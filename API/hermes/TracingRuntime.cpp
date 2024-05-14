@@ -22,12 +22,11 @@ namespace tracing {
 
 TracingRuntime::TracingRuntime(
     std::unique_ptr<jsi::Runtime> runtime,
-    uint64_t globalID,
     const ::hermes::vm::RuntimeConfig &conf,
     std::unique_ptr<llvh::raw_ostream> traceStream)
     : RuntimeDecorator<jsi::Runtime>(*runtime),
       runtime_(std::move(runtime)),
-      trace_(globalID, conf, std::move(traceStream)),
+      trace_(conf, std::move(traceStream)),
       numPreambleRecords_(0) {}
 
 void TracingRuntime::replaceNondeterministicFuncs() {
@@ -765,13 +764,16 @@ TracingHermesRuntime::TracingHermesRuntime(
     std::unique_ptr<llvh::raw_ostream> traceStream,
     std::function<std::string()> commitAction,
     std::function<void()> rollbackAction)
-    : TracingHermesRuntime(
-          runtime,
-          runtime->getUniqueID(runtime->global()),
-          runtimeConfig,
-          std::move(traceStream),
-          std::move(commitAction),
-          std::move(rollbackAction)) {}
+    : TracingRuntime(std::move(runtime), runtimeConfig, std::move(traceStream)),
+      conf_(runtimeConfig),
+      commitAction_(std::move(commitAction)),
+      rollbackAction_(std::move(rollbackAction)),
+      crashCallbackKey_(
+          conf_.getCrashMgr()
+              ? llvh::Optional<::hermes::vm::CrashManager::CallbackKey>(
+                    conf_.getCrashMgr()->registerCallback(
+                        [this](int fd) { crashCallback(fd); }))
+              : llvh::None) {}
 
 TracingHermesRuntime::~TracingHermesRuntime() {
   if (crashCallbackKey_) {
@@ -784,28 +786,6 @@ TracingHermesRuntime::~TracingHermesRuntime() {
     rollbackAction_();
   }
 }
-
-TracingHermesRuntime::TracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> &runtime,
-    uint64_t globalID,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig,
-    std::unique_ptr<llvh::raw_ostream> traceStream,
-    std::function<std::string()> commitAction,
-    std::function<void()> rollbackAction)
-    : TracingRuntime(
-          std::move(runtime),
-          globalID,
-          runtimeConfig,
-          std::move(traceStream)),
-      conf_(runtimeConfig),
-      commitAction_(std::move(commitAction)),
-      rollbackAction_(std::move(rollbackAction)),
-      crashCallbackKey_(
-          conf_.getCrashMgr()
-              ? llvh::Optional<::hermes::vm::CrashManager::CallbackKey>(
-                    conf_.getCrashMgr()->registerCallback(
-                        [this](int fd) { crashCallback(fd); }))
-              : llvh::None) {}
 
 void TracingHermesRuntime::flushAndDisableTrace() {
   (void)flushAndDisableBridgeTrafficTrace();

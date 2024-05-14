@@ -187,9 +187,12 @@ Collection<std::string, std::allocator<std::string>> getListOfStrings(
   return strings;
 }
 
-SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
+SynthTrace getTrace(
+    JSONArray *array,
+    std::optional<SynthTrace::ObjectID> globalObjID) {
   using RecordType = SynthTrace::RecordType;
-  SynthTrace trace(globalObjID, ::hermes::vm::RuntimeConfig());
+  SynthTrace trace(
+      ::hermes::vm::RuntimeConfig(), /* traceStream */ nullptr, globalObjID);
   auto getListOfTraceValues =
       [](JSONArray *array,
          SynthTrace &trace) -> std::vector<SynthTrace::TraceValue> {
@@ -537,10 +540,6 @@ std::tuple<
 parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   JSLexer::Allocator alloc;
   JSONObject *root = llvh::cast<JSONObject>(parseJSON(alloc, std::move(trace)));
-  if (!llvh::dyn_cast_or_null<JSONNumber>(root->get("globalObjID"))) {
-    ::hermes::hermes_fatal(
-        "Trace does not have a \"globalObjID\" value that is a number");
-  }
   if (auto *ver = root->get("version")) {
     // Version exists, validate that it is a number, and the correct version.
     if (auto *verNum = llvh::dyn_cast<JSONNumber>(ver)) {
@@ -561,8 +560,10 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   // Else, for backwards compatibility, allow no version to be specified, which
   // will imply "latest version".
 
-  auto globalObjID =
-      getNumberAs<SynthTrace::ObjectID>(root->get("globalObjID"));
+  auto *gid = llvh::dyn_cast_or_null<JSONNumber>(root->get("globalObjID"));
+  std::optional<SynthTrace::ObjectID> globalObjID = gid
+      ? getNumberAs<SynthTrace::ObjectID>(gid)
+      : std::optional<SynthTrace::ObjectID>();
   // Get and parse the records list.
   JSONObject *const rtConfig =
       llvh::cast_or_null<JSONObject>(root->get("runtimeConfig"));

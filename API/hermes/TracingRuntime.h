@@ -24,7 +24,6 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   TracingRuntime(
       std::unique_ptr<jsi::Runtime> runtime,
-      uint64_t globalID,
       const ::hermes::vm::RuntimeConfig &conf,
       std::unique_ptr<llvh::raw_ostream> traceStream);
 
@@ -229,21 +228,6 @@ class TracingHermesRuntime final : public TracingRuntime {
   }
 
  private:
-  // Why do we have a private ctor executed from the public one,
-  // instead of just having a single public ctor which calls
-  // getUniqueID() to initialize the base class?  This one weird trick
-  // is needed to avoid undefined behavior in that case.  Otherwise,
-  // when calling the base class ctor, the order of evaluating the
-  // globalID value and the side effect of moving the runtime would be
-  // unspecified.
-  TracingHermesRuntime(
-      std::unique_ptr<HermesRuntime> &runtime,
-      uint64_t globalID,
-      const ::hermes::vm::RuntimeConfig &runtimeConfig,
-      std::unique_ptr<llvh::raw_ostream> traceStream,
-      std::function<std::string()> commitAction,
-      std::function<void()> rollbackAction);
-
   void crashCallback(int fd);
 
   const ::hermes::vm::RuntimeConfig conf_;

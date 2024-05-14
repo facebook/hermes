@@ -221,7 +221,9 @@ TraceInterpreter::TraceInterpreter(
       trace_(trace),
       gom_() {
   // Add the global object to the global object map
-  gom_.emplace(trace.globalObjID(), rt.global());
+  if (trace.globalObjID()) {
+    gom_.emplace(*trace.globalObjID(), rt.global());
+  }
 
   auto [lastUsePerObj, lastUses] = createLastUseMaps(trace.records());
   lastUsePerObj_ = std::move(lastUsePerObj);
