@@ -411,6 +411,12 @@ class FlowChecker::ParseClassType {
       return outer_.flowContext_.getAny();
     }
 
+    if (!llvh::isa<ESTree::IdentifierNode>(prop->_key)) {
+      outer_.sm_.error(
+          prop->getSourceRange(), "ft: property name must be an identifier");
+      return outer_.flowContext_.getAny();
+    }
+
     auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
 
     Type *fieldType;
