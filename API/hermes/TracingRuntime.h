@@ -27,11 +27,10 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       const ::hermes::vm::RuntimeConfig &conf,
       std::unique_ptr<llvh::raw_ostream> traceStream);
 
-  virtual SynthTrace::ObjectID getUniqueID(const jsi::Object &o) = 0;
-  virtual SynthTrace::ObjectID getUniqueID(const jsi::BigInt &s) = 0;
-  virtual SynthTrace::ObjectID getUniqueID(const jsi::String &s) = 0;
-  virtual SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) = 0;
-  virtual SynthTrace::ObjectID getUniqueID(const jsi::Symbol &sym) = 0;
+  /// Assign a new ObjectID for given jsi::Pointer.
+  SynthTrace::ObjectID defObjectID(const jsi::Pointer &p);
+  /// Get the ObjectID for given jsi::Pointer.
+  SynthTrace::ObjectID useObjectID(const jsi::Pointer &p) const;
 
   virtual void flushAndDisableTrace() = 0;
 
@@ -156,11 +155,20 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   }
 
  private:
-  SynthTrace::TraceValue toTraceValue(const jsi::Value &value);
+  SynthTrace::TraceValue defTraceValue(const jsi::Value &value) {
+    return toTraceValue(value, true);
+  }
+  SynthTrace::TraceValue useTraceValue(const jsi::Value &value) {
+    return toTraceValue(value, false);
+  }
+  SynthTrace::TraceValue toTraceValue(
+      const jsi::Value &value,
+      bool assignNewUID = false);
 
   std::vector<SynthTrace::TraceValue> argStringifyer(
       const jsi::Value *args,
-      size_t count);
+      size_t count,
+      bool assignNewUID = false);
 
   SynthTrace::TimeSinceStart getTimeSinceStart() const;
 
@@ -169,6 +177,20 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   std::deque<jsi::Function> savedFunctions;
   const SynthTrace::TimePoint startTime_{std::chrono::steady_clock::now()};
   uint32_t numPreambleRecords_;
+
+  SynthTrace::ObjectID currentUniqueID_{0};
+
+  /// Map from PointerValue* to ObjectID. Except WeakRef case (see below), we
+  /// assign a new ObjectID whenever we see a new def of jsi::Pointer Value.
+  std::unordered_map<const jsi::Runtime::PointerValue *, SynthTrace::ObjectID>
+      uniqueIDs_;
+
+  /// WeakObject's PointerValue* to ObjectID mapping.
+  /// The key is the PointerValue of the WeakObject at the time of
+  /// it is created.
+  /// The value is newly assign ObjectID for that PointerValue.
+  std::unordered_map<const jsi::Runtime::PointerValue *, SynthTrace::ObjectID>
+      weakRefIDs_;
 };
 
 // TracingRuntime is *almost* vm independent.  This provides the
@@ -194,22 +216,6 @@ class TracingHermesRuntime final : public TracingRuntime {
       std::function<void()> rollbackAction);
 
   ~TracingHermesRuntime() override;
-
-  SynthTrace::ObjectID getUniqueID(const jsi::Object &o) override {
-    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(o));
-  }
-  SynthTrace::ObjectID getUniqueID(const jsi::BigInt &b) override {
-    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(b));
-  }
-  SynthTrace::ObjectID getUniqueID(const jsi::String &s) override {
-    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(s));
-  }
-  SynthTrace::ObjectID getUniqueID(const jsi::PropNameID &pni) override {
-    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(pni));
-  }
-  SynthTrace::ObjectID getUniqueID(const jsi::Symbol &sym) override {
-    return static_cast<SynthTrace::ObjectID>(hermesRuntime().getUniqueID(sym));
-  }
 
   void flushAndDisableTrace() override;
 
