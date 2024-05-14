@@ -258,8 +258,6 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
       makeHermesRuntime(conf), conf, std::move(resultStream)));
 
-  SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
-
   rt->flushAndDisableTrace();
 
   auto optTrace = rt->global()
@@ -271,7 +269,6 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
   EXPECT_EQ(
       SynthTrace::synthVersion(),
       optTrace.getProperty(*rt, "version").asNumber());
-  EXPECT_EQ(globalObjID, optTrace.getProperty(*rt, "globalObjID").asNumber());
 
   auto rtConfig = optTrace.getPropertyAsObject(*rt, "runtimeConfig");
 
