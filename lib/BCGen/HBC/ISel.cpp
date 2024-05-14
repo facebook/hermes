@@ -193,9 +193,6 @@ class HBCISel {
   /// Emit a mov, or none if it would be a no-op.
   void emitMovIfNeeded(param_t dest, param_t src);
 
-  /// Emit an Unreachable opcode in debug builds, otherwise do nothing.
-  void emitUnreachableIfDebug();
-
   /// In debug mode, assert that parameters have been correctly allocated.
   void verifyCall(BaseCallInst *Inst);
 
@@ -563,12 +560,6 @@ void HBCISel::emitMovIfNeeded(param_t dest, param_t src) {
   } else {
     BCFGen_->emitMovLong(dest, src);
   }
-}
-
-void HBCISel::emitUnreachableIfDebug() {
-#ifndef NDEBUG
-  BCFGen_->emitUnreachable();
-#endif
 }
 
 void HBCISel::verifyCall(BaseCallInst *Inst) {
@@ -1742,7 +1733,9 @@ void HBCISel::generateHBCSpillMovInst(HBCSpillMovInst *Inst, BasicBlock *next) {
 void HBCISel::generateUnreachableInst(
     hermes::UnreachableInst *Inst,
     hermes::BasicBlock *next) {
-  emitUnreachableIfDebug();
+  if (bytecodeGenerationOptions_.emitAsserts) {
+    BCFGen_->emitUnreachable();
+  }
 }
 
 void HBCISel::generateIteratorBeginInst(

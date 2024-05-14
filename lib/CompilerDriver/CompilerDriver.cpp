@@ -235,6 +235,17 @@ static list<std::string> NoDumpFunctions(
     llvh::cl::CommaSeparated,
     cat(CompilerCategory));
 
+cl::opt<bool> EnableAsserts(
+    "enable-asserts",
+#ifdef NDEBUG
+    cl::desc("(default false) Whether assertions in compiled code are enabled"),
+    cl::init(false),
+#else
+    cl::desc("(default true) Whether assertions in compiled code are enabled"),
+    cl::init(true),
+#endif
+    cl::cat(CompilerCategory));
+
 static opt<bool> Pretty(
     "pretty",
     init(true),
@@ -1928,6 +1939,7 @@ CompileResult processSourceFiles(
   genOptions.staticBuiltinsEnabled = context->getStaticBuiltinOptimization();
   genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
   genOptions.verifyIR = cl::VerifyIR;
+  genOptions.emitAsserts = cl::EnableAsserts;
 
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.

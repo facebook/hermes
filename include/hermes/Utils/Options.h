@@ -81,6 +81,9 @@ struct BytecodeGenerationOptions {
   // Emit #line directives in the resulting output.
   bool emitLineDirectives = false;
 
+  // Emit asserts in the bytecode.
+  bool emitAsserts = false;
+
   /* implicit */ BytecodeGenerationOptions(OutputFormatKind format)
       : format(format) {}
 

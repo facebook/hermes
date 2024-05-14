@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O0 -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -O0 -enable-asserts -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines
 
 async function simpleReturn() {
   return 1;
