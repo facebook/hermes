@@ -540,10 +540,24 @@ class SwitchBuilder {
     return pair->second;
   }
 
-  /// Construct and \return the SwitchInst.
-  SwitchInst *generate(Value *operand, BasicBlock *defaultBlock) {
-    return builder_.createSwitchInst(
-        operand, defaultBlock, values_, switchTargets_);
+  /// Construct and \return the IR for the switch.
+  /// \p operand *must* be a hit on valid on a switch case.
+  TerminatorInst *generate(Value *operand) {
+    assert(!values_.empty() && "empty switch");
+    // A single case is equivalent to an unconditional branch.
+    if (values_.size() == 1) {
+      return builder_.createBranchInst(switchTargets_[0]);
+    } else {
+      // We only need to perform numCases-1 comparisons. If we have checked the
+      // first numCases-1 cases and have found no match, we can unconditionally
+      // branch to the last case. We use the default block mechanism in the
+      // SwitchInst to do this.
+      return builder_.createSwitchInst(
+          operand,
+          switchTargets_.back(),
+          llvh::ArrayRef<Literal *>{values_}.drop_back(1),
+          llvh::ArrayRef<BasicBlock *>{switchTargets_}.drop_back(1));
+    }
   }
 
   /// \return number of cases in the switch.
@@ -836,36 +850,22 @@ void LowerToStateMachine::lowerToSwitch(
     }
   }
 
-  auto *defaultMainSwitchBB = builder_.createBasicBlock(inner_);
-  builder_.setInsertionBlock(defaultMainSwitchBB);
-  // The switch index should always be hitting a value we explicitly defined, so
-  // this should never execute.
-  builder_.createUnreachableInst();
-
   builder_.setInsertionBlock(userCodeSwitchBB);
   builder_.createStoreFrameInst(
       getParentOuterScope_,
       builder_.getLiteralNumber((uint8_t)State::Executing),
       genState);
   mainSwitch.generate(
-      builder_.createLoadFrameInst(getParentOuterScope_, switchIdx),
-      defaultMainSwitchBB);
+      builder_.createLoadFrameInst(getParentOuterScope_, switchIdx));
 
   if (hasExistingTrys) {
-    auto *defaultExceptionSwitchBB = builder_.createBasicBlock(inner_);
-    builder_.setInsertionBlock(defaultExceptionSwitchBB);
-    // The switch index should always be hitting a value we explicitly defined,
-    // so this should never execute.
-    builder_.createUnreachableInst();
-
     // Set the thrown value placeholder variable and execute the switch.
     builder_.setInsertionBlock(surroundingCatchBB);
     auto *catchVal = builder_.createCatchInst();
     builder_.createStoreFrameInst(
         getParentOuterScope_, catchVal, thrownValPlaceholder);
     exceptionSwitch.generate(
-        builder_.createLoadFrameInst(getParentOuterScope_, exceptionSwitchIdx),
-        defaultExceptionSwitchBB);
+        builder_.createLoadFrameInst(getParentOuterScope_, exceptionSwitchIdx));
   }
 
   resultContainsTrys_ = hasExistingTrys;

@@ -130,15 +130,10 @@ function *args() {
 // CHECK-NEXT:    LoadConstZero     r3
 // CHECK-NEXT:    StrictEq          r5, r3, r4
 // CHECK-NEXT:    JmpTrue           L3, r5
-// CHECK-NEXT:    LoadConstUInt8    r3, 1
-// CHECK-NEXT:    StrictEq          r5, r3, r4
-// CHECK-NEXT:    JmpTrue           L4, r5
-// CHECK-NEXT:    Unreachable
-// CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadFromEnvironment r5, r2, 3
 // CHECK-NEXT:    Mov               r3, r5
 // CHECK-NEXT:    LoadConstUInt8    r6, 1
-// CHECK-NEXT:    JStrictEqual      L5, r1, r6
+// CHECK-NEXT:    JStrictEqual      L4, r1, r6
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r0
 // CHECK-NEXT:    LoadFromEnvironment r5, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r6, 2
@@ -147,18 +142,18 @@ function *args() {
 // CHECK-NEXT:    Mov               r8, r3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
 // CHECK-NEXT:    LoadFromEnvironment r9, r2, 3
-// CHECK-NEXT:    JmpTrue           L6, r9
+// CHECK-NEXT:    JmpTrue           L5, r9
 // CHECK-NEXT:    GetGlobalObject   r6
 // CHECK-NEXT:    TryGetById        r7, r6, 1, "y"
-// CHECK-NEXT:    JmpTrueLong       L7, r7
-// CHECK-NEXT:    JmpLong           L8
-// CHECK-NEXT:L6:
+// CHECK-NEXT:    JmpTrueLong       L6, r7
+// CHECK-NEXT:    JmpLong           L7
+// CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
 // CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
 // CHECK-NEXT:    Ret               r7
-// CHECK-NEXT:L5:
+// CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
 // CHECK-NEXT:    Throw             r0
@@ -166,7 +161,7 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 2
 // CHECK-NEXT:    Mov               r6, r7
 // CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqualLong  L9, r1, r8
+// CHECK-NEXT:    JStrictEqualLong  L8, r1, r8
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r0
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
@@ -175,7 +170,7 @@ function *args() {
 // CHECK-NEXT:    Mov               r10, r6
 // CHECK-NEXT:    StoreNPToEnvironment r2, 2, r10
 // CHECK-NEXT:    LoadFromEnvironment r11, r2, 2
-// CHECK-NEXT:    JmpTrue           L10, r11
+// CHECK-NEXT:    JmpTrue           L9, r11
 // CHECK-NEXT:    GetEnvironment    r8, r2, 1
 // CHECK-NEXT:    CreateEnvironment r9, r8, 2
 // CHECK-NEXT:    StoreToEnvironment r2, 7, r9
@@ -187,13 +182,13 @@ function *args() {
 // CHECK-NEXT:    StoreNPToEnvironment r9, 1, r12
 // CHECK-NEXT:    GetGlobalObject   r13
 // CHECK-NEXT:    TryGetById        r14, r13, 1, "y"
-// CHECK-NEXT:    JmpTrue           L7, r14
-// CHECK-NEXT:L8:
+// CHECK-NEXT:    JmpTrue           L6, r14
+// CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
 // CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 4
 // CHECK-NEXT:    Ret               r9
-// CHECK-NEXT:L7:
+// CHECK-NEXT:L6:
 // CHECK-NEXT:    LoadFromEnvironment r8, r2, 7
 // CHECK-NEXT:    LoadFromEnvironment r9, r8, 0
 // CHECK-NEXT:    LoadFromEnvironment r10, r8, 1
@@ -208,30 +203,30 @@ function *args() {
 // CHECK-NEXT:    NewObjectWithBuffer r16, 2, 2, 0, 2
 // CHECK-NEXT:    PutOwnBySlotIdx   r16, r13, 0
 // CHECK-NEXT:    Ret               r16
-// CHECK-NEXT:L10:
+// CHECK-NEXT:L9:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
 // CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
-// CHECK-NEXT:L9:
+// CHECK-NEXT:L8:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqual      L11, r1, r8
+// CHECK-NEXT:    JStrictEqual      L10, r1, r8
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
-// CHECK-NEXT:    JStrictEqual      L12, r1, r8
+// CHECK-NEXT:    JStrictEqual      L11, r1, r8
 // CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r9
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
 // CHECK-NEXT:    Ret               r8
-// CHECK-NEXT:L12:
+// CHECK-NEXT:L11:
 // CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
 // CHECK-NEXT:    Ret               r8
-// CHECK-NEXT:L11:
+// CHECK-NEXT:L10:
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
@@ -242,7 +237,7 @@ function *args() {
 // CHECK-NEXT:    Unreachable
 
 // CHECK:Function<?anon_0_args>(1 params, 25 registers):
-// CHECK-NEXT:Offset in debug table: source 0x002c, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -258,15 +253,10 @@ function *args() {
 // CHECK-NEXT:    LoadConstZero     r3
 // CHECK-NEXT:    StrictEq          r5, r3, r4
 // CHECK-NEXT:    JmpTrue           L3, r5
-// CHECK-NEXT:    LoadConstUInt8    r3, 1
-// CHECK-NEXT:    StrictEq          r5, r3, r4
-// CHECK-NEXT:    JmpTrue           L4, r5
-// CHECK-NEXT:    Unreachable
-// CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadFromEnvironment r5, r2, 3
 // CHECK-NEXT:    Mov               r3, r5
 // CHECK-NEXT:    LoadConstUInt8    r6, 1
-// CHECK-NEXT:    JStrictEqual      L5, r1, r6
+// CHECK-NEXT:    JStrictEqual      L4, r1, r6
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r0
 // CHECK-NEXT:    LoadFromEnvironment r5, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r6, 2
@@ -275,20 +265,20 @@ function *args() {
 // CHECK-NEXT:    Mov               r8, r3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
 // CHECK-NEXT:    LoadFromEnvironment r9, r2, 3
-// CHECK-NEXT:    JmpTrue           L6, r9
+// CHECK-NEXT:    JmpTrue           L5, r9
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
 // CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r8
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r8, 0
 // CHECK-NEXT:    Ret               r7
-// CHECK-NEXT:L6:
+// CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
 // CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
 // CHECK-NEXT:    Ret               r7
-// CHECK-NEXT:L5:
+// CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
 // CHECK-NEXT:    Throw             r0
@@ -296,7 +286,7 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 2
 // CHECK-NEXT:    Mov               r6, r7
 // CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqual      L7, r1, r8
+// CHECK-NEXT:    JStrictEqual      L6, r1, r8
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r0
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
@@ -305,7 +295,7 @@ function *args() {
 // CHECK-NEXT:    Mov               r10, r6
 // CHECK-NEXT:    StoreNPToEnvironment r2, 2, r10
 // CHECK-NEXT:    LoadFromEnvironment r11, r2, 2
-// CHECK-NEXT:    JmpTrue           L8, r11
+// CHECK-NEXT:    JmpTrue           L7, r11
 // CHECK-NEXT:    LoadFromEnvironment r8, r2, 1
 // CHECK-NEXT:    GetEnvironment    r9, r2, 1
 // CHECK-NEXT:    CreateEnvironment r10, r9, 0
@@ -318,30 +308,30 @@ function *args() {
 // CHECK-NEXT:    NewObjectWithBuffer r14, 2, 2, 0, 2
 // CHECK-NEXT:    PutOwnBySlotIdx   r14, r11, 0
 // CHECK-NEXT:    Ret               r14
-// CHECK-NEXT:L8:
+// CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
 // CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
-// CHECK-NEXT:L7:
+// CHECK-NEXT:L6:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqual      L9, r1, r8
+// CHECK-NEXT:    JStrictEqual      L8, r1, r8
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
-// CHECK-NEXT:    JStrictEqual      L10, r1, r8
+// CHECK-NEXT:    JStrictEqual      L9, r1, r8
 // CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r9
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
 // CHECK-NEXT:    Ret               r8
-// CHECK-NEXT:L10:
+// CHECK-NEXT:L9:
 // CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
 // CHECK-NEXT:    Ret               r8
-// CHECK-NEXT:L9:
+// CHECK-NEXT:L8:
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
@@ -364,19 +354,17 @@ function *args() {
 // CHECK-NEXT:    bc 23: line 10 col 1
 // CHECK-NEXT:    bc 36: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 3, starts at line 10 col 1
-// CHECK-NEXT:    bc 67: line 13 col 5
-// CHECK-NEXT:    bc 116: line 12 col 10
-// CHECK-NEXT:    bc 163: line 13 col 5
-// CHECK-NEXT:    bc 251: line 12 col 10
-// CHECK-NEXT:    bc 291: line 13 col 14
-// CHECK-NEXT:    bc 301: line 13 col 12
-// CHECK-NEXT:    bc 415: line 13 col 5
-// CHECK-NEXT:  0x002c  function idx 4, starts at line 18 col 1
-// CHECK-NEXT:    bc 67: line 19 col 3
-// CHECK-NEXT:    bc 169: line 19 col 3
-// CHECK-NEXT:    bc 234: line 19 col 18
-// CHECK-NEXT:    bc 348: line 19 col 3
-// CHECK-NEXT:  0x0040  end of debug source table
+// CHECK-NEXT:    bc 105: line 12 col 10
+// CHECK-NEXT:    bc 152: line 13 col 5
+// CHECK-NEXT:    bc 240: line 12 col 10
+// CHECK-NEXT:    bc 280: line 13 col 14
+// CHECK-NEXT:    bc 290: line 13 col 12
+// CHECK-NEXT:    bc 404: line 13 col 5
+// CHECK-NEXT:  0x0029  function idx 4, starts at line 18 col 1
+// CHECK-NEXT:    bc 158: line 19 col 3
+// CHECK-NEXT:    bc 223: line 19 col 18
+// CHECK-NEXT:    bc 337: line 19 col 3
+// CHECK-NEXT:  0x0039  end of debug source table
 
 // CHECK:Debug lexical table:
 // CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0

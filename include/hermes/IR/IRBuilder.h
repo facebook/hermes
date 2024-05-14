@@ -501,8 +501,8 @@ class IRBuilder {
   SwitchInst *createSwitchInst(
       Value *input,
       BasicBlock *defaultBlock,
-      const SwitchInst::ValueListType &values,
-      const SwitchInst::BasicBlockListType &blocks);
+      llvh::ArrayRef<Literal *> values,
+      llvh::ArrayRef<BasicBlock *> blocks);
 
   PhiInst *createPhiInst(
       const PhiInst::ValueListType &values,

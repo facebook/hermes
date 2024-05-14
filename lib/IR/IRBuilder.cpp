@@ -761,8 +761,8 @@ IRBuilder::createBinaryOperatorInst(Value *left, Value *right, ValueKind kind) {
 SwitchInst *IRBuilder::createSwitchInst(
     Value *input,
     BasicBlock *defaultBlock,
-    const SwitchInst::ValueListType &values,
-    const SwitchInst::BasicBlockListType &blocks) {
+    llvh::ArrayRef<Literal *> values,
+    llvh::ArrayRef<BasicBlock *> blocks) {
   auto SI = new SwitchInst(input, defaultBlock, values, blocks);
   insert(SI);
   return SI;

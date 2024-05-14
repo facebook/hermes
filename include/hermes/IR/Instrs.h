@@ -2705,8 +2705,8 @@ class SwitchInst : public TerminatorInst {
   explicit SwitchInst(
       Value *input,
       BasicBlock *defaultBlock,
-      const ValueListType &values,
-      const BasicBlockListType &blocks);
+      llvh::ArrayRef<Literal *> values,
+      llvh::ArrayRef<BasicBlock *> blocks);
   explicit SwitchInst(const SwitchInst *src, llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 

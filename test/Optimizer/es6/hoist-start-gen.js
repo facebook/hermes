@@ -100,7 +100,7 @@ function *foo() {
 // CHECK-NEXT:        StoreStackInst 2: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 2: number, [%VS1.generator_state]: number
 // CHECK-NEXT:  %43 = LoadFrameInst (:number) %4: environment, [%VS1.idx]: number
-// CHECK-NEXT:        SwitchInst %43: number, %BB28, 0: number, %BB1, 1: number, %BB4, 2: number, %BB5
+// CHECK-NEXT:        SwitchInst %43: number, %BB5, 0: number, %BB1, 1: number, %BB4
 // CHECK-NEXT:%BB14:
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, 3: number, [%VS1.generator_state]: number
@@ -130,7 +130,7 @@ function *foo() {
 // CHECK-NEXT:        StoreStackInst %61: any, %3: any
 // CHECK-NEXT:        StoreFrameInst %4: environment, %61: any, [%VS1.catchVal]: any
 // CHECK-NEXT:  %64 = LoadFrameInst (:number) %4: environment, [%VS1.exception_handler_idx]: number
-// CHECK-NEXT:        SwitchInst %64: number, %BB29, 0: number, %BB21, 1: number, %BB23
+// CHECK-NEXT:        SwitchInst %64: number, %BB23, 0: number, %BB21
 // CHECK-NEXT:%BB23:
 // CHECK-NEXT:        StoreFrameInst %4: environment, 1: number, [%VS1.idx]: number
 // CHECK-NEXT:        BranchInst %BB12
@@ -146,8 +146,4 @@ function *foo() {
 // CHECK-NEXT:%BB27:
 // CHECK-NEXT:  %74 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %74: object
-// CHECK-NEXT:%BB28:
-// CHECK-NEXT:        UnreachableInst
-// CHECK-NEXT:%BB29:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end

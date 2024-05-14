@@ -191,8 +191,8 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
 SwitchInst::SwitchInst(
     Value *input,
     BasicBlock *defaultBlock,
-    const ValueListType &values,
-    const BasicBlockListType &blocks)
+    llvh::ArrayRef<Literal *> values,
+    llvh::ArrayRef<BasicBlock *> blocks)
     : TerminatorInst(ValueKind::SwitchInstKind) {
   pushOperand(input);
   pushOperand(defaultBlock);

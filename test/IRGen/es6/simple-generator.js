@@ -79,7 +79,7 @@ function* simple() {
 // CHECK-NEXT:%BB11:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 2: number, [%VS1.generator_state]: number
 // CHECK-NEXT:  %29 = LoadFrameInst (:number) %2: environment, [%VS1.idx]: number
-// CHECK-NEXT:        SwitchInst %29: number, %BB19, 0: number, %BB1, 1: number, %BB4
+// CHECK-NEXT:        SwitchInst %29: number, %BB4, 0: number, %BB1
 // CHECK-NEXT:%BB12:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 3: number, [%VS1.generator_state]: number
 // CHECK-NEXT:        ThrowTypeErrorInst "Generator functions may not be called on executing generators": string
@@ -97,6 +97,4 @@ function* simple() {
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:  %39 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %39: object
-// CHECK-NEXT:%BB19:
-// CHECK-NEXT:        UnreachableInst
 // CHECK-NEXT:function_end
