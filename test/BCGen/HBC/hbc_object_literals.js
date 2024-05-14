@@ -223,7 +223,7 @@ var obj4 = {
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj4"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 7, 0, 0
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 0, 0
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 3
 // BCGEN-NEXT:    CreateTopLevelEnvironment r2, 0
@@ -231,7 +231,7 @@ var obj4 = {
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r2, 5
 // BCGEN-NEXT:    GetGlobalObject   r2
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "obj1"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 18, 1, 15
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 1, 15
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 0
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 1
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 2
@@ -239,10 +239,10 @@ var obj4 = {
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 4
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 5
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "obj2"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 13, 2, 16
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 16
 // BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "obj3"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 13, 2, 16
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 16
 // BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "obj4"
 // BCGEN-NEXT:    Ret               r0
@@ -263,12 +263,12 @@ var obj4 = {
 // BCGEN-NEXT:    bc 5: line 11 col 1
 // BCGEN-NEXT:    bc 10: line 11 col 1
 // BCGEN-NEXT:    bc 15: line 11 col 1
-// BCGEN-NEXT:    bc 51: line 11 col 10
-// BCGEN-NEXT:    bc 89: line 15 col 10
-// BCGEN-NEXT:    bc 103: line 37 col 12
-// BCGEN-NEXT:    bc 107: line 37 col 10
-// BCGEN-NEXT:    bc 121: line 53 col 12
-// BCGEN-NEXT:    bc 125: line 53 col 10
+// BCGEN-NEXT:    bc 49: line 11 col 10
+// BCGEN-NEXT:    bc 85: line 15 col 10
+// BCGEN-NEXT:    bc 97: line 37 col 12
+// BCGEN-NEXT:    bc 101: line 37 col 10
+// BCGEN-NEXT:    bc 113: line 53 col 12
+// BCGEN-NEXT:    bc 117: line 53 col 10
 // BCGEN-NEXT:  0x0022  end of debug source table
 
 // BCGEN:Debug lexical table:

@@ -1102,19 +1102,13 @@ void HBCISel::generateHBCAllocObjectFromBufferInst(
     HBCAllocObjectFromBufferInst *Inst,
     BasicBlock *next) {
   auto result = encodeValue(Inst);
-
-  // size hint operand of NewObjectWithBuffer opcode is 16-bit.
-  uint32_t sizeHint =
-      std::min((uint32_t)UINT16_MAX, Inst->getSizeHint()->asUInt32());
-
   auto buffIdxs =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
   if (buffIdxs.first <= UINT16_MAX && buffIdxs.second <= UINT16_MAX) {
-    BCFGen_->emitNewObjectWithBuffer(
-        result, sizeHint, buffIdxs.first, buffIdxs.second);
+    BCFGen_->emitNewObjectWithBuffer(result, buffIdxs.first, buffIdxs.second);
   } else {
     BCFGen_->emitNewObjectWithBufferLong(
-        result, sizeHint, buffIdxs.first, buffIdxs.second);
+        result, buffIdxs.first, buffIdxs.second);
   }
 }
 

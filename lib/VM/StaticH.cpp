@@ -1399,7 +1399,6 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
 extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
-    uint32_t sizeHint,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
   Runtime &runtime = getRuntime(shr);

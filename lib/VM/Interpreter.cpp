@@ -2851,8 +2851,8 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
-                ip->iNewObjectWithBuffer.op3,
-                ip->iNewObjectWithBuffer.op4));
+                ip->iNewObjectWithBuffer.op2,
+                ip->iNewObjectWithBuffer.op3));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -2867,8 +2867,8 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
-                ip->iNewObjectWithBufferLong.op3,
-                ip->iNewObjectWithBufferLong.op4));
+                ip->iNewObjectWithBufferLong.op2,
+                ip->iNewObjectWithBufferLong.op3));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }

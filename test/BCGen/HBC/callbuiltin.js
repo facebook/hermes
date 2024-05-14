@@ -154,7 +154,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    TryGetById        r2, r0, 1, "print"
 // CHKBC-NEXT:    GetByIdShort      r3, r0, 2, "foo"
 // CHKBC-NEXT:    LoadConstUndefined r1
-// CHKBC-NEXT:    NewObjectWithBuffer r0, 4, 0, 0
+// CHKBC-NEXT:    NewObjectWithBuffer r0, 0, 0
 // CHKBC-NEXT:    Call2             r0, r3, r1, r0
 // CHKBC-NEXT:    Call2             r0, r2, r1, r0
 // CHKBC-NEXT:    Ret               r0
@@ -167,7 +167,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Function<shadows>(1 params, 13 registers):
 // CHKBC-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
-// CHKBC-NEXT:    NewObjectWithBuffer r3, 1, 1, 17
+// CHKBC-NEXT:    NewObjectWithBuffer r3, 1, 17
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    TryGetById        r0, r0, 1, "print"
 // CHKBC-NEXT:    PutOwnBySlotIdx   r3, r0, 0
@@ -203,14 +203,14 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    bc 50: line 12 col 1
 // CHKBC-NEXT:    bc 56: line 26 col 1
 // CHKBC-NEXT:    bc 62: line 26 col 7
-// CHKBC-NEXT:    bc 77: line 26 col 10
-// CHKBC-NEXT:    bc 82: line 26 col 6
+// CHKBC-NEXT:    bc 75: line 26 col 10
+// CHKBC-NEXT:    bc 80: line 26 col 6
 // CHKBC-NEXT:  0x0022  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23
 // CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1
-// CHKBC-NEXT:    bc 10: line 18 col 25
-// CHKBC-NEXT:    bc 20: line 19 col 16
-// CHKBC-NEXT:    bc 31: line 19 col 16
+// CHKBC-NEXT:    bc 8: line 18 col 25
+// CHKBC-NEXT:    bc 18: line 19 col 16
+// CHKBC-NEXT:    bc 29: line 19 col 16
 // CHKBC-NEXT:  0x0036  function idx 3, starts at line 22 col 1
 // CHKBC-NEXT:    bc 2: line 23 col 3
 // CHKBC-NEXT:    bc 8: line 23 col 24

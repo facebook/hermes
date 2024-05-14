@@ -658,13 +658,11 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object(SHRuntime *shr);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_new_object_with_parent(SHRuntime *shr, const SHLegacyValue *parent);
 
-/// \p sizeHint the eventual size of the resultant object.
 /// \p shapeTableIndex the entry index in the literal shape table.
 /// \p valBufferOffset the beginning offset in the literal value buffer.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
-    uint32_t sizeHint,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset);
 

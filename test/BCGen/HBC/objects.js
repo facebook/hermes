@@ -20,7 +20,7 @@ function foo(p) {
 //CHECK-LABEL:Function<foo>(2 params, 4 registers):
 //CHECK-NEXT:Offset in debug table: {{.*}}
 //CHECK-NEXT:[@ {{.*}}] LoadParam 1<Reg8>, 1<UInt8>
-//CHECK-NEXT:[@ {{.*}}] NewObjectWithBuffer 0<Reg8>, 1<UInt16>, 0<UInt16>, 0<UInt16>
+//CHECK-NEXT:[@ {{.*}}] NewObjectWithBuffer 0<Reg8>, 0<UInt16>, 0<UInt16>
 //CHECK-NEXT:[@ {{.*}}] LoadConstUInt8 2<Reg8>, 1<UInt8>
 //CHECK-NEXT:[@ {{.*}}] PutByIdLoose 0<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
 //CHECK-NEXT:[@ {{.*}}] PutByValLoose 0<Reg8>, 1<Reg8>, 2<Reg8>

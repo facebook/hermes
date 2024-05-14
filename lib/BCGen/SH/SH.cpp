@@ -2006,16 +2006,12 @@ class InstrGen {
       HBCAllocObjectFromBufferInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    // size hint operand of NewObjectWithBuffer opcode is 16-bit.
-    uint32_t sizeHint =
-        std::min((uint32_t)UINT16_MAX, inst.getSizeHint()->asUInt32());
 
     auto [shapeIdx, valIdx] =
         moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
     os_ << " = ";
     os_ << "_sh_ljs_new_object_with_buffer(shr, &THIS_UNIT, ";
-    os_ << sizeHint << ", ";
     os_ << shapeIdx << ", ";
     os_ << valIdx << ")";
     os_ << ";\n";

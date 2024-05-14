@@ -422,7 +422,7 @@ class UsageCounter : public BytecodeVisitor {
         break;
       case OpCode::NewObjectWithBuffer: {
         ShapeTableEntry shapeInfo =
-            bcProvider_->getObjectShapeTable()[inst->iNewObjectWithBuffer.op3];
+            bcProvider_->getObjectShapeTable()[inst->iNewObjectWithBuffer.op2];
         auto numProps = shapeInfo.numProps;
         countSerializedLiterals(
             bcProvider_->getObjectKeyBuffer(),
@@ -430,14 +430,14 @@ class UsageCounter : public BytecodeVisitor {
             numProps);
         countSerializedLiterals(
             bcProvider_->getLiteralValueBuffer(),
-            inst->iNewObjectWithBuffer.op4,
+            inst->iNewObjectWithBuffer.op3,
             numProps);
         break;
       }
       case OpCode::NewObjectWithBufferLong: {
         ShapeTableEntry shapeInfo =
             bcProvider_
-                ->getObjectShapeTable()[inst->iNewObjectWithBufferLong.op3];
+                ->getObjectShapeTable()[inst->iNewObjectWithBufferLong.op2];
         auto numProps = shapeInfo.numProps;
         countSerializedLiterals(
             bcProvider_->getObjectKeyBuffer(),
@@ -445,7 +445,7 @@ class UsageCounter : public BytecodeVisitor {
             numProps);
         countSerializedLiterals(
             bcProvider_->getLiteralValueBuffer(),
-            inst->iNewObjectWithBufferLong.op4,
+            inst->iNewObjectWithBufferLong.op3,
             numProps);
         break;
       }

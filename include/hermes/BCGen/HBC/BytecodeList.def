@@ -81,11 +81,10 @@ DEFINE_OPCODE_0(Unreachable)
 /// Create an object from a static map of values, as for var={'a': 3}.
 /// Any non-constant elements can be set afterwards with PutOwnByInd.
 /// Arg1 is the destination.
-/// Arg2 is a preallocation size hint.
-/// Arg3 is the index in the object shape table.
-/// Arg4 is the index in the object val buffer table.
-DEFINE_OPCODE_4(NewObjectWithBuffer, Reg8, UInt16, UInt16, UInt16)
-DEFINE_OPCODE_4(NewObjectWithBufferLong, Reg8, UInt16, UInt32, UInt32)
+/// Arg2 is the index in the object shape table.
+/// Arg3 is the index in the object val buffer table.
+DEFINE_OPCODE_3(NewObjectWithBuffer, Reg8, UInt16, UInt16)
+DEFINE_OPCODE_3(NewObjectWithBufferLong, Reg8, UInt32, UInt32)
 
 /// Create a new, empty Object using the built-in constructor (regardless of
 /// whether it was overridden).
