@@ -441,6 +441,12 @@ class Debugger {
   String getSourceMappingUrl(uint32_t fileId) const {
     return "";
   };
+  std::vector<SourceLocation> getLoadedScripts() const {
+    return {};
+  }
+  StackTrace captureStackTrace() const {
+    return StackTrace{};
+  }
   BreakpointID setBreakpoint(SourceLocation loc) {
     return 0;
   }

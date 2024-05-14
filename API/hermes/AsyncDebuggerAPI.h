@@ -282,6 +282,10 @@ class HERMES_EXPORT AsyncDebuggerAPI {
     return false;
   }
 
+  bool isPaused() {
+    return false;
+  }
+
   bool resumeFromPaused(AsyncDebugCommand command) {
     return false;
   }
