@@ -10,6 +10,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/BigIntSupport.h"
@@ -124,6 +125,7 @@ class BCProviderBase {
 
   llvh::ArrayRef<unsigned char> literalValueBuffer_{};
   llvh::ArrayRef<unsigned char> objKeyBuffer_{};
+  llvh::ArrayRef<ShapeTableEntry> objShapeTable_{};
 
   llvh::ArrayRef<bigint::BigIntTableEntry> bigIntTable_{};
   llvh::ArrayRef<unsigned char> bigIntStorage_{};
@@ -195,6 +197,9 @@ class BCProviderBase {
   }
   llvh::ArrayRef<unsigned char> getObjectKeyBuffer() const {
     return objKeyBuffer_;
+  }
+  llvh::ArrayRef<ShapeTableEntry> getObjectShapeTable() const {
+    return objShapeTable_;
   }
   llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
     return bigIntTable_;

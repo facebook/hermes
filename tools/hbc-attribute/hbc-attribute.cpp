@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/CommandLine.h"
@@ -17,6 +18,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/StringKind.h"
+#include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/Support/Buffer.h"
 #include "hermes/Support/JSONEmitter.h"
@@ -418,26 +420,35 @@ class UsageCounter : public BytecodeVisitor {
       case OpCode::SwitchImm:
         visitSwitchImm(inst);
         break;
-      case OpCode::NewObjectWithBuffer:
+      case OpCode::NewObjectWithBuffer: {
+        ShapeTableEntry shapeInfo =
+            bcProvider_->getObjectShapeTable()[inst->iNewObjectWithBuffer.op3];
+        auto numProps = shapeInfo.numProps;
         countSerializedLiterals(
             bcProvider_->getObjectKeyBuffer(),
+            shapeInfo.keyBufferOffset,
+            numProps);
+        countSerializedLiterals(
+            bcProvider_->getLiteralValueBuffer(),
             inst->iNewObjectWithBuffer.op4,
-            inst->iNewObjectWithBuffer.op3);
-        countSerializedLiterals(
-            bcProvider_->getLiteralValueBuffer(),
-            inst->iNewObjectWithBuffer.op5,
-            inst->iNewObjectWithBuffer.op3);
+            numProps);
         break;
-      case OpCode::NewObjectWithBufferLong:
+      }
+      case OpCode::NewObjectWithBufferLong: {
+        ShapeTableEntry shapeInfo =
+            bcProvider_
+                ->getObjectShapeTable()[inst->iNewObjectWithBufferLong.op3];
+        auto numProps = shapeInfo.numProps;
         countSerializedLiterals(
             bcProvider_->getObjectKeyBuffer(),
-            inst->iNewObjectWithBufferLong.op4,
-            inst->iNewObjectWithBufferLong.op3);
+            shapeInfo.keyBufferOffset,
+            numProps);
         countSerializedLiterals(
             bcProvider_->getLiteralValueBuffer(),
-            inst->iNewObjectWithBufferLong.op5,
-            inst->iNewObjectWithBufferLong.op3);
+            inst->iNewObjectWithBufferLong.op4,
+            numProps);
         break;
+      }
       case OpCode::NewArrayWithBuffer:
         countSerializedLiterals(
             bcProvider_->getLiteralValueBuffer(),

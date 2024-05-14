@@ -10,6 +10,7 @@
 #include "hermes/VM/Runtime.h"
 
 #include "hermes/BCGen/SerializedLiteralParser.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/SlowAssert.h"
@@ -500,12 +501,13 @@ ExecutionStatus Interpreter::putByValTransient_RJS(
 static Handle<HiddenClass> getHiddenClassForBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
-    unsigned numLiterals,
-    unsigned keyBufferIndex) {
+    unsigned shapeTableIndex) {
   RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+
   if (auto clazzOpt = runtimeModule->findCachedLiteralHiddenClass(
-          runtime, keyBufferIndex, numLiterals))
+          runtime, shapeTableIndex)) {
     return *clazzOpt;
+  }
 
   MutableHandle<> tmpHandleKey{runtime};
   MutableHandle<HiddenClass> clazz =
@@ -513,8 +515,11 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
           vmcast<JSObject>(runtime.objectPrototype),
           JSObject::numOverlapSlots<JSObject>()));
 
-  GCScopeMarkerRAII marker{runtime};
+  ShapeTableEntry shapeInfo = curCodeBlock->getRuntimeModule()
+                                  ->getBytecode()
+                                  ->getObjectShapeTable()[shapeTableIndex];
 
+  GCScopeMarkerRAII marker{runtime};
   // Set up the visitor to populate keys in the hidden class.
   struct {
     void visitStringID(StringID id) {
@@ -555,35 +560,30 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
       curCodeBlock->getRuntimeModule()
           ->getBytecode()
           ->getObjectKeyBuffer()
-          .slice(keyBufferIndex),
-      numLiterals,
+          .slice(shapeInfo.keyBufferOffset),
+      shapeInfo.numProps,
       v);
 
+  assert(
+      shapeInfo.numProps == clazz->getNumProperties() &&
+      "numLiterals should match hidden class property count.");
   if (LLVM_LIKELY(!clazz->isDictionary())) {
-    assert(
-        numLiterals == clazz->getNumProperties() &&
-        "numLiterals should match hidden class property count.");
-    assert(
-        clazz->getNumProperties() < 256 &&
-        "cached hidden class should have property count less than 256");
-    runtimeModule->tryCacheLiteralHiddenClass(runtime, keyBufferIndex, *clazz);
+    runtimeModule->tryCacheLiteralHiddenClass(runtime, shapeTableIndex, *clazz);
   }
-
   return {clazz};
 }
 
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
-    unsigned numLiterals,
-    unsigned keyBufferIndex,
-    unsigned valBufferIndex) {
+    unsigned shapeTableIndex,
+    unsigned valBufferOffset) {
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  auto clazz = getHiddenClassForBuffer(
-      runtime, curCodeBlock, numLiterals, keyBufferIndex);
+  auto clazz = getHiddenClassForBuffer(runtime, curCodeBlock, shapeTableIndex);
   auto obj = runtime.makeHandle(JSObject::create(runtime, clazz));
+  auto numLiterals = clazz->getNumProperties();
 
   // Set up the visitor to populate property values in the object.
   struct {
@@ -616,7 +616,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       curCodeBlock->getRuntimeModule()
           ->getBytecode()
           ->getLiteralValueBuffer()
-          .slice(valBufferIndex),
+          .slice(valBufferOffset),
       numLiterals,
       v);
 
@@ -2852,8 +2852,7 @@ tailCall:
                 runtime,
                 curCodeBlock,
                 ip->iNewObjectWithBuffer.op3,
-                ip->iNewObjectWithBuffer.op4,
-                ip->iNewObjectWithBuffer.op5));
+                ip->iNewObjectWithBuffer.op4));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -2869,8 +2868,7 @@ tailCall:
                 runtime,
                 curCodeBlock,
                 ip->iNewObjectWithBufferLong.op3,
-                ip->iNewObjectWithBufferLong.op4,
-                ip->iNewObjectWithBufferLong.op5));
+                ip->iNewObjectWithBufferLong.op4));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }

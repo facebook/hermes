@@ -1328,15 +1328,11 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
 static Handle<HiddenClass> getHiddenClassForBuffer(
     SHRuntime *shr,
     SHUnit *unit,
-    uint32_t literalCacheID,
-    uint32_t numLiterals,
-    llvh::ArrayRef<unsigned char> keyBuffer,
-    uint32_t keyBufferIndex) {
+    uint32_t shapeTableIndex) {
   Runtime &runtime = getRuntime(shr);
 
-  // Check if there is an existing cache entry for this object literal.
   auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
-      &unit->object_literal_class_cache[literalCacheID]);
+      &unit->object_literal_class_cache[shapeTableIndex]);
   if (*cacheEntry)
     return runtime.makeHandle(cacheEntry->get(runtime, runtime.getHeap()));
 
@@ -1381,12 +1377,15 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
       unit,
       GCScopeMarkerRAII{runtime}};
 
+  llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
+  const SHShapeTableEntry &info = unit->obj_shape_table[shapeTableIndex];
+
   SerializedLiteralParser::parse(
-      keyBuffer.slice(keyBufferIndex), numLiterals, v);
+      keyBuffer.slice(info.key_buffer_offset), info.num_props, v);
 
   if (LLVM_LIKELY(!clazz->isDictionary())) {
     assert(
-        numLiterals == clazz->getNumProperties() &&
+        info.num_props == clazz->getNumProperties() &&
         "numLiterals should match hidden class property count.");
     assert(
         clazz->getNumProperties() < 256 &&
@@ -1401,22 +1400,17 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
     uint32_t sizeHint,
-    uint32_t literalCacheID,
-    uint32_t literalValBufferIndex) {
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
-  llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
-  llvh::ArrayRef literalValBuffer{
-      unit->literal_val_buffer, unit->literal_val_buffer_size};
-
-  auto [keyBufferIndex, numLiterals] =
-      unit->object_literal_key_info[literalCacheID];
 
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  Handle<HiddenClass> clazz = getHiddenClassForBuffer(
-      shr, unit, literalCacheID, numLiterals, keyBuffer, keyBufferIndex);
+  Handle<HiddenClass> clazz =
+      getHiddenClassForBuffer(shr, unit, shapeTableIndex);
+  auto numProps = clazz->getNumProperties();
   Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime, clazz));
 
   struct {
@@ -1446,8 +1440,10 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     size_t i;
   } v{obj, runtime, unit, 0};
 
+  llvh::ArrayRef literalValBuffer{
+      unit->literal_val_buffer, unit->literal_val_buffer_size};
   SerializedLiteralParser::parse(
-      literalValBuffer.slice(literalValBufferIndex), numLiterals, v);
+      literalValBuffer.slice(valBufferOffset), numProps, v);
 
   return obj.getHermesValue();
 }

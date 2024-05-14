@@ -7,6 +7,9 @@
 
 #include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
+#include "hermes/IR/IR.h"
+#include "hermes/IR/Instrs.h"
 
 namespace hermes {
 namespace LiteralBufferBuilder {
@@ -137,7 +140,9 @@ class Builder {
   /// corresponding indices in \c objKeys_/values_. Note that the indicies may
   /// not be the same, since values_ is shared between object and array literal
   /// values.
-  std::vector<std::pair<const Instruction *, std::pair<size_t, size_t>>>
+  std::vector<std::pair<
+      const HBCAllocObjectFromBufferInst *,
+      std::pair<size_t, size_t>>>
       objInst_{};
 };
 
@@ -164,9 +169,15 @@ LiteralBufferBuilder::Result Builder::generate() {
         literalOffsetMap.count(Inst) == 0 &&
         "instruction literal can't be serialized twice");
     uint32_t arrayIndexInSet = values_.indexInSet(idx);
-    literalOffsetMap[Inst] =
-        LiteralOffset{valView[arrayIndexInSet].getOffset(), UINT32_MAX};
+    literalOffsetMap[Inst] = {valView[arrayIndexInSet].getOffset(), UINT32_MAX};
   }
+
+  // This contains all the unique shapes of all the object literals in the
+  // module.
+  std::vector<ShapeTableEntry> objShapeTable{};
+  // This maps a <keyBufferOffset, numProps> pair to an element index in the
+  // object shape table.
+  llvh::DenseMap<std::pair<uint32_t, uint32_t>, size_t> coordToIdx;
 
   // Visit all object literals.
   auto keyView = const_cast<const hbc::ConsecutiveStringStorage &>(keyStorage)
@@ -174,18 +185,28 @@ LiteralBufferBuilder::Result Builder::generate() {
   for (size_t i = 0, e = objInst_.size(); i != e; ++i) {
     const auto [Inst, indices] = objInst_[i];
     const auto [keyIdx, valIdx] = indices;
+    const uint32_t len = Inst->getKeyValuePairCount();
     assert(
         literalOffsetMap.count(Inst) == 0 &&
         "instruction literal can't be serialized twice");
     uint32_t keyIndexInSet = objKeys_.indexInSet(keyIdx);
     uint32_t valIndexInSet = values_.indexInSet(valIdx);
-    literalOffsetMap[Inst] = LiteralOffset{
-        keyView[keyIndexInSet].getOffset(), valView[valIndexInSet].getOffset()};
+    uint32_t keyBufferOffset = keyView[keyIndexInSet].getOffset();
+    const auto [iter, success] =
+        coordToIdx.insert({{keyBufferOffset, len}, coordToIdx.size()});
+    auto shapeID = iter->second;
+    if (success) {
+      // This is a new entry, add it to the shape table.
+      objShapeTable.push_back({keyBufferOffset, len});
+    }
+    literalOffsetMap[Inst] =
+        LiteralOffset{shapeID, valView[valIndexInSet].getOffset()};
   }
 
   return {
       valStorage.acquireStringStorage(),
       keyStorage.acquireStringStorage(),
+      std::move(objShapeTable),
       std::move(literalOffsetMap)};
 }
 

@@ -96,7 +96,7 @@ extern "C" SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit) {
     memset(
         unit->object_literal_class_cache,
         0,
-        unit->num_object_literal_class_cache_entries * sizeof(WeakRootBase));
+        unit->obj_shape_table_count * sizeof(WeakRootBase));
   }
   unit->dirty = true;
 
@@ -235,7 +235,7 @@ void hermes::vm::sh_unit_mark_long_lived_weak_roots(
 
   for (auto &entry : llvh::makeMutableArrayRef(
            reinterpret_cast<WeakRootBase *>(unit->object_literal_class_cache),
-           unit->num_object_literal_class_cache_entries)) {
+           unit->obj_shape_table_count)) {
     acceptor.acceptWeak(entry);
   }
 }

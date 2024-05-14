@@ -206,7 +206,9 @@ void BytecodeModuleGenerator::initializeSerializedLiterals(
       bm_->getObjectKeyBuffer().empty() && literalOffsetMap_.empty() &&
       "serialized literals already initialized");
   bm_->initializeSerializedLiterals(
-      std::move(bufs.literalValBuffer), std::move(bufs.keyBuffer));
+      std::move(bufs.literalValBuffer),
+      std::move(bufs.keyBuffer),
+      std::move(bufs.shapeTable));
   literalOffsetMap_ = std::move(bufs.offsetMap);
 }
 

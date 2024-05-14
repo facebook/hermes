@@ -17,7 +17,7 @@ delete glob.baz;
 
 //CHECK:    DeclareGlobalVar  "glob"
 //CHECK:    DeclareGlobalVar  "re"
-//CHECK:    NewObjectWithBuffer {{r[0-9]+}}, 1, 1, 0, 0
+//CHECK:    NewObjectWithBuffer {{r[0-9]+}}, 1, 0, 0
 //CHECK:    GetGlobalObject   {{r[0-9]+}}
 //CHECK:    TryGetById        {{r[0-9]+}}, {{r[0-9]+}}, 1, "bar"
 //CHECK:    LoadConstUndefined {{r[0-9]+}}

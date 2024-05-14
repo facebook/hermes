@@ -138,17 +138,15 @@ class Interpreter {
       Runtime &runtime,
       InterpreterState &state);
 
-  /// Populates an object with literal values from the object buffer.
-  /// \param numLiterals the amount of literals to read from the buffer.
-  /// \param keyBufferIndex the first element of the key buffer to read.
-  /// \param literalValBufferIndex the first element of the val buffer to read.
+  /// Constructs an object via literal buffers in the bytecode file.
+  /// \param shapeTableIndex the index of the shape element.
+  /// \param valBufferOffset the first element of the val buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
   static CallResult<PseudoHandle<>> createObjectFromBuffer(
       Runtime &runtime,
       CodeBlock *curCodeBlock,
-      unsigned numLiterals,
-      unsigned keyBufferIndex,
-      unsigned literalValBufferIndex);
+      unsigned shapeTableIndex,
+      unsigned valBufferOffset);
 
   /// Populates an array with literal values from the array buffer.
   /// \param numLiterals the amount of literals to read from the buffer.

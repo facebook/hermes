@@ -293,6 +293,19 @@ void BytecodeDisassembler::disassembleObjectKeyBuffer(raw_ostream &OS) {
   }
 }
 
+void BytecodeDisassembler::disassembleObjectShapeTable(raw_ostream &OS) {
+  auto objShapeTable = bcProvider_->getObjectShapeTable();
+  if (objShapeTable.size() == 0)
+    return;
+  OS << "Object Shape Table:\n";
+  for (size_t shapeTableIdx = 0, e = objShapeTable.size(); shapeTableIdx < e;
+       shapeTableIdx++) {
+    auto shapeInfo = objShapeTable[shapeTableIdx];
+    OS << shapeTableIdx << "[" << shapeInfo.keyBufferOffset << ", "
+       << shapeInfo.numProps << "]\n";
+  }
+}
+
 /// Converts the given bigint magnitude \p bytes to a string in base 10.
 static std::string bigintMagnitudeToLengthLimitedString(
     llvh::ArrayRef<uint8_t> bytes) {
@@ -1235,6 +1248,7 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
   disassembleStringStorage(OS);
   disassembleLiteralValueBuffer(OS);
   disassembleObjectKeyBuffer(OS);
+  disassembleObjectShapeTable(OS);
   disassembleBigIntStorage(OS);
   disassembleCJSModuleTable(OS);
   disassembleFunctionSourceTable(OS);

@@ -1102,7 +1102,6 @@ void HBCISel::generateHBCAllocObjectFromBufferInst(
     HBCAllocObjectFromBufferInst *Inst,
     BasicBlock *next) {
   auto result = encodeValue(Inst);
-  unsigned e = Inst->getKeyValuePairCount();
 
   // size hint operand of NewObjectWithBuffer opcode is 16-bit.
   uint32_t sizeHint =
@@ -1112,10 +1111,10 @@ void HBCISel::generateHBCAllocObjectFromBufferInst(
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
   if (buffIdxs.first <= UINT16_MAX && buffIdxs.second <= UINT16_MAX) {
     BCFGen_->emitNewObjectWithBuffer(
-        result, sizeHint, e, buffIdxs.first, buffIdxs.second);
+        result, sizeHint, buffIdxs.first, buffIdxs.second);
   } else {
     BCFGen_->emitNewObjectWithBufferLong(
-        result, sizeHint, e, buffIdxs.first, buffIdxs.second);
+        result, sizeHint, buffIdxs.first, buffIdxs.second);
   }
 }
 

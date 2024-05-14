@@ -125,6 +125,9 @@ void RuntimeModule::initializeWithoutCJSModulesMayAllocate(
   bcProvider_ = std::move(bytecode);
   importStringIDMapMayAllocate();
   initializeFunctionMap();
+  // Initialize the object literal hidden class cache.
+  auto numObjShapes = bcProvider_->getObjectShapeTable().size();
+  objectLiteralHiddenClasses_.resize(numObjShapes);
 }
 
 ExecutionStatus RuntimeModule::initializeMayAllocate(
@@ -397,48 +400,33 @@ void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
     }
   }
   for (auto &entry : objectLiteralHiddenClasses_) {
-    if (entry.second) {
-      acceptor.acceptWeak(entry.second);
-    }
+    acceptor.acceptWeak(entry);
   }
 }
 
 llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
     Runtime &runtime,
-    unsigned keyBufferIndex,
-    unsigned numLiterals) const {
-  if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
-    const auto cachedHiddenClassIter = objectLiteralHiddenClasses_.find(
-        getLiteralHiddenClassCacheHashKey(keyBufferIndex, numLiterals));
-    if (cachedHiddenClassIter != objectLiteralHiddenClasses_.end()) {
-      if (HiddenClass *const cachedHiddenClass =
-              cachedHiddenClassIter->second.get(runtime, runtime.getHeap())) {
-        return runtime_.makeHandle(cachedHiddenClass);
-      }
-    }
+    uint32_t shapeTableIndex) const {
+  auto &HC = objectLiteralHiddenClasses_[shapeTableIndex];
+  if (HC) {
+    return runtime_.makeHandle(HC.get(runtime, runtime.getHeap()));
   }
   return llvh::None;
 }
 
 void RuntimeModule::tryCacheLiteralHiddenClass(
     Runtime &runtime,
-    unsigned keyBufferIndex,
+    unsigned shapeTableIndex,
     HiddenClass *clazz) {
-  auto numLiterals = clazz->getNumProperties();
-  if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
-    assert(
-        !findCachedLiteralHiddenClass(runtime, keyBufferIndex, numLiterals)
-             .hasValue() &&
-        "Why are we caching an item already cached?");
-    objectLiteralHiddenClasses_[getLiteralHiddenClassCacheHashKey(
-                                    keyBufferIndex, numLiterals)]
-        .set(runtime, clazz);
-  }
+  assert(
+      !findCachedLiteralHiddenClass(runtime, shapeTableIndex).hasValue() &&
+      "Why are we caching an item already cached?");
+  objectLiteralHiddenClasses_[shapeTableIndex].set(runtime, clazz);
 }
 
 size_t RuntimeModule::additionalMemorySize() const {
   return stringIDMap_.capacity() * sizeof(SymbolID) +
-      objectLiteralHiddenClasses_.getMemorySize() +
+      objectLiteralHiddenClasses_.size() * sizeof(WeakRoot<HiddenClass>) +
       templateMap_.getMemorySize();
 }
 

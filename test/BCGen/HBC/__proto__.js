@@ -54,6 +54,9 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:[String 3]
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:[String 2]
+// CHECK-NEXT:Object Shape Table:
+// CHECK-NEXT:0[0, 3]
+// CHECK-NEXT:1[4, 2]
 // CHECK-NEXT:Function<global>(1 params, 3 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
@@ -69,7 +72,7 @@ function dynamicProto(func, getProto) {
 
 // CHECK:Function<staticProto>(1 params, 12 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
-// CHECK-NEXT:    NewObjectWithBuffer r0, 3, 3, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r0, 3, 0, 0
 // CHECK-NEXT:    LoadConstNull     r2
 // CHECK-NEXT:    Mov               r3, r0
 // CHECK-NEXT:    CallBuiltin       r1, "HermesBuiltin.silentSetPrototypeOf", 3
@@ -77,7 +80,7 @@ function dynamicProto(func, getProto) {
 
 // CHECK:Function<dynamicProto>(3 params, 13 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
-// CHECK-NEXT:    NewObjectWithBuffer r0, 2, 2, 4, 13
+// CHECK-NEXT:    NewObjectWithBuffer r0, 2, 1, 13
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Call1             r1, r1, r2
@@ -101,11 +104,11 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    bc 23: line 11 col 1
 // CHECK-NEXT:    bc 34: line 11 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 11 col 1
-// CHECK-NEXT:    bc 15: line 12 col 10
+// CHECK-NEXT:    bc 13: line 12 col 10
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 15 col 1
-// CHECK-NEXT:    bc 15: line 16 col 18
-// CHECK-NEXT:    bc 26: line 16 col 48
-// CHECK-NEXT:    bc 33: line 16 col 29
+// CHECK-NEXT:    bc 13: line 16 col 18
+// CHECK-NEXT:    bc 24: line 16 col 48
+// CHECK-NEXT:    bc 31: line 16 col 29
 // CHECK-NEXT:  0x0024  end of debug source table
 
 // CHECK:Debug lexical table:

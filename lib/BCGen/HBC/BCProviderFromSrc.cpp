@@ -64,6 +64,7 @@ BCProviderFromSrc::BCProviderFromSrc(
 
   literalValueBuffer_ = module_->getLiteralValueBuffer();
   objKeyBuffer_ = module_->getObjectKeyBuffer();
+  objShapeTable_ = module_->getObjectShapeTable();
 
   segmentID_ = module_->getSegmentID();
   cjsModuleTable_ = module_->getCJSModuleTable();

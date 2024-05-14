@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
@@ -179,6 +180,9 @@ class BytecodeModule {
 
   /// Object Key Buffer table.
   SerializableBufferTy objKeyBuffer_;
+
+  /// Object shape table.
+  std::vector<ShapeTableEntry> objShapeTable_;
 
   /// The segment ID corresponding to this BytecodeModule.
   /// This uniquely identifies this BytecodeModule within a set of modules
@@ -362,9 +366,11 @@ class BytecodeModule {
   /// Initialize the literal buffers.
   void initializeSerializedLiterals(
       std::vector<unsigned char> &&literalValueBuffer,
-      std::vector<unsigned char> &&objKeyBuffer) {
+      std::vector<unsigned char> &&objKeyBuffer,
+      std::vector<ShapeTableEntry> &&objShapeTable) {
     literalValueBuffer_ = std::move(literalValueBuffer);
     objKeyBuffer_ = std::move(objKeyBuffer);
+    objShapeTable_ = std::move(objShapeTable);
   }
 
   /// Returns the amount of bytes in the object key buffer
@@ -385,6 +391,11 @@ class BytecodeModule {
   /// Returns a reference to the object keys.
   llvh::ArrayRef<unsigned char> getObjectKeyBuffer() const {
     return llvh::ArrayRef<unsigned char>(objKeyBuffer_);
+  }
+
+  /// Returns a reference to the object shapes.
+  llvh::ArrayRef<ShapeTableEntry> getObjectShapeTable() const {
+    return objShapeTable_;
   }
 
   /// Returns a pair, where the first element is the key buffer starting at

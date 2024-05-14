@@ -110,12 +110,8 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// scriptID.
   facebook::hermes::debugger::ScriptID scriptID_;
 
-  /// A map from NewObjectWithBuffer's <keyBufferIndex, numLiterals> tuple to
-  /// its shared hidden class.
-  /// During hashing, keyBufferIndex takes the top 24bits while numLiterals
-  /// becomes the lower 8bits of the key.
-  /// Cacheing will be skipped if keyBufferIndex is >= 2^24.
-  llvh::DenseMap<uint32_t, WeakRoot<HiddenClass>> objectLiteralHiddenClasses_;
+  /// A vector of cached hidden classes.
+  std::vector<WeakRoot<HiddenClass>> objectLiteralHiddenClasses_;
 
   /// A map from template object ids to template objects.
   llvh::DenseMap<uint32_t, JSObject *> templateMap_;
@@ -368,22 +364,19 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 #endif
 
   /// Find the cached hidden class for an object literal, if one exists.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
-  /// \param numLiterals number of literals used from key buffer of
-  /// NewObjectWithBuffer instruction.
+  /// \param shapeTableIndex is the ID of an object literal shape.
   /// \return the cached hidden class.
   llvh::Optional<Handle<HiddenClass>> findCachedLiteralHiddenClass(
       Runtime &runtime,
-      unsigned keyBufferIndex,
-      unsigned numLiterals) const;
+      uint32_t shapeTableIndex) const;
 
-  /// Try to cache the sharable hidden class for object literal. Cache will
-  /// be skipped if keyBufferIndex is >= 2^24.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
+  /// Try to cache the shareable hidden class for a given shape. Caching will be
+  /// skipped if shapeTableIndex exceeds the bounds of the cache.
+  /// \param shapeTableIndex is the ID of an object literal shape.
   /// \param clazz the hidden class to cache.
   void tryCacheLiteralHiddenClass(
       Runtime &runtime,
-      unsigned keyBufferIndex,
+      unsigned shapeTableIndex,
       HiddenClass *clazz);
 
   /// Given \p templateObjectID, retrieve the cached template object.
@@ -440,30 +433,6 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       StringID stringID,
       const StringTableEntry &entry,
       OptValue<uint32_t> mhash);
-
-  /// \return a unique hash key for object literal hidden class cache.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction(must be
-  /// less than 2^24).
-  /// \param numLiterals number of literals used from key buffer of
-  /// NewObjectWithBuffer instruction(must be less than 256).
-  static uint32_t getLiteralHiddenClassCacheHashKey(
-      unsigned keyBufferIndex,
-      unsigned numLiterals) {
-    assert(
-        canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals) &&
-        "<keyBufferIndex, numLiterals> tuple can't be used as cache key.");
-    return ((uint32_t)keyBufferIndex << 8) | numLiterals;
-  }
-
-  /// \return whether tuple <keyBufferIndex, numLiterals> can generate a
-  /// hidden class literal cache hash key or not.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction. it must
-  /// be less than 256 to be used as a cache key.
-  static bool canGenerateLiteralHiddenClassCacheKey(
-      uint32_t keyBufferIndex,
-      unsigned numLiterals) {
-    return (keyBufferIndex & 0xFF000000) == 0 && numLiterals < 256;
-  }
 };
 
 using RuntimeModuleList = llvh::simple_ilist<RuntimeModule>;

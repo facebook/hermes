@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 
@@ -273,6 +274,11 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
       align(buf);
       f.objKeyBuffer =
           castArrayRef<unsigned char>(buf, h->objKeyBufferSize, end);
+    }
+    void visitObjectShapeTable() {
+      align(buf);
+      f.objShapeTable =
+          castArrayRef<ShapeTableEntry>(buf, h->objShapeTableCount, end);
     }
     void visitBigIntTable() {
       align(buf);
@@ -571,6 +577,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   stringStorage_ = fields.stringStorage;
   literalValueBuffer_ = fields.literalValueBuffer;
   objKeyBuffer_ = fields.objKeyBuffer;
+  objShapeTable_ = fields.objShapeTable;
   bigIntTable_ = fields.bigIntTable;
   bigIntStorage_ = fields.bigIntStorage;
   regExpTable_ = fields.regExpTable;

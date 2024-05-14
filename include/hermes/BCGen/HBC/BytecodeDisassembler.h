@@ -309,6 +309,9 @@ class BytecodeDisassembler {
   /// Print the content of the object key buffer table into \p OS.
   void disassembleObjectKeyBuffer(raw_ostream &OS);
 
+  /// Print the content of the object shape table into \p OS.
+  void disassembleObjectShapeTable(raw_ostream &OS);
+
   /// Print the contents of the CJS module table to \p OS,
   /// if it contains any entries.
   void disassembleCJSModuleTable(raw_ostream &OS);

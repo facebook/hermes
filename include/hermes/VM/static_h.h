@@ -25,14 +25,13 @@ typedef struct SHUnitExt SHUnitExt;
 typedef uint32_t SHSymbolID;
 typedef struct SHUnit SHUnit;
 
-/// SHObjectLiteralKeyInfo encodes the set of keys to be used to construct an
-/// object literal.
-typedef struct SHObjectLiteralKeyInfo {
-  /// The index in the \c obj_key_buffer where keys for this object start.
-  uint32_t key_buffer_index;
-  /// The number of keys in this object literal.
-  uint32_t num_keys;
-} SHObjectLiteralKeyInfo;
+/// Encodes the set of keys to be used to construct an object literal.
+typedef struct SHShapeTableEntry {
+  /// The number of bytes into the key buffer this shape begins.
+  uint32_t key_buffer_offset;
+  /// The number of properties in this shape.
+  uint32_t num_props;
+} SHShapeTableEntry;
 
 /// This represents a source JS location. This is only valid in a particular
 /// SHUnit, since the filename is stored as an index into the SHUnit's global
@@ -114,14 +113,12 @@ typedef struct SHUnit {
   /// Size of value buffer.
   uint32_t literal_val_buffer_size;
 
-  /// Size of the object literal class cache.
-  uint32_t num_object_literal_class_cache_entries;
-  /// Information about the keys used to construct each cached object literal
-  /// class. Points to an array with `num_object_literal_class_cache_entries`
-  /// elements.
-  const SHObjectLiteralKeyInfo *object_literal_key_info;
+  /// Object shape table.
+  const SHShapeTableEntry *obj_shape_table;
+  /// Size of object shape table.
+  uint32_t obj_shape_table_count;
   /// Cached object literal hidden classes. Points to an array of
-  /// `num_object_literal_class_cache_entries` WeakRoots, which point to the
+  /// `obj_shape_table_count` WeakRoots, which point to the
   /// cached hidden class for that entry.
   /// NOTE: These should always be treated as WeakRoots, which means a read
   /// barrier is needed to safely read out the value.
@@ -662,14 +659,14 @@ SHERMES_EXPORT SHLegacyValue
 _sh_ljs_new_object_with_parent(SHRuntime *shr, const SHLegacyValue *parent);
 
 /// \p sizeHint the eventual size of the resultant object.
-/// \p literalCacheID the entry in the literal class cache to use for creating
-/// this object.
+/// \p shapeTableIndex the entry index in the literal shape table.
+/// \p valBufferOffset the beginning offset in the literal value buffer.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
     uint32_t sizeHint,
-    uint32_t literalCacheID,
-    uint32_t literalValBufferIndex);
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
 
 /// \p sizeHint the size of the resultant array.
 SHERMES_EXPORT SHLegacyValue

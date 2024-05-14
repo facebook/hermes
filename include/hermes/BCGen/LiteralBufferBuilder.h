@@ -9,10 +9,15 @@
 #define HERMES_BCGEN_LITERALBUFFERBUILDER_H
 
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
-#include "hermes/IR/Instrs.h"
-#include "llvh/ADT/ArrayRef.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
+#include "llvh/ADT/DenseMap.h"
 
 namespace hermes {
+
+class Instruction;
+class Module;
+class Function;
+
 namespace LiteralBufferBuilder {
 
 using LiteralOffset = std::pair<uint32_t, uint32_t>;
@@ -22,6 +27,8 @@ using LiteralOffsetMapTy = llvh::DenseMap<const Instruction *, LiteralOffset>;
 struct Result {
   std::vector<unsigned char> literalValBuffer;
   std::vector<unsigned char> keyBuffer;
+  /// Contains the unique'd shapes of all object literals.
+  std::vector<ShapeTableEntry> shapeTable;
   LiteralOffsetMapTy offsetMap;
 };
 

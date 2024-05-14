@@ -65,6 +65,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:Object Key Buffer:
 // CHECK-NEXT:[String 13]
 // CHECK-NEXT:[String 9]
+// CHECK-NEXT:Object Shape Table:
+// CHECK-NEXT:0[0, 2]
 // CHECK-NEXT:Function Source Table:
 // CHECK-NEXT:  Function ID 7 -> s0
 // CHECK-NEXT:  Function ID 8 -> s0
@@ -207,12 +209,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CreateEnvironment r6, r5, 0
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 2, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 0, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadConstUInt8    r5, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 2, r5
-// CHECK-NEXT:    NewObjectWithBuffer r6, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r6, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r6, r4, 0
 // CHECK-NEXT:    Ret               r6
 // CHECK-NEXT:L3:
@@ -224,12 +226,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    JStrictEqual      L5, r1, r5
 // CHECK-NEXT:    LoadConstUInt8    r5, 2
 // CHECK-NEXT:    JStrictEqual      L6, r1, r5
-// CHECK-NEXT:    NewObjectWithBuffer r5, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r5, 2, 0, 6
 // CHECK-NEXT:    LoadConstUndefined r6
 // CHECK-NEXT:    PutOwnBySlotIdx   r5, r6, 0
 // CHECK-NEXT:    Ret               r5
 // CHECK-NEXT:L6:
-// CHECK-NEXT:    NewObjectWithBuffer r5, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r5, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r5, r0, 0
 // CHECK-NEXT:    Ret               r5
 // CHECK-NEXT:L5:
@@ -277,13 +279,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadFromEnvironment r7, r6, 0
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L4:
@@ -313,12 +315,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r2, 5, r11
 // CHECK-NEXT:    LoadConstUInt8    r12, 1
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r12
-// CHECK-NEXT:    NewObjectWithBuffer r13, 2, 2, 0, 8
+// CHECK-NEXT:    NewObjectWithBuffer r13, 2, 0, 8
 // CHECK-NEXT:    Ret               r13
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L6:
@@ -330,12 +332,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    JStrictEqual      L8, r1, r8
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
 // CHECK-NEXT:    JStrictEqual      L9, r1, r8
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 6
 // CHECK-NEXT:    LoadConstUndefined r9
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L8:
@@ -383,13 +385,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadFromEnvironment r7, r6, 0
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L4:
@@ -419,12 +421,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r2, 5, r11
 // CHECK-NEXT:    LoadConstUInt8    r12, 1
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r12
-// CHECK-NEXT:    NewObjectWithBuffer r13, 2, 2, 0, 8
+// CHECK-NEXT:    NewObjectWithBuffer r13, 2, 0, 8
 // CHECK-NEXT:    Ret               r13
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L6:
@@ -436,12 +438,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    JStrictEqual      L8, r1, r8
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
 // CHECK-NEXT:    JStrictEqual      L9, r1, r8
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 6
 // CHECK-NEXT:    LoadConstUndefined r9
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 6
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 6
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L8:
@@ -475,11 +477,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  0x0024  function idx 3, starts at line 19 col 21
 // CHECK-NEXT:    bc 34: line 19 col 21
 // CHECK-NEXT:  0x002b  function idx 8, starts at line 14 col 1
-// CHECK-NEXT:    bc 168: line 15 col 11
-// CHECK-NEXT:    bc 343: line 15 col 11
+// CHECK-NEXT:    bc 164: line 15 col 11
+// CHECK-NEXT:    bc 331: line 15 col 11
 // CHECK-NEXT:  0x0037  function idx 9, starts at line 19 col 21
-// CHECK-NEXT:    bc 168: line 20 col 11
-// CHECK-NEXT:    bc 343: line 20 col 11
+// CHECK-NEXT:    bc 164: line 20 col 11
+// CHECK-NEXT:    bc 331: line 20 col 11
 // CHECK-NEXT:  0x0043  end of debug source table
 
 // CHECK:Debug lexical table:

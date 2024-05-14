@@ -60,6 +60,8 @@ function *args() {
 // CHECK-NEXT:Object Key Buffer:
 // CHECK-NEXT:[String 9]
 // CHECK-NEXT:[String 7]
+// CHECK-NEXT:Object Shape Table:
+// CHECK-NEXT:0[0, 2]
 // CHECK-NEXT:Function Source Table:
 // CHECK-NEXT:  Function ID 3 -> s0
 // CHECK-NEXT:  Function ID 4 -> s0
@@ -150,7 +152,7 @@ function *args() {
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L4:
@@ -186,7 +188,7 @@ function *args() {
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 4
+// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 0, 4
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L6:
 // CHECK-NEXT:    LoadFromEnvironment r8, r2, 7
@@ -200,13 +202,13 @@ function *args() {
 // CHECK-NEXT:    StoreNPToEnvironment r2, 6, r14
 // CHECK-NEXT:    LoadConstUInt8    r15, 1
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r15
-// CHECK-NEXT:    NewObjectWithBuffer r16, 2, 2, 0, 2
+// CHECK-NEXT:    NewObjectWithBuffer r16, 2, 0, 2
 // CHECK-NEXT:    PutOwnBySlotIdx   r16, r13, 0
 // CHECK-NEXT:    Ret               r16
 // CHECK-NEXT:L9:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L8:
@@ -218,12 +220,12 @@ function *args() {
 // CHECK-NEXT:    JStrictEqual      L10, r1, r8
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
 // CHECK-NEXT:    JStrictEqual      L11, r1, r8
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r9
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L11:
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L10:
@@ -268,14 +270,14 @@ function *args() {
 // CHECK-NEXT:    JmpTrue           L5, r9
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r8
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r8, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r7, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L4:
@@ -305,13 +307,13 @@ function *args() {
 // CHECK-NEXT:    StoreNPToEnvironment r2, 6, r12
 // CHECK-NEXT:    LoadConstUInt8    r13, 1
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r13
-// CHECK-NEXT:    NewObjectWithBuffer r14, 2, 2, 0, 2
+// CHECK-NEXT:    NewObjectWithBuffer r14, 2, 0, 2
 // CHECK-NEXT:    PutOwnBySlotIdx   r14, r11, 0
 // CHECK-NEXT:    Ret               r14
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r9, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L6:
@@ -323,12 +325,12 @@ function *args() {
 // CHECK-NEXT:    JStrictEqual      L8, r1, r8
 // CHECK-NEXT:    LoadConstUInt8    r8, 2
 // CHECK-NEXT:    JStrictEqual      L9, r1, r8
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r9
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 2, 0, 0
+// CHECK-NEXT:    NewObjectWithBuffer r8, 2, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
 // CHECK-NEXT:    Ret               r8
 // CHECK-NEXT:L8:
@@ -355,15 +357,15 @@ function *args() {
 // CHECK-NEXT:    bc 36: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 3, starts at line 10 col 1
 // CHECK-NEXT:    bc 105: line 12 col 10
-// CHECK-NEXT:    bc 152: line 13 col 5
-// CHECK-NEXT:    bc 240: line 12 col 10
-// CHECK-NEXT:    bc 280: line 13 col 14
-// CHECK-NEXT:    bc 290: line 13 col 12
-// CHECK-NEXT:    bc 404: line 13 col 5
+// CHECK-NEXT:    bc 150: line 13 col 5
+// CHECK-NEXT:    bc 238: line 12 col 10
+// CHECK-NEXT:    bc 276: line 13 col 14
+// CHECK-NEXT:    bc 286: line 13 col 12
+// CHECK-NEXT:    bc 392: line 13 col 5
 // CHECK-NEXT:  0x0029  function idx 4, starts at line 18 col 1
-// CHECK-NEXT:    bc 158: line 19 col 3
-// CHECK-NEXT:    bc 223: line 19 col 18
-// CHECK-NEXT:    bc 337: line 19 col 3
+// CHECK-NEXT:    bc 154: line 19 col 3
+// CHECK-NEXT:    bc 219: line 19 col 18
+// CHECK-NEXT:    bc 325: line 19 col 3
 // CHECK-NEXT:  0x0039  end of debug source table
 
 // CHECK:Debug lexical table:

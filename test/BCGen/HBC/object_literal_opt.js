@@ -64,6 +64,9 @@ function foo(p) {
 // CHECK-NEXT:[String 5]
 // CHECK-NEXT:[String 6]
 // CHECK-NEXT:[String 7]
+// CHECK-NEXT:Object Shape Table:
+// CHECK-NEXT:0[0, 2]
+// CHECK-NEXT:1[3, 3]
 // CHECK-NEXT:Function<global>(1 params, 11 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 0<Reg8>, 0<UInt32>
@@ -77,14 +80,14 @@ function foo(p) {
 // CHECK-NEXT:[@ 35] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 1 registers):
-// CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 2<UInt16>, 2<UInt16>, 0<UInt16>, 0<UInt16>
-// CHECK-NEXT:[@ 10] Ret 0<Reg8>
+// CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 2<UInt16>, 0<UInt16>, 0<UInt16>
+// CHECK-NEXT:[@ 8] Ret 0<Reg8>
 
 // CHECK:Function<>(1 params, 2 registers):
-// CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 3<UInt16>, 3<UInt16>, 3<UInt16>, 9<UInt16>
-// CHECK-NEXT:[@ 10] LoadThisNS 1<Reg8>
-// CHECK-NEXT:[@ 12] PutOwnBySlotIdx 0<Reg8>, 1<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 16] Ret 0<Reg8>
+// CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 3<UInt16>, 1<UInt16>, 9<UInt16>
+// CHECK-NEXT:[@ 8] LoadThisNS 1<Reg8>
+// CHECK-NEXT:[@ 10] PutOwnBySlotIdx 0<Reg8>, 1<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 14] Ret 0<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}object_literal_opt.js

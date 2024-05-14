@@ -11,6 +11,7 @@
 #include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/BCGen/HBC/BytecodeVersion.h"
 #include "hermes/BCGen/HBC/StringKind.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Compiler.h"
@@ -86,6 +87,7 @@ struct BytecodeFileHeader {
   uint32_t regExpStorageSize;
   uint32_t literalValueBufferSize;
   uint32_t objKeyBufferSize;
+  uint32_t objShapeTableCount; // Number of elements in the shape table.
   uint32_t segmentID; // The ID of this segment.
   uint32_t cjsModuleCount; // Number of modules.
   uint32_t functionSourceCount; // Number of function sources preserved.
@@ -94,7 +96,7 @@ struct BytecodeFileHeader {
 
   // Insert any padding to make function headers that follow this file header
   // less likely to cross cache lines.
-  uint8_t padding[23];
+  uint8_t padding[19];
 
   BytecodeFileHeader(
       uint64_t magic,
@@ -114,6 +116,7 @@ struct BytecodeFileHeader {
       uint32_t regExpStorageSize,
       uint32_t literalValueBufferSize,
       uint32_t objKeyBufferSize,
+      uint32_t objShapeTableCount,
       uint32_t segmentID,
       uint32_t cjsModuleCount,
       uint32_t functionSourceCount,
@@ -136,6 +139,7 @@ struct BytecodeFileHeader {
         regExpStorageSize(regExpStorageSize),
         literalValueBufferSize(literalValueBufferSize),
         objKeyBufferSize(objKeyBufferSize),
+        objShapeTableCount(objShapeTableCount),
         segmentID(segmentID),
         cjsModuleCount(cjsModuleCount),
         functionSourceCount(functionSourceCount),
@@ -406,6 +410,7 @@ void visitBytecodeSegmentsInOrder(Visitor &visitor) {
   visitor.visitStringStorage();
   visitor.visitLiteralValueBuffer();
   visitor.visitObjectKeyBuffer();
+  visitor.visitObjectShapeTable();
   visitor.visitBigIntTable();
   visitor.visitBigIntStorage();
   visitor.visitRegExpTable();
@@ -438,6 +443,9 @@ struct BytecodeFileFields {
 
   /// The list of short string table entries.
   Array<hbc::SmallStringTableEntry> stringTableEntries{};
+
+  /// Table for object shapes.
+  Array<ShapeTableEntry> objShapeTable;
 
   /// Run-length encoding representing the kinds of strings in the table.
   Array<StringKind::Entry> stringKinds{};

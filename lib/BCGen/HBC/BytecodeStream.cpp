@@ -100,6 +100,7 @@ class BytecodeSerializer {
   void visitStringStorage();
   void visitLiteralValueBuffer();
   void visitObjectKeyBuffer();
+  void visitObjectShapeTable();
   void visitBigIntTable();
   void visitBigIntStorage();
   void visitRegExpTable();
@@ -140,6 +141,7 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
       static_cast<uint32_t>(BM.getRegExpStorage().size()),
       BM.getLiteralValueBufferSize(),
       BM.getObjectKeyBufferSize(),
+      static_cast<uint32_t>(BM.getObjectShapeTable().size()),
       BM.getSegmentID(),
       cjsModuleCount,
       static_cast<uint32_t>(BM.getFunctionSourceTable().size()),
@@ -405,6 +407,11 @@ void BytecodeSerializer::visitLiteralValueBuffer() {
 void BytecodeSerializer::visitObjectKeyBuffer() {
   pad(BYTECODE_ALIGNMENT);
   writeBinaryArray(bytecodeModule_->getObjectKeyBuffer());
+}
+
+void BytecodeSerializer::visitObjectShapeTable() {
+  pad(BYTECODE_ALIGNMENT);
+  writeBinaryArray(bytecodeModule_->getObjectShapeTable());
 }
 
 void BytecodeSerializer::visitBigIntTable() {

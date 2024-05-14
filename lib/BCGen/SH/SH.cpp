@@ -22,6 +22,7 @@
 #include "hermes/BCGen/MovElimination.h"
 #include "hermes/BCGen/RemoveMovs.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRVerifier.h"
@@ -185,6 +186,9 @@ class SHLiteralBuffers {
   /// They are stored as chars in order to shorten bytecode size
   std::vector<unsigned char> objKeyBuffer{};
 
+  /// Table of object literal shapes.
+  std::vector<ShapeTableEntry> objShapeTable{};
+
   /// A map from instruction to literal offset in the corresponding buffers.
   /// \c arrayBuffer, \c objKeyBuffer, \c objliteralValBuffer.
   LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap{};
@@ -201,6 +205,7 @@ class SHLiteralBuffers {
         optimizationEnabled);
     literalValueBuffer = std::move(bufs.literalValBuffer);
     objKeyBuffer = std::move(bufs.keyBuffer);
+    objShapeTable = std::move(bufs.shapeTable);
     literalOffsetMap = std::move(bufs.offsetMap);
   }
 
@@ -219,6 +224,17 @@ class SHLiteralBuffers {
   void generate(llvh::raw_ostream &os) const {
     generateBuffer(os, "s_literal_val_buffer", literalValueBuffer);
     generateBuffer(os, "s_obj_key_buffer", objKeyBuffer);
+    // Generate the shape table.
+    os << "static const SHShapeTableEntry s_obj_shape_table[] = {\n";
+    for (auto &entry : objShapeTable) {
+      os.indent(2);
+      os << "{ .key_buffer_offset = " << entry.keyBufferOffset
+         << ", .num_props = " << entry.numProps << " },\n";
+    }
+    os << "};\n";
+    // Produce storage for the cached classes.
+    os << "static SHCompressedPointer s_object_literal_class_cache["
+       << objShapeTable.size() << "];\n";
   }
 
  private:
@@ -230,48 +246,6 @@ class SHLiteralBuffers {
     for (unsigned char c : buf) {
       os << (int)c << ",";
     }
-    os << "};\n";
-  }
-};
-
-/// For each unique pair of {key buffer index, number of keys}, maintain a
-/// corresponding cache index, which can be used to retrieve that pair at
-/// runtime, and access the corresponding cached hidden class.
-class ObjectLiteralClassCache {
-  /// Map from a pair of {key buffer index, number of keys} to a unique cache
-  /// index for that pair.
-  llvh::DenseMap<std::pair<uint32_t, uint32_t>, uint32_t> cacheIndices_{};
-
- public:
-  /// Get the cache index for the given pair of \p keyBufferIndex and \p
-  /// numKeys, creating one if it does not exist.
-  uint32_t getCacheIndex(uint32_t keyBufferIndex, uint32_t numKeys) {
-    // If this pair does not exist, use the next cache index, otherwise, use
-    // the existing entry.
-    return cacheIndices_
-        .try_emplace({keyBufferIndex, numKeys}, cacheIndices_.size())
-        .first->second;
-  }
-
-  uint32_t size() const {
-    return cacheIndices_.size();
-  }
-
-  void generate(llvh::raw_ostream &os) const {
-    // Sort the keys by cache index.
-    std::vector<std::pair<uint32_t, uint32_t>> sortedKeys{cacheIndices_.size()};
-    for (auto &entry : cacheIndices_)
-      sortedKeys[entry.second] = entry.first;
-
-    // Produce storage for the cached classes.
-    os << "static SHCompressedPointer s_object_literal_class_cache["
-       << cacheIndices_.size() << "];\n";
-
-    // Produce an array containing the key information for each entry.
-    os << "static SHObjectLiteralKeyInfo s_object_literal_key_info["
-       << cacheIndices_.size() << "] = {";
-    for (auto &entry : sortedKeys)
-      os << " {" << entry.first << "," << entry.second << "},";
     os << "};\n";
   }
 };
@@ -463,9 +437,6 @@ struct ModuleGen {
 
   /// Literal buffers for objects and arrays.
   SHLiteralBuffers literalBuffers;
-
-  /// Maintain entries for the object literal class cache.
-  ObjectLiteralClassCache objectLiteralClassCache{};
 
   /// Maintain a table of all unique source file locations used by throwing
   /// instructions.
@@ -2035,28 +2006,18 @@ class InstrGen {
       HBCAllocObjectFromBufferInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    int numLiterals = inst.getKeyValuePairCount();
-    llvh::SmallVector<Literal *, 8> objKeys;
-    llvh::SmallVector<Literal *, 8> objVals;
-    for (int ind = 0; ind < numLiterals; ind++) {
-      auto keyValuePair = inst.getKeyValuePair(ind);
-      objKeys.push_back(cast<Literal>(keyValuePair.first));
-      objVals.push_back(cast<Literal>(keyValuePair.second));
-    }
-
     // size hint operand of NewObjectWithBuffer opcode is 16-bit.
     uint32_t sizeHint =
         std::min((uint32_t)UINT16_MAX, inst.getSizeHint()->asUInt32());
 
-    auto buffIdxs = moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
-    auto cacheIdx = moduleGen_.objectLiteralClassCache.getCacheIndex(
-        buffIdxs.first, numLiterals);
+    auto [shapeIdx, valIdx] =
+        moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
     os_ << " = ";
     os_ << "_sh_ljs_new_object_with_buffer(shr, &THIS_UNIT, ";
     os_ << sizeHint << ", ";
-    os_ << cacheIdx << ", ";
-    os_ << buffIdxs.second << ")";
+    os_ << shapeIdx << ", ";
+    os_ << valIdx << ")";
     os_ << ";\n";
   }
   void generateHBCProfilePointInst(HBCProfilePointInst &inst) {
@@ -2814,7 +2775,6 @@ static SHNativeFuncInfo s_function_info_table[];
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);
-    moduleGen.objectLiteralClassCache.generate(OS);
     moduleGen.srcLocationTable.generate(
         OS, M->getContext().getSourceErrorManager());
     moduleGen.nativeFunctionTable.generate(OS);
@@ -2831,10 +2791,10 @@ static SHNativeFuncInfo s_function_info_table[];
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
        << moduleGen.literalBuffers.literalValueBuffer.size() << ", "
-       << ".object_literal_key_info = s_object_literal_key_info, "
+       << ".obj_shape_table = s_obj_shape_table, "
+       << ".obj_shape_table_count = "
+       << moduleGen.literalBuffers.objShapeTable.size() << ", "
        << ".object_literal_class_cache = s_object_literal_class_cache, "
-       << ".num_object_literal_class_cache_entries = "
-       << moduleGen.objectLiteralClassCache.size() << ", "
        << ".source_locations = s_source_locations, "
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
        << ", " << ".unit_main = _0_global, "
