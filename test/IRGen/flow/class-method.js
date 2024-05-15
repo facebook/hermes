@@ -46,7 +46,7 @@ print(new C().method());
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.C]: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %method(): functionCode
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "method": string, %7: object
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any, "method": string, %7: object
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %5: object, "prototype": string
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string

@@ -65,7 +65,7 @@ class B extends A {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS1.B]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:object) %1: environment, [%VS1.?A.prototype]: object
 // CHECK-NEXT:  %16 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) "f": string, %16: object
+// CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) empty: any, "f": string, %16: object
 // CHECK-NEXT:        StoreParentInst %15: object, %17: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.?B.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %17: object, %13: object, "prototype": string

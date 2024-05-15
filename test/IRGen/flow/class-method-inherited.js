@@ -53,7 +53,7 @@ new D().inherited();
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.C]: any
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %inherited(): functionCode
-// CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) "inherited": string, %8: object
+// CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) empty: any, "inherited": string, %8: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, %6: object, "prototype": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
@@ -62,7 +62,7 @@ new D().inherited();
 // CHECK-NEXT:        StoreFrameInst %1: environment, %14: object, [%VS1.D]: any
 // CHECK-NEXT:  %16 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
 // CHECK-NEXT:  %17 = PrLoadInst (:object) %16: object, 0: number, "inherited": string
-// CHECK-NEXT:  %18 = AllocObjectLiteralInst (:object) "inherited": string, %17: object
+// CHECK-NEXT:  %18 = AllocObjectLiteralInst (:object) empty: any, "inherited": string, %17: object
 // CHECK-NEXT:        StoreParentInst %16: object, %18: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %18: object, [%VS1.?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %18: object, %14: object, "prototype": string

@@ -48,21 +48,21 @@ function* simple() {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       StoreFrameInst %2: environment, 1: number, [%VS1.idx]: number
 // CHECK-NEXT:       StoreFrameInst %2: environment, 1: number, [%VS1.generator_state]: number
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) "value": string, 42: number, "done": string, false: boolean
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any, "value": string, 42: number, "done": string, false: boolean
 // CHECK-NEXT:       ReturnInst %8: object
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %11: object
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        CmpBrStrictlyEqualInst %1: number, 1: number, %BB9, %BB10
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:  %15 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:  %15 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %15: object
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 3: number, [%VS1.generator_state]: number
-// CHECK-NEXT:  %18 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %18 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %18: object
 // CHECK-NEXT:%BB7:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 3: number, [%VS1.generator_state]: number
@@ -92,9 +92,9 @@ function* simple() {
 // CHECK-NEXT:%BB16:
 // CHECK-NEXT:        CmpBrStrictlyEqualInst %1: number, 2: number, %BB17, %BB18
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %37 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %37 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %37: object
 // CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %39 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:  %39 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %39: object
 // CHECK-NEXT:function_end

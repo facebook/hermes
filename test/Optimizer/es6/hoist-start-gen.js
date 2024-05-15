@@ -115,10 +115,10 @@ function *foo() {
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:        CmpBrStrictlyEqualInst %1: number, 2: number, %BB19, %BB20
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %53 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %53 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %53: object
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %55 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:  %55 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %55: object
 // CHECK-NEXT:%BB21:
 // CHECK-NEXT:        StoreStackInst 3: number, %2: number
@@ -135,15 +135,15 @@ function *foo() {
 // CHECK-NEXT:        StoreFrameInst %4: environment, 1: number, [%VS1.idx]: number
 // CHECK-NEXT:        BranchInst %BB12
 // CHECK-NEXT:%BB24:
-// CHECK-NEXT:  %68 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %68 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %68: object
 // CHECK-NEXT:%BB25:
-// CHECK-NEXT:  %70 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:  %70 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %70: object
 // CHECK-NEXT:%BB26:
-// CHECK-NEXT:  %72 = AllocObjectLiteralInst (:object) "value": string, 0: number, "done": string, false: boolean
+// CHECK-NEXT:  %72 = AllocObjectLiteralInst (:object) empty: any, "value": string, 0: number, "done": string, false: boolean
 // CHECK-NEXT:        ReturnInst %72: object
 // CHECK-NEXT:%BB27:
-// CHECK-NEXT:  %74 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %74 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %74: object
 // CHECK-NEXT:function_end

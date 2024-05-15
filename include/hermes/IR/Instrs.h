@@ -2026,11 +2026,16 @@ class AllocObjectLiteralInst : public Instruction {
   void operator=(const AllocObjectLiteralInst &) = delete;
 
  public:
+  enum { ParentObjectIdx, FirstKeyIdx };
+
   using ObjectPropertyMap = llvh::SmallVector<std::pair<Literal *, Value *>, 4>;
 
-  explicit AllocObjectLiteralInst(const ObjectPropertyMap &propMap)
+  explicit AllocObjectLiteralInst(
+      Value *parentObject,
+      const ObjectPropertyMap &propMap)
       : Instruction(ValueKind::AllocObjectLiteralInstKind) {
     setType(*getInherentTypeImpl());
+    pushOperand(parentObject);
     for (size_t i = 0; i < propMap.size(); i++) {
       pushOperand(propMap[i].first);
       pushOperand(propMap[i].second);
@@ -2057,8 +2062,12 @@ class AllocObjectLiteralInst : public Instruction {
     return {};
   }
 
+  Value *getParentObject() const {
+    return getOperand(ParentObjectIdx);
+  }
+
   unsigned getKeyValuePairCount() const {
-    return getNumOperands() / 2;
+    return (getNumOperands() - FirstKeyIdx) / 2;
   }
 
   static bool classof(const Value *V) {
@@ -2066,12 +2075,16 @@ class AllocObjectLiteralInst : public Instruction {
     return kind == ValueKind::AllocObjectLiteralInstKind;
   }
 
+  static unsigned getKeyOperandIdx(unsigned index) {
+    return 2 * index + FirstKeyIdx;
+  }
+
   Literal *getKey(unsigned index) const {
-    return cast<Literal>(getOperand(2 * index));
+    return cast<Literal>(getOperand(2 * index + FirstKeyIdx));
   }
 
   Value *getValue(unsigned index) const {
-    return getOperand(2 * index + 1);
+    return getOperand(2 * index + 1 + FirstKeyIdx);
   }
 };
 

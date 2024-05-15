@@ -484,6 +484,15 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   builder.setInsertionPoint(allocInst);
   auto *alloc = builder.createHBCAllocObjectFromBufferInst(
       propMap, allocInst->getKeyValuePairCount());
+
+  // HBCAllocObjectFromBuffer does not take a prototype argument. So if the
+  // object has a prototype set, make an explicit call to set it.
+  if (!llvh::isa<EmptySentinel>(allocInst->getParentObject())) {
+    builder.createCallBuiltinInst(
+        BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
+        {alloc, allocInst->getParentObject()});
+  }
+
   allocInst->replaceAllUsesWith(alloc);
   allocInst->eraseFromParent();
 
@@ -533,7 +542,8 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvh::isa<AllocObjectLiteralInst>(&Inst)) {
         auto allocInst = cast<AllocObjectLiteralInst>(&Inst);
         for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
-          changed |= stringToNumericProperty(builder, Inst, i * 2);
+          changed |= stringToNumericProperty(
+              builder, Inst, AllocObjectLiteralInst::getKeyOperandIdx(i));
         }
       }
     }

@@ -1033,8 +1033,10 @@ HBCAllocObjectFromBufferInst *IRBuilder::createHBCAllocObjectFromBufferInst(
 }
 
 AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
-    const AllocObjectLiteralInst::ObjectPropertyMap &propMap) {
-  auto *inst = new AllocObjectLiteralInst(propMap);
+    const AllocObjectLiteralInst::ObjectPropertyMap &propMap,
+    Value *parentObject) {
+  auto *inst = new AllocObjectLiteralInst(
+      parentObject ? parentObject : getEmptySentinel(), propMap);
   insert(inst);
   return inst;
 }

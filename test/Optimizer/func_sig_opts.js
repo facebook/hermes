@@ -235,11 +235,11 @@ function test_async() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadFrameInst (:number) %2: environment, [%VS2.x]: number
 // CHECK-NEXT:       StoreFrameInst %2: environment, 3: number, [%VS2.generator_state]: number
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "value": string, %5: number, "done": string, true: boolean
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any, "value": string, %5: number, "done": string, true: boolean
 // CHECK-NEXT:       ReturnInst %7: object
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       StoreFrameInst %2: environment, 3: number, [%VS2.generator_state]: number
-// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %10: object
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 3: number, [%VS2.generator_state]: number
@@ -262,10 +262,10 @@ function test_async() {
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        CmpBrStrictlyEqualInst %1: number, 2: number, %BB11, %BB12
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %24 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %24 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %24: object
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %26 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:  %26 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %26: object
 // CHECK-NEXT:function_end
 
@@ -292,11 +292,11 @@ function test_async() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %2: environment, [%VS3.x]: any
 // CHECK-NEXT:       StoreFrameInst %2: environment, 3: number, [%VS3.generator_state]: number
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "value": string, %5: any, "done": string, true: boolean
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any, "value": string, %5: any, "done": string, true: boolean
 // CHECK-NEXT:       ReturnInst %7: object
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       StoreFrameInst %2: environment, 3: number, [%VS3.generator_state]: number
-// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %10: object
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        StoreFrameInst %2: environment, 3: number, [%VS3.generator_state]: number
@@ -319,9 +319,9 @@ function test_async() {
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:        CmpBrStrictlyEqualInst %1: number, 2: number, %BB11, %BB12
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %24 = AllocObjectLiteralInst (:object) "value": string, %0: any, "done": string, true: boolean
+// CHECK-NEXT:  %24 = AllocObjectLiteralInst (:object) empty: any, "value": string, %0: any, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %24: object
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %26 = AllocObjectLiteralInst (:object) "value": string, undefined: undefined, "done": string, true: boolean
+// CHECK-NEXT:  %26 = AllocObjectLiteralInst (:object) empty: any, "value": string, undefined: undefined, "done": string, true: boolean
 // CHECK-NEXT:        ReturnInst %26: object
 // CHECK-NEXT:function_end

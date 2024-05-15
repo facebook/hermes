@@ -49,11 +49,11 @@ let j: string;
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.b]: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.i]: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.j]: any
-// CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) "0": string, 2: number, "1": string, "asdf": string
+// CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) empty: any, "0": string, 2: number, "1": string, "asdf": string
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.inner]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS1.inner]: any
 // CHECK-NEXT:  %15 = CheckedTypeCastInst (:object) %14: any, type(object)
-// CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) "0": string, 1: number, "1": string, true: boolean, "2": string, %15: object
+// CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) empty: any, "0": string, 1: number, "1": string, true: boolean, "2": string, %15: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %16: object, [%VS1.outer]: any
 // CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [%VS1.outer]: any
 // CHECK-NEXT:  %19 = CheckedTypeCastInst (:object) %18: any, type(object)

@@ -43,7 +43,7 @@ x[1] = false;
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.y]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.z]: any
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) "0": string, 1: number, "1": string, true: boolean
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any, "0": string, 1: number, "1": string, true: boolean
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS1.x]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %10 = CheckedTypeCastInst (:object) %9: any, type(object)
