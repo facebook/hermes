@@ -1070,12 +1070,18 @@ void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   } else {
     auto bufIndex =
         BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-    if (bufIndex.first <= UINT16_MAX) {
+    if (bufIndex.valueBufferOffset <= UINT16_MAX) {
       BCFGen_->emitNewArrayWithBuffer(
-          encodeValue(Inst), sizeHint, elementCount, bufIndex.first);
+          encodeValue(Inst),
+          sizeHint,
+          elementCount,
+          bufIndex.valueBufferOffset);
     } else {
       BCFGen_->emitNewArrayWithBufferLong(
-          encodeValue(Inst), sizeHint, elementCount, bufIndex.first);
+          encodeValue(Inst),
+          sizeHint,
+          elementCount,
+          bufIndex.valueBufferOffset);
     }
   }
 }
@@ -1104,11 +1110,13 @@ void HBCISel::generateHBCAllocObjectFromBufferInst(
   auto result = encodeValue(Inst);
   auto buffIdxs =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  if (buffIdxs.first <= UINT16_MAX && buffIdxs.second <= UINT16_MAX) {
-    BCFGen_->emitNewObjectWithBuffer(result, buffIdxs.first, buffIdxs.second);
+  if (buffIdxs.shapeTableIdx <= UINT16_MAX &&
+      buffIdxs.valueBufferOffset <= UINT16_MAX) {
+    BCFGen_->emitNewObjectWithBuffer(
+        result, buffIdxs.shapeTableIdx, buffIdxs.valueBufferOffset);
   } else {
     BCFGen_->emitNewObjectWithBufferLong(
-        result, buffIdxs.first, buffIdxs.second);
+        result, buffIdxs.shapeTableIdx, buffIdxs.valueBufferOffset);
   }
 }
 

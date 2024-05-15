@@ -169,7 +169,7 @@ LiteralBufferBuilder::Result Builder::generate() {
         literalOffsetMap.count(Inst) == 0 &&
         "instruction literal can't be serialized twice");
     uint32_t arrayIndexInSet = values_.indexInSet(idx);
-    literalOffsetMap[Inst] = {valView[arrayIndexInSet].getOffset(), UINT32_MAX};
+    literalOffsetMap[Inst] = {UINT32_MAX, valView[arrayIndexInSet].getOffset()};
   }
 
   // This contains all the unique shapes of all the object literals in the
@@ -177,7 +177,7 @@ LiteralBufferBuilder::Result Builder::generate() {
   std::vector<ShapeTableEntry> objShapeTable{};
   // This maps a <keyBufferOffset, numProps> pair to an element index in the
   // object shape table.
-  llvh::DenseMap<std::pair<uint32_t, uint32_t>, size_t> coordToIdx;
+  llvh::DenseMap<std::pair<uint32_t, uint32_t>, uint32_t> coordToIdx;
 
   // Visit all object literals.
   auto keyView = const_cast<const hbc::ConsecutiveStringStorage &>(keyStorage)

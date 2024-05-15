@@ -20,7 +20,14 @@ class Function;
 
 namespace LiteralBufferBuilder {
 
-using LiteralOffset = std::pair<uint32_t, uint32_t>;
+/// Offset information stored per object/array literal instruction.
+struct LiteralOffset {
+  /// Index into the shape table. Unused for array instructions.
+  uint32_t shapeTableIdx;
+  /// Byte offset into the value buffer.
+  uint32_t valueBufferOffset;
+};
+
 using LiteralOffsetMapTy = llvh::DenseMap<const Instruction *, LiteralOffset>;
 
 /// The LiteralBufferBuilder will build this struct as its output.

@@ -1480,7 +1480,7 @@ class InstrGen {
       os_ << "_sh_ljs_new_array_with_buffer(shr, &THIS_UNIT, ";
       os_ << sizeHint << ", ";
       os_ << elementCount << ", ";
-      os_ << bufIndex.first << ")";
+      os_ << bufIndex.valueBufferOffset << ")";
     }
     os_ << ";\n";
   }
