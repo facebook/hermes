@@ -269,7 +269,7 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       CondBranchInst %1: any, %BB2, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined

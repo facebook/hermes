@@ -592,9 +592,6 @@ class TypeInferenceImpl {
     return inst->hasUsers() ? inferMemoryLocationType(inst)
                             : Type::createAnyType();
   }
-  Type inferAllocObjectInst(AllocObjectInst *inst) {
-    return Type::createObject();
-  }
   Type inferAllocArrayInst(AllocArrayInst *inst) {
     return *inst->getInherentType();
   }

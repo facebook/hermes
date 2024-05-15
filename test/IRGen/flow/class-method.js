@@ -27,7 +27,7 @@ print(new C().method());
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
@@ -54,7 +54,7 @@ print(new C().method());
 // CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
 // CHECK-NEXT:  %14 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
 // CHECK-NEXT:  %15 = UnionNarrowTrustedInst (:object) %14: object
-// CHECK-NEXT:  %16 = AllocObjectInst (:object) 0: number, %15: object
+// CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) %15: object
 // CHECK-NEXT:  %17 = LoadParentInst (:object) %16: object
 // CHECK-NEXT:  %18 = PrLoadInst (:object) %17: object, 0: number, "method": string
 // CHECK-NEXT:  %19 = CallInst [njsf] (:any) %18: object, %method(): functionCode, empty: any, undefined: undefined, %16: object

@@ -18,7 +18,7 @@
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 2: number, empty: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %3: object, "10": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %3: object, "11": string, true: boolean
 // CHECK-NEXT:       StoreOwnPropertyInst 3: number, %3: object, "10": string, true: boolean

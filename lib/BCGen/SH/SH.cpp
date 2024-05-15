@@ -1450,20 +1450,6 @@ class InstrGen {
     // This is a no-op.
     os_ << "  // AllocStackInst\n";
   }
-  void generateAllocObjectInst(AllocObjectInst &inst) {
-    os_.indent(2);
-    generateRegister(inst);
-    os_ << " = ";
-    // TODO: Utilize sizeHint.
-    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
-      os_ << "_sh_ljs_new_object(shr)";
-    } else {
-      os_ << "_sh_ljs_new_object_with_parent(shr, &";
-      generateValue(*inst.getParentObject());
-      os_ << ")";
-    }
-    os_ << ";\n";
-  }
   void generateAllocArrayInst(AllocArrayInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -1516,8 +1502,21 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
-    // This instruction should not have reached this far.
-    hermes_fatal("AllocObjectLiteralInst should have been lowered.");
+    assert(
+        inst.getKeyValuePairCount() == 0 &&
+        "AllocObjectLiteralInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    // TODO: Utilize sizeHint.
+    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
+      os_ << "_sh_ljs_new_object(shr)";
+    } else {
+      os_ << "_sh_ljs_new_object_with_parent(shr, &";
+      generateValue(*inst.getParentObject());
+      os_ << ")";
+    }
+    os_ << ";\n";
   }
   void generateCreateArgumentsLooseInst(CreateArgumentsLooseInst &inst) {
     hermes_fatal("CreateArgumentsLooseInst should have been lowered.");

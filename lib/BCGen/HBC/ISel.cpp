@@ -1043,21 +1043,19 @@ void HBCISel::generateStoreFrameInst(StoreFrameInst *Inst, BasicBlock *next) {
 void HBCISel::generateAllocStackInst(AllocStackInst *Inst, BasicBlock *next) {
   // This is a no-op.
 }
-void HBCISel::generateAllocObjectInst(AllocObjectInst *Inst, BasicBlock *next) {
+void HBCISel::generateAllocObjectLiteralInst(
+    AllocObjectLiteralInst *Inst,
+    BasicBlock *) {
   auto result = encodeValue(Inst);
-  // TODO: Utilize sizeHint.
+  assert(
+      Inst->getKeyValuePairCount() == 0 &&
+      "AllocObjectLiteralInst with properties should be lowered to HBCAllocObjectFromBufferInst");
   if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObject(result);
   } else {
     auto parentReg = encodeValue(Inst->getParentObject());
     BCFGen_->emitNewObjectWithParent(result, parentReg);
   }
-}
-void HBCISel::generateAllocObjectLiteralInst(
-    AllocObjectLiteralInst *,
-    BasicBlock *) {
-  // This instruction should not have reached this far.
-  llvm_unreachable("AllocObjectLiteralInst should have been lowered.");
 }
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);

@@ -27,7 +27,7 @@
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 4: number, empty: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreOwnPropertyInst 3: number, %3: object, "x": string, true: boolean
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %5: object, undefined: undefined, %3: object, "y": string, true: boolean

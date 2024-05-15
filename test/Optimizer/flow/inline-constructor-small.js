@@ -31,7 +31,7 @@ print(p1.x, p2.x);
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %Point(): functionCode
-// CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 3: number

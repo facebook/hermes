@@ -280,7 +280,7 @@ Value *ESTreeIRGen::emitClassAllocation(
   // that sets the parent, uses the prop map, etc.
   Value *result;
   if (propMap.empty()) {
-    result = Builder.createAllocObjectInst(0, parent);
+    result = Builder.createAllocObjectLiteralInst({}, parent);
   } else {
     result = Builder.createAllocObjectLiteralInst(propMap);
     if (parent) {

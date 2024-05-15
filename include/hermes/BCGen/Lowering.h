@@ -51,7 +51,6 @@ class LowerAllocObjectLiteral : public FunctionPass {
   bool runOnFunction(Function *F) override;
 
  private:
-  bool lowerAlloc(AllocObjectLiteralInst *allocInst);
   bool lowerAllocObjectBuffer(AllocObjectLiteralInst *allocInst);
 };
 

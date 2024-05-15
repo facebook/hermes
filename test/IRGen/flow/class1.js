@@ -34,7 +34,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dotProduct(): functionCode
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %Vec2D(): functionCode
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
 // CHECK-NEXT:  %5 = AllocFastArrayInst (:object) 2: number
 // CHECK-NEXT:       FastArrayPushInst %1: object, %5: object

@@ -71,7 +71,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.func]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.__proto__]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS1.__proto__]: any
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 3: number, empty: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS1.__proto__]: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst %7: any, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %6: object, "a": string, true: boolean
@@ -89,7 +89,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.func]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.__proto__]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS2.__proto__]: any
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 1: number, empty: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS2.__proto__]: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS2.__proto__]: any
@@ -107,10 +107,10 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.func]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.__proto__]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS3.__proto__]: any
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 1: number, empty: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS3.__proto__]: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst %7: any, %6: object, "__proto__": string, true: boolean
-// CHECK-NEXT:  %9 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: object, %9: object
 // CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
@@ -125,8 +125,8 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.func]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.__proto__]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS4.__proto__]: any
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 0: number, empty: any
-// CHECK-NEXT:  %7 = AllocObjectInst (:object) 1: number, %6: object
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) %6: object
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS4.__proto__]: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst %8: any, %7: object, "__proto__": string, true: boolean
 // CHECK-NEXT:        ReturnInst %7: object

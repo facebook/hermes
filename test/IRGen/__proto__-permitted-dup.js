@@ -80,7 +80,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.func]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, %5: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
 // CHECK-NEXT:       StoreOwnPropertyInst null: null, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       StoreOwnPropertyInst 42: number, %6: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %6: object
@@ -96,7 +96,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.func]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS2.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, %5: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %__proto__(): functionCode
 // CHECK-NEXT:       StoreNewOwnPropertyInst %7: object, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 42: number, %6: object, "a": string, true: boolean
@@ -111,7 +111,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.func]: any
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 2: number, empty: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %"__proto__ 1#"(): functionCode
 // CHECK-NEXT:       StoreNewOwnPropertyInst %5: object, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS3.func]: any
@@ -131,7 +131,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.func]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 1: number, %5: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"get __proto__"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %7: object, undefined: undefined, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       ReturnInst %6: object
@@ -147,7 +147,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.func]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS5.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 1: number, %5: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"set __proto__"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst undefined: undefined, %7: object, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:       ReturnInst %6: object
@@ -161,7 +161,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.func]: any
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 1: number, empty: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %"get __proto__ 1#"(): functionCode
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %"set __proto__ 1#"(): functionCode
 // CHECK-NEXT:       StoreGetterSetterInst %5: object, %6: object, %4: object, "__proto__": string, true: boolean

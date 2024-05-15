@@ -33,18 +33,6 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<AllocFastArrayInst>(Inst))
     return true;
 
-  if (llvh::isa<AllocObjectInst>(Inst)) {
-    // The AllocObjectInst::SizeIdx is a literal.
-    if (opIndex == AllocObjectInst::SizeIdx)
-      return true;
-    // AllocObjectInst::ParentObjectIdx is a literal if it is the EmptySentinel.
-    if (opIndex == AllocObjectInst::ParentObjectIdx &&
-        llvh::isa<EmptySentinel>(Inst->getOperand(opIndex)))
-      return true;
-
-    return false;
-  }
-
   // SwitchInst's rest of the operands are case values,
   // hence they will stay as constant.
   if (llvh::isa<SwitchInst>(Inst) && opIndex > 0)

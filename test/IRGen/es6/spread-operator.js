@@ -39,7 +39,7 @@ function foo(a, b, c) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.b]: any
 // CHECK-NEXT:  %6 = LoadParamInst (:any) %c: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.c]: any
-// CHECK-NEXT:  %8 = AllocObjectInst (:object) 2: number, empty: any
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.a]: any
 // CHECK-NEXT:        StoreNewOwnPropertyInst %9: any, %8: object, "a": string, true: boolean
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.b]: any

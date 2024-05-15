@@ -1906,54 +1906,6 @@ class TryLoadGlobalPropertyInst : public BaseLoadPropertyInst {
   }
 };
 
-class AllocObjectInst : public Instruction {
-  AllocObjectInst(const AllocObjectInst &) = delete;
-  void operator=(const AllocObjectInst &) = delete;
-
- public:
-  enum { SizeIdx, ParentObjectIdx };
-
-  uint32_t getSize() const {
-    return cast<LiteralNumber>(getOperand(SizeIdx))->asUInt32();
-  }
-
-  Value *getParentObject() const {
-    return getOperand(ParentObjectIdx);
-  }
-
-  explicit AllocObjectInst(LiteralNumber *size, Value *parentObject)
-      : Instruction(ValueKind::AllocObjectInstKind) {
-    setType(*getInherentTypeImpl());
-    assert(size->isUInt32Representible() && "size must be uint32");
-    pushOperand(size);
-    pushOperand(parentObject);
-  }
-  explicit AllocObjectInst(
-      const AllocObjectInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createObject();
-  }
-
-  static bool hasOutput() {
-    return true;
-  }
-  static bool isTyped() {
-    return false;
-  }
-
-  SideEffect getSideEffectImpl() const {
-    return {};
-  }
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::AllocObjectInstKind;
-  }
-};
-
 class HBCAllocObjectFromBufferInst : public Instruction {
   HBCAllocObjectFromBufferInst(const HBCAllocObjectFromBufferInst &) = delete;
   void operator=(const HBCAllocObjectFromBufferInst &) = delete;

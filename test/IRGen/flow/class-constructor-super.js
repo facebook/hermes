@@ -32,7 +32,7 @@ new D();
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
@@ -51,7 +51,7 @@ new D();
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.D]: any
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.C]: any
-// CHECK-NEXT:  %8 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %6: object, "prototype": string
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
@@ -59,14 +59,14 @@ new D();
 // CHECK-NEXT:  %13 = CreateFunctionInst (:object) %1: environment, %D(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS1.D]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
-// CHECK-NEXT:  %16 = AllocObjectInst (:object) 0: number, %15: object
+// CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) %15: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %16: object, [%VS1.?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %16: object, %13: object, "prototype": string
 // CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS1.D]: any
 // CHECK-NEXT:  %20 = CheckedTypeCastInst (:object) %19: any, type(object)
 // CHECK-NEXT:  %21 = LoadFrameInst (:object) %1: environment, [%VS1.?D.prototype]: object
 // CHECK-NEXT:  %22 = UnionNarrowTrustedInst (:object) %21: object
-// CHECK-NEXT:  %23 = AllocObjectInst (:object) 0: number, %22: object
+// CHECK-NEXT:  %23 = AllocObjectLiteralInst (:object) %22: object
 // CHECK-NEXT:  %24 = CallInst (:any) %20: object, %D(): functionCode, empty: any, %20: object, %23: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

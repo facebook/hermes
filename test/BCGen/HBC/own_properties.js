@@ -39,7 +39,7 @@ function foo() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = AllocObjectInst (:object) 5: number, empty: any
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %3 = HBCLoadConstInst (:number) 1: number
 // CHECK-NEXT:       StoreNewOwnPropertyInst %3: number, %2: object, "a": string, true: boolean
 // CHECK-NEXT:  %5 = HBCLoadConstInst (:number) 2: number

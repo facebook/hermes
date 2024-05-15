@@ -212,7 +212,7 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS6.x]: any
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS6.x]: any
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any

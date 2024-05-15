@@ -70,7 +70,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.func]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, %5: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %6: object, "a": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %6: object, "b": string, true: boolean
 // CHECK-NEXT:       ReturnInst %6: object
@@ -82,7 +82,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHECK-NEXT:  %2 = AllocObjectInst (:object) 1: number, null: null
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) null: null
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %2: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
@@ -93,7 +93,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHECK-NEXT:  %2 = AllocObjectInst (:object) 1: number, 10: number
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) 10: number
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %2: object, "b": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
@@ -104,7 +104,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
-// CHECK-NEXT:  %2 = AllocObjectInst (:object) 1: number, null: null
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) null: null
 // CHECK-NEXT:       StoreNewOwnPropertyInst 4: number, %2: object, "c": string, true: boolean
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
@@ -119,7 +119,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.func]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %getParent: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS5.getParent]: any
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, empty: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS5.func]: any
 // CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreNewOwnPropertyInst %8: any, %6: object, "a": string, true: boolean

@@ -77,7 +77,7 @@ class InstructionEscapeAnalysisTest : public ::testing::Test {
   //   Just calls the InstructionEscapeAnalysis function.
 
   Instruction *createInstruction() {
-    return builder_.createAllocObjectInst(1);
+    return builder_.createAllocObjectLiteralInst();
   }
   Instruction *createInstruction(Value *dependency) {
     return builder_.createAsNumberInst(dependency);

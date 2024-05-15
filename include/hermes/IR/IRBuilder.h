@@ -455,10 +455,6 @@ class IRBuilder {
       Value *storedValue,
       Identifier property);
 
-  AllocObjectInst *createAllocObjectInst(
-      uint32_t size,
-      Value *parent = nullptr);
-
   AllocObjectLiteralInst *createAllocObjectLiteralInst(
       const AllocObjectLiteralInst::ObjectPropertyMap &propMap = {},
       Value *parentObject = nullptr);

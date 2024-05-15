@@ -33,7 +33,7 @@ new D().inherited();
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
@@ -70,7 +70,7 @@ new D().inherited();
 // CHECK-NEXT:  %23 = CheckedTypeCastInst (:object) %22: any, type(object)
 // CHECK-NEXT:  %24 = LoadFrameInst (:object) %1: environment, [%VS1.?D.prototype]: object
 // CHECK-NEXT:  %25 = UnionNarrowTrustedInst (:object) %24: object
-// CHECK-NEXT:  %26 = AllocObjectInst (:object) 0: number, %25: object
+// CHECK-NEXT:  %26 = AllocObjectLiteralInst (:object) %25: object
 // CHECK-NEXT:  %27 = CallInst (:any) %23: object, %D(): functionCode, empty: any, %23: object, %26: object
 // CHECK-NEXT:  %28 = LoadParentInst (:object) %26: object
 // CHECK-NEXT:  %29 = PrLoadInst (:object) %28: object, 0: number, "inherited": string

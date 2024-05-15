@@ -27,7 +27,7 @@ namespace {
 /// Define a type for managing lists of StoreNewOwnPropertyInsts.
 using StoreList = llvh::SmallVector<StoreNewOwnPropertyInst *, 4>;
 /// Define a type for mapping a given basic block to the stores to a given
-/// AllocObjectInst in that basic block.
+/// AllocObjectLiteralInst in that basic block.
 using BlockUserMap = llvh::DenseMap<BasicBlock *, StoreList>;
 
 /// Starting from the given \p entry block, use the given DominanceInfo to
@@ -109,7 +109,7 @@ static llvh::SmallVector<BasicBlock *, 4> orderBlocksByDominance(
 /// \return an ordered list of stores to \p allocInst that are known to
 /// always execute without any other intervening users.
 StoreList collectStores(
-    AllocObjectInst *allocInst,
+    AllocObjectLiteralInst *allocInst,
     const BlockUserMap &userBasicBlockMap,
     const DominanceInfo &DI) {
   // Sort the basic blocks that contain users of allocInst by dominance.
@@ -139,7 +139,7 @@ StoreList collectStores(
 ///    users of the allocInst. Any stores to a numeric property key should
 ///    appear *after* nonnumeric stores
 bool mergeStoresToObjectLiteral(
-    AllocObjectInst *allocInst,
+    AllocObjectLiteralInst *allocInst,
     const StoreList &users) {
   uint32_t size = users.size();
   // Skip processing for objects that have no new stores.
@@ -196,37 +196,45 @@ bool mergeNewStores(Function *F) {
   /// store to \p A. If so, append it to \p stores, if not, append nullptr to
   /// indicate that subsequent users in the basic block should not be
   /// considered.
-  auto tryAdd = [](AllocObjectInst *A, Instruction *U, StoreList &stores) {
-    // If the store list has been terminated by a nullptr, we have already
-    // encountered a non-SNOP user of A in this block. Ignore this user.
-    if (!stores.empty() && !stores.back())
-      return;
-    auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(U);
-    if (!SI || SI->getStoredValue() == A || !SI->getIsEnumerable()) {
-      // A user that's not a StoreNewOwnPropertyInst storing into the object
-      // created by allocInst. We have to stop processing here. Note that we
-      // check the stored value instead of the target object so that we omit
-      // the case where an object is stored into itself. While it should
-      // technically be safe, this maintains the invariant that stop as soon
-      // the allocated object is used as something other than the target of a
-      // StoreNewOwnPropertyInst.
-      stores.push_back(nullptr);
-    } else {
-      assert(
-          SI->getObject() == A &&
-          "SNOP using allocInst must use it as object or value");
-      stores.push_back(SI);
-    }
-  };
+  auto tryAdd =
+      [](AllocObjectLiteralInst *A, Instruction *U, StoreList &stores) {
+        // If the store list has been terminated by a nullptr, we have already
+        // encountered a non-SNOP user of A in this block. Ignore this user.
+        if (!stores.empty() && !stores.back())
+          return;
+        auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(U);
+        if (!SI || SI->getStoredValue() == A || !SI->getIsEnumerable()) {
+          // A user that's not a StoreNewOwnPropertyInst storing into the object
+          // created by allocInst. We have to stop processing here. Note that we
+          // check the stored value instead of the target object so that we omit
+          // the case where an object is stored into itself. While it should
+          // technically be safe, this maintains the invariant that stop as soon
+          // the allocated object is used as something other than the target of
+          // a StoreNewOwnPropertyInst.
+          stores.push_back(nullptr);
+        } else {
+          assert(
+              SI->getObject() == A &&
+              "SNOP using allocInst must use it as object or value");
+          stores.push_back(SI);
+        }
+      };
 
   // For each basic block, collect an ordered list of stores into
   // AllocObjectInsts that should be considered for lowering into a buffer.
-  llvh::DenseMap<AllocObjectInst *, BlockUserMap> allocUsers;
-  for (BasicBlock &BB : *F)
-    for (Instruction &I : BB)
-      for (size_t i = 0; i < I.getNumOperands(); ++i)
-        if (auto *A = llvh::dyn_cast<AllocObjectInst>(I.getOperand(i)))
-          tryAdd(A, &I, allocUsers[A][&BB]);
+  llvh::DenseMap<AllocObjectLiteralInst *, BlockUserMap> allocUsers;
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      for (size_t i = 0; i < I.getNumOperands(); ++i) {
+        if (auto *A = llvh::dyn_cast<AllocObjectLiteralInst>(I.getOperand(i))) {
+          // For now, we only consider merging StoreNewOwnPropertyInsts that are
+          // writing into an empty object to start.
+          if (A->getKeyValuePairCount() == 0)
+            tryAdd(A, &I, allocUsers[A][&BB]);
+        }
+      }
+    }
+  }
 
   bool changed = false;
   DominanceInfo DI(F);

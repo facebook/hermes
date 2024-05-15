@@ -963,11 +963,6 @@ bool Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
   return true;
 }
 
-bool Verifier::visitAllocObjectInst(const hermes::AllocObjectInst &Inst) {
-  // Nothing to verify at this point.
-  return true;
-}
-
 bool Verifier::visitAllocFastArrayInst(const hermes::AllocFastArrayInst &Inst) {
   LiteralNumber *size = Inst.getCapacity();
   AssertIWithMsg(
@@ -1320,10 +1315,6 @@ bool Verifier::visitHBCAllocObjectFromBufferInst(
 
 bool Verifier::visitAllocObjectLiteralInst(
     const hermes::AllocObjectLiteralInst &Inst) {
-  AssertIWithMsg(
-      Inst,
-      Inst.getKeyValuePairCount() > 0,
-      "Cannot allocate an empty AllocObjectLiteralInst");
   return true;
 }
 

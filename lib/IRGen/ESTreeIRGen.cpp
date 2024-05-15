@@ -860,14 +860,10 @@ void ESTreeIRGen::emitRestProperty(
   if (excludedItems.empty()) {
     excludedObj = Builder.getLiteralUndefined();
   } else {
-    // This size is only a hint as the true size may change if there are
-    // duplicates when computedExcludedItems is processed at run-time.
-    auto excludedSizeHint =
-        literalExcludedItems.size() + computedExcludedItems.size();
     // Explicitly set the prototype for the object created here so it isn't
     // initialized to Object.prototype, which may be modified by the user.
-    excludedObj = Builder.createAllocObjectInst(
-        excludedSizeHint, Builder.getLiteralNull());
+    excludedObj =
+        Builder.createAllocObjectLiteralInst({}, Builder.getLiteralNull());
 
     for (Literal *key : literalExcludedItems)
       Builder.createStoreNewOwnPropertyInst(
@@ -880,7 +876,7 @@ void ESTreeIRGen::emitRestProperty(
 
   auto *restValue = genBuiltinCall(
       BuiltinMethod::HermesBuiltin_copyDataProperties,
-      {Builder.createAllocObjectInst(0), source, excludedObj});
+      {Builder.createAllocObjectLiteralInst(), source, excludedObj});
 
   lref.emitStore(restValue);
 }

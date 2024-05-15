@@ -37,12 +37,12 @@ new Foo();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.?O.prototype]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %O(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %4: object, "prototype": string
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %Foo(): functionCode
-// CHECK-NEXT:  %7 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
 // CHECK-NEXT:  %9 = HBCAllocObjectFromBufferInst (:object) 3: number, "o0": string, 0: number, "o1": string, 0: number, "o2": string, 0: number
 // CHECK-NEXT:        StoreParentInst %7: object, %9: object

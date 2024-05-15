@@ -26,10 +26,10 @@ exports.next = next
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %1 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %next(): functionCode
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %Cls(): functionCode
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %4: object, %3: object, "prototype": string
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "next": string
 // CHECK-NEXT:       ReturnInst undefined: undefined

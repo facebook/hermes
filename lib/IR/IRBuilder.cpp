@@ -660,15 +660,6 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
       storedValue, getLiteralString(property));
 }
 
-AllocObjectInst *IRBuilder::createAllocObjectInst(
-    uint32_t size,
-    Value *parent) {
-  auto AOI = new AllocObjectInst(
-      M->getLiteralNumber(size), parent ? parent : getEmptySentinel());
-  insert(AOI);
-  return AOI;
-}
-
 AllocFastArrayInst *IRBuilder::createAllocFastArrayInst(
     LiteralNumber *sizeHint) {
   auto A = new AllocFastArrayInst(sizeHint);

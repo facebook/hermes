@@ -42,12 +42,12 @@ const s: string = i2.val;
 // CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.ID#2]: any
 // CHECK-NEXT:  %11 = CreateFunctionInst (:object) %1: environment, %ID(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.ID#1]: any
-// CHECK-NEXT:  %13 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %13 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS1.?ID.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %13: object, %11: object, "prototype": string
 // CHECK-NEXT:  %16 = CreateFunctionInst (:object) %1: environment, %"ID 1#"(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %16: object, [%VS1.ID#2]: any
-// CHECK-NEXT:  %18 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %18 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %18: object, [%VS1.?ID.prototype#1]: object
 // CHECK-NEXT:        StorePropertyStrictInst %18: object, %16: object, "prototype": string
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) %1: environment, [%VS1.ID#1]: any

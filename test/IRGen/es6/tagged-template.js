@@ -188,7 +188,7 @@ function helloWorld() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS7.obj]: any
-// CHECK-NEXT:  %3 = AllocObjectInst (:object) 1: number, empty: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "dummy": string
 // CHECK-NEXT:       StoreNewOwnPropertyInst %4: any, %3: object, "func": string, true: boolean
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS7.obj]: any

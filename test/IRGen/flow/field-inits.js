@@ -61,7 +61,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %4 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
@@ -86,14 +86,14 @@ function f(i: number): number {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.<fieldInitFuncVar:A>]: object
 // CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %A(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.A]: any
-// CHECK-NEXT:  %14 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %14: object, [%VS1.?A.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %14: object, %12: object, "prototype": string
 // CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %<instance_members_initializer:B>(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.<fieldInitFuncVar:B>]: object
 // CHECK-NEXT:  %19 = CreateFunctionInst (:object) %1: environment, %B(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %19: object, [%VS1.B]: any
-// CHECK-NEXT:  %21 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %21 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %21: object, [%VS1.?B.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %21: object, %19: object, "prototype": string
 // CHECK-NEXT:  %24 = CreateFunctionInst (:object) %1: environment, %<instance_members_initializer:C0>(): functionCode
@@ -133,7 +133,7 @@ function f(i: number): number {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS2.<fieldInitFuncVar:A>]: object
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %"A 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS2.A]: any
-// CHECK-NEXT:  %10 = AllocObjectInst (:object) 0: number, empty: any
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS2.?A.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %10: object, %8: object, "prototype": string
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS2.A]: any

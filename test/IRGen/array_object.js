@@ -44,7 +44,7 @@ function foo(param) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.param]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.obj]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
-// CHECK-NEXT:  %6 = AllocObjectInst (:object) 2: number, empty: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %6: object, "1": string, true: boolean
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.param]: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst %8: any, %6: object, "key": string, true: boolean

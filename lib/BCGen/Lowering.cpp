@@ -148,29 +148,6 @@ bool LowerAllocObjectLiteral::runOnFunction(Function *F) {
   return changed;
 }
 
-bool LowerAllocObjectLiteral::lowerAlloc(AllocObjectLiteralInst *allocInst) {
-  Function *F = allocInst->getParent()->getParent();
-  IRBuilder builder(F);
-
-  auto size = allocInst->getKeyValuePairCount();
-
-  // Replace AllocObjectLiteral with a regular AllocObject
-  builder.setLocation(allocInst->getLocation());
-  builder.setInsertionPoint(allocInst);
-  auto *Obj = builder.createAllocObjectInst(size, nullptr);
-
-  for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    builder.createStoreNewOwnPropertyInst(
-        value, allocInst, key, IRBuilder::PropEnumerable::Yes);
-  }
-  allocInst->replaceAllUsesWith(Obj);
-  allocInst->eraseFromParent();
-
-  return true;
-}
-
 bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
     AllocObjectLiteralInst *allocInst) {
   Function *F = allocInst->getParent()->getParent();
@@ -183,7 +160,7 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   // Should not create HBCAllocObjectFromBufferInst for an object with 0
   // properties.
   if (size == 0) {
-    return lowerAlloc(allocInst);
+    return false;
   }
 
   // Replace AllocObjectLiteral with HBCAllocObjectFromBufferInst

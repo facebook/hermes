@@ -1373,8 +1373,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   }
 
   // Allocate a new javascript object on the heap.
-  auto Obj =
-      Builder.createAllocObjectInst(propMap.size() + numComputed, objectParent);
+  auto Obj = Builder.createAllocObjectLiteralInst({}, objectParent);
 
   // haveSeenComputedProp tracks whether we have processed a computed property.
   // Once we do, for all future properties, we can no longer generate
@@ -1616,8 +1615,8 @@ Value *ESTreeIRGen::genTypedObjectExpr(
   }
 
   Value *result = propMap.empty()
-      ? static_cast<Value *>(Builder.createAllocObjectInst(0))
-      : static_cast<Value *>(Builder.createAllocObjectLiteralInst(propMap));
+      ? Builder.createAllocObjectLiteralInst()
+      : Builder.createAllocObjectLiteralInst(propMap);
 
   // Store the remaining non-literal properties.
   for (const auto &[name, valueAndIdx] : storedValues) {
