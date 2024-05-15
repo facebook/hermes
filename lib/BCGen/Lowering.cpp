@@ -301,50 +301,53 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
   Function *F = allocInst->getParent()->getParent();
   IRBuilder builder(F);
   HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map;
+  bool hasSeenNumericProp = false;
   for (uint32_t i = 0; i < size; ++i) {
     StoreNewOwnPropertyInst *I = users[i];
-    Literal *propLiteral = nullptr;
     // Property name can be either a LiteralNumber or a LiteralString.
-    if (auto *LN = llvh::dyn_cast<LiteralNumber>(I->getProperty())) {
+    Literal *propKey = cast<Literal>(I->getProperty());
+    if (auto *keyStr = llvh::dyn_cast<LiteralString>(propKey)) {
       assert(
-          LN->convertToArrayIndex() &&
-          "LiteralNumber can be a property name only if it can be converted to array index.");
-      propLiteral = LN;
-    } else {
-      propLiteral = cast<LiteralString>(I->getProperty());
+          !toArrayIndex(keyStr->getValue().str()).hasValue() &&
+          "LiteralString that looks like an array index should have been converted to a number.");
     }
+    auto *propVal = I->getStoredValue();
+    bool isNumericKey = llvh::isa<LiteralNumber>(propKey);
+    hasSeenNumericProp |= isNumericKey;
 
     auto *loadInst = llvh::dyn_cast<HBCLoadConstInst>(I->getStoredValue());
     // Not counting undefined as literal since the parser doesn't
     // support it.
     if (canSerialize(loadInst)) {
       prop_map.push_back(
-          std::pair<Literal *, Literal *>(propLiteral, loadInst->getConst()));
+          std::pair<Literal *, Literal *>(propKey, loadInst->getConst()));
       I->eraseFromParent();
-    } else if (llvh::isa<LiteralString>(propLiteral)) {
-      // This index is used to write the unserializable value directly into the
-      // correct slot after the object is created from the buffer.
-      size_t curSlotIdx = prop_map.size();
-      // If prop is a literal number, there is no need to put it into the
-      // buffer or change the instruction.
-      // Otherwise, use null as placeholder, and
-      // later a PutById instruction will overwrite it with correct value.
-      prop_map.push_back(std::pair<Literal *, Literal *>(
-          propLiteral, builder.getLiteralNull()));
-
-      // Since we will be defining this property twice, once in the buffer
-      // once setting the correct value later, we can no longer use
-      // StoreNewOwnPropertyInst. Replace this instruction with
-      // StorePropertyInst.
+    } else {
+      // Use null as placeholder.
+      prop_map.push_back({propKey, builder.getLiteralNull()});
       builder.setLocation(I->getLocation());
       builder.setInsertionPoint(I);
-      auto *PSI = builder.createPrStoreInst(
-          I->getStoredValue(),
-          I->getObject(),
-          curSlotIdx,
-          cast<LiteralString>(propLiteral),
-          I->getStoredValue()->getType().isNonPtr());
-      I->replaceAllUsesWith(PSI);
+      // Patch the object with the correct value.
+      Instruction *patchingInst = nullptr;
+      if (hasSeenNumericProp) {
+        if (isNumericKey) {
+          patchingInst = builder.createStoreOwnPropertyInst(
+              propVal, allocInst, propKey, IRBuilder::PropEnumerable::Yes);
+        } else {
+          // For non-numeric keys, StorePropertyInst is more efficient because
+          // it can be cached off the string ID.
+          patchingInst =
+              builder.createStorePropertyInst(propVal, allocInst, propKey);
+        }
+      } else {
+        patchingInst = builder.createPrStoreInst(
+            propVal,
+            I->getObject(),
+            i,
+            cast<LiteralString>(propKey),
+            propVal->getType().isNonPtr());
+      }
+      I->replaceAllUsesWith(patchingInst);
       I->eraseFromParent();
     }
   }
@@ -432,56 +435,47 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   builder.setInsertionPointAfter(allocInst);
   HBCAllocObjectFromBufferInst::ObjectPropertyMap propMap;
 
-  unsigned i = 0;
-  for (; i < size; i++) {
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    Literal *propLiteral = nullptr;
-    // Property name can be either a LiteralNumber or a LiteralString.
-    if (auto *LN = llvh::dyn_cast<LiteralNumber>(key)) {
+  bool hasSeenNumericProp = false;
+  for (unsigned i = 0; i < size; i++) {
+    Literal *propKey = allocInst->getKey(i);
+    if (auto *keyStr = llvh::dyn_cast<LiteralString>(propKey)) {
       assert(
-          LN->convertToArrayIndex() &&
-          "LiteralNumber can be a property name only if it can be converted to array index.");
-      propLiteral = LN;
-    } else {
-      propLiteral = cast<LiteralString>(key);
+          !toArrayIndex(keyStr->getValue().str()).hasValue() &&
+          "LiteralString that looks like an array index should have been converted to a number.");
     }
-
-    if (SerializedLiteralGenerator::isSerializableLiteral(value)) {
-      propMap.push_back(std::pair<Literal *, Literal *>(
-          propLiteral, llvh::cast<Literal>(value)));
-    } else if (llvh::isa<LiteralString>(propLiteral)) {
-      // We will be adding in this property to the buffer with a placeholder
-      // value, which we should patch with the correct value after object
-      // construction. We can do this using PrStore, since we know the shape of
-      // the object. The slot index to use for this property is the current
-      // propMap size, since that is where there property will sit once we
-      // insert it into the map.
-      builder.createPrStoreInst(
-          value,
-          allocInst,
-          propMap.size(),
-          cast<LiteralString>(propLiteral),
-          value->getType().isNonPtr());
-      // LiteralString key with undefined / non-constant value.
-      propMap.push_back(std::pair<Literal *, Literal *>(
-          propLiteral, builder.getLiteralNull()));
+    Value *propVal = allocInst->getValue(i);
+    bool isNumericKey = llvh::isa<LiteralNumber>(propKey);
+    hasSeenNumericProp |= isNumericKey;
+    if (SerializedLiteralGenerator::isSerializableLiteral(propVal)) {
+      propMap.push_back({propKey, llvh::cast<Literal>(propVal)});
     } else {
-      // LiteralNumber key with undefined / non-constant value.
-      // No need to put Null in the buffer, as numeric properties can
-      // be added in any order.
-      builder.createStoreOwnPropertyInst(
-          value, allocInst, key, IRBuilder::PropEnumerable::Yes);
+      // Add the literal key in with a dummy placeholder value.
+      propMap.push_back(
+          std::pair<Literal *, Literal *>(propKey, builder.getLiteralNull()));
+      // Patch the placeholder with the correct value.
+      if (hasSeenNumericProp) {
+        // We don't assume the runtime storage and layout of numeric properties.
+        // So, if we have encountered a numeric property, we cannot store
+        // directly into a slot.
+        if (isNumericKey) {
+          builder.createStoreOwnPropertyInst(
+              propVal, allocInst, propKey, IRBuilder::PropEnumerable::Yes);
+        } else {
+          // For non-numeric keys, StorePropertyInst is more efficient because
+          // it can be cached off the string ID.
+          builder.createStorePropertyInst(propVal, allocInst, propKey);
+        }
+      } else {
+        // If we haven't encountered a numeric property, we can store
+        // directly into a slot.
+        builder.createPrStoreInst(
+            propVal,
+            allocInst,
+            i,
+            cast<LiteralString>(propKey),
+            propVal->getType().isNonPtr());
+      }
     }
-  }
-
-  // Handle properties beyond best num of properties or that cannot fit in
-  // maxSize.
-  for (; i < allocInst->getKeyValuePairCount(); i++) {
-    Literal *key = allocInst->getKey(i);
-    Value *value = allocInst->getValue(i);
-    builder.createStoreNewOwnPropertyInst(
-        value, allocInst, key, IRBuilder::PropEnumerable::Yes);
   }
 
   // Emit HBCAllocObjectFromBufferInst.

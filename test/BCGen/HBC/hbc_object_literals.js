@@ -92,11 +92,11 @@ var obj4 = {
 // IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 4: number, "e": string, true: boolean
 // IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 5: number, "r": string, true: boolean
 // IRGEN-NEXT:        StorePropertyLooseInst %12: object, %10: object, "obj2": string
-// IRGEN-NEXT:  %20 = HBCAllocObjectFromBufferInst (:object) 13: number, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:        StoreNewOwnPropertyInst %5: undefined, %20: object, 1: number, true: boolean
+// IRGEN-NEXT:  %20 = HBCAllocObjectFromBufferInst (:object) 13: number, 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:        StoreOwnPropertyInst %5: undefined, %20: object, 1: number, true: boolean
 // IRGEN-NEXT:        StorePropertyLooseInst %20: object, %10: object, "obj3": string
-// IRGEN-NEXT:  %23 = HBCAllocObjectFromBufferInst (:object) 13: number, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:        StoreNewOwnPropertyInst %5: undefined, %23: object, 1: number, true: boolean
+// IRGEN-NEXT:  %23 = HBCAllocObjectFromBufferInst (:object) 13: number, 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:        StoreOwnPropertyInst %5: undefined, %23: object, 1: number, true: boolean
 // IRGEN-NEXT:        StorePropertyLooseInst %23: object, %10: object, "obj4": string
 // IRGEN-NEXT:        ReturnInst %5: undefined
 // IRGEN-NEXT:function_end
@@ -175,6 +175,19 @@ var obj4 = {
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:null
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:Object Key Buffer:
 // BCGEN-NEXT:[String 3]
 // BCGEN-NEXT:[String 9]
@@ -201,6 +214,7 @@ var obj4 = {
 // BCGEN-NEXT:[String 6]
 // BCGEN-NEXT:[String 21]
 // BCGEN-NEXT:[String 22]
+// BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[String 13]
 // BCGEN-NEXT:[String 2]
 // BCGEN-NEXT:[String 5]
@@ -216,7 +230,7 @@ var obj4 = {
 // BCGEN-NEXT:Object Shape Table:
 // BCGEN-NEXT:0[0, 7]
 // BCGEN-NEXT:1[8, 18]
-// BCGEN-NEXT:2[28, 12]
+// BCGEN-NEXT:2[28, 13]
 // BCGEN-NEXT:Function<global>(1 params, 4 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
@@ -239,10 +253,10 @@ var obj4 = {
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 4
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 5
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "obj2"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 16
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 65
 // BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "obj3"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 16
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 65
 // BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
 // BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "obj4"
 // BCGEN-NEXT:    Ret               r0

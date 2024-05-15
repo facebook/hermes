@@ -91,9 +91,9 @@ function accessorObjectLiteral(func) {
 
 // IRGEN:function numericPlaceholder(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "c": string, "hello": string, "d": string, null: null
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, 42: number, null: null, "c": string, "hello": string, "d": string, null: null
 // IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 2: number, 1: number, 100: number, 2: number, 200: number
-// IRGEN-NEXT:       StoreNewOwnPropertyInst %1: object, %0: object, 42: number, true: boolean
+// IRGEN-NEXT:       StoreOwnPropertyInst %1: object, %0: object, 42: number, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
