@@ -30,7 +30,6 @@ add_hermes_library(hermesHBCBackend
   hermesRegex
   hermesSourceMap
   hermesAST
-  hermesPublic
 )
 
 add_hermes_library(hermesHBCBackendLean
@@ -41,7 +40,6 @@ add_hermes_library(hermesHBCBackendLean
   UniquingFilenameTable.cpp
   LINK_OBJLIBS
   hermesSupport
-  hermesPublic
 )
 
 target_compile_definitions(hermesHBCBackendLean_obj PUBLIC HERMESVM_LEAN)

@@ -18,5 +18,4 @@ add_hermes_library(hermesSHBackend
   hermesInst
   hermesSourceMap
   hermesAST
-  hermesPublic
 )

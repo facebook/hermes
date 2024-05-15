@@ -12,7 +12,6 @@
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/StreamVector.h"
 #include "hermes/BCGen/HBC/UniquingFilenameTable.h"
-#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/LEB128.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTable.h"
@@ -31,6 +30,9 @@ namespace hermes {
 class SourceMapGenerator;
 namespace hbc {
 
+/// Represent an invalid sourceMappingUrl index.
+constexpr uint32_t kInvalidSourceMappingUrlId = 0;
+
 /// The file name, line and column associated with a bytecode address.
 struct DebugSourceLocation {
   // The bytecode offset of this debug info.
@@ -38,8 +40,8 @@ struct DebugSourceLocation {
   // The filename index in the filename table.
   uint32_t filenameId{0};
   // The sourceMappingUrl index in the string table.
-  // Use kInvalidBreakpoint for an invalid URL.
-  uint32_t sourceMappingUrlId{facebook::hermes::debugger::kInvalidBreakpoint};
+  // Use kInvalidSourceMappingUrlId for an invalid URL.
+  uint32_t sourceMappingUrlId{kInvalidSourceMappingUrlId};
   // The line count, 1 based.
   uint32_t line{0};
   // The column count, 1 based.

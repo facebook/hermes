@@ -439,7 +439,7 @@ inline FileAndSourceMapId HBCISel::obtainFileAndSourceMapId(
   // it was already encoded in the top level module, and it could be a 1MB+
   // data url that we don't want to duplicate once per function.
   if (sourceMappingUrl.empty()) {
-    currentSourceMappingUrlId = facebook::hermes::debugger::kInvalidBreakpoint;
+    currentSourceMappingUrlId = kInvalidSourceMappingUrlId;
   } else {
     // NOTE: this is potentially a very expensive operation, since the source
     // mapping URL could be many megabytes (when it is a data URL). Looking it

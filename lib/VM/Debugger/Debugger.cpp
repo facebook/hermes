@@ -1337,7 +1337,7 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
 
     for (const auto &file : debugInfo->viewFiles()) {
       if (resolveScriptId(&runtimeModule, file.filenameId) == scriptId) {
-        if (file.sourceMappingUrlId == fhd::kInvalidBreakpoint) {
+        if (file.sourceMappingUrlId == hbc::kInvalidSourceMappingUrlId) {
           return "";
         }
         return getFileNameAsUTF8(
