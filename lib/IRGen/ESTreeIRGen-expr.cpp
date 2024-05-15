@@ -1622,13 +1622,16 @@ Value *ESTreeIRGen::genTypedObjectExpr(
   // Store the remaining non-literal properties.
   for (const auto &[name, valueAndIdx] : storedValues) {
     const auto &[storedValue, idx] = valueAndIdx;
-    if (storedValue)
+    if (storedValue) {
+      // We only put strings into propMap.
+      auto *name = llvh::cast<LiteralString>(propMap[idx].first);
       Builder.createPrStoreInst(
           storedValue,
           result,
           idx,
-          propMap[idx].first,
+          name,
           flowTypeToIRType(type->getFields()[idx].type).isNonPtr());
+    }
   }
 
   return result;

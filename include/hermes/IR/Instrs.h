@@ -2026,8 +2026,7 @@ class AllocObjectLiteralInst : public Instruction {
   void operator=(const AllocObjectLiteralInst &) = delete;
 
  public:
-  using ObjectPropertyMap =
-      llvh::SmallVector<std::pair<LiteralString *, Value *>, 4>;
+  using ObjectPropertyMap = llvh::SmallVector<std::pair<Literal *, Value *>, 4>;
 
   explicit AllocObjectLiteralInst(const ObjectPropertyMap &propMap)
       : Instruction(ValueKind::AllocObjectLiteralInstKind) {
