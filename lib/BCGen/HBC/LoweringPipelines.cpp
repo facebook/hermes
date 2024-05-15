@@ -58,9 +58,6 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(new LoadConstants());
   if (options.optimizationEnabled) {
     PM.addPass(createOptParentEnvironment());
-    // Lowers AllocObjects and its sequential literal properties into a single
-    // HBCAllocObjectFromBufferInst
-    PM.addPass(new LowerAllocObject());
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());
     // Turn Calls into CallNs.

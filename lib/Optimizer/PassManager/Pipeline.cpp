@@ -66,6 +66,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addFunctionAnalysis();
   PM.addInlining();
   PM.addDCE();
+  PM.addObjectMergeNewStores();
   PM.addObjectStackPromotion();
   PM.addTypeInference();
   PM.addSimpleStackPromotion();

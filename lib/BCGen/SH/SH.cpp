@@ -2394,9 +2394,6 @@ bool lowerModuleIR(Module *M, bool optimize) {
   PM.addPass(sh::createLoadConstants());
   PM.addPass(createLowerScopes());
   if (optimize) {
-    // Lowers AllocObjects and its sequential literal properties into a single
-    // HBCAllocObjectFromBufferInst
-    PM.addPass(new LowerAllocObject());
     PM.addTypeInference();
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());

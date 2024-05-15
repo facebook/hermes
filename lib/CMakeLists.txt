@@ -17,6 +17,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/ScopeElimination.cpp
   Optimizer/Scalar/TypeInference.cpp
   Optimizer/Scalar/SimpleStackPromotion.cpp
+  Optimizer/Scalar/ObjectMergeNewStores.cpp
   Optimizer/Scalar/ObjectStackPromotion.cpp
   Optimizer/Scalar/InstSimplify.cpp
   Optimizer/Scalar/Auditor.cpp

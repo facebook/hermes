@@ -7,7 +7,7 @@
 
 // RUN: %hermes --target=HBC -dump-lir -O %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=IRGEN
 
-// LowerNumericProperties should handle AllocObjectLiteral.
+// Numeric properties.
 function emitAllocObjectLiteral(func) {
   return {a: 1, b: 2, c: 3, d: 4, 5: 5, '6': 6};
 }
@@ -22,7 +22,7 @@ function numericPlaceholder(func) {
   return {a: 10, 42:{1: 100, 2:200}, c: "hello", d: null};
 }
 
-// Lowering continues after reaching estimated best num of elements.
+// Whole object is committed to buffer.
 function estimateBestNumElement(func) {
   return { a: 1,
            b: 1,
@@ -42,8 +42,7 @@ function estimateBestNumElement(func) {
            2: 42 };
 }
 
-// Object literals with accessors can still be partially handled by
-// LowerAllocObject pass.
+// Object literals with accessors can still be partially added to buffer.
 function accessorObjectLiteral(func) {
   return {a: 10, b: "test-str", get c() {return 42;}, d: null};
 }
@@ -93,7 +92,7 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, 42: number, null: null, "c": string, "hello": string, "d": string, null: null
 // IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 2: number, 1: number, 100: number, 2: number, 200: number
-// IRGEN-NEXT:       StoreOwnPropertyInst %1: object, %0: object, 42: number, true: boolean
+// IRGEN-NEXT:       PrStoreInst %1: object, %0: object, 1: number, "42": string, false: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
@@ -111,7 +110,7 @@ function accessorObjectLiteral(func) {
 
 // IRGEN:function accessorObjectLiteral(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "b": string, "test-str": string
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 2: number, "a": string, 10: number, "b": string, "test-str": string
 // IRGEN-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // IRGEN-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"get c"(): functionCode
 // IRGEN-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined

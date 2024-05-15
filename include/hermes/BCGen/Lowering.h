@@ -40,37 +40,6 @@ class SwitchLowering : public FunctionPass {
   void erasePhiTarget(BasicBlock *block, BasicBlock *toDelete);
 };
 
-/// Lowers AllocObjects and its associated StoreOwnPropertyInst with literals
-/// properties.
-class LowerAllocObject : public FunctionPass {
- public:
-  explicit LowerAllocObject() : FunctionPass("LowerAllocObject") {}
-  ~LowerAllocObject() override = default;
-
-  bool runOnFunction(Function *F) override;
-
- private:
-  /// Define a type for managing lists of StoreNewOwnPropertyInsts.
-  using StoreList = llvh::SmallVector<StoreNewOwnPropertyInst *, 4>;
-  /// Define a type for mapping a given basic block to the stores to a given
-  /// AllocObjectInst in that basic block.
-  using BlockUserMap = llvh::DenseMap<BasicBlock *, StoreList>;
-
-  /// Construct an ordered list of stores to \p allocInst that are known to
-  /// always execute without any other intervening users.
-  StoreList collectStores(
-      AllocObjectInst *allocInst,
-      const BlockUserMap &userBasicBlockMap,
-      const DominanceInfo &DI);
-  /// Serialize AllocObjects with literal property and value sets into object
-  /// buffer; non-literals values could also be set as placeholders and later
-  /// overwritten by PutByIds.
-  bool lowerAllocObjectBuffer(
-      AllocObjectInst *allocInst,
-      const StoreList &users,
-      uint32_t maxSize);
-};
-
 /// Lowers AllocObjectLiterals which target object literals with
 /// constant properties.
 class LowerAllocObjectLiteral : public FunctionPass {

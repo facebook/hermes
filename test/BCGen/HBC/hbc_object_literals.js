@@ -8,62 +8,105 @@
 // RUN: %hermes --target=HBC -dump-lir -O %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=IRGEN
 // RUN: %hermes --target=HBC -dump-bytecode -O %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=BCGEN
 
-var obj1 = {'a': 'hello', 'b': 1, 'c': null, 'd': undefined, 'e': true, 'f': function() {}, 'g': 2};
-
-// Test the case when even we will save bytecode size if we serialize the object
-// into the buffer, we choose not to, because it will add too many placeholders.
-var obj2 = {
-  a : undefined,
-  b : undefined,
-  c : undefined,
-  d : undefined,
-  e : undefined,
-  r : undefined,
-  f : 1,
-  g : 1,
-  h : 1,
-  i : 1,
-  j : 1,
-  k : 1,
-  l : 1,
-  m : 1,
-  n : 1,
-  o : 1,
-  p : 1,
-  q : 1,
-};
-
-// Cannot serialize undefined as placeholder when the property is a number.
-var obj3 = {
-  1 : undefined,
-  f : 1,
-  g : 1,
-  h : 1,
-  i : 1,
-  j : 1,
-  k : 1,
-  l : 1,
-  m : 1,
-  n : 1,
-  o : 1,
-  p : 1,
-  q : 1,
+function obj1() {
+  return {'a': 'hello', 'b': 1, 'c': null, 'd': undefined, 'e': true, 'f': function() {}, 'g': 2};
 }
 
-var obj4 = {
-  '1' : undefined,
-  f : 1,
-  g : 1,
-  h : 1,
-  i : 1,
-  j : 1,
-  k : 1,
-  l : 1,
-  m : 1,
-  n : 1,
-  o : 1,
-  p : 1,
-  q : 1,
+// Objects are always fully commited into the buffer.
+function obj2() {
+  return {
+    a : undefined,
+    b : undefined,
+    c : undefined,
+    d : undefined,
+    e : undefined,
+    r : undefined,
+    f : 1,
+    g : 1,
+    h : 1,
+    i : 1,
+    j : 1,
+    k : 1,
+    l : 1,
+    m : 1,
+    n : 1,
+    o : 1,
+    p : 1,
+    q : 1,
+  };
+}
+
+// Unserializable numeric key is admitted into the buffer.
+function obj3() {
+  return {
+    1 : undefined,
+    f : 1,
+    g : 1,
+    h : 1,
+    i : 1,
+    j : 1,
+    k : 1,
+    l : 1,
+    m : 1,
+    n : 1,
+    o : 1,
+    p : 1,
+    q : 1,
+  }
+}
+
+function obj4() {
+  return {
+    '1' : undefined,
+    f : 1,
+    g : 1,
+    h : 1,
+    i : 1,
+    j : 1,
+    k : 1,
+    l : 1,
+    m : 1,
+    n : 1,
+    o : 1,
+    p : 1,
+    q : 1,
+  };
+}
+
+// Numeric keys containing constant values interleaved with nonnumeric keys.
+function obj5() {
+  return {
+    '1': 50,
+    'a': 1,
+    '3': 50,
+    'b': 2,
+    '2': 50,
+    'c': 3,
+  };
+}
+
+// Numeric keys containing unserializable values interleaved with nonnumeric keys.
+function obj6() {
+  return {
+    '1': undefined,
+    'a': 1,
+    '3': undefined,
+    'b': 2,
+    '2': undefined,
+    'c': 3,
+  };
+}
+
+// Numeric keys containing constant values interleaved with nonnumeric keys of unserializable values.
+function obj7() {
+  return {
+    '1': 1,
+    'a': undefined,
+    '3': 2,
+    'b': undefined,
+    '2': 3,
+    'c': undefined,
+  };
 }
 
 // Auto-generated content below. Please do not modify manually.
@@ -72,33 +115,97 @@ var obj4 = {
 
 // IRGEN:function global(): undefined
 // IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj1": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj2": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj3": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj4": string
-// IRGEN-NEXT:  %4 = HBCAllocObjectFromBufferInst (:object) 7: number, "a": string, "hello": string, "b": string, 1: number, "c": string, null: null, "d": string, null: null, "e": string, true: boolean, "f": string, null: null, "g": string, 2: number
-// IRGEN-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       PrStoreInst %5: undefined, %4: object, 3: number, "d": string, true: boolean
-// IRGEN-NEXT:  %7 = CreateScopeInst (:environment) %VS0: any, empty: any
-// IRGEN-NEXT:  %8 = CreateFunctionInst (:object) %7: environment, %f(): functionCode
-// IRGEN-NEXT:       PrStoreInst %8: object, %4: object, 5: number, "f": string, false: boolean
-// IRGEN-NEXT:  %10 = HBCGetGlobalObjectInst (:object)
-// IRGEN-NEXT:        StorePropertyLooseInst %4: object, %10: object, "obj1": string
-// IRGEN-NEXT:  %12 = HBCAllocObjectFromBufferInst (:object) 18: number, "a": string, null: null, "b": string, null: null, "c": string, null: null, "d": string, null: null, "e": string, null: null, "r": string, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 0: number, "a": string, true: boolean
-// IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 1: number, "b": string, true: boolean
-// IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 2: number, "c": string, true: boolean
-// IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 3: number, "d": string, true: boolean
-// IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 4: number, "e": string, true: boolean
-// IRGEN-NEXT:        PrStoreInst %5: undefined, %12: object, 5: number, "r": string, true: boolean
-// IRGEN-NEXT:        StorePropertyLooseInst %12: object, %10: object, "obj2": string
-// IRGEN-NEXT:  %20 = HBCAllocObjectFromBufferInst (:object) 13: number, 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:        StoreOwnPropertyInst %5: undefined, %20: object, 1: number, true: boolean
-// IRGEN-NEXT:        StorePropertyLooseInst %20: object, %10: object, "obj3": string
-// IRGEN-NEXT:  %23 = HBCAllocObjectFromBufferInst (:object) 13: number, 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:        StoreOwnPropertyInst %5: undefined, %23: object, 1: number, true: boolean
-// IRGEN-NEXT:        StorePropertyLooseInst %23: object, %10: object, "obj4": string
-// IRGEN-NEXT:        ReturnInst %5: undefined
+// IRGEN-NEXT:       DeclareGlobalVarInst "obj5": string
+// IRGEN-NEXT:       DeclareGlobalVarInst "obj6": string
+// IRGEN-NEXT:       DeclareGlobalVarInst "obj7": string
+// IRGEN-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %obj1(): functionCode
+// IRGEN-NEXT:  %9 = HBCGetGlobalObjectInst (:object)
+// IRGEN-NEXT:        StorePropertyLooseInst %8: object, %9: object, "obj1": string
+// IRGEN-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %obj2(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %11: object, %9: object, "obj2": string
+// IRGEN-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %obj3(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %13: object, %9: object, "obj3": string
+// IRGEN-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %obj4(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %15: object, %9: object, "obj4": string
+// IRGEN-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %obj5(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %17: object, %9: object, "obj5": string
+// IRGEN-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %obj6(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %19: object, %9: object, "obj6": string
+// IRGEN-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %obj7(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %21: object, %9: object, "obj7": string
+// IRGEN-NEXT:  %23 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:        ReturnInst %23: undefined
+// IRGEN-NEXT:function_end
+
+// IRGEN:function obj1(): object
+// IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 7: number, "a": string, "hello": string, "b": string, 1: number, "c": string, null: null, "d": string, null: null, "e": string, true: boolean, "f": string, null: null, "g": string, 2: number
+// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 3: number, "d": string, true: boolean
+// IRGEN-NEXT:  %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// IRGEN-NEXT:  %4 = CreateFunctionInst (:object) %3: environment, %f(): functionCode
+// IRGEN-NEXT:       PrStoreInst %4: object, %0: object, 5: number, "f": string, false: boolean
+// IRGEN-NEXT:       ReturnInst %0: object
+// IRGEN-NEXT:function_end
+
+// IRGEN:function obj2(): object
+// IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 18: number, "a": string, null: null, "b": string, null: null, "c": string, null: null, "d": string, null: null, "e": string, null: null, "r": string, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 0: number, "a": string, true: boolean
+// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 1: number, "b": string, true: boolean
+// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 2: number, "c": string, true: boolean
+// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 3: number, "d": string, true: boolean
+// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 4: number, "e": string, true: boolean
+// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 5: number, "r": string, true: boolean
+// IRGEN-NEXT:       ReturnInst %0: object
+// IRGEN-NEXT:function_end
+
+// IRGEN:function obj3(): object
+// IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 13: number, 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:       ReturnInst %0: object
+// IRGEN-NEXT:function_end
+
+// IRGEN:function obj4(): object
+// IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 13: number, 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:       ReturnInst %0: object
+// IRGEN-NEXT:function_end
+
+// IRGEN:function obj5(): object
+// IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 6: number, 1: number, 50: number, "a": string, 1: number, 3: number, 50: number, "b": string, 2: number, 2: number, 50: number, "c": string, 3: number
+// IRGEN-NEXT:       ReturnInst %0: object
+// IRGEN-NEXT:function_end
+
+// IRGEN:function obj6(): object
+// IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 6: number, 1: number, null: null, "a": string, 1: number, 3: number, null: null, "b": string, 2: number, 2: number, null: null, "c": string, 3: number
+// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 3: number, true: boolean
+// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 2: number, true: boolean
+// IRGEN-NEXT:       ReturnInst %0: object
+// IRGEN-NEXT:function_end
+
+// IRGEN:function obj7(): object
+// IRGEN-NEXT:%BB0:
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 6: number, 1: number, 1: number, "a": string, null: null, 3: number, 2: number, "b": string, null: null, 2: number, 3: number, "c": string, null: null
+// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:       StorePropertyLooseInst %1: undefined, %0: object, "a": string
+// IRGEN-NEXT:       StorePropertyLooseInst %1: undefined, %0: object, "b": string
+// IRGEN-NEXT:       StorePropertyLooseInst %1: undefined, %0: object, "c": string
+// IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function f(): undefined
@@ -110,8 +217,8 @@ var obj4 = {
 // BCGEN:Bytecode File Information:
 // BCGEN-NEXT:  Bytecode version number: {{.*}}
 // BCGEN-NEXT:  Source hash: {{.*}}
-// BCGEN-NEXT:  Function count: 2
-// BCGEN-NEXT:  String count: 24
+// BCGEN-NEXT:  Function count: 9
+// BCGEN-NEXT:  String count: 27
 // BCGEN-NEXT:  BigInt count: 0
 // BCGEN-NEXT:  String Kind Entry count: 2
 // BCGEN-NEXT:  RegExp count: 0
@@ -145,9 +252,12 @@ var obj4 = {
 // BCGEN-NEXT:i18[ASCII, 23..26] #2B6CEF81: obj2
 // BCGEN-NEXT:i19[ASCII, 27..30] #2B6CEB92: obj3
 // BCGEN-NEXT:i20[ASCII, 31..34] #2B6CE7A3: obj4
-// BCGEN-NEXT:i21[ASCII, 35..35] #0001C771: p
-// BCGEN-NEXT:i22[ASCII, 36..36] #0001C360: q
-// BCGEN-NEXT:i23[ASCII, 37..37] #0001CF53: r
+// BCGEN-NEXT:i21[ASCII, 35..38] #2B6CE3B4: obj5
+// BCGEN-NEXT:i22[ASCII, 39..42] #2B6CFFC5: obj6
+// BCGEN-NEXT:i23[ASCII, 43..46] #2B6CFBD6: obj7
+// BCGEN-NEXT:i24[ASCII, 47..47] #0001C771: p
+// BCGEN-NEXT:i25[ASCII, 48..48] #0001C360: q
+// BCGEN-NEXT:i26[ASCII, 49..49] #0001CF53: r
 
 // BCGEN:Literal Value Buffer:
 // BCGEN-NEXT:[String 1]
@@ -177,6 +287,11 @@ var obj4 = {
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:null
 // BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:null
+// BCGEN-NEXT:[int 2]
+// BCGEN-NEXT:null
+// BCGEN-NEXT:[int 3]
+// BCGEN-NEXT:null
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
@@ -188,6 +303,13 @@ var obj4 = {
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 50]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[int 50]
+// BCGEN-NEXT:[int 2]
+// BCGEN-NEXT:[int 50]
+// BCGEN-NEXT:[int 3]
 // BCGEN-NEXT:Object Key Buffer:
 // BCGEN-NEXT:[String 3]
 // BCGEN-NEXT:[String 9]
@@ -201,7 +323,7 @@ var obj4 = {
 // BCGEN-NEXT:[String 10]
 // BCGEN-NEXT:[String 11]
 // BCGEN-NEXT:[String 12]
-// BCGEN-NEXT:[String 23]
+// BCGEN-NEXT:[String 26]
 // BCGEN-NEXT:[String 13]
 // BCGEN-NEXT:[String 2]
 // BCGEN-NEXT:[String 5]
@@ -212,8 +334,8 @@ var obj4 = {
 // BCGEN-NEXT:[String 16]
 // BCGEN-NEXT:[String 17]
 // BCGEN-NEXT:[String 6]
-// BCGEN-NEXT:[String 21]
-// BCGEN-NEXT:[String 22]
+// BCGEN-NEXT:[String 24]
+// BCGEN-NEXT:[String 25]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[String 13]
 // BCGEN-NEXT:[String 2]
@@ -225,40 +347,101 @@ var obj4 = {
 // BCGEN-NEXT:[String 16]
 // BCGEN-NEXT:[String 17]
 // BCGEN-NEXT:[String 6]
-// BCGEN-NEXT:[String 21]
-// BCGEN-NEXT:[String 22]
+// BCGEN-NEXT:[String 24]
+// BCGEN-NEXT:[String 25]
+// BCGEN-NEXT:[int 1]
+// BCGEN-NEXT:[String 3]
+// BCGEN-NEXT:[int 3]
+// BCGEN-NEXT:[String 9]
+// BCGEN-NEXT:[int 2]
+// BCGEN-NEXT:[String 10]
 // BCGEN-NEXT:Object Shape Table:
 // BCGEN-NEXT:0[0, 7]
 // BCGEN-NEXT:1[8, 18]
 // BCGEN-NEXT:2[28, 13]
-// BCGEN-NEXT:Function<global>(1 params, 4 registers):
+// BCGEN-NEXT:3[46, 6]
+// BCGEN-NEXT:Function<global>(1 params, 3 registers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// BCGEN-NEXT:    CreateTopLevelEnvironment r0, 0
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj4"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 0, 0
+// BCGEN-NEXT:    DeclareGlobalVar  "obj5"
+// BCGEN-NEXT:    DeclareGlobalVar  "obj6"
+// BCGEN-NEXT:    DeclareGlobalVar  "obj7"
+// BCGEN-NEXT:    CreateClosure     r2, r0, Function<obj1>
+// BCGEN-NEXT:    GetGlobalObject   r1
+// BCGEN-NEXT:    PutByIdLoose      r1, r2, 1, "obj1"
+// BCGEN-NEXT:    CreateClosure     r2, r0, Function<obj2>
+// BCGEN-NEXT:    PutByIdLoose      r1, r2, 2, "obj2"
+// BCGEN-NEXT:    CreateClosure     r2, r0, Function<obj3>
+// BCGEN-NEXT:    PutByIdLoose      r1, r2, 3, "obj3"
+// BCGEN-NEXT:    CreateClosure     r2, r0, Function<obj4>
+// BCGEN-NEXT:    PutByIdLoose      r1, r2, 4, "obj4"
+// BCGEN-NEXT:    CreateClosure     r2, r0, Function<obj5>
+// BCGEN-NEXT:    PutByIdLoose      r1, r2, 5, "obj5"
+// BCGEN-NEXT:    CreateClosure     r2, r0, Function<obj6>
+// BCGEN-NEXT:    PutByIdLoose      r1, r2, 6, "obj6"
+// BCGEN-NEXT:    CreateClosure     r0, r0, Function<obj7>
+// BCGEN-NEXT:    PutByIdLoose      r1, r0, 7, "obj7"
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 3
-// BCGEN-NEXT:    CreateTopLevelEnvironment r2, 0
-// BCGEN-NEXT:    CreateClosure     r2, r2, Function<f>
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r2, 5
-// BCGEN-NEXT:    GetGlobalObject   r2
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "obj1"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 1, 15
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 0
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 1
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 2
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 3
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 4
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 5
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "obj2"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 65
-// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "obj3"
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 65
-// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "obj4"
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj1>(1 params, 2 registers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 0, 0
+// BCGEN-NEXT:    LoadConstUndefined r1
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 3
+// BCGEN-NEXT:    GetParentEnvironment r1, 0
+// BCGEN-NEXT:    CreateClosure     r1, r1, Function<f>
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 5
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj2>(1 params, 3 registers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 1, 15
+// BCGEN-NEXT:    LoadConstUndefined r1
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 0
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 1
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 2
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 3
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 4
+// BCGEN-NEXT:    PutOwnBySlotIdx   r0, r1, 5
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj3>(1 params, 2 registers):
+// BCGEN-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 2, 83
+// BCGEN-NEXT:    LoadConstUndefined r1
+// BCGEN-NEXT:    PutOwnByIndex     r0, r1, 1
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj4>(1 params, 2 registers):
+// BCGEN-NEXT:Offset in debug table: source 0x0035, lexical 0x0000
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 2, 83
+// BCGEN-NEXT:    LoadConstUndefined r1
+// BCGEN-NEXT:    PutOwnByIndex     r0, r1, 1
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj5>(1 params, 1 registers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 133
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj6>(1 params, 3 registers):
+// BCGEN-NEXT:Offset in debug table: source 0x003c, lexical 0x0000
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 65
+// BCGEN-NEXT:    LoadConstUndefined r1
+// BCGEN-NEXT:    PutOwnByIndex     r0, r1, 1
+// BCGEN-NEXT:    PutOwnByIndex     r0, r1, 3
+// BCGEN-NEXT:    PutOwnByIndex     r0, r1, 2
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj7>(1 params, 3 registers):
+// BCGEN-NEXT:Offset in debug table: source 0x004a, lexical 0x0000
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 66
+// BCGEN-NEXT:    LoadConstUndefined r1
+// BCGEN-NEXT:    PutByIdLoose      r0, r1, 1, "a"
+// BCGEN-NEXT:    PutByIdLoose      r0, r1, 2, "b"
+// BCGEN-NEXT:    PutByIdLoose      r0, r1, 3, "c"
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<f>(1 params, 1 registers):
@@ -273,17 +456,33 @@ var obj4 = {
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// BCGEN-NEXT:    bc 0: line 11 col 1
-// BCGEN-NEXT:    bc 5: line 11 col 1
-// BCGEN-NEXT:    bc 10: line 11 col 1
-// BCGEN-NEXT:    bc 15: line 11 col 1
-// BCGEN-NEXT:    bc 49: line 11 col 10
-// BCGEN-NEXT:    bc 85: line 15 col 10
-// BCGEN-NEXT:    bc 97: line 37 col 12
-// BCGEN-NEXT:    bc 101: line 37 col 10
-// BCGEN-NEXT:    bc 113: line 53 col 12
-// BCGEN-NEXT:    bc 117: line 53 col 10
-// BCGEN-NEXT:  0x0022  end of debug source table
+// BCGEN-NEXT:    bc 6: line 11 col 1
+// BCGEN-NEXT:    bc 11: line 11 col 1
+// BCGEN-NEXT:    bc 16: line 11 col 1
+// BCGEN-NEXT:    bc 21: line 11 col 1
+// BCGEN-NEXT:    bc 26: line 11 col 1
+// BCGEN-NEXT:    bc 31: line 11 col 1
+// BCGEN-NEXT:    bc 36: line 11 col 1
+// BCGEN-NEXT:    bc 48: line 11 col 1
+// BCGEN-NEXT:    bc 59: line 11 col 1
+// BCGEN-NEXT:    bc 70: line 11 col 1
+// BCGEN-NEXT:    bc 81: line 11 col 1
+// BCGEN-NEXT:    bc 92: line 11 col 1
+// BCGEN-NEXT:    bc 103: line 11 col 1
+// BCGEN-NEXT:    bc 114: line 11 col 1
+// BCGEN-NEXT:  0x002e  function idx 3, starts at line 40 col 1
+// BCGEN-NEXT:    bc 8: line 41 col 10
+// BCGEN-NEXT:  0x0035  function idx 4, starts at line 58 col 1
+// BCGEN-NEXT:    bc 8: line 59 col 10
+// BCGEN-NEXT:  0x003c  function idx 6, starts at line 89 col 1
+// BCGEN-NEXT:    bc 8: line 90 col 10
+// BCGEN-NEXT:    bc 12: line 90 col 10
+// BCGEN-NEXT:    bc 16: line 90 col 10
+// BCGEN-NEXT:  0x004a  function idx 7, starts at line 101 col 1
+// BCGEN-NEXT:    bc 8: line 102 col 10
+// BCGEN-NEXT:    bc 14: line 102 col 10
+// BCGEN-NEXT:    bc 20: line 102 col 10
+// BCGEN-NEXT:  0x0058  end of debug source table
 
 // BCGEN:Debug lexical table:
 // BCGEN-NEXT:  0x0000  lexical parent: none, variable count: 0
