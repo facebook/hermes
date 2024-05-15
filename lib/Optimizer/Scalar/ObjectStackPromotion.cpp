@@ -17,12 +17,63 @@ namespace {
 /// Try to promote the given object to a series of AllocStackInsts if it does
 /// not escape its enclosing function. If successful, \p alloc and all of its
 /// users are eliminated and replaced with stack operations. For now, this only
-/// handles objects with properties at known offsets that are accessed with
-/// PrLoad and PrStore.
-/// Instructions to destroy will be added to the given \p destroyer.
+/// handles objects with constant key properties, that are accessed with known
+/// existing properties.
+/// \p alloc the object to promote
+/// \p stores are known to always execute without any other intervening users
+/// \p destroyer is used to eliminate instructions
 bool tryPromoteObject(
     AllocObjectLiteralInst *alloc,
     IRBuilder::InstructionDestroyer &destroyer) {
+  IRBuilder builder(alloc->getFunction());
+  auto numElems = alloc->getKeyValuePairCount();
+  // Used as scratch space to perform the conversion of a number to a string.
+  char conversionBuf[NUMBER_TO_STRING_BUF_SIZE];
+
+  // Map from number to its string representation.
+  llvh::SmallDenseMap<LiteralNumber *, LiteralString *> conversionMapping;
+  /// Convert \p LN to a LiteralString.
+  auto convertNumber =
+      [&conversionMapping, &conversionBuf, &builder](LiteralNumber *LN) {
+        auto &cachedLS = conversionMapping[LN];
+        if (cachedLS) {
+          return cachedLS;
+        }
+        auto len = numberToString(
+            LN->getValue(), conversionBuf, NUMBER_TO_STRING_BUF_SIZE);
+        auto strRef = llvh::StringRef(conversionBuf, len);
+        auto *LS = builder.getLiteralString(strRef);
+        cachedLS = LS;
+        return LS;
+      };
+
+  // Map from property key string -> slot index.
+  llvh::SmallDenseMap<LiteralString *, size_t> objLayout;
+  // Populate the object layout, ensuring all property keys are represented as
+  // LiteralStrings.
+  for (size_t i = 0; i < numElems; ++i) {
+    auto *propKey = alloc->getKey(i);
+    if (auto *LS = llvh::dyn_cast<LiteralString>(propKey)) {
+      objLayout.insert({LS, i});
+    } else {
+      auto *LN = llvh::cast<LiteralNumber>(propKey);
+      objLayout.insert({convertNumber(LN), i});
+    }
+  }
+
+  /// \return true if \p V is known to be an existing property key on the
+  /// object. This will convert LiteralNumbers to LiteralStrings to do the
+  /// check, since the layout is defined in terms of strings.
+  auto isInLayout = [&objLayout, &convertNumber](Value *V) -> bool {
+    if (auto *LS = llvh::dyn_cast<LiteralString>(V)) {
+      return objLayout.count(LS);
+    }
+    if (auto *LN = llvh::dyn_cast<LiteralNumber>(V)) {
+      return objLayout.count(convertNumber(LN));
+    }
+    return false;
+  };
+
   for (auto *U : alloc->getUsers()) {
     // Loading from the object does not escape.
     if (auto *L = llvh::dyn_cast<PrLoadInst>(U)) {
@@ -49,15 +100,35 @@ bool tryPromoteObject(
       }
     }
 
+    if (auto *SP = llvh::dyn_cast<StorePropertyInst>(U)) {
+      if (SP->getStoredValue() == alloc)
+        return false;
+      if (!isInLayout(SP->getProperty()))
+        return false;
+      continue;
+    }
+
+    if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(U)) {
+      if (SOP->getStoredValue() == alloc)
+        return false;
+      if (!isInLayout(SOP->getProperty()))
+        return false;
+      continue;
+    }
+
+    if (auto *LP = llvh::dyn_cast<LoadPropertyInst>(U)) {
+      if (!isInLayout(LP->getProperty()))
+        return false;
+      continue;
+    }
+
     // For now, all other instructions are considered to escape.
     return false;
   }
 
   // The object does not escape, create a stack location for each of its fields.
-  IRBuilder builder(alloc->getFunction());
   builder.setLocation(alloc->getLocation());
   builder.setInsertionPoint(alloc);
-  auto numElems = alloc->getKeyValuePairCount();
   llvh::SmallVector<AllocStackInst *, 8> stackLocs;
   stackLocs.reserve(numElems);
 
@@ -71,6 +142,20 @@ bool tryPromoteObject(
     stackLocs.push_back(loc);
     builder.createStoreStackInst(alloc->getValue(i), loc);
   }
+
+  /// \return the AllocStackInst replacement of the given property key \p
+  /// propKey.
+  auto stackLocOfPropKey =
+      [&stackLocs, &objLayout, &conversionMapping](Literal *propKey) {
+        if (auto *LS = llvh::dyn_cast<LiteralString>(propKey)) {
+          return stackLocs[objLayout[LS]];
+        }
+        auto *LN = llvh::cast<LiteralNumber>(propKey);
+        assert(
+            conversionMapping.count(LN) &&
+            "numeric key should have already been converted");
+        return stackLocs[objLayout[conversionMapping[LN]]];
+      };
 
   for (auto *U : alloc->getUsers()) {
     builder.setLocation(U->getLocation());
@@ -101,6 +186,29 @@ bool tryPromoteObject(
     }
     if (auto *SP = llvh::dyn_cast<StoreParentInst>(U)) {
       builder.createStoreStackInst(SP->getStoredValue(), parentLoc);
+      continue;
+    }
+
+    if (auto *LP = llvh::dyn_cast<LoadPropertyInst>(U)) {
+      auto *replace = builder.createLoadStackInst(
+          stackLocOfPropKey(llvh::cast<Literal>(LP->getProperty())));
+      LP->replaceAllUsesWith(replace);
+      continue;
+    }
+
+    if (auto *SP = llvh::dyn_cast<StorePropertyInst>(U)) {
+      auto *replace = builder.createStoreStackInst(
+          SP->getStoredValue(),
+          stackLocOfPropKey(llvh::cast<Literal>(SP->getProperty())));
+      SP->replaceAllUsesWith(replace);
+      continue;
+    }
+
+    if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(U)) {
+      auto *replace = builder.createStoreStackInst(
+          SOP->getStoredValue(),
+          stackLocOfPropKey(llvh::cast<Literal>(SOP->getProperty())));
+      SOP->replaceAllUsesWith(replace);
       continue;
     }
 
