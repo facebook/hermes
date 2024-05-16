@@ -14,13 +14,13 @@ var arr = [{a: 1}, {b: 2}, {c: 3}, {d: 4}];
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "arr": string
 // CHECK-NEXT:  $Reg1 = AllocArrayInst (:object) 4: number
-// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) 1: number, "a": string, 1: number
+// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) "a": string, 1: number
 // CHECK-NEXT:  $Reg0 = StoreOwnPropertyInst $Reg0, $Reg1, 0: number, true: boolean
-// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) 1: number, "b": string, 2: number
+// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) "b": string, 2: number
 // CHECK-NEXT:  $Reg0 = StoreOwnPropertyInst $Reg0, $Reg1, 1: number, true: boolean
-// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) 1: number, "c": string, 3: number
+// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) "c": string, 3: number
 // CHECK-NEXT:  $Reg0 = StoreOwnPropertyInst $Reg0, $Reg1, 2: number, true: boolean
-// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) 1: number, "d": string, 4: number
+// CHECK-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) "d": string, 4: number
 // CHECK-NEXT:  $Reg0 = StoreOwnPropertyInst $Reg0, $Reg1, 3: number, true: boolean
 // CHECK-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "arr": string

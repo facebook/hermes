@@ -236,8 +236,8 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
 
     case ValueKind::HBCAllocObjectFromBufferInstKind:
       // AllocObjectFromBuffer stores the keys and values as alternating
-      // operands starting from FirstKeyIdx.
-      return (idx - HBCAllocObjectFromBufferInst::FirstKeyIdx) % 2 == 0;
+      // operands, with keys starting first.
+      return idx % 2 == 0;
 
     default:
       return false;

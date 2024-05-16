@@ -608,8 +608,7 @@ class IRBuilder {
   HBCSpillMovInst *createHBCSpillMovInst(Instruction *value);
 
   HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
-      HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map,
-      uint32_t size);
+      HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
 
   CompareBranchInst *createCompareBranchInst(
       Value *left,

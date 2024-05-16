@@ -1015,10 +1015,8 @@ HBCSpillMovInst *IRBuilder::createHBCSpillMovInst(Instruction *value) {
 }
 
 HBCAllocObjectFromBufferInst *IRBuilder::createHBCAllocObjectFromBufferInst(
-    HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map,
-    uint32_t size) {
-  auto *inst =
-      new HBCAllocObjectFromBufferInst(M->getLiteralNumber(size), prop_map);
+    HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map) {
+  auto *inst = new HBCAllocObjectFromBufferInst(prop_map);
   insert(inst);
   return inst;
 }

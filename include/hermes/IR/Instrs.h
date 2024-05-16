@@ -1911,21 +1911,15 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   void operator=(const HBCAllocObjectFromBufferInst &) = delete;
 
  public:
-  enum { SizeIdx, FirstKeyIdx };
-
   using ObjectPropertyMap =
       llvh::SmallVector<std::pair<Literal *, Literal *>, 4>;
 
   /// \sizeHint is a hint for the VM regarding the final size of this object.
   /// It is the number of entries in the object declaration including
   /// non-literal ones. \prop_map is all the literal key/value entries.
-  explicit HBCAllocObjectFromBufferInst(
-      LiteralNumber *sizeHint,
-      const ObjectPropertyMap &prop_map)
+  explicit HBCAllocObjectFromBufferInst(const ObjectPropertyMap &prop_map)
       : Instruction(ValueKind::HBCAllocObjectFromBufferInstKind) {
     setType(*getInherentTypeImpl());
-    assert(sizeHint->isUInt32Representible() && "size hint must be uint32");
-    pushOperand(sizeHint);
     for (size_t i = 0; i < prop_map.size(); i++) {
       pushOperand(prop_map[i].first);
       pushOperand(prop_map[i].second);
@@ -1953,18 +1947,14 @@ class HBCAllocObjectFromBufferInst : public Instruction {
 
   /// Number of consecutive literal key/value pairs in the object.
   unsigned getKeyValuePairCount() const {
-    return (getNumOperands() - FirstKeyIdx) / 2;
+    return getNumOperands() / 2;
   }
 
   /// Return the \index 'd sequential literal key/value pair.
   std::pair<Literal *, Literal *> getKeyValuePair(unsigned index) const {
     return std::pair<Literal *, Literal *>{
-        cast<Literal>(getOperand(FirstKeyIdx + 2 * index)),
-        cast<Literal>(getOperand(FirstKeyIdx + 1 + 2 * index))};
-  }
-
-  LiteralNumber *getSizeHint() const {
-    return cast<LiteralNumber>(getOperand(SizeIdx));
+        cast<Literal>(getOperand(2 * index)),
+        cast<Literal>(getOperand(1 + 2 * index))};
   }
 
   static bool classof(const Value *V) {

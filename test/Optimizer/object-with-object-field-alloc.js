@@ -44,7 +44,7 @@ new Foo();
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %Foo(): functionCode
 // CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
-// CHECK-NEXT:  %9 = HBCAllocObjectFromBufferInst (:object) 3: number, "o0": string, 0: number, "o1": string, 0: number, "o2": string, 0: number
+// CHECK-NEXT:  %9 = HBCAllocObjectFromBufferInst (:object) "o0": string, 0: number, "o1": string, 0: number, "o2": string, 0: number
 // CHECK-NEXT:        StoreParentInst %7: object, %9: object
 // CHECK-NEXT:  %11 = CallInst (:undefined) %6: object, %Foo(): functionCode, empty: any, %6: object, %9: object
 // CHECK-NEXT:  %12 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -65,16 +65,16 @@ new Foo();
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %1: environment, [%VS1.?O.prototype]: object
-// CHECK-NEXT:  %3 = HBCAllocObjectFromBufferInst (:object) 1: number, "i": string, 0: number
+// CHECK-NEXT:  %3 = HBCAllocObjectFromBufferInst (:object) "i": string, 0: number
 // CHECK-NEXT:       StoreParentInst %2: object, %3: object
 // CHECK-NEXT:  %5 = HBCLoadConstInst (:number) 7: number
 // CHECK-NEXT:       PrStoreInst %5: number, %3: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:       PrStoreInst %3: object, %0: object, 0: number, "o0": string, false: boolean
-// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) 1: number, "i": string, 0: number
+// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) "i": string, 0: number
 // CHECK-NEXT:       StoreParentInst %2: object, %8: object
 // CHECK-NEXT:        PrStoreInst %5: number, %8: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:        PrStoreInst %8: object, %0: object, 1: number, "o1": string, false: boolean
-// CHECK-NEXT:  %12 = HBCAllocObjectFromBufferInst (:object) 1: number, "i": string, 0: number
+// CHECK-NEXT:  %12 = HBCAllocObjectFromBufferInst (:object) "i": string, 0: number
 // CHECK-NEXT:        StoreParentInst %2: object, %12: object
 // CHECK-NEXT:        PrStoreInst %5: number, %12: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:        PrStoreInst %12: object, %0: object, 2: number, "o2": string, false: boolean

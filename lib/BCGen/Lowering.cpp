@@ -215,8 +215,7 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   // First, we reset insertion location.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createHBCAllocObjectFromBufferInst(
-      propMap, allocInst->getKeyValuePairCount());
+  auto *alloc = builder.createHBCAllocObjectFromBufferInst(propMap);
 
   // HBCAllocObjectFromBuffer does not take a prototype argument. So if the
   // object has a prototype set, make an explicit call to set it.

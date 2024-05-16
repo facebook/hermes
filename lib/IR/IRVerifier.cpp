@@ -1301,11 +1301,6 @@ bool Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
 
 bool Verifier::visitHBCAllocObjectFromBufferInst(
     const hermes::HBCAllocObjectFromBufferInst &Inst) {
-  LiteralNumber *size = Inst.getSizeHint();
-  AssertIWithMsg(
-      Inst,
-      size->isUInt32Representible(),
-      "Invalid HBCAllocObjectFromBufferInst size hint");
   AssertIWithMsg(
       Inst,
       Inst.getKeyValuePairCount() > 0,

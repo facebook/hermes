@@ -2228,7 +2228,7 @@ Value *ESTreeIRGen::genRegExpLiteral(ESTree::RegExpLiteralNode *RE) {
 
   if (regexp.getMapping().size()) {
     auto &mapping = regexp.getMapping();
-    HBCAllocObjectFromBufferInst::ObjectPropertyMap propMap;
+    AllocObjectLiteralInst::ObjectPropertyMap propMap;
     for (auto &identifier : regexp.getOrderedGroupNames()) {
       std::string converted;
       convertUTF16ToUTF8WithSingleSurrogates(converted, identifier);
@@ -2241,9 +2241,7 @@ Value *ESTreeIRGen::genRegExpLiteral(ESTree::RegExpLiteralNode *RE) {
       auto *val = Builder.getLiteralNumber(groupIdx);
       propMap.emplace_back(key, val);
     }
-    auto sz = mapping.size();
-
-    auto literalObj = Builder.createHBCAllocObjectFromBufferInst(propMap, sz);
+    auto literalObj = Builder.createAllocObjectLiteralInst(propMap);
 
     Value *params[] = {exp, literalObj};
     Builder.createCallBuiltinInst(

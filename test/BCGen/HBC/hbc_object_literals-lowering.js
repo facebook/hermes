@@ -76,29 +76,29 @@ function accessorObjectLiteral(func) {
 
 // IRGEN:function emitAllocObjectLiteral(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 6: number, "a": string, 1: number, "b": string, 2: number, "c": string, 3: number, "d": string, 4: number, 5: number, 5: number, 6: number, 6: number
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 1: number, "b": string, 2: number, "c": string, 3: number, "d": string, 4: number, 5: number, 5: number, 6: number, 6: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function nestedAllocObjectLiteral(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "b": string, null: null, "c": string, "hello": string, "d": string, null: null
-// IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 2: number, 1: number, 100: number, 2: number, 200: number
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, null: null, "c": string, "hello": string, "d": string, null: null
+// IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 1: number, 100: number, 2: number, 200: number
 // IRGEN-NEXT:       PrStoreInst %1: object, %0: object, 1: number, "b": string, false: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function numericPlaceholder(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, 42: number, null: null, "c": string, "hello": string, "d": string, null: null
-// IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 2: number, 1: number, 100: number, 2: number, 200: number
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, 42: number, null: null, "c": string, "hello": string, "d": string, null: null
+// IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 1: number, 100: number, 2: number, 200: number
 // IRGEN-NEXT:       PrStoreInst %1: object, %0: object, 1: number, "42": string, false: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function estimateBestNumElement(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 16: number, "a": string, 1: number, "b": string, 1: number, "c": string, 1: number, "d": string, 1: number, "e": string, 1: number, "f": string, null: null, "g": string, null: null, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, null: null, "m": string, null: null, "n": string, null: null, 1: number, 42: number, 2: number, 42: number
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 1: number, "b": string, 1: number, "c": string, 1: number, "d": string, 1: number, "e": string, 1: number, "f": string, null: null, "g": string, null: null, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, null: null, "m": string, null: null, "n": string, null: null, 1: number, 42: number, 2: number, 42: number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 5: number, "f": string, true: boolean
 // IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 6: number, "g": string, true: boolean
@@ -110,7 +110,7 @@ function accessorObjectLiteral(func) {
 
 // IRGEN:function accessorObjectLiteral(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 2: number, "a": string, 10: number, "b": string, "test-str": string
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, "test-str": string
 // IRGEN-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // IRGEN-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"get c"(): functionCode
 // IRGEN-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined

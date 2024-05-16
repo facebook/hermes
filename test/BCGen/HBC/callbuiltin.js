@@ -46,7 +46,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  $Reg2 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
 // CHKRA-NEXT:  $Reg3 = LoadPropertyInst (:any) $Reg0, "foo": string
 // CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKRA-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) 4: number, "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
+// CHKRA-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
 // CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
 // CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:object) $Reg0
 // CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg3, empty: any, empty: any, $Reg1, $Reg1, $Reg0
@@ -66,7 +66,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKRA:function shadows(): undefined
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg3 = HBCAllocObjectFromBufferInst (:object) 1: number, "keys": string, null: null
+// CHKRA-NEXT:  $Reg3 = HBCAllocObjectFromBufferInst (:object) "keys": string, null: null
 // CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  $Reg0 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
 // CHKRA-NEXT:  $Reg0 = PrStoreInst $Reg0, $Reg3, 0: number, "keys": string, false: boolean
