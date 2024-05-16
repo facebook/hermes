@@ -410,3 +410,12 @@ show(it.next());
 // CHECK-NEXT: 4 | false
 show(it.next());
 // CHECK-NEXT: undefined | true
+
+// Check that arrow functions bind correctly.
+function *genContainingArrow(a) {
+  let foo = () => { print(this, new.target, arguments[0]); };
+  foo();
+}
+var it = genContainingArrow.call(42, 5)
+it.next();
+// CHECK-NEXT: 42 undefined 5

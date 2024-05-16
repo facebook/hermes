@@ -369,10 +369,17 @@ Function *ESTreeIRGen::genGeneratorFunction(
                       parentScope]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
 
+    // We pass InitES5CaptureState::No to emitFunctionPrologue because generator
+    // functions do not create a scope and so we shouldn't be trying to capture
+    // state like 'this' into its nonexistent scope. If there is an arrow
+    // function inside the inner generator function which needs access to
+    // captured state, then a later lowering pass is responsible for lifting out
+    // instructions like CreateArguments. That lowering pass also will create
+    // the required scopes.
     emitFunctionPrologue(
         functionNode,
         Builder.createBasicBlock(outerFn),
-        InitES5CaptureState::Yes,
+        InitES5CaptureState::No,
         DoEmitDeclarations::No,
         parentScope);
 
@@ -496,11 +503,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
       scope,
       genAnonymousLabelName("new.target"),
       curFunction()->function->getNewTargetParam()->getType());
-  emitStore(
-      Builder.createGetNewTargetInst(
-          curFunction()->function->getNewTargetParam()),
-      curFunction()->capturedNewTarget,
-      true);
+  emitStore(genNewTarget(), curFunction()->capturedNewTarget, true);
 
   // "arguments".
   if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {

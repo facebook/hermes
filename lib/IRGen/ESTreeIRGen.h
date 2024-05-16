@@ -854,6 +854,9 @@ class ESTreeIRGen {
 
   Value *genMetaProperty(ESTree::MetaPropertyNode *MP);
 
+  /// Generate the new.target of the current function.
+  Value *genNewTarget();
+
   /// Generate IR for a template literal expression, which in most cases is
   /// translated to a call to HermesInternal.concat().
   Value *genTemplateLiteralExpr(ESTree::TemplateLiteralNode *Expr);

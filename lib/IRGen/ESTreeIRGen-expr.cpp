@@ -2377,36 +2377,40 @@ Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
   // Recognize "new.target"
   if (cast<ESTree::IdentifierNode>(MP->_meta)->_name == kw_.identNew) {
     if (cast<ESTree::IdentifierNode>(MP->_property)->_name == kw_.identTarget) {
-      Value *value;
-
-      switch (curFunction()->function->getDefinitionKind()) {
-        case Function::DefinitionKind::ES5Function:
-        case Function::DefinitionKind::ES6Constructor:
-          value = Builder.createGetNewTargetInst(
-              curFunction()->function->getNewTargetParam());
-          break;
-        case Function::DefinitionKind::ES6Arrow:
-          value = curFunction()->capturedNewTarget;
-          break;
-        // Generators cannot be invoked with new, so new.target will be
-        // undefined.
-        case Function::DefinitionKind::GeneratorInner:
-        case Function::DefinitionKind::ES6Method:
-          value = Builder.getLiteralUndefined();
-          break;
-      }
-
-      // If it is a variable, we must issue a load.
-      if (auto *V = llvh::dyn_cast<Variable>(value)) {
-        auto *RSI = emitResolveScopeInstIfNeeded(V->getParent());
-        return Builder.createLoadFrameInst(RSI, V);
-      }
-
-      return value;
+      return genNewTarget();
     }
   }
 
   llvm_unreachable("invalid MetaProperty");
+}
+
+Value *ESTreeIRGen::genNewTarget() {
+  Value *value;
+
+  switch (curFunction()->function->getDefinitionKind()) {
+    case Function::DefinitionKind::ES5Function:
+    case Function::DefinitionKind::ES6Constructor:
+      value = Builder.createGetNewTargetInst(
+          curFunction()->function->getNewTargetParam());
+      break;
+    case Function::DefinitionKind::ES6Arrow:
+      value = curFunction()->capturedNewTarget;
+      break;
+    // Generators cannot be invoked with new, so new.target will be
+    // undefined.
+    case Function::DefinitionKind::GeneratorInner:
+    case Function::DefinitionKind::ES6Method:
+      value = Builder.getLiteralUndefined();
+      break;
+  }
+
+  // If it is a variable, we must issue a load.
+  if (auto *V = llvh::dyn_cast<Variable>(value)) {
+    auto *RSI = emitResolveScopeInstIfNeeded(V->getParent());
+    return Builder.createLoadFrameInst(RSI, V);
+  }
+
+  return value;
 }
 
 Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
