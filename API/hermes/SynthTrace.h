@@ -261,12 +261,6 @@ class SynthTrace {
     }
 
    protected:
-    /// Compare records for equality. Derived classes should override this, call
-    /// their parent, and mark any public versions as "final".
-    virtual bool operator==(const Record &that) const {
-      return getType() == that.getType();
-    }
-
     /// Emit JSON fields into \p os, excluding the closing curly brace.
     /// NOTE: This is overridable, and non-abstract children should call the
     /// parent.
@@ -378,7 +372,6 @@ class SynthTrace {
 
    protected:
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
-    bool operator==(const Record &that) const override;
   };
 
   /// A BeginExecJSRecord is an event where execution begins of JS source
@@ -408,8 +401,6 @@ class SynthTrace {
       return sourceHash_;
     }
 
-    bool operator==(const Record &that) const override;
-
    private:
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
@@ -432,7 +423,6 @@ class SynthTrace {
     explicit ReturnMixin(TraceValue value) : retVal_(value) {}
 
     void toJSONInternal(::hermes::JSONEmitter &json) const;
-    bool operator==(const ReturnMixin &that) const;
   };
 
   /// A EndExecJSRecord is an event where execution of JS source code stops.
@@ -449,7 +439,6 @@ class SynthTrace {
     RecordType getType() const override {
       return type;
     }
-    bool operator==(const Record &that) const final;
     virtual void toJSONInternal(::hermes::JSONEmitter &json) const final;
     std::vector<ObjectID> defs() const override {
       auto defs = MarkerRecord::defs();
@@ -468,8 +457,6 @@ class SynthTrace {
 
     explicit CreateObjectRecord(TimeSinceStart time, ObjectID objID)
         : Record(time), objID_(objID) {}
-
-    bool operator==(const Record &that) const override;
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
@@ -508,8 +495,6 @@ class SynthTrace {
         uint64_t bits)
         : Record(time), objID_(objID), method_(m), bits_(bits) {}
 
-    bool operator==(const Record &that) const override;
-
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
     RecordType getType() const override {
@@ -543,8 +528,6 @@ class SynthTrace {
         ObjectID bigintID,
         int radix)
         : Record(time), strID_(strID), bigintID_(bigintID), radix_(radix) {}
-
-    bool operator==(const Record &that) const override;
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
@@ -591,8 +574,6 @@ class SynthTrace {
         const char *chars,
         size_t length)
         : Record(time), objID_(objID), chars_(chars, length), ascii_(true) {}
-
-    bool operator==(const Record &that) const override;
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
@@ -656,8 +637,6 @@ class SynthTrace {
           traceValue_(traceValue),
           valueType_(TRACEVALUE) {}
 
-    bool operator==(const Record &that) const override;
-
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
@@ -709,8 +688,6 @@ class SynthTrace {
           paramCount_(paramCount) {
     }
 
-    bool operator==(const Record &that) const override;
-
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
 
     RecordType getType() const override {
@@ -752,8 +729,6 @@ class SynthTrace {
           value_(value) {
     }
 
-    bool operator==(const Record &that) const final;
-
     std::vector<ObjectID> uses() const override {
       std::vector<ObjectID> vec{objID_};
       pushIfTrackedValue(propID_, vec);
@@ -770,8 +745,6 @@ class SynthTrace {
 
     QueueMicrotaskRecord(TimeSinceStart time, ObjectID callbackID)
         : Record(time), callbackID_(callbackID) {}
-
-    bool operator==(const Record &that) const final;
 
     RecordType getType() const override {
       return type;
@@ -791,8 +764,6 @@ class SynthTrace {
 
     DrainMicrotasksRecord(TimeSinceStart time, int tasksHint = -1)
         : Record(time), maxMicrotasksHint_(tasksHint) {}
-
-    bool operator==(const Record &that) const final;
 
     RecordType getType() const override {
       return type;
@@ -861,8 +832,6 @@ class SynthTrace {
           propID_(propID) {
     }
 
-    bool operator==(const Record &that) const final;
-
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
@@ -888,8 +857,6 @@ class SynthTrace {
         ObjectID objID,
         ObjectID propNamesID)
         : Record(time), objID_(objID), propNamesID_(propNamesID) {}
-
-    bool operator==(const Record &that) const final;
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
@@ -918,8 +885,6 @@ class SynthTrace {
         size_t length)
         : Record(time), objID_(objID), length_(length) {}
 
-    bool operator==(const Record &that) const final;
-
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
@@ -943,8 +908,6 @@ class SynthTrace {
         size_t index,
         TraceValue value)
         : Record(time), objID_(objID), index_(index), value_(value) {}
-
-    bool operator==(const Record &that) const final;
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     std::vector<ObjectID> uses() const override {
@@ -1004,8 +967,6 @@ class SynthTrace {
           thisArg_(thisArg),
           args_(args) {}
 
-    bool operator==(const Record &that) const final;
-
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     std::vector<ObjectID> uses() const override {
       // The function is used regardless of direction.
@@ -1064,7 +1025,6 @@ class SynthTrace {
       pushIfTrackedValue(retVal_, uses);
       return uses;
     }
-    bool operator==(const Record &that) const final;
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
@@ -1083,7 +1043,6 @@ class SynthTrace {
       pushIfTrackedValue(retVal_, defs);
       return defs;
     }
-    bool operator==(const Record &that) const final;
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
@@ -1133,7 +1092,6 @@ class SynthTrace {
     }
 
    protected:
-    bool operator==(const Record &that) const override;
   };
 
   /// A GetPropertyNativeRecord is an event where JS tries to access a property
@@ -1146,7 +1104,6 @@ class SynthTrace {
     RecordType getType() const override {
       return type;
     }
-    bool operator==(const Record &that) const final;
   };
 
   struct GetPropertyNativeReturnRecord final : public Record,
@@ -1162,7 +1119,6 @@ class SynthTrace {
       pushIfTrackedValue(retVal_, uses);
       return uses;
     }
-    bool operator==(const Record &that) const final;
 
    protected:
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
@@ -1190,7 +1146,6 @@ class SynthTrace {
               propName),
           value_(value) {}
 
-    bool operator==(const Record &that) const final;
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
@@ -1208,10 +1163,6 @@ class SynthTrace {
     using Record::Record;
     RecordType getType() const override {
       return type;
-    }
-    bool operator==(const Record &that) const final {
-      // Since there are no fields to compare, any two will always be the same.
-      return Record::operator==(that);
     }
   };
 
@@ -1238,8 +1189,6 @@ class SynthTrace {
     std::vector<ObjectID> uses() const override {
       return {hostObjectID_};
     }
-
-    bool operator==(const Record &that) const override;
   };
 
   /// A GetNativePropertyNamesReturnRecord records what property names were
@@ -1268,8 +1217,6 @@ class SynthTrace {
       }
       return uses;
     }
-
-    bool operator==(const Record &that) const override;
   };
 
   struct SetExternalMemoryPressureRecord final : public Record {
@@ -1295,7 +1242,6 @@ class SynthTrace {
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
-    bool operator==(const Record &that) const override;
   };
 
   /// An Utf8Record is an event where a PropNameID or String or Symbol was
@@ -1325,7 +1271,6 @@ class SynthTrace {
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
-    bool operator==(const Record &that) const override;
   };
 
   struct GlobalRecord final : public Record {
@@ -1344,7 +1289,6 @@ class SynthTrace {
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
-    bool operator==(const Record &that) const override;
   };
 
   /// Completes writing of the trace to the trace stream.  If writing
