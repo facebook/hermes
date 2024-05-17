@@ -79,8 +79,8 @@ class Builder {
   Builder(
       Module *m,
       const std::function<bool(Function const *)> &shouldVisitFunction,
-      SerializedLiteralGenerator::StringLookupFn getIdentifier,
-      SerializedLiteralGenerator::StringLookupFn getString,
+      const SerializedLiteralGenerator::StringLookupFn &getIdentifier,
+      const SerializedLiteralGenerator::StringLookupFn &getString,
       bool optimize)
       : M_(m),
         shouldVisitFunction_(shouldVisitFunction),
