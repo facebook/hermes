@@ -1297,8 +1297,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   /// The optional __proto__ property.
   ESTree::PropertyNode *protoProperty = nullptr;
 
-  uint32_t numComputed = 0;
-
   for (auto &P : Expr->_properties) {
     if (llvh::isa<ESTree::SpreadElementNode>(&P)) {
       continue;
@@ -1312,7 +1310,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     if (prop->_computed) {
       // Can't store any useful information if the name is computed.
       // Just generate the code in the next loop.
-      ++numComputed;
       continue;
     }
 
