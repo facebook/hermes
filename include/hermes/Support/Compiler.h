@@ -67,6 +67,15 @@
 #error "LLVM_PTR_SIZE needs to be defined"
 #endif
 
+// If the build system has not defined HERMES_UBSAN, check if the compiler makes
+// that information available. This only currently works with clang, but is
+// useful for internal builds, where we do not control ubsan.
+#if !defined(HERMES_UBSAN) && defined(__has_feature)
+#if __has_feature(undefined_behavior_sanitizer)
+#define HERMES_UBSAN
+#endif
+#endif
+
 // In fbcode we might have bigger code samples during development due to
 // integration testing. However, we're also at liberty to increase stack
 // size at the application level and for things like HaaS we do this.
