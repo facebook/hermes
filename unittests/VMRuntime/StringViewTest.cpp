@@ -8,7 +8,7 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/Runtime.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 

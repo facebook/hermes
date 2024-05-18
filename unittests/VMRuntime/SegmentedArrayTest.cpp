@@ -9,7 +9,7 @@
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/HermesValueTraits.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 using namespace hermes::vm;
 

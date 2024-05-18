@@ -10,7 +10,7 @@
 #include <hermes/VM/GC.h>
 #include <chrono>
 #include <functional>
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 
 using namespace hermes::vm;

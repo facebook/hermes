@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "hermes/ADT/SafeInt.h"
 #include "hermes/VM/JSLib/Base64Util.h"

@@ -11,7 +11,7 @@
 // the heap on every alloc.
 #ifdef HERMESVM_GC_MALLOC
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/VM/DummyObject.h"
 #include "hermes/VM/JSObject.h"

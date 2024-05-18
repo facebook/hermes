@@ -13,8 +13,8 @@
 #if defined(HERMES_MEMORY_INSTRUMENTATION) && \
     !defined(HERMESVM_SANITIZE_HANDLES)
 
-#include "TestHelpers.h"
 #include "TestHelpers1.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/SourceMap/SourceMap.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"

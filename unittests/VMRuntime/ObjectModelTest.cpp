@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/JSDate.h"

@@ -11,7 +11,7 @@
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 

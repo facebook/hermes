@@ -10,7 +10,7 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Runtime.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 

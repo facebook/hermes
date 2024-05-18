@@ -6,7 +6,7 @@
  */
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/GC.h"

@@ -68,7 +68,7 @@ set(RTSources
   StringPrimitiveTest.cpp
   StringViewTest.cpp
   SymbolIDTest.cpp
-  TestHelpers.cpp TestHelpers.h
+  VMRuntimeTestHelpers.cpp VMRuntimeTestHelpers.h
   TestHelpers1.cpp TestHelpers1.h
   TwineChar16Test.cpp
   WeakValueMapTest.cpp

@@ -10,7 +10,7 @@
 
 #include "llvh/Support/AlignOf.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include <climits>
 #include <random>

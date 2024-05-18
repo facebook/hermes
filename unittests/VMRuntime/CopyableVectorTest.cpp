@@ -7,7 +7,7 @@
 
 #include "hermes/VM/CopyableVector.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/Compiler.h"
 
 #include "gtest/gtest.h"

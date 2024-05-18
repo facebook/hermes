@@ -8,7 +8,7 @@
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 
 #include "hermes/VM/HeapSnapshot.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Algorithms.h"

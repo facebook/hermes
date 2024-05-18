@@ -6,7 +6,7 @@
  */
 
 #include "AdditionalSlots.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSError.h"

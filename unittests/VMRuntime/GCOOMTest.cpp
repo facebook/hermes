@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/LimitedStorageProvider.h"

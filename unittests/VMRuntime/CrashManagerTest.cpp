@@ -13,7 +13,7 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"

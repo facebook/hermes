@@ -6,7 +6,7 @@
  */
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/DummyObject.h"

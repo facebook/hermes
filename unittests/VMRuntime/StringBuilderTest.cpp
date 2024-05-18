@@ -9,7 +9,7 @@
 #include "hermes/ADT/SafeInt.h"
 #include "hermes/VM/StringView.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 

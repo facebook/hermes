@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "hermes/VM/AlignedHeapSegment.h"
 

@@ -7,7 +7,7 @@
 
 #include "hermes/VM/JSTypedArray.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 using namespace hermes::vm;
 

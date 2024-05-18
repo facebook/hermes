@@ -9,7 +9,7 @@
 #include <string>
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 using namespace hermes::vm;
 

@@ -11,7 +11,7 @@
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StringView.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include <limits>
 

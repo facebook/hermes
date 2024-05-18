@@ -7,7 +7,7 @@
 
 #include "hermes/VM/DictPropertyMap.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 

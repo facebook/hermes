@@ -7,7 +7,7 @@
 
 #include "hermes/VM/BigIntPrimitive.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/BigIntTestHelpers.h"
 
 #include <array>

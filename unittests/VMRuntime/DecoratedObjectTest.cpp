@@ -8,7 +8,7 @@
 #include "hermes/VM/DecoratedObject.h"
 
 #include "AdditionalSlots.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 
 #include <vector>

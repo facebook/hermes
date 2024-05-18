@@ -7,7 +7,7 @@
 
 #include "hermes/VM/SmallHermesValue.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StringPrimitive.h"

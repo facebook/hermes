@@ -6,7 +6,7 @@
  */
 
 #include "hermes/VM/Casting.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/VM/Runtime.h"
 
 #include "gtest/gtest.h"

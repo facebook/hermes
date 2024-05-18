@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
 #include "TestHelpers1.h"
+#include "VMRuntimeTestHelpers.h"
 
 using namespace hermes;
 using namespace hermes::vm;

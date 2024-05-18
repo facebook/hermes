@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 using namespace hermes::vm;
 using namespace hermes::vm::detail;
