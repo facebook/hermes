@@ -605,42 +605,8 @@ llvh::raw_ostream &operator<<(
     SynthTrace::RecordType type) {
 #define CASE(t)                   \
   case SynthTrace::RecordType::t: \
-    return os << #t
-  switch (type) {
-    CASE(BeginExecJS);
-    CASE(EndExecJS);
-    CASE(Marker);
-    CASE(CreateObject);
-    CASE(CreateString);
-    CASE(CreatePropNameID);
-    CASE(CreateHostObject);
-    CASE(CreateHostFunction);
-    CASE(QueueMicrotask);
-    CASE(DrainMicrotasks);
-    CASE(GetProperty);
-    CASE(SetProperty);
-    CASE(HasProperty);
-    CASE(GetPropertyNames);
-    CASE(CreateArray);
-    CASE(ArrayRead);
-    CASE(ArrayWrite);
-    CASE(CallFromNative);
-    CASE(ConstructFromNative);
-    CASE(ReturnFromNative);
-    CASE(ReturnToNative);
-    CASE(CallToNative);
-    CASE(GetPropertyNative);
-    CASE(GetPropertyNativeReturn);
-    CASE(SetPropertyNative);
-    CASE(SetPropertyNativeReturn);
-    CASE(GetNativePropertyNames);
-    CASE(GetNativePropertyNamesReturn);
-    CASE(CreateBigInt);
-    CASE(BigIntToString);
-    CASE(SetExternalMemoryPressure);
-    CASE(Utf8);
-    CASE(Global);
-  }
+    return os << #t;
+  switch (type) { SYNTH_TRACE_RECORD_TYPES(CASE) }
 #undef CASE
   // This only exists to appease gcc.
   return os;
@@ -656,39 +622,7 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
     type = SynthTrace::RecordType::t;        \
     return is;                               \
   }
-  CASE(BeginExecJS)
-  CASE(EndExecJS)
-  CASE(Marker)
-  CASE(CreateObject)
-  CASE(CreateString)
-  CASE(CreatePropNameID)
-  CASE(CreateHostObject)
-  CASE(CreateHostFunction)
-  CASE(QueueMicrotask)
-  CASE(DrainMicrotasks)
-  CASE(GetProperty)
-  CASE(SetProperty)
-  CASE(HasProperty)
-  CASE(GetPropertyNames);
-  CASE(CreateArray)
-  CASE(ArrayRead)
-  CASE(ArrayWrite)
-  CASE(CallFromNative)
-  CASE(ConstructFromNative)
-  CASE(ReturnFromNative)
-  CASE(ReturnToNative)
-  CASE(CallToNative)
-  CASE(GetPropertyNative)
-  CASE(GetPropertyNativeReturn)
-  CASE(SetPropertyNative)
-  CASE(SetPropertyNativeReturn)
-  CASE(GetNativePropertyNames)
-  CASE(GetNativePropertyNamesReturn)
-  CASE(CreateBigInt)
-  CASE(BigIntToString)
-  CASE(SetExternalMemoryPressure)
-  CASE(Utf8);
-  CASE(Global);
+  SYNTH_TRACE_RECORD_TYPES(CASE)
 #undef CASE
 
   llvm_unreachable(

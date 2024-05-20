@@ -175,44 +175,47 @@ class SynthTrace {
   using TimePoint = std::chrono::steady_clock::time_point;
   using TimeSinceStart = std::chrono::milliseconds;
 
-  static constexpr size_t kHashNumBytes = 20;
+#define SYNTH_TRACE_RECORD_TYPES(RECORD) \
+  RECORD(BeginExecJS)                    \
+  RECORD(EndExecJS)                      \
+  RECORD(Marker)                         \
+  RECORD(CreateObject)                   \
+  RECORD(CreateString)                   \
+  RECORD(CreatePropNameID)               \
+  RECORD(CreateHostObject)               \
+  RECORD(CreateHostFunction)             \
+  RECORD(QueueMicrotask)                 \
+  RECORD(DrainMicrotasks)                \
+  RECORD(GetProperty)                    \
+  RECORD(SetProperty)                    \
+  RECORD(HasProperty)                    \
+  RECORD(GetPropertyNames)               \
+  RECORD(CreateArray)                    \
+  RECORD(ArrayRead)                      \
+  RECORD(ArrayWrite)                     \
+  RECORD(CallFromNative)                 \
+  RECORD(ConstructFromNative)            \
+  RECORD(ReturnFromNative)               \
+  RECORD(ReturnToNative)                 \
+  RECORD(CallToNative)                   \
+  RECORD(GetPropertyNative)              \
+  RECORD(GetPropertyNativeReturn)        \
+  RECORD(SetPropertyNative)              \
+  RECORD(SetPropertyNativeReturn)        \
+  RECORD(GetNativePropertyNames)         \
+  RECORD(GetNativePropertyNamesReturn)   \
+  RECORD(CreateBigInt)                   \
+  RECORD(BigIntToString)                 \
+  RECORD(SetExternalMemoryPressure)      \
+  RECORD(Utf8)                           \
+  RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
   /// There should be a unique tag for each record type.
   enum class RecordType {
-    BeginExecJS,
-    EndExecJS,
-    Marker,
-    CreateObject,
-    CreateString,
-    CreatePropNameID,
-    CreateHostObject,
-    CreateHostFunction,
-    QueueMicrotask,
-    DrainMicrotasks,
-    GetProperty,
-    SetProperty,
-    HasProperty,
-    GetPropertyNames,
-    CreateArray,
-    ArrayRead,
-    ArrayWrite,
-    CallFromNative,
-    ConstructFromNative,
-    ReturnFromNative,
-    ReturnToNative,
-    CallToNative,
-    GetPropertyNative,
-    GetPropertyNativeReturn,
-    SetPropertyNative,
-    SetPropertyNativeReturn,
-    GetNativePropertyNames,
-    GetNativePropertyNamesReturn,
-    CreateBigInt,
-    BigIntToString,
-    SetExternalMemoryPressure,
-    Utf8,
-    Global,
+#define RECORD(name) name,
+    SYNTH_TRACE_RECORD_TYPES(RECORD)
+#undef RECORD
   };
 
   /// A Record is one element of a trace.
