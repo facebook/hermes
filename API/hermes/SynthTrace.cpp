@@ -76,6 +76,16 @@ uint64_t decodeID(const std::string &s) {
   return id;
 }
 
+llvh::StringRef recordTypeToString(RecordType type) {
+  switch (type) {
+#define CASE(t)       \
+  case RecordType::t: \
+    return #t "Record";
+    SYNTH_TRACE_RECORD_TYPES(CASE)
+#undef CASE
+  }
+}
+
 } // namespace
 
 bool SynthTrace::TraceValue::operator==(const TraceValue &that) const {
@@ -300,12 +310,7 @@ void SynthTrace::Record::toJSON(JSONEmitter &json) const {
 }
 
 void SynthTrace::Record::toJSONInternal(JSONEmitter &json) const {
-  std::string storage;
-  llvh::raw_string_ostream os{storage};
-  os << getType() << "Record";
-  os.flush();
-
-  json.emitKeyValue("type", storage);
+  json.emitKeyValue("type", recordTypeToString(getType()));
   json.emitKeyValue("time", time_.count());
 }
 
@@ -598,36 +603,6 @@ void SynthTrace::flushAndDisable(const ::hermes::vm::GCExecTrace &gcTrace) {
   os().flush();
   json_.reset();
   traceStream_.reset();
-}
-
-llvh::raw_ostream &operator<<(
-    llvh::raw_ostream &os,
-    SynthTrace::RecordType type) {
-#define CASE(t)                   \
-  case SynthTrace::RecordType::t: \
-    return os << #t;
-  switch (type) { SYNTH_TRACE_RECORD_TYPES(CASE) }
-#undef CASE
-  // This only exists to appease gcc.
-  return os;
-}
-
-std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
-  std::string kindstr;
-  is >> kindstr;
-  // Can't use switch on strings, use if statements instead.
-  // There's definitely a faster way to do this, but this code isn't critical.
-#define CASE(t)                              \
-  if (kindstr == std::string(#t "Record")) { \
-    type = SynthTrace::RecordType::t;        \
-    return is;                               \
-  }
-  SYNTH_TRACE_RECORD_TYPES(CASE)
-#undef CASE
-
-  llvm_unreachable(
-      "failed to parse SynthTrace::RecordType. Make sure all enum values are "
-      "handled.");
 }
 
 } // namespace tracing
