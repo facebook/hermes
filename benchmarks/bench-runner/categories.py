@@ -93,7 +93,6 @@ class SynthBenchmark(BenchmarkWithGCConfig):
             self.marker,
         )
 
-
 # A group of benchmarks
 Category = namedtuple("Category", ["name", "benchmarks", "runByDefault"])
 
@@ -380,6 +379,10 @@ _micros = Category(
         ),
         ResourceBenchmark(
             "regExpSplit", "micros/regExpSplit.js", gcMinHeap="1M", gcMaxHeap="1M"
+        ),
+        ResourceBenchmark(
+            "numberArrayReadWrite", "micros/numberArrayReadWrite.js",
+            gcMinHeap="1M", gcMaxHeap="1M"
         ),
     ],
     runByDefault=False,

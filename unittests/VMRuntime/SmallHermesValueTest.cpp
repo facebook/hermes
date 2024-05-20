@@ -134,12 +134,45 @@ TEST_F(SmallHermesValueRuntimeTest, SmiTest) {
   };
 
   verifySmi(0);
-  verifySmi(llvh::minIntN(29));
-  verifySmi(llvh::maxIntN(29));
-
-  // Try some random SMIs.
+  // We can do min int values for large bit widths, but only because they're
+  // powers of 2 -- their mantissa has trailing zeros.
+  verifySmi(llvh::minIntN(40));
+  // For positive max values, which are all ones, the max we we can do is 19:
+  // The max N-bit integer has N-1 ones.  So that's 18 ones.
+  // One of these is an implicit leading 1 in floating point.  So 17 ones.
+  // 32 - (3 tag bits) - (1 sign bit) - (11 exponent bits) = 17;
+  verifySmi(llvh::maxIntN(19));
+  // Try some random SMIs (in the 19-bit range described above.
   for (int i = 0; i < 1000; i++)
-    verifySmi(getRandomInt32(llvh::minIntN(29), llvh::maxIntN(29)));
+    verifySmi(getRandomInt32(llvh::minIntN(19), llvh::maxIntN(19)));
+}
+
+TEST_F(SmallHermesValueRuntimeTest, EncodeNumberTest) {
+  // Encode SMIs.
+  auto verifySmi = [&](int64_t i) {
+    double d = static_cast<double>(i);
+    auto SHV = SmallHermesValue::encodeNumberValue(d, runtime);
+// When Handle-SAN is enabled, we put all numbers on the heap.
+#ifndef HERMESVM_SANITIZE_HANDLES
+    EXPECT_FALSE(SHV.isPointer());
+#endif
+    auto HV = SHV.unboxToHV(runtime);
+    EXPECT_TRUE(HV.isNumber()) << "SMI not encoded as number: " << i;
+    EXPECT_EQ(HV.getNumber(), d);
+  };
+
+  verifySmi(0);
+  // We can do min int values for large bit widths, but only because they're
+  // powers of 2 -- their mantissa has trailing zeros.
+  verifySmi(llvh::minIntN(40));
+  // For positive max values, which are all ones, the max we we can do is 19:
+  // The max N-bit integer has N-1 ones.  So that's 18 ones.
+  // One of these is an implicit leading 1 in floating point.  So 17 ones.
+  // 32 - (3 tag bits) - (1 sign bit) - (11 exponent bits) = 17;
+  verifySmi(llvh::maxIntN(19));
+  // Try some random SMIs (in the 19-bit range described above.
+  for (int i = 0; i < 1000; i++)
+    verifySmi(getRandomInt32(llvh::minIntN(19), llvh::maxIntN(19)));
 }
 
 TEST_F(SmallHermesValueRuntimeTest, SymbolTest) {

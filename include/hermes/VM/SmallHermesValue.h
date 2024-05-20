@@ -189,12 +189,6 @@ class HermesValue32 {
 
   static constexpr size_t kNumTagBits = LogHeapAlign;
   static constexpr size_t kNumValueBits = 8 * sizeof(RawType) - kNumTagBits;
-  /// To match the behaviour of a double, SMI precision cannot exceed 53 bits +
-  /// a sign bit. This is only relevant when compressed pointers are allowed but
-  /// turned off on a 64-bit platform (e.g. with MallocGC) since we would end up
-  /// using HermesValue32, but RawType would be 64 bits.
-  static constexpr size_t kNumSmiBits =
-      std::min(kNumValueBits, static_cast<size_t>(54));
 
   /// A 3 bit tag describing the stored value. Tags that represent multiple
   /// types are distinguished using an additional bit found in the "ETag".
@@ -203,7 +197,7 @@ class HermesValue32 {
     BigInt,
     String,
     BoxedDouble,
-    SmallInt,
+    CompressedDouble,
     Symbol,
     BoolAndUndefined,
     EmptyAndNull,
@@ -235,8 +229,9 @@ class HermesValue32 {
     String2 = static_cast<uint8_t>(Tag::String) + kETagOffset,
     BoxedDouble1 = static_cast<uint8_t>(Tag::BoxedDouble),
     BoxedDouble2 = static_cast<uint8_t>(Tag::BoxedDouble) + kETagOffset,
-    SmallInt1 = static_cast<uint8_t>(Tag::SmallInt),
-    SmallInt2 = static_cast<uint8_t>(Tag::SmallInt) + kETagOffset,
+    CompressedDouble1 = static_cast<uint8_t>(Tag::CompressedDouble),
+    CompressedDouble2 =
+        static_cast<uint8_t>(Tag::CompressedDouble) + kETagOffset,
     Symbol1 = static_cast<uint8_t>(Tag::Symbol),
     Symbol2 = static_cast<uint8_t>(Tag::Symbol) + kETagOffset,
     Bool = static_cast<uint8_t>(Tag::BoolAndUndefined),
@@ -252,10 +247,9 @@ class HermesValue32 {
   }
   /// Helper function to encode a non-pointer value with a given tag.
   static constexpr HermesValue32 fromTagAndValue(Tag tag, RawType value) {
-    // Only a small integer can have its top bits set (if it's negative).
-    assert(
-        (llvh::isUInt<kNumValueBits>(value) || tag == Tag::SmallInt) &&
-        "Value out of range.");
+    // The value will have been right-shifted by the tag width, and should
+    // have zeroes in the top bits.
+    assert(llvh::isUInt<kNumValueBits>(value) && "Value out of range.");
     return fromRaw((value << kNumTagBits) | static_cast<uint8_t>(tag));
   }
   static constexpr HermesValue32 fromETagAndValue(ETag etag, RawType value) {
@@ -269,7 +263,6 @@ class HermesValue32 {
   }
 
   RawType getValue() const {
-    assert(getTag() != Tag::SmallInt && "SMIs must use getSmallInt.");
     assert(
         static_cast<uint8_t>(getTag()) < kFirstExtendedTag &&
         "Values for ETags should use getETagValue.");
@@ -281,10 +274,12 @@ class HermesValue32 {
         "Not an extended type.");
     return raw_ >> kNumETagBits;
   }
-  SmiType getSmallInt() const {
-    assert(getTag() == Tag::SmallInt && "Must be a SMI.");
-    return static_cast<SmiType>(raw_) >> kNumTagBits;
+
+  double getCompressedDouble() const {
+    assert(getTag() == Tag::CompressedDouble && "Must be a compressed double.");
+    return llvh::BitsToDouble(compressedDoubleToBits());
   }
+
   Tag getTag() const {
     return static_cast<Tag>(
         raw_ & llvh::maskTrailingOnes<RawType>(kNumTagBits));
@@ -312,19 +307,19 @@ class HermesValue32 {
     return fromRaw(p | static_cast<RawType>(tag));
   }
 
-  /// Truncate \p d to an integer that fits in kNumSmiBits.
-  static SmiType doubleToSmi(double d) {
-    // Use a generic lambda here so the inactive case of the if constexpr does
-    // not need to compile.
-    return [](auto d) {
-      if constexpr (kNumSmiBits <= 32)
-        return llvh::SignExtend32<kNumSmiBits>(
-            unsafeTruncateDouble<SmiType>(d));
-      else
-        return llvh::SignExtend64<kNumSmiBits>(
-            unsafeTruncateDouble<SmiType>(d));
-    }(d);
+  /// Convert a compressed double to the "raw" form of a (64-bit) HermesValue.
+  uint64_t compressedDoubleToBits() const {
+    uint64_t res = getValue();
+    return res << (32 + kNumTagBits);
   }
+
+  /// Encode a HermesValue that is required to be a Number as a
+  /// HermesValue32.  "Compressible" number values will be stored inline,
+  /// and non-compressible doubles will be allocated on the heap. Always
+  /// treat this function as though it may allocate.
+  inline static HermesValue32 encodeNumberValue(
+      HermesValue hv,
+      Runtime &runtime);
 
  public:
   HermesValue32() = default;
@@ -352,7 +347,7 @@ class HermesValue32 {
   }
   bool isNumber() const {
     Tag tag = getTag();
-    return tag == Tag::BoxedDouble || tag == Tag::SmallInt;
+    return tag == Tag::BoxedDouble || tag == Tag::CompressedDouble;
   }
   bool isSymbol() const {
     return getTag() == Tag::Symbol;
