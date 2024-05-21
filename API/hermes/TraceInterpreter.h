@@ -37,6 +37,11 @@ class TraceInterpreter final {
     /// identical to the input trace. If they're not, there was a bug in replay.
     mutable bool traceEnabled{false};
 
+    /// If true, verify that the replay results such as returned values from JS
+    /// execution, inputs from JS to native function calls are matching with the
+    /// trace record.
+    bool verificationEnabled{false};
+
     /// If true, command-line options override the config options recorded in
     /// the trace.  If false, start from the default config.
     bool useTraceConfig{false};
@@ -268,6 +273,10 @@ class TraceInterpreter final {
   LLVM_ATTRIBUTE_NORETURN void crashOnException(
       const std::exception &e,
       ::hermes::OptValue<uint64_t> globalRecordNum);
+
+  void assertMatch(
+      const SynthTrace::TraceValue &traceValue,
+      const jsi::Value &val) const;
 };
 
 } // namespace tracing
