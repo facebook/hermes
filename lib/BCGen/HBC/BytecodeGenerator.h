@@ -103,6 +103,7 @@ class BytecodeModuleGenerator {
       std::unique_ptr<BCProviderBase> baseBCProvider = nullptr)
       : bm_(bcModule),
         M_(M),
+        debugInfoGenerator_(bm_.getDebugInfo()),
         options_(options),
         sourceMapGen_(sourceMapGen),
         baseBCProvider_(std::move(baseBCProvider)) {

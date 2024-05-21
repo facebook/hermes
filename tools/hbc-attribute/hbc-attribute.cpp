@@ -204,8 +204,7 @@ class UsageCounter : public BytecodeVisitor {
     if (offsets->lexicalData &&
         offsets->lexicalData != DebugOffsets::NO_OFFSET) {
       auto data = bcProvider_->getDebugInfo()->viewData().getData();
-      unsigned start = offsets->lexicalData +
-          bcProvider_->getDebugInfo()->lexicalDataOffset();
+      unsigned start = offsets->lexicalData;
       unsigned offset = start;
       int64_t trash;
 

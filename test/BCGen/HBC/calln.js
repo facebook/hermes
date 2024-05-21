@@ -231,7 +231,3 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:  0x003e  function idx 5, starts at line 23 col 1
 // BCGEN-NEXT:    bc 19: line 23 col 21
 // BCGEN-NEXT:  0x0045  end of debug source table
-
-// BCGEN:Debug lexical table:
-// BCGEN-NEXT:  0x0000  lexical parent: none, variable count: 0
-// BCGEN-NEXT:  0x0002  end of debug lexical table

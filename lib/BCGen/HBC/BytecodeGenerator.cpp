@@ -132,9 +132,8 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   if (funcGen.hasDebugInfo()) {
     uint32_t sourceLocOffset = debugInfoGenerator.appendSourceLocations(
         funcGen.getSourceLocation(), functionID, funcGen.getDebugLocations());
-    uint32_t lexicalDataOffset = debugInfoGenerator.appendLexicalData(
-        funcGen.getLexicalParentID(), funcGen.getDebugVariableNames());
-    bcFunc->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
+    // TODO: Delete lexical offset, there's nothing there.
+    bcFunc->setDebugOffsets({sourceLocOffset, 0});
   }
 
   // For lazy functions, set the function here to be used by the
@@ -492,7 +491,7 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
     bm_.setFunction(functionID, std::move(func));
   }
 
-  bm_.setDebugInfo(debugInfoGenerator_.serializeWithMove());
+  std::move(debugInfoGenerator_).generate();
   return true;
 }
 

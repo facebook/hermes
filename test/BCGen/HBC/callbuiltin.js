@@ -216,7 +216,3 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    bc 8: line 23 col 24
 // CHKBC-NEXT:    bc 19: line 23 col 24
 // CHKBC-NEXT:  0x0043  end of debug source table
-
-// CHKBC:Debug lexical table:
-// CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHKBC-NEXT:  0x0002  end of debug lexical table

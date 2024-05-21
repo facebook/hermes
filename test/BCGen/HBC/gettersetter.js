@@ -93,7 +93,3 @@ var obj = {
 // CHECK-NEXT:    bc 59: line 10 col 11
 // CHECK-NEXT:    bc 67: line 10 col 9
 // CHECK-NEXT:  0x0013  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x0002  end of debug lexical table

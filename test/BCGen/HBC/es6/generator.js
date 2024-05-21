@@ -367,7 +367,3 @@ function *args() {
 // CHECK-NEXT:    bc 215: line 19 col 18
 // CHECK-NEXT:    bc 313: line 19 col 3
 // CHECK-NEXT:  0x0039  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x0002  end of debug lexical table

@@ -89,7 +89,3 @@ function foo() {
 // CHKBC-NEXT:  0x000d  function idx 1, starts at line 13 col 1
 // CHKBC-NEXT:    bc 2: line 14 col 10
 // CHKBC-NEXT:  0x0014  end of debug source table
-
-// CHKBC:Debug lexical table:
-// CHKBC-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHKBC-NEXT:  0x0002  end of debug lexical table

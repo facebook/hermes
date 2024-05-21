@@ -141,7 +141,3 @@ function foo() { return; }
 // CHECK-NEXT:    bc 90: line 30 col 7
 // CHECK-NEXT:    bc 94: line 31 col 7
 // CHECK-NEXT:  0x0059  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x0002  end of debug lexical table

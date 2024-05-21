@@ -483,7 +483,3 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    bc 160: line 20 col 11
 // CHECK-NEXT:    bc 319: line 20 col 11
 // CHECK-NEXT:  0x0043  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x0002  end of debug lexical table

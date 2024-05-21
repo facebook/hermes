@@ -483,7 +483,3 @@ function obj7() {
 // BCGEN-NEXT:    bc 14: line 102 col 10
 // BCGEN-NEXT:    bc 20: line 102 col 10
 // BCGEN-NEXT:  0x0058  end of debug source table
-
-// BCGEN:Debug lexical table:
-// BCGEN-NEXT:  0x0000  lexical parent: none, variable count: 0
-// BCGEN-NEXT:  0x0002  end of debug lexical table

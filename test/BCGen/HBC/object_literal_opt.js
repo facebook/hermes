@@ -101,7 +101,3 @@ function foo(p) {
 // CHECK-NEXT:    bc 18: line 10 col 1
 // CHECK-NEXT:    bc 31: line 25 col 2
 // CHECK-NEXT:  0x000d  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x0002  end of debug lexical table

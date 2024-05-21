@@ -130,7 +130,6 @@ class DebugInfo {
   UniquingFilenameTable filenameTable_;
 
   DebugFileRegionList files_{};
-  uint32_t lexicalDataOffset_ = 0;
   StreamVector<uint8_t> data_{};
 
   /// Get source filename as string id.
@@ -147,7 +146,6 @@ class DebugInfo {
       StreamVector<uint8_t> &&data)
       : filenameTable_(std::move(filenameTable)),
         files_(std::move(files)),
-        lexicalDataOffset_(lexicalDataOffset),
         data_(std::move(data)) {}
 
   explicit DebugInfo(
@@ -160,16 +158,27 @@ class DebugInfo {
             std::move(filenameStrings),
             std::move(filenameStorage)}),
         files_(std::move(files)),
-        lexicalDataOffset_(lexicalDataOffset),
         data_(std::move(data)) {}
 
   DebugInfo &operator=(DebugInfo &&that) = default;
 
+  DebugFileRegionList &getFilesMut() {
+    return files_;
+  }
   const DebugFileRegionList &viewFiles() const {
     return files_;
   }
+  void resetDataRef() {
+    return data_.resetRef();
+  }
+  std::vector<uint8_t> &getDataMut() {
+    return data_.getDataMut();
+  }
   const StreamVector<uint8_t> &viewData() const {
     return data_;
+  }
+  UniquingFilenameTable &getFilenameTableMut() {
+    return filenameTable_;
   }
   llvh::ArrayRef<StringTableEntry> getFilenameTable() const {
     return filenameTable_.getStringTableView();
@@ -185,10 +194,6 @@ class DebugInfo {
     return getUTF8StringFromEntry(
                getFilenameTable()[id], getFilenameStorage(), utf8Storage)
         .str();
-  }
-
-  uint32_t lexicalDataOffset() const {
-    return lexicalDataOffset_;
   }
 
   /// Get the location of \p offsetInFunction, given the function's debug
@@ -216,29 +221,18 @@ class DebugInfo {
   OptValue<uint32_t> getParentFunctionId(uint32_t offset) const;
 
  private:
-  /// Accessors for portions of data_, which looks like this:
-  /// [sourceLocations][lexicalData]
-  ///                  ^ lexicalDataOffset_
-
   /// \return the slice of data_ reflecting the source locations.
   llvh::ArrayRef<uint8_t> sourceLocationsData() const {
-    return data_.getData().slice(0, lexicalDataOffset_);
-  }
-
-  /// \return the slice of data_ reflecting the lexical data.
-  llvh::ArrayRef<uint8_t> lexicalData() const {
-    return data_.getData().slice(lexicalDataOffset_);
+    return data_.getData();
   }
 
   void disassembleFilenames(llvh::raw_ostream &OS) const;
   void disassembleFilesAndOffsets(llvh::raw_ostream &OS) const;
-  void disassembleLexicalData(llvh::raw_ostream &OS) const;
 
  public:
   void disassemble(llvh::raw_ostream &OS) const {
     disassembleFilenames(OS);
     disassembleFilesAndOffsets(OS);
-    disassembleLexicalData(OS);
   }
 
 #ifndef HERMESVM_LEAN
@@ -269,19 +263,8 @@ class DebugInfoGenerator {
 
   bool validData{true};
 
-  /// Serialized source location data.
-  std::vector<uint8_t> sourcesData_{};
-
-  /// String storage for filenames.
-  /// UniquingFilenameTable is not copy-constructible or copy-assignable.
-  UniquingFilenameTable filenameTable_;
-
-  /// List of files mapping file ID to source location offsets.
-  DebugInfo::DebugFileRegionList files_{};
-
-  /// Serialized lexical data, which contains information about the variables
-  /// associated with each code block.
-  std::vector<uint8_t> lexicalData_;
+  /// The DebugInfo object being generated.
+  DebugInfo &debugInfo_;
 
   int32_t delta(uint32_t to, uint32_t from) {
     int64_t diff = (int64_t)to - from;
@@ -306,13 +289,17 @@ class DebugInfoGenerator {
   DebugInfoGenerator &operator=(const DebugInfoGenerator &) = delete;
 
  public:
-  explicit DebugInfoGenerator();
+  explicit DebugInfoGenerator(DebugInfo &debugInfo) : debugInfo_(debugInfo) {}
 
   DebugInfoGenerator(DebugInfoGenerator &&) = default;
 
+  uint32_t sourceLocationsDataSize() const {
+    return debugInfo_.viewData().size();
+  }
+
   /// Add a new filename to the table, returning an index into the table.
   uint32_t addFilename(llvh::StringRef filename) {
-    return filenameTable_.addFilename(filename);
+    return debugInfo_.getFilenameTableMut().addFilename(filename);
   }
 
   uint32_t appendSourceLocations(
@@ -320,15 +307,8 @@ class DebugInfoGenerator {
       uint32_t functionIndex,
       llvh::ArrayRef<DebugSourceLocation> offsets);
 
-  /// Append lexical data including parent function \p parentFunctionIndex and
-  /// list of variable names \p names to the debug data. \return the offset in
-  /// the lexical section of the debug data.
-  uint32_t appendLexicalData(
-      OptValue<uint32_t> parentFunctionIndex,
-      llvh::ArrayRef<Identifier> names);
-
-  // Destructively move memory to a DebugInfo.
-  DebugInfo serializeWithMove();
+  // Finish generating the debug info.
+  void generate() &&;
 };
 
 } // namespace hbc

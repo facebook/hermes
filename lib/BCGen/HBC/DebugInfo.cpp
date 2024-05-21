@@ -80,28 +80,6 @@ struct FunctionDebugInfoDeserializer {
 };
 } // namespace
 
-/// Decodes a string at offset \p offset in \p data, updating offset in-place.
-/// \return the decoded string.
-static llvh::StringRef decodeString(
-    uint32_t *inoutOffset,
-    llvh::ArrayRef<uint8_t> data) {
-  // The string is represented as its LEB-encoded length, followed by
-  // the bytes. This format matches DebugInfoGenerator::appendString().
-  uint32_t offset = *inoutOffset;
-  int64_t strSize;
-  offset += readSignedLEB128(data, offset, &strSize);
-  assert(
-      strSize >= 0 && // can't be negative
-      strSize <= UINT_MAX && // can't overflow uint32
-      uint32_t(strSize) + offset >= offset && // sum can't overflow
-      uint32_t(strSize) + offset <= data.size() && // validate range
-      "Invalid string size");
-  const unsigned char *ptr = data.data() + offset;
-  offset += strSize;
-  *inoutOffset = offset;
-  return llvh::StringRef(reinterpret_cast<const char *>(ptr), size_t(strSize));
-}
-
 OptValue<uint32_t> DebugInfo::getFilenameForAddress(
     uint32_t debugOffset) const {
   OptValue<uint32_t> value = llvh::None;
@@ -160,7 +138,7 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
     if (cur.filenameId == filenameId) {
       foundFile = true;
       start = cur.fromAddress;
-      end = lexicalDataOffset_;
+      end = sourceLocationsData().size();
     }
   }
   if (!foundFile) {
@@ -210,32 +188,11 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
 /// of the debug info. \return the list of variable names.
 llvh::SmallVector<llvh::StringRef, 4> DebugInfo::getVariableNames(
     uint32_t offset) const {
-  // Incoming offset is given relative to our lexical region.
-  llvh::ArrayRef<uint8_t> data = lexicalData();
-  int64_t parentId;
-  int64_t signedCount;
-  offset += readSignedLEB128(data, offset, &parentId);
-  offset += readSignedLEB128(data, offset, &signedCount);
-  (void)parentId;
-  assert(signedCount >= 0 && "Invalid variable name count");
-  size_t count = size_t(signedCount);
-
-  llvh::SmallVector<llvh::StringRef, 4> result;
-  result.reserve(count);
-  for (size_t i = 0; i < count; i++)
-    result.push_back(decodeString(&offset, data));
-  return result;
+  hermes_fatal("getVariableNames not supported");
 }
 
 OptValue<uint32_t> DebugInfo::getParentFunctionId(uint32_t offset) const {
-  // Incoming offset is given relative to our lexical region.
-  llvh::ArrayRef<uint8_t> data = lexicalData();
-  int64_t parentId;
-  readSignedLEB128(data, offset, &parentId);
-  if (parentId < 0)
-    return llvh::None;
-  assert(parentId <= UINT32_MAX && "Parent ID out of bounds");
-  return uint32_t(parentId);
+  hermes_fatal("getParentFunctionId not supported");
 }
 
 void DebugInfo::disassembleFilenames(llvh::raw_ostream &os) const {
@@ -283,39 +240,6 @@ void DebugInfo::disassembleFilesAndOffsets(llvh::raw_ostream &OS) const {
   }
   OS << "  " << llvh::format_hex(offset, 6)
      << "  end of debug source table\n\n";
-}
-
-void DebugInfo::disassembleLexicalData(llvh::raw_ostream &OS) const {
-  uint32_t offset = 0;
-  llvh::ArrayRef<uint8_t> lexData = lexicalData();
-
-  OS << "Debug lexical table:\n";
-  auto next = [&]() {
-    int64_t result;
-    offset += readSignedLEB128(lexData, offset, &result);
-    return (int32_t)result;
-  };
-  while (offset < lexData.size()) {
-    OS << "  " << llvh::format_hex(offset, 6);
-    int64_t parentId = next();
-    int64_t varNamesCount = next();
-    OS << "  lexical parent: ";
-    if (parentId < 0) {
-      OS << "none";
-    } else {
-      OS << parentId;
-    }
-    OS << ", variable count: " << varNamesCount;
-    OS << '\n';
-    for (int64_t i = 0; i < varNamesCount; i++) {
-      llvh::StringRef name = decodeString(&offset, lexData);
-      OS << "    \"";
-      OS.write_escaped(name);
-      OS << '"' << '\n';
-    }
-  }
-  assert(offset == lexData.size());
-  OS << "  " << llvh::format_hex(offset, 6) << "  end of debug lexical table\n";
 }
 
 #ifndef HERMESVM_LEAN
@@ -370,25 +294,28 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   // so require that statement = 0 for the start debug value.
   assert(start.statement == 0 && "function must start at statement 0");
 
+  auto &files = debugInfo_.getFilesMut();
+  auto &sourcesData = debugInfo_.getDataMut();
+
   if (offsets.empty()) {
     return DebugOffsets::NO_OFFSET;
   }
-  const uint32_t startOffset = sourcesData_.size();
+  const uint32_t startOffset = sourcesData.size();
 
-  if (files_.empty() || files_.back().filenameId != start.filenameId) {
-    files_.push_back(DebugFileRegion{
+  if (files.empty() || files.back().filenameId != start.filenameId) {
+    files.push_back(DebugFileRegion{
         startOffset, start.filenameId, start.sourceMappingUrlId});
   }
 
-  appendSignedLEB128(sourcesData_, functionIndex);
-  appendSignedLEB128(sourcesData_, start.line);
-  appendSignedLEB128(sourcesData_, start.column);
+  appendSignedLEB128(sourcesData, functionIndex);
+  appendSignedLEB128(sourcesData, start.line);
+  appendSignedLEB128(sourcesData, start.column);
   const DebugSourceLocation *previous = &start;
 
   for (auto &next : offsets) {
     if (next.filenameId != previous->filenameId) {
-      files_.push_back(DebugFileRegion{
-          (unsigned)sourcesData_.size(),
+      files.push_back(DebugFileRegion{
+          (unsigned)sourcesData.size(),
           next.filenameId,
           start.sourceMappingUrlId});
     }
@@ -405,56 +332,22 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
     // presence of statementNo.
     ldelta = (ldelta * 2) + (sdelta != 0);
 
-    appendSignedLEB128(sourcesData_, adelta);
-    appendSignedLEB128(sourcesData_, ldelta);
-    appendSignedLEB128(sourcesData_, cdelta);
+    appendSignedLEB128(sourcesData, adelta);
+    appendSignedLEB128(sourcesData, ldelta);
+    appendSignedLEB128(sourcesData, cdelta);
     if (sdelta)
-      appendSignedLEB128(sourcesData_, sdelta);
+      appendSignedLEB128(sourcesData, sdelta);
     previous = &next;
   }
-  appendSignedLEB128(sourcesData_, -1);
+  appendSignedLEB128(sourcesData, -1);
 
+  debugInfo_.resetDataRef();
   return startOffset;
 }
 
-DebugInfoGenerator::DebugInfoGenerator() {
-  // Initialize the empty data entry in debug lexical table.
-  assert(
-      lexicalData_.size() == kEmptyLexicalDataOffset &&
-      "Lexical data should initially be kEmptyLexicalDataOffset");
-  appendSignedLEB128(lexicalData_, -1); // parent function
-  appendSignedLEB128(lexicalData_, 0); // name count
-}
-
-uint32_t DebugInfoGenerator::appendLexicalData(
-    OptValue<uint32_t> parentFunc,
-    llvh::ArrayRef<Identifier> names) {
-  assert(validData && "DebugInfoGenerator not valid");
-  if (!parentFunc.hasValue() && names.empty()) {
-    return kEmptyLexicalDataOffset;
-  }
-  const uint32_t startOffset = lexicalData_.size();
-  appendSignedLEB128(lexicalData_, parentFunc ? *parentFunc : int64_t(-1));
-  appendSignedLEB128(lexicalData_, names.size());
-  for (Identifier name : names)
-    appendString(lexicalData_, name.str());
-  return startOffset;
-}
-
-DebugInfo DebugInfoGenerator::serializeWithMove() {
+void DebugInfoGenerator::generate() && {
   assert(validData);
   validData = false;
 
-  filenameTable_.appendFilenamesToStorage();
-
-  // Append the lexical data after the sources data.
-  uint32_t lexicalStart = sourcesData_.size();
-  auto combinedData = std::move(sourcesData_);
-  combinedData.insert(
-      combinedData.end(), lexicalData_.begin(), lexicalData_.end());
-  return DebugInfo(
-      std::move(filenameTable_),
-      std::move(files_),
-      lexicalStart,
-      StreamVector<uint8_t>(std::move(combinedData)));
+  debugInfo_.getFilenameTableMut().appendFilenamesToStorage();
 }

@@ -124,7 +124,3 @@ function foo() {
 // CHECK-NEXT:    bc 37: line 22 col 9
 // CHECK-NEXT:    bc 47: line 22 col 14
 // CHECK-NEXT:  0x0027  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x0002  end of debug lexical table

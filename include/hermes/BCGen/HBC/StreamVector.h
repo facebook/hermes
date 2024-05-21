@@ -56,6 +56,18 @@ class StreamVector {
     return ref_;
   }
 
+  /// \return a mutable reference to the underlying data.
+  /// NOTE: Any mutation of the data must be followed by a call to resetRef(),
+  /// to ensure that the new data is correctly referenced.
+  std::vector<T> &getDataMut() {
+    return vec_;
+  }
+
+  /// Reset the reference to the underlying data.
+  void resetRef() {
+    ref_ = vec_;
+  }
+
   size_t size() const {
     return ref_.size();
   }

@@ -247,7 +247,3 @@ function f(x) {
 // CHECK-NEXT:    bc 282: line 75 col 13
 // CHECK-NEXT:    bc 289: line 75 col 14
 // CHECK-NEXT:  0x0029  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x0000  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x0002  end of debug lexical table

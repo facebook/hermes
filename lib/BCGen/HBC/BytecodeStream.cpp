@@ -219,7 +219,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   const auto filenameStorage = info.getFilenameStorage();
   const DebugInfo::DebugFileRegionList &files = info.viewFiles();
   const StreamVector<uint8_t> &data = info.viewData();
-  uint32_t lexOffset = info.lexicalDataOffset();
+  uint32_t lexOffset = data.size();
 
   DebugInfoHeader header{
       (uint32_t)filenameTable.size(),

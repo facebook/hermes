@@ -61,18 +61,3 @@ function Fc() {
 // UNICODE:  0x{{[0-9a-f]+}}  function idx 3, starts at {{.*}}
 // UNICODE:  0x{{[0-9a-f]+}}  function idx 4, starts at {{.*}}
 // UNICODE:  0x{{[0-9a-f]+}}  end of debug source table
-
-// CHECK:Debug lexical table:
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: none, variable count: 0
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 3, variable count: 0
-// CHECK-NEXT:  0x{{[0-9a-f]+}}  end of debug lexical table
-// UNICODE:Debug lexical table:
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: none, variable count: 0
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 0, variable count: 0
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  lexical parent: 3, variable count: 0
-// UNICODE-NEXT:  0x{{[0-9a-f]+}}  end of debug lexical table
