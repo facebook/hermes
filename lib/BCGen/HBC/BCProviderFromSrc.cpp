@@ -47,6 +47,10 @@ BCProviderFromSrc::BCProviderFromSrc(
     : BCProviderBase(BCProviderKind::BCProviderFromSrc),
       compilationData_(std::move(compilationData)),
       module_(std::move(module)) {
+  setBytecodeModuleRefs();
+}
+
+void BCProviderFromSrc::setBytecodeModuleRefs() {
   options_ = module_->getBytecodeOptions();
 
   functionCount_ = module_->getNumFunctions();

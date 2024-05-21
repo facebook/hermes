@@ -155,6 +155,11 @@ class BCProviderFromSrc final : public BCProviderBase {
     return result;
   }
 
+  /// Set any references in the BCProvider based on the underlying data.
+  /// This must be called after construction or after any underlying data
+  /// (string tables, regexp tables, etc.) changes during lazy compilation.
+  void setBytecodeModuleRefs();
+
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     return RuntimeFunctionHeader(&module_->getFunction(functionID).getHeader());
   }
