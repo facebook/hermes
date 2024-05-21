@@ -8,6 +8,7 @@
 #include "ScopedFunctionPromoter.h"
 
 #include "SemanticResolver.h"
+#include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"

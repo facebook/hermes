@@ -59,8 +59,8 @@ bool SemanticResolver::runCommonJSModule(
     BindingTableScopeTy programBindingScope(bindingTable_);
     llvh::SaveAndRestore<LexicalScope *> saveLexicalScope(
         curScope_, semCtx_.getGlobalScope());
-    llvh::SaveAndRestore<BindingTableScopeTy *> setGlobalScope(
-        globalScope_, &programBindingScope);
+    llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
+        globalScope_, programBindingScope.ptr());
 
     visitESTreeNodeNoReplace(*this, rootNode);
   }
@@ -89,8 +89,8 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
 
   {
     ScopeRAII programScope{*this, node};
-    llvh::SaveAndRestore<BindingTableScopeTy *> setGlobalScope(
-        globalScope_, &programScope.getBindingScope());
+    llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
+        globalScope_, programScope.getBindingScope().ptr());
 
     // Promote hoisted functions.
     if (!curFunctionInfo()->strict) {
@@ -1136,30 +1136,31 @@ void SemanticResolver::visitFunctionLike(
     bindingTable_.try_emplace(kw_.identArguments, Binding{argsDecl, nullptr});
   };
 
-  // Determine whether we need to declare "arguments" temporarily, while
-  // processing the parameter init expressions, in case they refer to it.
-  bool declaredArgumentsTemporarily = false;
-  if (!llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
-      !hasParameterNamedArguments && hasParameterExpressions) {
-    declareArguments();
-    declaredArgumentsTemporarily = true;
-  }
-
   // Do not visit the identifier node, because that would try to resolve it
   // in an incorrect scope!
   // visitESTreeNode(*this, getIdentifier(node), node);
 
-  // Visit the parameters before we have hoisted the body declarations.
-  {
+  /// Visits the parameters in the current scope.
+  auto visitParams = [this, node]() -> void {
     llvh::SaveAndRestore<bool> oldIsFormalParams{
         functionContext()->isFormalParams, true};
     visitESTreeNodeList(*this, getParams(node), node);
-  }
+  };
 
-  // If we declared the arguments object temporarily, unbind it, so it doesn't
-  // clash with potential declarations in the function body.
-  if (declaredArgumentsTemporarily)
-    bindingTable_.eraseFromCurrentScope(kw_.identArguments);
+  // Visit the parameters before we have hoisted the body declarations.
+  // Determine whether we need to declare "arguments" temporarily, while
+  // processing the parameter init expressions, in case they refer to it.
+  if (!llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
+      !hasParameterNamedArguments && hasParameterExpressions) {
+    // If we declared the arguments object temporarily, unbind it after visiting
+    // the params, so it doesn't clash with potential declarations in the
+    // function body.
+    ScopeRAII temporaryArgumentsScope{*this};
+    declareArguments();
+    visitParams();
+  } else {
+    visitParams();
+  }
 
   // Promote hoisted functions.
   if (blockBody) {

@@ -9,7 +9,7 @@
 #define HERMES_SEMA_SEMANTICRESOLVER_H
 
 #include "DeclCollector.h"
-#include "hermes/ADT/ScopedHashTable.h"
+#include "hermes/ADT/PersistentScopedMap.h"
 #include "hermes/AST/RecursiveVisitor.h"
 #include "hermes/Sema/Keywords.h"
 
@@ -80,15 +80,17 @@ class SemanticResolver
   };
 
   /// The scoped binding table mapping from string to binding.
-  using BindingTableTy = hermes::ScopedHashTable<UniqueString *, Binding>;
+  using BindingTableTy = hermes::PersistentScopedMap<UniqueString *, Binding>;
   using BindingTableScopeTy =
-      hermes::ScopedHashTableScope<UniqueString *, Binding>;
+      hermes::PersistentScopedMapScope<UniqueString *, Binding>;
+  using BindingTableScopePtrTy =
+      hermes::PersistentScopedMapScopePtr<UniqueString *, Binding>;
 
   /// The currently lexically visible names.
   BindingTableTy bindingTable_{};
 
   /// The global scope.
-  BindingTableScopeTy *globalScope_ = nullptr;
+  BindingTableScopePtrTy globalScope_;
 
   /// True if we are preparing the AST to be compiled by Hermes, including
   /// erroring on features which we parse but don't compile and transforming
