@@ -17,6 +17,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -275,9 +276,9 @@ class SynthTrace {
   /// If \p traceStream is non-null, the trace will be written to that
   /// stream.  Otherwise, no trace is written.
   explicit SynthTrace(
-      ObjectID globalObjID,
       const ::hermes::vm::RuntimeConfig &conf,
-      std::unique_ptr<llvh::raw_ostream> traceStream = nullptr);
+      std::unique_ptr<llvh::raw_ostream> traceStream = nullptr,
+      std::optional<ObjectID> = {});
 
   template <typename T, typename... Args>
   void emplace_back(Args &&...args) {
@@ -289,7 +290,7 @@ class SynthTrace {
     return records_;
   }
 
-  ObjectID globalObjID() const {
+  std::optional<ObjectID> globalObjID() const {
     return globalObjID_;
   }
 
@@ -353,7 +354,11 @@ class SynthTrace {
   /// written to the file.
   std::vector<std::unique_ptr<Record>> records_;
   /// The id of the global object.
-  const ObjectID globalObjID_;
+  /// Note: Keeping this as optional to support replaying the older trace
+  /// records before the change of TracingRuntime's PointerValue based ObjectID.
+  /// We can remove this once we remove old traces.
+  /// TODO: T189113203
+  const std::optional<ObjectID> globalObjID_;
 
  public:
   /// @name Record classes

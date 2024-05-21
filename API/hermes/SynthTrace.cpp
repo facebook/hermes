@@ -98,15 +98,14 @@ bool SynthTrace::TraceValue::operator==(const TraceValue &that) const {
 }
 
 SynthTrace::SynthTrace(
-    ObjectID globalObjID,
     const ::hermes::vm::RuntimeConfig &conf,
-    std::unique_ptr<llvh::raw_ostream> traceStream)
+    std::unique_ptr<llvh::raw_ostream> traceStream,
+    std::optional<ObjectID> globalObjID)
     : traceStream_(std::move(traceStream)), globalObjID_(globalObjID) {
   if (traceStream_) {
     json_ = std::make_unique<JSONEmitter>(*traceStream_, /*pretty*/ true);
     json_->openDict();
     json_->emitKeyValue("version", synthVersion());
-    json_->emitKeyValue("globalObjID", globalObjID_);
 
     // RuntimeConfig section.
     json_->emitKey("runtimeConfig");
