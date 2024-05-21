@@ -39,8 +39,8 @@ class SynthTrace {
   /// A tagged union representing different types available in the trace.
   /// We use a an API very similar to HermesValue, but:
   ///   a) also represent the JSI type PropNameID, and
-  ///   b) the "payloads" for some the types (Objects, Strings, and PropNameIDs)
-  ///      are unique ObjectIDs, rather than actual values.
+  ///   b) the "payloads" for some the types (Objects, Strings, BigInts, Symbols
+  ///   and PropNameIDs) are unique ObjectIDs, rather than actual values.
   /// (This could probably become a std::variant when we could use C++17.)
   class TraceValue {
    public:

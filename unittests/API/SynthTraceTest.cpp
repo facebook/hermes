@@ -1334,6 +1334,29 @@ TEST_F(SynthTraceReplayTest, BigIntCreate) {
   }
 }
 
+TEST_F(SynthTraceReplayTest, BigIntCreateFromJs) {
+  {
+    auto &rt = *traceRt;
+    eval(rt, R""""(
+x = BigInt("9007199254740991");
+)"""");
+
+    jsi::Value x = rt.global().getProperty(rt, "x");
+    ASSERT_TRUE(x.isBigInt());
+    jsi::BigInt bigint = x.asBigInt(rt);
+    jsi::String str = bigint.toString(rt, 10);
+    rt.global().setProperty(rt, "str", str);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto bigint = rt.global().getProperty(rt, "x").asBigInt(rt);
+    auto str = rt.global().getProperty(rt, "str").asString(rt);
+    EXPECT_EQ(bigint.getInt64(rt), 9007199254740991);
+    EXPECT_EQ(str.utf8(rt), "9007199254740991");
+  }
+}
+
 /// This test is here to make sure that the replayed string match is happening
 /// during replay.
 TEST_F(SynthTraceReplayTest, PropNameIDUtf8) {

@@ -115,7 +115,8 @@ class TraceInterpreter final {
   /// Index of lastUses_ vector that the interpreter is currently processing.
   uint64_t lastUsesIndex_{0};
 
-  // Invariant: the value is either jsi::Object, jsi::String, jsi::Symbol.
+  // Invariant: the value is either jsi::Object, jsi::String, jsi::Symbol,
+  // jsi::BigInt.
   std::unordered_map<SynthTrace::ObjectID, jsi::Value> gom_;
   // For the PropNameIDs, which are not representable as jsi::Value.
   std::unordered_map<SynthTrace::ObjectID, jsi::PropNameID> gpnm_;
@@ -221,14 +222,15 @@ class TraceInterpreter final {
       jsi::PropNameID &&val,
       uint64_t defIndex);
 
-  /// If \p traceValue specifies an Object, String or Symbol, requires \p
-  /// val to be of the corresponding runtime type.  Adds this \p val to gom_.
+  /// If \p traceValue specifies an Object, String, BigInt or Symbol, requires
+  /// \p val to be of the corresponding runtime type.  Adds this \p val to gom_.
   ///
   /// \p isThis should be true if and only if the value is a 'this' in a call
   /// (only used for validation). TODO(T84791675): Remove this parameter.
   ///
   /// N.B. This method should be called even if you happen to know that the
-  /// value cannot be an Object or String, since it performs useful validation.
+  /// value cannot be an Object, String, Symbol or BigInt, since it performs
+  /// useful validation.
   void ifObjectAddToObjectMap(
       SynthTrace::TraceValue traceValue,
       const jsi::Value &val,

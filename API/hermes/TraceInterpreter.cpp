@@ -192,6 +192,8 @@ void assertMatch(const SynthTrace::TraceValue &traceValue, const Value &val) {
     assert(val.isObject() && "type mismatch between trace and replay");
   } else if (traceValue.isSymbol()) {
     assert(val.isSymbol() && "type mismatch between trace and replay");
+  } else if (traceValue.isBigInt()) {
+    assert(val.isBigInt() && "type mismatch between trace and replay");
   }
 }
 #endif
@@ -603,8 +605,7 @@ jsi::Value TraceInterpreter::traceValueToJSIValue(
   if (value.isBool()) {
     return Value(value.getBool());
   }
-  if (value.isObject() || value.isBigInt() || value.isString() ||
-      value.isSymbol()) {
+  if (value.isUID()) {
     return getJSIValueForUse(value.getUID());
   }
   llvm_unreachable("Unrecognized value type encountered");
@@ -1127,7 +1128,7 @@ void TraceInterpreter::ifObjectAddToObjectMap(
     assertMatch(traceValue, val);
   }
 #endif
-  if (traceValue.isObject() || traceValue.isString() || traceValue.isSymbol()) {
+  if (traceValue.isUID()) {
     addToObjectMap(traceValue.getUID(), std::move(val), defIndex);
   }
 }
