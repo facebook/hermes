@@ -10,6 +10,7 @@
 #include "ESTreeIRGen.h"
 
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
 namespace hermes {
@@ -47,6 +48,13 @@ void generateIRForCJSModule(
   flow::FlowContext flowContext{};
   ESTreeIRGen generator(M, semContext, flowContext, node);
   return generator.doCJSModule(semContext, segmentID, id, filename);
+}
+
+Function *generateLazyFunctionIR(
+    Function *F,
+    ESTree::FunctionLikeNode *node,
+    sema::SemContext &semCtx) {
+  hermes_fatal("IRGen: IRGen for lazy unimplemented");
 }
 
 } // namespace hermes

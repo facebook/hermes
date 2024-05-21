@@ -293,6 +293,11 @@ Function::ProhibitInvoke Function::getProhibitInvoke() const {
   return ProhibitInvoke::ProhibitNone;
 }
 
+LazyCompilationDataInst *Function::getLazyCompilationDataInst() {
+  return llvh::dyn_cast<LazyCompilationDataInst>(
+      &BasicBlockList.front().front());
+}
+
 BasicBlock::BasicBlock(Function *parent)
     : Value(ValueKind::BasicBlockKind), Parent(parent) {
   assert(Parent && "Invalid parent function");

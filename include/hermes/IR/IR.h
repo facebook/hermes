@@ -46,6 +46,7 @@ class JSDynamicParam;
 class Instruction;
 class Context;
 class TerminatorInst;
+class LazyCompilationDataInst;
 
 /// Representation of a type in the IR. This roughly corresponds for JavaScript
 /// types, but represents lower level concepts like "empty" type for TDZ and
@@ -603,42 +604,6 @@ static inline bool kindInRange(ValueKind kind, ValueKind from, ValueKind to) {
 /// Return number of values in an IR class.
 #define HERMES_IR_CLASS_LENGTH(CLASS) \
   ((int)ValueKind::Last_##CLASS##Kind - (int)ValueKind::First_##CLASS##Kind - 1)
-
-/// A linked list of function scopes provided as context during IRGen.
-/// This how e.g. the debugger can provide information that an identifier 'foo'
-/// should be captured from a function two levels down the lexical stack.
-class SerializedScope {
- public:
-  /// Parent scope, if any.
-  std::shared_ptr<const SerializedScope> parentScope;
-  /// Original name of the function, if any.
-  Identifier originalName;
-  /// The generated name of the variable holding the function in the parent's
-  /// frame, which is what we need to look up to reference ourselves. It is only
-  /// set if there is an alias binding from \c originalName (which must be
-  /// valid) and said variable, which must have a different name (since it is
-  /// generated). Function::lazyClosureAlias_.
-  Identifier closureAlias;
-  /// List of variable names in the frame.
-  llvh::SmallVector<Identifier, 16> variables;
-};
-
-#ifndef HERMESVM_LEAN
-/// The source of a lazy AST node.
-struct LazySource {
-  /// The type of node (such as a FunctionDeclaration or FunctionExpression).
-  ESTree::NodeKind nodeKind{ESTree::NodeKind::Empty};
-  /// The source buffer id in which this function can be find.
-  uint32_t bufferId{0};
-  /// The range of the function within the buffer (the whole function node, not
-  /// just the lazily parsed body).
-  SMRange functionRange;
-  /// The Yield param to restore when eagerly parsing.
-  bool paramYield{false};
-  /// The Await param to restore when eagerly parsing.
-  bool paramAwait{false};
-};
-#endif
 
 /// A set of attributes to be associated with Values.
 union Attributes {
@@ -1999,9 +1964,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return expectedParamCountIncludingThis_;
   }
 
+  /// \return the LazyCompilationDataInst at the start of the function,
+  /// or nullptr if there isn't one.
+  LazyCompilationDataInst *getLazyCompilationDataInst();
+
   /// \return true if the function should be compiled lazily.
-  bool isLazy() const {
-    return false;
+  bool isLazy() {
+    return getLazyCompilationDataInst() != nullptr;
   }
 
   using iterator = BasicBlockListType::iterator;

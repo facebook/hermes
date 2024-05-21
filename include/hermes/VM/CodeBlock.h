@@ -202,12 +202,24 @@ class CodeBlock final
   }
 
   /// Checks whether this function is lazily compiled.
+#ifndef HERMESVM_LEAN
   bool isLazy() const {
     return false;
   }
-  ExecutionStatus lazyCompile(Runtime &) {
+  ExecutionStatus lazyCompile(Runtime &runtime) {
+    if (LLVM_LIKELY(!isLazy()))
+      return ExecutionStatus::RETURNED;
+    return lazyCompileImpl(runtime);
+  }
+  ExecutionStatus lazyCompileImpl(Runtime &runtime);
+#else
+  bool isLazy() const {
+    return false;
+  }
+  ExecutionStatus lazyCompile(Runtime &runtime) {
     return ExecutionStatus::RETURNED;
   }
+#endif
 
   /// Get the start location of this function, if it's lazy.
   SourceErrorManager::SourceCoords getLazyFunctionStartLoc() const {

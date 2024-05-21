@@ -190,32 +190,6 @@ OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
 
 OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
     uint32_t offset) const {
-#ifndef HERMESVM_LEAN
-  if (LLVM_UNLIKELY(isLazy())) {
-    assert(offset == 0 && "Function is lazy, but debug offset >0 specified");
-
-    auto *provider = (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
-    auto *func = provider->getBytecodeFunction();
-    auto *lazyData = func->getLazyCompilationData();
-    auto sourceLoc = lazyData->span.Start;
-
-    SourceErrorManager::SourceCoords coords;
-    if (!lazyData->context->getSourceErrorManager().findBufferLineAndLoc(
-            sourceLoc, coords)) {
-      return llvh::None;
-    }
-
-    hbc::DebugSourceLocation location;
-    location.line = coords.line;
-    location.column = coords.col;
-    // We don't actually have a filename table, so we can't really provide
-    // this. Fortunately the location of uncompiled codeblocks is primarily
-    // used by heap snapshots, which substitutes it for the SourceID anyways.
-    location.filenameId = facebook::hermes::debugger::kInvalidLocation;
-    return location;
-  }
-#endif
-
   auto debugLocsOffset = getDebugSourceLocationsOffset();
   if (!debugLocsOffset) {
     return llvh::None;
@@ -226,6 +200,12 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
       ->getDebugInfo()
       ->getLocationForAddress(*debugLocsOffset, offset);
 }
+
+#ifndef HERMESVM_LEAN
+ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
+  hermes_fatal("CodeBlock::lazyCompile unsupported");
+}
+#endif
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   // Note that for the case of lazy compilation, the function sources had been
@@ -266,16 +246,7 @@ OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
 
 SourceErrorManager::SourceCoords CodeBlock::getLazyFunctionLoc(
     bool start) const {
-  assert(isLazy() && "Function must be lazy");
-  SourceErrorManager::SourceCoords coords;
-#ifndef HERMESVM_LEAN
-  auto *provider = (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
-  auto *func = provider->getBytecodeFunction();
-  auto *lazyData = func->getLazyCompilationData();
-  lazyData->context->getSourceErrorManager().findBufferLineAndLoc(
-      start ? lazyData->span.Start : lazyData->span.End, coords);
-#endif
-  return coords;
+  hermes_fatal("lazy function location unsupported");
 }
 
 void CodeBlock::markCachedHiddenClasses(

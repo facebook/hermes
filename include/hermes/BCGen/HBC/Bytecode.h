@@ -55,7 +55,7 @@ class BytecodeFunction {
   std::vector<HBCExceptionHandlerInfo> exceptions_;
 
   /// Data to lazily compile this BytecodeFunction, if applicable.
-  std::unique_ptr<LazyCompilationData> lazyCompilationData_{};
+  Function *lazyFunction_ = nullptr;
 
  public:
   /// Used during serialization. \p opcodes will be swapped after this call.
@@ -128,17 +128,16 @@ class BytecodeFunction {
         debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET;
   }
 
-  LazyCompilationData *getLazyCompilationData() const {
-    return lazyCompilationData_.get();
+  void setLazyFunction(Function *lazyFunction) {
+    lazyFunction_ = lazyFunction;
   }
-
-  void setLazyCompilationData(std::unique_ptr<LazyCompilationData> data) {
-    lazyCompilationData_ = std::move(data);
+  Function *getLazyFunction() {
+    return lazyFunction_;
   }
 
   /// \return true if the function should be compiled lazily.
   bool isLazy() const {
-    return (bool)lazyCompilationData_;
+    return lazyFunction_ != nullptr;
   }
 };
 
