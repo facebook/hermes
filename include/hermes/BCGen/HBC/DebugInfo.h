@@ -127,11 +127,7 @@ class DebugInfo {
   using DebugFileRegionList = llvh::SmallVector<DebugFileRegion, 1>;
 
  private:
-  /// Filename table for mapping to offsets and lengths in filenameStorage_.
-  std::vector<StringTableEntry> filenameTable_{};
-
-  /// String storage for filenames.
-  std::vector<unsigned char> filenameStorage_{};
+  UniquingFilenameTable filenameTable_;
 
   DebugFileRegionList files_{};
   uint32_t lexicalDataOffset_ = 0;
@@ -145,12 +141,11 @@ class DebugInfo {
   /*implicit*/ DebugInfo(DebugInfo &&that) = default;
 
   explicit DebugInfo(
-      ConsecutiveStringStorage &&filenameStrings,
+      UniquingFilenameTable &&filenameTable,
       DebugFileRegionList &&files,
       uint32_t lexicalDataOffset,
       StreamVector<uint8_t> &&data)
-      : filenameTable_(filenameStrings.acquireStringTable()),
-        filenameStorage_(filenameStrings.acquireStringStorage()),
+      : filenameTable_(std::move(filenameTable)),
         files_(std::move(files)),
         lexicalDataOffset_(lexicalDataOffset),
         data_(std::move(data)) {}
@@ -161,8 +156,9 @@ class DebugInfo {
       DebugFileRegionList &&files,
       uint32_t lexicalDataOffset,
       StreamVector<uint8_t> &&data)
-      : filenameTable_(std::move(filenameStrings)),
-        filenameStorage_(std::move(filenameStorage)),
+      : filenameTable_(ConsecutiveStringStorage{
+            std::move(filenameStrings),
+            std::move(filenameStorage)}),
         files_(std::move(files)),
         lexicalDataOffset_(lexicalDataOffset),
         data_(std::move(data)) {}
@@ -176,18 +172,18 @@ class DebugInfo {
     return data_;
   }
   llvh::ArrayRef<StringTableEntry> getFilenameTable() const {
-    return filenameTable_;
+    return filenameTable_.getStringTableView();
   }
   llvh::ArrayRef<unsigned char> getFilenameStorage() const {
-    return filenameStorage_;
+    return filenameTable_.getStringStorageView();
   }
 
   /// Retrieve the filename for a given \p id in the filename table.
   std::string getUTF8FilenameByID(uint32_t id) const {
-    assert(id < filenameTable_.size() && "Filename ID out of bounds");
+    assert(id < getFilenameTable().size() && "Filename ID out of bounds");
     std::string utf8Storage;
     return getUTF8StringFromEntry(
-               filenameTable_[id], filenameStorage_, utf8Storage)
+               getFilenameTable()[id], getFilenameStorage(), utf8Storage)
         .str();
   }
 

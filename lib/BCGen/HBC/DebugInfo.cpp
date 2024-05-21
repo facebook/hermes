@@ -240,10 +240,10 @@ OptValue<uint32_t> DebugInfo::getParentFunctionId(uint32_t offset) const {
 
 void DebugInfo::disassembleFilenames(llvh::raw_ostream &os) const {
   os << "Debug filename table:\n";
-  for (uint32_t i = 0, e = filenameTable_.size(); i < e; ++i) {
+  for (uint32_t i = 0, e = getFilenameTable().size(); i < e; ++i) {
     os << "  " << i << ": " << getUTF8FilenameByID(i) << '\n';
   }
-  if (filenameTable_.empty()) {
+  if (getFilenameTable().empty()) {
     os << "  (none)\n";
   }
   os << '\n';
@@ -445,13 +445,15 @@ DebugInfo DebugInfoGenerator::serializeWithMove() {
   assert(validData);
   validData = false;
 
+  filenameTable_.appendFilenamesToStorage();
+
   // Append the lexical data after the sources data.
   uint32_t lexicalStart = sourcesData_.size();
   auto combinedData = std::move(sourcesData_);
   combinedData.insert(
       combinedData.end(), lexicalData_.begin(), lexicalData_.end());
   return DebugInfo(
-      UniquingFilenameTable::toStorage(std::move(filenameTable_)),
+      std::move(filenameTable_),
       std::move(files_),
       lexicalStart,
       StreamVector<uint8_t>(std::move(combinedData)));
