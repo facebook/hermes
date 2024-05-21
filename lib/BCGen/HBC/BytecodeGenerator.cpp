@@ -222,6 +222,39 @@ void BytecodeModuleGenerator::initializeSerializedLiterals(
   literalOffsetMap_ = std::move(bufs.offsetMap);
 }
 
+void BytecodeModuleGenerator::initializeSerializedLiteralsLazy(
+    LiteralBufferBuilder::Result &&bufs) {
+  uint32_t literalValBufferOffset = bm_.getLiteralValueBufferSize();
+  uint32_t objKeyBufferOffset = bm_.getObjectKeyBufferSize();
+  uint32_t objShapeTableOffset = bm_.getObjectShapeTableSize();
+
+  // Fix up the shape table to point to the potentially offset key buffer.
+  for (auto &entry : bufs.shapeTable) {
+    entry.keyBufferOffset += objKeyBufferOffset;
+  }
+
+  // Offset all the offsets by the existing offsets.
+  for (auto &[it, entry] : bufs.offsetMap) {
+    if (entry.shapeTableIdx == UINT32_MAX) {
+      entry.valueBufferOffset += literalValBufferOffset;
+    } else {
+      entry.shapeTableIdx += objShapeTableOffset;
+      entry.valueBufferOffset += literalValBufferOffset;
+    }
+  }
+
+  // FIXME: Avoid copying the buffers by reusing the existing std::vectors.
+  bm_.appendSerializedLiterals(
+      std::move(bufs.literalValBuffer),
+      std::move(bufs.keyBuffer),
+      std::move(bufs.shapeTable));
+
+  /// literalOffsetMap_ isn't persisted because it's only used for ISel,
+  /// and once that's done it can be discarded because any relevant information
+  /// has been stored in the bytecode instructions themselves.
+  literalOffsetMap_ = std::move(bufs.offsetMap);
+}
+
 /// \return true if and only if a literal string operand at index \p idx of
 /// instruction \p I is to be treated as an Identifier during Hermes Bytecode
 /// generation.
@@ -529,7 +562,6 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
     Function *lazyFunc,
     uint32_t lazyFuncID) && {
   assert(valid_ && "cannot generate more than once with a generator");
-  assert(lazyFunc->isLazy() && "lazy function is not lazy");
   assert(
       bm_.getBCProviderFromSrc() && "BytecodeModule doesn't have a provider");
   valid_ = false;
@@ -566,7 +598,15 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
 
   collectStrings();
 
-  // TODO: Append serialized literals here.
+  // TODO: Avoid creating a new vector and copying the data here.
+  // We should just be able to give references to LiteralBufferBuilder and have
+  // it append directly.
+  initializeSerializedLiteralsLazy(LiteralBufferBuilder::generate(
+      M_,
+      shouldGenerate,
+      [this](llvh::StringRef str) { return getIdentifierID(str); },
+      [this](llvh::StringRef str) { return getStringID(str); },
+      options_.optimizationEnabled));
 
   if (!generateAddedFunctions())
     return false;

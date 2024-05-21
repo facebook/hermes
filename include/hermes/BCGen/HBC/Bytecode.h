@@ -433,6 +433,21 @@ class BytecodeModule {
     objShapeTable_ = std::move(objShapeTable);
   }
 
+  /// Append to the buffers based on the buffers passed in.
+  void appendSerializedLiterals(
+      std::vector<unsigned char> &&literalValueBuffer,
+      std::vector<unsigned char> &&objKeyBuffer,
+      std::vector<ShapeTableEntry> &&objShapeTable) {
+    literalValueBuffer_.insert(
+        literalValueBuffer_.end(),
+        literalValueBuffer.begin(),
+        literalValueBuffer.end());
+    objKeyBuffer_.insert(
+        objKeyBuffer_.end(), objKeyBuffer.begin(), objKeyBuffer.end());
+    objShapeTable_.insert(
+        objShapeTable_.end(), objShapeTable.begin(), objShapeTable.end());
+  }
+
   /// Returns the amount of bytes in the object key buffer
   uint32_t getObjectKeyBufferSize() const {
     return objKeyBuffer_.size();
@@ -441,6 +456,11 @@ class BytecodeModule {
   /// Returns the amount of bytes in the literal value buffer.
   uint32_t getLiteralValueBufferSize() const {
     return literalValueBuffer_.size();
+  }
+
+  /// Returns the amount of bytes in the literal value buffer.
+  uint32_t getObjectShapeTableSize() const {
+    return objShapeTable_.size();
   }
 
   /// Returns a reference to the literal value buffer.

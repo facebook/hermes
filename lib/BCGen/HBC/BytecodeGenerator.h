@@ -162,10 +162,17 @@ class BytecodeModuleGenerator {
     return bm_.addBigInt(std::move(bigint));
   }
 
-  /// Set the serialized literal tables that this generator will use. Once set,
-  /// no further modifications are possible.
+  /// Set the serialized literal tables that this generator will use.
+  /// Only to be called once, when the module is created and the buffers are
+  /// empty.
   /// \param bufs containing the serialized literals.
   void initializeSerializedLiterals(LiteralBufferBuilder::Result &&bufs);
+
+  /// Set the serialized literal tables that this generator will use,
+  /// given that the module already exists with the buffers already set.
+  /// Appends new data and populates literalOffsetMap_.
+  /// \param bufs containing the serialized literals.
+  void initializeSerializedLiteralsLazy(LiteralBufferBuilder::Result &&bufs);
 
   /// Adds a compiled regexp to the module table.
   /// \return the index of the regexp in the table.
