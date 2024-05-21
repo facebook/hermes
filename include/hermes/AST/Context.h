@@ -421,8 +421,7 @@ class Context {
   }
 
   void setLazyCompilation(bool lazyCompilation) {
-    // TODO: restore this when we are ready to re-enable it.
-    //    lazyCompilation_ = lazyCompilation;
+    lazyCompilation_ = lazyCompilation;
   }
 
   unsigned getPreemptiveFunctionCompilationThreshold() {
