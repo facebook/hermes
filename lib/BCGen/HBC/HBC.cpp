@@ -35,6 +35,16 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
   return success ? std::move(bm) : nullptr;
 }
 
+bool generateBytecodeFunctionLazy(
+    BytecodeModule &bm,
+    Module *M,
+    Function *lazyFunc,
+    uint32_t lazyFuncID,
+    const BytecodeGenerationOptions &options) {
+  return BytecodeModuleGenerator{bm, M, options, nullptr, nullptr}
+      .generateLazyFunctions(lazyFunc, lazyFuncID);
+}
+
 } // namespace hbc
 } // namespace hermes
 

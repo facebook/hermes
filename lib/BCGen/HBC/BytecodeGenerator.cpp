@@ -97,11 +97,16 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     DebugInfoGenerator &debugInfoGenerator) {
   BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxRegisterUsage()};
 
-  runHBCISel(F, &funcGen, RA, options, debugCache, sourceMapGen);
-  if (funcGen.hasEncodingError()) {
-    F->getParent()->getContext().getSourceErrorManager().error(
-        F->getSourceRange().Start, "Error encoding bytecode");
-    return nullptr;
+  if (F->isLazy()) {
+    // Nothing to do.
+    funcGen.bytecodeGenerationComplete();
+  } else {
+    runHBCISel(F, &funcGen, RA, options, debugCache, sourceMapGen);
+    if (funcGen.hasEncodingError()) {
+      F->getParent()->getContext().getSourceErrorManager().error(
+          F->getSourceRange().Start, "Error encoding bytecode");
+      return nullptr;
+    }
   }
   assert(
       funcGen.complete_ && "ISel did not complete BytecodeFunctionGenerator");
@@ -130,6 +135,13 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     uint32_t lexicalDataOffset = debugInfoGenerator.appendLexicalData(
         funcGen.getLexicalParentID(), funcGen.getDebugVariableNames());
     bcFunc->setDebugOffsets({sourceLocOffset, lexicalDataOffset});
+  }
+
+  // For lazy functions, set the function here to be used by the
+  // compilation pipeline when they are called at runtime.
+  if (auto *lazyInst = F->getLazyCompilationDataInst()) {
+    bcFunc->setLazyFunction(F);
+    lazyInst->getData().bcFunctionID = functionID;
   }
 
   return bcFunc;
@@ -367,10 +379,6 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
   const uint32_t strippedFunctionNameId =
       options_.stripFunctionNames ? bm_.getStringID(kStrippedFunctionName) : 0;
   for (auto [F, functionID] : functionIDMap_) {
-    if (F->isLazy()) {
-      hermes_fatal("lazy compilation not supported");
-    }
-
     auto *cjsModule = M_->findCJSModule(F);
     if (cjsModule) {
       if (M_->getCJSModulesResolved()) {
@@ -448,9 +456,7 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
 bool BytecodeModuleGenerator::generate(
     Function *entryPoint,
     hermes::OptValue<uint32_t> segment) && {
-  assert(
-      valid_ &&
-      "BytecodeModuleGenerator::generate() cannot be called more than once");
+  assert(valid_ && "cannot generate more than once with a generator");
   valid_ = false;
 
   lowerModuleIR(M_, options_);
@@ -503,6 +509,57 @@ bool BytecodeModuleGenerator::generate(
       options_.optimizationEnabled));
 
   return generateAddedFunctions();
+}
+
+bool BytecodeModuleGenerator::generateLazyFunctions(
+    Function *lazyFunc,
+    uint32_t lazyFuncID) && {
+  assert(valid_ && "cannot generate more than once with a generator");
+  assert(lazyFunc->isLazy() && "lazy function is not lazy");
+  assert(
+      bm_.getBCProviderFromSrc() && "BytecodeModule doesn't have a provider");
+  valid_ = false;
+
+  lowerModuleIR(M_, options_);
+
+  // Add each function to BMGen so that each function has a unique ID.
+  // Start by replacing the lazy Function with the real Function.
+  functionIDMap_.insert({lazyFunc, lazyFuncID});
+
+  /// \return true if we should generate function \p f.
+  std::function<bool(Function *)> shouldGenerate = [this](Function *f) -> bool {
+    // Do not generate the top-level function because it's retained
+    // throughout lazy compilation (due to IRGen requirements) but is only
+    // an UnreachableInst stub after it's generated.
+    if (f == M_->getTopLevelFunction())
+      return false;
+
+    // Skip lazy functions that already have BytecodeFunctions and IDs.
+    if (auto *lazyInst = f->getLazyCompilationDataInst();
+        lazyInst && lazyInst->getData().bcFunctionID.hasValue()) {
+      return false;
+    }
+
+    return true;
+  };
+
+  for (Function &F : *M_) {
+    if (!shouldGenerate(&F)) {
+      continue;
+    }
+    addFunction(&F);
+  }
+
+  collectStrings();
+
+  // TODO: Append serialized literals here.
+
+  bool success = generateAddedFunctions();
+  if (!success)
+    return false;
+
+  bm_.getBCProviderFromSrc()->setBytecodeModuleRefs();
+  return true;
 }
 
 } // namespace hbc

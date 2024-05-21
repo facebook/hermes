@@ -113,6 +113,18 @@ class BytecodeModuleGenerator {
   /// \return true on success, false on failure (will report errors).
   bool generate(Function *entryPoint, hermes::OptValue<uint32_t> segment) &&;
 
+  /// Generates new functions created by lazy compilation.
+  /// Generates all the functions in the Module except the top-level function.
+  /// All the functions generated will have \p lazyFunc as a lexical ancestor,
+  /// and \p lazyFunc will be the only Function that had a bytecode function ID
+  /// prior to this call.
+  /// After this is called, the data for lazyFunc will be cleaned up,
+  /// and its lazy children will have their IDs assigned.
+  /// \param lazyFunc a new function replacing an existing lazy function.
+  /// \param lazyFuncID the existing ID of the lazy function.
+  /// \return true on success, false on failure (will report errors).
+  bool generateLazyFunctions(Function *lazyFunc, uint32_t lazyFuncID) &&;
+
   /// Add a function to request generating bytecode for it if it doesn't
   /// already exist.
   /// The associated BytecodeFunction will be nullptr until it's generated.

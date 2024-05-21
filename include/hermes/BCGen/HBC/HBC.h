@@ -41,6 +41,21 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
+/// Generate bytecode for a lazy function and mutate the BytecodeModule
+/// accordingly.
+/// Called after parser/resolver/IRGen have run by lazy compilation.
+/// \param bm the bytecode module to be modified.
+/// \param M the IR module containing the lazy function.
+/// \param lazyFunc the lazy function to be compiled.
+/// \param lazyFuncID the ID of the lazy function.
+/// \param options the bytecode generation options.
+bool generateBytecodeFunctionLazy(
+    BytecodeModule &bm,
+    Module *M,
+    Function *lazyFunc,
+    uint32_t lazyFuncID,
+    const BytecodeGenerationOptions &options);
+
 } // namespace hbc
 } // namespace hermes
 
