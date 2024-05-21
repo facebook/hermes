@@ -82,7 +82,19 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   /// The table maps from a sequential string id in the bytecode to an
   /// SymbolID.
-  std::vector<RootSymbolID> stringIDMap_;
+  std::vector<RootSymbolID> stringIDMap_{};
+
+  /// Lazy compilation: Next string ID to allocate when mapping strings.
+  StringID nextStringID_ = 0;
+
+  /// Lazy compilation: offset in stringKinds to begin at when importing the
+  /// stringIDMap_.
+  uint32_t stringKindsOffset_ = 0;
+
+  /// Lazy compilation: offset in identifierHashes to begin at when importing
+  /// the stringIDMap_.
+  /// Updated when importStringIDMapMayAllocate runs.
+  uint32_t identifierHashesOffset_ = 0;
 
   /// Weak pointer to a GC-managed Domain that owns this RuntimeModule.
   /// We use WeakRoot<Domain> here to express that the RuntimeModule does not
@@ -269,6 +281,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   /// \return the CodeBlock for a function by function index.
   inline CodeBlock *getCodeBlockMayAllocate(unsigned index) {
+    assert(index < functionMap_.size() && "Index out of bounds");
     if (LLVM_LIKELY(functionMap_[index])) {
       return functionMap_[index];
     }
@@ -400,6 +413,16 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
         templateMap_.count(templateObjID) == 0 &&
         "The template object already exists.");
     templateMap_[templateObjID] = templateObj.get();
+  }
+
+  /// After a new lazy function has been compiled, update internal RuntimeModule
+  /// state with new data from the BCProvider.
+  void initAfterLazyCompilation() {
+    importStringIDMapMayAllocate();
+    initializeFunctionMap();
+    // Initialize the object literal hidden class cache.
+    auto numObjShapes = bcProvider_->getObjectShapeTable().size();
+    objectLiteralHiddenClasses_.resize(numObjShapes);
   }
 
  private:

@@ -9,10 +9,8 @@
 
 #include "hermes/VM/CodeBlock.h"
 
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SimpleDiagHandler.h"
@@ -125,8 +123,9 @@ CodeBlock *CodeBlock::createCodeBlock(
     const uint8_t *bytecode,
     uint32_t functionID) {
 #ifdef HERMES_SLOW_DEBUG
-  validateInstructions(
-      {bytecode, header.bytecodeSizeInBytes()}, header.frameSize());
+  if (bytecode)
+    validateInstructions(
+        {bytecode, header.bytecodeSizeInBytes()}, header.frameSize());
 #endif
 
   // Compute size needed for caching from the highest accessed indices.
@@ -159,21 +158,11 @@ int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
 }
 
 SymbolID CodeBlock::getNameMayAllocate() const {
-#ifndef HERMESVM_LEAN
-  if (isLazy()) {
-    return runtimeModule_->getLazyName();
-  }
-#endif
   return runtimeModule_->getSymbolIDFromStringIDMayAllocate(
       functionHeader_.functionName());
 }
 
 std::string CodeBlock::getNameString(GCBase::GCCallbacks &runtime) const {
-#ifndef HERMESVM_LEAN
-  if (isLazy()) {
-    return runtime.convertSymbolToUTF8(runtimeModule_->getLazyName());
-  }
-#endif
   return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
 }
 
@@ -203,7 +192,21 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
 
 #ifndef HERMESVM_LEAN
 ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
-  hermes_fatal("CodeBlock::lazyCompile unsupported");
+  assert(isLazy() && "Laziness has not been checked");
+  auto *provider = runtimeModule_->getBytecode();
+
+  auto [success, errMsg] = hbc::compileLazyFunction(provider, functionID_);
+  if (!success) {
+    // Raise a SyntaxError to be consistent with eval().
+    return runtime.raiseSyntaxError(llvh::StringRef{errMsg});
+  }
+
+  functionHeader_ =
+      runtimeModule_->getBytecode()->getFunctionHeader(functionID_);
+  bytecode_ = runtimeModule_->getBytecode()->getBytecode(functionID_);
+  runtimeModule_->initAfterLazyCompilation();
+
+  return ExecutionStatus::RETURNED;
 }
 #endif
 

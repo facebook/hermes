@@ -56,6 +56,30 @@ bool generateBytecodeFunctionLazy(
     uint32_t lazyFuncID,
     const BytecodeGenerationOptions &options);
 
+/// Generate the bytecode for the lazy function by running the full compiler
+/// pipeline without optimizations.
+/// Mutates the underlying BytecodeModule of the BCProviderFromSrc and updates
+/// all references stored in the BCProviderFromSrc.
+/// Runs the compiler on a separate thread to avoid stack overflows, blocking
+/// the current thread while doing so.
+///
+/// \param provider the BCProviderFromSrc owning the BytecodeModule.
+///   Passed in as BCProvider to avoid BCProviderFromSrc dependencies in
+///   CodeBlock (for simplicity).
+/// \param funcID the ID of the lazy function to generate.
+/// \return [success, errMsg] where errMsg is only populated when success is
+///   false. The error message is stored in the lazy BytecodeFunction which
+///   failed to compile.
+///
+/// NOTE: This function is exposed here for convenience, because there's no
+/// better place to put it to access all the parts of the compiler.
+/// It calls \c generateBytecodeFunctionLazy, but that function is also exposed
+/// on principle because it's an actual entry point into the backend - this
+/// function is really a driver for the entire compiler.
+std::pair<bool, llvh::StringRef> compileLazyFunction(
+    hbc::BCProvider *baseProvider,
+    uint32_t funcID);
+
 } // namespace hbc
 } // namespace hermes
 

@@ -142,9 +142,8 @@ ExecutionStatus RuntimeModule::initializeMayAllocate(
 CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
 #ifndef HERMESVM_LEAN
   if (bcProvider_->isFunctionLazy(index)) {
-    auto *lazyModule = RuntimeModule::createLazyModule(
-        runtime_, getDomain(runtime_), this, index);
-    functionMap_[index] = lazyModule->getOnlyLazyCodeBlock();
+    functionMap_[index] = CodeBlock::createCodeBlock(
+        this, bcProvider_->getFunctionHeader(index), nullptr, index);
     return functionMap_[index];
   }
 #endif
@@ -232,8 +231,6 @@ void RuntimeModule::importStringIDMapMayAllocate() {
 
   auto strTableSize = bcProvider_->getStringCount();
 
-  stringIDMap_.clear();
-
   // Populate the string ID map with empty identifiers.
   stringIDMap_.resize(strTableSize, RootSymbolID(SymbolID::empty()));
 
@@ -258,31 +255,38 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   // then this is an underestimate.
   runtime_.getIdentifierTable().reserve(hashes.size());
   {
-    StringID strID = 0;
-    uint32_t hashID = 0;
+    uint32_t hashID = identifierHashesOffset_;
 
-    for (auto entry : kinds) {
+    for (auto entry : kinds.drop_front(stringKindsOffset_)) {
       switch (entry.kind()) {
         case StringKind::String:
-          strID += entry.count();
+          nextStringID_ += entry.count();
           break;
 
         case StringKind::Identifier:
-          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++hashID) {
+          for (uint32_t i = 0; i < entry.count();
+               ++i, ++nextStringID_, ++hashID) {
             createSymbolFromStringIDMayAllocate(
-                strID, bcProvider_->getStringTableEntry(strID), hashes[hashID]);
+                nextStringID_,
+                bcProvider_->getStringTableEntry(nextStringID_),
+                hashes[hashID]);
           }
           break;
       }
     }
 
-    assert(strID == strTableSize && "Should map every string in the bytecode.");
+    assert(
+        nextStringID_ == strTableSize &&
+        "Should map every string in the bytecode.");
     assert(hashID == hashes.size() && "Should hash all identifiers.");
   }
 
   if (runtime_.getVMExperimentFlags() & experiments::MAdviseStringsRandom) {
     bcProvider_->adviseStringTableRandom();
   }
+
+  stringKindsOffset_ = bcProvider_->getStringKinds().size();
+  identifierHashesOffset_ = bcProvider_->getIdentifierHashes().size();
 
   if (strTableSize == 0) {
     // If the string table turns out to be empty,
@@ -407,6 +411,9 @@ void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
 llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
     Runtime &runtime,
     uint32_t shapeTableIndex) const {
+  assert(
+      shapeTableIndex < objectLiteralHiddenClasses_.size() &&
+      "Invalid shape table index");
   auto &HC = objectLiteralHiddenClasses_[shapeTableIndex];
   if (HC) {
     return runtime_.makeHandle(HC.get(runtime, runtime.getHeap()));

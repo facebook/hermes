@@ -58,6 +58,15 @@ class BytecodeFunction {
   /// Data to lazily compile this BytecodeFunction, if applicable.
   Function *lazyFunction_ = nullptr;
 
+  /// Error message if this was a lazy function which failed to compile.
+  /// Stored here to avoid rerunning compilation.
+  /// Compilation can fail even in bytecode generation, and running IRGen again
+  /// for new bytecode and/or having to deal with half-emitted child functions
+  /// would be inconvenient.
+  /// This is an early error, which would have been caught as a SyntaxError in
+  /// eager mode.
+  llvh::Optional<std::string> lazyCompileError_{};
+
  public:
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
@@ -139,6 +148,22 @@ class BytecodeFunction {
   /// \return true if the function should be compiled lazily.
   bool isLazy() const {
     return lazyFunction_ != nullptr;
+  }
+
+  /// Set the lazy compile error.
+  /// May only be called once.
+  void setLazyCompileError(std::string &&error) {
+    assert(
+        !lazyCompileError_.hasValue() && "Cannot set lazy compile error twice");
+    lazyCompileError_ = std::move(error);
+  }
+  /// \return the lazy compile error if this function has already failed to
+  /// compile once.
+  llvh::Optional<llvh::StringRef> getLazyCompileError() const {
+    if (lazyCompileError_) {
+      return llvh::StringRef{*lazyCompileError_};
+    }
+    return llvh::None;
   }
 };
 

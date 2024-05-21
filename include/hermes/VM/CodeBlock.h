@@ -204,7 +204,7 @@ class CodeBlock final
   /// Checks whether this function is lazily compiled.
 #ifndef HERMESVM_LEAN
   bool isLazy() const {
-    return false;
+    return !bytecode_;
   }
   ExecutionStatus lazyCompile(Runtime &runtime) {
     if (LLVM_LIKELY(!isLazy()))
