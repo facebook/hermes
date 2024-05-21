@@ -25,10 +25,14 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
+  auto bm = std::make_unique<BytecodeModule>();
 
-  return BytecodeModuleGenerator{
-      M, options, sourceMapGen, std::move(baseBCProvider)}
-      .generate(entryPoint, segment);
+  bool success =
+      BytecodeModuleGenerator{
+          *bm, M, options, sourceMapGen, std::move(baseBCProvider)}
+          .generate(entryPoint, segment);
+
+  return success ? std::move(bm) : nullptr;
 }
 
 } // namespace hbc

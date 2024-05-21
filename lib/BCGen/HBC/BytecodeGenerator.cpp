@@ -190,10 +190,10 @@ void BytecodeFunctionGenerator::bytecodeGenerationComplete() {
 }
 
 unsigned BytecodeModuleGenerator::addFunction(Function *F) {
-  auto [it, inserted] = functionIDMap_.insert({F, bm_->getNumFunctions()});
+  auto [it, inserted] = functionIDMap_.insert({F, bm_.getNumFunctions()});
   if (inserted) {
-    bm_->addFunction();
-    bm_->getBytecodeOptionsMut().hasAsync |= llvh::isa<AsyncFunction>(F);
+    bm_.addFunction();
+    bm_.getBytecodeOptionsMut().hasAsync |= llvh::isa<AsyncFunction>(F);
   }
   return it->second;
 }
@@ -201,10 +201,9 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
 void BytecodeModuleGenerator::initializeSerializedLiterals(
     LiteralBufferBuilder::Result &&bufs) {
   assert(
-      bm_->getLiteralValueBuffer().empty() &&
-      bm_->getObjectKeyBuffer().empty() && literalOffsetMap_.empty() &&
-      "serialized literals already initialized");
-  bm_->initializeSerializedLiterals(
+      bm_.getLiteralValueBuffer().empty() && bm_.getObjectKeyBuffer().empty() &&
+      literalOffsetMap_.empty() && "serialized literals already initialized");
+  bm_.initializeSerializedLiterals(
       std::move(bufs.literalValBuffer),
       std::move(bufs.keyBuffer),
       std::move(bufs.shapeTable));
@@ -355,10 +354,10 @@ void BytecodeModuleGenerator::collectStrings() {
       options_.optimizationEnabled
           ? StringLiteralTable::OptimizeMode::ReorderAndPack
           : StringLiteralTable::OptimizeMode::Reorder);
-  bm_->initializeStringTable(std::move(strings));
+  bm_.initializeStringTable(std::move(strings));
 }
 
-std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
+bool BytecodeModuleGenerator::generate(
     Function *entryPoint,
     hermes::OptValue<uint32_t> segment) && {
   assert(
@@ -415,14 +414,14 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
       [this](llvh::StringRef str) { return getStringID(str); },
       options_.optimizationEnabled));
 
-  BytecodeOptions &bytecodeOptions = bm_->getBytecodeOptionsMut();
+  BytecodeOptions &bytecodeOptions = bm_.getBytecodeOptionsMut();
   bytecodeOptions.cjsModulesStaticallyResolved = M_->getCJSModulesResolved();
 
   // Allow reusing the debug cache between functions
   FileAndSourceMapIdCache debugCache{};
 
   const uint32_t strippedFunctionNameId =
-      options_.stripFunctionNames ? bm_->getStringID(kStrippedFunctionName) : 0;
+      options_.stripFunctionNames ? bm_.getStringID(kStrippedFunctionName) : 0;
   for (auto [F, functionID] : functionIDMap_) {
     if (F->isLazy()) {
       hermes_fatal("lazy compilation not supported");
@@ -477,7 +476,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
 
     uint32_t functionNameId = options_.stripFunctionNames
         ? strippedFunctionNameId
-        : bm_->getStringID(F->getOriginalOrInferredName().str());
+        : bm_.getStringID(F->getOriginalOrInferredName().str());
 
     // Use the register allocated IR to make a BytecodeFunctionGenerator and
     // run ISel.
@@ -493,13 +492,13 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
             sourceMapGen_,
             debugInfoGenerator_);
     if (!func)
-      return nullptr;
+      return false;
 
-    bm_->setFunction(functionID, std::move(func));
+    bm_.setFunction(functionID, std::move(func));
   }
 
-  bm_->setDebugInfo(debugInfoGenerator_.serializeWithMove());
-  return std::move(bm_);
+  bm_.setDebugInfo(debugInfoGenerator_.serializeWithMove());
+  return true;
 }
 
 } // namespace hbc
