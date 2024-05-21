@@ -46,6 +46,8 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   void queueMicrotask(const jsi::Function &callback) override;
   bool drainMicrotasks(int maxMicrotasksHint = -1) override;
 
+  jsi::Object global() override;
+
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
 

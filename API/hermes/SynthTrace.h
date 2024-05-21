@@ -211,6 +211,7 @@ class SynthTrace {
     BigIntToString,
     SetExternalMemoryPressure,
     Utf8,
+    Global,
   };
 
   /// A Record is one element of a trace.
@@ -1316,6 +1317,25 @@ class SynthTrace {
       std::vector<ObjectID> vec;
       pushIfTrackedValue(objID_, vec);
       return vec;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    bool operator==(const Record &that) const override;
+  };
+
+  struct GlobalRecord final : public Record {
+    static constexpr RecordType type{RecordType::Global};
+    const ObjectID objID_; // global's ObjectID returned from Runtime::global().
+
+    explicit GlobalRecord(TimeSinceStart time, ObjectID objID)
+        : Record(time), objID_(objID) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> defs() const override {
+      return {objID_};
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;

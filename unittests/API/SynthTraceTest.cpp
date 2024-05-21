@@ -135,23 +135,25 @@ TEST_F(SynthTraceTest, SymbolToString) {
   const SynthTrace::ObjectID objId = rt->getUniqueID(symbol.asSymbol(*rt));
 
   const auto &records = rt->trace().records();
-  // records[0] is createString for "eval"
-  // records[1] is getProperty for "eval"
-  // records[2] is createString for "Symbol('foo')"
+  // records[0] is global()
+  // records[1] is createString for "eval"
+  // records[2] is getProperty for "eval"
+  // records[3] is createString for "Symbol('foo')"
   // records[4] is return from eval
   // records[5] is symbolToString
-  EXPECT_EQ(6, records.size());
+  EXPECT_EQ(7, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::Utf8Record(
           dummyTime, SynthTrace::encodeSymbol(objId), symbolToStringResult),
-      *records[5]);
+      *records[6]);
 }
 
 TEST_F(SynthTraceTest, CallAndReturn) {
   const std::string code = "function identity(x) { return x; }";
   rt->evaluateJavaScript(
       std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(code)), "");
-  const SynthTrace::ObjectID globalObjID = rt->getUniqueID(rt->global());
+  jsi::Object global = rt->global();
+  const SynthTrace::ObjectID globalObjID = rt->getUniqueID(global);
   std::string argStr{"foobar"};
   // StringCreate0
   auto arg = jsi::String::createFromAscii(*rt, argStr);
@@ -160,9 +162,7 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   std::string identityStr{"identity"};
   jsi::String identity = jsi::String::createFromAscii(*rt, identityStr);
   SynthTrace::ObjectID identityID = rt->getUniqueID(identity);
-
-  auto func =
-      rt->global().getProperty(*rt, identity).asObject(*rt).asFunction(*rt);
+  auto func = global.getProperty(*rt, identity).asObject(*rt).asFunction(*rt);
   SynthTrace::ObjectID functionID = rt->getUniqueID(func);
   auto ret = func.call(*rt, {std::move(arg)});
   // Make sure that the return value is correct in case there's some bug in
@@ -170,10 +170,20 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   ASSERT_EQ(argStr, ret.asString(rt->plain()).utf8(rt->plain()));
 
   const auto &records = rt->trace().records();
+  int recordIndex = 0;
   // The first two records are for executing the JS for "identity".
   // Then there are two string creations -- one labeled StringCreate0 above,
   // and the other for the string "identity" in StringCreate1.
-  EXPECT_EQ(7, records.size());
+  EXPECT_EQ(8, records.size());
+  EXPECT_EQ(
+      SynthTrace::RecordType::BeginExecJS, records[recordIndex++]->getType());
+  EXPECT_EQ(
+      SynthTrace::RecordType::EndExecJS, records[recordIndex++]->getType());
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+  EXPECT_EQ(
+      SynthTrace::RecordType::CreateString, records[recordIndex++]->getType());
+  EXPECT_EQ(
+      SynthTrace::RecordType::CreateString, records[recordIndex++]->getType());
   auto gprExpect = SynthTrace::GetPropertyRecord(
       dummyTime,
       globalObjID,
@@ -182,18 +192,18 @@ TEST_F(SynthTraceTest, CallAndReturn) {
       identityStr,
 #endif
       SynthTrace::encodeObject(functionID));
-  EXPECT_EQ_RECORD(gprExpect, *records[4]);
+  EXPECT_EQ_RECORD(gprExpect, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CallFromNativeRecord(
           dummyTime,
           functionID,
           SynthTrace::encodeUndefined(),
           {SynthTrace::encodeString(argID)}),
-      *records[5]);
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::ReturnToNativeRecord(
           dummyTime, SynthTrace::encodeString(argID)),
-      *records[6]);
+      *records[recordIndex++]);
 }
 
 TEST_F(SynthTraceTest, CallToNative) {
@@ -673,42 +683,44 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
     ASSERT_EQ(insertValue, ho.getProperty(*rt, tho->xPropName).asNumber());
   }
   const auto &records = rt->trace().records();
-  auto globID = rt->getUniqueID(rt->global());
-  EXPECT_EQ(17, records.size());
+  auto globID = rt->getUniqueID(rt->plain().global());
+  int recordIndex = 0;
+  EXPECT_EQ(20, records.size());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime, xPropNameID, cs.x.c_str(), cs.x.size()),
-      *records[0]);
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime,
           getHappenedPropNameID,
           cs.getHappened.c_str(),
           cs.getHappened.size()),
-      *records[1]);
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime,
           setHappenedPropNameID,
           cs.setHappened.c_str(),
           cs.setHappened.size()),
-      *records[2]);
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime,
           getPropertyNamesHappenedPropNameID,
           cs.getPropertyNamesHappened.c_str(),
           cs.getPropertyNamesHappened.size()),
-      *records[3]);
+      *records[recordIndex++]);
 
   EXPECT_EQ_RECORD(
-      SynthTrace::CreateHostObjectRecord(dummyTime, objID), *records[4]);
+      SynthTrace::CreateHostObjectRecord(dummyTime, objID),
+      *records[recordIndex++]);
   // Called getProperty on the proxy. This first calls getProperty on the proxy,
   // then on the host object itself.
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeRecord(dummyTime, objID, xPropNameID, cs.x),
-      *records[5]);
+      *records[recordIndex++]);
   auto sprExpect0 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
@@ -717,11 +729,12 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       cs.getHappened,
 #endif
       SynthTrace::encodeBool(true));
-  EXPECT_EQ_RECORD(sprExpect0, *records[6]);
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+  EXPECT_EQ_RECORD(sprExpect0, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           dummyTime, SynthTrace::encodeNumber(0)),
-      *records[7]);
+      *records[recordIndex++]);
   auto gprExpect0 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
@@ -730,7 +743,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       cs.x,
 #endif
       SynthTrace::encodeNumber(0));
-  EXPECT_EQ_RECORD(gprExpect0, *records[8]);
+  EXPECT_EQ_RECORD(gprExpect0, *records[recordIndex++]);
   // Called setProperty on the proxy.
   auto sprExpect1 = SynthTrace::SetPropertyRecord(
       dummyTime,
@@ -740,7 +753,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       cs.x,
 #endif
       SynthTrace::encodeNumber(insertValue));
-  EXPECT_EQ_RECORD(sprExpect1, *records[9]);
+  EXPECT_EQ_RECORD(sprExpect1, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::SetPropertyNativeRecord(
           dummyTime,
@@ -748,7 +761,8 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
           xPropNameID,
           cs.x,
           SynthTrace::encodeNumber(insertValue)),
-      *records[10]);
+      *records[recordIndex++]);
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   auto sprExpect2 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
@@ -757,13 +771,15 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       cs.setHappened,
 #endif
       SynthTrace::encodeBool(true));
-  EXPECT_EQ_RECORD(sprExpect2, *records[11]);
+  EXPECT_EQ_RECORD(sprExpect2, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
-      SynthTrace::SetPropertyNativeReturnRecord(dummyTime), *records[12]);
+      SynthTrace::SetPropertyNativeReturnRecord(dummyTime),
+      *records[recordIndex++]);
   // Called getProperty one last time.
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeRecord(dummyTime, objID, xPropNameID, cs.x),
-      *records[13]);
+      *records[recordIndex++]);
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   auto sprExpect4 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
@@ -772,11 +788,11 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       cs.getHappened,
 #endif
       SynthTrace::encodeBool(true));
-  EXPECT_EQ_RECORD(sprExpect4, *records[14]);
+  EXPECT_EQ_RECORD(sprExpect4, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           dummyTime, SynthTrace::encodeNumber(insertValue)),
-      *records[15]);
+      *records[recordIndex++]);
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
       dummyTime,
       objID,
@@ -785,7 +801,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       cs.x,
 #endif
       SynthTrace::encodeNumber(insertValue));
-  EXPECT_EQ_RECORD(gprExpect1, *records[16]);
+  EXPECT_EQ_RECORD(gprExpect1, *records[recordIndex++]);
 }
 
 TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
@@ -864,19 +880,22 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
     auto yResPropName = jsi::PropNameID::forAscii(*rt, yRes.c_str());
     yResPropNameID = rt->getUniqueID(yResPropName);
     // Retrieve the results.
-    ASSERT_EQ(7, rt->global().getProperty(*rt, xResPropName).asNumber());
-    ASSERT_FALSE(rt->global().getProperty(*rt, yResPropName).getBool());
+    ASSERT_EQ(
+        7, rt->plain().global().getProperty(*rt, xResPropName).asNumber());
+    ASSERT_FALSE(rt->plain().global().getProperty(*rt, yResPropName).getBool());
   }
   const auto &records = rt->trace().records();
-  auto globID = rt->getUniqueID(rt->global());
-  EXPECT_EQ(20, records.size());
+  auto globID = rt->getUniqueID(rt->plain().global());
+  int recordIndex = 0;
+  EXPECT_EQ(24, records.size());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime, oPropNameID, cs.o.c_str(), cs.o.size()),
-      *records[0]);
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
-      SynthTrace::CreateObjectRecord(dummyTime, oObjID), *records[1]);
+      SynthTrace::CreateObjectRecord(dummyTime, oObjID),
+      *records[recordIndex++]);
   auto sprExpect0 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
@@ -885,13 +904,15 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       cs.o,
 #endif
       SynthTrace::encodeObject(oObjID));
-  EXPECT_EQ_RECORD(sprExpect0, *records[2]);
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+  EXPECT_EQ_RECORD(sprExpect0, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
-      SynthTrace::CreateHostObjectRecord(dummyTime, hoObjID), *records[3]);
+      SynthTrace::CreateHostObjectRecord(dummyTime, hoObjID),
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime, hoPropNameID, ho.c_str(), ho.size()),
-      *records[4]);
+      *records[recordIndex++]);
   auto sprExpect1 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
@@ -900,16 +921,19 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       ho,
 #endif
       SynthTrace::encodeObject(hoObjID));
-  EXPECT_EQ_RECORD(sprExpect1, *records[5]);
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+  EXPECT_EQ_RECORD(sprExpect1, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::BeginExecJSRecord(dummyTime, "", codeHash, false),
-      *records[6]);
+      *records[recordIndex++]);
   // Called getProperty on the host object.
   // We can't create the expected record, since we don't know the unique ID for
   // the PropNameID for "x".  So test the fields individually.
-  EXPECT_EQ(SynthTrace::RecordType::GetPropertyNative, records[7]->getType());
-  auto rec7AsGPN =
-      dynamic_cast<const SynthTrace::GetPropertyNativeRecord &>(*records[7]);
+  EXPECT_EQ(
+      SynthTrace::RecordType::GetPropertyNative,
+      records[recordIndex]->getType());
+  auto rec7AsGPN = dynamic_cast<const SynthTrace::GetPropertyNativeRecord &>(
+      *records[recordIndex++]);
   EXPECT_EQ(hoObjID, rec7AsGPN.hostObjectID_);
   uint32_t observedXPropNameUID = rec7AsGPN.propNameID_;
   EXPECT_EQ(x, rec7AsGPN.propName_);
@@ -922,7 +946,8 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       cs.o,
 #endif
       SynthTrace::encodeObject(oObjID));
-  EXPECT_EQ_RECORD(gprExpect0, *records[8]);
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+  EXPECT_EQ_RECORD(gprExpect0, *records[recordIndex++]);
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
       dummyTime,
       oObjID,
@@ -931,17 +956,19 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       x,
 #endif
       SynthTrace::encodeNumber(7));
-  EXPECT_EQ_RECORD(gprExpect1, *records[9]);
+  EXPECT_EQ_RECORD(gprExpect1, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           dummyTime, SynthTrace::encodeNumber(7)),
-      *records[10]);
+      *records[recordIndex++]);
   // Called setProperty on the host object.
   // We can't create the expected record, since we don't know the unique ID for
   // the PropNameID for "y".  So test the fields individually.
-  EXPECT_EQ(SynthTrace::RecordType::SetPropertyNative, records[11]->getType());
-  auto rec11AsGPN =
-      dynamic_cast<const SynthTrace::SetPropertyNativeRecord &>(*records[11]);
+  EXPECT_EQ(
+      SynthTrace::RecordType::SetPropertyNative,
+      records[recordIndex]->getType());
+  auto rec11AsGPN = dynamic_cast<const SynthTrace::SetPropertyNativeRecord &>(
+      *records[recordIndex++]);
   EXPECT_EQ(hoObjID, rec11AsGPN.hostObjectID_);
   uint32_t observedYPropNameUID = rec11AsGPN.propNameID_;
   EXPECT_EQ(y, rec11AsGPN.propName_);
@@ -954,7 +981,8 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       cs.o,
 #endif
       SynthTrace::encodeObject(oObjID));
-  EXPECT_EQ_RECORD(gprExpect2, *records[12]);
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+  EXPECT_EQ_RECORD(gprExpect2, *records[recordIndex++]);
   auto sprExpect = SynthTrace::SetPropertyRecord(
       dummyTime,
       oObjID,
@@ -963,20 +991,21 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       y,
 #endif
       SynthTrace::encodeBool(false));
-  EXPECT_EQ_RECORD(sprExpect, *records[13]);
+  EXPECT_EQ_RECORD(sprExpect, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
-      SynthTrace::SetPropertyNativeReturnRecord(dummyTime), *records[14]);
+      SynthTrace::SetPropertyNativeReturnRecord(dummyTime),
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::EndExecJSRecord(dummyTime, SynthTrace::encodeUndefined()),
-      *records[15]);
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime, xResPropNameID, xRes.c_str(), xRes.size()),
-      *records[16]);
+      *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
           dummyTime, yResPropNameID, yRes.c_str(), yRes.size()),
-      *records[17]);
+      *records[recordIndex++]);
   auto gprExpect3 = SynthTrace::GetPropertyRecord(
       dummyTime,
       globID,
@@ -985,7 +1014,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       xRes,
 #endif
       SynthTrace::encodeNumber(7));
-  EXPECT_EQ_RECORD(gprExpect3, *records[18]);
+  EXPECT_EQ_RECORD(gprExpect3, *records[recordIndex++]);
   auto gprExpect4 = SynthTrace::GetPropertyRecord(
       dummyTime,
       globID,
@@ -994,7 +1023,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       yRes,
 #endif
       SynthTrace::encodeBool(false));
-  EXPECT_EQ_RECORD(gprExpect4, *records[19]);
+  EXPECT_EQ_RECORD(gprExpect4, *records[recordIndex++]);
 }
 
 TEST_F(SynthTraceTest, CreateBigInt) {

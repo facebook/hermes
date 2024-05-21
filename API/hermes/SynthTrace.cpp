@@ -539,6 +539,14 @@ bool SynthTrace::Utf8Record::operator==(const Record &that) const {
   return objID_ == thatCasted.objID_ && retVal_ == thatCasted.retVal_;
 }
 
+bool SynthTrace::GlobalRecord::operator==(const Record &that) const {
+  if (!Record::operator==(that)) {
+    return false;
+  }
+  auto &thatCasted = dynamic_cast<const GlobalRecord &>(that);
+  return objID_ == thatCasted.objID_;
+}
+
 void SynthTrace::Record::toJSONInternal(JSONEmitter &json) const {
   std::string storage;
   llvh::raw_string_ostream os{storage};
@@ -766,6 +774,11 @@ void SynthTrace::Utf8Record::toJSONInternal(JSONEmitter &json) const {
   json.emitKeyValue("retval", retVal_);
 }
 
+void SynthTrace::GlobalRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+}
+
 const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   switch (ru) {
     case ::hermes::vm::ReleaseUnused::kReleaseUnusedNone:
@@ -874,6 +887,7 @@ llvh::raw_ostream &operator<<(
     CASE(BigIntToString);
     CASE(SetExternalMemoryPressure);
     CASE(Utf8);
+    CASE(Global);
   }
 #undef CASE
   // This only exists to appease gcc.
@@ -922,6 +936,7 @@ std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type) {
   CASE(BigIntToString)
   CASE(SetExternalMemoryPressure)
   CASE(Utf8);
+  CASE(Global);
 #undef CASE
 
   llvm_unreachable(
