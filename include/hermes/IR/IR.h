@@ -2484,6 +2484,13 @@ class Module : public Value {
     return FunctionList.back();
   }
 
+  /// Delete all non top-level non-lazy functions and set the Module state to be
+  /// ready for compiling more code.
+  /// Delete unused VariableScopes to avoid unnecessary memory usage.
+  /// Avoids destroying a Module completely,
+  /// but allows it to be reused for another purpose.
+  void resetForLazyCompilation();
+
   void viewGraph();
   void dump(llvh::raw_ostream &os = llvh::outs()) const;
 

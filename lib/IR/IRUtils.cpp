@@ -9,6 +9,7 @@
 
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
+#include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 
 namespace hermes {
@@ -109,6 +110,29 @@ std::pair<Instruction *, VariableScope *> getResolveScopeStart(
     startVarScope = startVarScope->getParentScope();
   }
   return {startScope, startVarScope};
+}
+
+/// Makes an entry block for \p F which only contains UnreachableInst.
+/// Deletes the rest of the body of the function.
+void replaceBodyWithUnreachable(Function *F) {
+  IRBuilder builder(F);
+
+  // Do nothing if the first instruction is already Unreachable.
+  if (llvh::isa<UnreachableInst>(F->begin()->begin())) {
+    return;
+  }
+
+  for (auto it = F->begin(), e = F->end(); it != e;) {
+    auto *BB = &*it++;
+    // No need to handle Phis because the whole body will be deleted.
+    // There may still be uses of the block from other unreachable blocks.
+    BB->replaceAllUsesWith(nullptr);
+    // Erase this basic block.
+    BB->eraseFromParent();
+  }
+  auto *unreachableBB = builder.createBasicBlock(F);
+  builder.setInsertionBlock(unreachableBB);
+  builder.createUnreachableInst();
 }
 
 } // namespace hermes

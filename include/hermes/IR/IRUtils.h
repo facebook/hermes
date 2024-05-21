@@ -42,6 +42,10 @@ std::pair<Instruction *, VariableScope *> getResolveScopeStart(
     VariableScope *startVarScope,
     VariableScope *targetVarScope);
 
+/// Makes an entry block for \p F which only contains UnreachableInst.
+/// Deletes the rest of the body of the function.
+void replaceBodyWithUnreachable(Function *F);
+
 } // namespace hermes
 
 #endif

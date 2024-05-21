@@ -508,7 +508,13 @@ bool BytecodeModuleGenerator::generate(
       [this](llvh::StringRef str) { return getStringID(str); },
       options_.optimizationEnabled));
 
-  return generateAddedFunctions();
+  if (!generateAddedFunctions())
+    return false;
+
+  if (M_->getContext().isLazyCompilation())
+    M_->resetForLazyCompilation();
+
+  return true;
 }
 
 bool BytecodeModuleGenerator::generateLazyFunctions(
@@ -554,11 +560,12 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
 
   // TODO: Append serialized literals here.
 
-  bool success = generateAddedFunctions();
-  if (!success)
+  if (!generateAddedFunctions())
     return false;
 
   bm_.getBCProviderFromSrc()->setBytecodeModuleRefs();
+  M_->resetForLazyCompilation();
+
   return true;
 }
 

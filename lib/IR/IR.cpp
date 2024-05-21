@@ -6,6 +6,7 @@
  */
 
 #include "hermes/IR/CFG.h"
+#include "hermes/IR/IRUtils.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/Casting.h"
@@ -780,6 +781,45 @@ Identifier Module::deriveUniqueInternalName(Identifier originalName) {
   buf.append("#");
 
   return getContext().getIdentifier(buf);
+}
+
+void Module::resetForLazyCompilation() {
+  isLowered_ = false;
+  areGeneratorsLowered_ = false;
+
+  llvh::SmallVector<Function *, 4> toDestroy{};
+  for (Function &F : FunctionList) {
+    if (&F == topLevelFunction_) {
+      replaceBodyWithUnreachable(&F);
+      continue;
+    }
+    if (F.isLazy()) {
+      continue;
+    }
+
+    toDestroy.push_back(&F);
+  }
+  for (Function *F : toDestroy) {
+    F->eraseFromParentNoDestroy();
+    Value::destroy(F);
+  }
+
+  // Delete unused VariableScopes.
+  // Any VariableScope that has no users isn't used in any
+  // LazyCompilationDataInst, and therefore there will be no future captures of
+  // its variables.
+  // Don't delete any unused variables from VariableScopes here, because they
+  // may be captured in the future.
+  for (auto it = variableScopes_.begin(); it != variableScopes_.end();) {
+    if (it->hasUsers()) {
+      // Skip VariableScopes with users.
+      ++it;
+    } else {
+      // If no users, delete the VariableScope.
+      it->removeFromScopeChain();
+      variableScopes_.erase(it++);
+    }
+  }
 }
 
 void Module::viewGraph() {
