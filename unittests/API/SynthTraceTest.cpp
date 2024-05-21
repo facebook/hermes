@@ -79,7 +79,7 @@ TEST_F(SynthTraceTest, CreateObject) {
   SynthTrace::ObjectID objID;
   {
     auto obj = jsi::Object(*rt);
-    objID = rt->getUniqueID(obj);
+    objID = rt->useObjectID(obj);
   }
   const auto &records = rt->trace().records();
   EXPECT_EQ(1, records.size());
@@ -92,7 +92,7 @@ TEST_F(SynthTraceTest, PropNameIDUtf8) {
   const jsi::PropNameID name = jsi::PropNameID::forAscii(*rt, ascii);
   const std::string utf8RetVal = name.utf8(*rt);
 
-  const SynthTrace::ObjectID objId = rt->getUniqueID(name);
+  const SynthTrace::ObjectID objId = rt->useObjectID(name);
 
   const auto &records = rt->trace().records();
   EXPECT_EQ(2, records.size());
@@ -111,7 +111,7 @@ TEST_F(SynthTraceTest, StringUtf8) {
   const jsi::String name = jsi::String::createFromAscii(*rt, ascii);
   const std::string utf8RetVal = name.utf8(*rt);
 
-  const SynthTrace::ObjectID objId = rt->getUniqueID(name);
+  const SynthTrace::ObjectID objId = rt->useObjectID(name);
 
   const auto &records = rt->trace().records();
   EXPECT_EQ(2, records.size());
@@ -132,7 +132,7 @@ TEST_F(SynthTraceTest, SymbolToString) {
 
   const std::string symbolToStringResult = symbol.asSymbol(*rt).toString(*rt);
 
-  const SynthTrace::ObjectID objId = rt->getUniqueID(symbol.asSymbol(*rt));
+  const SynthTrace::ObjectID objId = rt->useObjectID(symbol.asSymbol(*rt));
 
   const auto &records = rt->trace().records();
   // records[0] is global()
@@ -153,18 +153,20 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   rt->evaluateJavaScript(
       std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(code)), "");
   jsi::Object global = rt->global();
-  const SynthTrace::ObjectID globalObjID = rt->getUniqueID(global);
+  const SynthTrace::ObjectID globalObjID = rt->useObjectID(global);
   std::string argStr{"foobar"};
   // StringCreate0
   auto arg = jsi::String::createFromAscii(*rt, argStr);
-  SynthTrace::ObjectID argID = rt->getUniqueID(arg);
+  SynthTrace::ObjectID argID = rt->useObjectID(arg);
 
   std::string identityStr{"identity"};
   jsi::String identity = jsi::String::createFromAscii(*rt, identityStr);
-  SynthTrace::ObjectID identityID = rt->getUniqueID(identity);
+  SynthTrace::ObjectID identityID = rt->useObjectID(identity);
   auto func = global.getProperty(*rt, identity).asObject(*rt).asFunction(*rt);
-  SynthTrace::ObjectID functionID = rt->getUniqueID(func);
+  SynthTrace::ObjectID functionID = rt->useObjectID(func);
   auto ret = func.call(*rt, {std::move(arg)});
+  SynthTrace::ObjectID retID = rt->useObjectID(ret.asString(rt->plain()));
+
   // Make sure that the return value is correct in case there's some bug in
   // the function that was called.
   ASSERT_EQ(argStr, ret.asString(rt->plain()).utf8(rt->plain()));
@@ -202,7 +204,7 @@ TEST_F(SynthTraceTest, CallAndReturn) {
       *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::ReturnToNativeRecord(
-          dummyTime, SynthTrace::encodeString(argID)),
+          dummyTime, SynthTrace::encodeString(retID)),
       *records[recordIndex++]);
 }
 
@@ -225,8 +227,8 @@ TEST_F(SynthTraceTest, CallToNative) {
     auto propName = jsi::PropNameID::forAscii(*rt, "foo");
     auto func =
         jsi::Function::createFromHostFunction(*rt, propName, 1, undefined);
-    propNameID = rt->getUniqueID(propName);
-    functionID = rt->getUniqueID(func);
+    propNameID = rt->useObjectID(propName);
+    functionID = rt->useObjectID(func);
     auto ret = func.call(*rt, {jsi::Value(arg)});
     ASSERT_EQ(arg + 100, ret.asNumber());
   }
@@ -281,23 +283,23 @@ TEST_F(SynthTraceTest, GetProperty) {
   SynthTrace::ObjectID bPropID;
   {
     auto obj = jsi::Object(*rt);
-    objID = rt->getUniqueID(obj);
+    objID = rt->useObjectID(obj);
     // Property name doesn't matter, just want to record that some property was
     // requested.
     auto aStr = jsi::String::createFromAscii(*rt, a);
-    aStringID = rt->getUniqueID(aStr);
+    aStringID = rt->useObjectID(aStr);
     auto aValue = obj.getProperty(*rt, aStr);
     ASSERT_TRUE(aValue.isUndefined());
 
     // Now get using a PropNameID created from aStr.
     auto aProp = jsi::PropNameID::forString(*rt, aStr);
-    aPropID = rt->getUniqueID(aProp);
+    aPropID = rt->useObjectID(aProp);
     aValue = obj.getProperty(*rt, aProp);
     ASSERT_TRUE(aValue.isUndefined());
 
     // Now get using a PropNameID created from b.
     auto bProp = jsi::PropNameID::forAscii(*rt, b);
-    bPropID = rt->getUniqueID(bProp);
+    bPropID = rt->useObjectID(bProp);
     auto bValue = obj.getProperty(*rt, bProp);
     ASSERT_TRUE(bValue.isUndefined());
   }
@@ -352,14 +354,14 @@ TEST_F(SynthTraceTest, SetProperty) {
   SynthTrace::ObjectID bPropID;
   {
     auto obj = jsi::Object(*rt);
-    objID = rt->getUniqueID(obj);
+    objID = rt->useObjectID(obj);
     auto aStr = jsi::String::createFromAscii(*rt, a);
-    aStringID = rt->getUniqueID(aStr);
+    aStringID = rt->useObjectID(aStr);
     obj.setProperty(*rt, aStr, 1);
 
     // Now set using a PropNameID.
     auto bProp = jsi::PropNameID::forAscii(*rt, b);
-    bPropID = rt->getUniqueID(bProp);
+    bPropID = rt->useObjectID(bProp);
     obj.setProperty(*rt, bProp, true);
   }
   const auto &records = rt->trace().records();
@@ -400,16 +402,16 @@ TEST_F(SynthTraceTest, HasProperty) {
   SynthTrace::ObjectID bPropID;
   {
     auto obj = jsi::Object(*rt);
-    objID = rt->getUniqueID(obj);
+    objID = rt->useObjectID(obj);
     auto aStr = jsi::String::createFromAscii(*rt, a);
-    aStringID = rt->getUniqueID(aStr);
+    aStringID = rt->useObjectID(aStr);
     bool hasA = obj.hasProperty(*rt, aStr);
     // Whether or not "a" exists is irrelevant in this test.
     (void)hasA;
 
     // Now set using a PropNameID.
     auto bProp = jsi::PropNameID::forAscii(*rt, b);
-    bPropID = rt->getUniqueID(bProp);
+    bPropID = rt->useObjectID(bProp);
     bool hasB = obj.hasProperty(*rt, bProp);
     // Whether or not "b" exists is irrelevant in this test.
     (void)hasB;
@@ -451,9 +453,9 @@ TEST_F(SynthTraceTest, GetPropertyNames) {
   SynthTrace::ObjectID propNamesID;
   {
     auto obj = jsi::Object(*rt);
-    objID = rt->getUniqueID(obj);
+    objID = rt->useObjectID(obj);
     jsi::Array names = obj.getPropertyNames(*rt);
-    propNamesID = rt->getUniqueID(names);
+    propNamesID = rt->useObjectID(names);
   }
   const auto &records = rt->trace().records();
   EXPECT_EQ(2, records.size());
@@ -468,7 +470,7 @@ TEST_F(SynthTraceTest, CreateArray) {
   SynthTrace::ObjectID objID;
   {
     auto arr = jsi::Array(*rt, 10);
-    objID = rt->getUniqueID(arr);
+    objID = rt->useObjectID(arr);
   }
   const auto &records = rt->trace().records();
   EXPECT_EQ(1, records.size());
@@ -480,7 +482,7 @@ TEST_F(SynthTraceTest, ArrayWrite) {
   SynthTrace::ObjectID objID;
   {
     auto arr = jsi::Array(*rt, 10);
-    objID = rt->getUniqueID(arr);
+    objID = rt->useObjectID(arr);
     arr.setValueAtIndex(*rt, 0, 1);
   }
   const auto &records = rt->trace().records();
@@ -501,11 +503,12 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
   SynthTrace::ObjectID objID;
   SynthTrace::ObjectID aStringID;
   SynthTrace::ObjectID functionID;
+  SynthTrace::ObjectID argObjID;
   uint32_t propNameID;
   {
     auto aStr = jsi::String::createFromAscii(*rt, a);
-    aStringID = rt->getUniqueID(aStr);
-    auto getObjectProp = [&aStr](
+    aStringID = rt->useObjectID(aStr);
+    auto getObjectProp = [trt = rt.get(), &aStr, &argObjID](
                              jsi::Runtime &rt,
                              const jsi::Value &,
                              const jsi::Value *args,
@@ -513,16 +516,18 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
       if (argc != 1) {
         throw std::logic_error("Should be exactly one argument");
       }
-      args[0].asObject(rt).getProperty(rt, aStr);
+      jsi::Object obj = args[0].asObject(rt);
+      argObjID = trt->useObjectID(obj);
+      obj.getProperty(rt, aStr);
       return jsi::Value(1);
     };
     auto propName = jsi::PropNameID::forAscii(*rt, getObjectPropStr);
     auto func =
         jsi::Function::createFromHostFunction(*rt, propName, 1, getObjectProp);
     auto obj = jsi::Object(*rt);
-    propNameID = rt->getUniqueID(propName);
-    objID = rt->getUniqueID(obj);
-    functionID = rt->getUniqueID(func);
+    propNameID = rt->useObjectID(propName);
+    objID = rt->useObjectID(obj);
+    functionID = rt->useObjectID(func);
     auto value = func.call(*rt, obj);
     // Make sure the right value was returned.
     ASSERT_EQ(1, value.asNumber());
@@ -565,11 +570,11 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
           dummyTime,
           functionID,
           SynthTrace::encodeUndefined(),
-          {SynthTrace::encodeObject(objID)}),
+          {SynthTrace::encodeObject(argObjID)}),
       *records[5]);
   auto gprExpect = SynthTrace::GetPropertyRecord(
       dummyTime,
-      objID,
+      argObjID,
       SynthTrace::encodeString(aStringID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       a,
@@ -610,8 +615,12 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   };
   ConstStrings cs;
 
+  SynthTrace::ObjectID globID;
+
   SynthTrace::ObjectID objID;
   SynthTrace::ObjectID xPropNameID;
+  SynthTrace::ObjectID xPropNameIDForGetProperty[2];
+  SynthTrace::ObjectID xPropNameIDForSetProperty;
   SynthTrace::ObjectID getHappenedPropNameID;
   SynthTrace::ObjectID setHappenedPropNameID;
   SynthTrace::ObjectID getPropertyNamesHappenedPropNameID;
@@ -619,17 +628,23 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   {
     class TestHostObject : public jsi::HostObject {
       double xVal;
-      const ConstStrings &cs;
 
      public:
       jsi::PropNameID xPropName;
       jsi::PropNameID getHappenedPropName;
       jsi::PropNameID setHappenedPropName;
       jsi::PropNameID getPropertyNamesHappenedPropName;
+      jsi::Object &global;
 
-      TestHostObject(jsi::Runtime &rt, const ConstStrings &cs)
+      int getCalledCount = 0;
+      SynthTrace::ObjectID xPropNameIDForGetProperty[2];
+      SynthTrace::ObjectID xPropNameIDForSetProperty;
+      TracingRuntime &trt;
+      TestHostObject(
+          TracingRuntime &rt,
+          const ConstStrings &cs,
+          jsi::Object &global)
           : xVal(0.0),
-            cs(cs),
             xPropName(jsi::PropNameID::forAscii(rt, cs.x.c_str())),
             getHappenedPropName(
                 jsi::PropNameID::forAscii(rt, cs.getHappened.c_str())),
@@ -637,10 +652,14 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
                 jsi::PropNameID::forAscii(rt, cs.setHappened.c_str())),
             getPropertyNamesHappenedPropName(jsi::PropNameID::forAscii(
                 rt,
-                cs.getPropertyNamesHappened.c_str())) {}
+                cs.getPropertyNamesHappened.c_str())),
+            global(global),
+            trt(rt) {}
       jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
+        xPropNameIDForGetProperty[getCalledCount++] = trt.useObjectID(name);
+
         // Do an operation with the runtime, to ensure that it is traced.
-        rt.global().setProperty(rt, getHappenedPropName, jsi::Value(true));
+        global.setProperty(rt, getHappenedPropName, jsi::Value(true));
         if (jsi::PropNameID::compare(rt, name, xPropName)) {
           return jsi::Value(xVal);
         } else {
@@ -652,40 +671,49 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
           const jsi::PropNameID &name,
           const jsi::Value &value) override {
         // Do an operation with the runtime, to ensure that it is traced.
-        rt.global().setProperty(rt, setHappenedPropName, jsi::Value(true));
+        global.setProperty(rt, setHappenedPropName, jsi::Value(true));
         if (jsi::PropNameID::compare(rt, name, xPropName)) {
           xVal = value.asNumber();
         }
+        xPropNameIDForSetProperty = trt.useObjectID(name);
       }
       std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
         // Do an operation with the runtime, to ensure that it is traced.
-        rt.global().setProperty(
+        global.setProperty(
             rt, getPropertyNamesHappenedPropName, jsi::Value(true));
         // Can't re-use propName due to deleted copy constructor.
-        return jsi::PropNameID::names(rt, cs.x.c_str());
+        jsi::PropNameID p{rt, xPropName};
+        return jsi::PropNameID::names(rt, std::move(p));
       }
     };
 
-    auto tho = std::make_shared<TestHostObject>(*rt, cs);
-    xPropNameID = rt->getUniqueID(tho->xPropName);
-    getHappenedPropNameID = rt->getUniqueID(tho->getHappenedPropName);
-    setHappenedPropNameID = rt->getUniqueID(tho->setHappenedPropName);
+    jsi::Object global = rt->global();
+    globID = rt->useObjectID(global);
+
+    auto tho = std::make_shared<TestHostObject>(*rt, cs, global);
+    xPropNameID = rt->useObjectID(tho->xPropName);
+    getHappenedPropNameID = rt->useObjectID(tho->getHappenedPropName);
+    setHappenedPropNameID = rt->useObjectID(tho->setHappenedPropName);
     getPropertyNamesHappenedPropNameID =
-        rt->getUniqueID(tho->getPropertyNamesHappenedPropName);
+        rt->useObjectID(tho->getPropertyNamesHappenedPropName);
 
     jsi::Object ho = jsi::Object::createFromHostObject(*rt, tho);
-    objID = rt->getUniqueID(ho);
+    objID = rt->useObjectID(ho);
     // Access the property
     ASSERT_EQ(0, ho.getProperty(*rt, tho->xPropName).asNumber());
+    xPropNameIDForGetProperty[0] = tho->xPropNameIDForGetProperty[0];
+
     // Write to the property
     ho.setProperty(*rt, tho->xPropName, jsi::Value(insertValue));
+    xPropNameIDForSetProperty = tho->xPropNameIDForSetProperty;
     // Check that it was written just in case.
     ASSERT_EQ(insertValue, ho.getProperty(*rt, tho->xPropName).asNumber());
+    xPropNameIDForGetProperty[1] = tho->xPropNameIDForGetProperty[1];
   }
   const auto &records = rt->trace().records();
-  auto globID = rt->getUniqueID(rt->plain().global());
   int recordIndex = 0;
-  EXPECT_EQ(20, records.size());
+  EXPECT_EQ(18, records.size());
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
@@ -719,7 +747,8 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   // Called getProperty on the proxy. This first calls getProperty on the proxy,
   // then on the host object itself.
   EXPECT_EQ_RECORD(
-      SynthTrace::GetPropertyNativeRecord(dummyTime, objID, xPropNameID, cs.x),
+      SynthTrace::GetPropertyNativeRecord(
+          dummyTime, objID, xPropNameIDForGetProperty[0], cs.x),
       *records[recordIndex++]);
   auto sprExpect0 = SynthTrace::SetPropertyRecord(
       dummyTime,
@@ -729,7 +758,6 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       cs.getHappened,
 #endif
       SynthTrace::encodeBool(true));
-  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   EXPECT_EQ_RECORD(sprExpect0, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
@@ -758,11 +786,10 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       SynthTrace::SetPropertyNativeRecord(
           dummyTime,
           objID,
-          xPropNameID,
+          xPropNameIDForSetProperty,
           cs.x,
           SynthTrace::encodeNumber(insertValue)),
       *records[recordIndex++]);
-  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   auto sprExpect2 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
@@ -777,9 +804,9 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       *records[recordIndex++]);
   // Called getProperty one last time.
   EXPECT_EQ_RECORD(
-      SynthTrace::GetPropertyNativeRecord(dummyTime, objID, xPropNameID, cs.x),
+      SynthTrace::GetPropertyNativeRecord(
+          dummyTime, objID, xPropNameIDForGetProperty[1], cs.x),
       *records[recordIndex++]);
-  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   auto sprExpect4 = SynthTrace::SetPropertyRecord(
       dummyTime,
       globID,
@@ -817,7 +844,10 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   };
   ConstStrings cs;
 
+  SynthTrace::ObjectID globID;
   SynthTrace::ObjectID oObjID;
+  SynthTrace::ObjectID setArgObjID;
+  SynthTrace::ObjectID getReturnObjID;
   SynthTrace::ObjectID hoObjID;
   SynthTrace::ObjectID oPropNameID;
   SynthTrace::ObjectID hoPropNameID;
@@ -827,14 +857,25 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   {
     class TestHostObject : public jsi::HostObject {
      public:
+      TracingRuntime &trt;
       jsi::PropNameID oPropName;
+      jsi::Object &global;
 
-      TestHostObject(jsi::Runtime &rt, const ConstStrings &cs)
-          : oPropName(jsi::PropNameID::forAscii(rt, cs.o.c_str())) {}
+      SynthTrace::ObjectID setArgObjID;
+      SynthTrace::ObjectID getReturnObjID;
+
+      TestHostObject(
+          TracingRuntime &trt,
+          const ConstStrings &cs,
+          jsi::Object &global)
+          : trt(trt),
+            oPropName(jsi::PropNameID::forAscii(trt, cs.o.c_str())),
+            global(global) {}
 
       jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
         // Do an operation with the runtime, to ensure that it is traced.
-        auto oObj = rt.global().getProperty(rt, oPropName).asObject(rt);
+        auto oObj = global.getProperty(rt, oPropName).asObject(rt);
+        getReturnObjID = trt.useObjectID(oObj);
         return oObj.getProperty(rt, name);
       }
       void set(
@@ -842,23 +883,26 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
           const jsi::PropNameID &name,
           const jsi::Value &value) override {
         // Do an operation with the runtime, to ensure that it is traced.
-        auto oObj = rt.global().getProperty(rt, oPropName).asObject(rt);
+        auto oObj = global.getProperty(rt, oPropName).asObject(rt);
         oObj.setProperty(rt, name, value);
+        setArgObjID = trt.useObjectID(oObj);
       }
     };
+    jsi::Object global = rt->global();
+    globID = rt->useObjectID(global);
 
-    auto tho = std::make_shared<TestHostObject>(*rt, cs);
-    oPropNameID = rt->getUniqueID(tho->oPropName);
+    auto tho = std::make_shared<TestHostObject>(*rt, cs, global);
+    oPropNameID = rt->useObjectID(tho->oPropName);
 
     jsi::Object o{*rt};
-    oObjID = rt->getUniqueID(o);
-    rt->global().setProperty(*rt, tho->oPropName, o);
+    oObjID = rt->useObjectID(o);
+    global.setProperty(*rt, tho->oPropName, o);
 
     jsi::Object hoObj = jsi::Object::createFromHostObject(*rt, tho);
-    hoObjID = rt->getUniqueID(hoObj);
+    hoObjID = rt->useObjectID(hoObj);
     auto hoPropName = jsi::PropNameID::forAscii(*rt, ho.c_str());
-    hoPropNameID = rt->getUniqueID(hoPropName);
-    rt->global().setProperty(*rt, hoPropName, hoObj);
+    hoPropNameID = rt->useObjectID(hoPropName);
+    global.setProperty(*rt, hoPropName, hoObj);
 
     const std::string code = R"###(
         o.x = 7;
@@ -875,19 +919,24 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
     rt->evaluateJavaScript(
         std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(code)), "");
 
+    setArgObjID = tho->setArgObjID;
+    getReturnObjID = tho->getReturnObjID;
+
     auto xResPropName = jsi::PropNameID::forAscii(*rt, xRes.c_str());
-    xResPropNameID = rt->getUniqueID(xResPropName);
+    xResPropNameID = rt->useObjectID(xResPropName);
     auto yResPropName = jsi::PropNameID::forAscii(*rt, yRes.c_str());
-    yResPropNameID = rt->getUniqueID(yResPropName);
+    yResPropNameID = rt->useObjectID(yResPropName);
     // Retrieve the results.
     ASSERT_EQ(
-        7, rt->plain().global().getProperty(*rt, xResPropName).asNumber());
-    ASSERT_FALSE(rt->plain().global().getProperty(*rt, yResPropName).getBool());
+        7,
+        rt->plain().global().getProperty(rt->plain(), xResPropName).asNumber());
+    ASSERT_FALSE(
+        rt->plain().global().getProperty(rt->plain(), yResPropName).getBool());
   }
   const auto &records = rt->trace().records();
-  auto globID = rt->getUniqueID(rt->plain().global());
   int recordIndex = 0;
-  EXPECT_EQ(24, records.size());
+  EXPECT_EQ(19, records.size());
+  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
@@ -904,7 +953,6 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       cs.o,
 #endif
       SynthTrace::encodeObject(oObjID));
-  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   EXPECT_EQ_RECORD(sprExpect0, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreateHostObjectRecord(dummyTime, hoObjID),
@@ -921,7 +969,6 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       ho,
 #endif
       SynthTrace::encodeObject(hoObjID));
-  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   EXPECT_EQ_RECORD(sprExpect1, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::BeginExecJSRecord(dummyTime, "", codeHash, false),
@@ -945,12 +992,11 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.o,
 #endif
-      SynthTrace::encodeObject(oObjID));
-  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+      SynthTrace::encodeObject(getReturnObjID));
   EXPECT_EQ_RECORD(gprExpect0, *records[recordIndex++]);
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
       dummyTime,
-      oObjID,
+      getReturnObjID,
       SynthTrace::encodePropNameID(observedXPropNameUID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       x,
@@ -980,12 +1026,11 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
 #ifdef HERMESVM_API_TRACE_DEBUG
       cs.o,
 #endif
-      SynthTrace::encodeObject(oObjID));
-  EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
+      SynthTrace::encodeObject(setArgObjID));
   EXPECT_EQ_RECORD(gprExpect2, *records[recordIndex++]);
   auto sprExpect = SynthTrace::SetPropertyRecord(
       dummyTime,
-      oObjID,
+      setArgObjID,
       SynthTrace::encodePropNameID(observedYPropNameUID),
 #ifdef HERMESVM_API_TRACE_DEBUG
       y,
@@ -1014,23 +1059,13 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
       xRes,
 #endif
       SynthTrace::encodeNumber(7));
-  EXPECT_EQ_RECORD(gprExpect3, *records[recordIndex++]);
-  auto gprExpect4 = SynthTrace::GetPropertyRecord(
-      dummyTime,
-      globID,
-      SynthTrace::encodePropNameID(yResPropNameID),
-#ifdef HERMESVM_API_TRACE_DEBUG
-      yRes,
-#endif
-      SynthTrace::encodeBool(false));
-  EXPECT_EQ_RECORD(gprExpect4, *records[recordIndex++]);
 }
 
 TEST_F(SynthTraceTest, CreateBigInt) {
   SynthTrace::ObjectID fromInt64ID =
-      rt->getUniqueID(jsi::BigInt::fromInt64(*rt, 0xffffffffffffffff));
+      rt->useObjectID(jsi::BigInt::fromInt64(*rt, 0xffffffffffffffff));
   SynthTrace::ObjectID fromUint64ID =
-      rt->getUniqueID(jsi::BigInt::fromUint64(*rt, 0xffffffffffffffff));
+      rt->useObjectID(jsi::BigInt::fromUint64(*rt, 0xffffffffffffffff));
 
   const auto &records = rt->trace().records();
   ASSERT_EQ(2, records.size());
@@ -1052,9 +1087,9 @@ TEST_F(SynthTraceTest, CreateBigInt) {
 
 TEST_F(SynthTraceTest, BigIntToString) {
   jsi::BigInt b = jsi::BigInt::fromInt64(*rt, -42);
-  SynthTrace::ObjectID bID = rt->getUniqueID(b);
+  SynthTrace::ObjectID bID = rt->useObjectID(b);
   jsi::String str = b.toString(*rt, 16);
-  SynthTrace::ObjectID strID = rt->getUniqueID(str);
+  SynthTrace::ObjectID strID = rt->useObjectID(str);
 
   const auto &records = rt->trace().records();
   ASSERT_EQ(2, records.size());

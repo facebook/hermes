@@ -330,7 +330,7 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   SynthTrace::ObjectID objID;
   {
     auto obj = jsi::Object(*rt);
-    objID = rt->getUniqueID(obj);
+    objID = rt->useObjectID(obj);
     // Property name doesn't matter, just want to record that some property was
     // requested.
     auto value = obj.getProperty(*rt, "a");
