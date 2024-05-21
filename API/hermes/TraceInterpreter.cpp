@@ -1459,6 +1459,27 @@ Value TraceInterpreter::execFunction(
             obj.setExternalMemoryPressure(rt_, record.amount_);
             break;
           }
+          case RecordType::Utf8: {
+            const auto &record =
+                static_cast<const SynthTrace::Utf8Record &>(*rec);
+
+            if (record.objID_.isString()) {
+              const auto &val = getJSIValueForUse(record.objID_.getUID());
+              [[maybe_unused]] std::string replayedStr =
+                  val.getString(rt_).utf8(rt_);
+              assert(replayedStr == record.retVal_);
+            } else if (record.objID_.isPropNameID()) {
+              auto propNameID = getPropNameIDForUse(record.objID_.getUID());
+              [[maybe_unused]] std::string replayedStr = propNameID.utf8(rt_);
+              assert(replayedStr == record.retVal_);
+            } else if (record.objID_.isSymbol()) {
+              jsi::Value val = getJSIValueForUse(record.objID_.getUID());
+              [[maybe_unused]] std::string replayedStr =
+                  val.asSymbol(rt_).toString(rt_);
+              assert(replayedStr == record.retVal_);
+            }
+            break;
+          }
         }
       } catch (const std::exception &e) {
         crashOnException(e, globalRecordNum);

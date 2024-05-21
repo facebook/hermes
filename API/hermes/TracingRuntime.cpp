@@ -387,6 +387,29 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromUtf8(
   return res;
 }
 
+std::string TracingRuntime::utf8(const jsi::PropNameID &name) {
+  std::string res = RD::utf8(name);
+  trace_.emplace_back<SynthTrace::Utf8Record>(
+      getTimeSinceStart(),
+      SynthTrace::encodePropNameID(getUniqueID(name)),
+      res);
+  return res;
+}
+
+std::string TracingRuntime::utf8(const jsi::String &str) {
+  std::string res = RD::utf8(str);
+  trace_.emplace_back<SynthTrace::Utf8Record>(
+      getTimeSinceStart(), SynthTrace::encodeString(getUniqueID(str)), res);
+  return res;
+}
+
+std::string TracingRuntime::symbolToString(const jsi::Symbol &sym) {
+  std::string res = RD::symbolToString(sym);
+  trace_.emplace_back<SynthTrace::Utf8Record>(
+      getTimeSinceStart(), SynthTrace::encodeSymbol(getUniqueID(sym)), res);
+  return res;
+}
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
   jsi::PropNameID res = RD::createPropNameIDFromString(str);

@@ -511,6 +511,12 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
             timeFromStart, objID->getValue(), amount);
         break;
       }
+      case RecordType::Utf8: {
+        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
+        trace.emplace_back<SynthTrace::Utf8Record>(
+            timeFromStart, SynthTrace::decode(objId->str()), retval->c_str());
+        break;
+      }
     }
   }
   return trace;
