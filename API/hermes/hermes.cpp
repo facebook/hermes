@@ -1436,7 +1436,6 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
   auto buffer = std::make_unique<BufferAdapter>(jsiBuffer);
   vm::RuntimeModuleFlags runtimeFlags{};
-  runtimeFlags.persistent = true;
 
   bool isBytecode = isHermesBytecode(buffer->data(), buffer->size());
 #ifdef HERMESVM_PLATFORM_LOGGING
@@ -1451,6 +1450,7 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
     }
     bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
         std::move(buffer));
+    runtimeFlags.persistent = true;
   } else {
 #if defined(HERMESVM_LEAN)
     bcErr.second = "prepareJavaScript source compilation not supported";
@@ -1474,6 +1474,11 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
     }
     bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
         std::move(buffer), sourceURL, std::move(sourceMap), compileFlags_);
+    if (bcErr.first) {
+      runtimeFlags.persistent =
+          llvh::cast<hbc::BCProviderFromSrc>(bcErr.first.get())
+              ->allowPersistent();
+    }
 #endif
   }
   if (!bcErr.first) {

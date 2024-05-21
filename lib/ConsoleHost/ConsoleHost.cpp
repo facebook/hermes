@@ -394,7 +394,12 @@ bool executeHBCBytecodeImpl(
   installConsoleBindings(*runtime, ctx, statSampler.get(), filename);
 
   vm::RuntimeModuleFlags flags;
-  flags.persistent = true;
+  if (auto *bcProviderFromSrc =
+          llvh::dyn_cast<hbc::BCProviderFromSrc>(bytecode.get())) {
+    flags.persistent = bcProviderFromSrc->allowPersistent();
+  } else {
+    flags.persistent = true;
+  }
 
   if (options.stopAfterInit) {
     vm::Handle<vm::Domain> domain =

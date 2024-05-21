@@ -185,6 +185,16 @@ class BCProviderFromSrc final : public BCProviderBase {
     return false;
   }
 
+  /// \return whether the provider can be loaded as persistent,
+  /// which is not possible if the underlying storage may be mutated,
+  /// e.g. in the case of lazy compilation.
+  bool allowPersistent() const {
+    // Persistent RuntimeModules are only supported when there is no lazy
+    // compilation that could create new functions.
+    return !compilationData_.M ||
+        !compilationData_.M->getContext().isLazyCompilation();
+  }
+
   bool isSingleFunction() const {
     return singleFunction_;
   }

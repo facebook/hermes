@@ -43,6 +43,9 @@ union RuntimeModuleFlags {
     /// have lazy identifiers whose string content is a pointer to the string
     /// storage in the bytecode module. We should only make the first (biggest)
     /// module persistent.
+    /// This flag must not be set when creating a RuntimeModule for lazy
+    /// compiled Modules, because the BytecodeModule will change underneath the
+    /// provider, so the VM can't hold pointers into the storage.
     bool persistent : 1;
 
     /// Whether this runtime module's epilogue should be hidden in

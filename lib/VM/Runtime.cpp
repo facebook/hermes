@@ -1006,7 +1006,8 @@ CallResult<HermesValue> Runtime::run(
 
   PerfSection loading("Executing global function");
   RuntimeModuleFlags rmflags;
-  rmflags.persistent = true;
+  if (bytecode->allowPersistent())
+    rmflags.persistent = true;
   return runBytecode(
       std::move(bytecode), rmflags, sourceURL, makeNullHandle<Environment>());
 #endif
@@ -1036,6 +1037,18 @@ CallResult<HermesValue> Runtime::runBytecode(
   }
 
   if (flags.persistent) {
+#ifndef HERMESVM_LEAN
+    // Persistent flag can't be true if the BCProvider doesn't support it.
+    if (auto *providerFromSrc =
+            llvh::dyn_cast<hbc::BCProviderFromSrc>(bytecode.get())) {
+      if (LLVM_UNLIKELY(!providerFromSrc->allowPersistent())) {
+        const char *msg = "Cannot enable persistent mode for lazy compilation";
+        hermesLog("Hermes", "%s", msg);
+        hermes_fatal(msg);
+      }
+    }
+#endif
+
     persistentBCProviders_.push_back(bytecode);
     if (bytecodeWarmupPercent_ > 0) {
       // Start the warmup thread for this bytecode if it's a buffer.
