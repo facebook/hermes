@@ -227,6 +227,11 @@ class BytecodeModuleGenerator {
   /// required.
   /// Must be called exactly once per generation.
   void collectStrings();
+
+  /// Generate all functions added to the functionIDMap_.
+  /// \pre all strings and literals have been collected.
+  /// \return true on success, false otherwise.
+  bool generateAddedFunctions();
 };
 
 /// This class is used by the hermes backend.

@@ -357,63 +357,7 @@ void BytecodeModuleGenerator::collectStrings() {
   bm_.initializeStringTable(std::move(strings));
 }
 
-bool BytecodeModuleGenerator::generate(
-    Function *entryPoint,
-    hermes::OptValue<uint32_t> segment) && {
-  assert(
-      valid_ &&
-      "BytecodeModuleGenerator::generate() cannot be called more than once");
-  valid_ = false;
-
-  lowerModuleIR(M_, options_);
-
-  if (options_.format == DumpLIR)
-    M_->dump();
-
-  if (segment) {
-    setSegmentID(*segment);
-  }
-  // Empty if all functions should be generated (i.e. bundle splitting was not
-  // requested).
-  llvh::DenseSet<Function *> functionsToGenerate = segment
-      ? M_->getFunctionsInSegment(*segment)
-      : llvh::DenseSet<Function *>{};
-
-  /// \return true if we should generate function \p f.
-  std::function<bool(Function *)> shouldGenerate;
-  if (segment) {
-    shouldGenerate = [entryPoint, &functionsToGenerate](const Function *f) {
-      return f == entryPoint || functionsToGenerate.count(f) > 0;
-    };
-  } else {
-    shouldGenerate = [](const Function *) { return true; };
-  }
-
-  // Add each function to BMGen so that each function has a unique ID.
-  for (auto &F : *M_) {
-    if (!shouldGenerate(&F)) {
-      continue;
-    }
-    auto index = addFunction(&F);
-    if (&F == entryPoint) {
-      setEntryPointIndex(index);
-    }
-  }
-  assert(getEntryPointIndex() != -1 && "Entry point not added");
-
-  collectStrings();
-
-  // TODO: Avoid iterating the entire Module here.
-  // Possibilities include passing the list of Functions to
-  // LiteralBufferBuilder or letting LiteralBufferBuilder operate in an
-  // incremental manner on single Functions.
-  initializeSerializedLiterals(LiteralBufferBuilder::generate(
-      M_,
-      shouldGenerate,
-      [this](llvh::StringRef str) { return getIdentifierID(str); },
-      [this](llvh::StringRef str) { return getStringID(str); },
-      options_.optimizationEnabled));
-
+bool BytecodeModuleGenerator::generateAddedFunctions() {
   BytecodeOptions &bytecodeOptions = bm_.getBytecodeOptionsMut();
   bytecodeOptions.cjsModulesStaticallyResolved = M_->getCJSModulesResolved();
 
@@ -499,6 +443,66 @@ bool BytecodeModuleGenerator::generate(
 
   bm_.setDebugInfo(debugInfoGenerator_.serializeWithMove());
   return true;
+}
+
+bool BytecodeModuleGenerator::generate(
+    Function *entryPoint,
+    hermes::OptValue<uint32_t> segment) && {
+  assert(
+      valid_ &&
+      "BytecodeModuleGenerator::generate() cannot be called more than once");
+  valid_ = false;
+
+  lowerModuleIR(M_, options_);
+
+  if (options_.format == DumpLIR)
+    M_->dump();
+
+  if (segment) {
+    setSegmentID(*segment);
+  }
+  // Empty if all functions should be generated (i.e. bundle splitting was not
+  // requested).
+  llvh::DenseSet<Function *> functionsToGenerate = segment
+      ? M_->getFunctionsInSegment(*segment)
+      : llvh::DenseSet<Function *>{};
+
+  /// \return true if we should generate function \p f.
+  std::function<bool(Function *)> shouldGenerate;
+  if (segment) {
+    shouldGenerate = [entryPoint, &functionsToGenerate](const Function *f) {
+      return f == entryPoint || functionsToGenerate.count(f) > 0;
+    };
+  } else {
+    shouldGenerate = [](const Function *) { return true; };
+  }
+
+  // Add each function to BMGen so that each function has a unique ID.
+  for (auto &F : *M_) {
+    if (!shouldGenerate(&F)) {
+      continue;
+    }
+    auto index = addFunction(&F);
+    if (&F == entryPoint) {
+      setEntryPointIndex(index);
+    }
+  }
+  assert(getEntryPointIndex() != -1 && "Entry point not added");
+
+  collectStrings();
+
+  // TODO: Avoid iterating the entire Module here.
+  // Possibilities include passing the list of Functions to
+  // LiteralBufferBuilder or letting LiteralBufferBuilder operate in an
+  // incremental manner on single Functions.
+  initializeSerializedLiterals(LiteralBufferBuilder::generate(
+      M_,
+      shouldGenerate,
+      [this](llvh::StringRef str) { return getIdentifierID(str); },
+      [this](llvh::StringRef str) { return getStringID(str); },
+      options_.optimizationEnabled));
+
+  return generateAddedFunctions();
 }
 
 } // namespace hbc
