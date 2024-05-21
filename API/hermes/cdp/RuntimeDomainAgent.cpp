@@ -387,7 +387,7 @@ RuntimeDomainAgent::RuntimeDomainAgent(
       helpers_(runtime_) {
   consoleMessageRegistration_ = consoleMessageDispatcher_.subscribe(
       [this](const ConsoleMessage &message) {
-        this->consoleAPICalled(message);
+        this->consoleAPICalled(message, /* isBuffered */ false);
       });
 }
 
@@ -418,14 +418,16 @@ void RuntimeDomainAgent::enable() {
     std::vector<jsi::Value> args;
     args.push_back(std::move(arg));
 
-    consoleAPICalled(ConsoleMessage(
-        *consoleMessageStorage_.oldestTimestamp() - 0.1,
-        ConsoleAPIType::kWarning,
-        std::move(args)));
+    consoleAPICalled(
+        ConsoleMessage(
+            *consoleMessageStorage_.oldestTimestamp() - 0.1,
+            ConsoleAPIType::kWarning,
+            std::move(args)),
+        /* isBuffered */ true);
   }
 
   for (auto &message : consoleMessageStorage_.messages()) {
-    consoleAPICalled(message);
+    consoleAPICalled(message, /* isBuffered */ true);
   }
 }
 
@@ -956,7 +958,9 @@ static std::string consoleMessageTypeName(ConsoleAPIType type) {
   }
 }
 
-void RuntimeDomainAgent::consoleAPICalled(const ConsoleMessage &message) {
+void RuntimeDomainAgent::consoleAPICalled(
+    const ConsoleMessage &message,
+    bool isBuffered) {
   if (!enabled_) {
     return;
   }
@@ -970,14 +974,11 @@ void RuntimeDomainAgent::consoleAPICalled(const ConsoleMessage &message) {
     note.stackTrace->callFrames =
         m::runtime::makeCallFrames(message.stackTrace);
   }
-
+  ObjectSerializationOptions serializationOptions;
+  serializationOptions.generatePreview = !isBuffered;
   for (auto &arg : message.args) {
     note.args.push_back(m::runtime::makeRemoteObject(
-        runtime_,
-        arg,
-        *objTable_,
-        "ConsoleObjectGroup",
-        ObjectSerializationOptions{}));
+        runtime_, arg, *objTable_, "ConsoleObjectGroup", serializationOptions));
   }
 
   sendNotificationToClient(note);
