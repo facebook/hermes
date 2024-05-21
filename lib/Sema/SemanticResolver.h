@@ -100,6 +100,15 @@ class SemanticResolver
   /// \return false on error.
   bool run(ESTree::ProgramNode *rootNode);
 
+  /// Run semantic resolution for a lazy function and store the result in \c
+  /// semCtx_.
+  /// \param rootNode the top-level function node to run resolution on.
+  /// \param semInfo the original FunctionInfo for the root node,
+  ///   which was created on the first pass and will be populated with real
+  ///   scopes now.
+  /// \return false on error.
+  bool runLazy(ESTree::FunctionLikeNode *rootNode, sema::FunctionInfo *semInfo);
+
   /// Validate and resolve a CommonJS function expression. It will use the
   /// existing global function and global scope, which must have been created
   /// by a previous invocation of \c run().
@@ -266,6 +275,15 @@ class SemanticResolver
       ESTree::Node *body,
       ESTree::NodeList &params,
       ESTree::MethodDefinitionNode *method = nullptr);
+  /// Visit a function-like node with the FunctionContext already created.
+  /// Used by visitFunctionLike and by runLazy.
+  void visitFunctionLikeInFunctionContext(
+      ESTree::FunctionLikeNode *node,
+      ESTree::IdentifierNode *id,
+      ESTree::Node *body,
+      ESTree::NodeList &params,
+      ESTree::MethodDefinitionNode *method = nullptr);
+
   void visitFunctionExpression(
       ESTree::FunctionExpressionNode *node,
       ESTree::Node *body,
@@ -429,6 +447,16 @@ class FunctionContext {
   explicit FunctionContext(
       SemanticResolver &resolver,
       FunctionInfo *newFunctionFin);
+
+  /// Tag for readability to show lazy compilation constructor.
+  struct LazyTag {};
+
+  /// Constructor for lazy compilation, takes existing \p semInfoLazy.
+  explicit FunctionContext(
+      SemanticResolver &resolver,
+      ESTree::FunctionLikeNode *node,
+      FunctionInfo *semInfoLazy,
+      LazyTag);
 
   ~FunctionContext();
 

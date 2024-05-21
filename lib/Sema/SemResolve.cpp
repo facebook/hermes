@@ -188,6 +188,17 @@ bool resolveAST(
   return true;
 }
 
+bool resolveASTLazy(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::FunctionLikeNode *root,
+    FunctionInfo *semInfo) {
+  PerfSection validation("Resolving JavaScript lazy AST");
+  // Resolve the entire AST.
+  SemanticResolver resolver{astContext, semCtx, {}, nullptr, true};
+  return resolver.runLazy(root, semInfo);
+}
+
 bool resolveCommonJSAST(
     Context &astContext,
     SemContext &semCtx,

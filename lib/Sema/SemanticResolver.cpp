@@ -43,6 +43,42 @@ bool SemanticResolver::run(ESTree::ProgramNode *rootNode) {
   return sm_.getErrorCount() == 0;
 }
 
+bool SemanticResolver::runLazy(
+    ESTree::FunctionLikeNode *rootNode,
+    sema::FunctionInfo *semInfo) {
+  semCtx_.assertGlobalFunctionAndScope();
+
+  if (sm_.getErrorCount())
+    return false;
+
+  llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
+      globalScope_, semCtx_.getBindingTableGlobalScope());
+
+  // For clarity: not going to generate anything in the global function context.
+  globalFunctionContext_ = nullptr;
+
+  // Activate the function's binding table scope.
+  assert(semInfo->bindingTableScope && "semInfo must have a scope");
+  bindingTable_.activateScope(semInfo->bindingTableScope);
+  auto restoreScope = llvh::make_scope_exit([this, semInfo]() {
+    bindingTable_.activateScope({});
+    // Decrement refcount of the binding table scope to allow it to be freed.
+    semInfo->bindingTableScope.reset();
+  });
+
+  // Run the resolver on the function body.
+  FunctionContext newFuncCtx{
+      *this, rootNode, semInfo, FunctionContext::LazyTag{}};
+  visitFunctionLikeInFunctionContext(
+      rootNode,
+      llvh::cast_or_null<ESTree::IdentifierNode>(
+          ESTree::getIdentifier(rootNode)),
+      ESTree::getBlockStatement(rootNode),
+      ESTree::getParams(rootNode));
+
+  return sm_.getErrorCount() == 0;
+}
+
 bool SemanticResolver::runCommonJSModule(
     ESTree::FunctionExpressionNode *rootNode) {
   semCtx_.assertGlobalFunctionAndScope();
@@ -92,6 +128,7 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
     ScopeRAII programScope{*this, node};
     llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
         globalScope_, programScope.getBindingScope().ptr());
+    semCtx_.setBindingTableGlobalScope(globalScope_);
 
     // Promote hoisted functions.
     if (!curFunctionInfo()->strict) {
@@ -1043,6 +1080,15 @@ void SemanticResolver::visitFunctionLike(
     }
   }
 
+  visitFunctionLikeInFunctionContext(node, id, body, params, method);
+}
+
+void SemanticResolver::visitFunctionLikeInFunctionContext(
+    ESTree::FunctionLikeNode *node,
+    ESTree::IdentifierNode *id,
+    ESTree::Node *body,
+    ESTree::NodeList &params,
+    ESTree::MethodDefinitionNode *method) {
   if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
     sm_.error(node->getSourceRange(), "async generators are unsupported");
   }
@@ -1070,6 +1116,14 @@ void SemanticResolver::visitFunctionLike(
     // Set the expression decl of the id.
     semCtx_.setExpressionDecl(id, semCtx_.getDeclarationDecl(id));
     validateDeclarationName(Decl::Kind::FunctionExprName, id);
+  }
+
+  if (blockBody->isLazyFunctionBody) {
+    // Don't descend into lazy functions, don't create a scope.
+    // But do record the surrounding scope in the FunctionInfo.
+    assert(node->getSemInfo() && "semInfo must be set in first pass");
+    node->getSemInfo()->bindingTableScope = bindingTable_.getCurrentScope();
+    return;
   }
 
   // Create the function scope.
@@ -1877,6 +1931,29 @@ FunctionContext::FunctionContext(
       prevContext_(resolver.curFunctionContext_),
       semInfo(newFunctionInfo),
       node(nullptr) {
+  resolver.curFunctionContext_ = this;
+}
+
+FunctionContext::FunctionContext(
+    SemanticResolver &resolver,
+    ESTree::FunctionLikeNode *node,
+    FunctionInfo *semInfoLazy,
+    LazyTag)
+    : resolver_(resolver),
+      prevContext_(nullptr),
+      semInfo(semInfoLazy),
+      node(node),
+      decls(DeclCollector::run(
+          node,
+          resolver.keywords(),
+          resolver.recursionDepth_,
+          [&resolver](ESTree::Node *n) {
+            // Inform the resolver that we have gone too deep.
+            resolver.recursionDepth_ = 0;
+            resolver.recursionDepthExceeded(n);
+          })) {
+  // Use the same semInfo as the lazy one.
+  node->setSemInfo(semInfoLazy);
   resolver.curFunctionContext_ = this;
 }
 

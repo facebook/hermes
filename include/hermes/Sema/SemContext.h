@@ -252,6 +252,9 @@ class FunctionInfo {
   /// anyway.
   bool mayReachImplicitReturn = true;
 
+  /// Lazy compilation: the parent binding table scope of this function.
+  BindingTableScopePtrTy bindingTableScope;
+
   /// How many labels have been allocated in this function so far.
   uint32_t numLabels{0};
 
@@ -369,6 +372,17 @@ class SemContext {
     return &scopes_.at(0);
   }
 
+  /// Set the binding table global scope.
+  void setBindingTableGlobalScope(
+      const BindingTableScopePtrTy &bindingTableScope) {
+    bindingTableGlobalScope_ = bindingTableScope;
+  }
+
+  /// \return the binding table global scope.
+  const BindingTableScopePtrTy &getBindingTableGlobalScope() const {
+    return bindingTableGlobalScope_;
+  }
+
   /// Create or retrieve the arguments declaration in \p func.
   /// If `func` is an arrow function, find the closest ancestor that
   /// is not an arrow function and use that function's `arguments`. If we end
@@ -421,6 +435,9 @@ class SemContext {
  private:
   /// The currently lexically visible names.
   BindingTableTy bindingTable_{};
+
+  /// Global binding table scope.
+  BindingTableScopePtrTy bindingTableGlobalScope_{};
 
   /// Storage for all functions.
   std::deque<FunctionInfo> functions_{};

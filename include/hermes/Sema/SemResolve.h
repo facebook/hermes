@@ -56,6 +56,19 @@ inline bool resolveAST(
   return resolveAST(astContext, semCtx, nullptr, root, ambientDecls);
 }
 
+/// Run semantic resolution for a lazy function and store the result in \c
+/// semCtx_.
+/// \param root the top-level function node to run resolution on.
+/// \param semInfo the original FunctionInfo for the root node,
+///   which was created on the first pass and will be populated with real
+///   scopes now.
+/// \return false on error.
+bool resolveASTLazy(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::FunctionLikeNode *root,
+    FunctionInfo *semInfo);
+
 /// Perform semantic resolution of a CommonJS module.
 bool resolveCommonJSAST(
     Context &astContext,
