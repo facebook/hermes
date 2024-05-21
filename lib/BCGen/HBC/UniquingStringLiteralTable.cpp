@@ -26,19 +26,11 @@ StringKind::Kind kind(llvh::StringRef str, bool isIdentifier) {
 
 } // namespace
 
-StringLiteralIDMapping::StringLiteralIDMapping(
+StringLiteralTable::StringLiteralTable(
     ConsecutiveStringStorage storage,
     std::vector<bool> isIdentifier)
     : storage_(std::move(storage)), isIdentifier_(std::move(isIdentifier)) {
-  // Initialize our tables by decoding our storage's string table.
-  std::string utf8Storage;
-  uint32_t count = storage_.count();
-  assert(isIdentifier_.size() == count);
-  for (uint32_t i = 0; i < count; i++) {
-    uint32_t j = strings_.insert(storage_.getUTF8StringAtIndex(i, utf8Storage));
-    assert(i == j && "Duplicate string in storage.");
-    (void)j;
-  }
+  populateStringsTableFromStorage();
 }
 
 std::vector<uint32_t> StringLiteralTable::getIdentifierHashes() const {
@@ -65,16 +57,32 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   return std::move(acc).entries();
 }
 
-/* static */ StringLiteralTable UniquingStringLiteralAccumulator::toTable(
-    UniquingStringLiteralAccumulator accum,
-    bool optimize) {
-  auto &storage = accum.storage_;
-  auto &strings = accum.strings_;
-  auto &isIdentifier = accum.isIdentifier_;
-  auto &numIdentifierRefs = accum.numIdentifierRefs_;
+void StringLiteralTable::populateStorage(
+    StringLiteralTable::OptimizeMode mode) {
+  switch (mode) {
+    case OptimizeMode::Reorder:
+      return sortAndRemap(false);
+    case OptimizeMode::ReorderAndPack:
+      return sortAndRemap(true);
+  }
+}
 
-  const size_t existingStrings = storage.count();
-  const size_t allStrings = strings.size();
+void StringLiteralTable::populateStringsTableFromStorage() {
+  // Initialize our tables by decoding our storage's string table.
+  strings_ = {};
+  std::string utf8Storage;
+  uint32_t count = storage_.count();
+  assert(isIdentifier_.size() == count);
+  for (uint32_t i = 0; i < count; i++) {
+    uint32_t j = strings_.insert(storage_.getUTF8StringAtIndex(i, utf8Storage));
+    assert(i == j && "Duplicate string in storage.");
+    (void)j;
+  }
+}
+
+void StringLiteralTable::sortAndRemap(bool optimize) {
+  const size_t existingStrings = storage_.count();
+  const size_t allStrings = strings_.size();
   const size_t newStrings = allStrings - existingStrings;
   assert(
       existingStrings <= allStrings &&
@@ -126,21 +134,21 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   indices.reserve(newStrings);
 
   for (size_t i = existingStrings; i < allStrings; ++i) {
-    indices.emplace_back(i, strings[i], kind(strings[i], isIdentifier[i]));
+    indices.emplace_back(i, strings_[i], kind(strings_[i], isIdentifier_[i]));
   }
 
   // Sort indices of new strings by frequency of identifier references.
   std::stable_sort(
       indices.begin(),
       indices.end(),
-      [&numIdentifierRefs, existingStrings](const Index &a, const Index &b) {
+      [this, existingStrings](const Index &a, const Index &b) {
         assert(a.origIndex >= existingStrings && "Sorting an old string");
         assert(b.origIndex >= existingStrings && "Sorting an old string");
 
         auto ai = a.origIndex - existingStrings;
         auto bi = b.origIndex - existingStrings;
 
-        return numIdentifierRefs[ai] > numIdentifierRefs[bi];
+        return numIdentifierRefs_[ai] > numIdentifierRefs_[bi];
       });
 
   // Take an index into all the strings, and map it to an index in to a data
@@ -174,11 +182,11 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
       refs.emplace_back(i.str);
     }
     ConsecutiveStringStorage newStrings(refs, optimize);
-    storage.appendStorage(std::move(newStrings));
+    storage_.appendStorage(std::move(newStrings));
   }
 
   // Associate the new string table index entries with their string kind.
-  auto tableView = storage.getStringTableView();
+  auto tableView = storage_.getStringTableView();
   std::vector<KindedEntry> kindedEntries;
   kindedEntries.reserve(newStrings);
 
@@ -199,10 +207,12 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   // Write the re-ordered entries back into the table.
   for (size_t i = 0, j = existingStrings; i < newStrings; ++i, ++j) {
     tableView[j] = kindedEntries[i].entry;
-    isIdentifier[j] = kindedEntries[i].kind != StringKind::String;
+    isIdentifier_[j] = kindedEntries[i].kind != StringKind::String;
   }
 
-  return StringLiteralTable{std::move(storage), std::move(isIdentifier)};
+  // Update the strings table with the new storage.
+  populateStringsTableFromStorage();
+  numIdentifierRefs_.clear();
 }
 
 } // namespace hbc

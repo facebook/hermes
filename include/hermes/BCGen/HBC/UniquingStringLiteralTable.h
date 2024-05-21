@@ -14,27 +14,17 @@
 namespace hermes {
 namespace hbc {
 
-/// Implementation shared between the UniquingStringLiteralAccumulator, which
-/// gathers strings into a storage, and the StringLiteralTable, which exposes
-/// the mapping from string to numeric ID.
-struct StringLiteralIDMapping {
-  /// \return the number of strings in the mapping.
-  inline size_t count() const;
-
-  /// \return true if and only if no strings have been recorded.
-  inline bool empty() const;
-
-  StringLiteralIDMapping() = default;
-
-  /// Take ownership of \p storage and decode it to seed the strings_ mapping.
-  /// \p isIdentifier indicates which strings in \p storage are to be treated as
-  /// identifiers (i.e. the string at ID \c i in \p storage is an identifier if
-  /// and only if \c isIdentifier[i] evaluates to true).
-  explicit StringLiteralIDMapping(
-      ConsecutiveStringStorage storage,
-      std::vector<bool> isIdentifier);
-
- protected:
+/// A table that maps strings to unique IDs to be used in the bytecode.
+/// Can be initialized with a pre-existing ConsecutiveStringStorage.
+/// After constructing StringLiteralTable, calling addString will add entries to
+/// the mapping, but won't immediately append them to the
+/// ConsecutiveStringStorage.
+/// When done adding strings, you must call populateStorage to actually write
+/// their contents to the storage.
+/// After populateStorage is called, getIdentifierHashes and getStringKinds can
+/// be used to generate their respective tables for storage in the
+/// BytecodeModule.
+class StringLiteralTable {
   /// The storage that the mapping was initialised with.
   ConsecutiveStringStorage storage_;
 
@@ -44,14 +34,34 @@ struct StringLiteralIDMapping {
   // Mapping such that \c isIdentifier_[i] is true if and only if the string at
   // \c strings_[i] should be treated as an identifier.
   std::vector<bool> isIdentifier_;
-};
 
-/// Exposes the mapping from strings to their IDs in a ConsecutiveStringStorage.
-/// This class does not own the storage it is mapping, but also does not require
-/// the storage to outlive it.
-struct StringLiteralTable final : public StringLiteralIDMapping {
+  /// The number of times a string was added as an identifier.  This information
+  /// is only tracked for newly added strings (those not in the storage the
+  /// accumulator may have been initialized with) and is keyed by the offset of
+  /// the string in the mapping from the first newly added string.  This
+  /// information is used to order the resulting storage.
+  std::vector<size_t> numIdentifierRefs_;
+
+ public:
   StringLiteralTable() = default;
-  using StringLiteralIDMapping::StringLiteralIDMapping;
+
+  /// Take ownership of \p storage and decode it to seed the strings_ mapping.
+  /// \p isIdentifier indicates which strings in \p storage are to be treated as
+  /// identifiers (i.e. the string at ID \c i in \p storage is an identifier if
+  /// and only if \c isIdentifier[i] evaluates to true).
+  explicit StringLiteralTable(
+      ConsecutiveStringStorage storage,
+      std::vector<bool> isIdentifier);
+
+  /// \return the number of strings in the mapping.
+  inline size_t count() const {
+    return strings_.size();
+  }
+
+  /// \return true if and only if no strings have been recorded.
+  inline bool empty() const {
+    return strings_.size() == 0;
+  }
 
   /// \return string id of an existing \p str in string table.
   inline uint32_t getStringID(llvh::StringRef str) const;
@@ -83,45 +93,39 @@ struct StringLiteralTable final : public StringLiteralIDMapping {
   /// the string with ID i in the mapping (and the underlying storage it was
   /// initialised with).
   std::vector<StringKind::Entry> getStringKinds() const;
-};
-
-/// Gathers strings into a storage. Because the indices of strings in the
-/// resulting storage may change between when the string is added and when the
-/// storage is created, this class does not return the ID of the string when it
-/// is added.
-class UniquingStringLiteralAccumulator final : public StringLiteralIDMapping {
-  /// The number of times a string was added as an identifier.  This information
-  /// is only tracked for newly added strings (those not in the storage the
-  /// accumulator may have been initialized with) and is keyed by the offset of
-  /// the string in the mapping from the first newly added string.  This
-  /// information is used to order the resulting storage.
-  std::vector<size_t> numIdentifierRefs_;
-
- public:
-  UniquingStringLiteralAccumulator() = default;
-  using StringLiteralIDMapping::StringLiteralIDMapping;
 
   /// Add a new string -- \p str -- to the accumulation.  If \p isIdentifier is
   /// true, then the string is marked as potentially being used as an
   /// identifier.
   inline void addString(llvh::StringRef str, bool isIdentifier);
 
-  /// \return a StringLiteralTable with the same strings as the accumulator
-  /// \p strings.  If \p optimize is set, attempt to pack the strings to
-  /// reduce the size taken up by the character buffer.  The mapping from ID
-  /// to String is not preserved between \p strings and the resulting table.
-  static StringLiteralTable toTable(
-      UniquingStringLiteralAccumulator strings,
-      bool optimize = false);
+  /// Mode for storing new strings to the storage.
+  enum class OptimizeMode {
+    /// Reorders the strings before populating the storage.
+    /// WARNING: The mapping from ID to String is NOT preserved.
+    Reorder,
+    /// Reorders the strings before populating the storage, and packs the
+    /// storage to reduce the size taken up by the character buffer.
+    /// WARNING: The mapping from ID to String is NOT preserved.
+    ReorderAndPack,
+  };
+
+  /// Populate the storage with all the strings currently in the mapping.
+  void populateStorage(OptimizeMode mode);
+
+ private:
+  /// Populate the strings table from the storage.
+  /// Called after storage_ is updated to write the changes made to the
+  /// storage back into the mapping.
+  void populateStringsTableFromStorage();
+
+  /// Transform into a table with identifiers at lower indices, attempting to
+  /// reuse orignal strings for newly added strings when possible.
+  ///
+  /// \param optimize If set, attempt to pack the strings to reduce the size
+  /// taken up by the character buffer.
+  void sortAndRemap(bool optimize = false);
 };
-
-inline size_t StringLiteralIDMapping::count() const {
-  return strings_.size();
-}
-
-inline bool StringLiteralIDMapping::empty() const {
-  return strings_.size() == 0;
-}
 
 inline uint32_t StringLiteralTable::getStringID(llvh::StringRef str) const {
   auto iter = strings_.find(str);
@@ -152,7 +156,7 @@ inline std::vector<unsigned char> StringLiteralTable::acquireStringStorage() {
   return storage_.acquireStringStorage();
 }
 
-inline void UniquingStringLiteralAccumulator::addString(
+inline void StringLiteralTable::addString(
     llvh::StringRef str,
     bool isIdentifier) {
   assert(strings_.size() == isIdentifier_.size());

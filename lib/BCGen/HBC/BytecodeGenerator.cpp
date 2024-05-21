@@ -40,7 +40,7 @@ const uint64_t kRegisterAllocationMemoryLimit = 10L * 1024 * 1024;
 /// Used in delta optimizing mode.
 /// \return a UniquingStringLiteralAccumulator seeded with strings  from a
 /// bytecode provider \p bcProvider.
-static UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
+static StringLiteralTable stringAccumulatorFromBCProvider(
     const BCProviderBase &bcProvider) {
   uint32_t count = bcProvider.getStringCount();
 
@@ -66,8 +66,7 @@ static UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
   auto strStorage = bcProvider.getStringStorage();
   ConsecutiveStringStorage css{std::move(entries), strStorage.vec()};
 
-  return UniquingStringLiteralAccumulator{
-      std::move(css), std::move(isIdentifier)};
+  return StringLiteralTable{std::move(css), std::move(isIdentifier)};
 }
 
 void BytecodeFunctionGenerator::addDebugSourceLocation(
@@ -273,7 +272,7 @@ void BytecodeModuleGenerator::collectStrings() {
   // our base bytecode provider.
   auto strings = baseBCProvider_
       ? stringAccumulatorFromBCProvider(*baseBCProvider_)
-      : UniquingStringLiteralAccumulator{};
+      : StringLiteralTable{};
 
   for (auto [F, functionID] : functionIDMap_) {
     // Walk functions.
@@ -352,8 +351,11 @@ void BytecodeModuleGenerator::collectStrings() {
     }
   }
 
-  bm_->initializeStringTable(UniquingStringLiteralAccumulator::toTable(
-      std::move(strings), options_.optimizationEnabled));
+  strings.populateStorage(
+      options_.optimizationEnabled
+          ? StringLiteralTable::OptimizeMode::ReorderAndPack
+          : StringLiteralTable::OptimizeMode::Reorder);
+  bm_->initializeStringTable(std::move(strings));
 }
 
 std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
