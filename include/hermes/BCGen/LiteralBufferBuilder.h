@@ -43,7 +43,7 @@ struct Result {
 /// buffers.
 Result generate(
     Module *m,
-    const std::function<bool(Function const *)> &shouldVisitFunction,
+    const std::function<bool(Function *)> &shouldVisitFunction,
     const SerializedLiteralGenerator::StringLookupFn &getIdentifier,
     const SerializedLiteralGenerator::StringLookupFn &getString,
     bool optimize);

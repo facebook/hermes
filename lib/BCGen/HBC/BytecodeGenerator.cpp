@@ -379,7 +379,7 @@ std::unique_ptr<BytecodeModule> BytecodeModuleGenerator::generate(
       : llvh::DenseSet<Function *>{};
 
   /// \return true if we should generate function \p f.
-  std::function<bool(const Function *)> shouldGenerate;
+  std::function<bool(Function *)> shouldGenerate;
   if (segment) {
     shouldGenerate = [entryPoint, &functionsToGenerate](const Function *f) {
       return f == entryPoint || functionsToGenerate.count(f) > 0;

@@ -78,7 +78,7 @@ class Builder {
   /// \param optimize whether to deduplicate the serialized literals.
   Builder(
       Module *m,
-      const std::function<bool(Function const *)> &shouldVisitFunction,
+      const std::function<bool(Function *)> &shouldVisitFunction,
       const SerializedLiteralGenerator::StringLookupFn &getIdentifier,
       const SerializedLiteralGenerator::StringLookupFn &getString,
       bool optimize)
@@ -114,7 +114,7 @@ class Builder {
   Module *const M_;
   /// A predicate indicating whether a function should be processed or not. (In
   /// some cases like segment splitting we want to exclude part of the module.)
-  const std::function<bool(const Function *)> &shouldVisitFunction_;
+  const std::function<bool(Function *)> &shouldVisitFunction_;
   /// Whether to deduplicate the serialized literals.
   bool const optimize_;
 
@@ -273,7 +273,7 @@ void Builder::serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB) {
 
 Result generate(
     Module *m,
-    const std::function<bool(Function const *)> &shouldVisitFunction,
+    const std::function<bool(Function *)> &shouldVisitFunction,
     const SerializedLiteralGenerator::StringLookupFn &getIdentifier,
     const SerializedLiteralGenerator::StringLookupFn &getString,
     bool optimize) {
