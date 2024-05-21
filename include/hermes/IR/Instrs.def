@@ -261,6 +261,8 @@ DEF_VALUE(LIRDeadValueInst, Instruction)
 DEF_VALUE(NativeCallInst, Instruction)
 DEF_VALUE(GetNativeRuntimeInst, Instruction)
 
+DEF_VALUE(LazyCompilationDataInst, Instruction)
+
 // Don't undef these if this file is being included in ValueKinds.def, since
 // these macros are still used after the #include.
 #ifndef INCLUDED_FROM_VALUEKINDS

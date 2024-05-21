@@ -1227,6 +1227,14 @@ NativeCallInst *IRBuilder::createNativeCallInst(
   return inst;
 }
 
+LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
+    LazyCompilationData &&data,
+    VariableScope *parentVarScope) {
+  auto *inst = new LazyCompilationDataInst(std::move(data), parentVarScope);
+  insert(inst);
+  return inst;
+}
+
 GetNativeRuntimeInst *IRBuilder::createGetNativeRuntimeInst() {
   auto *inst = new GetNativeRuntimeInst();
   insert(inst);

@@ -680,6 +680,10 @@ class IRBuilder {
       ArrayRef<Value *> args);
   GetNativeRuntimeInst *createGetNativeRuntimeInst();
 
+  LazyCompilationDataInst *createLazyCompilationDataInst(
+      LazyCompilationData &&data,
+      VariableScope *parentVarScope);
+
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.
   class ScopedLocationChange {

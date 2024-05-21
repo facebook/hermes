@@ -11,13 +11,10 @@
 #include "hermes/ADT/OwningFoldingSet.h"
 #include "hermes/ADT/WordBitSet.h"
 #include "hermes/AST/Context.h"
+#include "hermes/AST/ESTree.h"
 #include "hermes/AST/NativeContext.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
-
-#ifndef HERMESVM_LEAN
-#include "hermes/AST/ESTree.h"
-#endif
 
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/SmallPtrSet.h"
@@ -36,6 +33,10 @@
 #include <vector>
 
 namespace hermes {
+
+namespace sema {
+class FunctionInfo;
+} // namespace sema
 
 class Module;
 class VariableScope;

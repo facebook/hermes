@@ -2286,6 +2286,9 @@ class InstrGen {
       os_ << " = _sh_ljs_undefined();\n";
     }
   }
+  void generateLazyCompilationDataInst(LazyCompilationDataInst &inst) {
+    hermes_fatal("lazy compilation unsupported in native backend");
+  }
   /// Print code to convert the result of a native call to its corresponding
   /// JS type.
   ///

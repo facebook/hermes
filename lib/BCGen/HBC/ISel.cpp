@@ -1941,6 +1941,11 @@ void HBCISel::generateHBCStringConcatInst(
       encodeValue(inst->getLeft()),
       encodeValue(inst->getRight()));
 }
+void HBCISel::generateLazyCompilationDataInst(
+    LazyCompilationDataInst *,
+    BasicBlock *) {
+  hermes_fatal("LazyCompilationDataInst not supported.");
+}
 
 void HBCISel::generateBB(BasicBlock *BB, BasicBlock *next) {
   // Register the address of the current basic block.

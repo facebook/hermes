@@ -1587,6 +1587,11 @@ bool Verifier::visitGetNativeRuntimeInst(
   return true;
 }
 
+bool Verifier::visitLazyCompilationDataInst(
+    const hermes::LazyCompilationDataInst &Inst) {
+  return true;
+}
+
 } // namespace
 
 #endif

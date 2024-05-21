@@ -1074,3 +1074,15 @@ Example | LIRDeadValue (:number)
 Arguments | None
 Semantics | Create a value of the specified type.
 Effects | None
+
+### LazyCompilationData
+
+NOTE: LazyCompilationData relies on the fact that we don't delete Variables during the lazy compilation pipeline. That means no stack promotion, and the existing full optimization pipeline cannot run, because we haven't yet figured out which variables are captured by child functions.
+
+LazyCompilationData | _
+--- |-----------------------------------------------|
+Description | Data needed for lazy compilation, including the VariableScope chain used to access captured variables.
+Example | LazyCompilationData %parentVS, %parentParentVS, ...
+Arguments | %parentVS the immediately enclosing VariableScope. The remaining operands are successively the ancestors of %parentVS, which are kept as operands to ensure the VariableScopes aren't deleted across lazy compilation calls.
+Semantics | Information needed for lazy compilation. Deleted after use.
+Effects | None

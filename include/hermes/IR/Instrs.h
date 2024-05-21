@@ -5208,6 +5208,119 @@ class GetNativeRuntimeInst : public Instruction {
   }
 };
 
+/// Data for LazyCompilationDataInst to use.
+class LazyCompilationData {
+ public:
+  /// The original name of the function, as found in the source.
+  UniqueString *originalName;
+
+  /// The source buffer ID in which we can find the function source.
+  uint32_t bufferId;
+
+  /// The source span of the function.
+  SMRange span;
+
+  /// The FunctionInfo for the function being compiled.
+  sema::FunctionInfo *semInfo;
+
+  /// The type of function, e.g. statement or expression.
+  ESTree::NodeKind nodeKind;
+
+  /// Whether or not the function is strict.
+  bool strictMode;
+
+  /// The Yield param to restore when parsing.
+  bool paramYield;
+
+  /// The Await param to restore when parsing.
+  bool paramAwait;
+
+  /// If not None, the bytecode function ID that has already been assigned to
+  /// the function. Used to avoid assigning new function IDs to lazy Functions
+  /// that have already had BytecodeFunctions created.
+  OptValue<uint32_t> bcFunctionID{llvh::None};
+
+ public:
+  LazyCompilationData(
+      UniqueString *originalName,
+      uint32_t bufferId,
+      SMRange span,
+      sema::FunctionInfo *semInfo,
+      ESTree::NodeKind nodeKind,
+      bool strictMode,
+      bool paramYield,
+      bool paramAwait)
+      : originalName(originalName),
+        bufferId(bufferId),
+        span(span),
+        semInfo(semInfo),
+        nodeKind(nodeKind),
+        strictMode(strictMode),
+        paramYield(paramYield),
+        paramAwait(paramAwait) {}
+};
+
+class LazyCompilationDataInst : public Instruction {
+  LazyCompilationDataInst(const LazyCompilationDataInst &) = delete;
+  void operator=(const LazyCompilationDataInst &) = delete;
+
+  LazyCompilationData data_;
+
+ public:
+  enum { ParentVarScopeIdx };
+
+  explicit LazyCompilationDataInst(
+      LazyCompilationData &&data,
+      VariableScope *parentVarScope)
+      : Instruction(ValueKind::LazyCompilationDataInstKind), data_(data) {
+    setType(Type::createNoType());
+    // Push all VariableScopes which must be kept alive to properly compile this
+    // function.
+    // NOTE: LazyCompilationData relies on the fact that we don't delete
+    // Variables during lazy compilation. That means no stack
+    // promotion, and the existing full optimization pipeline cannot run,
+    // because we haven't yet figured out which variables are captured by child
+    // functions.
+    // Variables themselves are not stored here because we don't delete them
+    // between lazy compilation invocations (there's no telling whether they're
+    // going to be used or not), instead we just delete them when their owning
+    // VariableScopes are destroyed (when they have no users).
+    for (VariableScope *cur = parentVarScope; cur; cur = cur->getParentScope())
+      pushOperand(cur);
+  }
+  explicit LazyCompilationDataInst(
+      const LazyCompilationDataInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands), data_(src->data_) {}
+
+  const LazyCompilationData &getData() const {
+    return data_;
+  }
+  LazyCompilationData &getData() {
+    return data_;
+  }
+  const VariableScope *getParentVarScope() const {
+    return cast<VariableScope>(getOperand(ParentVarScopeIdx));
+  }
+  VariableScope *getParentVarScope() {
+    return cast<VariableScope>(getOperand(ParentVarScopeIdx));
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return true;
+  }
+  SideEffect getSideEffectImpl() const {
+    // First in block to make it easy to find during compilation.
+    return SideEffect::createUnknown().setFirstInBlock();
+  }
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LazyCompilationDataInstKind;
+  }
+};
+
 } // end namespace hermes
 
 #endif
