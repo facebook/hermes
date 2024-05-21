@@ -27,71 +27,6 @@ namespace tracing {
 
 class TraceInterpreter final {
  public:
-  /// A DefAndUse details the location of a definition of an object id, and its
-  /// use. It is an index into the global record table.
-  struct DefAndUse {
-    /// If an object was not used or not defined, its DefAndUse can store this
-    /// value.
-    static constexpr uint64_t kUnused = std::numeric_limits<uint64_t>::max();
-
-    uint64_t lastDefBeforeFirstUse{kUnused};
-    uint64_t lastUse{kUnused};
-  };
-
-  /// A Call is a list of Pieces that represent the entire single call
-  /// frame, even if it spans multiple control transfers between JS and native.
-  /// It also contains a map from ObjectIDs to their last definition before a
-  /// first use, and a last use.
-  struct Call {
-    /// A Piece is a series of contiguous records that are part of the same
-    /// native call, and have no transitions to JS in the middle of them.
-    struct Piece {
-      /// The index of the start of the piece in the global record vector.
-      uint64_t start;
-      std::vector<const SynthTrace::Record *> records;
-
-      explicit Piece() : start(0) {}
-      explicit Piece(int64_t start) : start(start) {}
-    };
-
-    /// A list of pieces, where each piece stops when a transition occurs
-    /// between JS and Native. Pieces are guaranteed to be sorted according to
-    /// their start record (ascending).
-    std::vector<Piece> pieces;
-    std::unordered_map<SynthTrace::ObjectID, DefAndUse> locals;
-
-    explicit Call() = delete;
-    explicit Call(const Piece &piece) {
-      pieces.emplace_back(piece);
-    }
-    explicit Call(Piece &&piece) {
-      pieces.emplace_back(std::move(piece));
-    }
-  };
-
-  /// A HostFunctionToCalls is a mapping from a host function id to the list of
-  /// calls associated with that host function's execution. The calls are
-  /// ordered by invocation (the 0th element is the 1st call).
-  using HostFunctionToCalls =
-      std::unordered_map<SynthTrace::ObjectID, std::vector<Call>>;
-
-  struct HostObjectInfo final {
-    explicit HostObjectInfo() = default;
-
-    /// Stores any of get(), set(), getPropertyNames() call to a HostObject,
-    /// ordered by invocation.
-    std::vector<Call> calls;
-    /// Stores the return value of getPropertyNames() call to a HostObject
-    /// ordered by invocation.
-    std::vector<std::vector<std::string>> resultsOfGetPropertyNames;
-  };
-
-  /// A HostObjectToCalls is a mapping from a host object id to the
-  /// mapping of property names to calls associated with accessing properties of
-  /// that host object and the list of calls associated with getPropertyNames.
-  using HostObjectToCalls =
-      std::unordered_map<SynthTrace::ObjectID, HostObjectInfo>;
-
   /// Options for executing the trace.
   struct ExecuteOptions {
     /// Customizes the GCConfig of the Runtime.
@@ -169,11 +104,18 @@ class TraceInterpreter final {
   // Map from source hash to source file to run.
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles_;
   const SynthTrace &trace_;
-  const std::unordered_map<SynthTrace::ObjectID, DefAndUse> &globalDefsAndUses_;
-  const HostFunctionToCalls &hostFunctionCalls_;
-  const HostObjectToCalls &hostObjectCalls_;
 
-  // Invariant: the value is either jsi::Object or jsi::String.
+  /// The last use of each object.
+  std::unordered_map<SynthTrace::ObjectID, uint64_t> lastUsePerObj_;
+
+  /// The list of pairs from record index to ObjectID. Each record index is the
+  /// lastly used position of each Object, at which we can remove the object
+  /// from gom_ and gpnm_.
+  std::vector<std::pair<uint64_t, SynthTrace::ObjectID>> lastUses_;
+  /// Index of lastUses_ vector that the interpreter is currently processing.
+  uint64_t lastUsesIndex_{0};
+
+  // Invariant: the value is either jsi::Object, jsi::String, jsi::Symbol.
   std::unordered_map<SynthTrace::ObjectID, jsi::Value> gom_;
   // For the PropNameIDs, which are not representable as jsi::Value.
   std::unordered_map<SynthTrace::ObjectID, jsi::PropNameID> gpnm_;
@@ -183,6 +125,9 @@ class TraceInterpreter final {
   bool markerFound_{false};
   /// Depth in the execution stack. Zero is the outermost function.
   uint64_t depth_{0};
+
+  /// The index of the record that the TraceInterpreter is executing.
+  uint64_t nextExecIndex_{0};
 
  public:
   /// Execute the trace given by \p traceFile, that was the trace of executing
@@ -219,11 +164,7 @@ class TraceInterpreter final {
       jsi::Runtime &rt,
       const ExecuteOptions &options,
       const SynthTrace &trace,
-      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles,
-      const std::unordered_map<SynthTrace::ObjectID, DefAndUse>
-          &globalDefsAndUses,
-      const HostFunctionToCalls &hostFunctionCalls,
-      const HostObjectToCalls &hostObjectCalls);
+      std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles);
 
   static std::string exec(
       jsi::Runtime &rt,
@@ -258,128 +199,67 @@ class TraceInterpreter final {
 
   jsi::Object createHostObject(SynthTrace::ObjectID objID);
 
-  std::string execEntryFunction(const Call &entryFunc);
+  /// Execute the records with the given ExecuteOptions::MarkerOption
+  std::string executeRecordsWithMarkerOptions();
 
-  // Execute \p entryFunc on the given \p thisVal and the \p count
-  // arguments \p args.  If the first record should be treated as a
-  // definition of a propNameID used in the function, \p
-  // nativePropNameToConsumeAsDef will be non-null, and will point to
-  // the jsi::PropNameID that is the runtime value for the prop name.
-  jsi::Value execFunction(
-      const Call &entryFunc,
-      const jsi::Value &thisVal,
-      const jsi::Value *args,
-      uint64_t count,
-      const jsi::PropNameID *nativePropNameToConsumeAsDef = nullptr);
+  /// Execute the records. JS might call this recursively when HostFunction or
+  /// HostObject's functions are called.
+  void executeRecords();
 
   /// Requires that \p valID is the proper id for \p val, and that a
-  /// defining occurrence of \p valID occurs at the given \p
-  /// globalRecordNum.  Decides whether the definition should be
-  /// recorded, locally in \p call, or globally, and, if so, adds the
-  /// association between \p valID and \p val to \p locals or \p
-  /// globals, as appropriate.
-  template <typename ValueType>
-  void addValueToDefs(
-      const Call &call,
+  /// defining occurrence of \p valID occurs at the current \p defIndex. Decides
+  /// whether the definition should be recorded, and, if so, adds the
+  /// association between \p valID and \p val \p gom_ as appropriate.
+  void addToObjectMap(
       SynthTrace::ObjectID valID,
-      uint64_t globalRecordNum,
-      const ValueType &val,
-      std::unordered_map<SynthTrace::ObjectID, ValueType> &locals,
-      std::unordered_map<SynthTrace::ObjectID, ValueType> &globals);
-
-  /// Same as above, except it avoids copies on temporary objects.
-  template <typename ValueType>
-  void addValueToDefs(
-      const Call &call,
-      SynthTrace::ObjectID valID,
-      uint64_t globalRecordNum,
-      ValueType &&val,
-      std::unordered_map<SynthTrace::ObjectID, ValueType> &locals,
-      std::unordered_map<SynthTrace::ObjectID, ValueType> &globals);
-
-  /// Requires that \p valID is the proper id for \p val, and that a
-  /// defining occurrence of \p key occurs at the given \p
-  /// globalRecordNum.  Decides whether the definition should be
-  /// recorded, locally in \p call, or globally, and, if so, adds the
-  /// association between \p key and \p val to \p locals or \p
-  /// globals, as appropriate.
-  void addJSIValueToDefs(
-      const Call &call,
-      SynthTrace::ObjectID valID,
-      uint64_t globalRecordNum,
-      const jsi::Value &val,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
-    addValueToDefs<jsi::Value>(call, valID, globalRecordNum, val, locals, gom_);
-  }
-
-  /// Same as above, except it avoids copies on temporary objects.
-  void addJSIValueToDefs(
-      const Call &call,
-      SynthTrace::ObjectID valID,
-      uint64_t globalRecordNum,
       jsi::Value &&val,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals) {
-    addValueToDefs<jsi::Value>(call, valID, globalRecordNum, val, locals, gom_);
-  }
+      uint64_t defIndex);
 
-  /// Requires that \p valID is the proper id for \p propNameID, and
-  /// that a defining occurrence of \p propNameID occurs at the given
-  /// \p globalRecordNum.  Decides whether the definition should be
-  /// recorded, locally in \p call, or globally, and, if so, adds the
-  /// association between \p propNameID and \p val to \p locals or \p
-  /// globals, as appropriate.
-  void addPropNameIDToDefs(
-      const Call &call,
-      SynthTrace::ObjectID valID,
-      uint64_t globalRecordNum,
-      const jsi::PropNameID &propNameID,
-      std::unordered_map<SynthTrace::ObjectID, jsi::PropNameID> &locals) {
-    addValueToDefs<jsi::PropNameID>(
-        call, valID, globalRecordNum, propNameID, locals, gpnm_);
-  }
+  /// Similar to addToObjectMap, but for PropNameIDs.
+  void addToPropNameIDMap(
+      SynthTrace::ObjectID id,
+      jsi::PropNameID &&val,
+      uint64_t defIndex);
 
-  /// Same as above, except it avoids copies on temporary objects.
-  void addPropNameIDToDefs(
-      const Call &call,
-      SynthTrace::ObjectID valID,
-      uint64_t globalRecordNum,
-      jsi::PropNameID &&propNameID,
-      std::unordered_map<SynthTrace::ObjectID, jsi::PropNameID> &locals) {
-    addValueToDefs<jsi::PropNameID>(
-        call, valID, globalRecordNum, propNameID, locals, gpnm_);
-  }
-
-  /// If \p traceValue specifies an Object or String, requires \p
-  /// val to be of the corresponding runtime type.  Adds this
-  /// occurrence at \p globalRecordNum as a local or global definition
-  /// in \p locals or the global object map, respectively.
+  /// If \p traceValue specifies an Object, String or Symbol, requires \p
+  /// val to be of the corresponding runtime type.  Adds this \p val to gom_.
   ///
   /// \p isThis should be true if and only if the value is a 'this' in a call
   /// (only used for validation). TODO(T84791675): Remove this parameter.
   ///
   /// N.B. This method should be called even if you happen to know that the
   /// value cannot be an Object or String, since it performs useful validation.
-  void ifObjectAddToDefs(
-      const SynthTrace::TraceValue &traceValue,
+  void ifObjectAddToObjectMap(
+      SynthTrace::TraceValue traceValue,
       const jsi::Value &val,
-      const Call &call,
-      uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      uint64_t defIndex,
       bool isThis = false);
 
   /// Same as above, except it avoids copies on temporary objects.
-  void ifObjectAddToDefs(
-      const SynthTrace::TraceValue &traceValue,
+  void ifObjectAddToObjectMap(
+      SynthTrace::TraceValue traceValue,
       jsi::Value &&val,
-      const Call &call,
-      uint64_t globalRecordNum,
-      std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+      uint64_t defIndex,
       bool isThis = false);
 
   /// Check if the \p marker is the one that is being searched for. If this is
   /// the first time encountering the matching marker, perform the actions set
   /// up for that marker.
   void checkMarker(const std::string &marker);
+
+  /// Get a jsi::Value from gom_ for given ObjectID.
+  jsi::Value getJSIValueForUse(SynthTrace::ObjectID id);
+
+  /// Get a jsi::PropNameID from gpnm_ for given ObjectID.
+  jsi::PropNameID getPropNameIDForUse(SynthTrace::ObjectID id);
+
+  /// Convert a TraceValue to a jsi::Value. This calls \p getJSIValueForUse,
+  /// which will remove the entry from gom_ and globalDefsAndUses_.
+  jsi::Value traceValueToJSIValue(SynthTrace::TraceValue value);
+
+  /// Erase all references to objects of which last use is before the given
+  /// record index.
+  void eraseRefsBefore(uint64_t index);
 
   std::string printStats();
 

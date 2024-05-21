@@ -33,305 +33,25 @@ using ObjectID = SynthTrace::ObjectID;
 
 namespace {
 
-constexpr ObjectID setupFuncID = std::numeric_limits<ObjectID>::max();
-
-/// Get the map from host functions to calls, and host objects to calls, for
-/// the given list of records.
-/// \param setupFuncID The function id to use for the top-level function. This
-///   should not collide with any possible existing function id.
-/// \param records A list of records inside a trace.
 std::pair<
-    TraceInterpreter::HostFunctionToCalls,
-    TraceInterpreter::HostObjectToCalls>
-getCalls(
-    ObjectID setupFuncID,
+    std::unordered_map<ObjectID, uint64_t>,
+    std::vector<std::pair<uint64_t, ObjectID>>>
+createLastUseMaps(
     const std::vector<std::unique_ptr<SynthTrace::Record>> &records) {
-  // This function iterates through the list of records, maintaining a stack of
-  // function calls that mimics the same sequence that was taken during trace
-  // collection. It attributes each contiguous sequence of records that are part
-  // of the same function invocation into a Piece, which it then puts into the
-  // call.
-
-  // A mapping from host functions to calls. The first element of the return
-  // tuple.
-  TraceInterpreter::HostFunctionToCalls funcIDToRecords;
-  // A mapping from a host object id to a map from property name to
-  // list of records. The second element of the return tuple.
-  TraceInterpreter::HostObjectToCalls hostObjIDToNameToRecords;
-
-  // As CallRecords are encountered, the reference to the list of calls for
-  // HostFunction or HostObject is placed at the end of this stack, so that when
-  // the matching return is executed, records can be attributed to the previous
-  // call.
-  struct StackValue {
-    std::vector<TraceInterpreter::Call> &calls;
-    ObjectID objID = {}; // Only needed for GetNativePropertyNamesRecord
-  };
-  std::vector<StackValue> stack;
-
-  // Make the setup function. It is the bottom of the stack, and also a host
-  // function.
-  funcIDToRecords[setupFuncID].emplace_back(
-      TraceInterpreter::Call(TraceInterpreter::Call::Piece()));
-  stack.emplace_back(StackValue{funcIDToRecords[setupFuncID]});
-
-  for (uint64_t recordNum = 0; recordNum < records.size(); ++recordNum) {
-    const auto &rec = records[recordNum];
-    if (rec->getType() == RecordType::CreateHostFunction) {
-      const auto &createHFRec =
-          static_cast<const SynthTrace::CreateHostFunctionRecord &>(*rec);
-      assert(
-          funcIDToRecords.find(createHFRec.objID_) == funcIDToRecords.end() &&
-          "The host function was already initialized, it was called before it was created");
-      // Insert a call so that this function is in the map, even if nothing
-      // calls it.
-      funcIDToRecords.emplace(
-          createHFRec.objID_, std::vector<TraceInterpreter::Call>());
-    } else if (rec->getType() == RecordType::CreateHostObject) {
-      const auto &createHORec =
-          static_cast<const SynthTrace::CreateHostObjectRecord &>(*rec);
-      assert(
-          hostObjIDToNameToRecords.find(createHORec.objID_) ==
-              hostObjIDToNameToRecords.end() &&
-          "The host object was already initialized, it was used before it was created");
-      // Insert an entry so that this host object is in the map, even if nothing
-      // uses it.
-      hostObjIDToNameToRecords.emplace(
-          createHORec.objID_, TraceInterpreter::HostObjectInfo{});
-    } else if (rec->getType() == RecordType::CallToNative) {
-      // JS will cause a call to native code. Add a new call on the stack, and
-      // add a call with an empty piece to the function it is calling.
-      const auto &callRec =
-          static_cast<const SynthTrace::CallToNativeRecord &>(*rec);
-      assert(
-          callRec.functionID_ != setupFuncID &&
-          "Should never encounter a call into the setup function");
-      auto &calls = funcIDToRecords[callRec.functionID_];
-      stack.emplace_back(StackValue{calls});
-      calls.emplace_back(
-          TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
-    } else if (
-        rec->getType() == RecordType::GetPropertyNative ||
-        rec->getType() == RecordType::SetPropertyNative) {
-      const auto &nativeAccessRec =
-          static_cast<const SynthTrace::GetOrSetPropertyNativeRecord &>(*rec);
-      // JS will access a property on a host object, which delegates to an
-      // accessor. Add a new call on the stack, and add a call with an empty
-      // piece to the object and property it is calling.
-      auto &calls =
-          hostObjIDToNameToRecords[nativeAccessRec.hostObjectID_].calls;
-      stack.emplace_back(StackValue{calls});
-      calls.emplace_back(
-          TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
-    } else if (rec->getType() == RecordType::GetNativePropertyNames) {
-      const auto &nativePropNamesRec =
-          static_cast<const SynthTrace::GetNativePropertyNamesRecord &>(*rec);
-      // JS asked for all properties on a host object. Add a new call on the
-      // stack, and add a call with an empty piece to the object it is calling.
-      auto &calls =
-          hostObjIDToNameToRecords[nativePropNamesRec.hostObjectID_].calls;
-      stack.emplace_back(StackValue{calls, nativePropNamesRec.hostObjectID_});
-      calls.emplace_back(
-          TraceInterpreter::Call(TraceInterpreter::Call::Piece(recordNum)));
-    } else if (rec->getType() == RecordType::GetNativePropertyNamesReturn) {
-      // Set the vector of strings that were returned from the original call.
-      const auto &nativePropNamesRec =
-          static_cast<const SynthTrace::GetNativePropertyNamesReturnRecord &>(
-              *rec);
-      hostObjIDToNameToRecords[stack.back().objID]
-          .resultsOfGetPropertyNames.emplace_back(
-              nativePropNamesRec.propNames_);
-    }
-
-    assert(!stack.empty());
-    auto &calls = stack.back().calls;
-    assert(!calls.empty() && "There should always be at least one call");
-    auto &call = calls.back();
-    if (rec->getType() == RecordType::ReturnToNative) {
-      // Add a new piece to the current call because we're about to
-      // re-enter native.
-      call.pieces.emplace_back(TraceInterpreter::Call::Piece(recordNum));
-    }
-
-    auto &piece = call.pieces.back();
-    piece.records.emplace_back(&*rec);
-    if (rec->getType() == RecordType::GetPropertyNativeReturn ||
-        rec->getType() == RecordType::SetPropertyNativeReturn ||
-        rec->getType() == RecordType::GetNativePropertyNamesReturn ||
-        rec->getType() == RecordType::ReturnFromNative) {
-      stack.pop_back();
-    }
-  }
-  assert(stack.size() == 1 && "Stack was not fully exhausted");
-  return std::make_pair(funcIDToRecords, hostObjIDToNameToRecords);
-}
-
-/// Given a call, computes each local object's last def before first use, and
-/// last use.
-/// Stores this information into \code call->locals.
-void createCallMetadata(TraceInterpreter::Call *call) {
-  // start is unused, since there's no need to convert to global indices
-  for (auto &piece : call->pieces) {
-    auto recordNum = piece.start;
-    for (auto *rec : piece.records) {
-      // For records that define and use the same object, this order is
-      // important, it might def an object that it uses, or use an object
-      // that it defs.
-      // For now, there's only one case where this happens, in
-      // GetPropertyRecord, which is the case of def'ing an object that it
-      // uses. So the uses need to come before defs.
-      // A general solution would require each record saying which order the
-      // two should be run in, or have a conflict resolver inside itself.
-      for (ObjectID use : rec->uses()) {
-        auto &loc = call->locals[use];
-        // Locally defined object access, move the last use forward.
-        loc.lastUse = recordNum;
+  std::unordered_map<ObjectID, uint64_t> lastUsePerObj;
+  std::vector<std::pair<uint64_t, ObjectID>> lastUses;
+  for (int64_t i = records.size() - 1; i >= 0; i--) {
+    const SynthTrace::Record *rec = records[i].get();
+    for (const auto &objID : rec->uses()) {
+      if (lastUsePerObj.find(objID) == lastUsePerObj.end()) {
+        lastUsePerObj.insert({objID, i});
+        lastUses.push_back({i, objID});
       }
-      for (ObjectID def : rec->defs()) {
-        auto &loc = call->locals[def];
-        if (loc.lastUse == TraceInterpreter::DefAndUse::kUnused) {
-          // Nothing local has used this object yet, we can eliminate any
-          // previous defs.
-          loc.lastDefBeforeFirstUse = recordNum;
-        }
-      }
-      recordNum++;
     }
   }
-  // TODO (T31512967): Prune unused defs.
-}
 
-std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> createGlobalMap(
-    const TraceInterpreter::HostFunctionToCalls &funcCallStacks,
-    const TraceInterpreter::HostObjectToCalls &objCallStacks,
-    ObjectID globalObjID) {
-  struct Glob {
-    uint64_t firstUse{TraceInterpreter::DefAndUse::kUnused};
-    uint64_t lastUse{TraceInterpreter::DefAndUse::kUnused};
-  };
-  // For Objects, Strings, and PropNameIDs.
-  std::unordered_map<ObjectID, Glob> firstAndLastGlobalUses;
-  // For Objects, Strings, and PropNameIDs.
-  std::unordered_map<ObjectID, std::set<uint64_t>> defsPerObj;
-
-  defsPerObj[globalObjID].insert(0);
-  firstAndLastGlobalUses[globalObjID].firstUse = 0;
-  firstAndLastGlobalUses[globalObjID].lastUse = std::numeric_limits<int>::max();
-
-  std::vector<const TraceInterpreter::Call *> calls;
-  for (const auto &p : funcCallStacks) {
-    const std::vector<TraceInterpreter::Call> &funcCalls = p.second;
-    for (const auto &call : funcCalls) {
-      calls.push_back(&call);
-    }
-  }
-  for (const auto &p : objCallStacks) {
-    for (const auto &call : p.second.calls) {
-      calls.push_back(&call);
-    }
-  }
-  for (const auto *call : calls) {
-    for (const auto &piece : call->pieces) {
-      auto globalRecordNum = piece.start;
-      for (const auto *rec : piece.records) {
-        for (ObjectID def : rec->defs()) {
-          // Add to the set of defs.
-          defsPerObj[def].emplace(globalRecordNum);
-        }
-        for (ObjectID use : rec->uses()) {
-          // Update the last use only if it can't be satisfied by a local def.
-          const auto &loc = call->locals.at(use);
-          if (loc.lastDefBeforeFirstUse ==
-              TraceInterpreter::DefAndUse::kUnused) {
-            // It was a global access
-            auto &glob = firstAndLastGlobalUses[use];
-            if (globalRecordNum < glob.firstUse ||
-                glob.firstUse == TraceInterpreter::DefAndUse::kUnused) {
-              // Earlier global use or first global use, update.
-              glob.firstUse = globalRecordNum;
-            }
-            if (globalRecordNum > glob.lastUse ||
-                glob.lastUse == TraceInterpreter::DefAndUse::kUnused) {
-              // Later global use, update.
-              glob.lastUse = globalRecordNum;
-            }
-          }
-        }
-        globalRecordNum++;
-      };
-    };
-  }
-  // For each object, find the max def that is before the first use.
-  std::unordered_map<ObjectID, TraceInterpreter::DefAndUse> globalDefsAndUses;
-  for (auto &p : firstAndLastGlobalUses) {
-    const auto objID = p.first;
-    const auto firstUse = p.second.firstUse;
-    const auto lastUse = p.second.lastUse;
-    assert(
-        firstUse <= lastUse &&
-        "Should never have the first use be greater than the last use");
-    const std::set<uint64_t> &defs = defsPerObj[objID];
-    assert(
-        defs.size() &&
-        "There must be at least one def for any globally used object");
-    const auto firstDefAfterFirstUseIter = defs.upper_bound(firstUse);
-    assert(
-        firstDefAfterFirstUseIter != defs.begin() &&
-        "Must have at least one def before first use.");
-    uint64_t lastDefBeforeFirstUse = *std::prev(firstDefAfterFirstUseIter);
-    assert(
-        lastDefBeforeFirstUse <= lastUse &&
-        "Should never have the last def before first use be greater than "
-        "the last use");
-    globalDefsAndUses[objID] =
-        TraceInterpreter::DefAndUse{lastDefBeforeFirstUse, lastUse};
-  }
-
-  return globalDefsAndUses;
-}
-
-/// Merge host function calls and host object calls into one set of calls, and
-/// compute which values are local to each call.
-void createCallMetadataForHostFunctions(
-    TraceInterpreter::HostFunctionToCalls *funcCallStacks) {
-  for (auto &p : *funcCallStacks) {
-    for (TraceInterpreter::Call &call : p.second) {
-      createCallMetadata(&call);
-    }
-  }
-}
-
-void createCallMetadataForHostObjects(
-    TraceInterpreter::HostObjectToCalls *objCallStacks) {
-  for (auto &p : *objCallStacks) {
-    for (auto &call : p.second.calls) {
-      createCallMetadata(&call);
-    }
-  }
-}
-
-Value traceValueToJSIValue(
-    Runtime &rt,
-    const SynthTrace &trace,
-    std::function<Value(ObjectID)> getJSIValueForUse,
-    SynthTrace::TraceValue value) {
-  if (value.isUndefined()) {
-    return Value::undefined();
-  }
-  if (value.isNull()) {
-    return Value::null();
-  }
-  if (value.isNumber()) {
-    return Value(value.getNumber());
-  }
-  if (value.isBool()) {
-    return Value(value.getBool());
-  }
-  if (value.isObject() || value.isBigInt() || value.isString() ||
-      value.isSymbol()) {
-    return getJSIValueForUse(value.getUID());
-  }
-  llvm_unreachable("Unrecognized value type encountered");
+  std::reverse(lastUses.begin(), lastUses.end());
+  return {lastUsePerObj, lastUses};
 }
 
 std::unique_ptr<const jsi::Buffer> bufConvert(
@@ -482,21 +202,18 @@ TraceInterpreter::TraceInterpreter(
     jsi::Runtime &rt,
     const ExecuteOptions &options,
     const SynthTrace &trace,
-    std::map<::hermes::SHA1, std::shared_ptr<const Buffer>> bundles,
-    const std::unordered_map<ObjectID, TraceInterpreter::DefAndUse>
-        &globalDefsAndUses,
-    const HostFunctionToCalls &hostFunctionCalls,
-    const HostObjectToCalls &hostObjectCalls)
+    std::map<::hermes::SHA1, std::shared_ptr<const Buffer>> bundles)
     : rt_(rt),
       options_(options),
       bundles_(std::move(bundles)),
       trace_(trace),
-      globalDefsAndUses_(globalDefsAndUses),
-      hostFunctionCalls_(hostFunctionCalls),
-      hostObjectCalls_(hostObjectCalls),
       gom_() {
   // Add the global object to the global object map
   gom_.emplace(trace.globalObjID(), rt.global());
+
+  auto [lastUsePerObj, lastUses] = createLastUseMaps(trace.records());
+  lastUsePerObj_ = std::move(lastUsePerObj);
+  lastUses_ = std::move(lastUses);
 }
 
 /* static */
@@ -697,52 +414,48 @@ std::string TraceInterpreter::exec(
     const ExecuteOptions &options,
     const SynthTrace &trace,
     std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles) {
-  // Partition the records into each call.
-  auto funcCallsAndObjectCalls = getCalls(setupFuncID, trace.records());
-  auto &hostFuncs = funcCallsAndObjectCalls.first;
-  auto &hostObjs = funcCallsAndObjectCalls.second;
-  // Write in the metadata.
-  createCallMetadataForHostFunctions(&hostFuncs);
-  createCallMetadataForHostObjects(&hostObjs);
-  assert(
-      hostFuncs.at(setupFuncID).size() == 1 &&
-      "The setup function should only have one call");
-  // Calculate the globals and locals information for the records to know
-  // which objects need to be put into a global map data structure.
-  const auto globalDefsAndUses =
-      createGlobalMap(hostFuncs, hostObjs, trace.globalObjID());
-  TraceInterpreter interpreter(
-      rt,
-      options,
-      trace,
-      std::move(bundles),
-      globalDefsAndUses,
-      hostFuncs,
-      hostObjs);
-  return interpreter.execEntryFunction(hostFuncs.at(setupFuncID).at(0));
+  TraceInterpreter interpreter(rt, options, trace, std::move(bundles));
+  return interpreter.executeRecordsWithMarkerOptions();
 }
 
 Function TraceInterpreter::createHostFunction(
     const SynthTrace::CreateHostFunctionRecord &rec,
     const PropNameID &propNameID) {
-  const auto funcID = rec.objID_;
-  const std::vector<TraceInterpreter::Call> &calls =
-      hostFunctionCalls_.at(funcID);
 #ifdef HERMESVM_API_TRACE_DEBUG
   assert(propNameID.utf8(rt_) == rec.functionName_);
 #endif
-  uint64_t callCount = 0;
   return Function::createFromHostFunction(
       rt_,
       propNameID,
       rec.paramCount_,
-      [this, callCount, &calls](
-          Runtime &,
+      [this](
+          Runtime &rt,
           const Value &thisVal,
           const Value *args,
           size_t count) mutable -> Value {
         try {
-          return execFunction(calls.at(callCount++), thisVal, args, count);
+          const auto &rec = trace_.records()[nextExecIndex_];
+          const auto &ctnr =
+              dynamic_cast<const SynthTrace::CallToNativeRecord &>(*rec);
+          // Associate the this arg with its object id.
+          ifObjectAddToObjectMap(
+              ctnr.thisArg_, thisVal, nextExecIndex_, /* isThis = */ true);
+          // Associate each argument with its object id.
+          assert(
+              ctnr.args_.size() == count &&
+              "Called at runtime with a different number of args than "
+              "the trace expected");
+          for (uint64_t i = 0; i < ctnr.args_.size(); ++i) {
+            ifObjectAddToObjectMap(
+                ctnr.args_[i], Value{rt, args[i]}, nextExecIndex_);
+          }
+
+          executeRecords();
+
+          const auto &rfnr =
+              dynamic_cast<const SynthTrace::ReturnFromNativeRecord &>(
+                  *trace_.records()[nextExecIndex_ - 1]);
+          return traceValueToJSIValue(rfnr.retVal_);
         } catch (const std::exception &e) {
           crashOnException(e, llvh::None);
         }
@@ -750,81 +463,83 @@ Function TraceInterpreter::createHostFunction(
 }
 
 Object TraceInterpreter::createHostObject(ObjectID objID) {
-  struct FakeHostObject : public HostObject {
-    TraceInterpreter &interpreter;
-    const HostObjectInfo &hostObjectInfo;
-    uint64_t callCount = 0;
-    uint64_t getPropertyNamesReturnCount = 0;
+  class FakeHostObject : public HostObject {
+    TraceInterpreter &interpreter_;
 
-    FakeHostObject(
-        TraceInterpreter &interpreter,
-        const HostObjectInfo &hostObjectInfo)
-        : interpreter(interpreter), hostObjectInfo(hostObjectInfo) {}
+   public:
+    explicit FakeHostObject(TraceInterpreter &interpreter)
+        : interpreter_(interpreter) {}
 
     Value get(Runtime &rt, const PropNameID &name) override {
       try {
         const std::string propName = name.utf8(rt);
-        // There are no arguments to pass to a get call.
-        return interpreter.execFunction(
-            hostObjectInfo.calls.at(callCount++),
-            // This is undefined since there's no way to access the host object
-            // as a JS value normally from this position.
-            Value::undefined(),
-            nullptr,
-            0,
-            &name);
+        const auto &rec =
+            interpreter_.trace_.records()[interpreter_.nextExecIndex_];
+        const auto &gpnr =
+            dynamic_cast<const SynthTrace::GetPropertyNativeRecord &>(*rec);
+        interpreter_.addToPropNameIDMap(
+            gpnr.propNameID_,
+            jsi::PropNameID{interpreter_.rt_, name},
+            interpreter_.nextExecIndex_);
+
+        interpreter_.executeRecords();
+
+        const auto &gpnrr =
+            dynamic_cast<const SynthTrace::GetPropertyNativeReturnRecord &>(
+                *interpreter_.trace_
+                     .records()[interpreter_.nextExecIndex_ - 1]);
+        return interpreter_.traceValueToJSIValue(gpnrr.retVal_);
       } catch (const std::exception &e) {
-        interpreter.crashOnException(e, llvh::None);
+        interpreter_.crashOnException(e, llvh::None);
       }
     }
 
     void set(Runtime &rt, const PropNameID &name, const Value &value) override {
       try {
-        const std::string propName = name.utf8(rt);
-        const Value args[] = {Value(rt, value)};
+        const auto &rec =
+            interpreter_.trace_.records()[interpreter_.nextExecIndex_];
+        const auto &spnr =
+            dynamic_cast<const SynthTrace::SetPropertyNativeRecord &>(*rec);
+        interpreter_.addToPropNameIDMap(
+            spnr.propNameID_,
+            jsi::PropNameID{interpreter_.rt_, name},
+            interpreter_.nextExecIndex_);
+        interpreter_.ifObjectAddToObjectMap(
+            spnr.value_, Value(rt, value), interpreter_.nextExecIndex_);
+
         // There is exactly one argument to pass to a set call.
-        interpreter.execFunction(
-            hostObjectInfo.calls.at(callCount++),
-            // This is undefined since there's no way to access the host object
-            // as a JS value normally from this position.
-            Value::undefined(),
-            args,
-            1,
-            &name);
+        interpreter_.executeRecords();
       } catch (const std::exception &e) {
-        interpreter.crashOnException(e, llvh::None);
+        interpreter_.crashOnException(e, llvh::None);
       }
     }
 
     std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
       try {
-        interpreter.execFunction(
-            hostObjectInfo.calls.at(callCount++),
-            // This is undefined since there's no way to access the host object
-            // as a JS value normally from this position.
-            Value::undefined(),
-            nullptr,
-            0);
-        const std::vector<std::string> &names =
-            hostObjectInfo.resultsOfGetPropertyNames.at(
-                getPropertyNamesReturnCount++);
+        interpreter_.executeRecords();
+
+        const auto &rec =
+            interpreter_.trace_.records()[interpreter_.nextExecIndex_ - 1];
+        assert(rec->getType() == RecordType::GetNativePropertyNamesReturn);
+        const auto &record = dynamic_cast<
+            const SynthTrace::GetNativePropertyNamesReturnRecord &>(*rec);
+        const std::vector<std::string> &names = record.propNames_;
         std::vector<PropNameID> props;
         for (const std::string &name : names) {
           props.emplace_back(PropNameID::forUtf8(rt, name));
         }
         return props;
       } catch (const std::exception &e) {
-        interpreter.crashOnException(e, llvh::None);
+        interpreter_.crashOnException(e, llvh::None);
       }
     }
   };
 
   return Object::createFromHostObject(
-      rt_, std::make_shared<FakeHostObject>(*this, hostObjectCalls_.at(objID)));
+      rt_, std::make_shared<FakeHostObject>(*this));
 }
 
-std::string TraceInterpreter::execEntryFunction(
-    const TraceInterpreter::Call &entryFunc) {
+std::string TraceInterpreter::executeRecordsWithMarkerOptions() {
   assert(
       (options_.action == ExecuteOptions::MarkerAction::NONE ||
        !options_.profileFileName.empty()) &&
@@ -853,7 +568,7 @@ std::string TraceInterpreter::execEntryFunction(
       // Do nothing.
       break;
   }
-  execFunction(entryFunc, Value::undefined(), nullptr, 0);
+  executeRecords();
 
 #ifdef HERMESVM_PROFILER_BB
   if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
@@ -872,24 +587,55 @@ std::string TraceInterpreter::execEntryFunction(
   return stats_;
 }
 
-Value TraceInterpreter::execFunction(
-    const TraceInterpreter::Call &call,
-    const Value &thisVal,
-    const Value *args,
-    uint64_t count,
-    const PropNameID *nativePropNameToConsumeAsDef) {
+jsi::Value TraceInterpreter::traceValueToJSIValue(
+    SynthTrace::TraceValue value) {
+  if (value.isUndefined()) {
+    return Value::undefined();
+  }
+  if (value.isNull()) {
+    return Value::null();
+  }
+  if (value.isNumber()) {
+    return Value(value.getNumber());
+  }
+  if (value.isBool()) {
+    return Value(value.getBool());
+  }
+  if (value.isObject() || value.isBigInt() || value.isString() ||
+      value.isSymbol()) {
+    return getJSIValueForUse(value.getUID());
+  }
+  llvm_unreachable("Unrecognized value type encountered");
+}
+
+jsi::Value TraceInterpreter::getJSIValueForUse(SynthTrace::ObjectID id) {
+  auto it = gom_.find(id);
+  assert(it != gom_.end() && "Value not found");
+  return jsi::Value{rt_, it->second};
+};
+
+jsi::PropNameID TraceInterpreter::getPropNameIDForUse(SynthTrace::ObjectID id) {
+  auto it = gpnm_.find(id);
+  assert(it != gpnm_.end() && "ID not found");
+  return PropNameID{rt_, it->second};
+};
+
+void TraceInterpreter::executeRecords() {
   llvh::SaveAndRestore<uint64_t> depthGuard(depth_, depth_ + 1);
-  // A mapping from an ObjectID to the Object for local variables.
-  // Invariant: value is Object or String;
-  std::unordered_map<ObjectID, Value> locals;
-  std::unordered_map<ObjectID, PropNameID> pniLocals;
+  const std::vector<std::unique_ptr<SynthTrace::Record>> &records =
+      trace_.records();
+
   // Save a value so that Call can set it, and Return can access it.
   Value retval;
   // Carry the return value from BeginJSExec to EndJSExec.
   Value overallRetval;
+
 #ifndef NDEBUG
+  // We'll want the first record, to verify that it's the one that consumes
+  // nativePropNameToConsumeAsDef if that is non-null.
+  const SynthTrace::Record *firstRec = records[nextExecIndex_].get();
   if (depth_ != 1) {
-    RecordType firstRecType = call.pieces.front().records.front()->getType();
+    RecordType firstRecType = firstRec->getType();
     assert(
         (firstRecType == RecordType::CallToNative ||
          firstRecType == RecordType::GetNativePropertyNames ||
@@ -898,600 +644,411 @@ Value TraceInterpreter::execFunction(
         "Illegal starting record");
   }
 #endif
-#ifndef NDEBUG
-  // We'll want the first record, to verify that it's the one that consumes
-  // nativePropNameToConsumeAsDef if that is non-null.
-  const SynthTrace::Record *firstRec = call.pieces.at(0).records.at(0);
-#endif
-  for (const TraceInterpreter::Call::Piece &piece : call.pieces) {
-    uint64_t globalRecordNum = piece.start;
-    const auto getJSIValueForUse =
-        [this, &call, &locals, &globalRecordNum](ObjectID obj) -> Value {
-      // Check locals, then globals.
-      auto it = locals.find(obj);
-      if (it != locals.end()) {
-        // Satisfiable locally
-        Value val{rt_, it->second};
-        assert(
-            val.isObject() || val.isBigInt() || val.isString() ||
-            val.isSymbol());
-        // If it was the last local use, delete that object id from locals.
-        auto defAndUse = call.locals.find(obj);
-        if (defAndUse != call.locals.end() &&
-            defAndUse->second.lastUse == globalRecordNum) {
-          assert(
-              defAndUse->second.lastDefBeforeFirstUse != DefAndUse::kUnused &&
-              "All uses must be preceded by a def");
-          locals.erase(it);
-        }
-        return val;
-      }
-      auto defAndUse = globalDefsAndUses_.find(obj);
-      assert(
-          defAndUse != globalDefsAndUses_.end() &&
-          "All global uses must have a global definition");
-      it = gom_.find(obj);
-      assert(
-          it != gom_.end() &&
-          "If there is a global definition, it must exist in one of the maps");
-      Value val{rt_, it->second};
-      assert(val.isObject() || val.isString() || val.isSymbol());
-      // If it was the last global use, delete that object id from globals.
-      if (defAndUse->second.lastUse == globalRecordNum) {
-        gom_.erase(it);
-      }
-      return val;
-    };
-    const auto getObjForUse = [this,
-                               getJSIValueForUse](ObjectID obj) -> Object {
-      return getJSIValueForUse(obj).getObject(rt_);
-    };
-    const auto getPropNameIDForUse =
-        [this, &call, &pniLocals, &globalRecordNum](
-            ObjectID obj) -> PropNameID {
-      // Check locals, then globals.
-      auto it = pniLocals.find(obj);
-      if (it != pniLocals.end()) {
-        // Satisfiable locally
-        PropNameID propNameID{rt_, it->second};
-        // If it was the last local use, delete that object id from locals.
-        auto defAndUse = call.locals.find(obj);
-        if (defAndUse != call.locals.end() &&
-            defAndUse->second.lastUse == globalRecordNum) {
-          assert(
-              defAndUse->second.lastDefBeforeFirstUse != DefAndUse::kUnused &&
-              "All uses must be preceded by a def");
-          pniLocals.erase(it);
-        }
-        return propNameID;
-      }
-      auto defAndUse = globalDefsAndUses_.find(obj);
-      assert(
-          defAndUse != globalDefsAndUses_.end() &&
-          "All global uses must have a global definition");
-      it = gpnm_.find(obj);
-      assert(
-          it != gpnm_.end() &&
-          "If there is a global definition, it must exist in one of the maps");
-      PropNameID propNameID{rt_, it->second};
-      // If it was the last global use, delete that object id from globals.
-      if (defAndUse->second.lastUse == globalRecordNum) {
-        gpnm_.erase(it);
-      }
-      return propNameID;
-    };
 
-    for (const SynthTrace::Record *rec : piece.records) {
-      try {
-        switch (rec->getType()) {
-          case RecordType::BeginExecJS: {
-            const auto &bejsr =
-                dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
-            auto it = bundles_.find(bejsr.sourceHash());
-            if (it == bundles_.end()) {
-              if ((options_.disableSourceHashCheck ||
-                   isAllZeroSourceHash(bejsr.sourceHash())) &&
-                  bundles_.size() == 1) {
-                // Normally, if a bundle's source hash doesn't match, it would
-                // be an error. However, for convenience and backwards
-                // compatibility, allow an all-zero hash to automatically assume
-                // a bundle if that was the only bundle supplied.
-                it = bundles_.begin();
-              } else {
-                throw std::invalid_argument(
-                    "Trace expected the source hash " +
-                    ::hermes::hashAsString(bejsr.sourceHash()) +
-                    ", that wasn't provided as a file");
-              }
+  const auto endIndex = records.size();
+  while (nextExecIndex_ < endIndex) {
+    const auto currentExecIndex = nextExecIndex_++;
+    eraseRefsBefore(currentExecIndex);
+    try {
+      const SynthTrace::Record *rec = records[currentExecIndex].get();
+      switch (rec->getType()) {
+        case RecordType::BeginExecJS: {
+          const auto &bejsr =
+              dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
+          auto it = bundles_.find(bejsr.sourceHash());
+          if (it == bundles_.end()) {
+            if ((options_.disableSourceHashCheck ||
+                 isAllZeroSourceHash(bejsr.sourceHash())) &&
+                bundles_.size() == 1) {
+              // Normally, if a bundle's source hash doesn't match, it would
+              // be an error. However, for convenience and backwards
+              // compatibility, allow an all-zero hash to automatically assume
+              // a bundle if that was the only bundle supplied.
+              it = bundles_.begin();
+            } else {
+              throw std::invalid_argument(
+                  "Trace expected the source hash " +
+                  ::hermes::hashAsString(bejsr.sourceHash()) +
+                  ", that wasn't provided as a file");
             }
+          }
 
-            // Copy the shared pointer to the buffer in case this file is
-            // executed multiple times.
-            auto bundle = it->second;
-            if (!HermesRuntime::isHermesBytecode(
-                    bundle->data(), bundle->size())) {
-              llvh::errs()
-                  << "Note: You are running from source code, not HBC bytecode.\n"
-                  << "      This run will reflect dev performance, not production.\n";
+          // Copy the shared pointer to the buffer in case this file is
+          // executed multiple times.
+          auto bundle = it->second;
+          if (!HermesRuntime::isHermesBytecode(
+                  bundle->data(), bundle->size())) {
+            llvh::errs()
+                << "Note: You are running from source code, not HBC bytecode.\n"
+                << "      This run will reflect dev performance, not production.\n";
+          }
+          // overallRetval is to be consumed when we get an EndExecJS record.
+          overallRetval =
+              rt_.evaluateJavaScript(std::move(bundle), bejsr.sourceURL());
+          break;
+        }
+        case RecordType::EndExecJS: {
+          const auto &eejsr =
+              dynamic_cast<const SynthTrace::EndExecJSRecord &>(*rec);
+          ifObjectAddToObjectMap(
+              eejsr.retVal_, std::move(overallRetval), currentExecIndex);
+          [[fallthrough]];
+        }
+        case RecordType::Marker: {
+          const auto &mr = dynamic_cast<const SynthTrace::MarkerRecord &>(*rec);
+          // If the tag is the requested tag, and the stats have not already
+          // been collected, collect them.
+          checkMarker(mr.tag_);
+          if (auto *tracingRT = dynamic_cast<TracingRuntime *>(&rt_)) {
+            if (rec->getType() != RecordType::EndExecJS) {
+              // If tracing is on, re-emit the marker into the result stream.
+              // This way, the trace emitted from replay will be the same as
+              // the trace input. Don't do this for EndExecJSRecord, since
+              // that falls through to here, and it already emits a marker
+              // automatically.
+              tracingRT->addMarker(mr.tag_);
             }
-            // overallRetval is to be consumed when we get an EndExecJS record.
-            overallRetval =
-                rt_.evaluateJavaScript(std::move(bundle), bejsr.sourceURL());
-            break;
           }
-          case RecordType::EndExecJS: {
-            const auto &eejsr =
-                dynamic_cast<const SynthTrace::EndExecJSRecord &>(*rec);
-            ifObjectAddToDefs(
-                eejsr.retVal_,
-                std::move(overallRetval),
-                call,
-                globalRecordNum,
-                locals);
-            [[fallthrough]];
-          }
-          case RecordType::Marker: {
-            const auto &mr =
-                dynamic_cast<const SynthTrace::MarkerRecord &>(*rec);
-            // If the tag is the requested tag, and the stats have not already
-            // been collected, collect them.
-            checkMarker(mr.tag_);
-            if (auto *tracingRT = dynamic_cast<TracingRuntime *>(&rt_)) {
-              if (rec->getType() != RecordType::EndExecJS) {
-                // If tracing is on, re-emit the marker into the result stream.
-                // This way, the trace emitted from replay will be the same as
-                // the trace input. Don't do this for EndExecJSRecord, since
-                // that falls through to here, and it already emits a marker
-                // automatically.
-                tracingRT->addMarker(mr.tag_);
-              }
-            }
-            break;
-          }
-          case RecordType::CreateObject: {
-            const auto &cor =
-                static_cast<const SynthTrace::CreateObjectRecord &>(*rec);
-            // Make an empty object to be used.
-            addJSIValueToDefs(
-                call, cor.objID_, globalRecordNum, Object(rt_), locals);
-            break;
-          }
-          case RecordType::CreateBigInt: {
-            const auto &cbr =
-                static_cast<const SynthTrace::CreateBigIntRecord &>(*rec);
-            Value bigint;
-            switch (cbr.method_) {
-              case SynthTrace::CreateBigIntRecord::Method::FromInt64:
-                bigint =
-                    BigInt::fromInt64(rt_, static_cast<int64_t>(cbr.bits_));
-                assert(
-                    bigint.asBigInt(rt_).getInt64(rt_) ==
-                    static_cast<int64_t>(cbr.bits_));
-                break;
-              case SynthTrace::CreateBigIntRecord::Method::FromUint64:
-                bigint = BigInt::fromUint64(rt_, cbr.bits_);
-                assert(bigint.asBigInt(rt_).getUint64(rt_) == cbr.bits_);
-                break;
-            }
-            addJSIValueToDefs(
-                call, cbr.objID_, globalRecordNum, std::move(bigint), locals);
-            break;
-          }
-          case RecordType::BigIntToString: {
-            const auto &bts =
-                static_cast<const SynthTrace::BigIntToStringRecord &>(*rec);
-            BigInt obj = getJSIValueForUse(bts.bigintID_).asBigInt(rt_);
-            addJSIValueToDefs(
-                call,
-                bts.strID_,
-                globalRecordNum,
-                obj.toString(rt_, bts.radix_),
-                locals);
-            break;
-          }
-          case RecordType::CreateString: {
-            const auto &csr =
-                static_cast<const SynthTrace::CreateStringRecord &>(*rec);
-            Value str;
-            if (csr.ascii_) {
-              str = String::createFromAscii(
-                  rt_, csr.chars_.data(), csr.chars_.size());
-            } else {
-              str = String::createFromUtf8(
-                  rt_,
-                  reinterpret_cast<const uint8_t *>(csr.chars_.data()),
-                  csr.chars_.size());
-            }
-            assert(str.asString(rt_).utf8(rt_) == csr.chars_);
-            addJSIValueToDefs(
-                call, csr.objID_, globalRecordNum, std::move(str), locals);
-            break;
-          }
-          case RecordType::CreatePropNameID: {
-            const auto &cpnr =
-                static_cast<const SynthTrace::CreatePropNameIDRecord &>(*rec);
-            // We perform the calls below for their side effects (for example,
-            auto propNameID = [&] {
-              switch (cpnr.valueType_) {
-                case SynthTrace::CreatePropNameIDRecord::ASCII:
-                  return PropNameID::forAscii(rt_, cpnr.chars_);
-                case SynthTrace::CreatePropNameIDRecord::UTF8:
-                  return PropNameID::forUtf8(rt_, cpnr.chars_);
-                case SynthTrace::CreatePropNameIDRecord::TRACEVALUE: {
-                  auto val = traceValueToJSIValue(
-                      rt_, trace_, getJSIValueForUse, cpnr.traceValue_);
-                  if (val.isSymbol())
-                    return PropNameID::forSymbol(rt_, val.getSymbol(rt_));
-                  return PropNameID::forString(rt_, val.getString(rt_));
-                }
-              }
-              llvm_unreachable("No other way to construct PropNameID");
-            }();
-            addPropNameIDToDefs(
-                call,
-                cpnr.propNameID_,
-                globalRecordNum,
-                std::move(propNameID),
-                pniLocals);
-            break;
-          }
-          case RecordType::CreateHostObject: {
-            const auto &chor =
-                static_cast<const SynthTrace::CreateHostObjectRecord &>(*rec);
-            const ObjectID objID = chor.objID_;
-            addJSIValueToDefs(
-                call,
-                objID,
-                globalRecordNum,
-                Value(rt_, createHostObject(objID)),
-                locals);
-            break;
-          }
-          case RecordType::CreateHostFunction: {
-            const auto &chfr =
-                static_cast<const SynthTrace::CreateHostFunctionRecord &>(*rec);
-            addJSIValueToDefs(
-                call,
-                chfr.objID_,
-                globalRecordNum,
-                Value(
-                    rt_,
-                    createHostFunction(
-                        chfr, getPropNameIDForUse(chfr.propNameID_))),
-                locals);
-            break;
-          }
-          case RecordType::QueueMicrotask: {
-            const auto &queueRecord =
-                static_cast<const SynthTrace::QueueMicrotaskRecord &>(*rec);
-            jsi::Function callback =
-                getObjForUse(queueRecord.callbackID_).asFunction(rt_);
-            rt_.queueMicrotask(callback);
-            break;
-          }
-          case RecordType::DrainMicrotasks: {
-            const auto &drainRecord =
-                static_cast<const SynthTrace::DrainMicrotasksRecord &>(*rec);
-            rt_.drainMicrotasks(drainRecord.maxMicrotasksHint_);
-            break;
-          }
-          case RecordType::GetProperty: {
-            const auto &gpr =
-                static_cast<const SynthTrace::GetPropertyRecord &>(*rec);
-            // Call get property on the object specified, and possibly define
-            // the result.
-            jsi::Value value;
-            const auto &obj = getObjForUse(gpr.objID_);
-            if (gpr.propID_.isString()) {
-              const jsi::String propString =
-                  getJSIValueForUse(gpr.propID_.getUID()).asString(rt_);
-#ifdef HERMESVM_API_TRACE_DEBUG
-              assert(propString.utf8(rt_) == gpr.propNameDbg_);
-#endif
-              value = obj.getProperty(rt_, propString);
-            } else {
-              assert(gpr.propID_.isPropNameID());
-              auto propNameID = getPropNameIDForUse(gpr.propID_.getUID());
-#ifdef HERMESVM_API_TRACE_DEBUG
-              assert(propNameID.utf8(rt_) == gpr.propNameDbg_);
-#endif
-              value = obj.getProperty(rt_, propNameID);
-            }
-            ifObjectAddToDefs(
-                gpr.value_, std::move(value), call, globalRecordNum, locals);
-            break;
-          }
-          case RecordType::SetProperty: {
-            const auto &spr =
-                static_cast<const SynthTrace::SetPropertyRecord &>(*rec);
-            auto obj = getObjForUse(spr.objID_);
-            // Call set property on the object specified and give it the value.
-            if (spr.propID_.isString()) {
-              const jsi::String propString =
-                  getJSIValueForUse(spr.propID_.getUID()).asString(rt_);
-#ifdef HERMESVM_API_TRACE_DEBUG
-              assert(propString.utf8(rt_) == spr.propNameDbg_);
-#endif
-              obj.setProperty(
-                  rt_,
-                  propString,
-                  traceValueToJSIValue(
-                      rt_, trace_, getJSIValueForUse, spr.value_));
-            } else {
-              assert(spr.propID_.isPropNameID());
-              auto propNameID = getPropNameIDForUse(spr.propID_.getUID());
-#ifdef HERMESVM_API_TRACE_DEBUG
-              assert(propNameID.utf8(rt_) == spr.propNameDbg_);
-#endif
-              obj.setProperty(
-                  rt_,
-                  propNameID,
-                  traceValueToJSIValue(
-                      rt_, trace_, getJSIValueForUse, spr.value_));
-            }
-            break;
-          }
-          case RecordType::HasProperty: {
-            const auto &hpr =
-                static_cast<const SynthTrace::HasPropertyRecord &>(*rec);
-            auto obj = getObjForUse(hpr.objID_);
-            if (hpr.propID_.isString()) {
-              const jsi::String propString =
-                  getJSIValueForUse(hpr.propID_.getUID()).asString(rt_);
-#ifdef HERMESVM_API_TRACE_DEBUG
-              assert(propString.utf8(rt_) == hpr.propNameDbg_);
-#endif
-              obj.hasProperty(rt_, propString);
-            } else {
-              assert(hpr.propID_.isPropNameID());
-              auto propNameID = getPropNameIDForUse(hpr.propID_.getUID());
-#ifdef HERMESVM_API_TRACE_DEBUG
-              assert(propNameID.utf8(rt_) == hpr.propNameDbg_);
-#endif
-              obj.hasProperty(rt_, propNameID);
-            }
-            break;
-          }
-          case RecordType::GetPropertyNames: {
-            const auto &gpnr =
-                static_cast<const SynthTrace::GetPropertyNamesRecord &>(*rec);
-            jsi::Array arr = getObjForUse(gpnr.objID_).getPropertyNames(rt_);
-            addJSIValueToDefs(
-                call,
-                gpnr.propNamesID_,
-                globalRecordNum,
-                std::move(arr),
-                locals);
-            break;
-          }
-          case RecordType::CreateArray: {
-            const auto &car =
-                static_cast<const SynthTrace::CreateArrayRecord &>(*rec);
-            // Make an array of the appropriate length to be used.
-            addJSIValueToDefs(
-                call,
-                car.objID_,
-                globalRecordNum,
-                Array(rt_, car.length_),
-                locals);
-            break;
-          }
-          case RecordType::ArrayRead: {
-            const auto &arr =
-                static_cast<const SynthTrace::ArrayReadRecord &>(*rec);
-            // Read from the specified array, and possibly define the result.
-            auto value = getObjForUse(arr.objID_)
-                             .asArray(rt_)
-                             .getValueAtIndex(rt_, arr.index_);
-            ifObjectAddToDefs(
-                arr.value_, std::move(value), call, globalRecordNum, locals);
-            break;
-          }
-          case RecordType::ArrayWrite: {
-            const auto &awr =
-                static_cast<const SynthTrace::ArrayWriteRecord &>(*rec);
-            // Write to the array and give it the value.
-            getObjForUse(awr.objID_)
-                .asArray(rt_)
-                .setValueAtIndex(
-                    rt_,
-                    awr.index_,
-                    traceValueToJSIValue(
-                        rt_, trace_, getJSIValueForUse, awr.value_));
-            break;
-          }
-          case RecordType::CallFromNative: {
-            const auto &cfnr =
-                static_cast<const SynthTrace::CallFromNativeRecord &>(*rec);
-            auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
-            std::vector<Value> args;
-            for (const auto &arg : cfnr.args_) {
-              args.emplace_back(
-                  traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
-            }
-            // Save the return result into retval so that ReturnToNative can
-            // access it and put it at the correct object id.
-            const Value *argStart = args.data();
-            if (cfnr.thisArg_.isUndefined()) {
-              retval = func.call(rt_, argStart, args.size());
-            } else {
+          break;
+        }
+        case RecordType::CreateObject: {
+          const auto &cor =
+              static_cast<const SynthTrace::CreateObjectRecord &>(*rec);
+          // Make an empty object to be used.
+          addToObjectMap(cor.objID_, Object(rt_), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateBigInt: {
+          const auto &cbr =
+              static_cast<const SynthTrace::CreateBigIntRecord &>(*rec);
+          Value bigint;
+          switch (cbr.method_) {
+            case SynthTrace::CreateBigIntRecord::Method::FromInt64:
+              bigint = BigInt::fromInt64(rt_, static_cast<int64_t>(cbr.bits_));
               assert(
-                  cfnr.thisArg_.isObject() &&
-                  "Encountered a thisArg which was not undefined or an object");
-              retval = func.callWithThis(
-                  rt_,
-                  getObjForUse(cfnr.thisArg_.getUID()),
-                  argStart,
-                  args.size());
-            }
-            break;
+                  bigint.asBigInt(rt_).getInt64(rt_) ==
+                  static_cast<int64_t>(cbr.bits_));
+              break;
+            case SynthTrace::CreateBigIntRecord::Method::FromUint64:
+              bigint = BigInt::fromUint64(rt_, cbr.bits_);
+              assert(bigint.asBigInt(rt_).getUint64(rt_) == cbr.bits_);
+              break;
           }
-          case RecordType::ConstructFromNative: {
-            const auto &cfnr =
-                static_cast<const SynthTrace::ConstructFromNativeRecord &>(
-                    *rec);
-            // Essentially the same implementation as CallFromNative, except
-            // calls the construct path.
-            auto func = getObjForUse(cfnr.functionID_).asFunction(rt_);
-            std::vector<Value> args;
-            for (const auto &arg : cfnr.args_) {
-              args.emplace_back(
-                  traceValueToJSIValue(rt_, trace_, getJSIValueForUse, arg));
-            }
-            assert(
-                cfnr.thisArg_.isUndefined() &&
-                "The this arg should always be undefined for a construct call");
-            // Save the return result into retval so that ReturnToNative can
-            // access it and put it at the correct object id.
-            const Value *argStart = args.data();
-            retval = func.callAsConstructor(rt_, argStart, args.size());
-            break;
-          }
-          case RecordType::ReturnFromNative: {
-            const auto &rfnr =
-                dynamic_cast<const SynthTrace::ReturnFromNativeRecord &>(*rec);
-            return traceValueToJSIValue(
-                rt_, trace_, getJSIValueForUse, rfnr.retVal_);
-          }
-          case RecordType::ReturnToNative: {
-            const auto &rtnr =
-                dynamic_cast<const SynthTrace::ReturnToNativeRecord &>(*rec);
-            ifObjectAddToDefs(
-                rtnr.retVal_, std::move(retval), call, globalRecordNum, locals);
-            // If the return value wasn't an object, it can be ignored.
-            break;
-          }
-          case RecordType::CallToNative: {
-            const auto &ctnr =
-                static_cast<const SynthTrace::CallToNativeRecord &>(*rec);
-            // Associate the this arg with its object id.
-            ifObjectAddToDefs(
-                ctnr.thisArg_,
-                std::move(thisVal),
-                call,
-                globalRecordNum,
-                locals,
-                /* isThis = */ true);
-            // Associate each argument with its object id.
-            assert(
-                ctnr.args_.size() == count &&
-                "Called at runtime with a different number of args than "
-                "the trace expected");
-            for (uint64_t i = 0; i < ctnr.args_.size(); ++i) {
-              ifObjectAddToDefs(
-                  ctnr.args_[i],
-                  std::move(args[i]),
-                  call,
-                  globalRecordNum,
-                  locals);
-            }
-            break;
-          }
-          case RecordType::GetPropertyNative: {
-            assert(count == 0 && "Should have no arguments");
-            const auto &gpnr =
-                dynamic_cast<const SynthTrace::GetPropertyNativeRecord &>(*rec);
-            // The propName is a definition.
-            assert(nativePropNameToConsumeAsDef);
-            // This must be the first record in the call.
-            assert(rec == firstRec);
-            addPropNameIDToDefs(
-                call,
-                gpnr.propNameID_,
-                globalRecordNum,
-                *nativePropNameToConsumeAsDef,
-                pniLocals);
-            // Don't add this to the locals, it is not technically provided to
-            // the function.
-            break;
-          }
-          case RecordType::GetPropertyNativeReturn: {
-            const auto &gpnrr =
-                dynamic_cast<const SynthTrace::GetPropertyNativeReturnRecord &>(
-                    *rec);
-            return traceValueToJSIValue(
-                rt_, trace_, getJSIValueForUse, gpnrr.retVal_);
-          }
-          case RecordType::SetPropertyNative: {
-            const auto &spnr =
-                dynamic_cast<const SynthTrace::SetPropertyNativeRecord &>(*rec);
-            assert(
-                count == 1 &&
-                "There should be exactly one argument to SetPropertyNative");
-            // The propName is a definition.
-            assert(nativePropNameToConsumeAsDef);
-            // This must be the first record in the call.
-            assert(rec == firstRec);
-            addPropNameIDToDefs(
-                call,
-                spnr.propNameID_,
-                globalRecordNum,
-                *nativePropNameToConsumeAsDef,
-                pniLocals);
-            // Associate the single argument with its object id (if it's an
-            // object).
-            ifObjectAddToDefs(
-                spnr.value_, std::move(args[0]), call, globalRecordNum, locals);
-            break;
-          }
-          case RecordType::SetPropertyNativeReturn: {
-            // Since a SetPropertyNative does not have a return value, return
-            // undefined.
-            return Value::undefined();
-            break;
-          }
-          case RecordType::GetNativePropertyNames: {
-            // Nothing actually needs to happen here, as no defs are provided to
-            // the local function. The HostObject already handles accessing the
-            // property names.
-            break;
-          }
-          case RecordType::GetNativePropertyNamesReturn: {
-            // Accessing the list of property names on a host object doesn't
-            // return a JS value.
-            return Value::undefined();
-            break;
-          }
-          case RecordType::SetExternalMemoryPressure: {
-            const auto &record = static_cast<
-                const SynthTrace::SetExternalMemoryPressureRecord &>(*rec);
-            const auto &obj = getObjForUse(record.objID_);
-            obj.setExternalMemoryPressure(rt_, record.amount_);
-            break;
-          }
-          case RecordType::Utf8: {
-            const auto &record =
-                static_cast<const SynthTrace::Utf8Record &>(*rec);
-
-            if (record.objID_.isString()) {
-              const auto &val = getJSIValueForUse(record.objID_.getUID());
-              [[maybe_unused]] std::string replayedStr =
-                  val.getString(rt_).utf8(rt_);
-              assert(replayedStr == record.retVal_);
-            } else if (record.objID_.isPropNameID()) {
-              auto propNameID = getPropNameIDForUse(record.objID_.getUID());
-              [[maybe_unused]] std::string replayedStr = propNameID.utf8(rt_);
-              assert(replayedStr == record.retVal_);
-            } else if (record.objID_.isSymbol()) {
-              jsi::Value val = getJSIValueForUse(record.objID_.getUID());
-              [[maybe_unused]] std::string replayedStr =
-                  val.asSymbol(rt_).toString(rt_);
-              assert(replayedStr == record.retVal_);
-            }
-            break;
-          }
+          addToObjectMap(cbr.objID_, std::move(bigint), currentExecIndex);
+          break;
         }
-      } catch (const std::exception &e) {
-        crashOnException(e, globalRecordNum);
+        case RecordType::BigIntToString: {
+          const auto &bts =
+              static_cast<const SynthTrace::BigIntToStringRecord &>(*rec);
+          BigInt obj = getJSIValueForUse(bts.bigintID_).asBigInt(rt_);
+          addToObjectMap(
+              bts.strID_, obj.toString(rt_, bts.radix_), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateString: {
+          const auto &csr =
+              static_cast<const SynthTrace::CreateStringRecord &>(*rec);
+          Value str;
+          if (csr.ascii_) {
+            str = String::createFromAscii(
+                rt_, csr.chars_.data(), csr.chars_.size());
+          } else {
+            str = String::createFromUtf8(
+                rt_,
+                reinterpret_cast<const uint8_t *>(csr.chars_.data()),
+                csr.chars_.size());
+          }
+          assert(str.asString(rt_).utf8(rt_) == csr.chars_);
+          addToObjectMap(csr.objID_, std::move(str), currentExecIndex);
+          break;
+        }
+        case RecordType::CreatePropNameID: {
+          const auto &cpnr =
+              static_cast<const SynthTrace::CreatePropNameIDRecord &>(*rec);
+          // We perform the calls below for their side effects (for example,
+          jsi::PropNameID propNameID = [&] {
+            switch (cpnr.valueType_) {
+              case SynthTrace::CreatePropNameIDRecord::ASCII:
+                return PropNameID::forAscii(rt_, cpnr.chars_);
+              case SynthTrace::CreatePropNameIDRecord::UTF8:
+                return PropNameID::forUtf8(rt_, cpnr.chars_);
+              case SynthTrace::CreatePropNameIDRecord::TRACEVALUE: {
+                auto val = traceValueToJSIValue(cpnr.traceValue_);
+                if (val.isSymbol())
+                  return PropNameID::forSymbol(rt_, val.getSymbol(rt_));
+                return PropNameID::forString(rt_, val.getString(rt_));
+              }
+            }
+            llvm_unreachable("No other way to construct PropNameID");
+          }();
+          addToPropNameIDMap(
+              cpnr.propNameID_, std::move(propNameID), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateHostObject: {
+          const auto &chor =
+              static_cast<const SynthTrace::CreateHostObjectRecord &>(*rec);
+          const ObjectID objID = chor.objID_;
+          addToObjectMap(
+              objID, Value(rt_, createHostObject(objID)), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateHostFunction: {
+          const auto &chfr =
+              static_cast<const SynthTrace::CreateHostFunctionRecord &>(*rec);
+          addToObjectMap(
+              chfr.objID_,
+              Value(
+                  rt_,
+                  createHostFunction(
+                      chfr, getPropNameIDForUse(chfr.propNameID_))),
+              currentExecIndex);
+          break;
+        }
+        case RecordType::QueueMicrotask: {
+          const auto &queueRecord =
+              static_cast<const SynthTrace::QueueMicrotaskRecord &>(*rec);
+          jsi::Function callback = getJSIValueForUse(queueRecord.callbackID_)
+                                       .getObject(rt_)
+                                       .asFunction(rt_);
+          rt_.queueMicrotask(callback);
+          break;
+        }
+        case RecordType::DrainMicrotasks: {
+          const auto &drainRecord =
+              static_cast<const SynthTrace::DrainMicrotasksRecord &>(*rec);
+          rt_.drainMicrotasks(drainRecord.maxMicrotasksHint_);
+          break;
+        }
+        case RecordType::GetProperty: {
+          const auto &gpr =
+              static_cast<const SynthTrace::GetPropertyRecord &>(*rec);
+          // Call get property on the object specified, and possibly define
+          // the result.
+          jsi::Value value;
+          const auto &obj = getJSIValueForUse(gpr.objID_).asObject(rt_);
+          if (gpr.propID_.isString()) {
+            const jsi::String propString =
+                getJSIValueForUse(gpr.propID_.getUID()).asString(rt_);
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(propString.utf8(rt_) == gpr.propNameDbg_);
+#endif
+            value = obj.getProperty(rt_, propString);
+          } else {
+            assert(gpr.propID_.isPropNameID());
+            auto propNameID = getPropNameIDForUse(gpr.propID_.getUID());
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(propNameID.utf8(rt_) == gpr.propNameDbg_);
+#endif
+            value = obj.getProperty(rt_, propNameID);
+          }
+          ifObjectAddToObjectMap(
+              gpr.value_, std::move(value), currentExecIndex);
+          break;
+        }
+        case RecordType::SetProperty: {
+          const auto &spr =
+              static_cast<const SynthTrace::SetPropertyRecord &>(*rec);
+          auto obj = getJSIValueForUse(spr.objID_).asObject(rt_);
+          // Call set property on the object specified and give it the value.
+          if (spr.propID_.isString()) {
+            const jsi::String propString =
+                getJSIValueForUse(spr.propID_.getUID()).asString(rt_);
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(propString.utf8(rt_) == spr.propNameDbg_);
+#endif
+            obj.setProperty(rt_, propString, traceValueToJSIValue(spr.value_));
+          } else {
+            assert(spr.propID_.isPropNameID());
+            auto propNameID = getPropNameIDForUse(spr.propID_.getUID());
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(propNameID.utf8(rt_) == spr.propNameDbg_);
+#endif
+            obj.setProperty(rt_, propNameID, traceValueToJSIValue(spr.value_));
+          }
+          break;
+        }
+        case RecordType::HasProperty: {
+          const auto &hpr =
+              static_cast<const SynthTrace::HasPropertyRecord &>(*rec);
+          auto obj = getJSIValueForUse(hpr.objID_).asObject(rt_);
+          if (hpr.propID_.isString()) {
+            const jsi::String propString =
+                getJSIValueForUse(hpr.propID_.getUID()).asString(rt_);
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(propString.utf8(rt_) == hpr.propNameDbg_);
+#endif
+            obj.hasProperty(rt_, propString);
+          } else {
+            assert(hpr.propID_.isPropNameID());
+            auto propNameID = getPropNameIDForUse(hpr.propID_.getUID());
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(propNameID.utf8(rt_) == hpr.propNameDbg_);
+#endif
+            obj.hasProperty(rt_, propNameID);
+          }
+          break;
+        }
+        case RecordType::GetPropertyNames: {
+          const auto &gpnr =
+              static_cast<const SynthTrace::GetPropertyNamesRecord &>(*rec);
+          jsi::Array arr = getJSIValueForUse(gpnr.objID_)
+                               .asObject(rt_)
+                               .getPropertyNames(rt_);
+          addToObjectMap(gpnr.propNamesID_, std::move(arr), currentExecIndex);
+          break;
+        }
+        case RecordType::CreateArray: {
+          const auto &car =
+              static_cast<const SynthTrace::CreateArrayRecord &>(*rec);
+          // Make an array of the appropriate length to be used.
+          addToObjectMap(car.objID_, Array(rt_, car.length_), currentExecIndex);
+          break;
+        }
+        case RecordType::ArrayRead: {
+          const auto &arr =
+              static_cast<const SynthTrace::ArrayReadRecord &>(*rec);
+          // Read from the specified array, and possibly define the result.
+          auto value = getJSIValueForUse(arr.objID_)
+                           .asObject(rt_)
+                           .asArray(rt_)
+                           .getValueAtIndex(rt_, arr.index_);
+          ifObjectAddToObjectMap(
+              arr.value_, std::move(value), currentExecIndex);
+          break;
+        }
+        case RecordType::ArrayWrite: {
+          const auto &awr =
+              static_cast<const SynthTrace::ArrayWriteRecord &>(*rec);
+          // Write to the array and give it the value.
+          getJSIValueForUse(awr.objID_)
+              .asObject(rt_)
+              .asArray(rt_)
+              .setValueAtIndex(
+                  rt_, awr.index_, traceValueToJSIValue(awr.value_));
+          break;
+        }
+        case RecordType::CallFromNative: {
+          const auto &cfnr =
+              static_cast<const SynthTrace::CallFromNativeRecord &>(*rec);
+          auto func =
+              getJSIValueForUse(cfnr.functionID_).asObject(rt_).asFunction(rt_);
+          std::vector<Value> args;
+          for (const auto &arg : cfnr.args_) {
+            args.emplace_back(traceValueToJSIValue(arg));
+          }
+          // Save the return result into retval so that ReturnToNative can
+          // access it and put it at the correct object id.
+          const Value *argStart = args.data();
+          if (cfnr.thisArg_.isUndefined()) {
+            retval = func.call(rt_, argStart, args.size());
+          } else {
+            assert(
+                cfnr.thisArg_.isObject() &&
+                "Encountered a thisArg which was not undefined or an object");
+            retval = func.callWithThis(
+                rt_,
+                getJSIValueForUse(cfnr.thisArg_.getUID()).asObject(rt_),
+                argStart,
+                args.size());
+          }
+          break;
+        }
+        case RecordType::ConstructFromNative: {
+          const auto &cfnr =
+              static_cast<const SynthTrace::ConstructFromNativeRecord &>(*rec);
+          // Essentially the same implementation as CallFromNative, except
+          // calls the construct path.
+          auto func =
+              getJSIValueForUse(cfnr.functionID_).asObject(rt_).asFunction(rt_);
+          std::vector<Value> args;
+          for (const auto &arg : cfnr.args_) {
+            args.emplace_back(traceValueToJSIValue(arg));
+          }
+          assert(
+              cfnr.thisArg_.isUndefined() &&
+              "The this arg should always be undefined for a construct call");
+          // Save the return result into retval so that ReturnToNative can
+          // access it and put it at the correct object id.
+          const Value *argStart = args.data();
+          retval = func.callAsConstructor(rt_, argStart, args.size());
+          break;
+        }
+        case RecordType::ReturnFromNative: {
+          return;
+        }
+        case RecordType::ReturnToNative: {
+          const auto &rtnr =
+              dynamic_cast<const SynthTrace::ReturnToNativeRecord &>(*rec);
+          ifObjectAddToObjectMap(
+              rtnr.retVal_, std::move(retval), currentExecIndex);
+          // If the return value wasn't an object, it can be ignored.
+          break;
+        }
+        case RecordType::CallToNative: {
+          break;
+        }
+        case RecordType::GetPropertyNative: {
+          break;
+        }
+        case RecordType::GetPropertyNativeReturn: {
+          return;
+        }
+        case RecordType::SetPropertyNative: {
+          break;
+        }
+        case RecordType::SetPropertyNativeReturn: {
+          return;
+        }
+        case RecordType::GetNativePropertyNames: {
+          // Nothing actually needs to happen here, as no defs are provided to
+          // the local function. The HostObject already handles accessing the
+          // property names.
+          break;
+        }
+        case RecordType::GetNativePropertyNamesReturn: {
+          return;
+        }
+        case RecordType::SetExternalMemoryPressure: {
+          const auto &record =
+              static_cast<const SynthTrace::SetExternalMemoryPressureRecord &>(
+                  *rec);
+          const auto &obj = getJSIValueForUse(record.objID_).asObject(rt_);
+          obj.setExternalMemoryPressure(rt_, record.amount_);
+          break;
+        }
+        case RecordType::Utf8: {
+          const auto &record =
+              static_cast<const SynthTrace::Utf8Record &>(*rec);
+
+          if (record.objID_.isString()) {
+            const auto &val = getJSIValueForUse(record.objID_.getUID());
+            [[maybe_unused]] std::string replayedStr =
+                val.getString(rt_).utf8(rt_);
+            assert(replayedStr == record.retVal_);
+          } else if (record.objID_.isPropNameID()) {
+            auto propNameID = getPropNameIDForUse(record.objID_.getUID());
+            [[maybe_unused]] std::string replayedStr = propNameID.utf8(rt_);
+            assert(replayedStr == record.retVal_);
+          } else if (record.objID_.isSymbol()) {
+            jsi::Value val = getJSIValueForUse(record.objID_.getUID());
+            [[maybe_unused]] std::string replayedStr =
+                val.asSymbol(rt_).toString(rt_);
+            assert(replayedStr == record.retVal_);
+          }
+          break;
+        }
       }
-      // If the top of the stack is reached after a marker flushed the stats,
-      // exit early.
-      if (depth_ == 1 && markerFound_) {
-        return Value::undefined();
-      }
-      globalRecordNum++;
+    } catch (const std::exception &e) {
+      crashOnException(e, currentExecIndex);
     }
-  }
+    // If the top of the stack is reached after a marker flushed the stats,
+    // exit early.
+    if (depth_ == 1 && markerFound_) {
+      return;
+    }
+  } // the end of loop
+
   if (depth_ != 1) {
     // For the non-entry point, there should always be an explicit
     // ReturnFromNative or Get/SetPropertyNativeReturn which will return early
@@ -1499,64 +1056,68 @@ Value TraceInterpreter::execFunction(
     // malformed.
     llvm_unreachable("There was no return in the call");
   }
-  // Return undefined for the entry point, it is ignored anyway.
-  return Value::undefined();
+
+  return;
 }
 
-template <typename ValueType>
-void TraceInterpreter::addValueToDefs(
-    const Call &call,
-    SynthTrace::ObjectID valID,
-    uint64_t globalRecordNum,
-    ValueType &&valRef,
-    std::unordered_map<SynthTrace::ObjectID, ValueType> &locals,
-    std::unordered_map<SynthTrace::ObjectID, ValueType> &globals) {
-  {
-    // Either insert this def into the global map or the local one.
-    auto iter = globalDefsAndUses_.find(valID);
-    if (iter != globalDefsAndUses_.end() &&
-        globalRecordNum == iter->second.lastDefBeforeFirstUse) {
-      // This was the last def before a global use, insert into the map.
-      assert(
-          globals.find(valID) == globals.end() &&
-          "object already exists in the global map");
-      globals.emplace(valID, std::move(valRef));
-      return;
-    }
-  }
-  {
-    auto iter = locals.find(valID);
-    if (iter == locals.end()) {
-      auto defAndUse = call.locals.find(valID);
-      assert(
-          defAndUse != call.locals.end() &&
-          "Should always be local def and use information");
-      if (defAndUse->second.lastUse != TraceInterpreter::DefAndUse::kUnused) {
-        // This is used locally, put into a local set.
-        locals.emplace(valID, std::move(valRef));
-      }
-    }
+void TraceInterpreter::eraseRefsBefore(uint64_t index) {
+  while (lastUsesIndex_ < lastUses_.size() &&
+         lastUses_[lastUsesIndex_].first < index) {
+    const std::pair<uint64_t, SynthTrace::ObjectID> &kv =
+        lastUses_[lastUsesIndex_];
+    gom_.erase(kv.second);
+    gpnm_.erase(kv.second);
+    ++lastUsesIndex_;
   }
 }
 
-template <typename ValueType>
-void TraceInterpreter::addValueToDefs(
-    const Call &call,
-    SynthTrace::ObjectID valID,
-    uint64_t globalRecordNum,
-    const ValueType &valRef,
-    std::unordered_map<SynthTrace::ObjectID, ValueType> &locals,
-    std::unordered_map<SynthTrace::ObjectID, ValueType> &globals) {
-  addValueToDefs(
-      call, valID, globalRecordNum, ValueType{rt_, valRef}, locals, globals);
+namespace {
+
+template <typename ValueType, typename MapType>
+void addValueToMap(
+    MapType &map,
+    SynthTrace::ObjectID id,
+    ValueType &&val,
+    const std::unordered_map<SynthTrace::ObjectID, uint64_t> &lastUsePerObj,
+    uint64_t defIndex) {
+  auto it = lastUsePerObj.find(id);
+  if (it == lastUsePerObj.end()) {
+    // It is possible that this Object was defined but never used in the record.
+    return;
+  }
+
+  if (map.find(id) != map.end()) {
+    return;
+  }
+
+  // If this defIndex is within the range of the live range, add it to the map.
+  const uint64_t lastUse = it->second;
+  if (defIndex <= lastUse) {
+    map.emplace(id, std::forward<ValueType>(val));
+    return;
+  }
 }
 
-void TraceInterpreter::ifObjectAddToDefs(
-    const SynthTrace::TraceValue &traceValue,
-    Value &&val,
-    const Call &call,
-    uint64_t globalRecordNum,
-    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+} // namespace
+
+void TraceInterpreter::addToObjectMap(
+    SynthTrace::ObjectID id,
+    jsi::Value &&val,
+    uint64_t defIndex) {
+  addValueToMap(gom_, id, std::move(val), lastUsePerObj_, defIndex);
+}
+
+void TraceInterpreter::addToPropNameIDMap(
+    SynthTrace::ObjectID id,
+    jsi::PropNameID &&val,
+    uint64_t defIndex) {
+  addValueToMap(gpnm_, id, std::move(val), lastUsePerObj_, defIndex);
+}
+
+void TraceInterpreter::ifObjectAddToObjectMap(
+    SynthTrace::TraceValue traceValue,
+    jsi::Value &&val,
+    uint64_t defIndex,
     bool isThis) {
 #ifndef NDEBUG
   // TODO(T84791675): Include 'this' once all traces are correctly recording it.
@@ -1565,20 +1126,16 @@ void TraceInterpreter::ifObjectAddToDefs(
   }
 #endif
   if (traceValue.isObject() || traceValue.isString() || traceValue.isSymbol()) {
-    addJSIValueToDefs(
-        call, traceValue.getUID(), globalRecordNum, std::move(val), locals);
+    addToObjectMap(traceValue.getUID(), std::move(val), defIndex);
   }
 }
 
-void TraceInterpreter::ifObjectAddToDefs(
-    const SynthTrace::TraceValue &traceValue,
-    const Value &val,
-    const Call &call,
-    uint64_t globalRecordNum,
-    std::unordered_map<SynthTrace::ObjectID, jsi::Value> &locals,
+void TraceInterpreter::ifObjectAddToObjectMap(
+    SynthTrace::TraceValue traceValue,
+    const jsi::Value &val,
+    uint64_t defIndex,
     bool isThis) {
-  ifObjectAddToDefs(
-      traceValue, Value{rt_, val}, call, globalRecordNum, locals, isThis);
+  ifObjectAddToObjectMap(traceValue, jsi::Value{rt_, val}, defIndex, isThis);
 }
 
 void TraceInterpreter::checkMarker(const std::string &marker) {
