@@ -83,16 +83,18 @@ class StringLiteralTable {
     return storage_.getStringStorageView();
   }
 
+  /// \param start the index in strings_ to start reading from.
   /// \returns a list of hashes corresponding to the strings marked as
   /// identifiers, in their order in the underlying storage.
-  std::vector<uint32_t> getIdentifierHashes() const;
+  std::vector<uint32_t> getIdentifierHashes(uint32_t start = 0) const;
 
+  /// \param start the index in strings_ to start reading from.
   /// \return a sequence of string kinds represented by a run-length encoding.
   /// The i'th kind in the abstract sequence (i.e. not the i'th entry in the
   /// returned vector, which represents a run of the same kind) is the kind of
   /// the string with ID i in the mapping (and the underlying storage it was
   /// initialised with).
-  std::vector<StringKind::Entry> getStringKinds() const;
+  std::vector<StringKind::Entry> getStringKinds(uint32_t start = 0) const;
 
   /// Add a new string -- \p str -- to the accumulation.  If \p isIdentifier is
   /// true, then the string is marked as potentially being used as an
@@ -101,6 +103,10 @@ class StringLiteralTable {
 
   /// Mode for storing new strings to the storage.
   enum class OptimizeMode {
+    /// Do not perform any optimizations.
+    /// Do not reorder the strings (preserves IDs).
+    /// Used for lazy compilation where we want to append without reordering.
+    None,
     /// Reorders the strings before populating the storage.
     /// WARNING: The mapping from ID to String is NOT preserved.
     Reorder,
@@ -125,6 +131,11 @@ class StringLiteralTable {
   /// \param optimize If set, attempt to pack the strings to reduce the size
   /// taken up by the character buffer.
   void sortAndRemap(bool optimize = false);
+
+  /// Append any newly added strings to the ConsecutiveStringStorage.
+  /// \pre strings_ contains at least all the strings in the storage,
+  /// and all the newly added strings come after those in the storage.
+  void appendStorageLazy();
 };
 
 inline uint32_t StringLiteralTable::getStringID(llvh::StringRef str) const {

@@ -197,7 +197,7 @@ class BytecodeModule {
   std::vector<uint32_t> identifierHashes_;
 
   /// The global string table to represent each string in the string storage.
-  StringLiteralTable stringTable_;
+  StringLiteralTable stringTable_{};
 
   /// The global bigint table for assigning IDs to bigints.
   bigint::UniquingBigIntTable bigIntTable_;
@@ -288,13 +288,31 @@ class BytecodeModule {
     return getFunction(globalFunctionIndex_);
   }
 
-  /// Initialize the BytecodeModule with the given string table.
-  /// Create the stringKinds_ and identifierHashes_ fields.
-  void initializeStringTable(StringLiteralTable &&stringTable) {
-    assert(stringTable_.empty() && "String table must be empty");
-    stringKinds_ = stringTable.getStringKinds();
-    identifierHashes_ = stringTable.getIdentifierHashes();
-    stringTable_ = std::move(stringTable);
+  /// Create the stringKinds_ and identifierHashes_ fields based on the
+  /// stringTable.
+  void populateStringMetadataFromStringTable() {
+    assert(stringKinds_.empty() && "String table must be empty");
+    stringKinds_ = stringTable_.getStringKinds();
+    identifierHashes_ = stringTable_.getIdentifierHashes();
+  }
+
+  /// Create the stringKinds_ and identifierHashes_ fields based on the existing
+  /// stringTable_, only copying the data for strings added since the last
+  /// initialization of the fields.
+  /// Used for lazy compilation, where the BytecodeModule is appended to as we
+  /// compile new lazy functions.
+  /// \param startIdx the index of stringTable_'s strings_ from which to start
+  /// generating the kinds and hashes.
+  void appendStringMetadataFromStringTable(uint32_t startIdx) {
+    auto newKinds = stringTable_.getStringKinds(startIdx);
+    stringKinds_.insert(stringKinds_.end(), newKinds.begin(), newKinds.end());
+    auto newHashes = stringTable_.getIdentifierHashes(startIdx);
+    identifierHashes_.insert(
+        identifierHashes_.end(), newHashes.begin(), newHashes.end());
+  }
+
+  StringLiteralTable &getStringLiteralTableMut() {
+    return stringTable_;
   }
 
   llvh::ArrayRef<StringKind::Entry> getStringKinds() const {

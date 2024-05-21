@@ -279,11 +279,13 @@ static inline void appendUnicodeToStorage(
 }
 
 void BytecodeModuleGenerator::collectStrings() {
-  // If we are in delta optimizing mode, start with the string storage from
-  // our base bytecode provider.
-  auto strings = baseBCProvider_
-      ? stringAccumulatorFromBCProvider(*baseBCProvider_)
-      : StringLiteralTable{};
+  StringLiteralTable &strings = bm_.getStringLiteralTableMut();
+  if (baseBCProvider_) {
+    // If we are in delta optimizing mode, start with the string storage from
+    // our base bytecode provider.
+    assert(strings.empty() && "delta optimizing mode can't be lazy");
+    strings = stringAccumulatorFromBCProvider(*baseBCProvider_);
+  }
 
   for (auto [F, functionID] : functionIDMap_) {
     // Walk functions.
@@ -362,11 +364,17 @@ void BytecodeModuleGenerator::collectStrings() {
     }
   }
 
-  strings.populateStorage(
-      options_.optimizationEnabled
-          ? StringLiteralTable::OptimizeMode::ReorderAndPack
-          : StringLiteralTable::OptimizeMode::Reorder);
-  bm_.initializeStringTable(std::move(strings));
+  if (M_->getContext().isLazyCompilation()) {
+    uint32_t startIdx = strings.getStringTableView().size();
+    strings.populateStorage(StringLiteralTable::OptimizeMode::None);
+    bm_.appendStringMetadataFromStringTable(startIdx);
+  } else {
+    strings.populateStorage(
+        options_.optimizationEnabled
+            ? StringLiteralTable::OptimizeMode::ReorderAndPack
+            : StringLiteralTable::OptimizeMode::Reorder);
+    bm_.populateStringMetadataFromStringTable();
+  }
 }
 
 bool BytecodeModuleGenerator::generateAddedFunctions() {

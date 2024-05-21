@@ -33,10 +33,11 @@ StringLiteralTable::StringLiteralTable(
   populateStringsTableFromStorage();
 }
 
-std::vector<uint32_t> StringLiteralTable::getIdentifierHashes() const {
+std::vector<uint32_t> StringLiteralTable::getIdentifierHashes(
+    uint32_t start) const {
   std::vector<uint32_t> result;
   assert(strings_.size() == isIdentifier_.size());
-  for (size_t i = 0; i < strings_.size(); ++i) {
+  for (size_t i = start; i < strings_.size(); ++i) {
     if (!isIdentifier_[i]) {
       continue;
     }
@@ -46,11 +47,12 @@ std::vector<uint32_t> StringLiteralTable::getIdentifierHashes() const {
   return result;
 }
 
-std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
+std::vector<StringKind::Entry> StringLiteralTable::getStringKinds(
+    uint32_t start) const {
   StringKind::Accumulator acc;
 
   assert(strings_.size() == isIdentifier_.size());
-  for (size_t i = 0; i < strings_.size(); ++i) {
+  for (size_t i = start; i < strings_.size(); ++i) {
     acc.push_back(kind(strings_[i], isIdentifier_[i]));
   }
 
@@ -60,6 +62,8 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
 void StringLiteralTable::populateStorage(
     StringLiteralTable::OptimizeMode mode) {
   switch (mode) {
+    case OptimizeMode::None:
+      return appendStorageLazy();
     case OptimizeMode::Reorder:
       return sortAndRemap(false);
     case OptimizeMode::ReorderAndPack:
@@ -213,6 +217,22 @@ void StringLiteralTable::sortAndRemap(bool optimize) {
   // Update the strings table with the new storage.
   populateStringsTableFromStorage();
   numIdentifierRefs_.clear();
+}
+
+void StringLiteralTable::appendStorageLazy() {
+  const size_t existingStrings = storage_.count();
+  const size_t allStrings = strings_.size();
+
+  {
+    std::vector<llvh::StringRef> refs;
+    refs.reserve(allStrings - existingStrings);
+    for (size_t i = existingStrings; i < allStrings; ++i) {
+      refs.emplace_back(strings_[i]);
+    }
+    storage_.appendStorage(ConsecutiveStringStorage{refs});
+  }
+
+  assert(storage_.count() == strings_.size() && "must map all strings");
 }
 
 } // namespace hbc
