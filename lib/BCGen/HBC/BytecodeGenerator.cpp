@@ -417,6 +417,8 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
   // Allow reusing the debug cache between functions
   FileAndSourceMapIdCache debugCache{};
 
+  M_->assignIndexToVariables();
+
   const uint32_t strippedFunctionNameId =
       options_.stripFunctionNames ? bm_.getStringID(kStrippedFunctionName) : 0;
   for (auto [F, functionID] : functionIDMap_) {

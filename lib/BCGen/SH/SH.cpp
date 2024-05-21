@@ -2765,6 +2765,8 @@ static SHNativeFuncInfo s_function_info_table[];
     }
   }
 
+  M->assignIndexToVariables();
+
   for (auto &F : *M)
     generateFunction(F, OS, moduleGen, nextCacheIdx, options);
 

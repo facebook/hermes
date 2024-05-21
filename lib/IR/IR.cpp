@@ -529,16 +529,6 @@ Variable::Variable(VariableScope *scope, Identifier txt)
 
 Variable::~Variable() {}
 
-int Variable::getIndexInVariableList() const {
-  int index = 0;
-  for (auto V : parent->getVariables()) {
-    if (V == this)
-      return index;
-    index++;
-  }
-  llvm_unreachable("Cannot find variable in the variable list");
-}
-
 VariableScope::VariableScope(VariableScope *parentScope)
     : Value(ValueKind::VariableScopeKind), parentScope_(parentScope) {
   if (parentScope)
@@ -563,6 +553,16 @@ void VariableScope::removeFromScopeChain() {
 
   // Clear the parent scope, so this operation is idempotent.
   parentScope_ = nullptr;
+}
+
+void VariableScope::assignIndexToVariables() {
+  // No variables, or the index is already set, we're done.
+  if (variables_.empty() || variables_.front()->hasIndexInVariableList())
+    return;
+
+  // Otherwise, actually set the indices.
+  for (uint32_t i = 0, e = variables_.size(); i < e; ++i)
+    variables_[i]->setIndexInVariableList(i);
 }
 
 void BasicBlock::push_back(Instruction *I) {

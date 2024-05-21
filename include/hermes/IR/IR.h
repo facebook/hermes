@@ -1249,6 +1249,16 @@ class Variable : public Value {
   /// The scope that owns the variable.
   VariableScope *parent;
 
+  /// Index used for a Variable that hasn't had its index assigned yet.
+  static constexpr uint32_t kUnresolvedIndex = UINT32_MAX;
+
+  /// The index of the variable in the environment.
+  /// Initially set to kUnresolvedIndex, then set after register allocation.
+  /// Used for emitting loads/stores from environments using the variable.
+  /// Reused for variables that are captured in nested lazy functions, when they
+  /// are compiled.
+  uint32_t index_ = kUnresolvedIndex;
+
   /// If true, this variable obeys the TDZ rules.
   bool obeysTDZ_ = false;
 
@@ -1267,6 +1277,23 @@ class Variable : public Value {
     return parent;
   }
 
+  /// Set the index of the variable in the environment.
+  /// \pre the index has not yet been set.
+  void setIndexInVariableList(uint32_t index) {
+    assert(!hasIndexInVariableList() && "Index can only be set once");
+    index_ = index;
+  }
+  /// \return whether the index of the variable has been set.
+  bool hasIndexInVariableList() const {
+    return index_ != kUnresolvedIndex;
+  }
+  /// \pre the index has been set.
+  /// \return the index of the variable in the environment.
+  uint32_t getIndexInVariableList() const {
+    assert(hasIndexInVariableList() && "Index not set yet");
+    return index_;
+  }
+
   bool getObeysTDZ() const {
     return obeysTDZ_;
   }
@@ -1280,9 +1307,6 @@ class Variable : public Value {
   void setIsConst(bool value) {
     isConst_ = value;
   }
-
-  /// Return the index of this variable in the function's variable list.
-  int getIndexInVariableList() const;
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::VariableKind;
@@ -1674,6 +1698,12 @@ class VariableScope
   /// Remove this scope from the scope chain, by moving all of its children to
   /// instead be children of its parent.
   void removeFromScopeChain();
+
+  /// Store the location of each Variable in the scope into the Variable itself.
+  /// This is done after functions using the VariableScope have been register
+  /// allocated, so the layout of environments corresponding to this
+  /// VariableScope must no longer change (no Variables added or removed).
+  void assignIndexToVariables();
 
   ~VariableScope() {
     // Free all variables.
@@ -2307,6 +2337,12 @@ class Module : public Value {
   }
   const VariableScopeListType &getVariableScopes() const {
     return variableScopes_;
+  }
+
+  /// Assign index to all Variables in all VariableScopes.
+  void assignIndexToVariables() {
+    for (VariableScope &varScope : variableScopes_)
+      varScope.assignIndexToVariables();
   }
 
   /// Create the specified global property if it doesn't exist. If it does
