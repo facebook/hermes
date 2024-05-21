@@ -42,8 +42,10 @@ bool isSingleFunctionExpression(ESTree::NodePtr ast) {
 } // namespace
 
 BCProviderFromSrc::BCProviderFromSrc(
-    std::unique_ptr<hbc::BytecodeModule> module)
+    std::unique_ptr<hbc::BytecodeModule> &&module,
+    CompilationData &&compilationData)
     : BCProviderBase(BCProviderKind::BCProviderFromSrc),
+      compilationData_(std::move(compilationData)),
       module_(std::move(module)) {
   options_ = module_->getBytecodeOptions();
 
@@ -210,7 +212,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }
-  auto result = createFromBytecodeModule(std::move(BM));
+  auto result =
+      createFromBytecodeModule(std::move(BM), CompilationData{opts, M, semCtx});
   result->singleFunction_ = isSingleFunctionExpression(parsed.getValue());
   return {std::move(result), std::string{}};
 }

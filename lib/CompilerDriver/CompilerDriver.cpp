@@ -1659,20 +1659,21 @@ CompileResult processBytecodeFile(std::unique_ptr<llvh::MemoryBuffer> fileBuf) {
 /// suitable for immediate execution (i.e. no expectation of persistence).
 /// \return the compile result.
 CompileResult generateBytecodeForExecution(
-    Module &M,
-    const BytecodeGenerationOptions &genOptions) {
-  std::shared_ptr<Context> context = M.shareContext();
+    hbc::BCProviderFromSrc::CompilationData &&compilationData) {
+  std::shared_ptr<Context> context = compilationData.M->shareContext();
   CompileResult result{Success};
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
-    auto BM =
-        hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), genOptions);
+    auto BM = hbc::generateBytecodeModule(
+        compilationData.M.get(),
+        compilationData.M->getTopLevelFunction(),
+        compilationData.genOptions);
     if (auto N = context->getSourceErrorManager().getErrorCount()) {
       llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
       return BackendError;
     }
 
-    result.bytecodeProvider =
-        hbc::BCProviderFromSrc::createFromBytecodeModule(std::move(BM));
+    result.bytecodeProvider = hbc::BCProviderFromSrc::createFromBytecodeModule(
+        std::move(BM), std::move(compilationData));
   } else {
     llvm_unreachable("Invalid bytecode kind for execution");
     result = InvalidFlags;
@@ -1686,7 +1687,8 @@ CompileResult generateBytecodeForExecution(
 /// The corresponding base bytecode will be removed from \baseBytecodeMap.
 CompileResult generateBytecodeForSerialization(
     raw_ostream &OS,
-    Module &M,
+    const std::shared_ptr<Module> &M,
+    const std::shared_ptr<sema::SemContext> &semCtx,
     const BytecodeGenerationOptions &genOptions,
     const SHA1 &sourceHash,
     hermes::OptValue<uint32_t> segment,
@@ -1704,8 +1706,8 @@ CompileResult generateBytecodeForSerialization(
     }
     std::unique_ptr<hbc::BytecodeModule> bytecodeModule =
         hbc::generateBytecodeModule(
-            &M,
-            M.getTopLevelFunction(),
+            M.get(),
+            M->getTopLevelFunction(),
             genOptions,
             segment,
             sourceMapGenOrNull,
@@ -1722,7 +1724,7 @@ CompileResult generateBytecodeForSerialization(
         bytecodeModule->populateSourceMap(sourceMapGenOrNull);
     }
 
-    if (auto N = M.getContext().getSourceErrorManager().getErrorCount()) {
+    if (auto N = M->getContext().getSourceErrorManager().getErrorCount()) {
       llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
       return BackendError;
     }
@@ -1730,7 +1732,8 @@ CompileResult generateBytecodeForSerialization(
     if (cl::DumpTarget == DumpBytecode) {
       std::unique_ptr<hbc::BCProviderFromSrc> provider =
           hbc::BCProviderFromSrc::createFromBytecodeModule(
-              std::move(bytecodeModule));
+              std::move(bytecodeModule),
+              hbc::BCProviderFromSrc::CompilationData(genOptions, M, semCtx));
       provider->setSourceHash(sourceHash);
       disassembleBytecode(std::move(provider));
     }
@@ -1739,9 +1742,9 @@ CompileResult generateBytecodeForSerialization(
       llvh::dbgs() << "Source maps not supported with SH";
       return InvalidFlags;
     }
-    sh::generateSH(&M, OS, genOptions);
+    sh::generateSH(M.get(), OS, genOptions);
 
-    if (auto N = M.getContext().getSourceErrorManager().getErrorCount()) {
+    if (auto N = M->getContext().getSourceErrorManager().getErrorCount()) {
       llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
       return BackendError;
     }
@@ -1953,7 +1956,8 @@ CompileResult processSourceFiles(
     assert(
         !sourceMapGen &&
         "validateFlags() should enforce no source map output for execution");
-    return generateBytecodeForExecution(*M, genOptions);
+    return generateBytecodeForExecution(
+        hbc::BCProviderFromSrc::CompilationData{genOptions, M, semCtx});
   }
 
   BaseBytecodeMap baseBytecodeMap;
@@ -1974,7 +1978,8 @@ CompileResult processSourceFiles(
     }
     auto result = generateBytecodeForSerialization(
         fileOS.os(),
-        *M,
+        M,
+        semCtx,
         genOptions,
         sourceHash,
         llvh::None,
@@ -2009,7 +2014,8 @@ CompileResult processSourceFiles(
       }
       auto segResult = generateBytecodeForSerialization(
           fileOS.os(),
-          *M,
+          M,
+          semCtx,
           genOptions,
           sourceHash,
           segment,

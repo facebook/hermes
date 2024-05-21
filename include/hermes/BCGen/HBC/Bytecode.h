@@ -29,6 +29,7 @@ namespace hermes {
 class SourceMapGenerator;
 
 namespace hbc {
+class BCProviderFromSrc;
 
 // This class represents the in-memory representation of the bytecode function.
 class BytecodeFunction {
@@ -148,6 +149,14 @@ class BytecodeModule {
   using FunctionList = std::vector<std::unique_ptr<BytecodeFunction>>;
   using SerializableBufferTy = std::vector<unsigned char>;
 
+  /// Pointer to owning BCProviderFromSrc if this BytecodeModule is owned
+  /// by a BCProviderFromSrc, nullptr otherwise.
+  /// Allows updating the table references in the BCProvider when a new
+  /// lazy function is compiled.
+  /// If running from source, there's always a BCProviderFromSrc, so this will
+  /// always be set to non-null.
+  BCProviderFromSrc *bcProviderFromSrc_ = nullptr;
+
   /// A list of bytecode functions.
   FunctionList functions_{};
 
@@ -216,6 +225,15 @@ class BytecodeModule {
 
   /// Create an empty BytecodeModule with no functions.
   explicit BytecodeModule() = default;
+
+  /// Set the bcProviderFromSrc_ field to an owning BCProviderFromSrc.
+  void setBCProviderFromSrc(BCProviderFromSrc *bcProviderFromSrc) {
+    bcProviderFromSrc_ = bcProviderFromSrc;
+  }
+  /// Set the bcProviderFromSrc_ field to an owning BCProviderFromSrc.
+  BCProviderFromSrc *getBCProviderFromSrc() {
+    return bcProviderFromSrc_;
+  }
 
   /// Add an uncompiled BytecodeFunction to the table, to track that we will
   /// eventually compile it.

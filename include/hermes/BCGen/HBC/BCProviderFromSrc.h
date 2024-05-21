@@ -61,7 +61,40 @@ struct CompileFlags {
 /// We should only depend on this when running from eval code path to
 /// make sure maximum efficiency when loading from bytecode file.
 class BCProviderFromSrc final : public BCProviderBase {
+ public:
+  /// The data needed to rerun on the compiler on more code that uses variables
+  /// in this BCProvider.
+  /// Copying this will increment the use count of shared pointers.
+  class CompilationData {
+   public:
+    /// The options used to generate the BytecodeModule.
+    BytecodeGenerationOptions genOptions;
+
+    /// IR Module used for compiling more code into this BytecodeModule.
+    /// May be shared with other BCProviders during local eval,
+    /// which reuses SemContext and the IR but makes a new BCProvider.
+    std::shared_ptr<Module> M;
+
+    /// SemContext used for compiling more code into this BytecodeModule.
+    /// May be shared with other BCProviders during local eval,
+    /// which reuses SemContext and the IR but makes a new BCProvider.
+    std::shared_ptr<sema::SemContext> semCtx;
+
+    explicit CompilationData(
+        const BytecodeGenerationOptions &genOptions,
+        const std::shared_ptr<Module> &M,
+        const std::shared_ptr<sema::SemContext> &semCtx)
+        : genOptions(genOptions), M(M), semCtx(semCtx) {}
+  };
+
+ private:
+  /// Data needed for compiling more code that uses the same
+  /// variables/information.
+  CompilationData compilationData_;
+
   /// The BytecodeModule that provides the bytecode data.
+  /// Placed below CompilationData to ensure its destruction before the
+  /// Module gets deleted.
   std::unique_ptr<hbc::BytecodeModule> module_;
 
   /// Whether the module constitutes a single function
@@ -70,7 +103,9 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// Hash of all source files.
   SHA1 sourceHash_{SHA1{}};
 
-  explicit BCProviderFromSrc(std::unique_ptr<hbc::BytecodeModule> module);
+  explicit BCProviderFromSrc(
+      std::unique_ptr<hbc::BytecodeModule> &&module,
+      CompilationData &&compilationData);
 
   /// No need to do anything since it's already created as part of
   /// BytecodeModule and set to the local member.
@@ -112,9 +147,12 @@ class BCProviderFromSrc final : public BCProviderBase {
 
   /// Wrap an existing BytecodeModule in a BCProviderFromSrc.
   static std::unique_ptr<BCProviderFromSrc> createFromBytecodeModule(
-      std::unique_ptr<hbc::BytecodeModule> module) {
-    return std::unique_ptr<BCProviderFromSrc>(
-        new BCProviderFromSrc(std::move(module)));
+      std::unique_ptr<hbc::BytecodeModule> bcModule,
+      CompilationData &&compilationData) {
+    auto result = std::unique_ptr<BCProviderFromSrc>(
+        new BCProviderFromSrc(std::move(bcModule), std::move(compilationData)));
+    result->module_->setBCProviderFromSrc(result.get());
+    return result;
   }
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
@@ -153,6 +191,18 @@ class BCProviderFromSrc final : public BCProviderBase {
 
   hbc::BytecodeModule *getBytecodeModule() {
     return module_.get();
+  }
+
+  const BytecodeGenerationOptions &getBytecodeGenerationOptions() const {
+    return compilationData_.genOptions;
+  }
+
+  Module *getModule() {
+    return compilationData_.M.get();
+  }
+
+  sema::SemContext *getSemCtx() {
+    return compilationData_.semCtx.get();
   }
 
   SHA1 getSourceHash() const override {
