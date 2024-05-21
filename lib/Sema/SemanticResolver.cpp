@@ -33,6 +33,7 @@ SemanticResolver::SemanticResolver(
       kw_{astContext},
       ambientDecls_(ambientDecls),
       saveDecls_(saveDecls),
+      bindingTable_(semCtx.getBindingTable()),
       compile_(compile) {}
 
 bool SemanticResolver::run(ESTree::ProgramNode *rootNode) {

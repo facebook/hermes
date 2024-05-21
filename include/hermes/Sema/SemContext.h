@@ -8,6 +8,7 @@
 #ifndef HERMES_SEMA_SEMCONTEXT_H
 #define HERMES_SEMA_SEMCONTEXT_H
 
+#include "hermes/ADT/PersistentScopedMap.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/Sema/Keywords.h"
 
@@ -20,6 +21,32 @@ class Decl;
 class LexicalScope;
 class FunctionInfo;
 class SemContext;
+
+/// Binding between an identifier and its declaration in a scope.
+struct Binding {
+  Decl *decl = nullptr;
+  /// The declaring node. Note that this is nullable.
+  ESTree::IdentifierNode *ident = nullptr;
+
+  Binding() = default;
+  Binding(Decl *decl, ESTree::IdentifierNode *ident)
+      : decl(decl), ident(ident) {}
+
+  bool isValid() const {
+    return decl != nullptr;
+  }
+  void invalidate() {
+    decl = nullptr;
+    ident = nullptr;
+  }
+};
+
+/// The scoped binding table mapping from string to binding.
+using BindingTableTy = hermes::PersistentScopedMap<UniqueString *, Binding>;
+using BindingTableScopeTy =
+    hermes::PersistentScopedMapScope<UniqueString *, Binding>;
+using BindingTableScopePtrTy =
+    hermes::PersistentScopedMapScopePtr<UniqueString *, Binding>;
 
 /// Variable declaration.
 class Decl {
@@ -384,7 +411,17 @@ class SemContext {
   /// \return the constructor of a class, if it has one, else nullptr.
   ESTree::MethodDefinitionNode *getConstructor(ESTree::ClassLikeNode *node);
 
+  BindingTableTy &getBindingTable() {
+    return bindingTable_;
+  }
+  const BindingTableTy &getBindingTable() const {
+    return bindingTable_;
+  }
+
  private:
+  /// The currently lexically visible names.
+  BindingTableTy bindingTable_{};
+
   /// Storage for all functions.
   std::deque<FunctionInfo> functions_{};
 

@@ -60,34 +60,8 @@ class SemanticResolver
   /// Current lexical scope.
   LexicalScope *curScope_{nullptr};
 
-  /// Binding between an identifier and its declaration in a scope.
-  struct Binding {
-    Decl *decl = nullptr;
-    /// The declaring node. Note that this is nullable.
-    ESTree::IdentifierNode *ident = nullptr;
-
-    Binding() = default;
-    Binding(Decl *decl, ESTree::IdentifierNode *ident)
-        : decl(decl), ident(ident) {}
-
-    bool isValid() const {
-      return decl != nullptr;
-    }
-    void invalidate() {
-      decl = nullptr;
-      ident = nullptr;
-    }
-  };
-
-  /// The scoped binding table mapping from string to binding.
-  using BindingTableTy = hermes::PersistentScopedMap<UniqueString *, Binding>;
-  using BindingTableScopeTy =
-      hermes::PersistentScopedMapScope<UniqueString *, Binding>;
-  using BindingTableScopePtrTy =
-      hermes::PersistentScopedMapScopePtr<UniqueString *, Binding>;
-
   /// The currently lexically visible names.
-  BindingTableTy bindingTable_{};
+  BindingTableTy &bindingTable_;
 
   /// The global scope.
   BindingTableScopePtrTy globalScope_;
