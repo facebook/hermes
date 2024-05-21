@@ -55,6 +55,34 @@ const char *nativePropertyNamesTrace() {
       "value": "object:11"
     },
     {
+      "type": "CreatePropNameIDRecord",
+      "time": 0,
+      "objID": 100,
+      "encoding": "ASCII",
+      "chars": "baz"
+    },
+    {
+      "type": "CreatePropNameIDRecord",
+      "time": 0,
+      "objID": 102,
+      "encoding": "ASCII",
+      "chars": "quux"
+    },
+    {
+      "type": "CreatePropNameIDRecord",
+      "time": 0,
+      "objID": 104,
+      "encoding": "ASCII",
+      "chars": "foo"
+    },
+    {
+      "type": "CreatePropNameIDRecord",
+      "time": 0,
+      "objID": 106,
+      "encoding": "ASCII",
+      "chars": "bar"
+    },
+    {
       "type": "BeginExecJSRecord",
       "time": 0
     },
@@ -92,9 +120,9 @@ const char *nativePropertyNamesTrace() {
     {
       "type": "GetNativePropertyNamesReturnRecord",
       "time": 0,
-      "properties": [
-        "baz",
-        "quux"
+      "propNameIDs": [
+        "propNameID:100",
+        "propNameID:102"
       ],
     },
     {
@@ -117,9 +145,9 @@ const char *nativePropertyNamesTrace() {
     {
       "type": "GetNativePropertyNamesReturnRecord",
       "time": 0,
-      "properties": [
-        "baz",
-        "quux"
+      "propNameIDs": [
+        "propNameID:100",
+        "propNameID:102"
       ],
     },
     {
@@ -130,9 +158,9 @@ const char *nativePropertyNamesTrace() {
     {
       "type": "GetNativePropertyNamesReturnRecord",
       "time": 0,
-      "properties": [
-        "foo",
-        "bar"
+      "propNameIDs": [
+        "propNameID:104",
+        "propNameID:106"
       ],
     }
   ]

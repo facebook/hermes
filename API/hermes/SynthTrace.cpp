@@ -518,7 +518,7 @@ bool SynthTrace::GetNativePropertyNamesReturnRecord::operator==(
   }
   auto &thatCasted =
       dynamic_cast<const GetNativePropertyNamesReturnRecord &>(that);
-  return propNames_ == thatCasted.propNames_;
+  return propNameIDs_ == thatCasted.propNameIDs_;
 }
 
 bool SynthTrace::SetExternalMemoryPressureRecord::operator==(
@@ -745,10 +745,10 @@ void SynthTrace::GetNativePropertyNamesRecord::toJSONInternal(
 void SynthTrace::GetNativePropertyNamesReturnRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
-  json.emitKey("properties");
+  json.emitKey("propNameIDs");
   json.openArray();
-  for (const auto &prop : propNames_) {
-    json.emitValue(prop);
+  for (const auto &prop : propNameIDs_) {
+    json.emitValue(encode(prop));
   }
   json.closeArray();
 }

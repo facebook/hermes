@@ -499,12 +499,13 @@ SynthTrace getTrace(JSONArray *array, SynthTrace::ObjectID globalObjID) {
         trace.emplace_back<SynthTrace::GetNativePropertyNamesRecord>(
             timeFromStart, hostObjID->getValue());
         break;
-      case RecordType::GetNativePropertyNamesReturn:
+      case RecordType::GetNativePropertyNamesReturn: {
+        auto *pnids =
+            llvh::dyn_cast_or_null<JSONArray>(obj->get("propNameIDs"));
         trace.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
-            timeFromStart,
-            getListOfStrings<std::vector>(
-                llvh::cast<JSONArray>(obj->get("properties"))));
+            timeFromStart, getListOfTraceValues(pnids, trace));
         break;
+      }
       case RecordType::SetExternalMemoryPressure: {
         size_t amount = getNumberAs<size_t>(obj->get("amount"));
         trace.emplace_back<SynthTrace::SetExternalMemoryPressureRecord>(

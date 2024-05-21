@@ -523,12 +523,14 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         assert(rec->getType() == RecordType::GetNativePropertyNamesReturn);
         const auto &record = dynamic_cast<
             const SynthTrace::GetNativePropertyNamesReturnRecord &>(*rec);
-        const std::vector<std::string> &names = record.propNames_;
-        std::vector<PropNameID> props;
-        for (const std::string &name : names) {
-          props.emplace_back(PropNameID::forUtf8(rt, name));
+
+        std::vector<PropNameID> propNameIDs;
+        for (const SynthTrace::TraceValue &name : record.propNameIDs_) {
+          propNameIDs.emplace_back(
+              interpreter_.getPropNameIDForUse(name.getUID()));
         }
-        return props;
+
+        return propNameIDs;
       } catch (const std::exception &e) {
         interpreter_.crashOnException(e, llvh::None);
       }
