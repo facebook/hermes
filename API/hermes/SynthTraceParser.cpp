@@ -209,14 +209,22 @@ SynthTrace getTrace(
         });
     return values;
   };
+
+  auto strToRecordType = [](llvh::StringRef str) {
+#define CASE(t)           \
+  if (str == #t "Record") \
+    return RecordType::t;
+    SYNTH_TRACE_RECORD_TYPES(CASE)
+#undef CASE
+    ::hermes::hermes_fatal("Unknown record type");
+  };
+
   for (auto *val : *array) {
     auto *obj = llvh::cast<JSONObject>(val);
     auto timeFromStart =
         std::chrono::milliseconds(getNumberAs<uint64_t>(obj->get("time"), 0));
-    std::stringstream ss;
-    RecordType kind;
-    ss << llvh::cast<JSONString>(obj->get("type"))->c_str();
-    ss >> kind;
+    RecordType kind =
+        strToRecordType(llvh::cast<JSONString>(obj->get("type"))->str());
     // Common properties, they may not exist on all objects so use a
     // dynamic cast.
     auto *objID = llvh::dyn_cast_or_null<JSONNumber>(obj->get("objID"));

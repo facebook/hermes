@@ -1300,11 +1300,6 @@ class SynthTrace {
   void flushAndDisable(const ::hermes::vm::GCExecTrace &gcTrace);
 };
 
-llvh::raw_ostream &operator<<(
-    llvh::raw_ostream &os,
-    SynthTrace::RecordType type);
-std::istream &operator>>(std::istream &is, SynthTrace::RecordType &type);
-
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
