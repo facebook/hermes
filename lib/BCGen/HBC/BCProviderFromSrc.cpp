@@ -168,7 +168,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
     parserMode = parser::LazyParse;
   }
 
-  sema::SemContext semCtx(*context);
+  auto semCtx = std::make_shared<sema::SemContext>(*context);
   parser::JSParser parser(*context, fileBufId, parserMode);
   auto parsed = parser.parse();
 
@@ -180,7 +180,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   }
 
   if (!parsed ||
-      !hermes::sema::resolveAST(*context, semCtx, *parsed, declFileList)) {
+      !hermes::sema::resolveAST(*context, *semCtx, *parsed, declFileList)) {
     return {nullptr, getErrorString()};
   }
   // The compiler flag is not set, automatically detect 'use static builtin'
@@ -189,14 +189,14 @@ BCProviderFromSrc::createBCProviderFromSrc(
     context->setStaticBuiltinOptimization(useStaticBuiltinDetected);
   }
 
-  Module M(context);
-  hermes::generateIRFromESTree(&M, semCtx, parsed.getValue());
+  auto M = std::make_shared<Module>(context);
+  hermes::generateIRFromESTree(M.get(), *semCtx, parsed.getValue());
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }
 
   if (runOptimizationPasses)
-    runOptimizationPasses(M);
+    runOptimizationPasses(*M);
 
   auto opts = defaultBytecodeGenerationOptions;
   opts.format = compileFlags.format;
@@ -205,7 +205,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
       context->getOptimizationSettings().staticBuiltins;
   opts.verifyIR = compileFlags.verifyIR;
 
-  auto BM = hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), opts);
+  auto BM =
+      hbc::generateBytecodeModule(M.get(), M->getTopLevelFunction(), opts);
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }

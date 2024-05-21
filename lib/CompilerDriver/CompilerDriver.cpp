@@ -1821,15 +1821,15 @@ CompileResult processSourceFiles(
     sourceMapGen = SourceMapGenerator{};
   }
 
-  Module M(context);
-  sema::SemContext semCtx(*context);
+  auto M = std::make_shared<Module>(context);
+  auto semCtx = std::make_shared<sema::SemContext>(*context);
 
   if (context->getUseCJSModules()) {
     // Allow the IR generation function to populate inputSourceMaps to ensure
     // proper source map ordering.
     if (!generateIRForSourcesAsCJSModules(
-            M,
-            semCtx,
+            *M,
+            *semCtx,
             declFileList,
             std::move(fileBufs),
             sourceMapGen ? &*sourceMapGen : nullptr)) {
@@ -1861,7 +1861,7 @@ CompileResult processSourceFiles(
     context->getSourceErrorManager().setTranslator(sourceMapTranslator);
     ESTree::NodePtr ast = parseJS(
         context,
-        semCtx,
+        *semCtx,
         declFileList,
         std::move(mainFileBuf.file),
         std::move(sourceMap),
@@ -1872,7 +1872,7 @@ CompileResult processSourceFiles(
     if (cl::DumpTarget < DumpIR) {
       return Success;
     }
-    generateIRFromESTree(&M, semCtx, ast);
+    generateIRFromESTree(&*M, *semCtx, ast);
   }
 
   // Bail out if there were any errors. We can't ensure that the module is in
@@ -1884,7 +1884,7 @@ CompileResult processSourceFiles(
 
   // Verify the IR before we run optimizations on it.
   if (cl::VerifyIR) {
-    if (!verifyModule(M, &llvh::errs())) {
+    if (!verifyModule(*M, &llvh::errs())) {
       llvh::errs() << "IRGen produced invalid IR\n";
       return VerificationFailed;
     }
@@ -1894,7 +1894,7 @@ CompileResult processSourceFiles(
   if (!cl::CustomOptimize.empty()) {
     std::vector<std::string> opts(
         cl::CustomOptimize.begin(), cl::CustomOptimize.end());
-    if (!runCustomOptimizationPasses(M, opts)) {
+    if (!runCustomOptimizationPasses(*M, opts)) {
       llvh::errs() << "Invalid custom optimizations selected.\n\n"
                    << PassManager::getCustomPassText();
       return InvalidFlags;
@@ -1902,13 +1902,13 @@ CompileResult processSourceFiles(
   } else {
     switch (cl::OptimizationLevel) {
       case cl::OptLevel::O0:
-        runNoOptimizationPasses(M);
+        runNoOptimizationPasses(*M);
         break;
       case cl::OptLevel::Og:
-        runDebugOptimizationPasses(M);
+        runDebugOptimizationPasses(*M);
         break;
       case cl::OptLevel::OMax:
-        runFullOptimizationPasses(M);
+        runFullOptimizationPasses(*M);
         break;
     }
   }
@@ -1920,13 +1920,13 @@ CompileResult processSourceFiles(
   }
 
   if (cl::DumpTarget == DumpIR) {
-    M.dump();
+    M->dump();
     return Success;
   }
 
 #ifndef NDEBUG
   if (cl::DumpTarget == ViewCFG) {
-    M.viewGraph();
+    M->viewGraph();
     return Success;
   }
 #endif
@@ -1953,7 +1953,7 @@ CompileResult processSourceFiles(
     assert(
         !sourceMapGen &&
         "validateFlags() should enforce no source map output for execution");
-    return generateBytecodeForExecution(M, genOptions);
+    return generateBytecodeForExecution(*M, genOptions);
   }
 
   BaseBytecodeMap baseBytecodeMap;
@@ -1974,7 +1974,7 @@ CompileResult processSourceFiles(
     }
     auto result = generateBytecodeForSerialization(
         fileOS.os(),
-        M,
+        *M,
         genOptions,
         sourceHash,
         llvh::None,
@@ -2009,7 +2009,7 @@ CompileResult processSourceFiles(
       }
       auto segResult = generateBytecodeForSerialization(
           fileOS.os(),
-          M,
+          *M,
           genOptions,
           sourceHash,
           segment,
