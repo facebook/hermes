@@ -856,6 +856,80 @@ TEST_P(HermesRuntimeTest, PropNameIDFromSymbol) {
   EXPECT_EQ(x.getProperty(*rt, globalProp).getString(*rt).utf8(*rt), "global");
 }
 
+TEST_P(HermesRuntimeTest, HostObjectSymbolTest) {
+  class DummyHO : public HostObject {
+   public:
+    Value get(Runtime &, const PropNameID &name) {
+      return Value();
+    }
+    void set(Runtime &rt, const PropNameID &name, const Value &value) {
+      props.emplace_back(rt, name);
+    }
+    std::vector<PropNameID> getPropertyNames(Runtime &rt) {
+      std::vector<PropNameID> propsRet;
+      for (const auto &prop : props)
+        propsRet.emplace_back(rt, prop);
+      return propsRet;
+    }
+
+    std::vector<PropNameID> props;
+  };
+  auto hoObj = Object::createFromHostObject(*rt, std::make_shared<DummyHO>());
+  rt->global().setProperty(*rt, "ho", hoObj);
+  eval(R"(
+var abcSym = Symbol("abc");
+ho[abcSym] = 1;
+var defSym = Symbol("def");
+ho[defSym] = 2;
+// Add a number symbol to test that we don't treat it as integer index.
+var numberSym = Symbol("5");
+ho[numberSym] = 55;
+ho.xyz = 5;
+ho.qwerty = 6;
+// Create some duplicate properties to test deduplication.
+Object.defineProperty(ho, "xyz", {
+  value: 42,
+});
+Object.defineProperty(ho, "foo", {
+  value: 42,
+});
+Object.defineProperty(ho, abcSym, {
+  value: 78,
+});
+var hoDefSym = Symbol("def");
+Object.defineProperty(ho, hoDefSym, {
+  value: 26,
+});
+
+let assert = function(cond, msg) {
+  if (!cond) {
+    throw new Error(msg);
+  }
+};
+
+// Ensure that the values are the same, and have the same order.
+let arrayEqual = function(arr1, arr2) {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+  for (var i = 0; i < arr1.length; i++) {
+    if (arr1[i] !== arr2[i]) {
+      return false;
+    }
+  }
+  return true;
+};
+
+let strArr = Object.getOwnPropertyNames(ho);
+// Hidden class properties should come before HO properties.
+assert(arrayEqual(strArr, ["xyz", "foo", "qwerty"]),
+  "getOwnPropertyNames() returns incorrectly.");
+let symArr = Object.getOwnPropertySymbols(ho);
+assert(arrayEqual(symArr, [abcSym, hoDefSym, defSym, numberSym]),
+  "getOwnPropertySymbols() returns incorrectly.");
+)");
+}
+
 TEST_P(HermesRuntimeTest, HasComputedTest) {
   // The only use of JSObject::hasComputed() is in HermesRuntimeImpl,
   // so we test its Proxy support here, instead of from JS.

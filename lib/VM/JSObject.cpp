@@ -411,24 +411,23 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   // encountered.
   llvh::SmallVector<uint32_t, 8> indexNames{};
 
+  // Get host object property names
+  if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
+    assert(
+        range.first == range.second && "Host objects cannot own indexed range");
+    auto hostSymbolsRes =
+        vmcast<HostObject>(selfHandle.get())->getHostPropertyNames();
+    if (hostSymbolsRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if ((hostObjectSymbolCount = (**hostSymbolsRes)->getEndIndex()) != 0) {
+      Handle<JSArray> hostSymbols = *hostSymbolsRes;
+      hostObjectSymbols = std::move(hostSymbols);
+    }
+  }
+
   // Iterate the named properties excluding those which use Symbols.
   if (okFlags.getIncludeNonSymbols()) {
-    // Get host object property names
-    if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
-      assert(
-          range.first == range.second &&
-          "Host objects cannot own indexed range");
-      auto hostSymbolsRes =
-          vmcast<HostObject>(selfHandle.get())->getHostPropertyNames();
-      if (hostSymbolsRes == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      if ((hostObjectSymbolCount = (**hostSymbolsRes)->getEndIndex()) != 0) {
-        Handle<JSArray> hostSymbols = *hostSymbolsRes;
-        hostObjectSymbols = std::move(hostSymbols);
-      }
-    }
-
     // Iterate the indexed properties.
     GCScopeMarkerRAII marker{runtime};
     for (auto i = range.first; i != range.second; ++i) {
@@ -489,46 +488,21 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
               runtime.getStringPrimFromSymbolID(id));
           JSArray::setElementAt(array, runtime, index++, tmpHandle);
         });
-
-    // Iterate over HostObject properties and append them to the array. Do not
-    // append duplicates.
-    if (LLVM_UNLIKELY(hostObjectSymbols)) {
-      for (size_t i = 0; i < hostObjectSymbolCount; ++i) {
-        assert(
-            (*hostObjectSymbols)->at(runtime, i).isSymbol() &&
-            "Host object needs to return array of SymbolIDs");
-        marker.flush();
-        SymbolID id = (*hostObjectSymbols)->at(runtime, i).getSymbol();
-        if (dedupSet.count(id.unsafeGetRaw()) == 0) {
-          dedupSet.insert(id.unsafeGetRaw());
-
-          assert(
-              !InternalProperty::isInternal(id) &&
-              "host object returned reserved symbol");
-          auto propNameAsIndex = toArrayIndex(
-              runtime.getIdentifierTable().getStringView(runtime, id));
-          if (LLVM_UNLIKELY(propNameAsIndex)) {
-            indexNames.push_back(*propNameAsIndex);
-            continue;
-          }
-          tmpHandle = HermesValue::encodeStringValue(
-              runtime.getStringPrimFromSymbolID(id));
-          JSArray::setElementAt(array, runtime, index++, tmpHandle);
-        }
-      }
-    }
   }
 
   // Now iterate the named properties again, including only Symbols.
-  // We could iterate only once, if we chose to ignore (and disallow)
-  // own properties on HostObjects, as we do with Proxies.
   if (okFlags.getIncludeSymbols()) {
     MutableHandle<SymbolID> idHandle{runtime};
     HiddenClass::forEachProperty(
         runtime.makeHandle(selfHandle->clazz_),
         runtime,
-        [&runtime, okFlags, array, &index, &idHandle](
-            SymbolID id, NamedPropertyDescriptor desc) {
+        [&runtime,
+         okFlags,
+         array,
+         &index,
+         &idHandle,
+         hostObjectSymbolCount,
+         &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
           if (!isSymbolPrimitive(id)) {
             return;
           }
@@ -537,9 +511,65 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
             if (!desc.flags.enumerable)
               return;
           }
+
+          // Keep track of hidden class properties for deduplication purposes.
+          if (LLVM_UNLIKELY(hostObjectSymbolCount > 0)) {
+            dedupSet.insert(id.unsafeGetRaw());
+          }
+
           idHandle = id;
           JSArray::setElementAt(array, runtime, index++, idHandle);
         });
+  }
+
+  // Iterate over HostObject properties and append them to the array. Do not
+  // append duplicates.
+  if (LLVM_UNLIKELY(hostObjectSymbols)) {
+    GCScopeMarkerRAII marker{runtime};
+    for (size_t i = 0; i < hostObjectSymbolCount; ++i) {
+      assert(
+          (*hostObjectSymbols)->at(runtime, i).isSymbol() &&
+          "Host object needs to return array of SymbolIDs");
+      marker.flush();
+      SymbolID id = (*hostObjectSymbols)->at(runtime, i).getSymbol();
+      assert(
+          !InternalProperty::isInternal(id) &&
+          "host object returned reserved symbol");
+
+      auto success = dedupSet.insert(id.unsafeGetRaw()).second;
+      // Skip if it duplicates a hidden class property.
+      if (!success) {
+        continue;
+      }
+
+      if (id.isNotUniqued()) {
+        // If not including symbols, symbol id should be uniqued.
+        if (!okFlags.getIncludeSymbols()) {
+          continue;
+        }
+
+        // Return the original symbol value.
+        tmpHandle = HermesValue::encodeSymbolValue(id);
+      } else {
+        // If not including strings, symbol id should not be uniqued.
+        if (!okFlags.getIncludeNonSymbols()) {
+          continue;
+        }
+
+        // We should do this only if it's a string property.
+        auto propNameAsIndex = toArrayIndex(
+            runtime.getIdentifierTable().getStringView(runtime, id));
+        if (LLVM_UNLIKELY(propNameAsIndex)) {
+          indexNames.push_back(*propNameAsIndex);
+          continue;
+        }
+
+        // Return string value to caller.
+        tmpHandle = HermesValue::encodeStringValue(
+            runtime.getStringPrimFromSymbolID(id));
+      }
+      JSArray::setElementAt(array, runtime, index++, tmpHandle);
+    }
   }
 
   // The end (exclusive) of the named properties.
