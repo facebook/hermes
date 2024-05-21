@@ -62,7 +62,7 @@ void generateIRForCJSModule(
 /// body.
 /// \param node the AST node associated with the lazy function.
 /// \param semCtx the semantic context for resolution.
-/// \return the generated function.
+/// \return the newly generated function for lazyData.
 Function *generateLazyFunctionIR(
     Function *F,
     ESTree::FunctionLikeNode *node,

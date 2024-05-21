@@ -525,6 +525,12 @@ class ESTreeIRGen {
       uint32_t id,
       llvh::StringRef filename);
 
+  /// Perform IR generation for a single lazy function, potentially adding more
+  /// Functions to the Module.
+  /// \param lazyFunc the lazy function for which to generate new IR.
+  /// \return a newly created IR Function to replace the lazy function.
+  Function *doLazyFunction(Function *lazyFunc);
+
   /// Generate a function which immediately throws the specified SyntaxError
   /// message.
   Function *genSyntaxErrorFunction(
@@ -1060,6 +1066,11 @@ class ESTreeIRGen {
   ///     nothing.
   void emitScopeDeclarations(sema::LexicalScope *scope);
 
+  /// Emit any lazy declarations in the global scope which haven't been emitted
+  /// yet because they were found as the result of lazy compilation.
+  /// \pre all undeclared declarations are at the end of the scope's list.
+  void emitLazyGlobalDeclarations(sema::LexicalScope *globalScope);
+
   /// Emit the loading and initialization of parameters in the function
   /// prologue.
   void emitParameters(ESTree::FunctionLikeNode *funcNode);
@@ -1102,6 +1113,13 @@ class ESTreeIRGen {
   /// Generate a body for a dummy function so that it doesn't crash the
   /// backend when encountered.
   static void genDummyFunction(Function *dummy);
+
+  /// Add a LazyCompilationDataInst stub to \p F.
+  void setupLazyFunction(
+      Function *F,
+      ESTree::FunctionLikeNode *functionNode,
+      ESTree::BlockStatementNode *bodyBlock,
+      VariableScope *parentVarScope);
 
   /// Invoked after IR for a function has been emitted to perform any needed
   /// adjustments. Specifically, it updates all catch targets.

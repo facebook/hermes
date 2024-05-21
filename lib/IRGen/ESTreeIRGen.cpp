@@ -196,6 +196,51 @@ void ESTreeIRGen::doCJSModule(
       segmentID, id, Builder.createIdentifier(filename), newFunc);
 }
 
+Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
+  LazyCompilationDataInst *lazyDataInst =
+      lazyFunc->getLazyCompilationDataInst();
+
+  // Create a top level FunctionContext that will never be executed, because:
+  // 1. IRGen assumes the first function always has global scope
+  // 2. It serves as the root for dummy functions for lexical data
+  FunctionContext topLevelFunctionContext{
+      this, Mod->getTopLevelFunction(), nullptr};
+
+  emitLazyGlobalDeclarations(semCtx_.getGlobalScope());
+
+  auto *node = cast<ESTree::FunctionLikeNode>(Root);
+
+  assert(
+      !llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
+      "lazy compilation not supported for arrow functions");
+
+  VariableScope *parentVarScope = lazyDataInst->getParentVarScope();
+
+  // Generators have had their lazy scope set up without setting one up
+  // for the inner functions. This means that we will never directly generate
+  // a GeneratorInnerFunction here.
+  Function *compiledFunc = ESTree::isAsync(node)
+      ? genAsyncFunction(
+            lazyFunc->getOriginalOrInferredName(), node, parentVarScope)
+      : ESTree::isGenerator(node)
+      ? genGeneratorFunction(
+            lazyFunc->getOriginalOrInferredName(), node, parentVarScope)
+      : genBasicFunction(
+            lazyFunc->getOriginalOrInferredName(), node, parentVarScope);
+
+  drainCompilationQueue();
+
+  // Destroy the lazyFunc here, to avoid having to handle it specially in
+  // resetForLazyCompilation.
+  // It won't be needed again, even if there is an error later in the pipeline,
+  // because we store the error message in BytecodeFunction and reuse it,
+  // ensuring we never use the information in lazyFunc ever again.
+  lazyFunc->eraseFromParentNoDestroy();
+  Value::destroy(lazyFunc);
+
+  return compiledFunc;
+}
+
 Value *ESTreeIRGen::genMemberExpressionProperty(
     ESTree::MemberExpressionLikeNode *Mem) {
   // If computed is true, the node corresponds to a computed (a[b]) member

@@ -54,7 +54,9 @@ Function *generateLazyFunctionIR(
     Function *F,
     ESTree::FunctionLikeNode *node,
     sema::SemContext &semCtx) {
-  hermes_fatal("IRGen: IRGen for lazy unimplemented");
+  Module *M = F->getParent();
+  flow::FlowContext flowContext{};
+  return ESTreeIRGen{M, semCtx, flowContext, node}.doLazyFunction(F);
 }
 
 } // namespace hermes

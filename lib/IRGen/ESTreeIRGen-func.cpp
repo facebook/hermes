@@ -235,6 +235,11 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     newFunction->getAttributesRef(Mod).typed = true;
   }
 
+  if (body->isLazyFunctionBody) {
+    setupLazyFunction(newFunction, functionNode, body, parentScope);
+    return newFunction;
+  }
+
   auto compileFunc = [this,
                       functionKind,
                       newFunction,
@@ -362,6 +367,12 @@ Function *ESTreeIRGen::genGeneratorFunction(
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
 
+  auto *body = ESTree::getBlockStatement(functionNode);
+  if (body->isLazyFunctionBody) {
+    setupLazyFunction(outerFn, functionNode, body, parentScope);
+    return outerFn;
+  }
+
   auto compileFunc = [this,
                       outerFn,
                       functionNode,
@@ -438,6 +449,12 @@ Function *ESTreeIRGen::genAsyncFunction(
       functionNode->getSemInfo()->customDirectives,
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
+
+  auto *body = ESTree::getBlockStatement(functionNode);
+  if (body->isLazyFunctionBody) {
+    setupLazyFunction(asyncFn, functionNode, body, parentScope);
+    return asyncFn;
+  }
 
   auto compileFunc = [this,
                       asyncFn,
@@ -714,6 +731,24 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
   }
 }
 
+void ESTreeIRGen::emitLazyGlobalDeclarations(sema::LexicalScope *globalScope) {
+  // Iterate in reverse order because we want to emit the most recently declared
+  // global vars.
+  for (auto *decl : llvh::reverse(globalScope->decls)) {
+    // Found the most recently emitted global declaration.
+    // Everything at lower index has been emitted before.
+    if (decl->customData)
+      return;
+
+    assert(
+        decl->kind == sema::Decl::Kind::UndeclaredGlobalProperty &&
+        "Lazy functions can't declare variables in the global scope");
+    auto *prop =
+        Builder.createGlobalObjectProperty(decl->name, /* declared */ false);
+    setDeclData(decl, prop);
+  }
+}
+
 void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   auto *newFunc = curFunction()->function;
   sema::FunctionInfo *semInfo = funcNode->getSemInfo();
@@ -953,6 +988,47 @@ void ESTreeIRGen::genDummyFunction(Function *dummy) {
   BasicBlock *firstBlock = builder.createBasicBlock(dummy);
   builder.setInsertionBlock(firstBlock);
   builder.createUnreachableInst();
+}
+
+/// \return the NodeKind of the FunctionLikeNode (used for lazy parsing).
+static ESTree::NodeKind getLazyFunctionKind(ESTree::FunctionLikeNode *node) {
+  if (node->isMethodDefinition) {
+    // This is not a regular function expression but getter/setter.
+    // If we want to reparse it later, we have to start from an
+    // identifier and not from a 'function' keyword.
+    return ESTree::NodeKind::Property;
+  }
+  return node->getKind();
+}
+
+void ESTreeIRGen::setupLazyFunction(
+    Function *F,
+    ESTree::FunctionLikeNode *functionNode,
+    ESTree::BlockStatementNode *bodyBlock,
+    VariableScope *parentVarScope) {
+  // Avoid modifying Builder state because this isn't enqueued.
+  IRBuilder::SaveRestore saveBuilder{Builder};
+
+  Builder.createJSThisParam(F);
+  BasicBlock *bb = Builder.createBasicBlock(F);
+  Builder.setInsertionBlock(bb);
+
+  LazyCompilationData data{
+      F->getOriginalOrInferredName().getUnderlyingPointer(),
+      bodyBlock->bufferId,
+      functionNode->getSourceRange(),
+      functionNode->getSemInfo(),
+      getLazyFunctionKind(functionNode),
+      ESTree::isStrict(functionNode->strictness),
+      bodyBlock->paramYield,
+      bodyBlock->paramAwait};
+
+  Builder.createLazyCompilationDataInst(std::move(data), parentVarScope);
+  Builder.createUnreachableInst();
+
+  // Set the function's .length.
+  F->setExpectedParamCountIncludingThis(
+      countExpectedArgumentsIncludingThis(functionNode));
 }
 
 /// Generate a function which immediately throws the specified SyntaxError
