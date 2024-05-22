@@ -513,12 +513,22 @@ class JSParserImpl {
   /// Check whether the current token begins a Declaration.
   bool checkDeclaration() {
     if (checkN(
-            TokenKind::rw_function,
-            letIdent_,
-            TokenKind::rw_const,
-            TokenKind::rw_class) ||
+            TokenKind::rw_function, TokenKind::rw_const, TokenKind::rw_class) ||
         (check(asyncIdent_) && checkAsyncFunction())) {
       return true;
+    }
+
+    if (check(letIdent_)) {
+      if (isStrictMode()) {
+        return true;
+      }
+      // In loose mode, 'let' requires more work to check.
+      // let Identifier
+      // let [
+      // let {
+      // are all starts of 'let' declarations.
+      // But 'let' can also be an Identifier in loose mode.
+      return lexer_.isLetFollowedByDeclStart();
     }
 
 #if HERMES_PARSE_FLOW

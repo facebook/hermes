@@ -566,6 +566,15 @@ class JSLexer {
     return prevTokenEndLoc_;
   }
 
+  /// Check whether the current 'let' is a declaration.
+  /// \pre the current token is the 'let' identifier.
+  /// Does not advance the current token,
+  /// but will skip some ASCII non-newline whitespaces.
+  /// Calling advance() after this function is intended.
+  /// \return true when the current 'let' must be a declaration,
+  ///   based on the next token ('[', '{', or identifier).
+  bool isLetFollowedByDeclStart();
+
   /// Force an EOF at the next token.
   void forceEOF() {
     curCharPtr_ = bufferEnd_;
@@ -605,8 +614,7 @@ class JSLexer {
   /// Should be called in the middle of parsing a template literal.
   const Token *rescanRBraceInTemplateLiteral();
 
-  /// Skip over any non-line-terminator whitespace and return the kind of
-  /// the next token if there was no LineTerminator before it.
+  /// Skip over any whitespace and return the kind of the next token.
   /// Does not report any error messages during lookahead.
   /// For example, this is used to determine whether we're in the
   ///   async [no LineTerminator here] function
@@ -616,10 +624,12 @@ class JSLexer {
   ///         ^
   /// case for parsing async functions and arrow functions.
   /// \pre current token is an identifier or reserved word.
+  /// \param RequireNoNewLine if true, then return llvh::None when there is a
+  ///   newline before the token seen by lookahead.
   /// \param expectedToken if not None, then if the next token is expectedToken,
   ///   the next token is scanned and the curCharPtr_ isn't reset.
-  /// \return the kind of next token if there was no LineTerminator,
-  ///   otherwise return None.
+  /// \return the kind of next token if available, otherwise return None.
+  template <bool RequireNoNewLine = true>
   OptValue<TokenKind> lookahead1(OptValue<TokenKind> expectedToken);
 
   UniqueString *getIdentifier(llvh::StringRef name) {
