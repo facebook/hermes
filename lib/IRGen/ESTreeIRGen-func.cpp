@@ -835,8 +835,10 @@ uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
   // Implicit functions, whose funcNode is null, take no arguments.
   if (funcNode) {
     for (auto &param : ESTree::getParams(funcNode)) {
-      if (llvh::isa<ESTree::AssignmentPatternNode>(param)) {
-        // Found an initializer, stop counting expected arguments.
+      if (llvh::isa<ESTree::AssignmentPatternNode>(param) ||
+          llvh::isa<ESTree::RestElementNode>(param)) {
+        // Found an initializer or a rest parameter, stop counting expected
+        // arguments.
         break;
       }
       ++count;
