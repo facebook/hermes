@@ -9,6 +9,7 @@ import os
 import sys
 from dataclasses import dataclass
 from enum import auto, Enum, unique
+from pathlib import Path
 from typing import List
 
 from typing_defs import PathT
@@ -64,15 +65,16 @@ class Color(Enum):
         }[self.value]
 
 
+# Ignore non-JS files and fixture files in test262.
+def is_test(f: PathT) -> bool:
+    isFixture = "test262" in f and f.endswith("_FIXTURE.js")
+    return f.endswith(".js") and not isFixture
+
+
 def list_all_files(paths: List[PathT]) -> List[PathT]:
     """
     Recursively list all files in the given paths.
     """
-
-    # Ignore non-JS files and fixture files in test262.
-    def is_test(f: PathT):
-        isFixture = "test262" in f and f.endswith("_FIXTURE.js")
-        return f.endswith(".js") and not isFixture
 
     files = []
     for p in paths:
@@ -90,6 +92,49 @@ def list_all_files(paths: List[PathT]) -> List[PathT]:
             sys.exit(1)
 
     return files
+
+
+def list_entries_non_recursive(dir_path: PathT) -> List[PathT]:
+    """
+    List all files and directories in the given path (non-recursively).
+    """
+
+    entries = []
+    for entry in os.listdir(dir_path):
+        path = os.path.join(dir_path, entry)
+        if os.path.isdir(path):
+            entries.append(path)
+        elif os.path.isfile(path):
+            if is_test(path):
+                entries.append(path)
+        else:
+            print(f"Invalid path: {path}")
+            sys.exit(1)
+
+    return entries
+
+
+def list_all_matched_entries(pattern: str) -> List[PathT]:
+    """
+    List all files/directories matching the given pattern, which could be a
+    directory path, or a partial path that is prefix of other file paths.
+
+    Unlike list_all_files(), when the pattern is a directory path, we only list
+    the files/directories directly under it.
+    """
+
+    if os.path.isdir(pattern):
+        return list_entries_non_recursive(pattern)
+
+    # In skiplist config, we have partial path like
+    # test262/test/language/statements/for-of/head-let. We first get its
+    # parent directory, then list all files that are under it, and return those
+    # match the partial path.
+    parent = os.fspath(Path(pattern).parent)
+    # In case the partial path matches directories, we recursively list all
+    # files.
+    files = list_all_files([parent])
+    return [f for f in files if f.startswith(pattern)]
 
 
 def check_hermes_exe(binary_path: PathT) -> None:
