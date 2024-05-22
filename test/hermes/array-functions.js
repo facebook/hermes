@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 1024 && %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 1024 && %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 "use strict";
 
 // Performs a nested array comparison between the two arrays.

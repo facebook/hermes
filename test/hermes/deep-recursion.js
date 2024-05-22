@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
-// RUN: %shermes -exec %s -Wx,-max-register-stack=1048576 | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 1024 && %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
+// RUN: ulimit -s 1024 && %shermes -exec %s -Wx,-max-register-stack=1048576 | %FileCheck --match-full-lines %s
 
 function f() {
     f.apply();
