@@ -91,7 +91,7 @@ def create_parser():
     return parser
 
 
-def print_stats(stats: dict):
+def print_stats(stats: dict) -> None:
     """Print the result stats."""
     total = sum(stats.values())
     failed = (
@@ -140,7 +140,7 @@ def print_stats(stats: dict):
     # fmt: on
 
 
-def print_failed_tests(tests: dict):
+def print_failed_tests(tests: dict) -> None:
     def print_test_list(cat: TestResultCode, header: str):
         if len(tests[cat]) > 0:
             print("-----------------------------------")
@@ -149,12 +149,24 @@ def print_failed_tests(tests: dict):
                 print(test)
             print("-----------------------------------")
 
+    if len(tests) == 0:
+        return
     print("\nDetails:")
     print_test_list(TestResultCode.COMPILE_FAILED, "Compile failed:")
     print_test_list(TestResultCode.COMPILE_TIMEOUT, "Compile timeout:")
     print_test_list(TestResultCode.EXECUTE_FAILED, "Execute failed:")
     print_test_list(TestResultCode.EXECUTE_TIMEOUT, "Execute timeout:")
     print_test_list(TestResultCode.TEST_FAILED, "Other test failure:")
+
+
+def print_skipped_passed_tests(tests: List[str]) -> None:
+    if len(tests) == 0:
+        return
+    print("\nPassed tests in skiplist:")
+    print("-----------------------------------")
+    for test_name in tests:
+        print(test_name)
+    print("-----------------------------------")
 
 
 async def run(
@@ -202,28 +214,33 @@ async def run(
     start_time = time.time()
     tasks = []
     stats = defaultdict(int)
+    skipped_tests = set()
     for test_file in tests_files:
         suite = get_suite(test_file)
         assert suite, f"Test suite root directory is not found for {test_file}"
         full_test_name = suite.get_full_test_name(test_file)
 
         # Check if this file should be skipped.
-        if not test_skiplist:
-            if test_result := skipped_paths_features.try_skip(
-                test_file,
-                [SkipCategory.SKIP_LIST, SkipCategory.PERMANENT_SKIP_LIST],
-                full_test_name,
-            ):
+        if test_result := skipped_paths_features.try_skip(
+            test_file,
+            [SkipCategory.SKIP_LIST, SkipCategory.PERMANENT_SKIP_LIST],
+            full_test_name,
+        ):
+            if not test_skiplist:
                 pd.update(test_result)
                 stats[test_result.code] += 1
                 continue
-        if not test_intl:
-            if test_result := skipped_paths_features.try_skip(
-                test_file, [SkipCategory.INTL_TESTS], full_test_name
-            ):
+            else:
+                skipped_tests.add(full_test_name)
+        if test_result := skipped_paths_features.try_skip(
+            test_file, [SkipCategory.INTL_TESTS], full_test_name
+        ):
+            if not test_intl:
                 pd.update(test_result)
                 stats[test_result.code] += 1
                 continue
+            else:
+                skipped_tests.add(full_test_name)
 
         test_run_args = TestRunArgs(
             test_file,
@@ -244,12 +261,19 @@ async def run(
             return await fut
 
     failed_cases = defaultdict(list)
+    skipped_passed = []
     for task in asyncio.as_completed([wrap_task(fut) for fut in tasks]):
         result = await task
         stats[result.code] += 1
         pd.update(result)
         if result.code.is_failure:
             failed_cases[result.code].append(result.test_name)
+        if (
+            result.code == TestResultCode.TEST_PASSED
+            and result.test_name in skipped_tests
+        ):
+            skipped_passed.append(result.test_name)
+
     pd.finish()
     elapsed = time.time() - start_time
     print(f"Testing time: {elapsed:.2f}")
@@ -257,6 +281,7 @@ async def run(
     # Print result
     print_stats(stats)
     print_failed_tests(failed_cases)
+    print_skipped_passed_tests(skipped_passed)
 
 
 async def main():
