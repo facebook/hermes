@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<443255d7dd433634cec8a92c7d4f1d4c>>
+// @generated SignedSource<<2d6fd9e085abc8347743709393aff722>>
 
 #pragma once
 
@@ -907,6 +907,7 @@ struct runtime::GetPropertiesRequest : public Request {
 
   runtime::RemoteObjectId objectId{};
   std::optional<bool> ownProperties;
+  std::optional<bool> accessorPropertiesOnly;
   std::optional<bool> generatePreview;
 };
 
