@@ -531,10 +531,12 @@ class FlowChecker::ExprVisitor {
       // The type of ArrayExpression is only Tuple when that constraint was
       // passed in from above.
       visitArrayExpressionAsTuple(node, parent, constraint, tupleTy);
-    } else {
-      auto *constraintArrTy = llvh::dyn_cast_or_null<ArrayType>(
-          constraint ? constraint->info : nullptr);
+    } else if (
+        auto *constraintArrTy = llvh::dyn_cast_or_null<ArrayType>(
+            constraint ? constraint->info : nullptr)) {
       visitArrayExpressionAsArray(node, parent, constraint, constraintArrTy);
+    } else {
+      visitArrayExpressionAsArray(node, parent, nullptr, nullptr);
     }
   }
 
