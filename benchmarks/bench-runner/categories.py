@@ -189,6 +189,10 @@ _micros = Category(
             "arrayRead", "micros/arrayRead.js", gcMinHeap="1M", gcMaxHeap="1M"
         ),
         ResourceBenchmark(
+            "arrayReadByIndex", "micros/arrayReadByIndex.js",
+            gcMinHeap="1M", gcMaxHeap="1M"
+        ),
+        ResourceBenchmark(
             "largeArrayRead",
             "micros/largeArrayRead.js",
             gcMinHeap="1M",

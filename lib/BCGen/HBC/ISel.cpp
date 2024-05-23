@@ -995,6 +995,13 @@ void HBCISel::generateLoadPropertyInst(
     return;
   }
 
+  // If the prop is a uint8_t constant, generate the special bytecode.
+  if (auto *litNum = llvh::dyn_cast<LiteralNumber>(prop);
+      litNum && litNum->isUInt8Representible()) {
+    BCFGen_->emitGetByIndex(resultReg, objReg, litNum->asUInt8());
+    return;
+  }
+
   auto propReg = encodeValue(prop);
   BCFGen_->emitGetByVal(resultReg, objReg, propReg);
 }

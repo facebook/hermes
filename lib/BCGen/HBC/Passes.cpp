@@ -215,6 +215,18 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  // For properties that uint8_t literals, there's a GetByIndex variant
+  // that encodes the property as an immediate.
+  if (auto *loadPropInst = llvh::dyn_cast_or_null<LoadPropertyInst>(Inst)) {
+    if (opIndex == LoadPropertyInst::PropertyIdx) {
+      if (auto *litNum =
+              llvh::dyn_cast<LiteralNumber>(loadPropInst->getOperand(1));
+          litNum && litNum->isUInt8Representible()) {
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -247,10 +259,16 @@ bool LoadConstants::runOnFunction(Function *F) {
         }
         continue;
       }
-      // For all other instructions, insert load constants right before the they
-      // are needed. This minimizes their live range and therefore reduces
-      // register pressure. CodeMotion and CSE can later hoist and deduplicate
-      // them.
+
+      // For all other instructions, insert load constants right
+      // before the they are needed.  (They are not needed if the
+      // corresponding HBC instruction always expects a literal at the
+      // given operand position, or if there exists a variant of the
+      // HBC instruction that does.)
+      //
+      // This minimizes their live range and therefore reduces
+      // register pressure. CodeMotion and CSE can later hoist and
+      // deduplicate them.
       for (unsigned i = 0, e = I.getNumOperands(); i < e; ++i) {
         if (auto *literal = llvh::dyn_cast<Literal>(I.getOperand(i))) {
           if (!operandMustBeLiteral(&I, i)) {

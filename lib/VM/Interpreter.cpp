@@ -2446,6 +2446,38 @@ tailCall:
         ip = NEXTINST(GetByVal);
         DISPATCH;
       }
+      CASE(GetByIndex) {
+        if (LLVM_LIKELY(O2REG(GetByIndex).isObject())) {
+          auto *obj = vmcast<JSObject>(O2REG(GetByIndex));
+          if (LLVM_LIKELY(obj->hasFastIndexProperties())) {
+            PseudoHandle<> ourValue =
+                createPseudoHandle(JSObject::getOwnIndexed(
+                    PseudoHandle<JSObject>::create(obj),
+                    runtime,
+                    ip->iGetByIndex.op3));
+            if (LLVM_LIKELY(!ourValue->isEmpty())) {
+              gcScope.flushToSmallCount(KEEP_HANDLES);
+              O1REG(GetByIndex) = ourValue.get();
+              ip = NEXTINST(GetByIndex);
+              DISPATCH;
+            }
+          }
+        }
+        // Otherwise...
+        // This is the "slow path".
+        tmpHandle = HermesValue::encodeTrustedNumberValue(ip->iGetByIndex.op3);
+        CAPTURE_IP(
+            resPH = Interpreter::getByValTransient_RJS(
+                runtime, Handle<>(&O2REG(GetByIndex)), tmpHandle));
+        tmpHandle.clear();
+        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        O1REG(GetByIndex) = resPH->get();
+        ip = NEXTINST(GetByIndex);
+        DISPATCH;
+      }
 
       CASE(PutByValLoose)
       CASE(PutByValStrict) {

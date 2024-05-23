@@ -238,7 +238,7 @@ function *args() {
 // CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_args>(1 params, 25 registers):
+// CHECK:Function<?anon_0_args>(1 params, 24 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1
@@ -301,15 +301,14 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r8, r2, 1
 // CHECK-NEXT:    GetEnvironment    r9, r2, 1
 // CHECK-NEXT:    CreateEnvironment r10, r9, 0
-// CHECK-NEXT:    LoadConstZero     r10
-// CHECK-NEXT:    GetByVal          r11, r8, r10
+// CHECK-NEXT:    GetByIndex        r10, r8, 0
+// CHECK-NEXT:    LoadConstUInt8    r11, 1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 6, r11
 // CHECK-NEXT:    LoadConstUInt8    r12, 1
-// CHECK-NEXT:    StoreNPToEnvironment r2, 6, r12
-// CHECK-NEXT:    LoadConstUInt8    r13, 1
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r13
-// CHECK-NEXT:    NewObjectWithBuffer r14, 0, 2
-// CHECK-NEXT:    PutOwnBySlotIdx   r14, r11, 0
-// CHECK-NEXT:    Ret               r14
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r12
+// CHECK-NEXT:    NewObjectWithBuffer r13, 0, 2
+// CHECK-NEXT:    PutOwnBySlotIdx   r13, r10, 0
+// CHECK-NEXT:    Ret               r13
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
@@ -339,7 +338,7 @@ function *args() {
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
 // CHECK-NEXT:    LoadConstString   r9, "Generator functio"...
-// CHECK-NEXT:    Mov               r16, r9
+// CHECK-NEXT:    Mov               r15, r9
 // CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
@@ -364,6 +363,6 @@ function *args() {
 // CHECK-NEXT:    bc 380: line 13 col 5
 // CHECK-NEXT:  0x0029  function idx 4, starts at line 18 col 1
 // CHECK-NEXT:    bc 150: line 19 col 3
-// CHECK-NEXT:    bc 215: line 19 col 18
-// CHECK-NEXT:    bc 313: line 19 col 3
-// CHECK-NEXT:  0x0039  end of debug source table
+// CHECK-NEXT:    bc 213: line 19 col 18
+// CHECK-NEXT:    bc 311: line 19 col 3
+// CHECK-NEXT:  0x0038  end of debug source table

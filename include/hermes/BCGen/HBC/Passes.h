@@ -23,8 +23,12 @@ using llvh::dyn_cast;
 using llvh::isa;
 
 class LoadConstants : public FunctionPass {
-  /// Check whether a particular operand of an instruction must stay
-  /// as literal and hence cannot be lowered into load_const instruction.
+  /// Check whether a particular operand of an instruction may stay
+  /// as a literal, either because the corresponding HBC instruction encodes the
+  /// value as an immediate, or because there exists a variant HBC instruction
+  /// encoding the value as an immediate, and this variant is guaranteed to be
+  /// selected in instruction selection.  In these cases, the literal value
+  /// need not be lowered into load_const instruction.
   bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex);
 
  public:

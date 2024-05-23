@@ -392,6 +392,10 @@ OPERAND_STRING_ID(DelByIdStrictLong, 3)
 /// Get a property by value. Constants string values should instead use GetById.
 /// Arg1 = Arg2[Arg3]
 DEFINE_OPCODE_3(GetByVal, Reg8, Reg8, Reg8)
+/// Get a property by value, for the special case where the property is a numeric
+/// literal that is a uint8_t integer.
+/// Arg1 = Arg2[Arg3]
+DEFINE_OPCODE_3(GetByIndex, Reg8, Reg8, UInt8)
 
 /// Set a property by value. Constant string values should instead use GetById
 /// (unless they are array indices according to ES5.1 section 15.4, in which

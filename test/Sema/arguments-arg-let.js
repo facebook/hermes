@@ -28,6 +28,7 @@ function foo(a=arguments[1]) {
 // CHECK-NEXT:            Decl %d.3 'a' Parameter
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.5 'arguments' Let
+// CHECK-NEXT:            Scope %s.3
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    FunctionDeclaration

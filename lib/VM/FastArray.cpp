@@ -207,6 +207,7 @@ HermesValue FastArray::_getOwnIndexedImpl(
     PseudoHandle<JSObject> selfObj,
     Runtime &runtime,
     uint32_t index) {
+  NoHandleScope noHandles{runtime};
   auto *self = vmcast<FastArray>(selfObj.get());
   if (index >= self->getLength(runtime))
     return HermesValue::encodeEmptyValue();
