@@ -28,11 +28,26 @@ class StringLiteralTable {
   /// The storage that the mapping was initialised with.
   ConsecutiveStringStorage storage_;
 
-  /// Mapping between strings and IDs.
-  StringSetVector strings_;
+  /// Keys for the strings_ table.
+  /// We use a deque so that insertions do not move previous strings.  We seek
+  /// to preserve them because small strings' characters may be stored in-line
+  /// so a StringRef of a small string would point into the string and would be
+  /// invalidated if it were moved.
+  /// Always the same size as isIdentifier_.
+  /// TODO: Store isIdentifier info directly here to avoid mismatches,
+  /// not done yet because it's an invasive change.
+  std::deque<std::string> stringsKeys_;
+
+  /// Mapping of string to an index in stringsKeys_.
+  /// It's possible for stringsKeys_ to contain the same string twice:
+  /// first as a non-identifier and then as an identifier.
+  /// In that case, the value in this map will be updated to be the index of the
+  /// identifier.
+  /// In all other cases, there's only one corresponding string in stringsKeys_.
+  llvh::DenseMap<llvh::StringRef, size_t> strings_;
 
   // Mapping such that \c isIdentifier_[i] is true if and only if the string at
-  // \c strings_[i] should be treated as an identifier.
+  // \c stringsKeys_[i] should be treated as an identifier.
   std::vector<bool> isIdentifier_;
 
   /// The number of times a string was added as an identifier.  This information
@@ -99,7 +114,7 @@ class StringLiteralTable {
   /// Add a new string -- \p str -- to the accumulation.  If \p isIdentifier is
   /// true, then the string is marked as potentially being used as an
   /// identifier.
-  inline void addString(llvh::StringRef str, bool isIdentifier);
+  void addString(llvh::StringRef str, bool isIdentifier);
 
   /// Mode for storing new strings to the storage.
   enum class OptimizeMode {
@@ -145,7 +160,7 @@ inline uint32_t StringLiteralTable::getStringID(llvh::StringRef str) const {
       "The requested string is not in the mapping.  Is the part of the IR that "
       "introduces it being traversed by one of the functions in "
       "TraverseLiteralStrings.h ?");
-  return std::distance(strings_.begin(), iter);
+  return iter->second;
 }
 
 inline uint32_t StringLiteralTable::getIdentifierID(llvh::StringRef str) const {
@@ -165,27 +180,6 @@ inline std::vector<StringTableEntry> StringLiteralTable::acquireStringTable() {
 
 inline std::vector<unsigned char> StringLiteralTable::acquireStringStorage() {
   return storage_.acquireStringStorage();
-}
-
-inline void StringLiteralTable::addString(
-    llvh::StringRef str,
-    bool isIdentifier) {
-  assert(strings_.size() == isIdentifier_.size());
-  const auto fresh = strings_.size();
-  auto id = strings_.insert(str);
-  if (id == fresh) {
-    isIdentifier_.push_back(false);
-    numIdentifierRefs_.push_back(0);
-  }
-
-  if (isIdentifier) {
-    isIdentifier_[id] = true;
-    if (id >= storage_.count()) {
-      // We only track the frequency of new strings, so the ID needs to be
-      // translated.
-      numIdentifierRefs_[id - storage_.count()]++;
-    }
-  }
 }
 
 } // namespace hbc
