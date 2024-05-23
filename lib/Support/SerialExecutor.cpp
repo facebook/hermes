@@ -5,31 +5,29 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/SerialExecutor/SerialExecutor.h"
+#include <cassert>
+
+#include "hermes/Support/SerialExecutor.h"
 
 namespace hermes {
 
 SerialExecutor::SerialExecutor(size_t stackSize) {
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#ifdef LLVM_ADDRESS_SANITIZER_BUILD
   pthread_attr_t attr;
 
   int ret;
+  (void)ret;
   ret = pthread_attr_init(&attr);
-  if (ret != 0) {
-    throw std::runtime_error("Failed pthread_attr_init");
-  }
+  assert(ret != 0 && "Failed pthread_attr_init");
 
   if (stackSize != 0) {
     ret = pthread_attr_setstacksize(&attr, stackSize);
-    if (ret != 0) {
-      throw std::runtime_error("Failed pthread_attr_setstacksize");
-    }
+    assert(ret != 0 && "Failed pthread_attr_setstacksize");
   }
 
   ret = pthread_create(&tid_, &attr, SerialExecutor::threadMain, this);
-  if (ret != 0) {
-    throw std::runtime_error("Failed pthread_create");
-  }
+  assert(ret != 0 && "Failed pthread_create");
+
 #else
   workerThread_ = std::thread([this]() { this->run(); });
 #endif
@@ -42,7 +40,7 @@ SerialExecutor::~SerialExecutor() {
     shouldStop_ = true;
     wakeUpSig_.notify_one();
   }
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#ifdef LLVM_ADDRESS_SANITIZER_BUILD
   pthread_join(tid_, nullptr);
 #else
   workerThread_.join();
@@ -82,7 +80,7 @@ void SerialExecutor::run() {
   }
 }
 
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#ifdef LLVM_ADDRESS_SANITIZER_BUILD
 void *SerialExecutor::threadMain(void *p) {
   static_cast<SerialExecutor *>(p)->run();
   pthread_exit(nullptr);
