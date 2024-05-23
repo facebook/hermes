@@ -483,6 +483,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       ESTree::FunctionTypeAnnotationNode *node,
       AnnotationCB cb);
 
+  /// Visit the \p node for either resolution or parsing and call \p cb on each
+  /// of the type annotations in it.
+  /// \return the constructed TupleType.
+  template <typename AnnotationCB>
+  inline Type *processTupleTypeAnnotation(
+      ESTree::TupleTypeAnnotationNode *node,
+      AnnotationCB cb);
+
   /// Result indicating whether a type can flow into another type. If it can,
   /// additionally indicates whether a checked cast is needed.
   struct CanFlowResult {
@@ -820,6 +828,25 @@ Type *FlowChecker::processFunctionTypeAnnotation(
           /* isAsync */ false,
           /* isGenerator */ false),
       node);
+}
+
+template <typename AnnotationCB>
+Type *FlowChecker::processTupleTypeAnnotation(
+    ESTree::TupleTypeAnnotationNode *node,
+    AnnotationCB cb) {
+  llvh::SmallVector<Type *, 4> types{};
+  for (auto &n : node->_types) {
+    if (llvh::isa<ESTree::TupleTypeSpreadElementNode>(&n)) {
+      sm_.error(n.getSourceRange(), "ft: tuple spread unsupported");
+      continue;
+    }
+    if (llvh::isa<ESTree::TupleTypeLabeledElementNode>(&n)) {
+      sm_.error(n.getSourceRange(), "ft: tuple labels unsupported");
+      continue;
+    }
+    types.push_back(cb(&n));
+  }
+  return flowContext_.createType(flowContext_.createTuple(types), node);
 }
 
 } // namespace flow

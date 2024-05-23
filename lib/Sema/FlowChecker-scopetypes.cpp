@@ -567,6 +567,15 @@ class FlowChecker::DeclareScopeTypes {
           annotation);
     }
 
+    // Tuple types require resolving the tuple elements.
+    if (auto *tuple =
+            llvh::dyn_cast<ESTree::TupleTypeAnnotationNode>(annotation)) {
+      return outer.processTupleTypeAnnotation(
+          tuple, [this, &visited, depth](ESTree::Node *annotation) -> Type * {
+            return resolveTypeAnnotation(annotation, visited, depth);
+          });
+    }
+
     if (auto *func =
             llvh::dyn_cast<ESTree::FunctionTypeAnnotationNode>(annotation)) {
       return outer.processFunctionTypeAnnotation(

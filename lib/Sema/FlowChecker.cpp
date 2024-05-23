@@ -1491,19 +1491,10 @@ Type *FlowChecker::parseArrayTypeAnnotation(
 
 Type *FlowChecker::parseTupleTypeAnnotation(
     ESTree::TupleTypeAnnotationNode *node) {
-  llvh::SmallVector<Type *, 4> types{};
-  for (auto &n : node->_types) {
-    if (llvh::isa<ESTree::TupleTypeSpreadElementNode>(&n)) {
-      sm_.error(n.getSourceRange(), "ft: tuple spread unsupported");
-      continue;
-    }
-    if (llvh::isa<ESTree::TupleTypeLabeledElementNode>(&n)) {
-      sm_.error(n.getSourceRange(), "ft: tuple labels unsupported");
-      continue;
-    }
-    types.push_back(parseTypeAnnotation(&n));
-  }
-  return flowContext_.createType(flowContext_.createTuple(types), node);
+  return processTupleTypeAnnotation(
+      node, [this](ESTree::Node *annotation) -> Type * {
+        return parseTypeAnnotation(annotation);
+      });
 }
 
 Type *FlowChecker::parseObjectTypeAnnotation(

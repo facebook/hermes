@@ -7,13 +7,14 @@
 
 // RUN: %shermes -fno-std-globals --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
-type A = [number, string, bool];
+type A = [number, string, bool, A | null];
 
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%tuple.2 = tuple(number, string, boolean)
-// CHECK-NEXT:%object.3 = object({
+// CHECK-NEXT:%tuple.2 = tuple(number, string, boolean, %union.3)
+// CHECK-NEXT:%union.3 = union(null | %tuple.2)
+// CHECK-NEXT:%object.4 = object({
 // CHECK-NEXT:})
 
 // CHECK:SemContext
@@ -36,4 +37,8 @@ type A = [number, string, bool];
 // CHECK-NEXT:                            NumberTypeAnnotation
 // CHECK-NEXT:                            StringTypeAnnotation
 // CHECK-NEXT:                            BooleanTypeAnnotation
-// CHECK-NEXT:            ObjectExpression : %object.3
+// CHECK-NEXT:                            UnionTypeAnnotation
+// CHECK-NEXT:                                GenericTypeAnnotation
+// CHECK-NEXT:                                    Id 'A'
+// CHECK-NEXT:                                NullLiteralTypeAnnotation
+// CHECK-NEXT:            ObjectExpression : %object.4
