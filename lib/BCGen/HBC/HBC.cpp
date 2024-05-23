@@ -84,9 +84,6 @@ static void compileLazyFunctionWorker(void *argPtr) {
   hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
   Function *F = lazyFunc.getLazyFunction();
   assert(F && "no lazy IR for lazy function");
-  LLVM_DEBUG(
-      llvh::dbgs() << "Compiling lazy " << F->getDescriptiveDefinitionKindStr()
-                   << ": " << F->getOriginalOrInferredName() << "\n");
 
   SourceErrorManager &manager =
       F->getParent()->getContext().getSourceErrorManager();
@@ -96,6 +93,12 @@ static void compileLazyFunctionWorker(void *argPtr) {
   const LazyCompilationDataInst *lazyDataInst = F->getLazyCompilationDataInst();
   assert(lazyDataInst && "function must be lazy");
   const LazyCompilationData &lazyData = lazyDataInst->getData();
+
+  LLVM_DEBUG(llvh::dbgs() << "Compiling lazy "
+                          << F->getDescriptiveDefinitionKindStr() << ": "
+                          << F->getOriginalOrInferredName() << " @ ";
+             manager.dumpCoords(llvh::dbgs(), lazyData.span.Start);
+             llvh::dbgs() << "\n");
 
   // Free the AST once we're done compiling this function.
   AllocationScope alloc(context.getAllocator());
