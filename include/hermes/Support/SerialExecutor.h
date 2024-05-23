@@ -15,7 +15,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#if LLVM_ADDRESS_SANITIZER_BUILD
 #include <pthread.h>
 #else
 #include <thread>
@@ -29,7 +29,7 @@ namespace hermes {
 class SerialExecutor {
  private:
   // The thread on which all work is done.
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#ifdef LLVM_ADDRESS_SANITIZER_BUILD
   pthread_t tid_;
 #else
   std::thread workerThread_;
@@ -52,7 +52,7 @@ class SerialExecutor {
   /// they are posted. This stops running when shouldStop_ is set to true.
   void run();
 
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#if LLVM_ADDRESS_SANITIZER_BUILD
   /// Main function of the new thread.
   static void *threadMain(void *p);
 #endif
