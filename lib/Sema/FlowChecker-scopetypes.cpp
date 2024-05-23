@@ -576,6 +576,15 @@ class FlowChecker::DeclareScopeTypes {
           });
     }
 
+    // Object types require resolving the object fields.
+    if (auto *object =
+            llvh::dyn_cast<ESTree::ObjectTypeAnnotationNode>(annotation)) {
+      return outer.processObjectTypeAnnotation(
+          object, [this, &visited, depth](ESTree::Node *annotation) -> Type * {
+            return resolveTypeAnnotation(annotation, visited, depth);
+          });
+    }
+
     if (auto *func =
             llvh::dyn_cast<ESTree::FunctionTypeAnnotationNode>(annotation)) {
       return outer.processFunctionTypeAnnotation(

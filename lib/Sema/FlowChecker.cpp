@@ -1499,97 +1499,10 @@ Type *FlowChecker::parseTupleTypeAnnotation(
 
 Type *FlowChecker::parseObjectTypeAnnotation(
     ESTree::ObjectTypeAnnotationNode *node) {
-  if (!node->_indexers.empty()) {
-    sm_.error(
-        node->_indexers.front().getStartLoc(),
-        "ft: indexers are not supported in object types");
-    return flowContext_.getAny();
-  }
-  if (!node->_callProperties.empty()) {
-    sm_.error(
-        node->_callProperties.front().getStartLoc(),
-        "ft: call properties are not supported in object types");
-    return flowContext_.getAny();
-  }
-  if (!node->_internalSlots.empty()) {
-    sm_.error(
-        node->_internalSlots.front().getStartLoc(),
-        "ft: internal slots are not supported in object types");
-    return flowContext_.getAny();
-  }
-  if (node->_inexact) {
-    sm_.error(
-        node->getStartLoc(), "ft: inexact object types are not supported");
-    return flowContext_.getAny();
-  }
-
-  llvh::SmallVector<ExactObjectType::Field, 4> fields{};
-  // Used for checking for duplicate names.
-  llvh::SmallDenseSet<UniqueString *> names{};
-  for (auto &n : node->_properties) {
-    auto *prop = llvh::dyn_cast<ESTree::ObjectTypePropertyNode>(&n);
-    if (!prop) {
-      sm_.error(n.getSourceRange(), "ft: unsupported object type property");
-      continue;
-    }
-    if (prop->_variance) {
-      sm_.error(
-          n.getSourceRange(), "ft: object type variance is not supported");
-      continue;
-    }
-    if (prop->_static) {
-      sm_.error(
-          n.getSourceRange(),
-          "ft: object type static property is not supported");
-      continue;
-    }
-    if (prop->_proto) {
-      sm_.error(
-          n.getSourceRange(),
-          "ft: object type __proto__ property is not supported");
-      continue;
-    }
-    if (prop->_method) {
-      sm_.error(
-          n.getSourceRange(),
-          "ft: object type method property is not supported");
-      continue;
-    }
-    if (prop->_optional) {
-      sm_.error(
-          n.getSourceRange(),
-          "ft: object type optional property is not supported");
-      continue;
-    }
-    if (prop->_kind != kw_.identInit) {
-      sm_.error(n.getSourceRange(), "ft: object type accessors not supported");
-      continue;
-    }
-
-    UniqueString *name = propertyKeyAsIdentifier(prop->_key);
-    if (!name) {
-      sm_.error(
-          prop->_key->getSourceRange(), "ft: unsupported object type key");
-      continue;
-    }
-
-    // Check for duplicates.
-    auto [it, inserted] = names.insert(name);
-    if (!inserted) {
-      sm_.error(
-          prop->_key->getSourceRange(),
-          llvh::Twine("ft: duplicate object type property: ") + name->str());
-      continue;
-    }
-
-    // Found a property we support, add it to the list.
-    fields.emplace_back(
-        Identifier::getFromPointer(name), parseTypeAnnotation(prop->_value));
-  }
-
-  // It's possible we've failed on one of the properties, just continue
-  // with an empty object type because we're going to fail anyway.
-  return flowContext_.createType(flowContext_.createExactObject(fields), node);
+  return processObjectTypeAnnotation(
+      node, [this](ESTree::Node *annotation) -> Type * {
+        return parseTypeAnnotation(annotation);
+      });
 }
 
 Type *FlowChecker::parseGenericTypeAnnotation(
