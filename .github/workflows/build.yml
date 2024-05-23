@@ -532,14 +532,14 @@ jobs:
     - name: Setup dependencies
       run: |-
         (yes | sdkmanager "cmake;3.22.1" --verbose) || true
+        mkdir -p "$HERMES_WS_DIR"
+        cd "$HERMES_WS_DIR"
         # Check out test262 at a pinned revision to reduce flakiness
         git clone https://github.com/tc39/test262
         cd test262
         git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
     - name: Build Hermes Compiler
       run: |-
-        mkdir -p "$HERMES_WS_DIR"
-        cd "$HERMES_WS_DIR"
         cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
         cmake --build ./build -j 4 --target hermesc
     - name: Run android tests
