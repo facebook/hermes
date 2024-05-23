@@ -538,15 +538,13 @@ jobs:
         git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
     - name: Build Hermes Compiler
       run: |-
-        mkdir -p "$HERMES_WS_DIR"
-        cd "$HERMES_WS_DIR"
         cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
         cmake --build ./build -j 4 --target hermesc
     - name: Run android tests
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
         api-level: 29
-        script: find . -name "gradlew" && cd hermes/android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+        script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
   test-macos-test262:
     runs-on: macos-latest
     steps:
