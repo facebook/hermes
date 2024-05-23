@@ -530,7 +530,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4.1.0
       with:
-        path: hermes
+        path: /tmp/hermes/
     - name: Setup dependencies
       run: |-
         (yes | sdkmanager "cmake;3.22.1" --verbose) || true
