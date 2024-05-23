@@ -1818,6 +1818,7 @@ typedArrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  auto targetValue = runtime.makeHandle(res.getValue());
 
   HermesValue actualIndexValue =
       HermesValue::encodeTrustedNumberValue(actualIndex);
@@ -1843,7 +1844,6 @@ typedArrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
     }
   }
 
-  auto targetValue = runtime.makeHandle(res.getValue());
   if (LLVM_UNLIKELY(
           A->setOwnIndexed(A, runtime, actualIndex, targetValue) ==
           ExecutionStatus::EXCEPTION)) {
