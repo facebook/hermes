@@ -1783,9 +1783,6 @@ typedArrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
     // 6a. Let from be ! ToString(𝔽(length - k - 1)).
     double from = len - k - 1;
 
-    // 6b. Let Pk be ! ToString(𝔽(k)).
-    kHandle = HermesValue::encodeTrustedNumberValue(k);
-
     // 6c. Let fromValue be ? Get(O, from).
     fromValueHandle =
         JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, from);
