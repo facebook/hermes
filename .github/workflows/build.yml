@@ -551,7 +551,6 @@ jobs:
         cmake --build ./build -j 4 --target hermesc
     - name: Run android tests
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
-      working-directory: hermes/android
       with:
         api-level: 29
         script: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
