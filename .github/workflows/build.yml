@@ -518,9 +518,9 @@ jobs:
         api-level: 29
         script: |
           cd "$HERMES_WS_DIR"/react-native
-          && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
-          && adb shell am start com.facebook.react.uiapp/.RNTesterActivity
-          && timeout 30s adb logcat -e "Using Hermes: true" -m 1
+          ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
+          adb shell am start com.facebook.react.uiapp/.RNTesterActivity
+          timeout 30s adb logcat -e "Using Hermes: true" -m 1
   test-e2e-intl:
     runs-on: ubuntu-latest
     env:
