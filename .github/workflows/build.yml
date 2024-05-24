@@ -549,7 +549,13 @@ jobs:
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
         api-level: 29
-        script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest; cat /home/runner/work/hermes/build_android/intltest/reports/androidTests/connected/index.html
+        script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+    - name: Store test log
+      uses: actions/upload-artifact@v4
+      with:
+        name: tests
+        path: |
+          /home/runner/work/hermes/build_android/intltest/reports/androidTests/connected
   test-macos-test262:
     runs-on: macos-latest
     steps:
