@@ -497,6 +497,7 @@ jobs:
       ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
       HERMES_WS_DIR: /home/runner/work/hermes
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
+      JAVA_HOME: /usr/lib/jvm/openjdk-17
     steps:
     - uses: actions/setup-node@v4.0.2
     - name: Setup dependencies
