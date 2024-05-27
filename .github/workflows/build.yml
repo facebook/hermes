@@ -491,22 +491,22 @@ jobs:
   test-e2e:
     runs-on: ubuntu-latest
     env:
-      TERM: "dumb"
-      GRADLE_OPTS: '-Dorg.gradle.daemon=false'
       # By default we only build ARM64 to save time/resources. For release/nightlies/prealpha, we override this value to build all archs.
       ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
       HERMES_WS_DIR: /home/runner/work/hermes
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
-      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
     steps:
-    - uses: actions/setup-node@v4.0.2
-    - name: Configure JDK
+    - name: Install Node
+      uses: actions/setup-node@v4.0.2
+    - name: Install JDK
       uses: actions/setup-java@v3
       with:
         distribution: "temurin"
         java-version: "17"
-    - uses: actions/checkout@v4.1.0
-    - name: Prepare RNTester
+    - name: Checkout Hermes
+      uses: actions/checkout@v4.1.0
+    - name: Checkout React Native
       run: |-
         mkdir -p "$HERMES_WS_DIR"
         cd "$HERMES_WS_DIR"
