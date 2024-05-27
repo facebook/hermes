@@ -495,7 +495,7 @@ jobs:
       ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
       ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
       HERMES_WS_DIR: /home/runner/work/hermes
-      REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
+      REACT_NATIVE_OVERRIDE_HERMES_DIR: $HERMES_WS_DIR/hermes
     steps:
     - name: Install Node
       uses: actions/setup-node@v4.0.2
@@ -512,7 +512,7 @@ jobs:
         cd react-native
         yarn install
         echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
-    - name: Run android tests
+    - name: Run RNTester
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
         api-level: 29
