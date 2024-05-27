@@ -508,8 +508,6 @@ jobs:
       uses: actions/checkout@v4.1.0
     - name: Checkout React Native
       run: |-
-        mkdir -p "$HERMES_WS_DIR"
-        cd "$HERMES_WS_DIR"
         git clone --depth=1 https://github.com/facebook/react-native
         cd react-native
         yarn install
@@ -521,7 +519,7 @@ jobs:
         ndk: 26.1.10909125
         cmake: 3.22.1
         script: |
-          export && pwd && find ../ -name "gradlew" && cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
+          cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
           adb shell am start com.facebook.react.uiapp/.RNTesterActivity
           timeout 30s adb logcat -e "Using Hermes: true" -m 1
   test-e2e-intl:
