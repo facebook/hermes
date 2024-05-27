@@ -2450,11 +2450,12 @@ tailCall:
         if (LLVM_LIKELY(O2REG(GetByIndex).isObject())) {
           auto *obj = vmcast<JSObject>(O2REG(GetByIndex));
           if (LLVM_LIKELY(obj->hasFastIndexProperties())) {
-            PseudoHandle<> ourValue =
+            CAPTURE_IP_ASSIGN(
+                auto ourValue,
                 createPseudoHandle(JSObject::getOwnIndexed(
                     PseudoHandle<JSObject>::create(obj),
                     runtime,
-                    ip->iGetByIndex.op3));
+                    ip->iGetByIndex.op3)));
             if (LLVM_LIKELY(!ourValue->isEmpty())) {
               gcScope.flushToSmallCount(KEEP_HANDLES);
               O1REG(GetByIndex) = ourValue.get();
