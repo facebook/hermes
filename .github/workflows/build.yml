@@ -502,7 +502,11 @@ jobs:
     - name: Setup dependencies
       run: |-
         (yes | sdkmanager "cmake;3.22.1" --verbose) || true
-        sudo apt update && sudo apt install -y openjdk-11-jdk openjdk-17-jdk
+    - name: Configure JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: "temurin"
+        java-version: "17"
     - uses: actions/checkout@v4.1.0
     - name: Prepare RNTester
       run: |-
