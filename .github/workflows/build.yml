@@ -499,9 +499,6 @@ jobs:
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
     steps:
     - uses: actions/setup-node@v4.0.2
-    - name: Setup dependencies
-      run: |-
-        (yes | sdkmanager "cmake;3.22.1" "ndk;26.1.10909125" --verbose) || true
     - name: Configure JDK
       uses: actions/setup-java@v3
       with:
@@ -520,6 +517,8 @@ jobs:
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
         api-level: 29
+        ndk: 26.1.10909125
+        cmake: 3.22.1
         script: |
           pwd && find ../ -name "gradlew" && cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
           adb shell am start com.facebook.react.uiapp/.RNTesterActivity
