@@ -508,6 +508,7 @@ jobs:
       uses: actions/checkout@v4.1.0
     - name: Checkout React Native
       run: |-
+        cd "$HERMES_WS_DIR"
         git clone --depth=1 https://github.com/facebook/react-native
         cd react-native
         yarn install
@@ -536,11 +537,13 @@ jobs:
       uses: actions/checkout@v4.1.0
     - name: Checkout Test262
       run: |-
+        cd "$HERMES_WS_DIR"
         git clone https://github.com/tc39/test262
         cd test262
         git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
     - name: Build Hermes Compiler
       run: |-
+        cd "$HERMES_WS_DIR"
         cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
         cmake --build ./build -j 4 --target hermesc
     - name: Run android tests
