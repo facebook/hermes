@@ -497,13 +497,12 @@ jobs:
       ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
       HERMES_WS_DIR: /home/runner/work/hermes
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
-      JAVA_HOME: /usr/lib/jvm/openjdk-17
     steps:
     - uses: actions/setup-node@v4.0.2
     - name: Setup dependencies
       run: |-
         (yes | sdkmanager "cmake;3.22.1" --verbose) || true
-        sudo apt update && sudo apt install -y openjdk-17-jdk
+        sudo apt update && sudo apt install -y openjdk-11-jdk
     - uses: actions/checkout@v4.1.0
     - name: Prepare RNTester
       run: |-
@@ -518,7 +517,7 @@ jobs:
       with:
         api-level: 29
         script: |
-          JAVA_HOME=/usr/lib/jvm/openjdk-17  pwd && find ../ -name "gradlew" && cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
+          pwd && find ../ -name "gradlew" && cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
           adb shell am start com.facebook.react.uiapp/.RNTesterActivity
           timeout 30s adb logcat -e "Using Hermes: true" -m 1
   test-e2e-intl:
