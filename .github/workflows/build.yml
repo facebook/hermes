@@ -511,6 +511,8 @@ jobs:
         git clone --depth=1 https://github.com/facebook/react-native
         cd react-native
         yarn install
+        pwd
+        find
         echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
     - name: Run RNTester
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
