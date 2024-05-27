@@ -497,6 +497,7 @@ jobs:
       ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
       HERMES_WS_DIR: /home/runner/work/hermes
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
     steps:
     - uses: actions/setup-node@v4.0.2
     - name: Configure JDK
