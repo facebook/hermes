@@ -532,6 +532,7 @@ jobs:
       # By default we only build ARM64 to save time/resources. For release/nightlies/prealpha, we override this value to build all archs.
       ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
       HERMES_WS_DIR: /home/runner/work/hermes
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
     steps:
     - uses: actions/checkout@v4.1.0
     - name: Setup dependencies
@@ -554,11 +555,11 @@ jobs:
         api-level: 29
         script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
     - name: Store test log
+      if: ${{ failure() }}
       uses: actions/upload-artifact@v4
       with:
         name: tests
-        path: |
-          /home/runner/work/hermes/build_android/intltest/reports/androidTests/connected
+        path: /home/runner/work/hermes/build_android/intltest/reports/androidTests/connected
   test-macos-test262:
     runs-on: macos-latest
     steps:
