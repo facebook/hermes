@@ -501,7 +501,7 @@ jobs:
     - uses: actions/setup-node@v4.0.2
     - name: Setup dependencies
       run: |-
-        (yes | sdkmanager "cmake;3.22.1" --verbose) || true
+        (yes | sdkmanager "cmake;3.22.1" "ndk;26.1.10909125" --verbose) || true
     - name: Configure JDK
       uses: actions/setup-java@v3
       with:
