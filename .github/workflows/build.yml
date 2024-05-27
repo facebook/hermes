@@ -553,6 +553,7 @@ jobs:
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
         api-level: 29
+        emulator-options: -timezone Europe/Paris -partition-size 2048
         script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
     - name: Store test log
       if: ${{ failure() }}
