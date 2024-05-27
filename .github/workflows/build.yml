@@ -525,26 +525,20 @@ jobs:
   test-e2e-intl:
     runs-on: ubuntu-latest
     env:
-      TERM: "dumb"
-      GRADLE_OPTS: '-Dorg.gradle.daemon=false'
       # By default we only build ARM64 to save time/resources. For release/nightlies/prealpha, we override this value to build all archs.
       ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
       HERMES_WS_DIR: /home/runner/work/hermes
       ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
     steps:
-    - uses: actions/checkout@v4.1.0
-    - name: Setup dependencies
+    - name: Checkout Hermes
+      uses: actions/checkout@v4.1.0
+    - name: Checkout Test262
       run: |-
-        (yes | sdkmanager "cmake;3.22.1" --verbose) || true
-        mkdir -p "$HERMES_WS_DIR"
-        # Check out test262 at a pinned revision to reduce flakiness
-        cd "$HERMES_WS_DIR"
         git clone https://github.com/tc39/test262
         cd test262
         git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
     - name: Build Hermes Compiler
       run: |-
-        cd "$HERMES_WS_DIR"
         cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
         cmake --build ./build -j 4 --target hermesc
     - name: Run android tests
@@ -553,12 +547,6 @@ jobs:
         api-level: 29
         emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
-    - name: Store test log
-      if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: tests
-        path: /home/runner/work/hermes/build_android/intltest/reports/androidTests/connected
   test-macos-test262:
     runs-on: macos-latest
     steps:
