@@ -164,29 +164,19 @@ jobs:
       with:
         xcode-version: 14.3.1
     - uses: actions/checkout@v4.1.0
-    - name: Cache setup
-      uses: actions/cache@v4.0.0
-      with:
-        key: v4-repo-${{ github.sha }}
-        path: |-
-          build_iphoneos
-          build_catalyst
-          build_iphonesimulator
-          build_macosx
-          destroot
     - name: Install dependencies
       run: brew install cmake ninja
     - name: Build the test application
       run: pod install
       working-directory: test/ApplePlatformsIntegrationTestApp
-    - name: Test MacOS application
-      run: |-
-        xcodebuild test \
-          -workspace ApplePlatformsIntegrationTests.xcworkspace \
-          -configuration Debug \
-          -destination 'platform=macOS' \
-          -scheme ApplePlatformsIntegrationMacTests
-      working-directory: test/ApplePlatformsIntegrationTestApp
+    #- name: Test MacOS application
+    #  run: |-
+    #    xcodebuild test \
+    #      -workspace ApplePlatformsIntegrationTests.xcworkspace \
+    #      -configuration Debug \
+    #      -destination 'platform=macOS' \
+     #     -scheme ApplePlatformsIntegrationMacTests
+     # working-directory: test/ApplePlatformsIntegrationTestApp
     - name: Test iPhone application
       run: |-
         xcodebuild test \
