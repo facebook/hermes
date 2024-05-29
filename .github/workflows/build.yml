@@ -57,10 +57,7 @@ jobs:
         #cmake -S hermes -B build_hdb -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
         #  -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
         #  -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive"
-        cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
-          -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
-          -DHERMES_ENABLE_DEBUGGER=False
+        cmake -S hermes -B build
         #cmake --build build_hdb --target hdb
         cmake --build build --target check-hermes hermes hvm hbcdump hermesc
     - name: Create CLI tarball
