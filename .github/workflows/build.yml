@@ -195,7 +195,7 @@ jobs:
         xcodebuild test \
           -workspace ApplePlatformsIntegrationTests.xcworkspace \
           -configuration Debug \
-          -destination 'platform=iOS Simulator,name=iPhone 14 Pro Max,OS=16.2'
+          -destination 'platform=iOS Simulator,name=iPhone 14 Pro Max,OS=16.2' \
           -scheme ApplePlatformsIntegrationMobileTests
       working-directory: test/ApplePlatformsIntegrationTestApp
   package-apple-runtime:
