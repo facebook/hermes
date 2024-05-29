@@ -134,7 +134,7 @@ jobs:
     - name: Install dependencies
       run: |-
         brew install cmake ninja
-        sudo gem install cocoapods
+        sudo gem install cocoapods  
     - name: Build the iOS frameworks
       run: "./utils/build-ios-framework.sh"
     - name: Build the Mac frameworks
@@ -156,7 +156,7 @@ jobs:
         cmake --build ./build
         cmake --build ./build --target check-hermes
   test-apple-runtime:
-    runs-on: macos-latest
+    runs-on: macos-13
     needs: build-apple-runtime
     env:
       TERM: dumb
