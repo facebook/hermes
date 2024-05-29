@@ -85,10 +85,6 @@ class StringLiteralTable {
   /// marked as an identifier.
   inline uint32_t getIdentifierID(llvh::StringRef str) const;
 
-  /// Exposes interface to extract parts of underlying ConsecutiveStringStorage
-  inline std::vector<StringTableEntry> acquireStringTable();
-  inline std::vector<unsigned char> acquireStringStorage();
-
   /// \return a view of the string table entries in the underlying storage.
   StringTableEntry::StringTableRefTy getStringTableView() const {
     return storage_.getStringTableView();
@@ -172,14 +168,6 @@ inline uint32_t StringLiteralTable::getIdentifierID(llvh::StringRef str) const {
       "of the traversal functions in TraverseLiteralStrings.h, was the usage "
       "of the string as an identifier correctly traversed?");
   return idx;
-}
-
-inline std::vector<StringTableEntry> StringLiteralTable::acquireStringTable() {
-  return storage_.acquireStringTable();
-}
-
-inline std::vector<unsigned char> StringLiteralTable::acquireStringStorage() {
-  return storage_.acquireStringStorage();
 }
 
 } // namespace hbc

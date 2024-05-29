@@ -204,8 +204,8 @@ LiteralBufferBuilder::Result Builder::generate() {
   }
 
   return {
-      valStorage.acquireStringStorage(),
-      keyStorage.acquireStringStorage(),
+      std::move(valStorage).acquireStringTableAndStorage().second,
+      std::move(keyStorage).acquireStringTableAndStorage().second,
       std::move(objShapeTable),
       std::move(literalOffsetMap)};
 }

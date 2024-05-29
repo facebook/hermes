@@ -764,9 +764,6 @@ template ConsecutiveStringStorage::ConsecutiveStringStorage(
     bool optimize);
 
 uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {
-  ensureTableValid();
-  ensureStorageValid();
-
   auto &entry = strTable_[i];
   uint32_t length = entry.getLength();
   assert(
@@ -783,8 +780,6 @@ uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {
 }
 
 void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
-  ensureTableValid();
-  ensureStorageValid();
   // If we have not yet been written, just acquire the rhs.
   if (strTable_.empty()) {
     *this = std::move(rhs);
@@ -806,8 +801,6 @@ void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
 llvh::StringRef ConsecutiveStringStorage::getUTF8StringAtIndex(
     uint32_t idx,
     std::string &utf8ConversionStorage) const {
-  ensureTableValid();
-  ensureStorageValid();
   assert(idx < strTable_.size() && "getUTF8StringAtIndex: invalid index");
   return getUTF8StringFromEntry(
       strTable_[idx], storage_, utf8ConversionStorage);

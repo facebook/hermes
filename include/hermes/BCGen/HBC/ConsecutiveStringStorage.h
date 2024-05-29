@@ -53,19 +53,6 @@ class ConsecutiveStringStorage {
   /// A consecutive storage of char sequences.
   std::vector<unsigned char> storage_{};
 
-  /// Whether the string table is still valid to use.
-  bool isTableValid_{true};
-
-  /// Whether the string storage is still valid to use.
-  bool isStorageValid_{true};
-
-  inline void ensureTableValid() const {
-    assert(isTableValid_ && "String Table no longer valid");
-  }
-  inline void ensureStorageValid() const {
-    assert(isStorageValid_ && "String Storage no longer valid");
-  }
-
  public:
   ConsecutiveStringStorage() = default;
   ConsecutiveStringStorage(ConsecutiveStringStorage &&) = default;
@@ -97,43 +84,28 @@ class ConsecutiveStringStorage {
 
   /// \returns a view to the current table.
   StringTableRefTy getStringTableView() const {
-    ensureTableValid();
     return strTable_;
   }
 
   MutStringTableRefTy getStringTableView() {
-    ensureTableValid();
     return strTable_;
   }
 
   /// \returns the number of strings contained in this storage.
   size_t count() const {
-    ensureTableValid();
     return strTable_.size();
   }
 
-  /// \returns a reference to the string table. Notice that whoever receives
-  /// the table may temper, swap or destroy the content. Hence after this
-  /// call, the string table is no longer valid to use.
-  std::vector<StringTableEntry> acquireStringTable() {
-    ensureTableValid();
-    isTableValid_ = false;
-    return std::move(strTable_);
+  /// \returns the string table and the storage.
+  /// Consumes the ConsecutiveStringStorage, after which it must not be used.
+  std::pair<std::vector<StringTableEntry>, std::vector<unsigned char>>
+  acquireStringTableAndStorage() && {
+    return {std::move(strTable_), std::move(storage_)};
   };
 
   /// \returns a view to the current table.
   StringStorageRefTy getStringStorageView() const {
-    ensureTableValid();
     return storage_;
-  }
-
-  /// \returns a reference to the string storage. Notice that whoever receives
-  /// the table may temper, swap or destroy the content. Hence after this
-  /// call, the string table is no longer valid to use.
-  std::vector<unsigned char> acquireStringStorage() {
-    ensureStorageValid();
-    isStorageValid_ = false;
-    return std::move(storage_);
   }
 
   /// \return the hash of the string represented by the \p i'th entry, as it
