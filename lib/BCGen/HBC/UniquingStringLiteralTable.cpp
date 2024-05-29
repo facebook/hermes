@@ -12,20 +12,6 @@
 namespace hermes {
 namespace hbc {
 
-namespace {
-
-/// Works out the String Kind for the string \p str depending on whether it
-/// \p isIdentifier or not.
-StringKind::Kind kind(llvh::StringRef str, bool isIdentifier) {
-  if (isIdentifier) {
-    return StringKind::Identifier;
-  } else {
-    return StringKind::String;
-  }
-}
-
-} // namespace
-
 StringLiteralTable::StringLiteralTable(
     ConsecutiveStringStorage storage,
     std::vector<bool> isIdentifier)
@@ -52,8 +38,9 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds(
   StringKind::Accumulator acc;
 
   assert(stringsKeys_.size() == isIdentifier_.size());
-  for (size_t i = start; i < stringsKeys_.size(); ++i) {
-    acc.push_back(kind(stringsKeys_[i], isIdentifier_[i]));
+  for (size_t i = start, e = isIdentifier_.size(); i < e; ++i) {
+    acc.push_back(
+        isIdentifier_[i] ? StringKind::Identifier : StringKind::String);
   }
 
   return std::move(acc).entries();
@@ -216,7 +203,9 @@ void StringLiteralTable::sortAndRemap(bool optimize) {
 
   for (size_t i = existingStrings; i < allStrings; ++i) {
     indices.emplace_back(
-        i, stringsKeys_[i], kind(stringsKeys_[i], isIdentifier_[i]));
+        i,
+        stringsKeys_[i],
+        isIdentifier_[i] ? StringKind::Identifier : StringKind::String);
   }
 
   // Sort indices of new strings by frequency of identifier references.
