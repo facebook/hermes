@@ -184,6 +184,12 @@ void LowerToStateMachine::convert() {
   setupScopes();
   moveLocalsToOuter();
 
+  auto &innerFuncParams = inner_->getJSDynamicParams();
+  // Clear out the original parameters in inner_, except for 'this'.
+  for (size_t i = 1, e = innerFuncParams.size(); i < e; ++i)
+    Value::destroy(innerFuncParams[i]);
+  innerFuncParams.resize(1);
+
   // The inner function will take 2 parameters: action, value. Action
   // communicates what method was called on the generator: next, return, or
   // throw. For return and throw actions, value will hold the parameter that was
@@ -407,9 +413,6 @@ void LowerToStateMachine::moveLocalsToOuter() {
     }
     destroyer.add(ASI);
   }
-
-  // Clear out the original parameters in inner_, except for 'this'.
-  innerFuncParams.resize(1);
 }
 
 void LowerToStateMachine::writebackTerminator(
