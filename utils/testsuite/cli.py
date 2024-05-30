@@ -9,7 +9,6 @@ import asyncio
 import importlib.resources
 import os
 import shutil
-import sys
 import tempfile
 import time
 from asyncio import Semaphore
@@ -452,7 +451,3 @@ async def main() -> int:
         tmp_work_dir.cleanup()
 
     return exit_code
-
-
-if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
