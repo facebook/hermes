@@ -555,7 +555,7 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
       *records[1]);
   // The function was called with one argument, the object.
   auto chfrExpect = SynthTrace::CreateHostFunctionRecord(
-      records[1]->time_,
+      records[2]->time_,
       functionID,
       propNameID,
 #ifdef HERMESVM_API_TRACE_DEBUG
