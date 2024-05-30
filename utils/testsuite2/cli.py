@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import os
 import shutil
+import sys
 import tempfile
 import time
 from asyncio import Semaphore
@@ -234,7 +235,7 @@ async def run(
     shermes: bool,
     opt: bool,
     verbose: bool,
-) -> None:
+) -> int:
     """
     Run all tests with async subprocess and wait for results in completion order
     of test jobs. Each subprocess invokes hermes binary on a given test file, so
@@ -366,6 +367,8 @@ async def run(
         print_skipped_passed_tests(skipped_passed)
         remove_tests_from_skiplist(skipped_passed, skipped_paths_features)
 
+    return 1 if len(failed_cases) > 0 else 0
+
 
 def print_preprocessed_source(path: PathT) -> None:
     """
@@ -391,7 +394,7 @@ def print_preprocessed_source(path: PathT) -> None:
     print(test_case.source)
 
 
-async def main():
+async def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
     validate_args(args)
@@ -400,7 +403,7 @@ async def main():
     # separately for readability.
     if args.dump_source:
         print_preprocessed_source(args.paths[0])
-        return
+        return 0
 
     work_dir: Optional[str] = args.work_dir
     # Hold the reference to the temporary directory (if we do create one), so
@@ -418,7 +421,7 @@ async def main():
     skip_list_cfg_path = os.path.join(os.path.dirname(__file__), "skiplist.json")
     skipped_paths_features = SkippedPathsOrFeatures(skip_list_cfg_path)
 
-    await run(
+    return await run(
         args.paths,
         args.binary_directory,
         skipped_paths_features,
@@ -434,4 +437,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(asyncio.run(main()))
