@@ -504,6 +504,12 @@ class ClassContext {
   /// On subsequent calls, return that FunctionInfo.
   FunctionInfo *getOrCreateFieldInitFunctionInfo();
 
+  /// \return true if the current class of this context is a derived class.
+  bool isDerivedClass() const {
+    // It's a derived class if it has a super class node.
+    return getSuperClass(classNode_);
+  }
+
   /// Whether the class has an explicit constructor.  Only valid after
   /// the body of the class has been visited.
   bool hasConstructor = false;

@@ -225,5 +225,17 @@ bool isAsync(FunctionLikeNode *node) {
   }
 }
 
+Node *getSuperClass(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return cast<ClassExpressionNode>(node)->_superClass;
+    case NodeKind::ClassDeclaration:
+      return cast<ClassDeclarationNode>(node)->_superClass;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
 } // namespace ESTree
 } // namespace hermes

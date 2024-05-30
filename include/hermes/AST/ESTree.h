@@ -1236,6 +1236,9 @@ bool isGenerator(FunctionLikeNode *node);
 /// \return true when \p node is an async function.
 bool isAsync(FunctionLikeNode *node);
 
+/// \return the super class node of \p node.
+Node *getSuperClass(ClassLikeNode *node);
+
 /// Allow using \p NodeKind in \p llvh::DenseMaps.
 struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
   static inline NodeKind getEmptyKey() {

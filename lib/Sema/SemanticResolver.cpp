@@ -882,6 +882,11 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
       sm_.error(
           node->getSourceRange(), "super() call only allowed in constructor");
     }
+    if (!(curClassContext_ && curClassContext_->isDerivedClass())) {
+      sm_.error(
+          node->getSourceRange(),
+          "super() call only allowed in subclass constructor");
+    }
   }
 
   visitESTreeChildren(*this, node);
