@@ -47,6 +47,15 @@ struct PreParsedFunctionInfo {
   /// Note that we can't use \c UniqueString* here since they are
   /// arena-allocated and reclaimed between parse passes.
   llvh::SmallVector<llvh::SmallString<24>, 1> directives{};
+
+  /// Whether or not the function contains an arrow function.
+  bool containsArrowFunctions;
+
+  /// Whether this function might contain an arrow function using arguments.
+  /// This will be used as a conservative estimate of whether a non-arrow
+  /// function needs to eagerly create and capture its Arguments object.
+  /// Used for lazy compilation to populate the FunctionInfo.
+  bool mayContainArrowFunctionsUsingArguments;
 };
 
 /// Per buffer information from preparsing.

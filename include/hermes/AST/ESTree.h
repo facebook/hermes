@@ -364,6 +364,14 @@ class BlockStatementDecoration : public ScopeDecorationBase {
   bool paramYield{false};
   /// If this is a lazy block, the Await param to restore when eagerly parsing.
   bool paramAwait{false};
+  /// Whether this function contains an arrow function.
+  /// Used for lazy compilation to populate the FunctionInfo.
+  bool containsArrowFunctions = false;
+  /// Whether this function might contain an arrow function using arguments.
+  /// This will be used as a conservative estimate of whether a non-arrow
+  /// function needs to eagerly create and capture its Arguments object.
+  /// Used for lazy compilation to populate the FunctionInfo.
+  bool mayContainArrowFunctionsUsingArguments = false;
 };
 
 class ForStatementDecoration : public ScopeDecorationBase {};
