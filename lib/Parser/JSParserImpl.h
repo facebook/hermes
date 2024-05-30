@@ -216,6 +216,32 @@ class JSParserImpl {
   /// so we can recover directive nodes back in the lazyParse pass.
   llvh::SmallVector<UniqueString *, 1> seenDirectives_{};
 
+  /// Whether the current function is an arrow function.
+  /// Only set/restored by SaveFunctionState when entering/exiting a new
+  /// function.
+  bool isArrowFunction_ = false;
+
+  /// Whether the nearest enclosing non-arrow function contains an arrow
+  /// function.
+  /// Used only in PreParse phase to send information to SemanticResolver for
+  /// from the LazyParse phase.
+  /// Only updated by SaveFunctionState.
+  ///   * Set to true when entering an arrow function.
+  ///   * Set to false when entering a non-arrow function.
+  ///   * Unchanged when leaving an arrow function.
+  ///   * Restored to previous value when leaving a non-arrow function.
+  bool containsArrowFunctions_ = false;
+
+  /// Whether the nearest enclosing non-arrow function may contain an arrow
+  /// function using arguments.
+  /// Used only in PreParse phase to send information to SemanticResolver
+  /// for from the LazyParse phase.
+  /// Only set by SaveFunctionState or when parsing a primary expression as
+  /// 'arguments' IdentifierNode.
+  ///   * Unchanged when leaving an arrow function.
+  ///   * Restored to previous value when leaving a non-arrow function.
+  bool mayContainArrowFunctionsUsingArguments_ = false;
+
 #if HERMES_PARSE_JSX
   /// Incremented when inside a JSX tag and decremented when leaving it.
   /// Used to know whether to lex JS values or JSX text.
@@ -261,6 +287,7 @@ class JSParserImpl {
   UniqueString *valueIdent_;
   UniqueString *typeIdent_;
   UniqueString *asyncIdent_;
+  UniqueString *argumentsIdent_;
   UniqueString *awaitIdent_;
   UniqueString *assertIdent_;
 
@@ -959,8 +986,10 @@ class JSParserImpl {
   /// \param forceAsync set to true when it is already known that the arrow
   ///   function expression is 'async'. This occurs when there are no parens
   ///   around the argument list.
+  /// \param forceEagerly force any arrow functions to be eagerly parsed.
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
+      bool forceEagerly,
       ESTree::Node *leftExpr,
       bool hasNewLine,
       ESTree::Node *typeParams,
@@ -1005,8 +1034,10 @@ class JSParserImpl {
       ESTree::Node *node,
       bool inDecl);
 
+  /// \param forceEagerly force any arrow functions to be eagerly parsed.
   Optional<ESTree::Node *> parseAssignmentExpression(
       Param param = ParamIn,
+      bool forceEagerly = false,
       AllowTypedArrowFunction allowTypedArrowFunction =
           AllowTypedArrowFunction::Yes,
       CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes,
@@ -1436,21 +1467,54 @@ class JSParserImpl {
   }
 #endif
 
-  /// RAII to save and restore the current setting of "strict mode" and
-  /// "seen directives".
-  class SaveStrictModeAndSeenDirectives {
+  /// RAII to save and restore the current setting of fields that are used on a
+  /// per-function basis.
+  /// Handles arrow functions differently than non-arrow functions because they
+  /// shouldn't restore the information about nested arrow functions (that info
+  /// needs to be sent to the nearest non-arrow function).
+  /// Sets containsArrowFunctions_ and mayContainArrowFunctionsUsingArguments_
+  /// to false if we're entering a non-arrow function.
+  /// Sets isArrowFunction_ based on the constructor.
+  class SaveFunctionState {
     JSParserImpl *const parser_;
     const bool oldStrictMode_;
     const unsigned oldSeenDirectiveSize_;
+    const bool oldIsArrowFunction_;
+    const bool oldContainsArrowFunctions_;
+    const bool oldMayContainArrowFunctionsUsingArguments_;
 
    public:
-    explicit SaveStrictModeAndSeenDirectives(JSParserImpl *parser)
+    /// \param isArrowFunction whether we're about to enter an arrow function.
+    explicit SaveFunctionState(
+        JSParserImpl *parser,
+        bool isArrowFunction = false)
         : parser_(parser),
           oldStrictMode_(parser->isStrictMode()),
-          oldSeenDirectiveSize_(parser->getSeenDirectives().size()) {}
-    ~SaveStrictModeAndSeenDirectives() {
+          oldSeenDirectiveSize_(parser->getSeenDirectives().size()),
+          oldIsArrowFunction_(parser->isArrowFunction_),
+          oldContainsArrowFunctions_(parser->containsArrowFunctions_),
+          oldMayContainArrowFunctionsUsingArguments_(
+              parser->mayContainArrowFunctionsUsingArguments_) {
+      parser->isArrowFunction_ = isArrowFunction;
+      if (isArrowFunction) {
+        parser->containsArrowFunctions_ = true;
+      } else {
+        // Set flags to false when entering non-arrow functions.
+        parser->containsArrowFunctions_ = false;
+        parser->mayContainArrowFunctionsUsingArguments_ = false;
+      }
+    }
+    ~SaveFunctionState() {
       parser_->setStrictMode(oldStrictMode_);
       parser_->getSeenDirectives().resize(oldSeenDirectiveSize_);
+      if (!parser_->isArrowFunction_) {
+        // Restore the state when leaving non-arrow functions,
+        // but this information must be propagated for arrow functions.
+        parser_->containsArrowFunctions_ = oldContainsArrowFunctions_;
+        parser_->mayContainArrowFunctionsUsingArguments_ =
+            oldMayContainArrowFunctionsUsingArguments_;
+      }
+      parser_->isArrowFunction_ = oldIsArrowFunction_;
     }
   };
 

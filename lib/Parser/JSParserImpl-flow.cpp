@@ -244,7 +244,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
     return None;
   }
 
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this};
 
   auto parsedBody = parseFunctionBody(
       Param{}, false, false, false, JSLexer::AllowRegExp, true);
@@ -765,7 +765,7 @@ Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(SMLoc start) {
     return None;
   }
 
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this};
 
   auto parsedBody = parseFunctionBody(
       Param{}, false, false, false, JSLexer::AllowRegExp, true);
@@ -1186,7 +1186,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareClassFlow(SMLoc start) {
   advance(JSLexer::GrammarContext::Type);
 
   // NOTE: Class definition is always strict mode code.
-  SaveStrictModeAndSeenDirectives saveStrictMode{this};
+  SaveFunctionState saveStrictMode{this};
   setStrictMode(true);
 
   if (!need(

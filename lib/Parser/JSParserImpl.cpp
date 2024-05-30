@@ -79,6 +79,7 @@ void JSParserImpl::initializeIdentifiers() {
   valueIdent_ = lexer_.getIdentifier("value");
   typeIdent_ = lexer_.getIdentifier("type");
   asyncIdent_ = lexer_.getIdentifier("async");
+  argumentsIdent_ = lexer_.getIdentifier("arguments");
   awaitIdent_ = lexer_.getIdentifier("await");
   assertIdent_ = lexer_.getIdentifier("assert");
 
@@ -342,7 +343,7 @@ bool JSParserImpl::recursionDepthExceeded() {
 
 Optional<ESTree::ProgramNode *> JSParserImpl::parseProgram() {
   SMLoc startLoc = tok_->getStartLoc();
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this};
   ESTree::NodeList stmtList;
 
   if (!parseStatementList(
@@ -495,7 +496,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     return None;
   }
 
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this};
 
   // Grammar context to be used when lexing the closing brace.
   auto grammarContext =
@@ -757,6 +758,9 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
       body->paramYield = paramYield;
       body->paramAwait = paramAwait;
       body->bufferId = lexer_.getBufferId();
+      body->containsArrowFunctions = functionInfo.containsArrowFunctions;
+      body->mayContainArrowFunctionsUsingArguments =
+          functionInfo.mayContainArrowFunctionsUsingArguments;
       return setLocation(startLoc, endLoc, body);
     }
   }
@@ -767,7 +771,11 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
 
   if (pass_ == PreParse) {
     preParsed_->functionInfo[(*body)->getStartLoc()] = PreParsedFunctionInfo{
-        (*body)->getEndLoc(), isStrictMode(), copySeenDirectives()};
+        (*body)->getEndLoc(),
+        isStrictMode(),
+        copySeenDirectives(),
+        containsArrowFunctions_,
+        mayContainArrowFunctionsUsingArguments_};
   }
 
   return body;
@@ -1162,7 +1170,10 @@ JSParserImpl::parseVariableDeclaration(Param param, SMLoc declLoc) {
   auto debugLoc = advance().Start;
 
   auto expr = parseAssignmentExpression(
-      param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
+      param,
+      /* eagerly */ false,
+      AllowTypedArrowFunction::Yes,
+      CoverTypedParameters::No);
   if (!expr)
     return None;
 
@@ -2335,6 +2346,11 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
           return None;
         return func.getValue();
       }
+      if (isArrowFunction_ && LLVM_UNLIKELY(check(argumentsIdent_))) {
+        // Found an identifier 'arguments', so set this flag to conservatively
+        // assume that the function uses 'arguments'.
+        mayContainArrowFunctionsUsingArguments_ = true;
+      }
       auto *res = setLocation(
           tok_,
           tok_,
@@ -2643,7 +2659,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
   ESTree::NodePtr key = nullptr;
 
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this};
 
   bool computed = false;
   bool generator = false;
@@ -4298,7 +4314,10 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
         &sm_, Subsystem::Parser};
     CHECK_RECURSION;
     auto optConsequent = parseAssignmentExpression(
-        ParamIn, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
+        ParamIn,
+        /* eagerly */ false,
+        AllowTypedArrowFunction::Yes,
+        CoverTypedParameters::No);
     if (optConsequent && check(TokenKind::colon)) {
       consequent = *optConsequent;
     } else {
@@ -4319,7 +4338,10 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     // Consume the '?' (either for the first time or after savePoint.restore()).
     advance();
     auto optConsequent = parseAssignmentExpression(
-        ParamIn, AllowTypedArrowFunction::No, CoverTypedParameters::No);
+        ParamIn,
+        /* eagerly */ false,
+        AllowTypedArrowFunction::No,
+        CoverTypedParameters::No);
     if (!optConsequent)
       return None;
     consequent = *optConsequent;
@@ -4334,7 +4356,10 @@ Optional<ESTree::Node *> JSParserImpl::parseConditionalExpression(
     return None;
 
   auto optAlternate = parseAssignmentExpression(
-      param, AllowTypedArrowFunction::Yes, CoverTypedParameters::No);
+      param,
+      /* eagerly */ false,
+      AllowTypedArrowFunction::Yes,
+      CoverTypedParameters::No);
   if (!optAlternate)
     return None;
   ESTree::Node *alternate = *optAlternate;
@@ -4405,6 +4430,7 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
 
   auto optArg = parseAssignmentExpression(
       param.get(ParamIn),
+      /* eagerly */ false,
       AllowTypedArrowFunction::Yes,
       CoverTypedParameters::No);
   if (!optArg)
@@ -4420,7 +4446,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
     Param param) {
   assert(check(TokenKind::rw_class) && "class must start with 'class'");
   // NOTE: Class definition is always strict mode code.
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this};
   setStrictMode(true);
 
   SMLoc startLoc = advance().Start;
@@ -4476,7 +4502,7 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
 Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
   assert(check(TokenKind::rw_class) && "class must start with 'class'");
   // NOTE: A class definition is always strict mode code.
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this};
   setStrictMode(true);
 
   SMLoc start = advance().Start;
@@ -5296,6 +5322,7 @@ bool JSParserImpl::reparseArrowParameters(
 
 Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     Param param,
+    bool forceEagerly,
     ESTree::Node *leftExpr,
     bool hasNewLine,
     ESTree::Node *typeParams,
@@ -5324,7 +5351,8 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   if (!reparseArrowParameters(leftExpr, hasNewLine, paramList, isAsync))
     return None;
 
-  SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
+  SaveFunctionState saveFunctionState{this, /* arrow */ true};
+
   ESTree::Node *body;
   bool expression;
 
@@ -5333,7 +5361,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
   if (check(TokenKind::l_brace)) {
     auto optBody = parseFunctionBody(
         Param{},
-        true,
+        forceEagerly,
         oldParamYield.get(),
         argsParamAwait.get(),
         JSLexer::AllowDiv,
@@ -5348,6 +5376,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     CHECK_RECURSION;
     auto optConcise = parseAssignmentExpression(
         param.get(ParamIn),
+        true,
         allowTypedArrowFunction,
         CoverTypedParameters::No,
         nullptr);
@@ -5367,7 +5396,21 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       expression,
       isAsync);
 
-  return setLocation(startLoc, getPrevTokenEndLoc(), arrow);
+  if (pass_ == PreParse) {
+    auto [it, inserted] = preParsed_->functionInfo.try_emplace(
+        startLoc,
+        PreParsedFunctionInfo{
+            body->getEndLoc(),
+            isStrictMode(),
+            copySeenDirectives(),
+            containsArrowFunctions_,
+            mayContainArrowFunctionsUsingArguments_,
+        });
+    (void)it;
+    assert(inserted);
+  }
+
+  return setLocation(startLoc, body->getEndLoc(), arrow);
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(
@@ -5678,6 +5721,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
 
   return parseArrowFunctionExpression(
       param,
+      /* eagerly */ false,
       leftExpr,
       hasNewLine,
       typeParams,
@@ -5691,6 +5735,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
 
 Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     Param param,
+    bool forceEagerly,
     AllowTypedArrowFunction allowTypedArrowFunction,
     CoverTypedParameters coverTypedParameters,
     ESTree::Node *typeParams) {
@@ -5704,7 +5749,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
     explicit State() {}
   };
 
-  auto parseHelper = [this](
+  auto parseHelper = [this, forceEagerly](
                          State &state,
                          Param param,
                          AllowTypedArrowFunction allowTypedArrowFunction,
@@ -5757,6 +5802,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
       // typed arrow functions and attach the type parameters after the fact.
       auto optAssign = parseAssignmentExpression(
           param,
+          /* eagerly */ false,
           AllowTypedArrowFunction::No,
           CoverTypedParameters::No,
           nullptr);
@@ -5773,6 +5819,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
           typeParams = *optTypeParams;
           optAssign = parseAssignmentExpression(
               param,
+              /* eagerly */ false,
               AllowTypedArrowFunction::Yes,
               CoverTypedParameters::No,
               typeParams);
@@ -5910,6 +5957,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
         !lexer_.isNewLineBeforeCurrentToken()) {
       return parseArrowFunctionExpression(
           param,
+          forceEagerly,
           *state.optLeftExpr,
           state.hasNewLine,
           typeParams,
@@ -6009,7 +6057,11 @@ Optional<ESTree::Node *> JSParserImpl::parseExpression(
     CoverTypedParameters coverTypedParameters) {
   SMLoc startLoc = tok_->getStartLoc();
   auto optExpr = parseAssignmentExpression(
-      param, AllowTypedArrowFunction::Yes, coverTypedParameters, nullptr);
+      param,
+      /* eagerly */ false,
+      AllowTypedArrowFunction::Yes,
+      coverTypedParameters,
+      nullptr);
   if (!optExpr)
     return None;
 
@@ -6963,6 +7015,9 @@ Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
 
     case ESTree::NodeKind::FunctionDeclaration:
       return castNode(parseFunctionDeclaration(ParamReturn, true));
+
+    case ESTree::NodeKind::ArrowFunctionExpression:
+      return castNode(parseAssignmentExpression(ParamIn, true));
 
     case ESTree::NodeKind::Property: {
       auto node = parsePropertyAssignment(true);

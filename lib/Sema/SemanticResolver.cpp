@@ -1128,6 +1128,10 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     // But do record the surrounding scope in the FunctionInfo.
     assert(node->getSemInfo() && "semInfo must be set in first pass");
     node->getSemInfo()->bindingTableScope = bindingTable_.getCurrentScope();
+    node->getSemInfo()->containsArrowFunctions =
+        blockBody->containsArrowFunctions;
+    node->getSemInfo()->containsArrowFunctionsUsingArguments =
+        blockBody->mayContainArrowFunctionsUsingArguments;
     return;
   }
 
