@@ -14,12 +14,12 @@ from typing import Dict, List, Optional, TypedDict, Union
 PathT = str
 
 
-class Negative(TypedDict):
+class ExpectedFailure(TypedDict):
     phase: str
     type: str
 
 
-OptNegative = Optional[Negative]
+OptExpectedFailure = Optional[ExpectedFailure]
 
 
 class PathsWithComment(TypedDict):

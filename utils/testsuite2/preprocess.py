@@ -10,7 +10,7 @@ from typing import List
 
 from external.parse_test262 import parseTestRecord
 
-from typing_defs import OptNegative, PathT
+from typing_defs import OptExpectedFailure, PathT
 
 
 class StrictMode(Flag):
@@ -43,10 +43,10 @@ class TestCase:
     onlyStrict, noStrict, module, raw, async, generated, CanBlockIsFalse,
     CanBlockIsTrue, non-deterministic.
     """
-    negative: OptNegative = None
+    expected_failure: OptExpectedFailure = None
     """
-    This means the test is expected to throw an error of given type. The two
-    fields are (if not None):
+    The "negative" field in the test262 frontmatter. This means the test is 
+    expected to throw an error of given type. The two fields are (if not None):
     - phase, potential values are:
         - parse, meaning that the test must throw before execution
         - resolution, throw when performing ES2015 module resolution
@@ -91,7 +91,7 @@ def generate_test262_source(content: str, suite: PathT, filepath: PathT) -> Test
         includes=includes,
         strict_mode=strict_mode,
         flags=flags,
-        negative=negative,
+        expected_failure=negative,
         features=test.get("features", []),
     )
 
@@ -230,7 +230,7 @@ def generate_cves_source(content: str, test_name: str) -> TestCase:
     # A few CVEs tests use the same style metadata as test262
     negative = test.get("negative", None)
     return TestCase(
-        source=test["src"], strict_mode=StrictMode.NO_STRICT, negative=negative
+        source=test["src"], strict_mode=StrictMode.NO_STRICT, expected_failure=negative
     )
 
 

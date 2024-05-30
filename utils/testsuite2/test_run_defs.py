@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from es_ast import diff
-from hermes import compile_and_run, ExtraCompileVMArgs, generate_ast
+from hermes import compile_and_run, CompileRunArgs, ExtraCompileVMArgs, generate_ast
 from preprocess import generate_source, StrictMode
 from skiplist import SkipCategory, SkippedPathsOrFeatures
 from typing_defs import PathT
@@ -205,14 +205,14 @@ class Test262Suite(Suite):
             args.test_file, SkipCategory.HANDLESAN_SKIP_LIST
         )
 
-        return await compile_and_run(
+        compile_run_args = CompileRunArgs(
             full_test_name,
-            js_sources,
             test_case.strict_mode,
             args.binary_directory,
-            test_case.negative,
+            test_case.expected_failure,
             disable_handle_san,
         )
+        return await compile_and_run(js_sources, compile_run_args)
 
 
 class CvesSuite(Test262Suite):
@@ -262,15 +262,15 @@ class MjsunitSuite(Suite):
         extra_compile_vm_args = ExtraCompileVMArgs(
             compile_args=["-Xes6-class", "-Xenable-tdz"]
         )
-        return await compile_and_run(
+        compile_run_args = CompileRunArgs(
             full_test_name,
-            [js_source],
             test_case.strict_mode,
             args.binary_directory,
-            test_case.negative,
+            test_case.expected_failure,
             disable_handle_san,
             extra_compile_vm_args,
         )
+        return await compile_and_run([js_source], compile_run_args)
 
 
 class AstCheckSuite(Suite):
