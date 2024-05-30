@@ -40,6 +40,8 @@ class TestRunArgs(object):
     """Whether to run tests in skiplist."""
     lazy: bool
     """Whether to force lazy evaluation."""
+    shermes: bool
+    """Whether to test with shermes"""
 
 
 class Suite(ABC):
@@ -214,6 +216,7 @@ class Test262Suite(Suite):
             test_case.expected_failure,
             disable_handle_san,
             args.lazy,
+            args.shermes,
         )
         return await compile_and_run(js_sources, compile_run_args)
 
@@ -272,6 +275,7 @@ class MjsunitSuite(Suite):
             test_case.expected_failure,
             disable_handle_san,
             args.lazy,
+            args.shermes,
             extra_compile_vm_args,
         )
         return await compile_and_run([js_source], compile_run_args)

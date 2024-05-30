@@ -46,6 +46,8 @@ class CompileRunArgs(object):
     """Disable handle sanitizer to improve speed."""
     lazy: bool
     """Force lazy evaluation."""
+    shermes: bool
+    """Run with shermes."""
     extra_compile_vm_args: Optional[ExtraCompileVMArgs] = None
     """Extra compile/run arguments given by specific testsuites."""
 
@@ -61,7 +63,10 @@ async def run(
         exe = os.path.join(compile_run_args.binary_directory, "hermes")
     else:
         exe = os.path.join(compile_run_args.binary_directory, "hvm")
-    cmd_args = [file_to_run] + ES6_ARGS + EXTRA_RUN_ARGS + USE_MICROTASK_FLAG
+    cmd_args = []
+    if not compile_run_args.shermes:
+        cmd_args.append(exe)
+    cmd_args += [file_to_run] + ES6_ARGS + EXTRA_RUN_ARGS + USE_MICROTASK_FLAG
     if compile_run_args.lazy:
         cmd_args.append("-lazy")
         if StrictMode.STRICT in compile_run_args.strict_mode:
@@ -74,7 +79,7 @@ async def run(
     if sys.platform == "linux":
         env["ICU_DATA"] = compile_run_args.binary_directory
     proc = await create_subprocess_exec(
-        exe, *cmd_args, env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE
+        *cmd_args, env=env, stderr=subprocess.PIPE, stdout=subprocess.PIPE
     )
     stdout, stderr = (None, None)
     try:
@@ -208,24 +213,26 @@ async def compile_and_run_single(
         )
 
     file_to_run = f"{js_source_file}.out"
-    hermesc_exe = os.path.join(compile_run_args.binary_directory, "hermesc")
+    if compile_run_args.shermes:
+        hermesc_exe = os.path.join(compile_run_args.binary_directory, "shermes")
+    else:
+        hermesc_exe = os.path.join(compile_run_args.binary_directory, "hermesc")
     cmd_args = [
         hermesc_exe,
         str(js_source_file),
         "-test262",
-        "-emit-binary",
         "-fno-static-builtins",
-        "-out",
+        "-o" if compile_run_args.shermes else "-out",
         file_to_run,
     ]
+    if not compile_run_args.shermes:
+        cmd_args.append("-emit-binary")
 
     if compile_run_args.extra_compile_vm_args:
         cmd_args += compile_run_args.extra_compile_vm_args.compile_args
 
     if StrictMode.STRICT in compile_run_args.strict_mode:
         cmd_args.append("-strict")
-    else:
-        cmd_args.append("-non-strict")
 
     # Whether compilation is expected to fail.
     expect_compile_failure = expected_failure_phase == "parse"

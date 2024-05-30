@@ -88,6 +88,9 @@ def create_parser():
         "--lazy", dest="lazy", action="store_true", help="Force lazy evaluation"
     )
     parser.add_argument(
+        "--shermes", dest="shermes", action="store_true", help="Test with shermes"
+    )
+    parser.add_argument(
         "paths", type=str, nargs="+", help="Paths to testsuite, can be dir or file"
     )
 
@@ -198,6 +201,7 @@ async def run(
     test_skiplist: bool,
     test_intl: bool,
     lazy: bool,
+    shermes: bool,
     verbose: bool,
 ) -> None:
     """
@@ -290,6 +294,7 @@ async def run(
             skipped_paths_features,
             test_skiplist,
             lazy,
+            shermes,
         )
         tasks.append(suite.run_test(test_run_args))
 
@@ -360,6 +365,7 @@ async def main():
         args.test_skiplist,
         args.test_intl,
         args.lazy,
+        args.shermes,
         args.verbose,
     )
 
