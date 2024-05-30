@@ -275,22 +275,31 @@ public:
   void printOptionValues();
 
   void registerCategory(OptionCategory *cat) {
+    // ASan's SIOF detector incorrectly flags this as an SIOF, because it
+    // accesses other globals (even though those globals are guaranteed to have
+    // been initialized).
+#if !LLVM_ADDRESS_SANITIZER_BUILD
     assert(count_if(RegisteredOptionCategories,
                     [cat](const OptionCategory *Category) {
              return cat->getName() == Category->getName();
            }) == 0 &&
            "Duplicate option categories");
+#endif
 
     RegisteredOptionCategories.insert(cat);
   }
 
   void registerSubCommand(SubCommand *sub) {
+   // See the comment in registerCategory above.
+#if !LLVM_ADDRESS_SANITIZER_BUILD
     assert(count_if(RegisteredSubCommands,
                     [sub](const SubCommand *Sub) {
                       return (!sub->getName().empty()) &&
                              (Sub->getName() == sub->getName());
                     }) == 0 &&
            "Duplicate subcommands");
+#endif
+
     RegisteredSubCommands.insert(sub);
 
     // For all options that have been registered for all subcommands, add the
@@ -2239,4 +2248,3 @@ void cl::ResetCommandLineParser() { GlobalParser->reset(); }
 void cl::ResetAllOptionOccurrences() {
   GlobalParser->ResetAllOptionOccurrences();
 }
-
