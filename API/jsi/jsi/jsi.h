@@ -168,10 +168,7 @@ class JSI_EXPORT NativeState {
 /// means that the main source of unsafe behavior is to hold a jsi object
 /// in a non-Runtime-managed object, and not clean it up before the Runtime
 /// is shut down.  If your lifecycle is such that avoiding this is hard,
-/// you will probably need to do use your own locks.  Methods will typically
-/// only throw instances of JSIException, but may throw other std::exceptions
-/// that originate in STL usage in JSI infrastructure, or exceptions that are
-/// specific to the actual underlying JavaScript engine.
+/// you will probably need to do use your own locks.
 class JSI_EXPORT Runtime {
  public:
   virtual ~Runtime();
@@ -497,7 +494,7 @@ class JSI_EXPORT PropNameID : public Pointer {
 
   // Creates a vector of given PropNameIDs.
   template <size_t N>
-  static std::vector<PropNameID> names(PropNameID(&&propertyNames)[N]);
+  static std::vector<PropNameID> names(PropNameID (&&propertyNames)[N]);
 
   /// Copies the data in a PropNameID as utf8 into a C++ string.
   std::string utf8(Runtime& runtime) const {
