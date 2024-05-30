@@ -80,7 +80,7 @@ class Suite(ABC):
 
     def get_full_test_name(self, test_file: PathT) -> str:
         """
-        Get the full test name. This is usefuly when printing a relatively
+        Get the full test name. This is useful when printing a relatively
         succinct test name.
 
         It has form of:

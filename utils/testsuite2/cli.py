@@ -12,7 +12,7 @@ import tempfile
 import time
 from asyncio import Semaphore
 from collections import defaultdict
-from typing import Awaitable, List, Optional
+from typing import Awaitable, Dict, List, Optional
 
 import utils
 from progress import (
@@ -159,14 +159,31 @@ def print_failed_tests(tests: dict) -> None:
     print_test_list(TestResultCode.TEST_FAILED, "Other test failure:")
 
 
-def print_skipped_passed_tests(tests: List[str]) -> None:
-    if len(tests) == 0:
-        return
+def print_skipped_passed_tests(tests: Dict[str, str]) -> None:
     print("\nPassed tests in skiplist:")
     print("-----------------------------------")
     for test_name in tests:
         print(test_name)
     print("-----------------------------------")
+
+
+def remove_tests_from_skiplist(
+    tests: Dict[str, str], skipped_paths_features: SkippedPathsOrFeatures
+) -> None:
+    """Remove passed tests from the skiplist config."""
+
+    ans = input("\nRemove these passed tests from skiplist? [y]es/[n]o: ").lower()
+    if ans == "y" or ans == "yes":
+        # Original full test names have form of "<suite> :: relative/path",
+        # we need to convert them to form of "<suite>/relative/path" to match
+        # paths in skiplist.
+        tests_with_rel_paths = {
+            test_name.replace(" :: ", os.sep): suite_dir
+            for test_name, suite_dir in tests.items()
+        }
+
+        skipped_paths_features.remove_tests(tests_with_rel_paths)
+        skipped_paths_features.persist()
 
 
 async def run(
@@ -214,7 +231,11 @@ async def run(
     start_time = time.time()
     tasks = []
     stats = defaultdict(int)
-    skipped_tests = set()
+    # Record skipped tests and its suite path (as dict value).
+    # we need the suite path because some paths in the skiplist config are
+    # directories, we need to get their absolute paths to get all files under
+    # them.
+    skipped_tests = {}
     for test_file in tests_files:
         suite = get_suite(test_file)
         assert suite, f"Test suite root directory is not found for {test_file}"
@@ -231,7 +252,7 @@ async def run(
                 stats[test_result.code] += 1
                 continue
             else:
-                skipped_tests.add(full_test_name)
+                skipped_tests[full_test_name] = suite.directory
         if test_result := skipped_paths_features.try_skip(
             test_file, [SkipCategory.INTL_TESTS], full_test_name
         ):
@@ -240,7 +261,7 @@ async def run(
                 stats[test_result.code] += 1
                 continue
             else:
-                skipped_tests.add(full_test_name)
+                skipped_tests[full_test_name] = suite.directory
 
         test_run_args = TestRunArgs(
             test_file,
@@ -261,18 +282,17 @@ async def run(
             return await fut
 
     failed_cases = defaultdict(list)
-    skipped_passed = []
+    # Similar to skipped_tests, but only store those passed.
+    skipped_passed = {}
     for task in asyncio.as_completed([wrap_task(fut) for fut in tasks]):
         result = await task
         stats[result.code] += 1
         pd.update(result)
         if result.code.is_failure:
             failed_cases[result.code].append(result.test_name)
-        if (
-            result.code == TestResultCode.TEST_PASSED
-            and result.test_name in skipped_tests
-        ):
-            skipped_passed.append(result.test_name)
+        if result.code == TestResultCode.TEST_PASSED:
+            if test_suite_dir := skipped_tests.get(result.test_name):
+                skipped_passed[result.test_name] = test_suite_dir
 
     pd.finish()
     elapsed = time.time() - start_time
@@ -281,7 +301,9 @@ async def run(
     # Print result
     print_stats(stats)
     print_failed_tests(failed_cases)
-    print_skipped_passed_tests(skipped_passed)
+    if len(skipped_passed) > 0:
+        print_skipped_passed_tests(skipped_passed)
+        remove_tests_from_skiplist(skipped_passed, skipped_paths_features)
 
 
 async def main():
