@@ -44,3 +44,31 @@ print(JSON.stringify([...puncList].sort(new Intl.Collator("en", { ignorePunctuat
 try { Intl.Collator.prototype.resolvedOptions.call(new Intl.DateTimeFormat()) }
 catch (e) { print(e) }
 // CHECK-NEXT: TypeError: Intl.Collator.prototype.resolvedOptions called with incompatible 'this'
+
+// Invalid empty string locale
+try{ new Intl.Collator('', {}) } catch (e) { print(e) }
+// CHECK-NEXT: RangeError: Invalid language tag:
+
+// Invalid underscore locale
+try{ new Intl.Collator(['en_US'], {}) } catch (e) { print(e) }
+// CHECK-NEXT: RangeError: Invalid language tag: en_US
+
+// Invalid usage value
+try{ new Intl.Collator('en', { usage: 'order' }) } catch (e) { print(e) }
+// CHECK-NEXT: RangeError: usage value is invalid.
+
+// Invalid localeMatcher value
+try{ new Intl.Collator('en', { localeMatcher: 'last' }) } catch (e) { print(e) }
+// CHECK-NEXT: RangeError: localeMatcher value is invalid.
+
+// Invalid caseFirst value
+try{ new Intl.Collator('en', { caseFirst: 'lowercase' }) } catch (e) { print(e) }
+// CHECK-NEXT: RangeError: caseFirst value is invalid.
+
+// Invalid sensitivity value
+try{ new Intl.Collator('en', { sensitivity: 'primary' }) } catch (e) { print(e) }
+// CHECK-NEXT: RangeError: sensitivity value is invalid.
+
+// Invalid localeMatcher value
+try{ Intl.Collator.supportedLocalesOf('en', { localeMatcher: 'look up' }) } catch (e) { print(e) }
+// CHECK-NEXT: RangeError: localeMatcher value is invalid.
