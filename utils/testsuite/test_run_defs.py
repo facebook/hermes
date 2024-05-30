@@ -58,7 +58,8 @@ class Suite(ABC):
         """
 
         def get_suite_directory(s: str) -> PathT:
-            return path[: path.find(s) + len(s)]
+            # Search from the end in case the path has repeated folder names.
+            return path[: path.rfind(s) + len(s)]
 
         if "test262/" in path:
             return Test262Suite(get_suite_directory("test262"))
