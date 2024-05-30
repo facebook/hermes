@@ -734,6 +734,9 @@ void FlowChecker::visit(ESTree::IfStatementNode *node) {
   visitESTreeNode(*this, node->_alternate, node);
 }
 void FlowChecker::visit(ESTree::SwitchStatementNode *node) {
+  ScopeRAII scope(*this);
+  if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
+    return;
   visitExpression(node->_discriminant, node, nullptr);
   visitESTreeNodeList(*this, node->_cases, node);
 }
@@ -1050,7 +1053,9 @@ class FlowChecker::AnnotateScopeDecls {
           parent = ESTree::getBlockStatement(func);
         } else {
           parent = scopeNode;
-          assert(llvh::isa<ESTree::BlockStatementNode>(parent));
+          assert(
+              llvh::isa<ESTree::BlockStatementNode>(parent) ||
+              llvh::isa<ESTree::SwitchStatementNode>(parent));
         }
         annotateFunctionDeclaration(funcDecl, parent);
       } else if (
