@@ -9,8 +9,8 @@ from enum import Enum, unique
 from pathlib import Path
 from typing import cast, Dict, List, Optional, Pattern, Sequence, Tuple, Union
 
-from typing_defs import PathT, SkippedPathItem, SkippedPathsOrFeaturesDict
-from utils import list_all_matched_entries, TestCaseResult, TestResultCode
+from .typing_defs import PathT, SkippedPathItem, SkippedPathsOrFeaturesDict
+from .utils import list_all_matched_entries, TestCaseResult, TestResultCode
 
 
 @unique

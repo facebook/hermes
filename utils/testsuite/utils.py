@@ -12,7 +12,7 @@ from enum import auto, Enum, unique
 from pathlib import Path
 from typing import List
 
-from typing_defs import PathT
+from .typing_defs import PathT
 
 
 @unique

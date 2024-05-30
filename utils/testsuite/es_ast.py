@@ -6,8 +6,8 @@
 import json
 from typing import no_type_check, Tuple
 
-from typing_defs import JSON
-from utils import TestCaseResult, TestResultCode
+from .typing_defs import JSON
+from .utils import TestCaseResult, TestResultCode
 
 # Collect the keys that should be omitted from either Hermes or esprima ASTs.
 # Key is the type of a node, and value is the set of keys of child nodes that

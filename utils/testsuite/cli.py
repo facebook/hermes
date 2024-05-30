@@ -6,6 +6,7 @@
 
 import argparse
 import asyncio
+import importlib.resources
 import os
 import shutil
 import sys
@@ -15,20 +16,29 @@ from asyncio import Semaphore
 from collections import defaultdict
 from typing import Awaitable, Dict, List, Optional
 
-import utils
-from progress import (
+from . import utils
+from .progress import (
     ProgressBar,
     SimpleProgressBar,
     TerminalController,
     TestCaseResult,
     TestingProgressDisplay,
 )
-from skiplist import SkipCategory, SkippedPathsOrFeatures
-from test_run_defs import get_suite, StrictMode, TestRunArgs
-from typing_defs import PathT
-from utils import Color, TestResultCode
+from .skiplist import SkipCategory, SkippedPathsOrFeatures
+from .test_run_defs import get_suite, StrictMode, TestRunArgs
+from .typing_defs import PathT
+from .utils import Color, TestResultCode
 
 N_DEFAULT_CPU = 10
+try:
+    RESOURCE_ROOT = importlib.resources.files(__package__)
+except TypeError:
+    from pathlib import Path
+
+    # With Python 3.9.6 on MacOS, importlib.resources.files raises a TypeError,
+    # simply set it to the directory of current file as a fallback (it's unclear
+    # whether this will always work).
+    RESOURCE_ROOT = Path(os.path.dirname(__file__))
 
 
 def create_parser():
@@ -46,8 +56,8 @@ def create_parser():
         "-b",
         "--binary-dir",
         dest="binary_directory",
-        default="./bin/",
-        help="Path to hermes built binary directory",
+        default=RESOURCE_ROOT,
+        help="Path to hermes built binary directory, default to the package root",
     )
     parser.add_argument(
         "-j",
@@ -377,7 +387,7 @@ def print_preprocessed_source(path: PathT) -> None:
     the exact source code is returned.
     """
 
-    from preprocess import generate_source
+    from .preprocess import generate_source
 
     suite = get_suite(path)
     if not suite:
@@ -410,7 +420,7 @@ async def main() -> int:
     # it won't be deleted until we run all tests.
     tmp_work_dir = None
     if work_dir is None:
-        tmp_work_dir = tempfile.TemporaryDirectory()
+        tmp_work_dir = tempfile.TemporaryDirectory(suffix="hermes_workdir")
         work_dir = tmp_work_dir.name
     else:
         # Remove the directory if it exists.
@@ -418,10 +428,12 @@ async def main() -> int:
             shutil.rmtree(work_dir)
         os.makedirs(work_dir, exist_ok=False)
 
-    skip_list_cfg_path = os.path.join(os.path.dirname(__file__), "skiplist.json")
-    skipped_paths_features = SkippedPathsOrFeatures(skip_list_cfg_path)
+    with importlib.resources.as_file(
+        RESOURCE_ROOT / "skiplist.json"
+    ) as skip_list_cfg_path:
+        skipped_paths_features = SkippedPathsOrFeatures(os.fspath(skip_list_cfg_path))
 
-    return await run(
+    exit_code = await run(
         args.paths,
         args.binary_directory,
         skipped_paths_features,
@@ -434,6 +446,12 @@ async def main() -> int:
         args.opt,
         args.verbose,
     )
+
+    # Explicitly clean up the temporary directory if we created one.
+    if tmp_work_dir:
+        tmp_work_dir.cleanup()
+
+    return exit_code
 
 
 if __name__ == "__main__":

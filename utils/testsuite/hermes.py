@@ -10,9 +10,9 @@ from asyncio import create_subprocess_exec, subprocess, TimeoutError, wait_for
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from preprocess import StrictMode
-from progress import TestCaseResult, TestResultCode
-from typing_defs import OptExpectedFailure, PathT
+from .preprocess import StrictMode
+from .progress import TestCaseResult, TestResultCode
+from .typing_defs import OptExpectedFailure, PathT
 
 ES6_ARGS = ["-Xes6-promise", "-Xes6-proxy"]
 EXTRA_RUN_ARGS = ["-Xhermes-internal-test-methods"]

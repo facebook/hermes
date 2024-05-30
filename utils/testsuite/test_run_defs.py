@@ -12,12 +12,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional
 
-from es_ast import diff
-from hermes import compile_and_run, CompileRunArgs, ExtraCompileVMArgs, generate_ast
-from preprocess import generate_source, StrictMode
-from skiplist import SkipCategory, SkippedPathsOrFeatures
-from typing_defs import PathT
-from utils import TestCaseResult, TestResultCode
+from .es_ast import diff
+from .hermes import compile_and_run, CompileRunArgs, ExtraCompileVMArgs, generate_ast
+from .preprocess import generate_source, StrictMode
+from .skiplist import SkipCategory, SkippedPathsOrFeatures
+from .typing_defs import PathT
+from .utils import TestCaseResult, TestResultCode
 
 
 @dataclass
@@ -378,7 +378,8 @@ class AstCheckSuite(Suite):
         )
         if expected_file.endswith(".tree.json"):
             try:
-                expected_ast = json.load(open(expected_file, "r"))
+                with open(expected_file, "r") as json_f:
+                    expected_ast = json.load(json_f)
             except (json.JSONDecodeError, OSError) as err:
                 msg = f"FAIL: Failed to load expected AST file: {err}"
                 return TestCaseResult(full_test_name, TestResultCode.TEST_FAILED, msg)

@@ -317,7 +317,7 @@ class ProgressBar:
 # Progress display utility from LLVM LIT included in external/llvh/utils/lit.
 # Modified to suit Hermes testsuite runner use case.
 
-from utils import TestCaseResult, TestResultCode
+from .utils import TestCaseResult, TestResultCode
 
 
 class TestingProgressDisplay(object):
