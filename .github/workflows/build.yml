@@ -106,7 +106,7 @@ jobs:
         name: macos-hermes
         path: output
   build-apple-runtime:
-    runs-on: macos-latest
+    runs-on: macos-12
     env:
       TERM: dumb
       HERMES_WS_DIR: "/tmp/hermes"
@@ -153,7 +153,7 @@ jobs:
         cmake --build ./build
         cmake --build ./build --target check-hermes
   test-apple-runtime:
-    runs-on: macos-latest
+    runs-on: macos-12
     needs: build-apple-runtime
     env:
       TERM: dumb
@@ -196,7 +196,7 @@ jobs:
           -scheme ApplePlatformsIntegrationMobileTests
       working-directory: test/ApplePlatformsIntegrationTestApp
   package-apple-runtime:
-    runs-on: macos-latest
+    runs-on: macos-12
     needs:
     - test-macos
     - test-apple-runtime
