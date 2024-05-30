@@ -161,7 +161,7 @@ clearTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
 ///     - detachArrayBuffer, alias to HermesInternal.detachArrayBuffer (if it
 ///       exists)
 /// - alert, alias to print
-void initTest262Harness(vm::Runtime &runtime) {
+static void initTest262Harness(vm::Runtime &runtime) {
   vm::Handle<vm::JSObject> test262Obj =
       runtime.makeHandle(vm::JSObject::create(runtime));
 
