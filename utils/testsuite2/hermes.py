@@ -48,6 +48,8 @@ class CompileRunArgs(object):
     """Force lazy evaluation."""
     shermes: bool
     """Run with shermes."""
+    opt: bool
+    """Enable optimizer, i.e., use -O flag instead of -O0."""
     extra_compile_vm_args: Optional[ExtraCompileVMArgs] = None
     """Extra compile/run arguments given by specific testsuites."""
 
@@ -236,13 +238,15 @@ async def compile_and_run_single(
 
     # Whether compilation is expected to fail.
     expect_compile_failure = expected_failure_phase == "parse"
-    # For now, always run without optimization.
-    opt_level = "-O0"
+    if compile_run_args.opt:
+        cmd_args.append("-O")
+    else:
+        cmd_args.append("-O0")
     # If compiling failed (not as expected), return the result immediately.
     if unexpected_compile_result := await compile_with_args(
         compile_run_args.test_name,
         expect_compile_failure,
-        cmd_args + [opt_level],
+        cmd_args,
     ):
         return unexpected_compile_result
 

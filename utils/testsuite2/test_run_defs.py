@@ -42,6 +42,8 @@ class TestRunArgs(object):
     """Whether to force lazy evaluation."""
     shermes: bool
     """Whether to test with shermes"""
+    opt: bool
+    """Whether to enable optimizer"""
 
 
 class Suite(ABC):
@@ -217,6 +219,7 @@ class Test262Suite(Suite):
             disable_handle_san,
             args.lazy,
             args.shermes,
+            args.opt,
         )
         return await compile_and_run(js_sources, compile_run_args)
 
@@ -276,6 +279,7 @@ class MjsunitSuite(Suite):
             disable_handle_san,
             args.lazy,
             args.shermes,
+            args.opt,
             extra_compile_vm_args,
         )
         return await compile_and_run([js_source], compile_run_args)

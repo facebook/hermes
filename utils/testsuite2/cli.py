@@ -91,6 +91,9 @@ def create_parser():
         "--shermes", dest="shermes", action="store_true", help="Test with shermes"
     )
     parser.add_argument(
+        "--opt", dest="opt", action="store_true", help="Enable compiler optimizations"
+    )
+    parser.add_argument(
         "paths", type=str, nargs="+", help="Paths to testsuite, can be dir or file"
     )
 
@@ -202,6 +205,7 @@ async def run(
     test_intl: bool,
     lazy: bool,
     shermes: bool,
+    opt: bool,
     verbose: bool,
 ) -> None:
     """
@@ -295,6 +299,7 @@ async def run(
             test_skiplist,
             lazy,
             shermes,
+            opt,
         )
         tasks.append(suite.run_test(test_run_args))
 
@@ -366,6 +371,7 @@ async def main():
         args.test_intl,
         args.lazy,
         args.shermes,
+        args.opt,
         args.verbose,
     )
 
