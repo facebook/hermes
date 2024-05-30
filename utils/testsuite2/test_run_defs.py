@@ -38,6 +38,8 @@ class TestRunArgs(object):
     """Helper for skipping certain tests."""
     test_skiplist: bool
     """Whether to run tests in skiplist."""
+    lazy: bool
+    """Whether to force lazy evaluation."""
 
 
 class Suite(ABC):
@@ -211,6 +213,7 @@ class Test262Suite(Suite):
             args.binary_directory,
             test_case.expected_failure,
             disable_handle_san,
+            args.lazy,
         )
         return await compile_and_run(js_sources, compile_run_args)
 
@@ -268,6 +271,7 @@ class MjsunitSuite(Suite):
             args.binary_directory,
             test_case.expected_failure,
             disable_handle_san,
+            args.lazy,
             extra_compile_vm_args,
         )
         return await compile_and_run([js_source], compile_run_args)

@@ -85,6 +85,9 @@ def create_parser():
         "The work directory will be deleted if it is not empty",
     )
     parser.add_argument(
+        "--lazy", dest="lazy", action="store_true", help="Force lazy evaluation"
+    )
+    parser.add_argument(
         "paths", type=str, nargs="+", help="Paths to testsuite, can be dir or file"
     )
 
@@ -194,6 +197,7 @@ async def run(
     n_jobs: int,
     test_skiplist: bool,
     test_intl: bool,
+    lazy: bool,
     verbose: bool,
 ) -> None:
     """
@@ -249,13 +253,16 @@ async def run(
             stats[test_result.code] += 1
             continue
 
-        # Check if this file should be skipped w.r.t. test_skiplist flag.
+        # Check if this file should be skipped w.r.t. the test_skiplist flag.
+        skip_categories = [
+            SkipCategory.SKIP_LIST,
+            SkipCategory.MANUAL_SKIP_LIST,
+        ]
+        if lazy:
+            skip_categories.append(SkipCategory.LAZY_SKIP_LIST)
         if test_result := skipped_paths_features.try_skip(
             test_file,
-            [
-                SkipCategory.SKIP_LIST,
-                SkipCategory.MANUAL_SKIP_LIST,
-            ],
+            skip_categories,
             full_test_name,
         ):
             if not test_skiplist:
@@ -282,6 +289,7 @@ async def run(
             binary_directory,
             skipped_paths_features,
             test_skiplist,
+            lazy,
         )
         tasks.append(suite.run_test(test_run_args))
 
@@ -351,6 +359,7 @@ async def main():
         args.n_jobs,
         args.test_skiplist,
         args.test_intl,
+        args.lazy,
         args.verbose,
     )
 
