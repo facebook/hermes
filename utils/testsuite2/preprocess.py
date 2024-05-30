@@ -31,7 +31,7 @@ class TestCase:
     """Preprocessed source code."""
     includes: List[str] = field(default_factory=list)
     """
-    A list of files in the test262/harness/ directory that needs to be 
+    A list of files in the test262/harness/ directory that needs to be
     included to run the test. The content of these included files has been
     prepended to the source field.
     """
@@ -247,4 +247,5 @@ def generate_source(content: str, suite: str, test_name: str) -> TestCase:
     if "CVEs" in suite:
         return generate_cves_source(content, test_name)
 
-    raise NotImplementedError("Other test suite not supported yet")
+    # For all other suites, return the exact source instead.
+    return TestCase(content, strict_mode=StrictMode.NO_STRICT)

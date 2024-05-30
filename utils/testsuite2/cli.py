@@ -23,7 +23,7 @@ from progress import (
     TestingProgressDisplay,
 )
 from skiplist import SkipCategory, SkippedPathsOrFeatures
-from test_run_defs import get_suite, TestRunArgs
+from test_run_defs import get_suite, StrictMode, TestRunArgs
 from typing_defs import PathT
 from utils import Color, TestResultCode
 
@@ -92,6 +92,16 @@ def create_parser():
     )
     parser.add_argument(
         "--opt", dest="opt", action="store_true", help="Enable compiler optimizations"
+    )
+    parser.add_argument(
+        "-d",
+        "--dump-source",
+        dest="dump_source",
+        action="store_true",
+        help="Instead of running any tests, print the preprocessed source of "
+        "test case to standard output, including any generated use-strict "
+        "directives or stubbed pragmas. When this flag is provided, only one "
+        "path is expected.",
     )
     parser.add_argument(
         "paths", type=str, nargs="+", help="Paths to testsuite, can be dir or file"
@@ -341,9 +351,39 @@ async def run(
         remove_tests_from_skiplist(skipped_passed, skipped_paths_features)
 
 
+def print_preprocessed_source(path: PathT) -> None:
+    """
+    Print the preprocessed source to STDOUT. For test262/mjsunit, it may include
+    harness code and macros are replaced by actual code. For CVEs/flow/esprima,
+    the exact source code is returned.
+    """
+
+    from preprocess import generate_source
+
+    suite = get_suite(path)
+    if not suite:
+        print("Not a test from valid test suite.")
+        return
+    with open(path, "rb") as f:
+        source = f.read().decode("utf-8")
+    test_case = generate_source(source, suite.directory, suite.get_full_test_name(path))
+    # This is specifically for test262, and we only insert the directive if
+    # it's in strict only mode (when testing we would have to test both strict
+    # and non-strict mode if none of them is specified).
+    if StrictMode.STRICT in test_case.strict_mode:
+        print("'use strict';")
+    print(test_case.source)
+
+
 async def main():
     parser = create_parser()
     args = parser.parse_args()
+
+    # If user wants to dump the preprocessed source for debugging, handle it
+    # separately for readability.
+    if args.dump_source:
+        print_preprocessed_source(args.paths[0])
+        return
 
     work_dir: Optional[str] = args.work_dir
     # Hold the reference to the temporary directory (if we do create one), so
