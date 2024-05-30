@@ -962,9 +962,28 @@ class ESTreeIRGen {
           Function::DefinitionKind::ES5Function);
 
   /// Generate IR for ArrowFunctionExpression.
+  /// \param parentScope is the VariableScope of the enclosing function, or null
+  ///   if there isn't one.
   Value *genArrowFunctionExpression(
       ESTree::ArrowFunctionExpressionNode *AF,
       Identifier nameHint);
+
+  /// Generate IR for an arrow function's body, which may be lazy.
+  //// \param originalName is the original non-unique name specified by the user
+  ///   or inferred according to the rules of ES6.
+  /// \param functionNode is the ESTree arrow function node.
+  /// \param parentScope is the VariableScope of the enclosing function, or null
+  ///   if there isn't one.
+  /// \param capturedThis the captured value of this (nullable).
+  /// \param capturedNewTarget the captured value of new.target.
+  /// \param capturedArguments the captured value of arguments (nullable).
+  Function *genArrowFunction(
+      Identifier nameHint,
+      ESTree::ArrowFunctionExpressionNode *AF,
+      VariableScope *parentScope,
+      Variable *capturedThis,
+      Value *capturedNewTarget,
+      Variable *capturedArguments);
 
   /// Generate IR for a function (function declaration or expression) that is
   /// not a generator, async, or arrow function.  Constructors are "basic",
@@ -1120,7 +1139,10 @@ class ESTreeIRGen {
       Function *F,
       ESTree::FunctionLikeNode *functionNode,
       ESTree::BlockStatementNode *bodyBlock,
-      VariableScope *parentVarScope);
+      VariableScope *parentVarScope,
+      Variable *capturedThis = nullptr,
+      Value *capturedNewTarget = nullptr,
+      Variable *capturedArguments = nullptr);
 
   /// Invoked after IR for a function has been emitted to perform any needed
   /// adjustments. Specifically, it updates all catch targets.

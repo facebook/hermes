@@ -150,6 +150,25 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
     return Builder.getLiteralUndefined();
   }
 
+  auto *newFunc = genArrowFunction(
+      nameHint,
+      AF,
+      curFunction()->curScope->getVariableScope(),
+      curFunction()->capturedThis,
+      curFunction()->capturedNewTarget,
+      curFunction()->capturedArguments);
+
+  // Emit CreateFunctionInst after we have restored the builder state.
+  return Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
+}
+
+Function *ESTreeIRGen::genArrowFunction(
+    Identifier nameHint,
+    ESTree::ArrowFunctionExpressionNode *AF,
+    VariableScope *parentScope,
+    Variable *capturedThis,
+    Value *capturedNewTarget,
+    Variable *capturedArguments) {
   auto *newFunc = Builder.createFunction(
       nameHint,
       Function::DefinitionKind::ES6Arrow,
@@ -162,14 +181,26 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
     newFunc->getAttributesRef(Mod).typed = true;
   }
 
+  if (auto *body = ESTree::getBlockStatement(AF);
+      body && body->isLazyFunctionBody) {
+    setupLazyFunction(
+        newFunc,
+        AF,
+        body,
+        parentScope,
+        capturedThis,
+        capturedNewTarget,
+        capturedArguments);
+    return newFunc;
+  }
+
   auto compileFunc = [this,
                       newFunc,
                       AF,
-                      capturedThis = curFunction()->capturedThis,
-                      capturedNewTarget = curFunction()->capturedNewTarget,
-                      capturedArguments = curFunction()->capturedArguments,
-                      parentScope =
-                          curFunction()->curScope->getVariableScope()] {
+                      capturedThis,
+                      capturedNewTarget,
+                      capturedArguments,
+                      parentScope] {
     FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
@@ -190,8 +221,7 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 
   enqueueCompilation(AF, ExtraKey::Normal, newFunc, compileFunc);
 
-  // Emit CreateFunctionInst after we have restored the builder state.
-  return Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
+  return newFunc;
 }
 
 NormalFunction *ESTreeIRGen::genBasicFunction(
@@ -1007,7 +1037,10 @@ void ESTreeIRGen::setupLazyFunction(
     Function *F,
     ESTree::FunctionLikeNode *functionNode,
     ESTree::BlockStatementNode *bodyBlock,
-    VariableScope *parentVarScope) {
+    VariableScope *parentVarScope,
+    Variable *capturedThis,
+    Value *capturedNewTarget,
+    Variable *capturedArguments) {
   // Avoid modifying Builder state because this isn't enqueued.
   IRBuilder::SaveRestore saveBuilder{Builder};
 
@@ -1025,7 +1058,12 @@ void ESTreeIRGen::setupLazyFunction(
       bodyBlock->paramYield,
       bodyBlock->paramAwait};
 
-  Builder.createLazyCompilationDataInst(std::move(data), parentVarScope);
+  Builder.createLazyCompilationDataInst(
+      std::move(data),
+      capturedThis,
+      capturedNewTarget,
+      capturedArguments,
+      parentVarScope);
   Builder.createUnreachableInst();
 
   // Set the function's .length.

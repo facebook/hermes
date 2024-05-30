@@ -5267,13 +5267,32 @@ class LazyCompilationDataInst : public Instruction {
   LazyCompilationData data_;
 
  public:
-  enum { ParentVarScopeIdx };
+  enum {
+    CapturedThisIdx,
+    CapturedNewTargetIdx,
+    CapturedArgumentsIdx,
+    ParentVarScopeIdx
+  };
 
   explicit LazyCompilationDataInst(
       LazyCompilationData &&data,
+      Value *capturedThis,
+      Value *capturedNewTarget,
+      Value *capturedArguments,
       VariableScope *parentVarScope)
       : Instruction(ValueKind::LazyCompilationDataInstKind), data_(data) {
+    // Store the captured variables as EmptySentinel if they were null.
+    // The getters translate back to nullptr, convenient for the caller to use.
+    assert(
+        llvh::isa<EmptySentinel>(capturedThis) ||
+        llvh::isa<Variable>(capturedThis));
+    assert(
+        llvh::isa<EmptySentinel>(capturedArguments) ||
+        llvh::isa<Variable>(capturedArguments));
     setType(Type::createNoType());
+    pushOperand(capturedThis);
+    pushOperand(capturedNewTarget);
+    pushOperand(capturedArguments);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: LazyCompilationData relies on the fact that we don't delete
@@ -5304,6 +5323,19 @@ class LazyCompilationDataInst : public Instruction {
   }
   VariableScope *getParentVarScope() {
     return cast<VariableScope>(getOperand(ParentVarScopeIdx));
+  }
+
+  /// \return the captured \c this value Variable, nullptr if there is none.
+  Variable *getCapturedThis() {
+    return llvh::dyn_cast<Variable>(getOperand(CapturedThisIdx));
+  }
+  /// \return the captured \c new.target value, may be literal undefined.
+  Value *getCapturedNewTarget() {
+    return getOperand(CapturedNewTargetIdx);
+  }
+  /// \return the captured \c arguments Variable, nullptr if there is none.
+  Variable *getCapturedArguments() {
+    return llvh::dyn_cast<Variable>(getOperand(CapturedArgumentsIdx));
   }
 
   static bool hasOutput() {

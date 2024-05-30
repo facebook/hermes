@@ -1229,8 +1229,17 @@ NativeCallInst *IRBuilder::createNativeCallInst(
 
 LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
     LazyCompilationData &&data,
+    Variable *capturedThis,
+    Value *capturedNewTarget,
+    Variable *capturedArguments,
     VariableScope *parentVarScope) {
-  auto *inst = new LazyCompilationDataInst(std::move(data), parentVarScope);
+  auto *inst = new LazyCompilationDataInst(
+      std::move(data),
+      capturedThis ? static_cast<Value *>(capturedThis) : getEmptySentinel(),
+      capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
+      capturedArguments ? static_cast<Value *>(capturedArguments)
+                        : getEmptySentinel(),
+      parentVarScope);
   insert(inst);
   return inst;
 }

@@ -682,6 +682,9 @@ class IRBuilder {
 
   LazyCompilationDataInst *createLazyCompilationDataInst(
       LazyCompilationData &&data,
+      Variable *capturedThis,
+      Value *capturedNewTarget,
+      Variable *capturedArguments,
       VariableScope *parentVarScope);
 
   /// This is an RAII object that saves and restores the source location of the
