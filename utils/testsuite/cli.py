@@ -135,7 +135,7 @@ def validate_args(args: argparse.Namespace):
             print("Argument error: Only one path is expected with --dump-source.")
             sys.exit(1)
 
-    utils.check_hermes_exe(args.binary_directory, args.lazy, args.shermes)
+    utils.check_hermes_exe(args.binary_directory, args.shermes)
 
 
 def print_stats(stats: dict) -> None:

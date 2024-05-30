@@ -137,19 +137,14 @@ def list_all_matched_entries(pattern: str) -> List[PathT]:
     return [f for f in files if f.startswith(pattern)]
 
 
-def check_hermes_exe(binary_dir: PathT, lazy: bool, shermes: bool) -> None:
+def check_hermes_exe(binary_dir: PathT, shermes: bool) -> None:
     """Check that needed Hermes executables exist, terminate the execution if not."""
 
     # TODO(zhaogang): Check the executable names on Windows if we run testsuites on it.
-    exes = []
-    if lazy:
-        exes.append(os.path.join(binary_dir, "hermes"))
-    elif shermes:
-        exes.append(os.path.join(binary_dir, "shermes"))
-    else:
-        exes += [os.path.join(binary_dir, "hermesc"), os.path.join(binary_dir, "hvm")]
+    exe = os.path.join(binary_dir, "hermes")
+    if shermes:
+        exe = os.path.join(binary_dir, "shermes")
 
-    for exe in exes:
-        if not os.path.isfile(exe):
-            print(f"Error: {exe} not found.")
-            sys.exit(1)
+    if not os.path.isfile(exe):
+        print(f"Error: {exe} not found.")
+        sys.exit(1)
