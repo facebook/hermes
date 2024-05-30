@@ -165,22 +165,20 @@ class Test262Suite(Suite):
                 TestResultCode.TEST_SKIPPED,
                 "SKIP: Test has `module` flag",
             )
+        # Check if we need to skip this test due to unsupported features.
+        for f in test_case.features:
+            if skip_result := args.skipped_paths_features.try_skip(
+                f,
+                [
+                    SkipCategory.UNSUPPORTED_FEATURES,
+                    SkipCategory.PERMANENT_UNSUPPORTED_FEATURES,
+                ],
+                full_test_name,
+            ):
+                return skip_result
 
         base_name = os.path.basename(args.test_file)
         base_name_no_ext = os.path.splitext(base_name)[0]
-
-        # Check if we need to skip this test due to unsupported features.
-        if not args.test_skiplist:
-            for f in test_case.features:
-                if skip_result := args.skipped_paths_features.try_skip(
-                    f,
-                    [
-                        SkipCategory.UNSUPPORTED_FEATURES,
-                        SkipCategory.PERMANENT_UNSUPPORTED_FEATURES,
-                    ],
-                    full_test_name,
-                ):
-                    return skip_result
 
         tmp_dir: PathT = os.path.join(
             args.work_dir,

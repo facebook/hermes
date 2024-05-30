@@ -1,5 +1,91 @@
 {
+  "manual_skip_list": [
+    {
+      "paths": [
+        "test262/test/built-ins/Function/prototype/toString/",
+        "test262/test/language/block-scope/",
+        "test262/test/language/expressions/async-generator/",
+        "test262/test/language/expressions/class/",
+        "test262/test/language/expressions/dynamic-import/",
+        "test262/test/language/expressions/import.meta/",
+        "test262/test/language/expressions/new.target/",
+        "test262/test/language/expressions/super/",
+        "test262/test/language/module-code/",
+        "test262/test/language/statements/async-generator/",
+        "test262/test/language/statements/class/",
+        "test262/test/language/statements/let/",
+        "mjsunit/debug-",
+        "mjsunit/es6/debug-",
+        "esprima/test_fixtures/tokenize/",
+        "esprima/test_fixtures/comment/",
+        "esprima/test_fixtures/tolerant-parse/"
+      ],
+      "comment": "These paths are manually excluded for now since most tests under them are not supported. Every path should be a directory or partial path here."
+    },
+    {
+      "paths": [
+        "test262/test/language/computed-property-names/"
+      ],
+      "comment": "Most tests failed due to class, we should remove it once we have better support of class."
+    },
+    {
+      "paths": [
+        "test262/test/language/expressions/async-arrow-function/"
+      ],
+      "comment": "Lazy arrow functions are not supported for now."
+    }
+  ],
   "skip_list": [
+    {
+      "paths": [
+        "test262/test/language/expressions/arrow-function/dflt-params-ref-later.js",
+        "test262/test/language/expressions/arrow-function/dflt-params-ref-self.js",
+        "test262/test/language/expressions/arrow-function/eval-var-scope-syntax-err.js"
+      ],
+      "comment": [
+        "The first two requires enabling TDZ to throw expected error, the last one requires lexical scope for eval()."
+      ]
+    },
+    {
+      "paths": [
+        "mjsunit/es6/block-let-contextual-sloppy.js",
+        "mjsunit/harmony/regexp-property-lu-ui.js",
+        "mjsunit/es6/block-let-declaration.js",
+        "mjsunit/es6/math-log1p.js",
+        "mjsunit/es6/regress/regress-2506.js",
+        "mjsunit/es6/regress/regress-3938.js",
+        "mjsunit/regress/regress-4693.js",
+        "mjsunit/compiler/regress-447567.js",
+        "mjsunit/regress/regress-4388.js",
+        "mjsunit/es6/block-let-declaration-sloppy.js"
+      ],
+      "comment": "These are rest failing tests in mjsunit that we may support soon."
+    },
+    {
+      "paths": [
+        "test262/test/language/rest-parameters/with-new-target.js"
+      ],
+      "comment": "This test fails for now since we don't have good class support"
+    },
+    {
+      "paths":[
+        "test262/test/built-ins/Promise/"
+      ],
+      "comment": "We support Promise but not every features of it."
+    },
+    {
+      "paths": [
+        "test262/test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order.js",
+        "test262/test/language/expressions/assignment/destructuring/iterator-destructuring-property-reference-target-evaluation-order.js"
+      ],
+      "comment": "We have wrong evaluation order for destructing, V8/JSC can't pass them as well."
+    },
+    {
+      "paths": [
+        "test262/test/language/expressions/object/method-definition/"
+      ],
+      "comment": "Once T189947200 and T189947264 are addressed, we should remove these."
+    },
     {
       "paths": [
         "CVEs/CVE-2016-7194.js"
@@ -26,6 +112,7 @@
       "paths": ["CVEs/CVE-2017-2446.js"],
       "comment": ["Use special function properties such as '.caller'."]
     },
+    "test262/test/language/statements/switch/syntax/redeclaration/",
     "test262/test/language/identifiers/vals-rus-alpha-lower-via-escape-hex4.js",
     "test262/test/language/identifiers/vals-rus-alpha-upper-via-escape-hex4.js",
     "test262/test/language/white-space/mongolian-vowel-separator.js",
@@ -71,9 +158,7 @@
     "mjsunit/regexp.js",
     "mjsunit/regress/regress-396.js",
     "mjsunit/compiler/debug-catch-prediction.js",
-    "mjsunit/debug-",
     "mjsunit/deserialize-script-id.js",
-    "mjsunit/es6/debug-",
     "mjsunit/es6/mirror-iterators.js",
     "mjsunit/function-source.js",
     "mjsunit/regress/regress-arguments-slice.js",
@@ -82,6 +167,11 @@
     "mjsunit/argument-named-arguments.js",
     "mjsunit/regress/regress-2989.js",
     "mjsunit/regress/regress-crbug-157520.js",
+    "test262/test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js",
+    "test262/test/language/expressions/arrow-function/lexical-super-call-from-within-constructor.js",
+    "test262/test/language/expressions/arrow-function/lexical-super-property-from-within-constructor.js",
+    "test262/test/language/expressions/arrow-function/lexical-super-property.js",
+    "test262/test/language/expressions/arrow-function/lexical-supercall-from-immediately-invoked-arrow.js",
     "test262/test/language/arguments-object/10.6-6-4.js",
     "test262/test/language/arguments-object/10.6-10-c-ii-1.js",
     "test262/test/language/arguments-object/S10.1.6_A1_T3.js",
@@ -203,27 +293,6 @@
     "test262/test/language/statements/const/block-local-use-before-initialization-in-declaration-statement.js",
     "test262/test/language/statements/const/global-closure-get-before-initialization.js",
     "test262/test/language/statements/for-in/head-const-bound-names-fordecl-tdz.js",
-    "test262/test/built-ins/Function/prototype/toString/",
-    "test262/test/built-ins/Promise/",
-    "test262/test/language/block-scope/",
-    "test262/test/language/computed-property-names/",
-    "test262/test/language/destructuring/",
-    "test262/test/language/expressions/arrow-function/",
-    "test262/test/language/expressions/assignment/destructuring/",
-    "test262/test/language/expressions/async-arrow-function/",
-    "test262/test/language/expressions/async-generator/",
-    "test262/test/language/expressions/await/",
-    "test262/test/language/expressions/class/",
-    "test262/test/language/expressions/dynamic-import/",
-    "test262/test/language/expressions/import.meta/",
-    "test262/test/language/expressions/new.target/",
-    "test262/test/language/expressions/object/method-definition/",
-    "test262/test/language/expressions/super/",
-    "test262/test/language/module-code/",
-    "test262/test/language/rest-parameters/",
-    "test262/test/language/statements/async-generator/",
-    "test262/test/language/statements/class/",
-    "test262/test/language/statements/let/",
     "mjsunit/arguments.js",
     "mjsunit/es6/array-copywithin.js",
     "mjsunit/es6/array-from.js",
@@ -340,7 +409,6 @@
     "test262/test/language/statements/for-of/head-let-",
     "test262/test/language/statements/try/early-catch-function.js",
     "test262/test/language/statements/try/optional-catch-binding-lexical.js",
-    "test262/test/language/statements/switch/syntax/redeclaration/",
     "test262/test/language/global-code/block-decl-strict.js",
     "test262/test/language/function-code/block-decl-strict.js",
     "test262/test/language/function-code/block-decl-onlystrict.js",
@@ -1742,9 +1810,6 @@
     "esprima/test_fixtures/ES6/class/invalid-setter-method-rest.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0250.js",
     "esprima/test_fixtures/invalid-syntax/migrated_0184.js",
-    "esprima/test_fixtures/tokenize/",
-    "esprima/test_fixtures/comment/",
-    "esprima/test_fixtures/tolerant-parse/",
     "esprima/test_fixtures/directive-prolog/migrated_0000.js",
     "esprima/test_fixtures/directive-prolog/migrated_0001.js",
     "esprima/test_fixtures/statement/with/",
@@ -3951,7 +4016,8 @@
         "test262/test/language/statements/with/unscopables-inc-dec.js",
         "test262/test/language/statements/with/unscopables-prop-get-err.js",
         "test262/test/staging/Temporal/UserCalendar/old/calendar-non-trivial-mergefields.js",
-        "test262/test/staging/Temporal/UserCalendar/old/calendar-extra-fields.js"
+        "test262/test/staging/Temporal/UserCalendar/old/calendar-extra-fields.js",
+        "test262/test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js"
       ],
       "comment": "These tests require `eval` or `with`."
     }

@@ -241,10 +241,21 @@ async def run(
         assert suite, f"Test suite root directory is not found for {test_file}"
         full_test_name = suite.get_full_test_name(test_file)
 
-        # Check if this file should be skipped.
+        # We always skip tests that are in permanent skiplist.
+        if test_result := skipped_paths_features.try_skip(
+            test_file, [SkipCategory.PERMANENT_SKIP_LIST], full_test_name
+        ):
+            pd.update(test_result)
+            stats[test_result.code] += 1
+            continue
+
+        # Check if this file should be skipped w.r.t. test_skiplist flag.
         if test_result := skipped_paths_features.try_skip(
             test_file,
-            [SkipCategory.SKIP_LIST, SkipCategory.PERMANENT_SKIP_LIST],
+            [
+                SkipCategory.SKIP_LIST,
+                SkipCategory.MANUAL_SKIP_LIST,
+            ],
             full_test_name,
         ):
             if not test_skiplist:
@@ -253,6 +264,7 @@ async def run(
                 continue
             else:
                 skipped_tests[full_test_name] = suite.directory
+        # We check for intl tests separately since we don't run them frequently.
         if test_result := skipped_paths_features.try_skip(
             test_file, [SkipCategory.INTL_TESTS], full_test_name
         ):
@@ -290,7 +302,12 @@ async def run(
         pd.update(result)
         if result.code.is_failure:
             failed_cases[result.code].append(result.test_name)
-        if result.code == TestResultCode.TEST_PASSED:
+        # Some tests might be skipped due to unsupported features, we should consider
+        # them as "passed" as well since they will be skipped anyway.
+        if (
+            result.code == TestResultCode.TEST_PASSED
+            or result.code == TestResultCode.TEST_SKIPPED
+        ):
             if test_suite_dir := skipped_tests.get(result.test_name):
                 skipped_passed[result.test_name] = test_suite_dir
 

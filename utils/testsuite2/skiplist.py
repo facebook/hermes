@@ -16,6 +16,7 @@ from utils import list_all_matched_entries, TestCaseResult, TestResultCode
 
 @unique
 class SkipCategory(Enum):
+    MANUAL_SKIP_LIST = "manual_skip_list"
     SKIP_LIST = "skip_list"
     LAZY_SKIP_LIST = "lazy_skip_list"
     PERMANENT_SKIP_LIST = "permanent_skip_list"
@@ -26,6 +27,7 @@ class SkipCategory(Enum):
 
 
 SKIPCAT_TO_RETCODE = {
+    SkipCategory.MANUAL_SKIP_LIST: TestResultCode.TEST_SKIPPED,
     SkipCategory.SKIP_LIST: TestResultCode.TEST_SKIPPED,
     SkipCategory.LAZY_SKIP_LIST: TestResultCode.TEST_SKIPPED,
     SkipCategory.PERMANENT_SKIP_LIST: TestResultCode.TEST_PERMANENTLY_SKIPPED,
