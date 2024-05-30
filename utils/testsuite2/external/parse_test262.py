@@ -9,7 +9,7 @@
 # https://chromium.googlesource.com/external/github.com/tc39/test262/+/HEAD/CONTRIBUTING.md
 
 import re
-from typing import Optional
+from typing import Optional, Tuple
 
 from ._monkeyYaml import load as yamlLoad
 
@@ -60,7 +60,7 @@ def findLicense(src: str) -> Optional[str]:
     return match.group(0)
 
 
-def findAttrs(src: str) -> tuple[Optional[str], Optional[str]]:
+def findAttrs(src: str) -> Tuple[Optional[str], Optional[str]]:
     match = _YAML_PATTERN.search(src)
     if not match:
         return (None, None)
