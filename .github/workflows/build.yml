@@ -164,6 +164,16 @@ jobs:
       with:
         xcode-version: 14.3.1
     - uses: actions/checkout@v4.1.0
+    - name: Cache setup
+      uses: actions/cache@v4.0.0
+      with:
+        key: v4-repo-${{ github.sha }}
+        path: |-
+          build_iphoneos
+          build_catalyst
+          build_iphonesimulator
+          build_macosx
+          destroot
     - name: Install dependencies
       run: brew install cmake ninja
     - name: Build the test application
@@ -181,7 +191,7 @@ jobs:
       run: |-
         xcodebuild test \
           -workspace ApplePlatformsIntegrationTests.xcworkspace \
-          -configuration Release \
+          -configuration Debug \
           -destination 'platform=iOS Simulator,name=iPhone 14 Pro Max,OS=16.4' \
           -scheme ApplePlatformsIntegrationMobileTests
       working-directory: test/ApplePlatformsIntegrationTestApp
