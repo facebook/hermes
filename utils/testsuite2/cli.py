@@ -84,10 +84,11 @@ def create_parser():
         help="Specifies work directory where the test files will be generated. "
         "The work directory will be deleted if it is not empty",
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--lazy", dest="lazy", action="store_true", help="Force lazy evaluation"
     )
-    parser.add_argument(
+    group.add_argument(
         "--shermes", dest="shermes", action="store_true", help="Test with shermes"
     )
     parser.add_argument(
@@ -108,6 +109,22 @@ def create_parser():
     )
 
     return parser
+
+
+def validate_args(args: argparse.Namespace):
+    """
+    Validate provided arguments. For -b flag, check whether necessary Hermes
+    executables do exist.
+    """
+
+    import sys
+
+    if args.dump_source:
+        if len(args.paths) != 1:
+            print("Argument error: Only one path is expected with --dump-source.")
+            sys.exit(1)
+
+    utils.check_hermes_exe(args.binary_directory, args.lazy, args.shermes)
 
 
 def print_stats(stats: dict) -> None:
@@ -234,7 +251,6 @@ async def run(
     failing tests (if there are).
     """
 
-    utils.check_hermes_exe(binary_directory)
     # Get the common path of all file/directory paths to be used when creating
     # temporary files.
     tests_home = os.path.commonpath(tests_paths)
@@ -378,6 +394,7 @@ def print_preprocessed_source(path: PathT) -> None:
 async def main():
     parser = create_parser()
     args = parser.parse_args()
+    validate_args(args)
 
     # If user wants to dump the preprocessed source for debugging, handle it
     # separately for readability.
