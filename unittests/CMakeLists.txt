@@ -26,8 +26,7 @@ endif()
 
 add_subdirectory(AST)
 add_subdirectory(IR)
-# HBC tests disabled in Static Hermes.
-# add_subdirectory(BCGen)
+add_subdirectory(BCGen)
 add_subdirectory(Parser)
 add_subdirectory(VMRuntime)
 add_subdirectory(Support)

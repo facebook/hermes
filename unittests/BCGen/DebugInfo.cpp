@@ -36,15 +36,16 @@ void checkAddress(
   EXPECT_EQ(statement, location->statement);
 }
 
-static DebugInfoGenerator makeGenerator() {
-  UniquingFilenameTable files;
-  files.addFilename("file1.js");
-  files.addFilename("file2.js");
-  return DebugInfoGenerator{std::move(files)};
+static DebugInfoGenerator makeGenerator(DebugInfo &info) {
+  DebugInfoGenerator result{info};
+  result.addFilename("file1.js");
+  result.addFilename("file2.js");
+  return result;
 }
 
 TEST(DebugInfo, TestBasicInfo) {
-  auto dbg = makeGenerator();
+  DebugInfo info;
+  auto dbg = makeGenerator(info);
 
   auto debugOffset = dbg.appendSourceLocations(
       Loc{0, 1, 1, 1, 0}, // Method starts in file1:1,1
@@ -54,14 +55,15 @@ TEST(DebugInfo, TestBasicInfo) {
           Loc{2, 1, 3, 1, 1} // Opcode at address 2 is file1:3,1
       });
 
-  DebugInfo info = dbg.serializeWithMove();
+  std::move(dbg).generate();
 
   checkAddress(&info, debugOffset, 0, 1, 2, 1, 1);
   checkAddress(&info, debugOffset, 2, 1, 3, 1, 1);
 }
 
 TEST(DebugInfo, TestMultipleMethods) {
-  auto dbg = makeGenerator();
+  DebugInfo info;
+  auto dbg = makeGenerator(info);
 
   auto offset1 = dbg.appendSourceLocations(
       Loc{0, 1, 1, 1, 0}, 0, {Loc{2, 1, 1, 4, 1}, Loc{4, 1, 3, 4, 1}});
@@ -71,7 +73,7 @@ TEST(DebugInfo, TestMultipleMethods) {
       0,
       {Loc{2, 1, 101, 4, 1}, Loc{8, 1, 102, 4, 1}, Loc{16, 1, 103, 4, 1}});
 
-  DebugInfo info = dbg.serializeWithMove();
+  std::move(dbg).generate();
 
   checkAddress(&info, offset1, 2, 1, 1, 4, 1);
   checkAddress(&info, offset2, 8, 1, 102, 4, 1);
@@ -81,7 +83,8 @@ TEST(DebugInfo, TestMultipleMethods) {
 }
 
 TEST(DebugInfo, TestMultipleFiles) {
-  auto dbg = makeGenerator();
+  DebugInfo info;
+  auto dbg = makeGenerator(info);
 
   auto offset = dbg.appendSourceLocations(
       Loc{0, 1111, 1, 1, 0}, // Method starts in file #1111
@@ -92,7 +95,7 @@ TEST(DebugInfo, TestMultipleFiles) {
           Loc{6, 2222, 1, 2, 1} // Back to 2222
       });
 
-  DebugInfo info = dbg.serializeWithMove();
+  std::move(dbg).generate();
 
   checkAddress(&info, offset, 0, 1111, 1, 1, 0);
   checkAddress(&info, offset, 2, 2222, 1, 1, 1);
@@ -102,11 +105,12 @@ TEST(DebugInfo, TestMultipleFiles) {
 
 TEST(DebugInfo, TestLargeDeltas) {
   for (uint32_t i = 0; i < INT32_MAX; i += 123457) {
-    auto dbg = makeGenerator();
+    DebugInfo info;
+    auto dbg = makeGenerator(info);
     auto offset = dbg.appendSourceLocations(
         Loc{0, 1, 1, 1, 0}, 0, {Loc{2, i, i, i, 1}, Loc{4, 1, 2, 2, 1}});
 
-    DebugInfo info = dbg.serializeWithMove();
+    std::move(dbg).generate();
 
     checkAddress(&info, offset, 0, 1, 1, 1, 0);
     checkAddress(&info, offset, 2, i, i, i, 1);
@@ -116,7 +120,8 @@ TEST(DebugInfo, TestLargeDeltas) {
 
 TEST(DebugInfo, TestGetAddress) {
   // Smoke test to make sure that the getAddressForLocation works.
-  auto dbg = makeGenerator();
+  DebugInfo info;
+  auto dbg = makeGenerator(info);
 
   dbg.appendSourceLocations(
       Loc{0, 42, 1, 1, 0}, // Function is in file 42
@@ -141,7 +146,7 @@ TEST(DebugInfo, TestGetAddress) {
           Loc{2, 12, 3, 1, 1}, // opcode 2 is at file12:3:1
       });
 
-  DebugInfo info = dbg.serializeWithMove();
+  std::move(dbg).generate();
 
   OptValue<DebugSearchResult> result;
 

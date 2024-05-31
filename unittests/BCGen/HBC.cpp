@@ -9,11 +9,12 @@
 
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
+#include "hermes/BCGen/Lowering.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
@@ -56,274 +57,23 @@ class VectorBuffer : public Buffer {
   std::vector<uint8_t> vec_;
 };
 
-/// Create a string table appropriate (i.e. that contains all the necessary
-/// strings) for use with these tests.  Additionally adds the strings in
-/// \p strs if the test requires extra
-StringLiteralTable stringsForTest(
-    std::initializer_list<llvh::StringRef> strs = {}) {
-  UniquingStringLiteralAccumulator strings;
-
-  strings.addString("global", /* isIdentifier */ false);
-  for (auto &str : strs) {
-    strings.addString(str, /* isIdentifier */ false);
-  }
-
-  return UniquingStringLiteralAccumulator::toTable(std::move(strings));
-}
-
-TEST(HBCBytecodeGen, IntegrationTest) {
-  std::string Result;
-  llvh::raw_string_ostream OS(Result);
-
-  auto Ctx = std::make_shared<Context>();
-  Module M(Ctx);
-  IRBuilder Builder(&M);
-
-  Ctx->setDebugInfoSetting(DebugInfoSetting::ALL);
-
-  BytecodeModuleGenerator BMG;
-  BMG.initializeStringTable(stringsForTest({"f1"}));
-  BMG.addFilename("main.js");
-
-  Function *globalFunction = Builder.createTopLevelFunction({});
-  auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
-  BFG1->emitMov(1, 2);
-  BMG.setEntryPointIndex(BMG.addFunction(globalFunction));
-  BMG.setFunctionGenerator(globalFunction, std::move(BFG1));
-
-  Function *f1 =
-      Builder.createFunction("f1", Function::DefinitionKind::ES5Function, true);
-  auto BFG2 = BytecodeFunctionGenerator::create(BMG, 10);
-  BFG2->setSourceLocation(DebugSourceLocation(0, 0, 1, 1, 0));
-  const DebugSourceLocation debugSourceLoc(0, 1, 20, 300, 0);
-  BFG2->addDebugSourceLocation(debugSourceLoc);
-  BFG2->emitCall(9, 8, 7);
-  BMG.addFunction(f1);
-  BMG.setFunctionGenerator(f1, std::move(BFG2));
-
-  BytecodeSerializer BS{OS};
-  std::shared_ptr<BytecodeModule> BM = BMG.generate();
-  BS.serialize(*BM, SHA1{});
-
-  int globalFunctionIndex = BM->getGlobalFunctionIndex();
-  int globalFunctionOffsetExpected =
-      BM->getFunction(globalFunctionIndex).getOffset();
-  EXPECT_GE(globalFunctionOffsetExpected, 0);
-
-  auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      std::make_unique<StringBuffer>(OS.str()))
-                      .first;
-
-  int functionCnt = bytecode->getFunctionCount();
-  EXPECT_EQ(functionCnt, 2);
-
-  globalFunctionIndex = bytecode->getGlobalFunctionIndex();
-  EXPECT_TRUE(globalFunctionIndex == 0 || globalFunctionIndex == 1);
-  int globalFunctionOffsetActual =
-      bytecode->getFunctionHeader(globalFunctionIndex).offset();
-  EXPECT_EQ(globalFunctionOffsetExpected, globalFunctionOffsetActual);
-
-  // We permit globalFunctionIndex to be 0 or 1; f1 must be the other value.
-  int f1Index = 1 - globalFunctionIndex;
-  const BytecodeFunction &oldF1 = BM->getFunction(f1Index);
-  EXPECT_EQ(
-      oldF1.getDebugOffsets()->sourceLocations,
-      bytecode->getDebugOffsets(f1Index)->sourceLocations);
-  EXPECT_EQ(
-      oldF1.getDebugOffsets()->lexicalData,
-      bytecode->getDebugOffsets(f1Index)->lexicalData);
-  auto optionalSourceLoc = bytecode->getDebugInfo()->getLocationForAddress(
-      bytecode->getDebugOffsets(f1Index)->sourceLocations, 0);
-  EXPECT_TRUE(optionalSourceLoc.hasValue());
-  EXPECT_EQ(*optionalSourceLoc, debugSourceLoc);
-
-  // Verify basic properties of the source map.
-  // We have two functions. Each function has one segment per debug location.
-  SourceMapGenerator sourceMap;
-  sourceMap.addSource("main.js");
-  BM->populateSourceMap(&sourceMap);
-  const auto &mappings = sourceMap.getMappingsLines();
-  EXPECT_EQ(mappings.size(), 1u);
-  EXPECT_EQ(mappings[0].size(), 2u);
-}
-
-TEST(HBCBytecodeGen, StripDebugInfo) {
-  // Test that stripping debug info is successful.
-  auto Ctx = std::make_shared<Context>();
-  Module M(Ctx);
-  IRBuilder Builder(&M);
-
-  Ctx->setDebugInfoSetting(DebugInfoSetting::ALL);
-
-  BytecodeModuleGenerator BMG;
-  BMG.initializeStringTable(stringsForTest());
-
-  Function *globalFunction = Builder.createTopLevelFunction({});
-  auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
-  BFG1->addDebugSourceLocation(DebugSourceLocation{0, 1, 20, 300, 0});
-  BFG1->emitMov(1, 2);
-  BMG.setEntryPointIndex(BMG.addFunction(globalFunction));
-  BMG.setFunctionGenerator(globalFunction, std::move(BFG1));
-
-  std::shared_ptr<BytecodeModule> BM = BMG.generate();
-
-  BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
-
-  std::string unstrippedStorage;
-  llvh::raw_string_ostream unstrippedOS(unstrippedStorage);
-  opts.stripDebugInfoSection = false;
-  BytecodeSerializer{unstrippedOS, opts}.serialize(*BM, SHA1{});
-
-  std::string strippedStorage;
-  llvh::raw_string_ostream strippedOS(strippedStorage);
-  opts.stripDebugInfoSection = true;
-  BytecodeSerializer{strippedOS, opts}.serialize(*BM, SHA1{});
-
-  // Stripping should reduce the size.
-  EXPECT_LT(strippedOS.str().size(), unstrippedOS.str().size());
-
-  // Verify debug info absent from decoded BM.
-  std::unique_ptr<hbc::BCProvider> strippedBC =
-      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          std::make_unique<StringBuffer>(strippedOS.str()))
-          .first;
-  ASSERT_EQ(strippedBC->getFunctionCount(), BM->getNumFunctions());
-  for (uint32_t i = 0, max = BM->getNumFunctions(); i < max; i++) {
-    EXPECT_TRUE(BM->getFunction(i).hasDebugInfo());
-    EXPECT_FALSE(strippedBC->getFunctionHeader(i).flags().hasDebugInfo);
-  }
-}
-
-TEST(HBCBytecodeGen, StringTableTest) {
-  std::string Result;
-  llvh::raw_string_ostream OS(Result);
-
-  auto Ctx = std::make_shared<Context>();
-  Module M(Ctx);
-  IRBuilder Builder(&M);
-
-  BytecodeModuleGenerator BMG;
-  BMG.initializeStringTable(
-      stringsForTest({"foo", "bar", /* Ā */ "\xc4\x80", /* å */ "\xc3\xa5"}));
-
-  Function *F = Builder.createTopLevelFunction(true);
-  auto BFG = BytecodeFunctionGenerator::create(BMG, 2);
-  auto fooIdx1 = BFG->getStringID(Builder.getLiteralString("foo"));
-  auto barIdx1 = BFG->getStringID(Builder.getLiteralString("bar"));
-  auto fooIdx2 = BFG->getStringID(Builder.getLiteralString("foo"));
-  auto barIdx2 = BFG->getStringID(Builder.getLiteralString("bar"));
-  auto unicodeIdx1 =
-      BFG->getStringID(Builder.getLiteralString("\xc4\x80")); // Ā
-  auto unicodeIdx2 =
-      BFG->getStringID(Builder.getLiteralString("\xc3\xa5")); // å
-
-  BFG->emitLoadConstString(1, fooIdx1);
-  BFG->emitLoadConstString(1, barIdx1);
-  BFG->emitLoadConstString(1, fooIdx2);
-  BFG->emitLoadConstString(1, barIdx2);
-  BFG->emitLoadConstString(1, unicodeIdx1);
-  BFG->emitLoadConstString(1, unicodeIdx2);
-  BFG->bytecodeGenerationComplete();
-
-  BMG.setEntryPointIndex(BMG.addFunction(F));
-  BMG.setFunctionGenerator(F, std::move(BFG));
-  std::shared_ptr<BytecodeModule> BM = BMG.generate();
-  // 4 strings + function name.
-  EXPECT_EQ(BM->getStringTableSize(), 5u);
-  // function name "global" + 'foobar' + 2 chars per unicode char
-  EXPECT_EQ(BM->getStringStorageSize(), 16u);
-
-  Result.clear();
-  BytecodeSerializer BS{OS};
-  BS.serialize(*BM, SHA1{});
-
-  auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      std::make_unique<StringBuffer>(OS.str()))
-                      .first;
-
-  EXPECT_EQ(bytecode->getStringCount(), 5u);
-  EXPECT_EQ(bytecode->getStringStorage().size(), 16u);
-
-  // bar
-  EXPECT_EQ(bytecode->getStringTableEntry(0).getOffset(), 0u);
-  EXPECT_EQ(bytecode->getStringTableEntry(0).getLength(), 3u);
-  EXPECT_FALSE(bytecode->getStringTableEntry(0).isUTF16());
-
-  // foo
-  EXPECT_EQ(bytecode->getStringTableEntry(1).getOffset(), 3u);
-  EXPECT_EQ(bytecode->getStringTableEntry(1).getLength(), 3u);
-  EXPECT_FALSE(bytecode->getStringTableEntry(1).isUTF16());
-
-  // global
-  EXPECT_EQ(bytecode->getStringTableEntry(2).getOffset(), 6u);
-  EXPECT_EQ(bytecode->getStringTableEntry(2).getLength(), 6u);
-  EXPECT_FALSE(bytecode->getStringTableEntry(2).isUTF16());
-
-  // UTF16
-  EXPECT_EQ(bytecode->getStringTableEntry(3).getOffset(), 12u);
-  EXPECT_EQ(bytecode->getStringTableEntry(3).getLength(), 1u);
-  EXPECT_TRUE(bytecode->getStringTableEntry(3).isUTF16());
-
-  // UTF16
-  EXPECT_EQ(bytecode->getStringTableEntry(4).getOffset(), 14u);
-  EXPECT_EQ(bytecode->getStringTableEntry(4).getLength(), 1u);
-  EXPECT_TRUE(bytecode->getStringTableEntry(4).isUTF16());
-}
-
-TEST(HBCBytecodeGen, ExceptionTableTest) {
-  std::string Result;
-  llvh::raw_string_ostream OS(Result);
-
-  auto Ctx = std::make_shared<Context>();
-  Module M(Ctx);
-  IRBuilder Builder(&M);
-
-  BytecodeModuleGenerator BMG;
-  BMG.initializeStringTable(stringsForTest());
-
-  Function *F = Builder.createTopLevelFunction(true);
-  auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
-  BFG->emitMov(1, 2);
-  BFG->addExceptionHandler(HBCExceptionHandlerInfo{0, 10, 100});
-  BFG->addExceptionHandler(HBCExceptionHandlerInfo{0, 20, 200});
-  BFG->addExceptionHandler(HBCExceptionHandlerInfo{50, 60, 300});
-
-  BMG.setEntryPointIndex(BMG.addFunction(F));
-  BMG.setFunctionGenerator(F, std::move(BFG));
-
-  std::shared_ptr<BytecodeModule> BM = BMG.generate();
-  auto &BF = BM->getGlobalCode();
-  ASSERT_EQ(BF.getExceptionHandlerCount(), 3u);
-
-  BytecodeSerializer BS{OS};
-  BS.serialize(*BM, SHA1{});
-
-  auto bytecode = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                      std::make_unique<StringBuffer>(OS.str()))
-                      .first;
-
-  ASSERT_EQ(bytecode->getExceptionTable(0).size(), 3u);
-  EXPECT_EQ(bytecode->findCatchTargetOffset(0, 5), 100);
-  EXPECT_EQ(bytecode->findCatchTargetOffset(0, 15), 200);
-  EXPECT_EQ(bytecode->findCatchTargetOffset(0, 25), -1);
-  EXPECT_EQ(bytecode->findCatchTargetOffset(0, 55), 300);
-}
-
 TEST(HBCBytecodeGen, ArrayBufferTest) {
   auto src = R"(
 var arr = [1, true, false, null, null, 'abc']
 )";
   auto BM = bytecodeModuleForSource(src);
-  ASSERT_EQ(BM->getArrayBufferSize(), 10u);
+  ASSERT_EQ(BM->getLiteralValueBufferSize(), 10u);
 }
 
 TEST(HBCBytecodeGen, ObjectBufferTest) {
   auto src = R"(
 var obj = {a:1, b:2, c:3};
 )";
-  auto BM = bytecodeModuleForSource(src);
+  // Need to optimize to populate the object buffer.
+  auto BM = bytecodeModuleForSource(
+      src, BytecodeGenerationOptions::defaults(), /* optimize */ true);
   ASSERT_EQ(BM->getObjectKeyBufferSize(), 4u);
-  ASSERT_EQ(BM->getObjectValueBufferSize(), 13u);
+  ASSERT_EQ(BM->getLiteralValueBufferSize(), 13u);
 }
 
 // For the following 'easy' tests, exact duplicate literals are used. These will
@@ -344,7 +94,9 @@ var s = arr1[0] + arr2[0] + arr3[0] + arr4[0];
   // If de-duplication is working correctly, the amount of space that a single
   // array literal takes up should be the same amount of space that N identical
   // array literals take up.
-  ASSERT_EQ(singleArrBM->getArrayBufferSize(), manyArrBM->getArrayBufferSize());
+  ASSERT_EQ(
+      singleArrBM->getLiteralValueBufferSize(),
+      manyArrBM->getLiteralValueBufferSize());
 }
 
 TEST(HBCBytecodeGen, EasyObjectDedupBufferTest) {
@@ -366,8 +118,8 @@ var s = obj1.a + obj2.a + obj3.a + obj4.a;
   ASSERT_EQ(
       singleObjBM->getObjectKeyBufferSize(), dedupBM->getObjectKeyBufferSize());
   ASSERT_EQ(
-      singleObjBM->getObjectValueBufferSize(),
-      dedupBM->getObjectValueBufferSize());
+      singleObjBM->getLiteralValueBufferSize(),
+      dedupBM->getLiteralValueBufferSize());
 }
 
 // For the next 'hard' tests, the literals are not exact duplicates. If
@@ -387,7 +139,8 @@ var s = arr1[0] + arr2[1];
   auto dedupBM = bytecodeModuleForSource(almostDupCode, dedupOpts);
   // The bytecode module which performed optimizations should have a smaller
   // buffer size than the one that didn't.
-  ASSERT_LT(dedupBM->getArrayBufferSize(), dupBM->getArrayBufferSize());
+  ASSERT_LT(
+      dedupBM->getLiteralValueBufferSize(), dupBM->getLiteralValueBufferSize());
 }
 
 TEST(HBCBytecodeGen, HardObjectDedupBufferTest) {
@@ -396,15 +149,17 @@ var obj1 = {a:10,b:11,c:12,1:null,2:true,3:false};
 var obj2 = {a:10,b:11,c:12};
 var s = obj1.a + obj2.a;
 )";
-  auto dupBM = bytecodeModuleForSource(almostDupCode);
   auto dedupOpts = BytecodeGenerationOptions::defaults();
+  auto dupBM =
+      bytecodeModuleForSource(almostDupCode, dedupOpts, /* optimize */ true);
   dedupOpts.optimizationEnabled = true;
-  auto dedupBM = bytecodeModuleForSource(almostDupCode, dedupOpts);
+  auto dedupBM =
+      bytecodeModuleForSource(almostDupCode, dedupOpts, /* optimize */ true);
   // The bytecode module which performed optimizations should have a smaller
   // buffer size than the one that didn't.
   ASSERT_LT(dedupBM->getObjectKeyBufferSize(), dupBM->getObjectKeyBufferSize());
   ASSERT_LT(
-      dedupBM->getObjectValueBufferSize(), dupBM->getObjectValueBufferSize());
+      dedupBM->getLiteralValueBufferSize(), dupBM->getLiteralValueBufferSize());
 }
 
 TEST(SpillRegisterTest, SpillsParameters) {
@@ -424,7 +179,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
     values.push_back(builder.createHBCLoadConstInst(undef));
   }
   // Use them in a call to require 200 parameter registers.
-  builder.createCallInst(undef, emptySen, emptySen, undef, values);
+  builder.createCallInst(undef, emptySen, emptySen, undef, undef, values);
   builder.createReturnInst(undef);
 
   HVMRegisterAllocator RA(F);
@@ -433,7 +188,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
   RA.allocate(order);
 
   PassManager PM;
-  PM.addPass(new LowerCalls(RA));
+  PM.addPass(new LowerCalls());
   // Due to Mov elimination, many LoadConstInsts will be reallocated
   PM.addPass(new MovElimination(RA));
   PM.addPass(new SpillRegisters(RA));
@@ -491,8 +246,7 @@ TEST(HBCBytecodeGen, BytecodeFields) {
   ASSERT_EQ(fields.functionHeaders.size(), 1); // global function
   // Three functions:  print, 'Hello World', file name
   ASSERT_EQ(fields.stringTableEntries.size(), 3);
-  ASSERT_TRUE(fields.arrayBuffer.empty());
-  ASSERT_TRUE(fields.objValueBuffer.empty());
+  ASSERT_TRUE(fields.literalValueBuffer.empty());
   ASSERT_TRUE(fields.regExpTable.empty());
   ASSERT_TRUE(fields.regExpStorage.empty());
 }
@@ -507,12 +261,12 @@ TEST(HBCBytecodeGen, BytecodeFieldsFail) {
 }
 
 TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
-  TestCompileFlags flags;
-  flags.staticBuiltins = false;
-  auto bytecodeVecDefault = bytecodeForSource("print('hello world');", flags);
-  flags.staticBuiltins = true;
+  BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
+  opts.staticBuiltinsEnabled = false;
+  auto bytecodeVecDefault = bytecodeForSource("print('hello world');", opts);
+  opts.staticBuiltinsEnabled = true;
   auto bytecodeVecStaticBuiltins =
-      bytecodeForSource("print('hello world');", flags);
+      bytecodeForSource("print('hello world');", opts);
 
   auto bytecodeDefault = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
                              std::make_unique<VectorBuffer>(bytecodeVecDefault))
