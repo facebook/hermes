@@ -45,7 +45,9 @@ jobs:
               -DHERMESVM_GCKIND=<< parameters.gc >>
             cmake --build build
             cmake --build build --target check-hermes
-            python3 hermes/utils/testsuite/run_testsuite.py --shermes --test-intl test262/test -b build/bin
+            # TODO(zhaogang): test with --shermes flag as well once we address the harness
+            # code issue with shermes.
+            python3 hermes/utils/test_runner.py --test-intl test262/test -b build/bin
 
   test-linux:
     docker:

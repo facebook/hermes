@@ -33,6 +33,15 @@
         "test262/test/language/expressions/async-arrow-function/"
       ],
       "comment": "Lazy arrow functions are not supported for now."
+    },
+    {
+      "paths": [
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/",
+        "test262/test/intl402/DateTimeFormat/prototype/formatRange/",
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/",
+        "test262/test/intl402/NumberFormat/prototype/formatToParts"
+      ],
+      "comment": "Remove these once we have better Intl support based on ICU."
     }
   ],
   "skip_list": [
@@ -935,28 +944,21 @@
     "test262/test/intl402/DateTimeFormat/constructor-options-order-fractionalSecondDigits.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-order-dayPeriod.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-order.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-invalid.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-throwing-getters-dayPeriod.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-order-timedate-style.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-valid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-style-conflict.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-fractionalSecondDigits.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-dayPeriod.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-style.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts",
     "test262/test/intl402/DateTimeFormat/prototype/format/timedatestyle-en.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/fractionalSecondDigits.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js",
     "test262/test/intl402/DateTimeFormat/constructor-options-numberingSystem-invalid.js",
-    "test262/test/intl402/DateTimeFormat/default-options-object-prototype.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/proleptic-gregorian-calendar.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatRange",
-    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-basic.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-change.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
@@ -967,10 +969,7 @@
     "test262/test/intl402/NumberFormat/constructor-locales-hasproperty.js",
     "test262/test/intl402/NumberFormat/prototype/resolvedOptions/order.js",
     "test262/test/intl402/NumberFormat/constructor-order.js",
-    "test262/test/intl402/NumberFormat/constructor-options-roundingMode-invalid.js",
-    "test262/test/intl402/NumberFormat/constructor-options-throwing-getters-rounding-mode.js",
     "test262/test/intl402/NumberFormat/ignore-invalid-unicode-ext-values.js",
-    "test262/test/intl402/NumberFormat/prototype/resolvedOptions/roundingMode.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-en-US.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-en-US.js",
     "test262/test/intl402/NumberFormat/prototype/format/engineering-scientific-ja-JP.js",
@@ -995,7 +994,6 @@
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-zh-TW.js",
     "test262/test/intl402/NumberFormat/prototype/format/notation-compact-de-DE.js",
     "test262/test/intl402/NumberFormat/prototype/format/signDisplay-currency-zh-TW.js",
-    "test262/test/intl402/NumberFormat/prototype/formatToParts",
     "test262/test/intl402/NumberFormat/throws-for-minimumFractionDigits-over-limit.js",
     "test262/test/intl402/NumberFormat/throws-for-maximumFractionDigits-over-limit.js",
     "test262/test/language/identifiers/part-unicode-5.2.0-escaped.js",
