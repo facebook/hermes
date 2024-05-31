@@ -372,7 +372,11 @@ async def run(
     # Print result
     print_stats(stats)
     print_failed_tests(failed_cases)
-    if len(skipped_passed) > 0:
+    # The "intl_tests" list is simply a folder and we don't want to unfold
+    # it. All intl tests that we can't pass are included in "skip_list". So
+    # we will only remove them if both "--test-skiplist" and "--test-intl"
+    # are provided.
+    if len(skipped_passed) > 0 and test_skiplist:
         print_skipped_passed_tests(skipped_passed)
         remove_tests_from_skiplist(skipped_passed, skipped_paths_features)
 
