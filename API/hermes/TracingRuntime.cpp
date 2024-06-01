@@ -714,7 +714,7 @@ jsi::Function TracingRuntime::createFunctionFromHostFunction(
       trt.trace_.emplace_back<SynthTrace::CallToNativeRecord>(
           trt.getTimeSinceStart(),
           functionID_,
-          trt.useTraceValue(thisVal),
+          trt.defTraceValue(thisVal),
           trt.argStringifyer(args, count, true));
 
       try {
