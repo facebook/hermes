@@ -773,7 +773,12 @@ int main(int argc, char **argv) {
       (std::istreambuf_iterator<char>(fileStream)),
       std::istreambuf_iterator<char>());
 
-  std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime();
+  hermes::vm::RuntimeConfig config =
+      hermes::vm::RuntimeConfig::Builder()
+          .withCompilationMode(options.compilationMode)
+          .build();
+
+  std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime(config);
   HDBDebugger debugger(*runtime);
   runtime->getDebugger().setEventObserver(&debugger);
   runtime->getDebugger().setShouldPauseOnScriptLoad(options.breakAtStart);
