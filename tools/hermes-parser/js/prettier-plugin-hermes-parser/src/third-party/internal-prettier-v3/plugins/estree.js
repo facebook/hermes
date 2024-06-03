@@ -1698,6 +1698,9 @@
       "quasis",
       "types"
     ],
+    "AsConstExpression": [
+      "expression"
+    ],
     "AsExpression": [
       "expression",
       "typeAnnotation"
@@ -1748,6 +1751,13 @@
     "DeclareNamespace": [
       "id",
       "body"
+    ],
+    "EnumBigIntBody": [
+      "members"
+    ],
+    "EnumBigIntMember": [
+      "id",
+      "init"
     ],
     "HookDeclaration": [
       "id",
@@ -1844,9 +1854,6 @@
     "NeverTypeAnnotation": [],
     "UndefinedTypeAnnotation": [],
     "UnknownTypeAnnotation": [],
-    "AsConstExpression": [
-      "expression"
-    ],
     "SatisfiesExpression": [
       "expression",
       "typeAnnotation"
@@ -8085,8 +8092,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function printTypePredicate(path, print3) {
     const { node } = path;
+    const prefix = node.type === "TSTypePredicate" && node.asserts ? "asserts " : node.type === "TypePredicate" && node.kind ? `${node.kind} ` : "";
     return [
-      node.asserts ? "asserts " : "",
+      prefix,
       print3("parameterName"),
       node.typeAnnotation ? [" is ", printTypeAnnotationProperty(path, print3)] : ""
     ];
@@ -8174,10 +8182,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const {
       node
     } = path;
+    const inexact = node.inexact ? "..." : "";
     if (!hasComment(node, CommentCheckFlags.Dangling)) {
-      return [openBracket, closeBracket];
+      return [openBracket, inexact, closeBracket];
     }
-    return group([openBracket, printDanglingComments(path, options2, {
+    return group([openBracket, inexact, printDanglingComments(path, options2, {
       indent: true
     }), softline, closeBracket]);
   }
@@ -8202,7 +8211,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         elements,
         -1
       );
-      const canHaveTrailingComma = (lastElem == null ? void 0 : lastElem.type) !== "RestElement";
+      const canHaveTrailingComma = (lastElem == null ? void 0 : lastElem.type) !== "RestElement" && !node.inexact;
       const needsForcedTrailingComma = lastElem === null;
       const groupId = Symbol("array");
       const shouldBreak = !options2.__inJestEach && elements.length > 1 && elements.every((element, i, elements2) => {
@@ -8221,7 +8230,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       const trailingComma = !canHaveTrailingComma ? "" : needsForcedTrailingComma ? "," : !shouldPrintComma(options2) ? "" : shouldUseConciseFormatting ? ifBreak(",", "", {
         groupId
       }) : ifBreak(",");
-      parts.push(group([openBracket, indent([softline, shouldUseConciseFormatting ? printArrayElementsConcisely(path, options2, print3, trailingComma) : [printArrayElements(path, options2, elementsProperty, print3), trailingComma], printDanglingComments(path, options2)]), softline, closeBracket], {
+      parts.push(group([openBracket, indent([softline, shouldUseConciseFormatting ? printArrayElementsConcisely(path, options2, print3, trailingComma) : [printArrayElements(path, options2, elementsProperty, node.inexact, print3), trailingComma], printDanglingComments(path, options2)]), softline, closeBracket], {
         shouldBreak,
         id: groupId
       }));
@@ -8252,17 +8261,20 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return is_next_line_empty_default(text, currentIdx);
   }
-  function printArrayElements(path, options2, elementsProperty, print3) {
+  function printArrayElements(path, options2, elementsProperty, inexact, print3) {
     const parts = [];
     path.each(({
       node,
       isLast
     }) => {
       parts.push(node ? group(print3()) : "");
-      if (!isLast) {
+      if (!isLast || inexact) {
         parts.push([",", line, node && isLineAfterElementEmpty(path, options2) ? softline : ""]);
       }
     }, elementsProperty);
+    if (inexact) {
+      parts.push("...");
+    }
     return parts;
   }
   function printArrayElementsConcisely(path, options2, print3, trailingComma) {
@@ -9706,7 +9718,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       node
     } = path;
     const isTypeAnnotation = node.type === "ObjectTypeAnnotation";
-    const isEnumBody = node.type === "TSEnumDeclaration" || node.type === "EnumBooleanBody" || node.type === "EnumNumberBody" || node.type === "EnumStringBody" || node.type === "EnumSymbolBody";
+    const isEnumBody = node.type === "TSEnumDeclaration" || node.type === "EnumBooleanBody" || node.type === "EnumNumberBody" || node.type === "EnumBigIntBody" || node.type === "EnumStringBody" || node.type === "EnumSymbolBody";
     const fields = [node.type === "TSTypeLiteral" || isEnumBody ? "members" : node.type === "TSInterfaceBody" ? "body" : "properties"];
     if (isTypeAnnotation) {
       fields.push("indexers", "callProperties", "internalSlots");
@@ -10666,6 +10678,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         case "EnumNumberBody":
           type = "number";
           break;
+        case "EnumBigIntBody":
+          type = "bigint";
+          break;
         case "EnumStringBody":
           type = "string";
           break;
@@ -10991,11 +11006,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return printEnumDeclaration(path, print3, options2);
       case "EnumBooleanBody":
       case "EnumNumberBody":
+      case "EnumBigIntBody":
       case "EnumStringBody":
       case "EnumSymbolBody":
         return printEnumBody(path, print3, options2);
       case "EnumBooleanMember":
       case "EnumNumberMember":
+      case "EnumBigIntMember":
       case "EnumStringMember":
       case "EnumDefaultedMember":
         return printEnumMember(path, print3);
