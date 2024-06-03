@@ -975,6 +975,8 @@ class GCBase {
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvh::raw_ostream &os) = 0;
   void createSnapshot(GC &gc, llvh::raw_ostream &os);
+  /// Actual implementation of writing the snapshot.
+  void createSnapshotImpl(GC &gc, HeapSnapshot &snap);
 
   /// Subclasses can override and add more specific native memory usage.
   virtual void snapshotAddGCNativeNodes(HeapSnapshot &snap);

@@ -99,7 +99,17 @@ class HeapSnapshot {
   using EdgeIndex = uint32_t;
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  HeapSnapshot(JSONEmitter &json, StackTracesTree *stackTracesTree);
+  /// The \p nodeCount and \p edgeCount are used to write the "node_count" and
+  /// "edge_count" value of the "snapshot" field. If given 0, we will get the
+  /// real number after visiting all heap objects. \p traceFunctionCount is used
+  /// to write the "trace_function_count" value of the "snapshot" field. If
+  /// given 0, it will be computed from \p stackTracesTree.
+  HeapSnapshot(
+      JSONEmitter &json,
+      NodeIndex nodeCount,
+      EdgeIndex edgeCount,
+      size_t traceFunctionCount,
+      StackTracesTree *stackTracesTree);
 
   /// NOTE: this destructor writes to \p json.
   ~HeapSnapshot();
@@ -156,9 +166,22 @@ class HeapSnapshot {
 
   void emitAllocationTraceInfo();
 
+  /// Get the number of nodes that have been added to the snapshot.
+  NodeIndex getNodeCount() const {
+    return nodeCount_;
+  }
+  /// Get the number of edges that have been added to the snapshot.
+  EdgeIndex getEdgeCount() const {
+    return edgeCount_;
+  }
+  /// Get the trace function count for stackTracesTree_.
+  size_t getTraceFunctionCount() const {
+    return traceFunctionCount_;
+  }
+
  private:
-  void emitMeta();
-  size_t countFunctionTraceInfos();
+  void
+  emitMeta(NodeIndex nodeCount, EdgeIndex edgeCount, size_t traceFunctionCount);
   void emitStrings();
 
   /// The next section to be closed.  This class guarantees that all
@@ -173,7 +196,14 @@ class HeapSnapshot {
   llvh::DenseMap<NodeID, NodeIndex> nodeToIndex_;
   std::shared_ptr<StringSetVector> stringTable_;
   NodeIndex nodeCount_{0};
+  /// How many edges have currently been added in total.
+  EdgeIndex edgeCount_{0};
+  /// Number of edges added for the current node.
   HeapSizeType currEdgeCount_{0};
+  /// The number of trace functions computed from stackTracessTree_, in
+  /// emitAllocationTraceInfo(), or directly passed in the constructor (if not
+  /// 0).
+  size_t traceFunctionCount_{0};
   struct TraceNodeStats {
     HeapSizeType count{0};
     HeapSizeType size{0};
@@ -181,8 +211,6 @@ class HeapSnapshot {
   llvh::DenseMap<HeapSizeType, TraceNodeStats> traceNodeStats_;
 
 #ifndef NDEBUG
-  /// How many edges have currently been added.
-  EdgeIndex edgeCount_{0};
   /// How many edges there are expected to be. Used for checking the
   /// correctness of the snapshot.
   EdgeIndex expectedEdges_{0};

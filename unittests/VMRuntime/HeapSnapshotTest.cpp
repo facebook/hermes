@@ -458,8 +458,8 @@ TEST(HeapSnapshotTest, HeaderTest) {
 
   JSONObject *snapshot = llvh::cast<JSONObject>(root->at("snapshot"));
 
-  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 0);
-  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("edge_count"))->getValue(), 0);
+  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 11);
+  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("edge_count"))->getValue(), 6);
   EXPECT_EQ(
       llvh::cast<JSONNumber>(snapshot->at("trace_function_count"))->getValue(),
       0);
