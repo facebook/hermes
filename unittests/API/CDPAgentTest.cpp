@@ -15,8 +15,8 @@
 
 #include <hermes/AsyncDebuggerAPI.h>
 #include <hermes/CompileJS.h>
-#include <hermes/SerialExecutor/SerialExecutor.h>
 #include <hermes/Support/JSONEmitter.h>
+#include <hermes/Support/SerialExecutor.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/cdp/CDPDebugAPI.h>
 #include <hermes/cdp/JSONValueInterfaces.h>

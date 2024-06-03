@@ -11,7 +11,7 @@
 #include <memory>
 #include <mutex>
 
-#include <hermes/SerialExecutor/SerialExecutor.h>
+#include <hermes/Support/SerialExecutor.h>
 
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
