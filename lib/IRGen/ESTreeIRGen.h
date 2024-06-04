@@ -1140,6 +1140,7 @@ class ESTreeIRGen {
       ESTree::FunctionLikeNode *functionNode,
       ESTree::BlockStatementNode *bodyBlock,
       VariableScope *parentVarScope,
+      ExtraKey extraKey,
       Variable *capturedThis = nullptr,
       Value *capturedNewTarget = nullptr,
       Variable *capturedArguments = nullptr);

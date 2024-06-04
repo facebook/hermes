@@ -188,6 +188,7 @@ Function *ESTreeIRGen::genArrowFunction(
         AF,
         body,
         parentScope,
+        ExtraKey::Normal,
         capturedThis,
         capturedNewTarget,
         capturedArguments);
@@ -266,7 +267,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
   }
 
   if (body->isLazyFunctionBody) {
-    setupLazyFunction(newFunction, functionNode, body, parentScope);
+    setupLazyFunction(
+        newFunction, functionNode, body, parentScope, ExtraKey::Normal);
     return newFunction;
   }
 
@@ -399,7 +401,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
   auto *body = ESTree::getBlockStatement(functionNode);
   if (body->isLazyFunctionBody) {
-    setupLazyFunction(outerFn, functionNode, body, parentScope);
+    setupLazyFunction(
+        outerFn, functionNode, body, parentScope, ExtraKey::GeneratorOuter);
     return outerFn;
   }
 
@@ -482,7 +485,8 @@ Function *ESTreeIRGen::genAsyncFunction(
 
   auto *body = ESTree::getBlockStatement(functionNode);
   if (body->isLazyFunctionBody) {
-    setupLazyFunction(asyncFn, functionNode, body, parentScope);
+    setupLazyFunction(
+        asyncFn, functionNode, body, parentScope, ExtraKey::AsyncOuter);
     return asyncFn;
   }
 
@@ -1038,11 +1042,17 @@ void ESTreeIRGen::setupLazyFunction(
     ESTree::FunctionLikeNode *functionNode,
     ESTree::BlockStatementNode *bodyBlock,
     VariableScope *parentVarScope,
+    ExtraKey extraKey,
     Variable *capturedThis,
     Value *capturedNewTarget,
     Variable *capturedArguments) {
   // Avoid modifying Builder state because this isn't enqueued.
   IRBuilder::SaveRestore saveBuilder{Builder};
+
+  // Populate the IR function for this node.
+  CompiledMapKey key(functionNode, (unsigned)extraKey);
+  auto [it, inserted] = compiledEntities_.try_emplace(key, F);
+  assert(inserted && "Function already compiled");
 
   Builder.createJSThisParam(F);
   BasicBlock *bb = Builder.createBasicBlock(F);
