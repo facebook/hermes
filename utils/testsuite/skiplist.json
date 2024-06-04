@@ -47,6 +47,12 @@
   "skip_list": [
     {
       "paths": [
+        "mjsunit/es6/math-cbrt.js"
+      ],
+      "comment": "The native ::cbrt() function gives different results with different compilers."
+    },
+    {
+      "paths": [
         "test262/test/language/expressions/arrow-function/dflt-params-ref-later.js",
         "test262/test/language/expressions/arrow-function/dflt-params-ref-self.js",
         "test262/test/language/expressions/arrow-function/eval-var-scope-syntax-err.js"
