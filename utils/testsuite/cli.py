@@ -9,6 +9,7 @@ import asyncio
 import importlib.resources
 import os
 import shutil
+import sys
 import tempfile
 import time
 from asyncio import Semaphore
@@ -126,8 +127,6 @@ def validate_args(args: argparse.Namespace):
     Validate provided arguments. For -b flag, check whether necessary Hermes
     executables do exist.
     """
-
-    import sys
 
     if args.dump_source:
         if len(args.paths) != 1:
@@ -455,3 +454,7 @@ async def main() -> int:
         tmp_work_dir.cleanup()
 
     return exit_code
+
+
+if __name__ == "__main__":
+    sys.exit(asyncio.run(main()))
