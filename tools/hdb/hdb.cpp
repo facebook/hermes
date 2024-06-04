@@ -785,6 +785,7 @@ int main(int argc, char **argv) {
       std::istreambuf_iterator<char>());
 
   hermes::vm::RuntimeConfig::Builder optsBuilder;
+  optsBuilder.withCompilationMode(options.compilationMode);
   if (options.enableBlockScoping) {
     optsBuilder.withEnableBlockScoping(*options.enableBlockScoping);
   }
