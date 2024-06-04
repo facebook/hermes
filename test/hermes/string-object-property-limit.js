@@ -11,7 +11,7 @@
 try {
   var a = new String("foo");
   for (var j = 0; true; j++) {
-    a[j] = {};
+    a[j] = undefined;
   }
 } catch (e) {
   print(e.message);

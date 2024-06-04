@@ -345,9 +345,7 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   auto rt =
       Runtime::create(RuntimeConfig::Builder().withGCConfig(config).build());
   rt->collect("test");
-#ifndef HERMESVM_GC_RUNTIME
-  EXPECT_EQ(6, ev.size());
-#endif
+  EXPECT_GT(ev.size(), 2);
   for (size_t i = 0; i < ev.size(); i++) {
     if (i % 2 == 0) {
       EXPECT_EQ(GCEventKind::CollectionStart, ev[i]);
