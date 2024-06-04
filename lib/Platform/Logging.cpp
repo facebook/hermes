@@ -11,6 +11,7 @@
 #include <android/log.h>
 #elif defined(__APPLE__)
 #include <os/log.h>
+#include <stdio.h>
 #else
 #include <cstdio>
 #endif
