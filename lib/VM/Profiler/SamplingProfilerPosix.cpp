@@ -72,7 +72,7 @@ struct SamplingProfilerPosix : SamplingProfiler {
 
   /// Thread that this profiler instance represents. This can be updated as the
   /// runtime is invoked on different threads. Must only be accessed while
-  /// holding the runtimeDataLock_.
+  /// holding the threadIdLock_.
   pthread_t currentThread_;
 
 #if defined(HERMESVM_ENABLE_LOOM) && defined(__ANDROID__)
@@ -315,9 +315,10 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   // acquired the updates to domains_.
   self->profilerForSig_.store(profiler, std::memory_order_release);
 
-  // Signal target runtime thread to sample stack. The runtimeDataLock is
-  // held by the caller, ensuring the runtime won't start to be used on
+  // Signal target runtime thread to sample stack. The threadIdLock_ is
+  // held ensuring the runtime won't start to be used on
   // another thread before sampling begins.
+  std::lock_guard<std::mutex> lockGuard(posixProfiler->threadIdLock_);
   pthread_kill(posixProfiler->currentThread_, SIGPROF);
 
   // Threading: samplingDoneSem_ will synchronise this thread with the
@@ -473,13 +474,13 @@ std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
 
 bool SamplingProfiler::belongsToCurrentThread() {
   auto profiler = static_cast<sampling_profiler::SamplingProfilerPosix *>(this);
-  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  std::lock_guard<std::mutex> lock(profiler->threadIdLock_);
   return profiler->currentThread_ == pthread_self();
 }
 
 void SamplingProfiler::setRuntimeThread() {
   auto profiler = static_cast<sampling_profiler::SamplingProfilerPosix *>(this);
-  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  std::lock_guard<std::mutex> lock(profiler->threadIdLock_);
   profiler->currentThread_ = pthread_self();
 }
 
