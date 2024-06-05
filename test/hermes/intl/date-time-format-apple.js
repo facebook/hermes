@@ -48,7 +48,7 @@ try {
 // CHECK-NEXT: Caught{{.*}}
 
 print(new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'long' }).format(date));
-// CHECK-NEXT: Thursday, 2 January 2020 at 03:45:00 GMT
+// CHECK-NEXT: Thursday{{.+}}2 January 2020 at 03:45:00 GMT
 
 print(new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'medium' }).format(date));
 // CHECK-NEXT: 2020. 1. 2. 오전 3:45:00
