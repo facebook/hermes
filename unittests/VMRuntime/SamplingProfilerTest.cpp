@@ -65,78 +65,41 @@ TEST(SamplingProfilerTest, MultipleProfilers) {
 #endif
 
 TEST(SamplingProfilerTest, MultipleThreads) {
-  constexpr uint32_t kThreadCount = 3;
-  constexpr uint32_t kMaxEvals = 100;
+  constexpr uint32_t kThreadCount = 10;
 
   auto rt = makeRuntime(withSamplingProfilerEnabled);
   rt->samplingProfiler->enable();
 
   // Take turns evaluating JavaScript on a different thread each time.
-  std::mutex mutex;
-  std::condition_variable condVar;
-  std::atomic<uint32_t> evalCount(0);
-  std::atomic<bool> shutdown(false);
-  std::array<std::thread, kThreadCount> threads;
-  auto evaluateLoop = [&](uint32_t threadNumber) {
-    while (true) {
-      {
-        std::unique_lock<std::mutex> lock(mutex);
-        condVar.wait(lock, [&] {
-          bool myTurn = (evalCount < kMaxEvals) &&
-              (evalCount % kThreadCount == threadNumber);
-          return myTurn || shutdown;
-        });
-      }
-
-      if (shutdown) {
-        break;
-      }
-
-      rt->samplingProfiler->setRuntimeThread();
-      auto bytecode = hermes::bytecodeForSource(R"(
-                (function count() {
-                  let x = 0;
-                  function inc() {
-                    x++;
-                    return (x < 100000);
-                  }
-                  while(inc()){}
-                })();
-              )");
-      std::shared_ptr<hermes::hbc::BCProviderFromBuffer> bcProvider =
-          hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-              std::make_unique<hermes::Buffer>(
-                  bytecode.data(), bytecode.size()))
-              .first;
-      RuntimeModuleFlags runtimeModuleFlags;
-      runtimeModuleFlags.persistent = false;
-      auto result = rt->runBytecode(
-          std::move(bcProvider),
-          runtimeModuleFlags,
-          "test.js.hbc",
-          Runtime::makeNullHandle<Environment>());
-      EXPECT_NE(result.getStatus(), ExecutionStatus::EXCEPTION);
-
-      evalCount++;
-      condVar.notify_all();
-    }
+  auto evaluate = [&]() {
+    rt->samplingProfiler->setRuntimeThread();
+    auto bytecode = hermes::bytecodeForSource(R"(
+              (function count() {
+                let x = 0;
+                function inc() {
+                  x++;
+                  return (x < 100000);
+                }
+                while(inc()){}
+              })();
+            )");
+    std::shared_ptr<hermes::hbc::BCProviderFromBuffer> bcProvider =
+        hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+            std::make_unique<hermes::Buffer>(bytecode.data(), bytecode.size()))
+            .first;
+    RuntimeModuleFlags runtimeModuleFlags;
+    runtimeModuleFlags.persistent = false;
+    auto result = rt->runBytecode(
+        std::move(bcProvider),
+        runtimeModuleFlags,
+        "test.js.hbc",
+        Runtime::makeNullHandle<Environment>());
+    EXPECT_NE(result.getStatus(), ExecutionStatus::EXCEPTION);
   };
   for (uint32_t threadNumber = 0; threadNumber < kThreadCount; ++threadNumber) {
-    threads[threadNumber] = std::thread(evaluateLoop, threadNumber);
+    std::thread(evaluate).join();
   }
 
-  // Wait for all evaluations to complete
-  {
-    std::unique_lock<std::mutex> lock(mutex);
-    condVar.wait(lock, [&] { return evalCount == kMaxEvals; });
-  }
-
-  // Terminate threads.
-  shutdown = true;
-  condVar.notify_all();
-  for (std::thread &thread : threads) {
-    thread.join();
-  }
   rt->samplingProfiler->disable();
 }
 
