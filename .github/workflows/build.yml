@@ -25,7 +25,8 @@ jobs:
     - name: Build Hermes for Android
       run: |-
         cd hermes/android
-        ./gradlew githubRelease
+        # ./gradlew wrapper --gradle-version=8.2
+        ./gradlew githubRelease --warning-mode all
     - name: Copy artifacts
       run: |-
         mkdir output
@@ -195,7 +196,7 @@ jobs:
         xcodebuild test \
           -workspace ApplePlatformsIntegrationTests.xcworkspace \
           -configuration Debug \
-          -destination 'platform=iOS Simulator,name=iPhone 11' \
+          -destination 'platform=iOS Simulator,name=iPhone 14' \
           -scheme ApplePlatformsIntegrationMobileTests
       working-directory: test/ApplePlatformsIntegrationTestApp
   package-apple-runtime:
@@ -516,7 +517,8 @@ jobs:
     - name: Run android tests
       working-directory: react-native
       run: |
-          ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
+          # ./gradlew wrapper --gradle-version=8.2
+          ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease --warning-mode all
           && adb shell am start com.facebook.react.uiapp/.RNTesterActivity
           && timeout 30s adb logcat -e "Using Hermes: true" -m 1
   test-e2e-intl:
@@ -546,7 +548,10 @@ jobs:
         cmake --build ./build -j 4 --target hermesc
     - name: Run android tests
       working-directory: hermes/android
-      run: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+      run: |-
+        # ./gradlew wrapper --gradle-version=8.2
+        ./gradlew :intltest:prepareTests --warning-mode all
+        ./gradlew -Pabis=x86 :intltest:connectedAndroidTest --warning-mode all
   test-macos-test262:
     runs-on: macos-latest
     steps:
