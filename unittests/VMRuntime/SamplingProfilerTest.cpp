@@ -9,6 +9,7 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
+#include "TestHelpers1.h"
 #include "hermes/VM/Runtime.h"
 
 #include <gtest/gtest.h>
@@ -62,6 +63,34 @@ TEST(SamplingProfilerTest, MultipleProfilers) {
   EXPECT_TRUE(sp2->belongsToCurrentThread());
 }
 #endif
+
+TEST(SamplingProfilerTest, RegisterDifferentThread) {
+  constexpr uint32_t kThreadCount = 3;
+
+  auto rt = makeRuntime(withSamplingProfilerEnabled);
+  rt->samplingProfiler->enable();
+
+  for (uint32_t threadNumber = 0; threadNumber < kThreadCount; ++threadNumber) {
+    std::thread([&]() {
+      rt->samplingProfiler->setRuntimeThread();
+      EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+    }).join();
+  }
+
+  rt->samplingProfiler->disable();
+}
+
+TEST(SamplingProfilerTest, RegisterIdenticalThread) {
+  auto rt = makeRuntime(withSamplingProfilerEnabled);
+  rt->samplingProfiler->enable();
+
+  rt->samplingProfiler->setRuntimeThread();
+  EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+  rt->samplingProfiler->setRuntimeThread();
+  EXPECT_TRUE(rt->samplingProfiler->belongsToCurrentThread());
+
+  rt->samplingProfiler->disable();
+}
 
 } // namespace
 
