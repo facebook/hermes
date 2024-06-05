@@ -590,6 +590,9 @@ bool JSParserImpl::parseFormalParameters(
     Param param,
     ESTree::NodeList &paramList) {
   assert(check(TokenKind::l_paren) && "FormalParameters must start with '('");
+
+  llvh::SaveAndRestore oldFormalParams{isFormalParams_, true};
+
   // (
   SMLoc lparenLoc = advance().Start;
 
@@ -719,7 +722,11 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     bool paramAwait,
     JSLexer::GrammarContext grammarContext,
     bool parseDirectives) {
-  if (pass_ == LazyParse && !eagerly) {
+  // Disable lazy compilation in formal parameters,
+  // because initializer expressions capture a different environment than the
+  // environment the function body names are added to, and it would add some
+  // complexity to optimize a use case that's never actually encountered.
+  if (pass_ == LazyParse && !eagerly && !isFormalParams_) {
     auto startLoc = tok_->getStartLoc();
     assert(
         preParsed_->functionInfo.count(startLoc) == 1 &&
