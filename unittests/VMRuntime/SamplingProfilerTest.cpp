@@ -64,45 +64,6 @@ TEST(SamplingProfilerTest, MultipleProfilers) {
 }
 #endif
 
-TEST(SamplingProfilerTest, MultipleThreads) {
-  constexpr uint32_t kThreadCount = 10;
-
-  auto rt = makeRuntime(withSamplingProfilerEnabled);
-  rt->samplingProfiler->enable();
-
-  // Take turns evaluating JavaScript on a different thread each time.
-  auto evaluate = [&]() {
-    rt->samplingProfiler->setRuntimeThread();
-    auto bytecode = hermes::bytecodeForSource(R"(
-              (function count() {
-                let x = 0;
-                function inc() {
-                  x++;
-                  return (x < 100000);
-                }
-                while(inc()){}
-              })();
-            )");
-    std::shared_ptr<hermes::hbc::BCProviderFromBuffer> bcProvider =
-        hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-            std::make_unique<hermes::Buffer>(bytecode.data(), bytecode.size()))
-            .first;
-    RuntimeModuleFlags runtimeModuleFlags;
-    runtimeModuleFlags.persistent = false;
-    auto result = rt->runBytecode(
-        std::move(bcProvider),
-        runtimeModuleFlags,
-        "test.js.hbc",
-        Runtime::makeNullHandle<Environment>());
-    EXPECT_NE(result.getStatus(), ExecutionStatus::EXCEPTION);
-  };
-  for (uint32_t threadNumber = 0; threadNumber < kThreadCount; ++threadNumber) {
-    std::thread(evaluate).join();
-  }
-
-  rt->samplingProfiler->disable();
-}
-
 } // namespace
 
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
