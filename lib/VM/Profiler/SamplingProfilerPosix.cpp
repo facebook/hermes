@@ -70,10 +70,9 @@ struct SamplingProfilerPosix : SamplingProfiler {
   SamplingProfilerPosix(Runtime &rt);
   ~SamplingProfilerPosix() override;
 
-  /// Thread that this profiler instance represents. This can currently only be
-  /// set from the constructor of SamplingProfiler, so we need to construct a
-  /// new SamplingProfiler every time the runtime is moved to a different
-  /// thread.
+  /// Thread that this profiler instance represents. This can be updated as the
+  /// runtime is invoked on different threads. Must only be accessed while
+  /// holding the runtimeDataLock_.
   pthread_t currentThread_;
 
 #if defined(HERMESVM_ENABLE_LOOM) && defined(__ANDROID__)
@@ -316,7 +315,9 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   // acquired the updates to domains_.
   self->profilerForSig_.store(profiler, std::memory_order_release);
 
-  // Signal target runtime thread to sample stack.
+  // Signal target runtime thread to sample stack. The runtimeDataLock is
+  // held by the caller, ensuring the runtime won't start to be used on
+  // another thread before sampling begins.
   pthread_kill(posixProfiler->currentThread_, SIGPROF);
 
   // Threading: samplingDoneSem_ will synchronise this thread with the
@@ -470,9 +471,16 @@ std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
   return std::make_unique<sampling_profiler::SamplingProfilerPosix>(rt);
 }
 
-bool SamplingProfiler::belongsToCurrentThread() const {
-  return static_cast<const sampling_profiler::SamplingProfilerPosix *>(this)
-             ->currentThread_ == pthread_self();
+bool SamplingProfiler::belongsToCurrentThread() {
+  auto profiler = static_cast<sampling_profiler::SamplingProfilerPosix *>(this);
+  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  return profiler->currentThread_ == pthread_self();
+}
+
+void SamplingProfiler::setRuntimeThread() {
+  auto profiler = static_cast<sampling_profiler::SamplingProfilerPosix *>(this);
+  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  profiler->currentThread_ = pthread_self();
 }
 
 } // namespace vm
