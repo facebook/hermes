@@ -178,9 +178,10 @@ void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {
 bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   auto *winProfiler = static_cast<SamplingProfilerWindows *>(profiler);
 
-  // Suspend the JS thread. The runtimeDataLock is held by the caller, ensuring
+  // Suspend the JS thread. The threadIdLock_ is held by the caller, ensuring
   // the runtime won't start to be used on another thread before sampling
   // begins.
+  std::lock_guard<std::mutex> lockGuard(winProfiler->threadIdLock_);
   DWORD prevSuspendCount = SuspendThread(winProfiler->currentThread_);
   if (prevSuspendCount == static_cast<DWORD>(-1)) {
     return true;
@@ -212,14 +213,14 @@ std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
 bool SamplingProfiler::belongsToCurrentThread() {
   auto profiler =
       static_cast<sampling_profiler::SamplingProfilerWindows *>(this);
-  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  std::lock_guard<std::mutex> lock(profiler->threadIdLock_);
   return GetThreadId(profiler->currentThread_) == GetCurrentThreadId();
 }
 
 void SamplingProfiler::setRuntimeThread() {
   auto profiler =
       static_cast<sampling_profiler::SamplingProfilerWindows *>(this);
-  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  std::lock_guard<std::mutex> lock(profiler->threadIdLock_);
   CloseHandle(profiler->currentThread_);
   profiler->currentThread_ = openCurrentThread();
 }
