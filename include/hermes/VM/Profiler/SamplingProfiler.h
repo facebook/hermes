@@ -109,9 +109,11 @@ class SamplingProfiler {
   };
 
   /// \return true if this SamplingProfiler belongs to the current running
-  /// thread. Does not acquire any locks, and as such should not be used in
-  /// production.
-  bool belongsToCurrentThread() const;
+  /// thread. The current thread can change (e.g. in the time between
+  /// this function returning and the caller inspecting the value), so the
+  /// usefulness of this method depends upon knowledge of when the runtime
+  /// will switch threads.
+  bool belongsToCurrentThread();
 
   /// \returns the NativeFunctionPtr for \p stackFrame. Caller must hold
   /// runtimeDataLock_.
@@ -152,6 +154,9 @@ class SamplingProfiler {
   /// Protect data specific to a runtime, such as the sampled stacks and
   /// domains.
   std::mutex runtimeDataLock_;
+
+  /// Protect the current thread id.
+  std::mutex threadIdLock_;
 
  protected:
   /// Sampled stack traces overtime. Protected by runtimeDataLock_.
@@ -273,6 +278,10 @@ class SamplingProfiler {
   /// Resumes the sample profiling. There must have been a previous call to
   /// suspend() that hansn't been resume()d yet.
   void resume();
+
+  /// Inform the sampling profiler that the runtime will now be executing
+  /// bytecode on the current thread.
+  void setRuntimeThread();
 
  protected:
   explicit SamplingProfiler(Runtime &runtime);
