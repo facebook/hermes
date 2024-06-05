@@ -65,7 +65,7 @@ TEST(SamplingProfilerTest, MultipleProfilers) {
 #endif
 
 TEST(SamplingProfilerTest, MultipleThreads) {
-  constexpr uint32_t kThreadCount = 3;
+  constexpr uint32_t kThreadCount = 10;
 
   auto rt = makeRuntime(withSamplingProfilerEnabled);
   rt->samplingProfiler->enable();

@@ -155,6 +155,8 @@ class SamplingProfiler {
   /// domains, and thread associated with the runtime.
   std::mutex runtimeDataLock_;
 
+  std::mutex threadIdLock_;
+
  protected:
   /// Sampled stack traces overtime. Protected by runtimeDataLock_.
   std::vector<StackTrace> sampledStacks_;
