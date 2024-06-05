@@ -5,8 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::num::NonZeroU32;
-
 use serde::ser::SerializeTuple;
 use serde::Deserialize;
 use serde::Serialize;
@@ -14,7 +12,7 @@ use serde::Serialize;
 #[derive(Deserialize, Copy, Clone, Debug, PartialEq, PartialOrd, Hash)]
 pub struct SourceRange {
     pub start: u32,
-    pub end: NonZeroU32,
+    pub end: u32,
 }
 
 // ESTree and Babel store the `range` as `[start, end]`, so we customize

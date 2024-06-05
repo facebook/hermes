@@ -141,7 +141,7 @@ pub fn convert_smrange(cx: &Context, range: SMRange) -> SourceRange {
     let end = convert_smloc(cx, range.end);
     SourceRange {
         start: start as u32,
-        end: NonZeroU32::new(end as u32).unwrap(),
+        end: end as u32,
     }
 }
 
