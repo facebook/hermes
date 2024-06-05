@@ -1051,7 +1051,8 @@ void ESTreeIRGen::setupLazyFunction(
 
   // Populate the IR function for this node.
   CompiledMapKey key(functionNode, (unsigned)extraKey);
-  auto [it, inserted] = compiledEntities_.try_emplace(key, F);
+  auto [_, inserted] = compiledEntities_.try_emplace(key, F);
+  (void)inserted;
   assert(inserted && "Function already compiled");
 
   Builder.createJSThisParam(F);
