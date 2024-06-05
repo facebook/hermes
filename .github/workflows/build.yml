@@ -79,9 +79,9 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
@@ -115,9 +115,9 @@ jobs:
       HERMES_WS_DIR: "/tmp/hermes"
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
       uses: actions/cache@v4.0.0
@@ -142,9 +142,9 @@ jobs:
   test-macos:
     runs-on: macos-latest
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
@@ -163,9 +163,9 @@ jobs:
       HERMES_WS_DIR: "/tmp/hermes"
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
       uses: actions/cache@v4.0.0
@@ -208,9 +208,9 @@ jobs:
       HERMES_WS_DIR: "/tmp/hermes"
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
       uses: actions/cache@v4.0.0
@@ -550,9 +550,9 @@ jobs:
   test-macos-test262:
     runs-on: macos-latest
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
