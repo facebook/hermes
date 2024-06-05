@@ -5214,6 +5214,9 @@ class LazyCompilationData {
   /// The original name of the function, as found in the source.
   UniqueString *originalName;
 
+  /// The definition kind of the function to use when compiling the function.
+  Function::DefinitionKind definitionKind;
+
   /// The source buffer ID in which we can find the function source.
   uint32_t bufferId;
 
@@ -5243,6 +5246,7 @@ class LazyCompilationData {
  public:
   LazyCompilationData(
       UniqueString *originalName,
+      Function::DefinitionKind definitionKind,
       uint32_t bufferId,
       SMRange span,
       sema::FunctionInfo *semInfo,
@@ -5251,6 +5255,7 @@ class LazyCompilationData {
       bool paramYield,
       bool paramAwait)
       : originalName(originalName),
+        definitionKind(definitionKind),
         bufferId(bufferId),
         span(span),
         semInfo(semInfo),

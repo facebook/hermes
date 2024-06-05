@@ -1060,6 +1060,7 @@ void ESTreeIRGen::setupLazyFunction(
 
   LazyCompilationData data{
       F->getOriginalOrInferredName().getUnderlyingPointer(),
+      F->getDefinitionKind(),
       bodyBlock->bufferId,
       functionNode->getSourceRange(),
       functionNode->getSemInfo(),

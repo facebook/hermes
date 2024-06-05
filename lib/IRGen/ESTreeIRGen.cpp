@@ -232,7 +232,12 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
         ? genGeneratorFunction(
               lazyFunc->getOriginalOrInferredName(), node, parentVarScope)
         : genBasicFunction(
-              lazyFunc->getOriginalOrInferredName(), node, parentVarScope);
+              lazyFunc->getOriginalOrInferredName(),
+              node,
+              parentVarScope,
+              nullptr,
+              false,
+              lazyDataInst->getData().definitionKind);
   }
 
   drainCompilationQueue();
