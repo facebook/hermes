@@ -238,6 +238,29 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
       isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUnused));
 }
 
+TEST_F(CodeCoverageProfilerTest, LazyFunction) {
+  hbc::CompileFlags flags;
+  flags.lazy = true;
+  // Force lazy compilation.
+  flags.preemptiveFileCompilationThreshold = 0;
+  flags.preemptiveFunctionCompilationThreshold = 0;
+  CallResult<HermesValue> res = runtime.run(
+      "var foo; var bar = function() { foo = function() { return 5; }; return foo;}; bar()(); foo;",
+      "file:///fake.js",
+      flags);
+  EXPECT_FALSE(isException(res));
+
+  std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
+  std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
+      executedFuncInfos.find(runtime.getHeap().getName())->second;
+
+  Handle<JSFunction> funcFoo = runtime.makeHandle(vmcast<JSFunction>(*res));
+  // Global + bar + foo.
+  EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 3);
+  EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcFoo));
+}
+
 } // namespace CodeCoverageTest
 } // namespace unittest
 } // namespace hermes
