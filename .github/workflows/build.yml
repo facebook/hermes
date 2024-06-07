@@ -79,9 +79,9 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
@@ -115,9 +115,9 @@ jobs:
       HERMES_WS_DIR: "/tmp/hermes"
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
       uses: actions/cache@v4.0.0
@@ -142,9 +142,9 @@ jobs:
   test-macos:
     runs-on: macos-latest
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
@@ -163,9 +163,9 @@ jobs:
       HERMES_WS_DIR: "/tmp/hermes"
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
       uses: actions/cache@v4.0.0
@@ -192,10 +192,12 @@ jobs:
       working-directory: test/ApplePlatformsIntegrationTestApp
     - name: Test iPhone application
       run: |-
+        # Xcode 15 uses iOS 17 for simulator, and only iPhone 14/15 can work by
+        # default, so use the oldest working model here.
         xcodebuild test \
           -workspace ApplePlatformsIntegrationTests.xcworkspace \
           -configuration Debug \
-          -destination 'platform=iOS Simulator,name=iPhone 11' \
+          -destination 'platform=iOS Simulator,name=iPhone 14' \
           -scheme ApplePlatformsIntegrationMobileTests
       working-directory: test/ApplePlatformsIntegrationTestApp
   package-apple-runtime:
@@ -208,9 +210,9 @@ jobs:
       HERMES_WS_DIR: "/tmp/hermes"
       HOMEBREW_NO_AUTO_UPDATE: 1
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
       uses: actions/cache@v4.0.0
@@ -550,9 +552,9 @@ jobs:
   test-macos-test262:
     runs-on: macos-latest
     steps:
-    - uses: maxim-lobanov/setup-xcode@v1.6.0
+    - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 13.4.1
+        xcode-version: 15.4
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
