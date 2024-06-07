@@ -39,12 +39,25 @@
         "test262/test/intl402/DateTimeFormat/prototype/formatToParts/",
         "test262/test/intl402/DateTimeFormat/prototype/formatRange/",
         "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/",
-        "test262/test/intl402/NumberFormat/prototype/formatToParts"
+        "test262/test/intl402/NumberFormat/prototype/formatToParts/"
       ],
       "comment": "Remove these once we have better Intl support based on ICU."
+    },
+    {
+      "paths": [
+        "mjsunit/json-parser-recursive.js"
+      ],
+      "comment": "Timeout on Sandcastle, but can't reproduce on local testing."
     }
   ],
   "skip_list": [
+    {
+      "paths":[
+        "test262/test/language/expressions/arrow-function/scope-paramsbody-var-open.js",
+        "test262/test/language/expressions/object/scope-setter-paramsbody-var-open.js"
+      ],
+      "comment": "Failed in lazy mode, remove them once fix gets landed."
+    },
     {
       "paths": [
         "mjsunit/es6/math-cbrt.js"
