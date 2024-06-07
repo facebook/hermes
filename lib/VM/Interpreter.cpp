@@ -3157,11 +3157,11 @@ tailCall:
       assert(
           O1REG(PutOwnBySlotIdx).isObject() &&
           "Object argument of PutOwnBySlotIdx must be an object");
-      auto *obj = vmcast<JSObject>(O1REG(PutOwnBySlotIdx));
       CAPTURE_IP_ASSIGN(
           SmallHermesValue shv,
           SmallHermesValue::encodeHermesValue(O2REG(PutOwnBySlotIdx), runtime));
-      CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(obj, runtime, idVal, shv));
+      CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(
+          vmcast<JSObject>(O1REG(PutOwnBySlotIdx)), runtime, idVal, shv));
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
