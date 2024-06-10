@@ -22,6 +22,9 @@
 #include "llvh/ADT/SmallString.h"
 
 namespace hermes {
+
+struct UnicodeRangePoolRef;
+
 namespace regex {
 namespace constants {
 
@@ -122,7 +125,10 @@ enum class ErrorType {
   InvalidNamedReference,
 
   /// Reference to nonexistent capture group.
-  NonexistentNamedCaptureReference
+  NonexistentNamedCaptureReference,
+
+  /// Invalid Unicode property name or value
+  InvalidPropertyName,
 };
 
 /// \return an error message for the given \p error.
@@ -158,6 +164,8 @@ inline const char *messageForError(ErrorType error) {
       return "Invalid named reference";
     case ErrorType::NonexistentNamedCaptureReference:
       return "Nonexistent named capture reference";
+    case ErrorType::InvalidPropertyName:
+      return "Invalid property name";
     case ErrorType::None:
       return "No error";
   }
@@ -207,6 +215,19 @@ struct CharacterClass {
   bool inverted_;
 
   CharacterClass(Type type, bool invert) : type_(type), inverted_(invert) {}
+};
+
+// Type wrapping up a Unicode codepoint range array.
+struct CharacterClassCodepointRanges {
+  llvh::ArrayRef<UnicodeRangePoolRef> rangeArray;
+
+  // Whether the class is inverted (\P instead of \p).
+  bool inverted_;
+
+  CharacterClassCodepointRanges(
+      llvh::ArrayRef<UnicodeRangePoolRef> rangeArray,
+      bool inverted)
+      : rangeArray(rangeArray), inverted_(inverted) {}
 };
 
 // Struct representing flags which may be used when constructing the RegExp

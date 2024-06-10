@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <climits>
 #include <iterator>
+#include <string>
 #include <utility>
 
 namespace hermes {
@@ -209,5 +210,130 @@ uint32_t canonicalize(uint32_t cp, bool unicode) {
     return cp;
   }
 }
+
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+
+/// Find a matching entry (such as \p NameMapEntry or \p RangeMapEntry) by
+/// matching a string \p name against the entry's \p name field.
+template <class T>
+static const T *findMapEntry(
+    const llvh::ArrayRef<T> &arrayRef,
+    const std::string_view name) {
+  auto it = std::lower_bound(
+      std::begin(arrayRef),
+      std::end(arrayRef),
+      name,
+      [](const T &a, std::string_view b) {
+        return UNICODE_DATA_STRING_POOL.compare(a.name.offset, a.name.size, b) <
+            0;
+      });
+  if (it == std::end(arrayRef) ||
+      UNICODE_DATA_STRING_POOL.compare(it->name.offset, it->name.size, name) !=
+          0) {
+    return nullptr;
+  }
+  return it;
+}
+
+llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
+    std::string_view propertyName,
+    std::string_view propertyValue) {
+  const NameMapEntry *canonicalNameEntry;
+  llvh::ArrayRef<RangeMapEntry> rangeMap;
+
+  if (propertyValue.empty()) {
+    // There was no property value, this is either a binary property or a value
+    // from General_Category, as per `LoneUnicodePropertyNameOrValue`.
+    if ((canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_BinaryProperty),
+             propertyName))) {
+      rangeMap = unicodePropertyRangeMap_BinaryProperty;
+    } else if ((canonicalNameEntry = findMapEntry(
+                    llvh::ArrayRef(canonicalPropertyNameMap_GeneralCategory),
+                    propertyName))) {
+      rangeMap = unicodePropertyRangeMap_GeneralCategory;
+    }
+  } else {
+    // There was a property value, assume the name is a category.
+    if ((propertyName == "General_Category" || propertyName == "gc") &&
+        (canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_GeneralCategory),
+             propertyValue))) {
+      rangeMap = unicodePropertyRangeMap_GeneralCategory;
+    } else if (
+        (propertyName == "Script" || propertyName == "sc") &&
+        (canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_Script), propertyValue))) {
+      rangeMap = unicodePropertyRangeMap_Script;
+    } else if (
+        (propertyName == "Script_Extensions" || propertyName == "scx") &&
+        // Since Script_Extensions is a superset of Script, they share
+        // a name map.
+        (canonicalNameEntry = findMapEntry(
+             llvh::ArrayRef(canonicalPropertyNameMap_Script), propertyValue))) {
+      rangeMap = unicodePropertyRangeMap_ScriptExtensions;
+    } else {
+      return llvh::ArrayRef<UnicodeRangePoolRef>();
+    }
+  }
+
+  if (canonicalNameEntry == nullptr) {
+    return llvh::ArrayRef<UnicodeRangePoolRef>();
+  }
+
+  // Look up the range arrays for the property.
+  auto rangeMapEntry = findMapEntry(
+      rangeMap,
+      UNICODE_DATA_STRING_POOL.substr(
+          canonicalNameEntry->canonical.offset,
+          canonicalNameEntry->canonical.size));
+  if (rangeMapEntry == nullptr) {
+    return llvh::ArrayRef<UnicodeRangePoolRef>();
+  }
+
+  return llvh::ArrayRef{
+      &UNICODE_RANGE_ARRAY_POOL[rangeMapEntry->rangeArrayPoolOffset],
+      rangeMapEntry->rangeArraySize};
+}
+
+void addRangeArrayPoolToBracket(
+    CodePointSet *receiver,
+    const llvh::ArrayRef<UnicodeRangePoolRef> rangeArrayPool,
+    bool inverted) {
+  for (auto rangePoolRef : rangeArrayPool) {
+    auto rangePool = llvh::ArrayRef<UnicodeRange>{
+        &UNICODE_RANGE_POOL[rangePoolRef.offset], rangePoolRef.size};
+
+    if (inverted) {
+      uint32_t last = 0;
+      for (auto range : rangePool) {
+        receiver->add(CodePointRange{last, range.first - last});
+        last = range.second + 1;
+      }
+      // Add the final range.
+      receiver->add(CodePointRange{last, UNICODE_MAX_VALUE - last});
+    } else {
+      for (auto range : rangePool) {
+        const uint32_t length = range.second - range.first + 1;
+        receiver->add(CodePointRange{range.first, length});
+      }
+    }
+  }
+}
+
+#else
+
+llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
+    std::string_view propertyName,
+    std::string_view propertyValue) {
+  return llvh::ArrayRef<UnicodeRangePoolRef>();
+}
+
+void addRangeArrayPoolToBracket(
+    CodePointSet *receiver,
+    const llvh::ArrayRef<UnicodeRangePoolRef> rangeArrayPool,
+    bool inverted) {}
+
+#endif
 
 } // namespace hermes

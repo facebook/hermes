@@ -16,7 +16,7 @@ use hermes_parser::Comment;
 struct CommentAttachmentVisitor<'a> {
     comments: &'a [Comment],
     idx: usize,
-    attached_comments: Vec<(&'a str, Node<'a>, SourceRange)>,
+    attached_comments: Vec<(&'a str, SourceRange, Node<'a>, SourceRange)>,
 }
 
 impl<'a> Visitor<'a> for CommentAttachmentVisitor<'a> {
@@ -47,6 +47,7 @@ impl<'a> Visitor<'a> for CommentAttachmentVisitor<'a> {
         if found_node {
             self.attached_comments.push((
                 &self.comments[self.idx - 1].value,
+                self.comments[self.idx - 1].range,
                 node.as_node_enum(),
                 node.range(),
             ));
@@ -65,7 +66,7 @@ impl<'a> CommentAttachmentVisitor<'a> {
         }
     }
 
-    fn result(self) -> Vec<(&'a str, Node<'a>, SourceRange)> {
+    fn result(self) -> Vec<(&'a str, SourceRange, Node<'a>, SourceRange)> {
         self.attached_comments
     }
 }
@@ -75,7 +76,7 @@ impl<'a> CommentAttachmentVisitor<'a> {
 pub fn find_nodes_after_comments<'a>(
     program: &'a Program,
     comments: &'a [Comment],
-) -> Vec<(&'a str, Node<'a>, SourceRange)> {
+) -> Vec<(&'a str, SourceRange, Node<'a>, SourceRange)> {
     let mut comment_attachment_visitor = CommentAttachmentVisitor::new(comments);
     comment_attachment_visitor.visit_program(program);
     comment_attachment_visitor.result()

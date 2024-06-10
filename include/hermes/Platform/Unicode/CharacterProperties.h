@@ -10,6 +10,9 @@
 
 #include <cassert>
 #include <cstdint>
+#include <string>
+
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 
@@ -100,6 +103,16 @@ inline bool isUnicodeIDContinue(uint32_t cp) {
       cp == UNICODE_ZWNJ || cp == UNICODE_ZWJ;
 }
 
+/// \return true if the codepoint is valid in a unicode property name
+inline bool isUnicodePropertyName(uint32_t ch) {
+  return ch == '_' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
+}
+
+/// \return true if the codepoint is valid in a unicode property value
+inline bool isUnicodePropertyValue(uint32_t ch) {
+  return isUnicodePropertyName(ch) || isUnicodeDigit(ch);
+}
+
 /// \return the canonicalized value of \p cp, following ES9 21.2.2.8.2.
 uint32_t canonicalize(uint32_t cp, bool unicode);
 
@@ -107,6 +120,21 @@ class CodePointSet;
 /// \return a set containing all characters which are canonically equivalent to
 /// any character in \p set, following ES9 21.2.2.8.2.
 CodePointSet makeCanonicallyEquivalent(const CodePointSet &set, bool unicode);
+
+struct UnicodeRangePoolRef;
+
+// Create a codepoint range array from a Unicode \p propertyName and \p
+// propertyValue.
+llvh::ArrayRef<UnicodeRangePoolRef> unicodePropertyRanges(
+    std::string_view propertyName,
+    std::string_view propertyValue);
+
+/// Add a codepoint range array of codepoints to \p receiver, typically used in
+/// conjuction with unicodePropertyRanges.
+void addRangeArrayPoolToBracket(
+    CodePointSet *receiver,
+    const llvh::ArrayRef<UnicodeRangePoolRef> rangeArrayPool,
+    bool inverted);
 
 } // namespace hermes
 

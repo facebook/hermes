@@ -1326,10 +1326,10 @@ void HermesRuntime::registerForProfiling() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   vm::Runtime &runtime = impl(this)->runtime_;
   if (runtime.samplingProfiler) {
-    ::hermes::hermes_fatal(
-        "re-registering HermesVMs for profiling is not allowed");
+    runtime.samplingProfiler->setRuntimeThread();
+  } else {
+    runtime.samplingProfiler = ::hermes::vm::SamplingProfiler::create(runtime);
   }
-  runtime.samplingProfiler = ::hermes::vm::SamplingProfiler::create(runtime);
 #else
   throwHermesNotCompiledWithSamplingProfilerSupport();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
