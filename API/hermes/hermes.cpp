@@ -1378,6 +1378,10 @@ jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
           buffer, sourceMapBuf, sourceURL));
 }
 
+::hermes::vm::Runtime *HermesRuntime::getVMRuntimeUnsafe() const {
+  return impl(this)->rt_.get();
+}
+
 size_t HermesRuntime::rootsListLengthForTests() const {
   return impl(this)->hermesValues_.sizeForTests();
 }
