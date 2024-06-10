@@ -150,16 +150,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   static constexpr uint32_t kSentinelNativeValue = 0x6ef71fe1;
 
   HermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
-      : HermesRuntimeImpl(
-            runtimeConfig,
-            ::hermes::vm::Runtime::create(runtimeConfig)) {}
-
-  HermesRuntimeImpl(
-      const vm::RuntimeConfig &runtimeConfig,
-      const std::shared_ptr<::hermes::vm::Runtime> &rt)
       : hermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
         weakHermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
-        rt_(rt),
+        rt_(::hermes::vm::Runtime::create(runtimeConfig)),
         runtime_(*rt_),
         vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()) {
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -2458,24 +2451,6 @@ std::unique_ptr<HermesRuntime> makeHermesRuntime(
 #else
   auto ret = std::make_unique<HermesRuntimeImpl>(runtimeConfig);
 #endif
-
-#ifdef HERMES_ENABLE_DEBUGGER
-  // Only HermesRuntime can create a debugger instance.  This requires
-  // the setter and not using make_unique, so the call to new is here
-  // in this function, which is a friend of debugger::Debugger.
-  ret->setDebugger(std::unique_ptr<debugger::Debugger>(
-      new debugger::Debugger(ret.get(), ret->runtime_)));
-#else
-  ret->setDebugger(std::make_unique<debugger::Debugger>());
-#endif
-
-  return ret;
-}
-
-std::unique_ptr<HermesRuntime> adoptHermesRuntime(
-    const std::shared_ptr<::hermes::vm::Runtime> &runtime,
-    const vm::RuntimeConfig &runtimeConfig) {
-  auto ret = std::make_unique<HermesRuntimeImpl>(runtimeConfig, runtime);
 
 #ifdef HERMES_ENABLE_DEBUGGER
   // Only HermesRuntime can create a debugger instance.  This requires

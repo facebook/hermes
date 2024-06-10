@@ -271,9 +271,6 @@ class HERMES_EXPORT Debugger {
  private:
   friend std::unique_ptr<HermesRuntime> hermes::makeHermesRuntime(
       const ::hermes::vm::RuntimeConfig &);
-  friend std::unique_ptr<HermesRuntime> hermes::adoptHermesRuntime(
-      const std::shared_ptr<::hermes::vm::Runtime> &,
-      const ::hermes::vm::RuntimeConfig &);
   friend std::unique_ptr<jsi::ThreadSafeRuntime>
   hermes::makeThreadSafeHermesRuntime(const ::hermes::vm::RuntimeConfig &);
   friend ProgramState;

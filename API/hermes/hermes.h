@@ -25,7 +25,6 @@ struct HermesTestHelper;
 namespace hermes {
 namespace vm {
 class GCExecTrace;
-class Runtime;
 } // namespace vm
 } // namespace hermes
 
@@ -239,9 +238,6 @@ HERMES_EXPORT ::hermes::vm::RuntimeConfig hardenedHermesRuntimeConfig();
 HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
-HERMES_EXPORT std::unique_ptr<HermesRuntime> adoptHermesRuntime(
-    const std::shared_ptr<::hermes::vm::Runtime> &runtime,
-    const ::hermes::vm::RuntimeConfig &runtimeConfig);
 HERMES_EXPORT std::unique_ptr<jsi::ThreadSafeRuntime>
 makeThreadSafeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
