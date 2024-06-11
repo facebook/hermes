@@ -1420,6 +1420,13 @@
                     "type": "FlowTypeAnnotation"
                 }
             }
+        },
+        "TupleTypeAnnotation": {
+            "fields": {
+                "types": {
+                    "type": "Vec<FlowTypeAnnotation>"
+                }
+            }
         }
     },
     "enums": {
@@ -1640,7 +1647,8 @@
             "UnionTypeAnnotation",
             "IntersectionTypeAnnotation",
             "IndexedAccessType",
-            "OptionalIndexedAccessType"
+            "OptionalIndexedAccessType",
+            "TupleTypeAnnotation"
         ],
         "ObjectTypePropertyType": [
             "ObjectTypeProperty",
