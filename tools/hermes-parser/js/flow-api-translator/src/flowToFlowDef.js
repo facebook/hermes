@@ -49,6 +49,7 @@ import type {
   ObjectTypeAnnotation,
   ObjectTypeProperty,
   OpaqueType,
+  QualifiedTypeIdentifier,
   Program,
   RestElement,
   Statement,
@@ -977,6 +978,49 @@ function convertClassDeclaration(
   ];
 }
 
+function convertExpressionToIdentifier(
+  node: Expression,
+  context: TranslationContext,
+): DetachedNode<Identifier> | DetachedNode<QualifiedTypeIdentifier> {
+  if (node.type === 'Identifier') {
+    return t.Identifier({name: node.name});
+  }
+
+  if (node.type === 'MemberExpression') {
+    const {property, object} = node;
+    if (property.type === 'Identifier' && object.type !== 'Super') {
+      return t.QualifiedTypeIdentifier({
+        qualification: convertExpressionToIdentifier(object, context),
+        id: t.Identifier({name: property.name}),
+      });
+    }
+  }
+
+  throw translationError(
+    node,
+    `Expected ${node.type} to be an Identifier or Member with Identifier property, non-Super object.`,
+    context,
+  );
+}
+
+function convertSuperClassHelper(
+  detachedId: DetachedNode<Identifier | QualifiedTypeIdentifier>,
+  nodeForDependencies: ESNode,
+  superTypeParameters: ?TypeParameterInstantiation,
+  context: TranslationContext,
+): TranslatedResultOrNull<InterfaceExtends> {
+  const [resultTypeParams, typeParamsDeps] =
+    convertTypeParameterInstantiationOrNull(superTypeParameters, context);
+  const superDeps = analyzeTypeDependencies(nodeForDependencies, context);
+  return [
+    t.InterfaceExtends({
+      id: detachedId,
+      typeParameters: resultTypeParams,
+    }),
+    [...typeParamsDeps, ...superDeps],
+  ];
+}
+
 function convertSuperClass(
   superClass: ?Expression,
   superTypeParameters: ?TypeParameterInstantiation,
@@ -986,23 +1030,62 @@ function convertSuperClass(
     return EMPTY_TRANSLATION_RESULT;
   }
 
-  if (superClass.type !== 'Identifier') {
-    throw translationError(
-      superClass,
-      `SuperClass: Non identifier super type of "${superClass.type}" not supported`,
-      context,
-    );
+  switch (superClass.type) {
+    case 'Identifier': {
+      return convertSuperClassHelper(
+        asDetachedNode(superClass),
+        superClass,
+        superTypeParameters,
+        context,
+      );
+    }
+    case 'MemberExpression': {
+      return convertSuperClassHelper(
+        convertExpressionToIdentifier(superClass, context),
+        superClass,
+        superTypeParameters,
+        context,
+      );
+    }
+    case 'TypeCastExpression': {
+      const typeAnnotation = superClass.typeAnnotation.typeAnnotation;
+
+      if (typeAnnotation.type === 'GenericTypeAnnotation') {
+        return convertSuperClassHelper(
+          asDetachedNode(typeAnnotation.id),
+          typeAnnotation,
+          superTypeParameters,
+          context,
+        );
+      }
+
+      if (typeAnnotation.type === 'TypeofTypeAnnotation') {
+        const typeofArg = typeAnnotation.argument;
+
+        if (typeofArg.type === 'Identifier') {
+          return convertSuperClassHelper(
+            asDetachedNode(typeofArg),
+            typeofArg,
+            typeAnnotation.typeArguments,
+            context,
+          );
+        }
+      }
+
+      throw translationError(
+        superClass,
+        `SuperClass: Typecast super type of "${typeAnnotation.type}" not supported`,
+        context,
+      );
+    }
+    default: {
+      throw translationError(
+        superClass,
+        `SuperClass: Non identifier super type of "${superClass.type}" not supported`,
+        context,
+      );
+    }
   }
-  const [resultTypeParams, typeParamsDeps] =
-    convertTypeParameterInstantiationOrNull(superTypeParameters, context);
-  const superDeps = analyzeTypeDependencies(superClass, context);
-  return [
-    t.InterfaceExtends({
-      id: asDetachedNode(superClass),
-      typeParameters: resultTypeParams,
-    }),
-    [...typeParamsDeps, ...superDeps],
-  ];
 }
 
 function convertClassBody(
