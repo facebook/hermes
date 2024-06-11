@@ -1239,6 +1239,25 @@
                 }
             }
         },
+        "OpaqueType": {
+            "fields": {
+                "id": {
+                    "type": "Identifier"
+                },
+                "type_parameters": {
+                    "type": "Option<TypeParameterInstantiation>",
+                    "optional": true,
+                    "rename": "typeParameters"
+                },
+                "impltype": {
+                    "type": "FlowTypeAnnotation"
+                },
+                "supertype": {
+                    "type": "Option<FlowTypeAnnotation>",
+                    "optional": true
+                }
+            }
+        },
         "NullableTypeAnnotation": {
             "fields": {
                 "type_annotation": {
@@ -1515,7 +1534,8 @@
             "FunctionDeclaration",
             "VariableDeclaration",
             "TSTypeAliasDeclaration",
-            "TypeAlias"
+            "TypeAlias",
+            "OpaqueType"
         ],
         "ImportDeclarationSpecifier": [
             "ImportSpecifier",
