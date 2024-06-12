@@ -153,7 +153,7 @@ impl Grammar {
             use std::num::NonZeroU32;
             use serde::ser::{Serializer, SerializeMap};
             use serde::{Serialize,Deserialize};
-            use crate::{JsValue, Binding, SourceRange, Number, ESTreeNode, Range};
+            use crate::{JsValue, Binding, SourceRange, Number, ESTreeNode, Range, Introspection};
 
             #(#object_defs)*
 
@@ -765,6 +765,11 @@ impl Enum {
             quote!(Self::#variant(node) => node.range())
         });
 
+        let name_variants = sorted_variants.iter().map(|name| {
+            let variant = format_ident!("{}", name);
+            quote!(Self::#variant(_) => #name)
+        });
+
         quote! {
             #[derive(Serialize, Clone, Debug)]
             #[serde(untagged)]
@@ -794,6 +799,14 @@ impl Enum {
                 fn range(&self) -> SourceRange {
                     match self {
                         #(#range_variants),*
+                    }
+                }
+            }
+
+            impl Introspection for #name {
+                fn name(&self) -> &'static str {
+                    match self {
+                        #(#name_variants),*
                     }
                 }
             }
