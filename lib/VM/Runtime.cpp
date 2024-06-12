@@ -150,6 +150,10 @@ class Runtime::StackRuntime {
 
 /* static */
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
+#if defined(HERMESVM_CONTIGUOUS_HEAP) && defined(HERMESVM_RUNTIME_ON_STACK)
+#error Contiguous heap is not compatible with Runtime on stack.
+#endif
+
 #if defined(HERMESVM_CONTIGUOUS_HEAP)
   uint64_t maxHeapSize = runtimeConfig.getGCConfig().getMaxHeapSize();
   // Allow some extra segments for the runtime, and as a buffer for the GC.
@@ -160,9 +164,7 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   auto rt = HeapRuntime<Runtime>::create(sp);
   new (rt.get()) Runtime(std::move(sp), runtimeConfig);
   return rt;
-#elif defined(HERMES_FACEBOOK_BUILD) && !defined(HERMES_FBCODE_BUILD) && \
-    !defined(__EMSCRIPTEN__)
-  // TODO (T84179835): Disable this once it is no longer useful for debugging.
+#elif defined(HERMESVM_RUNTIME_ON_STACK)
   return StackRuntime::create(runtimeConfig);
 #else
   return std::shared_ptr<Runtime>{
