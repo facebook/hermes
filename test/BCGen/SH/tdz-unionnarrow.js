@@ -48,9 +48,8 @@ function f2() {
 // CHKIR-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHKIR-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHKIR-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS2.x]: any|empty
-// CHKIR-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.inner]: any
-// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %inner(): functionCode
-// CHKIR-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS2.inner]: any
+// CHKIR-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %inner(): functionCode
+// CHKIR-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS2.inner]: any
 // CHKIR-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.x]: any|empty
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end

@@ -25,7 +25,7 @@ function f(x: any, y: number) {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'f' ScopedFunction : %function.2
+// CHECK-NEXT:            Decl %d.2 'f' Var : %function.2
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction f
 // CHECK-NEXT:        Func strict

@@ -37,7 +37,7 @@
 // CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.3 'foo' ScopedFunction : %function.4
+// CHECK-NEXT:                Decl %d.3 'foo' Var : %function.4
 // CHECK-NEXT:                Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction foo
 // CHECK-NEXT:            Func strict

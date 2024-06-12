@@ -104,22 +104,21 @@ function func4() {
 // CHECK-NEXT:       StoreFrameInst %3: environment, %1: object, [%VS3.?anon_0_this]: any
 // CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [%VS3.?anon_1_new.target]: undefined|object
-// CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS3.innerFunction]: any
 // CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS3.innerArrow1]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %innerFunction(): functionCode
-// CHECK-NEXT:        StoreFrameInst %3: environment, %9: object, [%VS3.innerFunction]: any
-// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %12 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %13 = BinaryStrictlyNotEqualInst (:boolean) %12: undefined|object, undefined: undefined
-// CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: boolean
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %3: environment, %innerArrow1(): functionCode
-// CHECK-NEXT:        StoreFrameInst %3: environment, %15: object, [%VS3.innerArrow1]: any
-// CHECK-NEXT:  %17 = LoadFrameInst (:any) %3: environment, [%VS3.innerFunction]: any
-// CHECK-NEXT:  %18 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:        StoreOwnPropertyInst %17: any, %18: object, 0: number, true: boolean
-// CHECK-NEXT:  %20 = LoadFrameInst (:any) %3: environment, [%VS3.innerArrow1]: any
-// CHECK-NEXT:        StoreOwnPropertyInst %20: any, %18: object, 1: number, true: boolean
-// CHECK-NEXT:        ReturnInst %18: object
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %3: environment, %innerFunction(): functionCode
+// CHECK-NEXT:       StoreFrameInst %3: environment, %8: object, [%VS3.innerFunction]: any
+// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %11 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:  %12 = BinaryStrictlyNotEqualInst (:boolean) %11: undefined|object, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: boolean
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %3: environment, %innerArrow1(): functionCode
+// CHECK-NEXT:        StoreFrameInst %3: environment, %14: object, [%VS3.innerArrow1]: any
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) %3: environment, [%VS3.innerFunction]: any
+// CHECK-NEXT:  %17 = AllocArrayInst (:object) 2: number
+// CHECK-NEXT:        StoreOwnPropertyInst %16: any, %17: object, 0: number, true: boolean
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %3: environment, [%VS3.innerArrow1]: any
+// CHECK-NEXT:        StoreOwnPropertyInst %19: any, %17: object, 1: number, true: boolean
+// CHECK-NEXT:        ReturnInst %17: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS4 []

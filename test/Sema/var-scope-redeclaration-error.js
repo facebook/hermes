@@ -14,6 +14,9 @@ function foo() {
     var x;
     var y;
   }
+
+  var a1;
+  let a1;
 }
 
 {
@@ -44,16 +47,22 @@ function bar() {
 // CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:13:9: note: previous declaration
 // CHECK-NEXT:    let y;
 // CHECK-NEXT:        ^
-// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:21:7: error: Identifier 'z' is already declared
+// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:19:7: error: Identifier 'a1' is already declared
+// CHECK-NEXT:  let a1;
+// CHECK-NEXT:      ^~
+// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:18:7: note: previous declaration
+// CHECK-NEXT:  var a1;
+// CHECK-NEXT:      ^~
+// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:24:7: error: Identifier 'z' is already declared
 // CHECK-NEXT:  var z;
 // CHECK-NEXT:      ^
-// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:20:7: note: previous declaration
+// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:23:7: note: previous declaration
 // CHECK-NEXT:  let z;
 // CHECK-NEXT:      ^
-// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:29:13: error: Identifier 'e' is already declared
+// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:32:13: error: Identifier 'e' is already declared
 // CHECK-NEXT:        var e = 10;
 // CHECK-NEXT:            ^
-// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:27:15: note: previous declaration
+// CHECK-NEXT:{{.*}}var-scope-redeclaration-error.js:30:15: note: previous declaration
 // CHECK-NEXT:    } catch ([e = 10]) {
 // CHECK-NEXT:              ^
-// CHECK-NEXT:Emitted 4 errors. exiting.
+// CHECK-NEXT:Emitted 5 errors. exiting.

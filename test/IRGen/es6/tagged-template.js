@@ -205,14 +205,13 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS8.func]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %func(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS8.func]: any
-// CHECK-NEXT:  %5 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS8.func]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: any
-// CHECK-NEXT:       ReturnInst %8: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %func(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS8.func]: any
+// CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS8.func]: any
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS9 [x: any]

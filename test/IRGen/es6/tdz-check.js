@@ -103,15 +103,14 @@ function check4() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS3.x]: any|empty
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.check3_inner]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %check3_inner(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS3.check3_inner]: any
-// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS3.check3_inner]: any
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst %1: environment, %7: any, [%VS3.x]: any|empty
-// CHECK-NEXT:  %9 = LoadFrameInst (:any|empty) %1: environment, [%VS3.x]: any|empty
-// CHECK-NEXT:  %10 = UnionNarrowTrustedInst (:any) %9: any|empty
-// CHECK-NEXT:        ReturnInst %10: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %check3_inner(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS3.check3_inner]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS3.check3_inner]: any
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS3.x]: any|empty
+// CHECK-NEXT:  %8 = LoadFrameInst (:any|empty) %1: environment, [%VS3.x]: any|empty
+// CHECK-NEXT:  %9 = UnionNarrowTrustedInst (:any) %8: any|empty
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS4 [x: any|empty]

@@ -47,18 +47,17 @@ function foo() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.y]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.z]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x#1]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %x(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS1.x#1]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %y(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.y]: any
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %1: environment, %z(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.z]: any
-// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
-// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.y]: any
-// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [%VS1.z]: any
-// CHECK-NEXT:  %17 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %14: any, %15: any, %16: any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %x(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.x#1]: any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %y(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.y]: any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %z(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.z]: any
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS1.y]: any
+// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.z]: any
+// CHECK-NEXT:  %16 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: any, %14: any, %15: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

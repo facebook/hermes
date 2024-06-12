@@ -37,7 +37,7 @@ let e: [[number, bool], string] = [[1, true], "hi"];
 // CHECK-NEXT:            Decl %d.2 'a' Let : %tuple.3
 // CHECK-NEXT:            Decl %d.3 'b' Let : %tuple.4
 // CHECK-NEXT:            Decl %d.4 'c' Let : %tuple.4
-// CHECK-NEXT:            Decl %d.5 'd' ScopedFunction : %function.6
+// CHECK-NEXT:            Decl %d.5 'd' Var : %function.6
 // CHECK-NEXT:            Decl %d.6 'e' Let : %tuple.5
 // CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction d

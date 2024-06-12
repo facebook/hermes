@@ -65,10 +65,10 @@ function retval(c: C | null): C {
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.2 'C' Class : %class_constructor.5
-// CHECK-NEXT:            Decl %d.3 'loop' ScopedFunction : %function.6
-// CHECK-NEXT:            Decl %d.4 'call' ScopedFunction : %function.7
-// CHECK-NEXT:            Decl %d.5 'assign' ScopedFunction : %function.7
-// CHECK-NEXT:            Decl %d.6 'retval' ScopedFunction : %function.8
+// CHECK-NEXT:            Decl %d.3 'loop' Var : %function.6
+// CHECK-NEXT:            Decl %d.4 'call' Var : %function.7
+// CHECK-NEXT:            Decl %d.5 'assign' Var : %function.7
+// CHECK-NEXT:            Decl %d.6 'retval' Var : %function.8
 // CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction loop
 // CHECK-NEXT:            hoistedFunction call
@@ -83,7 +83,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.10 'cur' Parameter : %union.4
-// CHECK-NEXT:                Decl %d.11 'bar' ScopedFunction : %function.10
+// CHECK-NEXT:                Decl %d.11 'bar' Var : %function.10
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction bar
 // CHECK-NEXT:                Scope %s.6

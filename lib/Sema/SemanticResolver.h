@@ -310,6 +310,12 @@ class SemanticResolver
   /// `validateAndDeclareIdentifier`.
   void processDeclarations(const ScopeDecls &decls);
 
+  /// Declare all the function declarations in \p promotedFuncDecls with
+  /// Var in function scope or GlobalProperty in global scope.
+  /// Add the names to the function context's promotedFuncDecls list.
+  void processPromotedFuncDecls(
+      llvh::ArrayRef<ESTree::FunctionDeclarationNode *> promotedFuncDecls);
+
   /// Extract the list of declared identifiers in a declaration node and return
   /// the declaration kind of the node.
   /// Function declarations are returned as DeclKind::ScopedFunction,
@@ -427,6 +433,14 @@ class FunctionContext {
 
   /// All declarations in the function.
   std::unique_ptr<DeclCollector> decls;
+
+  /// The set of names that have been promoted to function scope by
+  /// promoteScopedFunctionDecls in this function.
+  llvh::DenseSet<UniqueString *> promotedFuncDecls{};
+
+  /// The depth of the function's scope in the binding table.
+  /// Populated when ScopeRAII is created within the function.
+  uint32_t bindingTableScopeDepth = 0;
 
   /// Just a tag for readability when invoking the special constructor.
   struct ExistingGlobalScopeTag {};

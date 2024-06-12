@@ -1090,6 +1090,12 @@ class ESTreeIRGen {
   /// \pre all undeclared declarations are at the end of the scope's list.
   void emitLazyGlobalDeclarations(sema::LexicalScope *globalScope);
 
+  /// Emit the function declaration for a hoisted function.
+  /// Eliminate dead stores of undefined when necessary.
+  void emitHoistedFunctionDeclaration(
+      sema::LexicalScope *scope,
+      ESTree::FunctionDeclarationNode *funcDecl);
+
   /// Emit the loading and initialization of parameters in the function
   /// prologue.
   void emitParameters(ESTree::FunctionLikeNode *funcNode);

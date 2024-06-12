@@ -38,9 +38,8 @@ function main(boop) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %boop: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.boop]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.foo]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.foo]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -170,6 +170,11 @@ class PersistentScopedMapScope {
     scope_->pop();
   }
 
+  /// \return the depth of the scope.
+  uint32_t getDepth() const {
+    return scope_->depth_;
+  }
+
   /// Return a persistent pointer that retains ownership of the scope so it can
   /// be reactivated after it has been popped.
   const PersistentScopedMapScopePtr<K, V> &ptr() const {
@@ -404,6 +409,18 @@ class PersistentScopedMap {
       return nullptr;
 
     return &result->second->second;
+  }
+
+  /// \return a pointer to the innermost value for a key along with its depth,
+  /// or (nullptr, 0) if none.
+  std::pair<V *, uint32_t> findWithDepth(const K &key) {
+    auto result = map_.find(key);
+    if (result == map_.end())
+      return {nullptr, 0};
+
+    detail::PersistentScopedMapNode<K, V> *node = result->second;
+
+    return {&node->second, node->depth_};
   }
 
   /// \return a pointer to the value for a key if it exists in the current

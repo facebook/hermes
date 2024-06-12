@@ -74,12 +74,11 @@ function outer2() {
 // CHECK-NEXT:       StoreFrameInst %3: environment, %1: object, [%VS2.?anon_0_this]: any
 // CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [%VS2.?anon_1_new.target]: undefined|object
-// CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS2.inner3]: any
 // CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS2.innerArrow4]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %inner3(): functionCode
-// CHECK-NEXT:        StoreFrameInst %3: environment, %9: object, [%VS2.inner3]: any
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %3: environment, %innerArrow4(): functionCode
-// CHECK-NEXT:        StoreFrameInst %3: environment, %11: object, [%VS2.innerArrow4]: any
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %3: environment, %inner3(): functionCode
+// CHECK-NEXT:       StoreFrameInst %3: environment, %8: object, [%VS2.inner3]: any
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %3: environment, %innerArrow4(): functionCode
+// CHECK-NEXT:        StoreFrameInst %3: environment, %10: object, [%VS2.innerArrow4]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -25,7 +25,7 @@ function func() {
 // CHECK-NEXT:        hoistedFunction func
 // CHECK-NEXT:    Func loose
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.2 'inner' ScopedFunction
+// CHECK-NEXT:            Decl %d.2 'inner' Var
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Decl %d.4 'foo' Let

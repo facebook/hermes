@@ -30,7 +30,7 @@ v3 = [4, "def"];
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.3 'f1' ScopedFunction : %function.3
+// CHECK-NEXT:            Decl %d.3 'f1' Var : %function.3
 // CHECK-NEXT:            Decl %d.4 'v1' Let : %tuple.2
 // CHECK-NEXT:            Decl %d.5 'v2' Let : %tuple.2
 // CHECK-NEXT:            Decl %d.6 'v3' Let : %tuple.2

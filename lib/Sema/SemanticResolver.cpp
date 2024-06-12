@@ -126,15 +126,17 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
 
   {
     ScopeRAII programScope{*this, node};
+    newFuncCtx.bindingTableScopeDepth =
+        programScope.getBindingScope().getDepth();
     llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
         globalScope_, programScope.getBindingScope().ptr());
     semCtx_.setBindingTableGlobalScope(globalScope_);
 
-    // Promote hoisted functions.
-    if (!curFunctionInfo()->strict) {
-      promoteScopedFuncDecls(*this, node);
-    }
     processCollectedDeclarations(node);
+    if (!curFunctionInfo()->strict) {
+      // Promote hoisted functions.
+      processPromotedFuncDecls(getPromotedScopedFuncDecls(*this, node));
+    }
     processAmbientDecls();
     visitESTreeChildren(*this, node);
   }
@@ -248,29 +250,47 @@ void SemanticResolver::visit(ESTree::VariableDeclarationNode *node) {
     extractIdentsFromDecl(node, idents);
     // Check every identifier declared as a 'var'.
     for (ESTree::IdentifierNode *ident : idents) {
-      const Binding prevName = bindingTable_.lookup(ident->_name);
+      const auto [prevName, prevDepth] =
+          bindingTable_.findWithDepth(ident->_name);
 
-      if (!prevName.isValid()) {
+      if (!prevName) {
         // No existing declaration, move on.
         continue;
       }
-      if (prevName.decl->scope ==
-          prevName.decl->scope->parentFunction->getFunctionScope()) {
+
+      // Whether the prevName is the lexical binding for a promoted function
+      // which reuses the same Decl.
+      // If it is a lexical binding of a promoted function,
+      // that's an error due to a lexically-scoped and var-scoped naming
+      // conflict.
+      bool prevIsLexicalBindingOfPromotedFunc =
+          functionContext()->promotedFuncDecls.count(ident->_name) &&
+          prevDepth != functionContext()->bindingTableScopeDepth;
+
+      if (prevName->decl->scope ==
+              prevName->decl->scope->parentFunction->getFunctionScope() &&
+          !prevIsLexicalBindingOfPromotedFunc) {
         // If the previous declaration is in the function scope, the error would
         // have been reported when validating declarations in the function
         // scope.
         continue;
       }
 
-      // Report an error if the var is trying to override a let-like.
-      const Decl::Kind prevKind = prevName.decl->kind;
-      if (Decl::isKindLetLike(prevKind) && prevKind != Decl::Kind::ES5Catch) {
+      // Report an error if the var is trying to override a let-like
+      // declaration.
+      //
+      // ES10.0 B.3.4: ES5Catch (only used for simple binding ident in catch
+      // block) is not an error if it conflicts with VarDeclaredNames in its
+      // body.
+      const Decl::Kind prevKind = prevName->decl->kind;
+      if ((Decl::isKindLetLike(prevKind) && prevKind != Decl::Kind::ES5Catch) ||
+          prevIsLexicalBindingOfPromotedFunc) {
         sm_.error(
             ident->getSourceRange(),
             llvh::Twine("Identifier '") + ident->_name->str() +
                 "' is already declared");
-        if (prevName.ident)
-          sm_.note(prevName.ident->getSourceRange(), "previous declaration");
+        if (prevName->ident)
+          sm_.note(prevName->ident->getSourceRange(), "previous declaration");
       }
     }
   }
@@ -1140,6 +1160,9 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
   // be accessed from FunctionInfo::getFunctionScope().
   ScopeRAII scope{*this};
 
+  functionContext()->bindingTableScopeDepth =
+      scope.getBindingScope().getDepth();
+
   // Set to false if the parameter list contains binding patterns.
   bool simpleParameterList = true;
   bool hasParameterExpressions = false;
@@ -1226,13 +1249,14 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     visitParams();
   }
 
+  processCollectedDeclarations(node);
+
   // Promote hoisted functions.
   if (blockBody) {
     if (!curFunctionInfo()->strict) {
-      promoteScopedFuncDecls(*this, node);
+      processPromotedFuncDecls(getPromotedScopedFuncDecls(*this, node));
     }
   }
-  processCollectedDeclarations(node);
 
   // Do we need to declare the "arguments" object? Only if we are not an arrow,
   // and don't have a parameter or a variable with that name.
@@ -1379,6 +1403,19 @@ void SemanticResolver::processDeclarations(const ScopeDecls &decls) {
   }
 }
 
+void SemanticResolver::processPromotedFuncDecls(
+    llvh::ArrayRef<ESTree::FunctionDeclarationNode *> promotedFuncDecls) {
+  // Use GlobalProperty in global scope.
+  const Decl::Kind kind = functionContext()->isGlobalScope()
+      ? Decl::Kind::GlobalProperty
+      : Decl::Kind::Var;
+  for (FunctionDeclarationNode *funcDecl : promotedFuncDecls) {
+    auto *ident = llvh::cast<IdentifierNode>(funcDecl->_id);
+    validateAndDeclareIdentifier(kind, ident);
+    functionContext()->promotedFuncDecls.insert(ident->_name);
+  }
+}
+
 Decl::Kind SemanticResolver::extractIdentsFromDecl(
     ESTree::Node *node,
     llvh::SmallVectorImpl<ESTree::IdentifierNode *> &idents) {
@@ -1404,8 +1441,7 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
 
   if (auto *funcDecl = llvh::dyn_cast<FunctionDeclarationNode>(node)) {
     extractDeclaredIdentsFromID(funcDecl->_id, idents);
-    if (functionContext()->isGlobalScope() &&
-        curScope_ == curFunctionInfo()->getFunctionScope()) {
+    if (curScope_ == curFunctionInfo()->getFunctionScope()) {
       // It is possible to still have ScopedFunctions in the global function,
       // for example if we have
       // ```
@@ -1422,7 +1458,13 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
       //
       // See ScopedFunctionPromoter for rules on when function declarations are
       // promoted out of the child scoped in which they are declared.
-      return Decl::Kind::GlobalProperty;
+      //
+      // If the FunctionDeclaration is not at global scope but it is a top-level
+      // declaration within a function, it's handled as Var.
+      // See ES10.0 13.2.7 for how scoped function declarations are treated
+      // specially in top-level.
+      return functionContext()->isGlobalScope() ? Decl::Kind::GlobalProperty
+                                                : Decl::Kind::Var;
     } else {
       return Decl::Kind::ScopedFunction;
     }
@@ -1551,6 +1593,9 @@ void SemanticResolver::validateAndDeclareIdentifier(
 
   Decl *decl = nullptr;
 
+  // Whether to reuse the decl (above) for a new binding when it's not nullptr.
+  bool reuseDeclForNewBinding = false;
+
   // Handle re-declarations, ignoring ambient properties.
   if (prevName.isValid() &&
       prevName.decl->kind != Decl::Kind::UndeclaredGlobalProperty) {
@@ -1561,23 +1606,63 @@ void SemanticResolver::validateAndDeclareIdentifier(
     // Note that since "var" declarations have been hoisted to the function
     // scope, we cannot catch cases where "var" follows something declared in a
     // surrounding lexical scope.
+    // See visit(VariableDeclarationNode *) for when those are handled.
+    //
+    // The two rules in the spec ES10.0 (e.g. B.3.3.4) are:
+    // * LexicallyDeclaredNames (in the same scope) can't conflict.
+    // * LexicallyDeclaredNames can't conflict with VarDeclarationNames in their
+    //   own scope or any of their child scopes (recursively).
+    //
+    // Parameter names must also not conflict with lexically scoped names
+    // in the top-level of the function (ES10.0 14.1.2):
+    // * It is a Syntax Error if any element of the BoundNames of
+    //   FormalParameters also occurs in the LexicallyDeclaredNames of
+    //   FunctionBody.
+    //
+    // Case by case explanations for our representation:
     //
     // ES5Catch, var
     //          -> valid, special case ES10 B.3.5, but we can't catch it here.
     //             See visit(VariableDeclarationNode *)
-    // var|scopedFunction, var|scopedFunction
+    // var, var
     //          -> always valid
+    // scopedFunction, var
+    //          -> can't happen because var is at top-level only
+    // var, scopedFunction
+    //          -> valid because scopedFunction is not at top-level
+    // scopedFunction, scopedFunction
+    //          -> strict mode: valid if not in the same scope
+    //             loose mode: always valid
+    //             See ES10.0 13.2.7
+    //             scoped function declarations are treated specially
+    //             if they're at the top-level of the function/script/module.
+    //             'var' case is handled in visit(VariableDeclarationNode *).
     // let, var
     //          -> always invalid
     // let, scopedFunction
     //          -> invalid if same scope
     // var|scopedFunction|let, let
     //          -> invalid if the same scope
+    // parameter, let
+    //          -> invalid if let is top-level (same scope as parameter)
+
+    assert(
+        !(prevKind == Decl::Kind::ScopedFunction && kind == Decl::Kind::Var) &&
+        "invalid state, scopedFunctions are not at top-level");
 
     if ((Decl::isKindLetLike(prevKind) && Decl::isKindVarLike(kind)) ||
-        (Decl::isKindLetLike(prevKind) && kind == Decl::Kind::ScopedFunction &&
+        (Decl::isKindVarLike(prevKind) && Decl::isKindLetLike(kind) &&
          sameScope) ||
-        (Decl::isKindLetLike(kind) && sameScope)) {
+        (Decl::isKindLetLike(prevKind) && Decl::isKindLetLike(kind) &&
+         sameScope &&
+         // ES10.0 B.3.3.4
+         // Annex B exception: non-strict mode ScopedFunctions are OK.
+         !(!curFunctionInfo()->strict &&
+           prevKind == Decl::Kind::ScopedFunction &&
+           kind == Decl::Kind::ScopedFunction)) ||
+        // Parameters are in the same scope as the top-level of the function.
+        (prevKind == Decl::Kind::Parameter && Decl::isKindLetLike(kind) &&
+         sameScope)) {
       sm_.error(
           ident->getSourceRange(),
           llvh::Twine("Identifier '") + ident->_name->str() +
@@ -1598,34 +1683,22 @@ void SemanticResolver::validateAndDeclareIdentifier(
     else if (
         Decl::isKindVarLike(prevKind) &&
         Decl::isKindVarLikeOrScopedFunction(kind)) {
-      if (sameScope ||
-          (prevKind != Decl::Kind::Parameter && !curFunctionInfo()->strict))
-        decl = prevName.decl;
-      else
-        decl = nullptr;
-    }
-    // ScopedFunc, ScopedFunc same scope -> use prev
-    // ScopedFunc, ScopedFunc new scope -> declare new
-    else if (
-        prevKind == Decl::Kind::ScopedFunction &&
-        kind == Decl::Kind::ScopedFunction) {
       if (sameScope) {
+        decl = prevName.decl;
+      } else if (functionContext()->promotedFuncDecls.count(ident->_name)) {
+        // We've already promoted this function, so add a new binding
+        // and point it to the original Decl.
+        reuseDeclForNewBinding = true;
         decl = prevName.decl;
       } else {
         decl = nullptr;
       }
     }
-    // ScopedFunc, Var -> convert to var
+    // ScopedFunc, ScopedFunc same scope -> error
+    // ScopedFunc, ScopedFunc new scope -> declare new
     else if (
-        prevKind == Decl::Kind::ScopedFunction && Decl::isKindVarLike(kind)) {
-      assert(
-          sameScope &&
-          "we can only encounter Var after ScopedFunction in the same scope");
-      // Since they are in the same scope, we can simply convert the existing
-      // ScopedFunction to Var.
-      decl = prevName.decl;
-      decl->kind = Decl::Kind::Var;
-    } else {
+        prevKind == Decl::Kind::ScopedFunction &&
+        kind == Decl::Kind::ScopedFunction) {
       decl = nullptr;
     }
   }
@@ -1636,6 +1709,8 @@ void SemanticResolver::validateAndDeclareIdentifier(
       decl = semCtx_.newGlobal(ident->_name, kind);
     else
       decl = semCtx_.newDeclInScope(ident->_name, kind, curScope_);
+    bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
+  } else if (reuseDeclForNewBinding) {
     bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
   }
 

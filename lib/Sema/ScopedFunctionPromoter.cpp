@@ -29,6 +29,11 @@ class ScopedFunctionPromoter {
   /// Run the AST pass.
   void run(FunctionLikeNode *funcNode);
 
+  /// \return the list of promoted function declarations.
+  std::vector<FunctionDeclarationNode *> acquirePromotedFuncDecls() {
+    return std::move(promotedFuncDecls_);
+  }
+
   /// Handle the default case for all nodes which we ignore, but we still want
   /// to visit their children.
   void visit(Node *node) {
@@ -91,6 +96,9 @@ class ScopedFunctionPromoter {
 
  private:
   SemanticResolver &resolver_;
+
+  /// The result list of promoted function declarations.
+  std::vector<ESTree::FunctionDeclarationNode *> promotedFuncDecls_{};
 
   /// The names of the scoped functions. We will ignore all other identifiers.
   llvh::SmallDenseSet<UniqueString *> funcNames_{};
@@ -211,28 +219,14 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
     // Remove it from the set, since we are no longer interested in it.
     funcDecls_.erase(funcDecl);
 
-    if (funcDecl->_id) {
-      // Is there a visible let-like declaration with the same name?
-      // If so, it can't be promoted because it would shadow a `let`,
-      // so keep it in `newDecls` and move on.
-      if (bindingTable_.lookup(cast<IdentifierNode>(funcDecl->_id)->_name)) {
-        newDecls.push_back(funcDecl);
-        continue;
-      }
-    } else {
-      // No name on the declaration, nothing to promote.
-      newDecls.push_back(funcDecl);
-      continue;
+    if (funcDecl->_id &&
+        !bindingTable_.lookup(cast<IdentifierNode>(funcDecl->_id)->_name)) {
+      // There's no visible let-like declaration with the same name.
+      // So this decl can be promoted because it would not shadow a `let`.
+      // Add it to the function scope list.
+      promotedFuncDecls_.push_back(funcDecl);
     }
-
-    // This block-scoped function declaration can (and should) be promoted.
-    // 1. Don't add it to the new_decls list.
-    // 2. Add it to the function scope list.
-    resolver_.functionContext()->decls->addScopeDeclForFunc(funcDecl);
   }
-
-  resolver_.functionContext()->decls->setScopeDeclsForNode(
-      scope, std::move(newDecls));
 }
 
 Decl::Kind ScopedFunctionPromoter::extractDeclaredIdents(
@@ -282,14 +276,16 @@ Decl::Kind ScopedFunctionPromoter::extractDeclaredIdents(
 
 } // anonymous namespace
 
-void promoteScopedFuncDecls(
+std::vector<ESTree::FunctionDeclarationNode *> getPromotedScopedFuncDecls(
     SemanticResolver &resolver,
     ESTree::FunctionLikeNode *funcNode) {
   if (resolver.functionContext()->decls->getScopedFuncDecls().empty()) {
     // No scoped function declarations, nothing to promote.
-    return;
+    return {};
   }
-  ScopedFunctionPromoter{resolver}.run(funcNode);
+  ScopedFunctionPromoter impl{resolver};
+  impl.run(funcNode);
+  return impl.acquirePromotedFuncDecls();
 }
 
 } // namespace sema

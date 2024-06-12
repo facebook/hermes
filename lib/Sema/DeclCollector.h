@@ -67,15 +67,6 @@ class DeclCollector
       return nullptr;
     return &it->second;
   }
-  /// Set the ScopeDecls for an AST node.
-  /// Replaces ScopeDecls if it already exists.
-  void setScopeDeclsForNode(ESTree::Node *node, ScopeDecls decls);
-  /// Add a single node to the list of declarations in the root AST node of the
-  /// function.
-  /// Used for promoting a function declaration out of block scope,
-  /// because that requires moving the declaration into the function's root
-  /// scope.
-  void addScopeDeclForFunc(ESTree::Node *node);
 
   /// Return a list of all scoped function declarations in the function.
   llvh::ArrayRef<ESTree::Node *> getScopedFuncDecls() const {

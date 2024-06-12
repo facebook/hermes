@@ -30,7 +30,7 @@ function foo(c: [number, string][]) {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'foo' ScopedFunction : %function.4
+// CHECK-NEXT:            Decl %d.2 'foo' Var : %function.4
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction foo
 // CHECK-NEXT:        Func strict

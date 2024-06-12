@@ -42,18 +42,19 @@ id<string>('a');
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %id(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.id#1]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %"id 1#"(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.id#2]: any
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.id#1]: any
-// CHECK-NEXT:  %9 = CheckedTypeCastInst (:object) %8: any, type(object)
-// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %9: object, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
-// CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.id#2]: any
-// CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
-// CHECK-NEXT:  %14 = CallInst [njsf] (:any) %13: object, empty: any, empty: any, undefined: undefined, undefined: undefined, "a": string
-// CHECK-NEXT:  %15 = CheckedTypeCastInst (:string) %14: any, type(string)
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.id]: any
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %id(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.id#1]: any
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"id 1#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS1.id#2]: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.id#1]: any
+// CHECK-NEXT:  %10 = CheckedTypeCastInst (:object) %9: any, type(object)
+// CHECK-NEXT:  %11 = CallInst [njsf] (:any) %10: object, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:  %12 = CheckedTypeCastInst (:number) %11: any, type(number)
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.id#2]: any
+// CHECK-NEXT:  %14 = CheckedTypeCastInst (:object) %13: any, type(object)
+// CHECK-NEXT:  %15 = CallInst [njsf] (:any) %14: object, empty: any, empty: any, undefined: undefined, undefined: undefined, "a": string
+// CHECK-NEXT:  %16 = CheckedTypeCastInst (:string) %15: any, type(string)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

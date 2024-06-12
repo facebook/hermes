@@ -112,13 +112,6 @@ void DeclCollector::dump(llvh::raw_ostream &os, unsigned indent) const {
 #endif
 }
 
-void DeclCollector::setScopeDeclsForNode(ESTree::Node *node, ScopeDecls decls) {
-  scopes_[node] = decls;
-}
-void DeclCollector::addScopeDeclForFunc(ESTree::Node *node) {
-  scopes_[root_].push_back(node);
-}
-
 void DeclCollector::visit(ESTree::VariableDeclarationNode *node) {
   if (node->_kind == kw_.identVar) {
     addToFunc(node);

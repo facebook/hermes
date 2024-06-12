@@ -33,10 +33,10 @@ outer<string>('a');
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'outer' ScopedFunction
+// CHECK-NEXT:            Decl %d.2 'outer' Var
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:            Decl %d.4 'outer' ScopedFunction : %function.2
-// CHECK-NEXT:            Decl %d.5 'outer' ScopedFunction : %function.3
+// CHECK-NEXT:            Decl %d.4 'outer' Var : %function.2
+// CHECK-NEXT:            Decl %d.5 'outer' Var : %function.3
 // CHECK-NEXT:            hoistedFunction outer
 // CHECK-NEXT:            hoistedFunction outer
 // CHECK-NEXT:            hoistedFunction outer
@@ -44,7 +44,7 @@ outer<string>('a');
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Decl %d.6 'x' Parameter
 // CHECK-NEXT:                Decl %d.7 'innerVar' Var
-// CHECK-NEXT:                Decl %d.8 'inner' ScopedFunction
+// CHECK-NEXT:                Decl %d.8 'inner' Var
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction inner
 // CHECK-NEXT:            Func strict
@@ -55,9 +55,9 @@ outer<string>('a');
 // CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.12 'x' Parameter : number
 // CHECK-NEXT:                Decl %d.13 'innerVar' Var : number
-// CHECK-NEXT:                Decl %d.14 'inner' ScopedFunction
+// CHECK-NEXT:                Decl %d.14 'inner' Var
 // CHECK-NEXT:                Decl %d.15 'arguments' Var Arguments
-// CHECK-NEXT:                Decl %d.16 'inner' ScopedFunction : %function.2
+// CHECK-NEXT:                Decl %d.16 'inner' Var : %function.2
 // CHECK-NEXT:                hoistedFunction inner
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.6
@@ -71,9 +71,9 @@ outer<string>('a');
 // CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.21 'x' Parameter : string
 // CHECK-NEXT:                Decl %d.22 'innerVar' Var : number
-// CHECK-NEXT:                Decl %d.23 'inner' ScopedFunction
+// CHECK-NEXT:                Decl %d.23 'inner' Var
 // CHECK-NEXT:                Decl %d.24 'arguments' Var Arguments
-// CHECK-NEXT:                Decl %d.25 'inner' ScopedFunction : %function.3
+// CHECK-NEXT:                Decl %d.25 'inner' Var : %function.3
 // CHECK-NEXT:                hoistedFunction inner
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.9

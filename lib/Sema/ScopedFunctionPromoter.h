@@ -34,7 +34,7 @@ class SemanticResolver;
 /// The input is a list of block-scoped function function declarations. The
 /// ones that can be promoted are deleted from their own scope and added to the
 /// function scope.
-void promoteScopedFuncDecls(
+std::vector<ESTree::FunctionDeclarationNode *> getPromotedScopedFuncDecls(
     SemanticResolver &resolver,
     ESTree::FunctionLikeNode *funcNode);
 

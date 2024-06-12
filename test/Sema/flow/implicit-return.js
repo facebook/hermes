@@ -84,20 +84,20 @@ function main(x) {
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.2 'main' ScopedFunction : %untyped_function.1
+// CHECK-NEXT:            Decl %d.2 'main' Var : %untyped_function.1
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            hoistedFunction main
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:                Decl %d.4 'x' Parameter : any
-// CHECK-NEXT:                Decl %d.5 'f1' ScopedFunction : %function.3
-// CHECK-NEXT:                Decl %d.6 'f2' ScopedFunction : %function.4
-// CHECK-NEXT:                Decl %d.7 'f3' ScopedFunction : %function.4
-// CHECK-NEXT:                Decl %d.8 'f4' ScopedFunction : %function.4
-// CHECK-NEXT:                Decl %d.9 'f5' ScopedFunction : %function.4
-// CHECK-NEXT:                Decl %d.10 'f6' ScopedFunction : %function.4
-// CHECK-NEXT:                Decl %d.11 'f7' ScopedFunction : %function.4
-// CHECK-NEXT:                Decl %d.12 'f8' ScopedFunction : %function.4
+// CHECK-NEXT:                Decl %d.5 'f1' Var : %function.3
+// CHECK-NEXT:                Decl %d.6 'f2' Var : %function.4
+// CHECK-NEXT:                Decl %d.7 'f3' Var : %function.4
+// CHECK-NEXT:                Decl %d.8 'f4' Var : %function.4
+// CHECK-NEXT:                Decl %d.9 'f5' Var : %function.4
+// CHECK-NEXT:                Decl %d.10 'f6' Var : %function.4
+// CHECK-NEXT:                Decl %d.11 'f7' Var : %function.4
+// CHECK-NEXT:                Decl %d.12 'f8' Var : %function.4
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction f1
 // CHECK-NEXT:                hoistedFunction f2

@@ -59,6 +59,8 @@ class Decl {
     Const,
     Class,
     Import,
+    /// Function declaration visible only in its lexical scope.
+    ScopedFunction,
     /// A single catch variable declared like this "catch (e)", see
     /// ES10 B.3.5 VariableStatements in Catch Blocks
     ES5Catch,
@@ -70,8 +72,6 @@ class Decl {
     /// Name of a class expression, which is visible within the class
     /// but not outside it.
     ClassExprName,
-    /// Function declaration visible only in its lexical scope.
-    ScopedFunction,
 
     // ==== Var-like declarations ===
 

@@ -715,16 +715,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         }
         // Var declarations must be initialized to undefined at the beginning
         // of the scope.
-        //
-        // Loose mode scoped function decls also need to be initialized. In
-        // strict mode, the scoped function is declared and created in the
-        // same scope, so there is no need to initialize before that. In loose
-        // mode however, the declaration may be promoted to function scope while
-        // the function creation happens later in the scope. The variable needs
-        // to be initialized meanwhile.
-        init = decl->kind == sema::Decl::Kind::Var ||
-            (decl->kind == sema::Decl::Kind::ScopedFunction &&
-             !curFunction()->function->isStrictMode());
+        init = decl->kind == sema::Decl::Kind::Var;
         break;
 
       case sema::Decl::Kind::Parameter:
@@ -760,8 +751,8 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
 
   // Generate and initialize the code for the hoisted function declarations
   // before generating the rest of the body.
-  for (auto funcDecl : scope->hoistedFunctions) {
-    genFunctionDeclaration(funcDecl);
+  for (auto *funcDecl : scope->hoistedFunctions) {
+    emitHoistedFunctionDeclaration(scope, funcDecl);
   }
 }
 
@@ -780,6 +771,48 @@ void ESTreeIRGen::emitLazyGlobalDeclarations(sema::LexicalScope *globalScope) {
     auto *prop =
         Builder.createGlobalObjectProperty(decl->name, /* declared */ false);
     setDeclData(decl, prop);
+  }
+}
+
+void ESTreeIRGen::emitHoistedFunctionDeclaration(
+    sema::LexicalScope *scope,
+    ESTree::FunctionDeclarationNode *funcDecl) {
+  genFunctionDeclaration(funcDecl);
+
+  if (!funcDecl->_id)
+    return;
+
+  sema::Decl *decl =
+      getIDDecl(llvh::cast<ESTree::IdentifierNode>(funcDecl->_id));
+
+  // Function-level var-scoped functions may have a previous store of
+  // 'undefined', which is now dead. If this isn't a function-level scope, don't
+  // try to delete anything.
+  if (scope->parentFunction->getFunctionScope() != scope)
+    return;
+
+  Value *storage = getDeclData(decl);
+
+  // This cleanup is only focused on the case where there are two stores,
+  // one of which we'll clean up.
+  if (storage->getNumUsers() != 2)
+    return;
+
+  assert(
+      storage->getUsers()[0]->getParent() ==
+          storage->getUsers()[1]->getParent() &&
+      "both stores must be in the same block");
+
+  IRBuilder::InstructionDestroyer destroyer{};
+  for (auto *user : storage->getUsers()) {
+    if (auto *store = llvh::dyn_cast<StoreFrameInst>(user); store &&
+        store->getVariable() == storage &&
+        llvh::isa<LiteralUndefined>(store->getValue())) {
+      // This is a dead 'undefined' store that we can clean up
+      // because we know there's another store.
+      destroyer.add(store);
+      break;
+    }
   }
 }
 
