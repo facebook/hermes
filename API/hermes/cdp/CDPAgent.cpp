@@ -93,9 +93,9 @@ class CDPAgentImpl {
   /// exclusive access to the runtime (whereas the CDP Agent can be used from)
   /// arbitrary threads), so all methods on this struct are expected to be
   /// called with exclusive access to the runtime.
-  struct DomainAgents {
+  struct DomainAgentsImpl {
     // Create a new collection of domain agents.
-    DomainAgents(
+    DomainAgentsImpl(
         int32_t executionContextID,
         CDPDebugAPI &cdpDebugAPI,
         SynchronizedOutboundCallback messageCallback,
@@ -160,7 +160,7 @@ class CDPAgentImpl {
   SynchronizedOutboundCallback messageCallback_;
 
   RuntimeTaskRunner runtimeTaskRunner_;
-  std::shared_ptr<DomainAgents> domainAgents_;
+  std::shared_ptr<DomainAgentsImpl> domainAgents_;
 };
 
 CDPAgentImpl::CDPAgentImpl(
@@ -173,7 +173,7 @@ CDPAgentImpl::CDPAgentImpl(
       runtimeTaskRunner_(
           cdpDebugAPI.asyncDebuggerAPI(),
           std::move(enqueueRuntimeTaskCallback)),
-      domainAgents_(std::make_shared<DomainAgents>(
+      domainAgents_(std::make_shared<DomainAgentsImpl>(
           executionContextID,
           cdpDebugAPI,
           messageCallback_,
@@ -253,7 +253,7 @@ State CDPAgentImpl::getState() {
       std::make_unique<State::Private>(domainAgents_->getDebuggerAgentState()));
 }
 
-CDPAgentImpl::DomainAgents::DomainAgents(
+CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
     int32_t executionContextID,
     CDPDebugAPI &cdpDebugAPI,
     SynchronizedOutboundCallback messageCallback,
@@ -271,7 +271,7 @@ CDPAgentImpl::DomainAgents::DomainAgents(
       "debuggerAgentState_ shouldn't ever be null");
 }
 
-void CDPAgentImpl::DomainAgents::initialize() {
+void CDPAgentImpl::DomainAgentsImpl::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
       executionContextID_,
       runtime_,
@@ -293,7 +293,7 @@ void CDPAgentImpl::DomainAgents::initialize() {
       executionContextID_, runtime_, messageCallback_, objTable_);
 }
 
-void CDPAgentImpl::DomainAgents::dispose() {
+void CDPAgentImpl::DomainAgentsImpl::dispose() {
   // Explicitly reset the domain agents here to force destructors to run on the
   // runtime thread
   debuggerAgent_.reset();
@@ -302,7 +302,7 @@ void CDPAgentImpl::DomainAgents::dispose() {
   heapProfilerAgent_.reset();
 }
 
-void CDPAgentImpl::DomainAgents::handleCommand(
+void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     std::shared_ptr<message::Request> command) {
   size_t domainLength = command->method.find('.');
   if (domainLength == std::string::npos) {
@@ -417,16 +417,16 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   }
 }
 
-void CDPAgentImpl::DomainAgents::enableRuntimeDomain() {
+void CDPAgentImpl::DomainAgentsImpl::enableRuntimeDomain() {
   runtimeAgent_->enable();
 }
 
-void CDPAgentImpl::DomainAgents::enableDebuggerDomain() {
+void CDPAgentImpl::DomainAgentsImpl::enableDebuggerDomain() {
   debuggerAgent_->enable();
 }
 
 std::unique_ptr<DomainState>
-CDPAgentImpl::DomainAgents::getDebuggerAgentState() {
+CDPAgentImpl::DomainAgentsImpl::getDebuggerAgentState() {
   return debuggerAgentState_->copy();
 }
 
