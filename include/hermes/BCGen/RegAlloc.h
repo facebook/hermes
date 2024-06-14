@@ -194,11 +194,9 @@ struct Interval {
 
   /// \return true if this interval intersects \p other.
   bool intersects(const Interval &other) const {
-    for (auto &s : segments_) {
-      if (other.intersects(s))
-        return true;
-    }
-    return false;
+    Segment a(start(), end());
+    Segment b(other.start(), other.end());
+    return a.intersects(b);
   }
 
   /// Join the range of the other interval into the current interval.

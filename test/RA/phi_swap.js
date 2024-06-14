@@ -43,8 +43,8 @@ function foo (a, b) {
 // CHECK-NEXT:  $Reg1 @5 [1...8) [10...12) 	%5 = PhiInst %2 @ $Reg1, %BB0, %9 @ $Reg1, %BB1
 // CHECK-NEXT:  $Reg0 @6 [2...9) [11...12) 	%6 = PhiInst %3 @ $Reg0, %BB0, %10 @ $Reg0, %BB1
 // CHECK-NEXT:  $Reg2 @7 [8...11) 	%7 = MovInst %5 @ $Reg1
-// CHECK-NEXT:  $Reg0 @8 [2...10) [11...12) 	%8 = MovInst %6 @ $Reg0
-// CHECK-NEXT:  $Reg1 @9 [10...11) 	%9 = MovInst %8 @ $Reg0
+// CHECK-NEXT:  $Reg3 @8 [9...10) 	%8 = MovInst %6 @ $Reg0
+// CHECK-NEXT:  $Reg1 @9 [10...11) 	%9 = MovInst %8 @ $Reg3
 // CHECK-NEXT:  $Reg0 @10 [empty]	%10 = MovInst %7 @ $Reg2
 // CHECK-NEXT:  $Reg0 @11 [empty]	%11 = BranchInst %BB1
 // CHECK-NEXT:function_end
