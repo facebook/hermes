@@ -94,13 +94,14 @@ async def run(
         (stdout, stderr) = await wait_for(proc.communicate(), timeout=TIMEOUT_COMPILER)
     except TimeoutError:
         msg = f"FAIL: Execution of binary timed out for {file_to_run}"
+        output = f"Run command: {' '.join(cmd_args)}\n"
         # Kill the subprocess and all its child processes
         proc.kill()
         return TestCaseResult(
-            compile_run_args.test_name, TestResultCode.EXECUTE_TIMEOUT, msg
+            compile_run_args.test_name, TestResultCode.EXECUTE_TIMEOUT, msg, output
         )
 
-    output = ""
+    output = f"Run command: {' '.join(cmd_args)}\n"
     if stdout:
         output += f"stdout:\n {stdout.decode('utf-8')}"
     if stderr:
@@ -170,10 +171,11 @@ async def compile_with_args(
         (stdout, stderr) = await wait_for(proc.communicate(), timeout=TIMEOUT_COMPILER)
     except TimeoutError:
         msg = f"FAIL: Compilation timed out, args: {args}"
+        output = f"Run command: {' '.join(args)}"
         proc.kill()
-        return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg)
+        return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg, output)
 
-    output = ""
+    output = f"Run command: {' '.join(args)}\n"
     if stdout:
         output += f"stdout:\n {stdout.decode('utf-8')}"
     if stderr:
@@ -321,12 +323,12 @@ async def run_hermes_simple(
     except TimeoutError:
         proc.kill()
         msg = "FAIL: Hermes timeout"
-        details = f"Command: {' '.join(args)}"
+        details = f"Run command: {' '.join(args)}"
         return TestCaseResult(test_name, TestResultCode.COMPILE_TIMEOUT, msg, details)
 
     if proc.returncode:
         msg = "FAIL: Hermes failed to run"
-        details = f"Command: {' '.join(args)}\n"
+        details = f"Run command: {' '.join(args)}\n"
         details += f"Return code: {proc.returncode}\n"
         details += f"stdout:\n {stdout.decode('utf-8')}"
         details += f"stderr:\n {stderr.decode('utf-8')}"
