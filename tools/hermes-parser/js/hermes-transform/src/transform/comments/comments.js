@@ -22,6 +22,7 @@ import {
   addLeadingComment as untypedAddLeadingComment,
   // $FlowExpectedError[untyped-import]
   addTrailingComment as untypedAddTrailingComment,
+  // $FlowFixMe[untyped-import]
 } from './prettier/common/util';
 import {isBlockComment} from 'hermes-estree';
 import {EOL} from 'os';
