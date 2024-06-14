@@ -44,12 +44,12 @@ function main(x, y, z) {
 // CHECK-NEXT:  $Reg0 @7 [empty]	%7 = BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg3 @8 [3...14) [16...18) 	%8 = PhiInst %5 : number, %BB0, %15 : string|number|bigint, %BB1
-// CHECK-NEXT:  $Reg2 @9 [4...18) 	%9 = PhiInst %6 : number, %BB0, %16 : number|bigint, %BB1
+// CHECK-NEXT:  $Reg2 @9 [4...15) [17...18) 	%9 = PhiInst %6 : number, %BB0, %16 : number|bigint, %BB1
 // CHECK-NEXT:  $Reg6 @10 [11...13) 	%10 = BinaryOperatorInst '+', %0, %9 : number|bigint
 // CHECK-NEXT:  $Reg0 @11 [12...13) 	%11 = BinaryOperatorInst '+', %1, %9 : number|bigint
 // CHECK-NEXT:  $Reg0 @12 [13...14) 	%12 = BinaryOperatorInst '*', %10 : string|number|bigint, %11 : string|number|bigint
 // CHECK-NEXT:  $Reg0 @13 [14...19) 	%13 = BinaryOperatorInst '+', %8 : string|number|bigint, %12 : number|bigint
-// CHECK-NEXT:  $Reg2 @14 [15...17) 	%14 = UnaryOperatorInst '++', %9 : number|bigint
+// CHECK-NEXT:  $Reg6 @14 [15...17) 	%14 = UnaryOperatorInst '++', %9 : number|bigint
 // CHECK-NEXT:  $Reg3 @15 [16...17) 	%15 = MovInst %13 : string|number|bigint
 // CHECK-NEXT:  $Reg2 @16 [17...18) 	%16 = MovInst %14 : number|bigint
 // CHECK-NEXT:  $Reg1 @17 [empty]	%17 = CompareBranchInst '<', %16 : number|bigint, %4 : number, %BB1, %BB2

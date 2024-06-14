@@ -187,10 +187,10 @@ function code_sinking_in_loop(x, y) {
 // CHECK-NEXT:  $Reg2 @5 [6...8) 	%5 = MovInst %1 : number
 // CHECK-NEXT:  $Reg4 @6 [empty]	%6 = CondBranchInst %2 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg2 @7 [2...13) 	%7 = PhiInst %5 : number, %BB0, %11 : number|bigint, %BB1
+// CHECK-NEXT:  $Reg2 @7 [2...11) [12...13) 	%7 = PhiInst %5 : number, %BB0, %11 : number|bigint, %BB1
 // CHECK-NEXT:  $Reg4 @8 [9...10) 	%8 = TryLoadGlobalPropertyInst %3 : object, "print" : string
 // CHECK-NEXT:  $Reg4 @9 [empty]	%9 = HBCCallNInst %8, undefined : undefined, %4 : undefined, %7 : number|bigint
-// CHECK-NEXT:  $Reg2 @10 [11...12) 	%10 = UnaryOperatorInst '++', %7 : number|bigint
+// CHECK-NEXT:  $Reg4 @10 [11...12) 	%10 = UnaryOperatorInst '++', %7 : number|bigint
 // CHECK-NEXT:  $Reg2 @11 [12...13) 	%11 = MovInst %10 : number|bigint
 // CHECK-NEXT:  $Reg1 @12 [empty]	%12 = CompareBranchInst '<', %11 : number|bigint, %0, %BB1, %BB2
 // CHECK-NEXT:%BB2:

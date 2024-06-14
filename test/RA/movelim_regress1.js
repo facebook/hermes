@@ -44,12 +44,12 @@ function fib(n) {
 // CHECK-NEXT:  $Reg0 @7 [8...21) 	%7 = MovInst %5 : number
 // CHECK-NEXT:  $Reg6 @8 [empty]	%8 = CondBranchInst %2 : boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg5 @9 [1...20) 	%9 = PhiInst %4, %BB0, %18 : number, %BB1
+// CHECK-NEXT:  $Reg5 @9 [1...14) [19...20) 	%9 = PhiInst %4, %BB0, %18 : number, %BB1
 // CHECK-NEXT:  $Reg2 @10 [6...13) [16...20) 	%10 = PhiInst %5 : number, %BB0, %15 : string|number|bigint, %BB1
 // CHECK-NEXT:  $Reg1 @11 [7...15) [17...20) 	%11 = PhiInst %6 : number, %BB0, %16 : string|number|bigint, %BB1
-// CHECK-NEXT:  $Reg7 @12 [13...17) 	%12 = BinaryOperatorInst '+', %10 : string|number|bigint, %11 : string|number|bigint
-// CHECK-NEXT:  $Reg5 @13 [14...19) 	%13 = BinaryOperatorInst '-', %9, %3 : number
-// CHECK-NEXT:  $Reg6 @14 [15...18) 	%14 = MovInst %11 : string|number|bigint
+// CHECK-NEXT:  $Reg8 @12 [13...17) 	%12 = BinaryOperatorInst '+', %10 : string|number|bigint, %11 : string|number|bigint
+// CHECK-NEXT:  $Reg6 @13 [14...19) 	%13 = BinaryOperatorInst '-', %9, %3 : number
+// CHECK-NEXT:  $Reg7 @14 [15...18) 	%14 = MovInst %11 : string|number|bigint
 // CHECK-NEXT:  $Reg2 @15 [16...19) 	%15 = MovInst %14 : string|number|bigint
 // CHECK-NEXT:  $Reg1 @16 [17...19) 	%16 = MovInst %12 : string|number|bigint
 // CHECK-NEXT:  $Reg0 @17 [18...21) 	%17 = MovInst %15 : string|number|bigint
