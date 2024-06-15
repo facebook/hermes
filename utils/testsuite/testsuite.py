@@ -1057,9 +1057,13 @@ def test_workdir(workdir, nuke_workdir, **kwargs):
 
 def get_hermes_features(binary_path):
     """
-    Run `hermes --version` and extract the features from the output.
+    Run `hermes/hermesc --version` and extract the features from the output.
     """
     hermes_path = path.join(binary_path, "hermes")
+    if not path.exists(hermes_path):
+        # We might only have hermesc binary avaiable, e.g., as in the
+        # hermes-bytecode-compat test.
+        hermes_path = path.join(binary_path, "hermesc")
     try:
         output = subprocess.check_output(
             [hermes_path, "--version"], stderr=subprocess.STDOUT
