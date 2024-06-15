@@ -391,6 +391,14 @@ void CDPAgentImpl::DomainAgents::handleCommand(
   } else if (command->method == "HeapProfiler.collectGarbage") {
     heapProfilerAgent_->collectGarbage(
         static_cast<m::heapProfiler::CollectGarbageRequest &>(*command));
+  } else if (command->method == "HeapProfiler.startTrackingHeapObjects") {
+    heapProfilerAgent_->startTrackingHeapObjects(
+        static_cast<m::heapProfiler::StartTrackingHeapObjectsRequest &>(
+            *command));
+  } else if (command->method == "HeapProfiler.stopTrackingHeapObjects") {
+    heapProfilerAgent_->stopTrackingHeapObjects(
+        static_cast<m::heapProfiler::StopTrackingHeapObjectsRequest &>(
+            *command));
   } else {
     messageCallback_(message::makeErrorResponse(
                          command->id,
