@@ -117,6 +117,10 @@ class CDPAgentTest : public ::testing::Test {
       std::string context = "reply",
       std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
 
+  /// check to see if a response or notification is immediately available.
+  /// returns the message, or nullopt if no message is available.
+  std::optional<std::string> tryGetMessage();
+
   void expectNothing();
   JSONObject *expectNotification(const std::string &method);
   JSONObject *expectResponse(const std::optional<std::string> &method, int id);
@@ -130,7 +134,11 @@ class CDPAgentTest : public ::testing::Test {
   /// 1 or more notifications containing chunks of the snapshot JSON object
   /// followed by an OK response to the snapshot request.
   /// \p messageID specifies the id of the snapshot request.
-  void expectHeapSnapshot(int messageID);
+  /// \p ignoreTrackingNotifications indicates whether lastSeenObjectId and
+  /// heapStatsUpdate notifications are tolerated before the snapshot arrives.
+  void expectHeapSnapshot(
+      int messageID,
+      bool ignoreTrackingNotifications = false);
 
   void sendRequest(
       const std::string &method,
@@ -298,6 +306,21 @@ std::string CDPAgentTest::waitForMessage(
   return message;
 }
 
+std::optional<std::string> CDPAgentTest::tryGetMessage() {
+  // Take a message, if present, while holding the mutex protecting the message
+  // collection. This doesn't clear the "hasMessage_" notification, so it could
+  // leave "hasMessage_" signaled when there is no message waiting. This is
+  // okay, because waiting on "hasMessage_" elsewhere tolerates spurious
+  // wake-ups by also checking "messages_.empty()".
+  std::unique_lock<std::mutex> lock(messageMutex_);
+  if (messages_.empty()) {
+    return std::nullopt;
+  }
+  std::string message = std::move(messages_.front());
+  messages_.pop();
+  return message;
+}
+
 void CDPAgentTest::expectNothing() {
   std::string message;
   try {
@@ -338,7 +361,9 @@ void CDPAgentTest::expectErrorMessageContaining(
   ASSERT_NE(errorMessage.find(substring), std::string::npos);
 }
 
-void CDPAgentTest::expectHeapSnapshot(int messageID) {
+void CDPAgentTest::expectHeapSnapshot(
+    int messageID,
+    bool ignoreTrackingNotifications) {
   JSLexer::Allocator jsonAlloc;
   JSONFactory factory(jsonAlloc);
 
@@ -348,7 +373,15 @@ void CDPAgentTest::expectHeapSnapshot(int messageID) {
   // until the object is complete, then expect no more.
   std::stringstream snapshot;
   do {
-    auto note = expectNotification("HeapProfiler.addHeapSnapshotChunk");
+    JSONObject *note = jsonScope_.parseObject(waitForMessage());
+    std::string method = jsonScope_.getString(note, {"method"});
+    if (ignoreTrackingNotifications &&
+        (method == "HeapProfiler.lastSeenObjectId" ||
+         method == "HeapProfiler.heapStatsUpdate")) {
+      continue;
+    }
+
+    ASSERT_EQ(method, "HeapProfiler.addHeapSnapshotChunk");
     snapshot << jsonScope_.getString(note, {"params", "chunk"});
   } while (!parseStrAsJsonObj(snapshot.str(), factory).has_value());
 
@@ -3205,6 +3238,59 @@ TEST_F(CDPAgentTest, HeapProfilerCollectGarbage) {
 
   // Expect objects to have been freed
   EXPECT_LT(after, before);
+}
+
+TEST_F(CDPAgentTest, HeapProfilerTrackHeapObjects) {
+  int msgId = 1;
+
+  sendAndCheckResponse("HeapProfiler.startTrackingHeapObjects", msgId++);
+
+  // Allocate until we get a notification, or timeout
+  auto start = std::chrono::high_resolution_clock::now();
+  constexpr float timeout = 5.0f;
+  while (true) {
+    auto now = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float> duration = now - start;
+    if (duration.count() >= timeout) {
+      // Timeout
+      break;
+    }
+
+    // Allocate some more
+    scheduleScript(R"(
+      a = a || []; // Ensure the array exists
+      for (var i = 0; i < 1000; i++) {
+        a.push(new Object);
+      }
+    )");
+    waitForScheduledScripts();
+
+    // Check to see if there is a report yet
+    auto objectIdNote = tryGetMessage();
+    if (objectIdNote) {
+      ensureNotification(*objectIdNote, "HeapProfiler.lastSeenObjectId");
+
+      auto statsNote = expectNotification("HeapProfiler.heapStatsUpdate");
+      double objectsCount =
+          jsonScope_.getNumber(statsNote, {"params", "statsUpdate", "1"});
+      double objectSize =
+          jsonScope_.getNumber(statsNote, {"params", "statsUpdate", "2"});
+      // Assuming zero-sized objects aren't present, the size of objects should
+      // be at least as large as the number of objects.
+      EXPECT_GE(objectSize, objectsCount);
+
+      // Verified that notifications are arriving; stop waiting.
+      break;
+    }
+  }
+
+  // Stop tracking, and expect a snapshot in summary (possibly with a few
+  // lingering tracking notifications first).
+  sendRequest("HeapProfiler.stopTrackingHeapObjects", msgId);
+  expectHeapSnapshot(msgId++, true /* ignore tracking notifications */);
+
+  // Expect no further responses or notifications.
+  expectNothing();
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
