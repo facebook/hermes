@@ -487,9 +487,15 @@ class MutableHandle : public Handle<T> {
   /// where the MutableHandle<> is an output-only value, so we don't want to
   /// unnecessarily initialize it to a value compatible with its type.
   static MutableHandle<T> aliasForOutput(PinnedHermesValue *valueAddr) {
-#ifdef HERMES_SLOW_DEBUG
-    *valueAddr = HermesValue::encodeInvalidValue();
-#endif
+    // It may seem like a good idea to set valueAddr to an invalid value in
+    // debug builds, in an effort to catch reads on this MutableHandle before a
+    // write has been issued. But, this would be incorect for a couple of
+    // reasons. First, writing to a MutableHandle triggers a check to make sure
+    // the handle doesn't currently contain invalid, to guard against using
+    // flushed handles. Second, this would prevent this method from being useful
+    // in certain situations in the interpreter. An output-only register may be
+    // aliased to an input register, so we could inadvertently clobber an input
+    // register before we've read it if we used this method on it.
     return MutableHandle<T>(valueAddr, true);
   }
 } HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
