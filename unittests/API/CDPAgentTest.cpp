@@ -3170,4 +3170,41 @@ TEST_F(CDPAgentTest, HeapProfilerSnapshotRemoteObject) {
   testObject(storedObjID, "object", "Array", "Array(3)", "array");
 }
 
+TEST_F(CDPAgentTest, HeapProfilerCollectGarbage) {
+  int msgId = 1;
+
+  // Allocate some objects
+  scheduleScript(R"(
+    a = [];
+    for (var i = 0; i < 1000; i++) {
+      a[i] = new Object;
+    }
+  )");
+
+  // Get the heap usage with objects allocated
+  double before = waitFor<double>([this](auto promise) {
+    runtimeThread_->add([this, promise]() {
+      promise->set_value(runtime_->instrumentation().getHeapInfo(
+          false)["hermes_allocatedBytes"]);
+    });
+  });
+
+  // Abandon the objects
+  scheduleScript("a = null;");
+
+  // Collect garbage
+  sendAndCheckResponse("HeapProfiler.collectGarbage", msgId);
+
+  // Get the heap usage after collection
+  double after = waitFor<double>([this](auto promise) {
+    runtimeThread_->add([this, promise]() {
+      promise->set_value(runtime_->instrumentation().getHeapInfo(
+          false)["hermes_allocatedBytes"]);
+    });
+  });
+
+  // Expect objects to have been freed
+  EXPECT_LT(after, before);
+}
+
 #endif // HERMES_ENABLE_DEBUGGER
