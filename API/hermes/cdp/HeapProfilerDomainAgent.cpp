@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "HeapProfilerDomainAgent.h"
+#include <sstream>
+
 #include "CallbackOStream.h"
+#include "HeapProfilerDomainAgent.h"
 
 #include <hermes/cdp/MessageConverters.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
@@ -87,6 +89,28 @@ void HeapProfilerDomainAgent::getObjectByHeapObjectId(
   resp.id = req.id;
   resp.result = std::move(remoteObj);
   sendResponseToClient(resp);
+}
+
+void HeapProfilerDomainAgent::getHeapObjectId(
+    const m::heapProfiler::GetHeapObjectIdRequest &req) {
+  uint64_t snapshotID = 0;
+  if (const jsi::Value *valuePtr = objTable_->getValue(req.objectId)) {
+    snapshotID = runtime_.getUniqueID(*valuePtr);
+  }
+
+  if (snapshotID) {
+    m::heapProfiler::GetHeapObjectIdResponse resp;
+    resp.id = req.id;
+    // std::to_string is not available on Android, use a std::ostream
+    // instead.
+    std::ostringstream stream;
+    stream << snapshotID;
+    resp.heapSnapshotObjectId = stream.str();
+    sendResponseToClient(resp);
+  } else {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::ServerError, "Object is not available"));
+  }
 }
 
 } // namespace cdp
