@@ -1935,13 +1935,13 @@ class InstrGen {
     os_ << " = _sh_ljs_get_global_object(shr);\n";
   }
   void generateCreateScopeInst(CreateScopeInst &inst) {
-    os_ << "  _sh_ljs_create_environment(shr, ";
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_create_environment(shr, ";
     if (llvh::isa<EmptySentinel>(inst.getParentScope()))
-      os_ << "_sh_ljs_object(NULL)";
+      os_ << "NULL";
     else
-      generateRegister(*inst.getParentScope());
-    os_ << ", ";
-    generateRegisterPtr(inst);
+      generateRegisterPtr(*inst.getParentScope());
     os_ << ", " << inst.getVariableScope()->getVariables().size() << ");\n";
   }
   void generateHBCCreateFunctionEnvironmentInst(

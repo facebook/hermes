@@ -425,30 +425,18 @@ extern "C" SHLegacyValue _sh_ljs_get_builtin_closure(
       getRuntime(shr).getBuiltinCallable(builtinMethodID));
 }
 
-extern "C" void _sh_ljs_create_environment(
+extern "C" SHLegacyValue _sh_ljs_create_environment(
     SHRuntime *shr,
-    SHLegacyValue parentEnv,
-    SHLegacyValue *result,
+    const SHLegacyValue *parentEnv,
     uint32_t size) {
   Runtime &runtime = getRuntime(shr);
 
-  // We are not allowed to store null object pointers in locals, so we have to
-  // use makeNullHandle for those.
-  const PinnedHermesValue *parentEnvPtr;
-  if (_sh_ljs_get_pointer(parentEnv)) {
-    result->raw = parentEnv.raw;
-    parentEnvPtr = toPHV(result);
-  } else {
-    parentEnvPtr =
-        runtime.makeNullHandle<Environment>().unsafeGetPinnedHermesValue();
-  }
+  auto parentHandle = parentEnv
+      ? Handle<Environment>::vmcast(toPHV(parentEnv))
+      : HandleRootOwner::makeNullHandle<Environment>();
 
-  {
-    GCScopeMarkerRAII marker{runtime};
-    HermesValue res = Environment::create(
-        runtime, Handle<Environment>::vmcast_or_null(parentEnvPtr), size);
-    result->raw = res.getRaw();
-  }
+  GCScopeMarkerRAII marker{runtime};
+  return Environment::create(runtime, parentHandle, size);
   // #ifdef HERMES_ENABLE_DEBUGGER
   //   framePtr.getDebugEnvironmentRef() = *res;
   // #endif

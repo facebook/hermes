@@ -374,13 +374,11 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_call_builtin(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_builtin_closure(SHRuntime *shr, uint32_t builtinMethodID);
 
-/// Create a new environment with the specified \p size and \p parentEnv.
-/// \p result will contain the result on exit, but is also used as a temporary
-///     (thus is not `const`).
-SHERMES_EXPORT void _sh_ljs_create_environment(
+/// Create a new environment with the specified \p size and \p parentEnv (which
+/// may be null if this is a top level environment).
+SHERMES_EXPORT SHLegacyValue _sh_ljs_create_environment(
     SHRuntime *shr,
-    SHLegacyValue parentEnv,
-    SHLegacyValue *result,
+    const SHLegacyValue *parentEnv,
     uint32_t size);
 
 /// Get the environment from the given \p closure. Note that the result should
