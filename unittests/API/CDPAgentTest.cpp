@@ -194,7 +194,8 @@ class CDPAgentTest : public ::testing::Test {
       const std::string &objectId,
       const std::unordered_map<std::string, PropInfo> &infos,
       const std::unordered_map<std::string, PropInfo> &internalInfos = {},
-      bool ownProperties = true);
+      bool ownProperties = true,
+      bool accessorPropertiesOnly = false);
 
   std::unique_ptr<HermesRuntime> runtime_;
   std::unique_ptr<CDPDebugAPI> cdpDebugAPI_;
@@ -508,14 +509,13 @@ m::runtime::GetPropertiesResponse CDPAgentTest::getAndEnsureProps(
     const std::string &objectId,
     const std::unordered_map<std::string, PropInfo> &infos,
     const std::unordered_map<std::string, PropInfo> &internalInfos,
-    bool ownProperties) {
-  sendRequest(
-      "Runtime.getProperties",
-      msgId,
-      [objectId, ownProperties](::hermes::JSONEmitter &json) {
-        json.emitKeyValue("objectId", objectId);
-        json.emitKeyValue("ownProperties", ownProperties);
-      });
+    bool ownProperties,
+    bool accessorPropertiesOnly) {
+  sendRequest("Runtime.getProperties", msgId, [&](::hermes::JSONEmitter &json) {
+    json.emitKeyValue("objectId", objectId);
+    json.emitKeyValue("ownProperties", ownProperties);
+    json.emitKeyValue("accessorPropertiesOnly", accessorPropertiesOnly);
+  });
   return ensureProps(waitForMessage(), infos, internalInfos);
 }
 
@@ -2418,6 +2418,16 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesExtendedDescriptors) {
   const auto &obj = scopeChildren.at("obj");
   std::string objId = obj.value.value().objectId.value();
 
+  getAndEnsureProps(
+      msgId++,
+      objId,
+      {{"accessor", PropInfo().setConfigurable(true).setEnumerable(false)},
+       {"throwingAccessor",
+        PropInfo().setConfigurable(false).setEnumerable(false)}},
+      {},
+      /* ownProperties */ true,
+      /* accessorPropertiesOnly */ true);
+
   auto objPropsResp = getAndEnsureProps(
       msgId++,
       objId,
@@ -2430,7 +2440,9 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesExtendedDescriptors) {
        {"accessor", PropInfo().setConfigurable(true).setEnumerable(false)},
        {"throwingAccessor",
         PropInfo().setConfigurable(false).setEnumerable(false)}},
-      {});
+      {},
+      /* ownProperties */ true,
+      /* accessorPropertiesOnly */ false);
 
   /// Helper that invokes a getter function on the specified object.
   auto invokeGetter = [&](std::string objId,

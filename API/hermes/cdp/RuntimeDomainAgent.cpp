@@ -549,6 +549,7 @@ void RuntimeDomainAgent::getProperties(
   ObjectSerializationOptions serializationOptions;
   serializationOptions.generatePreview = req.generatePreview.value_or(false);
   bool ownProperties = req.ownProperties.value_or(false);
+  bool accessorPropertiesOnly = req.accessorPropertiesOnly.value_or(false);
 
   std::string objGroup = objTable_->getObjectGroup(req.objectId);
   auto scopePtr = objTable_->getScope(req.objectId);
@@ -580,11 +581,17 @@ void RuntimeDomainAgent::getProperties(
 
     } else if (valuePtr != nullptr) {
       resp.result = makePropsFromValue(
-          *valuePtr, objGroup, ownProperties, serializationOptions);
-      auto internalProps =
-          makeInternalPropsFromValue(*valuePtr, objGroup, serializationOptions);
-      if (internalProps.size()) {
-        resp.internalProperties = std::move(internalProps);
+          *valuePtr,
+          objGroup,
+          ownProperties,
+          accessorPropertiesOnly,
+          serializationOptions);
+      if (!accessorPropertiesOnly) {
+        auto internalProps = makeInternalPropsFromValue(
+            *valuePtr, objGroup, serializationOptions);
+        if (internalProps.size()) {
+          resp.internalProperties = std::move(internalProps);
+        }
       }
     }
   } catch (const jsi::JSError &error) {
@@ -766,6 +773,7 @@ RuntimeDomainAgent::makePropsFromValue(
     const jsi::Value &value,
     const std::string &objectGroup,
     bool onlyOwnProperties,
+    bool accessorPropertiesOnly,
     const ObjectSerializationOptions &serializationOptions) {
   std::vector<m::runtime::PropertyDescriptor> result;
 
@@ -795,6 +803,14 @@ RuntimeDomainAgent::makePropsFromValue(
           m::runtime::PropertyDescriptor desc;
           desc.isOwn = isOwn;
           jsi::Value propNameOrSymbol = propArray.getValueAtIndex(runtime, i);
+          jsi::Object descriptor = helpers_.objectGetOwnPropertyDescriptor
+                                       .call(runtime, obj, propNameOrSymbol)
+                                       .asObject(runtime);
+          if (accessorPropertiesOnly &&
+              !descriptor.hasProperty(runtime, "get") &&
+              !descriptor.hasProperty(runtime, "set")) {
+            continue;
+          }
           if (propNameOrSymbol.isString()) {
             auto propName = propNameOrSymbol.getString(runtime);
             if (
@@ -831,9 +847,6 @@ RuntimeDomainAgent::makePropsFromValue(
             assert(false && "unexpected non-string non-symbol property key");
           }
           try {
-            jsi::Object descriptor = helpers_.objectGetOwnPropertyDescriptor
-                                         .call(runtime, obj, propNameOrSymbol)
-                                         .asObject(runtime);
             desc.enumerable =
                 descriptor.getProperty(runtime, "enumerable").asBool();
             desc.configurable =

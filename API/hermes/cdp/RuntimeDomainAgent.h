@@ -100,6 +100,7 @@ class RuntimeDomainAgent : public DomainAgent {
       const jsi::Value &value,
       const std::string &objectGroup,
       bool onlyOwnProperties,
+      bool accessorPropertiesOnly,
       const ObjectSerializationOptions &serializationOptions);
   std::vector<m::runtime::InternalPropertyDescriptor>
   makeInternalPropsFromValue(

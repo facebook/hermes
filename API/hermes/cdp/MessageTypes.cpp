@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<8577199f24d290b5b77422ed340660ad>>
+// @generated SignedSource<<de6ca843395a9e62745ae61459f2fe53>>
 
 #include "MessageTypes.h"
 
@@ -1803,15 +1803,17 @@ runtime::GetPropertiesRequest::tryMake(const JSONObject *obj) {
   auto *params = *convertResult;
   TRY_ASSIGN(req->objectId, params, "objectId");
   TRY_ASSIGN(req->ownProperties, params, "ownProperties");
+  TRY_ASSIGN(req->accessorPropertiesOnly, params, "accessorPropertiesOnly");
   TRY_ASSIGN(req->generatePreview, params, "generatePreview");
   return req;
 }
 
 JSONValue *runtime::GetPropertiesRequest::toJsonVal(
     JSONFactory &factory) const {
-  llvh::SmallVector<JSONFactory::Prop, 3> paramsProps;
+  llvh::SmallVector<JSONFactory::Prop, 4> paramsProps;
   put(paramsProps, "objectId", objectId, factory);
   put(paramsProps, "ownProperties", ownProperties, factory);
+  put(paramsProps, "accessorPropertiesOnly", accessorPropertiesOnly, factory);
   put(paramsProps, "generatePreview", generatePreview, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 1> props;
