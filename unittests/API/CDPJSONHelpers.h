@@ -72,6 +72,11 @@ struct FrameInfo {
     return *this;
   }
 
+  FrameInfo &setThisType(const std::string &type) {
+    thisType = type;
+    return *this;
+  }
+
   std::optional<std::string> callFrameId;
   std::string functionName;
   uint32_t lineNumberMin;
@@ -79,6 +84,10 @@ struct FrameInfo {
   uint32_t scopeCount;
   uint32_t columnNumber;
   std::string scriptId;
+  // If set, we optionally verify the type of the 'this' object. The 'this'
+  // object should always exist in Debugger.CallFrame, but it's not necessary to
+  // verify it with every test.
+  std::optional<std::string> thisType;
 };
 
 struct BreakpointLocation {
