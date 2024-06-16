@@ -2838,37 +2838,48 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
   constexpr double kTimestamp = 123.0;
   const std::string kStringValue = "string value";
 
-  runtime_->global().setProperty(
-      *runtime_,
-      "consoleLog",
-      jsi::Function::createFromHostFunction(
+  waitFor<bool>([this, timestamp = kTimestamp, kStringValue](auto promise) {
+    runtimeThread_->add([this, timestamp, kStringValue, promise]() {
+      runtime_->global().setProperty(
           *runtime_,
-          jsi::PropNameID::forAscii(*runtime_, "consoleLog"),
-          0,
-          [this, timestamp = kTimestamp, kStringValue](
-              jsi::Runtime &, const jsi::Value &, const jsi::Value *, size_t) {
-            jsi::String arg0 =
-                jsi::String::createFromAscii(*runtime_, kStringValue);
+          "consoleLog",
+          jsi::Function::createFromHostFunction(
+              *runtime_,
+              jsi::PropNameID::forAscii(*runtime_, "consoleLog"),
+              0,
+              [this, timestamp, kStringValue](
+                  jsi::Runtime &,
+                  const jsi::Value &,
+                  const jsi::Value *,
+                  size_t) {
+                jsi::String arg0 =
+                    jsi::String::createFromAscii(*runtime_, kStringValue);
 
-            jsi::Object arg1 = jsi::Object(*runtime_);
-            arg1.setProperty(*runtime_, "number1", 1);
-            arg1.setProperty(*runtime_, "bool1", false);
+                jsi::Object arg1 = jsi::Object(*runtime_);
+                arg1.setProperty(*runtime_, "number1", 1);
+                arg1.setProperty(*runtime_, "bool1", false);
 
-            jsi::Object arg2 = jsi::Object(*runtime_);
-            arg2.setProperty(*runtime_, "number2", 2);
-            arg2.setProperty(*runtime_, "bool2", true);
+                jsi::Object arg2 = jsi::Object(*runtime_);
+                arg2.setProperty(*runtime_, "number2", 2);
+                arg2.setProperty(*runtime_, "bool2", true);
 
-            ConsoleMessage message(
-                timestamp, ConsoleAPIType::kWarning, std::vector<jsi::Value>());
-            message.args.reserve(3);
-            message.args.push_back(std::move(arg0));
-            message.args.push_back(std::move(arg1));
-            message.args.push_back(std::move(arg2));
-            message.stackTrace = runtime_->getDebugger().captureStackTrace();
-            cdpDebugAPI_->addConsoleMessage(std::move(message));
+                ConsoleMessage message(
+                    timestamp,
+                    ConsoleAPIType::kWarning,
+                    std::vector<jsi::Value>());
+                message.args.reserve(3);
+                message.args.push_back(std::move(arg0));
+                message.args.push_back(std::move(arg1));
+                message.args.push_back(std::move(arg2));
+                message.stackTrace =
+                    runtime_->getDebugger().captureStackTrace();
+                cdpDebugAPI_->addConsoleMessage(std::move(message));
 
-            return jsi::Value::undefined();
-          }));
+                return jsi::Value::undefined();
+              }));
+      promise->set_value(true);
+    });
+  });
 
   // Startup
   sendAndCheckResponse("Runtime.enable", msgId++);
