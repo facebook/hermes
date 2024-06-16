@@ -69,7 +69,7 @@ class RuntimeDomainAgent : public DomainAgent {
   /// @cdp Runtime.callFunctionOn Allowed even if domain is not enabled.
   void callFunctionOn(const m::runtime::CallFunctionOnRequest &req);
   /// Dispatches a Runtime.consoleAPICalled notification
-  void consoleAPICalled(const ConsoleMessage &message);
+  void consoleAPICalled(const ConsoleMessage &message, bool isBuffered);
 
  private:
   struct Helpers {
