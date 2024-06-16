@@ -97,15 +97,12 @@ class CDPAgentImpl {
     // Create a new collection of domain agents.
     DomainAgentsImpl(
         int32_t executionContextID,
-        CDPDebugAPI &cdpDebugAPI,
+        HermesRuntime &runtime,
+        debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+        ConsoleMessageStorage &consoleMessageStorage,
+        ConsoleMessageDispatcher &consoleMessageDispatcher,
         SynchronizedOutboundCallback messageCallback,
         std::unique_ptr<DomainState> debuggerAgentState);
-
-    /// Create the domain handlers and subscribing to any external events.
-    void initialize();
-
-    /// Releasing any domain handlers and event subscriptions.
-    void dispose();
 
     /// Process a CDP \p command encoded in JSON using the appropriate domain
     /// handler.
@@ -151,6 +148,53 @@ class CDPAgentImpl {
     std::unique_ptr<DomainState> debuggerAgentState_;
   };
 
+  /// Wrapper for DomainAgentsImpl. This is used to ensure the entirety of
+  /// DomainAgentsImpl gets cleaned up on the runtime thread. Since
+  /// DomainAgentsImpl and domain agents might hold onto JSI values, via
+  /// RemoteObjectsTable, we want to be sure that everything is cleaned up prior
+  /// to the HermesRuntime going away.
+  struct DomainAgents {
+    // Create a new collection of domain agents.
+    DomainAgents(
+        int32_t executionContextID,
+        CDPDebugAPI &cdpDebugAPI,
+        SynchronizedOutboundCallback messageCallback,
+        std::unique_ptr<DomainState> debuggerAgentState);
+
+    /// Create the domain handlers and subscribing to any external events.
+    void initialize();
+
+    /// Releasing any domain handlers and event subscriptions.
+    void dispose();
+
+    /// Process a CDP \p command encoded in JSON using the appropriate domain
+    /// handler.
+    void handleCommand(std::shared_ptr<message::Request> command);
+
+    /// Enable the Runtime domain without processing a CDP command or sending a
+    /// CDP response.
+    void enableRuntimeDomain();
+
+    /// Enable the Debugger domain without processing a CDP command or sending a
+    /// CDP response.
+    void enableDebuggerDomain();
+
+    /// Get the Debugger domain state to be persisted.
+    std::unique_ptr<DomainState> getDebuggerAgentState();
+
+   private:
+    /// Variables that will be used initialize DomainAgentsImpl
+    int32_t executionContextID_;
+    HermesRuntime &runtime_;
+    debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
+    ConsoleMessageStorage &consoleMessageStorage_;
+    ConsoleMessageDispatcher &consoleMessageDispatcher_;
+    SynchronizedOutboundCallback messageCallback_;
+    std::unique_ptr<DomainState> debuggerAgentState_;
+
+    std::unique_ptr<DomainAgentsImpl> impl_{};
+  };
+
   /// Callback function for sending CDP response back. This is using the
   /// SynchronizedOutboundCallback wrapper because we want to be able to
   /// guarantee the callback will never be used after CDPAgentImpl is
@@ -160,7 +204,7 @@ class CDPAgentImpl {
   SynchronizedOutboundCallback messageCallback_;
 
   RuntimeTaskRunner runtimeTaskRunner_;
-  std::shared_ptr<DomainAgentsImpl> domainAgents_;
+  std::shared_ptr<DomainAgents> domainAgents_;
 };
 
 CDPAgentImpl::CDPAgentImpl(
@@ -173,7 +217,7 @@ CDPAgentImpl::CDPAgentImpl(
       runtimeTaskRunner_(
           cdpDebugAPI.asyncDebuggerAPI(),
           std::move(enqueueRuntimeTaskCallback)),
-      domainAgents_(std::make_shared<DomainAgentsImpl>(
+      domainAgents_(std::make_shared<DomainAgents>(
           executionContextID,
           cdpDebugAPI,
           messageCallback_,
@@ -255,23 +299,23 @@ State CDPAgentImpl::getState() {
 
 CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
     int32_t executionContextID,
-    CDPDebugAPI &cdpDebugAPI,
+    HermesRuntime &runtime,
+    debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+    ConsoleMessageStorage &consoleMessageStorage,
+    ConsoleMessageDispatcher &consoleMessageDispatcher,
     SynchronizedOutboundCallback messageCallback,
     std::unique_ptr<DomainState> debuggerAgentState)
     : executionContextID_(executionContextID),
-      runtime_(cdpDebugAPI.runtime()),
-      asyncDebuggerAPI_(cdpDebugAPI.asyncDebuggerAPI()),
-      consoleMessageStorage_(cdpDebugAPI.consoleMessageStorage_),
-      consoleMessageDispatcher_(cdpDebugAPI.consoleMessageDispatcher_),
+      runtime_(runtime),
+      asyncDebuggerAPI_(asyncDebuggerAPI),
+      consoleMessageStorage_(consoleMessageStorage),
+      consoleMessageDispatcher_(consoleMessageDispatcher),
       messageCallback_(std::move(messageCallback)),
       objTable_(std::make_shared<RemoteObjectsTable>()),
       debuggerAgentState_(std::move(debuggerAgentState)) {
   assert(
       debuggerAgentState_ != nullptr &&
       "debuggerAgentState_ shouldn't ever be null");
-}
-
-void CDPAgentImpl::DomainAgentsImpl::initialize() {
   debuggerAgent_ = std::make_unique<DebuggerDomainAgent>(
       executionContextID_,
       runtime_,
@@ -291,15 +335,6 @@ void CDPAgentImpl::DomainAgentsImpl::initialize() {
       executionContextID_, runtime_, messageCallback_, objTable_);
   heapProfilerAgent_ = std::make_unique<HeapProfilerDomainAgent>(
       executionContextID_, runtime_, messageCallback_, objTable_);
-}
-
-void CDPAgentImpl::DomainAgentsImpl::dispose() {
-  // Explicitly reset the domain agents here to force destructors to run on the
-  // runtime thread
-  debuggerAgent_.reset();
-  runtimeAgent_.reset();
-  profilerAgent_.reset();
-  heapProfilerAgent_.reset();
 }
 
 void CDPAgentImpl::DomainAgentsImpl::handleCommand(
@@ -428,6 +463,56 @@ void CDPAgentImpl::DomainAgentsImpl::enableDebuggerDomain() {
 std::unique_ptr<DomainState>
 CDPAgentImpl::DomainAgentsImpl::getDebuggerAgentState() {
   return debuggerAgentState_->copy();
+}
+
+CDPAgentImpl::DomainAgents::DomainAgents(
+    int32_t executionContextID,
+    CDPDebugAPI &cdpDebugAPI,
+    SynchronizedOutboundCallback messageCallback,
+    std::unique_ptr<DomainState> debuggerAgentState)
+    : executionContextID_(executionContextID),
+      runtime_(cdpDebugAPI.runtime()),
+      asyncDebuggerAPI_(cdpDebugAPI.asyncDebuggerAPI()),
+      consoleMessageStorage_(cdpDebugAPI.consoleMessageStorage_),
+      consoleMessageDispatcher_(cdpDebugAPI.consoleMessageDispatcher_),
+      messageCallback_(std::move(messageCallback)),
+      debuggerAgentState_(std::move(debuggerAgentState)) {}
+
+void CDPAgentImpl::DomainAgents::initialize() {
+  impl_ = std::make_unique<DomainAgentsImpl>(
+      executionContextID_,
+      runtime_,
+      asyncDebuggerAPI_,
+      consoleMessageStorage_,
+      consoleMessageDispatcher_,
+      std::move(messageCallback_),
+      std::move(debuggerAgentState_));
+}
+
+void CDPAgentImpl::DomainAgents::dispose() {
+  impl_.reset();
+}
+
+void CDPAgentImpl::DomainAgents::handleCommand(
+    std::shared_ptr<message::Request> command) {
+  assert(impl_ != nullptr);
+  impl_->handleCommand(std::move(command));
+}
+
+void CDPAgentImpl::DomainAgents::enableRuntimeDomain() {
+  assert(impl_ != nullptr);
+  impl_->enableRuntimeDomain();
+}
+
+void CDPAgentImpl::DomainAgents::enableDebuggerDomain() {
+  assert(impl_ != nullptr);
+  impl_->enableDebuggerDomain();
+}
+
+std::unique_ptr<DomainState>
+CDPAgentImpl::DomainAgents::getDebuggerAgentState() {
+  assert(impl_ != nullptr);
+  return impl_->getDebuggerAgentState();
 }
 
 std::unique_ptr<CDPAgent> CDPAgent::create(
