@@ -187,7 +187,7 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
     int id,
     std::vector<BreakpointLocation> locations);
 
-std::unordered_map<std::string, std::string> ensureProps(
+m::runtime::GetPropertiesResponse ensureProps(
     const std::string &message,
     const std::unordered_map<std::string, PropInfo> &infos);
 
@@ -195,6 +195,9 @@ std::string serializeRuntimeCallFunctionOnRequest(
     const m::runtime::CallFunctionOnRequest &req);
 m::runtime::GetPropertiesResponse parseRuntimeGetPropertiesResponse(
     const std::string &json);
+
+std::unordered_map<std::string, m::runtime::PropertyDescriptor> indexProps(
+    const std::vector<m::runtime::PropertyDescriptor> &props);
 
 } // namespace hermes
 } // namespace facebook
