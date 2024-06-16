@@ -484,16 +484,15 @@ static SHLegacyValue createClosure(
   auto parentHandle =
       Callable::inferredParent(runtime, (FuncKind)funcInfo->kind);
 
-  SHLegacyValue res =
-      NativeJSFunction::create(
-          runtime,
-          parentHandle,
-          _sh_ljs_is_null(*env) ? runtime.makeNullHandle<Environment>()
-                                : Handle<Environment>::vmcast(toPHV(env)),
-          func,
-          funcInfo,
-          0)
-          .getHermesValue();
+  SHLegacyValue res = NativeJSFunction::create(
+                          runtime,
+                          parentHandle,
+                          env ? Handle<Environment>::vmcast(toPHV(env))
+                              : runtime.makeNullHandle<Environment>(),
+                          func,
+                          funcInfo,
+                          0)
+                          .getHermesValue();
   return res;
 }
 

@@ -423,8 +423,8 @@ SHERMES_EXPORT void _sh_ljs_store_np_to_env(
 
 /// Create a closure. The properties of the function (name, etc.) will be
 /// populated lazily.
-/// \param env Should be JSNull if there is no environment.
-/// \param funcInfo Should not be null
+/// \param env NULL if there is no environment.
+/// \param funcInfo Must not be NULL.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,

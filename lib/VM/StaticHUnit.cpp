@@ -119,17 +119,15 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
   Runtime &runtime = getRuntime(shr);
   struct {
     SHLocals head;
-    SHLegacyValue env;
   } locals;
   // NOTE: sh_unit_run() is not a function call, it executes in an existing
   // frame.
   SHLegacyValue *savedSP = _sh_push_locals(
       shr, &locals.head, hbc::StackFrameLayout::callerOutgoingRegisters(0));
-  locals.head.count = 1;
-  locals.env = _sh_ljs_null();
+  locals.head.count = 0;
 
   SHLegacyValue closure = _sh_ljs_create_closure(
-      shr, &locals.env, unit->unit_main, unit->unit_main_info);
+      shr, nullptr, unit->unit_main, unit->unit_main_info);
 
   auto frame = StackFramePtr::initFrame(
       runtime.getStackPointer(),
