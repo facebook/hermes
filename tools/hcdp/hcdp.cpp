@@ -22,8 +22,8 @@ int main(void) {
 #include <sstream>
 
 #include <hermes/Parser/JSONParser.h>
-#include <hermes/SerialExecutor/SerialExecutor.h>
 #include <hermes/Support/JSONEmitter.h>
+#include <hermes/Support/SerialExecutor.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/cdp/CDPDebugAPI.h>
 #include <hermes/cdp/MessageTypes.h>

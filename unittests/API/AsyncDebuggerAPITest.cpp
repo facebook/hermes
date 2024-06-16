@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 
 #include <hermes/AsyncDebuggerAPI.h>
-#include <hermes/SerialExecutor/SerialExecutor.h>
+#include <hermes/Support/SerialExecutor.h>
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
 

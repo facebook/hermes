@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/SerialExecutor/SerialExecutor.h"
+#include <cassert>
+
+#include "hermes/Support/SerialExecutor.h"
 
 namespace hermes {
 
@@ -14,22 +16,18 @@ SerialExecutor::SerialExecutor(size_t stackSize) {
   pthread_attr_t attr;
 
   int ret;
+  (void)ret;
   ret = pthread_attr_init(&attr);
-  if (ret != 0) {
-    throw std::runtime_error("Failed pthread_attr_init");
-  }
+  assert(ret == 0 && "Failed pthread_attr_init");
 
   if (stackSize != 0) {
     ret = pthread_attr_setstacksize(&attr, stackSize);
-    if (ret != 0) {
-      throw std::runtime_error("Failed pthread_attr_setstacksize");
-    }
+    assert(ret == 0 && "Failed pthread_attr_setstacksize");
   }
 
   ret = pthread_create(&tid_, &attr, SerialExecutor::threadMain, this);
-  if (ret != 0) {
-    throw std::runtime_error("Failed pthread_create");
-  }
+  assert(ret == 0 && "Failed pthread_create");
+
 #else
   workerThread_ = std::thread([this]() { this->run(); });
 #endif

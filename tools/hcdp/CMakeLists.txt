@@ -28,7 +28,7 @@ add_hermes_tool(hcdp
   ${ALL_HEADER_FILES}
   )
 
-target_link_libraries(hcdp hermesSerialExecutor libhermes hermesParser)
+target_link_libraries(hcdp hermesSupport libhermes hermesParser)
 
 install(TARGETS hcdp
   RUNTIME DESTINATION bin
