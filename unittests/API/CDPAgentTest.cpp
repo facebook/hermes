@@ -2249,13 +2249,12 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
   auto scopeChildrenResp = getAndEnsureProps(
       msgId++,
       scopeObjId,
-      {{"this", PropInfo("undefined")},
-       {"num", PropInfo("number").setValue("123")},
+      {{"num", PropInfo("number").setValue("123")},
        {"obj", PropInfo("object")},
        {"arr", PropInfo("object").setSubtype("array")},
        {"bar", PropInfo("function")}});
   auto scopeChildren = indexProps(scopeChildrenResp.result);
-  EXPECT_EQ(scopeChildren.size(), 5);
+  EXPECT_EQ(scopeChildren.size(), 4);
 
   ASSERT_EQ(scopeChildren.count("obj"), 1);
   const auto &obj = scopeChildren.at("obj");
@@ -2330,9 +2329,7 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesOnlyOwn) {
   auto scopeChildrenResp = getAndEnsureProps(
       msgId++,
       scopeObject.objectId.value(),
-      {{"this", PropInfo("undefined")},
-       {"obj", PropInfo("object")},
-       {"protoObject", PropInfo("object")}});
+      {{"obj", PropInfo("object")}, {"protoObject", PropInfo("object")}});
   auto scopeChildren = indexProps(scopeChildrenResp.result);
   EXPECT_EQ(scopeChildren.count("obj"), 1);
   const auto &obj = scopeChildren.at("obj");
@@ -2414,10 +2411,8 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesExtendedDescriptors) {
   EXPECT_TRUE(scopeObject.objectId.has_value());
   std::string scopeObjectId = scopeObject.objectId.value();
 
-  auto scopeChildrenResp = getAndEnsureProps(
-      msgId++,
-      scopeObjectId,
-      {{"this", PropInfo("undefined")}, {"obj", PropInfo("object")}});
+  auto scopeChildrenResp =
+      getAndEnsureProps(msgId++, scopeObjectId, {{"obj", PropInfo("object")}});
   auto scopeChildren = indexProps(scopeChildrenResp.result);
   ASSERT_EQ(scopeChildren.count("obj"), 1);
   const auto &obj = scopeChildren.at("obj");

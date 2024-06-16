@@ -739,21 +739,6 @@ RuntimeDomainAgent::makePropsFromScope(
   }
   uint32_t varCount = lexicalInfo.getVariablesCountInScope(scopeIndex);
 
-  // If this is the frame's local scope, include 'this'.
-  if (scopeIndex == 0) {
-    auto varInfo = state.getVariableInfoForThis(frameIndex);
-    m::runtime::PropertyDescriptor desc;
-    desc.name = varInfo.name;
-    desc.value = m::runtime::makeRemoteObject(
-        runtime_, varInfo.value, *objTable_, objectGroup, serializationOptions);
-    // Chrome only shows enumerable properties.
-    desc.enumerable = true;
-    desc.configurable = true;
-    desc.writable = true;
-    desc.isOwn = true;
-    result.emplace_back(std::move(desc));
-  }
-
   // Then add each of the variables in this lexical scope.
   for (uint32_t varIndex = 0; varIndex < varCount; varIndex++) {
     debugger::VariableInfo varInfo =
