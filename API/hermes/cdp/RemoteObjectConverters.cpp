@@ -334,6 +334,43 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
   return result;
 }
 
+m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
+    jsi::Runtime &runtime,
+    RemoteObjectsTable &objTable,
+    const std::string &objectGroup,
+    const jsi::JSError &error) {
+  ObjectSerializationOptions errorSerializationOptions;
+  // NOTE: V8 omits the preview for actual Error objects, but we don't make
+  // this distinction here.
+  errorSerializationOptions.generatePreview = true;
+  m::runtime::ExceptionDetails exceptionDetails;
+  exceptionDetails.text = error.getMessage() + "\n" + error.getStack();
+  exceptionDetails.exception = m::runtime::makeRemoteObject(
+      runtime, error.value(), objTable, objectGroup, errorSerializationOptions);
+  return exceptionDetails;
+}
+
+m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
+    const jsi::JSIException &err) {
+  m::runtime::ExceptionDetails exceptionDetails;
+  exceptionDetails.text = err.what();
+  return exceptionDetails;
+}
+
+m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
+    const h::debugger::ExceptionDetails &details) {
+  m::runtime::ExceptionDetails result;
+
+  result.text = details.text;
+  result.scriptId = std::to_string(details.location.fileId);
+  result.url = details.location.fileName;
+  result.stackTrace = m::runtime::StackTrace();
+  result.stackTrace->callFrames = makeCallFrames(details.getStackTrace());
+  m::setChromeLocation(result, details.location);
+
+  return result;
+}
+
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
