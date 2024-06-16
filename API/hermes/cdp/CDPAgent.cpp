@@ -294,9 +294,12 @@ void CDPAgentImpl::DomainAgents::initialize() {
 }
 
 void CDPAgentImpl::DomainAgents::dispose() {
+  // Explicitly reset the domain agents here to force destructors to run on the
+  // runtime thread
   debuggerAgent_.reset();
   runtimeAgent_.reset();
   profilerAgent_.reset();
+  heapProfilerAgent_.reset();
 }
 
 void CDPAgentImpl::DomainAgents::handleCommand(
