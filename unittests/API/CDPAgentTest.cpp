@@ -2483,6 +2483,10 @@ TEST_F(CDPAgentTest, RuntimeEvaluateException) {
       jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
       0);
 
+  // Ensure that the result object is populated with the exception as well
+  EXPECT_GT(
+      jsonScope_.getString(resp, {"result", "result", "objectId"}).size(), 0);
+
   // Evaluate something that isn't valid JavaScript syntax
   sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
     params.emitKeyValue("expression", R"(*ptr));)");
@@ -2772,6 +2776,10 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContextThrowingError) {
   EXPECT_GT(
       jsonScope_.getString(resp, {"result", "exceptionDetails", "text"}).size(),
       0);
+
+  // Ensure that the result object is populated with the exception as well
+  EXPECT_GT(
+      jsonScope_.getString(resp, {"result", "result", "objectId"}).size(), 0);
 }
 
 TEST_F(CDPAgentTest, RuntimeConsoleLog) {

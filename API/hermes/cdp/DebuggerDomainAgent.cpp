@@ -298,19 +298,19 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
         m::debugger::EvaluateOnCallFrameResponse resp;
         resp.id = reqId;
         if (result.isException) {
-          resp.exceptionDetails =
-              m::runtime::makeExceptionDetails(result.exceptionDetails);
+          resp.exceptionDetails = m::runtime::makeExceptionDetails(
+              runtime, result, *objTable_, objectGroup);
+          // In V8, @cdp Debugger.evaluateOnCallFrame populates the `result`
+          // field with the exception value.
+          resp.result = m::runtime::makeRemoteObjectForError(
+              runtime, result.value, *objTable_, objectGroup);
         } else {
-          auto remoteObjPtr = std::make_shared<m::runtime::RemoteObject>();
-
-          *remoteObjPtr = m::runtime::makeRemoteObject(
+          resp.result = m::runtime::makeRemoteObject(
               runtime,
               result.value,
               *objTable_,
               objectGroup,
               serializationOptions);
-
-          resp.result = std::move(*remoteObjPtr);
         }
         sendResponseToClient(resp);
       });

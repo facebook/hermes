@@ -293,10 +293,13 @@ void ensureEvalException(
       mustParseStrAsJsonObj(message, factory));
 
   EXPECT_EQ(resp.id, id);
-  EXPECT_TRUE(resp.exceptionDetails.has_value());
+  ASSERT_TRUE(resp.exceptionDetails.has_value());
 
   m::runtime::ExceptionDetails &details = resp.exceptionDetails.value();
   EXPECT_EQ(details.text, exceptionText);
+
+  ASSERT_TRUE(details.exception.has_value());
+  EXPECT_TRUE(details.exception->objectId.has_value());
 
   // TODO: Hermes doesn't seem to populate the line number for the exception?
   EXPECT_EQ(details.lineNumber, 0);
@@ -316,6 +319,8 @@ void ensureEvalException(
 
     i++;
   }
+
+  EXPECT_TRUE(resp.result.objectId.has_value());
 }
 
 m::debugger::BreakpointId ensureSetBreakpointResponse(

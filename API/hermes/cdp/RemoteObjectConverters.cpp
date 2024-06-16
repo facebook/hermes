@@ -334,19 +334,28 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
   return result;
 }
 
+m::runtime::RemoteObject m::runtime::makeRemoteObjectForError(
+    jsi::Runtime &runtime,
+    const jsi::Value &value,
+    cdp::RemoteObjectsTable &objTable,
+    const std::string &objectGroup) {
+  ObjectSerializationOptions errorSerializationOptions;
+  // NOTE: V8 omits the preview for actual Error objects, but we don't
+  // make this distinction here.
+  errorSerializationOptions.generatePreview = true;
+  return m::runtime::makeRemoteObject(
+      runtime, value, objTable, objectGroup, errorSerializationOptions);
+}
+
 m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
     jsi::Runtime &runtime,
-    RemoteObjectsTable &objTable,
-    const std::string &objectGroup,
-    const jsi::JSError &error) {
-  ObjectSerializationOptions errorSerializationOptions;
-  // NOTE: V8 omits the preview for actual Error objects, but we don't make
-  // this distinction here.
-  errorSerializationOptions.generatePreview = true;
+    const jsi::JSError &error,
+    cdp::RemoteObjectsTable &objTable,
+    const std::string &objectGroup) {
   m::runtime::ExceptionDetails exceptionDetails;
   exceptionDetails.text = error.getMessage() + "\n" + error.getStack();
-  exceptionDetails.exception = m::runtime::makeRemoteObject(
-      runtime, error.value(), objTable, objectGroup, errorSerializationOptions);
+  exceptionDetails.exception = m::runtime::makeRemoteObjectForError(
+      runtime, error.value(), objTable, objectGroup);
   return exceptionDetails;
 }
 
@@ -358,17 +367,25 @@ m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
 }
 
 m::runtime::ExceptionDetails m::runtime::makeExceptionDetails(
-    const h::debugger::ExceptionDetails &details) {
-  m::runtime::ExceptionDetails result;
+    facebook::jsi::Runtime &runtime,
+    const h::debugger::EvalResult &result,
+    cdp::RemoteObjectsTable &objTable,
+    const std::string &objectGroup) {
+  assert(result.isException);
+  m::runtime::ExceptionDetails exceptionDetails;
 
-  result.text = details.text;
-  result.scriptId = std::to_string(details.location.fileId);
-  result.url = details.location.fileName;
-  result.stackTrace = m::runtime::StackTrace();
-  result.stackTrace->callFrames = makeCallFrames(details.getStackTrace());
-  m::setChromeLocation(result, details.location);
+  exceptionDetails.text = result.exceptionDetails.text;
+  exceptionDetails.scriptId =
+      std::to_string(result.exceptionDetails.location.fileId);
+  exceptionDetails.url = result.exceptionDetails.location.fileName;
+  exceptionDetails.stackTrace = m::runtime::StackTrace();
+  exceptionDetails.stackTrace->callFrames =
+      makeCallFrames(result.exceptionDetails.getStackTrace());
+  m::setChromeLocation(exceptionDetails, result.exceptionDetails.location);
+  exceptionDetails.exception = m::runtime::makeRemoteObjectForError(
+      runtime, result.value, objTable, objectGroup);
 
-  return result;
+  return exceptionDetails;
 }
 
 } // namespace cdp
