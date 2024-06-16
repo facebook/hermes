@@ -3293,4 +3293,46 @@ TEST_F(CDPAgentTest, HeapProfilerTrackHeapObjects) {
   expectNothing();
 }
 
+TEST_F(CDPAgentTest, HeapProfilerSampling) {
+  int msgId = 1;
+
+  // Start sampling.
+  {
+    sendRequest(
+        "HeapProfiler.startSampling", msgId, [](::hermes::JSONEmitter &json) {
+          // Sample every 256 bytes to ensure there are some samples. The
+          // default is 32768, which is too high for a small example. Note that
+          // sampling is a random process, so there's no guarantee there will be
+          // any samples in any finite number of allocations. In practice the
+          // likelihood is so high that there shouldn't be any issues.
+          json.emitKeyValue("samplingInterval", 256);
+        });
+    ensureOkResponse(waitForMessage(), msgId++);
+  }
+
+  // Run a script that allocates some objects.
+  scheduleScript(R"(
+      function allocator() {
+        // Do some allocation.
+        return new Object;
+      }
+      (function main() {
+        var a = [];
+        for (var i = 0; i < 1000; i++) {
+          a[i] = allocator();
+        }
+      })();
+    )");
+  waitForScheduledScripts();
+
+  // Stop sampling
+  sendRequest("HeapProfiler.stopSampling", msgId);
+  auto resp = expectResponse(std::nullopt, msgId++);
+  // Ensure the JSON parsed and some samples were produced.
+  EXPECT_NE(
+      jsonScope_.getArray(resp, {"result", "profile", "samples"})->size(), 0);
+  // Don't test the content of the JSON, that is tested via the
+  // SamplingHeapProfilerTest.
+}
+
 #endif // HERMES_ENABLE_DEBUGGER
