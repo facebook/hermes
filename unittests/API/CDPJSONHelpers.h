@@ -122,6 +122,8 @@ std::unique_ptr<T> getValue(
 struct PropInfo {
   PropInfo(const std::string &type) : type(type) {}
 
+  explicit PropInfo() : type("<ignored>"), accessor(true) {}
+
   PropInfo &setSubtype(const std::string &subtypeParam) {
     subtype = subtypeParam;
     return *this;
@@ -138,10 +140,37 @@ struct PropInfo {
     return *this;
   }
 
+  /// \note ignored for internal property descriptors.
+  PropInfo &setConfigurable(bool configurableParam) {
+    configurable = configurableParam;
+    return *this;
+  }
+
+  /// \note ignored for internal property descriptors.
+  PropInfo &setEnumerable(bool enumerableParam) {
+    enumerable = enumerableParam;
+    return *this;
+  }
+
+  /// \note ignored for internal property descriptors.
+  PropInfo &setWritable(bool writableParam) {
+    writable = writableParam;
+    return *this;
+  }
+
+  PropInfo &setAccessor(bool accessorParam) {
+    accessor = accessorParam;
+    return *this;
+  }
+
   std::string type;
   std::optional<std::string> subtype;
   std::optional<m::JSONBlob> value;
   std::optional<std::string> unserializableValue;
+  bool configurable{true};
+  bool enumerable{true};
+  bool writable{true};
+  bool accessor{false};
 };
 
 /// Ensure that \p message is a an error response with the given \p id,
@@ -189,7 +218,8 @@ m::debugger::BreakpointId ensureSetBreakpointByUrlResponse(
 
 m::runtime::GetPropertiesResponse ensureProps(
     const std::string &message,
-    const std::unordered_map<std::string, PropInfo> &infos);
+    const std::unordered_map<std::string, PropInfo> &infos,
+    const std::unordered_map<std::string, PropInfo> &internalInfos);
 
 std::string serializeRuntimeCallFunctionOnRequest(
     const m::runtime::CallFunctionOnRequest &req);

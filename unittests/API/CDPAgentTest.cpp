@@ -26,6 +26,7 @@
 #include <llvh/ADT/ScopeExit.h>
 
 #include "CDPJSONHelpers.h"
+#include "CDPTestHelpers.h"
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
 #include <sys/resource.h>
@@ -39,6 +40,14 @@ using namespace std::chrono_literals;
 using namespace std::placeholders;
 
 constexpr auto kDefaultUrl = "url";
+
+// A function passed to Runtime.callFunctionOn in order to invoke a getter. See
+// https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/58eff7d6a4ed165a3350c8817c1ec5724eab5cb7/front_end/ui/legacy/components/object_ui/ObjectPropertiesSection.ts#L1125-L1132
+constexpr auto kInvokeGetterFunction = R"(
+  function invokeGetter(getter) {
+    return Function.prototype.apply.call(getter, this, []);
+  }
+)";
 
 template <typename T>
 T waitFor(
@@ -184,6 +193,7 @@ class CDPAgentTest : public ::testing::Test {
       int msgId,
       const std::string &objectId,
       const std::unordered_map<std::string, PropInfo> &infos,
+      const std::unordered_map<std::string, PropInfo> &internalInfos = {},
       bool ownProperties = true);
 
   std::unique_ptr<HermesRuntime> runtime_;
@@ -497,6 +507,7 @@ m::runtime::GetPropertiesResponse CDPAgentTest::getAndEnsureProps(
     int msgId,
     const std::string &objectId,
     const std::unordered_map<std::string, PropInfo> &infos,
+    const std::unordered_map<std::string, PropInfo> &internalInfos,
     bool ownProperties) {
   sendRequest(
       "Runtime.getProperties",
@@ -505,7 +516,7 @@ m::runtime::GetPropertiesResponse CDPAgentTest::getAndEnsureProps(
         json.emitKeyValue("objectId", objectId);
         json.emitKeyValue("ownProperties", ownProperties);
       });
-  return ensureProps(waitForMessage(), infos);
+  return ensureProps(waitForMessage(), infos, internalInfos);
 }
 
 TEST_F(CDPAgentTest, CDPAgentIssuesStartupTask) {
@@ -1325,8 +1336,8 @@ TEST_F(CDPAgentTest, DebuggerEvalOnCallFrame) {
       objectId,
       {{"number", PropInfo("number").setValue("1")},
        {"bool", PropInfo("boolean").setValue("false")},
-       {"str", PropInfo("string").setValue("\"string\"")},
-       {"__proto__", PropInfo("object")}});
+       {"str", PropInfo("string").setValue("\"string\"")}},
+      {{"[[Prototype]]", PropInfo("object")}});
 
   // [3] resume
   sendAndCheckResponse("Debugger.resume", msgId++);
@@ -2246,7 +2257,7 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
   auto scopeChildren = indexProps(scopeChildrenResp.result);
   EXPECT_EQ(scopeChildren.size(), 5);
 
-  EXPECT_EQ(scopeChildren.count("obj"), 1);
+  ASSERT_EQ(scopeChildren.count("obj"), 1);
   const auto &obj = scopeChildren.at("obj");
   std::string objId = obj.value.value().objectId.value();
   objIds.push_back(objId);
@@ -2255,10 +2266,10 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
       msgId++,
       objId,
       {{"depth", PropInfo("number").setValue("0")},
-       {"value", PropInfo("object")},
-       {"__proto__", PropInfo("object")}});
+       {"value", PropInfo("object")}},
+      {{"[[Prototype]]", PropInfo("object")}});
   auto objChildren = indexProps(objChildrenResp.result);
-  EXPECT_EQ(objChildren.size(), 3);
+  EXPECT_EQ(objChildren.size(), 2);
 
   ASSERT_EQ(objChildren.count("value"), 1);
   const auto &value = objChildren.at("value");
@@ -2272,9 +2283,9 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
        {"b", PropInfo("number").setUnserializableValue("Infinity")},
        {"c", PropInfo("number").setUnserializableValue("NaN")},
        {"d", PropInfo("number").setUnserializableValue("-0")},
-       {"e", PropInfo("string").setValue("\"e_string\"")},
-       {"__proto__", PropInfo("object")}});
-  EXPECT_EQ(valueChildren.result.size(), 6);
+       {"e", PropInfo("string").setValue("\"e_string\"")}},
+      {{"[[Prototype]]", PropInfo("object")}});
+  EXPECT_EQ(valueChildren.result.size(), 5);
 
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
@@ -2299,11 +2310,12 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesOnlyOwn) {
   sendAndCheckResponse("Debugger.enable", msgId++);
   scheduleScript(R"(
     function foo() {
-      var protoObject = {
-        "protoNum": 77
-      };
+      var protoObject = Object.create(null);
+      protoObject.protoNum = 77;
+
       var obj = Object.create(protoObject);
       obj.num = 42;
+      protoObject.num = 1234 /* shadowed */;
       debugger;
     }
     foo();
@@ -2313,7 +2325,7 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesOnlyOwn) {
   // wait for a pause on debugger statement and get object ID from the local
   // scope.
   auto pausedNote = ensurePaused(
-      waitForMessage(), "other", {{"foo", 7, 2}, {"global", 9, 1}});
+      waitForMessage(), "other", {{"foo", 8, 2}, {"global", 10, 1}});
   const auto &scopeObject = pausedNote.callFrames.at(0).scopeChain.at(0).object;
   auto scopeChildrenResp = getAndEnsureProps(
       msgId++,
@@ -2331,20 +2343,123 @@ TEST_F(CDPAgentTest, RuntimeGetPropertiesOnlyOwn) {
   getAndEnsureProps(
       msgId++,
       objId,
-      {{"num", PropInfo("number").setValue("42")},
-       {"__proto__", PropInfo("object")}},
+      {{"num", PropInfo("number").setValue("42")}},
+      {{"[[Prototype]]", PropInfo("object")}},
       true);
 
   // Check that GetProperties request for obj object only have all properties
   // when onlyOwnProperties = false.
-  // __proto__ is not returned here because all properties from proto chain
-  // are already included in the result.
   getAndEnsureProps(
       msgId++,
       objId,
       {{"num", PropInfo("number").setValue("42")},
        {"protoNum", PropInfo("number").setValue("77")}},
+      {{"[[Prototype]]", PropInfo("object")}},
       false);
+
+  ASSERT_EQ(scopeChildren.count("protoObject"), 1);
+  std::string protoObjectId =
+      scopeChildren.at("protoObject").value.value().objectId.value();
+  getAndEnsureProps(
+      msgId++,
+      protoObjectId,
+      {{"num", PropInfo("number").setValue("1234")},
+       {"protoNum", PropInfo("number").setValue("77")}},
+      // No [[Prototype]] when the prototype is null
+      {});
+
+  // resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, RuntimeGetPropertiesExtendedDescriptors) {
+  int msgId = 1;
+
+  // Start a script
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  scheduleScript(R"(
+    function foo() {
+      var obj = Object.create(null);
+      Object.defineProperties(
+        obj,
+        {
+          data: {
+            value: 42,
+            configurable: false,
+            enumerable: false,
+            writable: false,
+          },
+          accessor: {
+            get() { return 1234; },
+            set(v) {},
+            configurable: true,
+            enumerable: false,
+          },
+          throwingAccessor: {
+            get() { throw new Error("Throwing accessor"); },
+          }
+        },
+      );
+      debugger;
+    }
+    foo();
+  )");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  auto pausedNote = ensurePaused(
+      waitForMessage(), "other", {{"foo", 23, 2}, {"global", 25, 1}});
+
+  const auto &scopeObject = pausedNote.callFrames.at(0).scopeChain.at(0).object;
+  EXPECT_TRUE(scopeObject.objectId.has_value());
+  std::string scopeObjectId = scopeObject.objectId.value();
+
+  auto scopeChildrenResp = getAndEnsureProps(
+      msgId++,
+      scopeObjectId,
+      {{"this", PropInfo("undefined")}, {"obj", PropInfo("object")}});
+  auto scopeChildren = indexProps(scopeChildrenResp.result);
+  ASSERT_EQ(scopeChildren.count("obj"), 1);
+  const auto &obj = scopeChildren.at("obj");
+  std::string objId = obj.value.value().objectId.value();
+
+  auto objPropsResp = getAndEnsureProps(
+      msgId++,
+      objId,
+      {{"data",
+        PropInfo("number")
+            .setValue("42")
+            .setConfigurable(false)
+            .setEnumerable(false)
+            .setWritable(false)},
+       {"accessor", PropInfo().setConfigurable(true).setEnumerable(false)},
+       {"throwingAccessor",
+        PropInfo().setConfigurable(false).setEnumerable(false)}},
+      {});
+
+  /// Helper that invokes a getter function on the specified object.
+  auto invokeGetter = [&](std::string objId,
+                          const m::runtime::PropertyDescriptor &prop)
+      -> m::runtime::CallFunctionOnResponse {
+    m::runtime::CallFunctionOnRequest req;
+    req.id = msgId++;
+    req.functionDeclaration = kInvokeGetterFunction;
+    req.objectId = objId;
+    req.arguments = std::vector<m::runtime::CallArgument>{};
+    auto ca = m::runtime::CallArgument();
+    ca.objectId = prop.get.value().objectId.value();
+    req.arguments->push_back(std::move(ca));
+    cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
+    auto message = expectResponse(std::nullopt, req.id);
+    return mustMake<m::runtime::CallFunctionOnResponse>(message);
+  };
+
+  auto objProps = indexProps(objPropsResp.result);
+  EXPECT_EQ(
+      invokeGetter(objId, objProps.at("accessor")).result.value.value(),
+      "1234");
+  EXPECT_TRUE(invokeGetter(objId, objProps.at("throwingAccessor"))
+                  .exceptionDetails.has_value());
 
   // resume
   sendAndCheckResponse("Debugger.resume", msgId++);
@@ -2413,8 +2528,8 @@ TEST_F(CDPAgentTest, RuntimeEvaluate) {
       objId,
       {{"number", PropInfo("number").setValue("1")},
        {"bool", PropInfo("boolean").setValue("false")},
-       {"str", PropInfo("string").setValue("\"string\"")},
-       {"__proto__", PropInfo("object")}},
+       {"str", PropInfo("string").setValue("\"string\"")}},
+      {{"[[Prototype]]", PropInfo("object")}},
       true);
 }
 
@@ -2584,9 +2699,6 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
   // It is modified by addMember (below).
   std::unordered_map<std::string, PropInfo> expectedPropInfos;
 
-  // Add __proto__ as it always exists.
-  expectedPropInfos.emplace("__proto__", PropInfo("object"));
-
   /// addMember sends Runtime.callFunctionOn() requests with a function
   /// declaration that simply adds a new property called \p propName with
   /// type \p type to the remote object \p id. \p ca is the property's value.
@@ -2636,10 +2748,12 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
   /// runtime::RemoteObjectId for the "self_ref" property (which must exist).
   auto verifyObjShape = [&](const m::runtime::RemoteObjectId &objId)
       -> std::optional<std::string> {
-    auto objPropsResponse =
-        getAndEnsureProps(msgId++, objId, expectedPropInfos);
+    auto objPropsResponse = getAndEnsureProps(
+        msgId++,
+        objId,
+        expectedPropInfos,
+        {{"[[Prototype]]", PropInfo("object")}});
     auto objProps = indexProps(objPropsResponse.result);
-    EXPECT_TRUE(objProps.count("__proto__"));
     auto objPropIt = objProps.find("self_ref");
     if (objPropIt == objProps.end()) {
       EXPECT_TRUE(false) << "missing \"self_ref\" property.";
@@ -2950,8 +3064,8 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
       msgId++,
       object1ID,
       {{"number1", PropInfo("number").setValue("1")},
-       {"bool1", PropInfo("boolean").setValue("false")},
-       {"__proto__", PropInfo("object")}});
+       {"bool1", PropInfo("boolean").setValue("false")}},
+      {{"[[Prototype]]", PropInfo("object")}});
 
   EXPECT_EQ(
       jsonScope_.getString(note, {"params", "args", "2", "type"}), "object");
@@ -2961,8 +3075,8 @@ TEST_F(CDPAgentTest, RuntimeConsoleLog) {
       msgId++,
       object2ID,
       {{"number2", PropInfo("number").setValue("2")},
-       {"bool2", PropInfo("boolean").setValue("true")},
-       {"__proto__", PropInfo("object")}});
+       {"bool2", PropInfo("boolean").setValue("true")}},
+      {{"[[Prototype]]", PropInfo("object")}});
 }
 
 TEST_F(CDPAgentTest, RuntimeConsoleLogJSON) {
