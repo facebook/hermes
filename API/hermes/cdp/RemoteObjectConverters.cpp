@@ -234,8 +234,7 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
     const facebook::jsi::Value &value,
     cdp::RemoteObjectsTable &objTable,
     const std::string &objectGroup,
-    bool byValue,
-    bool generatePreview) {
+    const cdp::ObjectSerializationOptions &options) {
   m::runtime::RemoteObject result;
   if (value.isUndefined()) {
     result.type = "undefined";
@@ -305,18 +304,18 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
       result.subtype = "array";
       result.className = "Array";
       result.description = "Array(" + std::to_string(arrayCount) + ")";
-      if (generatePreview) {
+      if (options.generatePreview) {
         result.preview = generateArrayPreview(runtime, array);
       }
     } else {
       result.type = "object";
       result.description = result.className = "Object";
-      if (generatePreview) {
+      if (options.generatePreview) {
         result.preview = generateObjectPreview(runtime, obj);
       }
     }
 
-    if (byValue) {
+    if (options.returnByValue) {
       // Use JSON.stringify to serialize this object.
       auto JSON = runtime.global().getPropertyAsObject(runtime, "JSON");
       auto stringify = JSON.getPropertyAsFunction(runtime, "stringify");

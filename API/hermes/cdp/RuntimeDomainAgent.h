@@ -12,6 +12,7 @@
 
 #include "CDPDebugAPI.h"
 #include "DomainAgent.h"
+#include "RemoteObjectConverters.h"
 
 namespace facebook {
 namespace hermes {
@@ -85,12 +86,12 @@ class RuntimeDomainAgent : public DomainAgent {
       std::pair<uint32_t, uint32_t> frameAndScopeIndex,
       const std::string &objectGroup,
       const debugger::ProgramState &state,
-      bool generatePreview);
+      const ObjectSerializationOptions &serializationOptions);
   std::vector<m::runtime::PropertyDescriptor> makePropsFromValue(
       const jsi::Value &value,
       const std::string &objectGroup,
       bool onlyOwnProperties,
-      bool generatePreview);
+      const ObjectSerializationOptions &serializationOptions);
 
   HermesRuntime &runtime_;
   debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;

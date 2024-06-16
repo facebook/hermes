@@ -283,8 +283,9 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
   // Copy members of req before returning from this function.
   long long reqId = req.id;
   std::string objectGroup = req.objectGroup.value_or("");
-  bool byValue = req.returnByValue.value_or(false);
-  bool generatePreview = req.generatePreview.value_or(false);
+  ObjectSerializationOptions serializationOptions;
+  serializationOptions.returnByValue = req.returnByValue.value_or(false);
+  serializationOptions.generatePreview = req.generatePreview.value_or(false);
 
   uint32_t frameIndex = (uint32_t)atoi(req.callFrameId.c_str());
   asyncDebugger_.evalWhilePaused(
@@ -292,8 +293,7 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
       frameIndex,
       [reqId,
        objectGroup = std::move(objectGroup),
-       byValue,
-       generatePreview,
+       serializationOptions = std::move(serializationOptions),
        this](HermesRuntime &runtime, const debugger::EvalResult &result) {
         m::debugger::EvaluateOnCallFrameResponse resp;
         resp.id = reqId;
@@ -308,8 +308,7 @@ void DebuggerDomainAgent::evaluateOnCallFrame(
               result.value,
               *objTable_,
               objectGroup,
-              byValue,
-              generatePreview);
+              serializationOptions);
 
           resp.result = std::move(*remoteObjPtr);
         }
