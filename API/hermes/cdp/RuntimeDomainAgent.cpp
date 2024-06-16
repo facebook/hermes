@@ -38,7 +38,7 @@ class CallFunctionOnArgument {
   /// Computes the real value for this argument, which can be an object
   /// referenced by maybeObjectId_, or the given evaldValue. Throws if
   /// maybeObjectId_ is not empty but references an unknown object.
-  jsi::Value value(
+  std::optional<jsi::Value> value(
       jsi::Runtime &rt,
       RemoteObjectsTable &objTable,
       jsi::Value evaldValue) const {
@@ -53,12 +53,20 @@ class CallFunctionOnArgument {
  private:
   /// Returns the jsi::Object for the given objId. Throws if such object can't
   /// be found.
-  static jsi::Value getValueFromId(
+  static std::optional<jsi::Value> getValueFromId(
       jsi::Runtime &rt,
       RemoteObjectsTable &objTable,
       m::runtime::RemoteObjectId objId) {
-    if (const jsi::Value *ptr = objTable.getValue(objId)) {
-      return jsi::Value(rt, *ptr);
+    if (objTable.isScopeId(objId)) {
+      if (objTable.getScope(objId) != nullptr) {
+        // Scope is found, but since scope IDs are not actual objects of the
+        // running program, there isn't an actual value associated with it.
+        return std::nullopt;
+      }
+    } else {
+      if (const jsi::Value *ptr = objTable.getValue(objId)) {
+        return jsi::Value(rt, *ptr);
+      }
     }
 
     throw std::runtime_error("unknown object id " + objId);
@@ -98,24 +106,35 @@ class CallFunctionOnRunner {
     // now resolve the arguments to the call, including "this".
     std::vector<jsi::Value> arguments(thisAndArguments_.size() - 1);
 
-    jsi::Object jsThis =
+    std::optional<jsi::Object> jsThis =
         getJsThis(rt, objTable, argsAndFunc.getValueAtIndex(rt, kJsThisIndex));
 
     size_t i = kFirstArgIndex;
     for (/*i points to the first param*/; i < thisAndArguments_.size(); ++i) {
-      arguments[i - kFirstArgIndex] = thisAndArguments_[i].value(
+      std::optional<jsi::Value> value = thisAndArguments_[i].value(
           rt, objTable, argsAndFunc.getValueAtIndex(rt, i));
+      assert(
+          value.has_value() &&
+          "Expect RemoteObjectId to be referencing real objects and are not scope IDs");
+      arguments[i - kFirstArgIndex] = std::move(value.value());
     }
 
     // i is now func's index.
     jsi::Function func =
         argsAndFunc.getValueAtIndex(rt, i).getObject(rt).getFunction(rt);
 
-    return func.callWithThis(
-        rt,
-        std::move(jsThis),
-        static_cast<const jsi::Value *>(arguments.data()),
-        arguments.size());
+    if (jsThis) {
+      return func.callWithThis(
+          rt,
+          std::move(*jsThis),
+          static_cast<const jsi::Value *>(arguments.data()),
+          arguments.size());
+    } else {
+      return func.call(
+          rt,
+          static_cast<const jsi::Value *>(arguments.data()),
+          arguments.size());
+    }
   }
 
  private:
@@ -133,7 +152,7 @@ class CallFunctionOnRunner {
   /// Resolves the js "this" for the request, which lives in
   /// thisAndArguments_[kJsThisIndex]. \p evaldThis should either be
   /// undefined, or the placeholder indicating that globalThis should be used.
-  jsi::Object getJsThis(
+  std::optional<jsi::Object> getJsThis(
       jsi::Runtime &rt,
       RemoteObjectsTable &objTable,
       jsi::Value evaldThis) const {
@@ -150,12 +169,26 @@ class CallFunctionOnRunner {
           evaldThis.getString(rt).utf8(rt) == kJsThisArgPlaceholder)) &&
         "unexpected value for jsThis argument placeholder");
 
-    // Need to save this information because of the std::move() below.
     const bool useGlobalThis = evaldThis.isString();
-    jsi::Value value = thisAndArguments_[kJsThisIndex].value(
-        rt, objTable, std::move(evaldThis));
+    if (useGlobalThis)
+      return rt.global();
 
-    return useGlobalThis ? rt.global() : value.getObject(rt);
+    std::optional<jsi::Value> value = thisAndArguments_[kJsThisIndex].value(
+        rt, objTable, std::move(evaldThis));
+    if (!value.has_value()) {
+      // VS Code's node.js debugger could pass a scope ID as 'this'. It doesn't
+      // make any sense because those RemoteObjects are not real. Still need to
+      // handle it so things don't crash.
+      return std::nullopt;
+    }
+
+    // TODO: Support any type of RemoteObject. Currently we're limited by what's
+    // available through jsi::Function.
+    assert(
+        value.value().isObject() &&
+        "jsi::Function only supports callWithThis with a jsi::Object");
+
+    return value.value().getObject(rt);
   }
 
   std::vector<CallFunctionOnArgument> thisAndArguments_;

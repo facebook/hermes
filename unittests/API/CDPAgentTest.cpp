@@ -2666,6 +2666,35 @@ TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {
   verifyObjShape(thisId);
 }
 
+TEST_F(CDPAgentTest, RuntimeCallFunctionOnScope) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    function test() {
+      debugger;  // line 2
+    }
+    test();      // line 4
+  )");
+
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+
+  m::debugger::PausedNotification note = ensurePaused(
+      waitForMessage(), "other", {{"test", 2, 2}, {"global", 4, 1}});
+  EXPECT_EQ(note.callFrames[0].scopeChain.size(), 2);
+  EXPECT_EQ(note.callFrames[0].scopeChain[0].object.objectId.value(), "-1");
+
+  m::runtime::CallFunctionOnRequest req;
+  req.id = msgId;
+  req.functionDeclaration = std::string("function(){}");
+  req.objectId = "-1";
+
+  cdpAgent_->handleCommand(serializeRuntimeCallFunctionOnRequest(req));
+  expectResponse(std::nullopt, msgId++);
+}
+
 TEST_F(CDPAgentTest, RuntimeCallFunctionOnExecutionContext) {
   int msgId = 1;
 
