@@ -2048,10 +2048,12 @@ TEST_F(CDPAgentTest, RuntimeGetHeapUsage) {
   // getHeapUsage response does not include the method name
   auto resp = expectResponse(std::nullopt, msgId++);
 
-  // Some memory should be in use. We don't know how much, but it should be
-  // more than 0.
-  EXPECT_GT(jsonScope_.getNumber(resp, {"result", "usedSize"}), 0);
-  EXPECT_GT(jsonScope_.getNumber(resp, {"result", "totalSize"}), 0);
+  // Some GC configurations report zero memory usage (e.g. mallocgc).
+  // Expect a successful response with non-negative memory usage,
+  // accepting zero memory usage rather than baking the specifics
+  // of each GC into this test of CDP.
+  EXPECT_GE(jsonScope_.getNumber(resp, {"result", "usedSize"}), 0);
+  EXPECT_GE(jsonScope_.getNumber(resp, {"result", "totalSize"}), 0);
 }
 
 TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
