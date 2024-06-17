@@ -97,7 +97,7 @@ static void compileLazyFunctionWorker(void *argPtr) {
   LLVM_DEBUG(llvh::dbgs() << "Compiling lazy "
                           << F->getDescriptiveDefinitionKindStr() << ": "
                           << F->getOriginalOrInferredName() << " @ ";
-             manager.dumpCoords(llvh::dbgs(), lazyData.span.Start);
+             manager.dumpCoords(llvh::dbgs(), F->getSourceRange().Start);
              llvh::dbgs() << "\n");
 
   // Free the AST once we're done compiling this function.
@@ -114,7 +114,7 @@ static void compileLazyFunctionWorker(void *argPtr) {
       lazyData.nodeKind,
       lazyData.paramYield,
       lazyData.paramAwait,
-      lazyData.span.Start);
+      F->getSourceRange().Start);
 
   sema::SemContext *semCtx = provider->getSemCtx();
   assert(semCtx && "missing semantic data to compile");

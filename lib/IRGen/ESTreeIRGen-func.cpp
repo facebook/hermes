@@ -1093,10 +1093,7 @@ void ESTreeIRGen::setupLazyFunction(
   Builder.setInsertionBlock(bb);
 
   LazyCompilationData data{
-      F->getOriginalOrInferredName().getUnderlyingPointer(),
-      F->getDefinitionKind(),
       bodyBlock->bufferId,
-      functionNode->getSourceRange(),
       functionNode->getSemInfo(),
       getLazyFunctionKind(functionNode),
       ESTree::isStrict(functionNode->strictness),

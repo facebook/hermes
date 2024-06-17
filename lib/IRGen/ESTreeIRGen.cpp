@@ -237,7 +237,7 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
               parentVarScope,
               nullptr,
               false,
-              lazyDataInst->getData().definitionKind);
+              lazyFunc->getDefinitionKind());
   }
 
   drainCompilationQueue();
