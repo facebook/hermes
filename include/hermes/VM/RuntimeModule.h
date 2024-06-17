@@ -104,7 +104,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   WeakRoot<Domain> domain_;
 
   /// The table maps from a function index to a CodeBlock.
-  std::vector<CodeBlock *> functionMap_{};
+  std::vector<std::unique_ptr<CodeBlock>> functionMap_{};
 
   /// The byte-code provider for this RuntimeModule. The RuntimeModule is
   /// designed to own the provider exclusively, especially because in some
@@ -237,7 +237,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   inline CodeBlock *getCodeBlockMayAllocate(unsigned index) {
     assert(index < functionMap_.size() && "Index out of bounds");
     if (LLVM_LIKELY(functionMap_[index])) {
-      return functionMap_[index];
+      return functionMap_[index].get();
     }
     return getCodeBlockSlowPath(index);
   }
@@ -283,7 +283,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   }
 
   /// \return a constant reference to the function map.
-  const std::vector<CodeBlock *> &getFunctionMap() {
+  const std::vector<std::unique_ptr<CodeBlock>> &getFunctionMap() {
     return functionMap_;
   }
 

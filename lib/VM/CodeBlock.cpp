@@ -117,7 +117,7 @@ static void validateInstructions(ArrayRef<uint8_t> list, unsigned frameSize) {
 
 #endif
 
-CodeBlock *CodeBlock::createCodeBlock(
+std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
     RuntimeModule *runtimeModule,
     hbc::RuntimeFunctionHeader header,
     const uint8_t *bytecode,
@@ -148,8 +148,15 @@ CodeBlock *CodeBlock::createCodeBlock(
   }
 #endif
 
-  return CodeBlock::create(
-      runtimeModule, header, bytecode, functionID, cacheSize, readCacheSize);
+  auto allocSize = totalSizeToAlloc<PropertyCacheEntry>(cacheSize);
+  void *mem = checkedMalloc(allocSize);
+  return std::unique_ptr<CodeBlock>(new (mem) CodeBlock(
+      runtimeModule,
+      header,
+      bytecode,
+      functionID,
+      cacheSize,
+      /* writePropCacheOffset */ readCacheSize));
 }
 
 int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {

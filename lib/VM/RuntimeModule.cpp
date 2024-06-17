@@ -64,11 +64,8 @@ RuntimeModule::~RuntimeModule() {
   runtime_.getCrashManager().unregisterMemory(this);
   runtime_.removeRuntimeModule(this);
 
-  for (auto *block : functionMap_) {
-    if (block != nullptr) {
-      runtime_.getHeap().getIDTracker().untrackNative(block);
-      delete block;
-    }
+  for (const auto &block : functionMap_) {
+    runtime_.getHeap().getIDTracker().untrackNative(block.get());
   }
   runtime_.getHeap().getIDTracker().untrackNative(&functionMap_);
 }
@@ -139,7 +136,7 @@ CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
   if (bcProvider_->isFunctionLazy(index)) {
     functionMap_[index] = CodeBlock::createCodeBlock(
         this, bcProvider_->getFunctionHeader(index), nullptr, index);
-    return functionMap_[index];
+    return functionMap_[index].get();
   }
 #endif
   functionMap_[index] = CodeBlock::createCodeBlock(
@@ -147,7 +144,7 @@ CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
       bcProvider_->getFunctionHeader(index),
       bcProvider_->getBytecode(index),
       index);
-  return functionMap_[index];
+  return functionMap_[index].get();
 }
 
 void RuntimeModule::importStringIDMapMayAllocate() {
@@ -366,7 +363,7 @@ size_t RuntimeModule::additionalMemorySize() const {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
   // Create a native node for each CodeBlock owned by this module.
-  for (const CodeBlock *cb : functionMap_) {
+  for (const auto &cb : functionMap_) {
     // Skip the null code blocks, they are lazily inserted the first time
     // they are used.
     if (cb && cb->getRuntimeModule() == this) {
@@ -375,7 +372,7 @@ void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
       snap.endNode(
           HeapSnapshot::NodeType::Native,
           "CodeBlock",
-          gc.getNativeID(cb),
+          gc.getNativeID(cb.get()),
           sizeof(CodeBlock) + cb->additionalMemorySize(),
           0);
     }
@@ -385,7 +382,7 @@ void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
   snap.beginNode();
   // Create an edge to each CodeBlock owned by this module.
   for (int i = 0, e = functionMap_.size(); i < e; i++) {
-    const CodeBlock *cb = functionMap_[i];
+    const CodeBlock *cb = functionMap_[i].get();
     // Skip the null code blocks, they are lazily inserted the first time
     // they are used.
     if (cb && cb->getRuntimeModule() == this) {

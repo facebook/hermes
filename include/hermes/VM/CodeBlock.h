@@ -84,29 +84,6 @@ class CodeBlock final
   ProfilerID profilerID{NO_PROFILER_ID};
 #endif
 
-  /// Create a CodeBlock for a given runtime module \p runtimeModule. The result
-  /// must be deallocated via delete, which is overridden.
-  /// TODO: it would be nice to have this return a unique_ptr with a custom
-  /// deleter; however lazy compilation requires that multiple RuntimeModules
-  /// reference the same CodeBlock, so it is not yet possible.
-  static CodeBlock *create(
-      RuntimeModule *runtimeModule,
-      hbc::RuntimeFunctionHeader header,
-      const uint8_t *bytecode,
-      uint32_t functionID,
-      uint32_t cacheSize,
-      uint32_t writePropCacheOffset) {
-    auto allocSize = totalSizeToAlloc<PropertyCacheEntry>(cacheSize);
-    void *mem = checkedMalloc(allocSize);
-    return new (mem) CodeBlock(
-        runtimeModule,
-        header,
-        bytecode,
-        functionID,
-        cacheSize,
-        writePropCacheOffset);
-  }
-
   /// Override of delete that balances the memory allocated in our create()
   /// function. Note the destructor has run already.
   static void operator delete(void *cb) {
@@ -237,7 +214,15 @@ class CodeBlock final
   // Mark all hidden classes in the property cache as roots.
   void markCachedHiddenClasses(Runtime &runtime, WeakRootAcceptor &acceptor);
 
-  static CodeBlock *createCodeBlock(
+  /// Create a CodeBlock for a given runtime module \p runtimeModule.
+  /// The result must be deallocated via the overridden delete operator,
+  /// which is why we use unique_ptr.
+  /// \param runtimeModule the RuntimeModule that it will belong to.
+  /// \param header the header of the function.
+  /// \param bytecode the bytecode of the function.
+  /// \param functionID the ID of the function in the bytecode.
+  /// \return a unique pointer to the CodeBlock.
+  static std::unique_ptr<CodeBlock> createCodeBlock(
       RuntimeModule *runtimeModule,
       hbc::RuntimeFunctionHeader header,
       const uint8_t *bytecode,

@@ -486,9 +486,9 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
   }
 
   llvh::DenseSet<CodeBlock *> unloadingBlocks;
-  for (auto *block : module->getFunctionMap()) {
+  for (const auto &block : module->getFunctionMap()) {
     if (block) {
-      unloadingBlocks.insert(block);
+      unloadingBlocks.insert(block.get());
     }
   }
 
