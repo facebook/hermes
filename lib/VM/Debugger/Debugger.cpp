@@ -1161,6 +1161,13 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   // skipping any CodeBlocks we've seen before.
   GCScope gcScope{runtime_};
   for (auto &runtimeModule : runtime_.getRuntimeModules()) {
+    const auto &request = breakpoint.requestedLocation;
+    if (request.fileId != kInvalidLocation &&
+        request.fileId != runtimeModule.getScriptID()) {
+      // User specified a file, so skip the other files.
+      continue;
+    }
+
     llvh::DenseSet<CodeBlock *> visited{};
     std::vector<CodeBlock *> toVisit{};
     for (uint32_t i = 0, e = runtimeModule.getNumCodeBlocks(); i < e; ++i) {
@@ -1174,7 +1181,9 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       CodeBlock *codeBlock = toVisit.back();
       toVisit.pop_back();
 
-      if (!codeBlock || !codeBlock->isLazy()) {
+      assert(codeBlock && "CodeBlock should be initialized");
+
+      if (!codeBlock->isLazy()) {
         // When looking for a lazy code block to expand,
         // there's no point looking at the non-lazy ones.
         continue;
@@ -1186,13 +1195,8 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       }
 
       visited.insert(codeBlock);
-      auto start = codeBlock->getLazyFunctionStartLoc();
-      auto end = codeBlock->getLazyFunctionEndLoc();
 
-      const auto &request = breakpoint.requestedLocation;
-      if ((start.line < request.line && request.line < end.line) ||
-          ((start.line == request.line || request.line == end.line) &&
-           (start.col <= request.column && request.column <= end.col))) {
+      if (codeBlock->coordsInLazyFunction(request.line, request.column)) {
         // The code block probably contains the breakpoint we want to set.
         // First, we compile it.
         if (LLVM_UNLIKELY(

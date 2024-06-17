@@ -212,6 +212,12 @@ class CodeBlock final
     return lazyCompileImpl(runtime);
   }
   ExecutionStatus lazyCompileImpl(Runtime &runtime);
+
+  /// \pre isLazy() is true.
+  /// \param line 1-based line.
+  /// \param col 1-based column.
+  /// \return whether the coordinates are in the lazy function.
+  bool coordsInLazyFunction(uint32_t line, uint32_t col) const;
 #else
   bool isLazy() const {
     return false;

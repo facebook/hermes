@@ -189,6 +189,35 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
   }
 }
 
+bool coordsInLazyFunction(
+    hbc::BCProvider *baseProvider,
+    uint32_t funcID,
+    uint32_t line,
+    uint32_t col) {
+  auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
+  assert(lazyFunc.isLazy() && "function is not lazy");
+  Function *F = lazyFunc.getLazyFunction();
+  assert(F && "no lazy IR for lazy function");
+
+  SourceErrorManager &manager =
+      F->getParent()->getContext().getSourceErrorManager();
+
+  // Convert the coords to SMLoc to check for membership, because that's simpler
+  // than converting the exclusive end SMLoc of the function to coords,
+  // plus it only requires one conversion.
+  SourceErrorManager::SourceCoords coords{
+      manager.findBufferIdForLoc(F->getSourceRange().Start), line, col};
+  SMLoc loc = manager.findSMLocFromCoords(coords);
+
+  if (!loc.isValid())
+    return false;
+
+  return F->getSourceRange().Start.getPointer() <= loc.getPointer() &&
+      loc.getPointer() < F->getSourceRange().End.getPointer();
+}
+
 } // namespace hbc
 } // namespace hermes
 

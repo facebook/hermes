@@ -208,6 +208,13 @@ ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
 
   return ExecutionStatus::RETURNED;
 }
+
+bool CodeBlock::coordsInLazyFunction(uint32_t line, uint32_t col) const {
+  assert(isLazy() && "function is not lazy");
+
+  return hbc::coordsInLazyFunction(
+      runtimeModule_->getBytecode(), functionID_, line, col);
+}
 #endif
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {

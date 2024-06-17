@@ -80,6 +80,20 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
     hbc::BCProvider *baseProvider,
     uint32_t funcID);
 
+/// \pre the BytecodeFunction at funcID is lazy.
+/// \param provider the BCProviderFromSrc owning the BytecodeModule.
+///   Passed in as BCProvider to avoid BCProviderFromSrc dependencies in
+///   CodeBlock (for simplicity).
+/// \param funcID the ID of the lazy function.
+/// \param line 1-based line.
+/// \param col 1-based column.
+/// \return whether the line/col location is contained in the lazy function.
+bool coordsInLazyFunction(
+    hbc::BCProvider *provider,
+    uint32_t funcID,
+    uint32_t line,
+    uint32_t col);
+
 } // namespace hbc
 } // namespace hermes
 
