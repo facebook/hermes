@@ -34,9 +34,6 @@ RuntimeModule::RuntimeModule(
       scriptID_(scriptID) {
   runtime_.addRuntimeModule(this);
   Domain::addRuntimeModule(domain, runtime, this);
-#ifndef HERMESVM_LEAN
-  lazyRoot_ = this;
-#endif
 }
 
 SymbolID RuntimeModule::createSymbolFromStringIDMayAllocate(
@@ -67,10 +64,8 @@ RuntimeModule::~RuntimeModule() {
   runtime_.getCrashManager().unregisterMemory(this);
   runtime_.removeRuntimeModule(this);
 
-  // We may reference other CodeBlocks through lazy compilation, but we only
-  // own the ones that reference us.
   for (auto *block : functionMap_) {
-    if (block != nullptr && block->getRuntimeModule() == this) {
+    if (block != nullptr) {
       runtime_.getHeap().getIDTracker().untrackNative(block);
       delete block;
     }
@@ -154,75 +149,6 @@ CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
       index);
   return functionMap_[index];
 }
-
-#ifndef HERMESVM_LEAN
-RuntimeModule *RuntimeModule::createLazyModule(
-    Runtime &runtime,
-    Handle<Domain> domain,
-    RuntimeModule *parent,
-    uint32_t functionID) {
-  auto RM = createUninitialized(runtime, domain);
-  RM->lazyRoot_ = parent->lazyRoot_;
-  // Copy the lazy root's script ID for lazy modules.
-  RM->scriptID_ = RM->lazyRoot_->scriptID_;
-
-  // Set the bcProvider's BytecodeModule to point to the parent's.
-  assert(parent->isInitialized() && "Parent module must have been initialized");
-
-  auto *bcFunction = &llvh::cast<hbc::BCProviderFromSrc>(parent->getBytecode())
-                          ->getBytecodeModule()
-                          ->getFunction(functionID);
-
-  RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
-
-  // We don't know which function index this block will eventually represent,
-  // so just add it as 0 to ensure ownership. We'll move it later in
-  // `initializeLazy`.
-  RM->functionMap_.emplace_back(CodeBlock::createCodeBlock(
-      RM, RM->bcProvider_->getFunctionHeader(functionID), {}, functionID));
-
-  // The module doesn't have a string table until we've compiled the block,
-  // so just add the string name as 0 in the mean time for f.name to work via
-  // getLazyName(). Since it's in the stringIDMap_, it'll be correctly GC'd.
-  RM->stringIDMap_.emplace_back(parent->getSymbolIDFromStringIDMayAllocate(
-      bcFunction->getHeader().functionName));
-
-  return RM;
-}
-
-SymbolID RuntimeModule::getLazyName() {
-  assert(functionMap_.size() == 1 && "Not a lazy module?");
-  assert(stringIDMap_.size() == 1 && "Missing lazy function name symbol");
-  assert(this->stringIDMap_[0].isValid() && "Invalid function name symbol");
-  return this->stringIDMap_[0];
-}
-
-void RuntimeModule::initializeLazyMayAllocate(
-    std::unique_ptr<hbc::BCProvider> bytecode) {
-  // Clear the old data provider first.
-  bcProvider_ = nullptr;
-
-  // Initialize without CJS module table because this compilation is done
-  // separately, and the bytecode will not contain a module table.
-  initializeWithoutCJSModulesMayAllocate(std::move(bytecode));
-
-  // createLazyCodeBlock added a single codeblock as functionMap_[0]
-  assert(functionMap_[0] && "Missing first entry");
-
-  // We should move it to the index where it's supposed to be. This ensures a
-  // 1-1 relationship between codeblocks and bytecodefunctions, which the
-  // debugger relies on for setting step-out breakpoints in all functions.
-  if (bcProvider_->getGlobalFunctionIndex() == 0) {
-    // No move needed
-    return;
-  }
-  assert(
-      !functionMap_[bcProvider_->getGlobalFunctionIndex()] &&
-      "Entry point is already occupied");
-  functionMap_[bcProvider_->getGlobalFunctionIndex()] = functionMap_[0];
-  functionMap_[0] = nullptr;
-}
-#endif
 
 void RuntimeModule::importStringIDMapMayAllocate() {
   assert(bcProvider_ && "Uninitialized RuntimeModule");

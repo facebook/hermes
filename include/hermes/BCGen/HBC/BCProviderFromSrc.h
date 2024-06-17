@@ -186,10 +186,6 @@ class BCProviderFromSrc final : public BCProviderBase {
     return module_->getFunction(functionID).isLazy();
   }
 
-  bool isLazy() const override {
-    return false;
-  }
-
   /// \return whether the provider can be loaded as persistent,
   /// which is not possible if the underlying storage may be mutated,
   /// e.g. in the case of lazy compilation.
@@ -233,65 +229,6 @@ class BCProviderFromSrc final : public BCProviderBase {
   }
 };
 
-/// BCProviderLazy is used during lazy compilation. When a function is created
-/// to be lazily compiled later, we create a BCProviderLazy object with
-/// a pointer to such BytecodeFunction.
-class BCProviderLazy final : public BCProviderBase {
-  /// Pointer to the BytecodeFunction.
-  hbc::BytecodeFunction *bytecodeFunction_;
-
-  explicit BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction);
-
-  /// No debug information will be available without compiling it.
-  void createDebugInfo() override {
-    hermes_fatal("Accessing debug info from a lazy module");
-  }
-
- public:
-  static std::unique_ptr<BCProviderBase> createBCProviderLazy(
-      hbc::BytecodeFunction *bytecodeFunction) {
-    return std::unique_ptr<BCProviderBase>(
-        new BCProviderLazy(bytecodeFunction));
-  }
-
-  RuntimeFunctionHeader getFunctionHeader(uint32_t) const override {
-    return RuntimeFunctionHeader(&bytecodeFunction_->getHeader());
-  }
-
-  StringTableEntry getStringTableEntry(uint32_t index) const override {
-    hermes_fatal("Accessing string table from a lazy module");
-  }
-
-  const uint8_t *getBytecode(uint32_t) const override {
-    hermes_fatal("Accessing bytecode from a lazy module");
-  }
-
-  llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
-      uint32_t) const override {
-    hermes_fatal("Accessing exception info from a lazy module");
-  }
-
-  const hbc::DebugOffsets *getDebugOffsets(uint32_t) const override {
-    hermes_fatal("Accessing debug offsets from a lazy module");
-  }
-
-  bool isFunctionLazy(uint32_t) const override {
-    return true;
-  }
-
-  bool isLazy() const override {
-    return true;
-  }
-
-  /// \return the pointer to the BytecodeFunction.
-  hbc::BytecodeFunction *getBytecodeFunction() {
-    return bytecodeFunction_;
-  }
-
-  static bool classof(const BCProviderBase *provider) {
-    return provider->getKind() == BCProviderKind::BCProviderLazy;
-  }
-};
 #endif // HERMESVM_LEAN
 } // namespace hbc
 } // namespace hermes

@@ -222,12 +222,5 @@ BCProviderFromSrc::createBCProviderFromSrc(
   return {std::move(result), std::string{}};
 }
 
-BCProviderLazy::BCProviderLazy(hbc::BytecodeFunction *bytecodeFunction)
-    : BCProviderBase(BCProviderKind::BCProviderLazy),
-      bytecodeFunction_(bytecodeFunction) {
-  // Lazy module should always contain one function to begin with.
-  functionCount_ = 1;
-}
-
 } // namespace hbc
 } // namespace hermes

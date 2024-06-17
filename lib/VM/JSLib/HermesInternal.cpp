@@ -431,18 +431,14 @@ static CallResult<HermesValue> getCodeBlockFileName(
     const CodeBlock *codeBlock,
     OptValue<hbc::DebugSourceLocation> location) {
   RuntimeModule *runtimeModule = codeBlock->getRuntimeModule();
-  if (!runtimeModule->getBytecode()->isLazy()) {
-    // Lazy code blocks do not have debug information (and will hermes_fatal if
-    // you try to access it), so only touch it for non-lazy blocks.
-    if (location) {
-      auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
-      return StringPrimitive::createEfficient(
-          runtime, debugInfo->getUTF8FilenameByID(location->filenameId));
-    } else {
-      llvh::StringRef sourceURL = runtimeModule->getSourceURL();
-      if (!sourceURL.empty()) {
-        return StringPrimitive::createEfficient(runtime, sourceURL);
-      }
+  if (location) {
+    auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
+    return StringPrimitive::createEfficient(
+        runtime, debugInfo->getUTF8FilenameByID(location->filenameId));
+  } else {
+    llvh::StringRef sourceURL = runtimeModule->getSourceURL();
+    if (!sourceURL.empty()) {
+      return StringPrimitive::createEfficient(runtime, sourceURL);
     }
   }
   return HermesValue::encodeUndefinedValue();
@@ -678,9 +674,7 @@ hermesInternalIsLazy(void *, Runtime &runtime, NativeArgs args) {
     return HermesValue::encodeBoolValue(false);
   }
 
-  RuntimeModule *runtimeModule = codeBlock->getRuntimeModule();
-  return HermesValue::encodeBoolValue(
-      runtimeModule && runtimeModule->getBytecode()->isLazy());
+  return HermesValue::encodeBoolValue(codeBlock->isLazy());
 }
 
 Handle<JSObject> createHermesInternalObject(

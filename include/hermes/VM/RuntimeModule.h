@@ -143,12 +143,6 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   CodeBlock *getCodeBlockSlowPath(unsigned index);
 
-#ifndef HERMESVM_LEAN
-  /// For a lazy module, this is the RuntimeModule that ultimately spawned it
-  // (the global function of the loaded file).
-  RuntimeModule *lazyRoot_;
-#endif
-
  public:
   ~RuntimeModule();
 
@@ -176,46 +170,6 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       RuntimeModuleFlags flags = {},
       facebook::hermes::debugger::ScriptID scriptID =
           facebook::hermes::debugger::kInvalidLocation);
-
-#ifndef HERMESVM_LEAN
-  /// Crates a lazy RuntimeModule as part of lazy compilation. This module
-  /// will contain only one CodeBlock that points to \p function.
-  static RuntimeModule *createLazyModule(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      RuntimeModule *parent,
-      uint32_t functionID);
-
-  /// Verifies that there is only one CodeBlock in this module, and return it.
-  /// This is used when a lazy code block is created which should be the only
-  /// block in the module.
-  CodeBlock *getOnlyLazyCodeBlock() const {
-    assert(functionMap_.size() == 1 && functionMap_[0] && "Not a lazy module?");
-    return functionMap_[0];
-  }
-
-  /// Get the name symbol ID associated with the getOnlyLazyCodeBlock().
-  SymbolID getLazyName();
-
-  /// Initialize lazy modules created with \p createUninitialized.
-  /// Calls `initialize` and does a bit of extra work.
-  /// \param bytecode the bytecode data to initialize it with.
-  void initializeLazyMayAllocate(std::unique_ptr<hbc::BCProvider> bytecode);
-#endif
-
-  /// If this function was lazily compiled, return the RuntimeModule with the
-  /// file's global function (i.e. the first RM created when we started
-  /// interpreting and lazily compiling the source code). For other RMs,
-  /// e.g. those loaded from precompiled bytecode, this is just itself.
-  /// We also return this for RM created from serialization/deserialization.
-  /// Note that lazy and serialization are not intended to work together.
-  RuntimeModule *getLazyRootModule() {
-#if defined(HERMESVM_LEAN)
-    return this;
-#else
-    return lazyRoot_;
-#endif
-  }
 
   /// Initialize modules created with \p createUninitialized,
   /// but do not import the CJS module table, allowing us to always succeed.
@@ -286,11 +240,6 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       return functionMap_[index];
     }
     return getCodeBlockSlowPath(index);
-  }
-
-  /// \return whether this RuntimeModule has been initialized.
-  bool isInitialized() const {
-    return !bcProvider_->isLazy();
   }
 
   const hbc::BCProvider *getBytecode() const {

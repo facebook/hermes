@@ -53,11 +53,6 @@ class CodeBlock final
   /// cache.
   const uint32_t writePropCacheOffset_;
 
-  /// Helper function for getting start and end locations.
-  /// Given an SMLoc, returns the source coordinates of it in the lazy function.
-  /// \param start if true, return the start coordinates, else end coordinates.
-  SourceErrorManager::SourceCoords getLazyFunctionLoc(bool start) const;
-
   /// \return the base pointer of the property cache.
   PropertyCacheEntry *propertyCache() {
     return getTrailingObjects<PropertyCacheEntry>();
@@ -226,16 +221,6 @@ class CodeBlock final
     return ExecutionStatus::RETURNED;
   }
 #endif
-
-  /// Get the start location of this function, if it's lazy.
-  SourceErrorManager::SourceCoords getLazyFunctionStartLoc() const {
-    return getLazyFunctionLoc(true);
-  }
-
-  /// Get the end location of this function, if it's lazy.
-  SourceErrorManager::SourceCoords getLazyFunctionEndLoc() const {
-    return getLazyFunctionLoc(false);
-  }
 
   inline PropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
     assert(idx < writePropCacheOffset_ && "idx out of ReadCache bound");

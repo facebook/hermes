@@ -142,7 +142,7 @@ CodeBlock *CodeBlock::createCodeBlock(
 
 #ifndef HERMESVM_LEAN
   bool isCodeBlockLazy = !bytecode;
-  if (!runtimeModule->isInitialized() || isCodeBlockLazy) {
+  if (isCodeBlockLazy) {
     readCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
     cacheSize = 2 * readCacheSize;
   }
@@ -222,9 +222,7 @@ OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   // reserved into the function source table of the root bytecode module.
   // For non-lazy module, the lazy root module is itself.
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> table =
-      runtimeModule_->getLazyRootModule()
-          ->getBytecode()
-          ->getFunctionSourceTable();
+      runtimeModule_->getBytecode()->getFunctionSourceTable();
 
   // Performs a binary search since the function source table is sorted by the
   // 1st value. We could further optimize the lookup by loading it as a map in
@@ -252,11 +250,6 @@ OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   if (ret == hbc::DebugOffsets::NO_OFFSET)
     return llvh::None;
   return ret;
-}
-
-SourceErrorManager::SourceCoords CodeBlock::getLazyFunctionLoc(
-    bool start) const {
-  hermes_fatal("lazy function location unsupported");
 }
 
 void CodeBlock::markCachedHiddenClasses(

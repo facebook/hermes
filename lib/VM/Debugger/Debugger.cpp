@@ -471,12 +471,6 @@ ExecutionStatus Debugger::debuggerLoop(
 }
 
 void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
-  // This function should only be called on the main RuntimeModule and not on
-  // any "child" RuntimeModules it may create through lazy compilation.
-  assert(
-      module == module->getLazyRootModule() &&
-      "Expected to only run on lazy root module");
-
   if (!getShouldPauseOnScriptLoad())
     return;
   // We want to pause on the first instruction of this module.
@@ -1234,10 +1228,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
     auto &runtimeModule = *it;
     GCScope gcScope{runtime_};
 
-    if (!runtimeModule.isInitialized()) {
-      // Uninitialized module.
-      continue;
-    }
     if (!runtimeModule.getBytecode()->getDebugInfo()) {
       // No debug info in this module, keep going.
       continue;
@@ -1328,11 +1318,6 @@ void Debugger::unresolveBreakpointLocation(Breakpoint &breakpoint) {
 
 auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
   for (auto &runtimeModule : runtime_.getRuntimeModules()) {
-    if (!runtimeModule.isInitialized()) {
-      // Uninitialized module.
-      continue;
-    }
-
     auto *debugInfo = runtimeModule.getBytecode()->getDebugInfo();
     if (!debugInfo) {
       // No debug info in this module, keep going.
@@ -1356,15 +1341,6 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
 auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
   std::vector<SourceLocation> loadedScripts;
   for (auto &runtimeModule : runtime_.getRuntimeModules()) {
-    if (!runtimeModule.isInitialized()) {
-      // Uninitialized module.
-      continue;
-    }
-    // Only include a RuntimeModule if it's the root module
-    if (runtimeModule.getLazyRootModule() != &runtimeModule) {
-      continue;
-    }
-
     auto *debugInfo = runtimeModule.getBytecode()->getDebugInfo();
     if (!debugInfo) {
       // No debug info in this module, keep going.

@@ -94,7 +94,6 @@ static_assert(
 enum class BCProviderKind {
   BCProviderFromBuffer,
   BCProviderFromSrc,
-  BCProviderLazy,
 };
 
 /// Base class designed to provide bytecode data. We use this class
@@ -282,9 +281,6 @@ class BCProviderBase {
 
   /// Check whether a function with \p functionID is lazy.
   virtual bool isFunctionLazy(uint32_t functionID) const = 0;
-
-  /// Check whether the whole data provider is lazy.
-  virtual bool isLazy() const = 0;
 
   /// Read some bytecode into OS page cache (only implemented for buffers).
   virtual void startWarmup(uint8_t percent) {}
@@ -520,10 +516,6 @@ class BCProviderFromBuffer final : public BCProviderBase {
   }
 
   bool isFunctionLazy(uint32_t functionID) const override {
-    return false;
-  }
-
-  bool isLazy() const override {
     return false;
   }
 
