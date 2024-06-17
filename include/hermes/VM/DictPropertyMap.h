@@ -184,7 +184,9 @@ class DictPropertyMap final
   }
 
   /// Return the maximum possible capacity of DictPropMap.
-  static size_type getMaxCapacity();
+  static constexpr DictPropertyMap::size_type getMaxCapacity() {
+    return constFindMaxCapacity(0, kSearchUpperBound);
+  }
 
   /// Create an instance of DictPropertyMap with the specified capacity.
   static CallResult<PseudoHandle<DictPropertyMap>> create(
@@ -468,6 +470,14 @@ class DictPropertyMap final
     return constWouldFitAllocation(mid) ? constFindMaxCapacity(mid, upper)
                                         : constFindMaxCapacity(lower, mid);
   }
+
+  /// The upper bound of the search when trying to find the maximum capacity
+  /// of this object, given GC::maxAllocationSize().
+  /// It was chosen to be a value that is certain to not fit into an allocation;
+  /// at the same time we want to make it smaller, so/ we have arbitrarily
+  /// chosen to divide the max allocation size by two, which is still guaranteed
+  /// not to fit.
+  static constexpr uint32_t kSearchUpperBound = GC::maxAllocationSize() / 2;
 
   /// A place to put things in order to avoid restrictions on using constexpr
   /// functions declared in the same class.
