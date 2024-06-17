@@ -953,6 +953,15 @@ void SemanticResolver::visit(ESTree::AwaitExpressionNode *awaitExpr) {
     sm_.error(awaitExpr->getSourceRange(), "'await' not in an async function");
   }
 
+  if (functionContext()->isFormalParams) {
+    // ES14.0 15.8.1
+    // It is a Syntax Error if FormalParameters Contains AwaitExpression
+    // is true.
+    sm_.error(
+        awaitExpr->getSourceRange(),
+        "'await' not allowed in a formal parameter");
+  }
+
   visitESTreeChildren(*this, awaitExpr);
 }
 
