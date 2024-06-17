@@ -273,6 +273,11 @@ class HiddenClass final : public GCCell {
     return cell->getKind() == CellKind::HiddenClassKind;
   }
 
+  /// \return the maximum number of properties that a hidden class can have.
+  static constexpr auto maxNumProperties() {
+    return DictPropertyMap::getMaxCapacity();
+  }
+
   /// Create a "root" hidden class - one that doesn't define any properties, but
   /// is a starting point for a hierarchy.
   static CallResult<HermesValue> createRoot(Runtime &runtime);

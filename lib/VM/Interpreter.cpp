@@ -498,7 +498,7 @@ ExecutionStatus Interpreter::putByValTransient_RJS(
   return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
 }
 
-static Handle<HiddenClass> getHiddenClassForBuffer(
+static CallResult<Handle<HiddenClass>> getHiddenClassForBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
     unsigned shapeTableIndex) {
@@ -518,6 +518,15 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
   ShapeTableEntry shapeInfo = curCodeBlock->getRuntimeModule()
                                   ->getBytecode()
                                   ->getObjectShapeTable()[shapeTableIndex];
+
+  // Ensure that the hidden class does not start out with any properties, so we
+  // just need to check the shape table entry.
+  assert(clazz->getNumProperties() == 0);
+  if (shapeInfo.numProps > HiddenClass::maxNumProperties()) {
+    return runtime.raiseRangeError(
+        TwineChar16("Object has more than ") + HiddenClass::maxNumProperties() +
+        " properties");
+  }
 
   GCScopeMarkerRAII marker{runtime};
   // Set up the visitor to populate keys in the hidden class.
@@ -578,10 +587,15 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     CodeBlock *curCodeBlock,
     unsigned shapeTableIndex,
     unsigned valBufferOffset) {
+  auto hcRes = getHiddenClassForBuffer(runtime, curCodeBlock, shapeTableIndex);
+  if (LLVM_UNLIKELY(hcRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  Handle<HiddenClass> clazz = *hcRes;
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  auto clazz = getHiddenClassForBuffer(runtime, curCodeBlock, shapeTableIndex);
   auto obj = runtime.makeHandle(JSObject::create(runtime, clazz));
   auto numLiterals = clazz->getNumProperties();
 
