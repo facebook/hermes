@@ -152,10 +152,7 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
     AllocObjectLiteralInst *allocInst) {
   Function *F = allocInst->getParent()->getParent();
   IRBuilder builder(F);
-
-  auto maxSize = (unsigned)UINT16_MAX;
   uint32_t size = allocInst->getKeyValuePairCount();
-  size = std::min(maxSize, size);
 
   // Should not create HBCAllocObjectFromBufferInst for an object with 0
   // properties.
