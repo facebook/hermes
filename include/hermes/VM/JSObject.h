@@ -1689,14 +1689,19 @@ inline CallResult<PseudoHandle<JSObject>> JSObject::allocatePropStorage(
   if (LLVM_LIKELY(size <= DIRECT_PROPERTY_SLOTS))
     return self;
 
-  Handle<JSObject> selfHandle = runtime.makeHandle(std::move(self));
+  struct : public Locals {
+    PinnedValue<JSObject> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.self = self.get();
+
   if (LLVM_UNLIKELY(
-          allocatePropStorage(selfHandle, runtime, size) ==
+          allocatePropStorage(lv.self, runtime, size) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return PseudoHandle<JSObject>{selfHandle};
+  return PseudoHandle<JSObject>{lv.self};
 }
 
 template <typename T>

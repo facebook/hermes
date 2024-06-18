@@ -331,7 +331,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// Find the cached hidden class for an object literal, if one exists.
   /// \param shapeTableIndex is the ID of an object literal shape.
   /// \return the cached hidden class.
-  llvh::Optional<Handle<HiddenClass>> findCachedLiteralHiddenClass(
+  HiddenClass *findCachedLiteralHiddenClass(
       Runtime &runtime,
       uint32_t shapeTableIndex) const;
 

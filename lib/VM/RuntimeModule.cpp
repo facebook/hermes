@@ -331,17 +331,14 @@ void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
   }
 }
 
-llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
+HiddenClass *RuntimeModule::findCachedLiteralHiddenClass(
     Runtime &runtime,
     uint32_t shapeTableIndex) const {
   assert(
       shapeTableIndex < objectLiteralHiddenClasses_.size() &&
       "Invalid shape table index");
-  auto &HC = objectLiteralHiddenClasses_[shapeTableIndex];
-  if (HC) {
-    return runtime_.makeHandle(HC.get(runtime, runtime.getHeap()));
-  }
-  return llvh::None;
+  return objectLiteralHiddenClasses_[shapeTableIndex].get(
+      runtime, runtime.getHeap());
 }
 
 void RuntimeModule::tryCacheLiteralHiddenClass(
@@ -349,7 +346,7 @@ void RuntimeModule::tryCacheLiteralHiddenClass(
     unsigned shapeTableIndex,
     HiddenClass *clazz) {
   assert(
-      !findCachedLiteralHiddenClass(runtime, shapeTableIndex).hasValue() &&
+      !findCachedLiteralHiddenClass(runtime, shapeTableIndex) &&
       "Why are we caching an item already cached?");
   objectLiteralHiddenClasses_[shapeTableIndex].set(runtime, clazz);
 }

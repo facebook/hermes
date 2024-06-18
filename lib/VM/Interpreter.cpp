@@ -498,22 +498,26 @@ ExecutionStatus Interpreter::putByValTransient_RJS(
   return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
 }
 
-static CallResult<Handle<HiddenClass>> getHiddenClassForBuffer(
+static CallResult<HiddenClass *> getHiddenClassForBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
     unsigned shapeTableIndex) {
   RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
 
-  if (auto clazzOpt = runtimeModule->findCachedLiteralHiddenClass(
+  if (auto clazz = runtimeModule->findCachedLiteralHiddenClass(
           runtime, shapeTableIndex)) {
-    return *clazzOpt;
+    return clazz;
   }
 
-  MutableHandle<> tmpHandleKey{runtime};
-  MutableHandle<HiddenClass> clazz =
-      runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
-          vmcast<JSObject>(runtime.objectPrototype),
-          JSObject::numOverlapSlots<JSObject>()));
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<> tmpKey;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.clazz = *runtime.getHiddenClassForPrototype(
+      vmcast<JSObject>(runtime.objectPrototype),
+      JSObject::numOverlapSlots<JSObject>());
 
   ShapeTableEntry shapeInfo = curCodeBlock->getRuntimeModule()
                                   ->getBytecode()
@@ -521,7 +525,7 @@ static CallResult<Handle<HiddenClass>> getHiddenClassForBuffer(
 
   // Ensure that the hidden class does not start out with any properties, so we
   // just need to check the shape table entry.
-  assert(clazz->getNumProperties() == 0);
+  assert(lv.clazz->getNumProperties() == 0);
   if (shapeInfo.numProps > HiddenClass::maxNumProperties()) {
     return runtime.raiseRangeError(
         TwineChar16("Object has more than ") + HiddenClass::maxNumProperties() +
@@ -557,12 +561,12 @@ static CallResult<Handle<HiddenClass>> getHiddenClassForBuffer(
       llvm_unreachable("Keys cannot be boolean");
     }
 
-    MutableHandle<HiddenClass> &clazz;
-    MutableHandle<> &tmpHandleKey;
+    PinnedValue<HiddenClass> &clazz;
+    PinnedValue<> &tmpHandleKey;
     GCScopeMarkerRAII &marker;
     Runtime &runtime;
     CodeBlock *curCodeBlock;
-  } v{clazz, tmpHandleKey, marker, runtime, curCodeBlock};
+  } v{lv.clazz, lv.tmpKey, marker, runtime, curCodeBlock};
 
   // Visit each literal in the buffer and add it as a property.
   SerializedLiteralParser::parse(
@@ -574,12 +578,13 @@ static CallResult<Handle<HiddenClass>> getHiddenClassForBuffer(
       v);
 
   assert(
-      shapeInfo.numProps == clazz->getNumProperties() &&
+      shapeInfo.numProps == lv.clazz->getNumProperties() &&
       "numLiterals should match hidden class property count.");
-  if (LLVM_LIKELY(!clazz->isDictionary())) {
-    runtimeModule->tryCacheLiteralHiddenClass(runtime, shapeTableIndex, *clazz);
+  if (LLVM_LIKELY(!lv.clazz->isDictionary())) {
+    runtimeModule->tryCacheLiteralHiddenClass(
+        runtime, shapeTableIndex, *lv.clazz);
   }
-  return {clazz};
+  return *lv.clazz;
 }
 
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
@@ -587,17 +592,23 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     CodeBlock *curCodeBlock,
     unsigned shapeTableIndex,
     unsigned valBufferOffset) {
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto hcRes = getHiddenClassForBuffer(runtime, curCodeBlock, shapeTableIndex);
   if (LLVM_UNLIKELY(hcRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  Handle<HiddenClass> clazz = *hcRes;
+  lv.clazz = *hcRes;
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  auto obj = runtime.makeHandle(JSObject::create(runtime, clazz));
-  auto numLiterals = clazz->getNumProperties();
+  lv.obj = JSObject::create(runtime, lv.clazz).get();
+  auto numLiterals = lv.clazz->getNumProperties();
 
   // Set up the visitor to populate property values in the object.
   struct {
@@ -623,7 +634,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     Runtime &runtime;
     RuntimeModule *runtimeModule;
     size_t propIndex;
-  } v{obj, runtime, curCodeBlock->getRuntimeModule(), 0};
+  } v{lv.obj, runtime, curCodeBlock->getRuntimeModule(), 0};
 
   // Visit each value in the given buffer, and set it in the object.
   SerializedLiteralParser::parse(
@@ -634,7 +645,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       numLiterals,
       v);
 
-  return createPseudoHandle(obj.getHermesValue());
+  return createPseudoHandle(lv.obj.getHermesValue());
 }
 
 CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
@@ -2904,7 +2915,6 @@ tailCall:
           goto exception;
         }
         O1REG(NewObjectWithBuffer) = resPH->get();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewObjectWithBuffer);
         DISPATCH;
       }
@@ -2920,7 +2930,6 @@ tailCall:
           goto exception;
         }
         O1REG(NewObjectWithBufferLong) = resPH->get();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewObjectWithBufferLong);
         DISPATCH;
       }
