@@ -474,39 +474,18 @@ extern "C" void _sh_ljs_store_np_to_env(
       .setNonPtr(HermesValue::fromRaw(val.raw), getRuntime(shr).getHeap());
 }
 
-static SHLegacyValue createClosure(
-    SHRuntime *shr,
-    const SHLegacyValue *env,
-    SHLegacyValue (*func)(SHRuntime *),
-    const SHNativeFuncInfo *funcInfo) {
-  Runtime &runtime = getRuntime(shr);
-  GCScopeMarkerRAII marker{runtime};
-  auto parentHandle =
-      Callable::inferredParent(runtime, (FuncKind)funcInfo->kind);
-
-  SHLegacyValue res = NativeJSFunction::create(
-                          runtime,
-                          parentHandle,
-                          env ? Handle<Environment>::vmcast(toPHV(env))
-                              : runtime.makeNullHandle<Environment>(),
-                          func,
-                          funcInfo,
-                          0)
-                          .getHermesValue();
-  return res;
-}
-
 extern "C" SHLegacyValue _sh_ljs_create_generator_object(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
-    const SHNativeFuncInfo *funcInfo) {
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit) {
   assert(
       !_sh_ljs_is_null(*env) && "inner generator cannot have null environment");
   Runtime &runtime = getRuntime(shr);
 
   auto genObjRes =
-      [&runtime, env, func, funcInfo]() -> CallResult<SHLegacyValue> {
+      [&runtime, env, func, funcInfo, unit]() -> CallResult<SHLegacyValue> {
     GCScopeMarkerRAII marker{runtime};
     Handle<NativeJSFunction> innerFunc = NativeJSFunction::create(
         runtime,
@@ -514,6 +493,7 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
         Handle<Environment>::vmcast(toPHV(env)),
         func,
         funcInfo,
+        unit,
         0);
     auto generatorFunction = runtime.makeHandle(vmcast<NativeJSFunction>(
         runtime.getCurrentFrame().getCalleeClosureUnsafe()));
@@ -546,8 +526,23 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
-    const SHNativeFuncInfo *funcInfo) {
-  return createClosure(shr, env, func, funcInfo);
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit) {
+  Runtime &runtime = getRuntime(shr);
+  GCScopeMarkerRAII marker{runtime};
+  auto parentHandle =
+      Callable::inferredParent(runtime, (FuncKind)funcInfo->kind);
+
+  return NativeJSFunction::create(
+             runtime,
+             parentHandle,
+             env ? Handle<Environment>::vmcast(toPHV(env))
+                 : runtime.makeNullHandle<Environment>(),
+             func,
+             funcInfo,
+             unit,
+             0)
+      .getHermesValue();
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {

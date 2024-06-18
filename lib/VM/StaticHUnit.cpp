@@ -127,7 +127,7 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
   locals.head.count = 0;
 
   SHLegacyValue closure = _sh_ljs_create_closure(
-      shr, nullptr, unit->unit_main, unit->unit_main_info);
+      shr, nullptr, unit->unit_main, unit->unit_main_info, unit);
 
   auto frame = StackFramePtr::initFrame(
       runtime.getStackPointer(),

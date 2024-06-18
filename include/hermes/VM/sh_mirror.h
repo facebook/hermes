@@ -18,6 +18,7 @@ typedef uintptr_t SHCompressedPointerRawType;
 #endif
 
 typedef struct SHNativeFuncInfo SHNativeFuncInfo;
+typedef struct SHUnit SHUnit;
 
 /// Struct mirroring the layout of PropertyCacheEntry. This allows us to expose
 /// the offsets of certain fields without needing to make the actual C++ version
@@ -70,6 +71,7 @@ typedef struct SHNativeJSFunction {
   SHCallable base;
   NativeJSFunctionPtr functionPtr;
   SHNativeFuncInfo *funcInfo;
+  SHUnit *unit;
 } SHNativeJSFunction;
 
 /// Struct mirroring the layout of Environment.

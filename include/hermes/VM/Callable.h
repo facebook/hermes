@@ -467,6 +467,8 @@ class NativeJSFunction : public Callable {
   const NativeJSFunctionPtr functionPtr_;
   /// Pointer to the information describing this function.
   const SHNativeFuncInfo *functionInfo_;
+  /// Pointer to the SHUnit that created this function.
+  const SHUnit *unit_;
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
   /// How many times the function was called.
@@ -492,6 +494,10 @@ class NativeJSFunction : public Callable {
 
   const SHNativeFuncInfo *getFunctionInfo() const {
     return functionInfo_;
+  }
+
+  const SHUnit *getUnit() const {
+    return unit_;
   }
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
@@ -534,6 +540,7 @@ class NativeJSFunction : public Callable {
       Handle<JSObject> parentHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit,
       unsigned additionalSlotCount = 0);
 
   /// Create an instance of SHLegacyFunction.
@@ -550,6 +557,7 @@ class NativeJSFunction : public Callable {
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit,
       unsigned additionalSlotCount = 0);
 
   /// \return the value in an additional slot.
@@ -581,20 +589,24 @@ class NativeJSFunction : public Callable {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       NativeJSFunctionPtr functionPtr,
-      const SHNativeFuncInfo *funcInfo)
+      const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit)
       : Callable(runtime, *parent, *clazz),
         functionPtr_(functionPtr),
-        functionInfo_(funcInfo) {}
+        functionInfo_(funcInfo),
+        unit_(unit) {}
   NativeJSFunction(
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       Handle<Environment> environment,
       NativeJSFunctionPtr functionPtr,
-      const SHNativeFuncInfo *funcInfo)
+      const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit)
       : Callable(runtime, *parent, *clazz, environment),
         functionPtr_(functionPtr),
-        functionInfo_(funcInfo) {}
+        functionInfo_(funcInfo),
+        unit_(unit) {}
 
  protected:
 #ifdef HERMES_MEMORY_INSTRUMENTATION

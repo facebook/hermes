@@ -47,8 +47,6 @@ typedef struct SHSrcLoc {
 
 /// Encodes some basic information about a native function.
 typedef struct SHNativeFuncInfo {
-  /// The associated unit that holds this function's information.
-  SHUnit *unit;
   /// The index in the global string table to get the function name.
   uint32_t name_index;
   /// The number of arguments this function takes.
@@ -429,7 +427,8 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
-    const SHNativeFuncInfo *funcInfo);
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit);
 
 /// Create a generator object.
 /// \param env Should not be null.
@@ -438,7 +437,8 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_generator_object(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHLegacyValue (*func)(SHRuntime *),
-    const SHNativeFuncInfo *funcInfo);
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr);
 SHERMES_EXPORT void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);

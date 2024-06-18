@@ -422,8 +422,8 @@ class SHNativeJSFunctionTable {
       uint32_t argCount = F->getExpectedParamCountIncludingThis() - 1;
       auto kindVal = F->getKind();
       OS.indent(2);
-      OS << "{ .unit = &THIS_UNIT, .name_index = " << nameIdx
-         << ", .arg_count = " << argCount << ", .prohibit_invoke = "
+      OS << "{ .name_index = " << nameIdx << ", .arg_count = " << argCount
+         << ", .prohibit_invoke = "
          << computeProhibitInvoke(F->getProhibitInvoke())
          << ", .kind = " << computeFuncKind(kindVal) << " },\n";
     }
@@ -1612,7 +1612,7 @@ class InstrGen {
     os_ << ", ";
     os_ << "&s_function_info_table["
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
-        << "]" << ");\n";
+        << "]" << ", (SHUnit *)&THIS_UNIT);\n";
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
     os_.indent(2);
@@ -1625,7 +1625,7 @@ class InstrGen {
     os_ << ", ";
     os_ << "&s_function_info_table["
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
-        << "]" << ");\n";
+        << "]" << ", (SHUnit *)&THIS_UNIT);\n";
   }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";

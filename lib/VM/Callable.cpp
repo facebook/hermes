@@ -130,7 +130,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
 
     const SHNativeFuncInfo *funcInfo = nativeFun->getFunctionInfo();
     assert(funcInfo && "funcInfo cannot be null for a lazy NativeJSFunction");
-    const SHUnit *unit = funcInfo->unit;
+    const SHUnit *unit = nativeFun->getUnit();
     SymbolID name = SymbolID::unsafeCreate(unit->symbols[funcInfo->name_index]);
     uint32_t argCount = funcInfo->arg_count;
     auto cr = Callable::defineNameLengthAndPrototype(
@@ -873,6 +873,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     Handle<JSObject> parentHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit,
     unsigned additionalSlotCount) {
   size_t reservedSlots =
       numOverlapSlots<NativeJSFunction>() + additionalSlotCount;
@@ -881,7 +882,8 @@ Handle<NativeJSFunction> NativeJSFunction::create(
       parentHandle,
       runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
       functionPtr,
-      funcInfo);
+      funcInfo,
+      unit);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
   // Allocate a propStorage if the number of additional slots requires it.
@@ -897,6 +899,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     Handle<Environment> parentEnvHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit,
     unsigned additionalSlotCount) {
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
@@ -906,7 +909,8 @@ Handle<NativeJSFunction> NativeJSFunction::create(
           numOverlapSlots<NativeJSFunction>() + additionalSlotCount),
       parentEnvHandle,
       functionPtr,
-      funcInfo);
+      funcInfo,
+      unit);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
   selfHandle->flags_.lazyObject = 1;
   return selfHandle;
