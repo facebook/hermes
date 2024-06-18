@@ -176,7 +176,10 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
       const DebugFlags &debugFlags);
 #endif
 
-  /// Register this runtime for sampling profiler.
+  /// Register this runtime and thread for sampling profiler. Before using the
+  /// runtime on another thread, invoke this function again from the new thread
+  /// to make the sampling profiler target the new thread (and forget the old
+  /// thread).
   void registerForProfiling();
   /// Unregister this runtime for sampling profiler.
   void unregisterForProfiling();

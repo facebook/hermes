@@ -26,14 +26,21 @@
 
 namespace hermes {
 namespace vm {
+
+/// Open the current thread and \return a handle to it. The handle must later
+/// be closed with a call to the Win32 CloseHandle API.
+static HANDLE openCurrentThread() {
+  return OpenThread(
+      THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION,
+      false,
+      GetCurrentThreadId());
+}
+
 namespace sampling_profiler {
 namespace {
 struct SamplingProfilerWindows : SamplingProfiler {
   SamplingProfilerWindows(Runtime &rt) : SamplingProfiler(rt) {
-    currentThread_ = OpenThread(
-        THREAD_GET_CONTEXT | THREAD_SUSPEND_RESUME | THREAD_QUERY_INFORMATION,
-        false,
-        GetCurrentThreadId());
+    currentThread_ = openCurrentThread();
 
 #if defined(HERMESVM_ENABLE_LOOM)
     fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
@@ -48,6 +55,8 @@ struct SamplingProfilerWindows : SamplingProfiler {
     // TODO(T125910634): re-introduce the requirement for destroying the
     // sampling profiler on the same thread in which it was created.
     Sampler::get()->unregisterRuntime(this);
+
+    CloseHandle(currentThread_);
   }
 
 #if defined(HERMESVM_ENABLE_LOOM)
@@ -121,10 +130,8 @@ struct SamplingProfilerWindows : SamplingProfiler {
   bool loomDataPushEnabled_{false};
 #endif // defined(HERMESVM_ENABLE_LOOM)
 
-  /// Thread that this profiler instance represents. This can currently only
-  /// be set from the constructor of SamplingProfiler, so we need to construct
-  /// a new SamplingProfiler every time the runtime is moved to a different
-  /// thread.
+  /// Thread that this profiler instance represents. This can be updated
+  /// by later calls to SetRuntimeThread.
   HANDLE currentThread_;
 };
 } // namespace
@@ -171,7 +178,9 @@ void Sampler::platformPostSampleStack(SamplingProfiler *localProfiler) {
 bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   auto *winProfiler = static_cast<SamplingProfilerWindows *>(profiler);
 
-  // Suspend the JS thread.
+  // Suspend the JS thread. The runtimeDataLock is held by the caller, ensuring
+  // the runtime won't start to be used on another thread before sampling
+  // begins.
   DWORD prevSuspendCount = SuspendThread(winProfiler->currentThread_);
   if (prevSuspendCount == static_cast<DWORD>(-1)) {
     return true;
@@ -200,11 +209,19 @@ std::unique_ptr<SamplingProfiler> SamplingProfiler::create(Runtime &rt) {
   return std::make_unique<sampling_profiler::SamplingProfilerWindows>(rt);
 }
 
-bool SamplingProfiler::belongsToCurrentThread() const {
-  return GetThreadId(
-             static_cast<const sampling_profiler::SamplingProfilerWindows *>(
-                 this)
-                 ->currentThread_) == GetCurrentThreadId();
+bool SamplingProfiler::belongsToCurrentThread() {
+  auto profiler =
+      static_cast<sampling_profiler::SamplingProfilerWindows *>(this);
+  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  return GetThreadId(profiler->currentThread_) == GetCurrentThreadId();
+}
+
+void SamplingProfiler::setRuntimeThread() {
+  auto profiler =
+      static_cast<sampling_profiler::SamplingProfilerWindows *>(this);
+  std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
+  CloseHandle(profiler->currentThread_);
+  profiler->currentThread_ = openCurrentThread();
 }
 
 } // namespace vm
