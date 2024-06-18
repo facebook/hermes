@@ -1403,15 +1403,20 @@ class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
   std::shared_ptr<hbc::BCProvider> bcProvider_;
   vm::RuntimeModuleFlags runtimeFlags_;
   std::string sourceURL_;
+  /// The Runtime that's used to create this PreparedJavaScript.
+  /// The PreparedJavaScript must not be run on any other runtime.
+  vm::Runtime &runtime_;
 
  public:
   explicit HermesPreparedJavaScript(
       std::unique_ptr<hbc::BCProvider> bcProvider,
       vm::RuntimeModuleFlags runtimeFlags,
-      std::string sourceURL)
+      std::string sourceURL,
+      vm::Runtime &runtime)
       : bcProvider_(std::move(bcProvider)),
         runtimeFlags_(runtimeFlags),
-        sourceURL_(std::move(sourceURL)) {}
+        sourceURL_(std::move(sourceURL)),
+        runtime_(runtime) {}
 
   std::shared_ptr<hbc::BCProvider> bytecodeProvider() const {
     return bcProvider_;
@@ -1423,6 +1428,10 @@ class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
 
   const std::string &sourceURL() const {
     return sourceURL_;
+  }
+
+  vm::Runtime &runtime() const {
+    return runtime_;
   }
 };
 
@@ -1487,7 +1496,7 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
         "Compiling JS failed: " + std::move(bcErr.second));
   }
   return std::make_shared<const HermesPreparedJavaScript>(
-      std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
+      std::move(bcErr.first), runtimeFlags, std::move(sourceURL), runtime_);
 }
 
 std::shared_ptr<const jsi::PreparedJavaScript>
@@ -1504,6 +1513,13 @@ jsi::Value HermesRuntimeImpl::evaluatePreparedJavaScript(
       "js must be an instance of HermesPreparedJavaScript");
   const auto *hermesPrep =
       static_cast<const HermesPreparedJavaScript *>(js.get());
+  if (&hermesPrep->runtime() != &runtime_) {
+    // PreparedJavaScript must not be used across runtimes because it could lead
+    // to a race if lazy compilation attempts to modify BCProvider from both
+    // runtimes simultaneously.
+    ::hermes::hermes_fatal(
+        "JS must be prepared by the same runtime as it is evaluated on");
+  }
   vm::GCScope gcScope(runtime_);
   auto res = runtime_.runBytecode(
       hermesPrep->bytecodeProvider(),
