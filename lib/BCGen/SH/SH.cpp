@@ -159,7 +159,6 @@ class SHStringTable {
     // };
     // static const char16_t s_u16_pool[] = {
     // };
-    // static SHSymbolID s_symbols[2];
     // static const uint32_t s_strings[] = {
     //     0, 5, 0, 6, 5, 0,
     // };
@@ -168,7 +167,6 @@ class SHStringTable {
        << asciiStr << "};\n"
        << "static const char16_t s_u16_pool[] = {\n"
        << u16Str << "};\n"
-       << "static SHSymbolID s_symbols[" << size() << "];\n"
        << "static const uint32_t s_strings[] = {";
     for (const auto &entry : stringEntries)
       os << entry.offset << "," << entry.length << "," << entry.hash << ",";
@@ -577,7 +575,7 @@ class InstrGen {
   /// Generate a string constant by referencing the global string table.
   llvh::raw_ostream &genStringConst(LiteralString *LS) {
     auto str = LS->getValue().str();
-    os_ << "s_symbols[" << moduleGen_.stringTable.add(str) << ']';
+    os_ << "get_symbols(&THIS_UNIT)[" << moduleGen_.stringTable.add(str) << ']';
     return genStringComment(str);
   }
   /// Generate a string constant, followed by an optional value (if non-null),
@@ -591,7 +589,7 @@ class InstrGen {
       os_ << ", ";
       generateRegisterPtr(*optValue);
     }
-    return os_ << ", s_prop_cache + " << nextCacheIdx_++;
+    return os_ << ", get_prop_cache(&THIS_UNIT) + " << nextCacheIdx_++;
   }
 
   /// Helper to generate a value in a register,
@@ -1558,9 +1556,9 @@ class InstrGen {
     generateValue(inst);
     os_ << " = ";
     os_ << "_sh_ljs_create_regexp(shr, ";
-    os_ << llvh::format("s_symbols[%u]", patternStrID);
+    os_ << llvh::format("get_symbols(&THIS_UNIT)[%u]", patternStrID);
     os_ << ", ";
-    os_ << llvh::format("s_symbols[%u]", flagsStrID);
+    os_ << llvh::format("get_symbols(&THIS_UNIT)[%u]", flagsStrID);
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
@@ -2744,10 +2742,10 @@ void generateModule(
     auto usedExterns = collectUsedExterns(M);
     generateExternCIncludes(M, OS, *usedExterns);
 
-    OS << R"(SHUnit THIS_UNIT;
+    OS << R"(static struct UnitData THIS_UNIT;
 
-static SHSymbolID s_symbols[];
-static SHPropertyCacheEntry s_prop_cache[];
+static inline SHSymbolID* get_symbols(SHUnit *);
+static inline SHPropertyCacheEntry* get_prop_cache(SHUnit *);
 static const SHSrcLoc s_source_locations[];
 static SHNativeFuncInfo s_function_info_table[];
 )";
@@ -2779,11 +2777,16 @@ static SHNativeFuncInfo s_function_info_table[];
     // other module components may add new entries to the string table.
     moduleGen.stringTable.generate(OS);
 
-    OS << "static SHPropertyCacheEntry s_prop_cache[" << nextCacheIdx << "];\n"
-       << "SHUnit THIS_UNIT = { .num_symbols = " << moduleGen.stringTable.size()
+    OS << "static struct UnitData {\n"
+       << "  SHUnit unit;\n"
+       << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
+       << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n"
+       << "} THIS_UNIT = {.unit = {.num_symbols = "
+       << moduleGen.stringTable.size()
        << ", .num_prop_cache_entries = " << nextCacheIdx
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
-       << ".strings = s_strings, .symbols = s_symbols, .prop_cache = s_prop_cache,"
+       << ".strings = s_strings, .symbols = THIS_UNIT.symbol_data,"
+       << ".prop_cache = THIS_UNIT.prop_cache_data,"
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
@@ -2796,7 +2799,16 @@ static SHNativeFuncInfo s_function_info_table[];
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
        << ", " << ".unit_main = _0_global, "
        << ".unit_main_info = &s_function_info_table[0], "
-       << ".unit_name = \"sh_compiled\" };\n";
+       << ".unit_name = \"sh_compiled\" }};\n"
+       << R"(
+SHSymbolID *get_symbols(SHUnit *unit) {
+  return ((struct UnitData *)unit)->symbol_data;
+}
+
+SHPropertyCacheEntry *get_prop_cache(SHUnit *unit) {
+  return ((struct UnitData *)unit)->prop_cache_data;
+}
+)";
     if (options.emitMain) {
       OS << R"(
 int main(int argc, char **argv) {
