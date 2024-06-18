@@ -216,7 +216,8 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
       const std::string &sourceURL);
 
   /// Returns the underlying low level Hermes VM runtime instance.
-  /// This should be avoided as the lower level APIs are unsafe
+  /// This function is considered unsafe and unstable.
+  /// Direct use of a vm::Runtime should be avoided as the lower level APIs are unsafe
   /// and they can change without notice.
   ::hermes::vm::Runtime *getVMRuntimeUnsafe() const;
 
