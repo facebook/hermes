@@ -1761,7 +1761,9 @@ typedArrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   auto self = args.vmcastThis<JSTypedArrayBase>();
 
   // 3. Let len be O.[[ArrayLength]].
-  double len = self->getLength();
+  JSArrayBuffer::size_type len = self->getLength();
+
+  auto byteWidth = self->getByteWidth();
 
   // 4. Let A be ? TypedArrayCreateSameType(O, « 𝔽(len) »).
   auto aRes = JSTypedArrayBase::allocateSpecies(runtime, self, len);
@@ -1771,28 +1773,18 @@ typedArrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   auto A = aRes.getValue();
 
   // 5. Let k be 0.
-  double k = 0;
-  MutableHandle<> kHandle{runtime};
-  MutableHandle<> fromValueHandle{runtime};
+  JSArrayBuffer::size_type k = 0;
 
-  auto marker = gcScope.createMarker();
+  auto aBuffer = A->getBuffer(runtime);
+  auto srcBuffer = self->getBuffer(runtime);
+
   // 6. Repeat, while k < len,
   while (k < len) {
-    gcScope.flushToMarker(marker);
-
     // 6a. Let from be ! ToString(𝔽(length - k - 1)).
-    double from = len - k - 1;
-
-    // 6c. Let fromValue be ? Get(O, from).
-    fromValueHandle =
-        JSObject::getOwnIndexed(createPseudoHandle(self.get()), runtime, from);
+    JSArrayBuffer::size_type from = len - k - 1;
 
     // 6d. Perform ! Set(A, Pk, fromValue, true).
-    if (LLVM_UNLIKELY(
-            A->setOwnIndexed(A, runtime, k, fromValueHandle) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
+    JSArrayBuffer::copyDataBlockBytes(runtime, aBuffer, k * byteWidth, srcBuffer, from * byteWidth, byteWidth);
 
     // 6e. Set k to k + 1.
     ++k;
