@@ -517,6 +517,16 @@ void Runtime::markRoots(
       acceptor.accept(*p);
     acceptor.endRootSection();
   }
+
+  {
+    MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Locals);
+    acceptor.beginRootSection(RootAcceptor::Section::Locals);
+    for (Locals *locals = vmLocals; locals; locals = locals->prev)
+      for (size_t i = 0, e = locals->numLocals; i < e; ++i)
+        acceptor.acceptNullable(locals->locals[i]);
+    acceptor.endRootSection();
+  }
+
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::SHLocals);
     acceptor.beginRootSection(RootAcceptor::Section::SHLocals);

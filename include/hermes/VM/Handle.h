@@ -163,6 +163,52 @@ class PseudoHandle {
   static inline PseudoHandle dyn_vmcast(PseudoHandle<U> &&other);
 };
 
+/// A simple typed wrapper around a PinnedHermesValue, providing convenient
+/// conversion to/from a Handle<T>.
+template <typename T = HermesValue>
+class PinnedValue : private PinnedHermesValue {
+  template <class U>
+  friend class Handle;
+
+  using traits_type = HermesValueTraits<T>;
+  using value_type = typename traits_type::value_type;
+  using arrow_type = typename traits_type::arrow_type;
+
+ public:
+  constexpr PinnedValue() = default;
+
+  /// Copy and move constructors are disabled, to avoid accidentally passing
+  /// PinnedValue by value, since its location must always be known to the GC.
+  PinnedValue(const PinnedValue &) = delete;
+  PinnedValue(PinnedValue &&) = delete;
+
+  PinnedValue &operator=(PinnedValue &&) = default;
+  PinnedValue &operator=(const PinnedValue &other) = default;
+
+  PinnedValue &operator=(const Handle<T> &handle) {
+    setNoBarrier(handle.getHermesValue());
+    return *this;
+  }
+  PinnedValue &operator=(value_type val) {
+    setNoBarrier(traits_type::encode(val));
+    return *this;
+  }
+
+  value_type get() const {
+    return traits_type::decode(*this);
+  }
+  value_type operator*() const {
+    return get();
+  }
+  arrow_type operator->() const {
+    return traits_type::arrow(*this);
+  }
+
+  HermesValue getHermesValue() const {
+    return *this;
+  }
+};
+
 /// A HermesValue in the current GCScope which is trackable by the GC and will
 /// be correctly marked and updated if objects are moved. The value is valid
 /// while the owning GCScope object is alive.
@@ -326,6 +372,8 @@ class Handle : public HandleBase {
         std::is_same<value_type, HermesValue>::value,
         "This constructor can only be used for Handle<HermesValue>");
   }
+
+  /* implicit */ Handle(const PinnedValue<T> &sh) : HandleBase(&sh) {}
 
   /// Convert between compatible types.
   template <

@@ -91,6 +91,7 @@ class ScopedNativeDepthTracker;
 class ScopedNativeCallFrame;
 class CodeCoverageProfiler;
 struct StackTracesTree;
+struct Locals;
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 class SamplingProfiler;
@@ -769,6 +770,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 #define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) RUNTIME_HV_FIELD(name)
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
+
+  /// Head of the locals list used for VM operations.
+  Locals *vmLocals{};
 
   /// [SH] head of locals list.
   SHLocals *shLocals{};
@@ -1577,6 +1581,50 @@ class XorPtr {
 static_assert(
     std::is_trivial<XorPtr<void, XorPtrKeyID::_NumKeys>>::value,
     "XorPtr must be trivial");
+
+/// Base for a stack allocated container for HermesValues, which are tracked by
+/// the GC. This allows us to reference GC managed values without incurring the
+/// dynamic allocation overhead of GCScope.
+struct Locals {
+  /// Number of trailing values that need to be marked.
+  uint32_t numLocals;
+
+  /// Pointer to the previous Locals struct.
+  Locals *prev;
+
+  /// The trailing locals.
+  PinnedHermesValue locals[0];
+
+#ifndef NDEBUG
+  /// In debug mode, assert to ensure the locals are properly registered.
+  Locals() : numLocals(UINT32_MAX) {}
+  ~Locals() {
+    assert(numLocals != UINT32_MAX && "Locals never pushed");
+  }
+#endif
+};
+
+/// RAII class to push/pop a Locals struct within a scope.
+class LocalsRAII {
+  Runtime &runtime_;
+  Locals *locals_;
+
+ public:
+  template <typename T>
+  explicit LocalsRAII(Runtime &runtime, T *locals)
+      : runtime_(runtime), locals_(locals) {
+    locals->prev = runtime_.vmLocals;
+    locals->numLocals =
+        (sizeof(T) - offsetof(Locals, locals)) / sizeof(PinnedHermesValue);
+    runtime_.vmLocals = locals;
+  }
+  ~LocalsRAII() {
+    assert(
+        runtime_.vmLocals == locals_ &&
+        "LocalsRAII must be destroyed in the reverse order of creation");
+    runtime_.vmLocals = locals_->prev;
+  }
+};
 
 /// An RAII class for automatically tracking the native call frame depth.
 class ScopedNativeDepthTracker {
