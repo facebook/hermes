@@ -1907,7 +1907,7 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 		switch(*++s) {
 		  case '-':
 			esign = 1;
-			/* no break */
+			__attribute__((fallthrough));
 		  case '+':
 			s++;
 		  }
@@ -2575,11 +2575,11 @@ _hermes_g_strtod
 	for(s = s00;;s++) switch(*s) {
 		case '-':
 			sign = 1;
-			/* no break */
+			__attribute__((fallthrough));
 		case '+':
 			if (*++s)
 				goto break2;
-			/* no break */
+			__attribute__((fallthrough));
 		case 0:
 			goto ret0;
 		case '\t':
