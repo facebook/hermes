@@ -1744,6 +1744,7 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
       }
       isDebugInfoLevelThrowing = true;
     // Falls through - if ii can execute.
+      LLVM_FALLTHROUGH;
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
       if (ii->hasLocation()) {
