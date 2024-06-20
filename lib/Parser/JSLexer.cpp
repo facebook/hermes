@@ -1672,6 +1672,7 @@ TokenKind JSLexer::scanReservedWord(const char *start, unsigned length) {
       case TokenKind::rw_static:
       case TokenKind::rw_yield:
         rw = TokenKind::identifier;
+        break;
       default:
         break;
     }
