@@ -2006,7 +2006,8 @@ void HBCISel::generateInst(Instruction *ii, BasicBlock *next) {
       if (!ii->getSideEffect().getThrow()) {
         break;
       }
-    // Falls through - if ii can execute.
+      // Falls through - if ii can execute.
+      [[fallthrough]];
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
       if (ii->hasLocation()) {
