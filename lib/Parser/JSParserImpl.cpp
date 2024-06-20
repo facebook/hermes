@@ -4731,7 +4731,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
           isStatic = true;
           advance();
         }
-        // intentional fallthrough
+        LLVM_FALLTHROUGH;
       default: {
         // ClassElement
         auto optElem = parseClassElement(
