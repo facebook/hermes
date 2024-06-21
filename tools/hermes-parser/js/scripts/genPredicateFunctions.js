@@ -27,17 +27,17 @@ const NODES_WITH_SPECIAL_HANDLING = new Set<string>([
 nodeTypesToImport.push('Identifier', 'JSXIdentifier', 'JSXText');
 predicateFunctions.push(
   `
-export function isIdentifier(node /*: ESNode | Token */) /*: node is (Identifier | MostTokens) */ {
+export function isIdentifier(node /*: ESNode | Token */) /*: implies node is (Identifier | MostTokens) */ {
   return node.type === 'Identifier';
 }
   `,
   `
-export function isJSXIdentifier(node /*: ESNode | Token */) /*: node is (JSXIdentifier | MostTokens) */ {
+export function isJSXIdentifier(node /*: ESNode | Token */) /*: implies node is (JSXIdentifier | MostTokens) */ {
   return node.type === 'JSXIdentifier';
 }
   `,
   `
-export function isJSXText(node /*: ESNode | Token */) /*: node is (JSXText | MostTokens) */ {
+export function isJSXText(node /*: ESNode | Token */) /*: implies node is (JSXText | MostTokens) */ {
   return node.type === 'JSXText';
 }
   `,
@@ -58,7 +58,7 @@ for (const node of nodes) {
   nodeTypesToImport.push(node);
   predicateFunctions.push(
     `
-export function is${node}(node /*: ESNode | Token */) /*: node is ${node} */ {
+export function is${node}(node /*: ESNode | Token */) /*: implies node is ${node} */ {
   return node.type === '${node}';
 }
     `,
@@ -70,7 +70,7 @@ for (const comment of COMMENTS) {
   nodeTypesToImport.push(`${comment}Comment`);
   predicateFunctions.push(
     `
-export function is${comment}Comment(node /*: ESNode | Token */) /*: node is (MostTokens | ${comment}Comment) */ {
+export function is${comment}Comment(node /*: ESNode | Token */) /*: implies node is (MostTokens | ${comment}Comment) */ {
   return node.type === '${comment}';
 }
     `,
@@ -217,7 +217,7 @@ for (const [name, token, type] of TOKENS) {
     // certain keywords may be reported as Identifier depending on the context
     predicateFunctions.push(
       `
-export function is${name}Keyword(node /*: ESNode | Token */) /*: node is (Identifier | MostTokens) */ {
+export function is${name}Keyword(node /*: ESNode | Token */) /*: implies node is (Identifier | MostTokens) */ {
   return (
     (node.type === 'Identifier' && node.name === '${token}') ||
     (node.type === 'Keyword' && node.value === '${token}')
@@ -228,7 +228,7 @@ export function is${name}Keyword(node /*: ESNode | Token */) /*: node is (Identi
   } else {
     predicateFunctions.push(
       `
-export function is${name}Token(node /*: ESNode | Token */) /*: node is MostTokens */ {
+export function is${name}Token(node /*: ESNode | Token */) /*: implies node is MostTokens */ {
   return node.type === '${type}' && node.value === '${token}';
 }
       `,
