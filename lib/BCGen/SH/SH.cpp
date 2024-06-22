@@ -2741,7 +2741,7 @@ void generateModule(
     generateExternCIncludes(M, OS, *usedExterns);
 
     OS << R"(static struct UnitData THIS_UNIT;
-
+static uint32_t unit_index;
 static inline SHSymbolID* get_symbols(SHUnit *);
 static inline SHPropertyCacheEntry* get_prop_cache(SHUnit *);
 static const SHSrcLoc s_source_locations[];
@@ -2782,7 +2782,7 @@ static SHNativeFuncInfo s_function_info_table[];
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
        << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n"
-       << "} THIS_UNIT = {.unit = {.num_symbols = "
+       << "} THIS_UNIT = {.unit = {.index = &unit_index, .num_symbols = "
        << moduleGen.stringTable.size()
        << ", .num_prop_cache_entries = " << nextCacheIdx
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"

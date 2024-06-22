@@ -72,6 +72,10 @@ typedef SHUnit *(*SHUnitCreator)();
 /// <br>One implication is that all units are treated as "persistent" modules,
 /// and strings don't need to be copied to RAM until needed.
 typedef struct SHUnit {
+  /// Pointer to the static index variable that uniquely identifies the unit
+  /// (rather than this particular instance). The index is zero until the first
+  /// instance is initialized.
+  uint32_t *index;
   /// Whether the data is dirty and must be re-initialized before reuse.
   bool dirty;
   /// Currently registered with an active runtime.

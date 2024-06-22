@@ -88,6 +88,27 @@ extern "C" SHLegacyValue _sh_unit_init(
         unit->unit_name);
     abort();
   }
+
+  {
+    // Counter to assign a globally unique index to each unit.
+    static uint32_t nextIndex = 1;
+
+    // Lock protecting next index, and preventing a race on the unit indices.
+    // The latter works based on the following observations:
+    //   1. Only this function can write to the index of a unit.
+    //   2. No code outside this function can read the index of a unit before it
+    //   has been written by this function.
+    // This means that by holding this mutex when checking and initializing the
+    // index below, we know that no other thread may be reading or writing the
+    // index at the same time.
+    static std::mutex idxMtx;
+    std::lock_guard<std::mutex> lock(idxMtx);
+    // If this unit does not have an index yet, assign one.
+    if (!*unit->index) {
+      *unit->index = nextIndex++;
+    }
+  }
+
   unit->in_use = true;
   unit->script_id = runtime.allocateScriptId();
 
