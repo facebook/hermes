@@ -230,9 +230,6 @@ class SHLiteralBuffers {
          << ", .num_props = " << entry.numProps << " },\n";
     }
     os << "};\n";
-    // Produce storage for the cached classes.
-    os << "static SHCompressedPointer s_object_literal_class_cache["
-       << objShapeTable.size() << "];\n";
   }
 
  private:
@@ -2782,6 +2779,8 @@ static SHNativeFuncInfo s_function_info_table[];
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
        << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n"
+       << "  SHCompressedPointer object_literal_class_cache["
+       << moduleGen.literalBuffers.objShapeTable.size() << "];\n"
        << "} THIS_UNIT = {.unit = {.index = &unit_index, .num_symbols = "
        << moduleGen.stringTable.size()
        << ", .num_prop_cache_entries = " << nextCacheIdx
@@ -2795,7 +2794,7 @@ static SHNativeFuncInfo s_function_info_table[];
        << ".obj_shape_table = s_obj_shape_table, "
        << ".obj_shape_table_count = "
        << moduleGen.literalBuffers.objShapeTable.size() << ", "
-       << ".object_literal_class_cache = s_object_literal_class_cache, "
+       << ".object_literal_class_cache = THIS_UNIT.object_literal_class_cache, "
        << ".source_locations = s_source_locations, "
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
        << ", " << ".unit_main = _0_global, "
