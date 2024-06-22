@@ -575,7 +575,7 @@ class InstrGen {
   /// Generate a string constant by referencing the global string table.
   llvh::raw_ostream &genStringConst(LiteralString *LS) {
     auto str = LS->getValue().str();
-    os_ << "get_symbols(&THIS_UNIT)[" << moduleGen_.stringTable.add(str) << ']';
+    os_ << "get_symbols(shUnit)[" << moduleGen_.stringTable.add(str) << ']';
     return genStringComment(str);
   }
   /// Generate a string constant, followed by an optional value (if non-null),
@@ -589,7 +589,7 @@ class InstrGen {
       os_ << ", ";
       generateRegisterPtr(*optValue);
     }
-    return os_ << ", get_prop_cache(&THIS_UNIT) + " << nextCacheIdx_++;
+    return os_ << ", get_prop_cache(shUnit) + " << nextCacheIdx_++;
   }
 
   /// Helper to generate a value in a register,
@@ -1461,7 +1461,7 @@ class InstrGen {
       auto bufIndex =
           moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
-      os_ << "_sh_ljs_new_array_with_buffer(shr, &THIS_UNIT, ";
+      os_ << "_sh_ljs_new_array_with_buffer(shr, shUnit, ";
       os_ << sizeHint << ", ";
       os_ << elementCount << ", ";
       os_ << bufIndex.valueBufferOffset << ")";
@@ -1484,9 +1484,8 @@ class InstrGen {
     // Can't lower to calling the HermesBuiltin because that depends on
     // RuntimeModule, so we have a _sh_get_template_object function instead,
     // which can read from the SHUnit templateMap.
-    os_ << "_sh_get_template_object(shr, &THIS_UNIT, "
-        << inst.getTemplateObjID() << ", " << boolStr(inst.isDup()) << ", "
-        << argCount;
+    os_ << "_sh_get_template_object(shr, shUnit, " << inst.getTemplateObjID()
+        << ", " << boolStr(inst.isDup()) << ", " << argCount;
     for (unsigned i = 0; i < numStrings; ++i) {
       os_ << ", ";
       generateRegisterPtr(*inst.getRawString(i));
@@ -1556,9 +1555,9 @@ class InstrGen {
     generateValue(inst);
     os_ << " = ";
     os_ << "_sh_ljs_create_regexp(shr, ";
-    os_ << llvh::format("get_symbols(&THIS_UNIT)[%u]", patternStrID);
+    os_ << llvh::format("get_symbols(shUnit)[%u]", patternStrID);
     os_ << ", ";
-    os_ << llvh::format("get_symbols(&THIS_UNIT)[%u]", flagsStrID);
+    os_ << llvh::format("get_symbols(shUnit)[%u]", flagsStrID);
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
@@ -1610,7 +1609,7 @@ class InstrGen {
     os_ << ", ";
     os_ << "&s_function_info_table["
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
-        << "]" << ", (SHUnit *)&THIS_UNIT);\n";
+        << "]" << ", shUnit);\n";
   }
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
     os_.indent(2);
@@ -1623,7 +1622,7 @@ class InstrGen {
     os_ << ", ";
     os_ << "&s_function_info_table["
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
-        << "]" << ", (SHUnit *)&THIS_UNIT);\n";
+        << "]" << ", shUnit);\n";
   }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";
@@ -2008,7 +2007,7 @@ class InstrGen {
         moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
     os_ << " = ";
-    os_ << "_sh_ljs_new_object_with_buffer(shr, &THIS_UNIT, ";
+    os_ << "_sh_ljs_new_object_with_buffer(shr, shUnit, ";
     os_ << shapeIdx << ", ";
     os_ << valIdx << ")";
     os_ << ";\n";
@@ -2540,11 +2539,12 @@ void generateFunction(
   OS << "  SHLegacyValue *frame = _sh_enter(shr, &locals.head, "
      << (RA.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
      << ");\n"
-     << "  locals.head.count =" << localsSize << ";\n";
+     << "  locals.head.count =" << localsSize << ";\n"
+     << "  SHUnit *shUnit = shr->units[unit_index];\n";
 
   if (emitNativeTraces) {
     // Initialize the current SHUnit.
-    OS << "  locals.head.unit = &THIS_UNIT;\n";
+    OS << "  locals.head.unit = shUnit;\n";
     // Initialize the current source location to invalid.
     OS << "  locals.head.src_location_idx = "
        << SHSrcLocationTable::kInvalidLocIdx << ";\n";
