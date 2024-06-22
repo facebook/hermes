@@ -18,6 +18,8 @@
 extern "C" {
 #endif
 
+typedef struct SHUnit SHUnit;
+
 /// This struct represents an element in the exception handler stack. This
 /// represents a try, and contains the information necessary to jump to its
 /// associated catch in the event of an exception.
@@ -66,6 +68,9 @@ typedef struct SHRuntime {
   /// in C and C++. Delete it once we add other fields.
   uint8_t dummy;
 #endif
+
+  /// The active SHUnits in this runtime.
+  SHUnit *units[8];
 
   /// The current top of the exception handler stack.
   SHJmpBuf *shCurJmpBuf;

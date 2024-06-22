@@ -239,6 +239,9 @@ RuntimeBase::RuntimeBase() {
   segmentMap[0] = nullptr;
 #endif
 
+  // Zero-initialize the unit pointers.
+  std::fill(std::begin(units), std::end(units), nullptr);
+
   shCurJmpBuf = nullptr;
 }
 
@@ -460,10 +463,9 @@ Runtime::~Runtime() {
     delete &runtimeModuleList_.back();
   }
 
-  while (!this->shUnits.empty()) {
-    sh_unit_done(*this, this->shUnits.back());
-    this->shUnits.pop_back();
-  }
+  for (auto *unit : units)
+    if (unit)
+      sh_unit_done(*this, unit);
 
   // Unwatch the runtime from the time limit monitor in case the latter still
   // has any references to this.
@@ -570,8 +572,9 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::SHUnits);
     acceptor.beginRootSection(RootAcceptor::Section::SHUnits);
-    for (auto *unit : this->shUnits)
-      sh_unit_mark_roots(unit, acceptor, markLongLived);
+    for (auto *unit : units)
+      if (unit)
+        sh_unit_mark_roots(unit, acceptor, markLongLived);
     acceptor.endRootSection();
   }
 
@@ -711,8 +714,9 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
     }
     for (auto &rm : runtimeModuleList_)
       rm.markLongLivedWeakRoots(acceptor);
-    for (SHUnit *unit : this->shUnits)
-      sh_unit_mark_long_lived_weak_roots(unit, acceptor);
+    for (SHUnit *unit : units)
+      if (unit)
+        sh_unit_mark_long_lived_weak_roots(unit, acceptor);
   }
   for (auto &rm : runtimeModuleList_)
     rm.markDomainRef(acceptor);
@@ -944,8 +948,9 @@ const void *Runtime::getStringForSymbol(SymbolID id) {
 
 size_t Runtime::mallocSize() const {
   size_t shSize = 0;
-  for (const SHUnit *unit : this->shUnits)
-    shSize += sh_unit_additional_memory_size(unit);
+  for (const SHUnit *unit : units)
+    if (unit)
+      shSize += sh_unit_additional_memory_size(unit);
 
   // Register stack uses mmap and RuntimeModules are tracked by their owning
   // Domains. So this only considers IdentifierTable size.

@@ -777,9 +777,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// [SH] head of locals list.
   SHLocals *shLocals{};
 
-  /// [SH] units registered with this runtime.
-  std::vector<SHUnit *> shUnits{};
-
   /// Raw pointers to prototypes.
   JSObject *objectPrototypeRawPtr{};
 

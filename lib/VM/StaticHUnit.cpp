@@ -105,6 +105,10 @@ extern "C" SHLegacyValue _sh_unit_init(
     std::lock_guard<std::mutex> lock(idxMtx);
     // If this unit does not have an index yet, assign one.
     if (!*unit->index) {
+      if (nextIndex == std::size(runtime.units)) {
+        fprintf(stderr, "Too many SH units registered\n");
+        abort();
+      }
       *unit->index = nextIndex++;
     }
   }
@@ -134,7 +138,7 @@ extern "C" SHLegacyValue _sh_unit_init(
   // Register the unit with the runtime before it is initialized, because the
   // GC could run in the middle of initialization and the already defined
   // symbols should be roots.
-  runtime.shUnits.push_back(unit);
+  runtime.units[*unit->index] = unit;
 
   sh_unit_init_symbols(runtime, unit);
   return sh_unit_run(shr, unit);
