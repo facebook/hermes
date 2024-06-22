@@ -213,10 +213,10 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
       const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
       const std::string &sourceURL);
 
-  /// Associate the specified SHUnit with this runtime and run its
-  /// initialization code. The association persists until the runtime is
-  /// destroyed. The unit must not be already associated with another runtime.
-  jsi::Value evaluateSHUnit(SHUnit *shUnit);
+  /// Associate the SHUnit returned by \p shUnitCreator with this runtime and
+  /// run its initialization code. The unit will be freed when the runtime is
+  /// destroyed.
+  jsi::Value evaluateSHUnit(SHUnit *(*shUnitCreator)());
 
   /// Retrieve the underlying SHRuntime.
   SHRuntime *getSHRuntime() noexcept;

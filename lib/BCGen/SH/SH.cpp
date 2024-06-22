@@ -2730,9 +2730,7 @@ void generateModule(
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     if (!isValidSHUnitName(options.unitName))
       hermes_fatal("Invalid unit name passed to SH backend.");
-    // Note that we prefix the unit name with sh_export_ to avoid potential
-    // conflicts.
-    OS << "#define THIS_UNIT sh_export_" << options.unitName << R"(
+    OS << R"(
 #include "hermes/VM/static_h.h"
 
 #include <stdlib.h>
@@ -2777,6 +2775,9 @@ static SHNativeFuncInfo s_function_info_table[];
     // other module components may add new entries to the string table.
     moduleGen.stringTable.generate(OS);
 
+    // Note that we prefix the unit name with sh_export_ to avoid potential
+    // conflicts.
+    OS << "#define CREATE_THIS_UNIT sh_export_" << options.unitName << "\n";
     OS << "static struct UnitData {\n"
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
@@ -2801,6 +2802,10 @@ static SHNativeFuncInfo s_function_info_table[];
        << ".unit_main_info = &s_function_info_table[0], "
        << ".unit_name = \"sh_compiled\" }};\n"
        << R"(
+SHUnit *CREATE_THIS_UNIT() {
+  return &THIS_UNIT.unit;
+}
+
 SHSymbolID *get_symbols(SHUnit *unit) {
   return ((struct UnitData *)unit)->symbol_data;
 }
@@ -2813,7 +2818,7 @@ SHPropertyCacheEntry *get_prop_cache(SHUnit *unit) {
       OS << R"(
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init(argc, argv);
-  bool success = _sh_initialize_units(shr, 1, &THIS_UNIT);
+  bool success = _sh_initialize_units(shr, 1, CREATE_THIS_UNIT);
   _sh_done(shr);
   return success ? 0 : 1;
 }

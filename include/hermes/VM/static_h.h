@@ -57,6 +57,10 @@ typedef struct SHNativeFuncInfo {
   uint8_t prohibit_invoke : 2;
 } SHNativeFuncInfo;
 
+/// Type of a function that allocates and returns a new SHUnit ready to be used
+/// with a runtime.
+typedef SHUnit *(*SHUnitCreator)();
+
 /// SHUnit describes a compilation unit.
 ///
 /// <h2>Restrictions</h2>
@@ -194,17 +198,21 @@ SHERMES_EXPORT void _sh_done(SHRuntime *shr);
 /// TODO: Inline the fast path to allow for faster execution.
 SHERMES_EXPORT void _sh_check_native_stack_overflow(SHRuntime *shr);
 
-/// Register, initialize and execute a main function of the specified unit.
-/// The unit is de-initialized when the runtime is destroyed.
-/// Execution of the unit initialization code might throw a JS exception.
-SHERMES_EXPORT SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit);
+/// Register, initialize and execute a main function of the unit returned by the
+/// given creator function. The unit is de-initialized when the runtime is
+/// destroyed. Execution of the unit initialization code might throw a JS
+/// exception.
+SHERMES_EXPORT SHLegacyValue
+_sh_unit_init(SHRuntime *shr, SHUnitCreator unitCreator);
 
 /// Execute \c _sh_unit_init and catch JS exceptions. \p resultOrExc is
 /// initialized to either the returned value or the thrown exception.
 ///
 /// \return false if an exception was thrown.
-SHERMES_EXPORT bool
-_sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resultOrExc);
+SHERMES_EXPORT bool _sh_unit_init_guarded(
+    SHRuntime *shr,
+    SHUnitCreator unitCreator,
+    SHLegacyValue *resultOrExc);
 
 /// Initialize all units passed as arguments in order. If a unit throws a
 /// JS exception during initialization, print the exception and stop.

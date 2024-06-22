@@ -33,9 +33,9 @@ extern "C" bool _sh_initialize_units(SHRuntime *shr, uint32_t count, ...) {
   va_start(ap, count);
 
   for (uint32_t i = 0; i < count; ++i) {
-    SHUnit *unit = va_arg(ap, SHUnit *);
+    SHUnitCreator unitCreator = va_arg(ap, SHUnitCreator);
     SHLegacyValue val;
-    if (!_sh_unit_init_guarded(shr, unit, &val)) {
+    if (!_sh_unit_init_guarded(shr, unitCreator, &val)) {
       GCScope gcScope{runtime};
       // Make sure stdout catches up to stderr.
       llvh::outs().flush();
@@ -50,8 +50,10 @@ extern "C" bool _sh_initialize_units(SHRuntime *shr, uint32_t count, ...) {
   return success;
 }
 
-extern "C" bool
-_sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resOrExc) {
+extern "C" bool _sh_unit_init_guarded(
+    SHRuntime *shr,
+    SHUnitCreator unitCreator,
+    SHLegacyValue *resOrExc) {
   Runtime &runtime = getRuntime(shr);
   GCScope gcScope{runtime};
 
@@ -63,7 +65,7 @@ _sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resOrExc) {
   bool success = true;
 
   if (_sh_try(shr, &jbuf) == 0) {
-    *resOrExc = _sh_unit_init(shr, unit);
+    *resOrExc = _sh_unit_init(shr, unitCreator);
     _sh_end_try(shr, &jbuf);
   } else {
     *resOrExc = _sh_catch(shr, &locals, frame, savedSP - frame);
@@ -74,9 +76,11 @@ _sh_unit_init_guarded(SHRuntime *shr, SHUnit *unit, SHLegacyValue *resOrExc) {
   return success;
 }
 
-extern "C" SHLegacyValue _sh_unit_init(SHRuntime *shr, SHUnit *unit) {
+extern "C" SHLegacyValue _sh_unit_init(
+    SHRuntime *shr,
+    SHUnitCreator unitCreator) {
   Runtime &runtime = getRuntime(shr);
-
+  auto *unit = unitCreator();
   if (unit->in_use) {
     fprintf(
         stderr,

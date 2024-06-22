@@ -1373,11 +1373,12 @@ jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
           buffer, sourceMapBuf, sourceURL));
 }
 
-jsi::Value HermesRuntime::evaluateSHUnit(SHUnit *shUnit) {
+jsi::Value HermesRuntime::evaluateSHUnit(SHUnitCreator shUnitCreator) {
   vm::Runtime &runtime = impl(this)->runtime_;
 
   SHLegacyValue resOrExc;
-  if (_sh_unit_init_guarded(vm::getSHRuntime(runtime), shUnit, &resOrExc)) {
+  if (_sh_unit_init_guarded(
+          vm::getSHRuntime(runtime), shUnitCreator, &resOrExc)) {
     return impl(this)->valueFromHermesValue(
         vm::HermesValue::fromRaw(resOrExc.raw));
   } else {
