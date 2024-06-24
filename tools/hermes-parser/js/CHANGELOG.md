@@ -1,3 +1,13 @@
+## 0.22.0
+
+### `hermes-eslint`
+* Fixed analysis of mapped types' scopes
+
+### `prettier-plugin-hermes-parser`
+* Added support for printing inexact tuple type annotations `[...]`
+* Added support for printing Flow Enums with bigint members
+* Added support for printing the one-sided variant of type guards `implies x is T`
+
 ## 0.21.1
 
 ### `flow-api-translator`
