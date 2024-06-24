@@ -1072,9 +1072,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       sb::Ptr<GrowableBufferImpl> self{mod, buf};
       if (sz < self->size)
         return;
-      u32 newData = w2c_hermes_realloc(mod, self->data, sz);
-      self->data = newData;
-      self->size = sz;
+      if (u32 newData = w2c_hermes_realloc(mod, self->data, sz)) {
+        self->data = newData;
+        self->size = sz;
+      }
     }
 
     /// Copy the contents of this GrowableBuffer into an std::string and return
@@ -1214,6 +1215,9 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       auto alloc = w2c_hermes_malloc(
           &runtime,
           sizeof(PropNameIDListWrapper) + sizeof(SandboxPropNameID) * sz);
+      if (!alloc) {
+        abort();
+      }
 
       sb::Ptr<PropNameIDListWrapper> self(&runtime, alloc);
       self->vtable = runtime.propNameIDListVTable_;
