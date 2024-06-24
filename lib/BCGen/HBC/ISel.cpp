@@ -1743,7 +1743,7 @@ void HBCISel::generate(Instruction *ii, BasicBlock *next) {
         break;
       }
       isDebugInfoLevelThrowing = true;
-    // Falls through - if ii can execute.
+      [[fallthrough]];
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
       if (ii->hasLocation()) {
