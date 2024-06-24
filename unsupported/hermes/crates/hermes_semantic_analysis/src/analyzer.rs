@@ -9,6 +9,7 @@ use hermes_diagnostics::Diagnostic;
 use hermes_estree::AssignmentOperator;
 use hermes_estree::AssignmentPropertyOrRestElement;
 use hermes_estree::AssignmentTarget;
+use hermes_estree::ESTreeNode;
 use hermes_estree::Expression;
 use hermes_estree::ExpressionOrPrivateIdentifier;
 use hermes_estree::ExpressionOrSuper;
@@ -334,7 +335,7 @@ impl Analyzer {
     }
 }
 
-impl Visitor for Analyzer {
+impl Visitor<'_> for Analyzer {
     fn visit_import_declaration_specifier(
         &mut self,
         ast: &hermes_estree::ImportDeclarationSpecifier,

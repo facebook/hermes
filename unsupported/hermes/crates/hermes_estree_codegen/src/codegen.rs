@@ -135,6 +135,14 @@ impl Grammar {
             .iter()
             .map(|(name, operator)| operator.codegen(name))
             .collect();
+        let node_enums: Vec<_> = self
+            .nodes
+            .keys()
+            .map(|key| {
+                let variant = format_ident!("{}", key);
+                quote!(#variant(&'a #variant))
+            })
+            .collect();
 
         quote! {
             #![allow(dead_code)]
@@ -155,12 +163,24 @@ impl Grammar {
 
             #(#operator_defs)*
 
-            pub trait Visitor {
+            pub trait Visitor<'ast> {
+                const VISIT_NODE: bool = false;
+                /// Execute on every node if `VISIT_NODE` is `true`
+                /// return `true` to stop traversing into children
+                fn visit_node<T: ESTreeNode>(&mut self, node: &'ast T) -> bool {
+                    return false;
+                }
+
                 #(#object_visitors)*
 
                 #(#node_visitors)*
 
                 #(#enum_visitors)*
+            }
+
+            #[derive(Serialize, Debug)]
+            pub enum Node<'a> {
+                #(#node_enums),*
             }
         }
     }
@@ -278,7 +298,7 @@ impl Object {
             })
             .collect();
         quote! {
-            fn #visitor_name(&mut self, ast: &#name) {
+            fn #visitor_name(&mut self, ast: &'ast #name) {
                 #(#field_visitors)*
             }
         }
@@ -356,7 +376,14 @@ impl Node {
                 pub range: SourceRange,
             }
 
-            impl ESTreeNode for #name {}
+            impl ESTreeNode for #name {
+                fn range(&self) -> SourceRange {
+                    self.range
+                }
+                fn as_node_enum(&self) -> Node {
+                    Node::#name(self)
+                }
+            }
 
             impl Serialize for #name {
                 fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -424,7 +451,10 @@ impl Node {
             })
             .collect();
         quote! {
-            fn #visitor_name(&mut self, ast: &#name) {
+            fn #visitor_name(&mut self, ast: &'ast #name) {
+                if Self::VISIT_NODE && self.visit_node(ast) {
+                    return;
+                }
                 #(#field_visitors)*
             }
         }
@@ -765,7 +795,7 @@ impl Enum {
             })
         }
         quote! {
-            fn #visitor_name(&mut self, ast: &#name) {
+            fn #visitor_name(&mut self, ast: &'ast #name) {
                 match ast {
                     #(#tag_matches),*
                 }
