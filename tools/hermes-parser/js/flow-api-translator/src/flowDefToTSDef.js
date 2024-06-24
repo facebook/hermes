@@ -3674,7 +3674,7 @@ const getTransforms = (
       return {
         type: 'TSTypePredicate',
         loc: DUMMY_LOC,
-        asserts: node.asserts,
+        asserts: node.kind != null && node.kind === 'asserts',
         parameterName: transform.Identifier(node.parameterName, false),
         typeAnnotation: node.typeAnnotation && {
           type: 'TSTypeAnnotation',

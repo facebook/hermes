@@ -1106,7 +1106,7 @@ export type TypeParameterInstantiationProps = {
 export type TypePredicateProps = {
   +parameterName: MaybeDetachedNode<TypePredicateType['parameterName']>,
   +typeAnnotation?: ?MaybeDetachedNode<TypePredicateType['typeAnnotation']>,
-  +asserts: TypePredicateType['asserts'],
+  +kind?: ?TypePredicateType['kind'],
 };
 
 export type UnaryExpressionProps = {
@@ -3379,7 +3379,7 @@ export function TypePredicate(props: {
     type: 'TypePredicate',
     parameterName: asDetachedNodeForCodeGen(props.parameterName),
     typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
-    asserts: props.asserts,
+    kind: props.kind,
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;

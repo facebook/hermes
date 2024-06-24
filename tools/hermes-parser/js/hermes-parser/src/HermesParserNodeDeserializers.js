@@ -1158,7 +1158,7 @@ function deserializeTypePredicate() {
     loc: this.addEmptyLoc(),
     parameterName: this.deserializeNode(),
     typeAnnotation: this.deserializeNode(),
-    asserts: this.deserializeBoolean(),
+    kind: this.deserializeString(),
   };
 }
 function deserializeInterfaceTypeAnnotation() {

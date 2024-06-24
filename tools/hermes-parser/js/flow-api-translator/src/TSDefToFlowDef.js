@@ -1874,7 +1874,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
                 typeAnnotation: null,
               })
             : Transform.Identifier(node.parameterName, false),
-        asserts: node.asserts,
+        kind: node.asserts ? 'asserts' : null,
         typeAnnotation:
           node.typeAnnotation == null
             ? null
