@@ -82,7 +82,7 @@ _sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
 extern "C" void _sh_check_native_stack_overflow(SHRuntime *shr) {
 #ifdef HERMES_CHECK_NATIVE_STACK
   Runtime &runtime = getRuntime(shr);
-  bool overflowing = runtime.isNativeStackOverflowing();
+  bool overflowing = runtime.isStackOverflowing();
   if (LLVM_UNLIKELY(overflowing)) {
     (void)runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
     _sh_throw_current(shr);

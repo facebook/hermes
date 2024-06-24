@@ -268,7 +268,8 @@ CallResult<RegExpMatch> performSearch(
       searchStartOffset,
       stringLength,
       &nativeMatchRanges,
-      matchFlags);
+      matchFlags,
+      runtime.getOverflowGuardForRegex());
   if (matchResult == regex::MatchRuntimeResult::StackOverflow) {
     return runtime.raiseRangeError("Maximum regex stack depth reached");
   } else if (matchResult == regex::MatchRuntimeResult::NoMatch) {

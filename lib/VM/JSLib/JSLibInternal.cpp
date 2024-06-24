@@ -285,7 +285,8 @@ static bool isReturnThis(Handle<StringPrimitive> str, Runtime &runtime) {
         0,
         input.length(),
         nullptr,
-        regex::constants::matchDefault | regex::constants::matchInputAllAscii);
+        regex::constants::matchDefault | regex::constants::matchInputAllAscii,
+        runtime.getOverflowGuardForRegex());
   } else {
     const char16_t *begin = input.castToChar16Ptr();
     result = regex::searchWithBytecode(
@@ -294,7 +295,8 @@ static bool isReturnThis(Handle<StringPrimitive> str, Runtime &runtime) {
         0,
         input.length(),
         nullptr,
-        regex::constants::matchDefault);
+        regex::constants::matchDefault,
+        runtime.getOverflowGuardForRegex());
   }
   return result == regex::MatchRuntimeResult::Match;
 }
