@@ -2630,6 +2630,7 @@ JSParserImpl::parseFunctionOrGroupTypeAnnotationFlow() {
   }
 
   if (!isFunction) {
+    type->incParens();
     return type;
   }
 
