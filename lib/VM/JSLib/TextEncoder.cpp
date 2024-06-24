@@ -107,6 +107,10 @@ textEncoderPrototypeEncoding(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
 
   auto selfHandle = args.dyncastThis<JSObject>();
+  if (!selfHandle) {
+    return runtime.raiseTypeError(
+        "TextEncoder.prototype.encoding called on non-TextEncoder object");
+  }
 
   NamedPropertyDescriptor desc;
   bool exists = JSObject::getOwnNamedDescriptor(
@@ -127,6 +131,10 @@ CallResult<HermesValue>
 textEncoderPrototypeEncode(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   auto selfHandle = args.dyncastThis<JSObject>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "TextEncoder.prototype.encode() called on non-TextEncoder object");
+  }
   NamedPropertyDescriptor desc;
   bool exists = JSObject::getOwnNamedDescriptor(
       selfHandle,
@@ -194,6 +202,10 @@ CallResult<HermesValue>
 textEncoderPrototypeEncodeInto(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
   auto selfHandle = args.dyncastThis<JSObject>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "TextEncoder.prototype.encodeInto() called on non-TextEncoder object");
+  }
   NamedPropertyDescriptor desc;
   bool exists = JSObject::getOwnNamedDescriptor(
       selfHandle,

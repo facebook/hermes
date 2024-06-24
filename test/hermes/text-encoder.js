@@ -32,6 +32,13 @@ try {
   // CHECK-NEXT: TextEncoder.prototype.encode() called on non-TextEncoder object
 }
 
+try {
+  TextEncoder.prototype.encode.call(undefined, '');
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextEncoder.prototype.encode() called on non-TextEncoder object
+}
+
 let result = encoder.encode('test');
 print(Object.prototype.toString.call(result));
 // CHECK-NEXT: [object Uint8Array]
@@ -70,6 +77,13 @@ result = new Uint8Array(4);
 try {
   const b = {};
   TextEncoder.prototype.encodeInto.call(b, '', result);
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextEncoder.prototype.encodeInto() called on non-TextEncoder object
+}
+
+try {
+  TextEncoder.prototype.encodeInto.call(undefined, '', result);
 } catch (e) {
   print(e.message);
   // CHECK-NEXT: TextEncoder.prototype.encodeInto() called on non-TextEncoder object
