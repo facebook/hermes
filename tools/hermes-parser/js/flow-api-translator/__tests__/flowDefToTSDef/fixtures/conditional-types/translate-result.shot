@@ -13,15 +13,15 @@ exports[`flowDefToTSDef conditional-types 1`] = `
 type TypeOf<T> = T extends null
   ? 'null'
   : T extends void
-  ? 'undefined'
-  : T extends string
-  ? 'string'
-  : T extends number
-  ? 'number'
-  : T extends boolean
-  ? 'boolean'
-  : T extends (...$$REST$$: ReadonlyArray<any>) => unknown
-  ? 'function'
-  : 'object';
+    ? 'undefined'
+    : T extends string
+      ? 'string'
+      : T extends number
+        ? 'number'
+        : T extends boolean
+          ? 'boolean'
+          : T extends (...$$REST$$: ReadonlyArray<any>) => unknown
+            ? 'function'
+            : 'object';
 "
 `;

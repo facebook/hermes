@@ -13,14 +13,14 @@
       typeof globalThis !== "undefined"
         ? globalThis
         : typeof global !== "undefined"
-        ? global
-        : typeof self !== "undefined"
-        ? self
-        : this || {};
+          ? global
+          : typeof self !== "undefined"
+            ? self
+            : this || {};
     root.prettierPlugins = root.prettierPlugins || {};
     root.prettierPlugins.flow = interopModuleDefault();
   }
-})(function() {
+})(function () {
   "use strict";
   var __create = Object.create;
   var __defProp = Object.defineProperty;
@@ -116,7 +116,7 @@
         const start = " *";
         const tail = " */";
         const keys = Object.keys(pragmas);
-        const printedObject = keys.map((key) => printKeyValues(key, pragmas[key])).reduce((arr, next) => arr.concat(next), []).map((keyValue) => `${start} ${keyValue}${line}`).join("");
+        const printedObject = keys.flatMap((key) => printKeyValues(key, pragmas[key])).map((keyValue) => `${start} ${keyValue}${line}`).join("");
         if (!comments) {
           if (keys.length === 0) {
             return "";
@@ -148,6 +148,21 @@
   __export(flow_exports, {
     flow: () => flow
   });
+
+  // src/language-js/loc.js
+  function locStart(node) {
+    var _a, _b, _c;
+    const start = ((_a = node.range) == null ? void 0 : _a[0]) ?? node.start;
+    const firstDecorator = (_c = ((_b = node.declaration) == null ? void 0 : _b.decorators) ?? node.decorators) == null ? void 0 : _c[0];
+    if (firstDecorator) {
+      return Math.min(locStart(firstDecorator), start);
+    }
+    return start;
+  }
+  function locEnd(node) {
+    var _a;
+    return ((_a = node.range) == null ? void 0 : _a[1]) ?? node.end;
+  }
 
   // src/language-js/pragma.js
   var import_jest_docblock = __toESM(require_build(), 1);
@@ -188,26 +203,6 @@
       pragmas
     } = parseDocBlock(text);
     return Object.prototype.hasOwnProperty.call(pragmas, "prettier") || Object.prototype.hasOwnProperty.call(pragmas, "format");
-  }
-
-  // src/utils/is-non-empty-array.js
-  function isNonEmptyArray(object) {
-    return Array.isArray(object) && object.length > 0;
-  }
-  var is_non_empty_array_default = isNonEmptyArray;
-
-  // src/language-js/loc.js
-  function locStart(node) {
-    var _a;
-    const start = node.range ? node.range[0] : node.start;
-    const decorators = ((_a = node.declaration) == null ? void 0 : _a.decorators) ?? node.decorators;
-    if (is_non_empty_array_default(decorators)) {
-      return Math.min(locStart(decorators[0]), start);
-    }
-    return start;
-  }
-  function locEnd(node) {
-    return node.range ? node.range[1] : node.end;
   }
 
   // src/language-js/parse/utils/create-parser.js
