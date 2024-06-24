@@ -1,0 +1,678 @@
+---
+source: crates/hermes_parser/tests/parser_test.rs
+expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\")"
+input_file: crates/hermes_parser/tests/fixtures/type-annotations.flow.js
+---
+Input:
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+let BooleanTypeAnnotation: boolean;
+let NumberTypeAnnotation: number;
+let StringTypeAnnotation: string;
+let MixedTypeAnnotation: mixed;
+let EmptyTypeAnnotation: empty;
+let VoidTypeAnnotation: void;
+let NullLiteralTypeAnnotation: null;
+let AnyTypeAnnotation: any;
+let StringLiteralTypeAnnotation: '123';
+let NumberLiteralTypeAnnotation: 123;
+let SymbolTypeAnnotation: symbol;
+let BigIntLiteralTypeAnnotation: 10n;
+let ExistsTypeAnnotation: *;
+let BooleanLiteralTypeAnnotation: true;
+
+
+Output:
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "BooleanTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "BooleanTypeAnnotation",
+                "loc": null,
+                "range": [
+                  219,
+                  226
+                ]
+              },
+              "loc": null,
+              "range": [
+                217,
+                226
+              ]
+            },
+            "loc": null,
+            "range": [
+              196,
+              226
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            196,
+            226
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        192,
+        227
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "NumberTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "NumberTypeAnnotation",
+                "loc": null,
+                "range": [
+                  254,
+                  260
+                ]
+              },
+              "loc": null,
+              "range": [
+                252,
+                260
+              ]
+            },
+            "loc": null,
+            "range": [
+              232,
+              260
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            232,
+            260
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        228,
+        261
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "StringTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "StringTypeAnnotation",
+                "loc": null,
+                "range": [
+                  288,
+                  294
+                ]
+              },
+              "loc": null,
+              "range": [
+                286,
+                294
+              ]
+            },
+            "loc": null,
+            "range": [
+              266,
+              294
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            266,
+            294
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        262,
+        295
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "MixedTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "MixedTypeAnnotation",
+                "loc": null,
+                "range": [
+                  321,
+                  326
+                ]
+              },
+              "loc": null,
+              "range": [
+                319,
+                326
+              ]
+            },
+            "loc": null,
+            "range": [
+              300,
+              326
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            300,
+            326
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        296,
+        327
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "EmptyTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "EmptyTypeAnnotation",
+                "loc": null,
+                "range": [
+                  353,
+                  358
+                ]
+              },
+              "loc": null,
+              "range": [
+                351,
+                358
+              ]
+            },
+            "loc": null,
+            "range": [
+              332,
+              358
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            332,
+            358
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        328,
+        359
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "VoidTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "VoidTypeAnnotation",
+                "loc": null,
+                "range": [
+                  384,
+                  388
+                ]
+              },
+              "loc": null,
+              "range": [
+                382,
+                388
+              ]
+            },
+            "loc": null,
+            "range": [
+              364,
+              388
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            364,
+            388
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        360,
+        389
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "NullLiteralTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "NullLiteralTypeAnnotation",
+                "loc": null,
+                "range": [
+                  421,
+                  425
+                ]
+              },
+              "loc": null,
+              "range": [
+                419,
+                425
+              ]
+            },
+            "loc": null,
+            "range": [
+              394,
+              425
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            394,
+            425
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        390,
+        426
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "AnyTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "AnyTypeAnnotation",
+                "loc": null,
+                "range": [
+                  450,
+                  453
+                ]
+              },
+              "loc": null,
+              "range": [
+                448,
+                453
+              ]
+            },
+            "loc": null,
+            "range": [
+              431,
+              453
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            431,
+            453
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        427,
+        454
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "StringLiteralTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "StringLiteralTypeAnnotation",
+                "value": "123",
+                "raw": "'123'",
+                "loc": null,
+                "range": [
+                  488,
+                  493
+                ]
+              },
+              "loc": null,
+              "range": [
+                486,
+                493
+              ]
+            },
+            "loc": null,
+            "range": [
+              459,
+              493
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            459,
+            493
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        455,
+        494
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "NumberLiteralTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "NumberLiteralTypeAnnotation",
+                "value": 123.0,
+                "raw": "123",
+                "loc": null,
+                "range": [
+                  528,
+                  531
+                ]
+              },
+              "loc": null,
+              "range": [
+                526,
+                531
+              ]
+            },
+            "loc": null,
+            "range": [
+              499,
+              531
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            499,
+            531
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        495,
+        532
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "SymbolTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "SymbolTypeAnnotation",
+                "loc": null,
+                "range": [
+                  559,
+                  565
+                ]
+              },
+              "loc": null,
+              "range": [
+                557,
+                565
+              ]
+            },
+            "loc": null,
+            "range": [
+              537,
+              565
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            537,
+            565
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        533,
+        566
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "BigIntLiteralTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "BigIntLiteralTypeAnnotation",
+                "raw": "10n",
+                "loc": null,
+                "range": [
+                  600,
+                  603
+                ]
+              },
+              "loc": null,
+              "range": [
+                598,
+                603
+              ]
+            },
+            "loc": null,
+            "range": [
+              571,
+              603
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            571,
+            603
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        567,
+        604
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "ExistsTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "ExistsTypeAnnotation",
+                "loc": null,
+                "range": [
+                  631,
+                  632
+                ]
+              },
+              "loc": null,
+              "range": [
+                629,
+                632
+              ]
+            },
+            "loc": null,
+            "range": [
+              609,
+              632
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            609,
+            632
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        605,
+        633
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "BooleanLiteralTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "BooleanLiteralTypeAnnotation",
+                "value": true,
+                "raw": "true",
+                "loc": null,
+                "range": [
+                  668,
+                  672
+                ]
+              },
+              "loc": null,
+              "range": [
+                666,
+                672
+              ]
+            },
+            "loc": null,
+            "range": [
+              638,
+              672
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            638,
+            672
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        634,
+        673
+      ]
+    }
+  ],
+  "sourceType": "script",
+  "loc": null,
+  "range": [
+    192,
+    673
+  ]
+}

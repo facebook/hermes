@@ -105,10 +105,7 @@
                 "type_annotation": {
                     "type": "Option<TypeAnnotation>",
                     "optional": true,
-                    "rename": "typeAnnotation",
-                    "hermes_default": true,
-                    "TODO": "support HermesParser"
-                }
+                    "rename": "typeAnnotation"                }
             }
         },
         "Literal": {
@@ -899,7 +896,7 @@
                 "is_method": {
                     "type": "bool",
                     "rename": "method",
-                    "TODO": "fixed value `false`" 
+                    "TODO": "fixed value `false`"
                 }
             }
         },
@@ -1091,8 +1088,66 @@
             },
             "TODO": "Non-standard HermesParser node"
         },
+        "TypeAnnotation": {
+            "fields": {
+                "type_annotation": {
+                    "type": "TypeAnnotationEnum",
+                    "rename": "typeAnnotation"
+                }
+            }
+        },
         "TSTypeAnnotation": {},
-        "TSTypeAliasDeclaration": {}
+        "TSTypeAliasDeclaration": {},
+        "ExistsTypeAnnotation": {},
+        "EmptyTypeAnnotation": {},
+        "StringTypeAnnotation": {},
+        "NumberTypeAnnotation": {},
+        "StringLiteralTypeAnnotation": {
+            "fields": {
+                "value": {
+                    "type": "String",
+                    "hermes_convert_with": "convert_string_value"
+                },
+                "raw": {
+                    "type": "String",
+                    "hermes_convert_with": "convert_string_value"
+                }
+            }
+        },
+        "NumberLiteralTypeAnnotation": {
+            "fields": {
+                "value": {
+                    "type": "Number"
+                },
+                "raw": {
+                    "type": "String"
+                }
+            }
+        },
+        "BigIntLiteralTypeAnnotation": {
+            "fields": {
+                "raw": {
+                    "type": "String"
+                }
+            }
+        },
+        "BooleanTypeAnnotation": {},
+        "BooleanLiteralTypeAnnotation": {
+            "fields": {
+                "value": {
+                    "type": "bool"
+                },
+                "raw": {
+                    "type": "String"
+                }
+            }
+        },
+        "NullLiteralTypeAnnotation": {},
+        "SymbolTypeAnnotation": {},
+        "AnyTypeAnnotation": {},
+        "MixedTypeAnnotation": {},
+        "BigIntTypeAnnotation": {},
+        "VoidTypeAnnotation": {}
     },
     "enums": {
         "Statement": [
@@ -1256,7 +1311,7 @@
             "JSXNamespacedName"
         ],
         "JSXChildItem": [
-            "JSXText", 
+            "JSXText",
             "JSXStringLiteral",
             "JSXExpressionContainer",
             "JSXSpreadChild",
@@ -1278,8 +1333,26 @@
             "PrivateIdentifier",
             "PrivateName"
         ],
-        "TypeAnnotation": [
-            "TSTypeAnnotation"
+        "TypeAnnotationEnum": [
+            "TSTypeAnnotation",
+            "FlowTypeAnnotation"
+        ],
+        "FlowTypeAnnotation": [
+            "ExistsTypeAnnotation",
+            "EmptyTypeAnnotation",
+            "StringTypeAnnotation",
+            "NumberTypeAnnotation",
+            "StringLiteralTypeAnnotation",
+            "NumberLiteralTypeAnnotation",
+            "BigIntLiteralTypeAnnotation",
+            "BooleanTypeAnnotation",
+            "BooleanLiteralTypeAnnotation",
+            "NullLiteralTypeAnnotation",
+            "SymbolTypeAnnotation",
+            "AnyTypeAnnotation",
+            "MixedTypeAnnotation",
+            "BigIntTypeAnnotation",
+            "VoidTypeAnnotation"
         ]
     },
     "operators": {

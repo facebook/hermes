@@ -1,0 +1,111 @@
+---
+source: crates/hermes_parser/tests/parser_test.rs
+expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\")"
+input_file: crates/hermes_parser/tests/fixtures/comments.flow.js
+---
+Input:
+/*
+Block
+*/
+function fn(){}
+
+// line
+function fn(){}
+
+
+// User
+type User = {
+    // name
+    name: string,
+};
+
+Output:
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "FunctionDeclaration",
+      "id": {
+        "type": "Identifier",
+        "name": "fn",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          21,
+          23
+        ]
+      },
+      "params": [],
+      "body": {
+        "type": "BlockStatement",
+        "body": [],
+        "loc": null,
+        "range": [
+          25,
+          27
+        ]
+      },
+      "generator": false,
+      "async": false,
+      "loc": null,
+      "range": [
+        12,
+        27
+      ],
+      "loc": null,
+      "range": [
+        12,
+        27
+      ]
+    },
+    {
+      "type": "FunctionDeclaration",
+      "id": {
+        "type": "Identifier",
+        "name": "fn",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          46,
+          48
+        ]
+      },
+      "params": [],
+      "body": {
+        "type": "BlockStatement",
+        "body": [],
+        "loc": null,
+        "range": [
+          50,
+          52
+        ]
+      },
+      "generator": false,
+      "async": false,
+      "loc": null,
+      "range": [
+        37,
+        52
+      ],
+      "loc": null,
+      "range": [
+        37,
+        52
+      ]
+    },
+    {
+      "type": "TSTypeAliasDeclaration",
+      "loc": null,
+      "range": [
+        63,
+        109
+      ]
+    }
+  ],
+  "sourceType": "script",
+  "loc": null,
+  "range": [
+    12,
+    109
+  ]
+}
