@@ -31,6 +31,10 @@ pub trait Range {
     fn range(&self) -> SourceRange;
 }
 
+pub trait Introspection {
+    fn name(&self) -> &'static str;
+}
+
 impl Default for SourceType {
     fn default() -> Self {
         Self::Module
