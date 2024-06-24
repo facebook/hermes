@@ -207,8 +207,8 @@ void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
   clear();
 }
 
-bool SamplingProfiler::enable() {
-  return sampling_profiler::Sampler::get()->enable();
+bool SamplingProfiler::enable(double meanHzFreq) {
+  return sampling_profiler::Sampler::get()->enable(meanHzFreq);
 }
 
 bool SamplingProfiler::disable() {

@@ -153,7 +153,7 @@ SamplingProfilerPosix::SamplingProfilerPosix(Runtime &rt)
     : SamplingProfiler(rt), currentThread_{pthread_self()} {
 #if defined(HERMESVM_ENABLE_LOOM) && defined(__APPLE__)
   fbloom_profilo_api()->fbloom_register_enable_for_loom_callback(
-      FBLoomTracerType::JAVASCRIPT, enable);
+      FBLoomTracerType::JAVASCRIPT, []() { return enable(); });
   fbloom_profilo_api()->fbloom_register_disable_for_loom_callback(
       FBLoomTracerType::JAVASCRIPT, disable);
   loomDataPushEnabled_ = true;
