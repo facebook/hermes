@@ -1386,6 +1386,20 @@
                     "type": "FlowTypeAnnotation"
                 }
             }
+        },
+        "UnionTypeAnnotation": {
+            "fields": {
+                "types": {
+                    "type": "Vec<FlowTypeAnnotation>"
+                }
+            }
+        },
+        "IntersectionTypeAnnotation": {
+            "fields": {
+                "types": {
+                    "type": "Vec<FlowTypeAnnotation>"
+                }
+            }
         }
     },
     "enums": {
@@ -1602,7 +1616,9 @@
             "KeyofTypeAnnotation",
             "QualifiedTypeofIdentifier",
             "ObjectTypeAnnotation",
-            "ObjectTypeProperty"
+            "ObjectTypeProperty",
+            "UnionTypeAnnotation",
+            "IntersectionTypeAnnotation"
         ],
         "ObjectTypePropertyType": [
             "ObjectTypeProperty",
