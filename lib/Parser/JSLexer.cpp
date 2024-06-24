@@ -113,6 +113,72 @@ void JSLexer::initializeReservedIdentifiers() {
 #include "hermes/Parser/TokenKinds.def"
 }
 
+bool JSLexer::isLetFollowedByDeclStart() {
+  assert(
+      token_.getKind() == TokenKind::identifier &&
+      token_.getIdentifier()->str() == "let");
+
+  /// Skip over whitespace that doesn't need to modify any flags in the JSLexer.
+  /// Does not skip over newlines due to newLineBeforeCurrentToken_.
+  /// Does not skip over comments.
+  /// Used to avoid lookahead.
+  /// \return the character at curCharPtr_ at the end.
+  auto optimisticSkipWhitespace = [this]() -> char {
+    while (char cur = *curCharPtr_) {
+      switch (cur) {
+        case ' ':
+        case '\t':
+        case '\v':
+        case '\f':
+          ++curCharPtr_;
+          continue;
+
+        default:
+          return cur;
+      }
+    }
+    return '\0';
+  };
+
+  const char curChar = optimisticSkipWhitespace();
+
+  // Fast path.
+  // If the next character is a '{', then this is a let declaration.
+  // If the next character is a '[', then this is a let declaration.
+  if (curChar == '{' || curChar == '[') {
+    return true;
+  }
+
+  // Fast path.
+  // If the next character starts an ASCII identifier,
+  // then this is a declaration.
+  // Don't check for UTF-8 here to avoid having to read a codepoint
+  // or determine Unicode letter value membership.
+  if (isASCIIIdentifierStart(curChar)) {
+    // If the next characters are 'in', this may result in 'in' or 'instanceof'.
+    // So we'd actually have to run a lookahead.
+    if (!(curChar == 'i' && curCharPtr_[1] == 'n')) {
+      return true;
+    }
+  }
+
+  // Slow path.
+  // There might be comments, newlines, UTF-8 identifiers, etc.
+  // If there's a next token and it's an identifier, '[', '{', then this is a
+  // declaration. Otherwise, it's not.
+  // Pass RequireNoNewLine=false because
+  //   let
+  //   x = 3;
+  // is supposed to parse as a let declaration of x, no ASI here.
+  // https://262.ecma-international.org/14.0/#prod-LexicalBinding
+  OptValue<TokenKind> nextTokenKind =
+      lookahead1</* RequireNoNewLine=*/false>(llvh::None);
+  return nextTokenKind.hasValue() &&
+      (*nextTokenKind == TokenKind::identifier ||
+       *nextTokenKind == TokenKind::l_brace ||
+       *nextTokenKind == TokenKind::l_square);
+}
+
 const Token *JSLexer::advance(GrammarContext grammarContext) {
   newLineBeforeCurrentToken_ = false;
 
@@ -902,6 +968,7 @@ const Token *JSLexer::rescanRBraceInTemplateLiteral() {
   return &token_;
 }
 
+template <bool RequireNoNewLine>
 OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
   // We support TokenKind::question here because of Flow's render types.
   // `renders?` is not a token itself (as making it a token would be bad for
@@ -934,7 +1001,7 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
 
   advance();
   OptValue<TokenKind> kind = token_.getKind();
-  if (isNewLineBeforeCurrentToken()) {
+  if (RequireNoNewLine && isNewLineBeforeCurrentToken()) {
     // Disregard anything after LineTerminator.
     kind = llvh::None;
   } else if (expectedToken == kind) {
@@ -960,6 +1027,9 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
 
   return kind;
 }
+
+template OptValue<TokenKind> JSLexer::lookahead1<true>(OptValue<TokenKind>);
+template OptValue<TokenKind> JSLexer::lookahead1<false>(OptValue<TokenKind>);
 
 uint32_t JSLexer::consumeUnicodeEscape() {
   assert(*curCharPtr_ == '\\');
