@@ -164,6 +164,48 @@ enum E {
 // CHECK-NEXT:     },
 
 enum E {
+  A = 1n,
+  B = 2n,
+}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "EnumDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "E"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "EnumBigIntBody",
+// CHECK-NEXT:         "members": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "EnumBigIntMember",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "A"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "init": {
+// CHECK-NEXT:               "type": "BigIntLiteral",
+// CHECK-NEXT:               "bigint": "1n"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "EnumBigIntMember",
+// CHECK-NEXT:             "id": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "B"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "init": {
+// CHECK-NEXT:               "type": "BigIntLiteral",
+// CHECK-NEXT:               "bigint": "2n"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           }
+// CHECK-NEXT:         ],
+// CHECK-NEXT:         "explicitType": false,
+// CHECK-NEXT:         "hasUnknownMembers": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+
+enum E {
   A = true,
   B = false,
 }
@@ -254,6 +296,21 @@ enum E of number {}
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "EnumNumberBody",
+// CHECK-NEXT:         "members": [],
+// CHECK-NEXT:         "explicitType": true,
+// CHECK-NEXT:         "hasUnknownMembers": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     },
+
+enum E of bigint {}
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "EnumDeclaration",
+// CHECK-NEXT:       "id": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "E"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "body": {
+// CHECK-NEXT:         "type": "EnumBigIntBody",
 // CHECK-NEXT:         "members": [],
 // CHECK-NEXT:         "explicitType": true,
 // CHECK-NEXT:         "hasUnknownMembers": false
