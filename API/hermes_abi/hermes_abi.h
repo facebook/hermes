@@ -117,7 +117,7 @@ struct HermesABIPropNameIDListPtrOrError {
 };
 
 /// Always set the top bit for pointers so they can be easily checked.
-#define HERMES_ABI_POINTER_MASK (1 << (sizeof(int) * 8 - 1))
+#define HERMES_ABI_POINTER_MASK (1u << (sizeof(unsigned int) * 8u - 1u))
 
 /// Enum for the types of JavaScript values that can be represented in the ABI.
 enum HermesABIValueKind {
