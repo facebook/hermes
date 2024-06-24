@@ -5,10 +5,28 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/* TODO
 // User
 type User = {
     // name
     name: string,
 };
-*/
+
+type Map = {
+    [string]: Value,
+};
+
+type Actor = {
+    lastName: string,
+    ...User,
+}
+
+
+type Data = {
+    "hello": string,
+    123: ?string,
+}
+
+
+type IPerson = {
+    name(): string
+}

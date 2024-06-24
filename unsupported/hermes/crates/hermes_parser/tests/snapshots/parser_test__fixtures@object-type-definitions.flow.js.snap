@@ -1,0 +1,407 @@
+---
+source: crates/hermes_parser/tests/parser_test.rs
+expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\\n\\nComments:{comments_json}\")"
+input_file: crates/hermes_parser/tests/fixtures/object-type-definitions.flow.js
+---
+Input:
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// User
+type User = {
+    // name
+    name: string,
+};
+
+type Map = {
+    [string]: Value,
+};
+
+type Actor = {
+    lastName: string,
+    ...User,
+}
+
+
+type Data = {
+    "hello": string,
+    123: ?string,
+}
+
+
+
+Output:
+{
+  "type": "Program",
+  "body": [
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "User",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          205,
+          209
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "ObjectTypeAnnotation",
+        "properties": [
+          {
+            "type": "ObjectTypeProperty",
+            "key": {
+              "type": "Identifier",
+              "name": "name",
+              "typeAnnotation": null,
+              "loc": null,
+              "range": [
+                230,
+                234
+              ]
+            },
+            "value": {
+              "type": "StringTypeAnnotation",
+              "loc": null,
+              "range": [
+                236,
+                242
+              ]
+            },
+            "method": false,
+            "optional": false,
+            "static": false,
+            "proto": false,
+            "variance": null,
+            "kind": "init",
+            "loc": null,
+            "range": [
+              230,
+              242
+            ]
+          }
+        ],
+        "indexers": [],
+        "callProperties": [],
+        "internalSlots": [],
+        "inexact": false,
+        "exact": false,
+        "loc": null,
+        "range": [
+          212,
+          245
+        ]
+      },
+      "loc": null,
+      "range": [
+        200,
+        246
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "Map",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          253,
+          256
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "ObjectTypeAnnotation",
+        "properties": [],
+        "indexers": [
+          {
+            "type": "ObjectTypeIndexer",
+            "id": null,
+            "key": {
+              "type": "StringTypeAnnotation",
+              "loc": null,
+              "range": [
+                266,
+                272
+              ]
+            },
+            "value": {
+              "type": "GenericTypeAnnotation",
+              "id": {
+                "type": "Identifier",
+                "name": "Value",
+                "typeAnnotation": null,
+                "loc": null,
+                "range": [
+                  275,
+                  280
+                ]
+              },
+              "typeParameters": null,
+              "loc": null,
+              "range": [
+                275,
+                280
+              ]
+            },
+            "static": false,
+            "variance": null,
+            "loc": null,
+            "range": [
+              265,
+              280
+            ]
+          }
+        ],
+        "callProperties": [],
+        "internalSlots": [],
+        "inexact": false,
+        "exact": false,
+        "loc": null,
+        "range": [
+          259,
+          283
+        ]
+      },
+      "loc": null,
+      "range": [
+        248,
+        284
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "Actor",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          291,
+          296
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "ObjectTypeAnnotation",
+        "properties": [
+          {
+            "type": "ObjectTypeProperty",
+            "key": {
+              "type": "Identifier",
+              "name": "lastName",
+              "typeAnnotation": null,
+              "loc": null,
+              "range": [
+                305,
+                313
+              ]
+            },
+            "value": {
+              "type": "StringTypeAnnotation",
+              "loc": null,
+              "range": [
+                315,
+                321
+              ]
+            },
+            "method": false,
+            "optional": false,
+            "static": false,
+            "proto": false,
+            "variance": null,
+            "kind": "init",
+            "loc": null,
+            "range": [
+              305,
+              321
+            ]
+          },
+          {
+            "type": "ObjectTypeSpreadProperty",
+            "argument": {
+              "type": "GenericTypeAnnotation",
+              "id": {
+                "type": "Identifier",
+                "name": "User",
+                "typeAnnotation": null,
+                "loc": null,
+                "range": [
+                  330,
+                  334
+                ]
+              },
+              "typeParameters": null,
+              "loc": null,
+              "range": [
+                330,
+                334
+              ]
+            },
+            "loc": null,
+            "range": [
+              327,
+              334
+            ]
+          }
+        ],
+        "indexers": [],
+        "callProperties": [],
+        "internalSlots": [],
+        "inexact": false,
+        "exact": false,
+        "loc": null,
+        "range": [
+          299,
+          337
+        ]
+      },
+      "loc": null,
+      "range": [
+        286,
+        337
+      ]
+    },
+    {
+      "type": "TypeAlias",
+      "id": {
+        "type": "Identifier",
+        "name": "Data",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          345,
+          349
+        ]
+      },
+      "typeParameters": null,
+      "right": {
+        "type": "ObjectTypeAnnotation",
+        "properties": [
+          {
+            "type": "ObjectTypeProperty",
+            "key": {
+              "type": "StringLiteral",
+              "value": "hello",
+              "loc": null,
+              "range": [
+                358,
+                365
+              ]
+            },
+            "value": {
+              "type": "StringTypeAnnotation",
+              "loc": null,
+              "range": [
+                367,
+                373
+              ]
+            },
+            "method": false,
+            "optional": false,
+            "static": false,
+            "proto": false,
+            "variance": null,
+            "kind": "init",
+            "loc": null,
+            "range": [
+              358,
+              373
+            ]
+          },
+          {
+            "type": "ObjectTypeProperty",
+            "key": {
+              "type": "NumericLiteral",
+              "value": 123.0,
+              "loc": null,
+              "range": [
+                379,
+                382
+              ]
+            },
+            "value": {
+              "type": "NullableTypeAnnotation",
+              "typeAnnotation": {
+                "type": "StringTypeAnnotation",
+                "loc": null,
+                "range": [
+                  385,
+                  391
+                ]
+              },
+              "loc": null,
+              "range": [
+                384,
+                391
+              ]
+            },
+            "method": false,
+            "optional": false,
+            "static": false,
+            "proto": false,
+            "variance": null,
+            "kind": "init",
+            "loc": null,
+            "range": [
+              379,
+              391
+            ]
+          }
+        ],
+        "indexers": [],
+        "callProperties": [],
+        "internalSlots": [],
+        "inexact": false,
+        "exact": false,
+        "loc": null,
+        "range": [
+          352,
+          394
+        ]
+      },
+      "loc": null,
+      "range": [
+        340,
+        394
+      ]
+    }
+  ],
+  "sourceType": "script",
+  "loc": null,
+  "range": [
+    200,
+    394
+  ]
+}
+
+Comments:[
+  {
+    "value": "*\n * Copyright (c) Meta Platforms, Inc. and affiliates.\n *\n * This source code is licensed under the MIT license found in the\n * LICENSE file in the root directory of this source tree.\n ",
+    "range": [
+      0,
+      190
+    ]
+  },
+  {
+    "value": " User",
+    "range": [
+      192,
+      199
+    ]
+  },
+  {
+    "value": " name",
+    "range": [
+      218,
+      225
+    ]
+  }
+]
