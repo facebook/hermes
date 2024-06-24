@@ -723,6 +723,7 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
+                "inexact": false,
                 "type": "TupleTypeAnnotation",
                 "types": [
                   {
@@ -796,6 +797,7 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
+                "inexact": false,
                 "type": "TupleTypeAnnotation",
                 "types": [
                   {
@@ -880,6 +882,7 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
+                "inexact": false,
                 "type": "TupleTypeAnnotation",
                 "types": [
                   {

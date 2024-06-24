@@ -1033,6 +1033,12 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
       delete node.raw;
       return node;
     }
+    case 'TupleTypeAnnotation': {
+      // $FlowExpectedError[cannot-write]
+      delete node.inexact;
+      return node;
+    }
+
     case 'JSXText': {
       // $FlowExpectedError[prop-missing]
       node.extra = {
