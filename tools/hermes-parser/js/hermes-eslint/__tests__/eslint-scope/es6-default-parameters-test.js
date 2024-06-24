@@ -44,6 +44,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
@@ -86,6 +87,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
@@ -128,6 +130,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
@@ -170,6 +173,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
@@ -212,6 +216,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
@@ -253,6 +258,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
@@ -295,6 +301,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
@@ -339,6 +346,7 @@ describe('ES6 default parameters:', () => {
     };
 
     for (const name in patterns) {
+      // $FlowFixMe[invalid-computed-prop]
       const code = patterns[name];
 
       it(name, () => {
