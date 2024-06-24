@@ -9,6 +9,7 @@
 #include "hermes/Regex/RegexTraits.h"
 #include "hermes/Support/OptValue.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/TrailingObjects.h"
 #include "llvh/Support/raw_ostream.h"
@@ -474,15 +475,6 @@ struct Context {
       BacktrackStack &bts);
 
  private:
-  /// \return true if the native stack is overflowing. This will either use real
-  /// stack checking or a simple depth counter.
-  bool isStackOverflowing() {
-#ifndef HERMES_CHECK_NATIVE_STACK
-    overflowGuard_.callDepth++;
-#endif
-    return overflowGuard_.isOverflowing();
-  }
-
   /// Do initialization of the given state before it enters the loop body
   /// described by the LoopInsn \p loop, including setting up any backtracking
   /// state.
@@ -1006,9 +998,15 @@ auto Context<Traits>::match(State<Traits> *s, bool onlyAtStart)
       (c.forwards() || locsToCheckCount == 1) &&
       "Can only check one location when cursor is backwards");
 
+#ifndef HERMES_CHECK_NATIVE_STACK
+  ++overflowGuard_.callDepth;
+  auto decrement =
+      llvh::make_scope_exit([this] { --overflowGuard_.callDepth; });
+#endif
+
   // Make sure we are not exceeding the set limit of the amount of times we can
   // recurse.
-  if (isStackOverflowing()) {
+  if (overflowGuard_.isOverflowing()) {
     return ExecutionStatus::STACK_OVERFLOW;
   }
 
