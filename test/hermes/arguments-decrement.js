@@ -18,5 +18,7 @@ function decrementArguments(flag) {
   }
   return var3 - 1 + flag;
 }
+
 print(decrementArguments(2));
 // CHECK: NaN
+

@@ -43,8 +43,8 @@ function foo (a, b) {
 // CHECK-NEXT:  $Reg0 = PhiInst (:any) $Reg0, %BB0, $Reg0, %BB1
 // CHECK-NEXT:  $Reg1 = PhiInst (:any) $Reg1, %BB0, $Reg1, %BB1
 // CHECK-NEXT:  $Reg2 = MovInst (:any) $Reg0
-// CHECK-NEXT:  $Reg1 = MovInst (:any) $Reg1
-// CHECK-NEXT:  $Reg0 = MovInst (:any) $Reg1
+// CHECK-NEXT:  $Reg3 = MovInst (:any) $Reg1
+// CHECK-NEXT:  $Reg0 = MovInst (:any) $Reg3
 // CHECK-NEXT:  $Reg1 = MovInst (:any) $Reg2
 // CHECK-NEXT:  $Reg0 = BranchInst %BB1
 // CHECK-NEXT:function_end
