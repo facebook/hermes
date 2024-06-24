@@ -117,6 +117,7 @@ void JSParserImpl::initializeIdentifiers() {
 
   checksIdent_ = lexer_.getIdentifier("%checks");
   assertsIdent_ = lexer_.getIdentifier("asserts");
+  impliesIdent_ = lexer_.getIdentifier("implies");
 
   // Flow Component syntax
   componentIdent_ = lexer_.getIdentifier("component");

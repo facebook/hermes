@@ -330,6 +330,7 @@ class JSParserImpl {
 
   UniqueString *checksIdent_;
   UniqueString *assertsIdent_;
+  UniqueString *impliesIdent_;
 
   UniqueString *componentIdent_;
   UniqueString *hookIdent_;

@@ -1638,8 +1638,60 @@ Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
     } else {
       returnType = *optType;
     }
+  } else if (check(impliesIdent_)) {
+    // TypePredicate (implies = true) or TypeAnnotation:
+    //   TypeAnnotation
+    //   implies IdentifierName is TypeAnnotation
+
+    //   implies IdentifierName is TypeAnnotation
+    //   ^
+    auto optType = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+    if (!optType)
+      return None;
+
+    if (check(TokenKind::identifier)) {
+      // Validate the "implies" token was an identifier not a more complex type.
+      if (auto *generic = dyn_cast<ESTree::GenericTypeAnnotationNode>(*optType);
+          !(generic && !generic->_typeParameters)) {
+        error(
+            tok_->getStartLoc(),
+            "invalid return annotation. 'implies' type guard needs to be followed by identifier");
+        return None;
+      }
+
+      //   implies IdentifierName is TypeAnnotation
+      //           ^
+      ESTree::Node *id = setLocation(
+          tok_,
+          tok_,
+          new (context_)
+              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+      advance(JSLexer::GrammarContext::Type);
+
+      //   implies IdentifierName is TypeAnnotation
+      //                          ^
+      if (!checkAndEat(isIdent_, JSLexer::GrammarContext::Type)) {
+        error(
+            tok_->getStartLoc(),
+            "expecting 'is' after parameter of 'implies' type guard");
+        return None;
+      }
+      //   implies IdentifierName is TypeAnnotation
+      //                             ^
+      auto optTypeT = parseTypeAnnotationFlow(None, allowAnonFunctionType);
+      if (!optTypeT)
+        return None;
+      returnType = setLocation(
+          start,
+          getPrevTokenEndLoc(),
+          new (context_)
+              ESTree::TypePredicateNode(id, *optTypeT, impliesIdent_));
+    } else {
+      // implies (as type -- okay)
+      returnType = *optType;
+    }
   } else {
-    // TypePredicate (asserts = false) or TypeAnnotation:
+    // TypePredicate (asserts = false && implies = false) or TypeAnnotation:
     //   TypeAnnotation
     //   IdentifierName is TypeAnnotation
 
