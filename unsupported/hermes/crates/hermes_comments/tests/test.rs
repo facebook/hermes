@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::env;
 
 use hermes_comments::*;
-use hermes_estree::Node;
 use hermes_estree::SourceType;
 use hermes_parser::parse;
 use hermes_parser::ParserDialect;

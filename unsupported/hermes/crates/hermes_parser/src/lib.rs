@@ -59,7 +59,7 @@ pub fn parse(
         .collect();
 
     Ok(ParseResult {
-        ast: FromHermes::convert(&mut cx, result.root().unwrap()),
+        ast: FromHermes::convert(&mut cx, result.root().unwrap()).unwrap(),
         comments,
     })
 }
