@@ -14,13 +14,18 @@ use insta::glob;
 
 #[test]
 fn fixtures() {
+    let mut settings = insta::Settings::clone_current();
+    if let Ok(path) = env::var("SNAPSHOT_PATH") {
+        settings.set_snapshot_path(path);
+    }
+    let _guard = settings.bind_to_scope();
     glob!("fixtures/**.js", |path| {
         println!("fixture {}", path.to_str().unwrap());
         let input = std::fs::read_to_string(path).unwrap();
         let mut ast = parse(
             &input,
             path.to_str().unwrap(),
-            hermes::parser::ParserDialect::FlowDetect,
+            hermes_parser::ParserDialect::FlowDetect,
         )
         .unwrap();
         // TODO: hack to prevent changing lots of fixtures all at once
