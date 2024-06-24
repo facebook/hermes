@@ -177,6 +177,17 @@
  *	used for input more than STRTOD_DIGLIM digits long (default 40).
  */
 
+#if defined __has_attribute
+  #if __has_attribute(fallthrough)
+    #define FALLTHROUGH __attribute__ ((fallthrough))
+  #else
+    #define FALLTHROUGH (void)0
+  #endif
+#else
+  #define FALLTHROUGH (void)0
+#endif
+
+
 #ifndef Long
 #define Long long
 #endif
@@ -2575,11 +2586,11 @@ _hermes_g_strtod
 	for(s = s00;;s++) switch(*s) {
 		case '-':
 			sign = 1;
-			/* no break */
+			FALLTHROUGH;
 		case '+':
 			if (*++s)
 				goto break2;
-			/* no break */
+			FALLTHROUGH;
 		case 0:
 			goto ret0;
 		case '\t':
@@ -2687,6 +2698,7 @@ _hermes_g_strtod
 		switch(c = *++s) {
 			case '-':
 				esign = 1;
+				FALLTHROUGH;
 			case '+':
 				c = *++s;
 			}
