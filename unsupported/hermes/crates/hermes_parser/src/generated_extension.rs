@@ -34,6 +34,7 @@ use hermes::parser::hermes_get_Property_kind;
 use hermes::parser::hermes_get_Property_method;
 use hermes::parser::hermes_get_Property_shorthand;
 use hermes::parser::hermes_get_Property_value;
+use hermes::parser::Comment as HermesComment;
 use hermes::parser::NodeKind;
 use hermes::parser::NodeLabel;
 use hermes::parser::NodeLabelOpt;
@@ -63,6 +64,7 @@ use hermes_estree::SourceRange;
 use hermes_estree::TemplateElement;
 use hermes_estree::TemplateElementValue;
 use juno_support::NullTerminatedBuf;
+use serde::Serialize;
 
 pub struct Context {
     start: usize,
@@ -120,6 +122,10 @@ where
 
 pub fn convert_range(cx: &Context, node: NodePtr) -> SourceRange {
     let range = node.as_ref().source_range;
+    convert_smrange(cx, range)
+}
+
+pub fn convert_smrange(cx: &Context, range: SMRange) -> SourceRange {
     let absolute_start: usize = range.start.as_ptr() as usize;
     let start = absolute_start - cx.start;
     let absolute_end: usize = range.end.as_ptr() as usize;
@@ -128,11 +134,6 @@ pub fn convert_range(cx: &Context, node: NodePtr) -> SourceRange {
         start: start as u32,
         end: NonZeroU32::new(end as u32).unwrap(),
     }
-}
-
-#[allow(dead_code)]
-pub fn convert_smrange(_range: SMRange) -> SourceRange {
-    todo!()
 }
 
 pub fn convert_string(_cx: &mut Context, label: NodeLabel) -> String {
@@ -347,5 +348,21 @@ impl FromHermes for ClassExpression {
             loc,
             range: Some(range),
         }
+    }
+}
+
+#[derive(Serialize)]
+pub struct Comment {
+    pub value: String,
+    pub range: SourceRange,
+}
+
+pub fn convert_comment(cx: &mut Context, comment: &HermesComment) -> Comment {
+    let str = comment.get_string();
+    let range = convert_smrange(cx, comment.source_range);
+
+    Comment {
+        value: str.to_string(),
+        range,
     }
 }

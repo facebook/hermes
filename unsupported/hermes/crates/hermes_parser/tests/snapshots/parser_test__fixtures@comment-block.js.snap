@@ -1,6 +1,6 @@
 ---
 source: crates/hermes_parser/tests/parser_test.rs
-expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\")"
+expression: "format!(\"Input:\\n{input}\\n\\nOutput:\\n{output}\\n\\nComments:{comments_json}\")"
 input_file: crates/hermes_parser/tests/fixtures/comment-block.js
 ---
 Input:
@@ -64,3 +64,20 @@ Output:
     219
   ]
 }
+
+Comments:[
+  {
+    "value": "*\n * Copyright (c) Meta Platforms, Inc. and affiliates.\n *\n * This source code is licensed under the MIT license found in the\n * LICENSE file in the root directory of this source tree.\n ",
+    "range": [
+      0,
+      190
+    ]
+  },
+  {
+    "value": "\nBlock\n",
+    "range": [
+      192,
+      203
+    ]
+  }
+]

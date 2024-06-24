@@ -206,6 +206,7 @@ dependencies = [
  "hermes_estree_codegen",
  "insta",
  "juno_support",
+ "serde",
  "serde_json",
 ]
 

@@ -8,6 +8,8 @@
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 mod generated_extension;
 
+use generated_extension::convert_comment;
+pub use generated_extension::Comment;
 use generated_extension::Context;
 use generated_extension::FromHermes;
 use hermes::parser::HermesParser;
@@ -18,22 +20,18 @@ use hermes_diagnostics::Diagnostic;
 use hermes_estree::Program;
 use juno_support::NullTerminatedBuf;
 
+pub struct ParseResult {
+    pub ast: Program,
+    pub comments: Vec<Comment>,
+}
+
 pub fn parse(
     source: &str,
     _file: &str,
-    dialect: ParserDialect,
-) -> Result<Program, Vec<Diagnostic>> {
+    flags: ParserFlags,
+) -> Result<ParseResult, Vec<Diagnostic>> {
     let buf = NullTerminatedBuf::from_str_check(source);
-    let result = HermesParser::parse(
-        ParserFlags {
-            dialect,
-            enable_jsx: true,
-            store_doc_block: true,
-            strict_mode: true,
-            store_comments: false,
-        },
-        &buf,
-    );
+    let result = HermesParser::parse(flags, &buf);
     let mut cx = Context::new(&buf);
     if result.has_errors() {
         let error_messages = result.messages();
@@ -46,5 +44,14 @@ pub fn parse(
             .collect());
     }
 
-    Ok(FromHermes::convert(&mut cx, result.root().unwrap()))
+    let comments = result
+        .comments()
+        .iter()
+        .map(|comment| convert_comment(&mut cx, comment))
+        .collect();
+
+    Ok(ParseResult {
+        ast: FromHermes::convert(&mut cx, result.root().unwrap()),
+        comments,
+    })
 }
