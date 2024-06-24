@@ -16,6 +16,13 @@
 #include <deque>
 #include <random>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
 #if __has_builtin(__builtin_unreachable)
 #define BUILTIN_UNREACHABLE __builtin_unreachable()
 #elif defined(_MSC_VER)
@@ -690,6 +697,32 @@ class SaveAndRestore {
   }
 };
 
+#if WASM_RT_USE_MMAP
+
+/// Get the page size of the system.
+static uintptr_t os_native_pagesize() {
+#if defined(_WIN32)
+  SYSTEM_INFO systemInfo;
+  GetSystemInfo(&systemInfo);
+  uintptr_t pageSize = systemInfo.dwPageSize;
+#else
+  uintptr_t pageSize = sysconf(_SC_PAGESIZE);
+#endif
+  return pageSize;
+}
+
+/// Remove read/write/execute access to the page containing the given address.
+/// Any accesses to the page will result in a bad memory access.
+static int os_guardpage(void *addr) {
+#if defined(_WIN32)
+  return VirtualFree(addr, os_native_pagesize(), MEM_DECOMMIT) ? 0 : -1;
+#else
+  return mprotect(addr, os_native_pagesize(), PROT_NONE);
+#endif
+}
+
+#endif // WASM_RT_USE_MMAP
+
 /// Define a simple wrapper class that manages the lifetime of the w2c_hermes
 /// instance. This lets us maintain the order of the destructor relative to
 /// other fields in HermesSandboxRuntimeImpl, which may need to be destroyed
@@ -703,6 +736,20 @@ class W2CHermesRAII : public w2c_hermes {
         (w2c_hermes__import *)this,
         (w2c_wasi__snapshot__preview1 *)this);
     w2c_hermes_0x5Finitialize(this);
+
+#if WASM_RT_USE_MMAP
+
+    // When the sandbox memory is allocated with mmap, and the
+    // lowest used address is larger than the page size, mprotect
+    // the first page so we trap on null accesses.
+    const uintptr_t pageSize = os_native_pagesize();
+    const uintptr_t global_base = w2c_hermes_get_global_base(this);
+    if (pageSize <= global_base) {
+      // Add a guard page based at NULL (address 0)
+      os_guardpage(this->w2c_memory.data);
+    }
+
+#endif // WASM_RT_USE_MMAP
   }
   ~W2CHermesRAII() {
     wasm2c_hermes_free(this);

@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 if (EMSCRIPTEN)
-  set(WASM_LINKER_ARGS "-sEXPORTED_FUNCTIONS=[_get_hermes_abi_vtable, _malloc, _realloc, _free, stackSave, stackRestore, stackAlloc]" -sWARN_ON_UNDEFINED_SYMBOLS=0 -sSTANDALONE_WASM --no-entry -sALLOW_TABLE_GROWTH=1)
+  set(WASM_LINKER_ARGS "-sEXPORTED_FUNCTIONS=[_get_hermes_abi_vtable, _malloc, _realloc, _free, stackSave, stackRestore, stackAlloc, _get_global_base]" -sWARN_ON_UNDEFINED_SYMBOLS=0 -sSTANDALONE_WASM --no-entry -sALLOW_TABLE_GROWTH=1)
 
   # Define a target that builds the Hermes library as a wasm executable.
   add_executable(hermesSandboxImpl hermes_sandbox_impl.cpp )
