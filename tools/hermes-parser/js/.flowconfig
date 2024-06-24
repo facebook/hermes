@@ -27,7 +27,7 @@ experimental.component_syntax=parsing
 enums=true
 
 [version]
-^0.230.0
+^0.231.0
 
 [lints]
 untyped-type-import=error
