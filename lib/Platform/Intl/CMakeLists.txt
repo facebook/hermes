@@ -21,6 +21,10 @@ if(HERMES_ENABLE_INTL)
     set_target_properties(hermesPlatformIntl_obj PROPERTIES UNITY_BUILD false)
     target_compile_options(hermesPlatformIntl_obj PRIVATE -fobjc-arc)
   else()
-    add_hermes_library(hermesPlatformIntl PlatformIntlDummy.cpp LINK_OBJLIBS hermesPublic)
+    add_hermes_library(hermesPlatformIntl PlatformIntlICU.cpp
+        LINK_OBJLIBS
+        hermesBCP47Parser
+        hermesPublic
+    )
   endif()
 endif()

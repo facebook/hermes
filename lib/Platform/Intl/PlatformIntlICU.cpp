@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
 #include <deque>
@@ -16,11 +17,54 @@ using namespace ::hermes;
 
 namespace hermes {
 namespace platform_intl {
+namespace {
 
+/// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
+vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &locales) {
+  // 1. If locales is undefined, then
+  //   a. Return a new empty List
+  // Not needed, this validation occurs closer to VM in 'normalizeLocales'.
+  // 2. Let seen be a new empty List.
+  std::vector<std::u16string> seen;
+  // 3. If Type(locales) is String or Type(locales) is Object and locales has an
+  // [[InitializedLocale]] internal slot, then
+  // 4. Else
+  // We don't yet support Locale object -
+  // https://402.ecma-international.org/8.0/#locale-objects As of now, 'locales'
+  // can only be a string list/array. Validation occurs in normalizeLocaleList,
+  // so this function just takes a vector of strings.
+  // 5. Let len be ? ToLength(? Get(O, "length")).
+  // 6. Let k be 0.
+  // 7. Repeat, while k < len
+  for (const auto &locale : locales) {
+    // 7.c.vi. Let canonicalizedTag be CanonicalizeUnicodeLocaleId(tag).
+    auto parsedOpt = ParsedLocaleIdentifier::parse(locale);
+    if (!parsedOpt)
+      return runtime.raiseRangeError(
+          vm::TwineChar16("Invalid language tag: ") +
+          vm::TwineChar16(locale.c_str()));
+    auto canonicalizedTag = parsedOpt->canonicalize();
+
+    // 7.c.vii. If canonicalizedTag is not an element of seen, append
+    // canonicalizedTag as the last element of seen.
+    if (std::find(seen.begin(), seen.end(), canonicalizedTag) == seen.end()) {
+      seen.push_back(std::move(canonicalizedTag));
+    }
+  }
+  return seen;
+}
+
+} // namespace
+
+/// https://402.ecma-international.org/8.0/#sec-intl.getcanonicallocales
 vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales) {
-  return std::vector<std::u16string>{u"fr-FR", u"es-ES"};
+  // 1. Let ll be ? CanonicalizeLocaleList(locales).
+  // 2. Return CreateArrayFromList(ll).
+  return canonicalizeLocaleList(runtime, locales);
 }
 
 vm::CallResult<std::u16string> toLocaleLowerCase(
@@ -29,6 +73,7 @@ vm::CallResult<std::u16string> toLocaleLowerCase(
     const std::u16string &str) {
   return std::u16string(u"lowered");
 }
+
 vm::CallResult<std::u16string> toLocaleUpperCase(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
