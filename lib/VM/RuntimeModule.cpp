@@ -70,7 +70,7 @@ RuntimeModule::~RuntimeModule() {
   runtime_.getHeap().getIDTracker().untrackNative(&functionMap_);
 }
 
-void RuntimeModule::prepareForRuntimeShutdown() {
+void RuntimeModule::prepareForDestruction() {
   for (int i = 0, e = functionMap_.size(); i < e; i++) {
     if (functionMap_[i] != nullptr &&
         functionMap_[i]->getRuntimeModule() != this) {
