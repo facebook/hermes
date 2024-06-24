@@ -2,7 +2,7 @@
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebook/hermes/blob/HEAD/LICENSE)
 [![npm version](https://img.shields.io/npm/v/hermes-engine.svg?style=flat)](https://www.npmjs.com/package/hermes-engine)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/HEAD/CONTRIBUTING.md)
-<img src="./website/static/img/logo.svg" alt="Hermes logo - large H with wings" align="right" width="20%"/>
+<img src="./doc/img/logo.svg" alt="Hermes logo - large H with wings" align="right" width="20%"/>
 
 Hermes is a JavaScript engine optimized for fast start-up of [React Native](https://reactnative.dev/) apps. It features ahead-of-time static optimization and compact bytecode.
 
