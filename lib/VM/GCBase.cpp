@@ -536,6 +536,11 @@ void GCBase::createSnapshot(GC &gc, llvh::raw_ostream &os) {
             stackTracesTreeNode ? stackTracesTreeNode->id : 0);
       };
   gc.forAllObjs(snapshotForObject);
+  // Scan all WeakMapEntrySlot so that PrimitiveNodeAcceptor won't miss
+  // primitives stored as WeakMap values.
+  weakMapEntrySlots_.forEach([&primitiveAcceptor](WeakMapEntrySlot &slot) {
+    primitiveAcceptor.accept(slot.mappedValue);
+  });
   // Write the singleton number nodes into the snapshot.
   primitiveAcceptor.writeAllNodes();
   snap.endSection(HeapSnapshot::Section::Nodes);

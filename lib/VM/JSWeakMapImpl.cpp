@@ -156,14 +156,6 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
         gc.getObjectID(key.getKeyNonNull(gc.getPointerBase(), gc)));
 
     auto mappedValue = key.getMappedValue(gc);
-    // TODO(T175014649): nodes for numbers may not exist since they are not seen
-    // by PrimitiveNodeAcceptor. We can't simply add them in
-    // _snapshotAddNodesImpl() either, because PrimitiveNodeAcceptor may see the
-    // same number in a heap object and the assertion of not writing duplicate
-    // node will fail.
-    if (mappedValue.isNumber()) {
-      continue;
-    }
     if (auto id = gc.getSnapshotID(mappedValue)) {
       snap.addNamedEdge(
           HeapSnapshot::EdgeType::Internal,
