@@ -845,7 +845,7 @@ ESTREE_NODE_3_ARGS(
     TypePredicate, Flow,
     NodePtr, parameterName, false,
     NodePtr, typeAnnotation, true,
-    NodeBoolean, asserts, false)
+    NodeString, kind, true)
 
 ESTREE_NODE_2_ARGS(
     InterfaceTypeAnnotation, Flow,

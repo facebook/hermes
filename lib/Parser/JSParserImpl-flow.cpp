@@ -1633,7 +1633,8 @@ Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
       returnType = setLocation(
           start,
           getPrevTokenEndLoc(),
-          new (context_) ESTree::TypePredicateNode(id, typeAnnotation, true));
+          new (context_)
+              ESTree::TypePredicateNode(id, typeAnnotation, assertsIdent_));
     } else {
       returnType = *optType;
     }
@@ -1656,7 +1657,7 @@ Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
       returnType = setLocation(
           start,
           getPrevTokenEndLoc(),
-          new (context_) ESTree::TypePredicateNode(*optId, *optType, false));
+          new (context_) ESTree::TypePredicateNode(*optId, *optType, nullptr));
     } else {
       returnType = *optType;
     }
