@@ -445,7 +445,8 @@ enum class DiagKind : uint32_t {
 DiagKind toDiagKind(llvh::SourceMgr::DiagKind k) {
   switch (k) {
     default:
-      assert(false);
+      assert(false && "Invalid DiagKind");
+      [[fallthrough]];
     case llvh::SourceMgr::DK_Error:
       return DiagKind::Error;
     case llvh::SourceMgr::DK_Warning:
