@@ -18,7 +18,7 @@ export default function BabelPluginSyntaxHermesParser(
   // $FlowExpectedError[unclear-type] We don't have types for this.
   api: any,
 ): $ReadOnly<{...}> {
-  api.assertVersion(7);
+  api.assertVersion('^7.0.0 || ^8.0.0-alpha.6');
 
   let curParserOpts: ParserOptions = {};
   let curFilename: ?string = null;
