@@ -353,7 +353,7 @@ impl FromHermes for ClassExpression {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Comment {
     pub value: String,
     pub range: SourceRange,
