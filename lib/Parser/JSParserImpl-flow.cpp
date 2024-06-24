@@ -2334,7 +2334,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   return setLocation(
       start,
       advance(JSLexer::GrammarContext::Type).End,
-      new (context_) ESTree::TupleTypeAnnotationNode(std::move(types)));
+      new (context_) ESTree::TupleTypeAnnotationNode(std::move(types), false));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow() {
