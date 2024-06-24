@@ -46,7 +46,7 @@ pub fn parse(
                     message,
                     SourceRange {
                         start,
-                        end: std::num::NonZeroU32::new(start + 1).unwrap(),
+                        end: start + 1,
                     },
                 )
             })
