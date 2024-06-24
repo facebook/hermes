@@ -52,14 +52,12 @@ pub fn parse(
             .collect());
     }
 
+    let ast = FromHermes::convert(&mut cx, result.root().unwrap())?;
     let comments = result
         .comments()
         .iter()
         .map(|comment| convert_comment(&mut cx, comment))
         .collect();
 
-    Ok(ParseResult {
-        ast: FromHermes::convert(&mut cx, result.root().unwrap()).unwrap(),
-        comments,
-    })
+    Ok(ParseResult { ast, comments })
 }
