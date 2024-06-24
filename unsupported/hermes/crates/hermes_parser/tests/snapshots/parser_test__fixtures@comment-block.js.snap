@@ -43,6 +43,7 @@ Output:
           219
         ]
       },
+      "returnType": null,
       "generator": false,
       "async": false,
       "loc": null,

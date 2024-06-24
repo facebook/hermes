@@ -11,22 +11,127 @@ Input:
  * LICENSE file in the root directory of this source tree.
  */
 
-/* TODO:
 function field(user: User): string {
     return "Hello";
 }
-*/
 
 
 Output:
 {
   "type": "Program",
-  "body": [],
+  "body": [
+    {
+      "type": "FunctionDeclaration",
+      "id": {
+        "type": "Identifier",
+        "name": "field",
+        "typeAnnotation": null,
+        "loc": null,
+        "range": [
+          201,
+          206
+        ]
+      },
+      "params": [
+        {
+          "type": "Identifier",
+          "name": "user",
+          "typeAnnotation": {
+            "type": "TypeAnnotation",
+            "typeAnnotation": {
+              "type": "GenericTypeAnnotation",
+              "id": {
+                "type": "Identifier",
+                "name": "User",
+                "typeAnnotation": null,
+                "loc": null,
+                "range": [
+                  213,
+                  217
+                ]
+              },
+              "typeParameters": null,
+              "loc": null,
+              "range": [
+                213,
+                217
+              ]
+            },
+            "loc": null,
+            "range": [
+              211,
+              217
+            ]
+          },
+          "loc": null,
+          "range": [
+            207,
+            217
+          ]
+        }
+      ],
+      "body": {
+        "type": "BlockStatement",
+        "body": [
+          {
+            "type": "ReturnStatement",
+            "argument": {
+              "type": "StringLiteral",
+              "value": "Hello",
+              "loc": null,
+              "range": [
+                240,
+                247
+              ]
+            },
+            "loc": null,
+            "range": [
+              233,
+              248
+            ]
+          }
+        ],
+        "loc": null,
+        "range": [
+          227,
+          250
+        ]
+      },
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "type": "StringTypeAnnotation",
+          "loc": null,
+          "range": [
+            220,
+            226
+          ]
+        },
+        "loc": null,
+        "range": [
+          218,
+          226
+        ]
+      },
+      "generator": false,
+      "async": false,
+      "loc": null,
+      "range": [
+        192,
+        250
+      ],
+      "loc": null,
+      "range": [
+        192,
+        250
+      ]
+    }
+  ],
   "sourceType": "script",
   "loc": null,
   "range": [
-    263,
-    263
+    192,
+    250
   ]
 }
 
@@ -36,13 +141,6 @@ Comments:[
     "range": [
       0,
       190
-    ]
-  },
-  {
-    "value": " TODO:\nfunction field(user: User): string {\n    return \"Hello\";\n}\n",
-    "range": [
-      192,
-      262
     ]
   }
 ]
