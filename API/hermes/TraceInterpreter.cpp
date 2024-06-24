@@ -30,7 +30,6 @@
                 << nextExecIndex_ - 1 << std::endl;                       \
       abort();                                                            \
     }                                                                     \
-    assert((expected) == (actual));                                       \
   } while (0)
 
 #define TRACE_EXPECT_TRUE(actual) TRACE_EXPECT_EQ(true, actual)
@@ -486,7 +485,6 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 
     Value get(Runtime &rt, const PropNameID &name) override {
       try {
-        const std::string propName = name.utf8(rt);
         const auto &rec =
             interpreter_.trace_.records()[interpreter_.nextExecIndex_];
         const auto &gpnr =
@@ -1038,18 +1036,13 @@ void TraceInterpreter::executeRecords() {
 
           if (record.objID_.isString()) {
             const auto &val = getJSIValueForUse(record.objID_.getUID());
-            [[maybe_unused]] std::string replayedStr =
-                val.getString(rt_).utf8(rt_);
-            TRACE_EXPECT_EQ(record.retVal_, replayedStr);
+            TRACE_EXPECT_EQ(record.retVal_, val.getString(rt_).utf8(rt_));
           } else if (record.objID_.isPropNameID()) {
             auto propNameID = getPropNameIDForUse(record.objID_.getUID());
-            [[maybe_unused]] std::string replayedStr = propNameID.utf8(rt_);
-            TRACE_EXPECT_EQ(record.retVal_, replayedStr);
+            TRACE_EXPECT_EQ(record.retVal_, propNameID.utf8(rt_));
           } else if (record.objID_.isSymbol()) {
             jsi::Value val = getJSIValueForUse(record.objID_.getUID());
-            [[maybe_unused]] std::string replayedStr =
-                val.asSymbol(rt_).toString(rt_);
-            TRACE_EXPECT_EQ(record.retVal_, replayedStr);
+            TRACE_EXPECT_EQ(record.retVal_, val.asSymbol(rt_).toString(rt_));
           }
           break;
         }
