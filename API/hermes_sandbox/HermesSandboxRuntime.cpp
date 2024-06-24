@@ -749,6 +749,20 @@ class W2CHermesRAII : public w2c_hermes {
       os_guardpage(this->w2c_memory.data);
     }
 
+    // Move stack end to the next page boundary and make room for the guard
+    // page.
+    uintptr_t stackEndPageAligned =
+        (this->w2c_0x5F_stack_end + pageSize - 1) & ~(pageSize - 1);
+
+    // Add a guard page to the bottom of the stack.
+    // Ensure that there are at least 2 pages in stack
+    // before the guard page.
+    if (stackEndPageAligned + 3 * pageSize <= this->w2c_0x5F_stack_pointer &&
+        !os_guardpage((void *)(this->w2c_memory.data + stackEndPageAligned))) {
+      // Adjust the stack end to after the guard page.
+      this->w2c_0x5F_stack_end = stackEndPageAligned + pageSize;
+    }
+
 #endif // WASM_RT_USE_MMAP
   }
   ~W2CHermesRAII() {
