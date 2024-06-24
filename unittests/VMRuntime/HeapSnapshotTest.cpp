@@ -458,8 +458,15 @@ TEST(HeapSnapshotTest, HeaderTest) {
 
   JSONObject *snapshot = llvh::cast<JSONObject>(root->at("snapshot"));
 
+  // Hades overrides snapshotAddGCNativeEdges()/snapshotAddGCNativeNodes(),
+  // which adds 2 more nodes and edges, while MallocGC does not.
+#ifdef HERMESVM_GC_MALLOC
+  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 9);
+  EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("edge_count"))->getValue(), 4);
+#else
   EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("node_count"))->getValue(), 11);
   EXPECT_EQ(llvh::cast<JSONNumber>(snapshot->at("edge_count"))->getValue(), 6);
+#endif
   EXPECT_EQ(
       llvh::cast<JSONNumber>(snapshot->at("trace_function_count"))->getValue(),
       0);
