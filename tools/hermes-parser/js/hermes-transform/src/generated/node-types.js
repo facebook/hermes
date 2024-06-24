@@ -68,6 +68,8 @@ import type {
   DoWhileStatement as DoWhileStatementType,
   EmptyStatement as EmptyStatementType,
   EmptyTypeAnnotation as EmptyTypeAnnotationType,
+  EnumBigIntBody as EnumBigIntBodyType,
+  EnumBigIntMember as EnumBigIntMemberType,
   EnumBooleanBody as EnumBooleanBodyType,
   EnumBooleanMember as EnumBooleanMemberType,
   EnumDeclaration as EnumDeclarationType,
@@ -452,6 +454,19 @@ export type DoWhileStatementProps = {
 export type EmptyStatementProps = {};
 
 export type EmptyTypeAnnotationProps = {};
+
+export type EnumBigIntBodyProps = {
+  +members: $ReadOnlyArray<
+    MaybeDetachedNode<EnumBigIntBodyType['members'][number]>,
+  >,
+  +explicitType: EnumBigIntBodyType['explicitType'],
+  +hasUnknownMembers: EnumBigIntBodyType['hasUnknownMembers'],
+};
+
+export type EnumBigIntMemberProps = {
+  +id: MaybeDetachedNode<EnumBigIntMemberType['id']>,
+  +init: MaybeDetachedNode<EnumBigIntMemberType['init']>,
+};
 
 export type EnumBooleanBodyProps = {
   +members: $ReadOnlyArray<
@@ -1779,6 +1794,33 @@ export function EmptyTypeAnnotation(
   return detachedProps<EmptyTypeAnnotationType>((props.parent: $FlowFixMe), {
     type: 'EmptyTypeAnnotation',
   });
+}
+
+export function EnumBigIntBody(props: {
+  ...EnumBigIntBodyProps,
+  +parent?: ESNode,
+}): DetachedNode<EnumBigIntBodyType> {
+  const node = detachedProps<EnumBigIntBodyType>((props.parent: $FlowFixMe), {
+    type: 'EnumBigIntBody',
+    members: props.members.map(n => asDetachedNodeForCodeGen(n)),
+    explicitType: props.explicitType,
+    hasUnknownMembers: props.hasUnknownMembers,
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function EnumBigIntMember(props: {
+  ...EnumBigIntMemberProps,
+  +parent?: ESNode,
+}): DetachedNode<EnumBigIntMemberType> {
+  const node = detachedProps<EnumBigIntMemberType>((props.parent: $FlowFixMe), {
+    type: 'EnumBigIntMember',
+    id: asDetachedNodeForCodeGen(props.id),
+    init: asDetachedNodeForCodeGen(props.init),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
 }
 
 export function EnumBooleanBody(props: {

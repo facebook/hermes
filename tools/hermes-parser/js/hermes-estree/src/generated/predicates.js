@@ -85,6 +85,8 @@ import type {
   DoWhileStatement,
   EmptyStatement,
   EmptyTypeAnnotation,
+  EnumBigIntBody,
+  EnumBigIntMember,
   EnumBooleanBody,
   EnumBooleanMember,
   EnumDeclaration,
@@ -474,6 +476,16 @@ export function isEmptyStatement(node /*: ESNode | Token */) /*: node is EmptySt
 
 export function isEmptyTypeAnnotation(node /*: ESNode | Token */) /*: node is EmptyTypeAnnotation */ {
   return node.type === 'EmptyTypeAnnotation';
+}
+    
+
+export function isEnumBigIntBody(node /*: ESNode | Token */) /*: node is EnumBigIntBody */ {
+  return node.type === 'EnumBigIntBody';
+}
+    
+
+export function isEnumBigIntMember(node /*: ESNode | Token */) /*: node is EnumBigIntMember */ {
+  return node.type === 'EnumBigIntMember';
 }
     
 
