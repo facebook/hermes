@@ -109,18 +109,18 @@ struct SandboxPropNameIDListPtrOrError {
 };
 
 /// Always set the top bit for pointers so they can be easily checked.
-#define SANDBOX_POINTER_MASK (1 << 31)
+#define SANDBOX_POINTER_MASK (1u << 31)
 
-enum SandboxValueKind {
+enum SandboxValueKind : uint32_t {
   SandboxValueKindUndefined = 0,
   SandboxValueKindNull = 1,
   SandboxValueKindBoolean = 2,
   SandboxValueKindError = 3,
   SandboxValueKindNumber = 4,
-  SandboxValueKindSymbol = 5 | SANDBOX_POINTER_MASK,
-  SandboxValueKindBigInt = 6 | SANDBOX_POINTER_MASK,
-  SandboxValueKindString = 7 | SANDBOX_POINTER_MASK,
-  SandboxValueKindObject = 9 | SANDBOX_POINTER_MASK,
+  SandboxValueKindSymbol = 5u | SANDBOX_POINTER_MASK,
+  SandboxValueKindBigInt = 6u | SANDBOX_POINTER_MASK,
+  SandboxValueKindString = 7u | SANDBOX_POINTER_MASK,
+  SandboxValueKindObject = 9u | SANDBOX_POINTER_MASK,
 };
 
 struct SandboxValue {
