@@ -24,11 +24,10 @@ module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/
 module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier-plugin-hermes-parser/src/index.js'
 
 component_syntax=true
-experimental.global_find_ref=true
 enums=true
 
 [version]
-^0.236.0
+^0.237.1
 
 [lints]
 untyped-type-import=error
