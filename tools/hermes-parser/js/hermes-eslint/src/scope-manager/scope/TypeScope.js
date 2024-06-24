@@ -24,6 +24,7 @@ import type {
   FunctionTypeAnnotation,
   HookTypeAnnotation,
   TypeAlias,
+  ObjectTypeMappedTypeProperty,
   OpaqueType,
   InterfaceDeclaration,
 } from 'hermes-estree';
@@ -48,6 +49,7 @@ class TypeScope extends ScopeBase<
   | FunctionTypeAnnotation
   | HookTypeAnnotation
   | TypeAlias
+  | ObjectTypeMappedTypeProperty
   | OpaqueType
   | InterfaceDeclaration,
   Scope,

@@ -36,6 +36,7 @@ import type {
   ObjectTypeIndexer,
   ObjectTypeInternalSlot,
   ObjectTypeProperty,
+  ObjectTypeMappedTypeProperty,
   OpaqueType,
   QualifiedTypeIdentifier,
   QualifiedTypeofIdentifier,
@@ -379,6 +380,20 @@ class TypeVisitor extends Visitor {
 
     this.visit(node.value);
     this.visit(node.variance);
+  }
+
+  ObjectTypeMappedTypeProperty(node: ObjectTypeMappedTypeProperty): void {
+    this._referencer.scopeManager.nestTypeScope(node);
+
+    // This will create a type defintion for the `key` property.
+    this.visit(node.keyTparam);
+
+    // Visit remaining properties.
+    this.visit(node.propType);
+    this.visit(node.sourceType);
+    this.visit(node.variance);
+
+    this._referencer.close(node);
   }
 
   OpaqueType(node: OpaqueType): void {
