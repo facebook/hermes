@@ -651,6 +651,16 @@
                 }
             }
         },
+        "AsExpression": {
+             "fields": {
+                "expression": {
+                    "type": "Expression"
+                },
+                "typeAnnotation": {
+                    "type": "TypeAnnotationEnum"
+                }
+            }
+        },
         "ImportDeclaration": {
             "fields": {
                 "specifiers": {
@@ -1490,7 +1500,8 @@
             "ThisExpression",
             "UnaryExpression",
             "UpdateExpression",
-            "YieldExpression"
+            "YieldExpression",
+            "AsExpression"
         ],
         "_Literal": [
             "Literal",
