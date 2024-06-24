@@ -33,6 +33,7 @@ stacker = "0.1.15"
 static_assertions = "1.1.0"
 syn = "2.0.23"
 thiserror = "1.0.41"
+typetag = "0.2.16"
 hermes = { git = "https://github.com/facebook/hermes.git" }
 juno_support = { git = "https://github.com/facebook/hermes.git" }
 
