@@ -22,5 +22,7 @@ xxx;
 
 // Note: re-enable formatting after Prettier is updated to handle \`as\` expressions
 xxx;
+
+xxx;
 "
 `;

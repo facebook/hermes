@@ -19,3 +19,5 @@ const yyy = '';
 
 // Note: re-enable formatting after Prettier is updated to handle `as` expressions
 xxx as number;
+
+xxx as const;
