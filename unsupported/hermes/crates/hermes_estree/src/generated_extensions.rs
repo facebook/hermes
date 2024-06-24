@@ -24,8 +24,11 @@ use crate::SourceType;
 
 /// Sentinel trait to distinguish AST *node* types
 pub trait ESTreeNode {
-    fn range(&self) -> SourceRange;
     fn as_node_enum(&self) -> Node;
+}
+
+pub trait Range {
+    fn range(&self) -> SourceRange;
 }
 
 impl Default for SourceType {
@@ -35,30 +38,12 @@ impl Default for SourceType {
 }
 
 impl ESTreeNode for Pattern {
-    fn range(&self) -> SourceRange {
-        match self {
-            Self::ArrayPattern(pattern) => pattern.range,
-            Self::AssignmentPattern(pattern) => pattern.range,
-            Self::Identifier(pattern) => pattern.range,
-            Self::ObjectPattern(pattern) => pattern.range,
-            Self::RestElement(pattern) => pattern.range,
-        }
-    }
-
     fn as_node_enum(&self) -> Node {
         todo!()
     }
 }
 
 impl ESTreeNode for ImportDeclarationSpecifier {
-    fn range(&self) -> SourceRange {
-        match self {
-            Self::ImportDefaultSpecifier(specifier) => specifier.range,
-            Self::ImportNamespaceSpecifier(specifier) => specifier.range,
-            Self::ImportSpecifier(specifier) => specifier.range,
-        }
-    }
-
     fn as_node_enum(&self) -> Node {
         todo!()
     }
@@ -119,11 +104,13 @@ impl IntoFunction for ArrowFunctionExpression {
     }
 }
 
-impl ESTreeNode for Function {
+impl Range for Function {
     fn range(&self) -> SourceRange {
         self.range
     }
+}
 
+impl ESTreeNode for Function {
     fn as_node_enum(&self) -> Node {
         todo!()
     }
@@ -166,10 +153,6 @@ impl IntoClass for ClassExpression {
 }
 
 impl ESTreeNode for Class {
-    fn range(&self) -> SourceRange {
-        self.range
-    }
-
     fn as_node_enum(&self) -> Node {
         todo!()
     }
