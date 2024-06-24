@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray, $FlowFixMe */
 
 'use strict';
 
@@ -42,6 +42,9 @@ export const HERMES_AST_VISITOR_KEYS = {
     typeParameters: 'Node',
     returnType: 'Node',
     predicate: 'Node',
+  },
+  AsConstExpression: {
+    expression: 'Node',
   },
   AsExpression: {
     expression: 'Node',

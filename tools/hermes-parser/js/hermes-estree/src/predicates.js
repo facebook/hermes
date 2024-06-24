@@ -5,254 +5,198 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * @format
  */
 
 'use strict';
 
-import type {ESNode, Token} from './types';
-
-import {
-  isArrayExpression,
-  isArrowFunctionExpression,
-  isAsExpression,
-  isAssignmentExpression,
-  isAwaitExpression,
-  isBinaryExpression,
-  isBlockComment,
-  isBlockStatement,
-  isBreakStatement,
-  isCallExpression,
-  isChainExpression,
-  isClassDeclaration,
-  isClassExpression,
-  isConditionalExpression,
-  isContinueStatement,
-  isDebuggerStatement,
-  isDeclareClass,
-  isDeclareFunction,
-  isDeclareInterface,
-  isDeclareModule,
-  isDeclareOpaqueType,
-  isDeclareTypeAlias,
-  isDeclareVariable,
-  isDoWhileStatement,
-  isEmptyStatement,
-  isEnumDeclaration,
-  isExpressionStatement,
-  isForInStatement,
-  isForOfStatement,
-  isForStatement,
-  isFunctionDeclaration,
-  isFunctionExpression,
-  isIdentifier,
-  isIfStatement,
-  isImportExpression,
-  isInterfaceDeclaration,
-  isJSXElement,
-  isJSXFragment,
-  isLabeledStatement,
-  isLineComment,
-  isLiteral,
-  isLogicalExpression,
-  isMemberExpression,
-  isMetaProperty,
-  isMethodDefinition,
-  isNewExpression,
-  isObjectExpression,
-  isOpaqueType,
-  isProperty,
-  isPropertyDefinition,
-  isReturnStatement,
-  isSequenceExpression,
-  isSwitchStatement,
-  isTaggedTemplateExpression,
-  isTemplateLiteral,
-  isThisExpression,
-  isThrowStatement,
-  isTryStatement,
-  isTypeAlias,
-  isTypeCastExpression,
-  isUnaryExpression,
-  isUpdateExpression,
-  isVariableDeclaration,
-  isWhileStatement,
-  isWithStatement,
-  isYieldExpression,
-} from './generated/predicates';
+/*::
+import type {
+  ESNode,
+  Token,
+  MostTokens,
+  BlockComment,
+  LineComment,
+  AFunction,
+  PropertyDefinition,
+  PropertyDefinitionWithNonComputedName,
+  MethodDefinition,
+  MethodDefinitionConstructor,
+  MethodDefinitionWithNonComputedName,
+  MemberExpression,
+  MemberExpressionWithNonComputedName,
+  ObjectPropertyWithShorthandStaticName,
+  ObjectPropertyWithNonShorthandStaticName,
+  DestructuringObjectPropertyWithShorthandStaticName,
+  DestructuringObjectPropertyWithNonShorthandStaticName,
+  ClassMember,
+  ClassDeclaration,
+  ClassExpression,
+  Literal,
+  BigIntLiteral,
+  BooleanLiteral,
+  NullLiteral,
+  NumericLiteral,
+  RegExpLiteral,
+  StringLiteral,
+  Identifier,
+  EnumDefaultedMember,
+  Expression,
+  Statement,
+} from './types';
+*/
 
 export * from './generated/predicates';
 
-// $FlowFixMe[deprecated-type]
-export function isClass(node: ESNode): boolean %checks {
-  return isClassDeclaration(node) || isClassExpression(node);
+export function isClass(node /*: ESNode */) /*: node is (ClassDeclaration | ClassExpression) */ {
+  return node.type === 'ClassDeclaration' || node.type === 'ClassExpression';
 }
 
 export function isPropertyDefinitionWithNonComputedName(
-  node: ESNode,
-  // $FlowFixMe[deprecated-type]
-): boolean %checks {
-  return isPropertyDefinition(node) && node.computed === false;
+  node /*: ESNode */,
+) /*: node is PropertyDefinitionWithNonComputedName */ {
+  return node.type === 'PropertyDefinition' && node.computed === false;
 }
 
-// $FlowFixMe[deprecated-type]
-export function isClassMember(node: ESNode): boolean %checks {
-  return isPropertyDefinition(node) || isMethodDefinition(node);
+export function isClassMember(node /*: ESNode */) /*: node is ClassMember */ {
+  return node.type === 'PropertyDefinition' || node.type === 'MethodDefinition';
 }
 
 export function isClassMemberWithNonComputedName(
-  node: ESNode,
-  // $FlowFixMe[deprecated-type]
-): boolean %checks {
-  return isClassMember(node) && node.computed === false;
+  node /*: ESNode */,
+) /*: node is (PropertyDefinitionWithNonComputedName | MethodDefinitionConstructor | MethodDefinitionWithNonComputedName) */ {
+  return (node.type === 'PropertyDefinition' || node.type === 'MethodDefinition') && node.computed === false;
 }
 
-// $FlowFixMe[deprecated-type]
-export function isComment(node: ESNode | Token): boolean %checks {
-  return isBlockComment(node) || isLineComment(node);
+export function isComment(node /*: ESNode | Token */) /*: node is (MostTokens | BlockComment | LineComment) */ {
+  return node.type === 'Block' || node.type === 'Line';
 }
 
-// $FlowFixMe[deprecated-type]
-export function isFunction(node: ESNode): boolean %checks {
+export function isFunction(node /*: ESNode */) /*: node is AFunction */ {
   return (
-    isArrowFunctionExpression(node) ||
-    isFunctionDeclaration(node) ||
-    isFunctionExpression(node)
+    node.type === 'ArrowFunctionExpression' ||
+    node.type === 'FunctionDeclaration' ||
+    node.type === 'FunctionExpression'
   );
 }
 
 export function isMethodDefinitionWithNonComputedName(
-  node: ESNode,
-  // $FlowFixMe[deprecated-type]
-): boolean %checks {
-  return isMethodDefinition(node) && node.computed === false;
+  node /*: ESNode */,
+) /*: node is (MethodDefinitionConstructor | MethodDefinitionWithNonComputedName) */ {
+  return node.type === 'MethodDefinition' && node.computed === false;
 }
 
 export function isMemberExpressionWithNonComputedProperty(
-  node: ESNode,
-  // $FlowFixMe[deprecated-type]
-): boolean %checks {
-  return isMemberExpression(node) && node.computed === false;
+  node /*: ESNode */,
+) /*: node is MemberExpressionWithNonComputedName */ {
+  return node.type === 'MemberExpression' && node.computed === false;
 }
 
 export function isOptionalMemberExpressionWithNonComputedProperty(
-  node: ESNode,
-  // $FlowFixMe[deprecated-type]
-): boolean %checks {
-  return isMemberExpression(node) && node.computed === false;
+  node /*: ESNode */,
+) /*: node is MemberExpressionWithNonComputedName */ {
+  return node.type === 'MemberExpression' && node.computed === false;
 }
 
-// $FlowFixMe[deprecated-type]
-export function isObjectPropertyWithShorthand(node: ESNode): boolean %checks {
-  return isProperty(node) && node.shorthand === true;
+export function isObjectPropertyWithShorthand(node /*: ESNode */) /*: node is (ObjectPropertyWithShorthandStaticName | DestructuringObjectPropertyWithShorthandStaticName) */ {
+  return node.type === 'Property' && node.shorthand === true;
 }
 
-export function isObjectPropertyWithNonComputedName(
-  node: ESNode,
-  // $FlowFixMe[deprecated-type]
-): boolean %checks {
-  return isProperty(node) && node.computed === false;
+export function isObjectPropertyWithNonComputedName(node /*: ESNode */) /*: node is (ObjectPropertyWithNonShorthandStaticName | ObjectPropertyWithShorthandStaticName | DestructuringObjectPropertyWithNonShorthandStaticName | DestructuringObjectPropertyWithShorthandStaticName) */ {
+  return node.type === 'Property' && node.computed === false;
 }
 
-// $FlowFixMe[deprecated-type]
-export function isBigIntLiteral(node: ESNode): boolean %checks {
-  return isLiteral(node) && node.literalType === 'bigint';
+export function isBigIntLiteral(node /*: ESNode */) /*: node is BigIntLiteral */ {
+  return node.type === 'Literal' && node.literalType === 'bigint';
 }
 
-// $FlowFixMe[deprecated-type]
-export function isBooleanLiteral(node: ESNode): boolean %checks {
-  return isLiteral(node) && node.literalType === 'boolean';
+export function isBooleanLiteral(node /*: ESNode */) /*: node is BooleanLiteral */ {
+  return node.type === 'Literal' && node.literalType === 'boolean';
 }
 
-// $FlowFixMe[deprecated-type]
-export function isNullLiteral(node: ESNode): boolean %checks {
-  return isLiteral(node) && node.literalType === 'null';
+export function isNullLiteral(node /*: ESNode */) /*: node is NullLiteral */ {
+  return node.type === 'Literal' && node.literalType === 'null';
 }
 
-// $FlowFixMe[deprecated-type]
-export function isNumericLiteral(node: ESNode): boolean %checks {
-  return isLiteral(node) && node.literalType === 'numeric';
+export function isNumericLiteral(node /*: ESNode */) /*: node is NumericLiteral */ {
+  return node.type === 'Literal' && node.literalType === 'numeric';
 }
 
-// $FlowFixMe[deprecated-type]
-export function isRegExpLiteral(node: ESNode): boolean %checks {
-  return isLiteral(node) && node.literalType === 'regexp';
+export function isRegExpLiteral(node /*: ESNode */) /*: node is RegExpLiteral */ {
+  return node.type === 'Literal' &&  node.literalType === 'regexp';
 }
 
-// $FlowFixMe[deprecated-type]
-export function isStringLiteral(node: ESNode): boolean %checks {
-  return isLiteral(node) && node.literalType === 'string';
+export function isStringLiteral(node /*: ESNode */) /*: node is StringLiteral */ {
+  return node.type === 'Literal' && node.literalType === 'string';
 }
 
-// $FlowFixMe[deprecated-type]
-export function isExpression(node: ESNode): boolean %checks {
+export function isExpression(node /*: ESNode */) /*: node is Expression */ {
   return (
-    isThisExpression(node) ||
-    isArrayExpression(node) ||
-    isObjectExpression(node) ||
-    isFunctionExpression(node) ||
-    isArrowFunctionExpression(node) ||
-    isYieldExpression(node) ||
-    isLiteral(node) ||
-    isUnaryExpression(node) ||
-    isUpdateExpression(node) ||
-    isBinaryExpression(node) ||
-    isAssignmentExpression(node) ||
-    isLogicalExpression(node) ||
-    isMemberExpression(node) ||
-    isConditionalExpression(node) ||
-    isCallExpression(node) ||
-    isNewExpression(node) ||
-    isSequenceExpression(node) ||
-    isTemplateLiteral(node) ||
-    isTaggedTemplateExpression(node) ||
-    isClassExpression(node) ||
-    isMetaProperty(node) ||
-    isIdentifier(node) ||
-    isAwaitExpression(node) ||
-    isImportExpression(node) ||
-    isChainExpression(node) ||
-    isTypeCastExpression(node) ||
-    isAsExpression(node) ||
-    isJSXFragment(node) ||
-    isJSXElement(node)
+    node.type === 'ThisExpression' ||
+    node.type === 'ArrayExpression' ||
+    node.type === 'ObjectExpression' ||
+    node.type === 'ObjectExpression' ||
+    node.type === 'FunctionExpression' ||
+    node.type === 'ArrowFunctionExpression' ||
+    node.type === 'YieldExpression' ||
+    node.type === 'Literal' ||
+    node.type === 'UnaryExpression' ||
+    node.type === 'UpdateExpression' ||
+    node.type === 'BinaryExpression' ||
+    node.type === 'AssignmentExpression' ||
+    node.type === 'LogicalExpression' ||
+    node.type === 'MemberExpression' ||
+    node.type === 'ConditionalExpression' ||
+    node.type === 'CallExpression' ||
+    node.type === 'NewExpression' ||
+    node.type === 'SequenceExpression' ||
+    node.type === 'TemplateLiteral' ||
+    node.type === 'TaggedTemplateExpression' ||
+    node.type === 'ClassExpression' ||
+    node.type === 'MetaProperty' ||
+    node.type === 'Identifier' ||
+    node.type === 'AwaitExpression' ||
+    node.type === 'ImportExpression' ||
+    node.type === 'ChainExpression' ||
+    node.type === 'TypeCastExpression' ||
+    node.type === 'AsExpression' ||
+    node.type === 'JSXFragment' ||
+    node.type === 'JSXElement'
   );
 }
 
-// $FlowFixMe[deprecated-type]
-export function isStatement(node: ESNode): boolean %checks {
+export function isStatement(node /*: ESNode */) /*: node is Statement */ {
   return (
-    isBlockStatement(node) ||
-    isBreakStatement(node) ||
-    isClassDeclaration(node) ||
-    isContinueStatement(node) ||
-    isDebuggerStatement(node) ||
-    isDeclareClass(node) ||
-    isDeclareVariable(node) ||
-    isDeclareFunction(node) ||
-    isDeclareInterface(node) ||
-    isDeclareModule(node) ||
-    isDeclareOpaqueType(node) ||
-    isDeclareTypeAlias(node) ||
-    isDoWhileStatement(node) ||
-    isEmptyStatement(node) ||
-    isEnumDeclaration(node) ||
-    isExpressionStatement(node) ||
-    isForInStatement(node) ||
-    isForOfStatement(node) ||
-    isForStatement(node) ||
-    isFunctionDeclaration(node) ||
-    isIfStatement(node) ||
-    isInterfaceDeclaration(node) ||
-    isLabeledStatement(node) ||
-    isOpaqueType(node) ||
-    isReturnStatement(node) ||
-    isSwitchStatement(node) ||
-    isThrowStatement(node) ||
-    isTryStatement(node) ||
-    isTypeAlias(node) ||
-    isVariableDeclaration(node) ||
-    isWhileStatement(node) ||
-    isWithStatement(node)
+    node.type === 'BlockStatement' ||
+    node.type === 'BreakStatement' ||
+    node.type === 'ClassDeclaration' ||
+    node.type === 'ContinueStatement' ||
+    node.type === 'DebuggerStatement' ||
+    node.type === 'DeclareClass' ||
+    node.type === 'DeclareVariable' ||
+    node.type === 'DeclareFunction' ||
+    node.type === 'DeclareInterface' ||
+    node.type === 'DeclareModule' ||
+    node.type === 'DeclareOpaqueType' ||
+    node.type === 'DeclareTypeAlias' ||
+    node.type === 'DoWhileStatement' ||
+    node.type === 'EmptyStatement' ||
+    node.type === 'EnumDeclaration' ||
+    node.type === 'ExpressionStatement' ||
+    node.type === 'ForInStatement' ||
+    node.type === 'ForOfStatement' ||
+    node.type === 'ForStatement' ||
+    node.type === 'FunctionDeclaration' ||
+    node.type === 'IfStatement' ||
+    node.type === 'InterfaceDeclaration' ||
+    node.type === 'LabeledStatement' ||
+    node.type === 'OpaqueType' ||
+    node.type === 'ReturnStatement' ||
+    node.type === 'SwitchStatement' ||
+    node.type === 'ThrowStatement' ||
+    node.type === 'TryStatement' ||
+    node.type === 'TypeAlias' ||
+    node.type === 'VariableDeclaration' ||
+    node.type === 'WhileStatement' ||
+    node.type === 'WithStatement'
   );
 }

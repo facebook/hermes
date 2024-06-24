@@ -17,7 +17,7 @@
 
 // lint directives to let us do some basic validation of generated files
 /* eslint no-undef: 'error', no-unused-vars: ['error', {vars: "local"}], no-redeclare: 'error' */
-/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray */
+/* global $NonMaybeType, Partial, $ReadOnly, $ReadOnlyArray, $FlowFixMe */
 
 'use strict';
 
@@ -1466,6 +1466,13 @@ function deserializeAsExpression() {
     typeAnnotation: this.deserializeNode(),
   };
 }
+function deserializeAsConstExpression() {
+  return {
+    type: 'AsConstExpression',
+    loc: this.addEmptyLoc(),
+    expression: this.deserializeNode(),
+  };
+}
 function deserializeInferredPredicate() {
   return {type: 'InferredPredicate', loc: this.addEmptyLoc()};
 }
@@ -2130,6 +2137,7 @@ module.exports = [
   deserializeTypeParameterInstantiation,
   deserializeTypeCastExpression,
   deserializeAsExpression,
+  deserializeAsConstExpression,
   deserializeInferredPredicate,
   deserializeDeclaredPredicate,
   deserializeEnumDeclaration,
