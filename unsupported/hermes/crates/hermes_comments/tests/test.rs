@@ -43,7 +43,7 @@ fn fixtures() {
         ast.source_type = SourceType::Script;
         let mut attached_comments = find_nodes_after_comments(&ast, &comments);
         attached_comments
-            .sort_by(|(comment1, _), (comment2, _)| comment1.trim().cmp(comment2.trim()));
+            .sort_by(|(comment1, _, _), (comment2, _, _)| comment1.trim().cmp(comment2.trim()));
         assert_snapshot!(format!(
             "Input:\n{}\n\nOutput:\n{}",
             input,
