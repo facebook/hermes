@@ -65,8 +65,7 @@
                     "optional": true
                 },
                 "range": {
-                    "type": "Option<SourceRange>",
-                    "optional": true
+                    "type": "SourceRange"
                 }
             }
         },

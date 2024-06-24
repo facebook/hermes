@@ -353,8 +353,7 @@ impl Node {
                 #[serde(default)]
                 pub loc: Option<SourceLocation>,
 
-                #[serde(default)]
-                pub range: Option<SourceRange>,
+                pub range: SourceRange,
             }
 
             impl ESTreeNode for #name {}
@@ -523,7 +522,7 @@ impl Node {
                     Self {
                         #(#field_names,)*
                         loc: None,
-                        range: Some(range),
+                        range,
                     }
                 }
             }

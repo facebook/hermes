@@ -79,11 +79,11 @@ impl Diagnostic {
     fn with_severity<T: 'static + DiagnosticDisplay>(
         severity: DiagnosticSeverity,
         message: T,
-        range: Option<SourceRange>,
+        range: SourceRange,
     ) -> Self {
         Self(Box::new(DiagnosticData {
             message: Box::new(message),
-            span: range.map(source_span_from_range),
+            span: Some(source_span_from_range(range)),
             related_information: Vec::new(),
             severity,
             data: Vec::new(),
@@ -92,34 +92,25 @@ impl Diagnostic {
 
     /// Creates a new Todo Diagnostic.
     /// Additional locations can be added with the `.annotate()` function.
-    pub fn todo<T: 'static + DiagnosticDisplay>(message: T, range: Option<SourceRange>) -> Self {
+    pub fn todo<T: 'static + DiagnosticDisplay>(message: T, range: SourceRange) -> Self {
         Diagnostic::with_severity(DiagnosticSeverity::Todo, message, range)
     }
 
     /// Creates a new Unsupported Diagnostic.
     /// Additional locations can be added with the `.annotate()` function.
-    pub fn unsupported<T: 'static + DiagnosticDisplay>(
-        message: T,
-        range: Option<SourceRange>,
-    ) -> Self {
+    pub fn unsupported<T: 'static + DiagnosticDisplay>(message: T, range: SourceRange) -> Self {
         Diagnostic::with_severity(DiagnosticSeverity::Unsupported, message, range)
     }
 
     /// Creates a new InvalidSyntax Diagnostic.
     /// Additional locations can be added with the `.annotate()` function.
-    pub fn invalid_syntax<T: 'static + DiagnosticDisplay>(
-        message: T,
-        range: Option<SourceRange>,
-    ) -> Self {
+    pub fn invalid_syntax<T: 'static + DiagnosticDisplay>(message: T, range: SourceRange) -> Self {
         Diagnostic::with_severity(DiagnosticSeverity::InvalidSyntax, message, range)
     }
 
     /// Creates a new Invariant Diagnostic.
     /// Additional locations can be added with the `.annotate()` function.
-    pub fn invariant<T: 'static + DiagnosticDisplay>(
-        message: T,
-        range: Option<SourceRange>,
-    ) -> Self {
+    pub fn invariant<T: 'static + DiagnosticDisplay>(message: T, range: SourceRange) -> Self {
         Diagnostic::with_severity(DiagnosticSeverity::Invariant, message, range)
     }
 
@@ -127,13 +118,13 @@ impl Diagnostic {
     pub fn annotate<T: 'static + DiagnosticDisplay>(
         mut self,
         message: T,
-        range: Option<SourceRange>,
+        range: SourceRange,
     ) -> Self {
         self.0
             .related_information
             .push(DiagnosticRelatedInformation {
                 message: Box::new(message),
-                span: range.map(source_span_from_range),
+                span: Some(source_span_from_range(range)),
             });
         self
     }

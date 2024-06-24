@@ -292,7 +292,7 @@ impl ScopeManager {
         scope_id: ScopeId,
         name: String,
         kind: DeclarationKind,
-        range: Option<SourceRange>,
+        range: SourceRange,
     ) -> DeclarationId {
         let scope = self.scope(scope_id);
         // Determine the scope to which this declaration should be hoisted. This mainly applies to var declarations
