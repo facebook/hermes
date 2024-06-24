@@ -141,9 +141,9 @@ void HeapSnapshot::addNamedEdge(
     currEdgeCount_++;
     return;
   }
-  assert(
-      edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
+  assert(edgeCount_ < expectedEdges_ && "Added more edges than were expected");
   assert(nextSection_ == Section::Edges && sectionOpened_);
+  edgeCount_++;
 
   json_.emitValue(index(type));
   json_.emitValue(stringTable_->insert(name));
@@ -164,9 +164,9 @@ void HeapSnapshot::addIndexedEdge(
     currEdgeCount_++;
     return;
   }
-  assert(
-      edgeCount_++ < expectedEdges_ && "Added more edges than were expected");
+  assert(edgeCount_ < expectedEdges_ && "Added more edges than were expected");
   assert(nextSection_ == Section::Edges && sectionOpened_);
+  edgeCount_++;
 
   json_.emitValue(index(type));
   json_.emitValue(edgeIndex);
