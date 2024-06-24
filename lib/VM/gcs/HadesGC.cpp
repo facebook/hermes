@@ -1034,25 +1034,21 @@ class HadesGC::Executor {
     thread_.join();
   }
 
-  std::future<void> add(std::function<void()> fn) {
+  /// Enqueue the function \p fn for execution on the executor thread.
+  template <typename Fn>
+  void add(Fn &&fn) {
     std::lock_guard<std::mutex> lk(mtx_);
-    // Use a shared_ptr because we cannot std::move the promise into the
-    // lambda in C++11.
-    auto promise = std::make_shared<std::promise<void>>();
-    auto ret = promise->get_future();
-    queue_.push_back([promise, fn] {
-      fn();
-      promise->set_value();
-    });
+    queue_.emplace_back(std::forward<Fn>(fn));
     cv_.notify_one();
-    return ret;
   }
 
+  /// Get the ID of the executor thread.
   std::thread::id getThreadId() const {
     return thread_.get_id();
   }
 
  private:
+  /// Drain enqueued tasks from the queue and run them.
   void worker() {
     oscompat::set_thread_name("hades");
     std::unique_lock<std::mutex> lk(mtx_);
@@ -1510,15 +1506,13 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
       concurrentPhase_ == Phase::None &&
       "Starting a second old gen collection");
   // Wait for any lingering background task to finish.
-  if (kConcurrentGC && ogThreadStatus_.valid()) {
+  if (kConcurrentGC) {
     // This is just making sure that any leftover work is completed before
     // starting a new collection. Since concurrentPhase_ == None here, there is
     // no collection ongoing. However, the background task may need to acquire
     // the lock in order to observe the value of concurrentPhase_.
     std::unique_lock<Mutex> lk{gcMutex_, std::adopt_lock};
-    lk.unlock();
-    ogThreadStatus_.get();
-    lk.lock();
+    ogPauseCondVar_.wait(lk, [this] { return !backgroundTaskActive_; });
     lk.release();
   }
   // We know ygCollectionStats_ exists because oldGenCollection is only called
@@ -1611,11 +1605,10 @@ void HadesGC::collectOGInBackground() {
   assert(
       !backgroundTaskActive_ && "Should only have one active task at a time");
   assert(kConcurrentGC && "Background work can only be done in concurrent GC");
-#ifndef NDEBUG
-  backgroundTaskActive_ = true;
-#endif
 
-  ogThreadStatus_ = backgroundExecutor_->add([this]() {
+  backgroundTaskActive_ = true;
+
+  backgroundExecutor_->add([this]() {
     std::unique_lock<Mutex> lk(gcMutex_);
     while (true) {
       // If the mutator has requested the background task to stop and yield
@@ -1629,9 +1622,10 @@ void HadesGC::collectOGInBackground() {
       incrementalCollect(true);
       if (concurrentPhase_ == Phase::None ||
           concurrentPhase_ == Phase::CompleteMarking) {
-#ifndef NDEBUG
         backgroundTaskActive_ = false;
-#endif
+        // Signal the mutator to let it know that this task is complete, in case
+        // it is waiting.
+        ogPauseCondVar_.notify_one();
         break;
       }
     }

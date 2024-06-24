@@ -702,8 +702,12 @@ class HadesGC final : public GCBase {
   /// the gcMutex_ to the mutator as soon as possible.
   AtomicIfConcurrentGC<bool> ogPaused_{false};
 
-  /// Condition variable that the background thread should wait on when
-  /// ogPaused_ is set to true, until the mutator has acquired gcMutex_.
+  /// Condition variable used to block either the mutator or background thread
+  /// until the other has completed.
+  ///   1. The background thread should wait on this when ogPaused_ is set to
+  ///   true, until the mutator has acquired gcMutex_.
+  ///   2. The mutator should wait on this if it is waiting for the background
+  ///   thread to finish its current task.
   std::condition_variable_any ogPauseCondVar_;
 
   enum class Phase : uint8_t {
@@ -733,17 +737,9 @@ class HadesGC final : public GCBase {
   /// concurrently with the mutator.
   std::unique_ptr<Executor> backgroundExecutor_;
 
-  /// This tracks the current status of execution in the background thread. The
-  /// future should be set every time work is enqueued onto the executor. After
-  /// that, whenever we need to wait for execution in the background thread to
-  /// end, we can call get() on this future.
-  std::future<void> ogThreadStatus_;
-
-#ifndef NDEBUG
   /// True from the time the background task is created, to the time it exits
-  /// the collection loop. False otherwise.
+  /// the collection loop. False otherwise. Protected by gcMutex_.
   bool backgroundTaskActive_{false};
-#endif
 
   /// If true, whenever YG fills up immediately put it into the OG.
   bool promoteYGToOG_;
