@@ -214,8 +214,9 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
           case 'ObjectPattern':
             return 'properties';
 
-          case 'CallExpression':
+          // $FlowFixMe[incompatible-type]
           case 'OptionalCallExpression':
+          case 'CallExpression':
           case 'NewExpression':
             return 'arguments';
 
@@ -244,8 +245,9 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
           case 'ObjectExpression':
             return 'properties';
 
-          case 'CallExpression':
+          // $FlowFixMe[incompatible-type]
           case 'OptionalCallExpression':
+          case 'CallExpression':
           case 'NewExpression':
             return 'arguments';
 
