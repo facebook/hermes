@@ -24,6 +24,12 @@
 #define BUILTIN_UNREACHABLE assert(false);
 #endif
 
+#if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)
+#define THREAD_SANITIZER_BUILD 1
+#else
+#define THREAD_SANITIZER_BUILD 0
+#endif
+
 using namespace facebook::jsi;
 
 namespace {
@@ -931,7 +937,14 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
 
     /// Determine whether the element is occupied by inspecting the refcount.
     bool isFree() const {
+      // See comments in hermes_vtable.cpp for why we use relaxed operations
+      // here and why we need different ordering under TSAN.
+
+#if THREAD_SANITIZER_BUILD
+      return refCount_.load(std::memory_order_acquire) == 0;
+#else
       return refCount_.load(std::memory_order_relaxed) == 0;
+#endif
     }
 
     /// Store a value and start the refcount at 1. After invocation, this
@@ -968,7 +981,8 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     }
 
     void inc() {
-      // See comments in hermes_abi.cpp for why we use relaxed operations here.
+      // See comments in hermes_vtable.cpp for why we use relaxed operations
+      // here.
       auto oldCount = refCount_.fetch_add(1, std::memory_order_relaxed);
       assert(oldCount && "Cannot resurrect a pointer");
       assert(oldCount + 1 != 0 && "Ref count overflow");
@@ -976,8 +990,14 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     }
 
     void dec() {
-      // See comments in hermes_abi.cpp for why we use relaxed operations here.
+      // See comments in hermes_vtable.cpp for why we use relaxed operations
+      // here, and why TSAN requires different ordering.
+
+#if THREAD_SANITIZER_BUILD
+      auto oldCount = refCount_.fetch_sub(1, std::memory_order_release);
+#else
       auto oldCount = refCount_.fetch_sub(1, std::memory_order_relaxed);
+#endif
       assert(oldCount > 0 && "Ref count underflow");
       // TODO(T174477630): releasePointer can only be invoked from the JS thread
       // since it involves calling back into the sandbox. This means that

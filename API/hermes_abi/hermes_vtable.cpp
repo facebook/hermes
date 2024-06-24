@@ -53,7 +53,18 @@ class ManagedValue : public HermesABIManagedPointer {
 
   /// Determine whether the element is occupied by inspecting the refcount.
   bool isFree() const {
+    // In general, it is safe to use relaxed operations here because there
+    // will be a control dependency between this load and any store that needs
+    // to be ordered. However, TSAN does not analyse control dependencies,
+    // since they are technically not part of C++, so use acquire under TSAN
+    // to enforce the ordering of subsequent writes resulting from deleting a
+    // freed element. (see the comment on dec() for more information)
+
+#if LLVM_THREAD_SANITIZER_BUILD
+    return refCount_.load(std::memory_order_acquire) == 0;
+#else
     return refCount_.load(std::memory_order_relaxed) == 0;
+#endif
   }
 
   /// Store a value and start the refcount at 1. After invocation, this
@@ -110,7 +121,14 @@ class ManagedValue : public HermesABIManagedPointer {
     // this value to be freed. We get this ordering from the fact that the
     // vtable read and the reference count update form a load-store control
     // dependency, which preserves their ordering on any reasonable hardware.
+    // TSAN does not analyse control dependencies, so we use release under
+    // TSAN to enforce the ordering of the preceding vtable load.
+
+#if LLVM_THREAD_SANITIZER_BUILD
+    auto oldCount = refCount_.fetch_sub(1, std::memory_order_release);
+#else
     auto oldCount = refCount_.fetch_sub(1, std::memory_order_relaxed);
+#endif
     assert(oldCount > 0 && "Ref count underflow");
     (void)oldCount;
   }
