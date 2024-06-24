@@ -2529,10 +2529,10 @@ const getTransforms = (
               );
             }
             const params = typeParameters.params;
-            if (params.length > 2) {
+            if (params.length > 3) {
               throw translationError(
                 node,
-                `Expected at no more than 2 type parameters with \`${fullTypeName}\``,
+                `Expected at no more than 3 type parameters with \`${fullTypeName}\``,
               );
             }
 
@@ -2541,7 +2541,8 @@ const getTransforms = (
                 return assertHasExactlyNTypeParameters(1);
               }
 
-              const [props, ref] = assertHasExactlyNTypeParameters(2);
+              const props = transformTypeAnnotationType(params[0]);
+              const ref = transformTypeAnnotationType(params[1]);
 
               return [
                 {
