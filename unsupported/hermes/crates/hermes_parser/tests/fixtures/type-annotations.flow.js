@@ -33,3 +33,4 @@ type UnionTypeAnnotation = "a" | "b" | "c";
 type IntersectionTypeAnnotation = "a" & "b" & "c";
 type IndexedAccessType = Account['account_id'];
 type OptionalIndexedAccessType = Account?.['account_id'];
+type TupleTypeAnnotation = [A,B]
