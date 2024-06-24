@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_JSLIB_RUNTIMECOMMONSTORAGE_H
 #define HERMES_VM_JSLIB_RUNTIMECOMMONSTORAGE_H
 
+#include "hermes/VM/JSLib/DateCache.h"
+
 #include <random>
 
 namespace hermes {
@@ -26,6 +28,9 @@ struct JSLibStorage {
   /// PRNG used by Math.random()
   std::mt19937_64 randomEngine_;
   bool randomEngineSeeded_ = false;
+
+  /// Time zone offset cache used in conversion between UTC and local time.
+  LocalTimeOffsetCache localTimeOffsetCache;
 };
 
 } // namespace vm
