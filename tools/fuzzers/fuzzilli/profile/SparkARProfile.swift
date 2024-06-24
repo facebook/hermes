@@ -63,7 +63,7 @@ let sparkARProfile = Profile(
         "HermesInternal.enablePromiseRejectionTracker"   : .function([.plain(.anything)] => .anything),
         "HermesInternal.getEpilogues"                    : .function([] => .iterable),
         "HermesInternal.getInstrumentedStats"            : .function([] => .object(ofGroup: "Object", withProperties: ["js_VMExperiments", "js_numGCs", "js_gcCPUTime", "js_gcTime", "js_totalAllocatedBytes", "js_allocatedBytes", "js_heapSize", "js_mallocSizeEstimate", "js_vaSize", "js_markStackOverflows"])),
-        "HermesInternal.getRuntimeProperties"            : .function([] => .object(ofGroup: "Object", withProperties: ["Snapshot VM", "Bytecode Version", "Builtins Frozen", "VM Experiments", "Build", "GC", "OSS Release Version", "CommonJS Modules"])),
+        "HermesInternal.getRuntimeProperties"            : .function([] => .object(ofGroup: "Object", withProperties: ["Snapshot VM", "Bytecode Version", "Builtins Frozen", "VM Experiments", "Build", "GC", "OSS Release Version", "Debugger Enabled", "CommonJS Modules"])),
         "HermesInternal.ttiReached"                      : .function([] => .undefined),
         "HermesInternal.getFunctionLocation"             : .function([.plain(.function())] => .object(ofGroup: "Object", withProperties: ["isNative", "lineNumber", "columnNumber", "fileName"])),
 
