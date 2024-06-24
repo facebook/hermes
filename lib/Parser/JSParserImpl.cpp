@@ -127,23 +127,17 @@ void JSParserImpl::initializeIdentifiers() {
 #endif
 
 #if HERMES_PARSE_TS
-
-  namespaceIdent_ = lexer_.getIdentifier("namespace");
   readonlyIdent_ = lexer_.getIdentifier("readonly");
   neverIdent_ = lexer_.getIdentifier("never");
   undefinedIdent_ = lexer_.getIdentifier("undefined");
   unknownIdent_ = lexer_.getIdentifier("unknown");
-
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
-
+  namespaceIdent_ = lexer_.getIdentifier("namespace");
   isIdent_ = lexer_.getIdentifier("is");
-
-#endif
-
-#if HERMES_PARSE_FLOW || HERMES_PARSE_TS
   inferIdent_ = lexer_.getIdentifier("infer");
+  constIdent_ = lexer_.getIdentifier("const");
 #endif
 
   // Generate the string representation of all tokens.
@@ -4108,6 +4102,22 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
             new (context_) ESTree::TSAsExpressionNode(left, right));
       } else {
         assert(context_.getParseFlow() && "must be parsing types");
+        if (auto *gen =
+                llvh::dyn_cast<ESTree::GenericTypeAnnotationNode>(right);
+            gen && !gen->_typeParameters && gen->getParens() == 0) {
+          if (auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(gen->_id)) {
+            if (ident->_name == constIdent_ && !ident->_optional &&
+                !ident->_typeAnnotation) {
+              // Special case for `x as const`,
+              // which only is used when the `const` type has no parens
+              // (otherwise, it's just a GenericTypeAnnotationNode).
+              return setLocation(
+                  startLoc,
+                  endLoc,
+                  new (context_) ESTree::AsConstExpressionNode(left));
+            }
+          }
+        }
         return setLocation(
             startLoc,
             endLoc,

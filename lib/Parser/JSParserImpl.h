@@ -349,6 +349,7 @@ class JSParserImpl {
   UniqueString *namespaceIdent_;
   UniqueString *isIdent_;
   UniqueString *inferIdent_;
+  UniqueString *constIdent_;
 #endif
 
   /// String representation of all tokens.
