@@ -36,14 +36,19 @@ const char *kSectionLabels[] = {
 
 } // namespace
 
-HeapSnapshot::HeapSnapshot(JSONEmitter &json, StackTracesTree *stackTracesTree)
+HeapSnapshot::HeapSnapshot(
+    JSONEmitter &json,
+    NodeIndex nodeCount,
+    EdgeIndex edgeCount,
+    size_t traceFunctionCount,
+    StackTracesTree *stackTracesTree)
     : json_(json),
       stackTracesTree_(stackTracesTree),
       stringTable_(
           stackTracesTree ? stackTracesTree->getStringTable()
                           : std::make_shared<StringSetVector>()) {
   json_.openDict();
-  emitMeta();
+  emitMeta(nodeCount, edgeCount, traceFunctionCount);
 }
 
 HeapSnapshot::~HeapSnapshot() {
@@ -230,7 +235,10 @@ const char *HeapSnapshot::edgeTypeToName(EdgeType type) {
   return "";
 }
 
-void HeapSnapshot::emitMeta() {
+void HeapSnapshot::emitMeta(
+    HeapSnapshot::NodeIndex nodeCount,
+    HeapSnapshot::EdgeIndex edgeCount,
+    size_t traceFunctionCount) {
   json_.emitKey("snapshot");
   json_.openDict();
 
@@ -320,40 +328,14 @@ void HeapSnapshot::emitMeta() {
   json_.emitKey("node_count");
   // This can be zero because it's only used as an optimization hint to
   // the viewer.
-  json_.emitValue(0);
+  json_.emitValue(nodeCount);
   json_.emitKey("edge_count");
   // This can be zero because it's only used as an optimization hint to
   // the viewer.
-  json_.emitValue(0);
+  json_.emitValue(edgeCount);
   json_.emitKey("trace_function_count");
-  json_.emitValue(countFunctionTraceInfos());
+  json_.emitValue(traceFunctionCount);
   json_.closeDict(); // "snapshot"
-}
-
-size_t HeapSnapshot::countFunctionTraceInfos() {
-  if (!stackTracesTree_) {
-    return 0;
-  }
-
-  size_t count = 0;
-  llvh::DenseSet<
-      StackTracesTreeNode::SourceLoc,
-      StackTracesTreeNode::SourceLocMapInfo>
-      sourceLocSet;
-  llvh::SmallVector<StackTracesTreeNode *, 128> nodeStack;
-  nodeStack.push_back(stackTracesTree_->getRootNode());
-  while (!nodeStack.empty()) {
-    auto curNode = nodeStack.pop_back_val();
-    auto funcHashToFuncIdxMapEntry = sourceLocSet.find(curNode->sourceLoc);
-    if (funcHashToFuncIdxMapEntry == sourceLocSet.end()) {
-      count++;
-      sourceLocSet.insert(curNode->sourceLoc);
-    }
-    for (auto child : curNode->getChildren()) {
-      nodeStack.push_back(child);
-    }
-  }
-  return count;
 }
 
 void HeapSnapshot::emitAllocationTraceInfo() {
@@ -397,6 +379,10 @@ void HeapSnapshot::emitAllocationTraceInfo() {
     }
   }
   endSection(Section::TraceFunctionInfos);
+
+  // Save the trace function count (which is essentially the number of nodes
+  // on the tree with unique SourceLocs.
+  traceFunctionCount_ = sourceLocToFuncIdxMap.size();
 
   beginSection(Section::TraceTree);
   nodeStack.push(stackTracesTree_->getRootNode());
