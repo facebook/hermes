@@ -25,6 +25,8 @@ let SymbolTypeAnnotation: symbol;
 let BigIntLiteralTypeAnnotation: 10n;
 let ExistsTypeAnnotation: *;
 let BooleanLiteralTypeAnnotation: true;
+let GenericTypeAnnotation: T;
+let FunctionTypeAnnotation: (this: User, str: string, bool?: boolean, ...nums: Array<number>) => void;
 
 
 Output:
@@ -667,12 +669,262 @@ Output:
         634,
         673
       ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "GenericTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "GenericTypeAnnotation",
+                "id": {
+                  "type": "Identifier",
+                  "name": "T",
+                  "typeAnnotation": null,
+                  "loc": null,
+                  "range": [
+                    701,
+                    702
+                  ]
+                },
+                "typeParameters": null,
+                "loc": null,
+                "range": [
+                  701,
+                  702
+                ]
+              },
+              "loc": null,
+              "range": [
+                699,
+                702
+              ]
+            },
+            "loc": null,
+            "range": [
+              678,
+              702
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            678,
+            702
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        674,
+        703
+      ]
+    },
+    {
+      "type": "VariableDeclaration",
+      "kind": "let",
+      "declarations": [
+        {
+          "type": "VariableDeclarator",
+          "id": {
+            "type": "Identifier",
+            "name": "FunctionTypeAnnotation",
+            "typeAnnotation": {
+              "type": "TypeAnnotation",
+              "typeAnnotation": {
+                "type": "FunctionTypeAnnotation",
+                "params": [
+                  {
+                    "type": "FunctionTypeParam",
+                    "name": {
+                      "type": "Identifier",
+                      "name": "str",
+                      "typeAnnotation": null,
+                      "loc": null,
+                      "range": [
+                        745,
+                        748
+                      ]
+                    },
+                    "typeAnnotation": {
+                      "type": "StringTypeAnnotation",
+                      "loc": null,
+                      "range": [
+                        750,
+                        756
+                      ]
+                    },
+                    "optional": false,
+                    "loc": null,
+                    "range": [
+                      745,
+                      756
+                    ]
+                  },
+                  {
+                    "type": "FunctionTypeParam",
+                    "name": {
+                      "type": "Identifier",
+                      "name": "boolean",
+                      "typeAnnotation": null,
+                      "loc": null,
+                      "range": [
+                        758,
+                        762
+                      ]
+                    },
+                    "typeAnnotation": {
+                      "type": "BooleanTypeAnnotation",
+                      "loc": null,
+                      "range": [
+                        765,
+                        772
+                      ]
+                    },
+                    "optional": true,
+                    "loc": null,
+                    "range": [
+                      758,
+                      772
+                    ]
+                  }
+                ],
+                "this": {
+                  "type": "FunctionTypeParam",
+                  "name": null,
+                  "typeAnnotation": {
+                    "type": "GenericTypeAnnotation",
+                    "id": {
+                      "type": "Identifier",
+                      "name": "User",
+                      "typeAnnotation": null,
+                      "loc": null,
+                      "range": [
+                        739,
+                        743
+                      ]
+                    },
+                    "typeParameters": null,
+                    "loc": null,
+                    "range": [
+                      739,
+                      743
+                    ]
+                  },
+                  "optional": false,
+                  "loc": null,
+                  "range": [
+                    733,
+                    743
+                  ]
+                },
+                "returnType": {
+                  "type": "VoidTypeAnnotation",
+                  "loc": null,
+                  "range": [
+                    801,
+                    805
+                  ]
+                },
+                "rest": {
+                  "type": "FunctionTypeParam",
+                  "name": {
+                    "type": "Identifier",
+                    "name": "nums",
+                    "typeAnnotation": null,
+                    "loc": null,
+                    "range": [
+                      777,
+                      781
+                    ]
+                  },
+                  "typeAnnotation": {
+                    "type": "GenericTypeAnnotation",
+                    "id": {
+                      "type": "Identifier",
+                      "name": "Array",
+                      "typeAnnotation": null,
+                      "loc": null,
+                      "range": [
+                        783,
+                        788
+                      ]
+                    },
+                    "typeParameters": {
+                      "type": "TypeParameterInstantiation",
+                      "params": [
+                        {
+                          "type": "NumberTypeAnnotation",
+                          "loc": null,
+                          "range": [
+                            789,
+                            795
+                          ]
+                        }
+                      ],
+                      "loc": null,
+                      "range": [
+                        788,
+                        796
+                      ]
+                    },
+                    "loc": null,
+                    "range": [
+                      783,
+                      796
+                    ]
+                  },
+                  "optional": false,
+                  "loc": null,
+                  "range": [
+                    777,
+                    796
+                  ]
+                },
+                "typeParameters": null,
+                "loc": null,
+                "range": [
+                  732,
+                  805
+                ]
+              },
+              "loc": null,
+              "range": [
+                730,
+                805
+              ]
+            },
+            "loc": null,
+            "range": [
+              708,
+              805
+            ]
+          },
+          "init": null,
+          "loc": null,
+          "range": [
+            708,
+            805
+          ]
+        }
+      ],
+      "loc": null,
+      "range": [
+        704,
+        806
+      ]
     }
   ],
   "sourceType": "script",
   "loc": null,
   "range": [
     192,
-    673
+    806
   ]
 }
