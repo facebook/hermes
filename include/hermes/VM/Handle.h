@@ -373,7 +373,12 @@ class Handle : public HandleBase {
         "This constructor can only be used for Handle<HermesValue>");
   }
 
-  /* implicit */ Handle(const PinnedValue<T> &sh) : HandleBase(&sh) {}
+  /// Implicitly convert from a PinnedValue of a compatible type.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  /* implicit */ Handle(const PinnedValue<U> &pv) : HandleBase(&pv) {}
 
   /// Convert between compatible types.
   template <
