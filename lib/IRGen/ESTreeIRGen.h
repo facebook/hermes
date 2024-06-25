@@ -58,6 +58,17 @@ struct GotoLabel {
   SurroundingTry *surroundingTry = nullptr;
 };
 
+// A context structure (pushed/popped within class declarations) for
+// conveying info about the current typed class, for use in compiling
+// constructors and related implicit methods.
+struct TypedClassContext {
+  /// The declaration node of the innermost typed class we are compiliing.
+  ESTree::ClassDeclarationNode *node = nullptr;
+
+  /// The type of the innermost typed class we are compiliing.
+  flow::ClassType *type = nullptr;
+};
+
 /// Holds per-function state, specifically label tables. Should be constructed
 /// on the stack. Upon destruction it automatically restores the previous
 /// function context.
@@ -169,6 +180,9 @@ class FunctionContext {
   /// The CreateScopeInst that creates the scope for this function.
   CreateScopeInst *curScope{};
 
+  /// Information about the current enclosing typed class.
+  TypedClassContext typedClassContext{};
+
   /// Initialize a new function context, while preserving the previous one.
   /// \param irGen the associated ESTreeIRGen object.
   /// \param function the newly created Function IR node.
@@ -214,39 +228,6 @@ class FunctionContext {
         "accessing an uninitialized label");
     return label;
   }
-};
-
-// A context structure (pushed/popped within class declarations) for
-// conveying info about the current class, for use in compiling
-// constructors and related implicit methods.
-class ClassContext {
- public:
-  ClassContext(
-      ESTreeIRGen *irGen,
-      ESTree::ClassDeclarationNode *classNode,
-      flow::ClassType *classType);
-
-  ~ClassContext();
-
-  /// The node of the innermost class we are currently compiliing.
-  ESTree::ClassDeclarationNode *getClassNode() const {
-    return classNode_;
-  }
-
-  /// The type of the innermost class we are currently compiliing.
-  flow::ClassType *getClassType() const {
-    return classType_;
-  }
-
- private:
-  /// Pointer to the "outer" object this is associated with.
-  ESTreeIRGen *const irGen_;
-  /// The node, and type, of the innermost class we are currently compiliing.
-  ESTree::ClassDeclarationNode *classNode_;
-  flow::ClassType *classType_;
-
-  // The previous context; restored as current on destruction.
-  ClassContext *oldContext_;
 };
 
 enum class ControlFlowChange { Break, Continue };
@@ -396,7 +377,6 @@ class LReference {
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
   friend class FunctionContext;
-  friend class ClassContext;
   friend class LReference;
 
   using BasicBlockListType = llvh::SmallVector<BasicBlock *, 4>;
@@ -416,9 +396,6 @@ class ESTreeIRGen {
   /// This points to the current function's context. It is saved and restored
   /// whenever we enter a nested function.
   FunctionContext *functionContext_{};
-  /// This points to the current class context. It is saved and restored
-  /// whenever we enter a nested class declaration.
-  ClassContext *classContext_{};
 
   /// The type of the key stored in \c compiledEntities_. It is a pair of an
   /// AST node pointer and an extra key, which is a small integer value.
@@ -1161,16 +1138,6 @@ class ESTreeIRGen {
   inline FunctionContext *curFunction() {
     assert(functionContext_ && "No active function context");
     return functionContext_;
-  }
-
-  inline ClassContext *curClass() {
-    return classContext_;
-  }
-  inline ESTree::ClassDeclarationNode *curClassNode() {
-    return classContext_ ? classContext_->getClassNode() : nullptr;
-  }
-  inline flow::ClassType *curClassType() {
-    return classContext_ ? classContext_->getClassType() : nullptr;
   }
 
   /// Resolve the identifier node to the corresponding variable or global prop

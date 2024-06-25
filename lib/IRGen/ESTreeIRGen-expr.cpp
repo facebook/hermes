@@ -515,7 +515,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     newTarget = Builder.createGetNewTargetInst(
         curFunction()->function->getNewTargetParam());
     // Must call the field init function immediately after.
-    fieldInitClassType = curClass()->getClassType();
+    fieldInitClassType = curFunction()->typedClassContext.type;
   } else {
     thisVal = Builder.getLiteralUndefined();
     callee = genExpression(call->_callee);

@@ -6,6 +6,7 @@
  */
 
 #include "ESTreeIRGen.h"
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace irgen {
@@ -38,8 +39,13 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     superClass = genExpression(node->_superClass);
   }
 
-  // Declare that we're curently compiling the given class (node and type).
-  ClassContext classContext(this, node, classType);
+  // Push a new typed class context.
+  TypedClassContext savedClsCtx = curFunction()->typedClassContext;
+  curFunction()->typedClassContext = {node, classType};
+  // Pop the class context on function exit.
+  auto popClsContext = llvh::make_scope_exit([&savedClsCtx, this]() {
+    curFunction()->typedClassContext = savedClsCtx;
+  });
 
   // Create the implicit field initializer function; store the closure
   // for it in a variable, and save that variable in a table indexed by
@@ -160,7 +166,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
     // TODO: An implicit constructor has to pass all arguments along to the
     // parent class.
     Mod->getContext().getSourceErrorManager().error(
-        curClass()->getClassNode()->getStartLoc(),
+        curFunction()->typedClassContext.node->getStartLoc(),
         "inherited classes implicit constructor unsupported, "
         "add an explicit constructor");
   }
@@ -171,7 +177,8 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
   // This way we avoid making multiple implicit constructors for the same
   // classType, allowing us to populate the target operand of CallInsts.
   if (Value *found = findCompiledEntity(
-          curClass()->getClassNode(), ExtraKey::ImplicitClassConstructor)) {
+          curFunction()->typedClassContext.node,
+          ExtraKey::ImplicitClassConstructor)) {
     func = llvh::cast<Function>(found);
   } else {
     IRBuilder::SaveRestore saveState{Builder};
@@ -179,7 +186,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
     // Retrieve the FunctionInfo for the implicit constructor, which must exist.
     sema::FunctionInfo *funcInfo =
         ESTree::getDecoration<ESTree::ClassLikeDecoration>(
-            curClass()->getClassNode())
+            curFunction()->typedClassContext.node)
             ->implicitCtorFunctionInfo;
     assert(
         funcInfo &&
@@ -194,11 +201,11 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
     auto compileFunc = [this,
                         func,
                         funcInfo,
-                        classNode = curClass()->getClassNode(),
-                        classType = curClass()->getClassType(),
+                        typedClassContext = curFunction()->typedClassContext,
                         parentScope =
                             curFunction()->curScope->getVariableScope()] {
       FunctionContext newFunctionContext{this, func, funcInfo};
+      newFunctionContext.typedClassContext = typedClassContext;
 
       auto *prologueBB = Builder.createBasicBlock(func);
       Builder.setInsertionBlock(prologueBB);
@@ -210,12 +217,12 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
           DoEmitDeclarations::No,
           parentScope);
 
-      emitFieldInitCall(classType);
+      emitFieldInitCall(curFunction()->typedClassContext.type);
 
       emitFunctionEpilogue(Builder.getLiteralUndefined());
     };
     enqueueCompilation(
-        curClass()->getClassNode(),
+        curFunction()->typedClassContext.node,
         ExtraKey::ImplicitClassConstructor,
         func,
         compileFunc);
@@ -369,21 +376,6 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
     case flow::TypeKind::Generic:
       hermes_fatal("invalid typekind");
   }
-}
-
-ClassContext::ClassContext(
-    ESTreeIRGen *irGen,
-    ESTree::ClassDeclarationNode *classNode,
-    flow::ClassType *classType)
-    : irGen_(irGen),
-      classNode_(classNode),
-      classType_(classType),
-      oldContext_(irGen->classContext_) {
-  irGen->classContext_ = this;
-}
-
-ClassContext::~ClassContext() {
-  irGen_->classContext_ = oldContext_;
 }
 
 } // namespace irgen
