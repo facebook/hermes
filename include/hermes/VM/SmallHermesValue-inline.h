@@ -132,12 +132,11 @@ double HermesValue32::getNumber(PointerBase &pb) const {
   assert(hv.isNumber() && "May only be called for Number values.");
 #ifndef HERMESVM_SANITIZE_HANDLES
   const uint64_t hvRaw = hv.getRaw();
-  constexpr uint64_t kShiftAmount = 32 + kNumTagBits;
+  constexpr uint64_t kShiftAmount = 64 - kNumValueBits;
   // If hvRaw is the part that would go into the HV32 value, followed
   // by zeros (i.e., it's equal to a value of kNumValueBits bits
-  // right-shifted by 32 plus the HV32 tag bits), then we can
-  // compress.  (Note: the double parens after LLVM_LIKELY below are
-  // for macro args.)
+  // right-shifted to the top of the 64 bit value), then we can compress.
+  // (Note: the double parens after LLVM_LIKELY below are for macro args.)
   if (LLVM_LIKELY((llvh::isShiftedUInt<kNumValueBits, kShiftAmount>(hvRaw)))) {
     const uint64_t hvHighVal = hvRaw >> kShiftAmount;
     return fromTagAndValue(Tag::CompressedDouble, hvHighVal);

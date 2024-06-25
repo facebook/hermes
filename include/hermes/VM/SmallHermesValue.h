@@ -310,7 +310,7 @@ class HermesValue32 {
   /// Convert a compressed double to the "raw" form of a (64-bit) HermesValue.
   uint64_t compressedDoubleToBits() const {
     uint64_t res = getValue();
-    return res << (32 + kNumTagBits);
+    return res << (64 - kNumValueBits);
   }
 
   /// Encode a HermesValue that is required to be a Number as a
