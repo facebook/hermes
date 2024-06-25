@@ -1764,7 +1764,7 @@ extern "C" void _sh_prstore_indirect(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
-extern "C" void _sh_store_parent(
+extern "C" void _sh_typed_store_parent(
     SHRuntime *shr,
     const SHLegacyValue *storedValue,
     const SHLegacyValue *object) {

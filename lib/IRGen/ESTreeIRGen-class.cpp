@@ -292,7 +292,7 @@ Value *ESTreeIRGen::emitClassAllocation(
     result = Builder.createAllocObjectLiteralInst(propMap);
     if (parent) {
       // TODO: Ensure that parent is typed correctly as 'object'.
-      Builder.createStoreParentInst(parent, result);
+      Builder.createTypedStoreParentInst(parent, result);
     }
   }
   return result;

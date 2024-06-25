@@ -55,7 +55,7 @@ print(new C().method());
 // CHECK-NEXT:  %14 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
 // CHECK-NEXT:  %15 = UnionNarrowTrustedInst (:object) %14: object
 // CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) %15: object
-// CHECK-NEXT:  %17 = LoadParentInst (:object) %16: object
+// CHECK-NEXT:  %17 = TypedLoadParentInst (:object) %16: object
 // CHECK-NEXT:  %18 = PrLoadInst (:object) %17: object, 0: number, "method": string
 // CHECK-NEXT:  %19 = CallInst [njsf] (:any) %18: object, %method(): functionCode, empty: any, undefined: undefined, %16: object
 // CHECK-NEXT:  %20 = CheckedTypeCastInst (:number) %19: any, type(number)

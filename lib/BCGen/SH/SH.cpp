@@ -1312,17 +1312,17 @@ class InstrGen {
     os_ << ", ";
     genStringConstIC(LS) << ");\n";
   }
-  void generateLoadParentInst(LoadParentInst &inst) {
+  void generateTypedLoadParentInst(TypedLoadParentInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
-    os_ << "_sh_load_parent(shr, ";
+    os_ << "_sh_typed_load_parent(shr, ";
     generateRegisterPtr(*inst.getObject());
     os_ << ");\n";
   }
-  void generateStoreParentInst(StoreParentInst &inst) {
+  void generateTypedStoreParentInst(TypedStoreParentInst &inst) {
     os_.indent(2);
-    os_ << "_sh_store_parent(shr, ";
+    os_ << "_sh_typed_store_parent(shr, ";
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ", ";
     generateRegisterPtr(*inst.getObject());

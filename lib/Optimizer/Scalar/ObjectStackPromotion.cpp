@@ -80,7 +80,7 @@ bool tryPromoteObject(
       assert(L->getObject() == alloc && "Load from a different object");
       continue;
     }
-    if (auto *LP = llvh::dyn_cast<LoadParentInst>(U)) {
+    if (auto *LP = llvh::dyn_cast<TypedLoadParentInst>(U)) {
       assert(LP->getObject() == alloc && "Load from a different object");
       continue;
     }
@@ -93,7 +93,7 @@ bool tryPromoteObject(
         continue;
       }
     }
-    if (auto *SP = llvh::dyn_cast<StoreParentInst>(U)) {
+    if (auto *SP = llvh::dyn_cast<TypedStoreParentInst>(U)) {
       if (SP->getStoredValue() != alloc) {
         assert(SP->getObject() == alloc && "Unknown usage of object.");
         continue;
@@ -170,7 +170,7 @@ bool tryPromoteObject(
       L->replaceAllUsesWith(narrowed);
       continue;
     }
-    if (auto *LP = llvh::dyn_cast<LoadParentInst>(U)) {
+    if (auto *LP = llvh::dyn_cast<TypedLoadParentInst>(U)) {
       auto *load = builder.createLoadStackInst(parentLoc);
       auto *narrowed =
           builder.createUnionNarrowTrustedInst(load, LP->getType());
@@ -184,7 +184,7 @@ bool tryPromoteObject(
           S->getStoredValue(), stackLocs[S->getPropIndex()]);
       continue;
     }
-    if (auto *SP = llvh::dyn_cast<StoreParentInst>(U)) {
+    if (auto *SP = llvh::dyn_cast<TypedStoreParentInst>(U)) {
       builder.createStoreStackInst(SP->getStoredValue(), parentLoc);
       continue;
     }

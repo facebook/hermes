@@ -1496,14 +1496,14 @@ bool Verifier::visitFastArrayLengthInst(const FastArrayLengthInst &Inst) {
   return true;
 }
 
-bool Verifier::visitLoadParentInst(const LoadParentInst &Inst) {
+bool Verifier::visitTypedLoadParentInst(const TypedLoadParentInst &Inst) {
   AssertIWithMsg(
       Inst,
       Inst.getObject()->getType().isObjectType(),
       "input object value must be of object type");
   return true;
 }
-bool Verifier::visitStoreParentInst(const StoreParentInst &Inst) {
+bool Verifier::visitTypedStoreParentInst(const TypedStoreParentInst &Inst) {
   AssertIWithMsg(
       Inst,
       Inst.getObject()->getType().isObjectType(),

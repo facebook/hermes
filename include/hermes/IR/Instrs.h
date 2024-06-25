@@ -4681,20 +4681,20 @@ class FastArrayLengthInst : public Instruction {
   }
 };
 
-class LoadParentInst : public Instruction {
-  LoadParentInst(const LoadParentInst &) = delete;
-  void operator=(const LoadParentInst &) = delete;
+class TypedLoadParentInst : public Instruction {
+  TypedLoadParentInst(const TypedLoadParentInst &) = delete;
+  void operator=(const TypedLoadParentInst &) = delete;
 
  public:
   enum { ObjectIdx };
 
-  explicit LoadParentInst(Value *object)
-      : Instruction(ValueKind::LoadParentInstKind) {
+  explicit TypedLoadParentInst(Value *object)
+      : Instruction(ValueKind::TypedLoadParentInstKind) {
     setType(*getInherentTypeImpl());
     pushOperand(object);
   }
-  explicit LoadParentInst(
-      const LoadParentInst *src,
+  explicit TypedLoadParentInst(
+      const TypedLoadParentInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -4722,25 +4722,25 @@ class LoadParentInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::LoadParentInstKind;
+    return V->getKind() == ValueKind::TypedLoadParentInstKind;
   }
 };
 
-class StoreParentInst : public Instruction {
-  StoreParentInst(const StoreParentInst &) = delete;
-  void operator=(const StoreParentInst &) = delete;
+class TypedStoreParentInst : public Instruction {
+  TypedStoreParentInst(const TypedStoreParentInst &) = delete;
+  void operator=(const TypedStoreParentInst &) = delete;
 
  public:
   enum { StoredValueIdx, ObjectIdx };
 
-  explicit StoreParentInst(Value *storedValue, Value *object)
-      : Instruction(ValueKind::StoreParentInstKind) {
+  explicit TypedStoreParentInst(Value *storedValue, Value *object)
+      : Instruction(ValueKind::TypedStoreParentInstKind) {
     setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
   }
-  explicit StoreParentInst(
-      const StoreParentInst *src,
+  explicit TypedStoreParentInst(
+      const TypedStoreParentInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -4770,7 +4770,7 @@ class StoreParentInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::StoreParentInstKind;
+    return V->getKind() == ValueKind::TypedStoreParentInstKind;
   }
 };
 

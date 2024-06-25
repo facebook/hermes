@@ -829,10 +829,10 @@ class TypeInferenceImpl {
   Type inferFastArrayLengthInst(FastArrayLengthInst *inst) {
     hermes_fatal("typed instruction");
   }
-  Type inferLoadParentInst(LoadParentInst *inst) {
+  Type inferTypedLoadParentInst(TypedLoadParentInst *inst) {
     hermes_fatal("typed instruction");
   }
-  Type inferStoreParentInst(StoreParentInst *inst) {
+  Type inferTypedStoreParentInst(TypedStoreParentInst *inst) {
     hermes_fatal("typed instruction");
   }
   Type inferNativeCallInst(NativeCallInst *inst) {

@@ -227,8 +227,8 @@ DEF_VALUE(FastArrayPushInst, Instruction)
 DEF_VALUE(FastArrayAppendInst, Instruction)
 DEF_VALUE(FastArrayLengthInst, Instruction)
 
-DEF_VALUE(LoadParentInst, Instruction)
-DEF_VALUE(StoreParentInst, Instruction)
+DEF_VALUE(TypedLoadParentInst, Instruction)
+DEF_VALUE(TypedStoreParentInst, Instruction)
 
 BEGIN_VALUE(FUnaryMathInst, Instruction)
 DEF_TAG(FNegate, FUnaryMathInst)

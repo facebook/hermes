@@ -113,7 +113,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %38 = LoadFrameInst (:object) %1: environment, [%VS1.?C0.prototype]: object
 // CHECK-NEXT:  %39 = PrLoadInst (:object) %38: object, 0: number, "m": string
 // CHECK-NEXT:  %40 = AllocObjectLiteralInst (:object) empty: any, "m": string, %39: object
-// CHECK-NEXT:        StoreParentInst %38: object, %40: object
+// CHECK-NEXT:        TypedStoreParentInst %38: object, %40: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %40: object, [%VS1.?C1.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %40: object, %36: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
@@ -141,7 +141,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %15 = LoadFrameInst (:object) %1: environment, [%VS2.?A.prototype]: object
 // CHECK-NEXT:  %16 = UnionNarrowTrustedInst (:object) %15: object
 // CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) empty: any, "x": string, undefined: undefined
-// CHECK-NEXT:        StoreParentInst %16: object, %17: object
+// CHECK-NEXT:        TypedStoreParentInst %16: object, %17: object
 // CHECK-NEXT:  %19 = CallInst (:any) %14: object, %"A 1#"(): functionCode, empty: any, %14: object, %17: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS2.a]: any
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) %1: environment, [%VS2.a]: any

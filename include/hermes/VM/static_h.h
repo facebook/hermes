@@ -1030,7 +1030,7 @@ static inline SHLegacyValue _sh_fastarray_length(
 #endif
 }
 
-static inline SHLegacyValue _sh_load_parent(
+static inline SHLegacyValue _sh_typed_load_parent(
     SHRuntime *shr,
     const SHLegacyValue *object) {
   SHCompressedPointer parent = {
@@ -1038,7 +1038,7 @@ static inline SHLegacyValue _sh_load_parent(
   return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
 }
 
-SHERMES_EXPORT void _sh_store_parent(
+SHERMES_EXPORT void _sh_typed_store_parent(
     SHRuntime *shr,
     const SHLegacyValue *storedValue,
     const SHLegacyValue *object);

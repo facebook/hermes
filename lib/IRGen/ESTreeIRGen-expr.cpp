@@ -851,7 +851,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       // correctly populate 'this' argument.
       return MemberExpressionResult{
           Builder.createPrLoadInst(
-              Builder.createLoadParentInst(baseValue),
+              Builder.createTypedLoadParentInst(baseValue),
               methodIndex,
               Builder.getLiteralString(propName),
               flowTypeToIRType(optMethodLookup->getField()->type)),

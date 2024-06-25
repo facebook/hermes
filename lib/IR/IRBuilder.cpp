@@ -1137,16 +1137,16 @@ FastArrayLengthInst *IRBuilder::createFastArrayLengthInst(Value *array) {
   return I;
 }
 
-LoadParentInst *IRBuilder::createLoadParentInst(Value *object) {
-  auto *inst = new LoadParentInst(object);
+TypedLoadParentInst *IRBuilder::createTypedLoadParentInst(Value *object) {
+  auto *inst = new TypedLoadParentInst(object);
   insert(inst);
   return inst;
 }
 
-StoreParentInst *IRBuilder::createStoreParentInst(
+TypedStoreParentInst *IRBuilder::createTypedStoreParentInst(
     Value *storedValue,
     Value *object) {
-  auto *inst = new StoreParentInst(storedValue, object);
+  auto *inst = new TypedStoreParentInst(storedValue, object);
   insert(inst);
   return inst;
 }

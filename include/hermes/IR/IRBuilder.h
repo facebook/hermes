@@ -653,8 +653,10 @@ class IRBuilder {
   FastArrayAppendInst *createFastArrayAppendInst(Value *other, Value *array);
   FastArrayLengthInst *createFastArrayLengthInst(Value *array);
 
-  LoadParentInst *createLoadParentInst(Value *object);
-  StoreParentInst *createStoreParentInst(Value *storedValue, Value *object);
+  TypedLoadParentInst *createTypedLoadParentInst(Value *object);
+  TypedStoreParentInst *createTypedStoreParentInst(
+      Value *storedValue,
+      Value *object);
 
   FUnaryMathInst *createFUnaryMathInst(ValueKind kind, Value *arg);
   FBinaryMathInst *

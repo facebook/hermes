@@ -1879,8 +1879,8 @@ void HBCISel::generateFUnaryMathInst(FUnaryMathInst *Inst, BasicBlock *) {
       break;
   }
 }
-void HBCISel::generateLoadParentInst(LoadParentInst *, BasicBlock *) {
-  hermes_fatal("LoadParentInst not supported.");
+void HBCISel::generateTypedLoadParentInst(TypedLoadParentInst *, BasicBlock *) {
+  hermes_fatal("TypedLoadParentInst not supported.");
 }
 void HBCISel::generateNativeCallInst(NativeCallInst *, BasicBlock *) {
   hermes_fatal("NativeCallInst not supported.");
@@ -1890,8 +1890,10 @@ void HBCISel::generateGetNativeRuntimeInst(
     hermes::BasicBlock *next) {
   hermes_fatal("GetNativeRuntimeInst not supported.");
 }
-void HBCISel::generateStoreParentInst(StoreParentInst *, BasicBlock *) {
-  hermes_fatal("StoreParentInst not supported.");
+void HBCISel::generateTypedStoreParentInst(
+    TypedStoreParentInst *,
+    BasicBlock *) {
+  hermes_fatal("TypedStoreParentInst not supported.");
 }
 void HBCISel::generateLIRDeadValueInst(LIRDeadValueInst *, BasicBlock *) {
   hermes_fatal("LIRDeadValueInst not supported.");

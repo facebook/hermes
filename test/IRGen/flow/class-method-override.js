@@ -80,7 +80,7 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %20 = CreateFunctionInst (:object) %1: environment, %"override 1#"(): functionCode
 // CHECK-NEXT:  %21 = CreateFunctionInst (:object) %1: environment, %"override2 1#"(): functionCode
 // CHECK-NEXT:  %22 = AllocObjectLiteralInst (:object) empty: any, "override": string, %20: object, "override2": string, %21: object
-// CHECK-NEXT:        StoreParentInst %19: object, %22: object
+// CHECK-NEXT:        TypedStoreParentInst %19: object, %22: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %22: object, [%VS1.?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %22: object, %17: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
@@ -98,13 +98,13 @@ function foo(c: C, d: D){
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS2.d]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS2.c]: any
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
-// CHECK-NEXT:  %8 = LoadParentInst (:object) %7: object
+// CHECK-NEXT:  %8 = TypedLoadParentInst (:object) %7: object
 // CHECK-NEXT:  %9 = PrLoadInst (:object) %8: object, 0: number, "override": string
 // CHECK-NEXT:  %10 = CallInst [njsf] (:any) %9: object, empty: any, empty: any, undefined: undefined, %7: object
 // CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS2.d]: any
 // CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
-// CHECK-NEXT:  %14 = LoadParentInst (:object) %13: object
+// CHECK-NEXT:  %14 = TypedLoadParentInst (:object) %13: object
 // CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "override": string
 // CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, %"override 1#"(): functionCode, empty: any, undefined: undefined, %13: object
 // CHECK-NEXT:  %17 = CheckedTypeCastInst (:number) %16: any, type(number)

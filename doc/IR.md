@@ -954,22 +954,22 @@ Arguments | %other is array from which elements will be copied, %array is the ar
 Semantics | Copy the elements from %other into the end of %array, increasing its length by the number of elements in %other. If accommodating the additional elements causes a reallocation past the maximum allowable allocation size, throw an exception.
 Effects | May write memory or throw.
 
-### LoadParent
+### TypedLoadParent
 
-LoadParent | _
+TypedLoadParent | _
 --- | --- |
 Description | Loads the parent (the vtable) for a typed object instance of a class
-Example | %0 = LoadParent %object
+Example | %0 = TypedLoadParent %object
 Arguments | %object is an instance of a typed class
 Semantics | Read the parent without any checks.
 Effects | May read memory.
 
-### StoreParent
+### TypedStoreParent
 
-StoreParent | _
+TypedStoreParent | _
 --- | --- |
 Description | Stores the parent (the vtable) for a typed object instance of a class
-Example | StoreParent %storedValue (:object), %object (:object)
+Example | TypedStoreParent %storedValue (:object), %object (:object)
 Arguments | %object is an instance of a typed class, %storedValue is stored as the parent
 Semantics | Store the parent without any checks.
 Effects | May write memory.

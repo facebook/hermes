@@ -55,7 +55,7 @@ const s: string = i2.val;
 // CHECK-NEXT:  %23 = LoadFrameInst (:object) %1: environment, [%VS1.?ID.prototype]: object
 // CHECK-NEXT:  %24 = UnionNarrowTrustedInst (:object) %23: object
 // CHECK-NEXT:  %25 = AllocObjectLiteralInst (:object) empty: any, "val": string, 0: number
-// CHECK-NEXT:        StoreParentInst %24: object, %25: object
+// CHECK-NEXT:        TypedStoreParentInst %24: object, %25: object
 // CHECK-NEXT:  %27 = CallInst (:any) %22: object, %ID(): functionCode, empty: any, %22: object, %25: object, 1: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %25: object, [%VS1.i1]: any
 // CHECK-NEXT:  %29 = LoadFrameInst (:any) %1: environment, [%VS1.i1]: any
@@ -67,7 +67,7 @@ const s: string = i2.val;
 // CHECK-NEXT:  %35 = LoadFrameInst (:object) %1: environment, [%VS1.?ID.prototype#1]: object
 // CHECK-NEXT:  %36 = UnionNarrowTrustedInst (:object) %35: object
 // CHECK-NEXT:  %37 = AllocObjectLiteralInst (:object) empty: any, "val": string, "": string
-// CHECK-NEXT:        StoreParentInst %36: object, %37: object
+// CHECK-NEXT:        TypedStoreParentInst %36: object, %37: object
 // CHECK-NEXT:  %39 = CallInst (:any) %34: object, %"ID 1#"(): functionCode, empty: any, %34: object, %37: object, "abc": string
 // CHECK-NEXT:        StoreFrameInst %1: environment, %37: object, [%VS1.i2]: any
 // CHECK-NEXT:  %41 = LoadFrameInst (:any) %1: environment, [%VS1.i2]: any

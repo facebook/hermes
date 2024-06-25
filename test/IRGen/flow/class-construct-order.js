@@ -36,7 +36,7 @@ class C {
 // CHECK-NEXT:  %6 = LoadFrameInst (:object) %0: environment, [%VS0.?C.prototype]: object
 // CHECK-NEXT:  %7 = UnionNarrowTrustedInst (:object) %6: object
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any, "x": string, 0: number
-// CHECK-NEXT:       StoreParentInst %7: object, %8: object
+// CHECK-NEXT:       TypedStoreParentInst %7: object, %8: object
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
 // CHECK-NEXT:  %12 = CallInst (:any) %5: object, %C(): functionCode, empty: any, %5: object, %8: object, %11: number
