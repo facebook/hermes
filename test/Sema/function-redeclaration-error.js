@@ -37,7 +37,7 @@ function testLoose() {
     function b1() {}
     function b1() {}
 // Fine in loose mode.
-// CHECK-NOT: {{.*}}: error: Identifier 'b2' is already declared
+// CHECK-NOT: {{.*}}: error: Identifier 'b1' is already declared
 
     var b2;
     function b2() {}
