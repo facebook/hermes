@@ -2793,6 +2793,7 @@ Node *Db<Alloc>::parseCtorDtorName(Node *&SoFar, NameState *State) {
       SoFar = make<ExpandedSpecialSubstitution>(SSK);
       if (!SoFar)
         return nullptr;
+      break;
     default:
       break;
     }
