@@ -6,6 +6,7 @@
  */
 
 #include "hermes/VM/JSLib/DateUtil.h"
+#include "hermes/VM/JSLib/DateCache.h"
 
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
 #include "hermes/Support/Compiler.h"
@@ -418,12 +419,18 @@ double daylightSavingTA(double t) {
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.9
 
+/// https://tc39.es/ecma262/#sec-localtime
 /// Conversion from UTC to local time.
-double localTime(double t) {
-  return t + localTZA() + daylightSavingTA(t);
+double localTime(double t, LocalTimeOffsetCache &localTimeOffsetCache) {
+  // The spec requires that localTime() accepts only finite time value, but for
+  // simplicity, we do the check here instead of the caller site.
+  if (!std::isfinite(t)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  return t + localTimeOffsetCache.getLocalTimeOffset(t, TimeType::Utc);
 }
 
-/// https://tc39.es/ecma262/#sec-localtime
+/// https://tc39.es/ecma262/#sec-utc-t
 /// Conversion from local time to UTC.
 ///
 /// There is time ambiguity when converting local time to UTC time. For example,
@@ -438,26 +445,11 @@ double localTime(double t) {
 /// 12 March 2017 is skipped, it should be interpreted as 2:30 AM UTC-05
 /// instead of 3:30 AM UTC-04. However, in this case, both have the same UTC
 /// epoch.
-double utcTime(double t) {
-  double ltza = localTZA();
-  // To compute the DST offset, we need to use UTC time (as required by
-  // daylightSavingTA()). However, getting the exact UTC time is not possible
-  // since that would be circular. Therefore, we approximate the UTC time by
-  // subtracting the standard time adjustment and then subtracting an additional
-  // hour to comply with the spec's requirements as noted in the doc-comment.
-  //
-  // For example, imagine a transition to DST that goes from UTC+0 to UTC+1,
-  // moving 00:00 to 01:00. Any time in the skipped hour gets mapped to a
-  // UTC time before the transition when we subtract an hour (e.g., 00:30 ->
-  // 23:30), which will correctly result in DST not being in effect.
-  //
-  // Similarly, during a transition from DST back to standard time, the hour
-  // from 00:00 to 01:00 is repeated. A local time in the repeated hour
-  // similarly gets mapped to a UTC time before the transition.
-  //
-  // Note that this will not work if the timezone offset has historical/future
-  // changes (which generates a different ltza than the one obtained here).
-  return t - ltza - daylightSavingTA(t - ltza - MS_PER_HOUR);
+double utcTime(double t, LocalTimeOffsetCache &localTimeOffsetCache) {
+  if (!std::isfinite(t)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  return t - localTimeOffsetCache.getLocalTimeOffset(t, TimeType::Local);
 }
 
 //===----------------------------------------------------------------------===//
@@ -787,7 +779,9 @@ static bool scanInt(InputIter &it, const InputIter end, int32_t &x) {
   return !ref.getAsInteger(10, x);
 }
 
-static double parseISODate(StringView u16str) {
+static double parseISODate(
+    StringView u16str,
+    LocalTimeOffsetCache &localTimeOffsetCache) {
   constexpr double nan = std::numeric_limits<double>::quiet_NaN();
 
   auto it = u16str.begin();
@@ -872,7 +866,7 @@ static double parseISODate(StringView u16str) {
       // forms are interpreted as a UTC time and date-time forms are interpreted
       // as a local time.
       double t = makeDate(makeDay(y, m - 1, d), makeTime(h, min, s, ms));
-      t = utcTime(t);
+      t = utcTime(t, localTimeOffsetCache);
       return t;
     }
 
@@ -917,7 +911,9 @@ static double parseISODate(StringView u16str) {
   return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
 }
 
-static double parseESDate(StringView str) {
+static double parseESDate(
+    StringView str,
+    LocalTimeOffsetCache &localTimeOffsetCache) {
   constexpr double nan = std::numeric_limits<double>::quiet_NaN();
   StringView tok = str;
 
@@ -1081,7 +1077,7 @@ static double parseESDate(StringView str) {
   if (it == end) {
     // Default to local time zone if no time zone provided
     double t = makeDate(makeDay(y, m - 1, d), makeTime(h, min, s, ms));
-    t = utcTime(t);
+    t = utcTime(t, localTimeOffsetCache);
     return t;
   }
 
@@ -1161,13 +1157,13 @@ complete:
   return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
 }
 
-double parseDate(StringView str) {
-  double result = parseISODate(str);
+double parseDate(StringView str, LocalTimeOffsetCache &localTimeOffsetCache) {
+  double result = parseISODate(str, localTimeOffsetCache);
   if (!std::isnan(result)) {
     return result;
   }
 
-  return parseESDate(str);
+  return parseESDate(str, localTimeOffsetCache);
 }
 
 } // namespace vm
