@@ -131,7 +131,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       curFunction()->curScope->getVariableScope(),
       Builder.createIdentifier(
           llvh::Twine("?") + classType->getClassName().str() + ".prototype"),
-      flowTypeToIRType(classType->getHomeObjectType()));
+      flowTypeToIRType(classType->getHomeObjectType()),
+      /* hidden */ true);
   Builder.createStoreFrameInst(
       curFunction()->curScope, homeObject, homeObjectVar);
 

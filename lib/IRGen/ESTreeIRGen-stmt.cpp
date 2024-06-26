@@ -605,7 +605,8 @@ void ESTreeIRGen::genScopedForLoop(
     Variable *newVar = Builder.createVariable(
         curFunction()->curScope->getVariableScope(),
         decl->name,
-        Type::subtractTy(oldVar->getType(), Type::createEmpty()));
+        Type::subtractTy(oldVar->getType(), Type::createEmpty()),
+        /* hidden */ false);
 
     vars.emplace_back(decl, oldVar, newVar);
 

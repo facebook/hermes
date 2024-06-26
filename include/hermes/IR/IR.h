@@ -1266,8 +1266,13 @@ class Variable : public Value {
   /// If true, this variable is const.
   bool isConst_ = false;
 
+  /// If true, this variable is hidden from e.g. the debugger.
+  /// Used for synthetic variables that don't correspond to user-defined
+  /// variables.
+  bool hidden_ = false;
+
  public:
-  explicit Variable(VariableScope *scope, Identifier txt);
+  explicit Variable(VariableScope *scope, Identifier txt, bool hidden);
 
   ~Variable();
 
@@ -1307,6 +1312,10 @@ class Variable : public Value {
   }
   void setIsConst(bool value) {
     isConst_ = value;
+  }
+
+  bool getHidden() const {
+    return hidden_;
   }
 
   static bool classof(const Value *V) {
@@ -1674,6 +1683,10 @@ class VariableScope
   /// update their parents if this scope is eliminated.
   llvh::simple_ilist<VariableScope, llvh::ilist_tag<VariableScope>> children_;
 
+  /// The number of variables in this scope that are visible to the debugger.
+  /// Defaulted to UINT32_MAX to indicate that it hasn't been assigned yet.
+  uint32_t numVisibleVariables_ = UINT32_MAX;
+
  public:
   VariableScope(VariableScope *parentScope);
 
@@ -1684,6 +1697,14 @@ class VariableScope
   /// \returns a list of variables.
   llvh::ArrayRef<Variable *> getVariables() const {
     return variables_;
+  }
+
+  /// \return the number of variables that are visible in this scope.
+  /// The first numVisibleVariables in this VariableScope are visible to the
+  /// debugger.
+  uint32_t getNumVisibleVariables() const {
+    assert(numVisibleVariables_ != UINT32_MAX && "not assigned yet");
+    return numVisibleVariables_;
   }
 
   /// Add a variable \p V to the variable list.

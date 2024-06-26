@@ -208,7 +208,8 @@ void LowerToStateMachine::convert() {
   Variable *genState = builder_.createVariable(
       getParentOuterScope_->getVariableScope(),
       "generator_state",
-      Type::createInt32());
+      Type::createInt32(),
+      /* hidden */ true);
 
   lowerResumeGenerator(loadActionParam, loadValueParam, genState);
   lowerToSwitch(loadActionParam, loadValueParam, genState);
@@ -269,7 +270,8 @@ void LowerToStateMachine::moveLocalsToOuter() {
     auto outerVar = builder_.createVariable(
         getParentOuterScope_->getVariableScope(),
         jsParam->getName(),
-        jsParam->getType());
+        jsParam->getType(),
+        /* hidden */ false);
     paramReplacements.insert({jsParam, outerVar});
     if (i == 0) {
       // The 'this' param already exists in outer_, so no need to
@@ -327,7 +329,8 @@ void LowerToStateMachine::moveLocalsToOuter() {
           Variable *outerRestArgs = builder_.createVariable(
               getParentOuterScope_->getVariableScope(),
               CBI->getName(),
-              CBI->getType());
+              CBI->getType(),
+              /* hidden */ false);
           moveBuilderTo(CBI, builder_);
           auto *replacement =
               builder_.createLoadFrameInst(getParentOuterScope_, outerRestArgs);
@@ -349,7 +352,8 @@ void LowerToStateMachine::moveLocalsToOuter() {
         Variable *argumentsVar = beforeCGI.createVariable(
             getParentOuterScope_->getVariableScope(),
             CAI->getName(),
-            Type::createObject());
+            Type::createObject(),
+            /* hidden */ false);
         auto *argInstInOuter = llvh::isa<CreateArgumentsLooseInst>(CAI)
             ? static_cast<CreateArgumentsInst *>(
                   beforeCGI.createCreateArgumentsLooseInst())
@@ -372,7 +376,8 @@ void LowerToStateMachine::moveLocalsToOuter() {
     auto *outerVar = builder_.createVariable(
         getParentOuterScope_->getVariableScope(),
         ASI->getVariableName(),
-        ASI->getType());
+        ASI->getType(),
+        /* hidden */ false);
     // Users of AllocStackInst must take AllocStackInst directly as they write
     // to it. To deal with this, create a 'dummy' AllocStackInst for each user
     // of the original AllocStackInst. Once it's done writing to the dummy,
@@ -462,7 +467,8 @@ void LowerToStateMachine::lowerResumeGenerator(
   Variable *valueToReturn = builder_.createVariable(
       getParentOuterScope_->getVariableScope(),
       "return_value",
-      Type::createAnyType());
+      Type::createAnyType(),
+      /* hidden */ true);
   for (BasicBlock &BB : *inner_) {
     for (auto iter = BB.begin(), end = BB.end(); iter != end; ++iter) {
       Instruction *I = &*iter;
@@ -591,7 +597,10 @@ void LowerToStateMachine::lowerToSwitch(
   // SaveAndYieldInsts and all catch handlers of a try-catch.
   SwitchBuilder mainSwitch(builder_);
   Variable *switchIdx = builder_.createVariable(
-      getParentOuterScope_->getVariableScope(), "idx", Type::createInt32());
+      getParentOuterScope_->getVariableScope(),
+      "idx",
+      Type::createInt32(),
+      /* hidden */ true);
 
   // Original entry point to the function.
   auto *oldBeginBB = &*inner_->begin();
@@ -681,7 +690,8 @@ void LowerToStateMachine::lowerToSwitch(
     thrownValPlaceholder = builder_.createVariable(
         getParentOuterScope_->getVariableScope(),
         "catchVal",
-        Type::createAnyType());
+        Type::createAnyType(),
+        /* hidden */ true);
     rethrowBB = builder_.createBasicBlock(inner_);
     builder_.setInsertionBlock(rethrowBB);
     builder_.createStoreFrameInst(
@@ -698,7 +708,8 @@ void LowerToStateMachine::lowerToSwitch(
     exceptionSwitchIdx = builder_.createVariable(
         getParentOuterScope_->getVariableScope(),
         "exception_handler_idx",
-        Type::createInt32());
+        Type::createInt32(),
+        /* hidden */ true);
     builder_.createStoreFrameInst(
         newOuterScope_,
         builder_.getLiteralNumber(rethrowBBIdx),
@@ -945,7 +956,10 @@ void LowerToStateMachine::moveCrossingValuesToOuter() {
       // the value of the instruction into the environment, and replace the
       // illegal usages with a read.
       Variable *storedValueOfI = builder_.createVariable(
-          getParentOuterScope_->getVariableScope(), I.getName(), I.getType());
+          getParentOuterScope_->getVariableScope(),
+          I.getName(),
+          I.getType(),
+          /* hidden */ false);
       // This is a small optimization to reduce the number of reads to the
       // replacement variable we need to create for each illegal user. Illegal
       // users that reside in the same block can all share the same single read
@@ -994,7 +1008,8 @@ void LowerToStateMachine::moveInnerPhisToOuter(DominanceInfo &D) {
         auto outerVar = builder_.createVariable(
             getParentOuterScope_->getVariableScope(),
             PI->getName(),
-            PI->getType());
+            PI->getType(),
+            /* hidden */ false);
         for (size_t i = 0, e = PI->getNumEntries(); i < e; ++i) {
           // For each possible value that PhiInst can take, create a
           // corresponding storeFrameInst in the BB it needs to come from in

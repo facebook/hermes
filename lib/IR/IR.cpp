@@ -20,6 +20,7 @@
 
 #include <set>
 #include <type_traits>
+#include <utility>
 
 using namespace hermes;
 
@@ -527,8 +528,11 @@ bool Instruction::acceptsEmptyType() const {
   }
 }
 
-Variable::Variable(VariableScope *scope, Identifier txt)
-    : Value(ValueKind::VariableKind), text(txt), parent(scope) {
+Variable::Variable(VariableScope *scope, Identifier txt, bool hidden)
+    : Value(ValueKind::VariableKind),
+      text(txt),
+      parent(scope),
+      hidden_(hidden) {
   scope->addVariable(this);
 }
 
@@ -561,9 +565,49 @@ void VariableScope::removeFromScopeChain() {
 }
 
 void VariableScope::assignIndexToVariables() {
-  // No variables, or the index is already set, we're done.
-  if (variables_.empty() || variables_.front()->hasIndexInVariableList())
+  // Index is already set, we're done.
+  if (numVisibleVariables_ != UINT32_MAX)
     return;
+
+  // No variables, no visible variables.
+  if (variables_.empty()) {
+    numVisibleVariables_ = 0;
+    return;
+  }
+
+  // Reorder the hidden variables to the end of the list.
+  // This will allow fast access when listing variables in the debugger.
+  // Move left to right, swapping hidden variables into to the end of the list.
+  // Every time we find a hidden variable at 'left',
+  // we find the rightmost visible variable using 'right' and swap it.
+  // If we can't find a visible variable to swap with, we're done.
+  // * All Variables at index strictly less than left are visible.
+  // * All Variables at index strictly greater than right are hidden.
+  uint32_t left = 0;
+  uint32_t right = variables_.size() - 1;
+  while (left <= right) {
+    if (variables_[left]->getHidden()) {
+      // Find the first visible variable on the right side by skipping all the
+      // hidden variables.
+      while (left < right && variables_[right]->getHidden())
+        --right;
+
+      // Couldn't find a visible variable to swap with. Done.
+      if (left == right)
+        break;
+
+      // right is a visible variable, left is a hidden variable. Swap.
+      assert(!variables_[right]->getHidden() && "right should be visible");
+      std::swap(variables_[left], variables_[right]);
+      --right;
+    }
+    ++left;
+  }
+
+  assert(
+      numVisibleVariables_ == UINT32_MAX &&
+      "numVisibleVariables_ must only be set once");
+  numVisibleVariables_ = left;
 
   // Otherwise, actually set the indices.
   for (uint32_t i = 0, e = variables_.size(); i < e; ++i)

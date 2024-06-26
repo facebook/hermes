@@ -544,21 +544,29 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
 
   // "this".
   auto *th = Builder.createVariable(
-      scope, genAnonymousLabelName("this"), Type::createAnyType());
+      scope,
+      genAnonymousLabelName("this"),
+      Type::createAnyType(),
+      /* hidden */ true);
   curFunction()->capturedThis = th;
   emitStore(curFunction()->jsParams[0], th, true);
 
   // "new.target".
-  curFunction()->capturedNewTarget = Builder.createVariable(
+  Variable *capturedNewTarget = Builder.createVariable(
       scope,
       genAnonymousLabelName("new.target"),
-      curFunction()->function->getNewTargetParam()->getType());
+      curFunction()->function->getNewTargetParam()->getType(),
+      /* hidden */ true);
+  curFunction()->capturedNewTarget = capturedNewTarget;
   emitStore(genNewTarget(), curFunction()->capturedNewTarget, true);
 
   // "arguments".
   if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {
     auto *args = Builder.createVariable(
-        scope, genAnonymousLabelName("arguments"), Type::createObject());
+        scope,
+        genAnonymousLabelName("arguments"),
+        Type::createObject(),
+        /* hidden */ true);
     curFunction()->capturedArguments = args;
     emitStore(curFunction()->createArgumentsInst, args, true);
   }
@@ -671,7 +679,8 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
               curFunction()->curScope->getVariableScope(),
               decl->name,
               tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
-                  : Type::createAnyType());
+                  : Type::createAnyType(),
+              false);
           var->setObeysTDZ(tdz);
           var->setIsConst(decl->kind == sema::Decl::Kind::Const);
           setDeclData(decl, var);
@@ -706,7 +715,10 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
           var = Builder.createVariable(
               curFunction()->curScope->getVariableScope(),
               decl->name,
-              Type::createAnyType());
+              Type::createAnyType(),
+              // FunctionExprName isn't supposed to show up in the list when
+              // debugging.
+              /* hidden */ decl->kind == sema::Decl::Kind::FunctionExprName);
           var->setIsConst(decl->kind == sema::Decl::Kind::Import);
           setDeclData(decl, var);
         } else {
@@ -835,7 +847,8 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
         curFunction()->curScope->getVariableScope(),
         decl->name,
         tdz ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
-            : Type::createAnyType());
+            : Type::createAnyType(),
+        /* hidden */ false);
     setDeclData(decl, var);
 
     // If not simple parameter list, enable TDZ and init every param.
@@ -1020,7 +1033,8 @@ void ESTreeIRGen::emitCreateFieldInitFunction() {
       curFunction()->curScope->getVariableScope(),
       (llvh::Twine("<fieldInitFuncVar:") + classType->getClassName().str() +
        ">"),
-      Type::createObject());
+      Type::createObject(),
+      /* hidden */ true);
   Builder.createStoreFrameInst(
       curFunction()->curScope, createFieldInitFunc, fieldInitFuncVar);
   classInfo.fieldInitFunctionVar = fieldInitFuncVar;

@@ -93,7 +93,7 @@ function *args() {
 // CHECK-NEXT:    LoadConstZero     r4
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r4
 // CHECK-NEXT:    LoadConstZero     r5
-// CHECK-NEXT:    StoreNPToEnvironment r1, 4, r5
+// CHECK-NEXT:    StoreNPToEnvironment r1, 7, r5
 // CHECK-NEXT:    CreateGenerator   r6, r1, Function<?anon_0_loop>
 // CHECK-NEXT:    Ret               r6
 
@@ -120,14 +120,14 @@ function *args() {
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
-// CHECK-NEXT:    LoadFromEnvironment r3, r2, 4
+// CHECK-NEXT:    LoadFromEnvironment r3, r2, 7
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
 // CHECK-NEXT:    JStrictEqualLong  L1, r3, r4
-// CHECK-NEXT:    LoadFromEnvironment r3, r2, 4
+// CHECK-NEXT:    LoadFromEnvironment r3, r2, 7
 // CHECK-NEXT:    LoadConstUInt8    r4, 3
 // CHECK-NEXT:    JStrictEqualLong  L2, r3, r4
 // CHECK-NEXT:    LoadConstUInt8    r3, 2
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r3
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 6
 // CHECK-NEXT:    LoadConstZero     r3
 // CHECK-NEXT:    StrictEq          r5, r3, r4
@@ -151,13 +151,13 @@ function *args() {
 // CHECK-NEXT:    JmpLong           L7
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r6
 // CHECK-NEXT:    NewObjectWithBuffer r7, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r6
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 2
@@ -175,7 +175,7 @@ function *args() {
 // CHECK-NEXT:    JmpTrue           L9, r11
 // CHECK-NEXT:    GetEnvironment    r8, r2, 1
 // CHECK-NEXT:    CreateEnvironment r9, r8, 2
-// CHECK-NEXT:    StoreToEnvironment r2, 7, r9
+// CHECK-NEXT:    StoreToEnvironment r2, 4, r9
 // CHECK-NEXT:    LoadFromEnvironment r10, r2, 1
 // CHECK-NEXT:    StoreToEnvironment r9, 0, r10
 // CHECK-NEXT:    LoadConstUndefined r11
@@ -187,11 +187,11 @@ function *args() {
 // CHECK-NEXT:    JmpTrue           L6, r14
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
 // CHECK-NEXT:    NewObjectWithBuffer r9, 0, 4
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L6:
-// CHECK-NEXT:    LoadFromEnvironment r8, r2, 7
+// CHECK-NEXT:    LoadFromEnvironment r8, r2, 4
 // CHECK-NEXT:    LoadFromEnvironment r9, r8, 0
 // CHECK-NEXT:    LoadFromEnvironment r10, r8, 1
 // CHECK-NEXT:    ToNumeric         r11, r10
@@ -201,19 +201,19 @@ function *args() {
 // CHECK-NEXT:    LoadConstUInt8    r14, 1
 // CHECK-NEXT:    StoreNPToEnvironment r2, 6, r14
 // CHECK-NEXT:    LoadConstUInt8    r15, 1
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r15
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r15
 // CHECK-NEXT:    NewObjectWithBuffer r16, 0, 2
 // CHECK-NEXT:    PutOwnBySlotIdx   r16, r13, 0
 // CHECK-NEXT:    Ret               r16
 // CHECK-NEXT:L9:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
 // CHECK-NEXT:    NewObjectWithBuffer r9, 0, 0
 // CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
 // CHECK-NEXT:    Ret               r9
 // CHECK-NEXT:L8:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r8, 1
@@ -232,7 +232,7 @@ function *args() {
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
 // CHECK-NEXT:    LoadConstString   r9, "Generator functio"...
 // CHECK-NEXT:    Mov               r18, r9
 // CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.throwTypeError", 2

@@ -156,9 +156,12 @@ JSDynamicParam *IRBuilder::createJSThisParam(Function *parent) {
   return param;
 }
 
-Variable *
-IRBuilder::createVariable(VariableScope *Parent, Identifier Name, Type type) {
-  auto *var = new Variable(Parent, Name);
+Variable *IRBuilder::createVariable(
+    VariableScope *Parent,
+    Identifier Name,
+    Type type,
+    bool hidden) {
+  auto *var = new Variable(Parent, Name, hidden);
   var->setType(type);
   return var;
 }
@@ -166,8 +169,9 @@ IRBuilder::createVariable(VariableScope *Parent, Identifier Name, Type type) {
 Variable *IRBuilder::createVariable(
     VariableScope *Parent,
     const llvh::Twine &Name,
-    Type type) {
-  return createVariable(Parent, createIdentifier(Name), type);
+    Type type,
+    bool hidden) {
+  return createVariable(Parent, createIdentifier(Name), type, hidden);
 }
 
 VariableScope *IRBuilder::createVariableScope(VariableScope *parentScope) {

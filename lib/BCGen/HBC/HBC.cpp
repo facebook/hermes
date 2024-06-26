@@ -413,11 +413,9 @@ std::vector<uint32_t> getVariableCounts(
 
   std::vector<uint32_t> counts;
 
-  // TODO: Determine how to hide variables we don't want the debugger to see
-  // here. For now, just count all the variables.
   for (auto *cur = evalDataInst->getFuncVarScope(); cur;
        cur = cur->getParentScope()) {
-    counts.push_back(cur->getVariables().size());
+    counts.push_back(cur->getNumVisibleVariables());
   }
 
   return counts;

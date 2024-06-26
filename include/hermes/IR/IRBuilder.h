@@ -129,11 +129,18 @@ class IRBuilder {
   JSDynamicParam *createJSThisParam(Function *parent);
 
   /// Add a new variable to scope \p Parent.
-  Variable *createVariable(VariableScope *Parent, Identifier Name, Type type);
+  Variable *createVariable(
+      VariableScope *Parent,
+      Identifier Name,
+      Type type,
+      bool hidden);
 
   /// Add a new variable to scope \p Parent.
-  Variable *
-  createVariable(VariableScope *Parent, const llvh::Twine &Name, Type type);
+  Variable *createVariable(
+      VariableScope *Parent,
+      const llvh::Twine &Name,
+      Type type,
+      bool hidden);
 
   /// Create a new VariableScope in the module.
   VariableScope *createVariableScope(VariableScope *parentScope);

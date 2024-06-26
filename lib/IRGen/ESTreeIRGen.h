@@ -496,7 +496,8 @@ class ESTreeIRGen {
   void doIt();
 
   /// Perform IRGeneration for the whole module.
-  Function *doItInScope(VariableScope *varScope = nullptr);
+  /// \param varScope the variable scope to resolve in, never nullptr.
+  Function *doItInScope(VariableScope *varScope);
 
   /// Perform IR generation for a given CJS module.
   void doCJSModule(
