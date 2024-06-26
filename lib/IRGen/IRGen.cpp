@@ -22,19 +22,21 @@ void generateIRFromESTree(
     Module *M,
     sema::SemContext &semCtx,
     flow::FlowContext &flowContext,
-    ESTree::NodePtr node) {
+    ESTree::NodePtr node,
+    llvh::StringRef topLevelFunctionName) {
   // Generate IR into the module M.
   ESTreeIRGen generator(M, semCtx, flowContext, node);
-  generator.doIt();
+  generator.doIt(topLevelFunctionName);
   LLVM_DEBUG(dbgs() << "Finished IRGen.\n");
 }
 
 void generateIRFromESTree(
     Module *M,
     sema::SemContext &semCtx,
-    ESTree::NodePtr node) {
+    ESTree::NodePtr node,
+    llvh::StringRef topLevelFunctionName) {
   flow::FlowContext flowContext{};
-  generateIRFromESTree(M, semCtx, flowContext, node);
+  generateIRFromESTree(M, semCtx, flowContext, node, topLevelFunctionName);
 }
 
 void generateIRForCJSModule(

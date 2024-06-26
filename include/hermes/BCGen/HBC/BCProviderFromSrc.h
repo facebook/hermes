@@ -117,6 +117,8 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// \param buffer the JavaScript source to compile, encoded in utf-8. It is
   ///     required to have null termination ('\0') in the byte past the end,
   ///     in other words `assert(buffer.data()[buffer.size()] == 0)`.
+  /// \param topLevelFunctionName the name of the global function
+  ///   "eval" for eval, "global" for ordinary scripts.
   /// \param sourceURL this will be used as the "file name" of the buffer for
   ///     errors, stack traces, etc.
   /// \param sourceMap optional input source map for \p buffer.
@@ -139,6 +141,7 @@ class BCProviderFromSrc final : public BCProviderBase {
       llvh::StringRef sourceURL,
       std::unique_ptr<SourceMap> sourceMap,
       const CompileFlags &compileFlags,
+      llvh::StringRef topLevelFunctionName = "global",
       SourceErrorManager::DiagHandlerTy diagHandler = {},
       void *diagContext = nullptr,
       const std::function<void(Module &)> &runOptimizationPasses = {},

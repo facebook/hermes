@@ -105,6 +105,7 @@ class IRBuilder {
 
   /// Create the top level function representing the global scope.
   Function *createTopLevelFunction(
+      llvh::StringRef topLevelFunctionName,
       bool strictMode,
       CustomDirectives customDirectives = CustomDirectives{},
       SMRange sourceRange = SMRange{});

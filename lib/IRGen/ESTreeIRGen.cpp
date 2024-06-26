@@ -118,7 +118,7 @@ ESTreeIRGen::ESTreeIRGen(
       Builder(Mod),
       identDefaultExport_(Builder.createIdentifier("?default")) {}
 
-void ESTreeIRGen::doIt() {
+void ESTreeIRGen::doIt(llvh::StringRef topLevelFunctionName) {
   LLVM_DEBUG(llvh::dbgs() << "Processing top level program.\n");
 
   ESTree::ProgramNode *Program;
@@ -135,6 +135,7 @@ void ESTreeIRGen::doIt() {
 
   // The function which will "execute" the module.
   Function *const topLevelFunction = Builder.createTopLevelFunction(
+      topLevelFunctionName,
       ESTree::isStrict(Program->strictness),
       Program->getSemInfo()->customDirectives,
       Program->getSourceRange());

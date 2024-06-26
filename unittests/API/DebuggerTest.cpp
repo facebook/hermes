@@ -363,7 +363,7 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   ASSERT_EQ(frame.location.line, 11);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
-  ASSERT_EQ(frame.functionName, "global");
+  ASSERT_EQ(frame.functionName, "eval");
   ASSERT_EQ(frame.location.fileName, "eval");
   ASSERT_EQ(frame.location.fileId, 3);
   ASSERT_EQ(frame.location.line, 14);

@@ -24,7 +24,7 @@ try{ global.eval("throw new Error()\n//# sourceURL=foo"); } catch (e) {
     print(e.stack);
 }
 //CHECK-NEXT: Error
-//CHECK-NEXT:   at global (foo:1:16)
+//CHECK-NEXT:   at eval (foo:1:16)
 
 try {
     var f = new Function(" 'use strict'; var o = {}; with (o) {}; ");

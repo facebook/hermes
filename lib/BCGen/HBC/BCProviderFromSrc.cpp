@@ -87,6 +87,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
     llvh::StringRef sourceURL,
     std::unique_ptr<SourceMap> sourceMap,
     const CompileFlags &compileFlags,
+    llvh::StringRef topLevelFunctionName,
     SourceErrorManager::DiagHandlerTy diagHandler,
     void *diagContext,
     const std::function<void(Module &)> &runOptimizationPasses,
@@ -196,7 +197,8 @@ BCProviderFromSrc::createBCProviderFromSrc(
   }
 
   auto M = std::make_shared<Module>(context);
-  hermes::generateIRFromESTree(M.get(), *semCtx, parsed.getValue());
+  hermes::generateIRFromESTree(
+      M.get(), *semCtx, parsed.getValue(), topLevelFunctionName);
   if (context->getSourceErrorManager().getErrorCount() > 0) {
     return {nullptr, getErrorString()};
   }

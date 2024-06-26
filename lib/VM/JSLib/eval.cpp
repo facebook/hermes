@@ -98,6 +98,7 @@ CallResult<HermesValue> evalInEnvironment(
           "eval",
           nullptr,
           compileFlags,
+          "eval",
           {},
           nullptr,
           runOptimizationPasses);

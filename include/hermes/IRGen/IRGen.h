@@ -32,13 +32,15 @@ void generateIRFromESTree(
     Module *M,
     sema::SemContext &semCtx,
     flow::FlowContext &flowContext,
-    ESTree::NodePtr node);
+    ESTree::NodePtr node,
+    llvh::StringRef topLevelFunctionName = "global");
 
 /// Lowers an ESTree program into Hermes IR in \p M.
 void generateIRFromESTree(
     Module *M,
     sema::SemContext &semCtx,
-    ESTree::NodePtr node);
+    ESTree::NodePtr node,
+    llvh::StringRef topLevelFunctionName = "global");
 
 /// Lowers an ESTree program into Hermes IR in \p M without a top-level
 /// function, so that it can be used as a CommonJS module.

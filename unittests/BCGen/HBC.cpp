@@ -167,7 +167,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
   Module M(Ctx);
   IRBuilder builder(&M);
 
-  auto *F = builder.createTopLevelFunction(true);
+  auto *F = builder.createTopLevelFunction("global", true);
   auto *BB = builder.createBasicBlock(F);
   builder.setInsertionBlock(BB);
   auto *undef = builder.getLiteralUndefined();
@@ -208,7 +208,7 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
   Module M(Ctx);
   IRBuilder builder(&M);
 
-  auto *F = builder.createTopLevelFunction(true);
+  auto *F = builder.createTopLevelFunction("global", true);
   auto *BB = builder.createBasicBlock(F);
   builder.setInsertionBlock(BB);
 

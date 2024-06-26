@@ -22,10 +22,8 @@ function helper() {
 entryPoint();
 `);
 
-// TODO: change this function name back to 'eval' once the functionality is implemented.
-// T173197877
 //CHECK:Uncaught TimeoutError: Javascript execution has timed out.
 //CHECK-NEXT:    at helper {{.*}}
 //CHECK-NEXT:    at entryPoint {{.*}}
-//CHECK-NEXT:    at global {{.*}}
+//CHECK-NEXT:    at eval {{.*}}
 //CHECK-NEXT:    at global {{.*}}

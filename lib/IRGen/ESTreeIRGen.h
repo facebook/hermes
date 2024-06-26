@@ -493,7 +493,8 @@ class ESTreeIRGen {
       ESTree::Node *root);
 
   /// Perform IRGeneration for the whole module.
-  void doIt();
+  /// \param topLevelFunctionName the name of the top-level function.
+  void doIt(llvh::StringRef topLevelFunctionName);
 
   /// Perform IRGeneration for the whole module.
   /// \param varScope the variable scope to resolve in, never nullptr.

@@ -65,13 +65,14 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
 }
 
 Function *IRBuilder::createTopLevelFunction(
+    llvh::StringRef topLevelFunctionName,
     bool strictMode,
     CustomDirectives customDirectives,
     SMRange sourceRange) {
   // Notice that this synthesized name is not a legal javascript name and
   // can't collide with functions in the processed program.
   auto *F = createFunction(
-      "global",
+      topLevelFunctionName,
       Function::DefinitionKind::ES5Function,
       strictMode,
       customDirectives,
