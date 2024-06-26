@@ -426,11 +426,6 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   else
     Builder.createBranchInst(bodyBlock);
 
-  // Generate the body.
-  Builder.setInsertionBlock(bodyBlock);
-  genStatement(loop->_body);
-  Builder.createBranchInst(updateBlock);
-
   // Generate the update sequence of 'for' loops.
   Builder.setInsertionBlock(updateBlock);
   if (loop->_update)
@@ -447,6 +442,14 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   } else {
     Builder.createBranchInst(bodyBlock);
   }
+
+  // Generate the body.
+  // Do this after the init/test/update expressions to make sure they have a
+  // different statement count.
+  // TODO: Determine if they should each also incrementStatementCount.
+  Builder.setInsertionBlock(bodyBlock);
+  genStatement(loop->_body);
+  Builder.createBranchInst(updateBlock);
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);

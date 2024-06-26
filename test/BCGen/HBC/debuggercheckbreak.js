@@ -128,4 +128,4 @@ function test1() {
 // CHECK-NEXT:    bc 101: line 20 col 3
 // CHECK-NEXT:    bc 107: line 20 col 8
 // CHECK-NEXT:    bc 112: line 21 col 1
-// CHECK-NEXT:  0x004b  end of debug source table
+// CHECK-NEXT:  0x004c  end of debug source table
