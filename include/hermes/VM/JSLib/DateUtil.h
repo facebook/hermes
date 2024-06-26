@@ -112,10 +112,6 @@ double localTZA();
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.8
 
-/// Daylight saving time adjustment, in milliseconds, at time \p t.
-/// \param t timestamp in milliseconds.
-double daylightSavingTA(double t);
-
 namespace detail {
 // Exposed for test only
 int32_t equivalentTime(int64_t epochSecs);
