@@ -50,7 +50,10 @@ LexicalScope::LexicalScope(
   }
 }
 
-SemContext::SemContext(Context &astContext) : kw(astContext) {}
+SemContext::SemContext(
+    Context &astContext,
+    const std::shared_ptr<SemContext> &parent)
+    : kw(astContext), parent_(parent), root_(parent_ ? parent_->root_ : this) {}
 
 SemContext::~SemContext() = default;
 

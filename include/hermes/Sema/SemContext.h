@@ -301,6 +301,12 @@ class FunctionInfo {
 /// destroyed.
 /// These allocated objects point to each other within the SemContext,
 /// so they can be freely passed around so long as the SemContext is alive.
+///
+/// SemContexts can be placed into a tree structure, where all the SemContext
+/// share a single binding table, but store their actual data in their own
+/// deques. This allows us to free data used for 'eval' once the corresponding
+/// runtime data is freed, because the scopes in the binding table are also
+/// refcounted.
 class SemContext {
   friend class SemContextDumper;
 
@@ -309,7 +315,12 @@ class SemContext {
   /// infrastructure.
   Keywords kw;
 
-  explicit SemContext(Context &astContext);
+  /// Construct a SemContext with an optional parent.
+  /// If a parent is provided, the binding table will be shared with the parent.
+  explicit SemContext(
+      Context &astContext,
+      const std::shared_ptr<SemContext> &parent = nullptr);
+
   ~SemContext();
 
   /// \p node may be null, in which case the answer is No.
@@ -365,22 +376,26 @@ class SemContext {
 
   /// \return the global function.
   FunctionInfo *getGlobalFunction() {
-    return &functions_.at(0);
+    return &root_->functions_.front();
   }
   /// \return the global lexical scope.
   LexicalScope *getGlobalScope() {
-    return &scopes_.at(0);
+    return &root_->scopes_.front();
   }
 
   /// Set the binding table global scope.
   void setBindingTableGlobalScope(
       const BindingTableScopePtrTy &bindingTableScope) {
+    assert(
+        root_ == this &&
+        "cannot set binding table global scope in child SemContext, "
+        "must be set from root");
     bindingTableGlobalScope_ = bindingTableScope;
   }
 
   /// \return the binding table global scope.
   const BindingTableScopePtrTy &getBindingTableGlobalScope() const {
-    return bindingTableGlobalScope_;
+    return root_->bindingTableGlobalScope_;
   }
 
   /// Create or retrieve the arguments declaration in \p func.
@@ -426,17 +441,34 @@ class SemContext {
   ESTree::MethodDefinitionNode *getConstructor(ESTree::ClassLikeNode *node);
 
   BindingTableTy &getBindingTable() {
-    return bindingTable_;
+    return root_->bindingTable_;
   }
   const BindingTableTy &getBindingTable() const {
-    return bindingTable_;
+    return root_->bindingTable_;
   }
 
  private:
+  /// The parent SemContext of this SemContext.
+  /// If null, this SemContext has no parent.
+  /// Use shared_ptr because these will form a tree, and the parent can be freed
+  /// when it has no users and no children.
+  std::shared_ptr<SemContext> parent_;
+
+  /// Non-owning pointer to the root SemContext,
+  /// used for efficiently finding the global scope/global function.
+  /// If this SemContext is the root, it points to itself.
+  /// If this SemContext has a parent, it points to another SemContext.
+  SemContext *root_;
+
   /// The currently lexically visible names.
+  /// Only lives in the root SemContext.
+  /// All other SemContexts will have empty binding tables,
+  /// and will read the binding table from the root.
   BindingTableTy bindingTable_{};
 
   /// Global binding table scope.
+  /// This is only set in a root SemContext.
+  /// Any child SemContexts must read it from the root.
   BindingTableScopePtrTy bindingTableGlobalScope_{};
 
   /// Storage for all functions.
