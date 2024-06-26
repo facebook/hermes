@@ -222,6 +222,21 @@ bool CodeBlock::coordsInLazyFunction(uint32_t line, uint32_t col) const {
   return hbc::coordsInLazyFunction(
       runtimeModule_->getBytecode(), functionID_, line, col);
 }
+
+std::vector<uint32_t> CodeBlock::getVariableCounts() const {
+  auto *provider =
+      llvh::cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
+  return hbc::getVariableCounts(provider, functionID_);
+}
+
+llvh::StringRef CodeBlock::getVariableNameAtDepth(
+    uint32_t depth,
+    uint32_t variableIndex) const {
+  auto *provider =
+      llvh::cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
+  return hbc::getVariableNameAtDepth(
+      provider, functionID_, depth, variableIndex);
+}
 #endif
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {

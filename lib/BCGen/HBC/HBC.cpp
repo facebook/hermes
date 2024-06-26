@@ -400,6 +400,48 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
       : std::make_pair(std::unique_ptr<BCProviderFromSrc>{}, data.error);
 }
 
+std::vector<uint32_t> getVariableCounts(
+    hbc::BCProviderFromSrc *provider,
+    uint32_t funcID) {
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
+  Function *F = lazyFunc.getFunctionIR();
+  assert(F && "no lazy IR for lazy function");
+
+  const EvalCompilationDataInst *evalDataInst = F->getEvalCompilationDataInst();
+  assert(evalDataInst && "function must be lazy");
+
+  std::vector<uint32_t> counts;
+
+  // TODO: Determine how to hide variables we don't want the debugger to see
+  // here. For now, just count all the variables.
+  for (auto *cur = evalDataInst->getFuncVarScope(); cur;
+       cur = cur->getParentScope()) {
+    counts.push_back(cur->getVariables().size());
+  }
+
+  return counts;
+}
+
+llvh::StringRef getVariableNameAtDepth(
+    hbc::BCProviderFromSrc *provider,
+    uint32_t funcID,
+    uint32_t depth,
+    uint32_t variableIndex) {
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
+  Function *F = lazyFunc.getFunctionIR();
+  assert(F && "no lazy IR for lazy function");
+
+  const EvalCompilationDataInst *evalDataInst = F->getEvalCompilationDataInst();
+  assert(evalDataInst && "function must be eval");
+
+  auto *varScope = llvh::cast<VariableScope>(evalDataInst->getOperand(
+      EvalCompilationDataInst::FuncVarScopeIdx + depth));
+
+  return varScope->getVariables()[variableIndex]->getName().str();
+}
+
 } // namespace hbc
 } // namespace hermes
 

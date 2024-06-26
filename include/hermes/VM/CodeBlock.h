@@ -190,12 +190,30 @@ class CodeBlock final
   /// \param col 1-based column.
   /// \return whether the coordinates are in the lazy function.
   bool coordsInLazyFunction(uint32_t line, uint32_t col) const;
+
+  /// \return a vector representing the number of Variables for each depth
+  ///   of the VariableScope chain.
+  std::vector<uint32_t> getVariableCounts() const;
+
+  /// \param depth the depth of the VariableScope to lookup, 0 is the
+  ///   the current CodeBlock.
+  /// \param variableIndex the index of the Variable in the VariableScope.
+  /// \return the name of the Variable at a given index at the given depth.
+  llvh::StringRef getVariableNameAtDepth(uint32_t depth, uint32_t variableIndex)
+      const;
 #else
   bool isLazy() const {
     return false;
   }
   ExecutionStatus lazyCompile(Runtime &runtime) {
     return ExecutionStatus::RETURNED;
+  }
+  std::vector<uint32_t> getVariableCounts() const {
+    hermes_fatal("unavailable in lean VM");
+  }
+
+  llvh::StringRef getVariableNameAtDepth(uint32_t, uint32_t) const {
+    hermes_fatal("unavailable in lean VM");
   }
 #endif
 

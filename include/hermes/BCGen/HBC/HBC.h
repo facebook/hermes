@@ -123,6 +123,21 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags);
 
+/// \return a vector of the number of variables at each stack frame depth in
+///   the function with the given ID, index 0 is the function itself.
+std::vector<uint32_t> getVariableCounts(
+    hbc::BCProviderFromSrc *provider,
+    uint32_t funcID);
+
+/// \return the name of the variable at frame depth \p depth and index \p
+///   variableIndex for the function at \p funcID, index 0 is the function
+///   itself.
+llvh::StringRef getVariableNameAtDepth(
+    hbc::BCProviderFromSrc *provider,
+    uint32_t funcID,
+    uint32_t depth,
+    uint32_t variableIndex);
+
 } // namespace hbc
 } // namespace hermes
 
