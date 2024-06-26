@@ -227,6 +227,10 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     }
   }
 
+  if (llvh::isa<EvalCompilationDataInst>(Inst)) {
+    return true;
+  }
+
   return false;
 }
 

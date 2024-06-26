@@ -5343,6 +5343,112 @@ class LazyCompilationDataInst : public Instruction {
   }
 };
 
+/// Data for EvalCompilationDataInst to use.
+class EvalCompilationData {
+ public:
+  /// The FunctionInfo for the function being compiled.
+  sema::FunctionInfo *semInfo;
+
+  /// If not None, the bytecode function ID that has already been assigned to
+  /// the function. Used to avoid assigning new function IDs to Functions
+  /// that have already had BytecodeFunctions created.
+  OptValue<uint32_t> bcFunctionID{llvh::None};
+
+ public:
+  EvalCompilationData(sema::FunctionInfo *semInfo) : semInfo(semInfo) {}
+};
+
+class EvalCompilationDataInst : public Instruction {
+  EvalCompilationDataInst(const EvalCompilationDataInst &) = delete;
+  void operator=(const EvalCompilationDataInst &) = delete;
+
+  EvalCompilationData data_;
+
+ public:
+  enum {
+    CapturedThisIdx,
+    CapturedNewTargetIdx,
+    CapturedArgumentsIdx,
+    FuncVarScopeIdx
+  };
+
+  explicit EvalCompilationDataInst(
+      EvalCompilationData &&data,
+      Value *capturedThis,
+      Value *capturedNewTarget,
+      Value *capturedArguments,
+      VariableScope *funcVarScope)
+      : Instruction(ValueKind::EvalCompilationDataInstKind), data_(data) {
+    assert(
+        llvh::isa<EmptySentinel>(capturedThis) ||
+        llvh::isa<Variable>(capturedThis));
+    assert(
+        llvh::isa<EmptySentinel>(capturedArguments) ||
+        llvh::isa<Variable>(capturedArguments));
+    setType(Type::createNoType());
+    pushOperand(capturedThis);
+    pushOperand(capturedNewTarget);
+    pushOperand(capturedArguments);
+    // Push all VariableScopes which must be kept alive to properly compile this
+    // function.
+    // NOTE: EvalCompilationData relies on the fact that we don't delete
+    // Variables during eval compilation. That means no stack
+    // promotion, and the existing full optimization pipeline cannot run,
+    // because we haven't yet figured out which variables are captured by child
+    // functions.
+    // Variables themselves are not stored here because we don't delete them
+    // between eval compilation invocations (there's no telling whether they're
+    // going to be used or not), instead we just delete them when their owning
+    // VariableScopes are destroyed (when they have no users).
+    for (VariableScope *cur = funcVarScope; cur; cur = cur->getParentScope())
+      pushOperand(cur);
+  }
+  explicit EvalCompilationDataInst(
+      const EvalCompilationDataInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands), data_(src->data_) {}
+
+  const EvalCompilationData &getData() const {
+    return data_;
+  }
+  EvalCompilationData &getData() {
+    return data_;
+  }
+  const VariableScope *getFuncVarScope() const {
+    return cast<VariableScope>(getOperand(FuncVarScopeIdx));
+  }
+  VariableScope *getFuncVarScope() {
+    return cast<VariableScope>(getOperand(FuncVarScopeIdx));
+  }
+
+  /// \return the captured \c this value Variable, nullptr if there is none.
+  Variable *getCapturedThis() {
+    return llvh::dyn_cast<Variable>(getOperand(CapturedThisIdx));
+  }
+  /// \return the captured \c new.target value, may be literal undefined.
+  Value *getCapturedNewTarget() {
+    return getOperand(CapturedNewTargetIdx);
+  }
+  /// \return the captured \c arguments Variable, nullptr if there is none.
+  Variable *getCapturedArguments() {
+    return llvh::dyn_cast<Variable>(getOperand(CapturedArgumentsIdx));
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return true;
+  }
+  SideEffect getSideEffectImpl() const {
+    // First in block to make it easy to find during compilation.
+    return SideEffect::createUnknown().setFirstInBlock();
+  }
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::EvalCompilationDataInstKind;
+  }
+};
+
 } // end namespace hermes
 
 #endif

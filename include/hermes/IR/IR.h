@@ -47,6 +47,7 @@ class Instruction;
 class Context;
 class TerminatorInst;
 class LazyCompilationDataInst;
+class EvalCompilationDataInst;
 
 /// Representation of a type in the IR. This roughly corresponds for JavaScript
 /// types, but represents lower level concepts like "empty" type for TDZ and
@@ -1997,6 +1998,10 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// \return the LazyCompilationDataInst at the start of the function,
   /// or nullptr if there isn't one.
   LazyCompilationDataInst *getLazyCompilationDataInst();
+
+  /// \return the EvalCompilationDataInst at the start of the function,
+  /// or nullptr if there isn't one.
+  EvalCompilationDataInst *getEvalCompilationDataInst();
 
   /// \return true if the function should be compiled lazily.
   bool isLazy() {

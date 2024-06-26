@@ -1593,6 +1593,11 @@ bool Verifier::visitLazyCompilationDataInst(
   return true;
 }
 
+bool Verifier::visitEvalCompilationDataInst(
+    const hermes::EvalCompilationDataInst &Inst) {
+  return true;
+}
+
 } // namespace
 
 #endif

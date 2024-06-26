@@ -299,6 +299,11 @@ LazyCompilationDataInst *Function::getLazyCompilationDataInst() {
       &BasicBlockList.front().front());
 }
 
+EvalCompilationDataInst *Function::getEvalCompilationDataInst() {
+  return llvh::dyn_cast<EvalCompilationDataInst>(
+      &BasicBlockList.front().front());
+}
+
 BasicBlock::BasicBlock(Function *parent)
     : Value(ValueKind::BasicBlockKind), Parent(parent) {
   assert(Parent && "Invalid parent function");

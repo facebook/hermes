@@ -1086,3 +1086,15 @@ Example | LazyCompilationData %capturedThis, %capturedNewTarget, %capturedArgume
 Arguments | The captured values are used in case the lazy function may have arrow functions as children which need to capture the values as variables. %parentVS the immediately enclosing VariableScope. The remaining operands are successively the ancestors of %parentVS, which are kept as operands to ensure the VariableScopes aren't deleted across lazy compilation calls.
 Semantics | Information needed for lazy compilation. Deleted after use.
 Effects | None
+
+### EvalCompilationData
+
+NOTE: EvalCompilationData relies on the fact that we don't delete Variables during the eval compilation pipeline. That means no stack promotion, and the existing full optimization pipeline cannot run, because we haven't yet figured out which variables are captured by child functions.
+
+EvalCompilationData | _
+--- |-----------------------------------------------|
+Description | Data needed for eval compilation within this function, including the VariableScope chain used to access captured variables.
+Example | EvalCompilationData %capturedThis, %capturedNewTarget, %capturedArguments, %VS, %parentVS, ...
+Arguments | The captured values are used in case the eval function may have arrow functions as children which need to capture the values as variables. %VS the VariableScope for the function (block scoping not supported). The remaining operands are successively the ancestors of %VS, which are kept as operands to ensure the VariableScopes aren't deleted across compilation calls.
+Semantics | Information needed for eval compilation.
+Effects | None

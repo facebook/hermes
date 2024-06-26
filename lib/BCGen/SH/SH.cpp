@@ -2283,6 +2283,9 @@ class InstrGen {
   void generateLazyCompilationDataInst(LazyCompilationDataInst &inst) {
     hermes_fatal("lazy compilation unsupported in native backend");
   }
+  void generateEvalCompilationDataInst(EvalCompilationDataInst &inst) {
+    hermes_fatal("eval compilation unsupported in native backend");
+  }
   /// Print code to convert the result of a native call to its corresponding
   /// JS type.
   ///

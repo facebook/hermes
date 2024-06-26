@@ -1953,7 +1953,12 @@ void HBCISel::generateHBCStringConcatInst(
 void HBCISel::generateLazyCompilationDataInst(
     LazyCompilationDataInst *,
     BasicBlock *) {
-  hermes_fatal("LazyCompilationDataInst not supported.");
+  // Nothing to do, this is metadata.
+}
+void HBCISel::generateEvalCompilationDataInst(
+    EvalCompilationDataInst *,
+    BasicBlock *) {
+  // Nothing to do, this is metadata.
 }
 
 void HBCISel::generateBB(BasicBlock *BB, BasicBlock *next) {

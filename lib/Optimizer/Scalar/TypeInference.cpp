@@ -859,6 +859,9 @@ class TypeInferenceImpl {
   Type inferLazyCompilationDataInst(LazyCompilationDataInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferEvalCompilationDataInst(EvalCompilationDataInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferUnionNarrowTrustedInst(UnionNarrowTrustedInst *inst) {
     auto res = Type::intersectTy(
         inst->getSavedResultType(), inst->getSingleOperand()->getType());

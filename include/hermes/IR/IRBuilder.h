@@ -689,6 +689,13 @@ class IRBuilder {
       Variable *capturedArguments,
       VariableScope *parentVarScope);
 
+  EvalCompilationDataInst *createEvalCompilationDataInst(
+      EvalCompilationData &&data,
+      Variable *capturedThis,
+      Value *capturedNewTarget,
+      Variable *capturedArguments,
+      VariableScope *funcVarScope);
+
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.
   class ScopedLocationChange {
