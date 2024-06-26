@@ -31,5 +31,5 @@ if (obj == 1) {
 // CHECK-STEP-OVER: Stepped to global: {{.*}}:13:1
 // CHECK-STEP-OVER: Stepped to global: {{.*}}:17:5
 // CHECK-STEP-OVER: hello
-// CHECK-STEP-OVER: Stepped to global: {{.*}}:18:5
+// CHECK-STEP-OVER: Stepped to global: {{.*}}:17:1
 // CHECK-STEP-OVER: one

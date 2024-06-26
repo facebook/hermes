@@ -21,7 +21,7 @@ try {
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: Break on exception in global: {{.*}}[{{[0-9]+}}]:14:3
 // CHECK-NEXT: Exception: Error: Bar
-// CHECK-NEXT:   0: eval: {{.*}}
+// CHECK-NEXT:   0: anonymous: eval:{{.*}}
 // CHECK-NEXT:   1: global: {{.*}}/throw-throw-eval.js:14:3
 // CHECK-NEXT: Thrown value is: {{.*}}
 // CHECK-NEXT: Continuing execution

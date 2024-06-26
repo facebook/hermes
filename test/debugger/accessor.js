@@ -42,7 +42,7 @@ print(alen);
 // CHECK-STEP: Break on breakpoint 1 in get aLen: {{.*}}:17:9
 // CHECK-STEP: hello
 // CHECK-STEP: Stepped to get aLen: {{.*}}:18:20
-// CHECK-STEP: Stepped to global: {{.*}}:22:12
+// CHECK-STEP: Stepped to global: {{.*}}:22:15
 // CHECK-STEP: Stepped to global: {{.*}}:23:1
 // CHECK-STEP: 2
 
@@ -51,6 +51,6 @@ print(alen);
 // CHECK-FINISH: Continuing execution
 // CHECK-FINISH: Break on breakpoint 1 in get aLen: {{.*}}:17:9
 // CHECK-FINISH: hello
-// CHECK-FINISH: Stepped to global: {{.*}}:22:12
+// CHECK-FINISH: Stepped to global: {{.*}}:22:15
 // CHECK-FINISH: Stepped to global: {{.*}}:23:1
 // CHECK-FINISH: 2
