@@ -211,15 +211,6 @@ class DebugInfo {
       uint32_t targetLine,
       OptValue<uint32_t> targetColumn) const;
 
-  /// Read variable names at \p offset into the lexical data section
-  /// of the debug info. \return the list of variable names.
-  llvh::SmallVector<llvh::StringRef, 4> getVariableNames(uint32_t offset) const;
-
-  /// Reads out the parent function ID of the function whose lexical debug data
-  /// starts at \p offset. \return the ID of the parent function, or None if
-  /// none.
-  OptValue<uint32_t> getParentFunctionId(uint32_t offset) const;
-
  private:
   /// \return the slice of data_ reflecting the source locations.
   llvh::ArrayRef<uint8_t> sourceLocationsData() const {

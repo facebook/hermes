@@ -447,7 +447,7 @@ CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
     bool strictCaller,
-    const ScopeChain &scopeChain,
+    const CodeBlock *codeBlock,
     bool singleFunction = false);
 
 /// ES10 23.1.1.2 AddEntriesFromIterable

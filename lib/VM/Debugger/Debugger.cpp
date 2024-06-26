@@ -53,57 +53,6 @@ static std::string getFileNameAsUTF8(
   return debugInfo->getUTF8FilenameByID(filenameId);
 }
 
-/// \return a scope chain containing the block and all its lexical parents,
-/// including the global scope.
-/// \return none if the scope chain is unavailable.
-static llvh::Optional<ScopeChain> scopeChainForBlock(
-    Runtime &runtime,
-    const CodeBlock *cb) {
-  OptValue<uint32_t> lexicalDataOffset = cb->getDebugLexicalDataOffset();
-  if (!lexicalDataOffset)
-    return llvh::None;
-
-  ScopeChain scopeChain;
-  RuntimeModule *runtimeModule = cb->getRuntimeModule();
-  const hbc::BCProvider *bytecode = runtimeModule->getBytecode();
-  const hbc::DebugInfo *debugInfo = bytecode->getDebugInfo();
-  while (lexicalDataOffset) {
-    GCScopeMarkerRAII marker{runtime};
-    scopeChain.functions.emplace_back();
-    auto &scopeItem = scopeChain.functions.back();
-    // Append a new list to the chain.
-    auto names = debugInfo->getVariableNames(*lexicalDataOffset);
-    scopeItem.variables.insert(
-        scopeItem.variables.end(), names.begin(), names.end());
-
-    // Get the parent item.
-    // Stop at the global block.
-    auto parentId = debugInfo->getParentFunctionId(*lexicalDataOffset);
-    if (!parentId)
-      break;
-
-    lexicalDataOffset = runtimeModule->getCodeBlockMayAllocate(*parentId)
-                            ->getDebugLexicalDataOffset();
-
-    if (!lexicalDataOffset) {
-      // The function has a parent, but the parent doesn't have debug info.
-      // This could happen when the parent is global.
-      // "global" doesn't have a lexical parent.
-      // "global" may have 0 variables, and may have no lexical info
-      // (which is the case for synthesized parent scopes in lazy compilation).
-      // In such case, BytecodeFunctionGenerator::hasDebugInfo returns false,
-      // resulting in no debug offset for global in the bytecode.
-      // Note that assert "*parentId == bytecode->getGlobalFunctionIndex()"
-      // will fail because the getGlobalFunctionIndex() function returns
-      // the entry point instead of the global function. The entry point
-      // is not the same as the global function in the context of
-      // lazy compilation.
-      scopeChain.functions.emplace_back();
-    }
-  }
-  return {std::move(scopeChain)};
-}
-
 void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
   runtime_.triggerDebuggerAsyncBreak(kind);
 }
@@ -940,16 +889,7 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
     return result;
   }
 
-  auto scopeChain = scopeChainForBlock(runtime_, cb);
-  if (!scopeChain) {
-    // Binary was compiled without variable debug info.
-    result.variableCountsByScope_.push_back(0);
-    return result;
-  }
-
-  for (const auto &func : scopeChain->functions) {
-    result.variableCountsByScope_.push_back(func.variables.size());
-  }
+  result.variableCountsByScope_ = cb->getVariableCounts();
   return result;
 }
 
@@ -975,15 +915,9 @@ HermesValue Debugger::getVariableInFrame(
   }
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
   assert(cb && "Unexpectedly null code block");
-  auto scopeChain = scopeChainForBlock(runtime_, cb);
-  if (!scopeChain) {
-    // Binary was compiled without variable debug info.
-    return undefined;
-  }
 
-  const ScopeChainItem &item = scopeChain->functions.at(scopeDepth);
   if (outName)
-    *outName = item.variables.at(variableIndex);
+    *outName = cb->getVariableNameAtDepth(scopeDepth, variableIndex);
 
   // Descend the environment chain to the desired depth, or stop at null.
   // We may get a null environment if it has not been created.
@@ -1081,11 +1015,6 @@ HermesValue Debugger::evalInFrame(
   }
 
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
-  auto scopeChain = scopeChainForBlock(runtime_, cb);
-  if (!scopeChain) {
-    // Binary was compiled without variable debug info.
-    return HermesValue::encodeUndefinedValue();
-  }
 
   // Interpreting code requires that the `thrownValue_` is empty.
   // Save it temporarily so we can restore it after the evalInEnvironment.
@@ -1097,7 +1026,7 @@ HermesValue Debugger::evalInFrame(
       src,
       false,
       env,
-      *scopeChain,
+      cb,
       Handle<>(&frameInfo->frame->getThisArgRef()),
       singleFunction);
 

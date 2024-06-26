@@ -2013,6 +2013,9 @@ tailCall:
                 ip->iCreateEnvironment.op3));
 
         O1REG(CreateEnvironment) = envHV;
+#ifdef HERMES_ENABLE_DEBUGGER
+        FRAME.getDebugEnvironmentRef() = envHV;
+#endif
         ip = NEXTINST(CreateEnvironment);
         DISPATCH;
       }

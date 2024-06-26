@@ -49,7 +49,7 @@ try {
 // TODO: Change name of 'eval' frame when T173197877 is completed.
 //CHECK-LABEL: Error: EvalTest
 //CHECK-NEXT:    at throwit ({{.*}}stacktrace.js:43:37)
-//CHECK-NEXT:    at global (JavaScript:1:8)
+//CHECK-NEXT:    at global (eval:1:8)
 //CHECK-NEXT:    at global ({{.*}}stacktrace.js:45:7)
 
 function runAndPrint(f) {

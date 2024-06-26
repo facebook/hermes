@@ -56,7 +56,7 @@ CallResult<HermesValue> evalInEnvironment(
     llvh::StringRef utf8code,
     bool strictCaller,
     Handle<Environment> environment,
-    const ScopeChain &scopeChain,
+    const CodeBlock *codeBlock,
     Handle<> thisArg,
     bool singleFunction);
 

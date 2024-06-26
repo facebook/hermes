@@ -1647,17 +1647,11 @@ extern "C" SHLegacyValue _sh_ljs_direct_eval(
                  strictCaller]() -> CallResult<HermesValue> {
     GCScopeMarkerRAII marker{runtime};
 
-    // Create a dummy scope, so that the local eval executes in its own scope
-    // (as per the spec for strict callers, which is the only thing we support).
-
-    ScopeChain scopeChain{};
-    scopeChain.functions.emplace_back();
-
     return vm::directEval(
         runtime,
         Handle<StringPrimitive>::vmcast(toPHV(evalText)),
         strictCaller,
-        scopeChain,
+        nullptr,
         false);
   }();
 

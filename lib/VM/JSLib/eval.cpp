@@ -30,7 +30,7 @@ CallResult<HermesValue> evalInEnvironment(
     llvh::StringRef utf8code,
     bool strictCaller,
     Handle<Environment> environment,
-    const ScopeChain &scopeChain,
+    const CodeBlock *codeBlock,
     Handle<> thisArg,
     bool singleFunction) {
 #ifdef HERMESVM_LEAN
@@ -70,21 +70,45 @@ CallResult<HermesValue> evalInEnvironment(
           llvh::MemoryBuffer::getMemBuffer(utf8code)));
     }
 
-    auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        std::move(buffer),
-        "JavaScript",
-        nullptr,
-        compileFlags,
-        {},
-        nullptr,
-        runOptimizationPasses);
-    if (!bytecode_err.first) {
-      return runtime.raiseSyntaxError(TwineChar16(bytecode_err.second));
+    if (codeBlock) {
+      assert(
+          !singleFunction && "Function constructor must always be global eval");
+      if (!llvh::isa<hbc::BCProviderFromSrc>(
+              codeBlock->getRuntimeModule()->getBytecode())) {
+        return runtime.raiseTypeError(
+            "Code compiled without support for direct eval");
+      }
+      // Local eval.
+      auto [newBCProviderFromSrc, error] = hbc::compileEvalModule(
+          std::move(buffer),
+          llvh::cast<hbc::BCProviderFromSrc>(
+              codeBlock->getRuntimeModule()->getBytecode()),
+          codeBlock->getFunctionID(),
+          compileFlags);
+      if (!newBCProviderFromSrc) {
+        return runtime.raiseSyntaxError(llvh::StringRef(error));
+      }
+      bytecode = std::move(newBCProviderFromSrc);
+    } else {
+      // Global eval.
+      // Creates a new AST Context and compiles everything independently:
+      // new SemContext, new IR Module, everything.
+      auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+          std::move(buffer),
+          "eval",
+          nullptr,
+          compileFlags,
+          {},
+          nullptr,
+          runOptimizationPasses);
+      if (!bytecode_err.first) {
+        return runtime.raiseSyntaxError(TwineChar16(bytecode_err.second));
+      }
+      if (singleFunction && !bytecode_err.first->isSingleFunction()) {
+        return runtime.raiseSyntaxError("Invalid function expression");
+      }
+      bytecode = std::move(bytecode_err.first);
     }
-    if (singleFunction && !bytecode_err.first->isSingleFunction()) {
-      return runtime.raiseSyntaxError("Invalid function expression");
-    }
-    bytecode = std::move(bytecode_err.first);
   }
 
   // TODO: pass a sourceURL derived from a '//# sourceURL' comment.
@@ -102,7 +126,7 @@ CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
     bool strictCaller,
-    const ScopeChain &scopeChain,
+    const CodeBlock *codeBlock,
     bool singleFunction) {
   // Convert the code into UTF8.
   std::string code;
@@ -119,7 +143,7 @@ CallResult<HermesValue> directEval(
       code,
       strictCaller,
       Runtime::makeNullHandle<Environment>(),
-      scopeChain,
+      codeBlock,
       runtime.getGlobal(),
       singleFunction);
 }
@@ -132,7 +156,7 @@ CallResult<HermesValue> eval(void *, Runtime &runtime, NativeArgs args) {
   }
 
   return directEval(
-      runtime, args.dyncastArg<StringPrimitive>(0), false, {}, false);
+      runtime, args.dyncastArg<StringPrimitive>(0), false, nullptr, false);
 }
 
 } // namespace vm

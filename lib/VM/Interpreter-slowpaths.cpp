@@ -35,17 +35,11 @@ ExecutionStatus Interpreter::caseDirectEval(
 
   GCScopeMarkerRAII gcMarker{runtime};
 
-  // Create a dummy scope, so that the local eval executes in its own scope
-  // (as per the spec for strict callers, which is the only thing we support).
-
-  ScopeChain scopeChain{};
-  scopeChain.functions.emplace_back();
-
   auto cr = vm::directEval(
       runtime,
       Handle<StringPrimitive>::vmcast(evalText),
       strictCaller,
-      scopeChain,
+      nullptr,
       false);
   if (cr == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;

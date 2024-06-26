@@ -184,17 +184,6 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
   return best;
 }
 
-/// Read \p count variable names from \p offset into the variable name section
-/// of the debug info. \return the list of variable names.
-llvh::SmallVector<llvh::StringRef, 4> DebugInfo::getVariableNames(
-    uint32_t offset) const {
-  hermes_fatal("getVariableNames not supported");
-}
-
-OptValue<uint32_t> DebugInfo::getParentFunctionId(uint32_t offset) const {
-  hermes_fatal("getParentFunctionId not supported");
-}
-
 void DebugInfo::disassembleFilenames(llvh::raw_ostream &os) const {
   os << "Debug filename table:\n";
   for (uint32_t i = 0, e = getFilenameTable().size(); i < e; ++i) {
