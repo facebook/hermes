@@ -135,9 +135,8 @@ class JSParserImpl {
   /// On success, returns a pointer to the \c JSParserImpl object that can be
   /// queried for various attributes of the just pre-parsed file, e.g. static
   /// builtins or magic URLs.
-  static std::shared_ptr<JSParserImpl> preParseBuffer(
-      Context &context,
-      uint32_t bufferId);
+  static std::shared_ptr<JSParserImpl>
+  preParseBuffer(Context &context, uint32_t bufferId, bool strict);
 
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on

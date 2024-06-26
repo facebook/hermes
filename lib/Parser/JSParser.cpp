@@ -87,11 +87,10 @@ void JSParser::seek(SMLoc startPos) {
   return impl_->seek(startPos);
 }
 
-std::unique_ptr<JSParser> JSParser::preParseBuffer(
-    Context &context,
-    uint32_t bufferId) {
+std::unique_ptr<JSParser>
+JSParser::preParseBuffer(Context &context, uint32_t bufferId, bool strict) {
   if (auto preParser =
-          detail::JSParserImpl::preParseBuffer(context, bufferId)) {
+          detail::JSParserImpl::preParseBuffer(context, bufferId, strict)) {
     return std::unique_ptr<JSParser>(new JSParser(std::move(preParser)));
   } else {
     return nullptr;

@@ -7005,11 +7005,11 @@ class PreParser {
 
 } // namespace
 
-std::shared_ptr<JSParserImpl> JSParserImpl::preParseBuffer(
-    Context &context,
-    uint32_t bufferId) {
+std::shared_ptr<JSParserImpl>
+JSParserImpl::preParseBuffer(Context &context, uint32_t bufferId, bool strict) {
   PerfSection preparsing("Pre-Parsing JavaScript");
   auto preParser = std::make_shared<PreParser>(context, bufferId);
+  preParser->parser.setStrictMode(strict);
   auto result = preParser->parser.parse();
   if (!result.hasValue())
     return nullptr;

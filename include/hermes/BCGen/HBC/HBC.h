@@ -102,6 +102,27 @@ bool coordsInLazyFunction(
     uint32_t line,
     uint32_t col);
 
+/// Generate the bytecode for eval function by running the full compiler
+/// pipeline without optimizations.
+/// Creates a new BytecodeModule.
+/// Mutates the IR Module (creates new Functions).
+/// Creates a new SemContext as a child of the input provider's SemContext.
+/// Runs the compiler on a separate thread to avoid stack overflows, blocking
+/// the current thread while doing so.
+///
+/// \param src the JS source to be compiled.
+/// \param provider the BCProviderFromSrc owning the BytecodeModule.
+///   Passed in as BCProvider to avoid BCProviderFromSrc dependencies in
+///   CodeBlock (for simplicity).
+/// \param enclosingFuncID the ID of the function enclosing the new eval.
+/// \return [success, errMsg] where errMsg is only populated when success is
+///   false.
+std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
+    std::unique_ptr<Buffer> src,
+    hbc::BCProviderFromSrc *provider,
+    uint32_t enclosingFuncID,
+    const CompileFlags &compileFlags);
+
 } // namespace hbc
 } // namespace hermes
 

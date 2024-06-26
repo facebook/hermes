@@ -108,9 +108,8 @@ class JSParser {
   /// On success, returns a pointer to the \c JSParser object that can be
   /// queried for various attributes of the just pre-parsed file, e.g. static
   /// builtins or magic URLs.
-  static std::unique_ptr<JSParser> preParseBuffer(
-      Context &context,
-      uint32_t bufferId);
+  static std::unique_ptr<JSParser>
+  preParseBuffer(Context &context, uint32_t bufferId, bool strict = false);
 
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on

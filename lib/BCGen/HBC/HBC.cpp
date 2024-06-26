@@ -171,6 +171,156 @@ static void compileLazyFunctionWorker(void *argPtr) {
   data->success = true;
 }
 
+/// Data for the compileEvalWorker.
+class EvalThreadData {
+ public:
+  /// Input: The source to compile.
+  std::unique_ptr<Buffer> src;
+  /// Input: the enclosing bytecode module.
+  hbc::BCProviderFromSrc *const provider;
+  /// Input: The function ID to compile.
+  uint32_t const enclosingFuncID;
+  /// Input: The CompileFlags to use.
+  const CompileFlags &compileFlags;
+  /// Output: whether the compilation succeeded.
+  bool success = false;
+  /// Output: Result if success=true.
+  std::unique_ptr<BCProviderFromSrc> result{};
+  /// Output: the error message, if success=false.
+  std::string error{};
+
+  EvalThreadData(
+      std::unique_ptr<Buffer> src,
+      hbc::BCProviderFromSrc *provider,
+      uint32_t enclosingFuncID,
+      const CompileFlags &compileFlags)
+      : src(std::move(src)),
+        provider(provider),
+        enclosingFuncID(enclosingFuncID),
+        compileFlags(compileFlags) {}
+};
+
+static void compileEvalWorker(void *argPtr) {
+  EvalThreadData *data = reinterpret_cast<EvalThreadData *>(argPtr);
+  hbc::BCProviderFromSrc *provider = data->provider;
+  uint32_t enclosingFuncID = data->enclosingFuncID;
+
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &enclosingFunc = bcModule->getFunction(enclosingFuncID);
+  Function *F = enclosingFunc.getFunctionIR();
+
+  if (!F) {
+    data->success = false;
+    data->error =
+        "Unable to find scope data for local eval (generators are unsupported)";
+    return;
+  }
+
+  SourceErrorManager &manager =
+      F->getParent()->getContext().getSourceErrorManager();
+  SimpleDiagHandlerRAII outputManager{manager};
+  Context &context = F->getParent()->getContext();
+
+  context.setEmitAsyncBreakCheck(data->compileFlags.emitAsyncBreakCheck);
+  context.setConvertES6Classes(data->compileFlags.enableES6Classes);
+  context.setDebugInfoSetting(
+      data->compileFlags.debug ? DebugInfoSetting::ALL
+                               : DebugInfoSetting::THROWING);
+
+  EvalCompilationDataInst *evalDataInst = F->getEvalCompilationDataInst();
+  if (!evalDataInst) {
+    data->success = false;
+    data->error = "Unable to find scope data for function in eval";
+    return;
+  }
+  const EvalCompilationData &evalData = evalDataInst->getData();
+
+  // Free the AST once we're done compiling this function.
+  AllocationScope alloc(context.getAllocator());
+
+  int fileBufId = context.getSourceErrorManager().addNewSourceBuffer(
+      std::make_unique<HermesLLVMMemoryBuffer>(std::move(data->src), "eval"));
+
+  auto parserMode = parser::FullParse;
+
+  // NOTE: We don't use lazy compilation if eval requests it but the AST Context
+  // doesn't allow it.
+  // Eager compilation is really just a version of lazy compilation with very
+  // small functions, so it won't violate invariants on what the caller is
+  // expecting. e.g. when 'eval' calls this function with lazy compilation
+  // enabled, it copies the source into the MemoryBuffer.
+  if (context.isLazyCompilation() && data->compileFlags.lazy) {
+    auto preParser = parser::JSParser::preParseBuffer(
+        context, fileBufId, data->compileFlags.strict);
+    if (!preParser) {
+      data->success = false;
+      data->error = outputManager.getErrorString();
+      return;
+    }
+    preParser->registerMagicURLs();
+    parserMode = parser::LazyParse;
+  }
+
+  parser::JSParser parser(context, fileBufId, parserMode);
+  parser.setStrictMode(data->compileFlags.strict);
+
+  auto optParsed = parser.parse();
+
+  if (optParsed && parserMode != parser::LazyParse) {
+    parser.registerMagicURLs();
+  }
+
+  // Make a new SemContext which is a child of the SemContext we're referring
+  // to, allowing it to be freed when the eval is complete and the
+  // BCProviderFromSrc is destroyed.
+  std::shared_ptr<sema::SemContext> semCtx =
+      std::make_shared<sema::SemContext>(context, provider->shareSemCtx());
+
+  // If parsing or resolution fails, report the error and return.
+  if (!optParsed ||
+      !sema::resolveASTInScope(
+          context,
+          *semCtx,
+          llvh::cast<ESTree::ProgramNode>(*optParsed),
+          evalData.semInfo)) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  Function *newFunc = hermes::generateEvalIR(
+      F->getParent(),
+      evalDataInst->getFuncVarScope(),
+      llvh::cast<ESTree::FunctionLikeNode>(*optParsed),
+      *semCtx);
+  if (outputManager.haveErrors()) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  BytecodeGenerationOptions bcGenOpts =
+      provider->getBytecodeGenerationOptions();
+  bcGenOpts.verifyIR = data->compileFlags.verifyIR;
+
+  Module *M = provider->getModule();
+  assert(M && "missing IR data to compile");
+  auto bm = hbc::generateBytecodeModuleForEval(M, newFunc, bcGenOpts);
+  if (!bm) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  data->success = true;
+  data->result = BCProviderFromSrc::createFromBytecodeModule(
+      std::move(bm),
+      BCProviderFromSrc::CompilationData{
+          provider->getBytecodeGenerationOptions(),
+          provider->shareModule(),
+          semCtx});
+}
+
 } // namespace
 
 std::pair<bool, llvh::StringRef> compileLazyFunction(
@@ -230,6 +380,24 @@ bool coordsInLazyFunction(
 
   return F->getSourceRange().Start.getPointer() <= loc.getPointer() &&
       loc.getPointer() < F->getSourceRange().End.getPointer();
+}
+
+std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
+    std::unique_ptr<Buffer> src,
+    hbc::BCProviderFromSrc *provider,
+    uint32_t enclosingFuncID,
+    const CompileFlags &compileFlags) {
+  // Run on a thread to prevent stack overflow if this is run from deep inside
+  // JS execution.
+
+  // Use an 8MB stack, which is the default size on mac and linux.
+  constexpr unsigned kStackSize = 1 << 23;
+
+  EvalThreadData data{std::move(src), provider, enclosingFuncID, compileFlags};
+  llvh::llvm_execute_on_thread(compileEvalWorker, &data, kStackSize);
+  return data.success
+      ? std::make_pair(std::move(data.result), "")
+      : std::make_pair(std::unique_ptr<BCProviderFromSrc>{}, data.error);
 }
 
 } // namespace hbc
