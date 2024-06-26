@@ -13,8 +13,8 @@ namespace hermes {
 namespace hbc {
 
 StringLiteralTable::StringLiteralTable(
-    ConsecutiveStringStorage storage,
-    std::vector<bool> isIdentifier)
+    ConsecutiveStringStorage &&storage,
+    llvh::BitVector &&isIdentifier)
     : storage_(std::move(storage)), isIdentifier_(std::move(isIdentifier)) {
   populateStringsTableFromStorage();
 }

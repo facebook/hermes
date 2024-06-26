@@ -11,6 +11,7 @@
 #include "hermes/VM/Predefined.h"
 
 #include "gtest/gtest.h"
+#include "llvh/ADT/BitVector.h"
 
 #include <cctype>
 #include <string>
@@ -625,7 +626,7 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "pilger",       "omisminium",  "miniummoiley", "deepmost",
       "amomisminium", "ucetminyan",  "lierendrafty"};
 
-  std::vector<bool> isIdentifier(baseEntries.size(), false);
+  llvh::BitVector isIdentifier(baseEntries.size(), false);
   hbc::ConsecutiveStringStorage storage{
       std::move(baseEntries), std::move(baseBuffer)};
   hbc::StringLiteralTable baseTableForDelta{

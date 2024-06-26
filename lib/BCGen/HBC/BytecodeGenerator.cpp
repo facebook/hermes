@@ -45,7 +45,7 @@ static StringLiteralTable stringAccumulatorFromBCProvider(
   uint32_t count = bcProvider.getStringCount();
 
   std::vector<StringTableEntry> entries;
-  std::vector<bool> isIdentifier;
+  llvh::BitVector isIdentifier;
 
   entries.reserve(count);
   isIdentifier.reserve(count);

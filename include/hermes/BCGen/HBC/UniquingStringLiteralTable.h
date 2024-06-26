@@ -11,6 +11,8 @@
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/StringKind.h"
 
+#include "llvh/ADT/BitVector.h"
+
 namespace hermes {
 namespace hbc {
 
@@ -48,7 +50,7 @@ class StringLiteralTable {
 
   // Mapping such that \c isIdentifier_[i] is true if and only if the string at
   // \c stringsKeys_[i] should be treated as an identifier.
-  std::vector<bool> isIdentifier_;
+  llvh::BitVector isIdentifier_;
 
   /// The number of times a string was added as an identifier.  This information
   /// is only tracked for newly added strings (those not in the storage the
@@ -65,8 +67,8 @@ class StringLiteralTable {
   /// identifiers (i.e. the string at ID \c i in \p storage is an identifier if
   /// and only if \c isIdentifier[i] evaluates to true).
   explicit StringLiteralTable(
-      ConsecutiveStringStorage storage,
-      std::vector<bool> isIdentifier);
+      ConsecutiveStringStorage &&storage,
+      llvh::BitVector &&isIdentifier);
 
   /// \return the number of strings in the mapping.
   inline size_t count() const {
