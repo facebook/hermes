@@ -1189,6 +1189,9 @@ class Parser {
           break;
         }
         re_->sawNamedBackrefBeforeGroup();
+        // If we are not in unicode and we don't have named groups, then fall
+        // through and we will consume the k as an identity escape.
+        [[fallthrough]];
       }
       default: {
         re_->pushChar(consumeCharacterEscape());
