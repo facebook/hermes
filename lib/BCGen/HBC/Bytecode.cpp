@@ -7,12 +7,30 @@
 
 #include "hermes/BCGen/HBC/Bytecode.h"
 
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
 #include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 namespace hbc {
+
+/// Destructor cleans up any Function IR that's been kept around for Eval
+/// data.
+BytecodeModule::~BytecodeModule() {
+  // Run destructors on all BytecodeFunctions, freeing any IR they've
+  // been keeping around for local eval.
+  // Run this before resetForMoreCompilation to reduce the number of users of
+  // VariableScopes as much as possible.
+  functions_.clear();
+
+#ifndef HERMESVM_LEAN
+  // Clean up any other parts of the IR that are no longer used.
+  if (bcProviderFromSrc_) {
+    bcProviderFromSrc_->getModule()->resetForMoreCompilation();
+  }
+#endif
+}
 
 void BytecodeModule::setFunction(
     uint32_t index,
@@ -39,6 +57,14 @@ void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
   }
   debugInfo_.populateSourceMap(
       sourceMap, std::move(functionOffsets), segmentID_);
+}
+
+BytecodeFunction::~BytecodeFunction() {
+  if (functionIR_) {
+    functionIR_->replaceAllUsesWith(nullptr);
+    functionIR_->eraseFromParentNoDestroy();
+    Value::destroy(functionIR_);
+  }
 }
 
 llvh::ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {

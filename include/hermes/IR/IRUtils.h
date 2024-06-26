@@ -46,6 +46,11 @@ std::pair<Instruction *, VariableScope *> getResolveScopeStart(
 /// Deletes the rest of the body of the function.
 void replaceBodyWithUnreachable(Function *F);
 
+/// Deletes all instructions except for EvalCompilationDataInst,
+/// ensuring it is the first instruction in the function.
+/// Terminates the first block with UnreachableInst.
+void deleteBodyExceptEvalData(Function *F);
+
 } // namespace hermes
 
 #endif

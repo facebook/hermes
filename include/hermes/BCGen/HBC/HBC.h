@@ -56,6 +56,14 @@ bool generateBytecodeFunctionLazy(
     uint32_t lazyFuncID,
     const BytecodeGenerationOptions &options);
 
+/// Generates a BytecodeModule from a module \p M, and will return a unique_ptr
+/// to the new module. The \p options parameter controls bytecode generation.
+/// \returns a pointer to the BytecodeModule.
+std::unique_ptr<BytecodeModule> generateBytecodeModuleForEval(
+    Module *M,
+    Function *entryPoint,
+    const BytecodeGenerationOptions &options);
+
 /// Generate the bytecode for the lazy function by running the full compiler
 /// pipeline without optimizations.
 /// Mutates the underlying BytecodeModule of the BCProviderFromSrc and updates

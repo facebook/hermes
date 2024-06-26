@@ -788,24 +788,43 @@ Identifier Module::deriveUniqueInternalName(Identifier originalName) {
   return getContext().getIdentifier(buf);
 }
 
-void Module::resetForLazyCompilation() {
+void Module::resetForMoreCompilation() {
   isLowered_ = false;
   areGeneratorsLowered_ = false;
 
+  const DebugInfoSetting debugSetting = getContext().getDebugInfoSetting();
+
   llvh::SmallVector<Function *, 4> toDestroy{};
-  for (Function &F : FunctionList) {
+  for (auto it = FunctionList.begin(), e = FunctionList.end(); it != e;) {
+    Function &F = *it++;
     if (&F == topLevelFunction_) {
-      replaceBodyWithUnreachable(&F);
+      if (debugSetting == DebugInfoSetting::ALL) {
+        deleteBodyExceptEvalData(&F);
+      } else {
+        replaceBodyWithUnreachable(&F);
+      }
       continue;
     }
     if (F.isLazy()) {
+      // Might need to compile this, don't touch it.
       continue;
     }
 
-    toDestroy.push_back(&F);
+    if (debugSetting == DebugInfoSetting::ALL) {
+      // If we need to preserve eval data, don't delete the Function.
+      deleteBodyExceptEvalData(&F);
+    } else {
+      // Otherwise, delete the Function because it'll not be used.
+      // This is safe because no BytecodeFunction will be referencing it:
+      // 1. It's not lazy.
+      // 2. There's no local eval storing the function IR.
+      // Any IR Functions referenced by BytecodeFunctions will be deleted
+      // when the BytecodeFunction is destroyed.
+      F.eraseFromParentNoDestroy();
+      toDestroy.push_back(&F);
+    }
   }
   for (Function *F : toDestroy) {
-    F->eraseFromParentNoDestroy();
     Value::destroy(F);
   }
 

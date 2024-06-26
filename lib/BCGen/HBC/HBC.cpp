@@ -11,6 +11,7 @@
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Sema/SemResolve.h"
+#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
@@ -50,6 +51,19 @@ bool generateBytecodeFunctionLazy(
       .generateLazyFunctions(lazyFunc, lazyFuncID);
 }
 
+std::unique_ptr<BytecodeModule> generateBytecodeModuleForEval(
+    Module *M,
+    Function *entryPoint,
+    const BytecodeGenerationOptions &options) {
+  PerfSection perf("Bytecode Generation");
+  auto bm = std::make_unique<BytecodeModule>();
+
+  bool success = BytecodeModuleGenerator{*bm, M, options, nullptr, nullptr}
+                     .generateForEval(entryPoint);
+
+  return success ? std::move(bm) : nullptr;
+}
+
 namespace {
 
 /// Data for the compileLazyFunctionWorker.
@@ -82,7 +96,7 @@ static void compileLazyFunctionWorker(void *argPtr) {
 
   hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
   hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
-  Function *F = lazyFunc.getLazyFunction();
+  Function *F = lazyFunc.getFunctionIR();
   assert(F && "no lazy IR for lazy function");
 
   SourceErrorManager &manager =
@@ -198,7 +212,7 @@ bool coordsInLazyFunction(
   hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
   hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
   assert(lazyFunc.isLazy() && "function is not lazy");
-  Function *F = lazyFunc.getLazyFunction();
+  Function *F = lazyFunc.getFunctionIR();
   assert(F && "no lazy IR for lazy function");
 
   SourceErrorManager &manager =

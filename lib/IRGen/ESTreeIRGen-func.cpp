@@ -1151,6 +1151,32 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
   deleteUnreachableBasicBlocks(curFunction()->function);
 
   fixupCatchTargets(F);
+
+  // Postprocessing for debugging: make the EvalCompilationData
+  // and add the function's VariableScope to the data so we can compile REPL
+  // commands from the debugger.
+  // Skip generators here, debugging generators is not supported yet.
+  if (Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL &&
+      !llvh::isa<GeneratorFunction>(F) &&
+      F->getDefinitionKind() != Function::DefinitionKind::GeneratorInner) {
+    BasicBlock &entry = *F->begin();
+
+    IRBuilder::ScopedLocationChange slc(Builder, F->getSourceRange().Start);
+    Builder.setInsertionPoint(&*entry.begin());
+
+    EvalCompilationData data{curFunction()->getSemInfo()};
+
+    auto *evalData = Builder.createEvalCompilationDataInst(
+        std::move(data),
+        nullptr,
+        nullptr,
+        nullptr,
+        curFunction()->curScope->getVariableScope());
+    // This is never emitted, it has no location.
+    evalData->setLocation({});
+
+    assert(!F->isLazy());
+  }
 }
 
 } // namespace irgen

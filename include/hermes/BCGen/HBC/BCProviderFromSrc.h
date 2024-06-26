@@ -212,8 +212,18 @@ class BCProviderFromSrc final : public BCProviderBase {
     return compilationData_.M.get();
   }
 
+  /// \return the shared_ptr for the Module so it can be copied.
+  const std::shared_ptr<Module> &shareModule() const {
+    return compilationData_.M;
+  }
+
   sema::SemContext *getSemCtx() {
     return compilationData_.semCtx.get();
+  }
+
+  /// \return the shared_ptr for the SemContext so it can be copied.
+  const std::shared_ptr<sema::SemContext> &shareSemCtx() const {
+    return compilationData_.semCtx;
   }
 
   SHA1 getSourceHash() const override {

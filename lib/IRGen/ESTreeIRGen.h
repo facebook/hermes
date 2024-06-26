@@ -495,6 +495,9 @@ class ESTreeIRGen {
   /// Perform IRGeneration for the whole module.
   void doIt();
 
+  /// Perform IRGeneration for the whole module.
+  Function *doItInScope(VariableScope *varScope = nullptr);
+
   /// Perform IR generation for a given CJS module.
   void doCJSModule(
       sema::SemContext &semContext,

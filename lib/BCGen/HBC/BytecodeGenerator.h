@@ -126,6 +126,13 @@ class BytecodeModuleGenerator {
   /// \return true on success, false on failure (will report errors).
   bool generateLazyFunctions(Function *lazyFunc, uint32_t lazyFuncID) &&;
 
+  /// Generates new functions created by 'eval'.
+  /// Skips functions that already have bytecode function IDs.
+  /// Consumes the generator.
+  /// \param entryPoint the entry point function.
+  /// \return true on success, false on failure (will report errors).
+  bool generateForEval(Function *entryPoint) &&;
+
   /// Add a function to request generating bytecode for it if it doesn't
   /// already exist.
   /// The associated BytecodeFunction will be nullptr until it's generated.

@@ -63,7 +63,11 @@ bool SemanticResolver::runLazy(
   auto restoreScope = llvh::make_scope_exit([this, semInfo]() {
     bindingTable_.activateScope({});
     // Decrement refcount of the binding table scope to allow it to be freed.
-    semInfo->bindingTableScope.reset();
+    // If we want to keep the binding table scope around for 'eval',
+    // do not reset it.
+    if (astContext_.getDebugInfoSetting() != DebugInfoSetting::ALL) {
+      semInfo->bindingTableScope.reset();
+    }
   });
 
   // Run the resolver on the function body.
@@ -75,6 +79,37 @@ bool SemanticResolver::runLazy(
           ESTree::getIdentifier(rootNode)),
       ESTree::getBlockStatement(rootNode),
       ESTree::getParams(rootNode));
+
+  return sm_.getErrorCount() == 0;
+}
+
+bool SemanticResolver::runInScope(
+    ESTree::ProgramNode *rootNode,
+    sema::FunctionInfo *semInfo) {
+  llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
+      globalScope_, semCtx_.getBindingTableGlobalScope());
+
+  assert(semInfo->bindingTableScope && "semInfo must have a scope");
+  bindingTable_.activateScope(semInfo->bindingTableScope);
+  auto restoreScope = llvh::make_scope_exit([this]() {
+    // Pop the scope to prepare for another run of SemanticResolver.
+    bindingTable_.activateScope({});
+  });
+  rootNode->strictness = makeStrictness(semInfo->strict);
+
+  // Run the resolver on the function body.
+  FunctionContext newFuncCtx{*this, rootNode, semInfo, semInfo->strict, {}};
+  {
+    ScopeRAII programScope{*this, rootNode};
+    if (sm_.getErrorCount())
+      return false;
+    // Promote hoisted functions.
+    if (!curFunctionInfo()->strict) {
+      processPromotedFuncDecls(getPromotedScopedFuncDecls(*this, rootNode));
+    }
+    processCollectedDeclarations(rootNode);
+    visitESTreeChildren(*this, rootNode);
+  }
 
   return sm_.getErrorCount() == 0;
 }
@@ -131,6 +166,9 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
     llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
         globalScope_, programScope.getBindingScope().ptr());
     semCtx_.setBindingTableGlobalScope(globalScope_);
+    if (astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+      curFunctionInfo()->bindingTableScope = globalScope_;
+    }
 
     processCollectedDeclarations(node);
     if (!curFunctionInfo()->strict) {
@@ -1129,12 +1167,9 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
 
   FoundDirectives directives{};
 
-  // Note that body might be empty (for lazy functions)
-  // or an expression (for arrow functions).
-  auto *blockBody = llvh::dyn_cast<BlockStatementNode>(body);
-  if (blockBody) {
-    directives = scanDirectives(blockBody->_body);
-  }
+  // Arrow functions have their bodies turned into BlockStatement before visit.
+  auto *blockBody = llvh::cast<BlockStatementNode>(body);
+  directives = scanDirectives(blockBody->_body);
 
   // Set the strictness if necessary.
   if (directives.useStrictNode)
@@ -1171,6 +1206,12 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
 
   functionContext()->bindingTableScopeDepth =
       scope.getBindingScope().getDepth();
+
+  if (astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+    // Store the current scope, for compiling children of this function in
+    // 'eval'.
+    node->getSemInfo()->bindingTableScope = bindingTable_.getCurrentScope();
+  }
 
   // Set to false if the parameter list contains binding patterns.
   bool simpleParameterList = true;

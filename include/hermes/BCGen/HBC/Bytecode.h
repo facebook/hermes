@@ -55,8 +55,14 @@ class BytecodeFunction {
   /// List of exception handlers.
   std::vector<HBCExceptionHandlerInfo> exceptions_;
 
-  /// Data to lazily compile this BytecodeFunction, if applicable.
-  Function *lazyFunction_ = nullptr;
+  /// Data to compile more code within this BytecodeFunction, if applicable.
+  /// If this function is NOT lazy, the IR function is used for compiling new
+  /// 'eval' code as a child.
+  /// This effectively owns the IR function, and will destroy it when it is
+  /// destroyed.
+  /// If the IR function is destroyed prior to the BytecodeFunction,
+  /// this must be reset to nullptr.
+  Function *functionIR_ = nullptr;
 
   /// Error message if this was a lazy function which failed to compile.
   /// Stored here to avoid rerunning compilation.
@@ -76,6 +82,9 @@ class BytecodeFunction {
       : opcodesAndJumpTables_(std::move(opcodesAndJumpTables)),
         header_(std::move(header)),
         exceptions_(std::move(exceptionHandlers)) {}
+
+  /// Destroys the IR Function if it's not null.
+  ~BytecodeFunction();
 
   const FunctionHeader &getHeader() const {
     return header_;
@@ -138,16 +147,16 @@ class BytecodeFunction {
         debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET;
   }
 
-  void setLazyFunction(Function *lazyFunction) {
-    lazyFunction_ = lazyFunction;
+  void setFunctionIR(Function *functionIR) {
+    functionIR_ = functionIR;
   }
-  Function *getLazyFunction() {
-    return lazyFunction_;
+  Function *getFunctionIR() {
+    return functionIR_;
   }
 
   /// \return true if the function should be compiled lazily.
   bool isLazy() const {
-    return lazyFunction_ != nullptr;
+    return functionIR_ && functionIR_->isLazy();
   }
 
   /// Set the lazy compile error.
@@ -250,6 +259,10 @@ class BytecodeModule {
 
   /// Create an empty BytecodeModule with no functions.
   explicit BytecodeModule() = default;
+
+  /// Destructor cleans up any Function IR that's been kept around for Eval
+  /// data.
+  ~BytecodeModule();
 
   /// Set the bcProviderFromSrc_ field to an owning BCProviderFromSrc.
   void setBCProviderFromSrc(BCProviderFromSrc *bcProviderFromSrc) {

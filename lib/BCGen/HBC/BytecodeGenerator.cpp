@@ -139,8 +139,11 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   // For lazy functions, set the function here to be used by the
   // compilation pipeline when they are called at runtime.
   if (auto *lazyInst = F->getLazyCompilationDataInst()) {
-    bcFunc->setLazyFunction(F);
+    bcFunc->setFunctionIR(F);
     lazyInst->getData().bcFunctionID = functionID;
+  } else if (auto *evalInst = F->getEvalCompilationDataInst()) {
+    bcFunc->setFunctionIR(F);
+    evalInst->getData().bcFunctionID = functionID;
   }
 
   return bcFunc;
@@ -553,8 +556,7 @@ bool BytecodeModuleGenerator::generate(
   if (!generateAddedFunctions())
     return false;
 
-  if (M_->getContext().isLazyCompilation())
-    M_->resetForLazyCompilation();
+  M_->resetForMoreCompilation();
 
   return true;
 }
@@ -571,6 +573,8 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
 
   // Add each function to BMGen so that each function has a unique ID.
   // Start by replacing the lazy Function with the real Function.
+  // NOTE: The old lazy BytecodeFunction's destructor will run,
+  // which will remove the lazy IR Function from the Module.
   functionIDMap_.insert({lazyFunc, lazyFuncID});
 
   /// \return true if we should generate function \p f.
@@ -581,9 +585,12 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
     if (f == M_->getTopLevelFunction())
       return false;
 
-    // Skip lazy functions that already have BytecodeFunctions and IDs.
+    // Skip functions that already have BytecodeFunctions and IDs.
     if (auto *lazyInst = f->getLazyCompilationDataInst();
         lazyInst && lazyInst->getData().bcFunctionID.hasValue()) {
+      return false;
+    } else if (auto *evalInst = f->getEvalCompilationDataInst();
+               evalInst && evalInst->getData().bcFunctionID.hasValue()) {
       return false;
     }
 
@@ -613,7 +620,71 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
     return false;
 
   bm_.getBCProviderFromSrc()->setBytecodeModuleRefs();
-  M_->resetForLazyCompilation();
+  M_->resetForMoreCompilation();
+
+  return true;
+}
+
+bool BytecodeModuleGenerator::generateForEval(Function *entryPoint) && {
+  assert(valid_ && "cannot generate more than once with a generator");
+  valid_ = false;
+
+  lowerModuleIR(M_, options_);
+
+  if (options_.format == DumpLIR)
+    M_->dump();
+
+  llvh::DenseSet<Function *> functionsToGenerate{};
+
+  /// \return true if we should generate function \p f.
+  auto shouldGenerate = [this](Function *f) {
+    // Do not generate the top-level function because it's retained
+    // throughout multiple compilations (due to IRGen requirements) but is only
+    // an UnreachableInst stub after it's generated.
+    if (f == M_->getTopLevelFunction())
+      return false;
+
+    // Skip functions that already have BytecodeFunctions and IDs.
+    if (auto *lazyInst = f->getLazyCompilationDataInst();
+        lazyInst && lazyInst->getData().bcFunctionID.hasValue()) {
+      return false;
+    } else if (auto *evalInst = f->getEvalCompilationDataInst();
+               evalInst && evalInst->getData().bcFunctionID.hasValue()) {
+      return false;
+    }
+
+    return true;
+  };
+
+  // Add each function to BMGen so that each function has a unique ID.
+  for (auto &F : *M_) {
+    if (!shouldGenerate(&F)) {
+      continue;
+    }
+    auto index = addFunction(&F);
+    if (&F == entryPoint) {
+      setEntryPointIndex(index);
+    }
+  }
+  assert(getEntryPointIndex() != -1 && "Entry point not added");
+
+  collectStrings();
+
+  // TODO: Avoid iterating the entire Module here.
+  // Possibilities include passing the list of Functions to
+  // LiteralBufferBuilder or letting LiteralBufferBuilder operate in an
+  // incremental manner on single Functions.
+  initializeSerializedLiterals(LiteralBufferBuilder::generate(
+      M_,
+      shouldGenerate,
+      [this](llvh::StringRef str) { return getIdentifierID(str); },
+      [this](llvh::StringRef str) { return getStringID(str); },
+      options_.optimizationEnabled));
+
+  if (!generateAddedFunctions())
+    return false;
+
+  M_->resetForMoreCompilation();
 
   return true;
 }

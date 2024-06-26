@@ -253,6 +253,11 @@ class FunctionInfo {
   bool mayReachImplicitReturn = true;
 
   /// Lazy compilation: the parent binding table scope of this function.
+  /// Eager/eval compilation: the binding table scope of this function.
+  /// In both cases, we're storing the parent of the code we want to eventually
+  /// compile - in the case of lazy compilation we're trying to compile this
+  /// function itself, while in eval we're going to compile (potentially many)
+  /// lexical children, so it's convenient to use the same field.
   BindingTableScopePtrTy bindingTableScope;
 
   /// How many labels have been allocated in this function so far.

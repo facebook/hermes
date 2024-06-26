@@ -2530,7 +2530,7 @@ class Module : public Value {
   /// Delete unused VariableScopes to avoid unnecessary memory usage.
   /// Avoids destroying a Module completely,
   /// but allows it to be reused for another purpose.
-  void resetForLazyCompilation();
+  void resetForMoreCompilation();
 
   void viewGraph();
   void dump(llvh::raw_ostream &os = llvh::outs()) const;

@@ -69,6 +69,17 @@ bool resolveASTLazy(
     ESTree::FunctionLikeNode *root,
     FunctionInfo *semInfo);
 
+/// Run semantic resolution for 'eval' within a given scope.
+/// This is distinct from resolveASTLazy because it operates on ProgramNode.
+/// \param root the top-level function node to run resolution on.
+/// \param semInfo the FunctionInfo for the enclosing function.
+/// \return false on error.
+bool resolveASTInScope(
+    Context &astContext,
+    SemContext &semCtx,
+    ESTree::ProgramNode *root,
+    FunctionInfo *semInfo);
+
 /// Perform semantic resolution of a CommonJS module.
 bool resolveCommonJSAST(
     Context &astContext,

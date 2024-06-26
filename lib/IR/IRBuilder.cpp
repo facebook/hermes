@@ -1244,6 +1244,23 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
   return inst;
 }
 
+EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
+    EvalCompilationData &&data,
+    Variable *capturedThis,
+    Value *capturedNewTarget,
+    Variable *capturedArguments,
+    VariableScope *funcVarScope) {
+  auto *inst = new EvalCompilationDataInst(
+      std::move(data),
+      capturedThis ? static_cast<Value *>(capturedThis) : getEmptySentinel(),
+      capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
+      capturedArguments ? static_cast<Value *>(capturedArguments)
+                        : getEmptySentinel(),
+      funcVarScope);
+  insert(inst);
+  return inst;
+}
+
 GetNativeRuntimeInst *IRBuilder::createGetNativeRuntimeInst() {
   auto *inst = new GetNativeRuntimeInst();
   insert(inst);

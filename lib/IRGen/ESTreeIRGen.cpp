@@ -169,6 +169,61 @@ void ESTreeIRGen::doIt() {
   drainCompilationQueue();
 }
 
+Function *ESTreeIRGen::doItInScope(VariableScope *varScope) {
+  LLVM_DEBUG(llvh::dbgs() << "Processing program in scope.\n");
+
+  ESTree::ProgramNode *Program;
+
+  Program = llvh::dyn_cast<ESTree::ProgramNode>(Root);
+
+  assert(Program && "missing 'Program' AST node");
+
+  LLVM_DEBUG(llvh::dbgs() << "Found Program decl.\n");
+
+  Function *const topLevelFunction = Mod->getTopLevelFunction();
+
+  // Function context for topLevelFunction.
+  FunctionContext topLevelFunctionContext{
+      this, topLevelFunction, Program->getSemInfo()};
+
+  emitLazyGlobalDeclarations(semCtx_.getGlobalScope());
+
+  // The function which will "execute" the module.
+  Function *const newFunc = Builder.createFunction(
+      "",
+      Function::DefinitionKind::ES5Function,
+      ESTree::isStrict(Program->strictness),
+      Program->getSemInfo()->customDirectives,
+      Program->getSourceRange());
+
+  // Function context for topLevelFunction.
+  FunctionContext mainFunctionContext{this, newFunc, Program->getSemInfo()};
+
+  emitFunctionPrologue(
+      Program,
+      Builder.createBasicBlock(newFunc),
+      InitES5CaptureState::Yes,
+      DoEmitDeclarations::Yes,
+      varScope);
+
+  // Allocate the return register, initialize it to undefined.
+  curFunction()->globalReturnRegister = Builder.createAllocStackInst(
+      genAnonymousLabelName("ret"), Type::createAnyType());
+  Builder.createStoreStackInst(
+      Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
+
+  genBody(Program->_body);
+
+  Value *retVal =
+      Builder.createLoadStackInst(curFunction()->globalReturnRegister);
+
+  emitFunctionEpilogue(retVal);
+
+  drainCompilationQueue();
+
+  return newFunc;
+}
+
 void ESTreeIRGen::doCJSModule(
     sema::SemContext &semContext,
     uint32_t segmentID,
@@ -242,13 +297,11 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
 
   drainCompilationQueue();
 
-  // Destroy the lazyFunc here, to avoid having to handle it specially in
-  // resetForLazyCompilation.
+  // The lazyFunc will be destroyed when the BytecodeFunction
+  // is destroyed.
   // It won't be needed again, even if there is an error later in the pipeline,
   // because we store the error message in BytecodeFunction and reuse it,
   // ensuring we never use the information in lazyFunc ever again.
-  lazyFunc->eraseFromParentNoDestroy();
-  Value::destroy(lazyFunc);
 
   return compiledFunc;
 }

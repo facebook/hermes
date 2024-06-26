@@ -109,6 +109,13 @@ class SemanticResolver
   /// \return false on error.
   bool runLazy(ESTree::FunctionLikeNode *rootNode, sema::FunctionInfo *semInfo);
 
+  /// Run semantic resolution for a program as if it was executed within an
+  /// existing function scope and store the result in \c semCtx_.
+  /// \param rootNode the top-level program node to run resolution on.
+  /// \param semInfo the original FunctionInfo for the parent of the local eval.
+  /// \return false on error.
+  bool runInScope(ESTree::ProgramNode *rootNode, sema::FunctionInfo *semInfo);
+
   /// Validate and resolve a CommonJS function expression. It will use the
   /// existing global function and global scope, which must have been created
   /// by a previous invocation of \c run().

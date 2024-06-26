@@ -135,4 +135,36 @@ void replaceBodyWithUnreachable(Function *F) {
   builder.createUnreachableInst();
 }
 
+void deleteBodyExceptEvalData(Function *F) {
+  IRBuilder builder(F);
+
+  // New block will contain Eval and UnreachableInst.
+  auto *newFirstBB = builder.createBasicBlock(F);
+  builder.setInsertionBlock(newFirstBB);
+  auto *unreachableInst = builder.createUnreachableInst();
+
+  // Delete all blocks, preserving the EvalCompilationDataInst.
+  EvalCompilationDataInst *evalDataInst = nullptr;
+  for (auto it = F->begin(), e = F->end(); it != e;) {
+    auto *BB = &*it++;
+    // Skip the new block.
+    if (BB == newFirstBB)
+      continue;
+    // Move the EvalCompilationDataInst to the new block if we found it.
+    // There's only one, so don't look in the block if we already found it.
+    if (!evalDataInst) {
+      for (auto &I : *BB) {
+        if (llvh::isa<EvalCompilationDataInst>(&I)) {
+          evalDataInst = llvh::cast<EvalCompilationDataInst>(&I);
+          evalDataInst->moveBefore(unreachableInst);
+          break;
+        }
+      }
+    }
+    // Delete the block.
+    BB->replaceAllUsesWith(nullptr);
+    BB->eraseFromParent();
+  }
+}
+
 } // namespace hermes
