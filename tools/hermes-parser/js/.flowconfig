@@ -29,7 +29,7 @@ enums=true
 one_sided_type_guards=true
 
 [version]
-^0.238.0
+^0.238.3
 
 [lints]
 untyped-type-import=error
