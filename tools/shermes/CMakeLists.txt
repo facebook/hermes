@@ -3,10 +3,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+# Define targets for the C++ console bindings. We define both a static and a
+# dynamic library, so they can be linked the same way as hermesvm.
+add_library(shermes_console SHARED ConsoleBindings.cpp)
+target_link_libraries(shermes_console PRIVATE hermesvm)
+
+add_library(shermes_console_a STATIC ConsoleBindings.cpp)
+# Add hermesvm as a dependency so headers are available, even though we aren't
+# actually linking anything here.
+target_link_libraries(shermes_console_a PRIVATE hermesvm_a)
+
 set(SHERMES_CC_INCLUDE_PATH
   "${CMAKE_BINARY_DIR}/lib/config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
   "Include path when invoking CC")
-set(SHERMES_CC_LIB_PATH "$<TARGET_FILE_DIR:hermesvm>:$<TARGET_FILE_DIR:jsi>" CACHE STRING
+set(SHERMES_CC_LIB_PATH "$<TARGET_FILE_DIR:hermesvm>:$<TARGET_FILE_DIR:jsi>:$<TARGET_FILE_DIR:shermes_console>" CACHE STRING
   "Library path when invoking CC")
 
 file(GENERATE
@@ -36,4 +46,4 @@ export(TARGETS shermes APPEND FILE ${CMAKE_BINARY_DIR}/ImportHostCompilers.cmake
 # libraries, we might want to link against release libraries from a debug
 # compiler, so this is not the default for shermes.
 add_custom_target(shermes-dep)
-add_dependencies(shermes-dep shermes hermesvm_a hermesvmlean_a hermesvm hermesvmlean)
+add_dependencies(shermes-dep shermes hermesvm_a hermesvmlean_a hermesvm hermesvmlean shermes_console shermes_console_a)

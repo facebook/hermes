@@ -2818,8 +2818,11 @@ SHPropertyCacheEntry *get_prop_cache(SHUnit *unit) {
 )";
     if (options.emitMain) {
       OS << R"(
+void init_console_bindings(SHRuntime *shr);
+
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init(argc, argv);
+  init_console_bindings(shr);
   bool success = _sh_initialize_units(shr, 1, CREATE_THIS_UNIT);
   _sh_done(shr);
   return success ? 0 : 1;
