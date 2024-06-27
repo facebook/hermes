@@ -71,6 +71,14 @@ class SemanticResolver
   /// the AST. False if we just want to validate the AST.
   bool compile_;
 
+  /// 'await' isn't allowed to be an identifier anywhere in the parameters
+  /// of an async arrow function, including the parameters of nested arrow
+  /// functions in the parameter initializers.
+  /// Ordinarily we'd check for this in the parser, but async arrow functions
+  /// have a reparse step, so we avoid revisiting the entire tree by checking in
+  /// SemanticResolver.
+  bool forbidAwaitAsIdentifier_ = false;
+
  public:
   /// This constant enables the more expensive path in RecursiveVisitorDispatch,
   /// enabling us to mutate NodeList.

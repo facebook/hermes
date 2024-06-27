@@ -1281,6 +1281,24 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
   auto visitParams = [this, node]() -> void {
     llvh::SaveAndRestore<bool> oldIsFormalParams{
         functionContext()->isFormalParams, true};
+
+    bool forbidAwaitAsIdentifier = false;
+    if (auto *arrow = llvh::dyn_cast<ArrowFunctionExpressionNode>(node)) {
+      // ES13.0 15.3 and 15.9
+      // ArrowFunction:
+      //  ArrowParameters[?Yield, ?Await]
+      // AsyncArrowHead :
+      //  async [no LineTerminator here] ArrowFormalParameters[~Yield, +Await]
+      // 'await' is forbidden as an identifier in arrow params when:
+      //  - It's already forbidden in a normal arrow function.
+      //  - The function is an async arrow function.
+      if (forbidAwaitAsIdentifier_ || arrow->_async)
+        forbidAwaitAsIdentifier = true;
+    }
+
+    llvh::SaveAndRestore<bool> oldForbidAwait{
+        forbidAwaitAsIdentifier_, forbidAwaitAsIdentifier};
+
     visitESTreeNodeList(*this, getParams(node), node);
   };
 
@@ -1298,6 +1316,9 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
   } else {
     visitParams();
   }
+
+  llvh::SaveAndRestore<bool> oldForbidAwait{
+      forbidAwaitAsIdentifier_, ESTree::isAsync(node)};
 
   processCollectedDeclarations(node);
 
@@ -1369,6 +1390,13 @@ Decl *SemanticResolver::resolveIdentifier(
   // Is this the "arguments" object?
   if (decl && decl->special == Decl::Special::Arguments)
     curFunctionInfo()->usesArguments = true;
+
+  if (LLVM_UNLIKELY(identifier->_name == kw_.identAwait) &&
+      forbidAwaitAsIdentifier_) {
+    sm_.error(
+        identifier->getSourceRange(),
+        "await is not a valid identifier name in an async function");
+  }
 
   // Resolved the identifier to a declaration, done.
   if (decl) {
