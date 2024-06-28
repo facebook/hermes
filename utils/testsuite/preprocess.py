@@ -183,7 +183,7 @@ function v8pragma_NopSentinel() {
         "%ArrayBufferNeuter": "HermesInternal.detachArrayBuffer",
         # ArrayBufferDetach is the more modern version of ArrayBufferNeuter.
         "%ArrayBufferDetach": "HermesInternal.detachArrayBuffer",
-        "%RunMicrotasks": "builtin_nop",
+        "%RunMicrotasks": "HermesInternal.drainJobs",
         "%SetAllocationTimeout": "builtin_nop",
         "%UnblockConcurrentRecompilation": "builtin_nop",
         "%DebugPrint": "builtin_nop",
