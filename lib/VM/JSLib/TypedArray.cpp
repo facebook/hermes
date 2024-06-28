@@ -1761,8 +1761,8 @@ typedArrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   auto self = args.vmcastThis<JSTypedArrayBase>();
 
   // 3. Let len be O.[[ArrayLength]].
-  JSArrayBuffer::size_type len = self->getLength();
-
+  auto len = self->getLength();
+  auto byteLength = self->getByteLength();
   auto byteWidth = self->getByteWidth();
 
   // 4. Let A be ? TypedArrayCreateSameType(O, « 𝔽(len) »).
@@ -1775,19 +1775,19 @@ typedArrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   // 5. Let k be 0.
   JSArrayBuffer::size_type k = 0;
 
-  auto aBuffer = A->getBuffer(runtime);
-  auto srcBuffer = self->getBuffer(runtime);
+  auto dstBlock = A->getBuffer(runtime)->getDataBlock(runtime);
+  auto srcBlock = self->getBuffer(runtime)->getDataBlock(runtime);
 
   // 6. Repeat, while k < len,
-  while (k < len) {
+  while (k < byteLength) {
     // 6a. Let from be ! ToString(𝔽(length - k - 1)).
-    JSArrayBuffer::size_type from = len - k - 1;
+    size_t from = byteLength - k - byteWidth;
 
     // 6d. Perform ! Set(A, Pk, fromValue, true).
-    JSArrayBuffer::copyDataBlockBytes(runtime, aBuffer, k * byteWidth, srcBuffer, from * byteWidth, byteWidth);
+    memcpy(dstBlock + k, srcBlock + from, byteWidth);
 
     // 6e. Set k to k + 1.
-    ++k;
+    k += byteWidth;
   }
 
   return A.getHermesValue();
