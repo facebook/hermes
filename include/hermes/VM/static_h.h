@@ -76,10 +76,6 @@ typedef struct SHUnit {
   /// (rather than this particular instance). The index is zero until the first
   /// instance is initialized.
   uint32_t *index;
-  /// Whether the data is dirty and must be re-initialized before reuse.
-  bool dirty;
-  /// Currently registered with an active runtime.
-  bool in_use;
   /// The ScriptID allocated from the Runtime when the unit is in use.
   uint32_t script_id;
 
@@ -203,9 +199,8 @@ SHERMES_EXPORT void _sh_done(SHRuntime *shr);
 SHERMES_EXPORT void _sh_check_native_stack_overflow(SHRuntime *shr);
 
 /// Register, initialize and execute a main function of the unit returned by the
-/// given creator function. The unit is de-initialized when the runtime is
-/// destroyed. Execution of the unit initialization code might throw a JS
-/// exception.
+/// given creator function. The unit is freed when the runtime is destroyed.
+/// Execution of the unit initialization code might throw a JS exception.
 SHERMES_EXPORT SHLegacyValue
 _sh_unit_init(SHRuntime *shr, SHUnitCreator unitCreator);
 

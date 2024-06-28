@@ -2740,7 +2740,7 @@ void generateModule(
     auto usedExterns = collectUsedExterns(M);
     generateExternCIncludes(M, OS, *usedExterns);
 
-    OS << R"(static struct UnitData THIS_UNIT;
+    OS << R"(
 static uint32_t unit_index;
 static inline SHSymbolID* get_symbols(SHUnit *);
 static inline SHPropertyCacheEntry* get_prop_cache(SHUnit *);
@@ -2778,18 +2778,21 @@ static SHNativeFuncInfo s_function_info_table[];
     // Note that we prefix the unit name with sh_export_ to avoid potential
     // conflicts.
     OS << "#define CREATE_THIS_UNIT sh_export_" << options.unitName << "\n";
-    OS << "static struct UnitData {\n"
+
+    OS << "struct UnitData {\n"
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
-       << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n"
+       << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n;"
        << "  SHCompressedPointer object_literal_class_cache["
-       << moduleGen.literalBuffers.objShapeTable.size() << "];\n"
-       << "} THIS_UNIT = {.unit = {.index = &unit_index, .num_symbols = "
-       << moduleGen.stringTable.size()
+       << moduleGen.literalBuffers.objShapeTable.size() << "];\n};\n"
+       << "SHUnit *CREATE_THIS_UNIT(SHRuntime *shr) {\n"
+       << "  struct UnitData *unit_data = calloc(sizeof(struct UnitData), 1);\n"
+       << "  *unit_data = (struct UnitData){.unit = {.index = &unit_index,"
+       << ".num_symbols =" << moduleGen.stringTable.size()
        << ", .num_prop_cache_entries = " << nextCacheIdx
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
-       << ".strings = s_strings, .symbols = THIS_UNIT.symbol_data,"
-       << ".prop_cache = THIS_UNIT.prop_cache_data,"
+       << ".strings = s_strings, .symbols = unit_data->symbol_data,"
+       << ".prop_cache = unit_data->prop_cache_data,"
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
@@ -2797,17 +2800,14 @@ static SHNativeFuncInfo s_function_info_table[];
        << ".obj_shape_table = s_obj_shape_table, "
        << ".obj_shape_table_count = "
        << moduleGen.literalBuffers.objShapeTable.size() << ", "
-       << ".object_literal_class_cache = THIS_UNIT.object_literal_class_cache, "
+       << ".object_literal_class_cache = unit_data->object_literal_class_cache, "
        << ".source_locations = s_source_locations, "
        << ".source_locations_size = " << moduleGen.srcLocationTable.size()
        << ", " << ".unit_main = _0_global, "
        << ".unit_main_info = &s_function_info_table[0], "
        << ".unit_name = \"sh_compiled\" }};\n"
+       << "  return (SHUnit *)unit_data;\n}\n"
        << R"(
-SHUnit *CREATE_THIS_UNIT() {
-  return &THIS_UNIT.unit;
-}
-
 SHSymbolID *get_symbols(SHUnit *unit) {
   return ((struct UnitData *)unit)->symbol_data;
 }

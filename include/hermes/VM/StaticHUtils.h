@@ -27,7 +27,7 @@ inline const PinnedHermesValue *toPHV(const SHLegacyValue *shv) {
   return static_cast<const PinnedHermesValue *>(shv);
 }
 
-/// De-init the unit, freeing all allocated data, marking it as not in use.
+/// Free the \p unit, and all associated data.
 void sh_unit_done(Runtime &runtime, SHUnit *unit);
 
 /// Calculate the size of allocated memory not tracked by GC.

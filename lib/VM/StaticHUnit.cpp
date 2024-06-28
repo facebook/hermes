@@ -81,13 +81,6 @@ extern "C" SHLegacyValue _sh_unit_init(
     SHUnitCreator unitCreator) {
   Runtime &runtime = getRuntime(shr);
   auto *unit = unitCreator();
-  if (unit->in_use) {
-    fprintf(
-        stderr,
-        "SH unit '%s' already registered in an active runtime\n",
-        unit->unit_name);
-    abort();
-  }
 
   {
     // Counter to assign a globally unique index to each unit.
@@ -113,21 +106,13 @@ extern "C" SHLegacyValue _sh_unit_init(
     }
   }
 
-  unit->in_use = true;
-  unit->script_id = runtime.allocateScriptId();
-
-  // If the unit is dirty, clean the property cache.
-  if (unit->dirty) {
-    memset(
-        unit->prop_cache,
-        0,
-        unit->num_prop_cache_entries * sizeof(PropertyCacheEntry));
-    memset(
-        unit->object_literal_class_cache,
-        0,
-        unit->obj_shape_table_count * sizeof(WeakRootBase));
+  // If the unit has already been initialized, discard the new copy.
+  if (auto *existingUnit = runtime.units[*unit->index]) {
+    free(unit);
+    return sh_unit_run(shr, existingUnit);
   }
-  unit->dirty = true;
+
+  unit->script_id = runtime.allocateScriptId();
 
   // We need to clean the symbol table in case the GC runs while we are
   // populating it.
@@ -218,12 +203,8 @@ static void sh_unit_init_symbols(Runtime &runtime, SHUnit *unit) {
 }
 
 void hermes::vm::sh_unit_done(Runtime &runtime, SHUnit *unit) {
-  assert(unit->in_use && "destroying unit which is not in use");
-
   delete unit->runtime_ext;
-  unit->runtime_ext = nullptr;
-
-  unit->in_use = false;
+  free(unit);
 }
 
 size_t hermes::vm::sh_unit_additional_memory_size(const SHUnit *unit) {
