@@ -77,7 +77,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simple(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %simple?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -85,7 +85,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_useResult(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %useResult?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -93,7 +93,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_loop(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %loop?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -101,7 +101,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simple2(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %simple2?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -109,7 +109,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_yieldStar(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %yieldStar?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -117,7 +117,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_destr(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %destr?inner(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object
@@ -127,7 +127,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_initializer(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %initializer?inner(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object
@@ -135,7 +135,7 @@ var initializer = function*(x = foo()) {
 
 // CHECK:scope %VS1 []
 
-// CHECK:generator inner ?anon_0_simple(): any
+// CHECK:generator inner simple?inner(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -161,7 +161,7 @@ var initializer = function*(x = foo()) {
 
 // CHECK:scope %VS2 [x: any]
 
-// CHECK:generator inner ?anon_0_useResult(): any
+// CHECK:generator inner useResult?inner(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -189,7 +189,7 @@ var initializer = function*(x = foo()) {
 
 // CHECK:scope %VS3 [x: any, i: any]
 
-// CHECK:generator inner ?anon_0_loop(x: any): any
+// CHECK:generator inner loop?inner(x: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -231,7 +231,7 @@ var initializer = function*(x = foo()) {
 
 // CHECK:scope %VS4 []
 
-// CHECK:generator inner ?anon_0_simple2(): any
+// CHECK:generator inner simple2?inner(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -257,7 +257,7 @@ var initializer = function*(x = foo()) {
 
 // CHECK:scope %VS5 []
 
-// CHECK:generator inner ?anon_0_yieldStar(): any
+// CHECK:generator inner yieldStar?inner(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -352,7 +352,7 @@ var initializer = function*(x = foo()) {
 
 // CHECK:scope %VS6 [x: any]
 
-// CHECK:generator inner ?anon_0_destr(?anon_2_param: any): any
+// CHECK:generator inner destr?inner(?anon_2_param: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
@@ -420,7 +420,7 @@ var initializer = function*(x = foo()) {
 
 // CHECK:scope %VS7 [x: any]
 
-// CHECK:generator inner ?anon_0_initializer(x: any): any
+// CHECK:generator inner initializer?inner(x: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:       StartGeneratorInst
 // CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any

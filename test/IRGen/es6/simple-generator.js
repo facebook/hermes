@@ -32,11 +32,11 @@ function* simple() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.idx]: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.generator_state]: number
-// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simple(): functionCode
+// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %1: environment, %simple?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:generator inner ?anon_0_simple(action: number, value: any): any
+// CHECK:generator inner simple?inner(action: number, value: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %value: any
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %action: number

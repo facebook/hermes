@@ -460,8 +460,10 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
     // Build the inner function. This must be done in the parentScope since
     // generator functions don't create a scope.
-    Identifier innerName =
-        genAnonymousLabelName(originalName.isValid() ? originalName.str() : "");
+    Identifier innerName = originalName.isValid()
+        ? Mod->getContext().getIdentifier(
+              originalName.getUnderlyingPointer()->str() + "?inner")
+        : genAnonymousLabelName("");
     NormalFunction *innerFn;
     if (isAsyncArrow) {
       // If we are compliing this function as part of an async arrow function,

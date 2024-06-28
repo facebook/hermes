@@ -39,23 +39,23 @@ function *args() {
 
 // CHECK:Global String Table:
 // CHECK-NEXT:s0[ASCII, 0..-1]:
-// CHECK-NEXT:s1[ASCII, 0..11]: ?anon_0_args
-// CHECK-NEXT:s2[ASCII, 12..23]: ?anon_0_loop
-// CHECK-NEXT:s3[ASCII, 24..35]: DONE LOOPING
-// CHECK-NEXT:s4[ASCII, 36..96]: Generator functions may not be called on executing generators
-// CHECK-NEXT:s5[ASCII, 97..102]: global
-// CHECK-NEXT:i6[ASCII, 103..106] #50273FEB: args
-// CHECK-NEXT:i7[ASCII, 107..110] #B553E7BD: done
-// CHECK-NEXT:i8[ASCII, 111..114] #EFC200CF: loop
-// CHECK-NEXT:i9[ASCII, 115..119] #DF50693D: value
-// CHECK-NEXT:i10[ASCII, 120..120] #0001E3E8: y
+// CHECK-NEXT:s1[ASCII, 0..11]: DONE LOOPING
+// CHECK-NEXT:s2[ASCII, 12..72]: Generator functions may not be called on executing generators
+// CHECK-NEXT:s3[ASCII, 73..82]: args?inner
+// CHECK-NEXT:s4[ASCII, 83..88]: global
+// CHECK-NEXT:s5[ASCII, 89..98]: loop?inner
+// CHECK-NEXT:i6[ASCII, 99..102] #50273FEB: args
+// CHECK-NEXT:i7[ASCII, 103..106] #B553E7BD: done
+// CHECK-NEXT:i8[ASCII, 107..110] #EFC200CF: loop
+// CHECK-NEXT:i9[ASCII, 111..115] #DF50693D: value
+// CHECK-NEXT:i10[ASCII, 116..116] #0001E3E8: y
 
 // CHECK:Literal Value Buffer:
 // CHECK-NEXT:null
 // CHECK-NEXT:true
 // CHECK-NEXT:null
 // CHECK-NEXT:false
-// CHECK-NEXT:[String 3]
+// CHECK-NEXT:[String 1]
 // CHECK-NEXT:true
 // CHECK-NEXT:Object Key Buffer:
 // CHECK-NEXT:[String 9]
@@ -94,7 +94,7 @@ function *args() {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r4
 // CHECK-NEXT:    LoadConstZero     r5
 // CHECK-NEXT:    StoreNPToEnvironment r1, 7, r5
-// CHECK-NEXT:    CreateGenerator   r6, r1, Function<?anon_0_loop>
+// CHECK-NEXT:    CreateGenerator   r6, r1, Function<loop?inner>
 // CHECK-NEXT:    Ret               r6
 
 // CHECK:NCFunction<args>(1 params, 10 registers):
@@ -112,10 +112,10 @@ function *args() {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r6
 // CHECK-NEXT:    LoadConstZero     r7
 // CHECK-NEXT:    StoreNPToEnvironment r1, 4, r7
-// CHECK-NEXT:    CreateGenerator   r8, r1, Function<?anon_0_args>
+// CHECK-NEXT:    CreateGenerator   r8, r1, Function<args?inner>
 // CHECK-NEXT:    Ret               r8
 
-// CHECK:Function<?anon_0_loop>(2 params, 27 registers):
+// CHECK:Function<loop?inner>(2 params, 27 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1
@@ -238,7 +238,7 @@ function *args() {
 // CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_args>(1 params, 24 registers):
+// CHECK:Function<args?inner>(1 params, 24 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1

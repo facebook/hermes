@@ -41,19 +41,19 @@ var simpleAsyncFE = async function () {
 
 // CHECK:Global String Table:
 // CHECK-NEXT:s0[ASCII, 0..-1]:
-// CHECK-NEXT:s1[ASCII, 0..28]: ?anon_0_?anon_0_simpleAsyncFE
-// CHECK-NEXT:s2[ASCII, 29..55]: ?anon_0_?anon_0_simpleAwait
-// CHECK-NEXT:s3[ASCII, 56..83]: ?anon_0_?anon_0_simpleReturn
-// CHECK-NEXT:s4[ASCII, 84..104]: ?anon_0_simpleAsyncFE
-// CHECK-NEXT:s5[ASCII, 105..123]: ?anon_0_simpleAwait
-// CHECK-NEXT:s6[ASCII, 124..143]: ?anon_0_simpleReturn
-// CHECK-NEXT:s7[ASCII, 144..204]: Generator functions may not be called on executing generators
-// CHECK-NEXT:s8[ASCII, 205..210]: global
-// CHECK-NEXT:i9[ASCII, 211..214] #B553E7BD: done
-// CHECK-NEXT:i10[ASCII, 215..227] #4CCB9499: simpleAsyncFE
-// CHECK-NEXT:i11[ASCII, 228..238] #FD482E4F: simpleAwait
-// CHECK-NEXT:i12[ASCII, 239..250] #EB416734: simpleReturn
-// CHECK-NEXT:i13[ASCII, 251..255] #DF50693D: value
+// CHECK-NEXT:s1[ASCII, 0..20]: ?anon_0_simpleAsyncFE
+// CHECK-NEXT:s2[ASCII, 21..47]: ?anon_0_simpleAsyncFE?inner
+// CHECK-NEXT:s3[ASCII, 48..66]: ?anon_0_simpleAwait
+// CHECK-NEXT:s4[ASCII, 67..91]: ?anon_0_simpleAwait?inner
+// CHECK-NEXT:s5[ASCII, 92..111]: ?anon_0_simpleReturn
+// CHECK-NEXT:s6[ASCII, 112..137]: ?anon_0_simpleReturn?inner
+// CHECK-NEXT:s7[ASCII, 138..198]: Generator functions may not be called on executing generators
+// CHECK-NEXT:s8[ASCII, 199..204]: global
+// CHECK-NEXT:i9[ASCII, 205..208] #B553E7BD: done
+// CHECK-NEXT:i10[ASCII, 209..221] #4CCB9499: simpleAsyncFE
+// CHECK-NEXT:i11[ASCII, 222..232] #FD482E4F: simpleAwait
+// CHECK-NEXT:i12[ASCII, 233..244] #EB416734: simpleReturn
+// CHECK-NEXT:i13[ASCII, 245..249] #DF50693D: value
 
 // CHECK:Literal Value Buffer:
 // CHECK-NEXT:[int 1]
@@ -150,7 +150,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 4, r3
 // CHECK-NEXT:    LoadConstZero     r4
 // CHECK-NEXT:    StoreNPToEnvironment r1, 2, r4
-// CHECK-NEXT:    CreateGenerator   r5, r1, Function<?anon_0_?anon_0_simpleReturn>
+// CHECK-NEXT:    CreateGenerator   r5, r1, Function<?anon_0_simpleReturn?inner>
 // CHECK-NEXT:    Ret               r5
 
 // CHECK:NCFunction<?anon_0_simpleAwait>(1 params, 7 registers):
@@ -163,7 +163,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 5, r3
 // CHECK-NEXT:    LoadConstZero     r4
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r4
-// CHECK-NEXT:    CreateGenerator   r5, r1, Function<?anon_0_?anon_0_simpleAwait>
+// CHECK-NEXT:    CreateGenerator   r5, r1, Function<?anon_0_simpleAwait?inner>
 // CHECK-NEXT:    Ret               r5
 
 // CHECK:NCFunction<?anon_0_simpleAsyncFE>(1 params, 7 registers):
@@ -176,10 +176,10 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 5, r3
 // CHECK-NEXT:    LoadConstZero     r4
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r4
-// CHECK-NEXT:    CreateGenerator   r5, r1, Function<?anon_0_?anon_0_simpleAsyncFE>
+// CHECK-NEXT:    CreateGenerator   r5, r1, Function<?anon_0_simpleAsyncFE?inner>
 // CHECK-NEXT:    Ret               r5
 
-// CHECK:Function<?anon_0_?anon_0_simpleReturn>(1 params, 19 registers):
+// CHECK:Function<?anon_0_simpleReturn?inner>(1 params, 19 registers):
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -244,7 +244,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CallBuiltin       r7, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_?anon_0_simpleAwait>(1 params, 24 registers):
+// CHECK:Function<?anon_0_simpleAwait?inner>(1 params, 24 registers):
 // CHECK-NEXT:Offset in debug table: source 0x002b, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1
@@ -350,7 +350,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_?anon_0_simpleAsyncFE>(1 params, 24 registers):
+// CHECK:Function<?anon_0_simpleAsyncFE?inner>(1 params, 24 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0037, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r0, 2
 // CHECK-NEXT:    LoadParam         r1, 1

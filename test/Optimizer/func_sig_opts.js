@@ -210,7 +210,7 @@ function test_async() {
 // CHECK-NEXT:  %2 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS2.x]: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS2.generator_state]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %?anon_0_gen(): functionCode
+// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %gen?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
@@ -225,7 +225,7 @@ function test_async() {
 // CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:generator inner ?anon_0_gen(action: number, value: any): any
+// CHECK:generator inner gen?inner(action: number, value: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %value: any
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %action: number
@@ -278,11 +278,11 @@ function test_async() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS3.generator_state]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %?anon_0_?anon_0_asyncFn(): functionCode
+// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %?anon_0_asyncFn?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
-// CHECK:generator inner ?anon_0_?anon_0_asyncFn(action: number, value: any): any
+// CHECK:generator inner ?anon_0_asyncFn?inner(action: number, value: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %value: any
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %action: number
