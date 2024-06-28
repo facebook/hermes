@@ -1787,7 +1787,7 @@ typedArrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   auto self = args.vmcastThis<JSTypedArrayBase>();
 
   // 3. Let len be O.[[ArrayLength]].
-  double len = self->getLength();
+  size_t len = self->getLength();
 
   // 4. Let relativeIndex be ? ToIntegerOrInfinity(index).
   auto relativeIndexRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
@@ -1800,8 +1800,8 @@ typedArrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
 
   // 5. If relativeIndex ≥ 0, let actualIndex be relativeIndex.
   // 6. Else, let actualIndex be len + relativeIndex.
-  double actualIndex =
-      convertNegativeBoundsRelativeToLength(relativeIndex, len);
+  auto actualIndex =
+      (size_t)convertNegativeBoundsRelativeToLength(relativeIndex, (double)len);
 
   // 7. If O.[[ContentType]] is BigInt, let numericValueBe ? ToBigInt(value)
   // 8. Else, let numericValue be ? ToNumber(value)
@@ -1833,34 +1833,31 @@ typedArrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-
   auto A = status.getValue();
+
+  // Get direct pointer to data blocks
+  auto srcBlock = self->getBuffer(runtime)->getDataBlock(runtime);
+  auto dstBlock = A->getBuffer(runtime)->getDataBlock(runtime);
+
+  auto byteWidth = self->getByteWidth();
+  auto actualByteOffset = actualIndex * byteWidth;
+
+  // Copy prefix
   if (actualIndex > 0) {
-    if (LLVM_UNLIKELY(
-            JSTypedArrayBase::setToCopyOfTypedArray(
-                runtime, A, 0, self, 0, actualIndex) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
+    memcpy(dstBlock, srcBlock, actualByteOffset);
   }
 
+  // copy element
   if (LLVM_UNLIKELY(
           A->setOwnIndexed(A, runtime, actualIndex, targetValue) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  // Copy suffix
   if (actualIndex + 1 < len) {
-    if (LLVM_UNLIKELY(
-            JSTypedArrayBase::setToCopyOfTypedArray(
-                runtime,
-                A,
-                actualIndex + 1,
-                self,
-                actualIndex + 1,
-                len - actualIndex - 1) == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
+    auto remainingBytes = (len - actualIndex - 1) * byteWidth;
+    memcpy(dstBlock + actualByteOffset + byteWidth, srcBlock + actualByteOffset + byteWidth, remainingBytes);
   }
 
   return A.getHermesValue();
