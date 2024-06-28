@@ -998,8 +998,7 @@ bool Verifier::visitCreateArgumentsInst(const CreateArgumentsInst &Inst) {
 
   BasicBlock *BB = Inst.getParent();
   Function *F = BB->getParent();
-  if (!M.areGeneratorsLowered() &&
-      F->getDefinitionKind() == Function::DefinitionKind::GeneratorInner) {
+  if (!M.areGeneratorsLowered() && F->isInnerGenerator()) {
     auto secondBB = F->begin();
     ++secondBB;
     AssertIWithMsg(
@@ -1335,8 +1334,7 @@ bool Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {
   ReturnIfNot(visitBaseCreateLexicalChildInst(Inst));
   AssertIWithMsg(
       Inst,
-      Inst.getFunctionCode()->getDefinitionKind() ==
-          Function::DefinitionKind::GeneratorInner,
+      Inst.getFunctionCode()->isInnerGenerator(),
       "CreateGeneratorInst must take a GeneratorInnerFunction");
   AssertIWithMsg(
       Inst,

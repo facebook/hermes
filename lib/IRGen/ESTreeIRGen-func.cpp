@@ -78,8 +78,13 @@ void ESTreeIRGen::genFunctionDeclaration(
   assert(funcStorage && "Function declaration storage must have been resolved");
 
   auto *newFuncParentScope = curFunction()->curScope->getVariableScope();
-  Function *newFunc = func->_async
-      ? genAsyncFunction(functionName, func, newFuncParentScope)
+  Function *newFunc = func->_async ? genAsyncFunction(
+                                         functionName,
+                                         func,
+                                         newFuncParentScope,
+                                         curFunction()->capturedThis,
+                                         curFunction()->capturedNewTarget,
+                                         curFunction()->capturedArguments)
       : func->_generator
       ? genGeneratorFunction(functionName, func, newFuncParentScope)
       : genBasicFunction(functionName, func, newFuncParentScope);
@@ -110,8 +115,13 @@ Value *ESTreeIRGen::genFunctionExpression(
       id ? Identifier::getFromPointer(id->_name) : nameHint;
 
   auto *parentScope = curFunction()->curScope->getVariableScope();
-  Function *newFunc = FE->_async
-      ? genAsyncFunction(originalNameIden, FE, parentScope)
+  Function *newFunc = FE->_async ? genAsyncFunction(
+                                       originalNameIden,
+                                       FE,
+                                       parentScope,
+                                       curFunction()->capturedThis,
+                                       curFunction()->capturedNewTarget,
+                                       curFunction()->capturedArguments)
       : FE->_generator
       ? genGeneratorFunction(originalNameIden, FE, parentScope)
       : genBasicFunction(
@@ -141,47 +151,55 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
       << Builder.getInsertionBlock()->getParent()->getInternalName() << ".\n");
 
   if (AF->_async) {
-    Builder.getModule()->getContext().getSourceErrorManager().error(
-        AF->getSourceRange(), Twine("async functions are unsupported"));
-    return Builder.getLiteralUndefined();
+    return Builder.createCreateFunctionInst(
+        curFunction()->curScope,
+        genAsyncFunction(
+            nameHint,
+            AF,
+            curFunction()->curScope->getVariableScope(),
+            curFunction()->capturedThis,
+            curFunction()->capturedNewTarget,
+            curFunction()->capturedArguments));
   }
 
-  auto *newFunc = genArrowFunction(
+  auto *newFunc = genCapturingFunction(
       nameHint,
       AF,
       curFunction()->curScope->getVariableScope(),
       curFunction()->capturedThis,
       curFunction()->capturedNewTarget,
-      curFunction()->capturedArguments);
+      curFunction()->capturedArguments,
+      Function::DefinitionKind::ES6Arrow);
 
   // Emit CreateFunctionInst after we have restored the builder state.
   return Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
 }
 
-Function *ESTreeIRGen::genArrowFunction(
-    Identifier nameHint,
-    ESTree::ArrowFunctionExpressionNode *AF,
+NormalFunction *ESTreeIRGen::genCapturingFunction(
+    Identifier originalName,
+    ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     Variable *capturedThis,
     Value *capturedNewTarget,
-    Variable *capturedArguments) {
+    Variable *capturedArguments,
+    Function::DefinitionKind functionKind) {
   auto *newFunc = Builder.createFunction(
-      nameHint,
-      Function::DefinitionKind::ES6Arrow,
-      ESTree::isStrict(AF->strictness),
-      AF->getSemInfo()->customDirectives,
-      AF->getSourceRange());
+      originalName,
+      functionKind,
+      ESTree::isStrict(functionNode->strictness),
+      functionNode->getSemInfo()->customDirectives,
+      functionNode->getSourceRange());
 
   if (auto *functionType = llvh::dyn_cast<flow::TypedFunctionType>(
-          flowContext_.getNodeTypeOrAny(AF)->info)) {
+          flowContext_.getNodeTypeOrAny(functionNode)->info)) {
     newFunc->getAttributesRef(Mod).typed = true;
   }
 
-  if (auto *body = ESTree::getBlockStatement(AF);
+  if (auto *body = ESTree::getBlockStatement(functionNode);
       body && body->isLazyFunctionBody) {
     setupLazyFunction(
         newFunc,
-        AF,
+        functionNode,
         body,
         parentScope,
         ExtraKey::Normal,
@@ -193,12 +211,13 @@ Function *ESTreeIRGen::genArrowFunction(
 
   auto compileFunc = [this,
                       newFunc,
-                      AF,
+                      functionNode,
                       capturedThis,
                       capturedNewTarget,
                       capturedArguments,
                       parentScope] {
-    FunctionContext newFunctionContext{this, newFunc, AF->getSemInfo()};
+    FunctionContext newFunctionContext{
+        this, newFunc, functionNode->getSemInfo()};
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
     curFunction()->capturedThis = capturedThis;
@@ -206,17 +225,19 @@ Function *ESTreeIRGen::genArrowFunction(
     curFunction()->capturedArguments = capturedArguments;
 
     emitFunctionPrologue(
-        AF,
+        functionNode,
         Builder.createBasicBlock(newFunc),
         InitES5CaptureState::No,
         DoEmitDeclarations::Yes,
         parentScope);
 
-    genStatement(AF->_body);
+    auto *body = ESTree::getBlockStatement(functionNode);
+    assert(body && "empty function body");
+    genStatement(body);
     emitFunctionEpilogue(Builder.getLiteralUndefined());
   };
 
-  enqueueCompilation(AF, ExtraKey::Normal, newFunc, compileFunc);
+  enqueueCompilation(functionNode, ExtraKey::Normal, newFunc, compileFunc);
 
   return newFunc;
 }
@@ -228,6 +249,9 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     ESTree::Node *superClassNode,
     Function::DefinitionKind functionKind) {
   assert(functionNode && "Function AST cannot be null");
+  assert(
+      functionKind != Function::DefinitionKind::GeneratorInnerArrow &&
+      "GeneratorInnerArrow should go through genCapturingFunction");
 
   // Check if already compiled.
   if (Value *compiled = findCompiledEntity(functionNode))
@@ -406,6 +430,9 @@ Function *ESTreeIRGen::genGeneratorFunction(
                       outerFn,
                       functionNode,
                       originalName,
+                      capturedThis = curFunction()->capturedThis,
+                      capturedNewTarget = curFunction()->capturedNewTarget,
+                      capturedArguments = curFunction()->capturedArguments,
                       parentScope]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
 
@@ -423,14 +450,43 @@ Function *ESTreeIRGen::genGeneratorFunction(
         DoEmitDeclarations::No,
         parentScope);
 
+    bool isAsyncArrow =
+        llvh::isa<ESTree::ArrowFunctionExpressionNode>(functionNode);
+    if (isAsyncArrow) {
+      assert(
+          ESTree::isAsync(functionNode) &&
+          "arrow function nodes should only be given to genGeneratorFunction when they are async arrows.");
+    }
+
     // Build the inner function. This must be done in the parentScope since
     // generator functions don't create a scope.
-    auto *innerFn = genBasicFunction(
-        genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
-        functionNode,
-        parentScope,
-        /* superClassNode */ nullptr,
-        Function::DefinitionKind::GeneratorInner);
+    Identifier innerName =
+        genAnonymousLabelName(originalName.isValid() ? originalName.str() : "");
+    NormalFunction *innerFn;
+    if (isAsyncArrow) {
+      // If we are compliing this function as part of an async arrow function,
+      // then we want to forward the captured state of the parent.
+      curFunction()->capturedThis = capturedThis;
+      curFunction()->capturedNewTarget = capturedNewTarget;
+      curFunction()->capturedArguments = capturedArguments;
+      // Create the inner function but make sure it captures the
+      // forwarded state we just set.
+      innerFn = genCapturingFunction(
+          innerName,
+          functionNode,
+          parentScope,
+          capturedThis,
+          capturedNewTarget,
+          capturedArguments,
+          Function::DefinitionKind::GeneratorInnerArrow);
+    } else {
+      innerFn = genBasicFunction(
+          innerName,
+          functionNode,
+          parentScope,
+          /* superClassNode */ nullptr,
+          Function::DefinitionKind::GeneratorInner);
+    }
 
     // Generator functions do not create their own scope, so use the parent's
     // scope.
@@ -459,7 +515,10 @@ Function *ESTreeIRGen::genGeneratorFunction(
 Function *ESTreeIRGen::genAsyncFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
-    VariableScope *parentScope) {
+    VariableScope *parentScope,
+    Variable *capturedThis,
+    Value *capturedNewTarget,
+    Variable *capturedArguments) {
   assert(functionNode && "Function AST cannot be null");
 
   if (auto *compiled = findCompiledEntity(functionNode, ExtraKey::AsyncOuter))
@@ -479,10 +538,24 @@ Function *ESTreeIRGen::genAsyncFunction(
       functionNode->getSourceRange(),
       /* insertBefore */ nullptr);
 
+  bool isAsyncArrow =
+      llvh::isa<ESTree::ArrowFunctionExpressionNode>(functionNode);
   auto *body = ESTree::getBlockStatement(functionNode);
   if (body->isLazyFunctionBody) {
-    setupLazyFunction(
-        asyncFn, functionNode, body, parentScope, ExtraKey::AsyncOuter);
+    if (isAsyncArrow) {
+      setupLazyFunction(
+          asyncFn,
+          functionNode,
+          body,
+          parentScope,
+          ExtraKey::AsyncOuter,
+          capturedThis,
+          capturedNewTarget,
+          capturedArguments);
+    } else {
+      setupLazyFunction(
+          asyncFn, functionNode, body, parentScope, ExtraKey::AsyncOuter);
+    }
     return asyncFn;
   }
 
@@ -490,8 +563,23 @@ Function *ESTreeIRGen::genAsyncFunction(
                       asyncFn,
                       functionNode,
                       originalName,
-                      parentScope]() {
+                      parentScope,
+                      capturedThis,
+                      capturedNewTarget,
+                      capturedArguments,
+                      isAsyncArrow]() {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
+
+    InitES5CaptureState shouldCapture = InitES5CaptureState::Yes;
+    if (isAsyncArrow) {
+      // Propagate captured "this", "new.target" and "arguments" from parents.
+      curFunction()->capturedThis = capturedThis;
+      curFunction()->capturedNewTarget = capturedNewTarget;
+      curFunction()->capturedArguments = capturedArguments;
+      // Since we just propagated the captured state, we do not want to try to
+      // capture the current state of the function.
+      shouldCapture = InitES5CaptureState::No;
+    }
 
     // The outer async function need not emit code for parameters.
     // It would simply delegate `arguments` object down to inner generator.
@@ -499,7 +587,7 @@ Function *ESTreeIRGen::genAsyncFunction(
     emitFunctionPrologue(
         functionNode,
         Builder.createBasicBlock(asyncFn),
-        InitES5CaptureState::Yes,
+        shouldCapture,
         DoEmitDeclarations::No,
         parentScope);
 
@@ -548,6 +636,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   curFunction()->capturedThis = th;
   emitStore(curFunction()->jsParams[0], th, true);
 
+  Value *newTarget = genNewTarget();
   // "new.target".
   Variable *capturedNewTarget = Builder.createVariable(
       scope,
@@ -555,7 +644,7 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
       curFunction()->function->getNewTargetParam()->getType(),
       /* hidden */ true);
   curFunction()->capturedNewTarget = capturedNewTarget;
-  emitStore(genNewTarget(), curFunction()->capturedNewTarget, true);
+  emitStore(newTarget, curFunction()->capturedNewTarget, true);
 
   // "arguments".
   if (curFunction()->getSemInfo()->containsArrowFunctionsUsingArguments) {

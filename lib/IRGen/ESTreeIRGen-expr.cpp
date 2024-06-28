@@ -2390,6 +2390,7 @@ Value *ESTreeIRGen::genNewTarget() {
       value = Builder.createGetNewTargetInst(
           curFunction()->function->getNewTargetParam());
       break;
+    case Function::DefinitionKind::GeneratorInnerArrow:
     case Function::DefinitionKind::ES6Arrow:
       value = curFunction()->capturedNewTarget;
       break;
@@ -2571,8 +2572,11 @@ Value *ESTreeIRGen::genLogicalExpression(
 }
 
 Value *ESTreeIRGen::genThisExpression() {
-  if (curFunction()->function->getDefinitionKind() ==
-      Function::DefinitionKind::ES6Arrow) {
+  // Generators may be used as arrows in async arrow functions, in which case
+  // they should load from the captured this.
+  auto funcDefKind = curFunction()->function->getDefinitionKind();
+  if ((funcDefKind == Function::DefinitionKind::ES6Arrow) ||
+      (funcDefKind == Function::DefinitionKind::GeneratorInnerArrow)) {
     assert(
         curFunction()->capturedThis &&
         "arrow function must have a captured this");

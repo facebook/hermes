@@ -270,20 +270,36 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
 
   Function *compiledFunc;
   if (auto *arrow = llvh::dyn_cast<ESTree::ArrowFunctionExpressionNode>(Root)) {
-    compiledFunc = genArrowFunction(
-        lazyFunc->getOriginalOrInferredName(),
-        arrow,
-        parentVarScope,
-        lazyDataInst->getCapturedThis(),
-        lazyDataInst->getCapturedNewTarget(),
-        lazyDataInst->getCapturedArguments());
+    if (arrow->_async) {
+      compiledFunc = genAsyncFunction(
+          lazyFunc->getOriginalOrInferredName(),
+          arrow,
+          parentVarScope,
+          lazyDataInst->getCapturedThis(),
+          lazyDataInst->getCapturedNewTarget(),
+          lazyDataInst->getCapturedArguments());
+    } else {
+      compiledFunc = genCapturingFunction(
+          lazyFunc->getOriginalOrInferredName(),
+          arrow,
+          parentVarScope,
+          lazyDataInst->getCapturedThis(),
+          lazyDataInst->getCapturedNewTarget(),
+          lazyDataInst->getCapturedArguments(),
+          Function::DefinitionKind::ES6Arrow);
+    }
   } else {
     // Generators have had their lazy scope set up without setting one up
     // for the inner functions. This means that we will never directly generate
     // a GeneratorInnerFunction here.
     compiledFunc = ESTree::isAsync(node)
         ? genAsyncFunction(
-              lazyFunc->getOriginalOrInferredName(), node, parentVarScope)
+              lazyFunc->getOriginalOrInferredName(),
+              node,
+              parentVarScope,
+              curFunction()->capturedThis,
+              curFunction()->capturedNewTarget,
+              curFunction()->capturedArguments)
         : ESTree::isGenerator(node)
         ? genGeneratorFunction(
               lazyFunc->getOriginalOrInferredName(), node, parentVarScope)

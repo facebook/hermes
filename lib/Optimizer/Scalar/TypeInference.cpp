@@ -979,7 +979,7 @@ class TypeInferenceImpl {
 
     // Inner generator functions may be called with `.return()` with any value
     // of any type.
-    if (F->getDefinitionKind() == Function::DefinitionKind::GeneratorInner) {
+    if (F->isInnerGenerator()) {
       F->setReturnType(Type::createAnyType());
       checkAndSetPrePassType(F);
       return F->getReturnType() != originalTy;

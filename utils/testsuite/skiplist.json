@@ -30,9 +30,10 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/async-arrow-function/"
+        "test262/test/language/expressions/async-arrow-function/rest-params-trailing-comma-early-error.js",
+        "test262/test/language/expressions/async-arrow-function/escaped-async.js"
       ],
-      "comment": "Lazy arrow functions are not supported for now."
+      "comment": "Corner cases in async arrow functions (T193923741)"
     },
     {
       "paths": [
@@ -363,7 +364,6 @@
     "test262/test/language/expressions/delete/11.4.1-5-a-5gs.js",
     "test262/test/language/literals/string/7.8.4-1gs.js",
     "test262/test/language/statements/try/early-catch-var.js",
-    "test262/test/built-ins/Object/seal/seal-asyncarrowfunction.js",
     "test262/test/built-ins/Object/seal/seal-asyncgeneratorfunction.js",
     "test262/test/language/comments/hashbang/function-constructor.js",
     "test262/test/language/expressions/optional-chaining/member-expression.js",
@@ -1172,10 +1172,8 @@
     "mjsunit/global-infinity-strict.js",
     "mjsunit/global-nan-strict.js",
     "mjsunit/global-undefined-strict.js",
-    "mjsunit/harmony/async-arrow-lexical-arguments.js",
     "mjsunit/harmony/async-arrow-lexical-new.target.js",
     "mjsunit/harmony/async-arrow-lexical-super.js",
-    "mjsunit/harmony/async-arrow-lexical-this.js",
     "mjsunit/harmony/async-await-no-constructor.js",
     "mjsunit/harmony/async-await-resolve-new.js",
     "mjsunit/harmony/async-await-species.js",

@@ -165,6 +165,7 @@ static Type functionNewTargetType(Function::DefinitionKind defKind) {
     case Function::DefinitionKind::ES6Constructor:
       return Type::createObject();
     case Function::DefinitionKind::ES6Arrow:
+    case Function::DefinitionKind::GeneratorInnerArrow:
       // Arrow functions never access their own new.target.
       return Type::createNoType();
     case Function::DefinitionKind::GeneratorInner:
@@ -235,6 +236,7 @@ std::string Function::getDefinitionKindStr(bool isDescriptive) const {
     case Function::DefinitionKind::ES6Method:
       return "method";
     case Function::DefinitionKind::GeneratorInner:
+    case Function::DefinitionKind::GeneratorInnerArrow:
       return "generator inner";
   }
   assert(false && "Invalid DefinitionKind");

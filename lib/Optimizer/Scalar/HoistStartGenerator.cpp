@@ -18,7 +18,7 @@ bool HoistStartGenerator::runOnFunction(Function *F) {
   if (F->getParent()->areGeneratorsLowered()) {
     return false;
   }
-  if (F->getDefinitionKind() != Function::DefinitionKind::GeneratorInner) {
+  if (!F->isInnerGenerator()) {
     return false;
   }
 

@@ -950,7 +950,8 @@ class ESTreeIRGen {
       ESTree::ArrowFunctionExpressionNode *AF,
       Identifier nameHint);
 
-  /// Generate IR for an arrow function's body, which may be lazy.
+  /// Generate IR for a function which inherits the current captured state
+  /// (this, arguments etc.), which may be lazy.
   //// \param originalName is the original non-unique name specified by the user
   ///   or inferred according to the rules of ES6.
   /// \param functionNode is the ESTree arrow function node.
@@ -959,13 +960,14 @@ class ESTreeIRGen {
   /// \param capturedThis the captured value of this (nullable).
   /// \param capturedNewTarget the captured value of new.target.
   /// \param capturedArguments the captured value of arguments (nullable).
-  Function *genArrowFunction(
-      Identifier nameHint,
-      ESTree::ArrowFunctionExpressionNode *AF,
+  NormalFunction *genCapturingFunction(
+      Identifier originalName,
+      ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       Variable *capturedThis,
       Value *capturedNewTarget,
-      Variable *capturedArguments);
+      Variable *capturedArguments,
+      Function::DefinitionKind functionKind);
 
   /// Generate IR for a function (function declaration or expression) that is
   /// not a generator, async, or arrow function.  Constructors are "basic",
@@ -1014,11 +1016,17 @@ class ESTreeIRGen {
   ///   or inferred according to the rules of ES6.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
+  /// \param capturedThis the captured value of this (nullable).
+  /// \param capturedNewTarget the captured value of new.target.
+  /// \param capturedArguments the captured value of arguments (nullable).
   /// \return the async Function.
   Function *genAsyncFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
-      VariableScope *parentScope);
+      VariableScope *parentScope,
+      Variable *capturedThis,
+      Value *capturedNewTarget,
+      Variable *capturedArgument);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.

@@ -1755,6 +1755,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     // This corresponds to the synthetic function we create in IRGen, which is
     // the inner generator function passed as the argument to CreateGenerator.
     GeneratorInner,
+    // This is a GeneratorInner function which is created as part of an async
+    // arrow.
+    GeneratorInnerArrow,
   };
 
   /// Enum describing restrictions on how this function may be invoked.
@@ -2072,6 +2075,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   void viewGraph();
+
+  /// \return true if this is a GeneratorInner or GeneratorInnerArrow function.
+  bool isInnerGenerator() {
+    auto defKind = getDefinitionKind();
+    return defKind == DefinitionKind::GeneratorInner ||
+        defKind == DefinitionKind::GeneratorInnerArrow;
+  }
 
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), Function);
