@@ -291,8 +291,7 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
               lazyFunc->getOriginalOrInferredName(),
               node,
               parentVarScope,
-              nullptr,
-              false,
+              /* superClassNode */ nullptr,
               lazyFunc->getDefinitionKind());
   }
 

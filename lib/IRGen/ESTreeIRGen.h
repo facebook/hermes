@@ -979,8 +979,6 @@ class ESTreeIRGen {
   ///   if there isn't one.
   /// \param superClassNode is the extends clause of the current class, if
   ///   available. Used for super calls.
-  /// \param isGeneratorInnerFunction whether this is a GeneratorInnerFunction.
-  /// \returns a new Function.
   /// \param functionKind is the proper kind for this function.
   /// \param ctorClass is the class containing functionNode, if functionNode
   ///  is for a constructor.
@@ -990,7 +988,6 @@ class ESTreeIRGen {
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       ESTree::Node *superClassNode = nullptr,
-      bool isGeneratorInnerFunction = false,
       Function::DefinitionKind functionKind =
           Function::DefinitionKind::ES5Function);
 

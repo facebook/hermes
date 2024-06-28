@@ -112,14 +112,10 @@ Value *ESTreeIRGen::genFunctionExpression(
   auto *parentScope = curFunction()->curScope->getVariableScope();
   Function *newFunc = FE->_async
       ? genAsyncFunction(originalNameIden, FE, parentScope)
-      : FE->_generator ? genGeneratorFunction(originalNameIden, FE, parentScope)
-                       : genBasicFunction(
-                             originalNameIden,
-                             FE,
-                             parentScope,
-                             superClassNode,
-                             /*isGeneratorInnerFunction*/ false,
-                             functionKind);
+      : FE->_generator
+      ? genGeneratorFunction(originalNameIden, FE, parentScope)
+      : genBasicFunction(
+            originalNameIden, FE, parentScope, superClassNode, functionKind);
 
   Value *closure =
       Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
@@ -230,7 +226,6 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     ESTree::Node *superClassNode,
-    bool isGeneratorInnerFunction,
     Function::DefinitionKind functionKind) {
   assert(functionNode && "Function AST cannot be null");
 
@@ -241,6 +236,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
   auto *body = ESTree::getBlockStatement(functionNode);
   assert(body && "body of ES5 function cannot be null");
 
+  const bool isGeneratorInnerFunction =
+      functionKind == Function::DefinitionKind::GeneratorInner;
   NormalFunction *newFunction = isGeneratorInnerFunction
       ? Builder.createFunction(
             originalName,
@@ -432,8 +429,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
         parentScope,
-        /* classNode */ nullptr,
-        true);
+        /* superClassNode */ nullptr,
+        Function::DefinitionKind::GeneratorInner);
 
     // Generator functions do not create their own scope, so use the parent's
     // scope.
