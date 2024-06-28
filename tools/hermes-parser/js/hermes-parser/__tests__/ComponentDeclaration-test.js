@@ -504,6 +504,21 @@ switch (thing) {
             callSomething(Foo);
         }"
       `);
+      expect(await printForSnapshotBabel(code, {reactRuntimeTarget: '19'}))
+        .toMatchInlineSnapshot(`
+        "switch (thing) {
+          case 1:
+            function Foo({
+              foo,
+              ref
+            }: $ReadOnly<{
+              foo: string,
+              ref: Ref,
+            }>): React.Node {}
+
+            callSomething(Foo);
+        }"
+      `);
     });
   });
 
