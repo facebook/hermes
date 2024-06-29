@@ -3696,11 +3696,17 @@ class LIRGetThisNSInst : public Instruction {
   void operator=(const LIRGetThisNSInst &) = delete;
 
  public:
-  explicit LIRGetThisNSInst() : Instruction(ValueKind::LIRGetThisNSInstKind) {}
+  explicit LIRGetThisNSInst() : Instruction(ValueKind::LIRGetThisNSInstKind) {
+    setType(*getInherentTypeImpl());
+  }
   explicit LIRGetThisNSInst(
       const LIRGetThisNSInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
 
   static bool hasOutput() {
     return true;
