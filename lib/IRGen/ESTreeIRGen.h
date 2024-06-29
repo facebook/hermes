@@ -240,6 +240,9 @@ class SurroundingTry {
  public:
   /// The record of the outer (closest surrounding) try/catch.
   SurroundingTry *const outer;
+  /// The surrounding scope of the try/catch statement. This is used to ensure
+  /// that finally blocks execute in the same scope.
+  CreateScopeInst *const scope;
   /// The ESTree node defining the try/catch. This is usually a
   /// TryStatementNode, but in some cases that require internal try/catch
   /// statements, it can be something different.
@@ -267,6 +270,7 @@ class SurroundingTry {
       GenFinalizerCB genFinalizer = {})
       : functionContext_(functionContext),
         outer(functionContext->surroundingTry),
+        scope(functionContext->curScope),
         node(node),
         catchBlock(catchBlock),
         tryEndLoc(tryEndLoc),
