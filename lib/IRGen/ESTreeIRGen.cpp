@@ -1049,7 +1049,7 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
       // We don't need to perform a runtime check for TDZ when in the
       // variable's function, since we know whether it has been initialized.
       // TODO(T182345760): Move this TDZ check into the resolver.
-      if (var->getParent() == curFunction()->curScope->getVariableScope()) {
+      if (llvh::isa<CreateScopeInst>(RSI)) {
         // If not initialized, throw.
         if (curFunction()->initializedTDZVars.count(var) == 0) {
           // Report an error or warning using the builder's location.
@@ -1107,7 +1107,7 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
     // TODO(T182345760): Move the TDZ tracking and checking into the resolver.
     if (declInit) {
       assert(
-          var->getParent() == curFunction()->curScope->getVariableScope() &&
+          llvh::isa<CreateScopeInst>(RSI) &&
           "variable must be initialized in its own function");
 
       // If this is a TDZ variable, record that it has been initialized.
@@ -1121,7 +1121,7 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
       if (var->getObeysTDZ()) {
         // We don't need to perform a runtime check for TDZ when in the
         // variable's function, since we know whether it has been initialized.
-        if (var->getParent() == curFunction()->curScope->getVariableScope()) {
+        if (llvh::isa<CreateScopeInst>(RSI)) {
           if (curFunction()->initializedTDZVars.count(var) == 0) {
             // Report an error or warning using the builder's location.
             assert(
