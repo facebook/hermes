@@ -685,7 +685,18 @@ print(a.indexOf('a', 4));
 print(a.indexOf('a'));
 // CHECK-NEXT: -1
 print(1 / [true].indexOf(true, -0));
-//CHECK-NEXT: Infinity
+// CHECK-NEXT: Infinity
+var a = [1, +0.0, -0.0, NaN, Infinity, 2 ** 32];
+print(a.indexOf(+0.0));
+// CHECK-NEXT: 1
+print(a.indexOf(-0.0))
+// CHECK-NEXT: 1
+print(a.indexOf(NaN));
+// CHECK-NEXT: -1
+print(a.indexOf(Infinity));
+// CHECK-NEXT: 4
+print(a.indexOf(2 ** 32));
+// CHECK-NEXT: 5
 
 print('lastIndexOf');
 // CHECK-LABEL: lastIndexOf
@@ -711,6 +722,17 @@ print(a.lastIndexOf('a', 4));
 // CHECK-NEXT: -1
 print(a.lastIndexOf('a'));
 // CHECK-NEXT: -1
+var a = [1, +0.0, -0.0, NaN, Infinity, 2 ** 32];
+print(a.lastIndexOf(+0.0));
+// CHECK-NEXT: 2
+print(a.lastIndexOf(-0.0))
+// CHECK-NEXT: 2
+print(a.lastIndexOf(NaN));
+// CHECK-NEXT: -1
+print(a.lastIndexOf(Infinity));
+// CHECK-NEXT: 4
+print(a.lastIndexOf(2 ** 32));
+// CHECK-NEXT: 5
 
 print('every');
 // CHECK-LABEL: every
