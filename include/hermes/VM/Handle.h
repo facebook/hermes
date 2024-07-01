@@ -444,6 +444,14 @@ class Handle : public HandleBase {
     return Handle<T>(valueAddr, true);
   }
 
+  /// Create a Handle from aliasing a PinnedValue and assert that the
+  /// value has the correct type.
+  template <typename U>
+  static Handle<T> vmcast(const PinnedValue<U> *pv) {
+    HermesValueCast<T>::assertValid(*pv);
+    return Handle<T>(pv, true);
+  }
+
   /// Create a Handle from aliasing a pinned HermesValue and assert that the
   /// value has the correct type.
   static Handle<T> vmcast_or_null(const PinnedHermesValue *valueAddr) {
@@ -501,6 +509,10 @@ class MutableHandle : public Handle<T> {
       HandleRootOwner &runtime,
       value_type value = HermesValueTraits<T>::defaultValue())
       : Handle<T>(runtime, value) {}
+
+  /// Construct a new Handle by aliasing an existing PinnedValue of the same
+  /// type.
+  /* implicit */ MutableHandle(const PinnedValue<T> &pv) : Handle<T>(pv) {}
 
   /// A move constructor.
   MutableHandle(MutableHandle &&sc) : Handle<T>(std::move(sc)) {}
