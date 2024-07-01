@@ -260,7 +260,9 @@ Runtime::Runtime(
     std::shared_ptr<StorageProvider> provider,
     const RuntimeConfig &runtimeConfig)
     // The initial heap size can't be larger than the max.
-    : enableEval(runtimeConfig.getEnableEval()),
+    : // thrownValue_ is Empty when there is no value currently being thrown.
+      thrownValue_(HermesValue::encodeEmptyValue()),
+      enableEval(runtimeConfig.getEnableEval()),
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
@@ -546,29 +548,14 @@ void Runtime::markRoots(
   }
 
   {
-    MarkRootsPhaseTimer timer(
-        *this, RootAcceptor::Section::RuntimeInstanceVars);
-    acceptor.beginRootSection(RootAcceptor::Section::RuntimeInstanceVars);
+    MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::RuntimeFields);
+    acceptor.beginRootSection(RootAcceptor::Section::RuntimeFields);
     for (auto &clazz : rootClazzes_)
       acceptor.accept(clazz, "rootClass");
-#define RUNTIME_HV_FIELD_PROTOTYPE(name)
-#define RUNTIME_HV_FIELD_INSTANCE(name) acceptor.accept((name), #name);
-#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init) \
-  RUNTIME_HV_FIELD_INSTANCE(name)
-#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name)
+#define RUNTIME_HV_FIELD(name) acceptor.accept((name), #name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
-    acceptor.endRootSection();
-  }
-
-  {
-    MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::RuntimeModules);
-    acceptor.beginRootSection(RootAcceptor::Section::RuntimeModules);
-#define RUNTIME_HV_FIELD_PROTOTYPE(name)
-#define RUNTIME_HV_FIELD_INSTANCE(name)
-#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init)
-#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name) acceptor.accept(name);
-#include "hermes/VM/RuntimeHermesValueFields.def"
-#undef RUNTIME_HV_FIELD_RUNTIMEMODULE
+    acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
+    acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
     for (auto &rm : runtimeModuleList_)
       rm.markRoots(acceptor, markLongLived);
     acceptor.endRootSection();
@@ -615,26 +602,6 @@ void Runtime::markRoots(
     acceptor.beginRootSection(RootAcceptor::Section::Jobs);
     for (Callable *&f : jobQueue_)
       acceptor.acceptPtr(f);
-    acceptor.endRootSection();
-  }
-
-#ifdef MARK
-#error "Shouldn't have defined mark already"
-#endif
-#define MARK(field) acceptor.accept((field), #field)
-  {
-    MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Prototypes);
-    acceptor.beginRootSection(RootAcceptor::Section::Prototypes);
-    // Prototypes.
-#define RUNTIME_HV_FIELD_PROTOTYPE(name) MARK(name);
-#define RUNTIME_HV_FIELD_INSTANCE(name)
-#define RUNTIME_HV_FIELD_INSTANCE_INIT(name, init)
-#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name)
-#include "hermes/VM/RuntimeHermesValueFields.def"
-#undef RUNTIME_HV_FIELD_PROTOTYPE
-    acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
-    acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
-#undef MARK
     acceptor.endRootSection();
   }
 

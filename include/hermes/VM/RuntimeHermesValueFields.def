@@ -5,116 +5,99 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef RUNTIME_HV_FIELD_PROTOTYPE
-#error "RUNTIME_HV_FIELD_PROTOTYPE must be defined"
+#ifndef RUNTIME_HV_FIELD
+#error "RUNTIME_HV_FIELD must be defined"
 #endif
 
-#ifndef RUNTIME_HV_FIELD_INSTANCE
-#error "RUNTIME_HV_FIELD_INSTANCE must be defined"
-#endif
-
-#ifndef RUNTIME_HV_FIELD_INSTANCE_INIT
-#error "RUNTIME_HV_FIELD_INSTANCE_INIT must be defined"
-#endif
-
-#ifndef RUNTIME_HV_FIELD_RUNTIMEMODULE
-#error "RUNTIME_HV_FIELD_RUNTIMEMODULE must be defined"
-#endif
-
-RUNTIME_HV_FIELD_PROTOTYPE(objectPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(errorConstructor)
+RUNTIME_HV_FIELD(objectPrototype)
+RUNTIME_HV_FIELD(errorConstructor)
 
 /// JSError.prototype, and prototype of all native error types.
-#define ALL_ERROR_TYPE(name) RUNTIME_HV_FIELD_PROTOTYPE(name##Prototype)
+#define ALL_ERROR_TYPE(name) RUNTIME_HV_FIELD(name##Prototype)
 #include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
-RUNTIME_HV_FIELD_PROTOTYPE(functionPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(functionConstructor)
+RUNTIME_HV_FIELD(functionPrototype)
+RUNTIME_HV_FIELD(functionConstructor)
 
-RUNTIME_HV_FIELD_PROTOTYPE(stringPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(bigintPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(numberPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(booleanPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(symbolPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(datePrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(fastArrayPrototype)
+RUNTIME_HV_FIELD(stringPrototype)
+RUNTIME_HV_FIELD(bigintPrototype)
+RUNTIME_HV_FIELD(numberPrototype)
+RUNTIME_HV_FIELD(booleanPrototype)
+RUNTIME_HV_FIELD(symbolPrototype)
+RUNTIME_HV_FIELD(datePrototype)
+RUNTIME_HV_FIELD(arrayPrototype)
+RUNTIME_HV_FIELD(fastArrayPrototype)
 
-RUNTIME_HV_FIELD_PROTOTYPE(arrayBufferPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(dataViewPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(typedArrayBasePrototype)
+RUNTIME_HV_FIELD(arrayBufferPrototype)
+RUNTIME_HV_FIELD(dataViewPrototype)
+RUNTIME_HV_FIELD(typedArrayBasePrototype)
 
 /// %TypedArray%.prototype and constructor for each typed array.
 #define TYPED_ARRAY(name, type)                    \
-  RUNTIME_HV_FIELD_PROTOTYPE(name##ArrayPrototype) \
-  RUNTIME_HV_FIELD_PROTOTYPE(name##ArrayConstructor)
+  RUNTIME_HV_FIELD(name##ArrayPrototype) \
+  RUNTIME_HV_FIELD(name##ArrayConstructor)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
-RUNTIME_HV_FIELD_PROTOTYPE(setPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(setPrototypeAdd)
-RUNTIME_HV_FIELD_PROTOTYPE(setPrototypeValues)
-RUNTIME_HV_FIELD_PROTOTYPE(setIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(mapPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(mapPrototypeSet)
-RUNTIME_HV_FIELD_PROTOTYPE(mapPrototypeEntries)
-RUNTIME_HV_FIELD_PROTOTYPE(mapIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(weakMapPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(weakSetPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(weakRefPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(typedArrayBaseConstructor)
+RUNTIME_HV_FIELD(setPrototype)
+RUNTIME_HV_FIELD(setPrototypeAdd)
+RUNTIME_HV_FIELD(setPrototypeValues)
+RUNTIME_HV_FIELD(setIteratorPrototype)
+RUNTIME_HV_FIELD(mapPrototype)
+RUNTIME_HV_FIELD(mapPrototypeSet)
+RUNTIME_HV_FIELD(mapPrototypeEntries)
+RUNTIME_HV_FIELD(mapIteratorPrototype)
+RUNTIME_HV_FIELD(weakMapPrototype)
+RUNTIME_HV_FIELD(weakSetPrototype)
+RUNTIME_HV_FIELD(weakRefPrototype)
+RUNTIME_HV_FIELD(regExpPrototype)
+RUNTIME_HV_FIELD(typedArrayBaseConstructor)
 
-RUNTIME_HV_FIELD_PROTOTYPE(regExpLastInput)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpLastRegExp)
+RUNTIME_HV_FIELD(regExpLastInput)
+RUNTIME_HV_FIELD(regExpLastRegExp)
 
-RUNTIME_HV_FIELD_PROTOTYPE(throwTypeErrorAccessor)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayClass)
-RUNTIME_HV_FIELD_PROTOTYPE(fastArrayClass)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpMatchClass)
+RUNTIME_HV_FIELD(throwTypeErrorAccessor)
+RUNTIME_HV_FIELD(arrayClass)
+RUNTIME_HV_FIELD(fastArrayClass)
+RUNTIME_HV_FIELD(regExpMatchClass)
 
-RUNTIME_HV_FIELD_PROTOTYPE(iteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayPrototypeValues)
-RUNTIME_HV_FIELD_PROTOTYPE(asyncFunctionPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(stringIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpStringIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(generatorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(generatorFunctionPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(parseIntFunction)
-RUNTIME_HV_FIELD_PROTOTYPE(parseFloatFunction)
-RUNTIME_HV_FIELD_PROTOTYPE(requireFunction)
-RUNTIME_HV_FIELD_PROTOTYPE(jsErrorStackAccessor)
-RUNTIME_HV_FIELD_PROTOTYPE(callSitePrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(textEncoderPrototype)
+RUNTIME_HV_FIELD(iteratorPrototype)
+RUNTIME_HV_FIELD(arrayIteratorPrototype)
+RUNTIME_HV_FIELD(arrayPrototypeValues)
+RUNTIME_HV_FIELD(asyncFunctionPrototype)
+RUNTIME_HV_FIELD(stringIteratorPrototype)
+RUNTIME_HV_FIELD(regExpStringIteratorPrototype)
+RUNTIME_HV_FIELD(generatorPrototype)
+RUNTIME_HV_FIELD(generatorFunctionPrototype)
+RUNTIME_HV_FIELD(parseIntFunction)
+RUNTIME_HV_FIELD(parseFloatFunction)
+RUNTIME_HV_FIELD(requireFunction)
+RUNTIME_HV_FIELD(jsErrorStackAccessor)
+RUNTIME_HV_FIELD(callSitePrototype)
+RUNTIME_HV_FIELD(textEncoderPrototype)
 
 // TODO: for Serialization/Deserialization  after global object initialization
 // we record specialCodeBlockDomain_ and create runtimemodule later need to
 // revisit this in stage 2
-RUNTIME_HV_FIELD_RUNTIMEMODULE(specialCodeBlockDomain_)
+RUNTIME_HV_FIELD(specialCodeBlockDomain_)
 
-RUNTIME_HV_FIELD_INSTANCE(global_)
-// thrownValue_ is Empty when there is no value currently being thrown.
-RUNTIME_HV_FIELD_INSTANCE_INIT(thrownValue_, HermesValue::encodeEmptyValue())
-RUNTIME_HV_FIELD_INSTANCE(keptObjects_)
+RUNTIME_HV_FIELD(global_)
+RUNTIME_HV_FIELD(thrownValue_)
+RUNTIME_HV_FIELD(keptObjects_)
 #ifdef HERMES_ENABLE_DEBUGGER
-RUNTIME_HV_FIELD_INSTANCE(debuggerInternalObject_)
+RUNTIME_HV_FIELD(debuggerInternalObject_)
 #endif // HERMES_ENABLE_DEBUGGER
 
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: move these out of Runtime
-RUNTIME_HV_FIELD_INSTANCE(intlCollator)
-RUNTIME_HV_FIELD_PROTOTYPE(intlCollatorPrototype)
-RUNTIME_HV_FIELD_INSTANCE(intlDateTimeFormat)
-RUNTIME_HV_FIELD_PROTOTYPE(intlDateTimeFormatPrototype)
-RUNTIME_HV_FIELD_INSTANCE(intlNumberFormat)
-RUNTIME_HV_FIELD_PROTOTYPE(intlNumberFormatPrototype)
+RUNTIME_HV_FIELD(intlCollator)
+RUNTIME_HV_FIELD(intlCollatorPrototype)
+RUNTIME_HV_FIELD(intlDateTimeFormat)
+RUNTIME_HV_FIELD(intlDateTimeFormatPrototype)
+RUNTIME_HV_FIELD(intlNumberFormat)
+RUNTIME_HV_FIELD(intlNumberFormatPrototype)
 #endif
 
-RUNTIME_HV_FIELD_INSTANCE(promiseRejectionTrackingHook_)
+RUNTIME_HV_FIELD(promiseRejectionTrackingHook_)
 
-#undef RUNTIME_HV_FIELD_PROTOTYPE
-#undef RUNTIME_HV_FIELD_INSTANCE
-#undef RUNTIME_HV_FIELD_INSTANCE_INIT
-#undef RUNTIME_HV_FIELD_RUNTIMEMODULE
 #undef RUNTIME_HV_FIELD
