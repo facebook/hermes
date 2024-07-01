@@ -182,6 +182,9 @@ class PinnedValue : private PinnedHermesValue {
   PinnedValue(const PinnedValue &) = delete;
   PinnedValue(PinnedValue &&) = delete;
 
+  constexpr PinnedValue(value_type val)
+      : PinnedHermesValue(traits_type::encode(val)) {}
+
   PinnedValue &operator=(PinnedValue &&) = default;
   PinnedValue &operator=(const PinnedValue &other) = default;
 
