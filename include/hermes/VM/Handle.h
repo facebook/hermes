@@ -175,7 +175,7 @@ class PinnedValue : private PinnedHermesValue {
   using arrow_type = typename traits_type::arrow_type;
 
  public:
-  constexpr PinnedValue() = default;
+  constexpr PinnedValue() : PinnedValue(traits_type::defaultValue()) {}
 
   /// Copy and move constructors are disabled, to avoid accidentally passing
   /// PinnedValue by value, since its location must always be known to the GC.
