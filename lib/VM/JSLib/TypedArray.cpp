@@ -1749,11 +1749,13 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
 inline static bool isValidIntegerIndex(
     Runtime &runtime,
     Handle<JSTypedArrayBase> O,
-    const HermesValue &index) {
+    Handle<HermesValue> indexHandle) {
   // 1. If IsDetachedBuffer(O.[[ViewedArrayBuffer]]) is true, return false.
   if (!O->attached(runtime)) {
     return false;
   }
+
+  auto index = indexHandle.getHermesValue();
 
   // 2. If IsIntegralNumber(index) is false, return false.
   if (LLVM_UNLIKELY(!index.isNumber())) {
@@ -1822,9 +1824,10 @@ typedArrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
 
   HermesValue actualIndexValue =
       HermesValue::encodeTrustedNumberValue(actualIndex);
+  Handle<> actualIndexValueHandle = runtime.makeHandle(actualIndexValue);
   // 9. If IsValidIntegerIndex(O, 𝔽(actualIndex)) is false, throw a RangeError
   // exception.
-  if (LLVM_UNLIKELY(!isValidIntegerIndex(runtime, self, actualIndexValue))) {
+  if (LLVM_UNLIKELY(!isValidIntegerIndex(runtime, self, actualIndexValueHandle))) {
     return runtime.raiseRangeError("index invalid or out of range");
   }
 
