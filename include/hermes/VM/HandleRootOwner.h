@@ -24,6 +24,7 @@ template <typename T>
 class Handle;
 template <typename T>
 class MutableHandle;
+struct RootAcceptor;
 
 #ifndef HERMESVM_DEBUG_MAX_GCSCOPE_HANDLES
 /// In debug mode we assert if more than this number of handles are allocated in

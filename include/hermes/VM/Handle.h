@@ -9,7 +9,6 @@
 #define HERMES_VM_HANDLE_H
 
 #include "hermes/VM/Casting.h"
-#include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValueTraits.h"

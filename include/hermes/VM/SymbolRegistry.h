@@ -19,7 +19,7 @@
 
 namespace hermes {
 namespace vm {
-struct SlotAcceptor;
+struct RootAcceptor;
 class StringPrimitive;
 class Runtime;
 
