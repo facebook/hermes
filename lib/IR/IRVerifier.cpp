@@ -1183,6 +1183,7 @@ bool Verifier::visitPhiInst(const hermes::PhiInst &Inst) {
       Inst,
       entries.size() == pred_count_unique(Inst.getParent()),
       "number of predecessors does not match phi inputs");
+  AssertIWithMsg(Inst, !entries.empty(), "Phi has no entries");
   return true;
 }
 
