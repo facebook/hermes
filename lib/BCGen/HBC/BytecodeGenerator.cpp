@@ -505,6 +505,8 @@ bool BytecodeModuleGenerator::generate(
   valid_ = false;
 
   lowerModuleIR(M_, options_);
+  if (M_->getContext().getSourceErrorManager().getErrorCount() != 0)
+    return false;
 
   if (options_.format == DumpLIR)
     M_->dump();
