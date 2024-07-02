@@ -39,11 +39,11 @@ function foo(x) {
 // CHECK-NEXT:  %4 = AllocStackInst (:number) $nextIndex: any
 // CHECK-NEXT:       StoreStackInst 0: number, %4: number
 // CHECK-NEXT:  %6 = LoadStackInst (:number) %4: number
-// CHECK-NEXT:  %7 = BinaryAddInst (:any) %6: number, 1: number
-// CHECK-NEXT:       StoreStackInst %7: any, %4: number
+// CHECK-NEXT:  %7 = FAddInst (:number) %6: number, 1: number
+// CHECK-NEXT:       StoreStackInst %7: number, %4: number
 // CHECK-NEXT:  %9 = LoadStackInst (:number) %4: number
-// CHECK-NEXT:  %10 = BinaryAddInst (:any) %9: number, 1: number
-// CHECK-NEXT:        StoreStackInst %10: any, %4: number
+// CHECK-NEXT:  %10 = FAddInst (:number) %9: number, 1: number
+// CHECK-NEXT:        StoreStackInst %10: number, %4: number
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %13 = AllocArrayInst (:object) 4: number, 1: number, 2: number
 // CHECK-NEXT:  %14 = LoadStackInst (:number) %4: number
@@ -52,13 +52,13 @@ function foo(x) {
 // CHECK-NEXT:  %17 = LoadStackInst (:number) %4: number
 // CHECK-NEXT:        StoreOwnPropertyInst 3: number, %13: object, %17: number, true: boolean
 // CHECK-NEXT:  %19 = LoadStackInst (:number) %4: number
-// CHECK-NEXT:  %20 = BinaryAddInst (:any) %19: number, 1: number
-// CHECK-NEXT:        StoreStackInst %20: any, %4: number
+// CHECK-NEXT:  %20 = FAddInst (:number) %19: number, 1: number
+// CHECK-NEXT:        StoreStackInst %20: number, %4: number
 // CHECK-NEXT:  %22 = LoadStackInst (:number) %4: number
 // CHECK-NEXT:        StoreOwnPropertyInst 4: number, %13: object, %22: number, true: boolean
 // CHECK-NEXT:  %24 = LoadStackInst (:number) %4: number
-// CHECK-NEXT:  %25 = BinaryAddInst (:any) %24: number, 1: number
-// CHECK-NEXT:        StoreStackInst %25: any, %4: number
+// CHECK-NEXT:  %25 = FAddInst (:number) %24: number, 1: number
+// CHECK-NEXT:        StoreStackInst %25: number, %4: number
 // CHECK-NEXT:        ReturnInst %13: object
 // CHECK-NEXT:function_end
 

@@ -368,10 +368,10 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
       // element as well, but the optimizer will eliminate the extra adds
       // because we know the initial value (0) and how incrementing works.
       Builder.createStoreStackInst(
-          Builder.createBinaryOperatorInst(
+          Builder.createFBinaryMathInst(
+              ValueKind::FAddInstKind,
               Builder.createLoadStackInst(nextIndex),
-              Builder.getLiteralNumber(1),
-              ValueKind::BinaryAddInstKind),
+              Builder.getLiteralNumber(1)),
           nextIndex);
     } else {
       count++;
