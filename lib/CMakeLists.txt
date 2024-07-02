@@ -190,7 +190,7 @@ endif()
 # Since we use private dependencies above, we need to enumerate all the headers
 # that should be available to consumers of hermesvm. Note that we only expose
 # the headers which produce visible symbols.
-target_include_directories(hermesvm PUBLIC ${CMAKE_SOURCE_DIR}/Public ${CMAKE_SOURCE_DIR}/API ${HERMES_JSI_DIR})
+target_include_directories(hermesvm PUBLIC ${CMAKE_SOURCE_DIR}/public ${CMAKE_SOURCE_DIR}/API ${HERMES_JSI_DIR})
 
 # Private dependencies also mean that JSI will not get propagated to libraries
 # that depend on hermesvm. If JSI is built as a shared library, ensure it is
