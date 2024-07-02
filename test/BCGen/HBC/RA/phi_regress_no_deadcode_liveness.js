@@ -36,6 +36,7 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:  $Reg1 = AllocStackInst (:any) $?anon_1_sourceOrNext: any
 // CHKRA-NEXT:  $Reg4 = HBCReifyArgumentsLooseInst $Reg3
 // CHKRA-NEXT:  $Reg3 = LoadStackInst (:undefined|object) $Reg3
+// CHKRA-NEXT:  $Reg3 = UnionNarrowTrustedInst (:object) $Reg3
 // CHKRA-NEXT:  $Reg3 = StoreStackInst $Reg3, $Reg1
 // CHKRA-NEXT:  $Reg3 = IteratorBeginInst (:any) $Reg1
 // CHKRA-NEXT:  $Reg3 = StoreStackInst $Reg3, $Reg2

@@ -92,7 +92,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Mov               r9, r5
 // CHECK-NEXT:    Ret               r9
 
-// CHECK:NCFunction<simpleReturn>(1 params, 23 registers):
+// CHECK:NCFunction<simpleReturn>(1 params, 24 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0016, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Mov               r0, r1
@@ -103,12 +103,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    GetBuiltinClosure r6, "HermesBuiltin.spawnAsync"
 // CHECK-NEXT:    ReifyArgumentsLoose r0
 // CHECK-NEXT:    Mov               r7, r0
-// CHECK-NEXT:    LoadConstUndefined r8
+// CHECK-NEXT:    Mov               r8, r7
 // CHECK-NEXT:    LoadConstUndefined r9
-// CHECK-NEXT:    Call4             r10, r6, r9, r5, r2, r7
-// CHECK-NEXT:    Ret               r10
+// CHECK-NEXT:    LoadConstUndefined r10
+// CHECK-NEXT:    Call4             r11, r6, r10, r5, r2, r8
+// CHECK-NEXT:    Ret               r11
 
-// CHECK:NCFunction<simpleAwait>(1 params, 23 registers):
+// CHECK:NCFunction<simpleAwait>(1 params, 24 registers):
 // CHECK-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Mov               r0, r1
@@ -119,12 +120,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    GetBuiltinClosure r6, "HermesBuiltin.spawnAsync"
 // CHECK-NEXT:    ReifyArgumentsLoose r0
 // CHECK-NEXT:    Mov               r7, r0
-// CHECK-NEXT:    LoadConstUndefined r8
+// CHECK-NEXT:    Mov               r8, r7
 // CHECK-NEXT:    LoadConstUndefined r9
-// CHECK-NEXT:    Call4             r10, r6, r9, r5, r2, r7
-// CHECK-NEXT:    Ret               r10
+// CHECK-NEXT:    LoadConstUndefined r10
+// CHECK-NEXT:    Call4             r11, r6, r10, r5, r2, r8
+// CHECK-NEXT:    Ret               r11
 
-// CHECK:NCFunction<simpleAsyncFE>(1 params, 23 registers):
+// CHECK:NCFunction<simpleAsyncFE>(1 params, 24 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Mov               r0, r1
@@ -135,10 +137,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    GetBuiltinClosure r6, "HermesBuiltin.spawnAsync"
 // CHECK-NEXT:    ReifyArgumentsLoose r0
 // CHECK-NEXT:    Mov               r7, r0
-// CHECK-NEXT:    LoadConstUndefined r8
+// CHECK-NEXT:    Mov               r8, r7
 // CHECK-NEXT:    LoadConstUndefined r9
-// CHECK-NEXT:    Call4             r10, r6, r9, r5, r2, r7
-// CHECK-NEXT:    Ret               r10
+// CHECK-NEXT:    LoadConstUndefined r10
+// CHECK-NEXT:    Call4             r11, r6, r10, r5, r2, r8
+// CHECK-NEXT:    Ret               r11
 
 // CHECK:NCFunction<?anon_0_simpleReturn>(1 params, 7 registers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
@@ -471,11 +474,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    bc 41: line 10 col 1
 // CHECK-NEXT:    bc 59: line 19 col 19
 // CHECK-NEXT:  0x0016  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 34: line 10 col 1
+// CHECK-NEXT:    bc 37: line 10 col 1
 // CHECK-NEXT:  0x001d  function idx 2, starts at line 14 col 1
-// CHECK-NEXT:    bc 34: line 14 col 1
+// CHECK-NEXT:    bc 37: line 14 col 1
 // CHECK-NEXT:  0x0024  function idx 3, starts at line 19 col 21
-// CHECK-NEXT:    bc 34: line 19 col 21
+// CHECK-NEXT:    bc 37: line 19 col 21
 // CHECK-NEXT:  0x002b  function idx 8, starts at line 14 col 1
 // CHECK-NEXT:    bc 160: line 15 col 11
 // CHECK-NEXT:    bc 319: line 15 col 11

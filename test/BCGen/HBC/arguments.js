@@ -86,6 +86,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg1 = StoreStackInst $Reg1, $Reg0
 // CHECK-NEXT:  $Reg1 = HBCReifyArgumentsLooseInst $Reg0
 // CHECK-NEXT:  $Reg0 = LoadStackInst (:undefined|object) $Reg0
+// CHECK-NEXT:  $Reg0 = UnionNarrowTrustedInst (:object) $Reg0
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:function_end
 
@@ -96,6 +97,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg1 = StoreStackInst $Reg1, $Reg0
 // CHECK-NEXT:  $Reg1 = HBCReifyArgumentsLooseInst $Reg0
 // CHECK-NEXT:  $Reg0 = LoadStackInst (:undefined|object) $Reg0
+// CHECK-NEXT:  $Reg0 = UnionNarrowTrustedInst (:object) $Reg0
 // CHECK-NEXT:  $Reg0 = BinaryAddInst (:string|number|bigint) $Reg0, $Reg0
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:function_end
@@ -112,12 +114,13 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg0 = MovInst (:object) $Reg1
 // CHECK-NEXT:  $Reg1 = BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  $Reg0 = PhiInst (:undefined|object) $Reg0, %BB1, $Reg0, %BB3
-// CHECK-NEXT:  $Reg0 = MovInst (:undefined|object) $Reg0
+// CHECK-NEXT:  $Reg0 = PhiInst (:object) $Reg0, %BB1, $Reg0, %BB3
+// CHECK-NEXT:  $Reg0 = MovInst (:object) $Reg0
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  $Reg1 = HBCReifyArgumentsLooseInst $Reg0
 // CHECK-NEXT:  $Reg0 = LoadStackInst (:undefined|object) $Reg0
-// CHECK-NEXT:  $Reg0 = MovInst (:undefined|object) $Reg0
+// CHECK-NEXT:  $Reg0 = UnionNarrowTrustedInst (:object) $Reg0
+// CHECK-NEXT:  $Reg0 = MovInst (:object) $Reg0
 // CHECK-NEXT:  $Reg1 = BranchInst %BB2
 // CHECK-NEXT:function_end

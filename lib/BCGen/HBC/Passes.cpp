@@ -380,7 +380,8 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
           builder.createHBCReifyArgumentsStrictInst(lazyReg);
         else
           builder.createHBCReifyArgumentsLooseInst(lazyReg);
-        auto *reifiedValue = builder.createLoadStackInst(lazyReg);
+        auto *reifiedValue = builder.createUnionNarrowTrustedInst(
+            builder.createLoadStackInst(lazyReg), Type::createObject());
         builder.createBranchInst(thisBlock);
 
         phi->updateEntry(i, reifiedValue, newBlock);
@@ -402,7 +403,8 @@ bool LowerArgumentsArray::runOnFunction(Function *F) {
         builder.createHBCReifyArgumentsStrictInst(lazyReg);
       else
         builder.createHBCReifyArgumentsLooseInst(lazyReg);
-      auto *array = builder.createLoadStackInst(lazyReg);
+      auto *array = builder.createUnionNarrowTrustedInst(
+          builder.createLoadStackInst(lazyReg), Type::createObject());
       for (int i = 0, n = user->getNumOperands(); i < n; i++) {
         if (user->getOperand(i) == createArguments) {
           user->setOperand(array, i);

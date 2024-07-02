@@ -97,7 +97,7 @@ function *args() {
 // CHECK-NEXT:    CreateGenerator   r6, r1, Function<loop?inner>
 // CHECK-NEXT:    Ret               r6
 
-// CHECK:NCFunction<args>(1 params, 10 registers):
+// CHECK:NCFunction<args>(1 params, 11 registers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    CreateEnvironment r1, r0, 7
@@ -107,13 +107,14 @@ function *args() {
 // CHECK-NEXT:    Mov               r3, r4
 // CHECK-NEXT:    ReifyArgumentsLoose r3
 // CHECK-NEXT:    Mov               r5, r3
-// CHECK-NEXT:    StoreToEnvironment r1, 1, r5
-// CHECK-NEXT:    LoadConstZero     r6
-// CHECK-NEXT:    StoreNPToEnvironment r1, 6, r6
+// CHECK-NEXT:    Mov               r6, r5
+// CHECK-NEXT:    StoreToEnvironment r1, 1, r6
 // CHECK-NEXT:    LoadConstZero     r7
-// CHECK-NEXT:    StoreNPToEnvironment r1, 4, r7
-// CHECK-NEXT:    CreateGenerator   r8, r1, Function<args?inner>
-// CHECK-NEXT:    Ret               r8
+// CHECK-NEXT:    StoreNPToEnvironment r1, 6, r7
+// CHECK-NEXT:    LoadConstZero     r8
+// CHECK-NEXT:    StoreNPToEnvironment r1, 4, r8
+// CHECK-NEXT:    CreateGenerator   r9, r1, Function<args?inner>
+// CHECK-NEXT:    Ret               r9
 
 // CHECK:Function<loop?inner>(2 params, 27 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
