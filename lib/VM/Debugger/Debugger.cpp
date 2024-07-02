@@ -175,49 +175,19 @@ ExecutionStatus Debugger::runDebugger(
         // This is in fact a temp breakpoint we want to stop on right now.
         assert(curStepMode_ && "no step to finish");
         clearTempBreakpoints();
-        auto locationOpt = getLocationForState(state);
 
         if (*curStepMode_ == StepMode::Into ||
             *curStepMode_ == StepMode::Over) {
           // If we're not stepping out, then we need to finish the step
           // in progress.
           // Otherwise, we just need to stop at the breakpoint site.
-          while (!locationOpt.hasValue() || locationOpt->statement == 0 ||
-                 sameStatementDifferentInstruction(state, preStepState_)) {
-            // Move to the next source location.
-            OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
-
-            if (curCode == OpCode::Ret) {
-              // We're stepping out now.
-              breakpointCaller();
-              pauseOnAllCodeBlocks_ = true;
-              curStepMode_ = StepMode::Out;
-              isDebugging_ = false;
-              return ExecutionStatus::RETURNED;
-            }
-
-            // These instructions won't recursively invoke the interpreter,
-            // and we also can't easily determine where they will jump to,
-            // so use single-step mode.
-            if (shouldSingleStep(curCode)) {
-              ExecutionStatus status = stepInstruction(state);
-              if (status == ExecutionStatus::EXCEPTION) {
-                breakpointExceptionHandler(state);
-                isDebugging_ = false;
-                return status;
-              }
-              locationOpt = getLocationForState(state);
-              continue;
-            }
-
-            // Set a breakpoint at the next instruction and continue.
-            breakAtPossibleNextInstructions(state);
-            if (*curStepMode_ == StepMode::Into) {
-              pauseOnAllCodeBlocks_ = true;
-            }
-            isDebugging_ = false;
-            return ExecutionStatus::RETURNED;
+          auto res = runUntilValidPauseLocation(state);
+          if (res == ExecutionStatus::EXCEPTION || !*res) {
+            // If we hit an exception, or we shouldn't run the debugger loop
+            // (because we're about to return, call, e.g.)
+            return res.getStatus();
           }
+          // Continue to run the debugger loop.
         }
 
         // Done stepping.
@@ -417,6 +387,49 @@ ExecutionStatus Debugger::debuggerLoop(
       }
     }
   }
+}
+
+CallResult<bool> Debugger::runUntilValidPauseLocation(InterpreterState &state) {
+  auto locationOpt = getLocationForState(state);
+
+  while (!locationOpt.hasValue() || locationOpt->statement == 0 ||
+         sameStatementDifferentInstruction(state, preStepState_)) {
+    // Move to the next source location.
+    OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
+
+    if (curCode == OpCode::Ret) {
+      // We're stepping out now.
+      breakpointCaller();
+      pauseOnAllCodeBlocks_ = true;
+      curStepMode_ = StepMode::Out;
+      isDebugging_ = false;
+      return false;
+    }
+
+    // These instructions won't recursively invoke the interpreter,
+    // and we also can't easily determine where they will jump to,
+    // so use single-step mode.
+    if (shouldSingleStep(curCode)) {
+      ExecutionStatus status = stepInstruction(state);
+      if (status == ExecutionStatus::EXCEPTION) {
+        breakpointExceptionHandler(state);
+        isDebugging_ = false;
+        return ExecutionStatus::EXCEPTION;
+      }
+      locationOpt = getLocationForState(state);
+      continue;
+    }
+
+    // Set a breakpoint at the next instruction and continue.
+    breakAtPossibleNextInstructions(state);
+    if (*curStepMode_ == StepMode::Into) {
+      pauseOnAllCodeBlocks_ = true;
+    }
+    isDebugging_ = false;
+    return false;
+  }
+
+  return true;
 }
 
 void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {

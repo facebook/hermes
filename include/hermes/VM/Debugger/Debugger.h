@@ -416,6 +416,13 @@ class Debugger {
       PauseReason pauseReason,
       BreakpointID breakpoint);
 
+  /// Step until we reach an instruction with a valid location that we can pause
+  /// on (and continue stepping).
+  /// Call this to prevent attempting to report invalid locations as the current
+  /// location to the inspector.
+  /// \return true if the debugger loop should be run, false otherwise.
+  CallResult<bool> runUntilValidPauseLocation(InterpreterState &state);
+
   /// Gets a BreakpointLocation from breakpointLocations_ if it exists
   /// for the given codeBlock and offset, else creates one.
   /// Used by other functions which should be called to set breakpoints.
