@@ -15,10 +15,7 @@ import type {Program} from 'hermes-estree';
 
 import {mutateESTreeASTForPrettier} from 'hermes-parser';
 import * as prettier from 'prettier';
-import {
-  addCommentsToNode,
-  getLeadingCommentsForNode,
-} from './comments/comments';
+import {mutateESTreeASTCommentsForPrettier} from './comments/comments';
 import type {VisitorKeysType} from 'hermes-parser';
 
 let cache = 1;
@@ -33,34 +30,19 @@ export async function print(
   // $FlowExpectedError[incompatible-type] This is now safe to access.
   const program: Program = ast;
 
-  // The docblock comment is never attached to any AST nodes, since its technically
-  // attached to the program. However this is specific to our AST and in order for
-  // prettier to correctly print it we need to attach it to the first node in the
-  // program body.
-  if (program.docblock != null && program.body.length > 0) {
-    const firstNode = program.body[0];
-    const docblockComment = program.docblock.comment;
-    const leadingComments = getLeadingCommentsForNode(firstNode);
-    if (!leadingComments.includes(docblockComment)) {
-      addCommentsToNode(firstNode, [docblockComment], 'leading');
-    }
-  }
-
   // Fix up the AST to match what prettier expects.
+  const codeForPrinting = mutateESTreeASTCommentsForPrettier(
+    program,
+    originalCode,
+  );
   mutateESTreeASTForPrettier(program, visitorKeys);
-
-  // we need to delete the comments prop or else prettier will do
-  // its own attachment pass after the mutation and duplicate the
-  // comments on each node, borking the output
-  // $FlowExpectedError[cannot-write]
-  delete program.comments;
 
   switch (getPrettierMajorVersion()) {
     case '3': {
       // Lazy require this module as it only exists in prettier v3.
       const prettierFlowPlugin = require('prettier/plugins/flow');
       return prettier.format(
-        originalCode,
+        codeForPrinting,
         // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
         {
           ...prettierOptions,
@@ -89,7 +71,7 @@ export async function print(
       }
 
       return prettier.format(
-        originalCode,
+        codeForPrinting,
         // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
         {
           ...prettierOptions,

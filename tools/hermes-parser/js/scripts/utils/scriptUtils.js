@@ -178,14 +178,6 @@ export const FLIPPED_ALIAS_KEYS: $ReadOnly<{
   return flippedAliasKeys;
 })();
 
-export const NODES_WITHOUT_TRANSFORM_NODE_TYPES: $ReadOnlySet<string> = new Set(
-  [
-    // a lot of additional properties are set on this, but nobody should ever "create" one so
-    // we purposely don't define a creation function
-    'Program',
-  ],
-);
-
 export const EXCLUDE_PROPERTIES_FROM_NODE: $ReadOnlyMap<
   string,
   $ReadOnlySet<string>,

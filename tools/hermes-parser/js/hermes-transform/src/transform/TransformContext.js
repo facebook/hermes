@@ -30,12 +30,14 @@ import type {RemoveCommentMutation} from './mutations/RemoveComment';
 import type {RemoveNodeMutation} from './mutations/RemoveNode';
 import type {RemoveStatementMutation} from './mutations/RemoveStatement';
 import type {ReplaceNodeMutation} from './mutations/ReplaceNode';
+import type {ModifyNodeInPlaceMutation} from './mutations/ModifyNodeInPlace';
 import type {
   ReplaceStatementWithManyMutation,
   ReplaceStatementWithManyMutationNodes,
 } from './mutations/ReplaceStatementWithMany';
 
 import {asDetachedNode, deepCloneNode, shallowCloneNode} from '../detachedNode';
+import {isNode} from 'hermes-parser';
 import {
   CommentPlacement,
   getCommentsForNode,
@@ -50,6 +52,7 @@ import {createRemoveNodeMutation} from './mutations/RemoveNode';
 import {createRemoveStatementMutation} from './mutations/RemoveStatement';
 import {createReplaceNodeMutation} from './mutations/ReplaceNode';
 import {createReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
+import {createModifyNodeInPlaceMutation} from './mutations/ModifyNodeInPlace';
 
 type Mutation = $ReadOnly<
   | AddCommentsMutation
@@ -59,7 +62,8 @@ type Mutation = $ReadOnly<
   | RemoveNodeMutation
   | RemoveStatementMutation
   | ReplaceNodeMutation
-  | ReplaceStatementWithManyMutation,
+  | ReplaceStatementWithManyMutation
+  | ModifyNodeInPlaceMutation,
 >;
 
 type SingleOrArray<+T> = T | $ReadOnlyArray<T>;
@@ -525,21 +529,19 @@ export function getTransformContext(): TransformContextAdditions {
     }: TransformReplaceAPIs['replaceStatementWithMany']),
   };
   const modifyAPIs: TransformModifyAPIs = {
-    modifyNodeInPlace: ((
-      node: ?ESNode,
-      newProps?: $ReadOnly<{...}> = {},
-      options?: ReplaceNodeOptions,
-    ): void => {
-      if (node == null) {
-        return;
+    modifyNodeInPlace: ((target: ESNode, newProps: $ReadOnly<{...}>): void => {
+      const detachedProps = {};
+      for (const [key, value] of Object.entries(newProps)) {
+        if (isNode(value)) {
+          // $FlowFixMe[incompatible-type]
+          const node: ESNode = value;
+          detachedProps[key] = asDetachedNode(node);
+        } else {
+          detachedProps[key] = value;
+        }
       }
 
-      const cloned = shallowCloneNode(node, newProps, {preserveLocation: true});
-      replaceAPIs.replaceNode(
-        (node: $FlowFixMe),
-        (cloned: $FlowFixMe),
-        options,
-      );
+      pushMutation(createModifyNodeInPlaceMutation(target, detachedProps));
     }: TransformModifyAPIs['modifyNodeInPlace']),
   };
 
