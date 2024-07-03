@@ -17,8 +17,8 @@ add_custom_command(OUTPUT ${RAYTRACER_O}
 
 add_executable(raytracer ${CMAKE_CURRENT_BINARY_DIR}/${RAYTRACER_O})
 set_target_properties(raytracer PROPERTIES LINKER_LANGUAGE CXX)
-target_link_directories(raytracer PRIVATE ${HERMES_BUILD}/lib)
-target_link_libraries(raytracer hermesvm)
+target_link_directories(raytracer PRIVATE ${HERMES_BUILD}/lib ${HERMES_BUILD}/tools/shermes)
+target_link_libraries(raytracer hermesvm shermes_console)
 
 set(RAYTRACER_GUI_O raytracer-gui${CMAKE_C_OUTPUT_EXTENSION})
 add_custom_command(OUTPUT ${RAYTRACER_GUI_O}
