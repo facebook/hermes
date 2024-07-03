@@ -9,7 +9,7 @@
 #include "hermes/hermes.h"
 #include "jsi/jsi.h"
 
-SHERMES_EXPORT extern "C" void init_console_bindings(SHRuntime *shr) {
+extern "C" SHERMES_EXPORT void init_console_bindings(SHRuntime *shr) {
   using namespace facebook;
   auto &hrt = *_sh_get_hermes_runtime(shr);
   // TOOD: Implement some bindings.
