@@ -434,7 +434,6 @@ void SynthTrace::ArrayReadRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("index", index_);
-  json.emitKeyValue("value", encode(value_));
 }
 
 void SynthTrace::ArrayWriteRecord::toJSONInternal(JSONEmitter &json) const {

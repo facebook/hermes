@@ -450,13 +450,15 @@ SynthTrace getTrace(
             objID->getValue(),
             getNumberAs<uint64_t>(obj->get("length")));
         break;
-      case RecordType::ArrayRead:
+      case RecordType::ArrayRead: {
+        std::optional<SynthTrace::TraceValue> value;
+        if (propValue) {
+          value = trace.decode(propValue->c_str());
+        }
         trace.emplace_back<SynthTrace::ArrayReadRecord>(
-            timeFromStart,
-            objID->getValue(),
-            arrayIndex->getValue(),
-            trace.decode(propValue->c_str()));
+            timeFromStart, objID->getValue(), arrayIndex->getValue(), value);
         break;
+      }
       case RecordType::ArrayWrite:
         trace.emplace_back<SynthTrace::ArrayWriteRecord>(
             timeFromStart,
