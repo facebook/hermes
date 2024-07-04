@@ -702,45 +702,6 @@ class SynthTrace {
     }
   };
 
-  /// The base struct for GetPropertyRecord and SetPropertyRecord.
-  struct GetOrSetPropertyRecord : public Record {
-    /// The ObjectID of the object that was accessed for its property.
-    const ObjectID objID_;
-    /// String or PropNameID passed to getProperty/setProperty.
-    const TraceValue propID_;
-#ifdef HERMESVM_API_TRACE_DEBUG
-    std::string propNameDbg_;
-#endif
-    /// Returned value from getProperty, or the set value passed for
-    /// setProperty.
-    const TraceValue value_;
-
-    GetOrSetPropertyRecord(
-        TimeSinceStart time,
-        ObjectID objID,
-        TraceValue propID,
-#ifdef HERMESVM_API_TRACE_DEBUG
-        const std::string &propNameDbg,
-#endif
-        TraceValue value)
-        : Record(time),
-          objID_(objID),
-          propID_(propID),
-#ifdef HERMESVM_API_TRACE_DEBUG
-          propNameDbg_(propNameDbg),
-#endif
-          value_(value) {
-    }
-
-    std::vector<ObjectID> uses() const override {
-      std::vector<ObjectID> vec{objID_};
-      pushIfTrackedValue(propID_, vec);
-      return vec;
-    }
-
-    void toJSONInternal(::hermes::JSONEmitter &json) const override;
-  };
-
   struct QueueMicrotaskRecord : public Record {
     static constexpr RecordType type{RecordType::QueueMicrotask};
     /// The ObjectID of the callback function that was queued.
@@ -777,32 +738,98 @@ class SynthTrace {
 
   /// A GetPropertyRecord is an event where native code accesses the property
   /// of a JS object.
-  struct GetPropertyRecord : public GetOrSetPropertyRecord {
+  struct GetPropertyRecord : public Record {
+    /// The ObjectID of the object that was accessed for its property.
+    const ObjectID objID_;
+    /// String or PropNameID passed to getProperty.
+    const TraceValue propID_;
+#ifdef HERMESVM_API_TRACE_DEBUG
+    std::string propNameDbg_;
+#endif
+    /// Returned value from getProperty.
+    // TODO: Remove once recordings no longer contain this field
+    const TraceValue value_;
+
+    GetPropertyRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        TraceValue propID,
+#ifdef HERMESVM_API_TRACE_DEBUG
+        const std::string &propNameDbg
+#endif
+            TraceValue value)
+        : Record(time),
+          objID_(objID),
+          propID_(propID),
+#ifdef HERMESVM_API_TRACE_DEBUG
+          propNameDbg_(propNameDbg),
+#endif
+          value_(value) {
+    }
+
     static constexpr RecordType type{RecordType::GetProperty};
-    using GetOrSetPropertyRecord::GetOrSetPropertyRecord;
     RecordType getType() const override {
       return type;
     }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses{objID_};
+      pushIfTrackedValue(propID_, uses);
+      return uses;
+    }
+
     std::vector<ObjectID> defs() const override {
-      auto defs = GetOrSetPropertyRecord::defs();
+      std::vector<ObjectID> defs{};
       pushIfTrackedValue(value_, defs);
       return defs;
     }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A SetPropertyRecord is an event where native code writes to the property
   /// of a JS object.
-  struct SetPropertyRecord : public GetOrSetPropertyRecord {
+  struct SetPropertyRecord : public Record {
+    /// The ObjectID of the object that was accessed for its property.
+    const ObjectID objID_;
+    /// String or PropNameID passed to setProperty.
+    const TraceValue propID_;
+#ifdef HERMESVM_API_TRACE_DEBUG
+    std::string propNameDbg_;
+#endif
+    /// The value being assigned.
+    const TraceValue value_;
+
+    SetPropertyRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        TraceValue propID,
+#ifdef HERMESVM_API_TRACE_DEBUG
+        const std::string &propNameDbg,
+#endif
+        TraceValue value)
+        : Record(time),
+          objID_(objID),
+          propID_(propID),
+#ifdef HERMESVM_API_TRACE_DEBUG
+          propNameDbg_(propNameDbg),
+#endif
+          value_(value) {
+    }
+
     static constexpr RecordType type{RecordType::SetProperty};
-    using GetOrSetPropertyRecord::GetOrSetPropertyRecord;
     RecordType getType() const override {
       return type;
     }
+
     std::vector<ObjectID> uses() const override {
-      auto uses = GetOrSetPropertyRecord::uses();
+      std::vector<ObjectID> uses{objID_};
+      pushIfTrackedValue(propID_, uses);
       pushIfTrackedValue(value_, uses);
       return uses;
     }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A HasPropertyRecord is an event where native code queries whether a
