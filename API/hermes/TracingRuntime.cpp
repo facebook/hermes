@@ -627,9 +627,11 @@ void TracingRuntime::setPropertyValue(
 }
 
 jsi::Array TracingRuntime::getPropertyNames(const jsi::Object &o) {
-  jsi::Array arr = RD::getPropertyNames(o);
   trace_.emplace_back<SynthTrace::GetPropertyNamesRecord>(
-      getTimeSinceStart(), useObjectID(o), defObjectID(arr));
+      getTimeSinceStart(), useObjectID(o));
+  jsi::Array arr = RD::getPropertyNames(o);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), SynthTrace::encodeObject(defObjectID(arr)));
   return arr;
 }
 

@@ -422,7 +422,6 @@ void SynthTrace::GetPropertyNamesRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
-  json.emitKeyValue("propNamesID", propNamesID_);
 }
 
 void SynthTrace::CreateArrayRecord::toJSONInternal(JSONEmitter &json) const {
