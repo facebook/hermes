@@ -430,8 +430,14 @@ void SynthTrace::CreateArrayRecord::toJSONInternal(JSONEmitter &json) const {
   json.emitKeyValue("length", length_);
 }
 
-void SynthTrace::ArrayReadOrWriteRecord::toJSONInternal(
-    JSONEmitter &json) const {
+void SynthTrace::ArrayReadRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("index", index_);
+  json.emitKeyValue("value", encode(value_));
+}
+
+void SynthTrace::ArrayWriteRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("index", index_);
