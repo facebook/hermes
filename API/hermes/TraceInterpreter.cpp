@@ -855,12 +855,7 @@ void TraceInterpreter::executeRecords() {
 #endif
             value = obj.getProperty(rt_, propNameID);
           }
-          if (gpr.value_) {
-            ifObjectAddToObjectMap(
-                *gpr.value_, std::move(value), currentExecIndex);
-          } else {
-            retval = std::move(value);
-          }
+          retval = std::move(value);
           break;
         }
         case RecordType::SetProperty: {
@@ -912,12 +907,7 @@ void TraceInterpreter::executeRecords() {
           jsi::Array arr = getJSIValueForUse(gpnr.objID_)
                                .asObject(rt_)
                                .getPropertyNames(rt_);
-          if (gpnr.propNamesID_) {
-            addToObjectMap(
-                *gpnr.propNamesID_, std::move(arr), currentExecIndex);
-          } else {
-            retval = std::move(arr);
-          }
+          retval = std::move(arr);
           break;
         }
         case RecordType::CreateArray: {
@@ -935,12 +925,7 @@ void TraceInterpreter::executeRecords() {
                            .asObject(rt_)
                            .asArray(rt_)
                            .getValueAtIndex(rt_, arr.index_);
-          if (arr.value_) {
-            ifObjectAddToObjectMap(
-                *arr.value_, std::move(value), currentExecIndex);
-          } else {
-            retval = std::move(value);
-          }
+          retval = std::move(value);
           break;
         }
         case RecordType::ArrayWrite: {
