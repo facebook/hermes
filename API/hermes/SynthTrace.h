@@ -748,7 +748,7 @@ class SynthTrace {
 #endif
     /// Returned value from getProperty.
     // TODO: Remove once recordings no longer contain this field
-    const TraceValue value_;
+    const std::optional<TraceValue> value_;
 
     GetPropertyRecord(
         TimeSinceStart time,
@@ -757,7 +757,7 @@ class SynthTrace {
 #ifdef HERMESVM_API_TRACE_DEBUG
         const std::string &propNameDbg
 #endif
-            TraceValue value)
+            std::optional<TraceValue> value = std::nullopt)
         : Record(time),
           objID_(objID),
           propID_(propID),
@@ -780,7 +780,9 @@ class SynthTrace {
 
     std::vector<ObjectID> defs() const override {
       std::vector<ObjectID> defs{};
-      pushIfTrackedValue(value_, defs);
+      if (value_) {
+        pushIfTrackedValue(*value_, defs);
+      }
       return defs;
     }
 

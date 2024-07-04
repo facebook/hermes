@@ -137,16 +137,17 @@ TEST_F(SynthTraceTest, SymbolToString) {
   // records[0] is global()
   // records[1] is createString for "eval"
   // records[2] is getProperty for "eval"
+  // records[3] is returnToNative for "eval"
   // records[3] is createString for "Symbol('foo')"
   // records[4] is return from eval
   // records[5] is symbolToString
-  EXPECT_EQ(7, records.size());
+  EXPECT_EQ(8, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::Utf8Record(
-          records[6]->time_,
+          records[7]->time_,
           SynthTrace::encodeSymbol(objId),
           symbolToStringResult),
-      *records[6]);
+      *records[7]);
 }
 
 TEST_F(SynthTraceTest, CallAndReturn) {
@@ -177,7 +178,7 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   // The first two records are for executing the JS for "identity".
   // Then there are two string creations -- one labeled StringCreate0 above,
   // and the other for the string "identity" in StringCreate1.
-  EXPECT_EQ(8, records.size());
+  EXPECT_EQ(9, records.size());
   EXPECT_EQ(
       SynthTrace::RecordType::BeginExecJS, records[recordIndex++]->getType());
   EXPECT_EQ(
@@ -190,12 +191,16 @@ TEST_F(SynthTraceTest, CallAndReturn) {
   auto gprExpect = SynthTrace::GetPropertyRecord(
       records[recordIndex]->time_,
       globalObjID,
-      SynthTrace::encodeString(identityID),
+      SynthTrace::encodeString(identityID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      identityStr,
+          ,
+      identityStr
 #endif
-      SynthTrace::encodeObject(functionID));
+  );
   EXPECT_EQ_RECORD(gprExpect, *records[recordIndex++]);
+  auto rtnExpect = SynthTrace::ReturnToNativeRecord(
+      records[recordIndex]->time_, SynthTrace::encodeObject(functionID));
+  EXPECT_EQ_RECORD(rtnExpect, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::CallFromNativeRecord(
           records[recordIndex]->time_,
@@ -306,7 +311,7 @@ TEST_F(SynthTraceTest, GetProperty) {
     ASSERT_TRUE(bValue.isUndefined());
   }
   const auto &records = rt->trace().records();
-  EXPECT_EQ(7, records.size());
+  EXPECT_EQ(10, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(records[0]->time_, objID), *records[0]);
   EXPECT_EQ_RECORD(
@@ -316,38 +321,50 @@ TEST_F(SynthTraceTest, GetProperty) {
   auto gprExpect0 = SynthTrace::GetPropertyRecord(
       records[2]->time_,
       objID,
-      SynthTrace::encodeString(aStringID),
+      SynthTrace::encodeString(aStringID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      a,
+          ,
+      a
 #endif
-      SynthTrace::encodeUndefined());
+  );
   EXPECT_EQ_RECORD(gprExpect0, *records[2]);
+  auto rtnExpect0 = SynthTrace::ReturnToNativeRecord(
+      records[3]->time_, SynthTrace::encodeUndefined());
+  EXPECT_EQ_RECORD(rtnExpect0, *records[3]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
-          records[3]->time_, aPropID, SynthTrace::encodeString(aStringID)),
-      *records[3]);
+          records[4]->time_, aPropID, SynthTrace::encodeString(aStringID)),
+      *records[4]);
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
-      records[4]->time_,
+      records[5]->time_,
       objID,
-      SynthTrace::encodePropNameID(aPropID),
+      SynthTrace::encodePropNameID(aPropID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      a,
+          ,
+      a
 #endif
-      SynthTrace::encodeUndefined());
-  EXPECT_EQ_RECORD(gprExpect1, *records[4]);
+  );
+  EXPECT_EQ_RECORD(gprExpect1, *records[5]);
+  auto rtnExpecct1 = SynthTrace::ReturnToNativeRecord(
+      records[6]->time_, SynthTrace::encodeUndefined());
+  EXPECT_EQ_RECORD(rtnExpecct1, *records[6]);
   EXPECT_EQ_RECORD(
       SynthTrace::CreatePropNameIDRecord(
-          records[5]->time_, bPropID, b.c_str(), 1),
-      *records[5]);
+          records[7]->time_, bPropID, b.c_str(), 1),
+      *records[7]);
   auto gprExpect2 = SynthTrace::GetPropertyRecord(
-      records[6]->time_,
+      records[8]->time_,
       objID,
-      SynthTrace::encodePropNameID(bPropID),
+      SynthTrace::encodePropNameID(bPropID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      b,
+          ,
+      b
 #endif
-      SynthTrace::encodeUndefined());
-  EXPECT_EQ_RECORD(gprExpect2, *records[6]);
+  );
+  EXPECT_EQ_RECORD(gprExpect2, *records[8]);
+  auto rtnExpect2 = SynthTrace::ReturnToNativeRecord(
+      records[9]->time_, SynthTrace::encodeUndefined());
+  EXPECT_EQ_RECORD(rtnExpect2, *records[9]);
 }
 
 TEST_F(SynthTraceTest, SetProperty) {
@@ -541,7 +558,7 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
     ASSERT_EQ(1, value.asNumber());
   }
   const auto &records = rt->trace().records();
-  EXPECT_EQ(9, records.size());
+  EXPECT_EQ(10, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateStringRecord(
           records[0]->time_, aStringID, a.c_str(), 1),
@@ -584,22 +601,26 @@ TEST_F(SynthTraceTest, CallObjectGetProp) {
   auto gprExpect = SynthTrace::GetPropertyRecord(
       records[6]->time_,
       argObjID,
-      SynthTrace::encodeString(aStringID),
+      SynthTrace::encodeString(aStringID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      a,
+          ,
+      a
 #endif
-      SynthTrace::encodeUndefined());
+  );
   EXPECT_EQ_RECORD(gprExpect, *records[6]);
+  auto rtnExpect = SynthTrace::ReturnToNativeRecord(
+      records[7]->time_, SynthTrace::encodeUndefined());
+  EXPECT_EQ_RECORD(rtnExpect, *records[7]);
   // The function returned a number (it also trampolined through JS and back so
   // there's two returns).
   EXPECT_EQ_RECORD(
       SynthTrace::ReturnFromNativeRecord(
-          records[7]->time_, SynthTrace::encodeNumber(1)),
-      *records[7]);
-  EXPECT_EQ_RECORD(
-      SynthTrace::ReturnToNativeRecord(
           records[8]->time_, SynthTrace::encodeNumber(1)),
       *records[8]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::ReturnToNativeRecord(
+          records[9]->time_, SynthTrace::encodeNumber(1)),
+      *records[9]);
 }
 
 TEST_F(SynthTraceTest, DrainMicrotasks) {
@@ -723,7 +744,7 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   }
   const auto &records = rt->trace().records();
   int recordIndex = 0;
-  EXPECT_EQ(18, records.size());
+  EXPECT_EQ(20, records.size());
   EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
@@ -755,8 +776,19 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   EXPECT_EQ_RECORD(
       SynthTrace::CreateHostObjectRecord(records[recordIndex]->time_, objID),
       *records[recordIndex++]);
-  // Called getProperty on the proxy. This first calls getProperty on the proxy,
-  // then on the host object itself.
+  // Called getProperty on the proxy. This first starts the getProperty
+  // operation, then calls getProperty on the proxy, then on the host object
+  // itself.
+  auto gprExpect0 = SynthTrace::GetPropertyRecord(
+      records[recordIndex]->time_,
+      objID,
+      SynthTrace::encodePropNameID(xPropNameID)
+#ifdef HERMESVM_API_TRACE_DEBUG
+          ,
+      cs.x
+#endif
+  );
+  EXPECT_EQ_RECORD(gprExpect0, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeRecord(
           records[recordIndex]->time_,
@@ -777,15 +809,9 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       SynthTrace::GetPropertyNativeReturnRecord(
           records[recordIndex]->time_, SynthTrace::encodeNumber(0)),
       *records[recordIndex++]);
-  auto gprExpect0 = SynthTrace::GetPropertyRecord(
-      records[recordIndex]->time_,
-      objID,
-      SynthTrace::encodePropNameID(xPropNameID),
-#ifdef HERMESVM_API_TRACE_DEBUG
-      cs.x,
-#endif
-      SynthTrace::encodeNumber(0));
-  EXPECT_EQ_RECORD(gprExpect0, *records[recordIndex++]);
+  auto rtnExpect0 = SynthTrace::ReturnToNativeRecord(
+      records[recordIndex]->time_, SynthTrace::encodeNumber(0));
+  EXPECT_EQ_RECORD(rtnExpect0, *records[recordIndex++]);
   // Called setProperty on the proxy.
   auto sprExpect1 = SynthTrace::SetPropertyRecord(
       records[recordIndex]->time_,
@@ -816,7 +842,17 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
   EXPECT_EQ_RECORD(
       SynthTrace::SetPropertyNativeReturnRecord(records[recordIndex]->time_),
       *records[recordIndex++]);
-  // Called getProperty one last time.
+  // // Called getProperty one last time.
+  auto gprExpect1 = SynthTrace::GetPropertyRecord(
+      records[recordIndex]->time_,
+      objID,
+      SynthTrace::encodePropNameID(xPropNameID)
+#ifdef HERMESVM_API_TRACE_DEBUG
+          ,
+      cs.x
+#endif
+  );
+  EXPECT_EQ_RECORD(gprExpect1, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeRecord(
           records[recordIndex]->time_,
@@ -837,15 +873,9 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
       SynthTrace::GetPropertyNativeReturnRecord(
           records[recordIndex]->time_, SynthTrace::encodeNumber(insertValue)),
       *records[recordIndex++]);
-  auto gprExpect1 = SynthTrace::GetPropertyRecord(
-      records[recordIndex]->time_,
-      objID,
-      SynthTrace::encodePropNameID(xPropNameID),
-#ifdef HERMESVM_API_TRACE_DEBUG
-      cs.x,
-#endif
-      SynthTrace::encodeNumber(insertValue));
-  EXPECT_EQ_RECORD(gprExpect1, *records[recordIndex++]);
+  auto rtnExpect1 = SynthTrace::ReturnToNativeRecord(
+      records[recordIndex]->time_, SynthTrace::encodeNumber(insertValue));
+  EXPECT_EQ_RECORD(rtnExpect1, *records[recordIndex++]);
 }
 
 TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
@@ -952,7 +982,7 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   }
   const auto &records = rt->trace().records();
   int recordIndex = 0;
-  EXPECT_EQ(19, records.size());
+  EXPECT_EQ(22, records.size());
   EXPECT_EQ(SynthTrace::RecordType::Global, records[recordIndex++]->getType());
   // Created a proxy host object.
   EXPECT_EQ_RECORD(
@@ -1006,21 +1036,29 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto gprExpect0 = SynthTrace::GetPropertyRecord(
       records[recordIndex]->time_,
       globID,
-      SynthTrace::encodePropNameID(oPropNameID),
+      SynthTrace::encodePropNameID(oPropNameID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      cs.o,
+          ,
+      cs.o
 #endif
-      SynthTrace::encodeObject(getReturnObjID));
+  );
   EXPECT_EQ_RECORD(gprExpect0, *records[recordIndex++]);
+  auto rtnExpect0 = SynthTrace::ReturnToNativeRecord(
+      records[recordIndex]->time_, SynthTrace::encodeObject(getReturnObjID));
+  EXPECT_EQ_RECORD(rtnExpect0, *records[recordIndex++]);
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
       records[recordIndex]->time_,
       getReturnObjID,
-      SynthTrace::encodePropNameID(observedXPropNameUID),
+      SynthTrace::encodePropNameID(observedXPropNameUID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      x,
+          ,
+      x
 #endif
-      SynthTrace::encodeNumber(7));
+  );
   EXPECT_EQ_RECORD(gprExpect1, *records[recordIndex++]);
+  auto rtnExpect1 = SynthTrace::ReturnToNativeRecord(
+      records[recordIndex]->time_, SynthTrace::encodeNumber(7));
+  EXPECT_EQ_RECORD(rtnExpect1, *records[recordIndex++]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetPropertyNativeReturnRecord(
           records[recordIndex]->time_, SynthTrace::encodeNumber(7)),
@@ -1040,12 +1078,16 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
   auto gprExpect2 = SynthTrace::GetPropertyRecord(
       records[recordIndex]->time_,
       globID,
-      SynthTrace::encodePropNameID(oPropNameID),
+      SynthTrace::encodePropNameID(oPropNameID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      cs.o,
+          ,
+      cs.o
 #endif
-      SynthTrace::encodeObject(setArgObjID));
+  );
   EXPECT_EQ_RECORD(gprExpect2, *records[recordIndex++]);
+  auto rtnExpect2 = SynthTrace::ReturnToNativeRecord(
+      records[recordIndex]->time_, SynthTrace::encodeObject(setArgObjID));
+  EXPECT_EQ_RECORD(rtnExpect2, *records[recordIndex++]);
   auto sprExpect = SynthTrace::SetPropertyRecord(
       records[recordIndex]->time_,
       setArgObjID,
@@ -1774,6 +1816,51 @@ TEST_F(SynthTraceReplayTest, HostFunctionTraceAndReplayCallCount) {
 
     auto ret6 = eval(rt, "ret6;");
     EXPECT_TRUE(ret6.isUndefined());
+  }
+}
+
+// This test exercises the case where a property getter triggers a host
+// function, emitting records between the start of the get-property
+// operation and the return value.
+TEST_F(SynthTraceReplayTest, HostFunctionAsGetter) {
+  {
+    auto &rt = *traceRt;
+
+    // Setup a host function that increments a flag
+    rt.global().setProperty(rt, "flag", 0);
+    auto func = jsi::Function::createFromHostFunction(
+        rt,
+        jsi::PropNameID::forAscii(rt, "foo"),
+        0,
+        [this](
+            jsi::Runtime &rt,
+            const jsi::Value &thisVal,
+            const jsi::Value *args,
+            size_t count) { return eval(rt, "++flag"); });
+
+    // Attach the host function to the property getter of an object
+    auto obj = jsi::Object(rt);
+    auto setGetter =
+        eval(
+            rt,
+            "(obj, name, getter) => Object.defineProperty(obj, name, {get: getter})")
+            .getObject(rt)
+            .getFunction(rt);
+    setGetter.call(rt, obj, "bar", func);
+
+    // Invoke the property getter (and host function) twice
+    obj.getProperty(rt, "bar");
+    obj.getProperty(rt, "bar");
+  }
+
+  // Ensure the records were emitted in the order that correctly
+  // represents actual execution.
+  replay();
+
+  // Ensure the host function was called twice
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(eval(rt, "flag").getNumber(), 2);
   }
 }
 

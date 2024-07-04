@@ -855,8 +855,12 @@ void TraceInterpreter::executeRecords() {
 #endif
             value = obj.getProperty(rt_, propNameID);
           }
-          ifObjectAddToObjectMap(
-              gpr.value_, std::move(value), currentExecIndex);
+          if (gpr.value_) {
+            ifObjectAddToObjectMap(
+                *gpr.value_, std::move(value), currentExecIndex);
+          } else {
+            retval = std::move(value);
+          }
           break;
         }
         case RecordType::SetProperty: {
