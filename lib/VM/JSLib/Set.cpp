@@ -152,9 +152,9 @@ setFromSetFastPath(Runtime &runtime, Handle<JSSet> target, Handle<JSSet> src) {
       src,
       runtime,
       [&target, &keyHandle, &valueHandle](
-          Runtime &runtime, Handle<HashMapEntry> entry) -> ExecutionStatus {
+          Runtime &runtime, Handle<HashSetEntry> entry) -> ExecutionStatus {
         keyHandle = entry->key.unboxToHV(runtime);
-        valueHandle = entry->value.unboxToHV(runtime);
+        valueHandle = entry->key.unboxToHV(runtime);
         JSSet::addValue(target, runtime, keyHandle, valueHandle);
         return ExecutionStatus::RETURNED;
       });

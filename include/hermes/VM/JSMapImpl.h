@@ -23,6 +23,11 @@ namespace vm {
 template <CellKind C>
 class JSMapImpl final : public JSObject {
   using Super = JSObject;
+  using OrderedHashTable = typename std::conditional<
+      C == CellKind::JSMapKind,
+      OrderedHashMap,
+      OrderedHashSet>::type;
+  using HashMapEntryType = typename OrderedHashTable::Entry;
 
  public:
   static const ObjectVTable vt;
@@ -42,17 +47,18 @@ class JSMapImpl final : public JSObject {
   static ExecutionStatus initializeStorage(
       Handle<JSMapImpl> self,
       Runtime &runtime) {
-    auto crtRes = OrderedHashMap::create(runtime);
+    auto crtRes = OrderedHashTable::create(runtime);
     if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto storageHandle = runtime.makeHandle<OrderedHashMap>(std::move(*crtRes));
+    auto storageHandle =
+        runtime.makeHandle<OrderedHashTable>(std::move(*crtRes));
     self->storage_.set(runtime, storageHandle.get(), runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
 
   /// Advance iterator and return the next.
-  HashMapEntry *iteratorNext(Runtime &runtime, HashMapEntry *entry) {
+  HashMapEntryType *iteratorNext(Runtime &runtime, HashMapEntryType *entry) {
     return storage_.getNonNull(runtime)->iteratorNext(runtime, entry);
   }
 
@@ -63,8 +69,8 @@ class JSMapImpl final : public JSObject {
       Handle<> key,
       Handle<> value) {
     self->assertInitialized();
-    OrderedHashMap::insert(
-        runtime.makeHandle<OrderedHashMap>(self->storage_),
+    OrderedHashTable::insert(
+        runtime.makeHandle<OrderedHashTable>(self->storage_),
         runtime,
         key,
         value);
@@ -73,23 +79,23 @@ class JSMapImpl final : public JSObject {
   /// \return true if a key exists.
   static bool hasKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
-    return OrderedHashMap::has(
-        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
+    return OrderedHashTable::has(
+        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
   }
 
   static HermesValue
   getValue(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
-    return OrderedHashMap::get(
-        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
+    return OrderedHashTable::get(
+        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
   }
 
   /// Delelet a key. \return true if succeeds.
   static bool
   deleteKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
-    return OrderedHashMap::erase(
-        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
+    return OrderedHashTable::erase(
+        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
   }
 
   /// \returns the size.
@@ -111,7 +117,7 @@ class JSMapImpl final : public JSObject {
       Handle<Callable> callbackfn,
       Handle<> thisArg) {
     self->assertInitialized();
-    MutableHandle<HashMapEntry> entry{runtime};
+    MutableHandle<HashMapEntryType> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
     for (entry = self->storage_.getNonNull(runtime)->iteratorNext(runtime);
          entry;
@@ -119,8 +125,8 @@ class JSMapImpl final : public JSObject {
              runtime, entry.get())) {
       marker.flush();
       SmallHermesValue key = entry->key;
-      SmallHermesValue value = entry->value;
       assert(!key.isEmpty() && "Invalid key encountered");
+      SmallHermesValue value = entry->getValue();
       assert(!value.isEmpty() && "Invalid value encountered");
       if (LLVM_UNLIKELY(
               Callable::executeCall3(
@@ -137,12 +143,12 @@ class JSMapImpl final : public JSObject {
   }
 
   /// Call the native \p callbackfn for each entry, with \p thisArg as this.
-  /// \param callback: (Runtime &, Handle<HashMapEntry>) -> ExecutionStatus.
+  /// \param callback: (Runtime &, Handle<HashMapEntryType>) -> ExecutionStatus.
   template <typename CB>
   static ExecutionStatus
   forEachNative(Handle<JSMapImpl> self, Runtime &runtime, CB callback) {
     self->assertInitialized();
-    MutableHandle<HashMapEntry> entry{runtime};
+    MutableHandle<HashMapEntryType> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
     for (entry = self->storage_.getNonNull(runtime)->iteratorNext(runtime);
          entry;
@@ -169,7 +175,7 @@ class JSMapImpl final : public JSObject {
 
  private:
   /// The underlying storage.
-  GCPointer<OrderedHashMap> storage_{nullptr};
+  GCPointer<OrderedHashTable> storage_{nullptr};
 
   void assertInitialized() {
     assert(storage_ && "Element storage uninitialized.");
@@ -191,6 +197,11 @@ struct JSMapTypeTraits<CellKind::JSMapIteratorKind> {
 template <CellKind C>
 class JSMapIteratorImpl final : public JSObject {
   using Super = JSObject;
+  using OrderedHashTable = typename std::conditional<
+      C == CellKind::JSMapIteratorKind,
+      OrderedHashMap,
+      OrderedHashSet>::type;
+  using HashMapEntryType = typename OrderedHashTable::Entry;
 
  public:
   static const ObjectVTable vt;
@@ -246,7 +257,8 @@ class JSMapIteratorImpl final : public JSObject {
             value = self->itr_.getNonNull(runtime)->key.unboxToHV(runtime);
             break;
           case IterationKind::Value:
-            value = self->itr_.getNonNull(runtime)->value.unboxToHV(runtime);
+            value =
+                self->itr_.getNonNull(runtime)->getValue().unboxToHV(runtime);
             break;
           case IterationKind::Entry: {
             // If we are iterating both key and value, we need to create an
@@ -258,7 +270,9 @@ class JSMapIteratorImpl final : public JSObject {
             auto arrHandle = *arrRes;
             value = self->itr_.getNonNull(runtime)->key.unboxToHV(runtime);
             JSArray::setElementAt(arrHandle, runtime, 0, value);
-            value = self->itr_.getNonNull(runtime)->value.unboxToHV(runtime);
+            if constexpr (std::is_same_v<OrderedHashTable, OrderedHashMap>) {
+              value = self->itr_.getNonNull(runtime)->value.unboxToHV(runtime);
+            }
             JSArray::setElementAt(arrHandle, runtime, 1, value);
             value = arrHandle.getHermesValue();
             break;
@@ -295,7 +309,7 @@ class JSMapIteratorImpl final : public JSObject {
   GCPointer<JSMapImpl<JSMapTypeTraits<C>::ContainerKind>> data_{nullptr};
 
   /// Iteration pointer to the element storage in the Map.
-  GCPointer<HashMapEntry> itr_{nullptr};
+  GCPointer<HashMapEntryType> itr_{nullptr};
 
   IterationKind iterationKind_;
 

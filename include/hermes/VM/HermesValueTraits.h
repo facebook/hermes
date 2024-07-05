@@ -39,7 +39,6 @@ HERMES_VM_GCOBJECT(Domain);
 HERMES_VM_GCOBJECT(Environment);
 HERMES_VM_GCOBJECT(FastArray);
 HERMES_VM_GCOBJECT(FinalizableNativeFunction);
-HERMES_VM_GCOBJECT(HashMapEntry);
 HERMES_VM_GCOBJECT(HiddenClass);
 HERMES_VM_GCOBJECT(HostObject);
 HERMES_VM_GCOBJECT(JSArray);
@@ -69,7 +68,6 @@ HERMES_VM_GCOBJECT(NativeJSFunction);
 HERMES_VM_GCOBJECT(NativeConstructor);
 HERMES_VM_GCOBJECT(NativeFunction);
 HERMES_VM_GCOBJECT(NativeState);
-HERMES_VM_GCOBJECT(OrderedHashMap);
 HERMES_VM_GCOBJECT(PropertyAccessor);
 HERMES_VM_GCOBJECT(RequireContext);
 HERMES_VM_GCOBJECT(StringPrimitive);
@@ -85,6 +83,16 @@ template <typename T, CellKind C>
 class JSTypedArray;
 template <typename T, CellKind C>
 struct IsGCObject<JSTypedArray<T, C>> : public std::true_type {};
+
+template <typename T>
+class HashMapEntryBase;
+template <typename Data>
+struct IsGCObject<HashMapEntryBase<Data>> : public std::true_type {};
+
+template <typename T>
+class OrderedHashMapBase;
+template <typename BucketType>
+struct IsGCObject<OrderedHashMapBase<BucketType>> : public std::true_type {};
 
 template <CellKind C>
 class JSMapImpl;

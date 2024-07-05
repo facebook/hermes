@@ -17,50 +17,85 @@
 namespace hermes {
 namespace vm {
 
+/// Data structure for the entry of OrderedHashSet.
+struct HashMapEntryKey {
+  /// The key.
+  GCSmallHermesValue key;
+};
+
+/// Data structure for the entry of OrderedHashMap.
+struct HashMapEntryKeyValue {
+  /// The key.
+  GCSmallHermesValue key;
+  /// The value.
+  GCSmallHermesValue value;
+};
+
 /// HashMapEntry is a gc-managed entry in the OrderedHashMap.
 /// We use HashMapEntry to form two separate linked lists,
 /// one that tracks the insertion order for iteration purpose, one
 /// tracks the list of entries in a hash table bucket for hash operations.
-class HashMapEntry final : public GCCell {
+template <typename Data>
+class HashMapEntryBase final : public GCCell, public Data {
+  friend void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend void HashSetEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+
  public:
   static const VTable vt;
 
-  /// The key.
-  GCSmallHermesValue key;
-
-  /// The value.
-  GCSmallHermesValue value;
-
   /// Previous entry in insertion order.
-  GCPointer<HashMapEntry> prevIterationEntry{nullptr};
+  GCPointer<HashMapEntryBase> prevIterationEntry{nullptr};
 
   /// Next entry in insertion order.
-  GCPointer<HashMapEntry> nextIterationEntry{nullptr};
+  GCPointer<HashMapEntryBase> nextIterationEntry{nullptr};
 
   static constexpr CellKind getCellKind() {
-    return CellKind::HashMapEntryKind;
+    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
+      return CellKind::HashMapEntryKind;
+    } else {
+      static_assert(std::is_same_v<Data, HashMapEntryKey>);
+      return CellKind::HashSetEntryKind;
+    }
   }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::HashMapEntryKind;
+    return cell->getKind() == getCellKind();
   }
 
-  static CallResult<PseudoHandle<HashMapEntry>> create(Runtime &runtime);
+  static CallResult<PseudoHandle<HashMapEntryBase>> create(Runtime &runtime);
 
-  static CallResult<PseudoHandle<HashMapEntry>> createLongLived(
+  static CallResult<PseudoHandle<HashMapEntryBase>> createLongLived(
       Runtime &runtime);
+
+  /// \return the value. If the Data is HashMapEntryKey, the key will be
+  /// returned.
+  GCSmallHermesValue getValue() const {
+    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
+      return Data::value;
+    } else {
+      return Data::key;
+    }
+  }
 
   /// Indicates whether this entry has been deleted.
   bool isDeleted() const {
-    assert(key.isEmpty() == value.isEmpty() && "Inconsistent deleted status");
-    return value.isEmpty();
+    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
+      assert(
+          Data::key.isEmpty() == Data::value.isEmpty() &&
+          "Inconsistent deleted status");
+    }
+    return Data::key.isEmpty();
   }
 
   /// Mark this entry as deleted.
   void markDeleted(Runtime &runtime) {
-    key.setNonPtr(SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
-    value.setNonPtr(SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
+    Data::key.setNonPtr(
+        SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
+    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
+      Data::value.setNonPtr(
+          SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
+    }
   }
-}; // HashMapEntry
+}; // HashMapEntryBase
 
 /// OrderedHashMap is a gc-managed hash map that maintains insertion order.
 /// The map contains two conceptual parts: a standard hash table with open
@@ -81,12 +116,17 @@ class HashMapEntry final : public GCCell {
 /// than quadratic probing because of memory locality. With a simple test case
 /// to insert integers as keys, we didn't see any performance gain with
 /// quadratic probing.
-class OrderedHashMap final : public GCCell {
+template <typename BucketType>
+class OrderedHashMapBase final : public GCCell {
   friend void OrderedHashMapBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+  friend void OrderedHashSetBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
 
  public:
+  using Entry = BucketType;
   static const VTable vt;
 
   static constexpr CellKind getCellKind() {
@@ -96,31 +136,32 @@ class OrderedHashMap final : public GCCell {
     return cell->getKind() == CellKind::OrderedHashMapKind;
   }
 
-  static CallResult<PseudoHandle<OrderedHashMap>> create(Runtime &runtime);
+  static CallResult<PseudoHandle<OrderedHashMapBase>> create(Runtime &runtime);
 
   /// \return true if the map contains a given HermesValue.
-  static bool has(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  static bool
+  has(Handle<OrderedHashMapBase> self, Runtime &runtime, Handle<> key);
 
   /// Lookup \p key in the table and \return the value if exists.
   /// Otherwise \return undefined.
   static HermesValue
-  get(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  get(Handle<OrderedHashMapBase> self, Runtime &runtime, Handle<> key);
 
   /// Lookup \p key in the table and \return the value if exists.
   /// Otherwise \return nullptr.
-  static HashMapEntry *
-  find(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  static BucketType *
+  find(Handle<OrderedHashMapBase> self, Runtime &runtime, Handle<> key);
 
   /// Insert a key/value pair into the map, if not already existing.
   static ExecutionStatus insert(
-      Handle<OrderedHashMap> self,
+      Handle<OrderedHashMapBase> self,
       Runtime &runtime,
       Handle<> key,
       Handle<> value);
 
   /// Erase a HermesValue from the map, \return true if succeed.
   static bool
-  erase(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  erase(Handle<OrderedHashMapBase> self, Runtime &runtime, Handle<> key);
 
   /// Clear the map.  The \p gc parameter is necessary for write barriers.
   void clear(Runtime &runtime);
@@ -135,10 +176,9 @@ class OrderedHashMap final : public GCCell {
   /// entry that is not deleted.
   /// Otherwise, we look for the next element after \p entry that is not
   /// deleted.
-  HashMapEntry *iteratorNext(Runtime &runtime, HashMapEntry *entry = nullptr)
-      const;
+  BucketType *iteratorNext(Runtime &runtime, BucketType *entry = nullptr) const;
 
-  OrderedHashMap(
+  OrderedHashMapBase(
       Runtime &runtime,
       Handle<SegmentedArraySmall> hashTableStorage);
 
@@ -148,10 +188,10 @@ class OrderedHashMap final : public GCCell {
   GCPointer<SegmentedArraySmall> hashTable_{nullptr};
 
   /// The first entry ever inserted. We need this entry to begin an iteration.
-  GCPointer<HashMapEntry> firstIterationEntry_{nullptr};
+  GCPointer<BucketType> firstIterationEntry_{nullptr};
 
   /// The last entry inserted. We need it to add new elements afterwards.
-  GCPointer<HashMapEntry> lastIterationEntry_{nullptr};
+  GCPointer<BucketType> lastIterationEntry_{nullptr};
 
   /// Initial capacity of the hash table.
   static constexpr uint32_t INITIAL_CAPACITY = 16;
@@ -182,13 +222,13 @@ class OrderedHashMap final : public GCCell {
   }
 
   /// Remove a node from the linked list.
-  void removeLinkedListNode(Runtime &runtime, HashMapEntry *entry, GC &gc);
+  void removeLinkedListNode(Runtime &runtime, BucketType *entry, GC &gc);
 
   /// Lookup an entry with key as \p key in a given \p bucket (hash).
   /// \return The pair of the entry found and the index for it. The entry can be
   /// nullptr if the key doesn't exist. In that case, the index is the index of
   /// the available bucket for the give key.
-  std::pair<HashMapEntry *, uint32_t>
+  std::pair<BucketType *, uint32_t>
   lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key);
 
   /// Adjust the capacity of the hashtable and rehash.
@@ -198,14 +238,16 @@ class OrderedHashMap final : public GCCell {
   /// empty bucket.
   /// \param beforeAdd if true, we use current size + 1 to calculate the new
   /// capacity. Otherwise, we use current size to calculate the new capacity.
-  static ExecutionStatus
-  rehash(Handle<OrderedHashMap> self, Runtime &runtime, bool beforeAdd = false);
+  static ExecutionStatus rehash(
+      Handle<OrderedHashMapBase> self,
+      Runtime &runtime,
+      bool beforeAdd = false);
 
   /// Determine if we should shrink the hash table basedon the current key count
   /// and capacity.
   static bool shouldShrink(uint32_t capacity, uint32_t keyCount) {
     return 8 * keyCount <= capacity &&
-        capacity > OrderedHashMap::INITIAL_CAPACITY;
+        capacity > OrderedHashMapBase::INITIAL_CAPACITY;
   }
 
   static const uint32_t kRehashFactor = 2;
@@ -220,10 +262,11 @@ class OrderedHashMap final : public GCCell {
   /// Calculate the next capacity based on the current capacity and key count.
   static uint32_t nextCapacity(uint32_t capacity, uint32_t keyCount) {
     if (!capacity)
-      return OrderedHashMap::INITIAL_CAPACITY;
+      return OrderedHashMapBase::INITIAL_CAPACITY;
 
     if (shouldShrink(capacity, keyCount)) {
-      assert((capacity / kRehashFactor) >= OrderedHashMap::INITIAL_CAPACITY);
+      assert(
+          (capacity / kRehashFactor) >= OrderedHashMapBase::INITIAL_CAPACITY);
       return capacity / kRehashFactor;
     }
 
@@ -236,13 +279,25 @@ class OrderedHashMap final : public GCCell {
   }
 
   /// Mark the bucket as deleted.
-  static void
-  deleteBucket(Handle<OrderedHashMap> self, Runtime &runtime, uint32_t bucket) {
+  static void deleteBucket(
+      Handle<OrderedHashMapBase> self,
+      Runtime &runtime,
+      uint32_t bucket) {
     /// Use NullValue to indicate that the bucket is deleted.
     self->hashTable_.getNonNull(runtime)->set(
         runtime, bucket, SmallHermesValue::encodeNullValue());
   }
-}; // OrderedHashMap
+
+}; // OrderedHashMapBase
+
+/// The bucket type for OrderedHashMap.
+using HashMapEntry = HashMapEntryBase<HashMapEntryKeyValue>;
+/// The bucket type for OrderedHashSet.
+using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
+
+using OrderedHashMap = OrderedHashMapBase<HashMapEntry>;
+using OrderedHashSet = OrderedHashMapBase<HashSetEntry>;
+
 } // namespace vm
 } // namespace hermes
 #endif // HERMES_VM_ORDERED_HASHMAP_H
