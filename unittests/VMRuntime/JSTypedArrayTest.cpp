@@ -19,19 +19,19 @@ TEST_F(JSTypedArrayTest, BeginAndEndMatchesOnBaseAndSub) {
   // Make sure that the begin and end pointers match for both JSTypedArrayBase,
   // and JSTypedArray<T>. Do this for each T.
 
-#define TYPED_ARRAY(name, type)                                        \
-  {                                                                    \
-    auto result = name##Array::allocate(runtime, 10);                  \
-    ASSERT_FALSE(isException(result));                                 \
-    Handle<name##Array> array = Handle<name##Array>::vmcast(*result);  \
-    EXPECT_EQ(                                                         \
-        reinterpret_cast<uintptr_t>(array->begin(runtime)),            \
-        reinterpret_cast<uintptr_t>(                                   \
-            Handle<JSTypedArrayBase>::vmcast(array)->begin(runtime))); \
-    EXPECT_EQ(                                                         \
-        reinterpret_cast<uintptr_t>(array->end(runtime)),              \
-        reinterpret_cast<uintptr_t>(                                   \
-            Handle<JSTypedArrayBase>::vmcast(array)->end(runtime)));   \
+#define TYPED_ARRAY(name, type)                                       \
+  {                                                                   \
+    auto result = name##Array::allocate(runtime, 10);                 \
+    ASSERT_FALSE(isException(result));                                \
+    Handle<name##Array> array = Handle<name##Array>::vmcast(*result); \
+    EXPECT_EQ(                                                        \
+        reinterpret_cast<uintptr_t>(array->begin(runtime)),           \
+        reinterpret_cast<uintptr_t>(                                  \
+            Handle<JSTypedArrayBase>(array)->begin(runtime)));        \
+    EXPECT_EQ(                                                        \
+        reinterpret_cast<uintptr_t>(array->end(runtime)),             \
+        reinterpret_cast<uintptr_t>(                                  \
+            Handle<JSTypedArrayBase>(array)->end(runtime)));          \
   }
 #include "hermes/VM/TypedArrays.def"
 }

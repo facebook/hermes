@@ -70,10 +70,10 @@ inline HandleBase &HandleBase::operator=(const HandleBase &other) {
 #endif
 
 template <typename T>
-inline Handle<T> Handle<T>::dyn_vmcast(const HandleBase &other) {
-  return vmisa<T>(other.getHermesValue())
-      ? Handle<T>(other, true)
-      : HandleRootOwner::makeNullHandle<T>();
+template <typename U>
+inline Handle<T> Handle<T>::dyn_vmcast(const Handle<U> &other) {
+  return vmisa<T>(other.get()) ? Handle<T>(other, true)
+                               : HandleRootOwner::makeNullHandle<T>();
 }
 
 } // namespace vm

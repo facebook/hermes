@@ -25,14 +25,14 @@ namespace vm {
 
 /// Assert that the cell, which must be non-null, is of the specified type
 /// and return the type-casted pointer.
-template <class ToType>
-ToType *vmcast(GCCell *cell) {
+template <typename ToType, typename FromType>
+ToType *vmcast(FromType *cell) {
   return llvh::cast<ToType>(cell);
 }
 
-/// const version of vmcast.
-template <class ToType>
-const ToType *vmcast(const GCCell *cell) {
+/// Const version of vmcast.
+template <typename ToType, typename FromType>
+const ToType *vmcast(const FromType *cell) {
   return llvh::cast<ToType>(cell);
 }
 
@@ -105,15 +105,9 @@ bool vmisa(HermesValue val) {
       llvh::isa<ToType>(static_cast<GCCell *>(val.getPointer()));
 }
 
-/// Return true if the cell is a pointer to an instance of ToType.
-template <class ToType>
-bool vmisa(GCCell *cell) {
-  return llvh::isa<ToType>(cell);
-}
-
-/// Const version of vmisa.
-template <class ToType>
-bool vmisa(const GCCell *cell) {
+/// Return true if the given type cell has the actual desired type.
+template <typename ToType, typename FromType>
+bool vmisa(const FromType *cell) {
   return llvh::isa<ToType>(cell);
 }
 

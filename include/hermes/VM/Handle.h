@@ -463,7 +463,8 @@ class Handle : public HandleBase {
 
   /// Cast the argument to the desired type and assert if it doesn't have the
   /// correct type.
-  static Handle<T> vmcast(const HandleBase &other) {
+  template <typename U>
+  static Handle<T> vmcast(const Handle<U> &other) {
     HermesValueCast<T>::assertValid(other.getHermesValue());
     return Handle<T>(other, true);
   }
@@ -475,7 +476,8 @@ class Handle : public HandleBase {
     return Handle<T>(other, true);
   }
 
-  static Handle<T> dyn_vmcast(const HandleBase &other);
+  template <typename U>
+  static Handle<T> dyn_vmcast(const Handle<U> &other);
 
   /// Create a handle based on a potentially invalid address.
   /// For example, this is used in CallResult for exception values.

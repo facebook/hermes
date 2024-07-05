@@ -389,7 +389,7 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
   if (LLVM_UNLIKELY(regExpRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return Handle<JSObject>::vmcast(*regExpRes);
+  return Handle<JSObject>(*regExpRes);
 }
 
 /// ES6 21.2.3.1 RegExp ( pattern, flags )
