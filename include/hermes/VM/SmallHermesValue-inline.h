@@ -89,6 +89,11 @@ double HermesValue32::getNumber(PointerBase &pb) const {
   return vmcast<BoxedDouble>(getPointer(pb))->get();
 }
 
+double HermesValue32::getBoxedDouble(PointerBase &pb) const {
+  assert(isBoxedDouble());
+  return vmcast<BoxedDouble>(getPointer(pb))->get();
+}
+
 /* static */ HermesValue32 HermesValue32::encodeHermesValue(
     HermesValue hv,
     Runtime &runtime) {
