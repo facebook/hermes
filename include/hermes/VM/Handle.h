@@ -195,6 +195,11 @@ class PinnedValue : private PinnedHermesValue {
     setNoBarrier(traits_type::encode(val));
     return *this;
   }
+  PinnedValue &operator=(PseudoHandle<T> &&other) {
+    setNoBarrier(other.getHermesValue());
+    other.invalidate();
+    return *this;
+  }
 
   value_type get() const {
     return traits_type::decode(*this);
