@@ -26,7 +26,7 @@ using std::min;
 /// @name Implementation
 /// @{
 
-Handle<JSObject> createArrayBufferConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createArrayBufferConstructor(Runtime &runtime) {
   auto arrayBufferPrototype =
       Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype);
   auto cons = defineSystemConstructor<JSArrayBuffer>(

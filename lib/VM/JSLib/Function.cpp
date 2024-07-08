@@ -26,7 +26,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Function.
 
-Handle<JSObject> createFunctionConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime) {
   auto functionPrototype = Handle<Callable>::vmcast(&runtime.functionPrototype);
 
   auto cons = defineSystemConstructor<JSFunction>(

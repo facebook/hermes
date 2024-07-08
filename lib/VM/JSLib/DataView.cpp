@@ -216,7 +216,7 @@ dataViewConstructor(void *, Runtime &runtime, NativeArgs args) {
   return self.getHermesValue();
 }
 
-Handle<JSObject> createDataViewConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.dataViewPrototype);
   auto cons = defineSystemConstructor<JSDataView>(
       runtime,

@@ -20,7 +20,7 @@ namespace vm {
 
 //===----------------------------------------------------------------------===//
 
-Handle<JSObject> createWeakRefConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime) {
   auto weakRefPrototype = Handle<JSObject>::vmcast(&runtime.weakRefPrototype);
 
   auto cons = defineSystemConstructor<JSWeakRef>(

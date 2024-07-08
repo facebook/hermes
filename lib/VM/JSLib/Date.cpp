@@ -100,7 +100,7 @@ enum class GetterKind {
   NumKinds
 };
 
-Handle<JSObject> createDateConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createDateConstructor(Runtime &runtime) {
   auto datePrototype = Handle<JSObject>::vmcast(&runtime.datePrototype);
   auto cons = defineSystemConstructor<JSDate>(
       runtime,

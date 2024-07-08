@@ -14,7 +14,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
 
   auto cons = runtime.makeHandle(NativeConstructor::create(

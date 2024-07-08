@@ -18,7 +18,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createBooleanConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createBooleanConstructor(Runtime &runtime) {
   auto booleanPrototype = Handle<JSBoolean>::vmcast(&runtime.booleanPrototype);
 
   auto cons = defineSystemConstructor<JSBoolean>(

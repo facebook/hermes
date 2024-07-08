@@ -24,7 +24,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Object.
 
-Handle<JSObject> createObjectConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createObjectConstructor(Runtime &runtime) {
   auto objectPrototype = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
   auto cons = defineSystemConstructor<JSObject>(

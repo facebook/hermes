@@ -170,7 +170,7 @@ proxyRevocable(void *, Runtime &runtime, NativeArgs args) {
   return result.getHermesValue();
 }
 
-Handle<JSObject> createProxyConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createProxyConstructor(Runtime &runtime) {
   Handle<NativeConstructor> cons = defineSystemConstructor<JSProxy>(
       runtime,
       Predefined::getSymbolID(Predefined::Proxy),

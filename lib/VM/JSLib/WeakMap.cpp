@@ -14,7 +14,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createWeakMapConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createWeakMapConstructor(Runtime &runtime) {
   auto weakMapPrototype = Handle<JSObject>::vmcast(&runtime.weakMapPrototype);
 
   defineMethod(

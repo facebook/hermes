@@ -17,7 +17,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createSetConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
   auto setPrototype = Handle<JSObject>::vmcast(&runtime.setPrototype);
 
   // Set.prototype.xxx methods.

@@ -25,7 +25,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createNumberConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
   auto numberPrototype = Handle<JSNumber>::vmcast(&runtime.numberPrototype);
 
   auto cons = defineSystemConstructor<JSNumber>(

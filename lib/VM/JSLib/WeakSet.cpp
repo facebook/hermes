@@ -14,7 +14,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createWeakSetConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createWeakSetConstructor(Runtime &runtime) {
   auto weakSetPrototype = Handle<JSObject>::vmcast(&runtime.weakSetPrototype);
 
   defineMethod(

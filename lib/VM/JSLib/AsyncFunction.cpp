@@ -21,7 +21,7 @@ asyncFunctionConstructor(void *, Runtime &runtime, NativeArgs args) {
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Async);
 }
 
-Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createAsyncFunctionConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype);
 
   /// 26.7.2 Properties of the AsyncFunction Constructor

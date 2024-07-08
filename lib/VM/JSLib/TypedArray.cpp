@@ -254,7 +254,7 @@ typedArrayConstructor(void *, Runtime &runtime, NativeArgs args) {
 }
 
 template <typename T, CellKind C, NativeFunctionPtr Ctor>
-Handle<JSObject> createTypedArrayConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createTypedArrayConstructor(Runtime &runtime) {
   using TA = JSTypedArray<T, C>;
   auto proto = TA::getPrototype(runtime);
 
@@ -1741,7 +1741,7 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.typedArrayBasePrototype);
 
   // Create NativeConstructor manually to avoid global object assignment.
@@ -2058,12 +2058,12 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
   return cons;
 }
 
-#define TYPED_ARRAY(name, type)                                       \
-  Handle<JSObject> create##name##ArrayConstructor(Runtime &runtime) { \
-    return createTypedArrayConstructor<                               \
-        type,                                                         \
-        CellKind::name##ArrayKind,                                    \
-        name##ArrayConstructor>(runtime);                             \
+#define TYPED_ARRAY(name, type)                                                \
+  Handle<NativeConstructor> create##name##ArrayConstructor(Runtime &runtime) { \
+    return createTypedArrayConstructor<                                        \
+        type,                                                                  \
+        CellKind::name##ArrayKind,                                             \
+        name##ArrayConstructor>(runtime);                                      \
   }
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY

@@ -20,7 +20,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createSymbolConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   auto symbolPrototype = Handle<JSObject>::vmcast(&runtime.symbolPrototype);
 
   auto cons = defineSystemConstructor<JSSymbol>(

@@ -27,7 +27,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Array.
 
-Handle<JSObject> createArrayConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
   auto arrayPrototype = Handle<JSArray>::vmcast(&runtime.arrayPrototype);
 
   // Array.prototype.xxx methods.

@@ -222,7 +222,7 @@ ExecutionStatus iteratorCloseAndRethrow(
 /// Create and initialize the global Object constructor. Populate the methods
 /// of Object and Object.prototype.
 /// \return the global Object constructor.
-Handle<JSObject> createObjectConstructor(Runtime &runtime);
+Handle<NativeConstructor> createObjectConstructor(Runtime &runtime);
 
 /// Built-in Object.prototype.toString.
 CallResult<HermesValue> directObjectPrototypeToString(
@@ -232,7 +232,7 @@ CallResult<HermesValue> directObjectPrototypeToString(
 /// Create and initialize the global Error constructor, as well as all
 /// the native error constructors. Populate the instance and prototype methods.
 #define ALL_ERROR_TYPE(name) \
-  Handle<JSObject> create##name##Constructor(Runtime &runtime);
+  Handle<NativeConstructor> create##name##Constructor(Runtime &runtime);
 #include "hermes/VM/NativeErrorTypes.def"
 
 /// Populate the internal CallSite.prototype.
@@ -241,32 +241,32 @@ void populateCallSitePrototype(Runtime &runtime);
 /// Create and initialize the global String constructor. Populate the methods
 /// of String and String.prototype.
 /// \return the global String constructor.
-Handle<JSObject> createStringConstructor(Runtime &runtime);
+Handle<NativeConstructor> createStringConstructor(Runtime &runtime);
 
 /// Create and initialize the global BigInt constructor. Populate the methods
 /// of BigInt and BigInt.prototype.
 /// \return the global BigInt constructor.
-Handle<JSObject> createBigIntConstructor(Runtime &runtime);
+Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime);
 
 /// Create and initialize the global Function constructor. Populate the methods
 /// of Function and Function.prototype.
 /// \return the global Function constructor.
-Handle<JSObject> createFunctionConstructor(Runtime &runtime);
+Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime);
 
 /// Create and initialize the global Number constructor. Populate the methods
 /// of Number and Number.prototype.
 /// \return the global Number constructor.
-Handle<JSObject> createNumberConstructor(Runtime &runtime);
+Handle<NativeConstructor> createNumberConstructor(Runtime &runtime);
 
 /// Create and initialize the global Boolean constructor. Populate the methods
 /// of Boolean and Boolean.prototype.
 /// \return the global Boolean constructor.
-Handle<JSObject> createBooleanConstructor(Runtime &runtime);
+Handle<NativeConstructor> createBooleanConstructor(Runtime &runtime);
 
 /// Create and initialize the global Date constructor. Populate the methods
 /// of Date and Date.prototype.
 /// \return the global Date constructor.
-Handle<JSObject> createDateConstructor(Runtime &runtime);
+Handle<NativeConstructor> createDateConstructor(Runtime &runtime);
 
 /// Create and initialize the global Math object, populating its value
 /// and function properties.
@@ -274,7 +274,7 @@ Handle<JSObject> createMathObject(Runtime &runtime);
 
 /// Create and initialize the global Proxy constructor, populating its methods.
 /// \return the global Proxy constructor.
-Handle<JSObject> createProxyConstructor(Runtime &runtime);
+Handle<NativeConstructor> createProxyConstructor(Runtime &runtime);
 
 // Forward declaration.
 class JSLibFlags;
@@ -304,7 +304,7 @@ Handle<JSObject> createReflectObject(Runtime &runtime);
 /// Create and initialize the global RegExp constructor. Populate the methods
 /// of RegExp and RegExp.prototype.
 /// \return the global RegExp constructor.
-Handle<JSObject> createRegExpConstructor(Runtime &runtime);
+Handle<NativeConstructor> createRegExpConstructor(Runtime &runtime);
 
 /// ES6.0 21.2.3.2.3 Runtime Semantics: RegExpCreate ( P, F )
 /// Creates a new RegExp with provided pattern \p P, and flags \p F.
@@ -369,53 +369,53 @@ advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
 /// Create and initialize the global Array constructor. Populate the methods
 /// of Array and Array.prototype.
 /// \return the global Array constructor.
-Handle<JSObject> createArrayConstructor(Runtime &runtime);
+Handle<NativeConstructor> createArrayConstructor(Runtime &runtime);
 
-Handle<JSObject> createArrayBufferConstructor(Runtime &runtime);
+Handle<NativeConstructor> createArrayBufferConstructor(Runtime &runtime);
 
-Handle<JSObject> createDataViewConstructor(Runtime &runtime);
+Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime);
 
-Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime);
+Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime);
 
 #define TYPED_ARRAY(name, type) \
-  Handle<JSObject> create##name##ArrayConstructor(Runtime &runtime);
+  Handle<NativeConstructor> create##name##ArrayConstructor(Runtime &runtime);
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
 /// Create and initialize the global Set constructor. Populate the methods
 /// of Set.prototype.
-Handle<JSObject> createSetConstructor(Runtime &runtime);
+Handle<NativeConstructor> createSetConstructor(Runtime &runtime);
 
 /// Create SetIterator.prototype and populate methods.
 Handle<JSObject> createSetIteratorPrototype(Runtime &runtime);
 
 /// Create and initialize the global Map constructor. Populate the methods
 /// of Map.prototype.
-Handle<JSObject> createMapConstructor(Runtime &runtime);
+Handle<NativeConstructor> createMapConstructor(Runtime &runtime);
 
 /// Create MapIterator.prototype and populate methods.
 Handle<JSObject> createMapIteratorPrototype(Runtime &runtime);
 
 /// Create the WeakMap constructor and populate methods.
-Handle<JSObject> createWeakMapConstructor(Runtime &runtime);
+Handle<NativeConstructor> createWeakMapConstructor(Runtime &runtime);
 
 /// Create the WeakSet constructor and populate methods.
-Handle<JSObject> createWeakSetConstructor(Runtime &runtime);
+Handle<NativeConstructor> createWeakSetConstructor(Runtime &runtime);
 
 /// Create the WeakRef constructor and populate methods.
-Handle<JSObject> createWeakRefConstructor(Runtime &runtime);
+Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime);
 
 /// Create the Symbol constructor and populate methods.
-Handle<JSObject> createSymbolConstructor(Runtime &runtime);
+Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime);
 
 /// Create the GeneratorFunction constructor and populate methods.
-Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime);
+Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime);
 
 /// Create the AsyncFunction constructor and populate methods.
-Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime);
+Handle<NativeConstructor> createAsyncFunctionConstructor(Runtime &runtime);
 
 /// Create the TextEncoder constructor and populate methods.
-Handle<JSObject> createTextEncoderConstructor(Runtime &runtime);
+Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime);
 
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime &runtime);

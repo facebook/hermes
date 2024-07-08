@@ -23,7 +23,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// ErrorObject.
 
-Handle<JSObject> createErrorConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
   auto errorPrototype = Handle<JSObject>::vmcast(&runtime.ErrorPrototype);
 
   // Error.prototype.xxx methods.
@@ -73,7 +73,8 @@ Handle<JSObject> createErrorConstructor(Runtime &runtime) {
 // The constructor creation functions have to be expanded from macros because
 // the constructor functions are expanded from macros.
 #define ERR_HELPER(error_name, argCount)                                    \
-  Handle<JSObject> create##error_name##Constructor(Runtime &runtime) {      \
+  Handle<NativeConstructor> create##error_name##Constructor(                \
+      Runtime &runtime) {                                                   \
     auto errorPrototype =                                                   \
         Handle<JSObject>::vmcast(&runtime.error_name##Prototype);           \
     auto defaultName = runtime.getPredefinedString(Predefined::error_name); \

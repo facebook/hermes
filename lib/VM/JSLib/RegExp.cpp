@@ -52,7 +52,7 @@ static inline bool thisIsRegExpProto(Runtime &runtime, NativeArgs args) {
       vmcast<JSObject>(runtime.regExpPrototype);
 }
 
-Handle<JSObject> createRegExpConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createRegExpConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.regExpPrototype);
 
   auto cons = defineSystemConstructor<JSRegExp>(

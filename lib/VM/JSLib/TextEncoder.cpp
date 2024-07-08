@@ -14,7 +14,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createTextEncoderConstructor(Runtime &runtime) {
+Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime) {
   auto textEncoderPrototype =
       Handle<JSObject>::vmcast(&runtime.textEncoderPrototype);
 
