@@ -290,14 +290,17 @@ struct IsHermesValueConvertible {
   using ToTraits = HermesValueTraits<To>;
 
   static constexpr bool value =
-      // Anything is convertable to HermesValue.
-      std::is_same<To, HermesValue>::value ||
       // A type is convertable to itself.
       std::is_same<From, To>::value ||
       // An object can be converted to its base class.
       (FromTraits::is_cell && ToTraits::is_cell &&
        std::is_base_of<To, From>::value);
 };
+
+/// Specialize converting to a HermesValue. Anything is convertible to
+/// HermesValue.
+template <class From>
+struct IsHermesValueConvertible<From, HermesValue> : std::true_type {};
 
 } // namespace vm
 } // namespace hermes
