@@ -528,12 +528,8 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
     const SHUnit *unit) {
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
-  auto parentHandle =
-      Callable::inferredParent(runtime, (FuncKind)funcInfo->kind);
-
-  return NativeJSFunction::create(
+  return NativeJSFunction::createWithInferredParent(
              runtime,
-             parentHandle,
              env ? Handle<Environment>::vmcast(toPHV(env))
                  : runtime.makeNullHandle<Environment>(),
              func,

@@ -192,11 +192,6 @@ class Callable : public JSObject {
   /// \return true if \p fn is an async function.
   static bool isAsyncFunction(Runtime &runtime, Callable *fn);
 
-  /// \return the inferred parent of a Callable based on its \p kind.
-  static inline Handle<JSObject> inferredParent(
-      Runtime &runtime,
-      FuncKind kind);
-
   /// Execute this function with no arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
   static CallResult<PseudoHandle<>> executeCall0(
@@ -350,19 +345,6 @@ class Callable : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parentHandle);
 };
-
-Handle<JSObject> Callable::inferredParent(Runtime &runtime, FuncKind kind) {
-  PinnedHermesValue *parent;
-  if (kind == FuncKind::Generator) {
-    parent = &runtime.generatorFunctionPrototype;
-  } else if (kind == FuncKind::Async) {
-    parent = &runtime.asyncFunctionPrototype;
-  } else {
-    assert(kind == FuncKind::Normal && "Unsupported function kind");
-    parent = &runtime.functionPrototype;
-  }
-  return Handle<JSObject>::vmcast(parent);
-}
 
 void Callable::staticAsserts() {
   static_assert(sizeof(Callable) == sizeof(SHCallable));
@@ -554,6 +536,22 @@ class NativeJSFunction : public Callable {
   static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
+      Handle<Environment> parentEnvHandle,
+      NativeJSFunctionPtr functionPtr,
+      const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit,
+      unsigned additionalSlotCount = 0);
+
+  /// Create a Function with the prototype property set to new Object(). The
+  /// parent is inferred by the kind of the function.
+  /// \param parentEnvHandle the parent environment
+  /// \param context the context to be passed to the function
+  /// \param functionPtr the native function
+  /// \param funcInfo pointer to the information describing the function.
+  /// \param additionalSlotCount internal slots to reserve within the
+  /// object (defaults to zero).
+  static Handle<NativeJSFunction> createWithInferredParent(
+      Runtime &runtime,
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,

@@ -916,6 +916,37 @@ Handle<NativeJSFunction> NativeJSFunction::create(
   return selfHandle;
 }
 
+/// \return the inferred parent of a Callable based on its \p kind.
+static Handle<JSObject> inferredParent(Runtime &runtime, FuncKind kind) {
+  PinnedHermesValue *parent;
+  if (kind == FuncKind::Generator) {
+    parent = &runtime.generatorFunctionPrototype;
+  } else if (kind == FuncKind::Async) {
+    parent = &runtime.asyncFunctionPrototype;
+  } else {
+    assert(kind == FuncKind::Normal && "Unsupported function kind");
+    parent = &runtime.functionPrototype;
+  }
+  return Handle<JSObject>::vmcast(parent);
+}
+
+Handle<NativeJSFunction> NativeJSFunction::createWithInferredParent(
+    Runtime &runtime,
+    Handle<Environment> parentEnvHandle,
+    NativeJSFunctionPtr functionPtr,
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit,
+    unsigned additionalSlotCount) {
+  return NativeJSFunction::create(
+      runtime,
+      inferredParent(runtime, (FuncKind)funcInfo->kind),
+      parentEnvHandle,
+      functionPtr,
+      funcInfo,
+      unit,
+      0);
+}
+
 /// This is a lightweight and unsafe wrapper intended to be used only by the
 /// interpreter. Its purpose is to avoid needlessly exposing the private
 /// fields.
@@ -1264,8 +1295,8 @@ PseudoHandle<JSFunction> JSFunction::createWithInferredParent(
     Handle<Domain> domain,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  auto parentHandle = Callable::inferredParent(
-      runtime, (FuncKind)codeBlock->getHeaderFlags().kind);
+  auto parentHandle =
+      inferredParent(runtime, (FuncKind)codeBlock->getHeaderFlags().kind);
   return create(runtime, domain, parentHandle, envHandle, codeBlock);
 }
 
