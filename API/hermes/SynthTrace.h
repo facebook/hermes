@@ -940,13 +940,14 @@ class SynthTrace {
     /// The index of the element that was accessed in the array.
     const size_t index_;
     /// The value that was read from the array.
-    const TraceValue value_;
+    // TODO: remove once recordings no longer contain this field
+    const std::optional<TraceValue> value_;
 
     explicit ArrayReadRecord(
         TimeSinceStart time,
         ObjectID objID,
         size_t index,
-        TraceValue value)
+        std::optional<TraceValue> value = std::nullopt)
         : Record(time), objID_(objID), index_(index), value_(value) {}
 
     static constexpr RecordType type{RecordType::ArrayRead};
@@ -955,7 +956,9 @@ class SynthTrace {
     }
     std::vector<ObjectID> defs() const override {
       std::vector<ObjectID> defs{};
-      pushIfTrackedValue(value_, defs);
+      if (value_) {
+        pushIfTrackedValue(*value_, defs);
+      }
       return defs;
     }
     std::vector<ObjectID> uses() const override {

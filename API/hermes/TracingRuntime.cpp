@@ -689,9 +689,11 @@ uint8_t *TracingRuntime::data(const jsi::ArrayBuffer &buf) {
 }
 
 jsi::Value TracingRuntime::getValueAtIndex(const jsi::Array &arr, size_t i) {
-  auto value = RD::getValueAtIndex(arr, i);
   trace_.emplace_back<SynthTrace::ArrayReadRecord>(
-      getTimeSinceStart(), useObjectID(arr), i, defTraceValue(value));
+      getTimeSinceStart(), useObjectID(arr), i);
+  auto value = RD::getValueAtIndex(arr, i);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(value));
   return value;
 }
 

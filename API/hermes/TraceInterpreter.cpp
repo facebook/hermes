@@ -935,8 +935,12 @@ void TraceInterpreter::executeRecords() {
                            .asObject(rt_)
                            .asArray(rt_)
                            .getValueAtIndex(rt_, arr.index_);
-          ifObjectAddToObjectMap(
-              arr.value_, std::move(value), currentExecIndex);
+          if (arr.value_) {
+            ifObjectAddToObjectMap(
+                *arr.value_, std::move(value), currentExecIndex);
+          } else {
+            retval = std::move(value);
+          }
           break;
         }
         case RecordType::ArrayWrite: {
