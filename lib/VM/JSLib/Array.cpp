@@ -15,6 +15,7 @@
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
@@ -2572,16 +2573,27 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   }
   auto O = runtime.makeHandle<JSObject>(objRes.getValue());
 
-  auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  // Array length is less than 2^32, length of array-like object is less than
+  // 2^53.
+  uint64_t len;
+  auto arrHandle = Handle<JSArray>::dyn_vmcast(O);
+  if (LLVM_LIKELY(arrHandle)) {
+    // Fast path: get array length.
+    len = JSArray::getLength(arrHandle.get(), runtime);
+  } else {
+    auto propRes = JSObject::getNamed_RJS(
+        O, runtime, Predefined::getSymbolID(Predefined::length));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto lenRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+    if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // toLengthU64() returns an unsigned integer smaller than 2^53, so it fits
+    // into int64_t.
+    len = *lenRes;
   }
-  auto lenRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
 
   // Early return before running into any coercions on args.
   // 2. Let len be ? LengthOfArrayLike(O).
@@ -2590,73 +2602,174 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
     return HermesValue::encodeTrustedNumberValue(-1);
   }
 
-  // Relative index to start the search at.
-  auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
-  double n;
+  // Actual index to start the search at.
+  uint64_t k;
   if (args.getArgCount() > 1) {
+    auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
     if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    n = intRes->getNumber();
-    if (LLVM_UNLIKELY(n == 0)) {
-      // To handle the special case when n is -0, we need to make sure it's 0.
-      n = 0;
+    double n = intRes->getNumber();
+    if (!reverse) {
+      if (LLVM_UNLIKELY(n >= len)) {
+        // If n >= len, nothing to search. This also handles n = +Inf.
+        return HermesValue::encodeTrustedNumberValue(-1);
+      } else if (n < 0) {
+        // 9. k = len + n. If k < 0, set k = 0. This handles n == -Inf.
+        k = std::max(len + n, 0.0);
+      } else {
+        // Here 0 <= n < len.
+        k = n;
+      }
+    } else {
+      if (LLVM_UNLIKELY(n + len < 0)) {
+        // Return -1 since nothing to search. This handles n = -Inf.
+        return HermesValue::encodeTrustedNumberValue(-1);
+      } else if (n >= 0) {
+        // If n is larger than len - 1, set k = len - 1. This handles n = +Inf.
+        k = std::min(n, (double)(len - 1));
+      } else {
+        // Here 0 <= n + len < len.
+        k = len + n;
+      }
     }
   } else {
-    n = !reverse ? 0 : len - 1;
+    k = !reverse ? 0 : len - 1;
   }
-
-  // Actual index to start the search at.
-  MutableHandle<> k{runtime};
-  if (!reverse) {
-    if (n >= 0) {
-      k = HermesValue::encodeTrustedNumberValue(n);
-    } else {
-      // If len - abs(n) < 0, set k=0. Otherwise set k = len - abs(n).
-      k = HermesValue::encodeTrustedNumberValue(
-          std::max(len - std::abs(n), 0.0));
-    }
-  } else {
-    if (n >= 0) {
-      k = HermesValue::encodeTrustedNumberValue(std::min(n, len - 1));
-    } else {
-      k = HermesValue::encodeTrustedNumberValue(len - std::abs(n));
-    }
-  }
-
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
-  MutableHandle<JSObject> descObjHandle{runtime};
 
   // Search for the element.
   auto searchElement = args.getArgHandle(0);
+  // If the range of Array IndexedStorage is not [0, len), there could be holes
+  // at some indices.
+  if (LLVM_LIKELY(
+          arrHandle && (0 == arrHandle->getBeginIndex()) &&
+          (len == arrHandle->getEndIndex()))) {
+    // Fast path: access array storage directly.
+    auto searchElementVal =
+        SmallHermesValue::encodeHermesValue(searchElement.get(), runtime);
+    NoAllocScope noAlloc{runtime};
+    bool hasHole = false;
+    auto *arrStorage = arrHandle->getIndexedStorage(runtime);
+
+    // Macro for searching the array with given loop initialization, terminating
+    // condition and updating rule after each iteration. Note that the macro
+    // COMPARE_EXPR, which takes the array element of each iteration and
+    // produces a boolean value, must be defined befofe exeucting this.
+#define SEARCH_ARRAY_DIRECTED(INIT, LOOP_COND, STEP)   \
+  for (INIT; LOOP_COND; STEP) {                        \
+    auto element = arrStorage->at(runtime, k);         \
+    if (LLVM_UNLIKELY(element.isEmpty())) {            \
+      hasHole = true;                                  \
+      break;                                           \
+    }                                                  \
+    if (COMPARE_EXPR(element))                         \
+      return HermesValue::encodeTrustedNumberValue(k); \
+  }
+
+    // Specialize the loop with search direction.
+#define SEARCH_ARRAY                             \
+  if (reverse) {                                 \
+    SEARCH_ARRAY_DIRECTED(++k, k-- > 0, (void)0) \
+  } else {                                       \
+    SEARCH_ARRAY_DIRECTED((void)0, k < len, ++k) \
+  }
+
+    // Specialize the search loop with the type of the target value.
+    if (searchElementVal.isInlinedDouble()) {
+      auto searchNum = searchElementVal.getNumber(runtime);
+      // If it's NaN, no need to do any comparison.
+      if (LLVM_UNLIKELY(std::isnan(searchNum))) {
+        return HermesValue::encodeTrustedNumberValue(-1);
+      }
+      // If it's +0.0/-0.0.
+      if (searchNum == 0) {
+        auto negativeZero = SmallHermesValue::encodeNumberValue(-0.0, runtime);
+        auto negativeZeroBits = negativeZero.getRaw();
+        auto positiveZero = SmallHermesValue::encodeNumberValue(+0.0, runtime);
+        auto positiveZeroBits = positiveZero.getRaw();
+        assert(
+            negativeZero.isInlinedDouble() && positiveZero.isInlinedDouble() &&
+            "Both +0.0/-0.0 should be inline double.");
+        // Compare bits with +0.0/-0.0 directly.
+#define COMPARE_EXPR(element) \
+  element.getRaw() == negativeZeroBits || element.getRaw() == positiveZeroBits
+        SEARCH_ARRAY
+#undef COMPARE_EXPR
+      } else {
+        // If it's not +0.0/-0.0/NaN, compare raw bits directly.
+#define COMPARE_EXPR(element) searchElementVal.getRaw() == element.getRaw()
+        SEARCH_ARRAY
+#undef COMPARE_EXPR
+      }
+    } else if (searchElementVal.isBoxedDouble()) {
+      // Only HV32 can have boxed doubles, compare the double value.
+      auto searchNum = searchElementVal.getBoxedDouble(runtime);
+#define COMPARE_EXPR(element) \
+  element.isBoxedDouble() && searchNum == element.getBoxedDouble(runtime)
+      SEARCH_ARRAY
+#undef COMPARE_EXPR
+    } else if (searchElementVal.isString()) {
+      auto searchStr = searchElementVal.getString(runtime);
+
+#define COMPARE_EXPR(element) \
+  element.isString() && searchStr->equals(element.getString(runtime))
+      SEARCH_ARRAY
+#undef COMPARE_EXPR
+    } else if (searchElementVal.isBigInt()) {
+      auto searchBigInt = searchElementVal.getBigInt(runtime);
+
+#define COMPARE_EXPR(element) \
+  element.isBigInt() && !searchBigInt->compare(element.getBigInt(runtime))
+      SEARCH_ARRAY
+#undef COMPARE_EXPR
+    } else {
+      // For all other types (e.g., Object), compare the exact bits.
+#define COMPARE_EXPR(element) searchElementVal.getRaw() == element.getRaw()
+      SEARCH_ARRAY
+#undef COMPARE_EXPR
+    }
+
+#undef SEARCH_ARRAY_DIRECTED
+#undef SEARCH_ARRAY
+
+    // If array has no hole and target is not found, return -1.
+    if (!hasHole) {
+      return HermesValue::encodeTrustedNumberValue(-1);
+    }
+  }
+
+  // Slow path for non-array objects or arrays with holes.
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  MutableHandle<JSObject> descObjHandle{runtime};
+  MutableHandle<> kHandle{runtime, HermesValue::encodeTrustedNumberValue(k)};
   auto marker = gcScope.createMarker();
   while (true) {
     gcScope.flushToMarker(marker);
     // Check that we're not done yet.
     if (!reverse) {
-      if (k->getDouble() >= len) {
+      if (kHandle->getDouble() >= len) {
         break;
       }
     } else {
-      if (k->getDouble() < 0) {
+      if (kHandle->getDouble() < 0) {
         break;
       }
     }
     ComputedPropertyDescriptor desc;
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
+        O, runtime, kHandle, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
+        O, runtime, descObjHandle, tmpPropNameStorage, desc, kHandle);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (!(*propRes)->isEmpty() &&
         strictEqualityTest(searchElement.get(), propRes->get())) {
-      return k.get();
+      return kHandle.get();
     }
     // Update the index based on the direction of the search.
-    k = HermesValue::encodeTrustedNumberValue(
-        k->getDouble() + (reverse ? -1 : 1));
+    kHandle = HermesValue::encodeTrustedNumberValue(
+        kHandle->getDouble() + (reverse ? -1 : 1));
   }
 
   // Not found, return -1.

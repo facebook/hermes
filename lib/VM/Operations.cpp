@@ -570,21 +570,6 @@ CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle) {
 }
 
 CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle) {
-  constexpr double maxLength = 9007199254740991.0; // 2**53 - 1
-  auto res = toIntegerOrInfinity(runtime, valueHandle);
-  if (res == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto len = res->getNumber();
-  if (len <= 0) {
-    len = 0;
-  } else if (len > maxLength) {
-    len = maxLength;
-  }
-  return HermesValue::encodeTrustedNumberValue(len);
-}
-
-CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
   constexpr double highestIntegralDouble =
       ((uint64_t)1 << std::numeric_limits<double>::digits) - 1;
   auto res = toIntegerOrInfinity(runtime, valueHandle);
@@ -597,7 +582,15 @@ CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
   } else if (len > highestIntegralDouble) {
     len = highestIntegralDouble;
   }
-  return len;
+  return HermesValue::encodeTrustedNumberValue(len);
+}
+
+CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
+  auto res = toLength(runtime, valueHandle);
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getNumber();
 }
 
 CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {

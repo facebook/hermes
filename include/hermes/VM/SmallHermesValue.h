@@ -58,6 +58,7 @@ class SmallHermesValueAdaptor : protected HermesValue {
 #endif
 
   using HermesValue::getBool;
+  using HermesValue::getRaw;
   using HermesValue::getSymbol;
   using HermesValue::isBigInt;
   using HermesValue::isBool;
@@ -69,6 +70,22 @@ class SmallHermesValueAdaptor : protected HermesValue {
   using HermesValue::isString;
   using HermesValue::isSymbol;
   using HermesValue::isUndefined;
+
+  /// \return true if it's a Number since double bits are always inlined in
+  /// HermesValue.
+  bool isInlinedDouble() const {
+    return isNumber();
+  }
+  /// \return false since HermesValue does not box doubles.
+  bool isBoxedDouble() const {
+    return false;
+  }
+  /// This should never be executed since isBoxedDouble() always return false.
+  /// Its existence is only to have the same method as HermesValue32 to satisfy
+  /// compiler.
+  double getBoxedDouble(PointerBase &) const {
+    llvm_unreachable("SmallHermesValueAdaptor does not have boxed doubles.");
+  }
 
   HermesValue toHV(PointerBase &) const {
     return *this;
@@ -347,7 +364,14 @@ class HermesValue32 {
   }
   bool isNumber() const {
     Tag tag = getTag();
-    return tag == Tag::BoxedDouble || tag == Tag::CompressedDouble;
+    // It's likely to be a CompressedDouble, so check it first.
+    return tag == Tag::CompressedDouble || tag == Tag::BoxedDouble;
+  }
+  bool isInlinedDouble() const {
+    return getTag() == Tag::CompressedDouble;
+  }
+  bool isBoxedDouble() const {
+    return getTag() == Tag::BoxedDouble;
   }
   bool isSymbol() const {
     return getTag() == Tag::Symbol;
@@ -363,6 +387,9 @@ class HermesValue32 {
   }
   bool isBool() const {
     return getETag() == ETag::Bool;
+  }
+  RawType getRaw() const {
+    return raw_;
   }
 
   /// Convert this to a full HermesValue, but do not unbox a BoxedDouble.
@@ -392,6 +419,7 @@ class HermesValue32 {
   inline BigIntPrimitive *getBigInt(PointerBase &pb) const;
   inline StringPrimitive *getString(PointerBase &pb) const;
   inline double getNumber(PointerBase &pb) const;
+  inline double getBoxedDouble(PointerBase &pb) const;
 
   CompressedPointer getPointer() const {
     assert(isPointer());
