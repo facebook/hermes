@@ -187,6 +187,19 @@ public:
     return ValueT();
   }
 
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.  Has const and non-const overloads.
+  const ValueT &at(const_arg_type_t<KeyT> Val) const {
+    auto Iter = this->find(std::move(Val));                             \
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key"); \
+    return Iter->second;
+  }
+  ValueT &at(const_arg_type_t<KeyT> Val) {
+    auto Iter = this->find(std::move(Val));                             \
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key"); \
+    return Iter->second;
+  }
+
   // Inserts key,value pair into the map if the key isn't already in the map.
   // If the key is already in the map, it returns false and doesn't update the
   // value.

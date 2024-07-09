@@ -115,6 +115,19 @@ public:
     return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
   }
 
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.  Has const and non-const overloads.
+  const ValueT &at(const KeyT &Key) const {
+    typename MapType::const_iterator Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
+  }
+  ValueT &at(const KeyT &Key) {
+    typename MapType::const_iterator Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
+  }
+
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
     std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(KV.first, 0);
     std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
