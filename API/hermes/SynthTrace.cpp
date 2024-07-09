@@ -387,8 +387,17 @@ void SynthTrace::CreateHostFunctionRecord::toJSONInternal(
 #endif
 }
 
-void SynthTrace::GetOrSetPropertyRecord::toJSONInternal(
-    JSONEmitter &json) const {
+void SynthTrace::GetPropertyRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("propID", encode(propID_));
+#ifdef HERMESVM_API_TRACE_DEBUG
+  json.emitKeyValue("propName", propNameDbg_);
+#endif
+  json.emitKeyValue("value", encode(value_));
+}
+
+void SynthTrace::SetPropertyRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("propID", encode(propID_));
