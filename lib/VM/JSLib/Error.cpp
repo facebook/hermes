@@ -214,30 +214,34 @@ static CallResult<HermesValue> constructAggregateErrorObject(
 // ERR_HELPER macro defined above.
 CallResult<HermesValue>
 ErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
-  auto prototype = runtime.makeHandle<JSObject>(runtime.ErrorPrototype);
   return constructErrorObject(
-      runtime, args, args.getArgHandle(0), args.getArgHandle(1), prototype);
+      runtime,
+      args,
+      args.getArgHandle(0),
+      args.getArgHandle(1),
+      runtime.ErrorPrototype);
 }
 
 // AggregateError has a different constructor body than the other errors.
 CallResult<HermesValue>
 AggregateErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
   return constructAggregateErrorObject(
-      runtime,
-      args,
-      runtime.makeHandle<JSObject>(runtime.AggregateErrorPrototype));
+      runtime, args, runtime.AggregateErrorPrototype);
 }
 
 // Constructor functions have to be expanded from macro because they are
 // native calls, and their interface are restricted. No extra parameters
 // can be passed in. We can't use the #ALL_ERROR_TYPE macro since AggregateError
 // requires a different constructor.
-#define NATIVE_ERROR_TYPE(name)                                                \
-  CallResult<HermesValue> name##Constructor(                                   \
-      void *, Runtime &runtime, NativeArgs args) {                             \
-    auto prototype = runtime.makeHandle<JSObject>(runtime.name##Prototype);    \
-    return constructErrorObject(                                               \
-        runtime, args, args.getArgHandle(0), args.getArgHandle(1), prototype); \
+#define NATIVE_ERROR_TYPE(name)                    \
+  CallResult<HermesValue> name##Constructor(       \
+      void *, Runtime &runtime, NativeArgs args) { \
+    return constructErrorObject(                   \
+        runtime,                                   \
+        args,                                      \
+        args.getArgHandle(0),                      \
+        args.getArgHandle(1),                      \
+        runtime.name##Prototype);                  \
   }
 #include "hermes/VM/NativeErrorTypes.def"
 

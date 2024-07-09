@@ -32,7 +32,8 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
   {
     auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
         setPrototype, runtime, Predefined::getSymbolID(Predefined::add)));
-    runtime.setPrototypeAdd = std::move(propValue);
+    runtime.setPrototypeAdd =
+        vmcast<NativeFunction>(std::move(propValue).getHermesValue());
   }
 
   defineMethod(
@@ -101,7 +102,7 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
           setPrototype,
           runtime,
           Predefined::getSymbolID(Predefined::values)))));
-  runtime.setPrototypeValues = propValue.getHermesValue();
+  runtime.setPrototypeValues = propValue.get();
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
       runtime,
@@ -204,15 +205,15 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
   auto iterMethod = runtime.makeHandle<Callable>(std::move(*iterMethodRes));
 
   // Fast path
-  const bool originalAdd =
-      adder.getHermesValue().getRaw() == runtime.setPrototypeAdd.getRaw();
+  const bool originalAdd = adder.getHermesValue().getRaw() ==
+      runtime.setPrototypeAdd.getHermesValue().getRaw();
   // If the adder is the default one, we can call JSSet::addValue directly.
   if (LLVM_LIKELY(originalAdd)) {
     // If the iterable is an array with unmodified iterator,
     // then we can do for-loop.
     if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0); arr &&
         LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
-                    runtime.arrayPrototypeValues.getRaw())) {
+                    runtime.arrayPrototypeValues.getHermesValue().getRaw())) {
       MutableHandle<HermesValue> tmpHandle{runtime};
 
       for (JSArray::size_type i = 0; i < JSArray::getLength(arr.get(), runtime);
@@ -244,7 +245,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
     // then we can do for-loop.
     if (Handle<JSSet> inputSet = args.dyncastArg<JSSet>(0); inputSet &&
         LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
-                    runtime.setPrototypeValues.getRaw())) {
+                    runtime.setPrototypeValues.getHermesValue().getRaw())) {
       if (LLVM_UNLIKELY(
               setFromSetFastPath(runtime, selfHandle, inputSet) ==
               ExecutionStatus::EXCEPTION)) {

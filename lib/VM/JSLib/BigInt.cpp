@@ -19,7 +19,7 @@ namespace hermes {
 namespace vm {
 
 Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime) {
-  auto bigintPrototype = Handle<JSObject>::vmcast(&runtime.bigintPrototype);
+  Handle<JSObject> bigintPrototype{runtime.bigintPrototype};
 
   auto cons = defineSystemConstructor<JSBigInt>(
       runtime,

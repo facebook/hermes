@@ -55,7 +55,7 @@ void populateGeneratorPrototype(Runtime &runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::constructor),
-      Handle<>(&runtime.generatorFunctionPrototype),
+      runtime.generatorFunctionPrototype,
       dpf);
 
   defineProperty(

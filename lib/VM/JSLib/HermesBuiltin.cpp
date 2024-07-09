@@ -492,13 +492,12 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
         createPseudoHandle(JSObject::getNamedDescriptorPredefined(
             arr, runtime, Predefined::SymbolIterator, desc));
     if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!desc.flags.proxyObject)) {
-      PseudoHandle<> slotValue = createPseudoHandle(
-          JSObject::getNamedSlotValueUnsafe(propObj.get(), runtime, desc)
-              .unboxToHV(runtime));
+      SmallHermesValue slotValue =
+          JSObject::getNamedSlotValueUnsafe(propObj.get(), runtime, desc);
       propObj.invalidate();
       if (LLVM_LIKELY(
-              slotValue->getRaw() == runtime.arrayPrototypeValues.getRaw())) {
-        slotValue.invalidate();
+              slotValue.isObject() &&
+              slotValue.getObject(runtime) == *runtime.arrayPrototypeValues)) {
         auto nextIndex = args.getArg(2).getNumberAs<JSArray::size_type>();
         MutableHandle<> idxHandle{runtime};
         GCScopeMarkerRAII marker{runtime};

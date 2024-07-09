@@ -131,9 +131,9 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
     res = Callable::newObject(
         Handle<Callable>::vmcast(callableHandle),
         runtime,
-        Handle<JSObject>::vmcast(
-            toPHV(prototype)->isObject() ? toPHV(prototype)
-                                         : &runtime.objectPrototype));
+        toPHV(prototype)->isObject()
+            ? Handle<JSObject>::vmcast(toPHV(prototype))
+            : runtime.objectPrototype);
   }
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -146,7 +146,7 @@ extern "C" SHLegacyValue _sh_ljs_coerce_this_ns(
   if (LLVM_LIKELY(_sh_ljs_is_object(value))) {
     return value;
   } else if (_sh_ljs_is_null(value) || _sh_ljs_is_undefined(value)) {
-    return getRuntime(shr).global_;
+    return getRuntime(shr).global_.getHermesValue();
   } else {
     CallResult<HermesValue> res{HermesValue::encodeUndefinedValue()};
     {
@@ -540,7 +540,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {
-  return getRuntime(shr).global_;
+  return getRuntime(shr).global_.getHermesValue();
 }
 
 extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
@@ -1314,8 +1314,7 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
 
   MutableHandle<HiddenClass> clazz =
       runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
-          vmcast<JSObject>(runtime.objectPrototype),
-          JSObject::numOverlapSlots<JSObject>()));
+          *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()));
 
   struct {
     void addProperty(SymbolID sym) {

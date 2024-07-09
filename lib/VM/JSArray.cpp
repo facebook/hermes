@@ -436,8 +436,7 @@ CallResult<Handle<Arguments>> Arguments::create(
       P::length,
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(length)));
 
-  DEFINE_PROP(
-      selfHandle, P::SymbolIterator, Handle<>(&runtime.arrayPrototypeValues));
+  DEFINE_PROP(selfHandle, P::SymbolIterator, runtime.arrayPrototypeValues);
 
   if (strictMode) {
     // Define .callee and .caller properties: throw always in strict mode

@@ -946,8 +946,7 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
     auto thrownProto =
         JSObject::getPrototypeOf(createPseudoHandle(thrownJSObject), runtime);
     ASSERT_NE(ExecutionStatus::EXCEPTION, thrownProto.getStatus());
-    EXPECT_EQ(
-        runtime.TypeErrorPrototype.getObject(runtime), thrownProto->get());
+    EXPECT_EQ(*runtime.TypeErrorPrototype, thrownProto->get());
     runtime.clearThrownValue();
   }
 
@@ -1384,8 +1383,7 @@ TEST_F(OperationsTest, NumberToBigIntTest) {
     auto thrownProto =
         JSObject::getPrototypeOf(createPseudoHandle(thrownJSObject), runtime);
     ASSERT_NE(ExecutionStatus::EXCEPTION, thrownProto.getStatus());
-    EXPECT_EQ(
-        runtime.RangeErrorPrototype.getObject(runtime), thrownProto->get());
+    EXPECT_EQ(*runtime.RangeErrorPrototype, thrownProto->get());
     runtime.clearThrownValue();
   }
 }

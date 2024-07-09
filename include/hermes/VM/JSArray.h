@@ -325,8 +325,8 @@ class JSArray final : public ArrayImpl {
     return createNoAllocPropStorage(
         runtime,
         prototypeHandle,
-        *prototypeHandle == runtime.arrayPrototype.getObject()
-            ? Handle<HiddenClass>::vmcast(&runtime.arrayClass)
+        *prototypeHandle == *runtime.arrayPrototype
+            ? runtime.arrayClass
             : createClass(runtime, prototypeHandle),
         capacity,
         length);

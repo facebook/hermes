@@ -924,9 +924,7 @@ TEST_F(ObjectModelLargeHeapTest, LargeObjectThrowsRangeError) {
     if (res == ExecutionStatus::EXCEPTION) {
       // Check that RangeError was thrown.
       auto *err = vmcast<JSObject>(runtime.getThrownValue());
-      EXPECT_EQ(
-          err->getParent(runtime),
-          vmcast<JSObject>(runtime.RangeErrorPrototype));
+      EXPECT_EQ(err->getParent(runtime), *runtime.RangeErrorPrototype);
       return;
     }
     i = HermesValue::encodeTrustedNumberValue(i->getNumber() + 1);

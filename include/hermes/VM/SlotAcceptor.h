@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_SLOTACCEPTOR_H
 #define HERMES_VM_SLOTACCEPTOR_H
 
+#include "hermes/VM/Handle.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/SymbolID.h"
@@ -58,6 +59,10 @@ struct RootAcceptor : public RootSectionAcceptor {
   /// Same as the above, but allows the HermesValue to store a nullptr value.
   virtual void acceptNullable(PinnedHermesValue &hv) = 0;
   virtual void accept(const RootSymbolID &sym) = 0;
+  template <typename T>
+  void acceptNullablePV(PinnedValue<T> &pv) {
+    acceptNullable(pv);
+  }
 
   /// When we want to call an acceptor on "raw" root pointers of
   /// some JSObject subtype T, this method does the necessary

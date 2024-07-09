@@ -812,9 +812,7 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
     default:
       assert(valueHandle->isNumber() && "Unknown tag in toObject.");
       return JSNumber::create(
-                 runtime,
-                 value.getNumber(),
-                 Handle<JSObject>::vmcast(&runtime.numberPrototype))
+                 runtime, value.getNumber(), runtime.numberPrototype)
           .getHermesValue();
   }
 }
@@ -3032,7 +3030,8 @@ extern "C" SHLegacyValue _sh_ljs_iterator_begin_rjs(
           return ExecutionStatus::EXCEPTION;
         PseudoHandle<> slotValue = std::move(*slotValueRes);
         if (LLVM_LIKELY(
-                slotValue->getRaw() == runtime.arrayPrototypeValues.getRaw()))
+                slotValue->getRaw() ==
+                runtime.arrayPrototypeValues.getHermesValue().getRaw()))
           return HermesValue::encodeTrustedNumberValue(0);
       }
     }
@@ -3168,7 +3167,7 @@ extern "C" void _sh_ljs_iterator_close_rjs(
 
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     // Ignore the raised exception if necessary.
-    if (ignoreExceptions && !isUncatchableError(runtime.thrownValue_)) {
+    if (ignoreExceptions && !isUncatchableError(*runtime.thrownValue_)) {
       runtime.clearThrownValue();
       return;
     }

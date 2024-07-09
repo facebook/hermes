@@ -623,8 +623,8 @@ intlCollatorCreator(Runtime &runtime, Handle<JSObject> parentHandle, void *) {
 
 void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
   // Create %CollatorPrototype% intrinsic.  Properties will be added later.
-  Handle<JSObject> prototype = runtime.makeHandle(JSObject::create(runtime));
-  runtime.intlCollatorPrototype = prototype.getHermesValue();
+  runtime.intlCollatorPrototype = JSObject::create(runtime);
+  Handle<JSObject> prototype{runtime.intlCollatorPrototype};
 
   // Create %Collator% intrinsic.
   Handle<NativeConstructor> constructor = defineSystemConstructor(
@@ -635,7 +635,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
       0,
       intlCollatorCreator,
       CellKind::DecoratedObjectKind);
-  runtime.intlCollator = constructor.getHermesValue();
+  runtime.intlCollator = constructor;
 
   {
     DefinePropertyFlags dpf{};
@@ -863,8 +863,8 @@ CallResult<PseudoHandle<JSObject>> intlDateTimeFormatCreator(
 void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
   // Create %DateTimeFormatPrototype% intrinsic.  Properties will be added
   // later.
-  Handle<JSObject> prototype = runtime.makeHandle(JSObject::create(runtime));
-  runtime.intlDateTimeFormatPrototype = prototype.getHermesValue();
+  runtime.intlDateTimeFormatPrototype = JSObject::create(runtime);
+  Handle<JSObject> prototype{runtime.intlDateTimeFormatPrototype};
 
   // Create %DateTimeFormat% intrinsic.
   Handle<NativeConstructor> constructor = defineSystemConstructor(
@@ -875,7 +875,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       0,
       intlDateTimeFormatCreator,
       CellKind::DecoratedObjectKind);
-  runtime.intlDateTimeFormat = constructor.getHermesValue();
+  runtime.intlDateTimeFormat = constructor;
 
   {
     DefinePropertyFlags dpf{};
@@ -1178,8 +1178,8 @@ CallResult<PseudoHandle<JSObject>> intlNumberFormatCreator(
 
 void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
   // Create %NumberFormatPrototype% intrinsic.  Properties will be added later.
-  Handle<JSObject> prototype = runtime.makeHandle(JSObject::create(runtime));
-  runtime.intlNumberFormatPrototype = prototype.getHermesValue();
+  runtime.intlNumberFormatPrototype = JSObject::create(runtime);
+  Handle<JSObject> prototype{runtime.intlNumberFormatPrototype};
 
   // Create %NumberFormat% intrinsic.
   Handle<NativeConstructor> constructor = defineSystemConstructor(
@@ -1190,7 +1190,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       0,
       intlNumberFormatCreator,
       CellKind::DecoratedObjectKind);
-  runtime.intlNumberFormat = constructor.getHermesValue();
+  runtime.intlNumberFormat = constructor;
 
   {
     DefinePropertyFlags dpf{};

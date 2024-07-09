@@ -92,7 +92,7 @@ CallResult<Handle<FastArray>> FastArray::create(
       runtime,
       runtime.makeAFixed<FastArray>(
           runtime,
-          Handle<JSObject>::vmcast(&runtime.fastArrayPrototype),
+          runtime.fastArrayPrototype,
           Handle<HiddenClass>::vmcast(&runtime.fastArrayClass),
           GCPointerBase::NoBarriers()));
 

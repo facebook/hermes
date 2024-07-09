@@ -26,7 +26,7 @@ namespace hermes {
 namespace vm {
 
 Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
-  auto numberPrototype = Handle<JSNumber>::vmcast(&runtime.numberPrototype);
+  Handle<JSNumber> numberPrototype{runtime.numberPrototype};
 
   auto cons = defineSystemConstructor<JSNumber>(
       runtime,
@@ -155,12 +155,12 @@ Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
       runtime,
       cons,
       Predefined::getSymbolID(Predefined::parseInt),
-      Handle<>(&runtime.parseIntFunction));
+      runtime.parseIntFunction);
   defineProperty(
       runtime,
       cons,
       Predefined::getSymbolID(Predefined::parseFloat),
-      Handle<>(&runtime.parseFloatFunction));
+      runtime.parseFloatFunction);
   return cons;
 }
 

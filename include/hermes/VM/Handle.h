@@ -168,6 +168,7 @@ template <typename T = HermesValue>
 class PinnedValue : private PinnedHermesValue {
   template <class U>
   friend class Handle;
+  friend struct RootAcceptor;
 
   using traits_type = HermesValueTraits<T>;
   using value_type = typename traits_type::value_type;

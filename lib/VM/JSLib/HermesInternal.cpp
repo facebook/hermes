@@ -17,6 +17,7 @@
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
 
@@ -588,14 +589,15 @@ CallResult<HermesValue> hermesInternalEnablePromiseRejectionTracker(
     Runtime &runtime,
     NativeArgs args) {
   auto opts = args.getArgHandle(0);
-  auto func = Handle<Callable>::dyn_vmcast(
-      Handle<>(&runtime.promiseRejectionTrackingHook_));
-  if (!func) {
+  if (!vmisa<Callable>(*runtime.promiseRejectionTrackingHook_)) {
     return runtime.raiseTypeError(
         "Promise rejection tracking hook was not registered");
   }
   return Callable::executeCall1(
-             func, runtime, Runtime::getUndefinedValue(), opts.getHermesValue())
+             Handle<Callable>::vmcast(&runtime.promiseRejectionTrackingHook_),
+             runtime,
+             Runtime::getUndefinedValue(),
+             opts.getHermesValue())
       .toCallResultHermesValue();
 }
 
@@ -741,7 +743,7 @@ Handle<JSObject> createHermesInternalObject(
   // because this method should be called with a meaningful `this`, but
   // CallBuiltin instruction does not support it.
   auto propRes = JSObject::getNamed_RJS(
-      runtime.makeHandle<JSObject>(runtime.stringPrototype),
+      runtime.stringPrototype,
       runtime,
       Predefined::getSymbolID(Predefined::concat));
   assert(

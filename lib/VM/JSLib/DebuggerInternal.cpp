@@ -15,7 +15,8 @@ namespace vm {
 #ifdef HERMES_ENABLE_DEBUGGER
 
 Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
-  Handle<JSObject> intern = runtime.makeHandle(JSObject::create(runtime));
+  runtime.debuggerInternalObject_ = JSObject::create(runtime);
+  Handle<JSObject> intern{runtime.debuggerInternalObject_};
 
   // Configurable property stored in the Debugger
   // To be used when a debugger transitions to an attached state.
@@ -44,7 +45,6 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
       false);
 
   JSObject::preventExtensions(*intern);
-  runtime.debuggerInternalObject_ = intern.getHermesValue();
 
   return intern;
 }

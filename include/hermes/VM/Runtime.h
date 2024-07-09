@@ -293,7 +293,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
         runtimeModuleFlags,
         sourceURL,
         environment,
-        Handle<>(&global_));
+        global_);
   }
 
   ExecutionStatus loadSegment(
@@ -559,7 +559,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// \return `thrownValue`.
   HermesValue getThrownValue() const {
-    return thrownValue_;
+    return *thrownValue_;
   }
 
   /// Set `thrownValue` to the specified value \p value, `returnValue` to
@@ -760,7 +760,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// @}
 
-#define RUNTIME_HV_FIELD(name) PinnedHermesValue name{};
+#define RUNTIME_HV_FIELD(name, type) PinnedValue<type> name{};
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #undef RUNTIME_HV_FIELD
 

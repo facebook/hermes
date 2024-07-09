@@ -152,7 +152,7 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
       0,
       HermesValue::fromRaw(closure.raw),
       HermesValue::encodeUndefinedValue());
-  frame.getThisArgRef() = runtime.global_;
+  frame.getThisArgRef() = runtime.global_.getHermesValue();
 
   SHLegacyValue res = NativeJSFunction::_legacyCall(
       shr, vmcast<NativeJSFunction>(HermesValue::fromRaw(closure.raw)));

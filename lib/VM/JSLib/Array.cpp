@@ -147,7 +147,8 @@ Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
 
   auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
       arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
-  runtime.arrayPrototypeValues = std::move(propValue);
+  runtime.arrayPrototypeValues =
+      vmcast<NativeFunction>(std::move(propValue).get());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
@@ -156,7 +157,7 @@ Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
       runtime,
       Predefined::getSymbolID(Predefined::SymbolIterator),
       dpf,
-      Handle<>(&runtime.arrayPrototypeValues)));
+      runtime.arrayPrototypeValues));
 
   auto cons = defineSystemConstructor<JSArray>(
       runtime,

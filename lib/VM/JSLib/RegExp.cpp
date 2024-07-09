@@ -48,8 +48,7 @@ static CallResult<HermesValue> regExpBuiltinExec(
 // Several RegExp accessors are defined to do particular things when passed the
 // RegExp object (which is not itself a RegExp). Centralize that logic here.
 static inline bool thisIsRegExpProto(Runtime &runtime, NativeArgs args) {
-  return args.dyncastThis<JSObject>().get() ==
-      vmcast<JSObject>(runtime.regExpPrototype);
+  return args.dyncastThis<JSObject>().get() == *runtime.regExpPrototype;
 }
 
 Handle<NativeConstructor> createRegExpConstructor(Runtime &runtime) {
@@ -256,8 +255,8 @@ static CallResult<Handle<JSRegExp>> regExpInitialize(
 /// ES6.0 21.2.3.2.3 Runtime Semantics: RegExpCreate ( P, F )
 CallResult<Handle<JSRegExp>>
 regExpCreate(Runtime &runtime, Handle<> P, Handle<> F) {
-  auto objRes =
-      regExpAlloc(runtime, createPseudoHandle(runtime.regExpPrototype));
+  auto objRes = regExpAlloc(
+      runtime, createPseudoHandle(runtime.regExpPrototype.getHermesValue()));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -884,13 +883,11 @@ regExpDollarNumberGetter(void *ctx, Runtime &runtime, NativeArgs args) {
   size_t i = reinterpret_cast<size_t>(ctx);
 
   auto match = runtime.regExpLastMatch;
-  if (match.size() >= i + 1 &&
-      vmisa<StringPrimitive>(runtime.regExpLastInput)) {
+  if (match.size() >= i + 1 && *runtime.regExpLastInput) {
     const auto &cap = match[i];
     if (cap.hasValue()) {
-      auto S = Handle<StringPrimitive>::vmcast(&runtime.regExpLastInput);
-      auto strRes =
-          StringPrimitive::slice(runtime, S, cap->location, cap->length);
+      auto strRes = StringPrimitive::slice(
+          runtime, runtime.regExpLastInput, cap->location, cap->length);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -984,9 +981,9 @@ regExpFlagPropertyGetter(void *ctx, Runtime &runtime, NativeArgs args) {
 CallResult<HermesValue>
 regExpLeftContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
   auto match = runtime.regExpLastMatch;
-  if (match.size() >= 1 && vmisa<StringPrimitive>(runtime.regExpLastInput)) {
-    auto S = Handle<StringPrimitive>::vmcast(&runtime.regExpLastInput);
-    auto strRes = StringPrimitive::slice(runtime, S, 0, match[0]->location);
+  if (match.size() >= 1 && *runtime.regExpLastInput) {
+    auto strRes = StringPrimitive::slice(
+        runtime, runtime.regExpLastInput, 0, match[0]->location);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1000,8 +997,8 @@ regExpLeftContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
 CallResult<HermesValue>
 regExpRightContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
   auto match = runtime.regExpLastMatch;
-  if (match.size() >= 1 && vmisa<StringPrimitive>(runtime.regExpLastInput)) {
-    auto S = Handle<StringPrimitive>::vmcast(&runtime.regExpLastInput);
+  if (match.size() >= 1 && *runtime.regExpLastInput) {
+    Handle<StringPrimitive> S{runtime.regExpLastInput};
     if (match[0]->location + match[0]->length < S->getStringLength()) {
       auto startIdx = match[0]->location + match[0]->length;
       auto strRes = StringPrimitive::slice(
@@ -1019,8 +1016,8 @@ regExpRightContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 regExpInputGetter(void *ctx, Runtime &runtime, NativeArgs args) {
-  if (vmisa<StringPrimitive>(runtime.regExpLastInput)) {
-    return runtime.regExpLastInput;
+  if (*runtime.regExpLastInput) {
+    return runtime.regExpLastInput.getHermesValue();
   }
 
   return HermesValue::encodeStringValue(
@@ -1030,10 +1027,9 @@ regExpInputGetter(void *ctx, Runtime &runtime, NativeArgs args) {
 CallResult<HermesValue>
 regExpLastMatchGetter(void *ctx, Runtime &runtime, NativeArgs args) {
   auto match = runtime.regExpLastMatch;
-  if (match.size() >= 1 && vmisa<StringPrimitive>(runtime.regExpLastInput)) {
-    auto S = Handle<StringPrimitive>::vmcast(&runtime.regExpLastInput);
+  if (match.size() >= 1 && *runtime.regExpLastInput) {
     auto strRes = StringPrimitive::slice(
-        runtime, S, match[0]->location, match[0]->length);
+        runtime, runtime.regExpLastInput, match[0]->location, match[0]->length);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1047,12 +1043,11 @@ regExpLastMatchGetter(void *ctx, Runtime &runtime, NativeArgs args) {
 CallResult<HermesValue>
 regExpLastParenGetter(void *ctx, Runtime &runtime, NativeArgs args) {
   auto match = runtime.regExpLastMatch;
-  if (match.size() >= 2 && vmisa<StringPrimitive>(runtime.regExpLastInput)) {
-    auto S = Handle<StringPrimitive>::vmcast(&runtime.regExpLastInput);
+  if (match.size() >= 2 && *runtime.regExpLastInput) {
     const auto &cap = match.back();
     if (cap.hasValue()) {
-      auto strRes =
-          StringPrimitive::slice(runtime, S, cap->location, cap->length);
+      auto strRes = StringPrimitive::slice(
+          runtime, runtime.regExpLastInput, cap->location, cap->length);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }

@@ -516,8 +516,7 @@ static CallResult<HiddenClass *> getHiddenClassForBuffer(
   LocalsRAII lraii(runtime, &lv);
 
   lv.clazz = *runtime.getHiddenClassForPrototype(
-      vmcast<JSObject>(runtime.objectPrototype),
-      JSObject::numOverlapSlots<JSObject>());
+      *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
 
   ShapeTableEntry shapeInfo = curCodeBlock->getRuntimeModule()
                                   ->getBytecode()
@@ -1518,7 +1517,7 @@ tailCall:
           O1REG(CoerceThisNS) = O2REG(CoerceThisNS);
         } else if (
             O2REG(CoerceThisNS).isNull() || O2REG(CoerceThisNS).isUndefined()) {
-          O1REG(CoerceThisNS) = runtime.global_;
+          O1REG(CoerceThisNS) = runtime.global_.getHermesValue();
         } else {
           tmpHandle = O2REG(CoerceThisNS);
           nextIP = NEXTINST(CoerceThisNS);
@@ -1533,7 +1532,7 @@ tailCall:
         } else if (
             FRAME.getThisArgRef().isNull() ||
             FRAME.getThisArgRef().isUndefined()) {
-          O1REG(LoadThisNS) = runtime.global_;
+          O1REG(LoadThisNS) = runtime.global_.getHermesValue();
         } else {
           tmpHandle = FRAME.getThisArgRef();
           nextIP = NEXTINST(LoadThisNS);
@@ -1771,11 +1770,11 @@ tailCall:
       }
 
       CASE(Catch) {
-        assert(!runtime.thrownValue_.isEmpty() && "Invalid thrown value");
+        assert(!runtime.thrownValue_->isEmpty() && "Invalid thrown value");
         assert(
-            !isUncatchableError(runtime.thrownValue_) &&
+            !isUncatchableError(*runtime.thrownValue_) &&
             "Uncatchable thrown value was caught");
-        O1REG(Catch) = runtime.thrownValue_;
+        O1REG(Catch) = *runtime.thrownValue_;
         runtime.clearThrownValue();
 #ifdef HERMES_ENABLE_DEBUGGER
         // Signal to the debugger that we're done unwinding an exception,
@@ -1790,7 +1789,7 @@ tailCall:
         runtime.thrownValue_ = O1REG(Throw);
         SLOW_DEBUG(
             dbgs() << "Exception thrown: "
-                   << DumpHermesValue(runtime.thrownValue_) << "\n");
+                   << DumpHermesValue(*runtime.thrownValue_) << "\n");
         goto exception;
       }
 
@@ -2103,7 +2102,7 @@ tailCall:
       }
 
       CASE(GetGlobalObject) {
-        O1REG(GetGlobalObject) = runtime.global_;
+        O1REG(GetGlobalObject) = runtime.global_.getHermesValue();
         ip = NEXTINST(GetGlobalObject);
         DISPATCH;
       }
@@ -3002,9 +3001,9 @@ tailCall:
             Callable::newObject(
                 Handle<Callable>::vmcast(&O3REG(CreateThis)),
                 runtime,
-                Handle<JSObject>::vmcast(
-                    O2REG(CreateThis).isObject() ? &O2REG(CreateThis)
-                                                 : &runtime.objectPrototype)));
+                O2REG(CreateThis).isObject()
+                    ? Handle<JSObject>::vmcast(&O2REG(CreateThis))
+                    : runtime.objectPrototype));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -3480,7 +3479,7 @@ tailCall:
                   Runtime::getEmptyValue()));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
             if (ip->iIteratorClose.op2 &&
-                !isUncatchableError(runtime.thrownValue_)) {
+                !isUncatchableError(*runtime.thrownValue_)) {
               // Ignore inner exception.
               runtime.clearThrownValue();
             } else {
@@ -3525,26 +3524,29 @@ tailCall:
   exception:
     UPDATE_OPCODE_TIME_SPENT;
     assert(
-        !runtime.thrownValue_.isEmpty() &&
+        !runtime.thrownValue_->isEmpty() &&
         "thrownValue unavailable at exception");
 
     bool catchable = true;
     // If this is an Error object that was thrown internally, it didn't have
     // access to the current codeblock and IP, so collect the stack trace here.
-    if (auto *jsError = dyn_vmcast<JSError>(runtime.thrownValue_)) {
+    if (auto *jsError = dyn_vmcast<JSError>(*runtime.thrownValue_)) {
       catchable = jsError->catchable();
       if (!jsError->getStackTrace()) {
-        // Temporarily clear the thrown value for following operations.
-        CAPTURE_IP_ASSIGN(
-            auto errorHandle,
-            runtime.makeHandle(vmcast<JSError>(runtime.thrownValue_)));
+        // Temporarily clear the thrown value for following operations. Before
+        // we clear it, save the value in tmpHandle.
+        tmpHandle = *runtime.thrownValue_;
         runtime.clearThrownValue();
 
         CAPTURE_IP(JSError::recordStackTrace(
-            errorHandle, runtime, false, curCodeBlock, ip));
+            Handle<JSError>::vmcast(tmpHandle),
+            runtime,
+            false,
+            curCodeBlock,
+            ip));
 
         // Restore the thrown value.
-        runtime.setThrownValue(errorHandle.getHermesValue());
+        runtime.setThrownValue(*tmpHandle);
       }
     }
 

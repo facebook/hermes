@@ -153,8 +153,7 @@ TEST_F(ArrayStorageBigHeapTest, AllocLargeArrayThrowsRangeError) {
       << "Allocating an array slightly larger than its max size should throw";
   HermesValue hv = runtime.getThrownValue();
   EXPECT_EQ(
-      vmcast<JSObject>(hv)->getParent(runtime),
-      vmcast<JSObject>(runtime.RangeErrorPrototype))
+      vmcast<JSObject>(hv)->getParent(runtime), *runtime.RangeErrorPrototype)
       << "Exception thrown was not a RangeError";
 }
 

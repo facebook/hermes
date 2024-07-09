@@ -355,7 +355,7 @@ Runtime::Runtime(
   // specialCodeBlockRuntimeModule_ will be owned by runtimeModuleList_.
   RuntimeModuleFlags flags;
   flags.hidesEpilogue = true;
-  specialCodeBlockDomain_ = Domain::create(*this).getHermesValue();
+  specialCodeBlockDomain_ = Domain::create(*this).get();
   specialCodeBlockRuntimeModule_ = RuntimeModule::createUninitialized(
       *this, Handle<Domain>::vmcast(&specialCodeBlockDomain_), flags);
   assert(
@@ -397,8 +397,7 @@ Runtime::Runtime(
     }
   }
 
-  global_ =
-      JSObject::create(*this, makeNullHandle<JSObject>()).getHermesValue();
+  global_ = JSObject::create(*this, makeNullHandle<JSObject>());
 
   JSLibFlags jsLibFlags{};
   jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();
@@ -413,10 +412,7 @@ Runtime::Runtime(
   // Set the prototype of the global object to the standard object prototype,
   // which has now been defined.
   ignoreAllocationFailure(JSObject::setParent(
-      vmcast<JSObject>(global_),
-      *this,
-      vmcast<JSObject>(objectPrototype),
-      PropOpFlags().plusThrowOnError()));
+      *global_, *this, *objectPrototype, PropOpFlags().plusThrowOnError()));
 
   symbolRegistry_.init(*this);
 
@@ -552,7 +548,7 @@ void Runtime::markRoots(
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeFields);
     for (auto &clazz : rootClazzes_)
       acceptor.accept(clazz, "rootClass");
-#define RUNTIME_HV_FIELD(name) acceptor.accept((name), #name);
+#define RUNTIME_HV_FIELD(name, type) acceptor.acceptNullablePV(name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
     acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
     acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
@@ -1926,7 +1922,7 @@ ExecutionStatus Runtime::drainJobs() {
 
 ExecutionStatus Runtime::addToKeptObjects(Handle<JSObject> obj) {
   // Lazily create the map for keptObjects_
-  if (keptObjects_.isUndefined()) {
+  if (keptObjects_->isUndefined()) {
     auto mapRes = OrderedHashMap::create(*this);
     if (LLVM_UNLIKELY(mapRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

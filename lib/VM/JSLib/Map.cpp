@@ -88,7 +88,8 @@ Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
   {
     auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
         mapPrototype, runtime, Predefined::getSymbolID(Predefined::set)));
-    runtime.mapPrototypeSet = std::move(propValue);
+    runtime.mapPrototypeSet =
+        vmcast<NativeFunction>(std::move(propValue).get());
   }
 
   defineAccessor(
@@ -117,7 +118,8 @@ Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
             mapPrototype,
             runtime,
             Predefined::getSymbolID(Predefined::entries)));
-    runtime.mapPrototypeEntries = std::move(propValue);
+    runtime.mapPrototypeEntries =
+        vmcast<NativeFunction>(std::move(propValue).get());
     runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
         mapPrototype,
         runtime,
@@ -216,12 +218,12 @@ mapConstructor(void *, Runtime &runtime, NativeArgs args) {
   // If the adder is the default one, we can call JSSet::addValue directly.
   if (LLVM_LIKELY(
           adder.getHermesValue().getRaw() ==
-          runtime.mapPrototypeSet.getRaw())) {
+          runtime.mapPrototypeSet.getHermesValue().getRaw())) {
     // If the iterable is a Map with the original iterator,
     // then we can do for-loop.
     if (Handle<JSMap> inputMap = args.dyncastArg<JSMap>(0); inputMap &&
         LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
-                    runtime.mapPrototypeEntries.getRaw())) {
+                    runtime.mapPrototypeEntries.getHermesValue().getRaw())) {
       if (LLVM_UNLIKELY(
               mapFromMapFastPath(runtime, selfHandle, inputMap) ==
               ExecutionStatus::EXCEPTION)) {

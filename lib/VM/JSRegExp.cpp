@@ -340,8 +340,8 @@ CallResult<RegExpMatch> JSRegExp::search(
   if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   } else if (!matchResult->empty()) {
-    runtime.regExpLastInput = strHandle.getHermesValue();
-    runtime.regExpLastRegExp = selfHandle.getHermesValue();
+    runtime.regExpLastInput = strHandle;
+    runtime.regExpLastRegExp = selfHandle;
     runtime.regExpLastMatch = *matchResult;
   }
   return matchResult;

@@ -918,16 +918,14 @@ Handle<NativeJSFunction> NativeJSFunction::create(
 
 /// \return the inferred parent of a Callable based on its \p kind.
 static Handle<JSObject> inferredParent(Runtime &runtime, FuncKind kind) {
-  PinnedHermesValue *parent;
   if (kind == FuncKind::Generator) {
-    parent = &runtime.generatorFunctionPrototype;
+    return runtime.generatorFunctionPrototype;
   } else if (kind == FuncKind::Async) {
-    parent = &runtime.asyncFunctionPrototype;
+    return runtime.asyncFunctionPrototype;
   } else {
     assert(kind == FuncKind::Normal && "Unsupported function kind");
-    parent = &runtime.functionPrototype;
+    return runtime.functionPrototype;
   }
-  return Handle<JSObject>::vmcast(parent);
 }
 
 Handle<NativeJSFunction> NativeJSFunction::createWithInferredParent(

@@ -119,7 +119,8 @@ ExecutionStatus Interpreter::caseIteratorBegin(
       }
       PseudoHandle<> slotValue = std::move(*slotValueRes);
       if (LLVM_LIKELY(
-              slotValue->getRaw() == runtime.arrayPrototypeValues.getRaw())) {
+              slotValue->getRaw() ==
+              runtime.arrayPrototypeValues.getHermesValue().getRaw())) {
         O1REG(IteratorBegin) = HermesValue::encodeTrustedNumberValue(0);
         return ExecutionStatus::RETURNED;
       }

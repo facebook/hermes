@@ -56,7 +56,7 @@ Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::prototype),
-      Handle<>(&runtime.generatorPrototype),
+      runtime.generatorPrototype,
       dpf);
 
   defineProperty(

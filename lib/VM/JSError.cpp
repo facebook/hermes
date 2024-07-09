@@ -218,7 +218,7 @@ ExecutionStatus JSError::setupStack(
     Handle<JSObject> selfHandle,
     Runtime &runtime) {
   // Lazily allocate the accessor.
-  if (runtime.jsErrorStackAccessor.isUndefined()) {
+  if (!*runtime.jsErrorStackAccessor) {
     // This code path allocates quite a few handles, so make sure we
     // don't disturb the parent GCScope and free them.
     GCScope gcScope{runtime};
@@ -241,8 +241,8 @@ ExecutionStatus JSError::setupStack(
         1,
         Runtime::makeNullHandle<JSObject>());
 
-    runtime.jsErrorStackAccessor =
-        PropertyAccessor::create(runtime, getter, setter);
+    runtime.jsErrorStackAccessor = vmcast<PropertyAccessor>(
+        PropertyAccessor::create(runtime, getter, setter));
   }
 
   auto accessor =
