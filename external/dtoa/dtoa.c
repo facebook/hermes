@@ -1918,7 +1918,7 @@ gethex( CONST char **sp, U *rvp, int rounding, int sign)
 		switch(*++s) {
 		  case '-':
 			esign = 1;
-			/* no break */
+			FALLTHROUGH;
 		  case '+':
 			s++;
 		  }
