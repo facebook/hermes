@@ -26,18 +26,18 @@ function foo(x) {
 
 // CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "a": string
-// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "b": string
-// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
+// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "a": string
+// CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "b": string
+// CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg1, %foo(): functionCode
 // CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $Reg3 = StorePropertyLooseInst $Reg1, $Reg2, "foo": string
-// CHECK-NEXT:  $Reg3 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg3 = MovInst (:undefined) $Reg4
-// CHECK-NEXT:  $Reg5 = LoadStackInst (:any) $Reg3
-// CHECK-NEXT:  $Reg6 = ReturnInst $Reg5
+// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg2, "foo": string
+// CHECK-NEXT:  $Reg1 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg1 = MovInst (:undefined) $Reg2
+// CHECK-NEXT:  $Reg1 = LoadStackInst (:any) $Reg1
+// CHECK-NEXT:  $Reg0 = ReturnInst $Reg1
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS0 []
@@ -46,25 +46,25 @@ function foo(x) {
 
 // CHECK:function foo(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS1: any, $Reg0
+// CHECK-NEXT:  $Reg1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS1: any, $Reg1
 // CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  $Reg3 = StoreFrameInst $Reg1, $Reg2, [%VS1.x]: any
-// CHECK-NEXT:  $Reg3 = LoadFrameInst (:any) $Reg1, [%VS1.x]: any
-// CHECK-NEXT:  $Reg4 = CondBranchInst $Reg3, %BB1, %BB2
+// CHECK-NEXT:  $Reg0 = StoreFrameInst $Reg1, $Reg2, [%VS1.x]: any
+// CHECK-NEXT:  $Reg1 = LoadFrameInst (:any) $Reg1, [%VS1.x]: any
+// CHECK-NEXT:  $Reg0 = CondBranchInst $Reg1, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 10: number
-// CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg0, $Reg1, "a": string
-// CHECK-NEXT:  $Reg2 = BranchInst %BB3
+// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:number) 10: number
+// CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg2, "a": string
+// CHECK-NEXT:  $Reg0 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 10: number
-// CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg0, $Reg1, "b": string
-// CHECK-NEXT:  $Reg2 = BranchInst %BB3
+// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:number) 10: number
+// CHECK-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg2, "b": string
+// CHECK-NEXT:  $Reg0 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg1 = ReturnInst $Reg0
+// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg0 = ReturnInst $Reg1
 // CHECK-NEXT:function_end
 
 // CHKOPT:scope %VS0 []

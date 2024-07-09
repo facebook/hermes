@@ -66,281 +66,278 @@ function *args() {
 // CHECK-NEXT:  Function ID 3 -> s0
 // CHECK-NEXT:  Function ID 4 -> s0
 
-// CHECK:Function<global>(1 params, 9 registers):
+// CHECK:Function<global>(1 params, 4 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
+// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "loop"
 // CHECK-NEXT:    DeclareGlobalVar  "args"
-// CHECK-NEXT:    CreateClosure     r1, r0, NCFunction<loop>
+// CHECK-NEXT:    CreateClosure     r2, r1, NCFunction<loop>
+// CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "loop"
+// CHECK-NEXT:    CreateClosure     r1, r1, NCFunction<args>
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "loop"
-// CHECK-NEXT:    CreateClosure     r3, r0, NCFunction<args>
-// CHECK-NEXT:    GetGlobalObject   r4
-// CHECK-NEXT:    PutByIdLoose      r4, r3, 2, "args"
-// CHECK-NEXT:    LoadConstUndefined r6
-// CHECK-NEXT:    Mov               r5, r6
-// CHECK-NEXT:    Mov               r7, r5
-// CHECK-NEXT:    Ret               r7
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "args"
+// CHECK-NEXT:    LoadConstUndefined r2
+// CHECK-NEXT:    Mov               r1, r2
+// CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<loop>(2 params, 8 registers):
+// CHECK:NCFunction<loop>(2 params, 3 registers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
-// CHECK-NEXT:    GetParentEnvironment r0, 0
-// CHECK-NEXT:    CreateEnvironment r1, r0, 8
+// CHECK-NEXT:    GetParentEnvironment r1, 0
+// CHECK-NEXT:    CreateEnvironment r1, r1, 8
 // CHECK-NEXT:    LoadParam         r2, 0
 // CHECK-NEXT:    StoreToEnvironment r1, 0, r2
-// CHECK-NEXT:    LoadParam         r3, 1
-// CHECK-NEXT:    StoreToEnvironment r1, 1, r3
-// CHECK-NEXT:    LoadConstZero     r4
-// CHECK-NEXT:    StoreNPToEnvironment r1, 6, r4
-// CHECK-NEXT:    LoadConstZero     r5
-// CHECK-NEXT:    StoreNPToEnvironment r1, 7, r5
-// CHECK-NEXT:    CreateGenerator   r6, r1, Function<loop?inner>
-// CHECK-NEXT:    Ret               r6
+// CHECK-NEXT:    LoadParam         r2, 1
+// CHECK-NEXT:    StoreToEnvironment r1, 1, r2
+// CHECK-NEXT:    LoadConstZero     r2
+// CHECK-NEXT:    StoreNPToEnvironment r1, 6, r2
+// CHECK-NEXT:    LoadConstZero     r2
+// CHECK-NEXT:    StoreNPToEnvironment r1, 7, r2
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<loop?inner>
+// CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<args>(1 params, 11 registers):
+// CHECK:NCFunction<args>(1 params, 4 registers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
-// CHECK-NEXT:    GetParentEnvironment r0, 0
-// CHECK-NEXT:    CreateEnvironment r1, r0, 7
+// CHECK-NEXT:    GetParentEnvironment r1, 0
+// CHECK-NEXT:    CreateEnvironment r1, r1, 7
 // CHECK-NEXT:    LoadParam         r2, 0
 // CHECK-NEXT:    StoreToEnvironment r1, 0, r2
-// CHECK-NEXT:    LoadConstUndefined r4
-// CHECK-NEXT:    Mov               r3, r4
-// CHECK-NEXT:    ReifyArgumentsLoose r3
-// CHECK-NEXT:    Mov               r5, r3
-// CHECK-NEXT:    Mov               r6, r5
-// CHECK-NEXT:    StoreToEnvironment r1, 1, r6
-// CHECK-NEXT:    LoadConstZero     r7
-// CHECK-NEXT:    StoreNPToEnvironment r1, 6, r7
-// CHECK-NEXT:    LoadConstZero     r8
-// CHECK-NEXT:    StoreNPToEnvironment r1, 4, r8
-// CHECK-NEXT:    CreateGenerator   r9, r1, Function<args?inner>
-// CHECK-NEXT:    Ret               r9
+// CHECK-NEXT:    LoadConstUndefined r3
+// CHECK-NEXT:    Mov               r2, r3
+// CHECK-NEXT:    ReifyArgumentsLoose r2
+// CHECK-NEXT:    StoreToEnvironment r1, 1, r2
+// CHECK-NEXT:    LoadConstZero     r2
+// CHECK-NEXT:    StoreNPToEnvironment r1, 6, r2
+// CHECK-NEXT:    LoadConstZero     r2
+// CHECK-NEXT:    StoreNPToEnvironment r1, 4, r2
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<args?inner>
+// CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<loop?inner>(2 params, 27 registers):
+// CHECK:Function<loop?inner>(2 params, 22 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r0, 2
-// CHECK-NEXT:    LoadParam         r1, 1
+// CHECK-NEXT:    LoadParam         r3, 2
+// CHECK-NEXT:    LoadParam         r5, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
-// CHECK-NEXT:    LoadFromEnvironment r3, r2, 7
+// CHECK-NEXT:    LoadFromEnvironment r7, r2, 7
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
-// CHECK-NEXT:    JStrictEqualLong  L1, r3, r4
-// CHECK-NEXT:    LoadFromEnvironment r3, r2, 7
+// CHECK-NEXT:    JStrictEqualLong  L1, r7, r4
+// CHECK-NEXT:    LoadFromEnvironment r7, r2, 7
 // CHECK-NEXT:    LoadConstUInt8    r4, 3
-// CHECK-NEXT:    JStrictEqualLong  L2, r3, r4
-// CHECK-NEXT:    LoadConstUInt8    r3, 2
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r3
-// CHECK-NEXT:    LoadFromEnvironment r4, r2, 6
-// CHECK-NEXT:    LoadConstZero     r3
-// CHECK-NEXT:    StrictEq          r5, r3, r4
-// CHECK-NEXT:    JmpTrue           L3, r5
-// CHECK-NEXT:    LoadFromEnvironment r5, r2, 3
-// CHECK-NEXT:    Mov               r3, r5
-// CHECK-NEXT:    LoadConstUInt8    r6, 1
-// CHECK-NEXT:    JStrictEqual      L4, r1, r6
-// CHECK-NEXT:    StoreToEnvironment r2, 5, r0
-// CHECK-NEXT:    LoadFromEnvironment r5, r2, 5
-// CHECK-NEXT:    LoadConstUInt8    r6, 2
-// CHECK-NEXT:    StrictEq          r7, r1, r6
-// CHECK-NEXT:    Mov               r3, r7
-// CHECK-NEXT:    Mov               r8, r3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
-// CHECK-NEXT:    LoadFromEnvironment r9, r2, 3
-// CHECK-NEXT:    JmpTrue           L5, r9
-// CHECK-NEXT:    GetGlobalObject   r6
-// CHECK-NEXT:    TryGetById        r7, r6, 1, "y"
+// CHECK-NEXT:    JStrictEqualLong  L2, r7, r4
+// CHECK-NEXT:    LoadConstUInt8    r7, 2
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r7
+// CHECK-NEXT:    LoadFromEnvironment r12, r2, 6
+// CHECK-NEXT:    LoadConstZero     r7
+// CHECK-NEXT:    StrictEq          r7, r7, r12
+// CHECK-NEXT:    JmpTrue           L3, r7
+// CHECK-NEXT:    LoadFromEnvironment r7, r2, 3
+// CHECK-NEXT:    Mov               r11, r7
+// CHECK-NEXT:    LoadConstUInt8    r7, 1
+// CHECK-NEXT:    JStrictEqual      L4, r5, r7
+// CHECK-NEXT:    StoreToEnvironment r2, 5, r3
+// CHECK-NEXT:    LoadFromEnvironment r10, r2, 5
+// CHECK-NEXT:    LoadConstUInt8    r7, 2
+// CHECK-NEXT:    StrictEq          r7, r5, r7
+// CHECK-NEXT:    Mov               r11, r7
+// CHECK-NEXT:    Mov               r7, r11
+// CHECK-NEXT:    StoreNPToEnvironment r2, 3, r7
+// CHECK-NEXT:    LoadFromEnvironment r7, r2, 3
+// CHECK-NEXT:    JmpTrue           L5, r7
+// CHECK-NEXT:    GetGlobalObject   r7
+// CHECK-NEXT:    TryGetById        r7, r7, 1, "y"
 // CHECK-NEXT:    JmpTrueLong       L6, r7
 // CHECK-NEXT:    JmpLong           L7
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r6
+// CHECK-NEXT:    LoadConstUInt8    r7, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r7
 // CHECK-NEXT:    NewObjectWithBuffer r7, 0, 0
-// CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
+// CHECK-NEXT:    PutOwnBySlotIdx   r7, r10, 0
 // CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r6
-// CHECK-NEXT:    Throw             r0
+// CHECK-NEXT:    LoadConstUInt8    r7, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r7
+// CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 2
-// CHECK-NEXT:    Mov               r6, r7
-// CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqualLong  L8, r1, r8
-// CHECK-NEXT:    StoreToEnvironment r2, 5, r0
-// CHECK-NEXT:    LoadFromEnvironment r7, r2, 5
-// CHECK-NEXT:    LoadConstUInt8    r8, 2
-// CHECK-NEXT:    StrictEq          r9, r1, r8
-// CHECK-NEXT:    Mov               r6, r9
-// CHECK-NEXT:    Mov               r10, r6
-// CHECK-NEXT:    StoreNPToEnvironment r2, 2, r10
-// CHECK-NEXT:    LoadFromEnvironment r11, r2, 2
-// CHECK-NEXT:    JmpTrue           L9, r11
-// CHECK-NEXT:    GetEnvironment    r8, r2, 1
-// CHECK-NEXT:    CreateEnvironment r9, r8, 2
-// CHECK-NEXT:    StoreToEnvironment r2, 4, r9
-// CHECK-NEXT:    LoadFromEnvironment r10, r2, 1
-// CHECK-NEXT:    StoreToEnvironment r9, 0, r10
-// CHECK-NEXT:    LoadConstUndefined r11
-// CHECK-NEXT:    StoreNPToEnvironment r9, 1, r11
-// CHECK-NEXT:    LoadConstZero     r12
-// CHECK-NEXT:    StoreNPToEnvironment r9, 1, r12
-// CHECK-NEXT:    GetGlobalObject   r13
-// CHECK-NEXT:    TryGetById        r14, r13, 1, "y"
-// CHECK-NEXT:    JmpTrue           L6, r14
+// CHECK-NEXT:    Mov               r9, r7
+// CHECK-NEXT:    LoadConstUInt8    r7, 1
+// CHECK-NEXT:    JStrictEqualLong  L8, r5, r7
+// CHECK-NEXT:    StoreToEnvironment r2, 5, r3
+// CHECK-NEXT:    LoadFromEnvironment r6, r2, 5
+// CHECK-NEXT:    LoadConstUInt8    r7, 2
+// CHECK-NEXT:    StrictEq          r7, r5, r7
+// CHECK-NEXT:    Mov               r9, r7
+// CHECK-NEXT:    Mov               r7, r9
+// CHECK-NEXT:    StoreNPToEnvironment r2, 2, r7
+// CHECK-NEXT:    LoadFromEnvironment r7, r2, 2
+// CHECK-NEXT:    JmpTrue           L9, r7
+// CHECK-NEXT:    GetEnvironment    r7, r2, 1
+// CHECK-NEXT:    CreateEnvironment r7, r7, 2
+// CHECK-NEXT:    StoreToEnvironment r2, 4, r7
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 1
+// CHECK-NEXT:    StoreToEnvironment r7, 0, r4
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    StoreNPToEnvironment r7, 1, r4
+// CHECK-NEXT:    LoadConstZero     r4
+// CHECK-NEXT:    StoreNPToEnvironment r7, 1, r4
+// CHECK-NEXT:    GetGlobalObject   r7
+// CHECK-NEXT:    TryGetById        r7, r7, 1, "y"
+// CHECK-NEXT:    JmpTrue           L6, r7
 // CHECK-NEXT:L7:
-// CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 0, 4
-// CHECK-NEXT:    Ret               r9
+// CHECK-NEXT:    LoadConstUInt8    r7, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r7
+// CHECK-NEXT:    NewObjectWithBuffer r7, 0, 4
+// CHECK-NEXT:    Ret               r7
 // CHECK-NEXT:L6:
-// CHECK-NEXT:    LoadFromEnvironment r8, r2, 4
-// CHECK-NEXT:    LoadFromEnvironment r9, r8, 0
-// CHECK-NEXT:    LoadFromEnvironment r10, r8, 1
-// CHECK-NEXT:    ToNumeric         r11, r10
-// CHECK-NEXT:    Inc               r12, r11
-// CHECK-NEXT:    StoreToEnvironment r8, 1, r12
-// CHECK-NEXT:    GetByVal          r13, r9, r11
-// CHECK-NEXT:    LoadConstUInt8    r14, 1
-// CHECK-NEXT:    StoreNPToEnvironment r2, 6, r14
-// CHECK-NEXT:    LoadConstUInt8    r15, 1
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r15
-// CHECK-NEXT:    NewObjectWithBuffer r16, 0, 2
-// CHECK-NEXT:    PutOwnBySlotIdx   r16, r13, 0
-// CHECK-NEXT:    Ret               r16
+// CHECK-NEXT:    LoadFromEnvironment r7, r2, 4
+// CHECK-NEXT:    LoadFromEnvironment r4, r7, 0
+// CHECK-NEXT:    LoadFromEnvironment r1, r7, 1
+// CHECK-NEXT:    ToNumeric         r1, r1
+// CHECK-NEXT:    Inc               r8, r1
+// CHECK-NEXT:    StoreToEnvironment r7, 1, r8
+// CHECK-NEXT:    GetByVal          r4, r4, r1
+// CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 6, r1
+// CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r1
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 2
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 0, 0
-// CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
-// CHECK-NEXT:    Ret               r9
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r1
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r6, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L8:
-// CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
-// CHECK-NEXT:    Throw             r0
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r1
+// CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L2:
-// CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqual      L10, r1, r8
-// CHECK-NEXT:    LoadConstUInt8    r8, 2
-// CHECK-NEXT:    JStrictEqual      L11, r1, r8
-// CHECK-NEXT:    NewObjectWithBuffer r8, 0, 0
-// CHECK-NEXT:    LoadConstUndefined r9
-// CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
-// CHECK-NEXT:    Ret               r8
+// CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    JStrictEqual      L10, r5, r1
+// CHECK-NEXT:    LoadConstUInt8    r1, 2
+// CHECK-NEXT:    JStrictEqual      L11, r5, r1
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L11:
-// CHECK-NEXT:    NewObjectWithBuffer r8, 0, 0
-// CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
-// CHECK-NEXT:    Ret               r8
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r3, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L10:
-// CHECK-NEXT:    Throw             r0
+// CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r8
-// CHECK-NEXT:    LoadConstString   r9, "Generator functio"...
-// CHECK-NEXT:    Mov               r18, r9
-// CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.throwTypeError", 2
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 7, r1
+// CHECK-NEXT:    LoadConstString   r1, "Generator functio"...
+// CHECK-NEXT:    Mov               r13, r1
+// CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<args?inner>(1 params, 24 registers):
+// CHECK:Function<args?inner>(1 params, 20 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r0, 2
-// CHECK-NEXT:    LoadParam         r1, 1
+// CHECK-NEXT:    LoadParam         r3, 2
+// CHECK-NEXT:    LoadParam         r5, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
-// CHECK-NEXT:    LoadFromEnvironment r3, r2, 4
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 4
+// CHECK-NEXT:    LoadConstUInt8    r1, 2
+// CHECK-NEXT:    JStrictEqualLong  L1, r4, r1
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 4
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    JStrictEqualLong  L2, r4, r1
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
-// CHECK-NEXT:    JStrictEqualLong  L1, r3, r4
-// CHECK-NEXT:    LoadFromEnvironment r3, r2, 4
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r4
+// CHECK-NEXT:    LoadFromEnvironment r10, r2, 6
+// CHECK-NEXT:    LoadConstZero     r4
+// CHECK-NEXT:    StrictEq          r4, r4, r10
+// CHECK-NEXT:    JmpTrue           L3, r4
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 3
+// CHECK-NEXT:    Mov               r9, r4
+// CHECK-NEXT:    LoadConstUInt8    r4, 1
+// CHECK-NEXT:    JStrictEqual      L4, r5, r4
+// CHECK-NEXT:    StoreToEnvironment r2, 5, r3
+// CHECK-NEXT:    LoadFromEnvironment r8, r2, 5
+// CHECK-NEXT:    LoadConstUInt8    r4, 2
+// CHECK-NEXT:    StrictEq          r4, r5, r4
+// CHECK-NEXT:    Mov               r9, r4
+// CHECK-NEXT:    Mov               r4, r9
+// CHECK-NEXT:    StoreNPToEnvironment r2, 3, r4
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 3
+// CHECK-NEXT:    JmpTrue           L5, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 3
-// CHECK-NEXT:    JStrictEqualLong  L2, r3, r4
-// CHECK-NEXT:    LoadConstUInt8    r3, 2
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r3
-// CHECK-NEXT:    LoadFromEnvironment r4, r2, 6
-// CHECK-NEXT:    LoadConstZero     r3
-// CHECK-NEXT:    StrictEq          r5, r3, r4
-// CHECK-NEXT:    JmpTrue           L3, r5
-// CHECK-NEXT:    LoadFromEnvironment r5, r2, 3
-// CHECK-NEXT:    Mov               r3, r5
-// CHECK-NEXT:    LoadConstUInt8    r6, 1
-// CHECK-NEXT:    JStrictEqual      L4, r1, r6
-// CHECK-NEXT:    StoreToEnvironment r2, 5, r0
-// CHECK-NEXT:    LoadFromEnvironment r5, r2, 5
-// CHECK-NEXT:    LoadConstUInt8    r6, 2
-// CHECK-NEXT:    StrictEq          r7, r1, r6
-// CHECK-NEXT:    Mov               r3, r7
-// CHECK-NEXT:    Mov               r8, r3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 3, r8
-// CHECK-NEXT:    LoadFromEnvironment r9, r2, 3
-// CHECK-NEXT:    JmpTrue           L5, r9
-// CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 0, 0
-// CHECK-NEXT:    LoadConstUndefined r8
-// CHECK-NEXT:    PutOwnBySlotIdx   r7, r8, 0
-// CHECK-NEXT:    Ret               r7
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r4
+// CHECK-NEXT:    NewObjectWithBuffer r4, 0, 0
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    PutOwnBySlotIdx   r4, r1, 0
+// CHECK-NEXT:    Ret               r4
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
-// CHECK-NEXT:    NewObjectWithBuffer r7, 0, 0
-// CHECK-NEXT:    PutOwnBySlotIdx   r7, r5, 0
-// CHECK-NEXT:    Ret               r7
+// CHECK-NEXT:    LoadConstUInt8    r4, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r4
+// CHECK-NEXT:    NewObjectWithBuffer r4, 0, 0
+// CHECK-NEXT:    PutOwnBySlotIdx   r4, r8, 0
+// CHECK-NEXT:    Ret               r4
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r6
-// CHECK-NEXT:    Throw             r0
+// CHECK-NEXT:    LoadConstUInt8    r4, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r4
+// CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    LoadFromEnvironment r7, r2, 2
-// CHECK-NEXT:    Mov               r6, r7
-// CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqual      L6, r1, r8
-// CHECK-NEXT:    StoreToEnvironment r2, 5, r0
-// CHECK-NEXT:    LoadFromEnvironment r7, r2, 5
-// CHECK-NEXT:    LoadConstUInt8    r8, 2
-// CHECK-NEXT:    StrictEq          r9, r1, r8
-// CHECK-NEXT:    Mov               r6, r9
-// CHECK-NEXT:    Mov               r10, r6
-// CHECK-NEXT:    StoreNPToEnvironment r2, 2, r10
-// CHECK-NEXT:    LoadFromEnvironment r11, r2, 2
-// CHECK-NEXT:    JmpTrue           L7, r11
-// CHECK-NEXT:    LoadFromEnvironment r8, r2, 1
-// CHECK-NEXT:    GetEnvironment    r9, r2, 1
-// CHECK-NEXT:    CreateEnvironment r10, r9, 0
-// CHECK-NEXT:    GetByIndex        r10, r8, 0
-// CHECK-NEXT:    LoadConstUInt8    r11, 1
-// CHECK-NEXT:    StoreNPToEnvironment r2, 6, r11
-// CHECK-NEXT:    LoadConstUInt8    r12, 1
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r12
-// CHECK-NEXT:    NewObjectWithBuffer r13, 0, 2
-// CHECK-NEXT:    PutOwnBySlotIdx   r13, r10, 0
-// CHECK-NEXT:    Ret               r13
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 2
+// CHECK-NEXT:    Mov               r7, r4
+// CHECK-NEXT:    LoadConstUInt8    r4, 1
+// CHECK-NEXT:    JStrictEqual      L6, r5, r4
+// CHECK-NEXT:    StoreToEnvironment r2, 5, r3
+// CHECK-NEXT:    LoadFromEnvironment r6, r2, 5
+// CHECK-NEXT:    LoadConstUInt8    r4, 2
+// CHECK-NEXT:    StrictEq          r4, r5, r4
+// CHECK-NEXT:    Mov               r7, r4
+// CHECK-NEXT:    Mov               r4, r7
+// CHECK-NEXT:    StoreNPToEnvironment r2, 2, r4
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 2
+// CHECK-NEXT:    JmpTrue           L7, r4
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 1
+// CHECK-NEXT:    GetEnvironment    r1, r2, 1
+// CHECK-NEXT:    CreateEnvironment r0, r1, 0
+// CHECK-NEXT:    GetByIndex        r4, r4, 0
+// CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 6, r1
+// CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r1
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 2
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L7:
-// CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
-// CHECK-NEXT:    NewObjectWithBuffer r9, 0, 0
-// CHECK-NEXT:    PutOwnBySlotIdx   r9, r7, 0
-// CHECK-NEXT:    Ret               r9
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r1
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r6, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L6:
-// CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
-// CHECK-NEXT:    Throw             r0
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r1
+// CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L2:
-// CHECK-NEXT:    LoadConstUInt8    r8, 1
-// CHECK-NEXT:    JStrictEqual      L8, r1, r8
-// CHECK-NEXT:    LoadConstUInt8    r8, 2
-// CHECK-NEXT:    JStrictEqual      L9, r1, r8
-// CHECK-NEXT:    NewObjectWithBuffer r8, 0, 0
-// CHECK-NEXT:    LoadConstUndefined r9
-// CHECK-NEXT:    PutOwnBySlotIdx   r8, r9, 0
-// CHECK-NEXT:    Ret               r8
+// CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    JStrictEqual      L8, r5, r1
+// CHECK-NEXT:    LoadConstUInt8    r1, 2
+// CHECK-NEXT:    JStrictEqual      L9, r5, r1
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    NewObjectWithBuffer r8, 0, 0
-// CHECK-NEXT:    PutOwnBySlotIdx   r8, r0, 0
-// CHECK-NEXT:    Ret               r8
+// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r3, 0
+// CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L8:
-// CHECK-NEXT:    Throw             r0
+// CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadConstUInt8    r8, 3
-// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r8
-// CHECK-NEXT:    LoadConstString   r9, "Generator functio"...
-// CHECK-NEXT:    Mov               r15, r9
-// CHECK-NEXT:    CallBuiltin       r10, "HermesBuiltin.throwTypeError", 2
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    StoreNPToEnvironment r2, 4, r1
+// CHECK-NEXT:    LoadConstString   r1, "Generator functio"...
+// CHECK-NEXT:    Mov               r11, r1
+// CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
 // CHECK:Debug filename table:
