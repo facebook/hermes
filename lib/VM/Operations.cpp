@@ -1681,7 +1681,7 @@ CallResult<Handle<JSArray>> iterableToArray(
   // CreateArrayFromList: 1. Let array be ! ArrayCreate(0).
   auto arrRes = JSArray::create(runtime, 0, 0);
   assert(arrRes != ExecutionStatus::EXCEPTION && "could not create array");
-  Handle<JSArray> array = *arrRes;
+  Handle<JSArray> array = runtime.makeHandle(std::move(*arrRes));
   // CreateArrayFromList: 2. Let n be 0.
   size_t n = 0;
 

@@ -1291,7 +1291,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> resultHandle = *resultRes;
+  Handle<JSArray> resultHandle = runtime.makeHandle(std::move(*resultRes));
   MutableHandle<> elemHandle{runtime};
   uint32_t resultIndex = 0;
   GCScopeMarkerRAII marker{runtime};
@@ -1396,7 +1396,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   if (LLVM_UNLIKELY(trapResultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> trapResult = *trapResultRes;
+  Handle<JSArray> trapResult = runtime.makeHandle(std::move(*trapResultRes));
   CallResult<PseudoHandle<OrderedHashMap>> dupcheckRes =
       OrderedHashMap::create(runtime);
   if (LLVM_UNLIKELY(dupcheckRes == ExecutionStatus::EXCEPTION)) {

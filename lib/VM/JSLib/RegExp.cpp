@@ -488,7 +488,7 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> A = runtime.makeHandle<JSArray>(*arrRes);
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
   JSArray::setStorageEndIndex(A, runtime, indices.size());
 
   // 6-8. done later. We can't code exactly to spec here because mappingObj
@@ -507,7 +507,7 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
       if (LLVM_UNLIKELY(matchIndexPairRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto pair = runtime.makeHandle<JSArray>(*matchIndexPairRes);
+      auto pair = runtime.makeHandle(std::move(*matchIndexPairRes));
       JSArray::setStorageEndIndex(pair, runtime, 2);
       auto firstIdx =
           SmallHermesValue::encodeNumberValue(matchIndices->location, runtime);
@@ -687,7 +687,7 @@ CallResult<Handle<JSArray>> directRegExpExec(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  A = arrRes->get();
+  A = std::move(*arrRes);
 
   // A already has .index and .groups.
   NamedPropertyDescriptor indexDesc;
@@ -1422,7 +1422,7 @@ regExpPrototypeSymbolMatch(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *arrRes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
   // e. Let n be 0.
   uint32_t n = 0;
 
@@ -2005,7 +2005,7 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *arrRes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
   // 12. Let lengthA be 0.
   uint32_t lengthA = 0;
 

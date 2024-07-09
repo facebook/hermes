@@ -783,7 +783,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
         if (arrayRes == vm::ExecutionStatus::EXCEPTION) {
           return vm::ExecutionStatus::EXCEPTION;
         }
-        vm::Handle<vm::JSArray> arrayHandle = *arrayRes;
+        vm::Handle<vm::JSArray> arrayHandle =
+            rt_.runtime_.makeHandle(std::move(*arrayRes));
 
         vm::GCScope gcScope{rt_.runtime_};
         vm::MutableHandle<vm::SymbolID> tmpHandle{rt_.runtime_};

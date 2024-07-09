@@ -389,7 +389,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto array = *arrayRes;
+  Handle<JSArray> array = runtime.makeHandle(std::move(*arrayRes));
 
   // Optional array of SymbolIDs reported via host object API
   llvh::Optional<Handle<JSArray>> hostObjectSymbols;

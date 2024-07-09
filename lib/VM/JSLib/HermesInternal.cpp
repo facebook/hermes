@@ -60,7 +60,7 @@ hermesInternalGetEpilogues(void *, Runtime &runtime, NativeArgs args) {
   if (outerResult == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto outer = *outerResult;
+  Handle<JSArray> outer = runtime.makeHandle(std::move(*outerResult));
   if (outer->setStorageEndIndex(outer, runtime, outerLen) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;

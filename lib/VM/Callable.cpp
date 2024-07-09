@@ -1143,6 +1143,15 @@ static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
 
 template <class From>
 static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+    CallResult<From *> other) {
+  if (LLVM_UNLIKELY(other == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return PseudoHandle<JSObject>::create(*other);
+}
+
+template <class From>
+static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
     CallResult<PseudoHandle<From>> &&other) {
   return std::move(other);
 }

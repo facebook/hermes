@@ -44,8 +44,8 @@ static inline Handle<Callable> makeSimpleJSFunction(
   return runtime.makeHandle<JSFunction>(JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
-      runtime.makeNullHandle<JSObject>(),
-      runtime.makeNullHandle<Environment>(),
+      Runtime::makeNullHandle<JSObject>(),
+      Runtime::makeNullHandle<Environment>(),
       codeBlock));
 }
 
@@ -691,7 +691,7 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
 
   auto indexObjRes = JSArray::create(runtime, 10, 0);
   ASSERT_EQ(indexObjRes.getStatus(), ExecutionStatus::RETURNED);
-  auto indexObj = *indexObjRes;
+  Handle<JSObject> indexObj = runtime.makeHandle(std::move(*indexObjRes));
 
   auto value1 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(101));
   auto value2 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(102));
@@ -788,7 +788,8 @@ TEST_F(ObjectModelTest, HasProperty) {
   auto indexID2Num =
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(10));
 
-  auto self = *JSArray::create(runtime, 0, 0);
+  Handle<JSObject> self =
+      runtime.makeHandle(std::move(*JSArray::create(runtime, 0, 0)));
 
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, nonIndexIDString));
   ASSERT_FALSE(*JSObject::hasComputed(self, runtime, indexIDNum));

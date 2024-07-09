@@ -883,7 +883,7 @@ CallResult<HermesValue> JSError::constructCallSitesArray(
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto array = std::move(*arrayRes);
+  Handle<JSArray> array = runtime.makeHandle(std::move(*arrayRes));
   if (!selfHandle->stacktrace_) {
     return array.getHermesValue();
   }

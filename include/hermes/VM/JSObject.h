@@ -1615,15 +1615,23 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
 namespace JSObjectInit {
 /// Initialize direct properties of obj and return it in a handle.
 template <typename JSObjectType>
-static Handle<JSObjectType> initToHandle(Runtime &runtime, JSObjectType *obj) {
+Handle<JSObjectType> initToHandle(Runtime &runtime, JSObjectType *obj) {
   // Check that the object looks well-formed.
   assert(JSObjectType::classof(obj) && "Mismatched CellKind");
   return runtime.makeHandle(JSObjectType::initDirectPropStorage(runtime, obj));
 }
 
+/// Initialize direct properties of \p obj and return the object pointer
+/// directly.
+template <typename JSObjectType>
+JSObjectType *initToPointer(Runtime &rt, JSObjectType *obj) {
+  assert(JSObjectType::classof(obj) && "Mismatched CellKind");
+  return JSObjectType::initDirectPropStorage(rt, obj);
+}
+
 /// Initialize direct properties of obj and return it in a pseudo-handle.
 template <typename JSObjectType>
-static PseudoHandle<JSObjectType> initToPseudoHandle(
+PseudoHandle<JSObjectType> initToPseudoHandle(
     Runtime &runtime,
     JSObjectType *obj) {
   assert(JSObjectType::classof(obj) && "Mismatched CellKind");
@@ -1632,7 +1640,7 @@ static PseudoHandle<JSObjectType> initToPseudoHandle(
 
 /// Initialize direct properties of obj and return it as a raw HermesValue.
 template <typename JSObjectType>
-static HermesValue initToHermesValue(Runtime &runtime, JSObjectType *obj) {
+HermesValue initToHermesValue(Runtime &runtime, JSObjectType *obj) {
   assert(JSObjectType::classof(obj) && "Mismatched CellKind");
   return HermesValue::encodeObjectValue(
       JSObjectType::initDirectPropStorage(runtime, obj));

@@ -36,11 +36,13 @@ TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
   // mutations.
   auto arrayResult = JSArray::create(runtime, 100, 100);
   ASSERT_FALSE(isException(arrayResult));
-  MutableHandle<JSArray> array{runtime, arrayResult->get()};
+  MutableHandle<JSArray> array{runtime};
+  array = std::move(*arrayResult);
 
   auto otherArrayResult = JSArray::create(runtime, 100, 100);
   ASSERT_FALSE(isException(otherArrayResult));
-  MutableHandle<JSArray> otherArray{runtime, otherArrayResult->get()};
+  MutableHandle<JSArray> otherArray{runtime};
+  otherArray = std::move(*otherArrayResult);
 
   MutableHandle<SymbolID> symbol{runtime};
   MutableHandle<StringPrimitive> str{runtime};

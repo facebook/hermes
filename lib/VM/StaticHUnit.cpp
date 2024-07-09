@@ -282,12 +282,12 @@ extern "C" SHLegacyValue _sh_get_template_object(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    Handle<JSObject> rawObj = *arrRes;
+    Handle<JSObject> rawObj = runtime.makeHandle(std::move(*arrRes));
     auto arrRes2 = JSArray::create(runtime, count, 0);
     if (LLVM_UNLIKELY(arrRes2 == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    Handle<JSObject> templateObj = *arrRes2;
+    Handle<JSObject> templateObj = runtime.makeHandle(std::move(*arrRes2));
 
     // Set cooked and raw strings as elements in template object and raw object,
     // respectively.

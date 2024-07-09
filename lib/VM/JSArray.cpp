@@ -9,6 +9,7 @@
 
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/Handle.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
@@ -536,7 +537,7 @@ Handle<HiddenClass> JSArray::createClass(
   return classHandle;
 }
 
-CallResult<Handle<JSArray>> JSArray::createNoAllocPropStorage(
+CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
     Runtime &runtime,
     Handle<JSObject> prototypeHandle,
     Handle<HiddenClass> classHandle,
@@ -548,7 +549,12 @@ CallResult<Handle<JSArray>> JSArray::createNoAllocPropStorage(
       classHandle->getNumProperties() >= jsArrayPropertyCount() &&
       "invalid number of properties in JSArray hidden class");
 
-  auto self = JSObjectInit::initToHandle(
+  struct : Locals {
+    PinnedValue<JSArray> self;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.self = JSObjectInit::initToPointer(
       runtime,
       runtime.makeAFixed<JSArray>(
           runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
@@ -561,21 +567,26 @@ CallResult<Handle<JSArray>> JSArray::createNoAllocPropStorage(
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    self->setIndexedStorage(runtime, arrRes->get(), runtime.getHeap());
+    lv.self->setIndexedStorage(runtime, arrRes->get(), runtime.getHeap());
   }
   auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
-  putLength(self.get(), runtime, shv);
+  putLength(lv.self.get(), runtime, shv);
 
-  return self;
+  return PseudoHandle<JSArray>::create(*lv.self);
 }
 
-CallResult<Handle<JSArray>> JSArray::createAndAllocPropStorage(
+CallResult<PseudoHandle<JSArray>> JSArray::createAndAllocPropStorage(
     Runtime &runtime,
     Handle<JSObject> prototypeHandle,
     Handle<HiddenClass> classHandle,
     size_type capacity,
     size_type length) {
-  CallResult<Handle<JSArray>> res = createNoAllocPropStorage(
+  struct : Locals {
+    PinnedValue<JSArray> arr;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  auto res = createNoAllocPropStorage(
       runtime, prototypeHandle, classHandle, capacity, length);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -583,14 +594,14 @@ CallResult<Handle<JSArray>> JSArray::createAndAllocPropStorage(
 
   // Allocate property storage with size corresponding to number of properties
   // in the hidden class.
-  Handle<JSArray> arr = std::move(*res);
+  lv.arr = std::move(*res);
   runtime.ignoreAllocationFailure(JSObject::allocatePropStorage(
-      arr, runtime, classHandle->getNumProperties()));
+      lv.arr, runtime, classHandle->getNumProperties()));
 
-  return arr;
+  return PseudoHandle<JSArray>::create(*lv.arr);
 }
 
-CallResult<Handle<JSArray>>
+CallResult<PseudoHandle<JSArray>>
 JSArray::create(Runtime &runtime, size_type capacity, size_type length) {
   return JSArray::createNoAllocPropStorage(
       runtime,
@@ -812,18 +823,27 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
         .getHermesValue();
   }
 
+  struct : Locals {
+    PinnedValue<JSObject> a;
+    PinnedValue<> index;
+    PinnedValue<> value;
+    PinnedValue<JSArray> arr;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // 4. Let a be the value of the [[IteratedObject]] internal slot of O.
-  Handle<JSObject> a = runtime.makeHandle(self->iteratedObject_);
+  lv.a = self->iteratedObject_.getNonNull(runtime);
   // 6. Let index be the value of the [[ArrayIteratorNextIndex]] internal slot
   // of O.
   uint64_t index = self->nextIndex_;
 
   uint64_t len;
-  if (auto ta = Handle<JSTypedArrayBase>::dyn_vmcast(a)) {
+  if (vmisa<JSTypedArrayBase>(*lv.a)) {
     // 8. If a has a [[TypedArrayName]] internal slot, then
     // a. If IsDetachedBuffer(a.[[ViewedArrayBuffer]]) is true,
     //    throw a TypeError exception.
     // b. Let len be the value of O’s [[ArrayLength]] internal slot.
+    auto ta = Handle<JSTypedArrayBase>::vmcast(&lv.a);
     if (LLVM_UNLIKELY(!ta->attached(runtime))) {
       return runtime.raiseTypeError("TypedArray detached during iteration");
     }
@@ -832,7 +852,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
     // 9. Else,
     // a. Let len be ToLength(Get(a, "length")).
     auto propRes = JSObject::getNamed_RJS(
-        a, runtime, Predefined::getSymbolID(Predefined::length));
+        lv.a, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -857,22 +877,21 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
   // index+1.
   ++self->nextIndex_;
 
-  auto indexHandle =
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index));
+  lv.index = HermesValue::encodeTrustedNumberValue(index);
 
   if (self->iterationKind_ == IterationKind::Key) {
     // 12. If itemKind is "key", return CreateIterResultObject(index, false).
-    return createIterResultObject(runtime, indexHandle, false).getHermesValue();
+    return createIterResultObject(runtime, lv.index, false).getHermesValue();
   }
 
   // 13. Let elementKey be ToString(index).
   // 14. Let elementValue be Get(a, elementKey).
   CallResult<PseudoHandle<>> valueRes =
-      JSObject::getComputed_RJS(a, runtime, indexHandle);
+      JSObject::getComputed_RJS(lv.a, runtime, lv.index);
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<> valueHandle = runtime.makeHandle(std::move(*valueRes));
+  lv.value = valueRes->getHermesValue();
 
   switch (self->iterationKind_) {
     case IterationKind::Key:
@@ -880,19 +899,18 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
       return HermesValue::encodeEmptyValue();
     case IterationKind::Value:
       // 16. If itemKind is "value", let result be elementValue.
-      return createIterResultObject(runtime, valueHandle, false)
-          .getHermesValue();
+      return createIterResultObject(runtime, lv.value, false).getHermesValue();
     case IterationKind::Entry: {
       // 17. b. Let result be CreateArrayFromList(«index, elementValue»).
       auto resultRes = JSArray::create(runtime, 2, 2);
       if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      Handle<JSArray> result = *resultRes;
-      JSArray::setElementAt(result, runtime, 0, indexHandle);
-      JSArray::setElementAt(result, runtime, 1, valueHandle);
+      lv.arr = std::move(*resultRes);
+      JSArray::setElementAt(lv.arr, runtime, 0, lv.index);
+      JSArray::setElementAt(lv.arr, runtime, 1, lv.value);
       // 18. Return CreateIterResultObject(result, false).
-      return createIterResultObject(runtime, result, false).getHermesValue();
+      return createIterResultObject(runtime, lv.arr, false).getHermesValue();
     }
     case IterationKind::NumKinds:
       llvm_unreachable("Invalid iteration kind");

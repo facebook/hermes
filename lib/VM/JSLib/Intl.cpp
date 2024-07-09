@@ -52,12 +52,11 @@ CallResult<HermesValue> localesToJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<Handle<JSArray>> arrayRes =
-      JSArray::create(runtime, result->size(), result->size());
+  auto arrayRes = JSArray::create(runtime, result->size(), result->size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = *arrayRes;
+  Handle<JSArray> array = runtime.makeHandle(std::move(*arrayRes));
   MutableHandle<> name{runtime};
   uint64_t index = 0;
   GCScopeMarkerRAII marker{runtime};
@@ -160,12 +159,11 @@ CallResult<HermesValue> partsToJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  CallResult<Handle<JSArray>> arrayRes =
-      JSArray::create(runtime, result->size(), result->size());
+  auto arrayRes = JSArray::create(runtime, result->size(), result->size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = *arrayRes;
+  Handle<JSArray> array = runtime.makeHandle(std::move(*arrayRes));
   uint64_t index = 0;
   GCScopeMarkerRAII marker{runtime};
   for (auto &part : *result) {

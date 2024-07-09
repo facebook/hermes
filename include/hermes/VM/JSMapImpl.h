@@ -267,7 +267,7 @@ class JSMapIteratorImpl final : public JSObject {
             if (arrRes == ExecutionStatus::EXCEPTION) {
               return ExecutionStatus::EXCEPTION;
             }
-            auto arrHandle = *arrRes;
+            Handle<JSArray> arrHandle = runtime.makeHandle(std::move(*arrRes));
             value = self->itr_.getNonNull(runtime)->key.unboxToHV(runtime);
             JSArray::setElementAt(arrHandle, runtime, 0, value);
             if constexpr (std::is_same_v<OrderedHashTable, OrderedHashMap>) {

@@ -465,9 +465,8 @@ ExecutionStatus Interpreter::putByIdTransient_RJS(
       return ExecutionStatus::RETURNED;
     }
 
-    CallResult<PseudoHandle<>> setRes =
-        accessor->setter.getNonNull(runtime)->executeCall1(
-            runtime.makeHandle(accessor->setter), runtime, base, *value);
+    CallResult<PseudoHandle<>> setRes = Callable::executeCall1(
+        runtime.makeHandle(accessor->setter), runtime, base, *value);
     if (setRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -660,7 +659,7 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
     return ExecutionStatus::EXCEPTION;
   }
   // Resize the array storage in advance.
-  auto arr = *arrRes;
+  Handle<JSArray> arr = runtime.makeHandle(std::move(*arrRes));
   JSArray::setStorageEndIndex(arr, runtime, numElements);
 
   // Set up the visitor to populate literal elements in the array.
@@ -2949,7 +2948,6 @@ tailCall:
           }
           O1REG(NewArray) = createRes->getHermesValue();
         }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewArray);
         DISPATCH;
       }

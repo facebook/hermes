@@ -656,7 +656,7 @@ HermesABIArrayOrError get_object_property_names(
   auto retRes = vm::JSArray::create(runtime, length, length);
   if (retRes == vm::ExecutionStatus::EXCEPTION)
     return abi::createArrayOrError(HermesABIErrorCodeJSError);
-  vm::Handle<vm::JSArray> ret = *retRes;
+  vm::Handle<vm::JSArray> ret = runtime.makeHandle(std::move(*retRes));
   vm::JSArray::setStorageEndIndex(ret, runtime, length);
   vm::MutableHandle<> nameHnd{runtime};
 
@@ -1120,7 +1120,8 @@ class HostObjectWrapper : public vm::HostObjectProxy {
     }
 
     // Store each of the returned PropNameIDs as a symbol in the JSArray.
-    vm::Handle<vm::JSArray> arrayHandle = *arrayRes;
+    vm::Handle<vm::JSArray> arrayHandle =
+        runtime.makeHandle(std::move(*arrayRes));
     vm::JSArray::setStorageEndIndex(arrayHandle, runtime, size);
     for (size_t i = 0; i < size; ++i) {
       auto shv = vm::SmallHermesValue::encodeSymbolValue(*toHandle(names[i]));

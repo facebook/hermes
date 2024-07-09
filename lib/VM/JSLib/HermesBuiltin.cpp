@@ -97,12 +97,12 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> rawObj = *arrRes;
+  Handle<JSArray> rawObj = runtime.makeHandle(std::move(*arrRes));
   auto arrRes2 = JSArray::create(runtime, count, 0);
   if (LLVM_UNLIKELY(arrRes2 == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> templateObj = *arrRes2;
+  Handle<JSArray> templateObj = runtime.makeHandle(std::move(*arrRes2));
 
   // Set cooked and raw strings as elements in template object and raw object,
   // respectively.
@@ -451,7 +451,7 @@ hermesBuiltinCopyRestArgs(void *, Runtime &runtime, NativeArgs args) {
   auto cr = JSArray::create(runtime, length, length);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  auto array = *cr;
+  Handle<JSArray> array = runtime.makeHandle(std::move(*cr));
   JSArray::setStorageEndIndex(array, runtime, length);
 
   for (uint32_t i = 0; i != length; ++i) {

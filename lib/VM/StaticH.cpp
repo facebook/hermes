@@ -27,15 +27,25 @@ using namespace hermes::vm;
 
 extern "C" void _SH_MODEL(void) {}
 
+namespace {
 /// Convert the given \p cr to a \c CallResult<HermesValue>.
 template <typename T>
-static inline CallResult<HermesValue> toCallResultHermesValue(
-    CallResult<Handle<T>> cr) {
-  if (LLVM_UNLIKELY(cr.getStatus() == ExecutionStatus::EXCEPTION)) {
+CallResult<HermesValue> toCallResultHermesValue(CallResult<Handle<T>> cr) {
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return cr.getValue().getHermesValue();
+  return cr->getHermesValue();
 }
+
+template <typename T>
+CallResult<HermesValue> toCallResultHermesValue(
+    CallResult<PseudoHandle<T>> cr) {
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return cr->getHermesValue();
+}
+} // namespace
 
 extern "C" SHLegacyValue *
 _sh_push_locals(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
@@ -531,7 +541,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
   return NativeJSFunction::createWithInferredParent(
              runtime,
              env ? Handle<Environment>::vmcast(toPHV(env))
-                 : runtime.makeNullHandle<Environment>(),
+                 : Runtime::makeNullHandle<Environment>(),
              func,
              funcInfo,
              unit,
@@ -1074,8 +1084,8 @@ extern "C" void _sh_ljs_put_own_getter_setter_by_val(
     dpFlags.setEnumerable = 1;
     dpFlags.enumerable = isEnumerable;
 
-    Handle<Callable> getterCallable = runtime.makeNullHandle<Callable>();
-    Handle<Callable> setterCallable = runtime.makeNullHandle<Callable>();
+    Handle<Callable> getterCallable = Runtime::makeNullHandle<Callable>();
+    Handle<Callable> setterCallable = Runtime::makeNullHandle<Callable>();
     if (LLVM_LIKELY(!toPHV(getter)->isUndefined())) {
       dpFlags.setGetter = 1;
       getterCallable = Handle<Callable>::vmcast(toPHV(getter));

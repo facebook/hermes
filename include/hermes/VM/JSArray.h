@@ -299,7 +299,7 @@ class JSArray final : public ArrayImpl {
   /// Create an instance of Array, with [[Prototype]] initialized with
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length. Does not allocate the return object's property storage array.
-  static CallResult<Handle<JSArray>> createNoAllocPropStorage(
+  static CallResult<PseudoHandle<JSArray>> createNoAllocPropStorage(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
@@ -310,14 +310,14 @@ class JSArray final : public ArrayImpl {
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length. It also allocates the return object's property storage array
   /// to hold all properties in \p classHandle.
-  static CallResult<Handle<JSArray>> createAndAllocPropStorage(
+  static CallResult<PseudoHandle<JSArray>> createAndAllocPropStorage(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
       size_type capacity = 0,
       size_type length = 0);
 
-  static CallResult<Handle<JSArray>> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
@@ -331,7 +331,7 @@ class JSArray final : public ArrayImpl {
         capacity,
         length);
   }
-  static CallResult<Handle<JSArray>> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle) {
     return create(runtime, prototypeHandle, 0, 0);
@@ -339,7 +339,7 @@ class JSArray final : public ArrayImpl {
 
   /// Create an instance of Array, using the standard array prototype, with
   /// capacity for \p capacity elements and actual size \p length.
-  static CallResult<Handle<JSArray>>
+  static CallResult<PseudoHandle<JSArray>>
   create(Runtime &runtime, size_type capacity, size_type length);
 
   /// A convenience method for setting the \c .length property of the array.

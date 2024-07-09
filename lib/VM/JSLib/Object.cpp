@@ -815,7 +815,7 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   if (LLVM_UNLIKELY(propertiesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto properties = *propertiesRes;
+  Handle<JSArray> properties = runtime.makeHandle(std::move(*propertiesRes));
 
   MutableHandle<StringPrimitive> name{runtime};
   MutableHandle<> value{runtime};

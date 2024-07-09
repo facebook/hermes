@@ -357,7 +357,7 @@ arrayConstructor(void *, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    selfHandle = arrRes->get();
+    selfHandle = std::move(*arrRes);
   }
 
   // Possibility 1: new Array(number)
@@ -475,7 +475,7 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = *arrRes;
+  Handle<JSArray> strings = runtime.makeHandle(std::move(*arrRes));
 
   // Index into the array.
   MutableHandle<> i{runtime, HermesValue::encodeTrustedNumberValue(0)};
@@ -682,7 +682,7 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *arrRes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
 
   // Index to insert into A.
   uint64_t n = 0;
@@ -900,7 +900,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strings = *arrRes;
+  Handle<JSArray> strings = runtime.makeHandle(std::move(*arrRes));
 
   // Call toString on all the elements of the array.
   for (MutableHandle<> i{runtime, HermesValue::encodeTrustedNumberValue(0)};
@@ -1384,7 +1384,7 @@ CallResult<HermesValue> sortSparse(
   auto crArray = JSArray::create(runtime, numProps, numProps);
   if (crArray == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  auto array = *crArray;
+  Handle<JSArray> array = runtime.makeHandle(std::move(*crArray));
   if (JSArray::setStorageEndIndex(array, runtime, numProps) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1760,7 +1760,7 @@ arrayPrototypeFlat(void *ctx, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *ARes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*ARes));
 
   // 6. Perform ? FlattenIntoArray(A, O, sourceLen, 0, depthNum).
   if (LLVM_UNLIKELY(
@@ -1814,7 +1814,7 @@ arrayPrototypeFlatMap(void *ctx, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *ARes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*ARes));
 
   // 6. Perform ? FlattenIntoArray(A, O, sourceLen, 0, 1, mapperFunction, T).
   if (LLVM_UNLIKELY(
@@ -1899,7 +1899,7 @@ arrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *arrRes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
 
   // Next index in A to write to.
   uint32_t n = 0;
@@ -2010,7 +2010,7 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *arrRes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
 
   // Indices used for various copies in loops below.
   MutableHandle<> from{runtime};
@@ -3029,7 +3029,7 @@ arrayPrototypeMap(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *arrRes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
 
   // Current index to execute callback on.
   MutableHandle<> k{runtime, HermesValue::encodeTrustedNumberValue(0)};
@@ -3107,7 +3107,7 @@ arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = *arrRes;
+  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
 
   // Index in the original array.
   MutableHandle<> k{runtime, HermesValue::encodeTrustedNumberValue(0)};
@@ -3676,7 +3676,7 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = ARes.getValue();
+  Handle<JSArray> A = runtime.makeHandle(std::move(*ARes));
 
   // 4. Let k be 0.
   double k = 0;
@@ -3884,7 +3884,7 @@ arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = ARes.getValue();
+  Handle<JSArray> A = runtime.makeHandle(std::move(*ARes));
 
   // 14. Let i be 0
   double i = 0;
@@ -3995,7 +3995,7 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto A = ARes.getValue();
+  Handle<JSArray> A = runtime.makeHandle(std::move(*ARes));
 
   // 8. Let k be 0.
   double k = 0;
@@ -4092,7 +4092,7 @@ CallResult<HermesValue> arrayOf(void *, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(aRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    A = vmcast<JSObject>(aRes->getHermesValue());
+    A = std::move(*aRes);
   }
   // 7. Let k be 0.
   MutableHandle<> k{runtime, HermesValue::encodeTrustedNumberValue(0)};
@@ -4194,7 +4194,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      A = arrRes->get();
+      A = std::move(*arrRes);
     }
     // c. ReturnIfAbrupt(A).
     // d. Let iterator be GetIterator(items, usingIterator).
@@ -4323,7 +4323,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    A = arrRes->get();
+    A = std::move(*arrRes);
   }
   // 14. ReturnIfAbrupt(A).
   // 15. Let k be 0.
