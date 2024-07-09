@@ -930,57 +930,67 @@ class SynthTrace {
     }
   };
 
-  struct ArrayReadOrWriteRecord : public Record {
+  /// An ArrayReadRecord is an event where a value was read from an index
+  /// of an array.
+  /// It is modeled separately from GetProperty because it is more efficient to
+  /// read from a numeric index on an array than a string.
+  struct ArrayReadRecord final : public Record {
     /// The ObjectID of the array that was accessed.
     const ObjectID objID_;
     /// The index of the element that was accessed in the array.
     const size_t index_;
-    /// The value that was read from or written to the array.
+    /// The value that was read from the array.
     const TraceValue value_;
 
-    explicit ArrayReadOrWriteRecord(
+    explicit ArrayReadRecord(
         TimeSinceStart time,
         ObjectID objID,
         size_t index,
         TraceValue value)
         : Record(time), objID_(objID), index_(index), value_(value) {}
 
-    void toJSONInternal(::hermes::JSONEmitter &json) const override;
-    std::vector<ObjectID> uses() const override {
-      return {objID_};
-    }
-  };
-
-  /// An ArrayReadRecord is an event where a value was read from an index
-  /// of an array.
-  /// It is modeled separately from GetProperty because it is more efficient to
-  /// read from a numeric index on an array than a string.
-  struct ArrayReadRecord final : public ArrayReadOrWriteRecord {
     static constexpr RecordType type{RecordType::ArrayRead};
-    using ArrayReadOrWriteRecord::ArrayReadOrWriteRecord;
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> defs() const override {
-      auto defs = ArrayReadOrWriteRecord::defs();
+      std::vector<ObjectID> defs{};
       pushIfTrackedValue(value_, defs);
       return defs;
     }
+    std::vector<ObjectID> uses() const override {
+      return {objID_};
+    }
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// An ArrayWriteRecord is an event where a value was written into an index
   /// of an array.
-  struct ArrayWriteRecord final : public ArrayReadOrWriteRecord {
+  struct ArrayWriteRecord final : public Record {
+    /// The ObjectID of the array that was accessed.
+    const ObjectID objID_;
+    /// The index of the element that was accessed in the array.
+    const size_t index_;
+    /// The value that was written to the array.
+    const TraceValue value_;
+
+    explicit ArrayWriteRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        size_t index,
+        TraceValue value)
+        : Record(time), objID_(objID), index_(index), value_(value) {}
+
     static constexpr RecordType type{RecordType::ArrayWrite};
-    using ArrayReadOrWriteRecord::ArrayReadOrWriteRecord;
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> uses() const override {
-      auto uses = ArrayReadOrWriteRecord::uses();
+      std::vector<ObjectID> uses{objID_};
       pushIfTrackedValue(value_, uses);
       return uses;
     }
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   struct CallRecord : public Record {
