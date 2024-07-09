@@ -66,7 +66,11 @@ const char *hostFunctionMutatesGlobalObjectTrace() {
       "objID": 1,
       "propID": "propIDTag:23",
       "propName": "o",
-      "value": "object:11"
+    },
+    {
+      "type": "ReturnToNativeRecord",
+      "time": 0,
+      "retval": "object:11"
     },
     {
       "type": "CreatePropNameRecord",
@@ -120,7 +124,11 @@ const char *hostFunctionMutatesGlobalObjectTrace() {
       "objID": 1,
       "propID": "propIDTag:23",
       "propName": "o",
-      "value": "object:11"
+    },
+    {
+      "type": "ReturnToNativeRecord",
+      "time": 0,
+      "retval": "object:11"
     },
     {
       "type": "CreateStringRecord",

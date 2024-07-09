@@ -103,7 +103,11 @@ const char *nativePropertyNamesTrace() {
       "objID": 1,
       "propID": "propIDTag:24",
       "propName": "jsFunc",
-      "value": "object:12"
+    },
+    {
+      "type": "ReturnToNativeRecord",
+      "time": 0,
+      "retval": "object:12"
     },
     {
       "type": "CallFromNativeRecord",
