@@ -786,6 +786,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
               "'arguments', if it exists, must be bound in the function prologue");
           continue;
         }
+        [[fallthrough]];
       case sema::Decl::Kind::Import:
       case sema::Decl::Kind::ES5Catch:
       case sema::Decl::Kind::FunctionExprName:
