@@ -394,7 +394,6 @@ void SynthTrace::GetPropertyRecord::toJSONInternal(JSONEmitter &json) const {
 #ifdef HERMESVM_API_TRACE_DEBUG
   json.emitKeyValue("propName", propNameDbg_);
 #endif
-  json.emitKeyValue("value", encode(value_));
 }
 
 void SynthTrace::SetPropertyRecord::toJSONInternal(JSONEmitter &json) const {

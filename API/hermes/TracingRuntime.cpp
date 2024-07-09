@@ -533,30 +533,36 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromSymbol(
 jsi::Value TracingRuntime::getProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
-  auto value = RD::getProperty(obj, name);
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
       getTimeSinceStart(),
       useObjectID(obj),
-      SynthTrace::encodeString(useObjectID(name)),
+      SynthTrace::encodeString(useObjectID(name))
 #ifdef HERMESVM_API_TRACE_DEBUG
-      name.utf8(*this),
+          ,
+      name.utf8(*this)
 #endif
-      defTraceValue(value));
+  );
+  auto value = RD::getProperty(obj, name);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(value));
   return value;
 }
 
 jsi::Value TracingRuntime::getProperty(
     const jsi::Object &obj,
     const jsi::PropNameID &name) {
-  auto value = RD::getProperty(obj, name);
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
       getTimeSinceStart(),
       useObjectID(obj),
-      SynthTrace::encodePropNameID(useObjectID(name)),
+      SynthTrace::encodePropNameID(useObjectID(name))
 #ifdef HERMESVM_API_TRACE_DEBUG
-      name.utf8(*this),
+          ,
+      name.utf8(*this)
 #endif
-      defTraceValue(value));
+  );
+  auto value = RD::getProperty(obj, name);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(value));
   return value;
 }
 

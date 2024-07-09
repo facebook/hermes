@@ -397,7 +397,12 @@ SynthTrace getTrace(
             paramCount);
         break;
       }
-      case RecordType::GetProperty:
+      case RecordType::GetProperty: {
+        std::optional<SynthTrace::TraceValue> value;
+        if (propValue) {
+          value = trace.decode(propValue->c_str());
+        }
+
         trace.emplace_back<SynthTrace::GetPropertyRecord>(
             timeFromStart,
             objID->getValue(),
@@ -405,8 +410,9 @@ SynthTrace getTrace(
 #ifdef HERMESVM_API_TRACE_DEBUG
             std::string(propName->c_str()),
 #endif
-            trace.decode(propValue->c_str()));
+            value);
         break;
+      }
       case RecordType::SetProperty:
         trace.emplace_back<SynthTrace::SetPropertyRecord>(
             timeFromStart,
