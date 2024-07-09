@@ -746,25 +746,24 @@ class SynthTrace {
 #ifdef HERMESVM_API_TRACE_DEBUG
     std::string propNameDbg_;
 #endif
-    /// Returned value from getProperty.
-    // TODO: Remove once recordings no longer contain this field
-    const std::optional<TraceValue> value_;
 
     GetPropertyRecord(
         TimeSinceStart time,
         ObjectID objID,
-        TraceValue propID,
+        TraceValue propID
 #ifdef HERMESVM_API_TRACE_DEBUG
+        ,
         const std::string &propNameDbg
 #endif
-            std::optional<TraceValue> value = std::nullopt)
+        )
         : Record(time),
           objID_(objID),
-          propID_(propID),
+          propID_(propID)
 #ifdef HERMESVM_API_TRACE_DEBUG
-          propNameDbg_(propNameDbg),
+          ,
+          propNameDbg_(propNameDbg)
 #endif
-          value_(value) {
+    {
     }
 
     static constexpr RecordType type{RecordType::GetProperty};
@@ -776,14 +775,6 @@ class SynthTrace {
       std::vector<ObjectID> uses{objID_};
       pushIfTrackedValue(propID_, uses);
       return uses;
-    }
-
-    std::vector<ObjectID> defs() const override {
-      std::vector<ObjectID> defs{};
-      if (value_) {
-        pushIfTrackedValue(*value_, defs);
-      }
-      return defs;
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
@@ -879,27 +870,13 @@ class SynthTrace {
     static constexpr RecordType type{RecordType::GetPropertyNames};
     /// The ObjectID of the object that was accessed for its property.
     const ObjectID objID_;
-    // Since getPropertyNames always returns an array, this can be an object id
-    // rather than a TraceValue.
-    /// The ObjectID of the array that was returned by getPropertyNames().
-    // TODO: delete once no traces contain this field
-    const std::optional<ObjectID> propNamesID_;
 
-    explicit GetPropertyNamesRecord(
-        TimeSinceStart time,
-        ObjectID objID,
-        std::optional<ObjectID> propNamesID = std::nullopt)
-        : Record(time), objID_(objID), propNamesID_(propNamesID) {}
+    explicit GetPropertyNamesRecord(TimeSinceStart time, ObjectID objID)
+        : Record(time), objID_(objID) {}
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
-    }
-    std::vector<ObjectID> defs() const override {
-      if (!propNamesID_) {
-        return {};
-      }
-      return {*propNamesID_};
     }
     std::vector<ObjectID> uses() const override {
       return {objID_};
@@ -939,27 +916,13 @@ class SynthTrace {
     const ObjectID objID_;
     /// The index of the element that was accessed in the array.
     const size_t index_;
-    /// The value that was read from the array.
-    // TODO: remove once recordings no longer contain this field
-    const std::optional<TraceValue> value_;
 
-    explicit ArrayReadRecord(
-        TimeSinceStart time,
-        ObjectID objID,
-        size_t index,
-        std::optional<TraceValue> value = std::nullopt)
-        : Record(time), objID_(objID), index_(index), value_(value) {}
+    explicit ArrayReadRecord(TimeSinceStart time, ObjectID objID, size_t index)
+        : Record(time), objID_(objID), index_(index) {}
 
     static constexpr RecordType type{RecordType::ArrayRead};
     RecordType getType() const override {
       return type;
-    }
-    std::vector<ObjectID> defs() const override {
-      std::vector<ObjectID> defs{};
-      if (value_) {
-        pushIfTrackedValue(*value_, defs);
-      }
-      return defs;
     }
     std::vector<ObjectID> uses() const override {
       return {objID_};
