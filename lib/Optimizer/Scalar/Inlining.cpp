@@ -511,6 +511,11 @@ bool Inlining::runOnModule(Module *M) {
 
     auto callsites = getKnownCallsites(FC);
 
+    // If the programmer explicitly said not to inline, skip.
+    if (FC->getNoInline()) {
+      continue;
+    }
+
     // Check the heuristic before doing any work.
     if (!shouldTryToInline(FC, callsites)) {
       if (FC->getAlwaysInline()) {

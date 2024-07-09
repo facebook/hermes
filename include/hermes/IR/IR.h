@@ -1972,6 +1972,12 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return customDirectives_.alwaysInline;
   }
 
+  /// \return whether the function never be attempted to be inlined,
+  /// bypassing the heuristics that normally determine that.
+  bool getNoInline() const {
+    return customDirectives_.noInline;
+  }
+
   OptValue<uint32_t> getStatementCount() const {
     return statementCount_;
   }

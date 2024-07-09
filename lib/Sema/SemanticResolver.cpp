@@ -1180,6 +1180,7 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     curFunctionInfo()->customDirectives.sourceVisibility =
         directives.sourceVisibility;
   curFunctionInfo()->customDirectives.alwaysInline = directives.alwaysInline;
+  curFunctionInfo()->customDirectives.noInline = directives.noInline;
 
   if (id) {
     // Set the expression decl of the id.
@@ -1938,8 +1939,26 @@ auto SemanticResolver::scanDirectives(ESTree::NodeList &body) const
         directives.sourceVisibility = SourceVisibility::Sensitive;
     }
 
+    // Shouldn't have both 'inline' and 'noinline'.  But this shouldn't
+    // prevent compilation.  So, give a warning, and take the most recent
+    // directive.
     if (directive == kw_.identInline) {
+      if (directives.noInline) {
+        sm_.warning(
+            exprSt->getSourceRange(),
+            "Should not declare both 'inline' and 'noinline'.");
+        directives.noInline = false;
+      }
       directives.alwaysInline = true;
+    }
+    if (directive == kw_.identNoInline) {
+      if (directives.alwaysInline) {
+        sm_.warning(
+            exprSt->getSourceRange(),
+            "Should not declare both 'inline' and 'noinline'.");
+        directives.alwaysInline = false;
+      }
+      directives.noInline = true;
     }
   }
   return directives;

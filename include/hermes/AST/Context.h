@@ -141,6 +141,10 @@ struct CustomDirectives {
   /// It's possible the function can't be inlined if it contains
   /// code which can't be inlined, but the heuristic won't reject it.
   bool alwaysInline{false};
+
+  /// Whether we should _never_ attempt to inline the function.
+  /// Useful (at least) in tests.
+  bool noInline{false};
 };
 
 /// Holds shared dependencies and state.

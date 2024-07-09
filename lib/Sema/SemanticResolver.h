@@ -377,6 +377,8 @@ class SemanticResolver
     SourceVisibility sourceVisibility = SourceVisibility::Default;
     /// If an "inline" directive is found, this is true.
     bool alwaysInline = false;
+    /// If a "noinline" directive is found, this is true.
+    bool noInline = false;
   };
 
   /// Scan the list of directives in the beginning of a program or function.
