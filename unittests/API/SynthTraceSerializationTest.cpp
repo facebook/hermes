@@ -188,8 +188,8 @@ TEST_F(SynthTraceSerializationTest, HasProperty) {
 
 TEST_F(SynthTraceSerializationTest, GetPropertyNames) {
   EXPECT_EQ(
-      R"({"type":"GetPropertyNamesRecord","time":0,"objID":1,"propNamesID":2})",
-      to_string(SynthTrace::GetPropertyNamesRecord(dummyTime, 1, 2)));
+      R"({"type":"GetPropertyNamesRecord","time":0,"objID":1})",
+      to_string(SynthTrace::GetPropertyNamesRecord(dummyTime, 1)));
 }
 
 TEST_F(SynthTraceSerializationTest, CreateArray) {

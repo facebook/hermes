@@ -912,7 +912,12 @@ void TraceInterpreter::executeRecords() {
           jsi::Array arr = getJSIValueForUse(gpnr.objID_)
                                .asObject(rt_)
                                .getPropertyNames(rt_);
-          addToObjectMap(gpnr.propNamesID_, std::move(arr), currentExecIndex);
+          if (gpnr.propNamesID_) {
+            addToObjectMap(
+                *gpnr.propNamesID_, std::move(arr), currentExecIndex);
+          } else {
+            retval = std::move(arr);
+          }
           break;
         }
         case RecordType::CreateArray: {

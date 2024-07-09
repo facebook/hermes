@@ -434,12 +434,16 @@ SynthTrace getTrace(
 #endif
         );
         break;
-      case RecordType::GetPropertyNames:
+      case RecordType::GetPropertyNames: {
+        JSONValue *propNamesIDVal = obj->get("propNamesID");
+        std::optional<SynthTrace::ObjectID> propNamesId;
+        if (propNamesIDVal) {
+          propNamesId = getNumberAs<SynthTrace::ObjectID>(propNamesIDVal);
+        }
         trace.emplace_back<SynthTrace::GetPropertyNamesRecord>(
-            timeFromStart,
-            objID->getValue(),
-            getNumberAs<SynthTrace::ObjectID>(obj->get("propNamesID")));
+            timeFromStart, objID->getValue(), propNamesId);
         break;
+      }
       case RecordType::CreateArray:
         trace.emplace_back<SynthTrace::CreateArrayRecord>(
             timeFromStart,

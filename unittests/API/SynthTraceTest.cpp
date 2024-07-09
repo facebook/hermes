@@ -483,12 +483,16 @@ TEST_F(SynthTraceTest, GetPropertyNames) {
     propNamesID = rt->useObjectID(names);
   }
   const auto &records = rt->trace().records();
-  EXPECT_EQ(2, records.size());
+  EXPECT_EQ(3, records.size());
   EXPECT_EQ_RECORD(
       SynthTrace::CreateObjectRecord(records[0]->time_, objID), *records[0]);
   EXPECT_EQ_RECORD(
-      SynthTrace::GetPropertyNamesRecord(records[1]->time_, objID, propNamesID),
+      SynthTrace::GetPropertyNamesRecord(records[1]->time_, objID),
       *records[1]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::ReturnToNativeRecord(
+          records[2]->time_, SynthTrace::encodeObject(propNamesID)),
+      *records[2]);
 }
 
 TEST_F(SynthTraceTest, CreateArray) {
@@ -1231,7 +1235,7 @@ struct SynthTraceRuntimeTest : public ::testing::Test {
             std::make_unique<llvh::raw_string_ostream>(traceResult),
             /* forReplay */ false)) {}
 
-  jsi::Value eval(jsi::Runtime &rt, std::string code) {
+  static jsi::Value eval(jsi::Runtime &rt, std::string code) {
     return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
   }
 };
@@ -1924,11 +1928,10 @@ TEST_F(SynthTraceReplayTest, HostFunctionAsGetter) {
         rt,
         jsi::PropNameID::forAscii(rt, "foo"),
         0,
-        [this](
-            jsi::Runtime &rt,
-            const jsi::Value &thisVal,
-            const jsi::Value *args,
-            size_t count) { return eval(rt, "++flag"); });
+        [](jsi::Runtime &rt,
+           const jsi::Value &thisVal,
+           const jsi::Value *args,
+           size_t count) { return eval(rt, "++flag"); });
 
     // Attach the host function to the property getter of an object
     auto obj = jsi::Object(rt);
@@ -1950,6 +1953,45 @@ TEST_F(SynthTraceReplayTest, HostFunctionAsGetter) {
   replay();
 
   // Ensure the host function was called twice
+  {
+    auto &rt = *replayRt;
+    EXPECT_EQ(eval(rt, "flag").getNumber(), 2);
+  }
+}
+
+// This test exercises the case where getting property names triggers
+// other records to be emitted before returning the property names.
+TEST_F(SynthTraceReplayTest, HostFunctionAsGetPropertyNames) {
+  // Host object to carry out some actions that generate records when property
+  // names are requested.
+  class TestHostObject : public jsi::HostObject {
+   public:
+    TestHostObject() {}
+
+    std::vector<jsi::PropNameID> getPropertyNames(jsi::Runtime &rt) override {
+      SynthTraceRuntimeTest::eval(rt, "++flag");
+      return std::vector<jsi::PropNameID>{};
+    }
+  };
+
+  {
+    auto &rt = *traceRt;
+
+    // Setup a flag to ensure the host object's getPropertyNames() was invoked.
+    rt.global().setProperty(rt, "flag", 0);
+
+    // Get the property names.
+    auto obj = jsi::Object::createFromHostObject(
+        rt, std::make_shared<TestHostObject>());
+    rt.getPropertyNames(obj);
+    rt.getPropertyNames(obj);
+  }
+
+  // Ensure the records were emitted in the order that correctly represents
+  // the actual execution.
+  replay();
+
+  // Ensure the host object's getPropertyNames() was invoked twice.
   {
     auto &rt = *replayRt;
     EXPECT_EQ(eval(rt, "flag").getNumber(), 2);
