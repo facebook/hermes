@@ -1087,6 +1087,9 @@ tailCall:
   }                                             \
   goto *opcodeDispatch[(unsigned)ip->opCode]
 
+// Do nothing if we're not in a switch.
+#define INTERPRETER_FALLTHROUGH
+
 #else // HERMESVM_INDIRECT_THREADING
 
 #define CASE(name) case OpCode::name:
@@ -1098,6 +1101,9 @@ tailCall:
     return HermesValue::encodeUndefinedValue(); \
   }                                             \
   continue
+
+// Fallthrough if we're in a switch.
+#define INTERPRETER_FALLTHROUGH [[fallthrough]]
 
 #endif // HERMESVM_INDIRECT_THREADING
 
@@ -1181,6 +1187,7 @@ tailCall:
   CASE(name) {                                                           \
     if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
       /* Fast-path. */                                                   \
+      INTERPRETER_FALLTHROUGH;                                           \
       CASE(name##N) {                                                    \
         O1REG(name) = HermesValue::encodeTrustedNumberValue(             \
             do##name(O2REG(name).getNumber(), O3REG(name).getNumber())); \
@@ -1312,6 +1319,7 @@ tailCall:
             O2REG(name##suffix).isNumber() &&                             \
             O3REG(name##suffix).isNumber())) {                            \
       /* Fast-path. */                                                    \
+      INTERPRETER_FALLTHROUGH;                                            \
       CASE(name##N##suffix) {                                             \
         if (O2REG(name##N##suffix)                                        \
                 .getNumber() oper O3REG(name##N##suffix)                  \
@@ -2770,6 +2778,7 @@ tailCall:
         if (LLVM_LIKELY(
                 O2REG(Add).isNumber() &&
                 O3REG(Add).isNumber())) { /* Fast-path. */
+          INTERPRETER_FALLTHROUGH;
           CASE(AddN) {
             O1REG(Add) = HermesValue::encodeTrustedNumberValue(
                 O2REG(Add).getNumber() + O3REG(Add).getNumber());
