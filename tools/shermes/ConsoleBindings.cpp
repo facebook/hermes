@@ -9,9 +9,44 @@
 #include "hermes/hermes.h"
 #include "jsi/jsi.h"
 
+/// Init harness symbols used in the test262 testsuite:
+/// - $test262, with properties:
+///   - global
+///   - evalScript
+///   - detachArrayBuffer
+/// - alert
+static void initTest262Bindings(facebook::hermes::HermesRuntime &hrt) {
+  auto global = hrt.global();
+  facebook::jsi::Object test262Obj{hrt};
+
+  // Define $262.global.
+  test262Obj.setProperty(hrt, "global", global);
+
+  // Define $262.evalScript.
+  auto evalFunc = global.getProperty(hrt, "eval");
+  test262Obj.setProperty(hrt, "evalScript", evalFunc);
+
+  // Define $262.detachArrayBuffer.
+  auto hermesInternalProp = global.getProperty(hrt, "HermesInternal");
+  if (hermesInternalProp.isObject()) {
+    auto hermesInternalObj = hermesInternalProp.asObject(hrt);
+    auto detachArrayBufferFunc =
+        hermesInternalObj.getProperty(hrt, "detachArrayBuffer");
+    if (detachArrayBufferFunc.isObject()) {
+      test262Obj.setProperty(hrt, "detachArrayBuffer", detachArrayBufferFunc);
+    }
+  }
+
+  // Define global object $262.
+  global.setProperty(hrt, "$262", test262Obj);
+
+  // Define global function alert().
+  auto printFunc = global.getProperty(hrt, "print");
+  global.setProperty(hrt, "alert", printFunc);
+}
+
 extern "C" SHERMES_EXPORT void init_console_bindings(SHRuntime *shr) {
   using namespace facebook;
   auto &hrt = *_sh_get_hermes_runtime(shr);
-  // TOOD: Implement some bindings.
-  (void)hrt;
+  initTest262Bindings(hrt);
 }
