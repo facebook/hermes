@@ -75,8 +75,9 @@ async def run(
         if StrictMode.STRICT in compile_run_args.strict_mode:
             cmd_args.append("-strict")
     else:
-        # Be able to recognize the output file as bytecode.
-        cmd_args.append("-b")
+        if not compile_run_args.shermes:
+            # Be able to recognize the output file as bytecode.
+            cmd_args.append("-b")
     if compile_run_args.extra_compile_vm_args:
         cmd_args += compile_run_args.extra_compile_vm_args.vm_args
         if lazy:
