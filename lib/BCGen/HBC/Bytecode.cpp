@@ -62,7 +62,11 @@ void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
 BytecodeFunction::~BytecodeFunction() {
   if (functionIR_) {
     functionIR_->replaceAllUsesWith(nullptr);
-    functionIR_->eraseFromParentNoDestroy();
+    if (isLazy()) {
+      functionIR_->eraseFromParentNoDestroy();
+    } else {
+      functionIR_->eraseFromCompiledFunctionsNoDestroy();
+    }
     Value::destroy(functionIR_);
   }
 }

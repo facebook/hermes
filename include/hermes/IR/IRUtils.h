@@ -49,6 +49,7 @@ void replaceBodyWithUnreachable(Function *F);
 /// Deletes all instructions except for EvalCompilationDataInst,
 /// ensuring it is the first instruction in the function.
 /// Terminates the first block with UnreachableInst.
+/// Moves the function to the compiled function list in the Module.
 void deleteBodyExceptEvalData(Function *F);
 
 } // namespace hermes

@@ -434,6 +434,11 @@ void Instruction::eraseFromParent() {
   getParent()->erase(this);
 }
 
+void Function::moveToCompiledFunctionList() {
+  getParent()->getFunctionList().remove(getIterator());
+  getParent()->getCompiledFunctionList().push_back(this);
+}
+
 void Function::eraseFromParentNoDestroy() {
   // Erase all of the basic blocks before deleting the function.
   while (begin() != end()) {
@@ -441,6 +446,15 @@ void Function::eraseFromParentNoDestroy() {
     begin()->eraseFromParent();
   }
   getParent()->getFunctionList().remove(getIterator());
+}
+
+void Function::eraseFromCompiledFunctionsNoDestroy() {
+  // Erase all of the basic blocks before deleting the function.
+  while (begin() != end()) {
+    begin()->replaceAllUsesWith(nullptr);
+    begin()->eraseFromParent();
+  }
+  getParent()->getCompiledFunctionList().remove(getIterator());
 }
 
 llvh::StringRef Instruction::getName() {
@@ -685,6 +699,7 @@ void Function::addJSThisParam(JSDynamicParam *param) {
 
 Module::~Module() {
   FunctionList.clear();
+  compiledFunctions_.clear();
 }
 
 void Module::push_back(Function *F) {

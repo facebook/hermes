@@ -1937,10 +1937,20 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return BasicBlockList;
   }
 
+  /// Remove the function from the module's main function list.
+  /// Move the function to the compiled function list.
+  void moveToCompiledFunctionList();
+
   /// Erase all the basic blocks and instructions in this function.
   /// Then remove the function from the module, remove all references.
   /// However this does not deallocate (destroy) the memory of this function.
   void eraseFromParentNoDestroy();
+
+  /// Erase all the basic blocks and instructions in this function.
+  /// Then remove the function from the compiled functions list,
+  /// remove all references.
+  /// However this does not deallocate (destroy) the memory of this function.
+  void eraseFromCompiledFunctionsNoDestroy();
 
   /// A debug utility that dumps the textual representation of the IR to \p os,
   /// defaults to stdout.
@@ -2234,6 +2244,13 @@ class Module : public Value {
 
   FunctionListType FunctionList{};
 
+  /// List of all the functions that have already been compiled,
+  /// which are retained to ensure their instructions stay alive,
+  /// importantly EvalCompilationDataInst.
+  /// Kept separate to avoid iterating over these because they've already been
+  /// compiled. We don't want to visit them during lowering, optimization, etc.
+  FunctionListType compiledFunctions_{};
+
   /// List of all the VariableScopes owned by this module.
   VariableScopeListType variableScopes_{};
 
@@ -2353,6 +2370,13 @@ class Module : public Value {
   }
   FunctionListType &getFunctionList() {
     return FunctionList;
+  }
+
+  const FunctionListType &getCompiledFunctionList() const {
+    return compiledFunctions_;
+  }
+  FunctionListType &getCompiledFunctionList() {
+    return compiledFunctions_;
   }
 
   /// Set the top-level function of this module - the function that will be

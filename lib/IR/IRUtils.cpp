@@ -165,6 +165,8 @@ void deleteBodyExceptEvalData(Function *F) {
     BB->replaceAllUsesWith(nullptr);
     BB->eraseFromParent();
   }
+
+  F->moveToCompiledFunctionList();
 }
 
 } // namespace hermes
