@@ -7,6 +7,10 @@
  * @flow
  */
 
+function CHECKED_CAST<T>(value: mixed): T {
+  return (value: any);
+}
+
 function IM_COL32(r, g, b, a) {
   "inline";
   return ((a & 0xFF) << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF);
@@ -24,33 +28,33 @@ class Vector {
   }
 }
 
-function Vector_times(k: number, v: Vector) {
+function Vector_times(k: number, v: Vector): Vector {
   "inline";
   return new Vector(k * v.x, k * v.y, k * v.z);
 }
-function Vector_minus(v1: Vector, v2: Vector) {
+function Vector_minus(v1: Vector, v2: Vector): Vector {
   "inline";
   return new Vector(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
 }
-function Vector_plus(v1: Vector, v2: Vector) {
+function Vector_plus(v1: Vector, v2: Vector): Vector {
   "inline";
   return new Vector(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z);
 }
-function Vector_dot(v1: Vector, v2: Vector) {
+function Vector_dot(v1: Vector, v2: Vector): number {
   "inline";
   return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
-function Vector_mag(v: Vector) {
+function Vector_mag(v: Vector): number {
   "inline";
   return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
-function Vector_norm(v: Vector) {
+function Vector_norm(v: Vector): Vector {
   "inline";
   var mag = Vector_mag(v);
   var div = mag === 0 ? Infinity : 1.0 / mag;
   return Vector_times(div, v);
 }
-function Vector_cross(v1: Vector, v2: Vector) {
+function Vector_cross(v1: Vector, v2: Vector): Vector {
   "inline";
   return new Vector(
     v1.y * v2.z - v1.z * v2.y,
@@ -71,15 +75,15 @@ class Color {
   }
 }
 
-function Color_scale(k: number, v: Color) {
+function Color_scale(k: number, v: Color): Color {
   "inline";
   return new Color(k * v.r, k * v.g, k * v.b);
 }
-function Color_plus(v1: Color, v2: Color) {
+function Color_plus(v1: Color, v2: Color): Color {
   "inline";
   return new Color(v1.r + v2.r, v1.g + v2.g, v1.b + v2.b);
 }
-function Color_times(v1: Color, v2: Color) {
+function Color_times(v1: Color, v2: Color): Color {
   "inline";
   return new Color(v1.r * v2.r, v1.g * v2.g, v1.b * v2.b);
 }
@@ -88,13 +92,13 @@ const Color_grey = new Color(0.5, 0.5, 0.5);
 const Color_black = new Color(0.0, 0.0, 0.0);
 const Color_background = Color_black;
 const Color_defaultColor = Color_black;
-function Color_toDrawingColor(c: Color) {
+function Color_toDrawingColor(c: Color): Color {
   var legalize = (d) => (d > 1 ? 1 : d);
-  return {
-    r: Math.floor(legalize(c.r) * 255),
-    g: Math.floor(legalize(c.g) * 255),
-    b: Math.floor(legalize(c.b) * 255),
-  };
+  return new Color(
+    Math.floor(legalize(c.r) * 255),
+    Math.floor(legalize(c.g) * 255),
+    Math.floor(legalize(c.b) * 255),
+  );
 }
 
 class Camera {
@@ -293,7 +297,7 @@ class RayTracer {
     this.maxDepth = 5;
   }
 
-  intersections(ray: Ray, scene: Scene) {
+  intersections(ray: Ray, scene: Scene): ?Intersection {
     var closest = +Infinity;
     var closestInter: ?Intersection = undefined;
     for (var i = 0; i < scene.things.length; ++i) {
@@ -310,7 +314,7 @@ class RayTracer {
     return closestInter;
   }
 
-  testRay(ray: Ray, scene: Scene) {
+  testRay(ray: Ray, scene: Scene): number|void {
     var isect = this.intersections(ray, scene);
     if (isect != null) {
       return isect.dist;
@@ -328,7 +332,7 @@ class RayTracer {
     }
   }
 
-  shade(isect: Intersection, scene: Scene, depth: number) {
+  shade(isect: Intersection, scene: Scene, depth: number): Color {
     var d = isect.ray.dir;
     var pos = Vector_plus(Vector_times(isect.dist, d), isect.ray.start);
     var normal = isect.thing.normal(pos);
@@ -361,7 +365,7 @@ class RayTracer {
     rd: Vector,
     scene: Scene,
     depth: number
-  ) {
+  ): Color {
     return Color_scale(
       thing.surface.reflect(pos),
       this.traceRay(new Ray(pos, rd), scene, depth + 1)
@@ -378,9 +382,11 @@ class RayTracer {
     var addLight = (col, light) => {
       var ldis = Vector_minus(light.pos, pos);
       var livec = Vector_norm(ldis);
-      var neatIsect = this.testRay(new Ray(pos, livec), scene);
+      var neatIsect: number|void = this.testRay(new Ray(pos, livec), scene);
       var isInShadow =
-        neatIsect === undefined ? false : neatIsect <= Vector_mag(ldis);
+        neatIsect === undefined
+          ? false
+          : CHECKED_CAST<number>(neatIsect) <= Vector_mag(ldis);
       if (isInShadow) {
         return col;
       } else {
@@ -412,7 +418,7 @@ class RayTracer {
     return result;
   }
 
-  render(scene: Scene, screenWidth: number, screenHeight: number, buf: c_ptr) {
+  render(scene: Scene, screenWidth: number, screenHeight: number, buf: c_ptr): void {
     var getPoint = (x: number, y: number, camera: Camera) => {
       var recenterX = (x) => (x - screenWidth / 2.0) / 2.0 / screenWidth;
       var recenterY = (y) => -(y - screenHeight / 2.0) / 2.0 / screenHeight;
@@ -433,7 +439,7 @@ class RayTracer {
           scene,
           0
         );
-        var c = Color_toDrawingColor(color);
+        var c: Color = Color_toDrawingColor(color);
         _sh_ptr_write_c_uint(buf, 4 * (y * screenWidth + x), IM_COL32(c.r, c.g, c.b, 255));
       }
     }
@@ -457,7 +463,7 @@ function defaultScene(): Scene {
   );
 }
 
-function exec(width: number, height: number, buf: c_ptr) {
+function exec(width: number, height: number, buf: c_ptr): void {
   var rayTracer = new RayTracer();
   return rayTracer.render(defaultScene(), width, height, buf);
 }
