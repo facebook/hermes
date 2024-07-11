@@ -583,7 +583,7 @@ void SemanticResolver::visit(ESTree::LabeledStatementNode *node) {
         "previous definition");
   }
   // Auto-erase the label on exit, if we inserted it.
-  const auto &deleter = llvh::make_scope_exit([=]() {
+  const auto &deleter = llvh::make_scope_exit([this, id, insertRes]() {
     if (insertRes.second)
       functionContext()->labelMap.erase(id->_name);
   });
