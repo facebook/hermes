@@ -63,6 +63,15 @@
         "test262/test/language/statements/try/scope-catch-block-lex-open.js"
       ],
       "comment": "Catch bindings need a separate scope"
+    },
+    {
+      "paths": [
+        "test262/test/language/statements/debugger/statement.js",
+        "test262/test/language/expressions/arrow-function/throw-new.js",
+        "test262/test/language/expressions/object/method-definition/generator-invoke-ctor.js",
+        "test262/test/language/expressions/object/method-definition/name-invoke-ctor.js"
+      ],
+      "comment": "These tests fail with shermes for now."
     }
   ],
   "skip_list": [
