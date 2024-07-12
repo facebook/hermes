@@ -477,7 +477,11 @@ if (typeof USE_GUI === "undefined") {
   let h = 256;
   let buf = allocTmp(w * h * 4);
   let t1 = performance.now();
-  exec(w, h, buf);
-  print("exec time: ", (performance.now() - t1), "ms");
+  let n = 10;
+  for (var i = 0; i < n; ++i) {
+    exec(w, h, buf);
+  }
+  let t2 = performance.now();
+  print("exec time: ", (t2 - t1) / n, "ms");
   flushAllocTmp();
 }
