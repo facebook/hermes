@@ -484,10 +484,9 @@ HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
   auto *self = vmcast<JSTypedArray>(selfObj.get());
 
   if (LLVM_UNLIKELY(!self->attached(runtime))) {
-    noAllocs.release();
-    // NOTE: This should be a TypeError to be fully spec-compliant, but
-    // getOwnIndexed is not allowed to return an exception.
-    return _getOwnRetEncoder<T>::encodeMayAlloc(runtime, 0);
+    // ES15 10.4.5.4 [[Get]]
+    // Return undefined if array buffer is detached.
+    return HermesValue::encodeUndefinedValue();
   }
   if (LLVM_LIKELY(index < self->getLength())) {
     auto elem = self->at(runtime, index);
@@ -555,8 +554,9 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
   }
   T destValue = JSTypedArray<T, C>::toDestType(*res);
   if (LLVM_UNLIKELY(!typedArrayHandle->attached(runtime))) {
-    return runtime.raiseTypeError(
-        "Cannot set a value into a detached ArrayBuffer");
+    // ES15 10.4.5.5 [[Set]]
+    // Return true if array buffer is detached.
+    return true;
   }
   if (LLVM_LIKELY(index < typedArrayHandle->getLength())) {
     typedArrayHandle->at(runtime, index) = destValue;

@@ -1183,7 +1183,8 @@ cons.forEach(function(ta) {
   assert.equal(chk[2], 0xff);
   assert.equal(chk[3], 0xff);
 
-  // Check that detach check is called after returning to runtime.
+  // Check that detach check does not raise type error and following accesses
+  // return undefined.
   var typedarray = new Uint8Array(16);
   var evilNumber = {
     valueOf: function() {
@@ -1191,9 +1192,8 @@ cons.forEach(function(ta) {
       return 0;
     },
   };
-  assert.throws(function() {
-    typedarray.set([evilNumber, 5, 5], 5);
-  }, TypeError);
+  typedarray.set([evilNumber, 5, 5], 5);
+  assert.equal(typedarray[0], undefined);
 })();
 
 /// @name TypedArray.prototype.slice

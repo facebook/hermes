@@ -180,16 +180,13 @@ TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
   var view = new Uint32Array(buf);
   HermesInternal.detachArrayBuffer(buf);
   view[0] = 5;
+  view[0]
 })
 )#");
-    try {
-      detach.asObject(*rt).asFunction(*rt).call(*rt, arrayBuffer);
-      FAIL() << "Expected JSIException";
-    } catch (const JSError &ex) {
-      EXPECT_TRUE(
-          strstr(ex.what(), "Cannot set a value into a detached ArrayBuffer") !=
-          nullptr);
-    }
+    EXPECT_TRUE(detach.asObject(*rt)
+                    .asFunction(*rt)
+                    .call(*rt, arrayBuffer)
+                    .isUndefined());
     rt->instrumentation().collectGarbage("");
     EXPECT_TRUE(weakBuf.expired());
   }
