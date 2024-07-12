@@ -1526,7 +1526,7 @@ class InstrGen {
         << ");\n";
   }
   void generateDebuggerInst(DebuggerInst &inst) {
-    unimplemented(inst);
+    hermes_fatal("DebuggerInst should have been deleted.");
   }
   void generateCreateRegExpInst(CreateRegExpInst &inst) {
     os_.indent(2);

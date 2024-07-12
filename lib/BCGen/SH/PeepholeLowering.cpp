@@ -55,6 +55,12 @@ class PeepholeLowering {
       case ValueKind::CallInstKind: {
         return stripEnvFromCall(llvh::cast<CallInst>(I), builder_);
       }
+      case ValueKind::DebuggerInstKind:
+      case ValueKind::EvalCompilationDataInstKind:
+        // Instructions aren't supported when compiling to the native
+        // backend, so delete it if it was generated so that the lowering
+        // doesn't have to deal with it.
+        destroyer_.add(I);
       default:
         return nullptr;
     }
