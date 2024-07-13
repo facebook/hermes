@@ -485,6 +485,7 @@ class UsageCounter : public BytecodeVisitor {
         break;
       case OpCode::CreateRegExp:
         countRegex(inst->iCreateRegExp.op4);
+        break;
       default:
         break;
     }
