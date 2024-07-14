@@ -61,6 +61,7 @@ class PeepholeLowering {
         // backend, so delete it if it was generated so that the lowering
         // doesn't have to deal with it.
         destroyer_.add(I);
+        return nullptr;
       default:
         return nullptr;
     }
