@@ -204,6 +204,9 @@ class CDPAgentTest : public ::testing::Test {
 
   std::atomic<bool> stopFlag_{};
 
+  std::shared_ptr<std::atomic_bool> destroyedDomainAgentsImpl_ =
+      std::make_shared<std::atomic_bool>(false);
+
   std::mutex testSignalMutex_;
   std::condition_variable testSignalCondition_;
   bool testSignalled_ = false;
@@ -225,11 +228,13 @@ class CDPAgentTest : public ::testing::Test {
 void CDPAgentTest::SetUp() {
   setupRuntimeTestInfra();
 
-  cdpAgent_ = CDPAgent::create(
+  cdpAgent_ = std::unique_ptr<CDPAgent>(new CDPAgent(
       kTestExecutionContextId_,
       *cdpDebugAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1));
+      std::bind(&CDPAgentTest::handleResponse, this, _1),
+      {},
+      destroyedDomainAgentsImpl_));
 }
 
 void CDPAgentTest::setupRuntimeTestInfra() {
@@ -673,6 +678,97 @@ TEST_F(CDPAgentTest, CDPAgentCanReenter) {
     cdpAgent->handleCommand(
         R"({"id": )" + std::to_string(commandID) +
         R"(, "method": "Unsupported.Message"})");
+  });
+}
+
+TEST_F(CDPAgentTest, CDPAgentTaskRunsAfterCleanUp) {
+  int msgId = 1;
+  auto setStopFlag = llvh::make_scope_exit([this] { stopFlag_.store(true); });
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // Start a long-running expression, which simulates uninterruptable JavaScript
+  // work
+  scheduleScript(R"(
+    signalTest();
+
+    while (!shouldStop()) {}
+  )");
+  // Wait for the script to start
+  waitForTestSignal();
+
+  // Schedule Runtime.evaluate. This will be queued, but not executed yet due to
+  // the previous long-running code.
+  sendRequest("Runtime.evaluate", msgId + 0, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"(while(!shouldStop()); 1+1)");
+  });
+
+  // Clean up CDPAgent. We allow this to be done without synchronization with
+  // the runtime thread.
+  cdpAgent_.reset();
+
+  // We expect destroying CDPAgent will queue cleanup logic with the interrupt
+  // queue. Schedule a task on the interrupt queue so we know when that cleanup
+  // logic finishes running.
+  AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
+  waitFor<bool>([&asyncDebuggerAPI](auto promise) {
+    asyncDebuggerAPI.triggerInterrupt_TS(
+        [promise](HermesRuntime &) { promise->set_value(true); });
+  });
+
+  // The interrupt queue will be able to run before the queued Runtime.evaluate
+  // task, so we expect DomainAgents to be cleaned up by this time.
+  EXPECT_TRUE(*destroyedDomainAgentsImpl_);
+
+  // Allow the JavaScript code from scheduleScript to finish, so the queued
+  // Runtime.evaluate task can start.
+  stopFlag_.store(true);
+
+  // Expect the queued Runtime.evaluate to do nothing.
+}
+
+TEST_F(CDPAgentTest, CDPAgentCleanUpWhileTaskRunning) {
+  int msgId = 1;
+  auto setStopFlag = llvh::make_scope_exit([this] { stopFlag_.store(true); });
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  sendRequest("Runtime.evaluate", msgId + 0, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"(
+      signalTest();
+
+      while (!shouldStop()) {}
+      )");
+  });
+  // Wait for Runtime.evaluate to start
+  waitForTestSignal();
+
+  // At this point Runtime.evaluate is currently running via the integrator
+  // queue. We now destroy CDPAgent, which will do some cleanup logic via the
+  // interrupt queue, thus interrupting Runtime.evaluate while it's running.
+  cdpAgent_.reset();
+
+  // We expect destroying CDPAgent will queue cleanup logic with the interrupt
+  // queue. Schedule a task on the interrupt queue so we know when that cleanup
+  // logic finishes running.
+  AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
+  waitFor<bool>([&asyncDebuggerAPI](auto promise) {
+    asyncDebuggerAPI.triggerInterrupt_TS(
+        [promise](HermesRuntime &) { promise->set_value(true); });
+  });
+
+  // Since Runtime.evaluate is still running, it will still hold onto a strong
+  // reference of DomainAgentsImpl. That's why DomainAgentsImpl won't actually
+  // have been destroyed here.
+  EXPECT_FALSE(*destroyedDomainAgentsImpl_);
+
+  // Allow the JavaScript code for Runtime.evaluate to run to finish.
+  stopFlag_.store(true);
+
+  runtimeThread_->add([this]() {
+    // Expect the DomainAgentsImpl to finally be cleaned up after
+    // Runtime.evaluate finishes.
+    EXPECT_TRUE(*destroyedDomainAgentsImpl_);
   });
 }
 
