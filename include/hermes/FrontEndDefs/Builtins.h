@@ -13,6 +13,9 @@
 namespace hermes {
 
 namespace BuiltinMethod {
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wduplicate-enum"
 enum Enum : unsigned char {
 #define BUILTIN_METHOD(object, name) object##_##name,
 #define PRIVATE_BUILTIN(name) BUILTIN_METHOD(HermesBuiltin, name)
@@ -25,6 +28,7 @@ enum Enum : unsigned char {
   _privateCount = _firstJS - _firstPrivate,
   _jsCount = _count - _firstJS,
 };
+#pragma clang diagnostic pop
 
 } // namespace BuiltinMethod
 
