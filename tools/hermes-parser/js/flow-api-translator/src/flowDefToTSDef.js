@@ -3620,46 +3620,66 @@ const getTransforms = (
             element.variance != null &&
             element.variance.kind === 'plus',
         );
+      const elems = node.types.map(element => {
+        switch (element.type) {
+          case 'TupleTypeLabeledElement':
+            if (!allReadOnly && element.variance != null) {
+              return unsupportedAnnotation(
+                element,
+                'tuple type element variance annotations',
+              );
+            }
+            return {
+              type: 'TSNamedTupleMember',
+              loc: DUMMY_LOC,
+              label: transform.Identifier(element.label),
+              optional: element.optional,
+              elementType: transformTypeAnnotationType(element.elementType),
+            };
+          case 'TupleTypeSpreadElement': {
+            const annot = transformTypeAnnotationType(element.typeAnnotation);
+            return {
+              type: 'TSRestType',
+              loc: DUMMY_LOC,
+              typeAnnotation:
+                element.label != null
+                  ? {
+                      type: 'TSNamedTupleMember',
+                      loc: DUMMY_LOC,
+                      label: transform.Identifier(element.label),
+                      optional: false,
+                      elementType: annot,
+                    }
+                  : annot,
+            };
+          }
+          default:
+            return transformTypeAnnotationType(element);
+        }
+      });
+
+      const elementTypes = node.inexact
+        ? [
+            ...elems,
+            {
+              type: 'TSRestType',
+              loc: DUMMY_LOC,
+              typeAnnotation: {
+                type: 'TSArrayType',
+                loc: DUMMY_LOC,
+                elementType: {
+                  type: 'TSUnknownKeyword',
+                  loc: DUMMY_LOC,
+                },
+              },
+            },
+          ]
+        : elems;
+
       const tupleAnnot: TSESTree.TSTupleType = {
         type: 'TSTupleType',
         loc: DUMMY_LOC,
-        elementTypes: node.types.map(element => {
-          switch (element.type) {
-            case 'TupleTypeLabeledElement':
-              if (!allReadOnly && element.variance != null) {
-                return unsupportedAnnotation(
-                  element,
-                  'tuple type element variance annotations',
-                );
-              }
-              return {
-                type: 'TSNamedTupleMember',
-                loc: DUMMY_LOC,
-                label: transform.Identifier(element.label),
-                optional: element.optional,
-                elementType: transformTypeAnnotationType(element.elementType),
-              };
-            case 'TupleTypeSpreadElement': {
-              const annot = transformTypeAnnotationType(element.typeAnnotation);
-              return {
-                type: 'TSRestType',
-                loc: DUMMY_LOC,
-                typeAnnotation:
-                  element.label != null
-                    ? {
-                        type: 'TSNamedTupleMember',
-                        loc: DUMMY_LOC,
-                        label: transform.Identifier(element.label),
-                        optional: false,
-                        elementType: annot,
-                      }
-                    : annot,
-              };
-            }
-            default:
-              return transformTypeAnnotationType(element);
-          }
-        }),
+        elementTypes,
       };
       return allReadOnly
         ? {
