@@ -1,6 +1,6 @@
 {
   "name": "babel-plugin-syntax-hermes-parser",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "description": "Babel plugin which switches Babel to use the Hermes parser.",
   "main": "dist/index.js",
   "license": "MIT",
@@ -9,7 +9,7 @@
     "url": "git@github.com:facebook/hermes.git"
   },
   "dependencies": {
-    "hermes-parser": "0.22.0"
+    "hermes-parser": "0.23.0"
   },
   "files": [
     "dist",
