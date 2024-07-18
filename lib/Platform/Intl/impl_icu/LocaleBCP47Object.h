@@ -5,21 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PLATFORMINTL_LOCALEBCP47OBJECT_H
-#define HERMES_PLATFORMINTL_LOCALEBCP47OBJECT_H
+#ifndef HERMES_PLATFORMINTL_IMPLICU_LOCALEBCP47OBJECT_H
+#define HERMES_PLATFORMINTL_IMPLICU_LOCALEBCP47OBJECT_H
 
 #include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/Runtime.h"
 
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace hermes {
 namespace platform_intl {
+namespace impl_icu {
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl#locale_identification_and_negotiation
 // A locale identifier is a string that consists of:
@@ -62,22 +63,22 @@ class LocaleBCP47Object {
 
   /**
    * Updates the extension map of BCP47 locale object.
-   * @param extensionMap a map contains all extension key and type
+   * @param extensionMap map that contains extension keys and types.
    */
   void updateExtensionMap(
-      const std::unordered_map<std::u16string, std::u16string> &extensionMap);
+      const std::map<std::u16string, std::u16string> &extensionMap);
 
   /**
    * Returns the BCP47 locale string without extensions.
    * @return BCP47 locale string without extensions.
    */
-  std::u16string getLocaleNoExt() const;
+  const std::u16string &getLocaleNoExt() const;
 
   /**
-   * Returns an unordered map that contains all extension key and type pairs.
-   * @return an unordered map that contains all extension key and type pairs.
+   * Returns the map that contains extension keys and types.
+   * @return map that contains extension keys and types.
    */
-  std::unordered_map<std::u16string, std::u16string> getExtensionMap() const;
+  const std::map<std::u16string, std::u16string> &getExtensionMap() const;
 
   /**
    * Returns the canonicalized BCP47 locale string.
@@ -104,7 +105,8 @@ class LocaleBCP47Object {
   ParsedLocaleIdentifier parsedLocaleIdentifier_;
 };
 
+} // namespace impl_icu
 } // namespace platform_intl
 } // namespace hermes
 
-#endif // HERMES_PLATFORMINTL_LOCALEBCP47OBJECT_H
+#endif // HERMES_PLATFORMINTL_IMPLICU_LOCALEBCP47OBJECT_H

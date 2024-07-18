@@ -5,13 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <unordered_set>
-
 #include "LocaleBCP47Object.h"
+
 #include "hermes/Platform/Intl/BCP47Parser.h"
+
+#include <unordered_set>
 
 namespace hermes {
 namespace platform_intl {
+namespace impl_icu {
 
 std::optional<LocaleBCP47Object> LocaleBCP47Object::forLanguageTag(
     const std::u16string &langTag) {
@@ -59,22 +61,17 @@ LocaleBCP47Object::canonicalizeLocaleList(
 }
 
 void LocaleBCP47Object::updateExtensionMap(
-    const std::unordered_map<std::u16string, std::u16string> &extensionMap) {
-  std::map<std::u16string, std::u16string> extMap(
-      extensionMap.begin(), extensionMap.end());
-  parsedLocaleIdentifier_.unicodeExtensionKeywords = extMap;
+    const std::map<std::u16string, std::u16string> &extensionMap) {
+  parsedLocaleIdentifier_.unicodeExtensionKeywords = extensionMap;
 }
 
-std::u16string LocaleBCP47Object::getLocaleNoExt() const {
+const std::u16string &LocaleBCP47Object::getLocaleNoExt() const {
   return localeNoExt_;
 }
 
-std::unordered_map<std::u16string, std::u16string>
-LocaleBCP47Object::getExtensionMap() const {
-  std::unordered_map<std::u16string, std::u16string> extMap(
-      parsedLocaleIdentifier_.unicodeExtensionKeywords.begin(),
-      parsedLocaleIdentifier_.unicodeExtensionKeywords.end());
-  return extMap;
+const std::map<std::u16string, std::u16string>
+    &LocaleBCP47Object::getExtensionMap() const {
+  return parsedLocaleIdentifier_.unicodeExtensionKeywords;
 }
 
 std::u16string LocaleBCP47Object::getCanonicalizedLocaleId() const {
@@ -99,5 +96,6 @@ std::u16string LocaleBCP47Object::getBaseName(
   return result;
 }
 
+} // namespace impl_icu
 } // namespace platform_intl
 } // namespace hermes

@@ -8,9 +8,11 @@
 #ifndef HERMES_PLATFORMINTL_IMPLICU_COLLATOR_H
 #define HERMES_PLATFORMINTL_IMPLICU_COLLATOR_H
 
-#include "../LocaleBCP47Object.h"
+#include "LocaleBCP47Object.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 #include "hermes/Platform/Unicode/icu.h"
+
+#include <string_view>
 
 namespace hermes {
 namespace platform_intl {
@@ -102,8 +104,8 @@ class Collator : public platform_intl::Collator {
   void setAttributes();
 
   static bool isExtensionTypeSupported(
-      const std::u16string &extensionKey,
-      const std::u16string &extensionType,
+      std::u16string_view extensionKey,
+      std::u16string_view extensionType,
       const LocaleBCP47Object &localeBCP47Object);
 
   std::u16string resolvedLocale_;

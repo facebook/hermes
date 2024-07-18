@@ -8,11 +8,12 @@
 #ifndef HERMES_PLATFORMINTL_IMPLICU_LOCALERESOLVER_H
 #define HERMES_PLATFORMINTL_IMPLICU_LOCALERESOLVER_H
 
-#include "../LocaleBCP47Object.h"
+#include "LocaleBCP47Object.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
+#include <map>
 #include <string>
-#include <unordered_map>
+#include <string_view>
 #include <unordered_set>
 
 namespace hermes {
@@ -41,8 +42,8 @@ class LocaleResolver {
       const Options &opt,
       const std::unordered_set<std::u16string> &relevantExtensionKeys,
       const std::function<bool(
-          const std::u16string &, /* extension key */
-          const std::u16string &, /* extension type */
+          std::u16string_view, /* extension key */
+          std::u16string_view, /* extension type */
           const LocaleBCP47Object &)> &isExtensionTypeSupported);
 
   /**
@@ -87,8 +88,8 @@ class LocaleResolver {
    * extensions on success, without an associated locale on failure.
    */
   static LocaleBCP47Object toLocaleBCP47ObjectWithExtensions(
-      const std::string &locale,
-      const std::unordered_map<std::u16string, std::u16string> &extensions);
+      std::string_view locale,
+      const std::map<std::u16string, std::u16string> &extensions);
 
   /**
    * Returns the "lookup" available locale for the given requested locale.
@@ -98,7 +99,7 @@ class LocaleResolver {
    * @return the longest non-empty prefix of locale that is an element of
    * availableLocales, or empty string if there is no such element.
    */
-  static std::string bestAvailableLocale(const std::string &locale);
+  static std::string bestAvailableLocale(std::u16string_view locale);
 
   /**
    * Returns the "lookup" available locale given the priority list of
@@ -140,13 +141,12 @@ class LocaleResolver {
    * extension and its type are supported for given locale
    * @return the supported extensions specified in given locale.
    */
-  static std::unordered_map<std::u16string, std::u16string>
-  getSupportedExtensions(
+  static std::map<std::u16string, std::u16string> getSupportedExtensions(
       const LocaleBCP47Object &localeBCP47Object,
       const std::unordered_set<std::u16string> &relevantExtensionKeys,
       const std::function<bool(
-          const std::u16string &, /* extension key */
-          const std::u16string &, /* extension type */
+          std::u16string_view, /* extension key */
+          std::u16string_view, /* extension type */
           const LocaleBCP47Object &)> &isExtensionTypeSupported);
 
   static const AvailableLocale availableLocales_;

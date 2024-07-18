@@ -6,11 +6,12 @@
  */
 
 #include "LocaleResolver.h"
-#include "../Constants.h"
-#include "../IntlUtils.h"
-#include "../LocaleBCP47Object.h"
-#include "../OptionHelpers.h"
+
+#include "Constants.h"
+#include "IntlUtils.h"
 #include "Locale.h"
+#include "LocaleBCP47Object.h"
+#include "OptionHelpers.h"
 #include "hermes/Platform/Unicode/icu.h"
 
 namespace hermes {
@@ -26,20 +27,19 @@ LocaleResolver::ResolvedResult LocaleResolver::resolveLocale(
     const Options &opt,
     const std::unordered_set<std::u16string> &relevantExtensionKeys,
     const std::function<bool(
-        const std::u16string &, /* extension key */
-        const std::u16string &, /* extension type */
+        std::u16string_view, /* extension key */
+        std::u16string_view, /* extension type */
         const LocaleBCP47Object &)> &isExtensionTypeSupported) {
-  Option matcher = opt.at(Constants::optName.matcher_);
+  Option matcher = opt.at(constants::opt_name::localeMatcher);
   LocaleBCP47Object matchedLocaleObj;
-  if (matcher.getString() == Constants::optValue.matcher.lookup_) {
+  if (matcher.getString() == constants::opt_value::locale_matcher::lookup) {
     matchedLocaleObj = lookupMatcher(requestedLocales);
   } else {
     matchedLocaleObj = bestFitMatcher(requestedLocales);
   }
 
-  std::unordered_map<std::u16string, std::u16string> extensions =
-      getSupportedExtensions(
-          matchedLocaleObj, relevantExtensionKeys, isExtensionTypeSupported);
+  std::map<std::u16string, std::u16string> extensions = getSupportedExtensions(
+      matchedLocaleObj, relevantExtensionKeys, isExtensionTypeSupported);
 
   Options resolvedOptions;
   for (const auto &ext : relevantExtensionKeys) {
@@ -50,13 +50,16 @@ LocaleResolver::ResolvedResult LocaleResolver::resolveLocale(
     auto optIter = opt.find(ext);
     if (optIter != opt.end()) {
       Option option = optIter->second;
-      std::u16string optExtType;
+      std::u16string_view optExtType;
       if (option.isNumber()) {
-        optExtType =
-            IntlUtils::toUTF16ASCII(std::to_string(option.getNumber()));
+        // No known relevant extension key use numbers for extension type
+        // strings, so this should not happen.
+        assert(
+            false &&
+            "unexpected number-type option for a relevant extension key");
       } else if (option.isBool()) {
-        optExtType = option.getBool() ? Constants::boolStr.true_
-                                      : Constants::boolStr.false_;
+        optExtType = option.getBool() ? constants::opt_value::trueStr
+                                      : constants::opt_value::falseStr;
       } else {
         optExtType = option.getString();
       }
@@ -69,8 +72,7 @@ LocaleResolver::ResolvedResult LocaleResolver::resolveLocale(
       if (isExtensionTypeSupported(ext, optExtType, matchedLocaleObj)) {
         // Extension type specified in option is supported. It takes precedence
         // over locale extension subtag if any.
-        resolvedOptions.erase(ext);
-        resolvedOptions.emplace(ext, option);
+        resolvedOptions.insert_or_assign(ext, option);
         if (extIter != extensions.end() && extIter->second != optExtType) {
           // The extension type is specified in both option and locale
           // extension subtag, but they don't match. Remove the locale
@@ -109,8 +111,8 @@ LocaleBCP47Object LocaleResolver::getDefaultLocale() {
 }
 
 LocaleBCP47Object LocaleResolver::toLocaleBCP47ObjectWithExtensions(
-    const std::string &locale,
-    const std::unordered_map<std::u16string, std::u16string> &extensions) {
+    std::string_view locale,
+    const std::map<std::u16string, std::u16string> &extensions) {
   LocaleBCP47Object result =
       LocaleBCP47Object::forLanguageTag(IntlUtils::toUTF16ASCII(locale))
           .value_or(LocaleBCP47Object());
@@ -128,8 +130,8 @@ LocaleBCP47Object LocaleResolver::lookupMatcher(
     //       with all Unicode locale extension sequences removed.
     // 2. b. Let availableLocale be
     //       BestAvailableLocale(availableLocales, noExtensionsLocale).
-    std::string availableLocale = LocaleResolver::bestAvailableLocale(
-        IntlUtils::toUTF8ASCII(localeBcp47Object.getLocaleNoExt()));
+    std::string availableLocale =
+        LocaleResolver::bestAvailableLocale(localeBcp47Object.getLocaleNoExt());
 
     // 2. c. If availableLocale is not undefined, append locale to the
     //       end of subset.
@@ -153,10 +155,10 @@ LocaleBCP47Object LocaleResolver::lookupMatcher(
 }
 
 // https://tc39.es/ecma402/#sec-bestavailablelocale
-std::string LocaleResolver::bestAvailableLocale(const std::string &locale) {
+std::string LocaleResolver::bestAvailableLocale(std::u16string_view locale) {
   // 1. Let candidate be locale.
   // Attention: The locale suppose to be lower case for comparison
-  std::string candidate = locale;
+  std::string candidate = IntlUtils::toUTF8ASCII(locale);
   // 2. Repeat,
   while (true) {
     // 2.a. If availableLocales contains an element equal to candidate, return
@@ -206,12 +208,11 @@ LocaleBCP47Object LocaleResolver::bestFitMatcher(
 std::string LocaleResolver::bestFitBestAvailableLocale(
     const LocaleBCP47Object &localeBCP47Object) {
   UErrorCode status = U_ZERO_ERROR;
-  char result[ULOC_FULLNAME_CAPACITY];
+  char result[ULOC_FULLNAME_CAPACITY + 1]; // +1 for null terminator
   UAcceptResult outResult = ULOC_ACCEPT_VALID;
 
-  std::string localeNoExt =
-      IntlUtils::toUTF8ASCII(localeBCP47Object.getLocaleNoExt());
-  std::string localeICU = Locale::convertBCP47toICULocale(localeNoExt);
+  std::string localeICU =
+      Locale::convertBCP47toICULocale(localeBCP47Object.getLocaleNoExt());
   const char *acceptList[1]{localeICU.c_str()};
 
   UEnumeration *availableLocales = uenum_openCharStringsEnumeration(
@@ -232,29 +233,31 @@ std::string LocaleResolver::bestFitBestAvailableLocale(
   assert(
       localeLen <= ULOC_FULLNAME_CAPACITY &&
       "locale string length is longer than expected");
-  if (U_SUCCESS(status) && outResult != ULOC_ACCEPT_FAILED) {
-    return Locale::convertICUtoBCP47Locale(std::string(result, localeLen));
+  if (U_SUCCESS(status) && outResult != ULOC_ACCEPT_FAILED &&
+      localeLen <= ULOC_FULLNAME_CAPACITY) {
+    return Locale::convertICUtoBCP47Locale(result);
   }
 
   return std::string();
 }
 
-std::unordered_map<std::u16string, std::u16string>
-LocaleResolver::getSupportedExtensions(
+std::map<std::u16string, std::u16string> LocaleResolver::getSupportedExtensions(
     const LocaleBCP47Object &localeBCP47Object,
     const std::unordered_set<std::u16string> &relevantExtensionKeys,
     const std::function<bool(
-        const std::u16string &, /* extension key */
-        const std::u16string &, /* extension type */
+        std::u16string_view, /* extension key */
+        std::u16string_view, /* extension type */
         const LocaleBCP47Object &)> &isExtensionTypeSupported) {
-  std::unordered_map<std::u16string, std::u16string> exts;
+  std::map<std::u16string, std::u16string> exts;
 
-  std::unordered_map<std::u16string, std::u16string> extensionsMap =
+  const std::map<std::u16string, std::u16string> &extensionsMap =
       localeBCP47Object.getExtensionMap();
 
   for (auto const &extension : extensionsMap) {
-    std::u16string extType =
-        extension.second.empty() ? Constants::boolStr.true_ : extension.second;
+    std::u16string_view extType{extension.second};
+    if (extType.empty()) {
+      extType = constants::opt_value::trueStr;
+    }
     if (relevantExtensionKeys.find(extension.first) !=
             relevantExtensionKeys.end() &&
         isExtensionTypeSupported(extension.first, extType, localeBCP47Object)) {
@@ -276,18 +279,18 @@ vm::CallResult<std::vector<std::u16string>> LocaleResolver::supportedLocales(
   auto matcherRes = OptionHelpers::getStringOption(
       runtime,
       options,
-      Constants::optName.matcher_,
-      Constants::validMatchers,
-      Constants::optValue.matcher.best_fit_);
+      constants::opt_name::localeMatcher,
+      constants::opt_value::locale_matcher::validLocaleMatchers,
+      constants::opt_value::locale_matcher::best_fit);
   if (LLVM_UNLIKELY(matcherRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   std::vector<std::u16string> subset;
   for (auto const &localeBcp47Object : *localeBcp47ObjectsRes) {
     std::string locale;
-    if (**matcherRes == Constants::optValue.matcher.lookup_) {
+    if (**matcherRes == constants::opt_value::locale_matcher::lookup) {
       locale = LocaleResolver::bestAvailableLocale(
-          IntlUtils::toUTF8ASCII(localeBcp47Object.getLocaleNoExt()));
+          localeBcp47Object.getLocaleNoExt());
     } else {
       locale = LocaleResolver::bestFitBestAvailableLocale(localeBcp47Object);
     }
