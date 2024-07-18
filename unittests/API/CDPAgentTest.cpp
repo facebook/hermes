@@ -68,19 +68,20 @@ T waitFor(
   return future.get();
 }
 
-m::runtime::CallArgument makeValueCallArgument(std::string val) {
+static m::runtime::CallArgument makeValueCallArgument(std::string val) {
   m::runtime::CallArgument ret;
   ret.value = val;
   return ret;
 }
 
-m::runtime::CallArgument makeUnserializableCallArgument(std::string val) {
+static m::runtime::CallArgument makeUnserializableCallArgument(
+    std::string val) {
   m::runtime::CallArgument ret;
   ret.unserializableValue = std::move(val);
   return ret;
 }
 
-m::runtime::CallArgument makeObjectIdCallArgument(
+static m::runtime::CallArgument makeObjectIdCallArgument(
     m::runtime::RemoteObjectId objectId) {
   m::runtime::CallArgument ret;
   ret.objectId = std::move(objectId);
