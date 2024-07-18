@@ -40,6 +40,9 @@ using namespace std::chrono_literals;
 using namespace std::placeholders;
 
 constexpr auto kDefaultUrl = "url";
+#ifndef HERMES_MEMORY_INSTRUMENTATION
+constexpr auto kMemoryInstrumentationSubstring = "memory instrumentation";
+#endif
 
 // A function passed to Runtime.callFunctionOn in order to invoke a getter. See
 // https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/58eff7d6a4ed165a3350c8817c1ec5724eab5cb7/front_end/ui/legacy/components/object_ui/ObjectPropertiesSection.ts#L1125-L1132
@@ -3388,12 +3391,13 @@ TEST_F(CDPAgentTest, RuntimeValidatesExecutionContextId) {
 }
 
 TEST_F(CDPAgentTest, HeapProfilerSnapshot) {
+  int msgId = 1;
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   auto setStopFlag = llvh::make_scope_exit([this] {
     // break out of loop
     stopFlag_.store(true);
   });
-
-  int msgId = 1;
 
   scheduleScript(R"(
       while(!shouldStop());
@@ -3408,10 +3412,18 @@ TEST_F(CDPAgentTest, HeapProfilerSnapshot) {
 
   // Expect no more chunks are pending.
   expectNothing();
+#else
+  sendRequest(
+      "HeapProfiler.takeHeapSnapshot", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("reportProgress", false);
+      });
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId);
+#endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
 TEST_F(CDPAgentTest, HeapProfilerSnapshotRemoteObject) {
   int msgId = 1;
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   scheduleScript(R"(
     storeValue([1, 2, 3]);
     signalTest();
@@ -3496,6 +3508,20 @@ TEST_F(CDPAgentTest, HeapProfilerSnapshotRemoteObject) {
   // because Hermes doesn't do uniquing.
   testObject(globalObjID, "object", "Object", "Object", nullptr);
   testObject(storedObjID, "object", "Array", "Array(3)", "array");
+#else
+  sendRequest(
+      "HeapProfiler.getObjectByHeapObjectId",
+      msgId,
+      [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("objectId", "123");
+      });
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId++);
+  sendRequest(
+      "HeapProfiler.getHeapObjectId", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("objectId", "123");
+      });
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId);
+#endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
 TEST_F(CDPAgentTest, HeapProfilerCollectGarbage) {
@@ -3537,6 +3563,7 @@ TEST_F(CDPAgentTest, HeapProfilerCollectGarbage) {
 
 TEST_F(CDPAgentTest, HeapProfilerTrackHeapObjects) {
   int msgId = 1;
+#ifdef HERMES_MEMORY_INSTRUMENTATION
 
   sendAndCheckResponse("HeapProfiler.startTrackingHeapObjects", msgId++);
 
@@ -3586,11 +3613,18 @@ TEST_F(CDPAgentTest, HeapProfilerTrackHeapObjects) {
 
   // Expect no further responses or notifications.
   expectNothing();
+#else
+  sendRequest("HeapProfiler.startTrackingHeapObjects", msgId);
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId++);
+  sendRequest("HeapProfiler.stopTrackingHeapObjects", msgId);
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId);
+#endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
 TEST_F(CDPAgentTest, HeapProfilerSampling) {
   int msgId = 1;
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   // Start sampling.
   {
     sendRequest(
@@ -3628,6 +3662,12 @@ TEST_F(CDPAgentTest, HeapProfilerSampling) {
       jsonScope_.getArray(resp, {"result", "profile", "samples"})->size(), 0);
   // Don't test the content of the JSON, that is tested via the
   // SamplingHeapProfilerTest.
+#else
+  sendRequest("HeapProfiler.startSampling", msgId);
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId++);
+  sendRequest("HeapProfiler.stopSampling", msgId);
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId);
+#endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
 #endif // HERMES_ENABLE_DEBUGGER
