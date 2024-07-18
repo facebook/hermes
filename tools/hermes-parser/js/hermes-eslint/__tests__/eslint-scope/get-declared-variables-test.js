@@ -56,11 +56,13 @@ describe('ScopeManager.prototype.getDeclaredVariables', () => {
         const expected = expectedNamesList.shift();
         const actual = scopeManager.getDeclaredVariables(node);
 
+        // $FlowFixMe[incompatible-use]
         expect(actual).toHaveLength(expected.length);
         if (actual.length > 0) {
           const end = actual.length - 1;
 
           for (let i = 0; i <= end; i++) {
+            // $FlowFixMe[incompatible-use]
             expect(actual[i].name).toEqual(expected[i]);
           }
         }
