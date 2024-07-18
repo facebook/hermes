@@ -23,14 +23,14 @@ if(HERMES_ENABLE_INTL)
     target_compile_options(hermesPlatformIntl PRIVATE -fobjc-arc)
   else()
     add_hermes_library(hermesPlatformIntl STATIC
-        IntlUtils.cpp
-        LocaleBCP47Object.cpp
-        OptionHelpers.cpp
         PlatformIntlICU.cpp
         PlatformIntlShared.cpp
         impl_icu/Collator.cpp
+        impl_icu/IntlUtils.cpp
         impl_icu/Locale.cpp
+        impl_icu/LocaleBCP47Object.cpp
         impl_icu/LocaleResolver.cpp
+        impl_icu/OptionHelpers.cpp
         LINK_LIBS
         hermesBCP47Parser
         hermesPublic

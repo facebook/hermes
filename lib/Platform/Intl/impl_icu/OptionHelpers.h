@@ -5,16 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PLATFORMINTL_OPTIONHELPERS_H
-#define HERMES_PLATFORMINTL_OPTIONHELPERS_H
+#ifndef HERMES_PLATFORMINTL_IMPLICU_OPTIONHELPERS_H
+#define HERMES_PLATFORMINTL_IMPLICU_OPTIONHELPERS_H
 
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <optional>
-#include <unordered_set>
+#include <string_view>
 
 namespace hermes {
 namespace platform_intl {
+namespace impl_icu {
 
 class OptionHelpers {
  public:
@@ -37,8 +39,8 @@ class OptionHelpers {
       vm::Runtime &runtime,
       const Options &options,
       const std::u16string &property,
-      const std::unordered_set<std::u16string> &validValues,
-      const std::optional<std::u16string> &defaultValue);
+      llvh::ArrayRef<const char16_t *> validValues,
+      std::optional<std::u16string_view> defaultValue);
 
   /**
    * Returns bool value of specified property from given
@@ -53,7 +55,7 @@ class OptionHelpers {
   static std::optional<bool> getBoolOption(
       const Options &options,
       const std::u16string &property,
-      const std::optional<bool> &defaultValue);
+      std::optional<bool> defaultValue);
 
   /**
    * Returns number value of specified property from given
@@ -77,10 +79,11 @@ class OptionHelpers {
       const std::u16string &property,
       double minimum,
       double maximum,
-      const std::optional<double> &defaultValue);
+      std::optional<double> defaultValue);
 };
 
+} // namespace impl_icu
 } // namespace platform_intl
 } // namespace hermes
 
-#endif // HERMES_PLATFORMINTL_OPTIONHELPERS_H
+#endif // HERMES_PLATFORMINTL_IMPLICU_OPTIONHELPERS_H

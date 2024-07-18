@@ -6,6 +6,8 @@
  */
 
 #include "Locale.h"
+
+#include "IntlUtils.h"
 #include "hermes/Platform/Unicode/icu.h"
 
 #include <vector>
@@ -14,11 +16,12 @@ namespace hermes {
 namespace platform_intl {
 namespace impl_icu {
 
-std::string Locale::convertBCP47toICULocale(const std::string &localeBCP47) {
+std::string Locale::convertBCP47toICULocale(std::u16string_view localeBCP47) {
+  std::string localeBCP47Str = IntlUtils::toUTF8ASCII(localeBCP47);
   std::vector<char> localeICU(16);
   UErrorCode errForLanguageTag{U_ZERO_ERROR};
   size_t outputLength = uloc_forLanguageTag(
-      localeBCP47.c_str(),
+      localeBCP47Str.c_str(),
       localeICU.data(),
       localeICU.size(),
       nullptr,
@@ -27,7 +30,7 @@ std::string Locale::convertBCP47toICULocale(const std::string &localeBCP47) {
     localeICU.resize(outputLength);
     errForLanguageTag = U_ZERO_ERROR;
     outputLength = uloc_forLanguageTag(
-        localeBCP47.c_str(),
+        localeBCP47Str.c_str(),
         localeICU.data(),
         localeICU.size(),
         nullptr,
@@ -37,17 +40,16 @@ std::string Locale::convertBCP47toICULocale(const std::string &localeBCP47) {
     // ICU can kind of deal with BCP-47 Language Tags, though not all cases are
     // covered if it's not first converted to ICU locale using forLanguageTag().
     // Return original input as fallback.
-    return localeBCP47;
+    return localeBCP47Str;
   }
-  std::string localeICUStr(localeICU.data(), outputLength);
-  return localeICUStr;
+  return std::string(localeICU.data(), outputLength);
 }
 
-std::string Locale::convertICUtoBCP47Locale(const std::string &localeICU) {
+std::string Locale::convertICUtoBCP47Locale(const char *localeICU) {
   std::vector<char> localeBCP47(16);
   UErrorCode errToLanguageTag{U_ZERO_ERROR};
   size_t outputLength = uloc_toLanguageTag(
-      localeICU.c_str(),
+      localeICU,
       localeBCP47.data(),
       localeBCP47.size(),
       true,
@@ -56,17 +58,16 @@ std::string Locale::convertICUtoBCP47Locale(const std::string &localeICU) {
     localeBCP47.resize(outputLength);
     errToLanguageTag = U_ZERO_ERROR;
     outputLength = uloc_toLanguageTag(
-        localeICU.c_str(),
+        localeICU,
         localeBCP47.data(),
         localeBCP47.size(),
         true,
         &errToLanguageTag);
   }
   if (U_FAILURE(errToLanguageTag)) {
-    return std::string();
+    return "und";
   }
-  std::string localeBCP47Str(localeBCP47.data(), outputLength);
-  return localeBCP47Str;
+  return std::string(localeBCP47.data(), outputLength);
 }
 
 } // namespace impl_icu

@@ -6,14 +6,17 @@
  */
 
 #include "Collator.h"
-#include <optional>
-#include "../Constants.h"
-#include "../IntlUtils.h"
-#include "../LocaleBCP47Object.h"
-#include "../OptionHelpers.h"
+
+#include "Constants.h"
+#include "IntlUtils.h"
 #include "Locale.h"
+#include "LocaleBCP47Object.h"
 #include "LocaleResolver.h"
+#include "OptionHelpers.h"
 #include "hermes/Platform/Intl/BCP47Parser.h"
+
+#include <algorithm>
+#include <optional>
 
 namespace hermes {
 namespace platform_intl {
@@ -33,8 +36,8 @@ vm::ExecutionStatus Collator::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   };
 
-  std::string localeICU = Locale::convertBCP47toICULocale(
-      IntlUtils::toUTF8ASCII(resolvedInternalLocale_));
+  std::string localeICU =
+      Locale::convertBCP47toICULocale(resolvedInternalLocale_);
 
   UErrorCode err{U_ZERO_ERROR};
   coll_ = ucol_open(localeICU.c_str(), &err);
@@ -100,11 +103,11 @@ void Collator::setAttributes() {
   // if both are provided, this options property takes precedence.
   UErrorCode errCaseFirst{U_ZERO_ERROR};
   if (!resolvedCaseFirstValue_.empty()) {
-    if (resolvedCaseFirstValue_ == Constants::optValue.caseFirst.upper_) {
+    if (resolvedCaseFirstValue_ == constants::opt_value::case_first::upper) {
       ucol_setAttribute(
           coll_, UCOL_CASE_FIRST, UCOL_UPPER_FIRST, &errCaseFirst);
     } else if (
-        resolvedCaseFirstValue_ == Constants::optValue.caseFirst.lower_) {
+        resolvedCaseFirstValue_ == constants::opt_value::case_first::lower) {
       ucol_setAttribute(
           coll_, UCOL_CASE_FIRST, UCOL_LOWER_FIRST, &errCaseFirst);
     } else {
@@ -120,11 +123,11 @@ void Collator::setAttributes() {
         U_SUCCESS(errCaseFirst) &&
         "failed to get collator attribute : UCOL_CASE_FIRST");
     if (caseFirstAttribute == UCOL_UPPER_FIRST) {
-      resolvedCaseFirstValue_ = Constants::optValue.caseFirst.upper_;
+      resolvedCaseFirstValue_ = constants::opt_value::case_first::upper;
     } else if (caseFirstAttribute == UCOL_LOWER_FIRST) {
-      resolvedCaseFirstValue_ = Constants::optValue.caseFirst.lower_;
+      resolvedCaseFirstValue_ = constants::opt_value::case_first::lower;
     } else {
-      resolvedCaseFirstValue_ = Constants::optValue.caseFirst.false_;
+      resolvedCaseFirstValue_ = constants::opt_value::falseStr;
     }
   }
 
@@ -152,17 +155,20 @@ void Collator::setAttributes() {
   // tertiary.
   UErrorCode errSensitivity{U_ZERO_ERROR};
   if (!resolvedSensitivityValue_.empty()) {
-    if (resolvedSensitivityValue_ == Constants::optValue.sensitivity.base_) {
+    if (resolvedSensitivityValue_ == constants::opt_value::sensitivity::base) {
       ucol_setAttribute(coll_, UCOL_STRENGTH, UCOL_PRIMARY, &errSensitivity);
     } else if (
-        resolvedSensitivityValue_ == Constants::optValue.sensitivity.accent_) {
+        resolvedSensitivityValue_ ==
+        constants::opt_value::sensitivity::accent) {
       ucol_setAttribute(coll_, UCOL_STRENGTH, UCOL_SECONDARY, &errSensitivity);
     } else if (
-        resolvedSensitivityValue_ == Constants::optValue.sensitivity.case_) {
+        resolvedSensitivityValue_ ==
+        constants::opt_value::sensitivity::caseStr) {
       ucol_setAttribute(coll_, UCOL_STRENGTH, UCOL_PRIMARY, &errSensitivity);
       ucol_setAttribute(coll_, UCOL_CASE_LEVEL, UCOL_ON, &errSensitivity);
     } else if (
-        resolvedSensitivityValue_ == Constants::optValue.sensitivity.variant_) {
+        resolvedSensitivityValue_ ==
+        constants::opt_value::sensitivity::variant) {
       ucol_setAttribute(coll_, UCOL_STRENGTH, UCOL_TERTIARY, &errSensitivity);
     }
     assert(
@@ -183,14 +189,14 @@ void Collator::setAttributes() {
           U_SUCCESS(errCaseLevel) &&
           "failed to get collator attribute: UCOL_CASE_LEVEL");
       if (caseLevelAttribute == UCOL_ON) {
-        resolvedSensitivityValue_ = Constants::optValue.sensitivity.case_;
+        resolvedSensitivityValue_ = constants::opt_value::sensitivity::caseStr;
       } else {
-        resolvedSensitivityValue_ = Constants::optValue.sensitivity.base_;
+        resolvedSensitivityValue_ = constants::opt_value::sensitivity::base;
       }
     } else if (strengthAttribute == UCOL_SECONDARY) {
-      resolvedSensitivityValue_ = Constants::optValue.sensitivity.accent_;
+      resolvedSensitivityValue_ = constants::opt_value::sensitivity::accent;
     } else {
-      resolvedSensitivityValue_ = Constants::optValue.sensitivity.variant_;
+      resolvedSensitivityValue_ = constants::opt_value::sensitivity::variant;
     }
   }
 
@@ -237,9 +243,9 @@ vm::ExecutionStatus Collator::initializeCollator(
   auto usageRes = OptionHelpers::getStringOption(
       runtime,
       options,
-      Constants::optName.usage_,
-      Constants::validUsages,
-      Constants::optValue.usage.sort_);
+      constants::opt_name::usage,
+      constants::opt_value::usage::validUsages,
+      constants::opt_value::usage::sort);
   if (LLVM_UNLIKELY(usageRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
@@ -277,19 +283,19 @@ vm::ExecutionStatus Collator::initializeCollator(
   auto matcherRes = OptionHelpers::getStringOption(
       runtime,
       options,
-      Constants::optName.matcher_,
-      Constants::validMatchers,
-      Constants::optValue.matcher.best_fit_);
+      constants::opt_name::localeMatcher,
+      constants::opt_value::locale_matcher::validLocaleMatchers,
+      constants::opt_value::locale_matcher::best_fit);
   if (LLVM_UNLIKELY(matcherRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 9. Set opt.[[localeMatcher]] to matcher.
-  opt.emplace(Constants::optName.matcher_, **matcherRes);
+  opt.emplace(constants::opt_name::localeMatcher, **matcherRes);
 
   // 10. Let collation be ? GetOption(options, "collation", "string", empty,
   // undefined).
   auto collationValueRes = OptionHelpers::getStringOption(
-      runtime, options, Constants::optName.collation_, {}, std::nullopt);
+      runtime, options, constants::opt_name::collation, {}, std::nullopt);
   if (LLVM_UNLIKELY(collationValueRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
@@ -303,13 +309,13 @@ vm::ExecutionStatus Collator::initializeCollator(
           vm::TwineChar16((*collationValueRes)->c_str()));
     }
     // 12. Set opt.[[co]] to collation.
-    opt.emplace(Constants::extKey.co_, **collationValueRes);
+    opt.emplace(constants::extension_key::co, **collationValueRes);
   }
 
   // 13. Let numeric be ? GetOption(options, "numeric", "boolean", empty,
   // undefined).
   auto numericValue = OptionHelpers::getBoolOption(
-      options, Constants::optName.numeric_, std::nullopt);
+      options, constants::opt_name::numeric, std::nullopt);
   // 14. If numeric is not undefined, then
   // a. Let numeric be ! ToString(numeric).
   // Note: We omit the ToString(numeric) operation as it's not observable.
@@ -317,7 +323,7 @@ vm::ExecutionStatus Collator::initializeCollator(
   // have side effects.
   // 15. Set opt.[[kn]] to numeric.
   if (numericValue.has_value()) {
-    opt.emplace(Constants::extKey.kn_, *numericValue);
+    opt.emplace(constants::extension_key::kn, *numericValue);
   }
 
   // 16. Let caseFirst be ? GetOption(options, "caseFirst", "string", « "upper",
@@ -325,22 +331,24 @@ vm::ExecutionStatus Collator::initializeCollator(
   auto caseFirstValueRes = OptionHelpers::getStringOption(
       runtime,
       options,
-      Constants::optName.caseFirst_,
-      Constants::validCaseFirsts,
+      constants::opt_name::caseFirst,
+      constants::opt_value::case_first::validCaseFirsts,
       std::nullopt);
   if (LLVM_UNLIKELY(caseFirstValueRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
   // 17. Set opt.[[kf]] to caseFirst.
   if (caseFirstValueRes->has_value()) {
-    opt.emplace(Constants::extKey.kf_, **caseFirstValueRes);
+    opt.emplace(constants::extension_key::kf, **caseFirstValueRes);
   }
 
   // The relevant unicode extensions accepted by Collator as specified here:
   // https://tc39.github.io/ecma402/#sec-intl-collator-internal-slots
   // 18. Let relevantExtensionKeys be %Collator%.[[RelevantExtensionKeys]].
   std::unordered_set<std::u16string> relevantExtensionKeys{
-      Constants::extKey.co_, Constants::extKey.kn_, Constants::extKey.kf_};
+      constants::extension_key::co,
+      constants::extension_key::kn,
+      constants::extension_key::kf};
   // 19. Let r be ResolveLocale(%Collator%.[[AvailableLocales]],
   // requestedLocales, opt, relevantExtensionKeys, localeData).
   // Implementation pass in a local function isExtensionTypeSupported instead
@@ -376,15 +384,15 @@ vm::ExecutionStatus Collator::initializeCollator(
   // is not allowed as collation resolved value per spec:
   // https://tc39.github.io/ecma402/#sec-intl-collator-internal-slots
   resolvedCollationValue_ = collationTypeDefault;
-  std::unordered_map<std::u16string, std::u16string> resolvedExtMap =
+  std::map<std::u16string, std::u16string> resolvedExtMap =
       resolvedBCP47Locale.getExtensionMap();
-  if (resolvedUsageValue_ == Constants::optValue.usage.search_) {
-    resolvedExtMap[Constants::extKey.co_] = collationTypeSearch;
+  if (resolvedUsageValue_ == constants::opt_value::usage::search) {
+    resolvedExtMap[constants::extension_key::co] = collationTypeSearch;
   } else {
-    auto collationEntry = resolvedOpt.find(Constants::extKey.co_);
+    auto collationEntry = resolvedOpt.find(constants::extension_key::co);
     if (collationEntry != resolvedOpt.end()) {
       resolvedCollationValue_ = collationEntry->second.getString();
-      resolvedExtMap[Constants::extKey.co_] = resolvedCollationValue_;
+      resolvedExtMap[constants::extension_key::co] = resolvedCollationValue_;
     }
   }
   resolvedBCP47Locale.updateExtensionMap(resolvedExtMap);
@@ -393,19 +401,21 @@ vm::ExecutionStatus Collator::initializeCollator(
   // 24. If relevantExtensionKeys contains "kn", then
   // a. Set collator.[[Numeric]] to ! SameValue(r.[[kn]], "true").
   resolvedNumericValue_ = false;
-  if (resolvedOpt.find(Constants::extKey.kn_) != opt.end()) {
-    if (resolvedOpt.at(Constants::extKey.kn_).isBool()) {
-      resolvedNumericValue_ = resolvedOpt.at(Constants::extKey.kn_).getBool();
+  auto numericEntry = resolvedOpt.find(constants::extension_key::kn);
+  if (numericEntry != resolvedOpt.end()) {
+    if (numericEntry->second.isBool()) {
+      resolvedNumericValue_ = numericEntry->second.getBool();
     } else {
-      resolvedNumericValue_ = IntlUtils::convertToBool(
-          resolvedOpt.at(Constants::extKey.kn_).getString());
+      resolvedNumericValue_ =
+          IntlUtils::convertToBool(numericEntry->second.getString());
     }
   }
 
   // 25. If relevantExtensionKeys contains "kf", then
   // a. Set collator.[[CaseFirst]] to r.[[kf]].
-  if (resolvedOpt.find(Constants::extKey.kf_) != opt.end()) {
-    resolvedCaseFirstValue_ = resolvedOpt.at(Constants::extKey.kf_).getString();
+  auto caseFirstEntry = resolvedOpt.find(constants::extension_key::kf);
+  if (caseFirstEntry != resolvedOpt.end()) {
+    resolvedCaseFirstValue_ = caseFirstEntry->second.getString();
   }
 
   // 26. Let sensitivity be ? GetOption(options, "sensitivity", "string", «
@@ -421,15 +431,15 @@ vm::ExecutionStatus Collator::initializeCollator(
   auto sensitivitiesValueRes = OptionHelpers::getStringOption(
       runtime,
       options,
-      Constants::optName.sensitivity_,
-      Constants::validSensitivities,
+      constants::opt_name::sensitivity,
+      constants::opt_value::sensitivity::validSensitivities,
       std::nullopt);
   if (LLVM_UNLIKELY(sensitivitiesValueRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
-  if (resolvedUsageValue_ == Constants::optValue.usage.sort_ &&
+  if (resolvedUsageValue_ == constants::opt_value::usage::sort &&
       !(sensitivitiesValueRes->has_value())) {
-    resolvedSensitivityValue_ = Constants::optValue.sensitivity.variant_;
+    resolvedSensitivityValue_ = constants::opt_value::sensitivity::variant;
   } else if (sensitivitiesValueRes->has_value()) {
     resolvedSensitivityValue_ = **sensitivitiesValueRes;
   } // Sensitivity value not specified and usage is 'search', need to default to
@@ -442,7 +452,7 @@ vm::ExecutionStatus Collator::initializeCollator(
   // 30. Set collator.[[IgnorePunctuation]] to ignorePunctuation.
   // 31. Return collator.
   auto ignorePunctuationValue = OptionHelpers::getBoolOption(
-      options, Constants::optName.ignorePunctuation_, false);
+      options, constants::opt_name::ignorePunctuation, false);
 
   resolvedIgnorePunctuationValue_ = *ignorePunctuationValue;
 
@@ -479,20 +489,20 @@ double Collator::compare(
 Options Collator::resolvedOptions() noexcept {
   Options finalResolvedOptions;
   finalResolvedOptions.emplace(
-      Constants::optName.locale_, Option(resolvedLocale_));
+      constants::opt_name::locale, Option(resolvedLocale_));
   finalResolvedOptions.emplace(
-      Constants::optName.usage_, Option(resolvedUsageValue_));
+      constants::opt_name::usage, Option(resolvedUsageValue_));
   finalResolvedOptions.emplace(
-      Constants::optName.sensitivity_, Option(resolvedSensitivityValue_));
+      constants::opt_name::sensitivity, Option(resolvedSensitivityValue_));
   finalResolvedOptions.emplace(
-      Constants::optName.ignorePunctuation_,
+      constants::opt_name::ignorePunctuation,
       Option(resolvedIgnorePunctuationValue_));
   finalResolvedOptions.emplace(
-      Constants::optName.collation_, Option(resolvedCollationValue_));
+      constants::opt_name::collation, Option(resolvedCollationValue_));
   finalResolvedOptions.emplace(
-      Constants::optName.numeric_, Option(resolvedNumericValue_));
+      constants::opt_name::numeric, Option(resolvedNumericValue_));
   finalResolvedOptions.emplace(
-      Constants::optName.caseFirst_, Option(resolvedCaseFirstValue_));
+      constants::opt_name::caseFirst, Option(resolvedCaseFirstValue_));
 
   return finalResolvedOptions;
 }
@@ -505,18 +515,24 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
 }
 
 bool Collator::isExtensionTypeSupported(
-    const std::u16string &extensionKey,
-    const std::u16string &extensionType,
+    std::u16string_view extensionKey,
+    std::u16string_view extensionType,
     const LocaleBCP47Object &localeBCP47Object) {
-  if (extensionKey == Constants::extKey.kf_) {
-    return Constants::validCaseFirsts.find(extensionType) !=
-        Constants::validCaseFirsts.end();
+  if (extensionKey == constants::extension_key::kf) {
+    return std::find(
+               std::begin(constants::opt_value::case_first::validCaseFirsts),
+               std::end(constants::opt_value::case_first::validCaseFirsts),
+               extensionType) !=
+        std::end(constants::opt_value::case_first::validCaseFirsts);
   }
-  if (extensionKey == Constants::extKey.kn_) {
-    return Constants::validNumeric.find(extensionType) !=
-        Constants::validNumeric.end();
+  if (extensionKey == constants::extension_key::kn) {
+    return std::find(
+               std::begin(constants::opt_value::numeric::validNumerics),
+               std::end(constants::opt_value::numeric::validNumerics),
+               extensionType) !=
+        std::end(constants::opt_value::numeric::validNumerics);
   }
-  if (extensionKey == Constants::extKey.co_) {
+  if (extensionKey == constants::extension_key::co) {
     // The Intl.Collator spec disallows "standard" and "search" as an
     // extension type per:
     // https://tc39.github.io/ecma402/#sec-intl-collator-internal-slots
@@ -529,13 +545,14 @@ bool Collator::isExtensionTypeSupported(
     // 3 - 8 alphanumeric characters. Map these alias / legacy type ids to
     // Unicode extension type ids.
     // https://github.com/unicode-org/cldr/blob/main/common/bcp47/collation.xml
-    static std::unordered_map<std::u16string, std::u16string> aliasMap = {
-        {u"dictionary", u"dict"},
-        {u"gb2312han", u"gb2312"},
-        {u"phonebook", u"phonebk"},
-        {u"traditional", u"trad"}};
-    auto icuLocale = Locale::convertBCP47toICULocale(
-        IntlUtils::toUTF8ASCII(localeBCP47Object.getLocaleNoExt()));
+    static std::unordered_map<std::u16string_view, std::u16string_view>
+        aliasMap = {
+            {u"dictionary", u"dict"},
+            {u"gb2312han", u"gb2312"},
+            {u"phonebook", u"phonebk"},
+            {u"traditional", u"trad"}};
+    auto icuLocale =
+        Locale::convertBCP47toICULocale(localeBCP47Object.getLocaleNoExt());
     UErrorCode status = U_ZERO_ERROR;
     UEnumeration *supportedTypes = ucol_getKeywordValuesForLocale(
         "collation",
@@ -551,7 +568,7 @@ bool Collator::isExtensionTypeSupported(
     int32_t length;
     const UChar *type = uenum_unext(supportedTypes, &length, &status);
     while (type != nullptr && U_SUCCESS(status)) {
-      std::u16string supportedType(
+      std::u16string_view supportedType(
           reinterpret_cast<const char16_t *>(type), length);
       auto aliasMapIter = aliasMap.find(supportedType);
       if (aliasMapIter != aliasMap.end()) {

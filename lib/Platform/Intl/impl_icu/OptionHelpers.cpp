@@ -11,20 +11,21 @@
 
 namespace hermes {
 namespace platform_intl {
+namespace impl_icu {
 
 vm::CallResult<std::optional<std::u16string>> OptionHelpers::getStringOption(
     vm::Runtime &runtime,
     const Options &options,
     const std::u16string &property,
-    const std::unordered_set<std::u16string> &validValues,
-    const std::optional<std::u16string> &defaultValue) {
+    llvh::ArrayRef<const char16_t *> validValues,
+    std::optional<std::u16string_view> defaultValue) {
   // 1. Let value be ? Get(options, property).
   auto iter = options.find(property);
   // 2. If value is undefined, then
   //   a. If default is required, throw a RangeError exception.
   //   b. Return default.
   if (iter == options.end()) {
-    return defaultValue;
+    return std::optional<std::u16string>(defaultValue);
   }
   // 5. Else,
   //   a. Assert: type is string.
@@ -33,7 +34,7 @@ vm::CallResult<std::optional<std::u16string>> OptionHelpers::getStringOption(
   // 6. If values is not empty and values does not contain value,
   // throw a RangeError exception.
   if (!validValues.empty() &&
-      validValues.find(optionValue) == validValues.end()) {
+      llvh::find(validValues, optionValue) == validValues.end()) {
     return runtime.raiseRangeError(
         vm::TwineChar16(property.c_str()) +
         vm::TwineChar16(" value is invalid."));
@@ -45,7 +46,7 @@ vm::CallResult<std::optional<std::u16string>> OptionHelpers::getStringOption(
 std::optional<bool> OptionHelpers::getBoolOption(
     const Options &options,
     const std::u16string &property,
-    const std::optional<bool> &defaultValue) {
+    std::optional<bool> defaultValue) {
   // 1. Let value be ? Get(options, property).
   auto iter = options.find(property);
   // 2. If value is undefined, then
@@ -67,7 +68,7 @@ vm::CallResult<std::optional<double>> OptionHelpers::getNumberOption(
     const std::u16string &property,
     double minimum,
     double maximum,
-    const std::optional<double> &defaultValue) {
+    std::optional<double> defaultValue) {
   auto iter = options.find(property);
   // https://402.ecma-international.org/8.0/#sec-defaultnumberoption
   // 1. If value is undefined, return fallback.
@@ -88,5 +89,6 @@ vm::CallResult<std::optional<double>> OptionHelpers::getNumberOption(
   return std::optional<double>(std::floor(optionValue));
 }
 
+} // namespace impl_icu
 } // namespace platform_intl
 } // namespace hermes

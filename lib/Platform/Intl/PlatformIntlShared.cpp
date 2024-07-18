@@ -7,9 +7,9 @@
 
 // This file includes shared code between Apple and ICU implementation of
 // Intl APIs
-#include "LocaleBCP47Object.h"
 #include "hermes/Platform/Intl/PlatformIntlShared.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "impl_icu/LocaleBCP47Object.h"
 
 using namespace ::hermes;
 
@@ -22,7 +22,7 @@ vm::CallResult<std::vector<std::u16string>> getCanonicalLocales(
     const std::vector<std::u16string> &locales) {
   // 1. Let ll be ? CanonicalizeLocaleList(locales).
   auto localeBcp47ObjectsRes =
-      LocaleBCP47Object::canonicalizeLocaleList(runtime, locales);
+      impl_icu::LocaleBCP47Object::canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(localeBcp47ObjectsRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
