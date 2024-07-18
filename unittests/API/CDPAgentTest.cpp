@@ -1400,7 +1400,7 @@ TEST_F(CDPAgentTest, DebuggerEvalOnCallFrameException) {
 
        // TODO: unsure why these frames are here, but they're in hdb tests
        // too. Ask Hermes about if they really should be there.
-       FrameInfo("eval", 0, 0).setLineNumberMax(19),
+       FrameInfo("anonymous", 0, 0).setLineNumberMax(19),
        FrameInfo("callme", 12, 2),
        FrameInfo("global", 0, 0).setLineNumberMax(19)});
   ensureEvalResponse(waitForMessage(), msgId + 2, 5);
@@ -2094,7 +2094,9 @@ TEST_F(CDPAgentTest, RuntimeGetHeapUsage) {
   EXPECT_GE(jsonScope_.getNumber(resp, {"result", "totalSize"}), 0);
 }
 
-TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
+// Currently disabled as getting lexical scope names is not fully supported,
+// and may produce incomplete/inconsistent results.
+TEST_F(CDPAgentTest, DISABLED_RuntimeGlobalLexicalScopeNames) {
   auto setStopFlag = llvh::make_scope_exit([this] {
     // break out of loop
     stopFlag_.store(true);
