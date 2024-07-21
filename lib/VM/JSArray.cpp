@@ -135,6 +135,11 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     return runtime.raiseRangeError("Out of memory for array elements");
   }
 
+  struct : Locals {
+    PinnedValue<StorageType> storage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // If indexedStorage hasn't even been allocated.
   if (LLVM_UNLIKELY(!self->getIndexedStorage(runtime))) {
     if (newLength == 0) {
@@ -144,8 +149,8 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto newStorage = runtime.makeHandle<StorageType>(std::move(*arrRes));
-    selfHandle->setIndexedStorage(runtime, newStorage.get(), runtime.getHeap());
+    lv.storage = std::move(*arrRes);
+    selfHandle->setIndexedStorage(runtime, lv.storage.get(), runtime.getHeap());
     selfHandle->beginIndex_ = 0;
     selfHandle->endIndex_ = newLength;
     return ExecutionStatus::RETURNED;
@@ -171,16 +176,14 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     }
   }
 
-  auto indexedStorage =
-      runtime.makeMutableHandle(selfHandle->getIndexedStorage(runtime));
-
+  lv.storage = selfHandle->getIndexedStorage(runtime);
+  MutableHandle<StorageType> indexedStorage{lv.storage};
   if (StorageType::resize(indexedStorage, runtime, newLength - beginIndex) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   selfHandle->endIndex_ = newLength;
-  selfHandle->setIndexedStorage(
-      runtime, indexedStorage.get(), runtime.getHeap());
+  selfHandle->setIndexedStorage(runtime, lv.storage.get(), runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -205,6 +208,12 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     return true;
   }
 
+  struct : Locals {
+    PinnedValue<StorageType> storage;
+    PinnedValue<> nameVal;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // If indexedStorage hasn't even been allocated.
   if (LLVM_UNLIKELY(!self->getIndexedStorage(runtime))) {
     // Allocate storage with capacity for 4 elements and length 1.
@@ -212,14 +221,14 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto newStorage = runtime.makeHandle<StorageType>(std::move(*arrRes));
+    lv.storage = std::move(*arrRes);
     const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     self = vmcast<ArrayImpl>(selfHandle.get());
 
-    self->setIndexedStorage(runtime, newStorage.get(), runtime.getHeap());
+    self->setIndexedStorage(runtime, lv.storage.get(), runtime.getHeap());
     self->beginIndex_ = index;
     self->endIndex_ = index + 1;
-    newStorage->set(runtime, 0, shv);
+    lv.storage->set(runtime, 0, shv);
     return true;
   }
 
@@ -240,8 +249,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
   }
 
-  auto indexedStorageHandle =
-      runtime.makeMutableHandle(self->getIndexedStorage(runtime));
+  lv.storage = self->getIndexedStorage(runtime);
+  MutableHandle<StorageType> indexedStorageHandle{lv.storage};
   // We only shift an array if the shift amount is within the limit.
   constexpr uint32_t shiftLimit = (1 << 20);
 
@@ -264,9 +273,8 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     // This is likely a misuse of the array (e.g. use array as an object).
     // In this case, we should just treat the index access as
     // a property access.
-    auto vr = valueToSymbolID(
-        runtime,
-        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index)));
+    lv.nameVal = HermesValue::encodeTrustedNumberValue(index);
+    auto vr = valueToSymbolID(runtime, lv.nameVal);
     assert(
         vr != ExecutionStatus::EXCEPTION &&
         "valueToIdentifier() failed for uint32_t value");
@@ -392,24 +400,28 @@ void ArgumentsBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.setVTable(&Arguments::vt);
 }
 
-CallResult<Handle<Arguments>> Arguments::create(
+CallResult<PseudoHandle<Arguments>> Arguments::create(
     Runtime &runtime,
     size_type length,
     Handle<Callable> curFunction,
     bool strictMode) {
+  struct : Locals {
+    PinnedValue<Arguments> self;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   auto clazz = runtime.getHiddenClassForPrototype(
       runtime.objectPrototypeRawPtr, numOverlapSlots<Arguments>());
   auto obj = runtime.makeAFixed<Arguments>(
       runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), clazz);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, obj);
+  lv.self = JSObjectInit::initToPointer(runtime, obj);
 
   {
     auto arrRes = StorageType::create(runtime, length);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
-    selfHandle->setIndexedStorage(runtime, arrRes->get(), runtime.getHeap());
+    lv.self->setIndexedStorage(runtime, arrRes->get(), runtime.getHeap());
   }
-  Arguments::setStorageEndIndex(selfHandle, runtime, length);
+  Arguments::setStorageEndIndex(lv.self, runtime, length);
 
   PropertyFlags pf{};
   namespace P = Predefined;
@@ -433,11 +445,11 @@ CallResult<Handle<Arguments>> Arguments::create(
   pf.configurable = 1;
 
   DEFINE_PROP(
-      selfHandle,
+      lv.self,
       P::length,
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(length)));
 
-  DEFINE_PROP(selfHandle, P::SymbolIterator, runtime.arrayPrototypeValues);
+  DEFINE_PROP(lv.self, P::SymbolIterator, runtime.arrayPrototypeValues);
 
   if (strictMode) {
     // Define .callee and .caller properties: throw always in strict mode
@@ -452,8 +464,8 @@ CallResult<Handle<Arguments>> Arguments::create(
     pf.configurable = 0;
     pf.accessor = 1;
 
-    DEFINE_PROP(selfHandle, P::callee, accessor);
-    DEFINE_PROP(selfHandle, P::caller, accessor);
+    DEFINE_PROP(lv.self, P::callee, accessor);
+    DEFINE_PROP(lv.self, P::caller, accessor);
   } else {
     // Define .callee in non-strict mode to point to the current function.
     // Leave .caller undefined, because it's a non-standard ES extension.
@@ -466,10 +478,10 @@ CallResult<Handle<Arguments>> Arguments::create(
     pf.writable = 1;
     pf.configurable = 1;
 
-    DEFINE_PROP(selfHandle, P::callee, curFunction);
+    DEFINE_PROP(lv.self, P::callee, curFunction);
   }
 
-  return selfHandle;
+  return createPseudoHandle(*lv.self);
 
 #undef DEFINE_PROP
 }

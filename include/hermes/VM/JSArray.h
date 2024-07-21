@@ -245,7 +245,7 @@ class Arguments final : public ArrayImpl {
 
   /// Create an instance of Arguments, with size and capacity equal to \p length
   /// and a property "length" initialized to that value.
-  static CallResult<Handle<Arguments>> create(
+  static CallResult<PseudoHandle<Arguments>> create(
       Runtime &runtime,
       size_type length,
       Handle<Callable> curFunction,

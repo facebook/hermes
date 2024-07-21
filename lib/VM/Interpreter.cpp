@@ -164,7 +164,7 @@ CallResult<Handle<Arguments>> Interpreter::reifyArgumentsSlowPath(
   if (LLVM_UNLIKELY(argRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<Arguments> args = *argRes;
+  Handle<Arguments> args = runtime.makeHandle(std::move(*argRes));
 
   for (uint32_t argIndex = 0; argIndex < argCount; ++argIndex) {
     SmallHermesValue shv =
