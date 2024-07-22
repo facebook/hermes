@@ -1296,7 +1296,7 @@ auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
     auto globalCodeBlock =
         runtimeModule.getCodeBlockMayAllocate(globalFunctionIndex);
     OptValue<hbc::DebugSourceLocation> debugSrcLoc =
-        globalCodeBlock->getSourceLocation();
+        globalCodeBlock->getSourceLocationForFunction();
     if (!debugSrcLoc) {
       continue;
     }

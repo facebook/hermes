@@ -202,6 +202,9 @@ class DebugInfo {
       uint32_t debugOffset,
       uint32_t offsetInFunction) const;
 
+  /// Get the location of the start of the function with \p debugOffset.
+  DebugSourceLocation getLocationForFunction(uint32_t debugOffset) const;
+
   /// Given a \p targetLine and optional \p targetColumn,
   /// find a bytecode address at which that location is listed in debug info.
   /// If \p targetColumn is None, then it tries to match at the first location

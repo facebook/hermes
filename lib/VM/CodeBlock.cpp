@@ -197,6 +197,19 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
       ->getLocationForAddress(*debugLocsOffset, offset);
 }
 
+OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocationForFunction()
+    const {
+  auto debugLocsOffset = getDebugSourceLocationsOffset();
+  if (!debugLocsOffset) {
+    return llvh::None;
+  }
+
+  return getRuntimeModule()
+      ->getBytecode()
+      ->getDebugInfo()
+      ->getLocationForFunction(*debugLocsOffset);
+}
+
 #ifndef HERMESVM_LEAN
 ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");

@@ -150,8 +150,10 @@ class CodeBlock final
 
   /// \return the source location of the given instruction offset \p offset in
   /// the code block \p codeBlock.
-  OptValue<hbc::DebugSourceLocation> getSourceLocation(
-      uint32_t offset = 0) const;
+  OptValue<hbc::DebugSourceLocation> getSourceLocation(uint32_t offset) const;
+
+  /// \return the source location of the function.
+  OptValue<hbc::DebugSourceLocation> getSourceLocationForFunction() const;
 
   /// Look up the function source table and \return the String ID associated
   /// with the current function if an entry is found, or llvh::None if not.

@@ -497,7 +497,7 @@ hermesInternalGetFunctionLocation(void *, Runtime &runtime, NativeArgs args) {
 
   if (codeBlock) {
     OptValue<hbc::DebugSourceLocation> location =
-        codeBlock->getSourceLocation();
+        codeBlock->getSourceLocationForFunction();
     if (location) {
       tmpHandle = HermesValue::encodeTrustedNumberValue(location->line);
       res = JSObject::defineOwnProperty(

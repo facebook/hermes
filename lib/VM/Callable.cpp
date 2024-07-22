@@ -1312,7 +1312,7 @@ void JSFunction::addLocationToSnapshot(
     HeapSnapshot &snap,
     HeapSnapshot::NodeID id,
     GC &gc) const {
-  if (auto location = codeBlock_.get(gc)->getSourceLocation()) {
+  if (auto location = codeBlock_.get(gc)->getSourceLocationForFunction()) {
     snap.addLocation(
         id,
         codeBlock_.get(gc)->getRuntimeModule()->getScriptID(),

@@ -118,6 +118,13 @@ OptValue<DebugSourceLocation> DebugInfo::getLocationForAddress(
   return llvh::None;
 }
 
+DebugSourceLocation DebugInfo::getLocationForFunction(
+    uint32_t debugOffset) const {
+  assert(debugOffset < data_.size() && "Debug offset out of range");
+  FunctionDebugInfoDeserializer fdid(data_.getData(), debugOffset);
+  return fdid.getCurrent();
+}
+
 OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
     uint32_t filenameId,
     uint32_t targetLine,
