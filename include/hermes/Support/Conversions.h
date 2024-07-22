@@ -45,6 +45,12 @@ int32_t truncateToInt32SlowPath(double d);
 /// the integer are then returned.
 int32_t truncateToInt32(double d) LLVM_NO_SANITIZE("float-cast-overflow");
 inline int32_t truncateToInt32(double d) {
+  // If we are compiling with ARM v8.3 or above, there is a special instruction
+  // to do the conversion.
+#ifdef __ARM_FEATURE_JCVT
+  return __builtin_arm_jcvt(d);
+#endif
+
   // ARM64 has different behavior when the double value can't fit into
   // int64_t (results in 2^63-1 instead of -2^63 on x86-64), and 2^63-1 can't
   // be represented precisely in double, so it's converted to 2^63. The result
