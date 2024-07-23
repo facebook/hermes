@@ -231,9 +231,10 @@ void SemanticResolver::visit(
     }
   }
 
-  if (auto *mem = llvh::dyn_cast<MemberExpressionNode>(parent)) {
-    if (!mem->_computed && mem->_property == identifier) {
+  if (auto *mem = llvh::dyn_cast<MemberExpressionLikeNode>(parent)) {
+    if (!ESTree::getComputed(mem) && ESTree::getProperty(mem) == identifier) {
       // expr.identifier
+      // expr?.identifier
       return;
     }
   }
