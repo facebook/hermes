@@ -154,7 +154,7 @@ setFromSetFastPath(Runtime &runtime, Handle<JSSet> target, Handle<JSSet> src) {
       [&target, &keyHandle](
           Runtime &runtime, Handle<HashSetEntry> entry) -> ExecutionStatus {
         keyHandle = entry->key.unboxToHV(runtime);
-        JSSet::addKey(target, runtime, keyHandle);
+        JSSet::insert(target, runtime, keyHandle);
         return ExecutionStatus::RETURNED;
       });
 }
@@ -205,7 +205,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
   // Fast path
   const bool originalAdd = adder.getHermesValue().getRaw() ==
       runtime.setPrototypeAdd.getHermesValue().getRaw();
-  // If the adder is the default one, we can call JSSet::addKey directly.
+  // If the adder is the default one, we can call JSSet::insert directly.
   if (LLVM_LIKELY(originalAdd)) {
     // If the iterable is an array with unmodified iterator,
     // then we can do for-loop.
@@ -222,7 +222,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
         auto element = arr.get()->at(runtime, i);
         if (LLVM_LIKELY(!element.isEmpty())) {
           tmpHandle = element.unboxToHV(runtime);
-          JSSet::addKey(selfHandle, runtime, tmpHandle);
+          JSSet::insert(selfHandle, runtime, tmpHandle);
         } else {
           tmpHandle = HermesValue::encodeUntrustedNumberValue(i);
           CallResult<PseudoHandle<>> valueRes =
@@ -232,7 +232,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
           }
 
           tmpHandle = valueRes->getHermesValue();
-          JSSet::addKey(selfHandle, runtime, tmpHandle);
+          JSSet::insert(selfHandle, runtime, tmpHandle);
         }
       }
 
@@ -309,7 +309,7 @@ setPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
   auto value = valueHandle->isNumber() && valueHandle->getNumber() == 0
       ? HandleRootOwner::getZeroValue()
       : valueHandle;
-  JSSet::addKey(selfHandle, runtime, value);
+  JSSet::insert(selfHandle, runtime, value);
   return selfHandle.getHermesValue();
 }
 
@@ -320,7 +320,7 @@ setPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.clear");
   }
-  JSSet::clear(selfHandle, runtime);
+  selfHandle->clear(runtime);
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -332,7 +332,7 @@ setPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
         "Non-Set object called on Set.prototype.delete");
   }
   return HermesValue::encodeBoolValue(
-      JSSet::deleteKey(selfHandle, runtime, args.getArgHandle(0)));
+      JSSet::erase(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
@@ -375,7 +375,7 @@ setPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Non-Set object called on Set.prototype.has");
   }
   return HermesValue::encodeBoolValue(
-      JSSet::hasKey(selfHandle, runtime, args.getArgHandle(0)));
+      JSSet::has(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
@@ -385,7 +385,7 @@ setPrototypeSizeGetter(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.size");
   }
-  return HermesValue::encodeTrustedNumberValue(JSSet::getSize(self, runtime));
+  return HermesValue::encodeTrustedNumberValue(self->size());
 }
 
 CallResult<HermesValue>

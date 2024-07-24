@@ -180,6 +180,7 @@ class OrderedHashMapBase {
 
   /// \return the size of the map.
   uint32_t size() const {
+    assertInitialized();
     return size_;
   }
 
@@ -214,7 +215,7 @@ class OrderedHashMapBase {
   /// Initial capacity of the hash table.
   static constexpr uint32_t INITIAL_CAPACITY = 16;
 
-  void assertInitialized() {
+  void assertInitialized() const {
     assert(hashTable_ && "Element storage uninitialized.");
   }
 

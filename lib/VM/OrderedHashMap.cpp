@@ -220,6 +220,7 @@ bool OrderedHashMapBase<BucketType, Derived>::has(
     Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
+  self->assertInitialized();
   auto bucket = hashToBucket(self->capacity_, runtime, key);
   return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
 }
@@ -229,6 +230,7 @@ BucketType *OrderedHashMapBase<BucketType, Derived>::find(
     Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
+  self->assertInitialized();
   auto bucket = hashToBucket(self->capacity_, runtime, key);
   return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
 }
@@ -238,6 +240,7 @@ HermesValue OrderedHashMapBase<BucketType, Derived>::get(
     Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
+  self->assertInitialized();
   auto *entry = find(self, runtime, key);
   if (!entry) {
     return HermesValue::encodeUndefinedValue();
@@ -252,6 +255,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
     Runtime &runtime,
     Handle<> key,
     Handle<> value) {
+  self->assertInitialized();
   uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
 
   // Find the bucket for this key. It the entry already exists, update the value
@@ -280,6 +284,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
     Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
+  self->assertInitialized();
   uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
 
   // Find the bucket for this key. It the entry already exists, then return.
@@ -383,6 +388,7 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
     Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
+  self->assertInitialized();
   uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
   BucketType *entry = nullptr;
   std::tie(entry, bucket) =
@@ -434,6 +440,7 @@ BucketType *OrderedHashMapBase<BucketType, Derived>::iteratorNext(
 
 template <typename BucketType, typename Derived>
 void OrderedHashMapBase<BucketType, Derived>::clear(Runtime &runtime) {
+  assertInitialized();
   if (!firstIterationEntry_) {
     // Empty set.
     return;

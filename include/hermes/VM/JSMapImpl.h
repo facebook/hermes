@@ -47,58 +47,6 @@ class JSMapImpl final : public JSObject,
       Runtime &runtime,
       Handle<JSObject> parentHandle);
 
-  /// Add a key and value. This is only enabled for Maps and not Sets.
-  template <
-      typename = std::enable_if<std::is_same_v<HashMapEntryType, HashMapEntry>>>
-  static void addValue(
-      Handle<JSMapImpl> self,
-      Runtime &runtime,
-      Handle<> key,
-      Handle<> value) {
-    self->assertInitialized();
-    ContainerSuper::insert(self, runtime, key, value);
-  }
-
-  /// Add a key. This is only enabled for Sets and not Maps.
-  template <
-      typename = std::enable_if<std::is_same_v<HashMapEntryType, HashSetEntry>>>
-  static void addKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
-    self->assertInitialized();
-    ContainerSuper::insert(self, runtime, key);
-  }
-
-  /// \return true if a key exists.
-  static bool hasKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
-    self->assertInitialized();
-    return ContainerSuper::has(self, runtime, key);
-  }
-
-  static HermesValue
-  getValue(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
-    self->assertInitialized();
-    return ContainerSuper::get(self, runtime, key);
-  }
-
-  /// Delelet a key. \return true if succeeds.
-  static bool
-  deleteKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
-    self->assertInitialized();
-    return ContainerSuper::erase(self, runtime, key);
-  }
-
-  /// \returns the size.
-  static uint32_t getSize(JSMapImpl *self, Runtime &runtime) {
-    self->assertInitialized();
-    return self->size();
-  }
-
-  /// Clear all elements from the storage.
-  static void clear(Handle<JSMapImpl> self, Runtime &runtime) {
-    self->assertInitialized();
-    ContainerSuper *super = static_cast<ContainerSuper *>(*self);
-    super->clear(runtime);
-  }
-
   /// Call \p callbackfn for each entry, with \p thisArg as this.
   static ExecutionStatus forEach(
       Handle<JSMapImpl> self,

@@ -168,7 +168,7 @@ mapFromMapFastPath(Runtime &runtime, Handle<JSMap> target, Handle<JSMap> src) {
           Runtime &runtime, Handle<HashMapEntry> entry) -> ExecutionStatus {
         keyHandle = entry->key.unboxToHV(runtime);
         valueHandle = entry->value.unboxToHV(runtime);
-        JSMap::addValue(target, runtime, keyHandle, valueHandle);
+        JSMap::insert(target, runtime, keyHandle, valueHandle);
         return ExecutionStatus::RETURNED;
       });
 }
@@ -215,7 +215,6 @@ mapConstructor(void *, Runtime &runtime, NativeArgs args) {
   auto iterMethod = runtime.makeHandle<Callable>(std::move(*iterMethodRes));
 
   // Check and run fast path.
-  // If the adder is the default one, we can call JSSet::addValue directly.
   if (LLVM_LIKELY(
           adder.getHermesValue().getRaw() ==
           runtime.mapPrototypeSet.getHermesValue().getRaw())) {
@@ -258,7 +257,7 @@ mapPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.clear");
   }
-  JSMap::clear(selfHandle, runtime);
+  selfHandle->clear(runtime);
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -270,7 +269,7 @@ mapPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
         "Non-Map object called on Map.prototype.delete");
   }
   return HermesValue::encodeBoolValue(
-      JSMap::deleteKey(selfHandle, runtime, args.getArgHandle(0)));
+      JSMap::erase(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
@@ -311,7 +310,7 @@ mapPrototypeGet(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError("Non-Map object called on Map.prototype.get");
   }
-  return JSMap::getValue(selfHandle, runtime, args.getArgHandle(0));
+  return JSMap::get(selfHandle, runtime, args.getArgHandle(0));
 }
 
 CallResult<HermesValue>
@@ -321,7 +320,7 @@ mapPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Non-Map object called on Map.prototype.has");
   }
   return HermesValue::encodeBoolValue(
-      JSMap::hasKey(selfHandle, runtime, args.getArgHandle(0)));
+      JSMap::has(selfHandle, runtime, args.getArgHandle(0)));
 }
 
 CallResult<HermesValue>
@@ -351,7 +350,7 @@ mapPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
   auto key = keyHandle->isNumber() && keyHandle->getNumber() == 0
       ? HandleRootOwner::getZeroValue()
       : keyHandle;
-  JSMap::addValue(selfHandle, runtime, key, args.getArgHandle(1));
+  JSMap::insert(selfHandle, runtime, key, args.getArgHandle(1));
   return selfHandle.getHermesValue();
 }
 
@@ -362,7 +361,7 @@ mapPrototypeSizeGetter(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.size");
   }
-  return HermesValue::encodeTrustedNumberValue(JSMap::getSize(self, runtime));
+  return HermesValue::encodeTrustedNumberValue(self->size());
 }
 
 CallResult<HermesValue>
