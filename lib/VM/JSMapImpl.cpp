@@ -16,24 +16,20 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSMapImpl
 
-template <CellKind C>
-void JSMapImpl<C>::MapOrSetBuildMeta(
-    const GCCell *cell,
-    Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapImpl<C>>());
-  JSObjectBuildMeta(cell, mb);
-  const auto *self = static_cast<const JSMapImpl<C> *>(cell);
-  mb.addField("storage", &self->storage_);
-}
-
 void JSMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSMap::MapOrSetBuildMeta(cell, mb);
   mb.setVTable(&JSMap::vt);
+  JSMap::buildMetadata(cell, mb);
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<JSMapImpl<CellKind::JSMapKind>>());
+  JSObjectBuildMeta(cell, mb);
 }
 
 void JSSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSSet::MapOrSetBuildMeta(cell, mb);
   mb.setVTable(&JSSet::vt);
+  JSSet::buildMetadata(cell, mb);
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<JSMapImpl<CellKind::JSSetKind>>());
+  JSObjectBuildMeta(cell, mb);
 }
 
 template <CellKind C>

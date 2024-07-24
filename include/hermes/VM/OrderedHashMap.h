@@ -194,9 +194,29 @@ class OrderedHashMapBase {
       Runtime &runtime,
       Handle<SegmentedArraySmall> hashTableStorage);
 
+  explicit OrderedHashMapBase();
+
+  /// Allocate the internal element storage.
+  static ExecutionStatus initializeStorage(
+      Handle<Derived> self,
+      Runtime &runtime) {
+    auto arrRes = SegmentedArraySmall::create(
+        runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
+    if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    self->hashTable_.set(runtime, arrRes->get(), runtime.getHeap());
+    return ExecutionStatus::RETURNED;
+  }
+
  protected:
   /// Initial capacity of the hash table.
   static constexpr uint32_t INITIAL_CAPACITY = 16;
+
+  void assertInitialized() {
+    assert(hashTable_ && "Element storage uninitialized.");
+  }
 
  private:
   /// The hashtable, with size always equal to capacity_. The number of

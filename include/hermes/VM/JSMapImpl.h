@@ -21,13 +21,17 @@ namespace vm {
 /// as a Set, and hence we share the same implementation for them, with
 /// different CellKind.
 template <CellKind C>
-class JSMapImpl final : public JSObject {
+class JSMapImpl final : public JSObject,
+                        public OrderedHashMapBase<
+                            std::conditional_t<
+                                C == CellKind::JSMapKind,
+                                HashMapEntry,
+                                HashSetEntry>,
+                            JSMapImpl<C>> {
+  using HashMapEntryType =
+      std::conditional_t<C == CellKind::JSMapKind, HashMapEntry, HashSetEntry>;
   using Super = JSObject;
-  using OrderedHashTable = typename std::conditional<
-      C == CellKind::JSMapKind,
-      OrderedHashMap,
-      OrderedHashSet>::type;
-  using HashMapEntryType = typename OrderedHashTable::Entry;
+  using ContainerSuper = OrderedHashMapBase<HashMapEntryType, JSMapImpl<C>>;
 
  public:
   static const ObjectVTable vt;
@@ -43,25 +47,6 @@ class JSMapImpl final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parentHandle);
 
-  /// Allocate the internal element storage.
-  static ExecutionStatus initializeStorage(
-      Handle<JSMapImpl> self,
-      Runtime &runtime) {
-    auto crtRes = OrderedHashTable::create(runtime);
-    if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto storageHandle =
-        runtime.makeHandle<OrderedHashTable>(std::move(*crtRes));
-    self->storage_.set(runtime, storageHandle.get(), runtime.getHeap());
-    return ExecutionStatus::RETURNED;
-  }
-
-  /// Advance iterator and return the next.
-  HashMapEntryType *iteratorNext(Runtime &runtime, HashMapEntryType *entry) {
-    return storage_.getNonNull(runtime)->iteratorNext(runtime, entry);
-  }
-
   /// Add a key and value. This is only enabled for Maps and not Sets.
   template <
       typename = std::enable_if<std::is_same_v<HashMapEntryType, HashMapEntry>>>
@@ -71,11 +56,7 @@ class JSMapImpl final : public JSObject {
       Handle<> key,
       Handle<> value) {
     self->assertInitialized();
-    OrderedHashTable::insert(
-        runtime.makeHandle<OrderedHashTable>(self->storage_),
-        runtime,
-        key,
-        value);
+    ContainerSuper::insert(self, runtime, key, value);
   }
 
   /// Add a key. This is only enabled for Sets and not Maps.
@@ -83,42 +64,39 @@ class JSMapImpl final : public JSObject {
       typename = std::enable_if<std::is_same_v<HashMapEntryType, HashSetEntry>>>
   static void addKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
-    OrderedHashTable::insert(
-        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
+    ContainerSuper::insert(self, runtime, key);
   }
 
   /// \return true if a key exists.
   static bool hasKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
-    return OrderedHashTable::has(
-        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
+    return ContainerSuper::has(self, runtime, key);
   }
 
   static HermesValue
   getValue(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
-    return OrderedHashTable::get(
-        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
+    return ContainerSuper::get(self, runtime, key);
   }
 
   /// Delelet a key. \return true if succeeds.
   static bool
   deleteKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
     self->assertInitialized();
-    return OrderedHashTable::erase(
-        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
+    return ContainerSuper::erase(self, runtime, key);
   }
 
   /// \returns the size.
   static uint32_t getSize(JSMapImpl *self, Runtime &runtime) {
     self->assertInitialized();
-    return self->storage_.getNonNull(runtime)->size();
+    return self->size();
   }
 
   /// Clear all elements from the storage.
   static void clear(Handle<JSMapImpl> self, Runtime &runtime) {
     self->assertInitialized();
-    self->storage_.getNonNull(runtime)->clear(runtime);
+    ContainerSuper *super = static_cast<ContainerSuper *>(*self);
+    super->clear(runtime);
   }
 
   /// Call \p callbackfn for each entry, with \p thisArg as this.
@@ -130,10 +108,8 @@ class JSMapImpl final : public JSObject {
     self->assertInitialized();
     MutableHandle<HashMapEntryType> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
-    for (entry = self->storage_.getNonNull(runtime)->iteratorNext(runtime);
-         entry;
-         entry = self->storage_.getNonNull(runtime)->iteratorNext(
-             runtime, entry.get())) {
+    for (entry = self->iteratorNext(runtime); entry;
+         entry = self->iteratorNext(runtime, entry.get())) {
       marker.flush();
       SmallHermesValue key = entry->key;
       assert(!key.isEmpty() && "Invalid key encountered");
@@ -161,10 +137,8 @@ class JSMapImpl final : public JSObject {
     self->assertInitialized();
     MutableHandle<HashMapEntryType> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
-    for (entry = self->storage_.getNonNull(runtime)->iteratorNext(runtime);
-         entry;
-         entry = self->storage_.getNonNull(runtime)->iteratorNext(
-             runtime, entry.get())) {
+    for (entry = self->iteratorNext(runtime); entry;
+         entry = self->iteratorNext(runtime, entry.get())) {
       marker.flush();
       if (LLVM_UNLIKELY(
               callback(runtime, entry) == ExecutionStatus::EXCEPTION)) {
@@ -175,22 +149,11 @@ class JSMapImpl final : public JSObject {
     return ExecutionStatus::RETURNED;
   }
 
-  /// Build the metadata for this map implementation, and store it into \p mb.
-  static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-
   JSMapImpl(
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, *parent, *clazz) {}
-
- private:
-  /// The underlying storage.
-  GCPointer<OrderedHashTable> storage_{nullptr};
-
-  void assertInitialized() {
-    assert(storage_ && "Element storage uninitialized.");
-  }
 };
 
 /// JSMapTypeTraits binds iterator type and its corresponding container type.
