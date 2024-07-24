@@ -580,62 +580,35 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   }
 };
 
+/// A worklist of cells that need to be marked by the GC. The mutator enqueues
+/// work from the write barrier, and marking drains it.
+/// TODO: Consider moving to something lock free and/or fixed size to improve
+///       performance.
 class MarkWorklist {
- private:
-  /// Like std::vector but has a fixed capacity specified by N to reduce memory
-  /// allocation.
-  template <typename T, size_t N>
-  class FixedCapacityVector {
-   public:
-    explicit FixedCapacityVector() : FixedCapacityVector(0) {}
-    explicit FixedCapacityVector(size_t sz) : size_(sz) {}
-    explicit FixedCapacityVector(const FixedCapacityVector &vec)
-        : data_(vec.data_), size_(vec.size_) {}
+  /// A fixed size local buffer that the mutator can push elements onto without
+  /// needing to acquire the lock. This allows us to batch writes before
+  /// acquiring the lock and pushing them onto worklist_.
+  static constexpr size_t kChunkSize = 128;
+  std::array<GCCell *, kChunkSize> pushChunk_;
 
-    size_t size() const {
-      return size_;
-    }
+  /// The index in pushChunk_ at which the next element will be written.
+  unsigned chunkIndex_{0};
 
-    constexpr size_t capacity() const {
-      return N;
-    }
+  /// Mutex protecting worklist_, allowing it to be accessed from the GC thread.
+  Mutex mtx_;
 
-    bool empty() const {
-      return size_ == 0;
-    }
-
-    void push_back(T elem) {
-      assert(
-          size_ < N && "Trying to push off the end of a FixedCapacityVector");
-      data_[size_++] = elem;
-    }
-
-    T *data() {
-      return data_.data();
-    }
-
-    void clear() {
-#ifndef NDEBUG
-      // Fill the push chunk with bad memory in debug modes to catch invalid
-      // reads.
-      std::memset(data_.data(), kInvalidHeapValue, sizeof(GCCell *) * N);
-#endif
-      size_ = 0;
-    }
-
-   private:
-    std::array<T, N> data_;
-    size_t size_;
-  };
+  /// The list of objects for the GC to mark.
+  /// Use a SmallVector of size 0 since it is more aggressive with PODs
+  llvh::SmallVector<GCCell *, 0> worklist_;
 
  public:
   /// Adds an element to the end of the queue.
   void enqueue(GCCell *cell) {
-    pushChunk_.push_back(cell);
-    if (pushChunk_.size() == pushChunk_.capacity()) {
-      // Once the chunk has reached its max size, move it to the pull chunks.
+    if (LLVM_UNLIKELY(chunkIndex_ == pushChunk_.size())) {
+      // Once the chunk is full, move it to the pull chunks.
       flushPushChunk();
     }
+    pushChunk_[chunkIndex_++] = cell;
   }
 
   /// Empty and return the current worklist
@@ -653,39 +626,22 @@ class MarkWorklist {
 
   /// While the world is stopped, move the push chunk to the list of pull chunks
   /// to finish draining the mark worklist.
-  /// WARN: This can only be called by the mutator or when the world is stopped.
+  /// WARN: This can only be called by the mutator.
   void flushPushChunk() {
     std::lock_guard<Mutex> lk{mtx_};
     worklist_.insert(
-        worklist_.end(),
-        pushChunk_.data(),
-        pushChunk_.data() + pushChunk_.size());
-    // Set the size back to 0 and refill the same buffer.
-    pushChunk_.clear();
-  }
-
-  /// \return true if there is still some work to be drained, with the exception
-  /// of the push chunk.
-  bool hasPendingWork() {
-    std::lock_guard<Mutex> lk{mtx_};
-    return !worklist_.empty();
+        worklist_.end(), pushChunk_.data(), pushChunk_.data() + chunkIndex_);
+    // Reset the level and refill the same buffer.
+    chunkIndex_ = 0;
   }
 
 #ifndef NDEBUG
-  /// WARN: This can only be called when the world is stopped.
+  /// WARN: This can only be called from the mutator.
   bool empty() {
     std::lock_guard<Mutex> lk{mtx_};
-    return pushChunk_.empty() && worklist_.empty();
+    return chunkIndex_ == 0 && worklist_.empty();
   }
 #endif
-
- private:
-  Mutex mtx_;
-  static constexpr size_t kChunkSize = 128;
-  using Chunk = FixedCapacityVector<GCCell *, kChunkSize>;
-  Chunk pushChunk_;
-  // Use a SmallVector of size 0 since it is more aggressive with PODs
-  llvh::SmallVector<GCCell *, 0> worklist_;
 };
 
 class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
