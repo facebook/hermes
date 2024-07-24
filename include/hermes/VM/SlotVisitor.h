@@ -54,9 +54,10 @@ class BaseVisitor {
   template <typename Acceptor, typename ElementType>
   struct ArrayElementAccept<Acceptor, ElementType, true> final {
     static void impl(Acceptor &acceptor, ElementType &elem, uint32_t num) {
-      auto name = std::to_string(num);
+      char name[16];
+      ::snprintf(name, sizeof(name), "%u", num);
       // It's fine to use the raw string since it is not stored, only copied.
-      acceptor.accept(elem, name.c_str());
+      acceptor.accept(elem, name);
     }
   };
 
