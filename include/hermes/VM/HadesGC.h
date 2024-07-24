@@ -501,15 +501,17 @@ class HadesGC final : public GCBase {
     /// bucket for a large block is obtained by rounding down to the nearest
     /// power of 2.
 
-    /// So for instance, with a heap alignment of 8 bytes, 256 small buckets,
+    /// So for instance, with a heap alignment of 8 bytes, 32 small buckets,
     /// and a maximum allocation size of 2^21, we would get:
 
     /// |    Small section      |  Large section   |
     /// +----+----+----+   +--------------+   +----+
-    /// | 0  | 8  | 16 |...|2040|2048|4096|...|2^21|
+    /// | 0  | 8  | 16 |...| 248| 256| 512|...|2^21|
     /// +----+----+----+   +--------------+   +----+
 
-    static constexpr size_t kLogNumSmallFreelistBuckets = 8;
+    // We use 32 small buckets, so the total number of buckets is less than 64,
+    // and can be scanned quickly.
+    static constexpr size_t kLogNumSmallFreelistBuckets = 5;
     static constexpr size_t kNumSmallFreelistBuckets = 1
         << kLogNumSmallFreelistBuckets;
     static constexpr size_t kLogMinSizeForLargeBlock =
