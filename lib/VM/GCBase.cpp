@@ -505,21 +505,18 @@ void GCBase::createSnapshotImpl(GC &gc, HeapSnapshot &snap) {
   // the loop.
   PrimitiveNodeAcceptor primitiveAcceptor(
       getPointerBase(), snap, getIDTracker());
-  SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
-      primitiveAcceptor};
   // Add a node for each object in the heap.
   const auto snapshotForObject =
-      [&snap, &primitiveVisitor, &gc, this](GCCell *cell) {
+      [&snap, &primitiveAcceptor, &gc, this](GCCell *cell) {
         auto &allocationLocationTracker = getAllocationLocationTracker();
         // First add primitive nodes.
-        markCellWithNames(primitiveVisitor, cell);
+        markCellWithNames(primitiveAcceptor, cell);
         EdgeAddingAcceptor acceptor(gc, snap);
-        SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
         // Allow nodes to add extra nodes not in the JS heap.
         cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
         snap.beginNode();
         // Add all internal edges first.
-        markCellWithNames(visitor, cell);
+        markCellWithNames(acceptor, cell);
         // Allow nodes to add custom edges not represented by metadata.
         cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
         auto stackTracesTreeNode =

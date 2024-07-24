@@ -975,7 +975,7 @@ class HadesGC final : public GCBase {
   /// YG/compactee are evacuated.
   template <bool CompactionEnabled>
   void scanDirtyCardsForSegment(
-      SlotVisitor<EvacAcceptor<CompactionEnabled>> &visitor,
+      EvacAcceptor<CompactionEnabled> &acceptor,
       HeapSegment &segment);
 
   /// Find all pointers from OG into the YG/compactee during a YG collection.

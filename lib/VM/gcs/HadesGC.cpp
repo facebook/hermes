@@ -2676,7 +2676,7 @@ void HadesGC::updateYoungGenSizeFactor() {
 
 template <bool CompactionEnabled>
 void HadesGC::scanDirtyCardsForSegment(
-    SlotVisitor<EvacAcceptor<CompactionEnabled>> &visitor,
+    EvacAcceptor<CompactionEnabled> &acceptor,
     HeapSegment &seg) {
   const auto &cardTable = seg.cardTable();
   // Use level instead of end in case the OG segment is still in bump alloc
@@ -2730,7 +2730,7 @@ void HadesGC::scanDirtyCardsForSegment(
 
     // Mark the first object with respect to the dirty card boundaries.
     if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-      markCellWithinRange(visitor, obj, obj->getKind(), begin, end);
+      markCellWithinRange(acceptor, obj, begin, end);
 
     obj = obj->nextCell();
     // If there are additional objects in this card, scan them.
@@ -2742,7 +2742,7 @@ void HadesGC::scanDirtyCardsForSegment(
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
         if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-          markCell(visitor, obj, obj->getKind());
+          markCell(obj, acceptor);
         obj = next;
       }
 
@@ -2752,7 +2752,7 @@ void HadesGC::scanDirtyCardsForSegment(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
       if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-        markCellWithinRange(visitor, obj, obj->getKind(), begin, end);
+        markCellWithinRange(acceptor, obj, begin, end);
     }
 
     from = iEnd;
@@ -2761,7 +2761,6 @@ void HadesGC::scanDirtyCardsForSegment(
 
 template <bool CompactionEnabled>
 void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
-  SlotVisitor<EvacAcceptor<CompactionEnabled>> visitor{acceptor};
   const bool preparingCompaction =
       CompactionEnabled && !compactee_.evacActive();
   // The acceptors in this loop can grow the old gen by adding another
@@ -2775,7 +2774,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
     // It is safe to hold this reference across a push_back into
     // oldGen_.segments_ since references into a deque are not invalidated.
     HeapSegment &seg = oldGen_[i];
-    scanDirtyCardsForSegment(visitor, seg);
+    scanDirtyCardsForSegment(acceptor, seg);
     // Do not clear the card table if the OG thread is currently marking to
     // prepare for a compaction. Note that we should clear the card tables if
     // the compaction is currently ongoing.
@@ -2786,7 +2785,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
   // No need to search dirty cards in the compactee segment if it is
   // currently being evacuated, since it will be scanned fully.
   if (preparingCompaction)
-    scanDirtyCardsForSegment(visitor, *compactee_.segment);
+    scanDirtyCardsForSegment(acceptor, *compactee_.segment);
 }
 
 void HadesGC::finalizeYoungGenObjects() {

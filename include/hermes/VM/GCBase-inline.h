@@ -110,40 +110,29 @@ constexpr uint32_t GCBase::minAllocationSize() {
 
 template <typename Acceptor>
 inline void GCBase::markCell(GCCell *cell, Acceptor &acceptor) {
-  markCell(cell, cell->getKind(), acceptor);
-}
-
-template <typename Acceptor>
-inline void GCBase::markCell(GCCell *cell, CellKind kind, Acceptor &acceptor) {
   SlotVisitor<Acceptor> visitor(acceptor);
-  markCell(visitor, cell, kind);
-}
-
-template <typename Acceptor>
-inline void
-GCBase::markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, CellKind kind) {
   visitor.visit(
-      cell, Metadata::metadataTable[static_cast<size_t>(kind)].offsets);
+      cell,
+      Metadata::metadataTable[static_cast<size_t>(cell->getKind())].offsets);
 }
 
 template <typename Acceptor>
 inline void GCBase::markCellWithinRange(
-    SlotVisitor<Acceptor> &visitor,
+    Acceptor &acceptor,
     GCCell *cell,
-    CellKind kind,
     const char *begin,
     const char *end) {
+  SlotVisitor<Acceptor> visitor{acceptor};
   visitor.visitWithinRange(
       cell,
-      Metadata::metadataTable[static_cast<size_t>(kind)].offsets,
+      Metadata::metadataTable[static_cast<size_t>(cell->getKind())].offsets,
       begin,
       end);
 }
 
 template <typename Acceptor>
-inline void GCBase::markCellWithNames(
-    SlotVisitorWithNames<Acceptor> &visitor,
-    GCCell *cell) {
+inline void GCBase::markCellWithNames(Acceptor &acceptor, GCCell *cell) {
+  SlotVisitorWithNames<Acceptor> visitor{acceptor};
   const CellKind kind = cell->getKind();
   visitor.visit(
       cell,

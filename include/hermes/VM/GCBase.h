@@ -1147,32 +1147,19 @@ class GCBase {
   template <typename Acceptor>
   inline void markCell(GCCell *cell, Acceptor &acceptor);
 
-  /// Same as the normal \c markCell, but for cells that don't have a valid
-  /// CellKind.
-  template <typename Acceptor>
-  inline void markCell(GCCell *cell, CellKind kind, Acceptor &acceptor);
-
-  /// Same as the normal \c markCell, but takes a visitor instead.
-  template <typename Acceptor>
-  inline void
-  markCell(SlotVisitor<Acceptor> &visitor, GCCell *cell, CellKind kind);
-
   /// Marks a cell by its metadata, but only for the slots that point between
   /// [begin, end).
   template <typename Acceptor>
   inline void markCellWithinRange(
-      SlotVisitor<Acceptor> &visitor,
+      Acceptor &acceptor,
       GCCell *cell,
-      CellKind kind,
       const char *begin,
       const char *end);
 
   /// Marks a cell by its metadata, and outputs the names of the slots.
   /// Meant to be used by heap snapshots.
   template <typename Acceptor>
-  inline void markCellWithNames(
-      SlotVisitorWithNames<Acceptor> &visitor,
-      GCCell *cell);
+  inline void markCellWithNames(Acceptor &acceptor, GCCell *cell);
 
   /// @}
 
