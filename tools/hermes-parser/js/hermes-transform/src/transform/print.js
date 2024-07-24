@@ -30,11 +30,24 @@ export async function print(
   // $FlowExpectedError[incompatible-type] This is now safe to access.
   const program: Program = ast;
 
-  // Fix up the AST to match what prettier expects.
+  // If the AST body is empty, we can skip the cost of prettier by returning a static string of the contents.
+  if (program.body.length === 0) {
+    // If the program had a docblock comment, we need to create the string manually.
+    const docblockComment = program.docblock?.comment;
+    if (docblockComment != null) {
+      return '/*' + docblockComment.value + '*/\n';
+    }
+
+    return '';
+  }
+
+  // Cleanup the comments from the AST and generate the "orginal" code needed for prettier.
   const codeForPrinting = mutateESTreeASTCommentsForPrettier(
     program,
     originalCode,
   );
+
+  // Fix up the AST to match what prettier expects.
   mutateESTreeASTForPrettier(program, visitorKeys);
 
   switch (getPrettierMajorVersion()) {

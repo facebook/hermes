@@ -109,14 +109,13 @@ const empty = 1;
       `);
     });
 
-    // Currently fails due to weird prettier behavior.
-    it.skip('with only a docblock', async () => {
+    it('with only a docblock', async () => {
       const result = await modifyDocblockWithBody('/* Hi! */');
 
       expect(result).toMatchInlineSnapshot(`
-              "/* DOCBLOCK! */ ('hello');
-              "
-          `);
+        "/* DOCBLOCK! */
+        "
+      `);
     });
   });
 
@@ -175,6 +174,49 @@ const empty = 1;
         "/* Hi! */ ('hello');
         "
       `);
+    });
+  });
+
+  describe('Remove body', () => {
+    function modifyDocblockWithBody(code: string) {
+      return transform(code, context => ({
+        Program(node: Program) {
+          context.modifyNodeInPlace(node, {
+            body: [],
+          });
+        },
+      }));
+    }
+
+    it('With docblock', async () => {
+      const result = await modifyDocblockWithBody(`\
+/**
+ * LICENCE GOES HERE
+ *
+ * @flow strict-local
+ * @format
+ */
+
+const empty = 1;
+`);
+
+      expect(result).toMatchInlineSnapshot(`
+        "/**
+         * LICENCE GOES HERE
+         *
+         * @flow strict-local
+         * @format
+         */
+        "
+      `);
+    });
+
+    it('Without docblock', async () => {
+      const result = await modifyDocblockWithBody(`\
+const empty = 1;
+`);
+
+      expect(result).toMatchInlineSnapshot(`""`);
     });
   });
 });
