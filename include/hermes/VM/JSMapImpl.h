@@ -62,7 +62,9 @@ class JSMapImpl final : public JSObject {
     return storage_.getNonNull(runtime)->iteratorNext(runtime, entry);
   }
 
-  /// Add a value.
+  /// Add a key and value. This is only enabled for Maps and not Sets.
+  template <
+      typename = std::enable_if<std::is_same_v<HashMapEntryType, HashMapEntry>>>
   static void addValue(
       Handle<JSMapImpl> self,
       Runtime &runtime,
@@ -74,6 +76,15 @@ class JSMapImpl final : public JSObject {
         runtime,
         key,
         value);
+  }
+
+  /// Add a key. This is only enabled for Sets and not Maps.
+  template <
+      typename = std::enable_if<std::is_same_v<HashMapEntryType, HashSetEntry>>>
+  static void addKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
+    self->assertInitialized();
+    OrderedHashTable::insert(
+        runtime.makeHandle<OrderedHashTable>(self->storage_), runtime, key);
   }
 
   /// \return true if a key exists.

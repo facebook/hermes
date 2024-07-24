@@ -152,12 +152,24 @@ class OrderedHashMapBase final : public GCCell {
   static BucketType *
   find(Handle<OrderedHashMapBase> self, Runtime &runtime, Handle<> key);
 
-  /// Insert a key/value pair into the map, if not already existing.
+  /// Insert a key/value pair, if not already existing. Function enabled only if
+  /// this is a Map.
+  template <
+      typename = std::enable_if<
+          std::is_same_v<BucketType, HashMapEntryBase<HashMapEntryKeyValue>>>>
   static ExecutionStatus insert(
       Handle<OrderedHashMapBase> self,
       Runtime &runtime,
       Handle<> key,
       Handle<> value);
+
+  /// Insert a key, if not already existing. Function enabled only if this is a
+  /// Set.
+  template <
+      typename = std::enable_if<
+          std::is_same_v<BucketType, HashMapEntryBase<HashMapEntryKey>>>>
+  static ExecutionStatus
+  insert(Handle<OrderedHashMapBase> self, Runtime &runtime, Handle<> key);
 
   /// Erase a HermesValue from the map, \return true if succeed.
   static bool
@@ -287,6 +299,15 @@ class OrderedHashMapBase final : public GCCell {
     self->hashTable_.getNonNull(runtime)->set(
         runtime, bucket, SmallHermesValue::encodeNullValue());
   }
+
+  /// Helper function for inserting key or key/value pair into the container.
+  /// Called by the public insert() functions.
+  static ExecutionStatus doInsert(
+      Handle<OrderedHashMapBase> self,
+      Runtime &runtime,
+      uint32_t bucket,
+      Handle<> key,
+      Handle<> value);
 
 }; // OrderedHashMapBase
 

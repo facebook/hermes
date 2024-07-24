@@ -258,6 +258,7 @@ HermesValue OrderedHashMapBase<BucketType>::get(
 }
 
 template <typename BucketType>
+template <typename>
 ExecutionStatus OrderedHashMapBase<BucketType>::insert(
     Handle<OrderedHashMapBase> self,
     Runtime &runtime,
@@ -277,13 +278,43 @@ ExecutionStatus OrderedHashMapBase<BucketType>::insert(
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
     if (entry) {
       // Element for the key already exists, update value and return.
-      if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
-        entry->value.set(shv, runtime.getHeap());
-      }
+      entry->value.set(shv, runtime.getHeap());
       return ExecutionStatus::RETURNED;
     }
   }
 
+  return doInsert(self, runtime, bucket, key, value);
+}
+
+template <typename BucketType>
+template <typename>
+ExecutionStatus OrderedHashMapBase<BucketType>::insert(
+    Handle<OrderedHashMapBase> self,
+    Runtime &runtime,
+    Handle<> key) {
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
+
+  // Find the bucket for this key. It the entry already exists, then return.
+  {
+    BucketType *entry = nullptr;
+    std::tie(entry, bucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    if (entry) {
+      return ExecutionStatus::RETURNED;
+    }
+  }
+
+  return doInsert(
+      self, runtime, bucket, key, HandleRootOwner::getUndefinedValue());
+}
+
+template <typename BucketType>
+ExecutionStatus OrderedHashMapBase<BucketType>::doInsert(
+    Handle<OrderedHashMapBase> self,
+    Runtime &runtime,
+    uint32_t bucket,
+    Handle<> key,
+    Handle<> value) {
   // Run rehash if necessary before inserting.
   if (shouldRehash(self->capacity_, self->size_, self->deletedCount_)) {
     if (LLVM_UNLIKELY(
@@ -448,6 +479,16 @@ void OrderedHashMapBase<BucketType>::clear(Runtime &runtime) {
 
 template class OrderedHashMapBase<HashMapEntry>;
 template class OrderedHashMapBase<HashSetEntry>;
+
+template ExecutionStatus OrderedHashMap::insert(
+    Handle<OrderedHashMapBase> self,
+    Runtime &runtime,
+    Handle<> key,
+    Handle<> value);
+template ExecutionStatus OrderedHashSet::insert(
+    Handle<OrderedHashMapBase> self,
+    Runtime &runtime,
+    Handle<> key);
 
 } // namespace vm
 } // namespace hermes
