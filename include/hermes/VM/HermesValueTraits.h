@@ -68,6 +68,8 @@ HERMES_VM_GCOBJECT(NativeJSFunction);
 HERMES_VM_GCOBJECT(NativeConstructor);
 HERMES_VM_GCOBJECT(NativeFunction);
 HERMES_VM_GCOBJECT(NativeState);
+HERMES_VM_GCOBJECT(OrderedHashMap);
+HERMES_VM_GCOBJECT(OrderedHashSet);
 HERMES_VM_GCOBJECT(PropertyAccessor);
 HERMES_VM_GCOBJECT(RequireContext);
 HERMES_VM_GCOBJECT(StringPrimitive);
@@ -88,11 +90,6 @@ template <typename T>
 class HashMapEntryBase;
 template <typename Data>
 struct IsGCObject<HashMapEntryBase<Data>> : public std::true_type {};
-
-template <typename T>
-class OrderedHashMapBase;
-template <typename BucketType>
-struct IsGCObject<OrderedHashMapBase<BucketType>> : public std::true_type {};
 
 template <CellKind C>
 class JSMapImpl;

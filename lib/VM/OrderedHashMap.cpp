@@ -60,50 +60,34 @@ template class HashMapEntryBase<HashMapEntryKey>;
 //===----------------------------------------------------------------------===//
 // class OrderedHashMapBase
 
-template <typename BucketType>
-const VTable OrderedHashMapBase<BucketType>::vt{
-    CellKind::OrderedHashMapKind,
-    cellSize<OrderedHashMapBase<BucketType>>()};
-
 void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const OrderedHashMap *>(cell);
   mb.setVTable(&OrderedHashMap::vt);
-  mb.addField("hashTable", &self->hashTable_);
-  mb.addField("firstIterationEntry", &self->firstIterationEntry_);
-  mb.addField("lastIterationEntry", &self->lastIterationEntry_);
+  OrderedHashMap::buildMetadata(cell, mb);
 }
 
 void OrderedHashSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const OrderedHashSet *>(cell);
   mb.setVTable(&OrderedHashSet::vt);
-  mb.addField("hashTable", &self->hashTable_);
-  mb.addField("firstIterationEntry", &self->firstIterationEntry_);
-  mb.addField("lastIterationEntry", &self->lastIterationEntry_);
+  OrderedHashSet::buildMetadata(cell, mb);
 }
 
-template <typename BucketType>
-OrderedHashMapBase<BucketType>::OrderedHashMapBase(
+template <typename BucketType, typename Derived>
+OrderedHashMapBase<BucketType, Derived>::OrderedHashMapBase(
     Runtime &runtime,
     Handle<SegmentedArraySmall> hashTableStorage)
     : hashTable_(runtime, hashTableStorage.get(), runtime.getHeap()) {}
 
-template <typename BucketType>
-CallResult<PseudoHandle<OrderedHashMapBase<BucketType>>>
-OrderedHashMapBase<BucketType>::create(Runtime &runtime) {
-  auto arrRes =
-      SegmentedArraySmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto hashTableStorage =
-      runtime.makeHandle<SegmentedArraySmall>(std::move(*arrRes));
-
-  return createPseudoHandle(
-      runtime.makeAFixed<OrderedHashMapBase>(runtime, hashTableStorage));
+template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::buildMetadata(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  const auto *self = static_cast<const Derived *>(cell);
+  mb.addField("hashTable", &self->hashTable_);
+  mb.addField("firstIterationEntry", &self->firstIterationEntry_);
+  mb.addField("lastIterationEntry", &self->lastIterationEntry_);
 }
 
-template <typename BucketType>
-void OrderedHashMapBase<BucketType>::removeLinkedListNode(
+template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::removeLinkedListNode(
     Runtime &runtime,
     BucketType *entry,
     GC &gc) {
@@ -124,9 +108,9 @@ void OrderedHashMapBase<BucketType>::removeLinkedListNode(
   entry->prevIterationEntry.setNull(runtime.getHeap());
 }
 
-template <typename BucketType>
+template <typename BucketType, typename Derived>
 std::pair<BucketType *, uint32_t>
-OrderedHashMapBase<BucketType>::lookupInBucket(
+OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     Runtime &runtime,
     uint32_t bucket,
     HermesValue key) {
@@ -164,9 +148,9 @@ OrderedHashMapBase<BucketType>::lookupInBucket(
   return {nullptr, bucket};
 }
 
-template <typename BucketType>
-ExecutionStatus OrderedHashMapBase<BucketType>::rehash(
-    Handle<OrderedHashMapBase> self,
+template <typename BucketType, typename Derived>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
+    Handle<Derived> self,
     Runtime &runtime,
     bool beforeAdd) {
   // NOTE: we have ensured that self->capacity_ * 4 never overflows uint32_t by
@@ -198,7 +182,7 @@ ExecutionStatus OrderedHashMapBase<BucketType>::rehash(
 
   // We can deref the handles because we are in NoAllocScope.
   SegmentedArraySmall *newHashTable = newHashTableHandle.get();
-  OrderedHashMapBase<BucketType> *rawSelf = *self;
+  OrderedHashMapBase<BucketType, Derived> *rawSelf = *self;
   const uint32_t mask = rawSelf->capacity_ - 1;
   auto entry = rawSelf->firstIterationEntry_.get(runtime);
   while (entry) {
@@ -227,27 +211,27 @@ ExecutionStatus OrderedHashMapBase<BucketType>::rehash(
   return ExecutionStatus::RETURNED;
 }
 
-template <typename BucketType>
-bool OrderedHashMapBase<BucketType>::has(
-    Handle<OrderedHashMapBase> self,
+template <typename BucketType, typename Derived>
+bool OrderedHashMapBase<BucketType, Derived>::has(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
   auto bucket = hashToBucket(self->capacity_, runtime, key);
   return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
 }
 
-template <typename BucketType>
-BucketType *OrderedHashMapBase<BucketType>::find(
-    Handle<OrderedHashMapBase> self,
+template <typename BucketType, typename Derived>
+BucketType *OrderedHashMapBase<BucketType, Derived>::find(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
   auto bucket = hashToBucket(self->capacity_, runtime, key);
   return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
 }
 
-template <typename BucketType>
-HermesValue OrderedHashMapBase<BucketType>::get(
-    Handle<OrderedHashMapBase> self,
+template <typename BucketType, typename Derived>
+HermesValue OrderedHashMapBase<BucketType, Derived>::get(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
   auto *entry = find(self, runtime, key);
@@ -257,10 +241,10 @@ HermesValue OrderedHashMapBase<BucketType>::get(
   return entry->getValue().unboxToHV(runtime);
 }
 
-template <typename BucketType>
+template <typename BucketType, typename Derived>
 template <typename>
-ExecutionStatus OrderedHashMapBase<BucketType>::insert(
-    Handle<OrderedHashMapBase> self,
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key,
     Handle<> value) {
@@ -286,10 +270,10 @@ ExecutionStatus OrderedHashMapBase<BucketType>::insert(
   return doInsert(self, runtime, bucket, key, value);
 }
 
-template <typename BucketType>
+template <typename BucketType, typename Derived>
 template <typename>
-ExecutionStatus OrderedHashMapBase<BucketType>::insert(
-    Handle<OrderedHashMapBase> self,
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
   uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
@@ -308,9 +292,9 @@ ExecutionStatus OrderedHashMapBase<BucketType>::insert(
       self, runtime, bucket, key, HandleRootOwner::getUndefinedValue());
 }
 
-template <typename BucketType>
-ExecutionStatus OrderedHashMapBase<BucketType>::doInsert(
-    Handle<OrderedHashMapBase> self,
+template <typename BucketType, typename Derived>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
+    Handle<Derived> self,
     Runtime &runtime,
     uint32_t bucket,
     Handle<> key,
@@ -356,7 +340,7 @@ ExecutionStatus OrderedHashMapBase<BucketType>::doInsert(
   NoHandleScope noHandle{runtime};
 
   // We can deref in NoAllocScope.
-  OrderedHashMapBase<BucketType> *rawSelf = *self;
+  OrderedHashMapBase<BucketType, Derived> *rawSelf = *self;
   GC &heap = runtime.getHeap();
 
   // Set the newly inserted entry as the front of this bucket chain.
@@ -390,9 +374,9 @@ ExecutionStatus OrderedHashMapBase<BucketType>::doInsert(
   return ExecutionStatus::RETURNED;
 }
 
-template <typename BucketType>
-bool OrderedHashMapBase<BucketType>::erase(
-    Handle<OrderedHashMapBase> self,
+template <typename BucketType, typename Derived>
+bool OrderedHashMapBase<BucketType, Derived>::erase(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
   uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
@@ -425,8 +409,8 @@ bool OrderedHashMapBase<BucketType>::erase(
   return true;
 }
 
-template <typename BucketType>
-BucketType *OrderedHashMapBase<BucketType>::iteratorNext(
+template <typename BucketType, typename Derived>
+BucketType *OrderedHashMapBase<BucketType, Derived>::iteratorNext(
     Runtime &runtime,
     BucketType *entry) const {
   if (entry == nullptr) {
@@ -444,8 +428,8 @@ BucketType *OrderedHashMapBase<BucketType>::iteratorNext(
   return entry;
 }
 
-template <typename BucketType>
-void OrderedHashMapBase<BucketType>::clear(Runtime &runtime) {
+template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::clear(Runtime &runtime) {
   if (!firstIterationEntry_) {
     // Empty set.
     return;
@@ -477,18 +461,56 @@ void OrderedHashMapBase<BucketType>::clear(Runtime &runtime) {
   size_ = 0;
 }
 
-template class OrderedHashMapBase<HashMapEntry>;
-template class OrderedHashMapBase<HashSetEntry>;
+template class OrderedHashMapBase<HashMapEntry, OrderedHashMap>;
+template class OrderedHashMapBase<HashSetEntry, OrderedHashSet>;
 
-template ExecutionStatus OrderedHashMap::insert(
-    Handle<OrderedHashMapBase> self,
+template ExecutionStatus
+OrderedHashMapBase<HashMapEntry, OrderedHashMap>::insert(
+    Handle<OrderedHashMap> self,
     Runtime &runtime,
     Handle<> key,
     Handle<> value);
-template ExecutionStatus OrderedHashSet::insert(
-    Handle<OrderedHashMapBase> self,
+template ExecutionStatus
+OrderedHashMapBase<HashSetEntry, OrderedHashSet>::insert(
+    Handle<OrderedHashSet> self,
     Runtime &runtime,
     Handle<> key);
+
+const VTable OrderedHashMap::vt{
+    CellKind::OrderedHashMapKind,
+    cellSize<OrderedHashMap>()};
+
+CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
+    Runtime &runtime) {
+  auto arrRes =
+      SegmentedArraySmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto hashTableStorage =
+      runtime.makeHandle<SegmentedArraySmall>(std::move(*arrRes));
+
+  return createPseudoHandle(
+      runtime.makeAFixed<OrderedHashMap>(runtime, hashTableStorage));
+}
+
+const VTable OrderedHashSet::vt{
+    CellKind::OrderedHashSetKind,
+    cellSize<OrderedHashSet>()};
+
+CallResult<PseudoHandle<OrderedHashSet>> OrderedHashSet::create(
+    Runtime &runtime) {
+  auto arrRes =
+      SegmentedArraySmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto hashTableStorage =
+      runtime.makeHandle<SegmentedArraySmall>(std::move(*arrRes));
+
+  return createPseudoHandle(
+      runtime.makeAFixed<OrderedHashSet>(runtime, hashTableStorage));
+}
 
 } // namespace vm
 } // namespace hermes
