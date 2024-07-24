@@ -1794,7 +1794,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
   hermesLog("HermesGC", "%s:", "Heap contents");
   HeapSizeDiagnosticAcceptor acceptor{getPointerBase()};
   forAllObjs([&acceptor, this](GCCell *cell) {
-    markCell(cell, acceptor);
+    markCell(acceptor, cell);
     acceptor.diagnostic.numCell++;
     if (cell->isVariableSize()) {
       acceptor.diagnostic.numVariableSizedObject++;

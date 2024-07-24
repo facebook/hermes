@@ -109,7 +109,7 @@ constexpr uint32_t GCBase::minAllocationSize() {
 }
 
 template <typename Acceptor>
-inline void GCBase::markCell(GCCell *cell, Acceptor &acceptor) {
+inline void GCBase::markCell(Acceptor &acceptor, GCCell *cell) {
   SlotVisitor<Acceptor> visitor(acceptor);
   visitor.visit(
       cell,

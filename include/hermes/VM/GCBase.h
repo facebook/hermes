@@ -1145,7 +1145,7 @@ class GCBase {
   /// \p cell The heap object to mark.
   /// \p acceptor The action to perform on each slot in the cell.
   template <typename Acceptor>
-  inline void markCell(GCCell *cell, Acceptor &acceptor);
+  inline void markCell(Acceptor &acceptor, GCCell *cell);
 
   /// Marks a cell by its metadata, but only for the slots that point between
   /// [begin, end).

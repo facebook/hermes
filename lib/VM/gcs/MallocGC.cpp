@@ -240,7 +240,7 @@ void MallocGC::checkWellFormed() {
   for (CellHeader *header : pointers_) {
     GCCell *cell = header->data();
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    markCell(cell, acceptor);
+    markCell(acceptor, cell);
   }
 
   weakMapEntrySlots_.forEach([](WeakMapEntrySlot &slot) {
@@ -391,7 +391,7 @@ void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
     acceptor.worklist_.pop_back();
     assert(header->isMarked() && "Pointer on the worklist isn't marked");
     GCCell *cell = header->data();
-    markCell(cell, acceptor);
+    markCell(acceptor, cell);
     allocatedBytes_ += cell->getAllocatedSize();
   }
 }

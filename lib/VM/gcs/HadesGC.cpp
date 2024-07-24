@@ -825,7 +825,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
           gc.dbgContains(cell) && "Non-heap object discovered during marking");
       const auto sz = cell->getAllocatedSize();
       numMarkedBytes += sz;
-      gc.markCell(cell, *this);
+      gc.markCell(*this, cell);
     }
     markedBytes_ += numMarkedBytes;
     return !localWorklist_.empty();
@@ -2388,7 +2388,7 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
     // object is only there for the forwarding pointer.
     GCCell *const cell =
         copyCell->getMarkedForwardingPointer().getNonNull(getPointerBase());
-    markCell(cell, acceptor);
+    markCell(acceptor, cell);
   }
 
   // Mark weak roots. We only need to update the long lived weak roots if we are
@@ -2742,7 +2742,7 @@ void HadesGC::scanDirtyCardsForSegment(
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
         if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
-          markCell(obj, acceptor);
+          markCell(acceptor, obj);
         obj = next;
       }
 
@@ -3071,7 +3071,7 @@ void HadesGC::checkWellFormed() {
   markWeakRoots(acceptor, /*markLongLived*/ true);
   forAllObjs([this, &acceptor](GCCell *cell) {
     assert(cell->isValid() && "Invalid cell encountered in heap");
-    markCell(cell, acceptor);
+    markCell(acceptor, cell);
   });
 
   weakMapEntrySlots_.forEach([](WeakMapEntrySlot &slot) {
@@ -3118,7 +3118,7 @@ void HadesGC::verifyCardTable() {
   };
 
   VerifyCardDirtyAcceptor acceptor{*this};
-  forAllObjs([this, &acceptor](GCCell *cell) { markCell(cell, acceptor); });
+  forAllObjs([this, &acceptor](GCCell *cell) { markCell(acceptor, cell); });
 
   for (const HeapSegment &seg : oldGen_) {
     seg.cardTable().verifyBoundaries(seg.start(), seg.level());
