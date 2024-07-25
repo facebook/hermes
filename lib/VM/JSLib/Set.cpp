@@ -21,20 +21,13 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
   auto setPrototype = Handle<JSObject>::vmcast(&runtime.setPrototype);
 
   // Set.prototype.xxx methods.
-  defineMethod(
+  runtime.setPrototypeAdd = defineMethod(
       runtime,
       setPrototype,
       Predefined::getSymbolID(Predefined::add),
       nullptr,
       setPrototypeAdd,
       1);
-
-  {
-    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-        setPrototype, runtime, Predefined::getSymbolID(Predefined::add)));
-    runtime.setPrototypeAdd =
-        vmcast<NativeFunction>(std::move(propValue).getHermesValue());
-  }
 
   defineMethod(
       runtime,
@@ -86,7 +79,7 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       false,
       true);
 
-  defineMethod(
+  runtime.setPrototypeValues = defineMethod(
       runtime,
       setPrototype,
       Predefined::getSymbolID(Predefined::values),
@@ -97,24 +90,18 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
-  Handle<NativeFunction> propValue = Handle<NativeFunction>::vmcast(
-      runtime.makeHandle(runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-          setPrototype,
-          runtime,
-          Predefined::getSymbolID(Predefined::values)))));
-  runtime.setPrototypeValues = propValue.get();
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
       runtime,
       Predefined::getSymbolID(Predefined::keys),
       dpf,
-      propValue));
+      runtime.setPrototypeValues));
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       setPrototype,
       runtime,
       Predefined::getSymbolID(Predefined::SymbolIterator),
       dpf,
-      propValue));
+      runtime.setPrototypeValues));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;

@@ -61,7 +61,7 @@ Handle<NativeConstructor> defineSystemConstructor(
   return constructor;
 }
 
-CallResult<HermesValue> defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID propertyName,
@@ -88,7 +88,7 @@ CallResult<HermesValue> defineMethod(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
 
-  return method.getHermesValue();
+  return method.get();
 }
 
 Handle<NativeConstructor> defineSystemConstructor(
@@ -110,7 +110,7 @@ Handle<NativeConstructor> defineSystemConstructor(
       targetKind);
 }
 
-void defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,
@@ -118,7 +118,7 @@ void defineMethod(
     NativeFunctionPtr nativeFunctionPtr,
     unsigned paramCount) {
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-  (void)defineMethod(
+  return defineMethod(
       runtime, objectHandle, name, context, nativeFunctionPtr, paramCount, dpf);
 }
 

@@ -23,6 +23,8 @@ namespace vm {
 
 /// This function declares a new system constructor (the likes of 'Object' and
 /// 'Array') with a specified object to be used as the 'prototype' property.
+/// This function must only be called during initialization and the assumption
+/// is that all object operations will succeed. Thus, it should never fail.
 /// - First, it creates a new NativeFunction object for the constructor, with
 ///   Function.prototype as the internal prototype.
 /// - Initializes the native function's 'prototype' property with the supplied
@@ -81,7 +83,9 @@ Handle<NativeConstructor> defineSystemConstructor(
 /// Define a method in an object instance.
 /// Currently, it's only used to define global %HermesInternal object in
 /// createHermesInternalObject(), with different flags, i.e. writable = 0 and
-/// configurable = 0.
+/// configurable = 0. This function must only be called during initialization
+/// and the assumption is that all object operations will succeed.
+/// Thus, it should never fail.
 /// \param objectHandle the instance where the method is defined.
 /// \param propertyName the key in objectHandle to insert the method at.
 /// \param methodName the value of the function.name property.
@@ -90,7 +94,7 @@ Handle<NativeConstructor> defineSystemConstructor(
 /// \param paramCount the number of declared method parameters
 /// \param dpf the flags to set on the newly defined property.
 /// \return the new NativeFunction.
-CallResult<HermesValue> defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID propertyName,
@@ -111,7 +115,7 @@ CallResult<HermesValue> defineMethod(
 /// \param paramCount the number of declared method parameters
 /// \param dpf the flags to set on the newly defined property.
 /// \return the new NativeFunction.
-inline CallResult<HermesValue> defineMethod(
+inline NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,
@@ -136,7 +140,7 @@ inline CallResult<HermesValue> defineMethod(
 /// \param context the context to pass to the native function.
 /// \param nativeFunctionPtr the native function implementing the method.
 /// \param paramCount the number of declared method parameters
-void defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,

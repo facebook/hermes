@@ -35,6 +35,12 @@ namespace vm {
 /// String.
 
 Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<NativeFunction> trimStart;
+    PinnedValue<NativeFunction> trimEnd;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   Handle<JSString> stringPrototype{runtime.stringPrototype};
 
   auto cons = defineSystemConstructor<JSString>(
@@ -161,35 +167,33 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
       1);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-  auto trimStartRes =
-      runtime.makeHandle<Callable>(runtime.ignoreAllocationFailure(defineMethod(
-          runtime,
-          stringPrototype,
-          Predefined::getSymbolID(Predefined::trimStart),
-          ctx,
-          stringPrototypeTrimStart,
-          0,
-          dpf)));
-  auto trimEndRes =
-      runtime.makeHandle<Callable>(runtime.ignoreAllocationFailure(defineMethod(
-          runtime,
-          stringPrototype,
-          Predefined::getSymbolID(Predefined::trimEnd),
-          ctx,
-          stringPrototypeTrimEnd,
-          0,
-          dpf)));
+  lv.trimStart = defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::trimStart),
+      ctx,
+      stringPrototypeTrimStart,
+      0,
+      dpf);
+  lv.trimEnd = defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::trimEnd),
+      ctx,
+      stringPrototypeTrimEnd,
+      0,
+      dpf);
 
   defineProperty(
       runtime,
       stringPrototype,
       Predefined::getSymbolID(Predefined::trimLeft),
-      trimStartRes);
+      lv.trimStart);
   defineProperty(
       runtime,
       stringPrototype,
       Predefined::getSymbolID(Predefined::trimRight),
-      trimEndRes);
+      lv.trimEnd);
 
   (void)defineMethod(
       runtime,

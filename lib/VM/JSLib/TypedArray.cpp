@@ -1742,6 +1742,11 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
 }
 
 Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<NativeFunction> values;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto proto = Handle<JSObject>::vmcast(&runtime.typedArrayBasePrototype);
 
   // Create NativeConstructor manually to avoid global object assignment.
@@ -1987,13 +1992,23 @@ Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime) {
       (void *)IterationKind::Key,
       typedArrayPrototypeIterator,
       0);
-  defineMethod(
+  lv.values = defineMethod(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::values),
       (void *)IterationKind::Value,
       typedArrayPrototypeIterator,
       0);
+
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
+  // Use the same valuesMethod for Symbol.iterator.
+  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
+      proto,
+      runtime,
+      Predefined::getSymbolID(Predefined::SymbolIterator),
+      dpf,
+      lv.values));
+
   defineMethod(
       runtime,
       proto,
@@ -2001,20 +2016,6 @@ Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime) {
       (void *)IterationKind::Entry,
       typedArrayPrototypeIterator,
       0);
-
-  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-
-  // Use the same valuesMethod for Symbol.iterator.
-  {
-    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-        proto, runtime, Predefined::getSymbolID(Predefined::values)));
-    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-        proto,
-        runtime,
-        Predefined::getSymbolID(Predefined::SymbolIterator),
-        dpf,
-        runtime.makeHandle<NativeFunction>(propValue.getHermesValue())));
-  }
 
   {
     auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(

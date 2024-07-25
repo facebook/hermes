@@ -37,7 +37,7 @@ Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
       mapPrototypeDelete,
       1);
 
-  defineMethod(
+  runtime.mapPrototypeEntries = defineMethod(
       runtime,
       mapPrototype,
       Predefined::getSymbolID(Predefined::entries),
@@ -77,20 +77,13 @@ Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
       mapPrototypeKeys,
       0);
 
-  defineMethod(
+  runtime.mapPrototypeSet = defineMethod(
       runtime,
       mapPrototype,
       Predefined::getSymbolID(Predefined::set),
       nullptr,
       mapPrototypeSet,
       2);
-
-  {
-    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-        mapPrototype, runtime, Predefined::getSymbolID(Predefined::set)));
-    runtime.mapPrototypeSet =
-        vmcast<NativeFunction>(std::move(propValue).get());
-  }
 
   defineAccessor(
       runtime,
@@ -111,22 +104,12 @@ Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
       0);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-
-  {
-    PseudoHandle<> propValue =
-        runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-            mapPrototype,
-            runtime,
-            Predefined::getSymbolID(Predefined::entries)));
-    runtime.mapPrototypeEntries =
-        vmcast<NativeFunction>(std::move(propValue).get());
-    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-        mapPrototype,
-        runtime,
-        Predefined::getSymbolID(Predefined::SymbolIterator),
-        dpf,
-        Handle<NativeFunction>::vmcast(&runtime.mapPrototypeEntries)));
-  }
+  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
+      mapPrototype,
+      runtime,
+      Predefined::getSymbolID(Predefined::SymbolIterator),
+      dpf,
+      runtime.mapPrototypeEntries));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
