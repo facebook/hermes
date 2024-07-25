@@ -29,6 +29,9 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
   CodeCoverageProfilerTest() {
     CodeCoverageProfiler::enableGlobal();
   }
+  ~CodeCoverageProfilerTest() {
+    CodeCoverageProfiler::disableGlobal();
+  }
 
  protected:
   static CodeCoverageProfiler::FuncInfo getFuncInfo(
