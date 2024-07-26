@@ -48,6 +48,8 @@ struct CodeGenerationSettings {
   StringSetVector dumpFunctions;
   /// Functions to exclude from IR dumps.
   StringSetVector noDumpFunctions;
+  // Time the optimizer by phases.
+  bool timeCompiler{false};
 };
 
 struct OptimizationSettings {

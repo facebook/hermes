@@ -22,9 +22,11 @@ namespace hermes {
 /// the order of the passes, the order of the functions to be processed and the
 /// invalidation of analysis.
 class PassManager {
+  llvh::StringRef pmName_;
   std::vector<std::unique_ptr<Pass>> pipeline_;
 
  public:
+  PassManager(llvh::StringRef pmName = "") : pmName_(pmName){};
   ~PassManager();
 
 /// Add a pass by appending its name.
@@ -50,6 +52,10 @@ class PassManager {
 #define PASS(ID, NAME, DESCRIPTION) NAME ": " DESCRIPTION "\n"
 #include "Passes.def"
         ;
+  }
+
+  llvh::StringRef getName() const {
+    return pmName_;
   }
 
   /// Add a pass by reference.

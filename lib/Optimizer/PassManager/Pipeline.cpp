@@ -23,7 +23,7 @@ bool hermes::runCustomOptimizationPasses(
     Module &M,
     const std::vector<std::string> &Opts) {
   LLVM_DEBUG(dbgs() << "Optimizing with custom pipeline...\n");
-  PassManager PM;
+  PassManager PM("Custom Opts");
 
   // Add the optimization passes.
   for (auto P : Opts) {
@@ -38,7 +38,7 @@ bool hermes::runCustomOptimizationPasses(
 
 void hermes::runFullOptimizationPasses(Module &M) {
   LLVM_DEBUG(dbgs() << "Running -O3 optimizations...\n");
-  PassManager PM;
+  PassManager PM("Full opts");
 
   auto addMem2Reg = [&PM, &M]() {
     if (M.getContext().getOptimizationSettings().useLegacyMem2Reg)
@@ -110,7 +110,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
 
 void hermes::runDebugOptimizationPasses(Module &M) {
   LLVM_DEBUG(dbgs() << "Running -Og optimizations...\n");
-  PassManager PM;
+  PassManager PM("Debug opts");
 
   PM.addLowerGeneratorFunction();
 

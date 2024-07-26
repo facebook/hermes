@@ -2371,7 +2371,7 @@ class InstrGen {
 /// Lower module IR to LIR, so it is suitable for register allocation.
 /// \return true if lowering completed successfully.
 bool lowerModuleIR(Module *M, bool optimize) {
-  PassManager PM;
+  PassManager PM("SH Lower");
   PM.addLowerGeneratorFunction();
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
@@ -2414,7 +2414,7 @@ void lowerAllocatedFunctionIR(
     Function *F,
     sh::SHRegisterAllocator &RA,
     bool optimize) {
-  PassManager PM;
+  PassManager PM("SH LowerAllocatedFunctionIR");
   PM.addPass(new LowerStoreInstrs(RA));
   PM.addPass(sh::createLowerCalls(RA));
   if (optimize) {

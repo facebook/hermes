@@ -337,6 +337,11 @@ opt<bool> OptimizedEval(
     desc("Turn on compiler optimizations in eval."),
     init(false));
 
+opt<bool> PrintCompilerTiming(
+    "ftime-report",
+    desc("Turn on compiler timing output."),
+    init(false));
+
 static list<std::string> IncludeGlobals(
     "include-globals",
     desc("Include the definitions of global properties (can be "
@@ -997,6 +1002,7 @@ std::shared_ptr<Context> createContext(
       cl::DumpFunctions.begin(), cl::DumpFunctions.end());
   codeGenOpts.noDumpFunctions.insert(
       cl::NoDumpFunctions.begin(), cl::NoDumpFunctions.end());
+  codeGenOpts.timeCompiler = cl::PrintCompilerTiming;
 
   OptimizationSettings optimizationOpts;
 

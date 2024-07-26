@@ -256,6 +256,12 @@ static cl::list<std::string> NoDumpFunctions(
     cl::CommaSeparated,
     cl::cat(CompilerCategory));
 
+static cl::opt<bool> PrintCompilerTiming(
+    "ftime-report",
+    cl::init(false),
+    cl::desc("Turn on compiler timing output."),
+    cl::cat(CompilerCategory));
+
 static cl::opt<std::string> ExportedUnit(
     "exported-unit",
     cl::desc("Produce an SHUnit with the given name to be used by other code. "
@@ -589,6 +595,7 @@ std::shared_ptr<Context> createContext() {
       cli::DumpFunctions.begin(), cli::DumpFunctions.end());
   codeGenOpts.noDumpFunctions.insert(
       cli::NoDumpFunctions.begin(), cli::NoDumpFunctions.end());
+  codeGenOpts.timeCompiler = cli::PrintCompilerTiming;
 
   OptimizationSettings optimizationOpts;
 

@@ -16,6 +16,7 @@
 #define DEBUG_TYPE "passmanager"
 
 namespace hermes {
+
 PassManager::~PassManager() = default;
 
 void PassManager::addPass(Pass *P) {
@@ -55,10 +56,18 @@ void PassManager::run(Function *F) {
 }
 
 bool PassManager::run(Module *M) {
-  llvh::SmallVector<Timer, 32> timers;
+  std::deque<Timer> timers;
   std::unique_ptr<TimerGroup> timerGroup{nullptr};
-  if (AreStatisticsEnabled()) {
-    timerGroup.reset(new TimerGroup("", "PassManager Timers"));
+  if (M->getContext().getCodeGenerationSettings().timeCompiler) {
+    if constexpr (kTimerEnabled) {
+      llvh::StringRef nm = getName();
+      if (nm.empty())
+        nm = "PassManager Timers";
+      timerGroup.reset(new TimerGroup("", nm));
+    } else {
+      llvh::errs() << "Warning: compiler timing requested, "
+                   << "but LLVM_ENABLE_STATS not set.\n";
+    }
   }
 
   // Optionally dump the IR after every pass if the flag is set.

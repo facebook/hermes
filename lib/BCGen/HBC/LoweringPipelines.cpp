@@ -28,7 +28,7 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   if (M->isLowered())
     return;
 
-  PassManager PM;
+  PassManager PM("HBC Lowering");
   // LowerGeneratorFunction produces ThrowTypeErrorInst, so it should run before
   // PeepholeLowering.
   PM.addLowerGeneratorFunction();
@@ -92,7 +92,7 @@ void lowerAllocatedFunctionIR(
     Function *F,
     HVMRegisterAllocator &RA,
     const BytecodeGenerationOptions &options) {
-  PassManager PM;
+  PassManager PM("HBC LowerAllocatedFunctionIR");
   PM.addPass(new LowerStoreInstrs(RA));
   PM.addPass(new InitCallFrame(RA));
   if (options.optimizationEnabled) {
