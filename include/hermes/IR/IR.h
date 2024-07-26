@@ -2246,7 +2246,7 @@ class Module : public Value {
 
   /// List of all the functions that have already been compiled,
   /// which are retained to ensure their instructions stay alive,
-  /// importantly EvalCompilationDataInst.
+  /// importantly EvalCompilationDataInst and LazyCompilationDataInst.
   /// Kept separate to avoid iterating over these because they've already been
   /// compiled. We don't want to visit them during lowering, optimization, etc.
   FunctionListType compiledFunctions_{};

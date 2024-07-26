@@ -98,7 +98,8 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxRegisterUsage()};
 
   if (F->isLazy()) {
-    // Nothing to do.
+    // Move the Function out of the main function list.
+    F->moveToCompiledFunctionList();
     funcGen.bytecodeGenerationComplete();
   } else {
     runHBCISel(F, &funcGen, RA, options, debugCache, sourceMapGen);
