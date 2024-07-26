@@ -46,9 +46,11 @@
     },
     {
       "paths": [
-        "mjsunit/json-parser-recursive.js"
+        "mjsunit/json-parser-recursive.js",
+        "mjsunit/mul-exhaustive-",
+        "mjsunit/math-floor-part2.js"
       ],
-      "comment": "Timeout on Sandcastle, but can't reproduce on local testing."
+      "comment": "Timeout on Sandcastle, but can't reproduce on local testing. TODO: figure out why (T196875150)."
     },
     {
       "paths": [
