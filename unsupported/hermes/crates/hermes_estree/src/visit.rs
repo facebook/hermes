@@ -186,6 +186,9 @@ pub trait Visitor_DEPRECATED<'ast> {
             Declaration::TypeAlias(_) => {
                 todo!("visit TypeAlias")
             }
+            Declaration::OpaqueType(_) => {
+                todo!("visit OpaqueType")
+            }
         }
     }
 

@@ -1915,6 +1915,31 @@ const getTransforms = (
         return [];
       };
 
+      function assertHasTypeParametersInRange(
+        min: number,
+        max: number,
+      ): $ReadOnlyArray<TSESTree.TypeNode> {
+        const {typeParameters} = node;
+        if (typeParameters == null) {
+          if (min > 0) {
+            throw translationError(
+              node,
+              `Expected between ${min} and ${max} type parameters with \`${fullTypeName}\`, but got none.`,
+            );
+          }
+          return [];
+        }
+        const params = typeParameters.params;
+        if (params.length < min || params.length > max) {
+          throw translationError(
+            node,
+            `Expected between ${min} and ${max} type parameters with \`${fullTypeName}\`, but got ${params.length}.`,
+          );
+        }
+
+        return typeParameters.params.map(transformTypeAnnotationType);
+      }
+
       switch (fullTypeName) {
         case '$Call':
         case '$ObjMap':
@@ -2240,6 +2265,100 @@ const getTransforms = (
               loc: DUMMY_LOC,
               typeAnnotation: param,
             },
+          };
+        }
+
+        case 'StringPrefix': {
+          // `StringPrefix<foo>` => `foo${string}`
+          // `StringPrefix<foo, T>` => `foo${T}`
+          const params = assertHasTypeParametersInRange(1, 2);
+          const prefix = params[0];
+          if (
+            prefix.type !== 'TSLiteralType' ||
+            typeof prefix.literal.value !== 'string'
+          ) {
+            throw translationError(
+              node,
+              'Expected a string literal for the first type parameter.',
+            );
+          }
+          const prefixStr = prefix.literal.value;
+          const remainder = params[1] ?? {
+            type: 'TSStringKeyword',
+            loc: DUMMY_LOC,
+          };
+
+          return {
+            type: 'TSTemplateLiteralType',
+            loc: DUMMY_LOC,
+            quasis: [
+              {
+                type: 'TemplateElement',
+                loc: DUMMY_LOC,
+                value: {
+                  raw: prefixStr,
+                  cooked: prefixStr,
+                },
+                tail: false,
+              },
+              {
+                type: 'TemplateElement',
+                loc: DUMMY_LOC,
+                value: {
+                  raw: '',
+                  cooked: '',
+                },
+                tail: true,
+              },
+            ],
+            types: [remainder],
+          };
+        }
+
+        case 'StringSuffix': {
+          // `StringSuffix<foo>` => `${string}foo`
+          // `StringSuffix<foo, T>` => `${T}foo`
+          const params = assertHasTypeParametersInRange(1, 2);
+          const suffix = params[0];
+          if (
+            suffix.type !== 'TSLiteralType' ||
+            typeof suffix.literal.value !== 'string'
+          ) {
+            throw translationError(
+              node,
+              'Expected a string literal for the first type parameter.',
+            );
+          }
+          const suffixStr = suffix.literal.value;
+          const remainder = params[1] ?? {
+            type: 'TSStringKeyword',
+            loc: DUMMY_LOC,
+          };
+
+          return {
+            type: 'TSTemplateLiteralType',
+            loc: DUMMY_LOC,
+            quasis: [
+              {
+                type: 'TemplateElement',
+                loc: DUMMY_LOC,
+                value: {
+                  raw: '',
+                  cooked: '',
+                },
+                tail: false,
+              },
+              {
+                type: 'TemplateElement',
+                loc: DUMMY_LOC,
+                value: {
+                  raw: suffixStr,
+                  cooked: suffixStr,
+                },
+                tail: true,
+              },
+            ],
+            types: [remainder],
           };
         }
       }
@@ -3501,46 +3620,66 @@ const getTransforms = (
             element.variance != null &&
             element.variance.kind === 'plus',
         );
+      const elems = node.types.map(element => {
+        switch (element.type) {
+          case 'TupleTypeLabeledElement':
+            if (!allReadOnly && element.variance != null) {
+              return unsupportedAnnotation(
+                element,
+                'tuple type element variance annotations',
+              );
+            }
+            return {
+              type: 'TSNamedTupleMember',
+              loc: DUMMY_LOC,
+              label: transform.Identifier(element.label),
+              optional: element.optional,
+              elementType: transformTypeAnnotationType(element.elementType),
+            };
+          case 'TupleTypeSpreadElement': {
+            const annot = transformTypeAnnotationType(element.typeAnnotation);
+            return {
+              type: 'TSRestType',
+              loc: DUMMY_LOC,
+              typeAnnotation:
+                element.label != null
+                  ? {
+                      type: 'TSNamedTupleMember',
+                      loc: DUMMY_LOC,
+                      label: transform.Identifier(element.label),
+                      optional: false,
+                      elementType: annot,
+                    }
+                  : annot,
+            };
+          }
+          default:
+            return transformTypeAnnotationType(element);
+        }
+      });
+
+      const elementTypes = node.inexact
+        ? [
+            ...elems,
+            {
+              type: 'TSRestType',
+              loc: DUMMY_LOC,
+              typeAnnotation: {
+                type: 'TSArrayType',
+                loc: DUMMY_LOC,
+                elementType: {
+                  type: 'TSUnknownKeyword',
+                  loc: DUMMY_LOC,
+                },
+              },
+            },
+          ]
+        : elems;
+
       const tupleAnnot: TSESTree.TSTupleType = {
         type: 'TSTupleType',
         loc: DUMMY_LOC,
-        elementTypes: node.types.map(element => {
-          switch (element.type) {
-            case 'TupleTypeLabeledElement':
-              if (!allReadOnly && element.variance != null) {
-                return unsupportedAnnotation(
-                  element,
-                  'tuple type element variance annotations',
-                );
-              }
-              return {
-                type: 'TSNamedTupleMember',
-                loc: DUMMY_LOC,
-                label: transform.Identifier(element.label),
-                optional: element.optional,
-                elementType: transformTypeAnnotationType(element.elementType),
-              };
-            case 'TupleTypeSpreadElement': {
-              const annot = transformTypeAnnotationType(element.typeAnnotation);
-              return {
-                type: 'TSRestType',
-                loc: DUMMY_LOC,
-                typeAnnotation:
-                  element.label != null
-                    ? {
-                        type: 'TSNamedTupleMember',
-                        loc: DUMMY_LOC,
-                        label: transform.Identifier(element.label),
-                        optional: false,
-                        elementType: annot,
-                      }
-                    : annot,
-              };
-            }
-            default:
-              return transformTypeAnnotationType(element);
-          }
-        }),
+        elementTypes,
       };
       return allReadOnly
         ? {

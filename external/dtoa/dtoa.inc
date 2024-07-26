@@ -32,6 +32,17 @@
  *	   calculation.
  */
 
+#if defined __has_attribute
+  #if __has_attribute(fallthrough)
+    #define FALLTHROUGH __attribute__ ((fallthrough))
+  #else
+    #define FALLTHROUGH (void)0
+  #endif
+#else
+  #define FALLTHROUGH (void)0
+#endif
+
+
  char *
 g_dtoa
 #ifdef KR_headers
@@ -274,7 +285,7 @@ g_dtoa
 			break;
 		case 2:
 			leftright = 0;
-			/* no break */
+			FALLTHROUGH;
 		case 4:
 			if (ndigits <= 0)
 				ndigits = 1;
@@ -282,7 +293,7 @@ g_dtoa
 			break;
 		case 3:
 			leftright = 0;
-			/* no break */
+			FALLTHROUGH;
 		case 5:
 			i = ndigits + k + 1;
 			ilim = i;

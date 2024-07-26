@@ -277,16 +277,15 @@ jsi::Value TracingRuntime::evaluateJavaScript(
 }
 
 void TracingRuntime::queueMicrotask(const jsi::Function &callback) {
-  RD::queueMicrotask(callback);
   trace_.emplace_back<SynthTrace::QueueMicrotaskRecord>(
       getTimeSinceStart(), useObjectID(callback));
+  RD::queueMicrotask(callback);
 }
 
 bool TracingRuntime::drainMicrotasks(int maxMicrotasksHint) {
-  auto res = RD::drainMicrotasks(maxMicrotasksHint);
   trace_.emplace_back<SynthTrace::DrainMicrotasksRecord>(
       getTimeSinceStart(), maxMicrotasksHint);
-  return res;
+  return RD::drainMicrotasks(maxMicrotasksHint);
 };
 
 jsi::Object TracingRuntime::global() {
@@ -533,30 +532,36 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromSymbol(
 jsi::Value TracingRuntime::getProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
-  auto value = RD::getProperty(obj, name);
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
       getTimeSinceStart(),
       useObjectID(obj),
-      SynthTrace::encodeString(useObjectID(name)),
+      SynthTrace::encodeString(useObjectID(name))
 #ifdef HERMESVM_API_TRACE_DEBUG
-      name.utf8(*this),
+          ,
+      name.utf8(*this)
 #endif
-      defTraceValue(value));
+  );
+  auto value = RD::getProperty(obj, name);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(value));
   return value;
 }
 
 jsi::Value TracingRuntime::getProperty(
     const jsi::Object &obj,
     const jsi::PropNameID &name) {
-  auto value = RD::getProperty(obj, name);
   trace_.emplace_back<SynthTrace::GetPropertyRecord>(
       getTimeSinceStart(),
       useObjectID(obj),
-      SynthTrace::encodePropNameID(useObjectID(name)),
+      SynthTrace::encodePropNameID(useObjectID(name))
 #ifdef HERMESVM_API_TRACE_DEBUG
-      name.utf8(*this),
+          ,
+      name.utf8(*this)
 #endif
-      defTraceValue(value));
+  );
+  auto value = RD::getProperty(obj, name);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(value));
   return value;
 }
 
@@ -621,9 +626,11 @@ void TracingRuntime::setPropertyValue(
 }
 
 jsi::Array TracingRuntime::getPropertyNames(const jsi::Object &o) {
-  jsi::Array arr = RD::getPropertyNames(o);
   trace_.emplace_back<SynthTrace::GetPropertyNamesRecord>(
-      getTimeSinceStart(), useObjectID(o), defObjectID(arr));
+      getTimeSinceStart(), useObjectID(o));
+  jsi::Array arr = RD::getPropertyNames(o);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), SynthTrace::encodeObject(defObjectID(arr)));
   return arr;
 }
 
@@ -681,9 +688,11 @@ uint8_t *TracingRuntime::data(const jsi::ArrayBuffer &buf) {
 }
 
 jsi::Value TracingRuntime::getValueAtIndex(const jsi::Array &arr, size_t i) {
-  auto value = RD::getValueAtIndex(arr, i);
   trace_.emplace_back<SynthTrace::ArrayReadRecord>(
-      getTimeSinceStart(), useObjectID(arr), i, defTraceValue(value));
+      getTimeSinceStart(), useObjectID(arr), i);
+  auto value = RD::getValueAtIndex(arr, i);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(value));
   return value;
 }
 

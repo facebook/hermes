@@ -44,10 +44,10 @@ print(decrementArguments());
 // CHKRA-LABEL: function decrementArguments#0#1()#2 : number
 // CHKRA-LABEL: %BB0:
 // CHKRA-LABEL: %BB1:
-// CHKRA-NEXT:   $Reg1 @7 [4...19)   %7 = PhiInst %5 : number, %BB0, %17 : number|bigint, %BB2
-// CHKRA-NEXT:   $Reg1 @8 [9...18)   %8 = UnaryOperatorInst '++', %7 : number|bigint
+// CHKRA-NEXT:   $Reg1 @7 [4...9) [18...19) 	%7 = PhiInst %5 : number, %BB0, %17 : number|bigint, %BB2
+// CHKRA-NEXT:   $Reg3 @8 [9...18)   %8 = UnaryOperatorInst '++', %7 : number|bigint
 // CHKRA-LABEL: %BB3:
 // CHKRA-LABEL: %BB2:
-// CHKRA-NEXT:   $Reg3 @15 [empty]    %15 = HBCReifyArgumentsInst %0
-// CHKRA-NEXT:   $Reg3 @16 [empty]    %16 = LoadStackInst %0
+// CHKRA-NEXT:   $Reg4 @15 [empty]    %15 = HBCReifyArgumentsInst %0
+// CHKRA-NEXT:   $Reg4 @16 [empty]    %16 = LoadStackInst %0
 // CHKRA-NEXT:   $Reg1 @17 [18...19)  %17 = MovInst %8 : number|bigint

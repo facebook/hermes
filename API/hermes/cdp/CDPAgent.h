@@ -8,12 +8,15 @@
 #ifndef HERMES_CDP_CDPAGENT_H
 #define HERMES_CDP_CDPAGENT_H
 
+#include <atomic>
 #include <string>
 
 #include <hermes/AsyncDebuggerAPI.h>
 #include <hermes/Public/HermesExport.h>
 #include <hermes/RuntimeTaskRunner.h>
 #include <hermes/hermes.h>
+
+class CDPAgentTest;
 
 namespace facebook {
 namespace hermes {
@@ -73,6 +76,8 @@ struct HERMES_EXPORT State {
 /// be delivered to the integrator via the provided \p messageCallback.
 /// Both callbacks may be invoked from arbitrary threads.
 class HERMES_EXPORT CDPAgent {
+  friend class ::CDPAgentTest;
+
   /// Hide the constructor so users can only construct via static create
   /// methods.
   CDPAgent(
@@ -80,7 +85,8 @@ class HERMES_EXPORT CDPAgent {
       CDPDebugAPI &cdpDebugAPI,
       debugger::EnqueueRuntimeTaskFunc enqueueRuntimeTaskCallback,
       OutboundMessageFunc messageCallback,
-      State state);
+      State state,
+      std::shared_ptr<std::atomic_bool> destroyedDomainAgents);
 
  public:
   /// Create a new CDP Agent. This can be done on an arbitrary thread; the

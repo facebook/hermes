@@ -66,7 +66,11 @@ const char *hostCallsJSWithThisTrace() {
       "objID": 1,
       "propID": "propIDTag:23",
       "propName": "f",
-      "value": "object:12"
+    },
+    {
+      "type": "ReturnToNativeRecord",
+      "time": 0,
+      "retval": "object:12"
     },
     {
       "type": "CallFromNativeRecord",

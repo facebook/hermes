@@ -37,7 +37,7 @@ void ensureOkResponse(const std::string &message, long long id) {
   EXPECT_EQ(response.id, id);
 }
 
-const JSONValue *getJSONValue(
+static const JSONValue *getJSONValue(
     const JSONValue *value,
     std::vector<std::string> paths) {
   int numPaths = paths.size();
@@ -65,7 +65,7 @@ std::unique_ptr<T> getValue(
   return target;
 }
 
-const JSONObject *getJSONObject(
+static const JSONObject *getJSONObject(
     const JSONValue *value,
     std::vector<std::string> paths) {
   value = getJSONValue(value, paths);
@@ -73,7 +73,7 @@ const JSONObject *getJSONObject(
   return static_cast<const JSONObject *>(value);
 }
 
-const JSONArray *getJSONArray(
+static const JSONArray *getJSONArray(
     const JSONValue *value,
     std::vector<std::string> paths) {
   value = getJSONValue(value, paths);
@@ -105,7 +105,7 @@ void ensureNotification(
   EXPECT_EQ(*getValue<std::string>(obj, {"method"}), expectedMethod);
 }
 
-void expectCallFrames(
+static void expectCallFrames(
     const std::vector<m::debugger::CallFrame> &frames,
     const std::vector<FrameInfo> &infos) {
   EXPECT_EQ(frames.size(), infos.size());

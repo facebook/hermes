@@ -1248,6 +1248,7 @@ export function transformProgram(
     visitorKeys: FlowESTreeAndBabelVisitorKeys,
   });
 
+  // $FlowFixMe[incompatible-type]
   if (resultNode?.type === 'File') {
     return resultNode;
   }

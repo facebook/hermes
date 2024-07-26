@@ -1,3 +1,19 @@
+## 0.23.0
+
+### `hermes-estree`
+* Adopted one-sided type guards in predicate functions (`implies x is T`)
+
+### `hermes-parser`
+* Added `reactRuntimeTarget` config option (defaulting to `'18'`) that when set to `'19'` no longer adds the forwardRef wrapper as React 19 treats refs on function components as regular props.
+
+### `hermes-transform`
+* Allow `context.modifyInPlace` API to modify the Program node. Previously, this relied upon `context.replaceNode` internally which meant modifications to the Program node itself were not possible.
+
+### `flow-api-translator`
+* Added support for parsing member expressions in parent classes like `class A extends Foo.Bar` and type casts such as `class A extends (Foo: Bar)`.
+* Added support for the `StringPrefix` and `StringSuffix` Flow types, turning them into a TS string literal type. For example, `StringPrefix<foo>` is turned into `foo${string}` and `StringPrefix<foo, T> is turned into foo${T}`.
+* Added support for inexact tuple types in TS by spreading an array of unknown (mixed) to the end of the array. This will allow for additional arbitrary elements in the tuple.
+
 ## 0.22.0
 
 ### `hermes-eslint`

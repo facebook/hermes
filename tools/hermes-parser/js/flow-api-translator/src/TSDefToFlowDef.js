@@ -61,10 +61,7 @@ export function TSDefToFlowDef(
     interpreter: null,
     tokens: [],
     loc: ast.loc,
-    docblock: {
-      comment: {...DUMMY_COMMON, type: 'Block', value: ''},
-      directives: {flow: []},
-    },
+    docblock: null,
   };
 
   const [transform, code] = getTransforms(originalCode, opts);
@@ -1061,7 +1058,9 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           objectType: base,
           indexType: constructFlowNode<FlowESTree.StringLiteralTypeAnnotation>({
             type: 'StringLiteralTypeAnnotation',
+            // $FlowFixMe[incompatible-call]
             value: name,
+            // $FlowFixMe[incompatible-type]
             raw: `'${name}'`,
           }),
         });

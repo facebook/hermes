@@ -8,10 +8,15 @@
  * @format
  */
 
-import type {CallExpression, ObjectTypeAnnotation} from 'hermes-estree';
+import type {
+  CallExpression,
+  ObjectTypeAnnotation,
+  Program,
+} from 'hermes-estree';
 import type {
   CallExpressionProps,
   ObjectTypeAnnotationProps,
+  ProgramProps,
 } from './node-types';
 
 /*
@@ -21,6 +26,11 @@ import type {
  * definitions required to typecheck the code and execute
  * the transformation tests.
  */
+
+type ProgramModifySignature = (
+  node: Program,
+  newProps: Partial<ProgramProps>,
+) => void;
 
 type CallExpressionModifySignature = (
   node: CallExpression,
@@ -33,4 +43,5 @@ type ObjectTypeAnnotationModifySignature = (
 ) => void;
 
 export type TransformModifySignatures = CallExpressionModifySignature &
-  ObjectTypeAnnotationModifySignature;
+  ObjectTypeAnnotationModifySignature &
+  ProgramModifySignature;

@@ -640,6 +640,13 @@ class Ptr {
     // the module's memory.
     if (((u64)ptr + sizeof(T) * (u64)n) > mod_->w2c_memory.size)
       abort();
+
+    // Check for null-dereferences: ensure that the pointer must be non-null if
+    // the size is non-zero. This is to prevent writes at the zero address
+    // which, given that zero is valid address in WASM linear memory, could be
+    // abused to tamper with the Hermes VM internal state.
+    if (ptr == 0 && n != 0)
+      abort();
   }
 
   /// Constructor to create a Ptr and defer initializing it. This is used by

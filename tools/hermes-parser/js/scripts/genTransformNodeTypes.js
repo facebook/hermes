@@ -12,7 +12,6 @@ import {
   GetHermesESTreeJSON,
   formatAndWriteSrcArtifact,
   LITERAL_TYPES,
-  NODES_WITHOUT_TRANSFORM_NODE_TYPES,
   EXCLUDE_PROPERTIES_FROM_NODE,
 } from './utils/scriptUtils';
 
@@ -31,6 +30,7 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'DeclareHook',
   'ExportNamedDeclaration',
   'Identifier',
+  'MemberExpression',
   'NullLiteral',
   'NumericLiteral',
   'ObjectTypeProperty',
@@ -38,14 +38,10 @@ const NODES_WITH_SPECIAL_HANDLING = new Set([
   'RegExpLiteral',
   'StringLiteral',
   'TemplateElement',
-  'MemberExpression',
 ]);
 
 for (const node of GetHermesESTreeJSON()) {
-  if (
-    NODES_WITH_SPECIAL_HANDLING.has(node.name) ||
-    NODES_WITHOUT_TRANSFORM_NODE_TYPES.has(node.name)
-  ) {
+  if (NODES_WITH_SPECIAL_HANDLING.has(node.name)) {
     continue;
   }
 

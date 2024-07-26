@@ -3943,6 +3943,7 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
             getPrevTokenEndLoc(),
             new (context_) ESTree::TSTypeAssertionNode(*optType, *optExpr));
       }
+      break;
 #endif
 
     case TokenKind::identifier:
@@ -3957,12 +3958,13 @@ Optional<ESTree::Node *> JSParserImpl::parseUnaryExpression() {
             getPrevTokenEndLoc(),
             new (context_) ESTree::AwaitExpressionNode(optExpr.getValue()));
       }
-      // Fall-through to default for all other identifiers.
-      LLVM_FALLTHROUGH;
+      // Default for all other identifiers.
+      break;
 
     default:
-      return parsePostfixExpression();
+      break;
   }
+  return parsePostfixExpression();
 }
 
 namespace {
@@ -4709,7 +4711,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
           isStatic = true;
           advance();
         }
-        // intentional fallthrough
+        LLVM_FALLTHROUGH;
       default: {
         // ClassElement
         auto optElem = parseClassElement(

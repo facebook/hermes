@@ -134,8 +134,24 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
       if (!assignJsonBlob(lhs, obj, key)) {     \
         return nullptr;                         \
       }
+    #define TRY_ASSIGN_OPTIONAL_JSON_BLOB(lhs, obj, key) \
+      if (!assignOptionalJsonBlob(lhs, obj, key)) {     \
+        return nullptr;                         \
+      }
 
     bool assignJsonBlob(
+        std::string &field,
+        const JSONObject *obj,
+        const std::string &key) {
+      JSONValue *v = obj->get(key);
+      if (v == nullptr) {
+        return false;
+      }
+      field = jsonValToStr(v);
+      return true;
+    }
+
+    bool assignOptionalJsonBlob(
         optional<std::string> &field,
         const JSONObject *obj,
         const std::string &key) {
@@ -148,21 +164,28 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
       return true;
     }
 
-
     void putJsonBlob(
+        Properties &props,
+        const std::string &key,
+        std::string blob,
+        JSONFactory &factory) {
+      JSONString *jsStr = factory.getString(key);
+      std::optional<JSONValue *> jsVal = parseStr(blob, factory);
+
+      // Expecting the conversion from string to JSONValue to succeed because
+      // it was originally parsed via assignJsonBlob.
+      assert(jsVal);
+
+      props.push_back({jsStr, *jsVal});
+    }
+
+    void putOptionalJsonBlob(
         Properties &props,
         const std::string &key,
         optional<std::string> blob,
         JSONFactory &factory) {
       if (blob.has_value()) {
-        JSONString *jsStr = factory.getString(key);
-        std::optional<JSONValue *> jsVal = parseStr(*blob, factory);
-
-        // Expecting the conversion from string to JSONValue to succeed because
-        // it was originally parsed via assignJsonBlob.
-        assert(jsVal);
-
-        props.push_back({jsStr, *jsVal});
+        putJsonBlob(props, key, *blob, factory);
       }
     }
 
@@ -191,7 +214,7 @@ function emitRequestParser(stream: Writable, commands: Array<Command>) {
     JSONObject *jsonObj = *parseResult;
 
     std::string method;
-    
+
     TRY_ASSIGN(method, jsonObj, "method");
 
     auto it = builders.find(method);
@@ -210,7 +233,11 @@ function emitPropAssign(stream: Writable, pointerName: string, prop: Array<Prope
   const id = prop.getCppIdentifier();
   const name = prop.name;
   const type = prop.getFullCppType();
-  const assignMethod = type == 'std::optional<JSONBlob>' ? 'TRY_ASSIGN_JSON_BLOB' : 'TRY_ASSIGN';
+  const assignMethod = type == 'std::optional<JSONBlob>' ?
+    'TRY_ASSIGN_OPTIONAL_JSON_BLOB' :
+    (type == 'JSONBlob' ?
+      'TRY_ASSIGN_JSON_BLOB' :
+      'TRY_ASSIGN');
   stream.write(`${assignMethod}(${pointerName}->${id}, ${objName}, "${name}");
   `);
 }
@@ -219,7 +246,11 @@ function emitPropPut(stream: Writable, prop: Array<Property>, propsName: string 
   const id = prop.getCppIdentifier();
   const name = prop.name;
   const type = prop.getFullCppType();
-  const putMethod = type == 'std::optional<JSONBlob>' ? 'putJsonBlob' : 'put';
+  const putMethod = type == 'std::optional<JSONBlob>' ?
+    'putOptionalJsonBlob' :
+    (type == 'JSONBlob' ?
+      'putJsonBlob' :
+      'put');
   stream.write(`${putMethod}(${propsName}, "${name}", ${id}, factory);\n`);
 }
 
@@ -267,7 +298,7 @@ function emitErrorResponseDef(stream: Writable) {
 
     TRY_ASSIGN(resp->code, error, "code");
     TRY_ASSIGN(resp->message, error, "message");
-    TRY_ASSIGN_JSON_BLOB(resp->data, error, "data");
+    TRY_ASSIGN_OPTIONAL_JSON_BLOB(resp->data, error, "data");
 
     return resp;
   }
@@ -276,7 +307,7 @@ function emitErrorResponseDef(stream: Writable) {
     llvh::SmallVector<JSONFactory::Prop, 3> errProps;
     put(errProps, "code", code, factory);
     put(errProps, "message", message, factory);
-    putJsonBlob(errProps, "data", data, factory);
+    putOptionalJsonBlob(errProps, "data", data, factory);
 
     llvh::SmallVector<JSONFactory::Prop, 2> props;
     put(props, "id", id, factory);
@@ -309,7 +340,7 @@ std::unique_ptr<UnknownRequest> UnknownRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<UnknownRequest> req = std::make_unique<UnknownRequest>();
   TRY_ASSIGN(req->id, obj, "id");
   TRY_ASSIGN(req->method, obj, "method");
-  TRY_ASSIGN_JSON_BLOB(req->params, obj, "params");
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(req->params, obj, "params");
   return req;
 }
 
@@ -317,7 +348,7 @@ JSONValue *UnknownRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> props;
   put(props, "id", id, factory);
   put(props, "method", method, factory);
-  putJsonBlob(props, "params", params, factory);
+  putOptionalJsonBlob(props, "params", params, factory);
   return factory.newObject(props.begin(), props.end());
 }
 

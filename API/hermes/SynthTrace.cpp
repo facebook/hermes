@@ -387,8 +387,16 @@ void SynthTrace::CreateHostFunctionRecord::toJSONInternal(
 #endif
 }
 
-void SynthTrace::GetOrSetPropertyRecord::toJSONInternal(
-    JSONEmitter &json) const {
+void SynthTrace::GetPropertyRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("propID", encode(propID_));
+#ifdef HERMESVM_API_TRACE_DEBUG
+  json.emitKeyValue("propName", propNameDbg_);
+#endif
+}
+
+void SynthTrace::SetPropertyRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("propID", encode(propID_));
@@ -422,7 +430,6 @@ void SynthTrace::GetPropertyNamesRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
-  json.emitKeyValue("propNamesID", propNamesID_);
 }
 
 void SynthTrace::CreateArrayRecord::toJSONInternal(JSONEmitter &json) const {
@@ -431,8 +438,13 @@ void SynthTrace::CreateArrayRecord::toJSONInternal(JSONEmitter &json) const {
   json.emitKeyValue("length", length_);
 }
 
-void SynthTrace::ArrayReadOrWriteRecord::toJSONInternal(
-    JSONEmitter &json) const {
+void SynthTrace::ArrayReadRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("index", index_);
+}
+
+void SynthTrace::ArrayWriteRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("index", index_);

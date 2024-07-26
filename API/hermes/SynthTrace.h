@@ -702,45 +702,6 @@ class SynthTrace {
     }
   };
 
-  /// The base struct for GetPropertyRecord and SetPropertyRecord.
-  struct GetOrSetPropertyRecord : public Record {
-    /// The ObjectID of the object that was accessed for its property.
-    const ObjectID objID_;
-    /// String or PropNameID passed to getProperty/setProperty.
-    const TraceValue propID_;
-#ifdef HERMESVM_API_TRACE_DEBUG
-    std::string propNameDbg_;
-#endif
-    /// Returned value from getProperty, or the set value passed for
-    /// setProperty.
-    const TraceValue value_;
-
-    GetOrSetPropertyRecord(
-        TimeSinceStart time,
-        ObjectID objID,
-        TraceValue propID,
-#ifdef HERMESVM_API_TRACE_DEBUG
-        const std::string &propNameDbg,
-#endif
-        TraceValue value)
-        : Record(time),
-          objID_(objID),
-          propID_(propID),
-#ifdef HERMESVM_API_TRACE_DEBUG
-          propNameDbg_(propNameDbg),
-#endif
-          value_(value) {
-    }
-
-    std::vector<ObjectID> uses() const override {
-      std::vector<ObjectID> vec{objID_};
-      pushIfTrackedValue(propID_, vec);
-      return vec;
-    }
-
-    void toJSONInternal(::hermes::JSONEmitter &json) const override;
-  };
-
   struct QueueMicrotaskRecord : public Record {
     static constexpr RecordType type{RecordType::QueueMicrotask};
     /// The ObjectID of the callback function that was queued.
@@ -777,32 +738,91 @@ class SynthTrace {
 
   /// A GetPropertyRecord is an event where native code accesses the property
   /// of a JS object.
-  struct GetPropertyRecord : public GetOrSetPropertyRecord {
+  struct GetPropertyRecord : public Record {
+    /// The ObjectID of the object that was accessed for its property.
+    const ObjectID objID_;
+    /// String or PropNameID passed to getProperty.
+    const TraceValue propID_;
+#ifdef HERMESVM_API_TRACE_DEBUG
+    std::string propNameDbg_;
+#endif
+
+    GetPropertyRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        TraceValue propID
+#ifdef HERMESVM_API_TRACE_DEBUG
+        ,
+        const std::string &propNameDbg
+#endif
+        )
+        : Record(time),
+          objID_(objID),
+          propID_(propID)
+#ifdef HERMESVM_API_TRACE_DEBUG
+          ,
+          propNameDbg_(propNameDbg)
+#endif
+    {
+    }
+
     static constexpr RecordType type{RecordType::GetProperty};
-    using GetOrSetPropertyRecord::GetOrSetPropertyRecord;
     RecordType getType() const override {
       return type;
     }
-    std::vector<ObjectID> defs() const override {
-      auto defs = GetOrSetPropertyRecord::defs();
-      pushIfTrackedValue(value_, defs);
-      return defs;
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses{objID_};
+      pushIfTrackedValue(propID_, uses);
+      return uses;
     }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A SetPropertyRecord is an event where native code writes to the property
   /// of a JS object.
-  struct SetPropertyRecord : public GetOrSetPropertyRecord {
+  struct SetPropertyRecord : public Record {
+    /// The ObjectID of the object that was accessed for its property.
+    const ObjectID objID_;
+    /// String or PropNameID passed to setProperty.
+    const TraceValue propID_;
+#ifdef HERMESVM_API_TRACE_DEBUG
+    std::string propNameDbg_;
+#endif
+    /// The value being assigned.
+    const TraceValue value_;
+
+    SetPropertyRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        TraceValue propID,
+#ifdef HERMESVM_API_TRACE_DEBUG
+        const std::string &propNameDbg,
+#endif
+        TraceValue value)
+        : Record(time),
+          objID_(objID),
+          propID_(propID),
+#ifdef HERMESVM_API_TRACE_DEBUG
+          propNameDbg_(propNameDbg),
+#endif
+          value_(value) {
+    }
+
     static constexpr RecordType type{RecordType::SetProperty};
-    using GetOrSetPropertyRecord::GetOrSetPropertyRecord;
     RecordType getType() const override {
       return type;
     }
+
     std::vector<ObjectID> uses() const override {
-      auto uses = GetOrSetPropertyRecord::uses();
+      std::vector<ObjectID> uses{objID_};
+      pushIfTrackedValue(propID_, uses);
       pushIfTrackedValue(value_, uses);
       return uses;
     }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A HasPropertyRecord is an event where native code queries whether a
@@ -850,23 +870,13 @@ class SynthTrace {
     static constexpr RecordType type{RecordType::GetPropertyNames};
     /// The ObjectID of the object that was accessed for its property.
     const ObjectID objID_;
-    // Since getPropertyNames always returns an array, this can be an object id
-    // rather than a TraceValue.
-    /// The ObjectID of the array that was returned by getPropertyNames().
-    const ObjectID propNamesID_;
 
-    explicit GetPropertyNamesRecord(
-        TimeSinceStart time,
-        ObjectID objID,
-        ObjectID propNamesID)
-        : Record(time), objID_(objID), propNamesID_(propNamesID) {}
+    explicit GetPropertyNamesRecord(TimeSinceStart time, ObjectID objID)
+        : Record(time), objID_(objID) {}
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
       return type;
-    }
-    std::vector<ObjectID> defs() const override {
-      return {propNamesID_};
     }
     std::vector<ObjectID> uses() const override {
       return {objID_};
@@ -897,57 +907,56 @@ class SynthTrace {
     }
   };
 
-  struct ArrayReadOrWriteRecord : public Record {
+  /// An ArrayReadRecord is an event where a value was read from an index
+  /// of an array.
+  /// It is modeled separately from GetProperty because it is more efficient to
+  /// read from a numeric index on an array than a string.
+  struct ArrayReadRecord final : public Record {
     /// The ObjectID of the array that was accessed.
     const ObjectID objID_;
     /// The index of the element that was accessed in the array.
     const size_t index_;
-    /// The value that was read from or written to the array.
+
+    explicit ArrayReadRecord(TimeSinceStart time, ObjectID objID, size_t index)
+        : Record(time), objID_(objID), index_(index) {}
+
+    static constexpr RecordType type{RecordType::ArrayRead};
+    RecordType getType() const override {
+      return type;
+    }
+    std::vector<ObjectID> uses() const override {
+      return {objID_};
+    }
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  /// An ArrayWriteRecord is an event where a value was written into an index
+  /// of an array.
+  struct ArrayWriteRecord final : public Record {
+    /// The ObjectID of the array that was accessed.
+    const ObjectID objID_;
+    /// The index of the element that was accessed in the array.
+    const size_t index_;
+    /// The value that was written to the array.
     const TraceValue value_;
 
-    explicit ArrayReadOrWriteRecord(
+    explicit ArrayWriteRecord(
         TimeSinceStart time,
         ObjectID objID,
         size_t index,
         TraceValue value)
         : Record(time), objID_(objID), index_(index), value_(value) {}
 
-    void toJSONInternal(::hermes::JSONEmitter &json) const override;
-    std::vector<ObjectID> uses() const override {
-      return {objID_};
-    }
-  };
-
-  /// An ArrayReadRecord is an event where a value was read from an index
-  /// of an array.
-  /// It is modeled separately from GetProperty because it is more efficient to
-  /// read from a numeric index on an array than a string.
-  struct ArrayReadRecord final : public ArrayReadOrWriteRecord {
-    static constexpr RecordType type{RecordType::ArrayRead};
-    using ArrayReadOrWriteRecord::ArrayReadOrWriteRecord;
-    RecordType getType() const override {
-      return type;
-    }
-    std::vector<ObjectID> defs() const override {
-      auto defs = ArrayReadOrWriteRecord::defs();
-      pushIfTrackedValue(value_, defs);
-      return defs;
-    }
-  };
-
-  /// An ArrayWriteRecord is an event where a value was written into an index
-  /// of an array.
-  struct ArrayWriteRecord final : public ArrayReadOrWriteRecord {
     static constexpr RecordType type{RecordType::ArrayWrite};
-    using ArrayReadOrWriteRecord::ArrayReadOrWriteRecord;
     RecordType getType() const override {
       return type;
     }
     std::vector<ObjectID> uses() const override {
-      auto uses = ArrayReadOrWriteRecord::uses();
+      std::vector<ObjectID> uses{objID_};
       pushIfTrackedValue(value_, uses);
       return uses;
     }
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   struct CallRecord : public Record {

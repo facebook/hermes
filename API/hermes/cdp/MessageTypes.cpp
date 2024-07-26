@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<de6ca843395a9e62745ae61459f2fe53>>
+// @generated SignedSource<<1aad3e25cb0b790476e59a2c064e6ccb>>
 
 #include "MessageTypes.h"
 
@@ -31,8 +31,24 @@ std::unique_ptr<Request> tryMake(const JSONObject *obj) {
   if (!assignJsonBlob(lhs, obj, key)) {     \
     return nullptr;                         \
   }
+#define TRY_ASSIGN_OPTIONAL_JSON_BLOB(lhs, obj, key) \
+  if (!assignOptionalJsonBlob(lhs, obj, key)) {      \
+    return nullptr;                                  \
+  }
 
 bool assignJsonBlob(
+    std::string &field,
+    const JSONObject *obj,
+    const std::string &key) {
+  JSONValue *v = obj->get(key);
+  if (v == nullptr) {
+    return false;
+  }
+  field = jsonValToStr(v);
+  return true;
+}
+
+bool assignOptionalJsonBlob(
     optional<std::string> &field,
     const JSONObject *obj,
     const std::string &key) {
@@ -48,17 +64,25 @@ bool assignJsonBlob(
 void putJsonBlob(
     Properties &props,
     const std::string &key,
+    std::string blob,
+    JSONFactory &factory) {
+  JSONString *jsStr = factory.getString(key);
+  std::optional<JSONValue *> jsVal = parseStr(blob, factory);
+
+  // Expecting the conversion from string to JSONValue to succeed because
+  // it was originally parsed via assignJsonBlob.
+  assert(jsVal);
+
+  props.push_back({jsStr, *jsVal});
+}
+
+void putOptionalJsonBlob(
+    Properties &props,
+    const std::string &key,
     optional<std::string> blob,
     JSONFactory &factory) {
   if (blob.has_value()) {
-    JSONString *jsStr = factory.getString(key);
-    std::optional<JSONValue *> jsVal = parseStr(*blob, factory);
-
-    // Expecting the conversion from string to JSONValue to succeed because
-    // it was originally parsed via assignJsonBlob.
-    assert(jsVal);
-
-    props.push_back({jsStr, *jsVal});
+    putJsonBlob(props, key, *blob, factory);
   }
 }
 
@@ -247,7 +271,7 @@ std::unique_ptr<runtime::RemoteObject> runtime::RemoteObject::tryMake(
   TRY_ASSIGN(type->type, obj, "type");
   TRY_ASSIGN(type->subtype, obj, "subtype");
   TRY_ASSIGN(type->className, obj, "className");
-  TRY_ASSIGN_JSON_BLOB(type->value, obj, "value");
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(type->value, obj, "value");
   TRY_ASSIGN(type->unserializableValue, obj, "unserializableValue");
   TRY_ASSIGN(type->description, obj, "description");
   TRY_ASSIGN(type->objectId, obj, "objectId");
@@ -262,7 +286,7 @@ JSONValue *runtime::RemoteObject::toJsonVal(JSONFactory &factory) const {
   put(props, "type", type, factory);
   put(props, "subtype", subtype, factory);
   put(props, "className", className, factory);
-  putJsonBlob(props, "value", value, factory);
+  putOptionalJsonBlob(props, "value", value, factory);
   put(props, "unserializableValue", unserializableValue, factory);
   put(props, "description", description, factory);
   put(props, "objectId", objectId, factory);
@@ -524,7 +548,7 @@ std::unique_ptr<runtime::CallArgument> runtime::CallArgument::tryMake(
     const JSONObject *obj) {
   std::unique_ptr<runtime::CallArgument> type =
       std::make_unique<runtime::CallArgument>();
-  TRY_ASSIGN_JSON_BLOB(type->value, obj, "value");
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(type->value, obj, "value");
   TRY_ASSIGN(type->unserializableValue, obj, "unserializableValue");
   TRY_ASSIGN(type->objectId, obj, "objectId");
   return type;
@@ -533,7 +557,7 @@ std::unique_ptr<runtime::CallArgument> runtime::CallArgument::tryMake(
 JSONValue *runtime::CallArgument::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> props;
 
-  putJsonBlob(props, "value", value, factory);
+  putOptionalJsonBlob(props, "value", value, factory);
   put(props, "unserializableValue", unserializableValue, factory);
   put(props, "objectId", objectId, factory);
   return factory.newObject(props.begin(), props.end());
@@ -546,7 +570,7 @@ runtime::ExecutionContextDescription::tryMake(const JSONObject *obj) {
   TRY_ASSIGN(type->id, obj, "id");
   TRY_ASSIGN(type->origin, obj, "origin");
   TRY_ASSIGN(type->name, obj, "name");
-  TRY_ASSIGN_JSON_BLOB(type->auxData, obj, "auxData");
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(type->auxData, obj, "auxData");
   return type;
 }
 
@@ -557,7 +581,7 @@ JSONValue *runtime::ExecutionContextDescription::toJsonVal(
   put(props, "id", id, factory);
   put(props, "origin", origin, factory);
   put(props, "name", name, factory);
-  putJsonBlob(props, "auxData", auxData, factory);
+  putOptionalJsonBlob(props, "auxData", auxData, factory);
   return factory.newObject(props.begin(), props.end());
 }
 
@@ -619,7 +643,7 @@ std::unique_ptr<UnknownRequest> UnknownRequest::tryMake(const JSONObject *obj) {
   std::unique_ptr<UnknownRequest> req = std::make_unique<UnknownRequest>();
   TRY_ASSIGN(req->id, obj, "id");
   TRY_ASSIGN(req->method, obj, "method");
-  TRY_ASSIGN_JSON_BLOB(req->params, obj, "params");
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(req->params, obj, "params");
   return req;
 }
 
@@ -627,7 +651,7 @@ JSONValue *UnknownRequest::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> props;
   put(props, "id", id, factory);
   put(props, "method", method, factory);
-  putJsonBlob(props, "params", params, factory);
+  putOptionalJsonBlob(props, "params", params, factory);
   return factory.newObject(props.begin(), props.end());
 }
 
@@ -1915,7 +1939,7 @@ std::unique_ptr<ErrorResponse> ErrorResponse::tryMake(const JSONObject *obj) {
 
   TRY_ASSIGN(resp->code, error, "code");
   TRY_ASSIGN(resp->message, error, "message");
-  TRY_ASSIGN_JSON_BLOB(resp->data, error, "data");
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(resp->data, error, "data");
 
   return resp;
 }
@@ -1924,7 +1948,7 @@ JSONValue *ErrorResponse::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 3> errProps;
   put(errProps, "code", code, factory);
   put(errProps, "message", message, factory);
-  putJsonBlob(errProps, "data", data, factory);
+  putOptionalJsonBlob(errProps, "data", data, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 2> props;
   put(props, "id", id, factory);
@@ -2490,7 +2514,7 @@ debugger::PausedNotification::tryMake(const JSONObject *obj) {
   auto *params = *convertResult;
   TRY_ASSIGN(notif->callFrames, params, "callFrames");
   TRY_ASSIGN(notif->reason, params, "reason");
-  TRY_ASSIGN_JSON_BLOB(notif->data, params, "data");
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(notif->data, params, "data");
   TRY_ASSIGN(notif->hitBreakpoints, params, "hitBreakpoints");
   TRY_ASSIGN(notif->asyncStackTrace, params, "asyncStackTrace");
   return notif;
@@ -2500,7 +2524,7 @@ JSONValue *debugger::PausedNotification::toJsonVal(JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 5> paramsProps;
   put(paramsProps, "callFrames", callFrames, factory);
   put(paramsProps, "reason", reason, factory);
-  putJsonBlob(paramsProps, "data", data, factory);
+  putOptionalJsonBlob(paramsProps, "data", data, factory);
   put(paramsProps, "hitBreakpoints", hitBreakpoints, factory);
   put(paramsProps, "asyncStackTrace", asyncStackTrace, factory);
 
@@ -2558,7 +2582,7 @@ debugger::ScriptParsedNotification::tryMake(const JSONObject *obj) {
   TRY_ASSIGN(notif->endColumn, params, "endColumn");
   TRY_ASSIGN(notif->executionContextId, params, "executionContextId");
   TRY_ASSIGN(notif->hash, params, "hash");
-  TRY_ASSIGN_JSON_BLOB(
+  TRY_ASSIGN_OPTIONAL_JSON_BLOB(
       notif->executionContextAuxData, params, "executionContextAuxData");
   TRY_ASSIGN(notif->sourceMapURL, params, "sourceMapURL");
   TRY_ASSIGN(notif->hasSourceURL, params, "hasSourceURL");
@@ -2578,7 +2602,7 @@ JSONValue *debugger::ScriptParsedNotification::toJsonVal(
   put(paramsProps, "endColumn", endColumn, factory);
   put(paramsProps, "executionContextId", executionContextId, factory);
   put(paramsProps, "hash", hash, factory);
-  putJsonBlob(
+  putOptionalJsonBlob(
       paramsProps, "executionContextAuxData", executionContextAuxData, factory);
   put(paramsProps, "sourceMapURL", sourceMapURL, factory);
   put(paramsProps, "hasSourceURL", hasSourceURL, factory);
@@ -2818,6 +2842,46 @@ JSONValue *runtime::ExecutionContextCreatedNotification::toJsonVal(
     JSONFactory &factory) const {
   llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
   put(paramsProps, "context", context, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "method", method, factory);
+  put(props,
+      "params",
+      factory.newObject(paramsProps.begin(), paramsProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+runtime::InspectRequestedNotification::InspectRequestedNotification()
+    : Notification("Runtime.inspectRequested") {}
+
+std::unique_ptr<runtime::InspectRequestedNotification>
+runtime::InspectRequestedNotification::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::InspectRequestedNotification> notif =
+      std::make_unique<runtime::InspectRequestedNotification>();
+  TRY_ASSIGN(notif->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(notif->object, params, "object");
+  TRY_ASSIGN_JSON_BLOB(notif->hints, params, "hints");
+  TRY_ASSIGN(notif->executionContextId, params, "executionContextId");
+  return notif;
+}
+
+JSONValue *runtime::InspectRequestedNotification::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 3> paramsProps;
+  put(paramsProps, "object", object, factory);
+  putJsonBlob(paramsProps, "hints", hints, factory);
+  put(paramsProps, "executionContextId", executionContextId, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "method", method, factory);

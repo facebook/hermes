@@ -651,6 +651,16 @@
                 }
             }
         },
+        "AsExpression": {
+             "fields": {
+                "expression": {
+                    "type": "Expression"
+                },
+                "typeAnnotation": {
+                    "type": "TypeAnnotationEnum"
+                }
+            }
+        },
         "ImportDeclaration": {
             "fields": {
                 "specifiers": {
@@ -1229,6 +1239,25 @@
                 }
             }
         },
+        "OpaqueType": {
+            "fields": {
+                "id": {
+                    "type": "Identifier"
+                },
+                "type_parameters": {
+                    "type": "Option<TypeParameterInstantiation>",
+                    "optional": true,
+                    "rename": "typeParameters"
+                },
+                "impltype": {
+                    "type": "FlowTypeAnnotation"
+                },
+                "supertype": {
+                    "type": "Option<FlowTypeAnnotation>",
+                    "optional": true
+                }
+            }
+        },
         "NullableTypeAnnotation": {
             "fields": {
                 "type_annotation": {
@@ -1420,6 +1449,13 @@
                     "type": "FlowTypeAnnotation"
                 }
             }
+        },
+        "TupleTypeAnnotation": {
+            "fields": {
+                "types": {
+                    "type": "Vec<FlowTypeAnnotation>"
+                }
+            }
         }
     },
     "enums": {
@@ -1483,7 +1519,8 @@
             "ThisExpression",
             "UnaryExpression",
             "UpdateExpression",
-            "YieldExpression"
+            "YieldExpression",
+            "AsExpression"
         ],
         "_Literal": [
             "Literal",
@@ -1497,7 +1534,8 @@
             "FunctionDeclaration",
             "VariableDeclaration",
             "TSTypeAliasDeclaration",
-            "TypeAlias"
+            "TypeAlias",
+            "OpaqueType"
         ],
         "ImportDeclarationSpecifier": [
             "ImportSpecifier",
@@ -1640,7 +1678,8 @@
             "UnionTypeAnnotation",
             "IntersectionTypeAnnotation",
             "IndexedAccessType",
-            "OptionalIndexedAccessType"
+            "OptionalIndexedAccessType",
+            "TupleTypeAnnotation"
         ],
         "ObjectTypePropertyType": [
             "ObjectTypeProperty",

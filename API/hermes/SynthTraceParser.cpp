@@ -397,16 +397,18 @@ SynthTrace getTrace(
             paramCount);
         break;
       }
-      case RecordType::GetProperty:
+      case RecordType::GetProperty: {
         trace.emplace_back<SynthTrace::GetPropertyRecord>(
             timeFromStart,
             objID->getValue(),
-            SynthTrace::decode(propID->str()),
+            SynthTrace::decode(propID->str())
 #ifdef HERMESVM_API_TRACE_DEBUG
+                ,
             std::string(propName->c_str()),
 #endif
-            trace.decode(propValue->c_str()));
+        );
         break;
+      }
       case RecordType::SetProperty:
         trace.emplace_back<SynthTrace::SetPropertyRecord>(
             timeFromStart,
@@ -428,25 +430,22 @@ SynthTrace getTrace(
 #endif
         );
         break;
-      case RecordType::GetPropertyNames:
+      case RecordType::GetPropertyNames: {
         trace.emplace_back<SynthTrace::GetPropertyNamesRecord>(
-            timeFromStart,
-            objID->getValue(),
-            getNumberAs<SynthTrace::ObjectID>(obj->get("propNamesID")));
+            timeFromStart, objID->getValue());
         break;
+      }
       case RecordType::CreateArray:
         trace.emplace_back<SynthTrace::CreateArrayRecord>(
             timeFromStart,
             objID->getValue(),
             getNumberAs<uint64_t>(obj->get("length")));
         break;
-      case RecordType::ArrayRead:
+      case RecordType::ArrayRead: {
         trace.emplace_back<SynthTrace::ArrayReadRecord>(
-            timeFromStart,
-            objID->getValue(),
-            arrayIndex->getValue(),
-            trace.decode(propValue->c_str()));
+            timeFromStart, objID->getValue(), arrayIndex->getValue());
         break;
+      }
       case RecordType::ArrayWrite:
         trace.emplace_back<SynthTrace::ArrayWriteRecord>(
             timeFromStart,

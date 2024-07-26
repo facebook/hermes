@@ -93,7 +93,11 @@ const char *hostCallsJSCallsHostTrace() {
       "objID": 1,
       "propID": "propIDTag:24",
       "propName": "f",
-      "value": "object:13"
+    },
+    {
+      "type": "ReturnToNativeRecord",
+      "time": 0,
+      "retval": "object:13"
     },
     {
       "type": "CallFromNativeRecord",

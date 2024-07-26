@@ -130,19 +130,20 @@ TEST_F(SynthTraceSerializationTest, ReturnEncodeUTF8String) {
 TEST_F(SynthTraceSerializationTest, GetProperty) {
   const std::string ex =
       std::string(
-          R"({"type":"GetPropertyRecord","time":0,"objID":1,"propID":"propNameID:1111",)") +
+          R"({"type":"GetPropertyRecord","time":0,"objID":1,"propID":"propNameID:1111")") +
 #ifdef HERMESVM_API_TRACE_DEBUG
-      R"("propName":"x",)" +
+      R"(,"propName":"x")" +
 #endif
-      R"("value":"undefined:"})";
+      R"(})";
   auto testRec = SynthTrace::GetPropertyRecord(
       dummyTime,
       1,
-      SynthTrace::encodePropNameID(1111),
+      SynthTrace::encodePropNameID(1111)
 #ifdef HERMESVM_API_TRACE_DEBUG
-      "x",
+          ,
+      "x"
 #endif
-      SynthTrace::encodeUndefined());
+  );
   EXPECT_EQ(ex, to_string(testRec));
 }
 
@@ -187,8 +188,8 @@ TEST_F(SynthTraceSerializationTest, HasProperty) {
 
 TEST_F(SynthTraceSerializationTest, GetPropertyNames) {
   EXPECT_EQ(
-      R"({"type":"GetPropertyNamesRecord","time":0,"objID":1,"propNamesID":2})",
-      to_string(SynthTrace::GetPropertyNamesRecord(dummyTime, 1, 2)));
+      R"({"type":"GetPropertyNamesRecord","time":0,"objID":1})",
+      to_string(SynthTrace::GetPropertyNamesRecord(dummyTime, 1)));
 }
 
 TEST_F(SynthTraceSerializationTest, CreateArray) {
@@ -373,7 +374,13 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
       SynthTrace::encodeString(stringID),
       SynthTrace::decode(
           record.getProperty(*rt, "propID").asString(*rt).utf8(*rt)));
+
+  record = records.getValueAtIndex(*rt, 3).asObject(*rt);
   EXPECT_EQ(
-      "undefined:", record.getProperty(*rt, "value").asString(*rt).utf8(*rt));
+      "ReturnToNativeRecord",
+      record.getProperty(*rt, "type").asString(*rt).utf8(*rt));
+  EXPECT_TRUE(record.getProperty(*rt, "time").isNumber());
+  EXPECT_EQ(
+      "undefined:", record.getProperty(*rt, "retval").asString(*rt).utf8(*rt));
 }
 } // namespace

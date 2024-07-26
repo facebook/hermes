@@ -6,6 +6,7 @@
  */
 
 #include "hermes/VM/JSLib/DateUtil.h"
+#include "hermes/VM/JSLib/DateCache.h"
 
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
 #include "hermes/Support/Compiler.h"
@@ -347,10 +348,6 @@ static int32_t equivalentYearAsEpochDays(
   return epochDaysForYear2006To2033[eqYear - 2006];
 }
 
-static const int32_t SECS_PER_DAY = 24 * 60 * 60;
-// Numbers are from 15.9.1.1 Time Values and Time Range
-static const int64_t TIME_RANGE_SECS = SECS_PER_DAY * 100000000LL;
-
 /// Returns an equivalent time for the purpose of determining DST using the
 /// rules in ES5.1 15.9.1.8 Daylight Saving Time Adjustment
 ///
@@ -367,67 +364,29 @@ int32_t detail::equivalentTime(int64_t epochSecs) {
   // function in https://github.com/v8/v8/blob/master/src/date.h
   assert(epochSecs >= -TIME_RANGE_SECS && epochSecs <= TIME_RANGE_SECS);
   int64_t epochDays, secsOfDay;
-  floorDivMod(epochSecs, SECS_PER_DAY, &epochDays, &secsOfDay);
+  floorDivMod(epochSecs, SECONDS_PER_DAY, &epochDays, &secsOfDay);
   int32_t year, yearAsEpochDays, dayOfYear;
   // Narrowing of epochDays will not result in truncation
   decomposeEpochDays(epochDays, &year, &yearAsEpochDays, &dayOfYear);
   int32_t eqYearAsEpochDays = equivalentYearAsEpochDays(year, yearAsEpochDays);
-  return (eqYearAsEpochDays + dayOfYear) * SECS_PER_DAY + secsOfDay;
-}
-
-double daylightSavingTA(double t) {
-  // The spec says LocalTime should only take finite time value and return 0 in
-  // case conversion fails. Once we enforce the finite input at the caller site,
-  // we should remove the below check or replace it with an assertion. For now,
-  // let's return NaN instead if it's not finite value.
-  if (!std::isfinite(t)) {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-
-  // Convert t to seconds and get the actual time needed.
-  const double seconds = t / MS_PER_SECOND;
-  // If the number of seconds is higher or lower than a unix timestamp can
-  // support, clamp it. This is not correct in all cases, but returning NaN (for
-  // Invalid Date) breaks date construction entirely. Clamping only results in
-  // small errors in daylight savings time. This is only a problem in systems
-  // with a 32-bit time_t, like some Android systems.
-  time_t local = 0;
-  if (seconds > TIME_RANGE_SECS || seconds < -TIME_RANGE_SECS) {
-    // Return NaN if input is outside Time Range allowed in ES5.1
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-  // This will truncate any fractional seconds, which is ok for daylight
-  // savings time calculations.
-  local = detail::equivalentTime(static_cast<int64_t>(seconds));
-
-  std::tm tm;
-#ifdef _WINDOWS
-  // The return value of localtime_s on Windows is an error code instead of
-  // a pointer to std::tm. For simplicity, we don't inspect the concrete error
-  // code and just return 0.
-  auto err = ::localtime_s(&tm, &local);
-  if (err) {
-    return 0;
-  }
-#else
-  std::tm *brokenTime = ::localtime_r(&local, &tm);
-  if (!brokenTime) {
-    // Local time is invalid.
-    return 0;
-  }
-#endif
-  return tm.tm_isdst ? MS_PER_HOUR : 0;
+  return (eqYearAsEpochDays + dayOfYear) * SECONDS_PER_DAY + secsOfDay;
 }
 
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.9
 
+/// https://tc39.es/ecma262/#sec-localtime
 /// Conversion from UTC to local time.
-double localTime(double t) {
-  return t + localTZA() + daylightSavingTA(t);
+double localTime(double t, LocalTimeOffsetCache &localTimeOffsetCache) {
+  // The spec requires that localTime() accepts only finite time value, but for
+  // simplicity, we do the check here instead of the caller site.
+  if (!std::isfinite(t)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  return t + localTimeOffsetCache.getLocalTimeOffset(t, TimeType::Utc);
 }
 
-/// https://tc39.es/ecma262/#sec-localtime
+/// https://tc39.es/ecma262/#sec-utc-t
 /// Conversion from local time to UTC.
 ///
 /// There is time ambiguity when converting local time to UTC time. For example,
@@ -442,26 +401,11 @@ double localTime(double t) {
 /// 12 March 2017 is skipped, it should be interpreted as 2:30 AM UTC-05
 /// instead of 3:30 AM UTC-04. However, in this case, both have the same UTC
 /// epoch.
-double utcTime(double t) {
-  double ltza = localTZA();
-  // To compute the DST offset, we need to use UTC time (as required by
-  // daylightSavingTA()). However, getting the exact UTC time is not possible
-  // since that would be circular. Therefore, we approximate the UTC time by
-  // subtracting the standard time adjustment and then subtracting an additional
-  // hour to comply with the spec's requirements as noted in the doc-comment.
-  //
-  // For example, imagine a transition to DST that goes from UTC+0 to UTC+1,
-  // moving 00:00 to 01:00. Any time in the skipped hour gets mapped to a
-  // UTC time before the transition when we subtract an hour (e.g., 00:30 ->
-  // 23:30), which will correctly result in DST not being in effect.
-  //
-  // Similarly, during a transition from DST back to standard time, the hour
-  // from 00:00 to 01:00 is repeated. A local time in the repeated hour
-  // similarly gets mapped to a UTC time before the transition.
-  //
-  // Note that this will not work if the timezone offset has historical/future
-  // changes (which generates a different ltza than the one obtained here).
-  return t - ltza - daylightSavingTA(t - ltza - MS_PER_HOUR);
+double utcTime(double t, LocalTimeOffsetCache &localTimeOffsetCache) {
+  if (!std::isfinite(t)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+  return t - localTimeOffsetCache.getLocalTimeOffset(t, TimeType::Local);
 }
 
 //===----------------------------------------------------------------------===//
@@ -791,7 +735,9 @@ static bool scanInt(InputIter &it, const InputIter end, int32_t &x) {
   return !ref.getAsInteger(10, x);
 }
 
-static double parseISODate(StringView u16str) {
+static double parseISODate(
+    StringView u16str,
+    LocalTimeOffsetCache &localTimeOffsetCache) {
   constexpr double nan = std::numeric_limits<double>::quiet_NaN();
 
   auto it = u16str.begin();
@@ -876,7 +822,7 @@ static double parseISODate(StringView u16str) {
       // forms are interpreted as a UTC time and date-time forms are interpreted
       // as a local time.
       double t = makeDate(makeDay(y, m - 1, d), makeTime(h, min, s, ms));
-      t = utcTime(t);
+      t = utcTime(t, localTimeOffsetCache);
       return t;
     }
 
@@ -921,7 +867,9 @@ static double parseISODate(StringView u16str) {
   return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
 }
 
-static double parseESDate(StringView str) {
+static double parseESDate(
+    StringView str,
+    LocalTimeOffsetCache &localTimeOffsetCache) {
   constexpr double nan = std::numeric_limits<double>::quiet_NaN();
   StringView tok = str;
 
@@ -1085,7 +1033,7 @@ static double parseESDate(StringView str) {
   if (it == end) {
     // Default to local time zone if no time zone provided
     double t = makeDate(makeDay(y, m - 1, d), makeTime(h, min, s, ms));
-    t = utcTime(t);
+    t = utcTime(t, localTimeOffsetCache);
     return t;
   }
 
@@ -1165,13 +1113,13 @@ complete:
   return makeDate(makeDay(y, m - 1, d), makeTime(h - tzh, min - tzm, s, ms));
 }
 
-double parseDate(StringView str) {
-  double result = parseISODate(str);
+double parseDate(StringView str, LocalTimeOffsetCache &localTimeOffsetCache) {
+  double result = parseISODate(str, localTimeOffsetCache);
   if (!std::isnan(result)) {
     return result;
   }
 
-  return parseESDate(str);
+  return parseESDate(str, localTimeOffsetCache);
 }
 
 } // namespace vm
