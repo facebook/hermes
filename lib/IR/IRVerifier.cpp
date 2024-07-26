@@ -165,7 +165,7 @@ void Verifier::_assertPrintLocation(const Instruction *inst) {
     f = &functionState->function;
 
   if (f) {
-    OS << " in function " << f->getInternalNameStr();
+    OS << " in function \"" << f->getInternalNameStr() << "\"";
     if (inst) {
       SourceErrorManager::SourceCoords coords{};
       if (Ctx->getSourceErrorManager().findBufferLineAndLoc(
