@@ -196,7 +196,12 @@ class PinnedValue : private PinnedHermesValue {
     setNoBarrier(traits_type::encode(val));
     return *this;
   }
-  PinnedValue &operator=(PseudoHandle<T> &&other) {
+
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  PinnedValue &operator=(PseudoHandle<U> &&other) {
     setNoBarrier(other.getHermesValue());
     other.invalidate();
     return *this;
