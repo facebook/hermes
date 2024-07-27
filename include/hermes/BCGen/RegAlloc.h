@@ -386,9 +386,9 @@ class RegisterAllocator {
   /// predecessor blocks.
   void lowerPhis(ArrayRef<BasicBlock *> order);
 
-  /// Allocate the registers for the instructions in the function. The order of
-  /// the block needs to match the order which we'll use for instruction
-  /// selection.
+  /// Allocate the registers for the instructions in the function. The blocks
+  /// must be in reverse-post-order, and must match the order which we'll use
+  /// for instruction selection.
   void allocate(ArrayRef<BasicBlock *> order);
 
   /// Reserves consecutive registers that will be manually managed by the user.
