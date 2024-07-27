@@ -20,22 +20,24 @@ function foo(x) {
     b = 10;
 }
 
-//CHECK-LABEL:Function<foo>(2 params, 7 registers, 1 symbols):
+//CHECK-LABEL:Function<foo>(2 params, 3 registers, 1 symbols):
 //CHECK-NEXT:Offset in debug table: source 0x{{.*}}, scope 0x{{.*}}
-//CHECK-NEXT:    CreateEnvironment r0
-//CHECK-NEXT:    LoadParam         r1, 1
-//CHECK-NEXT:    LoadConstUInt8    r2, 10
-//CHECK-NEXT:    GetGlobalObject   r3
-//CHECK-NEXT:    LoadConstUndefined r4
-//CHECK-NEXT:    StoreToEnvironment r0, 0, r1
-//CHECK-NEXT:    LoadFromEnvironment r5, r0, 0
-//CHECK-NEXT:    JmpTrue           L1, r5
-//CHECK-NEXT:    PutById           r3, r2, 1, "b"
+//CHECK-NEXT:    CreateEnvironment r1
+//CHECK-NEXT:    LoadParam         r2, 1
+//CHECK-NEXT:    StoreToEnvironment r1, 0, r2
+//CHECK-NEXT:    LoadFromEnvironment r1, r1, 0
+//CHECK-NEXT:    JmpTrue           L1, r1
+//CHECK-NEXT:    LoadConstUInt8    r1, 10
+//CHECK-NEXT:    GetGlobalObject   r2
+//CHECK-NEXT:    PutById           r2, r1, 1, "b"
 //CHECK-NEXT:    Jmp               L2
 //CHECK-NEXT:L1:
-//CHECK-NEXT:    PutById           r3, r2, 2, "a"
+//CHECK-NEXT:    LoadConstUInt8    r1, 10
+//CHECK-NEXT:    GetGlobalObject   r2
+//CHECK-NEXT:    PutById           r2, r1, 2, "a"
 //CHECK-NEXT:L2:
-//CHECK-NEXT:    Ret               r4
+//CHECK-NEXT:    LoadConstUndefined r1
+//CHECK-NEXT:    Ret               r1
 
 //CHKOPT-LABEL:Function<foo>(2 params, 2 registers, 0 symbols):
 //CHKOPT-NEXT:Offset in debug table: source 0x{{.*}}, scope 0x{{.*}}
