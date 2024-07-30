@@ -6,11 +6,13 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 from dataclasses import dataclass
 from enum import auto, Enum, unique
+from functools import cache
 from pathlib import Path
-from typing import List
+from typing import List, Set
 
 from .typing_defs import PathT
 
@@ -148,3 +150,54 @@ def check_hermes_exe(binary_dir: PathT, shermes: bool) -> None:
     if not os.path.isfile(exe):
         print(f"Error: {exe} not found.")
         sys.exit(1)
+
+
+HERMES_FEATURES_MATCHER = re.compile(
+    r"\s*Features:\s*\n(.*\n)", re.MULTILINE | re.DOTALL
+)
+"""Match the "Features" output of `hermes --version`."""
+
+
+CONFIGURABLE_HERMES_FEATURES = {
+    "Unicode RegExp Property Escapes": "regexp-unicode-property-escapes",
+}
+"""Mapping of Hermes features to test262 features, for use in dynamic feature
+skipping."""
+
+
+@cache
+def get_hermes_features(binary_dir: PathT) -> List[str]:
+    """
+    Run `hermes --version` and extract the features from the output.
+    """
+
+    import subprocess
+
+    exe = os.path.join(binary_dir, "hermes")
+    try:
+        output = subprocess.check_output([exe, "--version"], stderr=subprocess.STDOUT)
+        features = HERMES_FEATURES_MATCHER.search(output.decode("utf-8"))
+        if features is not None:
+            return [feature.strip() for feature in features.group(1).splitlines()]
+        else:
+            return []
+    except subprocess.CalledProcessError as e:
+        print(
+            "Failed to run hermes --version: " + e.output.decode("utf-8"),
+            file=sys.stderr,
+        )
+        return []
+
+
+@cache
+def get_hermes_supported_test262_features(binary_dir: PathT) -> List[str]:
+    """
+    Get hermes supported test262 feature from the feature list of the built
+    hermes binary.
+    """
+    hermes_features = get_hermes_features(binary_dir)
+    return [
+        CONFIGURABLE_HERMES_FEATURES[hermes_feature]
+        for hermes_feature in hermes_features
+        if hermes_feature in CONFIGURABLE_HERMES_FEATURES
+    ]

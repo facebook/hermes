@@ -827,6 +827,12 @@ class BracketNode : public Node {
     classes_.push_back(cls);
   }
 
+  void addCodePointRanges(
+      llvh::ArrayRef<UnicodeRangePoolRef> rangeArray,
+      bool inverted = false) {
+    addRangeArrayPoolToBracket(&codePointSet_, rangeArray, inverted);
+  }
+
   virtual MatchConstraintSet matchConstraints() const override {
     MatchConstraintSet result = 0;
     if (!canMatchASCII())

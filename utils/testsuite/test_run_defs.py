@@ -17,7 +17,7 @@ from .hermes import compile_and_run, CompileRunArgs, ExtraCompileVMArgs, generat
 from .preprocess import generate_source, StrictMode
 from .skiplist import SkipCategory, SkippedPathsOrFeatures
 from .typing_defs import PathT
-from .utils import TestCaseResult, TestResultCode
+from .utils import get_hermes_supported_test262_features, TestCaseResult, TestResultCode
 
 
 @dataclass
@@ -174,6 +174,14 @@ class Test262Suite(Suite):
             )
         # Check if we need to skip this test due to unsupported features.
         for f in test_case.features:
+            # If it's not running shermes test and this feature is specifically
+            # supported by the built hermes binary, we don't need to test if it
+            # is in the skiplist. We may still skip it due to the rest features
+            # of this test case though.
+            if not args.shermes and f in get_hermes_supported_test262_features(
+                args.binary_directory
+            ):
+                continue
             if skip_result := args.skipped_paths_features.try_skip(
                 f,
                 [
