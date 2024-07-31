@@ -59,7 +59,7 @@ class Environment final
 
   /// \return the parent lexical environment. This value will be nullptr if the
   /// parent is the global scope.
-  Environment *getParentEnvironment(Runtime &runtime) const {
+  Environment *getParentEnvironment(PointerBase &runtime) const {
     return parentEnvironment_.get(runtime);
   }
 
@@ -158,7 +158,7 @@ class Callable : public JSObject {
   }
 
   /// \return the environment associated with this callable.
-  Environment *getEnvironment(Runtime &runtime) const {
+  Environment *getEnvironment(PointerBase &runtime) const {
     return environment_.get(runtime);
   }
 
@@ -375,7 +375,7 @@ class BoundFunction final : public Callable {
   }
 
   /// \return the target function.
-  Callable *getTarget(Runtime &runtime) const {
+  Callable *getTarget(PointerBase &runtime) const {
     return target_.get(runtime);
   }
 
@@ -407,7 +407,7 @@ class BoundFunction final : public Callable {
       unsigned argCount);
 
   /// \return the number of arguments, including the 'this' param.
-  unsigned getArgCountWithThis(Runtime &runtime) const {
+  unsigned getArgCountWithThis(PointerBase &runtime) const {
     return argStorage_.getNonNull(runtime)->size();
   }
 
@@ -425,7 +425,7 @@ class BoundFunction final : public Callable {
  private:
   /// Return a pointer to the stored arguments, including \c this. \c this is
   /// at index 0, followed by the rest.
-  GCHermesValue *getArgsWithThis(Runtime &runtime) {
+  GCHermesValue *getArgsWithThis(PointerBase &runtime) {
     return argStorage_.getNonNull(runtime)->begin();
   }
 

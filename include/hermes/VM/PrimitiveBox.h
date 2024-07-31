@@ -56,7 +56,7 @@ class JSString final : public JSObject {
   /// Return the [[PrimitiveValue]] internal property as a string.
   static StringPrimitive *getPrimitiveString(
       const JSString *self,
-      Runtime &runtime) {
+      PointerBase &runtime) {
     return self->primitiveValue_.get(runtime);
   }
 
@@ -211,7 +211,7 @@ class JSBigInt final : public JSObject {
   /// Return the [[PrimitiveValue]] internal property as a bigint.
   static BigIntPrimitive *getPrimitiveBigInt(
       const JSBigInt *self,
-      Runtime &runtime) {
+      PointerBase &runtime) {
     return self->primitiveValue_.get(runtime);
   }
 

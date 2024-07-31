@@ -42,7 +42,7 @@ class JSGeneratorObject final : public JSObject {
 
   /// \return the inner function.
   static PseudoHandle<Callable> getInnerFunction(
-      Runtime &runtime,
+      PointerBase &runtime,
       JSGeneratorObject *self) {
     return createPseudoHandle(self->innerFunction_.get(runtime));
   }
