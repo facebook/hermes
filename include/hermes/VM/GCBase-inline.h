@@ -110,8 +110,8 @@ constexpr uint32_t GCBase::minAllocationSize() {
 
 template <typename Acceptor>
 inline void GCBase::markCell(Acceptor &acceptor, GCCell *cell) {
-  SlotVisitor<Acceptor> visitor(acceptor);
-  visitor.visit(
+  SlotVisitor::visit(
+      acceptor,
       cell,
       Metadata::metadataTable[static_cast<size_t>(cell->getKind())].offsets);
 }
@@ -122,8 +122,8 @@ inline void GCBase::markCellWithinRange(
     GCCell *cell,
     const char *begin,
     const char *end) {
-  SlotVisitor<Acceptor> visitor{acceptor};
-  visitor.visitWithinRange(
+  SlotVisitor::visitWithinRange(
+      acceptor,
       cell,
       Metadata::metadataTable[static_cast<size_t>(cell->getKind())].offsets,
       begin,
@@ -132,9 +132,9 @@ inline void GCBase::markCellWithinRange(
 
 template <typename Acceptor>
 inline void GCBase::markCellWithNames(Acceptor &acceptor, GCCell *cell) {
-  SlotVisitorWithNames<Acceptor> visitor{acceptor};
   const CellKind kind = cell->getKind();
-  visitor.visit(
+  SlotVisitor::visitWithNames(
+      acceptor,
       cell,
       Metadata::metadataTable[static_cast<size_t>(kind)].offsets,
       Metadata::metadataTable[static_cast<size_t>(kind)].names);
