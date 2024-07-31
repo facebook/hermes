@@ -3178,7 +3178,7 @@ TEST_F(CDPAgentTest, RuntimeConsoleBuffer) {
         EXPECT_LT(nthLog, kNumLogsToTest);
         EXPECT_EQ(type, "log");
         received[nthLog % kExpectedMaxBufferSize] = true;
-      } catch (const std::exception &e) {
+      } catch (const std::exception &) {
         EXPECT_EQ(type, "warning");
         EXPECT_NE(value.find("discarded"), std::string::npos);
         receivedWarning = true;
