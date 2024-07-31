@@ -71,7 +71,7 @@ Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime) {
   dpf.writable = 0;
   dpf.enumerable = 0;
   dpf.configurable = 0;
-  (void)defineMethod(
+  runtime.functionPrototypeSymbolHasInstance = defineMethod(
       runtime,
       functionPrototype,
       Predefined::getSymbolID(Predefined::SymbolHasInstance),

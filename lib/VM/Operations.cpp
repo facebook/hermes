@@ -1926,6 +1926,16 @@ CallResult<bool> instanceOfOperator_RJS(
   if (LLVM_UNLIKELY(instOfHandlerRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  if (LLVM_LIKELY(
+          (*instOfHandlerRes)->getRaw() ==
+          runtime.functionPrototypeSymbolHasInstance.getHermesValue()
+              .getRaw())) {
+    // functionPrototypeSymbolHasInstance is just a passthrough to
+    // ordinaryHasInstance. Avoid the extra function call.
+    return ordinaryHasInstance(runtime, constructor, object);
+  }
+
   auto instOfHandler = runtime.makeHandle(std::move(*instOfHandlerRes));
 
   // 4. If instOfHandler is not undefined, then
