@@ -1281,7 +1281,6 @@ uint32_t Runtime::getCurrentFrameOffset() const {
 static ExecutionStatus
 raisePlaceholder(Runtime &runtime, Handle<JSError> errorObj, Handle<> message) {
   JSError::recordStackTrace(errorObj, runtime);
-  JSError::setupStack(errorObj, runtime);
   JSError::setMessage(errorObj, runtime, message);
   return runtime.setThrownValue(errorObj.getHermesValue());
 }
