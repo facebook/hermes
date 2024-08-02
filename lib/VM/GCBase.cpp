@@ -340,10 +340,14 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
-  SnapshotRootAcceptor(GCBase &gc, HeapSnapshot &snap)
+  SnapshotRootAcceptor(
+      GCBase &gc,
+      HeapSnapshot &snap,
+      GCBase::SavedNumRootEdges &numRootEdges)
       : SnapshotAcceptor(gc.getPointerBase(), snap),
         WeakAcceptorDefault(gc.getPointerBase()),
-        gc_(gc) {}
+        gc_(gc),
+        numRootEdges_(numRootEdges) {}
 
   void accept(GCCell *&ptr, const char *name) override {
     pointerAccept(ptr, name, false);
@@ -388,6 +392,27 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
 #define ROOT_SECTION(name) "(" #name ")",
 #include "hermes/VM/RootSections.def"
     };
+
+    // If we haven't visited this section before, save its current edge count.
+    auto sectionIdx = static_cast<unsigned>(currentSection_);
+    if (!numRootEdges_[sectionIdx].hasValue()) {
+      numRootEdges_[sectionIdx] = snap_.getCurEdgeCount();
+    } else {
+      // Compare the edge count of this scan with the first scan, if some roots
+      // are newly dropped, we will add dummy edges to make sure all following
+      // scans have the same edge count as the first scan in a single call of
+      // createSnapshot().
+      auto savedEdgeCount = numRootEdges_[sectionIdx].getValue();
+      assert(
+          savedEdgeCount >= snap_.getCurEdgeCount() &&
+          "Unexpected new edges added");
+      const auto id = GCBase::IDTracker::reserved(
+          GCBase::IDTracker::ReservedObjectID::Undefined);
+      for (auto i = snap_.getCurEdgeCount(); i < savedEdgeCount; ++i) {
+        snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
+      }
+    }
+
     snap_.endNode(
         HeapSnapshot::NodeType::Synthetic,
         rootNames[static_cast<unsigned>(currentSection_)],
@@ -405,9 +430,11 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
  private:
   GCBase &gc_;
   llvh::DenseSet<HeapSnapshot::NodeID> seenIDs_;
-  // For unnamed edges, use indices instead.
+  /// For unnamed edges, use indices instead.
   unsigned nextEdge_{0};
   Section currentSection_{Section::InvalidSection};
+  /// Number of edges for each root section.
+  GCBase::SavedNumRootEdges &numRootEdges_;
 
   void pointerAccept(GCCell *ptr, const char *name, bool weak) {
     assert(
@@ -441,8 +468,11 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
 
 } // namespace
 
-void GCBase::createSnapshotImpl(GC &gc, HeapSnapshot &snap) {
-  const auto rootScan = [&gc, &snap, this]() {
+void GCBase::createSnapshotImpl(
+    GC &gc,
+    HeapSnapshot &snap,
+    SavedNumRootEdges &numRootEdges) {
+  const auto rootScan = [&gc, &snap, &numRootEdges, this]() {
     {
       // Make the super root node and add edges to each root section.
       SnapshotRootSectionAcceptor rootSectionAcceptor(getPointerBase(), snap);
@@ -478,7 +508,7 @@ void GCBase::createSnapshotImpl(GC &gc, HeapSnapshot &snap) {
       // Within a root section, there might be duplicates. The root acceptor
       // filters out duplicate edges because there cannot be duplicate edges to
       // nodes reachable from the super root.
-      SnapshotRootAcceptor rootAcceptor(gc, snap);
+      SnapshotRootAcceptor rootAcceptor(gc, snap, numRootEdges);
       markRoots(rootAcceptor, true);
       markWeakRoots(rootAcceptor, /*markLongLived*/ true);
     }
@@ -575,7 +605,11 @@ void GCBase::createSnapshot(GC &gc, llvh::raw_ostream &os) {
   // them to create a HeapSnapShot instance in the second pass.
   JSONEmitter dummyJSON{llvh::nulls()};
   HeapSnapshot dummySnap{dummyJSON, 0, 0, 0, gcCallbacks_.getStackTracesTree()};
-  createSnapshotImpl(gc, dummySnap);
+  // Array for saving the number of edges for each root section. We set the
+  // value the first time we visit a root section, and make sure the same number
+  // of edges are added in a single call of this function.
+  SavedNumRootEdges numRootEdges;
+  createSnapshotImpl(gc, dummySnap, numRootEdges);
 
   // Second pass, write out the real snapshot with the correct node_count and
   // edge_count.
@@ -586,7 +620,7 @@ void GCBase::createSnapshot(GC &gc, llvh::raw_ostream &os) {
       dummySnap.getEdgeCount(),
       dummySnap.getTraceFunctionCount(),
       gcCallbacks_.getStackTracesTree()};
-  createSnapshotImpl(gc, snap);
+  createSnapshotImpl(gc, snap, numRootEdges);
   // Check if the node/edge counts of the two passes are equal.
   assert(
       dummySnap.getNodeCount() == snap.getNodeCount() &&

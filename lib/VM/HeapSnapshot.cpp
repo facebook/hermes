@@ -56,8 +56,7 @@ HeapSnapshot::HeapSnapshot(
 }
 
 HeapSnapshot::~HeapSnapshot() {
-  assert(
-      edgeCount_ == expectedEdges_ && "Fewer edges added than were expected");
+  assert(edgeCount_ == expectedEdges_ && "Unexpected edges count");
   emitStrings();
   json_.closeDict(); // top level
 }
@@ -96,13 +95,11 @@ void HeapSnapshot::endSection(Section section) {
 }
 
 void HeapSnapshot::beginNode() {
-  if (nextSection_ == Section::Edges) {
-    // If the edges are being emitted, ignore node output.
-    return;
-  }
-  assert(nextSection_ == Section::Nodes && sectionOpened_);
   // Reset the edge counter.
   currEdgeCount_ = 0;
+  assert(
+      nextSection_ == Section::Edges ||
+      (nextSection_ == Section::Nodes && sectionOpened_));
 }
 
 void HeapSnapshot::endNode(
@@ -139,10 +136,10 @@ void HeapSnapshot::addNamedEdge(
     EdgeType type,
     llvh::StringRef name,
     NodeID toNode) {
+  // If we're emitting nodes, only count the number of edges being processed,
+  // but don't actually emit them.
+  currEdgeCount_++;
   if (nextSection_ == Section::Nodes) {
-    // If we're emitting nodes, only count the number of edges being processed,
-    // but don't actually emit them.
-    currEdgeCount_++;
     return;
   }
   assert(edgeCount_ < expectedEdges_ && "Added more edges than were expected");
@@ -162,10 +159,10 @@ void HeapSnapshot::addIndexedEdge(
     EdgeType type,
     EdgeIndex edgeIndex,
     NodeID toNode) {
+  // If we're emitting nodes, only count the number of edges being processed,
+  // but don't actually emit them.
+  currEdgeCount_++;
   if (nextSection_ == Section::Nodes) {
-    // If we're emitting nodes, only count the number of edges being processed,
-    // but don't actually emit them.
-    currEdgeCount_++;
     return;
   }
   assert(edgeCount_ < expectedEdges_ && "Added more edges than were expected");
