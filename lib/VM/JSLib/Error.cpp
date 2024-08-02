@@ -14,6 +14,7 @@
 
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -36,7 +37,7 @@ Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
       0);
 
   // Error.prototype.xxx properties.
-  // Error.prototype has two own properties: name and message.
+  // Error.prototype has three own properties: name, message, and stack.
   auto defaultName = runtime.getPredefinedString(Predefined::Error);
   defineProperty(
       runtime,
@@ -50,6 +51,49 @@ Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
       errorPrototype,
       Predefined::getSymbolID(Predefined::message),
       runtime.makeHandle(HermesValue::encodeStringValue(defaultMessage)));
+
+  auto getter = NativeFunction::create(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      nullptr,
+      errorStackGetter,
+      Predefined::getSymbolID(Predefined::emptyString),
+      0,
+      Runtime::makeNullHandle<JSObject>());
+
+  auto setter = NativeFunction::create(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      nullptr,
+      errorStackSetter,
+      Predefined::getSymbolID(Predefined::emptyString),
+      1,
+      Runtime::makeNullHandle<JSObject>());
+
+  // Save the accessors on the runtime so we can use them for captureStackTrace.
+  runtime.jsErrorStackAccessor =
+      PropertyAccessor::create(runtime, getter, setter);
+
+  auto accessor =
+      Handle<PropertyAccessor>::vmcast(&runtime.jsErrorStackAccessor);
+
+  DefinePropertyFlags dpf{};
+  dpf.setEnumerable = 1;
+  dpf.setConfigurable = 1;
+  dpf.setGetter = 1;
+  dpf.setSetter = 1;
+  dpf.enumerable = 0;
+  dpf.configurable = 1;
+
+  auto stackRes = JSObject::defineOwnProperty(
+      errorPrototype,
+      runtime,
+      Predefined::getSymbolID(Predefined::stack),
+      dpf,
+      accessor);
+  (void)stackRes;
+
+  assert(*stackRes && "Failed to define stack accessor");
 
   auto cons = defineSystemConstructor<JSError>(
       runtime,
@@ -120,13 +164,6 @@ static CallResult<HermesValue> constructErrorObject(
 
   // Record the stack trace, skipping this entry.
   JSError::recordStackTrace(selfHandle, runtime, true);
-
-  // Initialize stack accessor.
-  if (LLVM_UNLIKELY(
-          JSError::setupStack(selfHandle, runtime) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
 
   // new Error(message).
   // Only proceed when 'typeof message' isn't undefined.
@@ -322,10 +359,24 @@ errorCaptureStackTrace(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // Initialize the `stack` accessor on the target object.
-  if (LLVM_UNLIKELY(
-          JSError::setupStack(targetHandle, runtime) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  DefinePropertyFlags dpf{};
+  dpf.setEnumerable = 1;
+  dpf.setConfigurable = 1;
+  dpf.setGetter = 1;
+  dpf.setSetter = 1;
+  dpf.enumerable = 0;
+  dpf.configurable = 1;
+
+  auto stackRes = JSObject::defineOwnProperty(
+      targetHandle,
+      runtime,
+      Predefined::getSymbolID(Predefined::stack),
+      dpf,
+      runtime.jsErrorStackAccessor);
+
+  // Ignore failures to set the "stack" property as other engines do.
+  if (LLVM_UNLIKELY(stackRes == ExecutionStatus::EXCEPTION)) {
+    runtime.clearThrownValue();
   }
 
   return HermesValue::encodeUndefinedValue();

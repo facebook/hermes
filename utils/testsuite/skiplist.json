@@ -216,6 +216,12 @@
     },
     {
       "paths": [
+        "mjsunit/regress/regress-3404.js"
+      ],
+      "comment": "Error stack getter is on Error.prototype in Hermes."
+    },
+    {
+      "paths": [
         "test262/test/language/expressions/arrow-function/dflt-params-ref-later.js",
         "test262/test/language/expressions/arrow-function/dflt-params-ref-self.js",
         "test262/test/language/expressions/arrow-function/eval-var-scope-syntax-err.js"
