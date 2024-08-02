@@ -159,15 +159,71 @@ bool runOnVariable(Module *M, Variable *var) {
   return changed;
 }
 
+/// If the given scope \p CSI does not escape, we can promote all the variables
+/// inside it, regardless of whether they are captured elsewhere.
+bool runOnCreateScope(CreateScopeInst *CSI) {
+  // Check that CSI is only used as the scope operand of loads and stores.
+  // Anything else may cause it to escape.
+  for (auto *U : CSI->getUsers()) {
+    if (llvh::isa<LoadFrameInst>(U))
+      continue;
+
+    // For stores, ensure that the scope is not used as the stored value.
+    if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(U))
+      if (SFI->getValue() != CSI)
+        continue;
+
+    return false;
+  }
+
+  IRBuilder builder(CSI->getFunction());
+  IRBuilder::InstructionDestroyer destroyer;
+
+  // Map from a Variable to the alloca we have created for it.
+  llvh::SmallDenseMap<Variable *, AllocStackInst *> allocs;
+
+  for (auto *U : CSI->getUsers()) {
+    auto *var = llvh::isa<LoadFrameInst>(U)
+        ? llvh::cast<LoadFrameInst>(U)->getLoadVariable()
+        : llvh::cast<StoreFrameInst>(U)->getVariable();
+
+    // Create an AllocStackInst for this variable if one doesn't exist.
+    auto *&alloc = allocs[var];
+    if (!alloc) {
+      builder.setInsertionPoint(CSI);
+      alloc = builder.createAllocStackInst(var->getName(), var->getType());
+    }
+    builder.setInsertionPoint(U);
+
+    // Replace the frame operation with one to the stack location.
+    auto *stackOp = llvh::isa<LoadFrameInst>(U)
+        ? (Instruction *)builder.createLoadStackInst(alloc)
+        : builder.createStoreStackInst(
+              llvh::cast<StoreFrameInst>(U)->getValue(), alloc);
+    U->replaceAllUsesWith(stackOp);
+    destroyer.add(U);
+  }
+  destroyer.add(CSI);
+
+  return true;
+}
+
 /// Promotes all non-captured variables into stack allocations.
 /// Replaces usage of variables with known literal values.
 /// Creates stack copies of variables that are only stored to from the owning
 /// function, to allow local values to be forwarded.
 bool runSimpleStackPromotion(Module *M) {
   bool changed = false;
-  for (auto &VS : M->getVariableScopes())
+  for (auto &VS : M->getVariableScopes()) {
+    // If we can prove a particular instance of this scope does not escape,
+    // promote that instance in its entirety.
+    for (auto *U : VS.getUsers())
+      if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(U))
+        changed |= runOnCreateScope(CSI);
+
     for (Variable *var : VS.getVariables())
       changed |= runOnVariable(M, var);
+  }
   changed |= deleteUnusedVariables(M);
   return changed;
 }
