@@ -241,8 +241,8 @@ ExecutionStatus JSError::setupStack(
         1,
         Runtime::makeNullHandle<JSObject>());
 
-    runtime.jsErrorStackAccessor = vmcast<PropertyAccessor>(
-        PropertyAccessor::create(runtime, getter, setter));
+    runtime.jsErrorStackAccessor =
+        PropertyAccessor::create(runtime, getter, setter);
   }
 
   auto accessor =

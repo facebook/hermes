@@ -379,9 +379,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       Predefined::getSymbolID(Predefined::length),
       clearConfigurableDPF,
       Runtime::getUndefinedValue()));
-  runtime.throwTypeErrorAccessor =
-      vmcast<PropertyAccessor>(PropertyAccessor::create(
-          runtime, throwTypeErrorFunction, throwTypeErrorFunction));
+  runtime.throwTypeErrorAccessor = PropertyAccessor::create(
+      runtime, throwTypeErrorFunction, throwTypeErrorFunction);
 
   // Define the 'parseInt' function.
   runtime.parseIntFunction = defineGlobalFunc(

@@ -21,12 +21,12 @@ void PropertyAccessorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("setter", &self->setter);
 }
 
-HermesValue PropertyAccessor::create(
+PseudoHandle<PropertyAccessor> PropertyAccessor::create(
     Runtime &runtime,
     Handle<Callable> getter,
     Handle<Callable> setter) {
-  auto *cell = runtime.makeAFixed<PropertyAccessor>(runtime, getter, setter);
-  return HermesValue::encodeObjectValue(cell);
+  return createPseudoHandle(
+      runtime.makeAFixed<PropertyAccessor>(runtime, getter, setter));
 }
 
 } // namespace vm
