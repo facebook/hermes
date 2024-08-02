@@ -82,7 +82,7 @@ static m::runtime::ObjectPreview generateArrayPreview(
     try {
       desc = generatePropertyPreview(
           runtime, indexString, obj.getValueAtIndex(runtime, i));
-    } catch (const jsi::JSError &err) {
+    } catch (const jsi::JSError &) {
       desc.name = indexString;
       desc.type = "string";
       desc.value = "<Exception>";
@@ -121,7 +121,7 @@ static m::runtime::ObjectPreview generateObjectPreview(
       // Chrome instead detects getters and makes you click to invoke.
       desc = generatePropertyPreview(
           runtime, propName.utf8(runtime), obj.getProperty(runtime, propName));
-    } catch (const jsi::JSError &err) {
+    } catch (const jsi::JSError &) {
       desc.name = propName.utf8(runtime);
       desc.type = "string";
       desc.value = "<Exception>";

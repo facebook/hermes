@@ -2793,7 +2793,7 @@ TEST_F(ConnectionTests, testConsoleBuffer) {
         EXPECT_EQ(note.type, "log");
         EXPECT_EQ(note.args.size(), 1);
         received[nthLog % kExpectedMaxBufferSize] = true;
-      } catch (const std::exception &e) {
+      } catch (const std::exception &) {
         EXPECT_EQ(note.type, "warning");
         EXPECT_EQ(note.args.size(), 1);
         EXPECT_NE((*note.args[0].value).find("discarded"), std::string::npos);
