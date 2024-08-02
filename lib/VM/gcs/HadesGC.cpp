@@ -1436,17 +1436,23 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
   }
   GCCycle cycle{*this, "GC Old Gen (Direct)"};
 
-  assert(!ygCollectionStats_ && "Cannot collect OG during a YG collection");
-  CollectionStats waitingStats(*this, std::move(cause), "waiting");
-  waitingStats.beginCPUTimeSection();
-  waitingStats.setBeginTime();
+  llvh::Optional<CollectionStats> waitingStats;
+  if (ygCollectionStats_) {
+    ygCollectionStats_->addCollectionType("waiting");
+  } else {
+    waitingStats.emplace(*this, std::move(cause), "waiting");
+    waitingStats->beginCPUTimeSection();
+    waitingStats->setBeginTime();
+  }
 
   while (concurrentPhase_ != Phase::None)
     incrementalCollect(false);
 
-  waitingStats.endCPUTimeSection();
-  waitingStats.setEndTime();
-  recordGCStats(std::move(waitingStats).getEvent(), true);
+  if (waitingStats) {
+    waitingStats->endCPUTimeSection();
+    waitingStats->setEndTime();
+    recordGCStats(std::move(*waitingStats).getEvent(), true);
+  }
 }
 
 void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
@@ -2234,8 +2240,9 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
     return newObj;
   }
 
-  // TODO(T109282643): Block on any pending OG collections here in case they
-  // free up space.
+  // Can't expand to any more segments, wait for an old gen collection to
+  // finish and possibly free up memory.
+  gc_.waitForCollectionToFinish("full heap");
 
   // Repeat the search in case the collection did free memory.
   if (GCCell *cell = search(sz)) {
