@@ -138,7 +138,7 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
   if (!self->attached() || self->external_) {
     return;
   }
-  if (uint8_t *data = self->data_.get(gc)) {
+  if (uint8_t *data = self->data_) {
     // While this is an internal edge, it is to a native node which is not
     // automatically added by the metadata.
     snap.addNamedEdge(
@@ -155,7 +155,7 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   if (!self->attached() || self->external_) {
     return;
   }
-  if (uint8_t *data = self->data_.get(gc)) {
+  if (uint8_t *data = self->data_) {
     // Add the native node before the JSArrayBuffer node.
     snap.beginNode();
     snap.endNode(
@@ -169,7 +169,7 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
 #endif
 
 void JSArrayBuffer::freeInternalBuffer(GC &gc) {
-  uint8_t *data = data_.get(gc);
+  uint8_t *data = data_;
   assert(attached() && "Buffer must be attached");
   assert((data || size_ == 0) && "Null buffers must have zero size");
   assert(!external_ && "External buffer cannot be freed");
@@ -226,7 +226,7 @@ ExecutionStatus JSArrayBuffer::createDataBlock(
   }
 
   self->attached_ = true;
-  self->data_.set(runtime, data);
+  self->data_ = data;
   self->size_ = size;
   self->external_ = false;
   runtime.getHeap().creditExternalMemory(*self, size);
@@ -270,7 +270,7 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
   self->attached_ = true;
   self->size_ = size;
   self->external_ = true;
-  self->data_.set(runtime, data);
+  self->data_ = data;
   return ExecutionStatus::RETURNED;
 }
 

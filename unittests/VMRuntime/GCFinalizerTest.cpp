@@ -28,10 +28,8 @@ using testhelpers::DummyObject;
 static DummyObject *
 createWithFinalizeCount(PointerBase &base, GC &gc, int *numFinalized) {
   auto *obj = DummyObject::create(gc, base);
-  obj->finalizerCallback.set(
-      gc, new DummyObject::Callback([numFinalized]() mutable {
-        (*numFinalized)++;
-      }));
+  obj->finalizerCallback = std::make_unique<DummyObject::Callback>(
+      [numFinalized]() mutable { (*numFinalized)++; });
   return obj;
 }
 

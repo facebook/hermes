@@ -149,9 +149,9 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   // Deal with JSFunctions that has a source String ID. That implies this
   // function need a non-default toString implementation.
   if (auto jsFunc = dyn_vmcast<JSFunction>(*func)) {
-    if (auto sourceID = jsFunc->getCodeBlock(runtime)->getFunctionSourceID()) {
+    if (auto sourceID = jsFunc->getCodeBlock()->getFunctionSourceID()) {
       StringPrimitive *source =
-          jsFunc->getCodeBlock(runtime)
+          jsFunc->getCodeBlock()
               ->getRuntimeModule()
               ->getStringPrimFromStringIDMayAllocate(*sourceID);
       // Empty source marks implementation-hidden function, fabricate a source
@@ -173,9 +173,9 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   }
 
   SmallU16String<64> strBuf{};
-  if (Callable::isAsyncFunction(runtime, *func)) {
+  if (Callable::isAsyncFunction(*func)) {
     strBuf.append("async function ");
-  } else if (Callable::isGeneratorFunction(runtime, *func)) {
+  } else if (Callable::isGeneratorFunction(*func)) {
     strBuf.append("function *");
   } else {
     strBuf.append("function ");

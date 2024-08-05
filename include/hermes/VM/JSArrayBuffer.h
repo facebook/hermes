@@ -89,7 +89,7 @@ class JSArrayBuffer final : public JSObject {
     if (!runtime.hasArrayBuffer())
       hermes_fatal("Illegal access to ArrayBuffer");
     assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
-    return data_.get(runtime);
+    return data_;
   }
 
   /// Get the size of this buffer.
@@ -130,7 +130,7 @@ class JSArrayBuffer final : public JSObject {
       Handle<> value);
 
   /// data_, size_, and external_ are only valid when attached_ is true.
-  XorPtr<uint8_t, XorPtrKeyID::ArrayBufferData> data_;
+  uint8_t *data_;
   size_type size_;
   bool external_;
   bool attached_;

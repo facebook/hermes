@@ -187,10 +187,10 @@ class Callable : public JSObject {
       WritablePrototype writablePrototype);
 
   /// \return true if \p fn is a generator function.
-  static bool isGeneratorFunction(Runtime &runtime, Callable *fn);
+  static bool isGeneratorFunction(Callable *fn);
 
   /// \return true if \p fn is an async function.
-  static bool isAsyncFunction(Runtime &runtime, Callable *fn);
+  static bool isAsyncFunction(Callable *fn);
 
   /// Execute this function with no arguments. This is just a convenience
   /// helper method; it actually invokes the interpreter recursively.
@@ -1044,7 +1044,7 @@ class JSFunction : public Callable {
   friend void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
   /// CodeBlock to execute when called.
-  XorPtr<CodeBlock, XorPtrKeyID::JSFunctionCodeBlock> codeBlock_;
+  CodeBlock *codeBlock_;
 
   static constexpr auto kHasFinalizer = HasFinalizer::No;
 
@@ -1060,7 +1060,7 @@ class JSFunction : public Callable {
       Handle<Environment> environment,
       CodeBlock *codeBlock)
       : Callable(runtime, *parent, *clazz, environment),
-        codeBlock_(runtime, codeBlock),
+        codeBlock_(codeBlock),
         domain_(runtime, *domain, runtime.getHeap()) {
     assert(
         !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
@@ -1120,12 +1120,12 @@ class JSFunction : public Callable {
   }
 
   /// \return the code block containing the function code.
-  CodeBlock *getCodeBlock(Runtime &runtime) const {
-    return codeBlock_.get(runtime);
+  CodeBlock *getCodeBlock() const {
+    return codeBlock_;
   }
 
-  RuntimeModule *getRuntimeModule(Runtime &runtime) const {
-    return getCodeBlock(runtime)->getRuntimeModule();
+  RuntimeModule *getRuntimeModule() const {
+    return getCodeBlock()->getRuntimeModule();
   }
 
   /// Add a source location for a function in a heap snapshot.

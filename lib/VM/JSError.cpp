@@ -874,7 +874,7 @@ static const CodeBlock *getLeafCodeBlock(
   const Callable *callable = callableHandle.get();
   while (callable) {
     if (auto *asFunction = dyn_vmcast<const JSFunction>(callable)) {
-      return asFunction->getCodeBlock(runtime);
+      return asFunction->getCodeBlock();
     }
     if (auto *asBoundFunction = dyn_vmcast<const BoundFunction>(callable)) {
       callable = asBoundFunction->getTarget(runtime);

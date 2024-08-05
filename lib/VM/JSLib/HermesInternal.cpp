@@ -435,7 +435,7 @@ static const CodeBlock *getLeafCodeBlock(
     callable = bound->getTarget(runtime);
   }
   if (auto *asFunction = dyn_vmcast<const JSFunction>(callable)) {
-    return asFunction->getCodeBlock(runtime);
+    return asFunction->getCodeBlock();
   }
   return nullptr;
 }

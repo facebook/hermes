@@ -30,7 +30,7 @@ StackFramePtrT<isConst>::getCalleeCodeBlock(Runtime &runtime) const {
   auto &ref = getCalleeClosureOrCBRef();
   if (ref.isObject()) {
     if (auto *func = dyn_vmcast<JSFunction>(ref))
-      return func->getCodeBlock(runtime);
+      return func->getCodeBlock();
     else
       return nullptr;
   } else {

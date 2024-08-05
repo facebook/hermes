@@ -37,9 +37,8 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
   static CodeCoverageProfiler::FuncInfo getFuncInfo(
       Runtime &runtime,
       Handle<JSFunction> func) {
-    auto bcProvider =
-        func->getCodeBlock(runtime)->getRuntimeModule()->getBytecode();
-    auto functionId = func->getCodeBlock(runtime)->getFunctionID();
+    auto bcProvider = func->getCodeBlock()->getRuntimeModule()->getBytecode();
+    auto functionId = func->getCodeBlock()->getFunctionID();
     auto debugInfo = bcProvider->getDebugInfo();
     auto debugOffsets = bcProvider->getDebugOffsets(functionId);
     if (debugInfo && debugOffsets &&
@@ -55,8 +54,7 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
     const uint32_t segmentID = bcProvider->getSegmentID();
     const uint32_t funcVirtualOffset =
         bcProvider->getVirtualOffsetForFunction(functionId);
-    const std::string sourceURL =
-        func->getRuntimeModule(runtime)->getSourceURL();
+    const std::string sourceURL = func->getRuntimeModule()->getSourceURL();
     return {segmentID, funcVirtualOffset, sourceURL};
   }
 

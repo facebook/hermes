@@ -73,9 +73,9 @@ CallResult<PseudoHandle<JSObject>> Callable::_newObjectImpl(
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   // lazy functions can be Bound or JS Functions.
   if (auto jsFun = Handle<JSFunction>::dyn_vmcast(fn)) {
-    const CodeBlock *codeBlock = jsFun->getCodeBlock(runtime);
+    const CodeBlock *codeBlock = jsFun->getCodeBlock();
     // Create empty object for prototype.
-    auto prototypeParent = Callable::isGeneratorFunction(runtime, *jsFun)
+    auto prototypeParent = Callable::isGeneratorFunction(*jsFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
@@ -86,7 +86,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     // generator functions.
     auto prototypeObjectHandle =
         codeBlock->getHeaderFlags().isCallProhibited(/* construct */ true) &&
-            !Callable::isGeneratorFunction(runtime, *jsFun)
+            !Callable::isGeneratorFunction(*jsFun)
         ? Runtime::makeNullHandle<JSObject>()
         : runtime.makeHandle(JSObject::create(runtime, prototypeParent));
 
@@ -112,7 +112,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         "failed to define length and name of bound function");
     (void)res;
   } else if (auto nativeFun = Handle<NativeJSFunction>::dyn_vmcast(fn)) {
-    auto prototypeParent = Callable::isGeneratorFunction(runtime, *nativeFun)
+    auto prototypeParent = Callable::isGeneratorFunction(*nativeFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
@@ -124,7 +124,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     auto prototypeObjectHandle =
         nativeFun->getFunctionInfo()->prohibit_invoke ==
                 ProhibitInvoke::Construct &&
-            !Callable::isGeneratorFunction(runtime, *nativeFun)
+            !Callable::isGeneratorFunction(*nativeFun)
         ? Runtime::makeNullHandle<JSObject>()
         : runtime.makeHandle(JSObject::create(runtime, prototypeParent));
 
@@ -200,7 +200,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.configurable = 0;
     DEFINE_PROP(selfHandle, P::prototype, prototypeObjectHandle);
 
-    if (LLVM_LIKELY(!Callable::isGeneratorFunction(runtime, *selfHandle))) {
+    if (LLVM_LIKELY(!Callable::isGeneratorFunction(*selfHandle))) {
       // Set the 'constructor' property in the prototype object.
       // This must not be set for GeneratorFunctions, because
       // prototypes must not point back to their constructors.
@@ -218,20 +218,18 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 #undef DEFINE_PROP
 }
 
-bool Callable::isGeneratorFunction(Runtime &runtime, Callable *fn) {
+bool Callable::isGeneratorFunction(Callable *fn) {
   if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
-    return jsFun->getCodeBlock(runtime)->getHeaderFlags().kind ==
-        FuncKind::Generator;
+    return jsFun->getCodeBlock()->getHeaderFlags().kind == FuncKind::Generator;
   } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
     return nativeFun->getFunctionInfo()->kind == FuncKind::Generator;
   }
   return false;
 }
 
-bool Callable::isAsyncFunction(Runtime &runtime, Callable *fn) {
+bool Callable::isAsyncFunction(Callable *fn) {
   if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
-    return jsFun->getCodeBlock(runtime)->getHeaderFlags().kind ==
-        FuncKind::Async;
+    return jsFun->getCodeBlock()->getHeaderFlags().kind == FuncKind::Async;
   } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
     return nativeFun->getFunctionInfo()->kind == FuncKind::Async;
   }
@@ -1312,10 +1310,10 @@ void JSFunction::addLocationToSnapshot(
     HeapSnapshot &snap,
     HeapSnapshot::NodeID id,
     GC &gc) const {
-  if (auto location = codeBlock_.get(gc)->getSourceLocationForFunction()) {
+  if (auto location = codeBlock_->getSourceLocationForFunction()) {
     snap.addLocation(
         id,
-        codeBlock_.get(gc)->getRuntimeModule()->getScriptID(),
+        codeBlock_->getRuntimeModule()->getScriptID(),
         location->line,
         location->column);
   }
@@ -1327,7 +1325,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime &runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  result = runtime.interpretFunction(self->getCodeBlock(runtime));
+  result = runtime.interpretFunction(self->getCodeBlock());
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1341,7 +1339,7 @@ std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   if (!funcName.empty()) {
     return funcName;
   }
-  return self->codeBlock_.get(gc)->getNameString(gc.getCallbacks());
+  return self->codeBlock_->getNameString(gc.getCallbacks());
 }
 
 void JSFunction::_snapshotAddEdgesImpl(
@@ -1356,7 +1354,7 @@ void JSFunction::_snapshotAddEdgesImpl(
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Shortcut,
       "codeBlock",
-      gc.getIDTracker().getNativeID(self->codeBlock_.get(gc)));
+      gc.getIDTracker().getNativeID(self->codeBlock_));
 }
 
 void JSFunction::_snapshotAddLocationsImpl(

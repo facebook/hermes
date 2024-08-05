@@ -1657,7 +1657,7 @@ tailCall:
         runtime.pushCallStack(curCodeBlock, ip);
 #endif
 
-        CodeBlock *calleeBlock = func->getCodeBlock(runtime);
+        CodeBlock *calleeBlock = func->getCodeBlock();
         CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
