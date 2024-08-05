@@ -142,8 +142,17 @@ struct ExecuteOptions {
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 
-  /// Run the sampling profiler.
-  bool sampleProfiling{false};
+  enum class SampleProfilingMode {
+    /// No sampling profiler.
+    None,
+    /// Chrome devtools format.
+    Chrome,
+    /// Tracery format.
+    Tracery,
+  };
+
+  /// If not None, run sampling profiler and dump the result.
+  SampleProfilingMode sampleProfiling{SampleProfilingMode::None};
 
   /// Start tracking heap objects before executing bytecode.
   bool heapTimeline{false};

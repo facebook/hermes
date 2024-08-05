@@ -93,7 +93,9 @@ static int executeHBCBytecodeFromCL(
           .withES6Class(flags.EvalES6Class)
           .withIntl(flags.Intl)
           .withMicrotaskQueue(flags.MicrotaskQueue)
-          .withEnableSampleProfiling(flags.SampleProfiling)
+          .withEnableSampleProfiling(
+              flags.SampleProfiling !=
+              ExecuteOptions::SampleProfilingMode::None)
           .withRandomizeMemoryLayout(flags.RandomizeMemoryLayout)
           .withTrackIO(flags.TrackBytecodeIO)
           .withEnableHermesInternal(flags.EnableHermesInternal)

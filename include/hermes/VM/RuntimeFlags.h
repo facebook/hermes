@@ -11,6 +11,7 @@
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/CommandLine.h"
 
+#include "hermes/ConsoleHost/ConsoleHost.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/MemorySizeParser.h"
 #include "hermes/Support/RandomSeedParser.h"
@@ -86,10 +87,19 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(GCCategory),
       llvh::cl::init(vm::GCConfig::getDefaultOccupancyTarget())};
 
-  llvh::cl::opt<bool> SampleProfiling{
+  llvh::cl::opt<ExecuteOptions::SampleProfilingMode> SampleProfiling{
       "sample-profiling",
-      llvh::cl::init(false),
+      llvh::cl::init(ExecuteOptions::SampleProfilingMode::None),
       llvh::cl::desc("Enable sampling profiler"),
+      values(
+          clEnumValN(
+              ExecuteOptions::SampleProfilingMode::Chrome,
+              "chrome",
+              "Dump profile in Chrome DevTools format"),
+          clEnumValN(
+              ExecuteOptions::SampleProfilingMode::Tracery,
+              "tracery",
+              "Dump profile in Tracery format")),
       llvh::cl::cat(RuntimeCategory)};
 
   llvh::cl::opt<MemorySize, false, MemorySizeParser> MaxHeapSize{

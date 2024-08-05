@@ -419,7 +419,7 @@ bool executeHBCBytecodeImpl(
   }
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  if (options.sampleProfiling) {
+  if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
     vm::SamplingProfiler::enable();
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
@@ -434,9 +434,17 @@ bool executeHBCBytecodeImpl(
       vm::Runtime::makeNullHandle<vm::Environment>());
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  if (options.sampleProfiling) {
-    vm::SamplingProfiler::disable();
-    vm::SamplingProfiler::dumpChromeTraceGlobal(llvh::errs());
+  switch (options.sampleProfiling) {
+    case ExecuteOptions::SampleProfilingMode::None:
+      break;
+    case ExecuteOptions::SampleProfilingMode::Chrome:
+      vm::SamplingProfiler::disable();
+      runtime->samplingProfiler->serializeInDevToolsFormat(llvh::errs());
+      break;
+    case ExecuteOptions::SampleProfilingMode::Tracery:
+      vm::SamplingProfiler::disable();
+      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
+      break;
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
