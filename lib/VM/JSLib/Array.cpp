@@ -3253,19 +3253,31 @@ arrayPrototypeMap(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<JSArray> A;
+    PinnedValue<> k;
+    PinnedValue<> kValue;
+    PinnedValue<JSObject> descObj;
+    PinnedValue<SymbolID> tmpPropNameStorage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.O = vmcast<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto intRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3284,81 +3296,90 @@ arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
+  lv.A = std::move(*arrRes);
 
   // Index in the original array.
-  MutableHandle<> k{runtime, HermesValue::encodeTrustedNumberValue(0)};
+  uint64_t k = 0;
   // Index to copy to in the new array.
   uint32_t to = 0;
 
   // Value at index k.
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
-  MutableHandle<JSObject> descObjHandle{runtime};
-  MutableHandle<> kValue{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
+  MutableHandle<JSObject> descObjHandle{lv.descObj};
 
   auto marker = gcScope.createMarker();
-  while (k->getDouble() < len) {
+  while (k < len) {
     gcScope.flushToMarker(marker);
 
     ComputedPropertyDescriptor desc;
+    lv.k = HermesValue::encodeTrustedNumberValue(k);
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
+        lv.O, runtime, lv.k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
+        lv.O, runtime, descObjHandle, tmpPropNameStorage, desc, lv.k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
-      kValue = std::move(*propRes);
+      lv.kValue = std::move(*propRes);
       // Call the callback.
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
           args.getArgHandle(1),
-          kValue.get(),
-          k.get(),
-          O.getHermesValue());
+          lv.kValue.get(),
+          lv.k.get(),
+          lv.O.getHermesValue());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       if (toBoolean(callRes->get())) {
         // Add the element to the array if it passes the callback.
-        JSArray::setElementAt(A, runtime, to, kValue);
+        JSArray::setElementAt(lv.A, runtime, to, lv.kValue);
         ++to;
       }
     }
 
-    k = HermesValue::encodeTrustedNumberValue(k->getDouble() + 1);
+    k += 1;
   }
 
   if (LLVM_UNLIKELY(
-          JSArray::setLengthProperty(A, runtime, to) ==
+          JSArray::setLengthProperty(lv.A, runtime, to) ==
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  return A.getHermesValue();
+  return lv.A.getHermesValue();
 }
 
 CallResult<HermesValue>
 arrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<> value;
+    PinnedValue<> k;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.O = vmcast<JSObject>(*objRes);
   // Get the length.
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto lenRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   double len = *lenRes;
   // Get the value to be filled.
-  MutableHandle<> value(runtime, args.getArg(0));
+  lv.value = args.getArg(0);
   // Get the relative start and end.
   auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
@@ -3382,39 +3403,51 @@ arrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
   // Actual end index.
   double actualEnd = relativeEnd < 0 ? std::max(len + relativeEnd, 0.0)
                                      : std::min(relativeEnd, len);
-  MutableHandle<> k(
-      runtime, HermesValue::encodeTrustedNumberValue(actualStart));
+  lv.k = HermesValue::encodeTrustedNumberValue(actualStart);
   auto marker = gcScope.createMarker();
-  while (k->getDouble() < actualEnd) {
+  while (lv.k->getDouble() < actualEnd) {
     if (LLVM_UNLIKELY(
             JSObject::putComputed_RJS(
-                O, runtime, k, value, PropOpFlags().plusThrowOnError()) ==
+                lv.O,
+                runtime,
+                lv.k,
+                lv.value,
+                PropOpFlags().plusThrowOnError()) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    k.set(HermesValue::encodeTrustedNumberValue(k->getDouble() + 1));
+    lv.k = HermesValue::encodeTrustedNumberValue(lv.k->getDouble() + 1);
     gcScope.flushToMarker(marker);
   }
-  return O.getHermesValue();
+  return lv.O.getHermesValue();
 }
 
 static CallResult<HermesValue>
 findHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<> k;
+    PinnedValue<> kValue;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   GCScope gcScope{runtime};
   bool findIndex = ctx != nullptr;
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.O = vmcast<JSObject>(*objRes);
 
   // Get the length.
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto intRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3427,26 +3460,23 @@ findHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
 
   // "this" argument to the callback function.
   auto T = args.getArgHandle(1);
-  MutableHandle<> kHandle{runtime};
-  MutableHandle<> kValue{runtime};
   auto marker = gcScope.createMarker();
   for (size_t i = 0; i < len; ++i) {
-    kHandle =
-        HermesValue::encodeTrustedNumberValue(reverse ? (len - i - 1) : i);
+    lv.k = HermesValue::encodeTrustedNumberValue(reverse ? (len - i - 1) : i);
     gcScope.flushToMarker(marker);
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getComputed_RJS(O, runtime, kHandle)) ==
+            (propRes = JSObject::getComputed_RJS(lv.O, runtime, lv.k)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    kValue = std::move(*propRes);
+    lv.kValue = std::move(*propRes);
     auto callRes = Callable::executeCall3(
         predicate,
         runtime,
         T,
-        kValue.getHermesValue(),
-        kHandle.getHermesValue(),
-        O.getHermesValue());
+        lv.kValue.getHermesValue(),
+        lv.k.getHermesValue(),
+        lv.O.getHermesValue());
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3454,7 +3484,7 @@ findHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
     if (testResult) {
       // If this is index find variant, then return the index k.
       // Else, return the value at the index k.
-      return findIndex ? kHandle.getHermesValue() : kValue.getHermesValue();
+      return findIndex ? lv.k.getHermesValue() : lv.kValue.getHermesValue();
     }
   }
 
@@ -3479,19 +3509,30 @@ arrayPrototypeFindLast(void *ctx, Runtime &runtime, NativeArgs args) {
 /// \param reverse set to true to reduceRight, false to reduce from the left.
 static inline CallResult<HermesValue>
 reduceHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<JSObject> descObj;
+    PinnedValue<SymbolID> nameTmpStorage;
+    PinnedValue<> k;
+    PinnedValue<> accumulator;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.O = vmcast<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto intRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3512,49 +3553,47 @@ reduceHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   }
 
   // Current index in the reduction iteration.
-  MutableHandle<> k{
-      runtime, HermesValue::encodeTrustedNumberValue(reverse ? len - 1 : 0)};
-  MutableHandle<SymbolID> kNameTmpStorage{runtime};
-  MutableHandle<JSObject> kDescObjHandle{runtime};
-
-  MutableHandle<> accumulator{runtime};
+  double k = reverse ? (len - 1) : 0;
+  MutableHandle<SymbolID> kNameTmpStorage{lv.nameTmpStorage};
+  MutableHandle<JSObject> kDescObjHandle{lv.descObj};
 
   auto marker = gcScope.createMarker();
 
   // How much to increment k by each iteration of a loop.
-  double increment = reverse ? -1 : 1;
+  int increment = reverse ? -1 : 1;
 
   // Initialize the accumulator to either the intialValue arg or the first value
   // of the array.
   if (argCount >= 2) {
-    accumulator = args.getArg(1);
+    lv.accumulator = args.getArg(1);
   } else {
     bool kPresent = false;
     while (!kPresent) {
       gcScope.flushToMarker(marker);
       if (!reverse) {
-        if (k->getDouble() >= len) {
+        if (k >= len) {
           break;
         }
       } else {
-        if (k->getDouble() < 0) {
+        if (k < 0) {
           break;
         }
       }
       ComputedPropertyDescriptor kDesc;
+      lv.k = HermesValue::encodeTrustedNumberValue(k);
       JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, k, kDescObjHandle, kNameTmpStorage, kDesc);
+          lv.O, runtime, lv.k, kDescObjHandle, kNameTmpStorage, kDesc);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputedPropertyValue_RJS(
-              O, runtime, kDescObjHandle, kNameTmpStorage, kDesc, k);
+              lv.O, runtime, kDescObjHandle, kNameTmpStorage, kDesc, lv.k);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
         kPresent = true;
-        accumulator = std::move(*propRes);
+        lv.accumulator = std::move(*propRes);
       }
-      k = HermesValue::encodeTrustedNumberValue(k->getDouble() + increment);
+      k += increment;
     }
     if (!kPresent) {
       return runtime.raiseTypeError(
@@ -3566,20 +3605,21 @@ reduceHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   while (true) {
     gcScope.flushToMarker(marker);
     if (!reverse) {
-      if (k->getDouble() >= len) {
+      if (k >= len) {
         break;
       }
     } else {
-      if (k->getDouble() < 0) {
+      if (k < 0) {
         break;
       }
     }
 
     ComputedPropertyDescriptor kDesc;
+    lv.k = HermesValue::encodeTrustedNumberValue(k);
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, kDescObjHandle, kNameTmpStorage, kDesc);
+        lv.O, runtime, lv.k, kDescObjHandle, kNameTmpStorage, kDesc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, kDescObjHandle, kNameTmpStorage, kDesc, k);
+        lv.O, runtime, kDescObjHandle, kNameTmpStorage, kDesc, lv.k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3590,19 +3630,19 @@ reduceHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
           callbackFn,
           runtime,
           Runtime::getUndefinedValue(),
-          accumulator.get(),
+          lv.accumulator.get(),
           kValue.get(),
-          k.get(),
-          O.getHermesValue());
+          lv.k.get(),
+          lv.O.getHermesValue());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      accumulator = std::move(*callRes);
+      lv.accumulator = std::move(*callRes);
     }
-    k = HermesValue::encodeTrustedNumberValue(k->getDouble() + increment);
+    k += increment;
   }
 
-  return accumulator.get();
+  return lv.accumulator.get();
 }
 
 CallResult<HermesValue>
@@ -3618,28 +3658,32 @@ arrayPrototypeReduceRight(void *, Runtime &runtime, NativeArgs args) {
 /// ES10.0 22.1.3.23.
 CallResult<HermesValue>
 arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<> lower;
+    PinnedValue<> upper;
+    PinnedValue<> lowerValue;
+    PinnedValue<> upperValue;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
-
-  MutableHandle<> lower{runtime, HermesValue::encodeTrustedNumberValue(0)};
-  MutableHandle<> upper{runtime};
-
-  // The values at the lower and upper indices.
-  MutableHandle<> lowerValue{runtime};
-  MutableHandle<> upperValue{runtime};
+  lv.O = vmcast<JSObject>(*objRes);
 
   auto marker = gcScope.createMarker();
 
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto lenRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3647,36 +3691,39 @@ arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
 
   // Indices used in the reversal process.
   uint64_t middle = len / 2;
-
-  while (lower->getDouble() != middle) {
+  uint64_t lower = 0;
+  while (lower != middle) {
     gcScope.flushToMarker(marker);
-    upper = HermesValue::encodeTrustedNumberValue(len - lower->getNumber() - 1);
 
-    CallResult<bool> lowerExistsRes = JSObject::hasComputed(O, runtime, lower);
+    lv.upper = HermesValue::encodeTrustedNumberValue(len - lower - 1);
+    lv.lower = HermesValue::encodeTrustedNumberValue(lower);
+    CallResult<bool> lowerExistsRes =
+        JSObject::hasComputed(lv.O, runtime, lv.lower);
     if (LLVM_UNLIKELY(lowerExistsRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (*lowerExistsRes) {
       CallResult<PseudoHandle<>> lowerValueRes =
-          JSObject::getComputed_RJS(O, runtime, lower);
+          JSObject::getComputed_RJS(lv.O, runtime, lv.lower);
       if (LLVM_UNLIKELY(lowerValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      lowerValue = std::move(*lowerValueRes);
+      lv.lowerValue = std::move(*lowerValueRes);
       gcScope.flushToMarker(marker);
     }
 
-    CallResult<bool> upperExistsRes = JSObject::hasComputed(O, runtime, upper);
+    CallResult<bool> upperExistsRes =
+        JSObject::hasComputed(lv.O, runtime, lv.upper);
     if (LLVM_UNLIKELY(upperExistsRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (*upperExistsRes) {
       CallResult<PseudoHandle<>> upperValueRes =
-          JSObject::getComputed_RJS(O, runtime, upper);
+          JSObject::getComputed_RJS(lv.O, runtime, lv.upper);
       if (LLVM_UNLIKELY(upperValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      upperValue = std::move(*upperValueRes);
+      lv.upperValue = std::move(*upperValueRes);
       gcScope.flushToMarker(marker);
     }
 
@@ -3684,20 +3731,20 @@ arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
     if (*lowerExistsRes && *upperExistsRes) {
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
-                  O,
+                  lv.O,
                   runtime,
-                  lower,
-                  upperValue,
+                  lv.lower,
+                  lv.upperValue,
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
-                  O,
+                  lv.O,
                   runtime,
-                  upper,
-                  lowerValue,
+                  lv.upper,
+                  lv.lowerValue,
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -3705,47 +3752,53 @@ arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
     } else if (*upperExistsRes) {
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
-                  O,
+                  lv.O,
                   runtime,
-                  lower,
-                  upperValue,
+                  lv.lower,
+                  lv.upperValue,
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_UNLIKELY(
               JSObject::deleteComputed(
-                  O, runtime, upper, PropOpFlags().plusThrowOnError()) ==
+                  lv.O, runtime, lv.upper, PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     } else if (*lowerExistsRes) {
       if (LLVM_UNLIKELY(
               JSObject::deleteComputed(
-                  O, runtime, lower, PropOpFlags().plusThrowOnError()) ==
+                  lv.O, runtime, lv.lower, PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
-                  O,
+                  lv.O,
                   runtime,
-                  upper,
-                  lowerValue,
+                  lv.upper,
+                  lv.lowerValue,
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     }
 
-    lower = HermesValue::encodeTrustedNumberValue(lower->getDouble() + 1);
+    lower += 1;
   }
 
-  return O.getHermesValue();
+  return lv.O.getHermesValue();
 }
 
 CallResult<HermesValue>
 arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<> k;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   GCScope gcScope{runtime};
 
   // 1. Let O be ? ToObject(this value).
@@ -3753,16 +3806,16 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(*oRes);
+  lv.O = vmcast<JSObject>(*oRes);
 
   // 2. Let len be ? ToLength(? Get(O, "length")).
   auto lenPropRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(lenPropRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto lenRes =
-      toLengthU64(runtime, runtime.makeHandle(std::move(*lenPropRes)));
+  lv.lenProp = std::move(*lenPropRes);
+  auto lenRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3797,16 +3850,14 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
     }
   }
 
-  MutableHandle<> kHandle{runtime};
-
   // 7. Repeat, while k < len
   auto marker = gcScope.createMarker();
   while (k < len) {
     gcScope.flushToMarker(marker);
 
     // 7a. Let elementK be the result of ? Get(O, ! ToString(k)).
-    kHandle = HermesValue::encodeTrustedNumberValue(k);
-    auto elementKRes = JSObject::getComputed_RJS(O, runtime, kHandle);
+    lv.k = HermesValue::encodeTrustedNumberValue(k);
+    auto elementKRes = JSObject::getComputed_RJS(lv.O, runtime, lv.k);
     if (LLVM_UNLIKELY(elementKRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
