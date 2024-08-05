@@ -1118,24 +1118,25 @@ class StandardSortModel : public SortModel {
   /// Object to sort elements [0, length).
   Handle<JSObject> obj_;
 
-  /// Temporary handles for property name.
-  MutableHandle<SymbolID> aTmpNameStorage_;
-  MutableHandle<SymbolID> bTmpNameStorage_;
+  /// Preallocate these PVs so that we don't need to create them locally in
+  /// every method call.
+  struct : Locals {
+    /// Temporary handles for property name.
+    PinnedValue<SymbolID> aTmpNameStorage;
+    PinnedValue<SymbolID> bTmpNameStorage;
+    /// Handles for two indices.
+    PinnedValue<> a;
+    PinnedValue<> b;
+    /// Handles for the values at two indices.
+    PinnedValue<> aValue;
+    PinnedValue<> bValue;
+    /// Handles for the objects the values are retrieved from.
+    PinnedValue<JSObject> aDescObj;
+    PinnedValue<JSObject> bDescObj;
+    PinnedValue<> tmpValue;
 
-  /// Preallocate handles in the current GCScope so that we don't have to make
-  /// new handles in every method call.
-
-  /// Handles for two indices.
-  MutableHandle<> aHandle_;
-  MutableHandle<> bHandle_;
-
-  /// Handles for the values at two indices.
-  MutableHandle<> aValue_;
-  MutableHandle<> bValue_;
-
-  /// Handles for the objects the values are retrieved from.
-  MutableHandle<JSObject> aDescObjHandle_;
-  MutableHandle<JSObject> bDescObjHandle_;
+  } lv_;
+  LocalsRAII lraii_;
 
   /// Marker created after initializing all fields so handles allocated later
   /// can be flushed.
@@ -1150,14 +1151,7 @@ class StandardSortModel : public SortModel {
         gcScope_(runtime),
         compareFn_(compareFn),
         obj_(obj),
-        aTmpNameStorage_(runtime),
-        bTmpNameStorage_(runtime),
-        aHandle_(runtime),
-        bHandle_(runtime),
-        aValue_(runtime),
-        bValue_(runtime),
-        aDescObjHandle_(runtime),
-        bDescObjHandle_(runtime),
+        lraii_(runtime_, &lv_),
         gcMarker_(gcScope_.createMarker()) {}
 
   /// Use getComputed and putComputed to swap the values at obj[a] and obj[b].
@@ -1165,102 +1159,106 @@ class StandardSortModel : public SortModel {
     // Ensure that we don't leave here with any new handles.
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
 
-    aHandle_ = HermesValue::encodeTrustedNumberValue(a);
-    bHandle_ = HermesValue::encodeTrustedNumberValue(b);
+    lv_.a = HermesValue::encodeTrustedNumberValue(a);
+    lv_.b = HermesValue::encodeTrustedNumberValue(b);
 
     ComputedPropertyDescriptor aDesc;
+    MutableHandle<JSObject> aDescObjHandle{lv_.aDescObj};
+    MutableHandle<SymbolID> aTmpNameStorage{lv_.aTmpNameStorage};
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, aHandle_, aDescObjHandle_, aTmpNameStorage_, aDesc);
+        obj_, runtime_, lv_.a, aDescObjHandle, aTmpNameStorage, aDesc);
 
-    if (aDescObjHandle_) {
+    if (aDescObjHandle) {
       if (LLVM_LIKELY(!aDesc.flags.proxyObject)) {
         auto res = JSObject::getComputedPropertyValue_RJS(
             obj_,
             runtime_,
-            aDescObjHandle_,
-            aTmpNameStorage_,
+            aDescObjHandle,
+            aTmpNameStorage,
             aDesc,
-            aDescObjHandle_);
+            aDescObjHandle);
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (LLVM_LIKELY(!(*res)->isEmpty())) {
-          aValue_ = std::move(*res);
+          lv_.aValue = std::move(*res);
         }
       } else {
-        auto keyRes = toPropertyKey(runtime_, aHandle_);
+        auto keyRes = toPropertyKey(runtime_, lv_.a);
         if (keyRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
-        aHandle_ = keyRes->get();
+        lv_.a = keyRes->get();
         CallResult<bool> hasPropRes = JSProxy::getOwnProperty(
-            aDescObjHandle_, runtime_, aHandle_, aDesc, nullptr);
+            aDescObjHandle, runtime_, lv_.a, aDesc, nullptr);
         if (hasPropRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (*hasPropRes) {
           auto res =
-              JSProxy::getComputed(aDescObjHandle_, runtime_, aHandle_, obj_);
+              JSProxy::getComputed(aDescObjHandle, runtime_, lv_.a, obj_);
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
-          aValue_ = std::move(*res);
+          lv_.aValue = std::move(*res);
         } else {
-          aDescObjHandle_ = nullptr;
+          aDescObjHandle = nullptr;
         }
       }
     }
 
     ComputedPropertyDescriptor bDesc;
+    MutableHandle<JSObject> bDescObjHandle{lv_.bDescObj};
+    MutableHandle<SymbolID> bTmpNameStorage{lv_.bTmpNameStorage};
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, bHandle_, bDescObjHandle_, bTmpNameStorage_, bDesc);
+        obj_, runtime_, lv_.b, bDescObjHandle, bTmpNameStorage, bDesc);
 
-    if (bDescObjHandle_) {
+    if (bDescObjHandle) {
       if (LLVM_LIKELY(!bDesc.flags.proxyObject)) {
         auto res = JSObject::getComputedPropertyValue_RJS(
             obj_,
             runtime_,
-            bDescObjHandle_,
-            bTmpNameStorage_,
+            bDescObjHandle,
+            bTmpNameStorage,
             bDesc,
-            bDescObjHandle_);
+            bDescObjHandle);
         if (res == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (LLVM_LIKELY(!(*res)->isEmpty())) {
-          bValue_ = std::move(*res);
+          lv_.bValue = std::move(*res);
         }
       } else {
-        auto keyRes = toPropertyKey(runtime_, bHandle_);
+        auto keyRes = toPropertyKey(runtime_, lv_.b);
         if (keyRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
-        bHandle_ = keyRes->get();
+        lv_.b = keyRes->get();
         CallResult<bool> hasPropRes = JSProxy::getOwnProperty(
-            bDescObjHandle_, runtime_, bHandle_, bDesc, nullptr);
+            bDescObjHandle, runtime_, lv_.b, bDesc, nullptr);
         if (hasPropRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
         if (*hasPropRes) {
           auto res =
-              JSProxy::getComputed(bDescObjHandle_, runtime_, bHandle_, obj_);
+              JSProxy::getComputed(bDescObjHandle, runtime_, lv_.b, obj_);
           if (res == ExecutionStatus::EXCEPTION) {
             return ExecutionStatus::EXCEPTION;
           }
-          bValue_ = std::move(*res);
+          lv_.bValue = std::move(*res);
         } else {
-          bDescObjHandle_ = nullptr;
+          bDescObjHandle = nullptr;
         }
       }
     }
 
-    if (bDescObjHandle_) {
+    if (bDescObjHandle) {
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   obj_,
                   runtime_,
-                  aHandle_,
-                  bValue_,
+                  lv_.a,
+                  lv_.bValue,
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1268,19 +1266,19 @@ class StandardSortModel : public SortModel {
     } else {
       if (LLVM_UNLIKELY(
               JSObject::deleteComputed(
-                  obj_, runtime_, aHandle_, PropOpFlags().plusThrowOnError()) ==
+                  obj_, runtime_, lv_.a, PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     }
 
-    if (aDescObjHandle_) {
+    if (aDescObjHandle) {
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
                   obj_,
                   runtime_,
-                  bHandle_,
-                  aValue_,
+                  lv_.b,
+                  lv_.aValue,
                   PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
@@ -1288,7 +1286,7 @@ class StandardSortModel : public SortModel {
     } else {
       if (LLVM_UNLIKELY(
               JSObject::deleteComputed(
-                  obj_, runtime_, bHandle_, PropOpFlags().plusThrowOnError()) ==
+                  obj_, runtime_, lv_.b, PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1304,14 +1302,16 @@ class StandardSortModel : public SortModel {
     // Ensure that we don't leave here with any new handles.
     GCScopeMarkerRAII gcMarker{gcScope_, gcMarker_};
 
-    aHandle_ = HermesValue::encodeTrustedNumberValue(a);
-    bHandle_ = HermesValue::encodeTrustedNumberValue(b);
+    lv_.a = HermesValue::encodeTrustedNumberValue(a);
+    lv_.b = HermesValue::encodeTrustedNumberValue(b);
 
     ComputedPropertyDescriptor aDesc;
+    MutableHandle<JSObject> aDescObjHandle{lv_.aDescObj};
+    MutableHandle<SymbolID> aTmpNameStorage{lv_.aTmpNameStorage};
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, aHandle_, aDescObjHandle_, aTmpNameStorage_, aDesc);
+        obj_, runtime_, lv_.a, aDescObjHandle, aTmpNameStorage, aDesc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        obj_, runtime_, aDescObjHandle_, aTmpNameStorage_, aDesc, aHandle_);
+        obj_, runtime_, aDescObjHandle, aTmpNameStorage, aDesc, lv_.a);
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1319,33 +1319,31 @@ class StandardSortModel : public SortModel {
       // Spec defines empty as greater than everything.
       return 1;
     }
-    aValue_ = std::move(*propRes);
-    assert(!aValue_->isEmpty());
+    lv_.aValue = std::move(*propRes);
+    assert(!lv_.aValue->isEmpty());
 
     ComputedPropertyDescriptor bDesc;
+    MutableHandle<JSObject> bDescObjHandle{lv_.bDescObj};
+    MutableHandle<SymbolID> bTmpNameStorage{lv_.bTmpNameStorage};
     JSObject::getComputedPrimitiveDescriptor(
-        obj_, runtime_, bHandle_, bDescObjHandle_, bTmpNameStorage_, bDesc);
+        obj_, runtime_, lv_.b, bDescObjHandle, bTmpNameStorage, bDesc);
     if ((propRes = JSObject::getComputedPropertyValue_RJS(
-             obj_,
-             runtime_,
-             bDescObjHandle_,
-             bTmpNameStorage_,
-             bDesc,
-             bHandle_)) == ExecutionStatus::EXCEPTION) {
+             obj_, runtime_, bDescObjHandle, bTmpNameStorage, bDesc, lv_.b)) ==
+        ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     if ((*propRes)->isEmpty()) {
       // Spec defines empty as greater than everything.
       return -1;
     }
-    bValue_ = std::move(*propRes);
-    assert(!bValue_->isEmpty());
+    lv_.bValue = std::move(*propRes);
+    assert(!lv_.bValue->isEmpty());
 
-    if (aValue_->isUndefined()) {
+    if (lv_.aValue->isUndefined()) {
       // Spec defines undefined as greater than everything.
       return 1;
     }
-    if (bValue_->isUndefined()) {
+    if (lv_.bValue->isUndefined()) {
       // Spec defines undefined as greater than everything.
       return -1;
     }
@@ -1356,13 +1354,13 @@ class StandardSortModel : public SortModel {
           compareFn_,
           runtime_,
           Runtime::getUndefinedValue(),
-          aValue_.get(),
-          bValue_.get());
+          lv_.aValue.get(),
+          lv_.bValue.get());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto intRes =
-          toNumber_RJS(runtime_, runtime_.makeHandle(std::move(*callRes)));
+      lv_.tmpValue = std::move(*callRes);
+      auto intRes = toNumber_RJS(runtime_, lv_.tmpValue);
       if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1371,19 +1369,19 @@ class StandardSortModel : public SortModel {
       return (res < 0) ? -1 : (res > 0 ? 1 : 0);
     } else {
       // Convert both arguments to strings and compare
-      auto aValueRes = toString_RJS(runtime_, aValue_);
+      auto aValueRes = toString_RJS(runtime_, lv_.aValue);
       if (LLVM_UNLIKELY(aValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      aValue_ = aValueRes->getHermesValue();
+      lv_.aValue = aValueRes->getHermesValue();
 
-      auto bValueRes = toString_RJS(runtime_, bValue_);
+      auto bValueRes = toString_RJS(runtime_, lv_.bValue);
       if (LLVM_UNLIKELY(bValueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      bValue_ = bValueRes->getHermesValue();
+      lv_.bValue = bValueRes->getHermesValue();
 
-      return aValue_->getString()->compare(bValue_->getString());
+      return lv_.aValue->getString()->compare(lv_.bValue->getString());
     }
   }
 };
@@ -1402,6 +1400,14 @@ CallResult<HermesValue> sortSparse(
       !O->isHostObject() && !O->isProxyObject() &&
       "only non-exotic objects can be sparsely sorted");
 
+  struct : Locals {
+    PinnedValue<JSArray::StorageType> names;
+    PinnedValue<JSArray> array;
+    PinnedValue<> propName;
+    PinnedValue<> propVal;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // This is a "non-fast" object, meaning we need to create a symbol for every
   // property name. On the assumption that it is sparse, get all properties
   // first, so that we only have to read the existing properties.
@@ -1410,17 +1416,18 @@ CallResult<HermesValue> sortSparse(
   if (crNames == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   // Get the underlying storage containing the names.
-  auto names = runtime.makeHandle((*crNames)->getIndexedStorage(runtime));
-  if (!names) {
+  lv.names = (*crNames)->getIndexedStorage(runtime);
+  if (!lv.names.get()) {
     // Indexed storage can be null if there's nothing to store.
     return O.getHermesValue();
   }
 
   // Find out how many sortable numeric properties we have.
   JSArray::StorageType::size_type numProps = 0;
-  for (JSArray::StorageType::size_type e = names->size(runtime); numProps != e;
+  for (JSArray::StorageType::size_type e = lv.names->size(runtime);
+       numProps != e;
        ++numProps) {
-    SmallHermesValue hv = names->at(runtime, numProps);
+    SmallHermesValue hv = lv.names->at(runtime, numProps);
     // Stop at the first non-number.
     if (!hv.isNumber())
       break;
@@ -1437,14 +1444,12 @@ CallResult<HermesValue> sortSparse(
   auto crArray = JSArray::create(runtime, numProps, numProps);
   if (crArray == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  Handle<JSArray> array = runtime.makeHandle(std::move(*crArray));
-  if (JSArray::setStorageEndIndex(array, runtime, numProps) ==
+  lv.array = std::move(*crArray);
+  if (JSArray::setStorageEndIndex(lv.array, runtime, numProps) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  MutableHandle<> propName{runtime};
-  MutableHandle<> propVal{runtime};
   GCScopeMarkerRAII gcMarker{gcScope};
 
   // Copy all sortable properties into the array and delete them from the
@@ -1453,8 +1458,8 @@ CallResult<HermesValue> sortSparse(
   for (decltype(numProps) i = 0; i != numProps; ++i) {
     gcMarker.flush();
 
-    propName = names->at(runtime, i).unboxToHV(runtime);
-    auto res = JSObject::getComputed_RJS(O, runtime, propName);
+    lv.propName = lv.names->at(runtime, i).unboxToHV(runtime);
+    auto res = JSObject::getComputed_RJS(O, runtime, lv.propName);
     if (res == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
     // Skip empty values.
@@ -1462,10 +1467,10 @@ CallResult<HermesValue> sortSparse(
       continue;
 
     const auto shv = SmallHermesValue::encodeHermesValue(res->get(), runtime);
-    JSArray::unsafeSetExistingElementAt(*array, runtime, i, shv);
+    JSArray::unsafeSetExistingElementAt(*lv.array, runtime, i, shv);
 
     if (JSObject::deleteComputed(
-            O, runtime, propName, PropOpFlags().plusThrowOnError()) ==
+            O, runtime, lv.propName, PropOpFlags().plusThrowOnError()) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1473,7 +1478,7 @@ CallResult<HermesValue> sortSparse(
   gcMarker.flush();
 
   {
-    StandardSortModel sm(runtime, array, compareFn);
+    StandardSortModel sm(runtime, lv.array, compareFn);
     if (LLVM_UNLIKELY(
             quickSort(&sm, 0u, numProps) == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
@@ -1483,17 +1488,20 @@ CallResult<HermesValue> sortSparse(
   for (decltype(numProps) i = 0; i != numProps; ++i) {
     gcMarker.flush();
 
-    auto hv = array->at(runtime, i).unboxToHV(runtime);
+    auto hv = lv.array->at(runtime, i).unboxToHV(runtime);
     assert(
         !hv.isEmpty() &&
         "empty values cannot appear in the array out of nowhere");
-    propVal = hv;
+    lv.propVal = hv;
 
-    propName = HermesValue::encodeTrustedNumberValue(i);
+    lv.propName = HermesValue::encodeTrustedNumberValue(i);
 
     if (JSObject::putComputed_RJS(
-            O, runtime, propName, propVal, PropOpFlags().plusThrowOnError()) ==
-        ExecutionStatus::EXCEPTION) {
+            O,
+            runtime,
+            lv.propName,
+            lv.propVal,
+            PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
@@ -1511,18 +1519,25 @@ arrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Array sort argument must be callable");
   }
 
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.O = vmcast<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto intRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1531,11 +1546,12 @@ arrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
   // If we are not sorting a regular dense array, use a special routine which
   // first copies all properties into an array.
   // Proxies  and host objects however are excluded because they are weird.
-  if (!O->isProxyObject() && !O->isHostObject() && !O->hasFastIndexProperties())
-    return sortSparse(runtime, O, compareFn, len);
+  if (!lv.O->isProxyObject() && !lv.O->isHostObject() &&
+      !lv.O->hasFastIndexProperties())
+    return sortSparse(runtime, lv.O, compareFn, len);
 
   // This is the "fast" path. We are sorting an array with indexed storage.
-  StandardSortModel sm(runtime, O, compareFn);
+  StandardSortModel sm(runtime, lv.O, compareFn);
 
   // Use our custom sort routine. We can't use std::sort because it performs
   // optimizations that allow it to bypass calls to std::swap, but our swap
@@ -1543,7 +1559,7 @@ arrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(quickSort(&sm, 0u, len) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
-  return O.getHermesValue();
+  return lv.O.getHermesValue();
 }
 
 inline CallResult<HermesValue>
@@ -2943,19 +2959,32 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
 
 CallResult<HermesValue>
 arrayPrototypeUnshift(void *, Runtime &runtime, NativeArgs args) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<> j;
+    PinnedValue<> from;
+    PinnedValue<> to;
+    PinnedValue<> fromValue;
+    PinnedValue<JSObject> fromDescObj;
+    PinnedValue<SymbolID> fromNameTmpStorage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   GCScope gcScope(runtime);
+
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.O = vmcast<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto intRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2971,49 +3000,49 @@ arrayPrototypeUnshift(void *, Runtime &runtime, NativeArgs args) {
     }
 
     // Loop indices.
-    MutableHandle<> k{runtime, HermesValue::encodeTrustedNumberValue(len)};
-    MutableHandle<> j{runtime, HermesValue::encodeTrustedNumberValue(0)};
-
-    // Indices to copy from/to when shifting.
-    MutableHandle<> from{runtime};
-    MutableHandle<> to{runtime};
+    uint64_t k = len;
+    uint64_t j = 0;
 
     // Value that is being copied.
-    MutableHandle<SymbolID> fromNameTmpStorage{runtime};
-    MutableHandle<JSObject> fromDescObjHandle{runtime};
-    MutableHandle<> fromValue{runtime};
+    MutableHandle<SymbolID> fromNameTmpStorage{lv.fromNameTmpStorage};
+    MutableHandle<JSObject> fromDescObjHandle{lv.fromDescObj};
 
     // Move elements to the right by argCount to account for the new elements.
     // TODO: Add a fast path for actual arrays.
     auto marker = gcScope.createMarker();
-    while (k->getDouble() > 0) {
+    while (k > 0) {
       gcScope.flushToMarker(marker);
-      from = HermesValue::encodeTrustedNumberValue(k->getDouble() - 1);
-      to = HermesValue::encodeTrustedNumberValue(k->getDouble() + argCount - 1);
+      lv.from = HermesValue::encodeTrustedNumberValue(k - 1);
+      lv.to = HermesValue::encodeTrustedNumberValue(k + argCount - 1);
 
       ComputedPropertyDescriptor fromDesc;
       JSObject::getComputedPrimitiveDescriptor(
-          O, runtime, from, fromDescObjHandle, fromNameTmpStorage, fromDesc);
+          lv.O,
+          runtime,
+          lv.from,
+          fromDescObjHandle,
+          fromNameTmpStorage,
+          fromDesc);
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputedPropertyValue_RJS(
-              O,
+              lv.O,
               runtime,
               fromDescObjHandle,
               fromNameTmpStorage,
               fromDesc,
-              from);
+              lv.from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
 
       if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
-        fromValue = std::move(*propRes);
+        lv.fromValue = std::move(*propRes);
         if (LLVM_UNLIKELY(
                 JSObject::putComputed_RJS(
-                    O,
+                    lv.O,
                     runtime,
-                    to,
-                    fromValue,
+                    lv.to,
+                    lv.fromValue,
                     PropOpFlags().plusThrowOnError()) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
@@ -3022,35 +3051,37 @@ arrayPrototypeUnshift(void *, Runtime &runtime, NativeArgs args) {
         // Shift the empty slot by deleting at the destination.
         if (LLVM_UNLIKELY(
                 JSObject::deleteComputed(
-                    O, runtime, to, PropOpFlags().plusThrowOnError()) ==
+                    lv.O, runtime, lv.to, PropOpFlags().plusThrowOnError()) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
       }
-      k = HermesValue::encodeTrustedNumberValue(k->getDouble() - 1);
+      k -= 1;
     }
 
     // Put the arguments into the beginning of the array.
     for (auto arg : args.handles()) {
+      lv.j = HermesValue::encodeTrustedNumberValue(j);
       if (LLVM_UNLIKELY(
               JSObject::putComputed_RJS(
-                  O, runtime, j, arg, PropOpFlags().plusThrowOnError()) ==
+                  lv.O, runtime, lv.j, arg, PropOpFlags().plusThrowOnError()) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       gcScope.flushToMarker(marker);
-      j = HermesValue::encodeTrustedNumberValue(j->getDouble() + 1);
+      j += 1;
     }
   }
 
   // Increment length by argCount.
   auto newLen = HermesValue::encodeTrustedNumberValue(len + argCount);
+  lv.lenProp = newLen;
   if (LLVM_UNLIKELY(
           JSObject::putNamed_RJS(
-              O,
+              lv.O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
-              runtime.makeHandle(newLen),
+              lv.lenProp,
               PropOpFlags().plusThrowOnError()) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   return newLen;
@@ -3070,19 +3101,30 @@ arrayPrototypeLastIndexOf(void *, Runtime &runtime, NativeArgs args) {
 /// \param every true if calling every(), false if calling some().
 static inline CallResult<HermesValue>
 everySomeHelper(Runtime &runtime, NativeArgs args, const bool every) {
+  struct : Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> lenProp;
+    PinnedValue<> k;
+    PinnedValue<> kValue;
+    PinnedValue<JSObject> descObj;
+    PinnedValue<SymbolID> tmpPropNameStorage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   GCScope gcScope(runtime);
+
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.O = vmcast<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto intRes = toLengthU64(runtime, runtime.makeHandle(std::move(*propRes)));
+  lv.lenProp = std::move(*propRes);
+  auto intRes = toLengthU64(runtime, lv.lenProp);
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3094,37 +3136,36 @@ everySomeHelper(Runtime &runtime, NativeArgs args, const bool every) {
         "Array.prototype.every() requires a callable argument");
   }
 
-  // Index to check the callback on.
-  MutableHandle<> k{runtime, HermesValue::encodeTrustedNumberValue(0)};
-
   // Value at index k;
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
-  MutableHandle<JSObject> descObjHandle{runtime};
-  MutableHandle<> kValue{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
+  MutableHandle<JSObject> descObjHandle{lv.descObj};
 
   // Loop through and run the callback.
   auto marker = gcScope.createMarker();
-  while (k->getDouble() < len) {
+  // Index to check the callback on.
+  uint64_t k = 0;
+  while (k < len) {
     gcScope.flushToMarker(marker);
 
     ComputedPropertyDescriptor desc;
+    lv.k = HermesValue::encodeTrustedNumberValue(k);
     JSObject::getComputedPrimitiveDescriptor(
-        O, runtime, k, descObjHandle, tmpPropNameStorage, desc);
+        lv.O, runtime, lv.k, descObjHandle, tmpPropNameStorage, desc);
     CallResult<PseudoHandle<>> propRes = JSObject::getComputedPropertyValue_RJS(
-        O, runtime, descObjHandle, tmpPropNameStorage, desc, k);
+        lv.O, runtime, descObjHandle, tmpPropNameStorage, desc, lv.k);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
       // kPresent is true, call the callback on the kth element.
-      kValue = std::move(*propRes);
+      lv.kValue = std::move(*propRes);
       auto callRes = Callable::executeCall3(
           callbackFn,
           runtime,
           args.getArgHandle(1),
-          kValue.get(),
-          k.get(),
-          O.getHermesValue());
+          lv.kValue.get(),
+          lv.k.get(),
+          lv.O.getHermesValue());
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -3142,7 +3183,7 @@ everySomeHelper(Runtime &runtime, NativeArgs args, const bool every) {
       }
     }
 
-    k = HermesValue::encodeTrustedNumberValue(k->getDouble() + 1);
+    k += 1;
   }
 
   // If we're looking for every, then we finished without returning true.
