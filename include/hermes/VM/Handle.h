@@ -30,6 +30,8 @@ template <typename T>
 class Handle;
 template <typename T>
 class MutableHandle;
+template <typename T>
+class PinnedValue;
 
 /// This class is used in performance-sensitive context in situations where we
 /// want to encode in the function signature that allocations may be performed,
@@ -89,9 +91,15 @@ class PseudoHandle {
   constexpr PseudoHandle() : value_(traits_type::defaultValue()) {}
   PseudoHandle(Handle<T> handle) : value_(*handle) {}
 
+  /// Implicitly convert from a PinnedValue of compatible type.
+  template <
+      typename U,
+      typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  /* implicit */ PseudoHandle(const PinnedValue<U> &pv) : value_(*pv) {}
+
   /// Conveniently construct PseudoHandle<HermesValue> from a PinnedHermesValue
   /// pointer.
-  explicit PseudoHandle(PinnedHermesValue *pvalue) : value_(*pvalue) {
+  explicit PseudoHandle(const PinnedHermesValue *pvalue) : value_(*pvalue) {
     static_assert(
         std::is_same<value_type, HermesValue>::value,
         "This constructor can only be used for PseudoHandle<HermesValue>");
