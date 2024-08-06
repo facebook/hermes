@@ -29,7 +29,7 @@ SerialExecutor::SerialExecutor(size_t stackSize) {
   assert(ret == 0 && "Failed pthread_create");
 
 #else
-  workerThread_ = std::thread([this]() { this->run(); });
+  workerThread_ = std::thread(threadMain, this);
 #endif
 }
 
@@ -54,38 +54,32 @@ void SerialExecutor::add(std::function<void()> task) {
 }
 
 void SerialExecutor::run() {
+  std::unique_lock<std::mutex> lock(mutex_);
   while (true) {
-    {
-      std::unique_lock<std::mutex> lock(mutex_);
-      wakeUpSig_.wait(lock, [this] { return !tasks_.empty() || shouldStop_; });
-    }
-
-    // Make sure we do *NOT* hold a lock to mutex_ as we execute the given
-    // task. Otherwise, this can lead to a deadlock if the given task calls
-    // add(), which in turn requests a lock to mutex_.  However, we do want to
-    // hold the lock anytime that we interact with the tasks queue.
-    std::unique_lock<std::mutex> lock(mutex_);
-
     while (!tasks_.empty()) {
-      std::function<void()> task = tasks_.front();
+      std::function<void()> task = std::move(tasks_.front());
+      tasks_.pop_front();
+      // Make sure we do *NOT* hold a lock to mutex_ as we execute the given
+      // task. Otherwise, this can lead to a deadlock if the given task calls
+      // add(), which in turn requests a lock to mutex_.  However, we do want to
+      // hold the lock anytime that we interact with the tasks queue.
       lock.unlock();
       task();
       lock.lock();
-      tasks_.pop_front();
     }
-
     if (shouldStop_) {
       return;
     }
+
+    // Wait for a new task to be enqueued. Note we do this at the end to ensure
+    // that any tasks added before we entered this function are executed.
+    wakeUpSig_.wait(lock);
   }
 }
 
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
 void *SerialExecutor::threadMain(void *p) {
   static_cast<SerialExecutor *>(p)->run();
-  pthread_exit(nullptr);
   return nullptr;
 }
-#endif
 
 } // namespace hermes
