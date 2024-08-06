@@ -1910,13 +1910,6 @@ CallResult<bool> instanceOfOperator_RJS(
         "right operand of 'instanceof' is not an object");
   }
 
-  // Fast path: Function.prototype[Symbol.hasInstance] is non-configurable
-  // and non-writable (ES6.0 19.2.3.6), so we directly run its behavior here.
-  // Simply call through to ordinaryHasInstance.
-  if (vmisa<JSFunction>(*constructor)) {
-    return ordinaryHasInstance(runtime, constructor, object);
-  }
-
   // 2. Let instOfHandler be GetMethod(C,@@hasInstance).
   CallResult<PseudoHandle<>> instOfHandlerRes = JSObject::getNamed_RJS(
       Handle<JSObject>::vmcast(constructor),

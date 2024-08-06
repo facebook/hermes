@@ -145,7 +145,7 @@ function Console(options
   // We have to test new.target here to see if this function is called
   // with new, because we need to define a custom instanceof to accommodate
   // the global console.
-  if (!(this instanceof Console ? this.constructor : void 0)) {
+  if (new.target === undefined) {
     return ReflectConstruct(Console, arguments);
   }
 
