@@ -26,7 +26,7 @@ class BitArray {
   static_assert(
       A && A % sizeof(uintptr_t) == 0,
       "Bit set alignment must be a non-zero multiple of word size!");
-  static constexpr size_t kBitsPerWord = 8 * sizeof(uintptr_t);
+  static constexpr unsigned kBitsPerWord = 8 * sizeof(uintptr_t);
   static constexpr size_t kNumWords =
       llvh::alignTo<kBitsPerWord>(N) / kBitsPerWord;
   static constexpr size_t kPaddedWords =
@@ -45,7 +45,7 @@ class BitArray {
       return N;
     }
     size_t wordIdx = idx / kBitsPerWord;
-    size_t offset = idx % kBitsPerWord;
+    unsigned offset = idx % kBitsPerWord;
     // Start looking from the given idx. Invert the word if we are looking for a
     // 0 so it's the same as looking for a 1.
     uintptr_t currentWord = V ? allBits_[wordIdx] : ~allBits_[wordIdx];
@@ -87,7 +87,7 @@ class BitArray {
     // Start the search at idx-1
     idx--;
     size_t wordIdx = idx / kBitsPerWord;
-    size_t offset = idx % kBitsPerWord;
+    unsigned offset = idx % kBitsPerWord;
     // Start looking from the given idx. Invert the word if we are looking for a
     // 0 so it's the same as looking for a 1.
     uintptr_t currentWord = V ? allBits_[wordIdx] : ~allBits_[wordIdx];
