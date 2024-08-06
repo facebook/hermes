@@ -9,6 +9,7 @@
 #define HERMES_SUPPORT_BIGINT_H
 
 #include "hermes/Support/Compiler.h"
+#include "hermes/Support/HermesSafeMath.h"
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/DenseMap.h"
@@ -491,7 +492,8 @@ class UniquingBigIntTable {
     }
     auto newBytes = bigint.getBytes();
     bytes_.insert(bytes_.end(), newBytes.begin(), newBytes.end());
-    const uint32_t index = bigints_.size();
+    const uint32_t index = safePossiblyNarrowingCast<uint32_t>(
+        bigints_.size(), "too many BigInts created");
     bigints_.push_back(std::move(bigint));
     keysToIndex_[keyFor(bigints_.back())] = index;
     return index;
