@@ -9,6 +9,7 @@
 #define HERMES_REGEX_REGEXSERIALIZATION_H
 
 #include "hermes/Regex/RegexSupport.h"
+#include "hermes/Support/HermesSafeMath.h"
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/Optional.h"
 #include "llvh/ADT/StringRef.h"
@@ -122,7 +123,8 @@ class UniquingRegExpTable {
     if (iter != keysToIndex_.end())
       return iter->second;
 
-    uint32_t index = regexps_.size();
+    uint32_t index = safePossiblyNarrowingCast<uint32_t>(
+        regexps_.size(), "Too many regular expressions");
     regexps_.push_back(regexp);
     entryList_.push_back(
         {(uint32_t)bytecodeBuffer_.size(),
