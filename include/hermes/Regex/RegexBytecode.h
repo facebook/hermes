@@ -8,6 +8,7 @@
 #ifndef HERMES_REGEX_REGEXBYTECODE_H
 #define HERMES_REGEX_REGEXBYTECODE_H
 
+#include "hermes/Support/HermesSafeMath.h"
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/Support/Casting.h"
 
@@ -22,6 +23,9 @@ namespace regex {
 enum class Opcode : uint8_t {
 #include "hermes/Regex/RegexOpcodes.def"
 };
+
+/// Type representing an offset in the regex bytecode stream.
+using RegexInstrOffset = uint32_t;
 
 /// Type representing a jump location, as a 32 bit value.
 using JumpTarget32 = uint32_t;
@@ -299,7 +303,7 @@ class RegexBytecodeStream {
   template <typename Instruction>
   class InstructionWrapper {
     std::vector<uint8_t> *const bytes_;
-    const uint32_t offset_;
+    const RegexInstrOffset offset_;
 
    public:
     Instruction *operator->() {
@@ -307,7 +311,7 @@ class RegexBytecodeStream {
       return llvh::cast<Instruction>(base);
     }
 
-    InstructionWrapper(std::vector<uint8_t> *bytes, uint32_t offset)
+    InstructionWrapper(std::vector<uint8_t> *bytes, RegexInstrOffset offset)
         : bytes_(bytes), offset_(offset) {}
   };
 
@@ -317,27 +321,38 @@ class RegexBytecodeStream {
   template <typename Instruction>
   InstructionWrapper<Instruction> emit() {
     size_t startSize = bytes_.size();
+    sizeCheck<RegexInstrOffset>(
+        startSize + sizeof(Instruction), "too many regex bytecodes created");
     bytes_.resize(startSize + sizeof(Instruction), 0);
     Insn *insn = reinterpret_cast<Insn *>(&bytes_[startSize]);
     insn->opcode = OpcodeFor<Instruction>::value;
-    return InstructionWrapper<Instruction>(&bytes_, startSize);
+    // This is justified by the sizeCheck above.
+    return InstructionWrapper<Instruction>(
+        &bytes_, unsafeNarrow<RegexInstrOffset>(startSize));
   }
 
   /// Emit a BracketRange32.
   void emitBracketRange(BracketRange32 range) {
+    sizeCheck<RegexInstrOffset>(
+        bytes_.size() + sizeof(BracketRange32),
+        "too many regex bytecodes created");
     const uint8_t *rangeBytes = reinterpret_cast<const uint8_t *>(&range);
     bytes_.insert(bytes_.end(), rangeBytes, rangeBytes + sizeof(range));
   }
 
   /// Emit a Char8 for use inside a MatchNChar8Insn or MatchNCharICase8Insn.
   void emitChar8(char c) {
+    sizeCheck<RegexInstrOffset>(
+        bytes_.size() + 1, "too many regex bytecodes created");
     bytes_.push_back((uint8_t)c);
   }
 
   /// \return the current offset in the stream, which is where the next
   /// instruction will be emitted. Note the header is omitted.
-  uint32_t currentOffset() const {
-    return bytes_.size() - sizeof(RegexBytecodeHeader);
+  RegexInstrOffset currentOffset() const {
+    // This is justified by the sizeChecks in the emit operations.
+    return unsafeNarrow<RegexInstrOffset>(
+        bytes_.size() - sizeof(RegexBytecodeHeader));
   }
 
   /// \return the bytecode, transferring ownership of it to the caller.
