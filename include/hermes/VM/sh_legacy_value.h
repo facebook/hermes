@@ -121,7 +121,7 @@ struct HermesValueBase {
 
 typedef struct HermesValueBase SHLegacyValue;
 
-typedef intptr_t HVTagType;
+typedef int32_t HVTagType;
 
 /// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 /// word.
