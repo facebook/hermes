@@ -12,6 +12,7 @@ set(SupportSources
   CtorConfigTest.cpp
   Base64Test.cpp
   HashStringTest.cpp
+  HermesSafeMathTest.cpp
   JSONEmitterTest.cpp
   LEB128Test.cpp
   OptValueTest.cpp
