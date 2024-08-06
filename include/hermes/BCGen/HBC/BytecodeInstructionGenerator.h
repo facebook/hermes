@@ -9,6 +9,7 @@
 #define HERMES_BCGEN_HBC_BYTECODELIST_H
 
 #include "hermes/Support/Conversions.h"
+#include "hermes/Support/HermesSafeMath.h"
 
 #include <vector>
 
@@ -53,7 +54,10 @@ class BytecodeInstructionGenerator {
 
   /// Returns the current location of the bytecode stream.
   offset_t getCurrentLocation() {
-    return opcodes_.size();
+    // This narrowing conversion is justified by the test in emitOperand,
+    // which preserves the invariant that
+    // opcodes_.size() <= std::numeric_limits<offset_t>::max()
+    return unsafeNarrow<offset_t>(opcodes_.size());
   }
 
   offset_t emitOpcode(Operator op) {
@@ -63,6 +67,8 @@ class BytecodeInstructionGenerator {
   }
   /// Encode the parameter \p t in little-endian using \p size number of bytes.
   void emitOperand(param_t t, int size) {
+    sizeCheck<offset_t>(
+        opcodes_.size() + size, "too many bytecode instructions created.");
     while (size--) {
       opcodes_.push_back((opcode_atom_t)t);
       t >>= 8;
