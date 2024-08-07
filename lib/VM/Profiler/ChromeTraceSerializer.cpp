@@ -27,12 +27,12 @@ std::shared_ptr<ChromeStackFrameNode> ChromeStackFrameNode::findOrAddNewChild(
   return children_.back();
 }
 
-/*static*/ ChromeTraceFormat ChromeTraceFormat::create(
+/*static*/ TraceFormat TraceFormat::create(
     uint32_t pid,
     const SamplingProfiler::ThreadNamesMap &threadNames,
     const std::vector<SamplingProfiler::StackTrace> &sampledStacks) {
   ChromeFrameIdGenerator frameIdGen;
-  ChromeTraceFormat trace{
+  TraceFormat trace{
       pid,
       threadNames,
       std::make_unique<ChromeStackFrameNode>(
@@ -70,9 +70,9 @@ OptValue<hbc::DebugSourceLocation> getSourceLocation(
 }
 } // namespace
 
-ChromeTraceSerializer::ChromeTraceSerializer(
+TraceryTraceSerializer::TraceryTraceSerializer(
     const SamplingProfiler &sp,
-    ChromeTraceFormat &&chromeTrace)
+    TraceFormat &&chromeTrace)
     : samplingProfiler_(sp), trace_(std::move(chromeTrace)) {
   firstEventTimeStamp_ = trace_.getSampledEvents().empty()
       ? std::chrono::steady_clock::now()
@@ -84,7 +84,7 @@ static const char *Completed = "X";
 static const char *Metadata = "M";
 } // namespace chrome_event_type
 
-void ChromeTraceSerializer::serializeProcessName(JSONEmitter &json) const {
+void TraceryTraceSerializer::serializeProcessName(JSONEmitter &json) const {
   double pid = trace_.getPid();
   json.openDict();
   {
@@ -106,7 +106,7 @@ void ChromeTraceSerializer::serializeProcessName(JSONEmitter &json) const {
   json.closeDict(); // process_name entry.
 }
 
-void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
+void TraceryTraceSerializer::serializeThreads(JSONEmitter &json) const {
   uint32_t pid = trace_.getPid();
   for (const auto &threadNameEntry : trace_.getThreadNames()) {
     SamplingProfiler::ThreadId tid = threadNameEntry.first;
@@ -149,7 +149,7 @@ void ChromeTraceSerializer::serializeThreads(JSONEmitter &json) const {
   }
 }
 
-void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
+void TraceryTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
   uint32_t pid = trace_.getPid();
   const auto &sampledEvents = trace_.getSampledEvents();
   for (const ChromeSampleEvent &sample : sampledEvents) {
@@ -168,7 +168,7 @@ void ChromeTraceSerializer::serializeSampledEvents(JSONEmitter &json) const {
   }
 }
 
-void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
+void TraceryTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
   trace_.getRoot().dfsWalk([&samplingProfiler = samplingProfiler_, &json](
                                const ChromeStackFrameNode &node,
                                const ChromeStackFrameNode *parent) {
@@ -267,7 +267,7 @@ void ChromeTraceSerializer::serializeStackFrames(JSONEmitter &json) const {
   });
 }
 
-void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
+void TraceryTraceSerializer::serialize(llvh::raw_ostream &OS) const {
   JSONEmitter json(OS);
 
   // The format of the chrome trace is a bit vague. Here are the essential
@@ -306,7 +306,7 @@ void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
   json.closeDict(); // Whole trace.
 }
 
-/*static*/ std::string ChromeTraceSerializer::getSerializedTimeStamp(
+/*static*/ std::string TraceryTraceSerializer::getSerializedTimeStamp(
     SamplingProfiler::TimeStampType timeStamp) {
   return std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(
                             timeStamp.time_since_epoch())
@@ -314,17 +314,16 @@ void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
 }
 
 namespace {
-class ProfilerProfileSerializer {
-  ProfilerProfileSerializer(const ProfilerProfileSerializer &) = delete;
-  ProfilerProfileSerializer &operator=(const ProfilerProfileSerializer &) =
-      delete;
-  ProfilerProfileSerializer() = delete;
+class ChromeTraceSerializer {
+  ChromeTraceSerializer(const ChromeTraceSerializer &) = delete;
+  ChromeTraceSerializer &operator=(const ChromeTraceSerializer &) = delete;
+  ChromeTraceSerializer() = delete;
 
  public:
-  ProfilerProfileSerializer(
+  ChromeTraceSerializer(
       const SamplingProfiler &sp,
       JSONEmitter &emitter,
-      ChromeTraceFormat &&chromeTrace)
+      TraceFormat &&chromeTrace)
       : samplingProfiler_(sp),
         json_(emitter),
         chromeTrace_(std::move(chromeTrace)) {}
@@ -341,10 +340,10 @@ class ProfilerProfileSerializer {
 
   const SamplingProfiler &samplingProfiler_;
   JSONEmitter &json_;
-  ChromeTraceFormat chromeTrace_;
+  TraceFormat chromeTrace_;
 };
 
-void ProfilerProfileSerializer::serialize() const {
+void ChromeTraceSerializer::serialize() const {
   json_.openDict();
 
   if (!chromeTrace_.getSampledEvents().empty()) {
@@ -403,7 +402,7 @@ static void emitProfileNode(
   json.closeDict(); // node
 }
 
-void ProfilerProfileSerializer::processNode(
+void ChromeTraceSerializer::processNode(
     const ChromeStackFrameNode &node) const {
   std::string name;
   std::string url;
@@ -460,7 +459,7 @@ void ProfilerProfileSerializer::processNode(
   emitProfileNode(json_, node, name, scriptId, url, lineNumber, columnNumber);
 }
 
-void ProfilerProfileSerializer::emitNodes() const {
+void ChromeTraceSerializer::emitNodes() const {
   json_.emitKey("nodes");
   json_.openArray();
 
@@ -499,21 +498,21 @@ static SamplingProfiler::TimeStampType getLastTimeStamp(
                         : events.back().getTimeStamp();
 }
 
-void ProfilerProfileSerializer::emitStartTime() const {
+void ChromeTraceSerializer::emitStartTime() const {
   json_.emitKeyValue(
       "startTime",
       toMicros(getFirstTimeStamp(chromeTrace_.getSampledEvents())
                    .time_since_epoch()));
 }
 
-void ProfilerProfileSerializer::emitEndTime() const {
+void ChromeTraceSerializer::emitEndTime() const {
   json_.emitKeyValue(
       "endTime",
       toMicros(getLastTimeStamp(chromeTrace_.getSampledEvents())
                    .time_since_epoch()));
 }
 
-void ProfilerProfileSerializer::emitSamples() const {
+void ChromeTraceSerializer::emitSamples() const {
   json_.emitKey("samples");
 
   json_.openArray();
@@ -527,7 +526,7 @@ void ProfilerProfileSerializer::emitSamples() const {
   json_.closeArray(); // samples
 }
 
-void ProfilerProfileSerializer::emitTimeDeltas() const {
+void ChromeTraceSerializer::emitTimeDeltas() const {
   json_.emitKey("timeDeltas");
 
   json_.openArray();
@@ -546,13 +545,13 @@ void ProfilerProfileSerializer::emitTimeDeltas() const {
 }
 } // namespace
 
-void serializeAsProfilerProfile(
+void serializeAsChromeTrace(
     const SamplingProfiler &sp,
     llvh::raw_ostream &os,
-    ChromeTraceFormat &&chromeTrace) {
+    TraceFormat &&traceFormat) {
   JSONEmitter json(os);
 
-  ProfilerProfileSerializer s(sp, json, std::move(chromeTrace));
+  ChromeTraceSerializer s(sp, json, std::move(traceFormat));
   s.serialize();
 }
 } // namespace vm

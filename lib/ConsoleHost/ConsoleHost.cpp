@@ -439,11 +439,11 @@ bool executeHBCBytecodeImpl(
       break;
     case ExecuteOptions::SampleProfilingMode::Chrome:
       vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->serializeInDevToolsFormat(llvh::errs());
+      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
       break;
     case ExecuteOptions::SampleProfilingMode::Tracery:
       vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
+      runtime->samplingProfiler->dumpTraceryTrace(llvh::errs());
       break;
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE

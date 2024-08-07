@@ -1132,7 +1132,7 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
   if (ec) {
     throw std::system_error(ec);
   }
-  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
+  ::hermes::vm::SamplingProfiler::dumpTraceryTraceGlobal(os);
 #else
   throw std::logic_error(
       "Hermes was not compiled with SamplingProfilerSupport");
@@ -1142,7 +1142,7 @@ void HermesRuntime::dumpSampledTraceToFile(const std::string &fileName) {
 void HermesRuntime::dumpSampledTraceToStream(std::ostream &stream) {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   llvh::raw_os_ostream os(stream);
-  ::hermes::vm::SamplingProfiler::dumpChromeTraceGlobal(os);
+  ::hermes::vm::SamplingProfiler::dumpTraceryTraceGlobal(os);
 #else
   throwHermesNotCompiledWithSamplingProfilerSupport();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
@@ -1155,7 +1155,7 @@ void HermesRuntime::sampledTraceToStreamInDevToolsFormat(std::ostream &stream) {
     throw jsi::JSINativeException("Runtime not registered for profiling");
   }
   llvh::raw_os_ostream os(stream);
-  sp->serializeInDevToolsFormat(os);
+  sp->dumpChromeTrace(os);
 #else
   throwHermesNotCompiledWithSamplingProfilerSupport();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE

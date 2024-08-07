@@ -15,7 +15,7 @@
 // A new header may need to be introduced for data entities. It may make sense
 // to share the data entity across different SamplingProfiler implementations.
 
-/// This file convert sampled stack frames into Chrome trace format which
+/// This file convert sampled stack frames into trace format which
 /// is documented here:
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview
 
@@ -159,8 +159,8 @@ class ChromeSampleEvent {
   }
 };
 
-/// Represent all data for a trace session in chrome trace format.
-class ChromeTraceFormat {
+/// Represent all data for a trace session.
+class TraceFormat {
  private:
   /// Id of target process.
   uint32_t pid_;
@@ -171,14 +171,14 @@ class ChromeTraceFormat {
   /// Maintain all transformed chrome sample events.
   std::vector<ChromeSampleEvent> sampleEvents_;
 
-  explicit ChromeTraceFormat(
+  explicit TraceFormat(
       uint32_t pid,
       const SamplingProfiler::ThreadNamesMap &threadNames,
       std::unique_ptr<ChromeStackFrameNode> root)
       : pid_(pid), threadNames_(threadNames), root_(std::move(root)) {}
 
  public:
-  static ChromeTraceFormat create(
+  static TraceFormat create(
       uint32_t pid,
       const SamplingProfiler::ThreadNamesMap &threadNames,
       const std::vector<SamplingProfiler::StackTrace> &sampledStacks);
@@ -200,11 +200,11 @@ class ChromeTraceFormat {
   }
 };
 
-/// Serialize input ChromeTraceFormat to output stream.
-class ChromeTraceSerializer {
+/// Serialize input TraceFormat to output stream.
+class TraceryTraceSerializer {
  private:
   const SamplingProfiler &samplingProfiler_;
-  ChromeTraceFormat trace_;
+  TraceFormat trace_;
   SamplingProfiler::TimeStampType firstEventTimeStamp_;
 
  private:
@@ -222,23 +222,23 @@ class ChromeTraceSerializer {
       SamplingProfiler::TimeStampType timeStamp);
 
  public:
-  explicit ChromeTraceSerializer(
+  explicit TraceryTraceSerializer(
       const SamplingProfiler &sp,
-      ChromeTraceFormat &&chromeTrace);
+      TraceFormat &&chromeTrace);
 
   /// Serialize chrome trace to \p OS.
   void serialize(llvh::raw_ostream &OS) const;
 };
 
-/// Serialize the \p chromeTrace as a Profiler.Profile to \p os. See the url
+/// Serialize the \p traceFormat as a Profiler.Profile to \p os. See the url
 /// below for a description of that type.
 ///
 /// https://chromedevtools.github.io/devtools-protocol/tot/Profiler/#type-Profile
 ///
-void serializeAsProfilerProfile(
+void serializeAsChromeTrace(
     const SamplingProfiler &sp,
     llvh::raw_ostream &os,
-    ChromeTraceFormat &&chromeTrace);
+    TraceFormat &&traceFormat);
 
 } // namespace vm
 } // namespace hermes

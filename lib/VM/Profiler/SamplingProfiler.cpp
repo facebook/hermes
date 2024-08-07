@@ -179,30 +179,30 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   }
 }
 
-void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
+void SamplingProfiler::dumpTraceryTraceGlobal(llvh::raw_ostream &OS) {
   auto globalProfiler = sampling_profiler::Sampler::get();
   std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
   if (!globalProfiler->profilers_.empty()) {
     auto *localProfiler = *globalProfiler->profilers_.begin();
-    localProfiler->dumpChromeTrace(OS);
+    localProfiler->dumpTraceryTrace(OS);
   }
 }
 
-void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
+void SamplingProfiler::dumpTraceryTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   auto pid = oscompat::process_id();
-  ChromeTraceSerializer serializer(
-      *this, ChromeTraceFormat::create(pid, threadNames_, sampledStacks_));
+  TraceryTraceSerializer serializer(
+      *this, TraceFormat::create(pid, threadNames_, sampledStacks_));
   serializer.serialize(OS);
   clear();
 }
 
-void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
+void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  hermes::vm::serializeAsProfilerProfile(
+  hermes::vm::serializeAsChromeTrace(
       *this,
       OS,
-      ChromeTraceFormat::create(
+      TraceFormat::create(
           oscompat::process_id(), threadNames_, sampledStacks_));
   clear();
 }
