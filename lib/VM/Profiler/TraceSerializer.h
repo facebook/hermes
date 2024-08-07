@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_VM_PROFILER_CHROMETRACESERIALIZER_H
-#define HERMES_VM_PROFILER_CHROMETRACESERIALIZER_H
+#ifndef HERMES_VM_PROFILER_TRACESERIALIZER_H
+#define HERMES_VM_PROFILER_TRACESERIALIZER_H
 
 #include "hermes/VM/Profiler/SamplingProfilerDefs.h"
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-// TODO: Remove dependency on SamplingProfilerPosix from ChromeTraceSerializer.
+// TODO: Remove dependency on SamplingProfilerPosix from TraceSerializer.
 // A new header may need to be introduced for data entities. It may make sense
 // to share the data entity across different SamplingProfiler implementations.
 
@@ -200,35 +200,11 @@ class TraceFormat {
   }
 };
 
-/// Serialize input TraceFormat to output stream.
-class TraceryTraceSerializer {
- private:
-  const SamplingProfiler &samplingProfiler_;
-  TraceFormat trace_;
-  SamplingProfiler::TimeStampType firstEventTimeStamp_;
-
- private:
-  // Emit process_name metadata event.
-  void serializeProcessName(JSONEmitter &json) const;
-  // Emit threads related events.
-  void serializeThreads(JSONEmitter &json) const;
-  // Emit "sampled" events for captured stack traces.
-  void serializeSampledEvents(JSONEmitter &json) const;
-  // Emit "stackFrames" entries.
-  void serializeStackFrames(JSONEmitter &json) const;
-
-  // \return a serializable timeStamp string.
-  static std::string getSerializedTimeStamp(
-      SamplingProfiler::TimeStampType timeStamp);
-
- public:
-  explicit TraceryTraceSerializer(
-      const SamplingProfiler &sp,
-      TraceFormat &&chromeTrace);
-
-  /// Serialize chrome trace to \p OS.
-  void serialize(llvh::raw_ostream &OS) const;
-};
+/// Serialize the \p traceFormat as a tracery profile to \p OS.
+void serializeAsTraceryTrace(
+    const SamplingProfiler &sp,
+    llvh::raw_ostream &os,
+    TraceFormat &&traceFormat);
 
 /// Serialize the \p traceFormat as a Profiler.Profile to \p os. See the url
 /// below for a description of that type.
@@ -245,4 +221,4 @@ void serializeAsChromeTrace(
 
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
-#endif // HERMES_VM_PROFILER_CHROMETRACESERIALIZER_H
+#endif // HERMES_VM_PROFILER_TRACESERIALIZER_H

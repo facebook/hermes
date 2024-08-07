@@ -17,8 +17,8 @@
 
 #include "llvh/Support/Compiler.h"
 
-#include "ChromeTraceSerializer.h"
 #include "SamplingProfilerSampler.h"
+#include "TraceSerializer.h"
 
 #include <fcntl.h>
 #include <cassert>
@@ -191,9 +191,8 @@ void SamplingProfiler::dumpTraceryTraceGlobal(llvh::raw_ostream &OS) {
 void SamplingProfiler::dumpTraceryTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   auto pid = oscompat::process_id();
-  TraceryTraceSerializer serializer(
-      *this, TraceFormat::create(pid, threadNames_, sampledStacks_));
-  serializer.serialize(OS);
+  hermes::vm::serializeAsTraceryTrace(
+      *this, OS, TraceFormat::create(pid, threadNames_, sampledStacks_));
   clear();
 }
 

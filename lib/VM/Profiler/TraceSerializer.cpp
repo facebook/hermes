@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "ChromeTraceSerializer.h"
+#include "TraceSerializer.h"
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
@@ -70,6 +70,42 @@ OptValue<hbc::DebugSourceLocation> getSourceLocation(
 }
 } // namespace
 
+namespace chrome_event_type {
+static const char *Completed = "X";
+static const char *Metadata = "M";
+} // namespace chrome_event_type
+
+namespace {
+/// Serialize input TraceFormat to output stream.
+class TraceryTraceSerializer {
+ private:
+  const SamplingProfiler &samplingProfiler_;
+  TraceFormat trace_;
+  SamplingProfiler::TimeStampType firstEventTimeStamp_;
+
+ private:
+  // Emit process_name metadata event.
+  void serializeProcessName(JSONEmitter &json) const;
+  // Emit threads related events.
+  void serializeThreads(JSONEmitter &json) const;
+  // Emit "sampled" events for captured stack traces.
+  void serializeSampledEvents(JSONEmitter &json) const;
+  // Emit "stackFrames" entries.
+  void serializeStackFrames(JSONEmitter &json) const;
+
+  // \return a serializable timeStamp string.
+  static std::string getSerializedTimeStamp(
+      SamplingProfiler::TimeStampType timeStamp);
+
+ public:
+  explicit TraceryTraceSerializer(
+      const SamplingProfiler &sp,
+      TraceFormat &&chromeTrace);
+
+  /// Serialize chrome trace to \p OS.
+  void serialize(llvh::raw_ostream &OS) const;
+};
+
 TraceryTraceSerializer::TraceryTraceSerializer(
     const SamplingProfiler &sp,
     TraceFormat &&chromeTrace)
@@ -78,11 +114,6 @@ TraceryTraceSerializer::TraceryTraceSerializer(
       ? std::chrono::steady_clock::now()
       : trace_.getSampledEvents()[0].getTimeStamp();
 }
-
-namespace chrome_event_type {
-static const char *Completed = "X";
-static const char *Metadata = "M";
-} // namespace chrome_event_type
 
 void TraceryTraceSerializer::serializeProcessName(JSONEmitter &json) const {
   double pid = trace_.getPid();
@@ -313,7 +344,6 @@ void TraceryTraceSerializer::serialize(llvh::raw_ostream &OS) const {
                             .count());
 }
 
-namespace {
 class ChromeTraceSerializer {
   ChromeTraceSerializer(const ChromeTraceSerializer &) = delete;
   ChromeTraceSerializer &operator=(const ChromeTraceSerializer &) = delete;
@@ -544,6 +574,16 @@ void ChromeTraceSerializer::emitTimeDeltas() const {
   json_.closeArray(); // samples
 }
 } // namespace
+
+void serializeAsTraceryTrace(
+    const SamplingProfiler &sp,
+    llvh::raw_ostream &os,
+    TraceFormat &&traceFormat) {
+  JSONEmitter json(os);
+
+  TraceryTraceSerializer s(sp, std::move(traceFormat));
+  s.serialize(os);
+}
 
 void serializeAsChromeTrace(
     const SamplingProfiler &sp,

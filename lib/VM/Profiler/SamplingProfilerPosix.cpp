@@ -20,7 +20,7 @@
 
 #include "llvh/Support/Compiler.h"
 
-#include "ChromeTraceSerializer.h"
+#include "TraceSerializer.h"
 
 // Determine if LOOM allowed as well as if it is supported by the target
 // platform. From this point on, the code should use

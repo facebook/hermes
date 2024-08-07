@@ -17,7 +17,7 @@
 
 #include "llvh/Support/Compiler.h"
 
-#include "ChromeTraceSerializer.h"
+#include "TraceSerializer.h"
 
 #include <fcntl.h>
 #include <cassert>

@@ -53,7 +53,7 @@ set(source_files
   Runtime.cpp Runtime-profilers.cpp
   RuntimeFlags.cpp
   RuntimeModule.cpp
-  Profiler/ChromeTraceSerializer.cpp
+  Profiler/TraceSerializer.cpp
   Profiler/CodeCoverageProfiler.cpp
   Profiler/SamplingProfiler.cpp
   Profiler/SamplingProfilerPosix.cpp
