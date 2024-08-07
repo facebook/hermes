@@ -1230,7 +1230,7 @@ class DateTimeFormatApple : public DateTimeFormat {
   std::u16string format(double jsTimeValue) noexcept;
 
  private:
-  void initializeNSDateFormatter() noexcept;
+  void initializeNSDateFormatter(NSLocale *nsLocale) noexcept;
 
   // https://402.ecma-international.org/8.0/#sec-properties-of-intl-datetimeformat-instances
   // Intl.DateTimeFormat instances have an [[InitializedDateTimeFormat]]
@@ -1388,8 +1388,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
     opt.emplace(u"hc", *hourCycleOpt);
   // 16. Let localeData be %DateTimeFormat%.[[LocaleData]].
   // NOTE: We don't actually have access to the underlying locale data, so we
-  // will use NSLocale.currentLocale instance as a substitute
-  auto localeData = NSLocale.currentLocale;
+  // will construct an NSLocale as needed instead.
   // 17. Let r be ResolveLocale(%DateTimeFormat%.[[AvailableLocales]],
   // requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]],
   // localeData).
@@ -1581,6 +1580,8 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   // ii. Set dateTimeFormat's internal slot whose name is the Internal
   // Slot column of the row to p.
   // 39. If dateTimeFormat.[[Hour]] is undefined, then
+  NSLocale *nsLocale =
+      [NSLocale localeWithLocaleIdentifier:u16StringToNSString(locale_)];
   if (!hour_.has_value()) {
     // a. Set dateTimeFormat.[[HourCycle]] to undefined.
     hourCycle_ = std::nullopt;
@@ -1589,7 +1590,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
     // 40. Else,
   } else {
     // a. Let hcDefault be dataLocaleData.[[hourCycle]].
-    auto hcDefault = getDefaultHourCycle(localeData);
+    auto hcDefault = getDefaultHourCycle(nsLocale);
     // b. Let hc be dateTimeFormat.[[HourCycle]].
     auto hc = hourCycle_;
     // c. If hc is null, then
@@ -1635,7 +1636,7 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   // 41. Set dateTimeFormat.[[Pattern]] to pattern.
   // 42. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
   // 43. Return dateTimeFormat.
-  initializeNSDateFormatter();
+  initializeNSDateFormatter(nsLocale);
   return vm::ExecutionStatus::RETURNED;
 }
 
@@ -1693,7 +1694,8 @@ Options DateTimeFormat::resolvedOptions() noexcept {
   return static_cast<DateTimeFormatApple *>(this)->resolvedOptions();
 }
 
-void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
+void DateTimeFormatApple::initializeNSDateFormatter(
+    NSLocale *nsLocale) noexcept {
   static constexpr std::u16string_view kLong = u"long", kShort = u"short",
                                        kNarrow = u"narrow", kMedium = u"medium",
                                        kFull = u"full", kNumeric = u"numeric",
@@ -1730,8 +1732,7 @@ void DateTimeFormatApple::initializeNSDateFormatter() noexcept {
   }
   nsDateFormatter_.timeZone =
       [[NSTimeZone alloc] initWithName:u16StringToNSString(timeZone_)];
-  nsDateFormatter_.locale =
-      [[NSLocale alloc] initWithLocaleIdentifier:u16StringToNSString(locale_)];
+  nsDateFormatter_.locale = nsLocale;
   if (calendar_)
     nsDateFormatter_.calendar = [[NSCalendar alloc]
         initWithCalendarIdentifier:u16StringToNSString(*calendar_)];
