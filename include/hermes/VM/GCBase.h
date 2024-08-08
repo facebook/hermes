@@ -971,12 +971,24 @@ class GCBase {
   /// \return An error code on failure, else an empty error code.
   std::error_code createSnapshotToFile(const std::string &fileName);
 
+  /// An edges counter array for each root section. The counter is uninitialized
+  /// if a root section is not visited yet.
+  using SavedNumRootEdges = std::array<
+      llvh::Optional<HeapSizeType>,
+      static_cast<unsigned>(RootSectionAcceptor::Section::NumSections)>;
+
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
   virtual void createSnapshot(llvh::raw_ostream &os) = 0;
   void createSnapshot(GC &gc, llvh::raw_ostream &os);
-  /// Actual implementation of writing the snapshot.
-  void createSnapshotImpl(GC &gc, HeapSnapshot &snap);
+  /// Actual implementation of writing the snapshot. If \p numRootEdges is
+  // uninitialized, it will be populated with the edge counts for each root
+  // section. Otherwise, it will be used to pad the output with additional edges
+  // if necessary so they match the recorded count.
+  void createSnapshotImpl(
+      GC &gc,
+      HeapSnapshot &snap,
+      SavedNumRootEdges &numRootEdges);
 
   /// Subclasses can override and add more specific native memory usage.
   virtual void snapshotAddGCNativeNodes(HeapSnapshot &snap);

@@ -174,6 +174,10 @@ class HeapSnapshot {
   EdgeIndex getEdgeCount() const {
     return edgeCount_;
   }
+  /// Get the number of edges for the current node.
+  HeapSizeType getCurEdgeCount() const {
+    return currEdgeCount_;
+  }
   /// Get the trace function count for stackTracesTree_.
   size_t getTraceFunctionCount() const {
     return traceFunctionCount_;

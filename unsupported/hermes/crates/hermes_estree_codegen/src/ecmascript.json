@@ -383,6 +383,21 @@
                 }
             }
         },
+        "ComponentDeclaration": {
+            "fields": {
+                "id": {
+                    "type": "Identifier"
+                },
+                "body":{
+                    "type": "BlockStatement"
+                },
+                "type_parameters": {
+                    "type": "Option<TypeParameterInstantiation>",
+                    "optional": true,
+                    "rename": "typeParameters"
+                }
+            }
+        },
         "ClassDeclaration": {
             "skip_hermes_codegen": true,
             "fields": {
@@ -1544,7 +1559,8 @@
         ],
         "ModuleItem": [
             "ImportOrExportDeclaration",
-            "Statement"
+            "Statement",
+            "ComponentDeclaration"
         ],
         "ImportOrExportDeclaration": [
             "ImportDeclaration",

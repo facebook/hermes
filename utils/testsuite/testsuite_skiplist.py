@@ -1287,6 +1287,8 @@ SKIP_LIST = [
     "mjsunit/regress/regress-prepare-break-while-recompile.js",
     # Fails when ASAN/UBSAN are limiting the max native stack depth.
     "mjsunit/compiler/regress-lazy-deopt.js",
+    # Error stack getter is on Error.prototype in Hermes.
+    "mjsunit/regress/regress-3404.js",
     # Uncategorized mjsunit failures
     "mjsunit/accessor-map-sharing.js",
     "mjsunit/accessors-on-global-object.js",

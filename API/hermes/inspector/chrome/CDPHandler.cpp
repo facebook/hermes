@@ -1711,7 +1711,7 @@ std::vector<m::runtime::PropertyDescriptor> CDPHandlerImpl::makePropsFromValue(
         jsi::Value propValue = obj.getProperty(runtime, propName);
         desc.value = m::runtime::makeRemoteObject(
             runtime, propValue, objTable_, objectGroup, false, generatePreview);
-      } catch (const jsi::JSError &err) {
+      } catch (const jsi::JSError &) {
         // We fetched a property with a getter that threw. Show a placeholder.
         // We could have added additional info, but the UI quickly gets messy.
         desc.value = m::runtime::makeRemoteObject(

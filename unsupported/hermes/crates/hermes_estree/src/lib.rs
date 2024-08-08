@@ -10,7 +10,6 @@ mod binding;
 mod generated_extensions;
 mod js_value;
 mod range;
-mod visit;
 
 pub use binding::Binding;
 pub use binding::BindingId;
@@ -19,7 +18,6 @@ pub use generated_extensions::*;
 pub use js_value::JsValue;
 pub use js_value::Number;
 pub use range::SourceRange;
-pub use visit::*;
 
 #[cfg(test)]
 mod tests {

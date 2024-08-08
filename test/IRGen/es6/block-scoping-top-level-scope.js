@@ -81,213 +81,212 @@ function StrictHasParamExprs() {
 // BS-NEXT:i9[ASCII, 166..187] #DC9E65B9: notStrictHasParamExprs
 // BS-NEXT:i10[ASCII, 188..208] #689EB6F3: notStrictNoParamExprs
 
-// BS:Function<global>(1 params, 13 registers, 0 symbols):
+// BS:Function<global>(1 params, 4 registers, 0 symbols):
 // BS-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 // BS-NEXT:    DeclareGlobalVar  "notStrictNoParamE"...
 // BS-NEXT:    DeclareGlobalVar  "notStrictHasParam"...
 // BS-NEXT:    DeclareGlobalVar  "StrictNoParamExpr"...
 // BS-NEXT:    DeclareGlobalVar  "StrictHasParamExp"...
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    CreateClosure     r1, r0, Function<notStrictNoParamExprs>
-// BS-NEXT:    GetGlobalObject   r2
-// BS-NEXT:    PutById           r2, r1, 1, "notStrictNoParamE"...
-// BS-NEXT:    CreateClosure     r3, r0, Function<notStrictHasParamExprs>
-// BS-NEXT:    GetGlobalObject   r4
-// BS-NEXT:    PutById           r4, r3, 2, "notStrictHasParam"...
-// BS-NEXT:    CreateClosure     r5, r0, Function<StrictNoParamExprs>
-// BS-NEXT:    GetGlobalObject   r6
-// BS-NEXT:    PutById           r6, r5, 3, "StrictNoParamExpr"...
-// BS-NEXT:    CreateClosure     r7, r0, Function<StrictHasParamExprs>
-// BS-NEXT:    GetGlobalObject   r8
-// BS-NEXT:    PutById           r8, r7, 4, "StrictHasParamExp"...
-// BS-NEXT:    LoadConstUndefined r10
-// BS-NEXT:    Mov               r9, r10
-// BS-NEXT:    Mov               r11, r9
+// BS-NEXT:    CreateClosure     r2, r0, Function<notStrictNoParamExprs>
+// BS-NEXT:    GetGlobalObject   r3
+// BS-NEXT:    PutById           r3, r2, 1, "notStrictNoParamE"...
+// BS-NEXT:    CreateClosure     r2, r0, Function<notStrictHasParamExprs>
+// BS-NEXT:    GetGlobalObject   r3
+// BS-NEXT:    PutById           r3, r2, 2, "notStrictHasParam"...
+// BS-NEXT:    CreateClosure     r2, r0, Function<StrictNoParamExprs>
+// BS-NEXT:    GetGlobalObject   r3
+// BS-NEXT:    PutById           r3, r2, 3, "StrictNoParamExpr"...
+// BS-NEXT:    CreateClosure     r2, r0, Function<StrictHasParamExprs>
+// BS-NEXT:    GetGlobalObject   r3
+// BS-NEXT:    PutById           r3, r2, 4, "StrictHasParamExp"...
+// BS-NEXT:    LoadConstUndefined r3
+// BS-NEXT:    Mov               r2, r3
 // BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    Ret               r11
+// BS-NEXT:    Ret               r2
 
-// BS:Function<notStrictNoParamExprs>(1 params, 5 registers, 1 symbols):
+// BS:Function<notStrictNoParamExprs>(1 params, 4 registers, 1 symbols):
 // BS-NEXT:Offset in debug table: source 0x003d, scope 0x0003, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 0
-// BS-NEXT:    CreateClosure     r2, r1, Function<testNotStrictNoParamExprs>
-// BS-NEXT:    StoreToEnvironment r0, 0, r2
+// BS-NEXT:    CreateClosure     r3, r1, Function<testNotStrictNoParamExprs>
+// BS-NEXT:    StoreToEnvironment r0, 0, r3
 // BS-NEXT:    LoadConstUndefined r3
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r3
 
-// BS:Function<testNotStrictNoParamExprs>(2 params, 8 registers, 2 symbols):
+// BS:Function<testNotStrictNoParamExprs>(2 params, 4 registers, 2 symbols):
 // BS-NEXT:Offset in debug table: source 0x0051, scope 0x000a, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    LoadParam         r2, 1
-// BS-NEXT:    StoreToEnvironment r0, 0, r2
+// BS-NEXT:    LoadParam         r3, 1
+// BS-NEXT:    StoreToEnvironment r0, 0, r3
 // BS-NEXT:    LoadConstUndefined r3
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r3
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 1
-// BS-NEXT:    LoadConstUndefined r4
-// BS-NEXT:    StoreNPToEnvironment r1, 0, r4
-// BS-NEXT:    LoadConstUndefined r5
-// BS-NEXT:    StoreNPToEnvironment r1, 0, r5
-// BS-NEXT:    LoadConstUndefined r6
-// BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    Ret               r6
-
-// BS:Function<notStrictHasParamExprs>(1 params, 5 registers, 1 symbols):
-// BS-NEXT:Offset in debug table: source 0x006f, scope 0x0013, textified callees 0x0000
-// BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    CreateInnerEnvironment r1, r0, 0
-// BS-NEXT:    CreateClosure     r2, r1, Function<testNotStrictHasParamExprs>
-// BS-NEXT:    StoreToEnvironment r0, 0, r2
+// BS-NEXT:    LoadConstUndefined r3
+// BS-NEXT:    StoreNPToEnvironment r1, 0, r3
+// BS-NEXT:    LoadConstUndefined r3
+// BS-NEXT:    StoreNPToEnvironment r1, 0, r3
 // BS-NEXT:    LoadConstUndefined r3
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r3
 
-// BS:Function<testNotStrictHasParamExprs>(1 params, 14 registers, 2 symbols):
+// BS:Function<notStrictHasParamExprs>(1 params, 4 registers, 1 symbols):
+// BS-NEXT:Offset in debug table: source 0x006f, scope 0x0013, textified callees 0x0000
+// BS-NEXT:    CreateEnvironment r0
+// BS-NEXT:    CreateInnerEnvironment r1, r0, 0
+// BS-NEXT:    CreateClosure     r3, r1, Function<testNotStrictHasParamExprs>
+// BS-NEXT:    StoreToEnvironment r0, 0, r3
+// BS-NEXT:    LoadConstUndefined r3
+// BS-NEXT:    AsyncBreakCheck
+// BS-NEXT:    Ret               r3
+
+// BS:Function<testNotStrictHasParamExprs>(1 params, 10 registers, 2 symbols):
 // BS-NEXT:Offset in debug table: source 0x0083, scope 0x001a, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    LoadParam         r7, 1
+// BS-NEXT:    LoadParam         r9, 1
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 0
 // BS-NEXT:    LoadConstEmpty    r8
 // BS-NEXT:    StoreToEnvironment r0, 0, r8
-// BS-NEXT:    LoadConstUndefined r9
-// BS-NEXT:    StrictNeq         r10, r7, r9
-// BS-NEXT:    Mov               r6, r7
+// BS-NEXT:    LoadConstUndefined r8
+// BS-NEXT:    StrictNeq         r8, r9, r8
+// BS-NEXT:    Mov               r6, r9
 // BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    JmpTrue           L1, r10
+// BS-NEXT:    JmpTrue           L1, r8
 // BS-NEXT:    CreateInnerEnvironment r2, r1, 1
-// BS-NEXT:    CreateClosure     r7, r2, Function<funcParamInit>
-// BS-NEXT:    StoreToEnvironment r2, 0, r7
+// BS-NEXT:    CreateClosure     r8, r2, Function<funcParamInit>
+// BS-NEXT:    StoreToEnvironment r2, 0, r8
 // BS-NEXT:    CreateInnerEnvironment r3, r1, 1
 // BS-NEXT:    CreateClosure     r8, r3, Function<funcParamInit2>
 // BS-NEXT:    StoreToEnvironment r3, 0, r8
 // BS-NEXT:    Mov               r6, r8
 // BS-NEXT:L1:
 // BS-NEXT:    StoreToEnvironment r0, 0, r6
-// BS-NEXT:    LoadFromEnvironment r7, r0, 0
-// BS-NEXT:    ThrowIfEmpty      r8, r7
+// BS-NEXT:    LoadFromEnvironment r8, r0, 0
+// BS-NEXT:    ThrowIfEmpty      r8, r8
 // BS-NEXT:    StoreToEnvironment r0, 1, r8
 // BS-NEXT:    CreateInnerEnvironment r4, r1, 1
-// BS-NEXT:    LoadConstUndefined r9
-// BS-NEXT:    StoreNPToEnvironment r4, 0, r9
+// BS-NEXT:    LoadConstUndefined r8
+// BS-NEXT:    StoreNPToEnvironment r4, 0, r8
 // BS-NEXT:    CreateInnerEnvironment r5, r4, 1
-// BS-NEXT:    LoadConstUndefined r10
-// BS-NEXT:    StoreNPToEnvironment r5, 0, r10
-// BS-NEXT:    LoadConstUndefined r11
-// BS-NEXT:    StoreNPToEnvironment r5, 0, r11
-// BS-NEXT:    LoadConstUndefined r12
-// BS-NEXT:    Ret               r12
+// BS-NEXT:    LoadConstUndefined r8
+// BS-NEXT:    StoreNPToEnvironment r5, 0, r8
+// BS-NEXT:    LoadConstUndefined r8
+// BS-NEXT:    StoreNPToEnvironment r5, 0, r8
+// BS-NEXT:    LoadConstUndefined r8
+// BS-NEXT:    Ret               r8
 
-// BS:Function<funcParamInit>(2 params, 8 registers, 2 symbols):
+// BS:Function<funcParamInit>(2 params, 4 registers, 2 symbols):
 // BS-NEXT:Offset in debug table: source 0x00d3, scope 0x0034, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    LoadParam         r2, 1
-// BS-NEXT:    StoreToEnvironment r0, 0, r2
+// BS-NEXT:    LoadParam         r3, 1
+// BS-NEXT:    StoreToEnvironment r0, 0, r3
 // BS-NEXT:    LoadConstUndefined r3
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r3
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 1
-// BS-NEXT:    LoadConstUndefined r4
-// BS-NEXT:    StoreNPToEnvironment r1, 0, r4
-// BS-NEXT:    LoadConstUndefined r5
-// BS-NEXT:    StoreNPToEnvironment r1, 0, r5
-// BS-NEXT:    LoadConstUndefined r6
+// BS-NEXT:    LoadConstUndefined r3
+// BS-NEXT:    StoreNPToEnvironment r1, 0, r3
+// BS-NEXT:    LoadConstUndefined r3
+// BS-NEXT:    StoreNPToEnvironment r1, 0, r3
+// BS-NEXT:    LoadConstUndefined r3
 // BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    Ret               r6
+// BS-NEXT:    Ret               r3
 
 // BS:Function<funcParamInit2>(1 params, 4 registers, 0 symbols):
 // BS-NEXT:Offset in debug table: source 0x00f1, scope 0x0040, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 0
-// BS-NEXT:    LoadConstUndefined r2
+// BS-NEXT:    LoadConstUndefined r3
 // BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    Ret               r2
+// BS-NEXT:    Ret               r3
 
-// BS:Function<StrictNoParamExprs>(1 params, 4 registers, 1 symbols):
+// BS:Function<StrictNoParamExprs>(1 params, 3 registers, 1 symbols):
 // BS-NEXT:Offset in debug table: source 0x00fb, scope 0x0047, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    CreateClosure     r1, r0, Function<testStrictNoParamExprs>
-// BS-NEXT:    StoreToEnvironment r0, 0, r1
+// BS-NEXT:    CreateClosure     r2, r0, Function<testStrictNoParamExprs>
+// BS-NEXT:    StoreToEnvironment r0, 0, r2
 // BS-NEXT:    LoadConstUndefined r2
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r2
 
-// BS:Function<testStrictNoParamExprs>(2 params, 7 registers, 3 symbols):
+// BS:Function<testStrictNoParamExprs>(2 params, 3 registers, 3 symbols):
 // BS-NEXT:Offset in debug table: source 0x0112, scope 0x004c, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    LoadParam         r1, 1
-// BS-NEXT:    StoreToEnvironment r0, 0, r1
+// BS-NEXT:    LoadParam         r2, 1
+// BS-NEXT:    StoreToEnvironment r0, 0, r2
 // BS-NEXT:    LoadConstUndefined r2
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// BS-NEXT:    LoadConstUndefined r3
-// BS-NEXT:    StoreNPToEnvironment r0, 2, r3
-// BS-NEXT:    LoadConstUndefined r4
-// BS-NEXT:    StoreNPToEnvironment r0, 2, r4
-// BS-NEXT:    LoadConstUndefined r5
-// BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    Ret               r5
-
-// BS:Function<StrictHasParamExprs>(1 params, 4 registers, 1 symbols):
-// BS-NEXT:Offset in debug table: source 0x0135, scope 0x0053, textified callees 0x0000
-// BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    CreateClosure     r1, r0, Function<testStrictHasParamExprs>
-// BS-NEXT:    StoreToEnvironment r0, 0, r1
+// BS-NEXT:    LoadConstUndefined r2
+// BS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// BS-NEXT:    LoadConstUndefined r2
+// BS-NEXT:    StoreNPToEnvironment r0, 2, r2
 // BS-NEXT:    LoadConstUndefined r2
 // BS-NEXT:    AsyncBreakCheck
 // BS-NEXT:    Ret               r2
 
-// BS:Function<testStrictHasParamExprs>(1 params, 12 registers, 2 symbols):
+// BS:Function<StrictHasParamExprs>(1 params, 3 registers, 1 symbols):
+// BS-NEXT:Offset in debug table: source 0x0135, scope 0x0053, textified callees 0x0000
+// BS-NEXT:    CreateEnvironment r0
+// BS-NEXT:    CreateClosure     r2, r0, Function<testStrictHasParamExprs>
+// BS-NEXT:    StoreToEnvironment r0, 0, r2
+// BS-NEXT:    LoadConstUndefined r2
+// BS-NEXT:    AsyncBreakCheck
+// BS-NEXT:    Ret               r2
+
+// BS:Function<testStrictHasParamExprs>(1 params, 8 registers, 2 symbols):
 // BS-NEXT:Offset in debug table: source 0x014c, scope 0x0058, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    LoadParam         r5, 1
+// BS-NEXT:    LoadParam         r7, 1
 // BS-NEXT:    LoadConstEmpty    r6
 // BS-NEXT:    StoreToEnvironment r0, 0, r6
-// BS-NEXT:    LoadConstUndefined r7
-// BS-NEXT:    StrictNeq         r8, r5, r7
-// BS-NEXT:    Mov               r4, r5
+// BS-NEXT:    LoadConstUndefined r6
+// BS-NEXT:    StrictNeq         r6, r7, r6
+// BS-NEXT:    Mov               r4, r7
 // BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    JmpTrue           L1, r8
+// BS-NEXT:    JmpTrue           L1, r6
 // BS-NEXT:    CreateInnerEnvironment r1, r0, 1
-// BS-NEXT:    CreateClosure     r5, r1, Function<funcParamInit>
-// BS-NEXT:    StoreToEnvironment r1, 0, r5
+// BS-NEXT:    CreateClosure     r6, r1, Function<funcParamInit>
+// BS-NEXT:    StoreToEnvironment r1, 0, r6
 // BS-NEXT:    CreateInnerEnvironment r2, r0, 1
 // BS-NEXT:    CreateClosure     r6, r2, Function<funcParamInit2>
 // BS-NEXT:    StoreToEnvironment r2, 0, r6
 // BS-NEXT:    Mov               r4, r6
 // BS-NEXT:L1:
 // BS-NEXT:    StoreToEnvironment r0, 0, r4
-// BS-NEXT:    LoadFromEnvironment r5, r0, 0
-// BS-NEXT:    ThrowIfEmpty      r6, r5
+// BS-NEXT:    LoadFromEnvironment r6, r0, 0
+// BS-NEXT:    ThrowIfEmpty      r6, r6
 // BS-NEXT:    StoreToEnvironment r0, 1, r6
 // BS-NEXT:    CreateInnerEnvironment r3, r0, 2
-// BS-NEXT:    LoadConstUndefined r7
-// BS-NEXT:    StoreNPToEnvironment r3, 0, r7
-// BS-NEXT:    LoadConstUndefined r8
-// BS-NEXT:    StoreNPToEnvironment r3, 1, r8
-// BS-NEXT:    LoadConstUndefined r9
-// BS-NEXT:    StoreNPToEnvironment r3, 1, r9
-// BS-NEXT:    LoadConstUndefined r10
-// BS-NEXT:    Ret               r10
+// BS-NEXT:    LoadConstUndefined r6
+// BS-NEXT:    StoreNPToEnvironment r3, 0, r6
+// BS-NEXT:    LoadConstUndefined r6
+// BS-NEXT:    StoreNPToEnvironment r3, 1, r6
+// BS-NEXT:    LoadConstUndefined r6
+// BS-NEXT:    StoreNPToEnvironment r3, 1, r6
+// BS-NEXT:    LoadConstUndefined r6
+// BS-NEXT:    Ret               r6
 
-// BS:Function<funcParamInit>(2 params, 7 registers, 3 symbols):
+// BS:Function<funcParamInit>(2 params, 3 registers, 3 symbols):
 // BS-NEXT:Offset in debug table: source 0x01ab, scope 0x0070, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    LoadParam         r1, 1
-// BS-NEXT:    StoreToEnvironment r0, 0, r1
+// BS-NEXT:    LoadParam         r2, 1
+// BS-NEXT:    StoreToEnvironment r0, 0, r2
 // BS-NEXT:    LoadConstUndefined r2
 // BS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// BS-NEXT:    LoadConstUndefined r3
-// BS-NEXT:    StoreNPToEnvironment r0, 2, r3
-// BS-NEXT:    LoadConstUndefined r4
-// BS-NEXT:    StoreNPToEnvironment r0, 2, r4
-// BS-NEXT:    LoadConstUndefined r5
+// BS-NEXT:    LoadConstUndefined r2
+// BS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// BS-NEXT:    LoadConstUndefined r2
+// BS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// BS-NEXT:    LoadConstUndefined r2
 // BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    Ret               r5
+// BS-NEXT:    Ret               r2
 
 // BS:Function<funcParamInit2>(1 params, 3 registers, 0 symbols):
 // BS-NEXT:Offset in debug table: source 0x01ce, scope 0x007a, textified callees 0x0000
 // BS-NEXT:    CreateEnvironment r0
-// BS-NEXT:    LoadConstUndefined r1
+// BS-NEXT:    LoadConstUndefined r2
 // BS-NEXT:    AsyncBreakCheck
-// BS-NEXT:    Ret               r1
+// BS-NEXT:    Ret               r2
 
 // BS:Debug filename table:
 // BS-NEXT:  0: {{.*}}block-scoping-top-level-scope.js
@@ -307,7 +306,7 @@ function StrictHasParamExprs() {
 // BS-NEXT:    bc 68: line 11 col 1 scope offset 0x0000 env r0
 // BS-NEXT:    bc 74: line 11 col 1 scope offset 0x0000 env r0
 // BS-NEXT:    bc 79: line 11 col 1 scope offset 0x0000 env r0
-// BS-NEXT:    bc 83: line 51 col 1 scope offset 0x0000 env r0
+// BS-NEXT:    bc 80: line 51 col 1 scope offset 0x0000 env r0
 // BS-NEXT:  0x003d  function idx 1, starts at line 11 col 1
 // BS-NEXT:    bc 9: line 11 col 1 scope offset 0x0007 env r1
 // BS-NEXT:    bc 14: line 11 col 1 scope offset 0x0007 env r1
@@ -491,190 +490,189 @@ function StrictHasParamExprs() {
 // NOBS-NEXT:i9[ASCII, 166..187] #DC9E65B9: notStrictHasParamExprs
 // NOBS-NEXT:i10[ASCII, 188..208] #689EB6F3: notStrictNoParamExprs
 
-// NOBS:Function<global>(1 params, 13 registers, 0 symbols):
+// NOBS:Function<global>(1 params, 4 registers, 0 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
 // NOBS-NEXT:    DeclareGlobalVar  "notStrictNoParamE"...
 // NOBS-NEXT:    DeclareGlobalVar  "notStrictHasParam"...
 // NOBS-NEXT:    DeclareGlobalVar  "StrictNoParamExpr"...
 // NOBS-NEXT:    DeclareGlobalVar  "StrictHasParamExp"...
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    CreateClosure     r1, r0, Function<notStrictNoParamExprs>
-// NOBS-NEXT:    GetGlobalObject   r2
-// NOBS-NEXT:    PutById           r2, r1, 1, "notStrictNoParamE"...
-// NOBS-NEXT:    CreateClosure     r3, r0, Function<notStrictHasParamExprs>
-// NOBS-NEXT:    GetGlobalObject   r4
-// NOBS-NEXT:    PutById           r4, r3, 2, "notStrictHasParam"...
-// NOBS-NEXT:    CreateClosure     r5, r0, Function<StrictNoParamExprs>
-// NOBS-NEXT:    GetGlobalObject   r6
-// NOBS-NEXT:    PutById           r6, r5, 3, "StrictNoParamExpr"...
-// NOBS-NEXT:    CreateClosure     r7, r0, Function<StrictHasParamExprs>
-// NOBS-NEXT:    GetGlobalObject   r8
-// NOBS-NEXT:    PutById           r8, r7, 4, "StrictHasParamExp"...
-// NOBS-NEXT:    LoadConstUndefined r10
-// NOBS-NEXT:    Mov               r9, r10
-// NOBS-NEXT:    Mov               r11, r9
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<notStrictNoParamExprs>
+// NOBS-NEXT:    GetGlobalObject   r3
+// NOBS-NEXT:    PutById           r3, r2, 1, "notStrictNoParamE"...
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<notStrictHasParamExprs>
+// NOBS-NEXT:    GetGlobalObject   r3
+// NOBS-NEXT:    PutById           r3, r2, 2, "notStrictHasParam"...
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<StrictNoParamExprs>
+// NOBS-NEXT:    GetGlobalObject   r3
+// NOBS-NEXT:    PutById           r3, r2, 3, "StrictNoParamExpr"...
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<StrictHasParamExprs>
+// NOBS-NEXT:    GetGlobalObject   r3
+// NOBS-NEXT:    PutById           r3, r2, 4, "StrictHasParamExp"...
+// NOBS-NEXT:    LoadConstUndefined r3
+// NOBS-NEXT:    Mov               r2, r3
 // NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    Ret               r11
+// NOBS-NEXT:    Ret               r2
 
-// NOBS:Function<notStrictNoParamExprs>(1 params, 4 registers, 1 symbols):
+// NOBS:Function<notStrictNoParamExprs>(1 params, 3 registers, 1 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x003d, scope 0x0003, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    CreateClosure     r1, r0, Function<testNotStrictNoParamExprs>
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<testNotStrictNoParamExprs>
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
 // NOBS-NEXT:    Ret               r2
 
-// NOBS:Function<testNotStrictNoParamExprs>(2 params, 7 registers, 3 symbols):
+// NOBS:Function<testNotStrictNoParamExprs>(2 params, 3 registers, 3 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x0051, scope 0x0007, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadParam         r1, 1
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    LoadParam         r2, 1
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// NOBS-NEXT:    LoadConstUndefined r3
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r3
-// NOBS-NEXT:    LoadConstUndefined r4
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r4
-// NOBS-NEXT:    LoadConstUndefined r5
-// NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    Ret               r5
-
-// NOBS:Function<notStrictHasParamExprs>(1 params, 4 registers, 1 symbols):
-// NOBS-NEXT:Offset in debug table: source 0x006f, scope 0x000d, textified callees 0x0000
-// NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    CreateClosure     r1, r0, Function<testNotStrictHasParamExprs>
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
 // NOBS-NEXT:    Ret               r2
 
-// NOBS:Function<testNotStrictHasParamExprs>(1 params, 7 registers, 5 symbols):
+// NOBS:Function<notStrictHasParamExprs>(1 params, 3 registers, 1 symbols):
+// NOBS-NEXT:Offset in debug table: source 0x006f, scope 0x000d, textified callees 0x0000
+// NOBS-NEXT:    CreateEnvironment r0
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<testNotStrictHasParamExprs>
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    AsyncBreakCheck
+// NOBS-NEXT:    Ret               r2
+
+// NOBS:Function<testNotStrictHasParamExprs>(1 params, 5 registers, 5 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x0083, scope 0x0011, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadParam         r2, 1
+// NOBS-NEXT:    LoadParam         r4, 1
 // NOBS-NEXT:    LoadConstUndefined r3
-// NOBS-NEXT:    StrictNeq         r4, r2, r3
-// NOBS-NEXT:    Mov               r1, r2
+// NOBS-NEXT:    StrictNeq         r3, r4, r3
+// NOBS-NEXT:    Mov               r1, r4
 // NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    JmpTrue           L1, r4
-// NOBS-NEXT:    CreateClosure     r2, r0, Function<funcParamInit>
-// NOBS-NEXT:    StoreToEnvironment r0, 1, r2
+// NOBS-NEXT:    JmpTrue           L1, r3
+// NOBS-NEXT:    CreateClosure     r3, r0, Function<funcParamInit>
+// NOBS-NEXT:    StoreToEnvironment r0, 1, r3
 // NOBS-NEXT:    CreateClosure     r3, r0, Function<funcParamInit2>
 // NOBS-NEXT:    StoreToEnvironment r0, 2, r3
 // NOBS-NEXT:    Mov               r1, r3
 // NOBS-NEXT:L1:
 // NOBS-NEXT:    StoreToEnvironment r0, 0, r1
-// NOBS-NEXT:    LoadConstUndefined r2
-// NOBS-NEXT:    StoreNPToEnvironment r0, 3, r2
+// NOBS-NEXT:    LoadConstUndefined r3
+// NOBS-NEXT:    StoreNPToEnvironment r0, 3, r3
 // NOBS-NEXT:    LoadConstUndefined r3
 // NOBS-NEXT:    StoreNPToEnvironment r0, 4, r3
-// NOBS-NEXT:    LoadConstUndefined r4
-// NOBS-NEXT:    StoreNPToEnvironment r0, 4, r4
-// NOBS-NEXT:    LoadConstUndefined r5
-// NOBS-NEXT:    Ret               r5
+// NOBS-NEXT:    LoadConstUndefined r3
+// NOBS-NEXT:    StoreNPToEnvironment r0, 4, r3
+// NOBS-NEXT:    LoadConstUndefined r3
+// NOBS-NEXT:    Ret               r3
 
-// NOBS:Function<funcParamInit>(2 params, 7 registers, 3 symbols):
+// NOBS:Function<funcParamInit>(2 params, 3 registers, 3 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x00bf, scope 0x001b, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadParam         r1, 1
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    LoadParam         r2, 1
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// NOBS-NEXT:    LoadConstUndefined r3
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r3
-// NOBS-NEXT:    LoadConstUndefined r4
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r4
-// NOBS-NEXT:    LoadConstUndefined r5
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    Ret               r5
+// NOBS-NEXT:    Ret               r2
 
 // NOBS:Function<funcParamInit2>(1 params, 3 registers, 0 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x00dd, scope 0x0024, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadConstUndefined r1
+// NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    Ret               r1
+// NOBS-NEXT:    Ret               r2
 
-// NOBS:Function<StrictNoParamExprs>(1 params, 4 registers, 1 symbols):
+// NOBS:Function<StrictNoParamExprs>(1 params, 3 registers, 1 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x00e6, scope 0x0027, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    CreateClosure     r1, r0, Function<testStrictNoParamExprs>
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<testStrictNoParamExprs>
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
 // NOBS-NEXT:    Ret               r2
 
-// NOBS:Function<testStrictNoParamExprs>(2 params, 7 registers, 3 symbols):
+// NOBS:Function<testStrictNoParamExprs>(2 params, 3 registers, 3 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x00fa, scope 0x002c, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadParam         r1, 1
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    LoadParam         r2, 1
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// NOBS-NEXT:    LoadConstUndefined r3
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r3
-// NOBS-NEXT:    LoadConstUndefined r4
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r4
-// NOBS-NEXT:    LoadConstUndefined r5
-// NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    Ret               r5
-
-// NOBS:Function<StrictHasParamExprs>(1 params, 4 registers, 1 symbols):
-// NOBS-NEXT:Offset in debug table: source 0x0118, scope 0x0032, textified callees 0x0000
-// NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    CreateClosure     r1, r0, Function<testStrictHasParamExprs>
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
 // NOBS-NEXT:    Ret               r2
 
-// NOBS:Function<testStrictHasParamExprs>(1 params, 7 registers, 5 symbols):
+// NOBS:Function<StrictHasParamExprs>(1 params, 3 registers, 1 symbols):
+// NOBS-NEXT:Offset in debug table: source 0x0118, scope 0x0032, textified callees 0x0000
+// NOBS-NEXT:    CreateEnvironment r0
+// NOBS-NEXT:    CreateClosure     r2, r0, Function<testStrictHasParamExprs>
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    AsyncBreakCheck
+// NOBS-NEXT:    Ret               r2
+
+// NOBS:Function<testStrictHasParamExprs>(1 params, 5 registers, 5 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x012c, scope 0x0037, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadParam         r2, 1
+// NOBS-NEXT:    LoadParam         r4, 1
 // NOBS-NEXT:    LoadConstUndefined r3
-// NOBS-NEXT:    StrictNeq         r4, r2, r3
-// NOBS-NEXT:    Mov               r1, r2
+// NOBS-NEXT:    StrictNeq         r3, r4, r3
+// NOBS-NEXT:    Mov               r1, r4
 // NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    JmpTrue           L1, r4
-// NOBS-NEXT:    CreateClosure     r2, r0, Function<funcParamInit>
-// NOBS-NEXT:    StoreToEnvironment r0, 1, r2
+// NOBS-NEXT:    JmpTrue           L1, r3
+// NOBS-NEXT:    CreateClosure     r3, r0, Function<funcParamInit>
+// NOBS-NEXT:    StoreToEnvironment r0, 1, r3
 // NOBS-NEXT:    CreateClosure     r3, r0, Function<funcParamInit2>
 // NOBS-NEXT:    StoreToEnvironment r0, 2, r3
 // NOBS-NEXT:    Mov               r1, r3
 // NOBS-NEXT:L1:
 // NOBS-NEXT:    StoreToEnvironment r0, 0, r1
-// NOBS-NEXT:    LoadConstUndefined r2
-// NOBS-NEXT:    StoreNPToEnvironment r0, 3, r2
+// NOBS-NEXT:    LoadConstUndefined r3
+// NOBS-NEXT:    StoreNPToEnvironment r0, 3, r3
 // NOBS-NEXT:    LoadConstUndefined r3
 // NOBS-NEXT:    StoreNPToEnvironment r0, 4, r3
-// NOBS-NEXT:    LoadConstUndefined r4
-// NOBS-NEXT:    StoreNPToEnvironment r0, 4, r4
-// NOBS-NEXT:    LoadConstUndefined r5
-// NOBS-NEXT:    Ret               r5
+// NOBS-NEXT:    LoadConstUndefined r3
+// NOBS-NEXT:    StoreNPToEnvironment r0, 4, r3
+// NOBS-NEXT:    LoadConstUndefined r3
+// NOBS-NEXT:    Ret               r3
 
-// NOBS:Function<funcParamInit>(2 params, 7 registers, 3 symbols):
+// NOBS:Function<funcParamInit>(2 params, 3 registers, 3 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x0168, scope 0x0041, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadParam         r1, 1
-// NOBS-NEXT:    StoreToEnvironment r0, 0, r1
+// NOBS-NEXT:    LoadParam         r2, 1
+// NOBS-NEXT:    StoreToEnvironment r0, 0, r2
 // NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    StoreNPToEnvironment r0, 1, r2
-// NOBS-NEXT:    LoadConstUndefined r3
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r3
-// NOBS-NEXT:    LoadConstUndefined r4
-// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r4
-// NOBS-NEXT:    LoadConstUndefined r5
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// NOBS-NEXT:    LoadConstUndefined r2
+// NOBS-NEXT:    StoreNPToEnvironment r0, 2, r2
+// NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    Ret               r5
+// NOBS-NEXT:    Ret               r2
 
 // NOBS:Function<funcParamInit2>(1 params, 3 registers, 0 symbols):
 // NOBS-NEXT:Offset in debug table: source 0x018b, scope 0x004a, textified callees 0x0000
 // NOBS-NEXT:    CreateEnvironment r0
-// NOBS-NEXT:    LoadConstUndefined r1
+// NOBS-NEXT:    LoadConstUndefined r2
 // NOBS-NEXT:    AsyncBreakCheck
-// NOBS-NEXT:    Ret               r1
+// NOBS-NEXT:    Ret               r2
 
 // NOBS:Debug filename table:
 // NOBS-NEXT:  0: {{.*}}block-scoping-top-level-scope.js
@@ -694,7 +692,7 @@ function StrictHasParamExprs() {
 // NOBS-NEXT:    bc 68: line 11 col 1 scope offset 0x0000 env r0
 // NOBS-NEXT:    bc 74: line 11 col 1 scope offset 0x0000 env r0
 // NOBS-NEXT:    bc 79: line 11 col 1 scope offset 0x0000 env r0
-// NOBS-NEXT:    bc 83: line 51 col 1 scope offset 0x0000 env r0
+// NOBS-NEXT:    bc 80: line 51 col 1 scope offset 0x0000 env r0
 // NOBS-NEXT:  0x003d  function idx 1, starts at line 11 col 1
 // NOBS-NEXT:    bc 2: line 11 col 1 scope offset 0x0003 env r0
 // NOBS-NEXT:    bc 7: line 11 col 1 scope offset 0x0003 env r0

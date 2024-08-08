@@ -535,19 +535,6 @@ void RegisterAllocator::coalesce(
   }
 }
 
-namespace {
-/// Determines whether the Instruction is ever used outside its BasicBlock.
-bool isBlockLocal(Instruction *inst) {
-  BasicBlock *parent = inst->getParent();
-  for (auto user : inst->getUsers()) {
-    if (parent != user->getParent()) {
-      return false;
-    }
-  }
-  return true;
-}
-} // namespace
-
 void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
   // Make sure Phis and related Movs get the same register
   for (auto *bb : order) {
@@ -563,26 +550,70 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
     }
   }
 
-  llvh::SmallVector<Register, 16> blockLocals;
+  // Bit vector indicating whether a register with a given index is being used
+  // as a block local register.
+  llvh::BitVector blockLocals;
 
-  // Then just allocate the rest sequentially, while optimizing the case
-  // where an inst is only ever used in its own block.
-  for (auto *bb : order) {
-    for (auto &inst : *bb) {
-      if (!isAllocated(&inst)) {
-        Register R = file.allocateRegister();
-        updateRegister(&inst, R);
-        if (inst.getNumUsers() == 0) {
-          file.killRegister(R);
-        } else if (isBlockLocal(&inst)) {
-          blockLocals.push_back(R);
+  // List of free block local registers. We have to maintain this outside the
+  // file because we cannot determine interference between local and global
+  // registers. So we have to ensure that the local registers are only reused
+  // for other block-local instructions.
+  llvh::SmallVector<Register, 8> freeBlockLocals;
+
+  // A dummy register used for all instructions that have no users.
+  Register deadReg = file.allocateRegister();
+
+  // Iterate in reverse, so we can cheaply determine whether an instruction
+  // is local, and assign it a register accordingly.
+  for (auto *bb : llvh::reverse(order)) {
+    for (auto &inst : llvh::reverse(*bb)) {
+      if (isAllocated(&inst)) {
+        // If this is using a local register, we know the register is free after
+        // we visit the definition.
+        auto reg = getRegister(&inst);
+        auto idx = reg.getIndex();
+        if (idx < blockLocals.size() && blockLocals.test(idx))
+          freeBlockLocals.push_back(reg);
+      } else {
+        // Unallocated instruction means the result is dead, because all users
+        // are visited first. Allocate a temporary register.
+        // Note that we cannot assert that the instruction has no users, because
+        // there may be users in dead blocks.
+        updateRegister(&inst, deadReg);
+      }
+
+      // Allocate a register to unallocated operands.
+      for (size_t i = 0, e = inst.getNumOperands(); i < e; ++i) {
+        auto *op = llvh::dyn_cast<Instruction>(inst.getOperand(i));
+
+        // Skip if op is not an instruction or already has a register.
+        if (!op || isAllocated(op))
+          continue;
+
+        if (op->getParent() != bb) {
+          // Live across blocks, allocate a global regigster.
+          updateRegister(op, file.allocateRegister());
+          continue;
         }
+
+        // We know this operand is local because:
+        // 1. The operand is in the same block as this one.
+        // 2. All blocks dominated by this block have been visited.
+        // 3. All users must be dominated by their def, since Phis are
+        //    allocated beforehand.
+        if (!freeBlockLocals.empty()) {
+          updateRegister(op, freeBlockLocals.pop_back_val());
+          continue;
+        }
+
+        // No free local register, allocate another one.
+        Register reg = file.allocateRegister();
+        if (blockLocals.size() <= reg.getIndex())
+          blockLocals.resize(reg.getIndex() + 1);
+        blockLocals.set(reg.getIndex());
+        updateRegister(op, reg);
       }
     }
-    for (auto &reg : blockLocals) {
-      file.killRegister(reg);
-    }
-    blockLocals.clear();
   }
 }
 

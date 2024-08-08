@@ -675,7 +675,7 @@ void RuntimeDomainAgent::callFunctionOn(
     evalResult = runtime_.evaluateJavaScript(
         std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(expression)),
         kEvaluatedCodeUrl);
-  } catch (const jsi::JSIException &error) {
+  } catch (const jsi::JSIException &) {
     sendResponseToClient(m::makeErrorResponse(
         req.id,
         m::ErrorCode::InternalError,
@@ -883,7 +883,7 @@ RuntimeDomainAgent::makePropsFromValue(
             desc.wasThrown = true;
             desc.value = m::runtime::makeRemoteObjectForError(
                 runtime, err.value(), *objTable_, objectGroup);
-          } catch (const jsi::JSIException &err) {
+          } catch (const jsi::JSIException &) {
             desc.wasThrown = true;
             desc.value = m::runtime::makeRemoteObject(
                 runtime,

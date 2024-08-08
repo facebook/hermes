@@ -491,64 +491,63 @@ jobs:
         cmake -S hermes -B build -G 'Visual Studio 16 2019'
         cmake --build build --target check-hermes -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
   test-e2e:
-    runs-on: ubuntu-20.04
-    container:
-      image: reactnativecommunity/react-native-android:latest
-      env:
-        TERM: "dumb"
-        GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-        # By default we only build ARM64 to save time/resources. For release/nightlies/prealpha, we override this value to build all archs.
-        ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
-        REACT_NATIVE_OVERRIDE_HERMES_DIR: /__w/hermes/hermes/hermes/
+    runs-on: ubuntu-22.04
+    env:
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
+      HERMES_WS_DIR: /home/runner/work/hermes
+      REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
     steps:
-    - uses: actions/setup-node@v4.0.2
-    - name: Setup dependencies
-      run: |-
-        (yes | sdkmanager "cmake;3.22.1" --verbose) || true
-        sudo apt update && sudo apt install -y openjdk-11-jdk
-    - uses: actions/checkout@v4.1.0
+    - name: Install Node
+      uses: actions/setup-node@v4.0.2
+    - name: Install JDK
+      uses: actions/setup-java@v3
       with:
-        path: hermes
-    - name: Prepare RNTester
+        distribution: "temurin"
+        java-version: "17"
+    - name: Checkout Hermes
+      uses: actions/checkout@v4.1.0
+    - name: Checkout React Native
       run: |-
+        cd "$HERMES_WS_DIR"
         git clone --depth=1 https://github.com/facebook/react-native
         cd react-native
         yarn install
         echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
-    - name: Run android tests
-      working-directory: react-native
-      run: |
-          ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
-          && adb shell am start com.facebook.react.uiapp/.RNTesterActivity
-          && timeout 30s adb logcat -e "Using Hermes: true" -m 1
-  test-e2e-intl:
-    runs-on: ubuntu-20.04
-    container:
-      image: reactnativecommunity/react-native-android:latest
-      env:
-        TERM: "dumb"
-        GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-        # By default we only build ARM64 to save time/resources. For release/nightlies/prealpha, we override this value to build all archs.
-        ORG_GRADLE_PROJECT_reactNativeArchitectures: "arm64-v8a"
-        HERMES_WS_DIR: /__w/hermes/hermes/
-    steps:
-    - uses: actions/checkout@v4.1.0
+    - name: Run RNTester
+      uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
-        path: hermes
-    - name: Setup dependencies
+        api-level: 29
+        ndk: 26.1.10909125
+        cmake: 3.22.1
+        script: |
+          cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
+          adb shell am start com.facebook.react.uiapp/.RNTesterActivity
+          timeout 30s adb logcat -e "Using Hermes: true" -m 1
+  test-e2e-intl:
+    runs-on: ubuntu-22.04
+    env:
+      HERMES_WS_DIR: /home/runner/work/hermes
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
+    steps:
+    - name: Checkout Hermes
+      uses: actions/checkout@v4.1.0
+    - name: Checkout Test262
       run: |-
-        (yes | sdkmanager "cmake;3.22.1" --verbose) || true
-        # Check out test262 at a pinned revision to reduce flakiness
+        cd "$HERMES_WS_DIR"
         git clone https://github.com/tc39/test262
         cd test262
         git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
     - name: Build Hermes Compiler
       run: |-
+        cd "$HERMES_WS_DIR"
         cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
         cmake --build ./build -j 4 --target hermesc
     - name: Run android tests
-      working-directory: hermes/android
-      run: ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+      uses: ReactiveCircus/android-emulator-runner@v2.30.1
+      with:
+        api-level: 29
+        emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
   test-macos-test262:
     runs-on: macos-latest
     steps:

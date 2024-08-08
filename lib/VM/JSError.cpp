@@ -217,63 +217,6 @@ PseudoHandle<JSError> JSError::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-ExecutionStatus JSError::setupStack(
-    Handle<JSObject> selfHandle,
-    Runtime &runtime) {
-  // Lazily allocate the accessor.
-  if (runtime.jsErrorStackAccessor.isUndefined()) {
-    // This code path allocates quite a few handles, so make sure we
-    // don't disturb the parent GCScope and free them.
-    GCScope gcScope{runtime};
-
-    auto getter = NativeFunction::create(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        nullptr,
-        errorStackGetter,
-        Predefined::getSymbolID(Predefined::emptyString),
-        0,
-        Runtime::makeNullHandle<JSObject>());
-
-    auto setter = NativeFunction::create(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        nullptr,
-        errorStackSetter,
-        Predefined::getSymbolID(Predefined::emptyString),
-        1,
-        Runtime::makeNullHandle<JSObject>());
-
-    runtime.jsErrorStackAccessor =
-        PropertyAccessor::create(runtime, getter, setter);
-  }
-
-  auto accessor =
-      Handle<PropertyAccessor>::vmcast(&runtime.jsErrorStackAccessor);
-
-  DefinePropertyFlags dpf{};
-  dpf.setEnumerable = 1;
-  dpf.setConfigurable = 1;
-  dpf.setGetter = 1;
-  dpf.setSetter = 1;
-  dpf.enumerable = 0;
-  dpf.configurable = 1;
-
-  auto res = JSObject::defineOwnProperty(
-      selfHandle,
-      runtime,
-      Predefined::getSymbolID(Predefined::stack),
-      dpf,
-      accessor);
-
-  // Ignore failures to set the "stack" property as other engines do.
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    runtime.clearThrownValue();
-  }
-
-  return ExecutionStatus::RETURNED;
-}
-
 CallResult<Handle<StringPrimitive>> JSError::toString(
     Handle<JSObject> O,
     Runtime &runtime) {
