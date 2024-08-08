@@ -356,7 +356,8 @@ class JSArray final : public ArrayImpl {
         selfHandle,
         runtime,
         Predefined::getSymbolID(Predefined::length),
-        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(newValue)));
+        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(newValue)),
+        opFlags);
   }
 
   template <typename NeedsBarrier>
