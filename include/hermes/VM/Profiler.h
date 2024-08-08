@@ -8,20 +8,57 @@
 #ifndef HERMES_VM_PROFILER_H
 #define HERMES_VM_PROFILER_H
 
-#ifdef HERMESVM_PROFILER_OPCODE
-#include <x86intrin.h>
+#include <cstdint>
 
-#define INIT_OPCODE_PROFILER      \
-  uint64_t startTime = __rdtsc(); \
+#if defined(__i386__) || defined(__x86_64__)
+#include <x86intrin.h>
+#endif
+
+namespace hermes {
+
+#if defined(HERMESVM_PROFILER_JSFUNCTION) || \
+    defined(HERMESVM_PROFILER_OPCODE) || defined(HERMESVM_PROFILER_NATIVECALL)
+
+inline uint64_t rdtsc() {
+#if defined(__i386__) || defined(__x86_64__)
+  // Use the rdtsc intrinsic to get the cycle count if it's available.
+  return __rdtsc();
+#elif defined(__aarch64__)
+  uint64_t t;
+  // Use CNTVCT_EL0 (Counter-timer virtual count register) for AArch64.
+  // The virtual timer is the physical timer minus an offset,
+  // which appears to be used for compensating for running in a VM.
+  // From the ARMv8 manual:
+  //   The virtual count allows a hypervisor to show virtual time to a Virtual
+  //   Machine (VM). For example, a hypervisor could use the
+  //   offset to hide the passage of time when the VM was not scheduled. This
+  //   means that the virtual count can represent time experienced by the VM,
+  //   rather than wall clock time.
+  // MRS: Move to general-purpose register from system register.
+  asm volatile("mrs %0, cntvct_el0" : "=r"(t));
+  return t;
+#else
+#error "Unsupported architecture for profiler"
+#endif
+}
+
+#endif
+
+} // namespace hermes
+
+#ifdef HERMESVM_PROFILER_OPCODE
+
+#define INIT_OPCODE_PROFILER            \
+  uint64_t startTime = hermes::rdtsc(); \
   unsigned curOpcode = (unsigned)OpCode::Call;
 
 #define RECORD_OPCODE_START_TIME               \
   curOpcode = (unsigned)ip->opCode;            \
   runtime.opcodeExecuteFrequency[curOpcode]++; \
-  startTime = __rdtsc();
+  startTime = hermes::rdtsc();
 
 #define UPDATE_OPCODE_TIME_SPENT \
-  runtime.timeSpent[curOpcode] += __rdtsc() - startTime
+  runtime.timeSpent[curOpcode] += hermes::rdtsc() - startTime
 
 #else
 
@@ -67,7 +104,6 @@ struct ProfilerFunctionInfo {
 #endif
 
 #if defined(HERMESVM_PROFILER_JSFUNCTION)
-#include <x86intrin.h>
 namespace hermes {
 namespace vm {
 /// Structure to capture the event of either entering a function or
@@ -84,20 +120,20 @@ struct ProfilerFunctionEvent {
 
 #define INC_OPCODE_COUNT ++runtime.opcodeCount
 
-#define PROFILER_ENTER_FUNCTION(block)                            \
-  do {                                                            \
-    runtime.maxStackLevel =                                       \
-        std::max(runtime.maxStackLevel, runtime.getStackLevel()); \
-    auto id = runtime.getProfilerID(block);                       \
-    auto o = runtime.opcodeCount;                                 \
-    runtime.functionEvents.emplace_back(id, __rdtsc(), o, true);  \
+#define PROFILER_ENTER_FUNCTION(block)                                 \
+  do {                                                                 \
+    runtime.maxStackLevel =                                            \
+        std::max(runtime.maxStackLevel, runtime.getStackLevel());      \
+    auto id = runtime.getProfilerID(block);                            \
+    auto o = runtime.opcodeCount;                                      \
+    runtime.functionEvents.emplace_back(id, hermes::rdtsc(), o, true); \
   } while (false)
 
-#define PROFILER_EXIT_FUNCTION(block)                             \
-  do {                                                            \
-    auto id = runtime.getProfilerID(block);                       \
-    auto o = runtime.opcodeCount;                                 \
-    runtime.functionEvents.emplace_back(id, __rdtsc(), o, false); \
+#define PROFILER_EXIT_FUNCTION(block)                                   \
+  do {                                                                  \
+    auto id = runtime.getProfilerID(block);                             \
+    auto o = runtime.opcodeCount;                                       \
+    runtime.functionEvents.emplace_back(id, hermes::rdtsc(), o, false); \
   } while (false)
 
 } // namespace vm
@@ -115,8 +151,7 @@ struct ProfilerFunctionEvent {
 #ifdef HERMESVM_PROFILER_NATIVECALL
 
 #if defined(__i386__) || defined(__x86_64__)
-#include <x86intrin.h>
-#define HERMESVM_RDTSC() __rdtsc()
+#define HERMESVM_RDTSC() hermes::rdtsc()
 #else
 #define HERMESVM_RDTSC() 0
 #endif
