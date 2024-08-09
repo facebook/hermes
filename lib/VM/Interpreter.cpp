@@ -2736,16 +2736,20 @@ tailCall:
       }
       INCDECOP(Inc)
       INCDECOP(Dec)
+      CASE(AddN) {
+        O1REG(Add) = HermesValue::encodeTrustedNumberValue(
+            O2REG(Add).getNumber() + O3REG(Add).getNumber());
+        ip = NEXTINST(Add);
+        DISPATCH;
+      }
       CASE(Add) {
         if (LLVM_LIKELY(
                 O2REG(Add).isNumber() &&
                 O3REG(Add).isNumber())) { /* Fast-path. */
-          CASE(AddN) {
-            O1REG(Add) = HermesValue::encodeTrustedNumberValue(
-                O2REG(Add).getNumber() + O3REG(Add).getNumber());
-            ip = NEXTINST(Add);
-            DISPATCH;
-          }
+          O1REG(Add) = HermesValue::encodeTrustedNumberValue(
+              O2REG(Add).getNumber() + O3REG(Add).getNumber());
+          ip = NEXTINST(Add);
+          DISPATCH;
         }
         CAPTURE_IP(
             res = addOp_RJS(
