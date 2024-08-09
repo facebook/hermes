@@ -622,7 +622,19 @@ class GCBase {
         return llvh::BitsToDouble(HermesValue::encodeNullValue().getRaw());
       }
       static unsigned getHashValue(double val) {
-        return std::hash<uint64_t>{}(llvh::DoubleToBits(val));
+        uint64_t bits = llvh::DoubleToBits(val);
+        // Representation of small floating values may have many lower bits as
+        // 0's. Hash functions that generate 64bits hashes identical to the
+        // input integer values (e.g., std::hash) may cause a lot of collisions,
+        // since the hash values are truncated to 32bits. The LLVM hash_value
+        // function has the nice property that each input bit affects each
+        // output bit with close probability, so the hash value after truncating
+        // is still good. On a random number set of uniform distribution (with
+        // 1/16 being random doubles and the rest integers) in the range of
+        // [-1000000, 1000000], with size 80M, this performs pretty well. In
+        // practice, most numbers in the heap would be small integers, so use
+        // this for now until we see other extreme cases.
+        return llvh::hash_value(bits);
       }
       static bool isEqual(double LHS, double RHS) {
         return llvh::DoubleToBits(LHS) == llvh::DoubleToBits(RHS);
