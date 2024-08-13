@@ -177,6 +177,16 @@ DEF_TAG(CmpBrGreaterThanInst, HBCCompareBranchInst)
 DEF_TAG(CmpBrGreaterThanOrEqualInst, HBCCompareBranchInst)
 END_TERMINATOR(HBCCompareBranchInst)
 
+BEGIN_TERMINATOR(HBCFCompareBranchInst, Instruction)
+// NOTE: the ordering here matches FCompareInst!
+DEF_TAG(HBCFCmpBrEqualInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrNotEqualInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrLessThanInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrLessThanOrEqualInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrGreaterThanInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrGreaterThanOrEqualInst, HBCFCompareBranchInst)
+END_VALUE(HBCFCompareBranchInst)
+
 TERMINATOR(SwitchImmInst, TerminatorInst)
 TERMINATOR(SaveAndYieldInst, TerminatorInst)
 MARK_LAST(TerminatorInst)

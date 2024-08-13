@@ -1416,6 +1416,9 @@ class InstrGen {
     generateValue(*inst.getRight());
     os_ << "));\n";
   }
+  void generateHBCFCompareBranchInst(HBCFCompareBranchInst &inst) {
+    hermes_fatal("HBCFCompareBranchInst not generated in native backend");
+  }
   void generateStringConcatInst(StringConcatInst &inst) {
     os_.indent(2);
     generateRegister(inst);

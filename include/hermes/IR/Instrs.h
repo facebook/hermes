@@ -4920,6 +4920,88 @@ class FCompareInst : public Instruction {
   }
 };
 
+class HBCFCompareBranchInst : public TerminatorInst {
+  HBCFCompareBranchInst(const HBCFCompareBranchInst &) = delete;
+  void operator=(const HBCFCompareBranchInst &) = delete;
+
+ public:
+  enum { LeftHandSideIdx, RightHandSideIdx, TrueBlockIdx, FalseBlockIdx };
+
+  Value *getLeftHandSide() const {
+    return getOperand(LeftHandSideIdx);
+  }
+  Value *getRightHandSide() const {
+    return getOperand(RightHandSideIdx);
+  }
+  BasicBlock *getTrueDest() const {
+    return cast<BasicBlock>(getOperand(TrueBlockIdx));
+  }
+  BasicBlock *getFalseDest() const {
+    return cast<BasicBlock>(getOperand(FalseBlockIdx));
+  }
+
+  explicit HBCFCompareBranchInst(
+      ValueKind kind,
+      Value *left,
+      Value *right,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock)
+      : TerminatorInst(kind) {
+    assert(HERMES_IR_KIND_IN_CLASS(kind, HBCFCompareBranchInst));
+    pushOperand(left);
+    pushOperand(right);
+    pushOperand(trueBlock);
+    pushOperand(falseBlock);
+  }
+  explicit HBCFCompareBranchInst(
+      const HBCFCompareBranchInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return true;
+  }
+
+  /// Return the ValueKind corresponding to this comparison.
+  ValueKind toFCompareValueKind() const {
+    return HERMES_IR_OFFSET_TO_KIND(
+        FCompareInst,
+        HERMES_IR_KIND_TO_OFFSET(HBCFCompareBranchInst, getKind()));
+  }
+
+  /// Convert a FCompare ValueKind into a HBCFCompareBranchInst one.
+  static ValueKind fromFCompareValueKind(ValueKind kind) {
+    int ofs = HERMES_IR_KIND_TO_OFFSET(FCompareInst, kind);
+    assert(
+        ofs >= 0 && ofs < HERMES_IR_CLASS_LENGTH(HBCFCompareBranchInst) &&
+        "Invalid CmpBr ValueKind");
+    return HERMES_IR_OFFSET_TO_KIND(HBCFCompareBranchInst, ofs);
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), HBCFCompareBranchInst);
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 2;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    assert(idx <= 1 && "FCompareBranchInst only have 2 successors!");
+    return idx == 0 ? getTrueDest() : getFalseDest();
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    assert(idx <= 1 && "FCompareBranchInst only have 2 successors!");
+    setOperand(B, idx + TrueBlockIdx);
+  }
+};
+
 class StringConcatInst : public Instruction {
   StringConcatInst(const StringConcatInst &) = delete;
   void operator=(const StringConcatInst &) = delete;

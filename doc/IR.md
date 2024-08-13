@@ -299,6 +299,16 @@ Arguments | %x and %y are the operands of the binary operation, %BB1 is the 'Tru
 Semantics | The instruction follows the rules of JavaScript for each one of the binary operators defined in the instruction. If the condition is evaluated as 'True' the program jumps to the 'True' block. Otherwise the program jumps to the 'False' block.
 Effects | May read and write memory.
 
+### HBCFCompareBranchInst
+
+HBCFCompareBranchInst | _
+--- | --- |
+Description | Performs a binary comparison of the two numbers and a conditional branch depending on the result.
+Example |  %0 = HBCFCompareBranch %x, %y, %BB1, %BB2
+Arguments | %x and %y are the operands of the binary operation, %BB1 is the 'True' block, %BB2 is the 'False' block.
+Semantics | Performs a numeric comparison on the two doubles. If the condition is evaluated as 'True' the program jumps to the 'True' block. Otherwise the program jumps to the 'False' block.
+Effects | Does not read or write to memory.
+
 ### GetParentScopeInst
 
 GetParentScopeInst | _

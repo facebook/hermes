@@ -1539,6 +1539,14 @@ bool Verifier::visitFCompareInst(const FCompareInst &Inst) {
       "FCompare wrong type");
   return true;
 }
+bool Verifier::visitHBCFCompareBranchInst(const HBCFCompareBranchInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getLeftHandSide()->getType().isNumberType() &&
+          Inst.getRightHandSide()->getType().isNumberType(),
+      "HBCFCompareBranch wrong type");
+  return visitCondBranchLikeInst(Inst) && visitBinaryOperatorLikeInst(Inst);
+}
 bool Verifier::visitStringConcatInst(const StringConcatInst &Inst) {
   AssertIWithMsg(
       Inst, Inst.getType().isStringType(), "StringConcat wrong type");

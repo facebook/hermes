@@ -670,6 +670,12 @@ class IRBuilder {
   FBinaryMathInst *
   createFBinaryMathInst(ValueKind kind, Value *left, Value *right);
   FCompareInst *createFCompareInst(ValueKind kind, Value *left, Value *right);
+  HBCFCompareBranchInst *createHBCFCompareBranchInst(
+      Value *left,
+      Value *right,
+      ValueKind kind,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock);
 
   StringConcatInst *createStringConcatInst(llvh::ArrayRef<Value *> operands);
   HBCStringConcatInst *createHBCStringConcatInst(Value *left, Value *right);

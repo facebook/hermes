@@ -1842,6 +1842,63 @@ void HBCISel::generateFCompareInst(FCompareInst *Inst, BasicBlock *) {
       break;
   }
 }
+void HBCISel::generateHBCFCompareBranchInst(
+    HBCFCompareBranchInst *Inst,
+    BasicBlock *next) {
+  auto left = encodeValue(Inst->getLeftHandSide());
+  auto right = encodeValue(Inst->getRightHandSide());
+  auto res = encodeValue(Inst);
+
+  BasicBlock *trueBlock = Inst->getTrueDest();
+  BasicBlock *falseBlock = Inst->getFalseDest();
+
+  bool invert = false;
+
+  // If we need to fall-through to the "true" case, invert the condition and
+  // the jump targets.
+  if (next == trueBlock) {
+    invert = true;
+    std::swap(trueBlock, falseBlock);
+  }
+
+  offset_t loc;
+  switch (Inst->getKind()) {
+    case ValueKind::HBCFCmpBrEqualInstKind:
+      loc = invert ? BCFGen_->emitJStrictNotEqualLong(res, left, right)
+                   : BCFGen_->emitJStrictEqualLong(res, left, right);
+      break;
+    case ValueKind::HBCFCmpBrNotEqualInstKind:
+      loc = invert ? BCFGen_->emitJStrictEqualLong(res, left, right)
+                   : BCFGen_->emitJStrictNotEqualLong(res, left, right);
+      break;
+    case ValueKind::HBCFCmpBrLessThanInstKind:
+      loc = invert ? BCFGen_->emitJNotLessNLong(res, left, right)
+                   : BCFGen_->emitJLessNLong(res, left, right);
+      break;
+    case ValueKind::HBCFCmpBrLessThanOrEqualInstKind:
+      loc = invert ? BCFGen_->emitJNotLessEqualNLong(res, left, right)
+                   : BCFGen_->emitJLessEqualNLong(res, left, right);
+      break;
+    case ValueKind::HBCFCmpBrGreaterThanInstKind:
+      loc = invert ? BCFGen_->emitJNotGreaterNLong(res, left, right)
+                   : BCFGen_->emitJGreaterNLong(res, left, right);
+      break;
+    case ValueKind::HBCFCmpBrGreaterThanOrEqualInstKind:
+      loc = invert ? BCFGen_->emitJNotGreaterEqualNLong(res, left, right)
+                   : BCFGen_->emitJGreaterEqualNLong(res, left, right);
+      break;
+    default:
+      hermes_fatal("invalid kind for FCompareBranchInst");
+  }
+
+  registerLongJump(loc, trueBlock);
+
+  if (next == falseBlock)
+    return;
+
+  loc = BCFGen_->emitJmpLong(res);
+  registerLongJump(loc, falseBlock);
+}
 void HBCISel::generateFBinaryMathInst(FBinaryMathInst *Inst, BasicBlock *) {
   auto left = encodeValue(Inst->getLeft());
   auto right = encodeValue(Inst->getRight());

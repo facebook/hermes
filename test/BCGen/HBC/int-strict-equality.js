@@ -185,8 +185,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    ToInt32           r0, r0
 // CHKBC-NEXT:    LoadParam         r1, 2
 // CHKBC-NEXT:    ToInt32           r1, r1
-// CHKBC-NEXT:    StrictEq          r1, r0, r1
-// CHKBC-NEXT:    JmpTrue           L1, r1
+// CHKBC-NEXT:    JStrictEqual      L1, r0, r1
 // CHKBC-NEXT:    LoadConstUndefined r1
 // CHKBC-NEXT:    Ret               r1
 // CHKBC-NEXT:L1:
@@ -199,8 +198,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    LoadParam         r2, 2
 // CHKBC-NEXT:    LoadConstZero     r1
 // CHKBC-NEXT:    URshift           r1, r2, r1
-// CHKBC-NEXT:    StrictEq          r1, r0, r1
-// CHKBC-NEXT:    JmpTrue           L1, r1
+// CHKBC-NEXT:    JStrictEqual      L1, r0, r1
 // CHKBC-NEXT:    LoadConstUndefined r1
 // CHKBC-NEXT:    Ret               r1
 // CHKBC-NEXT:L1:
@@ -213,8 +211,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    URshift           r0, r0, r2
 // CHKBC-NEXT:    LoadParam         r1, 2
 // CHKBC-NEXT:    URshift           r1, r1, r2
-// CHKBC-NEXT:    StrictEq          r1, r0, r1
-// CHKBC-NEXT:    JmpTrue           L1, r1
+// CHKBC-NEXT:    JStrictEqual      L1, r0, r1
 // CHKBC-NEXT:    LoadConstUndefined r1
 // CHKBC-NEXT:    Ret               r1
 // CHKBC-NEXT:L1:

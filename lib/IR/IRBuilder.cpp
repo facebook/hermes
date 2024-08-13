@@ -1176,6 +1176,18 @@ IRBuilder::createFCompareInst(ValueKind kind, Value *left, Value *right) {
   return inst;
 }
 
+HBCFCompareBranchInst *IRBuilder::createHBCFCompareBranchInst(
+    Value *left,
+    Value *right,
+    ValueKind kind,
+    BasicBlock *trueBlock,
+    BasicBlock *falseBlock) {
+  auto *inst =
+      new HBCFCompareBranchInst(kind, left, right, trueBlock, falseBlock);
+  insert(inst);
+  return inst;
+}
+
 StringConcatInst *IRBuilder::createStringConcatInst(
     llvh::ArrayRef<Value *> operands) {
   auto *inst = new StringConcatInst(operands);

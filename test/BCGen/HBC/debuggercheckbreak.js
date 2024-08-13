@@ -58,42 +58,39 @@ function test1() {
 
 // CHECK:Function<test1>(1 params, 18 registers):
 // CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0000
-// CHECK-NEXT:    LoadConstUInt8    r6, 1
+// CHECK-NEXT:    LoadConstUInt8    r5, 1
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    LoadConstUInt8    r4, 5
 // CHECK-NEXT:    LoadConstUInt8    r3, 3
-// CHECK-NEXT:    LoadConstZero     r5
+// CHECK-NEXT:    LoadConstZero     r6
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    TryGetById        r7, r1, 1, "Math"
 // CHECK-NEXT:    GetByIdShort      r2, r7, 2, "random"
 // CHECK-NEXT:    Call1             r7, r2, r7
-// CHECK-NEXT:    Mov               r2, r5
+// CHECK-NEXT:    Mov               r2, r6
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    JStrictEqual      L1, r7, r3
 // CHECK-NEXT:    TryGetById        r8, r1, 1, "Math"
 // CHECK-NEXT:    GetByIdShort      r7, r8, 2, "random"
 // CHECK-NEXT:    Call1             r7, r7, r8
 // CHECK-NEXT:    JStrictEqual      L2, r7, r4
-// CHECK-NEXT:    AddN              r5, r2, r6
+// CHECK-NEXT:    AddN              r6, r2, r5
 // CHECK-NEXT:    Jmp               L3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadConstUInt8    r5, 10
-// CHECK-NEXT:    Greater           r3, r2, r5
-// CHECK-NEXT:    Mov               r4, r2
-// CHECK-NEXT:    Mov               r2, r4
-// CHECK-NEXT:    JmpFalse          L4, r3
+// CHECK-NEXT:    LoadConstUInt8    r4, 10
+// CHECK-NEXT:    Mov               r3, r2
+// CHECK-NEXT:    Mov               r2, r3
+// CHECK-NEXT:    JNotGreaterN      L4, r2, r4
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    SubN              r7, r4, r6
-// CHECK-NEXT:    Greater           r3, r7, r5
-// CHECK-NEXT:    Mov               r4, r7
-// CHECK-NEXT:    Mov               r2, r4
+// CHECK-NEXT:    SubN              r3, r3, r5
+// CHECK-NEXT:    Mov               r2, r3
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JmpTrue           L5, r3
+// CHECK-NEXT:    JGreaterN         L5, r2, r4
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    TryGetById        r1, r1, 3, "print"
 // CHECK-NEXT:    Call2             r1, r1, r0, r2
@@ -123,9 +120,9 @@ function test1() {
 // CHECK-NEXT:    bc 54: line 15 col 5
 // CHECK-NEXT:    bc 62: line 12 col 3
 // CHECK-NEXT:    bc 65: line 16 col 7
-// CHECK-NEXT:    bc 80: line 18 col 3
-// CHECK-NEXT:    bc 98: line 18 col 3
-// CHECK-NEXT:    bc 101: line 20 col 3
-// CHECK-NEXT:    bc 107: line 20 col 8
-// CHECK-NEXT:    bc 112: line 21 col 1
+// CHECK-NEXT:    bc 76: line 18 col 3
+// CHECK-NEXT:    bc 88: line 18 col 3
+// CHECK-NEXT:    bc 92: line 20 col 3
+// CHECK-NEXT:    bc 98: line 20 col 8
+// CHECK-NEXT:    bc 103: line 21 col 1
 // CHECK-NEXT:  0x004c  end of debug source table

@@ -34,28 +34,27 @@ function fib(n) {
 
 // CHECK:function fib(n: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg6 = LoadParamInst (:any) %n: any
-// CHECK-NEXT:  $Reg5 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  $Reg1 = BinaryGreaterThanInst (:boolean) $Reg6, $Reg5
-// CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg4
-// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg5
-// CHECK-NEXT:  $Reg6 = MovInst (:any) $Reg6
-// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg1 = CondBranchInst $Reg1, %BB1, %BB2
+// CHECK-NEXT:  $Reg5 = LoadParamInst (:any) %n: any
+// CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  $Reg6 = BinaryGreaterThanInst (:boolean) $Reg5, $Reg4
+// CHECK-NEXT:  $Reg3 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg3
+// CHECK-NEXT:  $Reg1 = MovInst (:number) $Reg4
+// CHECK-NEXT:  $Reg5 = MovInst (:any) $Reg5
+// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg1
+// CHECK-NEXT:  $Reg6 = CondBranchInst $Reg6, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg3 = PhiInst (:number) $Reg3, %BB0, $Reg3, %BB1
 // CHECK-NEXT:  $Reg2 = PhiInst (:number) $Reg2, %BB0, $Reg2, %BB1
-// CHECK-NEXT:  $Reg6 = PhiInst (:any) $Reg6, %BB0, $Reg6, %BB1
-// CHECK-NEXT:  $Reg9 = FAddInst (:number) $Reg2, $Reg3
-// CHECK-NEXT:  $Reg8 = BinarySubtractInst (:number) $Reg6, $Reg4
-// CHECK-NEXT:  $Reg1 = FGreaterThanInst (:boolean) $Reg8, $Reg5
-// CHECK-NEXT:  $Reg7 = MovInst (:number) $Reg3
-// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg9
-// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg7
-// CHECK-NEXT:  $Reg6 = MovInst (:number) $Reg8
-// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg1 = CondBranchInst $Reg1, %BB1, %BB2
+// CHECK-NEXT:  $Reg1 = PhiInst (:number) $Reg1, %BB0, $Reg1, %BB1
+// CHECK-NEXT:  $Reg5 = PhiInst (:any) $Reg5, %BB0, $Reg5, %BB1
+// CHECK-NEXT:  $Reg8 = FAddInst (:number) $Reg1, $Reg2
+// CHECK-NEXT:  $Reg6 = BinarySubtractInst (:number) $Reg5, $Reg3
+// CHECK-NEXT:  $Reg7 = MovInst (:number) $Reg2
+// CHECK-NEXT:  $Reg2 = MovInst (:number) $Reg8
+// CHECK-NEXT:  $Reg1 = MovInst (:number) $Reg7
+// CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg1
+// CHECK-NEXT:  $Reg5 = MovInst (:number) $Reg6
+// CHECK-NEXT:  $Reg1 = HBCFCmpBrGreaterThanInst $Reg5, $Reg4, %BB1, %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 = PhiInst (:number) $Reg0, %BB0, $Reg0, %BB1
 // CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg0

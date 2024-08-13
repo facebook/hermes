@@ -850,6 +850,9 @@ class TypeInferenceImpl {
   Type inferFCompareInst(FCompareInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferHBCFCompareBranchInst(HBCFCompareBranchInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferStringConcatInst(StringConcatInst *inst) {
     hermes_fatal("typed instruction");
   }

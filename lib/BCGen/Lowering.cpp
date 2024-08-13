@@ -417,24 +417,19 @@ bool LowerCondBranch::runOnFunction(Function *F) {
   IRBuilder builder(F);
   bool changed = false;
 
+  IRBuilder::InstructionDestroyer destroyer{};
+
   for (auto &BB : *F) {
-    llvh::DenseMap<CondBranchInst *, HBCCompareBranchInst *> condToCompMap;
+    auto *cbInst = llvh::dyn_cast<CondBranchInst>(BB.getTerminator());
+    // This also matches constructors.
+    if (!cbInst)
+      continue;
 
-    for (auto &I : BB) {
-      auto *cbInst = llvh::dyn_cast<CondBranchInst>(&I);
-      // This also matches constructors.
-      if (!cbInst)
-        continue;
+    Value *cond = cbInst->getCondition();
 
-      Value *cond = cbInst->getCondition();
-
+    if (auto *binopInst = llvh::dyn_cast<BinaryOperatorInst>(cond)) {
       // If the condition has more than one user, we can't lower it.
       if (!cond->hasOneUser())
-        continue;
-
-      // The condition must be a binary operator.
-      auto binopInst = llvh::dyn_cast<BinaryOperatorInst>(cond);
-      if (!binopInst)
         continue;
 
       auto *LHS = binopInst->getLeftHandSide();
@@ -460,17 +455,34 @@ bool LowerCondBranch::runOnFunction(Function *F) {
           cbInst->getTrueDest(),
           cbInst->getFalseDest());
 
-      condToCompMap[cbInst] = cmpBranch;
+      cbInst->replaceAllUsesWith(cmpBranch);
+      destroyer.add(cbInst);
+      destroyer.add(binopInst);
       changed = true;
-    }
+    } else if (auto *fcompare = llvh::dyn_cast<FCompareInst>(cond)) {
+      // The condition is pure and fast to execute, so it doesn't matter how
+      // many users it has.
+      assert(fcompare->getSideEffect().isPure() && "FCompare has side effect");
 
-    for (const auto &cbiter : condToCompMap) {
-      auto binopInst =
-          llvh::dyn_cast<BinaryOperatorInst>(cbiter.first->getCondition());
+      auto *LHS = fcompare->getLeft();
+      auto *RHS = fcompare->getRight();
 
-      cbiter.first->replaceAllUsesWith(condToCompMap[cbiter.first]);
-      cbiter.first->eraseFromParent();
-      binopInst->eraseFromParent();
+      builder.setInsertionPoint(cbInst);
+      builder.setLocation(cbInst->getLocation());
+      auto *cmpBranch = builder.createHBCFCompareBranchInst(
+          LHS,
+          RHS,
+          HBCFCompareBranchInst::fromFCompareValueKind(fcompare->getKind()),
+          cbInst->getTrueDest(),
+          cbInst->getFalseDest());
+
+      cbInst->replaceAllUsesWith(cmpBranch);
+      destroyer.add(cbInst);
+      if (!fcompare->hasUsers())
+        destroyer.add(fcompare);
+      changed = true;
+    } else {
+      continue;
     }
   }
   return changed;
