@@ -392,14 +392,14 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // Overridden from jsi::Instrumentation
   void createSnapshotToFile(
       const std::string &path,
-      const HeapSnapshotOptions & /*options*/) override {
+      const HeapSnapshotOptions &options) override {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     std::error_code code;
     llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
     if (code) {
       throw std::system_error(code);
     }
-    runtime_.getHeap().createSnapshot(os);
+    runtime_.getHeap().createSnapshot(os, options.captureNumericValue);
 #else
     throw std::logic_error(
         "Cannot create heap snapshots if Hermes isn't built with "
@@ -410,10 +410,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   // Overridden from jsi::Instrumentation
   void createSnapshotToStream(
       std::ostream &os,
-      const HeapSnapshotOptions & /*options*/) override {
+      const HeapSnapshotOptions &options) override {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     llvh::raw_os_ostream ros(os);
-    runtime_.getHeap().createSnapshot(ros);
+    runtime_.getHeap().createSnapshot(ros, options.captureNumericValue);
 #else
     throw std::logic_error(
         "Cannot create heap snapshots if Hermes isn't built with "

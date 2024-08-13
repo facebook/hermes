@@ -1007,12 +1007,14 @@ class GCBase {
 
   /// Creates a snapshot of the heap, which includes information about what
   /// objects exist, their sizes, and what they point to.
-  virtual void createSnapshot(llvh::raw_ostream &os) = 0;
-  void createSnapshot(GC &gc, llvh::raw_ostream &os);
+  virtual void createSnapshot(
+      llvh::raw_ostream &os,
+      bool captureNumericValue) = 0;
+  void createSnapshot(GC &gc, llvh::raw_ostream &os, bool captureNumericValue);
   /// Actual implementation of writing the snapshot. If \p numRootEdges is
-  // uninitialized, it will be populated with the edge counts for each root
-  // section. Otherwise, it will be used to pad the output with additional edges
-  // if necessary so they match the recorded count.
+  /// uninitialized, it will be populated with the edge counts for each root
+  /// section. Otherwise, it will be used to pad the output with additional
+  /// edges if necessary so they match the recorded count.
   void createSnapshotImpl(
       GC &gc,
       HeapSnapshot &snap,

@@ -91,7 +91,7 @@ class HadesGC final : public GCBase {
   void getHeapInfoWithMallocSize(HeapInfo &info) override;
   void getCrashManagerHeapInfo(CrashManager::HeapInformation &info) override;
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  void createSnapshot(llvh::raw_ostream &os) override;
+  void createSnapshot(llvh::raw_ostream &os, bool captureNumericValue) override;
   void snapshotAddGCNativeNodes(HeapSnapshot &snap) override;
   void snapshotAddGCNativeEdges(HeapSnapshot &snap) override;
   void enableHeapProfiler(

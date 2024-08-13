@@ -221,7 +221,8 @@ class MallocGC final : public GCBase {
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   /// Same as in superclass GCBase.
-  virtual void createSnapshot(llvh::raw_ostream &os) override;
+  virtual void createSnapshot(llvh::raw_ostream &os, bool captureNumericValue)
+      override;
 #endif
 
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) override;

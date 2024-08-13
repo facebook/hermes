@@ -1349,7 +1349,7 @@ void HadesGC::getCrashManagerHeapInfo(
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-void HadesGC::createSnapshot(llvh::raw_ostream &os) {
+void HadesGC::createSnapshot(llvh::raw_ostream &os, bool captureNumericValue) {
   std::lock_guard<Mutex> lk{gcMutex_};
   // No allocations are allowed throughout the entire heap snapshot process.
   NoAllocScope scope{*this};
@@ -1357,7 +1357,7 @@ void HadesGC::createSnapshot(llvh::raw_ostream &os) {
   waitForCollectionToFinish("snapshot");
   {
     GCCycle cycle{*this, "GC Heap Snapshot"};
-    GCBase::createSnapshot(*this, os);
+    GCBase::createSnapshot(*this, os, captureNumericValue);
   }
 }
 
