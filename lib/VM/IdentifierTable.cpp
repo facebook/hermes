@@ -506,7 +506,7 @@ void IdentifierTable::freeUnmarkedSymbols(
   // Flip and find set bits, which will correspond to symbols that weren't
   // marked.
   markedSymbols_.flip();
-  const bool isTrackingIDs = tracker.isTrackingIDs();
+  const bool hasTrackedObjectIDs = tracker.hasTrackedObjectIDs();
   const uint32_t markedSymbolsSize = markedSymbols.size();
   for (const uint32_t i : markedSymbols_.set_bits()) {
     // Don't check any bits after the passed-in bits, which represent the number
@@ -517,7 +517,7 @@ void IdentifierTable::freeUnmarkedSymbols(
     // We never free StringPrimitives that are materialized from a lazy
     // identifier.
     if (lookupVector_[i].isNonLazyStringPrim()) {
-      if (isTrackingIDs) {
+      if (hasTrackedObjectIDs) {
         tracker.untrackSymbol(i);
       }
       freeSymbol(i);

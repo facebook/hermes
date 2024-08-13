@@ -1193,7 +1193,7 @@ bool GCBase::IDTracker::hasNativeIDs() {
   return !nativeIDMap_.empty();
 }
 
-bool GCBase::IDTracker::isTrackingIDs() {
+bool GCBase::IDTracker::hasTrackedObjectIDs() {
   std::lock_guard<Mutex> lk{mtx_};
   return !objectIDMap_.empty();
 }
