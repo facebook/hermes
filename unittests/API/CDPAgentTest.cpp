@@ -17,6 +17,7 @@
 #include <hermes/CompileJS.h>
 #include <hermes/Support/JSONEmitter.h>
 #include <hermes/Support/SerialExecutor.h>
+#include <hermes/VM/HeapSnapshot.h>
 #include <hermes/cdp/CDPAgent.h>
 #include <hermes/cdp/CDPDebugAPI.h>
 #include <hermes/cdp/JSONValueInterfaces.h>
@@ -149,7 +150,8 @@ class CDPAgentTest : public ::testing::Test {
   /// \p messageID specifies the id of the snapshot request.
   /// \p ignoreTrackingNotifications indicates whether lastSeenObjectId and
   /// heapStatsUpdate notifications are tolerated before the snapshot arrives.
-  void expectHeapSnapshot(
+  /// \return the completed heap snapshot JSON object
+  JSONObject *expectHeapSnapshot(
       int messageID,
       bool ignoreTrackingNotifications = false);
 
@@ -381,7 +383,7 @@ void CDPAgentTest::expectErrorMessageContaining(
   ASSERT_NE(errorMessage.find(substring), std::string::npos);
 }
 
-void CDPAgentTest::expectHeapSnapshot(
+JSONObject *CDPAgentTest::expectHeapSnapshot(
     int messageID,
     bool ignoreTrackingNotifications) {
   // Expect chunk notifications until the snapshot object is complete. Fail if
@@ -398,12 +400,14 @@ void CDPAgentTest::expectHeapSnapshot(
       continue;
     }
 
-    ASSERT_EQ(method, "HeapProfiler.addHeapSnapshotChunk");
+    EXPECT_EQ(method, "HeapProfiler.addHeapSnapshotChunk");
     snapshot << jsonScope_.getString(note, {"params", "chunk"});
   } while (!jsonScope_.tryParseObject(snapshot.str()).has_value());
 
   // Expect the snapshot response after all chunks have been received.
   ensureOkResponse(waitForMessage(), messageID);
+
+  return jsonScope_.parseObject(snapshot.str());
 }
 
 jsi::Value CDPAgentTest::shouldStop(
@@ -3391,7 +3395,7 @@ TEST_F(CDPAgentTest, RuntimeValidatesExecutionContextId) {
   expectErrorMessageContaining(kExecutionContextSubstring, msgId++);
 }
 
-TEST_F(CDPAgentTest, HeapProfilerSnapshot) {
+TEST_F(CDPAgentTest, HeapProfilerSnapshotCaptureNumeric) {
   int msgId = 1;
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -3408,8 +3412,65 @@ TEST_F(CDPAgentTest, HeapProfilerSnapshot) {
   sendRequest(
       "HeapProfiler.takeHeapSnapshot", msgId, [](::hermes::JSONEmitter &json) {
         json.emitKeyValue("reportProgress", false);
+        json.emitKeyValue("captureNumericValue", true);
       });
-  expectHeapSnapshot(msgId);
+  JSONObject *root = expectHeapSnapshot(msgId);
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+
+  bool found = false;
+  auto nodesIt = nodes.begin();
+  const auto nodesEnd = nodes.end();
+  while (nodesIt != nodesEnd) {
+    auto type = static_cast<::hermes::vm::HeapSnapshot::NodeType>(
+        static_cast<unsigned>(llvh::cast<JSONNumber>(*nodesIt)->getValue()));
+    if (type == ::hermes::vm::HeapSnapshot::NodeType::Number) {
+      found = true;
+    }
+    nodesIt += ::hermes::vm::HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  }
+  EXPECT_TRUE(found);
+
+  // Expect no more chunks are pending.
+  expectNothing();
+#else
+  sendRequest(
+      "HeapProfiler.takeHeapSnapshot", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("reportProgress", false);
+        json.emitKeyValue("captureNumericValue", true);
+      });
+  expectErrorMessageContaining(kMemoryInstrumentationSubstring, msgId);
+#endif // HERMES_MEMORY_INSTRUMENTATION
+}
+
+TEST_F(CDPAgentTest, HeapProfilerSnapshotNoNumeric) {
+  int msgId = 1;
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+  auto setStopFlag = llvh::make_scope_exit([this] {
+    // break out of loop
+    stopFlag_.store(true);
+  });
+
+  scheduleScript(R"(
+      while(!shouldStop());
+  )");
+
+  // Request a heap snapshot and expect it to arrive.
+  // Expect captureNumericValue to default to false when not provided.
+  sendRequest(
+      "HeapProfiler.takeHeapSnapshot", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("reportProgress", false);
+      });
+  JSONObject *root = expectHeapSnapshot(msgId);
+  const JSONArray &nodes = *llvh::cast<JSONArray>(root->at("nodes"));
+  auto nodesIt = nodes.begin();
+  const auto nodesEnd = nodes.end();
+  while (nodesIt != nodesEnd) {
+    auto type = static_cast<::hermes::vm::HeapSnapshot::NodeType>(
+        static_cast<unsigned>(llvh::cast<JSONNumber>(*nodesIt)->getValue()));
+    EXPECT_NE(type, ::hermes::vm::HeapSnapshot::NodeType::Number);
+    nodesIt += ::hermes::vm::HeapSnapshot::V8_SNAPSHOT_NODE_FIELD_COUNT;
+  }
 
   // Expect no more chunks are pending.
   expectNothing();
