@@ -4879,6 +4879,7 @@ class FCompareInst : public Instruction {
 
   explicit FCompareInst(ValueKind kind, Value *left, Value *right)
       : Instruction(kind) {
+    assert(HERMES_IR_KIND_IN_CLASS(kind, FCompareInst) && "invalid kind");
     assert(left->getType().isNumberType() && "invalid input FCompareInst");
     assert(right->getType().isNumberType() && "invalid input FCompareInst");
     setType(Type::createBoolean());
