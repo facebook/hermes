@@ -60,8 +60,8 @@ return function main(x: number[]) {
 // CHECK-NEXT:       StoreStackInst 0: number, %7: number
 // CHECK-NEXT:  %9 = LoadStackInst (:number) %7: number
 // CHECK-NEXT:  %10 = FastArrayLengthInst (:number) %6: object
-// CHECK-NEXT:  %11 = BinaryLessThanInst (:any) %9: number, %10: number
-// CHECK-NEXT:        CondBranchInst %11: any, %BB1, %BB2
+// CHECK-NEXT:  %11 = FLessThanInst (:boolean) %9: number, %10: number
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %13 = LoadStackInst (:number) %7: number
 // CHECK-NEXT:  %14 = FastArrayLoadInst (:number) %6: object, %13: number
@@ -74,8 +74,8 @@ return function main(x: number[]) {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %20 = LoadStackInst (:number) %7: number
 // CHECK-NEXT:  %21 = FastArrayLengthInst (:number) %6: object
-// CHECK-NEXT:  %22 = BinaryLessThanInst (:any) %20: number, %21: number
-// CHECK-NEXT:        CondBranchInst %22: any, %BB1, %BB2
+// CHECK-NEXT:  %22 = FLessThanInst (:boolean) %20: number, %21: number
+// CHECK-NEXT:        CondBranchInst %22: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %24 = LoadStackInst (:number) %7: number
 // CHECK-NEXT:  %25 = FAddInst (:number) %24: number, 1: number
