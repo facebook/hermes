@@ -1085,6 +1085,20 @@ class TypeInferenceImpl {
     return changed;
   }
 
+  /// Reset the type of \p V to the pre-pass type, to handle the cases where the
+  /// type is notype due to unreachable or non-returning code.
+  ///
+  /// \return whether anything changed.
+  bool resetVariableNoTypesToPrePass(Variable *V) {
+    if (V->getType().isNoType()) {
+      auto it = prePassTypes_.find(V);
+      assert(it != prePassTypes_.end() && "Missing pre-pass type.");
+      V->setType(it->second);
+      return V->getType() != Type::createNoType();
+    }
+    return false;
+  }
+
   /// Ensure that the type of \p val is not wider than its type prior to the
   /// pass by checking against the pre-pass type and intersecting the type with
   /// it when the pre-pass type is different than \p val's type.
@@ -1200,6 +1214,9 @@ bool TypeInferenceImpl::runOnFunctionsAndVars(
     if (!localChanged && !haveRunReset) {
       for (Function *F : functions) {
         localChanged |= resetReturnAndParamNoTypesToPrePass(F);
+      }
+      for (Variable *var : vars) {
+        localChanged |= resetVariableNoTypesToPrePass(var);
       }
       haveRunReset = true;
       if (localChanged)
