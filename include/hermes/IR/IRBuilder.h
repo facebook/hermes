@@ -618,7 +618,7 @@ class IRBuilder {
   HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
       HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
 
-  CompareBranchInst *createCompareBranchInst(
+  HBCCompareBranchInst *createHBCCompareBranchInst(
       Value *left,
       Value *right,
       ValueKind kind,

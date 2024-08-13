@@ -1241,8 +1241,8 @@ void HBCISel::generateCondBranchInst(CondBranchInst *Inst, BasicBlock *next) {
   registerLongJump(loc, falseBlock);
 }
 
-void HBCISel::generateCompareBranchInst(
-    CompareBranchInst *Inst,
+void HBCISel::generateHBCCompareBranchInst(
+    HBCCompareBranchInst *Inst,
     BasicBlock *next) {
   auto left = encodeValue(Inst->getLeftHandSide());
   auto right = encodeValue(Inst->getRightHandSide());

@@ -50,46 +50,50 @@ print(bench(4e6, 100))
 
 // CHINT:function bench(lc: any, fc: any): string|number
 // CHINT-NEXT:%BB0:
-// CHINT-NEXT:  {loc3}    %0 [1...33)   = LoadParamInst (:any) %fc: any
+// CHINT-NEXT:  {loc3}    %0 [1...37)   = LoadParamInst (:any) %fc: any
 // CHINT-NEXT:  {loc0}    %1 [2...3)    = LoadParamInst (:any) %lc: any
-// CHINT-NEXT:  {loc2}    %2 [3...7)    = UnaryDecInst (:number|bigint) %1: any
-// CHINT-NEXT:  {np1}     %3 [4...33)   = HBCLoadConstInst (:number) 0: number
-// CHINT-NEXT:  {np0}     %4 [5...33)   = HBCLoadConstInst (:number) 1: number
-// CHINT-NEXT:  {loc1}    %5 [6...10)   = MovInst (:number) %3: number
-// CHINT-NEXT:  {loc2}    %6 [7...11)   = MovInst (:number|bigint) %2: number|bigint
-// CHINT-NEXT:  {loc0}    %7 [8...34)   = MovInst (:number) %5: number
-// CHINT-NEXT:            %8            = CmpBrGreaterThanOrEqualInst %6: number|bigint, %7: number, %BB1, %BB4
+// CHINT-NEXT:  {loc2}    %2 [3...8)    = UnaryDecInst (:number|bigint) %1: any
+// CHINT-NEXT:  {np2}     %3 [4...37)   = HBCLoadConstInst (:number) 0: number
+// CHINT-NEXT:  {np1}     %4 [5...37)   = HBCLoadConstInst (:number) 1: number
+// CHINT-NEXT:  {np0}     %5 [6...10)   = BinaryGreaterThanOrEqualInst (:boolean) %2: number|bigint, %3: number
+// CHINT-NEXT:  {loc1}    %6 [7...11)   = MovInst (:number) %3: number
+// CHINT-NEXT:  {loc2}    %7 [8...12)   = MovInst (:number|bigint) %2: number|bigint
+// CHINT-NEXT:  {loc0}    %8 [9...38)   = MovInst (:number) %6: number
+// CHINT-NEXT:            %9            = CondBranchInst %5: boolean, %BB1, %BB4
 // CHINT-NEXT:%BB1:
-// CHINT-NEXT:  {loc1}    %9 [6...13) [30...33)  = PhiInst (:string|number) %5: number, %BB0, %29: string|number, %BB3
-// CHINT-NEXT:  {loc2}   %10 [3...14) [32...33)  = PhiInst (:number|bigint) %6: number|bigint, %BB0, %31: number|bigint, %BB3
-// CHINT-NEXT:  {loc6}   %11 [12...17)  = UnaryDecInst (:number|bigint) %0: any
-// CHINT-NEXT:  {loc1}   %12 [6...28) [30...33)  = MovInst (:string|number) %9: string|number
-// CHINT-NEXT:  {loc2}   %13 [3...33)   = MovInst (:number|bigint) %10: number|bigint
-// CHINT-NEXT:  {loc5}   %14 [15...19)  = MovInst (:any) %0: any
-// CHINT-NEXT:  {loc4}   %15 [16...27)  = MovInst (:any) %14: any
-// CHINT-NEXT:  {loc6}   %16 [17...20)  = MovInst (:number|bigint) %11: number|bigint
-// CHINT-NEXT:           %17            = CmpBrGreaterThanInst %16: number|bigint, %4: number, %BB2, %BB3
+// CHINT-NEXT:  {loc1}   %10 [7...15) [34...37)  = PhiInst (:string|number) %6: number, %BB0, %33: string|number, %BB3
+// CHINT-NEXT:  {loc2}   %11 [3...16) [35...37)  = PhiInst (:number|bigint) %7: number|bigint, %BB0, %34: number|bigint, %BB3
+// CHINT-NEXT:  {loc6}   %12 [13...18)  = UnaryDecInst (:number|bigint) %0: any
+// CHINT-NEXT:  {np0}    %13 [14...20)  = BinaryGreaterThanInst (:boolean) %12: number|bigint, %4: number
+// CHINT-NEXT:  {loc1}   %14 [7...31) [34...37)  = MovInst (:string|number) %10: string|number
+// CHINT-NEXT:  {loc2}   %15 [3...37)   = MovInst (:number|bigint) %11: number|bigint
+// CHINT-NEXT:  {loc5}   %16 [17...21)  = MovInst (:any) %0: any
+// CHINT-NEXT:  {loc6}   %17 [18...22)  = MovInst (:number|bigint) %12: number|bigint
+// CHINT-NEXT:  {loc4}   %18 [19...30)  = MovInst (:any) %16: any
+// CHINT-NEXT:           %19            = CondBranchInst %13: boolean, %BB2, %BB3
 // CHINT-NEXT:%BB2:
-// CHINT-NEXT:  {loc5}   %18 [15...21) [23...26)  = PhiInst (:any) %14: any, %BB1, %22: number|bigint, %BB2
-// CHINT-NEXT:  {loc6}   %19 [12...26)  = PhiInst (:number|bigint) %16: number|bigint, %BB1, %24: number|bigint, %BB2
-// CHINT-NEXT:  {loc7}   %20 [21...24)  = BinaryMultiplyInst (:number|bigint) %18: any, %19: number|bigint
-// CHINT-NEXT:  {loc6}   %21 [22...25)  = UnaryDecInst (:number|bigint) %19: number|bigint
-// CHINT-NEXT:  {loc5}   %22 [23...25)  = MovInst (:number|bigint) %20: number|bigint
-// CHINT-NEXT:  {loc4}   %23 [24...27)  = MovInst (:number|bigint) %22: number|bigint
-// CHINT-NEXT:  {loc6}   %24 [25...26)  = MovInst (:number|bigint) %21: number|bigint
-// CHINT-NEXT:           %25            = CmpBrGreaterThanInst %24: number|bigint, %4: number, %BB2, %BB3
+// CHINT-NEXT:  {loc5}   %20 [17...23) [26...29)  = PhiInst (:any) %16: any, %BB1, %25: number|bigint, %BB2
+// CHINT-NEXT:  {loc6}   %21 [13...29)  = PhiInst (:number|bigint) %17: number|bigint, %BB1, %26: number|bigint, %BB2
+// CHINT-NEXT:  {loc7}   %22 [23...28)  = BinaryMultiplyInst (:number|bigint) %20: any, %21: number|bigint
+// CHINT-NEXT:  {loc6}   %23 [24...27)  = UnaryDecInst (:number|bigint) %21: number|bigint
+// CHINT-NEXT:  {np0}    %24 [25...29)  = BinaryGreaterThanInst (:boolean) %23: number|bigint, %4: number
+// CHINT-NEXT:  {loc5}   %25 [26...28)  = MovInst (:number|bigint) %22: number|bigint
+// CHINT-NEXT:  {loc6}   %26 [27...28)  = MovInst (:number|bigint) %23: number|bigint
+// CHINT-NEXT:  {loc4}   %27 [28...30)  = MovInst (:number|bigint) %25: number|bigint
+// CHINT-NEXT:           %28            = CondBranchInst %24: boolean, %BB2, %BB3
 // CHINT-NEXT:%BB3:
-// CHINT-NEXT:  {loc4}   %26 [16...28)  = PhiInst (:any) %15: any, %BB1, %23: number|bigint, %BB2
-// CHINT-NEXT:  {loc4}   %27 [28...31)  = BinaryAddInst (:string|number) %12: string|number, %26: any
-// CHINT-NEXT:  {loc2}   %28 [29...32)  = UnaryDecInst (:number|bigint) %13: number|bigint
-// CHINT-NEXT:  {loc1}   %29 [30...33)  = MovInst (:string|number) %27: string|number
-// CHINT-NEXT:  {loc0}   %30 [31...34)  = MovInst (:string|number) %29: string|number
-// CHINT-NEXT:  {loc2}   %31 [32...33)  = MovInst (:number|bigint) %28: number|bigint
-// CHINT-NEXT:           %32            = CmpBrGreaterThanOrEqualInst %31: number|bigint, %3: number, %BB1, %BB4
+// CHINT-NEXT:  {loc4}   %29 [19...31)  = PhiInst (:any) %18: any, %BB1, %27: number|bigint, %BB2
+// CHINT-NEXT:  {loc4}   %30 [31...36)  = BinaryAddInst (:string|number) %14: string|number, %29: any
+// CHINT-NEXT:  {loc2}   %31 [32...35)  = UnaryDecInst (:number|bigint) %15: number|bigint
+// CHINT-NEXT:  {np0}    %32 [33...37)  = BinaryGreaterThanOrEqualInst (:boolean) %31: number|bigint, %3: number
+// CHINT-NEXT:  {loc1}   %33 [34...37)  = MovInst (:string|number) %30: string|number
+// CHINT-NEXT:  {loc2}   %34 [35...37)  = MovInst (:number|bigint) %31: number|bigint
+// CHINT-NEXT:  {loc0}   %35 [36...38)  = MovInst (:string|number) %33: string|number
+// CHINT-NEXT:           %36            = CondBranchInst %32: boolean, %BB1, %BB4
 // CHINT-NEXT:%BB4:
-// CHINT-NEXT:  {loc0}   %33 [8...35)   = PhiInst (:string|number) %7: number, %BB0, %30: string|number, %BB3
-// CHINT-NEXT:  {loc0}   %34 [8...36)   = MovInst (:string|number) %33: string|number
-// CHINT-NEXT:           %35            = ReturnInst %34: string|number
+// CHINT-NEXT:  {loc0}   %37 [9...39)   = PhiInst (:string|number) %8: number, %BB0, %35: string|number, %BB3
+// CHINT-NEXT:  {loc0}   %38 [9...40)   = MovInst (:string|number) %37: string|number
+// CHINT-NEXT:           %39            = ReturnInst %38: string|number
 // CHINT-NEXT:function_end
 
 // CHECK:scope %VS0 []
@@ -116,41 +120,45 @@ print(bench(4e6, 100))
 // CHECK-NEXT:  {loc3}    %0 = LoadParamInst (:any) %fc: any
 // CHECK-NEXT:  {loc0}    %1 = LoadParamInst (:any) %lc: any
 // CHECK-NEXT:  {loc2}    %2 = UnaryDecInst (:number|bigint) {loc0} %1: any
-// CHECK-NEXT:  {np1}     %3 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  {np0}     %4 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  {loc1}    %5 = MovInst (:number) {np1} %3: number
-// CHECK-NEXT:  {loc2}    %6 = MovInst (:number|bigint) {loc2} %2: number|bigint
-// CHECK-NEXT:  {loc0}    %7 = MovInst (:number) {loc1} %5: number
-// CHECK-NEXT:                 CmpBrGreaterThanOrEqualInst {loc2} %6: number|bigint, {loc0} %7: number, %BB1, %BB4
+// CHECK-NEXT:  {np2}     %3 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {np1}     %4 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {np0}     %5 = BinaryGreaterThanOrEqualInst (:boolean) {loc2} %2: number|bigint, {np2} %3: number
+// CHECK-NEXT:  {loc1}    %6 = MovInst (:number) {np2} %3: number
+// CHECK-NEXT:  {loc2}    %7 = MovInst (:number|bigint) {loc2} %2: number|bigint
+// CHECK-NEXT:  {loc0}    %8 = MovInst (:number) {loc1} %6: number
+// CHECK-NEXT:                 CondBranchInst {np0} %5: boolean, %BB1, %BB4
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  {loc1}    %9 = PhiInst (:string|number) {loc1} %5: number, %BB0, {loc1} %29: string|number, %BB3
-// CHECK-NEXT:  {loc2}   %10 = PhiInst (:number|bigint) {loc2} %6: number|bigint, %BB0, {loc2} %31: number|bigint, %BB3
-// CHECK-NEXT:  {loc6}   %11 = UnaryDecInst (:number|bigint) {loc3} %0: any
-// CHECK-NEXT:  {loc1}   %12 = MovInst (:string|number) {loc1} %9: string|number
-// CHECK-NEXT:  {loc2}   %13 = MovInst (:number|bigint) {loc2} %10: number|bigint
-// CHECK-NEXT:  {loc5}   %14 = MovInst (:any) {loc3} %0: any
-// CHECK-NEXT:  {loc4}   %15 = MovInst (:any) {loc5} %14: any
-// CHECK-NEXT:  {loc6}   %16 = MovInst (:number|bigint) {loc6} %11: number|bigint
-// CHECK-NEXT:                 CmpBrGreaterThanInst {loc6} %16: number|bigint, {np0} %4: number, %BB2, %BB3
+// CHECK-NEXT:  {loc1}   %10 = PhiInst (:string|number) {loc1} %6: number, %BB0, {loc1} %33: string|number, %BB3
+// CHECK-NEXT:  {loc2}   %11 = PhiInst (:number|bigint) {loc2} %7: number|bigint, %BB0, {loc2} %34: number|bigint, %BB3
+// CHECK-NEXT:  {loc6}   %12 = UnaryDecInst (:number|bigint) {loc3} %0: any
+// CHECK-NEXT:  {np0}    %13 = BinaryGreaterThanInst (:boolean) {loc6} %12: number|bigint, {np1} %4: number
+// CHECK-NEXT:  {loc1}   %14 = MovInst (:string|number) {loc1} %10: string|number
+// CHECK-NEXT:  {loc2}   %15 = MovInst (:number|bigint) {loc2} %11: number|bigint
+// CHECK-NEXT:  {loc5}   %16 = MovInst (:any) {loc3} %0: any
+// CHECK-NEXT:  {loc6}   %17 = MovInst (:number|bigint) {loc6} %12: number|bigint
+// CHECK-NEXT:  {loc4}   %18 = MovInst (:any) {loc5} %16: any
+// CHECK-NEXT:                 CondBranchInst {np0} %13: boolean, %BB2, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  {loc5}   %18 = PhiInst (:any) {loc5} %14: any, %BB1, {loc5} %22: number|bigint, %BB2
-// CHECK-NEXT:  {loc6}   %19 = PhiInst (:number|bigint) {loc6} %16: number|bigint, %BB1, {loc6} %24: number|bigint, %BB2
-// CHECK-NEXT:  {loc7}   %20 = BinaryMultiplyInst (:number|bigint) {loc5} %18: any, {loc6} %19: number|bigint
-// CHECK-NEXT:  {loc6}   %21 = UnaryDecInst (:number|bigint) {loc6} %19: number|bigint
-// CHECK-NEXT:  {loc5}   %22 = MovInst (:number|bigint) {loc7} %20: number|bigint
-// CHECK-NEXT:  {loc4}   %23 = MovInst (:number|bigint) {loc5} %22: number|bigint
-// CHECK-NEXT:  {loc6}   %24 = MovInst (:number|bigint) {loc6} %21: number|bigint
-// CHECK-NEXT:                 CmpBrGreaterThanInst {loc6} %24: number|bigint, {np0} %4: number, %BB2, %BB3
+// CHECK-NEXT:  {loc5}   %20 = PhiInst (:any) {loc5} %16: any, %BB1, {loc5} %25: number|bigint, %BB2
+// CHECK-NEXT:  {loc6}   %21 = PhiInst (:number|bigint) {loc6} %17: number|bigint, %BB1, {loc6} %26: number|bigint, %BB2
+// CHECK-NEXT:  {loc7}   %22 = BinaryMultiplyInst (:number|bigint) {loc5} %20: any, {loc6} %21: number|bigint
+// CHECK-NEXT:  {loc6}   %23 = UnaryDecInst (:number|bigint) {loc6} %21: number|bigint
+// CHECK-NEXT:  {np0}    %24 = BinaryGreaterThanInst (:boolean) {loc6} %23: number|bigint, {np1} %4: number
+// CHECK-NEXT:  {loc5}   %25 = MovInst (:number|bigint) {loc7} %22: number|bigint
+// CHECK-NEXT:  {loc6}   %26 = MovInst (:number|bigint) {loc6} %23: number|bigint
+// CHECK-NEXT:  {loc4}   %27 = MovInst (:number|bigint) {loc5} %25: number|bigint
+// CHECK-NEXT:                 CondBranchInst {np0} %24: boolean, %BB2, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  {loc4}   %26 = PhiInst (:any) {loc4} %15: any, %BB1, {loc4} %23: number|bigint, %BB2
-// CHECK-NEXT:  {loc4}   %27 = BinaryAddInst (:string|number) {loc1} %12: string|number, {loc4} %26: any
-// CHECK-NEXT:  {loc2}   %28 = UnaryDecInst (:number|bigint) {loc2} %13: number|bigint
-// CHECK-NEXT:  {loc1}   %29 = MovInst (:string|number) {loc4} %27: string|number
-// CHECK-NEXT:  {loc0}   %30 = MovInst (:string|number) {loc1} %29: string|number
-// CHECK-NEXT:  {loc2}   %31 = MovInst (:number|bigint) {loc2} %28: number|bigint
-// CHECK-NEXT:                 CmpBrGreaterThanOrEqualInst {loc2} %31: number|bigint, {np1} %3: number, %BB1, %BB4
+// CHECK-NEXT:  {loc4}   %29 = PhiInst (:any) {loc4} %18: any, %BB1, {loc4} %27: number|bigint, %BB2
+// CHECK-NEXT:  {loc4}   %30 = BinaryAddInst (:string|number) {loc1} %14: string|number, {loc4} %29: any
+// CHECK-NEXT:  {loc2}   %31 = UnaryDecInst (:number|bigint) {loc2} %15: number|bigint
+// CHECK-NEXT:  {np0}    %32 = BinaryGreaterThanOrEqualInst (:boolean) {loc2} %31: number|bigint, {np2} %3: number
+// CHECK-NEXT:  {loc1}   %33 = MovInst (:string|number) {loc4} %30: string|number
+// CHECK-NEXT:  {loc2}   %34 = MovInst (:number|bigint) {loc2} %31: number|bigint
+// CHECK-NEXT:  {loc0}   %35 = MovInst (:string|number) {loc1} %33: string|number
+// CHECK-NEXT:                 CondBranchInst {np0} %32: boolean, %BB1, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  {loc0}   %33 = PhiInst (:string|number) {loc0} %7: number, %BB0, {loc0} %30: string|number, %BB3
-// CHECK-NEXT:  {loc0}   %34 = MovInst (:string|number) {loc0} %33: string|number
-// CHECK-NEXT:                 ReturnInst {loc0} %34: string|number
+// CHECK-NEXT:  {loc0}   %37 = PhiInst (:string|number) {loc0} %8: number, %BB0, {loc0} %35: string|number, %BB3
+// CHECK-NEXT:  {loc0}   %38 = MovInst (:string|number) {loc0} %37: string|number
+// CHECK-NEXT:                 ReturnInst {loc0} %38: string|number
 // CHECK-NEXT:function_end

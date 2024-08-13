@@ -418,7 +418,7 @@ bool LowerCondBranch::runOnFunction(Function *F) {
   bool changed = false;
 
   for (auto &BB : *F) {
-    llvh::DenseMap<CondBranchInst *, CompareBranchInst *> condToCompMap;
+    llvh::DenseMap<CondBranchInst *, HBCCompareBranchInst *> condToCompMap;
 
     for (auto &I : BB) {
       auto *cbInst = llvh::dyn_cast<CondBranchInst>(&I);
@@ -452,10 +452,11 @@ bool LowerCondBranch::runOnFunction(Function *F) {
 
       builder.setInsertionPoint(cbInst);
       builder.setLocation(cbInst->getLocation());
-      auto *cmpBranch = builder.createCompareBranchInst(
+      auto *cmpBranch = builder.createHBCCompareBranchInst(
           LHS,
           RHS,
-          CompareBranchInst::fromBinaryOperatorValueKind(binopInst->getKind()),
+          HBCCompareBranchInst::fromBinaryOperatorValueKind(
+              binopInst->getKind()),
           cbInst->getTrueDest(),
           cbInst->getFalseDest());
 

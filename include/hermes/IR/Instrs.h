@@ -3445,7 +3445,7 @@ class SaveAndYieldInst : public TerminatorInst {
     return getNextBlock();
   }
   void setSuccessorImpl(unsigned idx, BasicBlock *B) {
-    assert(idx == 0 && "CompareBranchInst only have 2 successors!");
+    assert(idx == 0 && "HBCCompareBranchInst only have 2 successors!");
     setOperand(B, NextBlockIdx);
   }
 
@@ -4054,9 +4054,9 @@ class HBCSpillMovInst : public SingleOperandInst {
   }
 };
 
-class CompareBranchInst : public TerminatorInst {
-  CompareBranchInst(const CompareBranchInst &) = delete;
-  void operator=(const CompareBranchInst &) = delete;
+class HBCCompareBranchInst : public TerminatorInst {
+  HBCCompareBranchInst(const HBCCompareBranchInst &) = delete;
+  void operator=(const HBCCompareBranchInst &) = delete;
 
  public:
   enum { LeftHandSideIdx, RightHandSideIdx, TrueBlockIdx, FalseBlockIdx };
@@ -4077,24 +4077,24 @@ class CompareBranchInst : public TerminatorInst {
   /// \return the string representation of the operator.
   llvh::StringRef getOperatorStr() {
     return BinaryOperatorInst::opStringRepr[HERMES_IR_KIND_TO_OFFSET(
-        CompareBranchInst, getKind())];
+        HBCCompareBranchInst, getKind())];
   }
 
-  explicit CompareBranchInst(
+  explicit HBCCompareBranchInst(
       ValueKind kind,
       Value *left,
       Value *right,
       BasicBlock *trueBlock,
       BasicBlock *falseBlock)
       : TerminatorInst(kind) {
-    assert(HERMES_IR_KIND_IN_CLASS(kind, CompareBranchInst));
+    assert(HERMES_IR_KIND_IN_CLASS(kind, HBCCompareBranchInst));
     pushOperand(left);
     pushOperand(right);
     pushOperand(trueBlock);
     pushOperand(falseBlock);
   }
-  explicit CompareBranchInst(
-      const CompareBranchInst *src,
+  explicit HBCCompareBranchInst(
+      const HBCCompareBranchInst *src,
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
@@ -4109,16 +4109,16 @@ class CompareBranchInst : public TerminatorInst {
   ValueKind toBinaryOperatorValueKind() const {
     return HERMES_IR_OFFSET_TO_KIND(
         BinaryOperatorInst,
-        HERMES_IR_KIND_TO_OFFSET(CompareBranchInst, getKind()));
+        HERMES_IR_KIND_TO_OFFSET(HBCCompareBranchInst, getKind()));
   }
 
-  /// Convert a BinaryOperatorInst ValueKind into a CompareBranchInst one.
+  /// Convert a BinaryOperatorInst ValueKind into a HBCCompareBranchInst one.
   static ValueKind fromBinaryOperatorValueKind(ValueKind kind) {
     int ofs = HERMES_IR_KIND_TO_OFFSET(BinaryOperatorInst, kind);
     assert(
-        ofs >= 0 && ofs < HERMES_IR_CLASS_LENGTH(CompareBranchInst) &&
+        ofs >= 0 && ofs < HERMES_IR_CLASS_LENGTH(HBCCompareBranchInst) &&
         "Invalid CmpBr ValueKind");
-    return HERMES_IR_OFFSET_TO_KIND(CompareBranchInst, ofs);
+    return HERMES_IR_OFFSET_TO_KIND(HBCCompareBranchInst, ofs);
   }
 
   // static ValueKind kindFromBinaryOperatorValueKind
@@ -4131,7 +4131,7 @@ class CompareBranchInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    return HERMES_IR_KIND_IN_CLASS(V->getKind(), CompareBranchInst);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), HBCCompareBranchInst);
   }
 
   unsigned getNumSuccessorsImpl() const {
@@ -4142,10 +4142,10 @@ class CompareBranchInst : public TerminatorInst {
       return getTrueDest();
     if (idx == 1)
       return getFalseDest();
-    llvm_unreachable("CompareBranchInst only have 2 successors!");
+    llvm_unreachable("HBCCompareBranchInst only have 2 successors!");
   }
   void setSuccessorImpl(unsigned idx, BasicBlock *B) {
-    assert(idx <= 1 && "CompareBranchInst only have 2 successors!");
+    assert(idx <= 1 && "HBCCompareBranchInst only have 2 successors!");
     setOperand(B, idx + TrueBlockIdx);
   }
 };

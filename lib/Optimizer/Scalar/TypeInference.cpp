@@ -690,7 +690,7 @@ class TypeInferenceImpl {
   Type inferTryStartInst(TryStartInst *inst) {
     return Type::createNoType();
   }
-  Type inferCompareBranchInst(CompareBranchInst *inst) {
+  Type inferHBCCompareBranchInst(HBCCompareBranchInst *inst) {
     return Type::createNoType();
   }
   Type inferSwitchImmInst(SwitchImmInst *inst) {

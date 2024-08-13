@@ -67,8 +67,10 @@ function foo(i) {
 // CHKLIR-NEXT:       BranchInst %BB1
 // CHKLIR-NEXT:%BB3:
 // CHKLIR-NEXT:  %6 = HBCLoadConstInst (:number) 1: number
-// CHKLIR-NEXT:       CmpBrStrictlyEqualInst %6: number, %0: any, %BB1, %BB1
+// CHKLIR-NEXT:  %7 = BinaryStrictlyEqualInst (:boolean) %6: number, %0: any
+// CHKLIR-NEXT:       CondBranchInst %7: boolean, %BB1, %BB1
 // CHKLIR-NEXT:%BB4:
-// CHKLIR-NEXT:  %8 = HBCLoadConstInst (:number) 0: number
-// CHKLIR-NEXT:       CmpBrStrictlyEqualInst %8: number, %0: any, %BB2, %BB3
+// CHKLIR-NEXT:  %9 = HBCLoadConstInst (:number) 0: number
+// CHKLIR-NEXT:  %10 = BinaryStrictlyEqualInst (:boolean) %9: number, %0: any
+// CHKLIR-NEXT:        CondBranchInst %10: boolean, %BB2, %BB3
 // CHKLIR-NEXT:function_end

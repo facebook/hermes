@@ -99,7 +99,7 @@ class LimitAllocArray : public FunctionPass {
   uint32_t maxSize_;
 };
 
-/// Lowers conditional branches to CompareBranchInst instructions
+/// Lowers conditional branches to HBCCompareBranchInst instructions
 class LowerCondBranch : public FunctionPass {
  public:
   explicit LowerCondBranch() : FunctionPass("LowerCondBranch") {}

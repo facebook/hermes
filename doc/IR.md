@@ -289,9 +289,9 @@ Arguments | %cond is the condition variable, %BB1 is the 'True' block, %BB2 is t
 Semantics | The instruction observes the value of a typed value and jumps to one of two basic blocks. If the condition is evaluated as 'True' the program jumps to the 'True' block. Otherwise the program jumps to the 'False' block.
 Effects | Does not read or write from memory.
 
-### CompareBranchInst
+### HBCCompareBranchInst
 
-CompareBranchInst | _
+HBCCompareBranchInst | _
 --- | --- |
 Description | Performs  a binary comparison of the two operands and a conditional branch depending on the result.
 Example |  %0 = CompareBranch %x, %y, %BB1, %BB2

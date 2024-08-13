@@ -1327,7 +1327,7 @@ bool Verifier::visitHBCLoadConstInst(hermes::HBCLoadConstInst const &Inst) {
 bool Verifier::visitLoadParamInst(hermes::LoadParamInst const &Inst) {
   return true;
 }
-bool Verifier::visitCompareBranchInst(const CompareBranchInst &Inst) {
+bool Verifier::visitHBCCompareBranchInst(const HBCCompareBranchInst &Inst) {
   return visitCondBranchLikeInst(Inst) && visitBinaryOperatorLikeInst(Inst);
 }
 

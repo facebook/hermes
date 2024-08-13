@@ -1035,13 +1035,14 @@ AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
   return inst;
 }
 
-CompareBranchInst *IRBuilder::createCompareBranchInst(
+HBCCompareBranchInst *IRBuilder::createHBCCompareBranchInst(
     Value *left,
     Value *right,
     ValueKind kind,
     BasicBlock *trueBlock,
     BasicBlock *falseBlock) {
-  auto *inst = new CompareBranchInst(kind, left, right, trueBlock, falseBlock);
+  auto *inst =
+      new HBCCompareBranchInst(kind, left, right, trueBlock, falseBlock);
   insert(inst);
   return inst;
 }

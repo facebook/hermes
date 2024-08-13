@@ -1713,116 +1713,8 @@ class InstrGen {
     generateBasicBlockLabel(inst.getCatchTarget(), os_, bbMap_);
     os_ << ";\n";
   }
-  void generateCompareBranchInst(CompareBranchInst &inst) {
-    os_ << "  if(";
-
-    // Whether to pass the arguments to a function by value.
-    bool passByValue = false;
-
-    // Function to use if we can't specialize the types.
-    const char *funcUntypedOp = nullptr;
-
-    // Infix operator for doubles.
-    const char *infixDoubleOp = nullptr;
-    // Infix operator for raw bitwise comparison.
-    const char *infixRawOp = nullptr;
-
-    bool bothDouble = inst.getLeftHandSide()->getType().isNumberType() &&
-        inst.getRightHandSide()->getType().isNumberType();
-
-    switch (inst.getKind()) {
-      case ValueKind::CmpBrLessThanInstKind: // <
-        if (bothDouble) {
-          infixDoubleOp = "<";
-        } else {
-          funcUntypedOp = "_sh_ljs_less_rjs";
-        }
-        break;
-      case ValueKind::CmpBrLessThanOrEqualInstKind: // <=
-        if (bothDouble) {
-          infixDoubleOp = "<=";
-        } else {
-          funcUntypedOp = "_sh_ljs_less_equal_rjs";
-        }
-        break;
-      case ValueKind::CmpBrGreaterThanInstKind: // >
-        if (bothDouble) {
-          infixDoubleOp = ">";
-        } else {
-          funcUntypedOp = "_sh_ljs_greater_rjs";
-        }
-        break;
-      case ValueKind::CmpBrGreaterThanOrEqualInstKind: // >=
-        if (bothDouble) {
-          infixDoubleOp = ">=";
-        } else {
-          funcUntypedOp = "_sh_ljs_greater_equal_rjs";
-        }
-        break;
-      case ValueKind::CmpBrEqualInstKind: // ==
-        funcUntypedOp = "_sh_ljs_equal_rjs";
-        break;
-      case ValueKind::CmpBrNotEqualInstKind: // !=
-        funcUntypedOp = "!_sh_ljs_equal_rjs";
-        break;
-      case ValueKind::CmpBrStrictlyEqualInstKind: // ===
-        if (bothDouble) {
-          infixDoubleOp = "==";
-        } else if (canCompareStrictEqualityRaw(
-                       inst.getLeftHandSide(), inst.getRightHandSide())) {
-          infixRawOp = "==";
-        } else {
-          funcUntypedOp = "_sh_ljs_strict_equal";
-          passByValue = true;
-        }
-        break;
-      case ValueKind::CmpBrStrictlyNotEqualInstKind: // !==
-        if (bothDouble) {
-          infixDoubleOp = "!=";
-        } else if (canCompareStrictEqualityRaw(
-                       inst.getLeftHandSide(), inst.getRightHandSide())) {
-          infixRawOp = "!=";
-        } else {
-          funcUntypedOp = "!_sh_ljs_strict_equal";
-          passByValue = true;
-        }
-        break;
-      default:
-        hermes_fatal("Invalid operator for CompareBranchInst");
-    }
-    if (passByValue) {
-      assert(funcUntypedOp);
-      os_ << funcUntypedOp << "(";
-      generateRegister(*inst.getLeftHandSide());
-      os_ << ", ";
-      generateRegister(*inst.getRightHandSide());
-      os_ << ")";
-    } else if (infixDoubleOp) {
-      assert(bothDouble);
-      os_ << "_sh_ljs_get_double(";
-      generateRegister(*inst.getLeftHandSide());
-      os_ << ") " << infixDoubleOp << " _sh_ljs_get_double(";
-      generateRegister(*inst.getRightHandSide());
-      os_ << ")";
-    } else if (infixRawOp) {
-      os_ << "";
-      generateRegister(*inst.getLeftHandSide());
-      os_ << ".raw " << infixRawOp << " ";
-      generateRegister(*inst.getRightHandSide());
-      os_ << ".raw";
-    } else {
-      assert(funcUntypedOp);
-      os_ << funcUntypedOp << "(shr, &";
-      generateRegister(*inst.getLeftHandSide());
-      os_ << ", &";
-      generateRegister(*inst.getRightHandSide());
-      os_ << ")";
-    }
-    os_ << ") goto ";
-    generateBasicBlockLabel(inst.getTrueDest(), os_, bbMap_);
-    os_ << ";\n  goto ";
-    generateBasicBlockLabel(inst.getFalseDest(), os_, bbMap_);
-    os_ << ";\n";
+  void generateHBCCompareBranchInst(HBCCompareBranchInst &inst) {
+    unimplemented(inst);
   }
   void generateSwitchImmInst(SwitchImmInst &inst) {
     unimplemented(inst);
@@ -2394,8 +2286,6 @@ bool lowerModuleIR(Module *M, bool optimize) {
   PM.addPass(createLowerScopes());
   if (optimize) {
     PM.addTypeInference();
-    // Reduce comparison and conditional jump to single comparison jump
-    PM.addPass(new LowerCondBranch());
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
