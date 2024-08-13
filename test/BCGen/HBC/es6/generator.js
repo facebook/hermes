@@ -120,10 +120,12 @@ function *args() {
 // CHECK-NEXT:    GetParentEnvironment r2, 0
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 7
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
-// CHECK-NEXT:    JStrictEqualLong  L1, r7, r4
+// CHECK-NEXT:    StrictEq          r7, r7, r4
+// CHECK-NEXT:    JmpTrueLong       L1, r7
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 7
 // CHECK-NEXT:    LoadConstUInt8    r4, 3
-// CHECK-NEXT:    JStrictEqualLong  L2, r7, r4
+// CHECK-NEXT:    StrictEq          r7, r7, r4
+// CHECK-NEXT:    JmpTrueLong       L2, r7
 // CHECK-NEXT:    LoadConstUInt8    r7, 2
 // CHECK-NEXT:    StoreNPToEnvironment r2, 7, r7
 // CHECK-NEXT:    LoadFromEnvironment r12, r2, 6
@@ -133,7 +135,8 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 3
 // CHECK-NEXT:    Mov               r11, r7
 // CHECK-NEXT:    LoadConstUInt8    r7, 1
-// CHECK-NEXT:    JStrictEqual      L4, r5, r7
+// CHECK-NEXT:    StrictEq          r7, r5, r7
+// CHECK-NEXT:    JmpTrue           L4, r7
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r3
 // CHECK-NEXT:    LoadFromEnvironment r10, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r7, 2
@@ -161,7 +164,8 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 2
 // CHECK-NEXT:    Mov               r9, r7
 // CHECK-NEXT:    LoadConstUInt8    r7, 1
-// CHECK-NEXT:    JStrictEqualLong  L8, r5, r7
+// CHECK-NEXT:    StrictEq          r7, r5, r7
+// CHECK-NEXT:    JmpTrueLong       L8, r7
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r3
 // CHECK-NEXT:    LoadFromEnvironment r6, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r7, 2
@@ -215,9 +219,11 @@ function *args() {
 // CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L10, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L10, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqual      L11, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L11, r1
 // CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
@@ -243,10 +249,12 @@ function *args() {
 // CHECK-NEXT:    GetParentEnvironment r2, 0
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 4
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqualLong  L1, r4, r1
+// CHECK-NEXT:    StrictEq          r4, r4, r1
+// CHECK-NEXT:    JmpTrueLong       L1, r4
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 4
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
-// CHECK-NEXT:    JStrictEqualLong  L2, r4, r1
+// CHECK-NEXT:    StrictEq          r4, r4, r1
+// CHECK-NEXT:    JmpTrueLong       L2, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
 // CHECK-NEXT:    StoreNPToEnvironment r2, 4, r4
 // CHECK-NEXT:    LoadFromEnvironment r10, r2, 6
@@ -256,7 +264,8 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 3
 // CHECK-NEXT:    Mov               r9, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 1
-// CHECK-NEXT:    JStrictEqual      L4, r5, r4
+// CHECK-NEXT:    StrictEq          r4, r5, r4
+// CHECK-NEXT:    JmpTrue           L4, r4
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r3
 // CHECK-NEXT:    LoadFromEnvironment r8, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
@@ -286,7 +295,8 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 2
 // CHECK-NEXT:    Mov               r7, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 1
-// CHECK-NEXT:    JStrictEqual      L6, r5, r4
+// CHECK-NEXT:    StrictEq          r4, r5, r4
+// CHECK-NEXT:    JmpTrue           L6, r4
 // CHECK-NEXT:    StoreToEnvironment r2, 5, r3
 // CHECK-NEXT:    LoadFromEnvironment r6, r2, 5
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
@@ -319,9 +329,11 @@ function *args() {
 // CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L8, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L8, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqual      L9, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L9, r1
 // CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
@@ -353,14 +365,14 @@ function *args() {
 // CHECK-NEXT:    bc 23: line 10 col 1
 // CHECK-NEXT:    bc 36: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 3, starts at line 10 col 1
-// CHECK-NEXT:    bc 105: line 12 col 10
-// CHECK-NEXT:    bc 148: line 13 col 5
-// CHECK-NEXT:    bc 236: line 12 col 10
-// CHECK-NEXT:    bc 272: line 13 col 14
-// CHECK-NEXT:    bc 282: line 13 col 12
-// CHECK-NEXT:    bc 380: line 13 col 5
+// CHECK-NEXT:    bc 114: line 12 col 10
+// CHECK-NEXT:    bc 157: line 13 col 5
+// CHECK-NEXT:    bc 248: line 12 col 10
+// CHECK-NEXT:    bc 284: line 13 col 14
+// CHECK-NEXT:    bc 294: line 13 col 12
+// CHECK-NEXT:    bc 398: line 13 col 5
 // CHECK-NEXT:  0x0029  function idx 4, starts at line 18 col 1
-// CHECK-NEXT:    bc 150: line 19 col 3
-// CHECK-NEXT:    bc 213: line 19 col 18
-// CHECK-NEXT:    bc 311: line 19 col 3
-// CHECK-NEXT:  0x0038  end of debug source table
+// CHECK-NEXT:    bc 159: line 19 col 3
+// CHECK-NEXT:    bc 225: line 19 col 18
+// CHECK-NEXT:    bc 329: line 19 col 3
+// CHECK-NEXT:  0x0039  end of debug source table

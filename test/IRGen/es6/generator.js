@@ -302,49 +302,52 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:  %33 = CatchInst (:any)
 // CHECK-NEXT:  %34 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "throw": string
-// CHECK-NEXT:        CmpBrStrictlyEqualInst %34: any, undefined: undefined, %BB18, %BB17
+// CHECK-NEXT:  %35 = BinaryStrictlyEqualInst (:any) %34: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %35: any, %BB18, %BB17
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %36 = ResumeGeneratorInst (:any) %17: boolean
-// CHECK-NEXT:        StoreStackInst %36: any, %15: any
-// CHECK-NEXT:  %38 = LoadStackInst (:boolean) %17: boolean
-// CHECK-NEXT:        CondBranchInst %38: boolean, %BB10, %BB7
+// CHECK-NEXT:  %37 = ResumeGeneratorInst (:any) %17: boolean
+// CHECK-NEXT:        StoreStackInst %37: any, %15: any
+// CHECK-NEXT:  %39 = LoadStackInst (:boolean) %17: boolean
+// CHECK-NEXT:        CondBranchInst %39: boolean, %BB10, %BB7
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:        StoreStackInst %36: any, %15: any
+// CHECK-NEXT:        StoreStackInst %37: any, %15: any
 // CHECK-NEXT:        TryEndInst %BB8, %BB11
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %42 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
-// CHECK-NEXT:        CmpBrStrictlyEqualInst %42: any, undefined: undefined, %BB13, %BB12
+// CHECK-NEXT:  %43 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
+// CHECK-NEXT:  %44 = BinaryStrictlyEqualInst (:any) %43: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %44: any, %BB13, %BB12
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %44 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:  %45 = CallInst (:any) %42: any, empty: any, empty: any, undefined: undefined, %12: any, %44: any
-// CHECK-NEXT:  %46 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %45: any, "iterator.return() did not return an object": string
-// CHECK-NEXT:  %47 = LoadPropertyInst (:any) %45: any, "done": string
-// CHECK-NEXT:        CondBranchInst %47: any, %BB14, %BB15
+// CHECK-NEXT:  %46 = LoadStackInst (:any) %15: any
+// CHECK-NEXT:  %47 = CallInst (:any) %43: any, empty: any, empty: any, undefined: undefined, %12: any, %46: any
+// CHECK-NEXT:  %48 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %47: any, "iterator.return() did not return an object": string
+// CHECK-NEXT:  %49 = LoadPropertyInst (:any) %47: any, "done": string
+// CHECK-NEXT:        CondBranchInst %49: any, %BB14, %BB15
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:        ReturnInst %36: any
+// CHECK-NEXT:        ReturnInst %37: any
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %50 = LoadPropertyInst (:any) %45: any, "value": string
-// CHECK-NEXT:        ReturnInst %50: any
+// CHECK-NEXT:  %52 = LoadPropertyInst (:any) %47: any, "value": string
+// CHECK-NEXT:        ReturnInst %52: any
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:        SaveAndYieldInst %45: any, true: boolean, %BB6
+// CHECK-NEXT:        SaveAndYieldInst %47: any, true: boolean, %BB6
 // CHECK-NEXT:%BB16:
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %54 = CallInst (:any) %34: any, empty: any, empty: any, undefined: undefined, %12: any, %33: any
-// CHECK-NEXT:  %55 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %54: any, "iterator.throw() did not return an object": string
-// CHECK-NEXT:  %56 = LoadPropertyInst (:any) %54: any, "done": string
-// CHECK-NEXT:        CondBranchInst %56: any, %BB19, %BB20
+// CHECK-NEXT:  %56 = CallInst (:any) %34: any, empty: any, empty: any, undefined: undefined, %12: any, %33: any
+// CHECK-NEXT:  %57 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %56: any, "iterator.throw() did not return an object": string
+// CHECK-NEXT:  %58 = LoadPropertyInst (:any) %56: any, "done": string
+// CHECK-NEXT:        CondBranchInst %58: any, %BB19, %BB20
 // CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %58 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
-// CHECK-NEXT:        CmpBrStrictlyEqualInst %58: any, undefined: undefined, %BB22, %BB21
+// CHECK-NEXT:  %60 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any, "return": string
+// CHECK-NEXT:  %61 = BinaryStrictlyEqualInst (:any) %60: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %61: any, %BB22, %BB21
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:        StoreStackInst %54: any, %18: any
+// CHECK-NEXT:        StoreStackInst %56: any, %18: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:        SaveAndYieldInst %54: any, true: boolean, %BB6
+// CHECK-NEXT:        SaveAndYieldInst %56: any, true: boolean, %BB6
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %63 = CallInst (:any) %58: any, empty: any, empty: any, undefined: undefined, %12: any
-// CHECK-NEXT:  %64 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %63: any, "iterator.return() did not return an object": string
+// CHECK-NEXT:  %66 = CallInst (:any) %60: any, empty: any, empty: any, undefined: undefined, %12: any
+// CHECK-NEXT:  %67 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %66: any, "iterator.return() did not return an object": string
 // CHECK-NEXT:        BranchInst %BB22
 // CHECK-NEXT:%BB22:
 // CHECK-NEXT:        ThrowTypeErrorInst "yield* delegate must have a .throw() method": string

@@ -49,16 +49,17 @@ function baz() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
-// CHECK-NEXT:       CmpBrStrictlyEqualInst %2: any, %3: object, %BB1, %BB2
+// CHECK-NEXT:  %4 = BinaryStrictlyEqualInst (:any) %2: any, %3: object
+// CHECK-NEXT:       CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = DirectEvalInst (:any) "1 + 1": string, false: boolean
+// CHECK-NEXT:  %6 = DirectEvalInst (:any) "1 + 1": string, false: boolean
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "1 + 1": string
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "1 + 1": string
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = PhiInst (:any) %5: any, %BB1, %7: any, %BB2
-// CHECK-NEXT:        ReturnInst %9: any
+// CHECK-NEXT:  %10 = PhiInst (:any) %6: any, %BB1, %8: any, %BB2
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS2 []
@@ -72,16 +73,17 @@ function baz() {
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
-// CHECK-NEXT:       CmpBrStrictlyEqualInst %2: any, %6: object, %BB1, %BB2
+// CHECK-NEXT:  %7 = BinaryStrictlyEqualInst (:any) %2: any, %6: object
+// CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = DirectEvalInst (:any) "2 + 2": string, false: boolean
-// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:  %9 = DirectEvalInst (:any) "2 + 2": string, false: boolean
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "2 + 2": string, %3: any, %5: any
+// CHECK-NEXT:  %11 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, "2 + 2": string, %3: any, %5: any
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = PhiInst (:any) %8: any, %BB1, %10: any, %BB2
-// CHECK-NEXT:        ReturnInst %12: any
+// CHECK-NEXT:  %13 = PhiInst (:any) %9: any, %BB1, %11: any, %BB2
+// CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS3 []
@@ -92,14 +94,15 @@ function baz() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "eval": string
 // CHECK-NEXT:  %3 = GetBuiltinClosureInst (:object) [globalThis.eval]: number
-// CHECK-NEXT:       CmpBrStrictlyEqualInst %2: any, %3: object, %BB1, %BB2
+// CHECK-NEXT:  %4 = BinaryStrictlyEqualInst (:any) %2: any, %3: object
+// CHECK-NEXT:       CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = DirectEvalInst (:any) undefined: undefined, false: boolean
+// CHECK-NEXT:  %6 = DirectEvalInst (:any) undefined: undefined, false: boolean
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = PhiInst (:any) %5: any, %BB1, %7: any, %BB2
-// CHECK-NEXT:        ReturnInst %9: any
+// CHECK-NEXT:  %10 = PhiInst (:any) %6: any, %BB1, %8: any, %BB2
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end

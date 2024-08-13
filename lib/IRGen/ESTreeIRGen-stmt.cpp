@@ -893,12 +893,11 @@ void ESTreeIRGen::genForOfFastArrayStatement(
       genAnonymousLabelName("forOfIndex"), Type::createNumber());
   Builder.createStoreStackInst(Builder.getLiteralNumber(0), idx);
   LoadStackInst *loadStack1 = Builder.createLoadStackInst(idx);
-  Builder.createCompareBranchInst(
+  auto *cond = Builder.createBinaryOperatorInst(
       loadStack1,
       Builder.createFastArrayLengthInst(exprValue),
-      ValueKind::CmpBrLessThanInstKind,
-      bodyBlock,
-      exitBlock);
+      ValueKind::BinaryLessThanInstKind);
+  Builder.createCondBranchInst(cond, bodyBlock, exitBlock);
 
   Builder.setInsertionBlock(bodyBlock);
   // Load the element from the array.
@@ -925,12 +924,11 @@ void ESTreeIRGen::genForOfFastArrayStatement(
   Builder.setInsertionBlock(postTestBlock);
   // Branch out of the loop if the index has reached the end of the array.
   LoadStackInst *loadStack2 = Builder.createLoadStackInst(idx);
-  Builder.createCompareBranchInst(
+  auto *cond2 = Builder.createBinaryOperatorInst(
       loadStack2,
       Builder.createFastArrayLengthInst(exprValue),
-      ValueKind::CmpBrLessThanInstKind,
-      bodyBlock,
-      exitBlock);
+      ValueKind::BinaryLessThanInstKind);
+  Builder.createCondBranchInst(cond2, bodyBlock, exitBlock);
 
   Builder.setInsertionBlock(exitBlock);
 }

@@ -1160,12 +1160,11 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
   BasicBlock *nextBlock = Builder.createBasicBlock(function);
 
   // Check if it is actually calling eval().
-  Builder.createCompareBranchInst(
+  auto *isEval = Builder.createBinaryOperatorInst(
       callee,
       Builder.createGetBuiltinClosureInst(BuiltinMethod::globalThis_eval),
-      ValueKind::CmpBrStrictlyEqualInstKind,
-      evalBlock,
-      callBlock);
+      ValueKind::BinaryStrictlyEqualInstKind);
+  Builder.createCondBranchInst(isEval, evalBlock, callBlock);
 
   // Perform a direct eval.
   Builder.setInsertionBlock(evalBlock);
@@ -1798,12 +1797,12 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
                     BuiltinMethod::HermesBuiltin_getMethod,
                     {iteratorRecord.iterator,
                      Builder.getLiteralString("return")});
-                Builder.createCompareBranchInst(
+                auto *noReturn = Builder.createBinaryOperatorInst(
                     returnMethod,
                     Builder.getLiteralUndefined(),
-                    ValueKind::CmpBrStrictlyEqualInstKind,
-                    noReturnBB,
-                    haveReturnBB);
+                    ValueKind::BinaryStrictlyEqualInstKind);
+                Builder.createCondBranchInst(
+                    noReturn, noReturnBB, haveReturnBB);
 
                 Builder.setInsertionBlock(haveReturnBB);
                 // iv. Let innerReturnResult be
@@ -1874,12 +1873,12 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         auto *throwMethod = genBuiltinCall(
             BuiltinMethod::HermesBuiltin_getMethod,
             {iteratorRecord.iterator, Builder.getLiteralString("throw")});
-        Builder.createCompareBranchInst(
+        auto *hasThrowMethod = Builder.createBinaryOperatorInst(
             throwMethod,
             Builder.getLiteralUndefined(),
-            ValueKind::CmpBrStrictlyEqualInstKind,
-            noThrowMethodBB,
-            hasThrowMethodBB);
+            ValueKind::BinaryStrictlyEqualInstKind);
+        Builder.createCondBranchInst(
+            hasThrowMethod, noThrowMethodBB, hasThrowMethodBB);
 
         // ii. If throw is not undefined, then
         Builder.setInsertionBlock(hasThrowMethodBB);

@@ -487,12 +487,11 @@ void LowerToStateMachine::lowerResumeGenerator(
 
       // Now put the check at the end of this block.
       builder_.setInsertionBlock(&BB);
-      builder_.createCompareBranchInst(
+      auto *isThrow = builder_.createBinaryOperatorInst(
           actionParam,
           builder_.getLiteralNumber((uint8_t)Action::Throw),
-          ValueKind::CmpBrStrictlyEqualInstKind,
-          throwBlockBB,
-          restOfInstsBB);
+          ValueKind::BinaryStrictlyEqualInstKind);
+      builder_.createCondBranchInst(isThrow, throwBlockBB, restOfInstsBB);
 
       builder_.setInsertionBlock(throwBlockBB);
       builder_.createStoreFrameInst(
@@ -630,12 +629,12 @@ void LowerToStateMachine::lowerToSwitch(
   // Note also that this must be before genState since it is an operand.
   getParentOuterScope_->moveBefore(loadState);
 
-  builder_.createCompareBranchInst(
+  auto *isExecuting = builder_.createBinaryOperatorInst(
       loadState,
       builder_.getLiteralNumber((uint8_t)State::Executing),
-      ValueKind::CmpBrStrictlyEqualInstKind,
-      throwBecauseExecutingBB,
-      checkIfCompletedBB);
+      ValueKind::BinaryStrictlyEqualInstKind);
+  builder_.createCondBranchInst(
+      isExecuting, throwBecauseExecutingBB, checkIfCompletedBB);
 
   builder_.setInsertionBlock(throwBecauseExecutingBB);
   builder_.createStoreFrameInst(
@@ -649,12 +648,11 @@ void LowerToStateMachine::lowerToSwitch(
   // If the state of the generator is completed, go to completedStateBB. Else,
   // try to execute the main switch.
   builder_.setInsertionBlock(checkIfCompletedBB);
-  builder_.createCompareBranchInst(
+  auto *isCompleted = builder_.createBinaryOperatorInst(
       builder_.createLoadFrameInst(getParentOuterScope_, genState),
       builder_.getLiteralNumber((uint8_t)State::Completed),
-      ValueKind::CmpBrStrictlyEqualInstKind,
-      completedStateBB,
-      executeSwitchBB);
+      ValueKind::BinaryStrictlyEqualInstKind);
+  builder_.createCondBranchInst(isCompleted, completedStateBB, executeSwitchBB);
 
   // Initialize the main switch index and generator state variables.
   builder_.setInsertionPoint(CGI_);
@@ -900,20 +898,18 @@ BasicBlock *LowerToStateMachine::createCompletedStateBlock(
   auto *returnUndefBB = builder_.createBasicBlock(inner_);
 
   builder_.setInsertionBlock(checkIsThrowBB);
-  builder_.createCompareBranchInst(
+  auto *isThrow = builder_.createBinaryOperatorInst(
       actionParam,
       builder_.getLiteralNumber((uint8_t)Action::Throw),
-      ValueKind::CmpBrStrictlyEqualInstKind,
-      throwValueBB,
-      checkIsReturnBB);
+      ValueKind::BinaryStrictlyEqualInstKind);
+  builder_.createCondBranchInst(isThrow, throwValueBB, checkIsReturnBB);
 
   builder_.setInsertionBlock(checkIsReturnBB);
-  builder_.createCompareBranchInst(
+  auto *isReturn = builder_.createBinaryOperatorInst(
       actionParam,
       builder_.getLiteralNumber((uint8_t)Action::Return),
-      ValueKind::CmpBrStrictlyEqualInstKind,
-      returnValueBB,
-      returnUndefBB);
+      ValueKind::BinaryStrictlyEqualInstKind);
+  builder_.createCondBranchInst(isReturn, returnValueBB, returnUndefBB);
 
   builder_.setInsertionBlock(returnUndefBB);
   emitReturnIterResultObject(builder_, builder_.getLiteralUndefined(), true);

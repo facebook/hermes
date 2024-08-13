@@ -181,17 +181,20 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    GetParentEnvironment r2, 0
 // CHECK-NEXT:    LoadFromEnvironment r1, r2, 2
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
-// CHECK-NEXT:    JStrictEqualLong  L1, r1, r4
+// CHECK-NEXT:    StrictEq          r1, r1, r4
+// CHECK-NEXT:    JmpTrueLong       L1, r1
 // CHECK-NEXT:    LoadFromEnvironment r1, r2, 2
 // CHECK-NEXT:    LoadConstUInt8    r4, 3
-// CHECK-NEXT:    JStrictEqual      L2, r1, r4
+// CHECK-NEXT:    StrictEq          r1, r1, r4
+// CHECK-NEXT:    JmpTrue           L2, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
 // CHECK-NEXT:    StoreNPToEnvironment r2, 2, r1
 // CHECK-NEXT:    LoadFromEnvironment r0, r2, 4
 // CHECK-NEXT:    LoadFromEnvironment r1, r2, 1
 // CHECK-NEXT:    Mov               r7, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L3, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L3, r1
 // CHECK-NEXT:    StoreToEnvironment r2, 3, r3
 // CHECK-NEXT:    LoadFromEnvironment r6, r2, 3
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
@@ -219,9 +222,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L5, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L5, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqual      L6, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L6, r1
 // CHECK-NEXT:    NewObjectWithBuffer r1, 0, 6
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
@@ -247,10 +252,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    GetParentEnvironment r2, 0
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 6
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqualLong  L1, r4, r1
+// CHECK-NEXT:    StrictEq          r4, r4, r1
+// CHECK-NEXT:    JmpTrueLong       L1, r4
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 6
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
-// CHECK-NEXT:    JStrictEqualLong  L2, r4, r1
+// CHECK-NEXT:    StrictEq          r4, r4, r1
+// CHECK-NEXT:    JmpTrueLong       L2, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
 // CHECK-NEXT:    StoreNPToEnvironment r2, 6, r4
 // CHECK-NEXT:    LoadFromEnvironment r10, r2, 5
@@ -260,7 +267,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 2
 // CHECK-NEXT:    Mov               r9, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 1
-// CHECK-NEXT:    JStrictEqual      L4, r5, r4
+// CHECK-NEXT:    StrictEq          r4, r5, r4
+// CHECK-NEXT:    JmpTrue           L4, r4
 // CHECK-NEXT:    StoreToEnvironment r2, 4, r3
 // CHECK-NEXT:    LoadFromEnvironment r8, r2, 4
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
@@ -292,7 +300,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadFromEnvironment r1, r2, 1
 // CHECK-NEXT:    Mov               r7, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L6, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L6, r1
 // CHECK-NEXT:    StoreToEnvironment r2, 4, r3
 // CHECK-NEXT:    LoadFromEnvironment r6, r2, 4
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
@@ -325,9 +334,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L8, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L8, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqual      L9, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L9, r1
 // CHECK-NEXT:    NewObjectWithBuffer r1, 0, 6
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
@@ -353,10 +364,12 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    GetParentEnvironment r2, 0
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 6
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqualLong  L1, r4, r1
+// CHECK-NEXT:    StrictEq          r4, r4, r1
+// CHECK-NEXT:    JmpTrueLong       L1, r4
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 6
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
-// CHECK-NEXT:    JStrictEqualLong  L2, r4, r1
+// CHECK-NEXT:    StrictEq          r4, r4, r1
+// CHECK-NEXT:    JmpTrueLong       L2, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
 // CHECK-NEXT:    StoreNPToEnvironment r2, 6, r4
 // CHECK-NEXT:    LoadFromEnvironment r10, r2, 5
@@ -366,7 +379,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadFromEnvironment r4, r2, 2
 // CHECK-NEXT:    Mov               r9, r4
 // CHECK-NEXT:    LoadConstUInt8    r4, 1
-// CHECK-NEXT:    JStrictEqual      L4, r5, r4
+// CHECK-NEXT:    StrictEq          r4, r5, r4
+// CHECK-NEXT:    JmpTrue           L4, r4
 // CHECK-NEXT:    StoreToEnvironment r2, 4, r3
 // CHECK-NEXT:    LoadFromEnvironment r8, r2, 4
 // CHECK-NEXT:    LoadConstUInt8    r4, 2
@@ -398,7 +412,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    LoadFromEnvironment r1, r2, 1
 // CHECK-NEXT:    Mov               r7, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L6, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L6, r1
 // CHECK-NEXT:    StoreToEnvironment r2, 4, r3
 // CHECK-NEXT:    LoadFromEnvironment r6, r2, 4
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
@@ -431,9 +446,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Throw             r3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    JStrictEqual      L8, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L8, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 2
-// CHECK-NEXT:    JStrictEqual      L9, r5, r1
+// CHECK-NEXT:    StrictEq          r1, r5, r1
+// CHECK-NEXT:    JmpTrue           L9, r1
 // CHECK-NEXT:    NewObjectWithBuffer r1, 0, 6
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    PutOwnBySlotIdx   r1, r4, 0
@@ -473,9 +490,9 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  0x0024  function idx 3, starts at line 19 col 21
 // CHECK-NEXT:    bc 31: line 19 col 21
 // CHECK-NEXT:  0x002b  function idx 8, starts at line 14 col 1
-// CHECK-NEXT:    bc 160: line 15 col 11
-// CHECK-NEXT:    bc 319: line 15 col 11
+// CHECK-NEXT:    bc 169: line 15 col 11
+// CHECK-NEXT:    bc 337: line 15 col 11
 // CHECK-NEXT:  0x0037  function idx 9, starts at line 19 col 21
-// CHECK-NEXT:    bc 160: line 20 col 11
-// CHECK-NEXT:    bc 319: line 20 col 11
+// CHECK-NEXT:    bc 169: line 20 col 11
+// CHECK-NEXT:    bc 337: line 20 col 11
 // CHECK-NEXT:  0x0043  end of debug source table

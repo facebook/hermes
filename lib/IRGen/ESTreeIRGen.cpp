@@ -499,12 +499,11 @@ void ESTreeIRGen::emitIteratorCloseSlow(
   auto *returnMethod = genBuiltinCall(
       BuiltinMethod::HermesBuiltin_getMethod,
       {iteratorRecord.iterator, Builder.getLiteralString("return")});
-  Builder.createCompareBranchInst(
+  auto *returnIsUndefined = Builder.createBinaryOperatorInst(
       returnMethod,
       Builder.getLiteralUndefined(),
-      ValueKind::CmpBrStrictlyEqualInstKind,
-      noReturn,
-      haveReturn);
+      ValueKind::BinaryStrictlyEqualInstKind);
+  Builder.createCondBranchInst(returnIsUndefined, noReturn, haveReturn);
 
   Builder.setInsertionBlock(haveReturn);
   if (ignoreInnerException) {
