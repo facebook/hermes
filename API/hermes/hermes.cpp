@@ -390,7 +390,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  void createSnapshotToFile(const std::string &path) override {
+  void createSnapshotToFile(
+      const std::string &path,
+      const HeapSnapshotOptions & /*options*/) override {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     std::error_code code;
     llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
@@ -406,7 +408,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   }
 
   // Overridden from jsi::Instrumentation
-  void createSnapshotToStream(std::ostream &os) override {
+  void createSnapshotToStream(
+      std::ostream &os,
+      const HeapSnapshotOptions & /*options*/) override {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     llvh::raw_os_ostream ros(os);
     runtime_.getHeap().createSnapshot(ros);
