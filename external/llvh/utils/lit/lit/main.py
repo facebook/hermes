@@ -335,7 +335,7 @@ def main_with_tmp(builtinParameters):
         parser.error('No inputs specified')
 
     if opts.numThreads is None:
-        opts.numThreads = lit.util.detectCPUs()
+        opts.numThreads = 1
     elif opts.numThreads <= 0:
         parser.error("Option '--threads' or '-j' requires positive integer")
 
