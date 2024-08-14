@@ -419,6 +419,7 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   }
 
   /// Add the location of an opcode.
+  /// A line of 0 indicates that there is no source location.
   void addDebugSourceLocation(const DebugSourceLocation &info);
   const std::vector<DebugSourceLocation> &getDebugLocations() const {
     return debugLocations_;

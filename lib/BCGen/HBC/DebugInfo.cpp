@@ -19,8 +19,9 @@ namespace {
 struct FunctionDebugInfoDeserializer {
   /// Construct a deserializer that begins deserializing at \p offset in \p
   /// data. It will deserialize until the function's debug info is finished
-  /// (address delta = -1) at which point next() will return None. The offset of
-  /// the next section can be obtained via getOffset().
+  /// (address delta = -1) at which point isDone() will return true. The offset
+  /// of the next section can be obtained via getOffset().
+  /// isDone() will not be true until after the first call to next().
   FunctionDebugInfoDeserializer(llvh::ArrayRef<uint8_t> data, uint32_t offset)
       : data_(data), offset_(offset) {
     functionIndex_ = decode1Int();
@@ -31,22 +32,41 @@ struct FunctionDebugInfoDeserializer {
   /// \return the next debug location, or None if we reach the end.
   /// Sample usage: while (auto loc = fdid.next()) {...}
   OptValue<DebugSourceLocation> next() {
+    assert(!done_ && "next() called after done");
+
     auto addressDelta = decode1Int();
-    if (addressDelta == -1)
+    if (addressDelta == -1) {
+      done_ = true;
       return llvh::None;
-    // Presence of the statement delta is LSB of line delta.
+    }
+    current_.address += addressDelta;
+
+    // ldelta encoding: bits 2..32 contain the line delta.
+    // Bit 0 indicates the presence of location information.
+    // Bit 1 indicates the presence of statement information.
+
     int64_t lineDelta = decode1Int();
+    if ((lineDelta & 1) == 0) {
+      // No location information here, but not done yet.
+      return llvh::None;
+    }
+
     int64_t columnDelta = decode1Int();
     int64_t statementDelta = 0;
-    if (lineDelta & 1)
+    if ((lineDelta & 2) != 0)
       statementDelta = decode1Int();
-    lineDelta >>= 1;
+    lineDelta >>= 2;
 
-    current_.address += addressDelta;
     current_.line += lineDelta;
     current_.column += columnDelta;
     current_.statement += statementDelta;
     return current_;
+  }
+
+  /// \return whether we're done reading the debug info for this function.
+  /// next() must not be called when isDone() is true.
+  bool isDone() const {
+    return done_;
   }
 
   /// \return the offset of this deserializer in the data.
@@ -77,6 +97,8 @@ struct FunctionDebugInfoDeserializer {
 
   uint32_t functionIndex_;
   DebugSourceLocation current_;
+
+  bool done_ = false;
 };
 } // namespace
 
@@ -100,20 +122,26 @@ OptValue<DebugSourceLocation> DebugInfo::getLocationForAddress(
     uint32_t offsetInFunction) const {
   assert(debugOffset < data_.size() && "Debug offset out of range");
   FunctionDebugInfoDeserializer fdid(data_.getData(), debugOffset);
-  DebugSourceLocation lastLocation = fdid.getCurrent();
+  OptValue<DebugSourceLocation> lastLocation = fdid.getCurrent();
   uint32_t lastLocationOffset = debugOffset;
   uint32_t nextLocationOffset = fdid.getOffset();
-  while (auto loc = fdid.next()) {
-    if (loc->address > offsetInFunction)
+  for (;;) {
+    // isDone() won't be true on the first iteration, because fdid was just
+    // constructed.
+    auto nextLocation = fdid.next();
+    if (fdid.isDone() || fdid.getCurrent().address > offsetInFunction)
       break;
-    lastLocation = *loc;
+    lastLocation = nextLocation;
     lastLocationOffset = nextLocationOffset;
     nextLocationOffset = fdid.getOffset();
   }
+  if (!lastLocation)
+    return llvh::None;
+  DebugSourceLocation result = *lastLocation;
   if (auto file = getFilenameForAddress(lastLocationOffset)) {
-    lastLocation.address = offsetInFunction;
-    lastLocation.filenameId = *file;
-    return lastLocation;
+    result.address = offsetInFunction;
+    result.filenameId = *file;
+    return result;
   }
   return llvh::None;
 }
@@ -163,7 +191,11 @@ OptValue<DebugSearchResult> DebugInfo::getAddressForLocation(
 
   while (offset < end) {
     FunctionDebugInfoDeserializer fdid(data_.getData(), offset);
-    while (auto loc = fdid.next()) {
+    while (!fdid.isDone()) {
+      auto loc = fdid.next();
+      if (!loc.hasValue()) {
+        continue;
+      }
       uint32_t line = loc->line;
       uint32_t column = loc->column;
       if (line == targetLine) {
@@ -224,10 +256,12 @@ void DebugInfo::disassembleFilesAndOffsets(llvh::raw_ostream &OS) const {
     OS << ", starts at line " << fdid.getCurrent().line << " col "
        << fdid.getCurrent().column << "\n";
     uint32_t count = 0;
-    while (auto loc = fdid.next()) {
-      OS << "    bc " << loc->address << ": line " << loc->line << " col "
-         << loc->column << "\n";
-      count++;
+    while (!fdid.isDone()) {
+      if (auto loc = fdid.next()) {
+        OS << "    bc " << loc->address << ": line " << loc->line << " col "
+           << loc->column << "\n";
+        count++;
+      }
     }
     if (count == 0) {
       OS << "    (none)\n";
@@ -271,8 +305,14 @@ void DebugInfo::populateSourceMap(
     FunctionDebugInfoDeserializer fdid(locsData, offset);
     uint32_t offsetInFile = functionOffsets[fdid.getFunctionIndex()];
     segments.push_back(segmentFor(fdid.getCurrent(), offsetInFile, offset));
-    while (auto loc = fdid.next())
-      segments.push_back(segmentFor(*loc, offsetInFile, offset));
+    while (!fdid.isDone()) {
+      if (auto loc = fdid.next()) {
+        segments.push_back(segmentFor(*loc, offsetInFile, offset));
+      }
+      // Don't add a segment for the debug info that has no location,
+      // because we won't be reporting location info on instructions that have
+      // no location information for the source map to translate.
+    }
     offset = fdid.getOffset();
   }
   sourceMap->addMappingsLine(std::move(segments), segmentID);
@@ -306,7 +346,11 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   appendSignedLEB128(sourcesData, functionIndex);
   appendSignedLEB128(sourcesData, start.line);
   appendSignedLEB128(sourcesData, start.column);
+
+  // The previous real source location that has been emitted.
   const DebugSourceLocation *previous = &start;
+  // The previous address that has been emitted.
+  uint32_t previousAddress = start.address;
 
   for (auto &next : offsets) {
     if (next.filenameId != previous->filenameId) {
@@ -316,24 +360,33 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
           start.sourceMappingUrlId});
     }
 
-    int32_t adelta = delta(next.address, previous->address);
-    // ldelta needs 64 bits because we will use it to encode an extra bit.
-    int64_t ldelta = delta(next.line, previous->line);
-    int32_t cdelta = delta(next.column, previous->column);
-    int32_t sdelta = delta(next.statement, previous->statement);
-
-    // Encode the presence of statementNo as a bit in the line delta, which is
-    // usually very small.
-    // ldelta encoding: bits 1..32 contain the line delta. Bit 0 indicates the
-    // presence of statementNo.
-    ldelta = (ldelta * 2) + (sdelta != 0);
-
+    int32_t adelta = delta(next.address, previousAddress);
     appendSignedLEB128(sourcesData, adelta);
-    appendSignedLEB128(sourcesData, ldelta);
-    appendSignedLEB128(sourcesData, cdelta);
-    if (sdelta)
-      appendSignedLEB128(sourcesData, sdelta);
-    previous = &next;
+    previousAddress = next.address;
+
+    if (next.line != 0) {
+      // There is a location.
+      // ldelta needs 64 bits because we will use it to encode an extra bit.
+      int64_t ldelta = delta(next.line, previous->line);
+      int32_t cdelta = delta(next.column, previous->column);
+      int32_t sdelta = delta(next.statement, previous->statement);
+
+      // Encode the presence of location info as a bit in the line delta,
+      // which is usually very small.
+      // ldelta encoding: bits 2..32 contain the line delta.
+      // Bit 0 indicates the presence of location information.
+      // Bit 1 indicates the presence of statement information.
+      // This is only ever decoded in FunctionDebugInfoDeserializer.
+      ldelta = (ldelta << 2) | ((sdelta != 0) << 1) | 1;
+      appendSignedLEB128(sourcesData, ldelta);
+      appendSignedLEB128(sourcesData, cdelta);
+      if (sdelta)
+        appendSignedLEB128(sourcesData, sdelta);
+      previous = &next;
+    } else {
+      // There is no location.
+      appendSignedLEB128(sourcesData, 0);
+    }
   }
   appendSignedLEB128(sourcesData, -1);
 

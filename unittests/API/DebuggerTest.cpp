@@ -542,8 +542,7 @@ static std::unique_ptr<hermes::Buffer> makeAsyncBreakCode() {
   std::move(debugGen).generate();
   builder.setDebugInfo(&debugInfo);
 
-  // Will be fixed to FALSE when we can encode "no location" instructions.
-  EXPECT_TRUE(debugInfo.getLocationForAddress(0, 0).hasValue());
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, 0).hasValue());
   EXPECT_TRUE(debugInfo.getLocationForAddress(0, offset).hasValue());
 
   builder.addFunction(1, 1, instGen.acquireBytecode());
@@ -562,6 +561,8 @@ TEST_F(DebuggerAPITest, ExplicitAsyncBreakLocationTest) {
   EXPECT_EQ(
       std::vector<PauseReason>({PauseReason::AsyncTriggerExplicit}),
       observer.pauseReasons);
+  ASSERT_EQ(observer.stackTraces.size(), 1);
+  EXPECT_EQ(observer.stackTraces.front().callFrameForIndex(0).location.line, 1);
 }
 
 TEST_F(DebuggerAPITest, ImplicitAsyncBreakLocationTest) {
@@ -573,6 +574,8 @@ TEST_F(DebuggerAPITest, ImplicitAsyncBreakLocationTest) {
   EXPECT_EQ(
       std::vector<PauseReason>({PauseReason::AsyncTriggerImplicit}),
       observer.pauseReasons);
+  ASSERT_EQ(observer.stackTraces.size(), 1);
+  EXPECT_EQ(observer.stackTraces.front().callFrameForIndex(0).location.line, 1);
 }
 
 #endif

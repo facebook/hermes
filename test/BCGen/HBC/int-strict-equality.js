@@ -261,4 +261,4 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    bc 5: line 46 col 15
 // CHKBC-NEXT:    bc 12: line 46 col 11
 // CHKBC-NEXT:    bc 16: line 47 col 15
-// CHKBC-NEXT:  0x003a  end of debug source table
+// CHKBC-NEXT:  0x003c  end of debug source table

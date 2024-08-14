@@ -470,17 +470,29 @@ void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
   for (auto &reloc : relocations_) {
     if (reloc.type != Relocation::DebugInfo)
       continue;
-    hasDebugInfo = true;
+
     auto *inst = cast<Instruction>(reloc.pointer);
 
-    assert(inst->hasLocation() && "Missing location");
-    auto location = inst->getLocation();
+    // Skip instructions that don't have a location if we haven't emitted
+    // anything yet, because no location is the default.
+    if (!inst->hasLocation() && !hasDebugInfo)
+      continue;
 
-    if (LLVM_UNLIKELY(!getDebugSourceLocation(manager, location, &info))) {
-      hermes_fatal("Unable to get source location");
+    hasDebugInfo = true;
+
+    if (inst->hasLocation()) {
+      auto location = inst->getLocation();
+
+      if (LLVM_UNLIKELY(!getDebugSourceLocation(manager, location, &info))) {
+        hermes_fatal("Unable to get source location");
+      }
+      info.statement = needDebugStatementNo ? inst->getStatementIndex() : 0;
+    } else {
+      info.line = 0;
+      info.column = 0;
+      info.statement = 0;
     }
     info.address = reloc.loc;
-    info.statement = needDebugStatementNo ? inst->getStatementIndex() : 0;
     BCFGen_->addDebugSourceLocation(info);
   }
 
@@ -2074,13 +2086,20 @@ void HBCISel::generateInst(Instruction *ii, BasicBlock *next) {
       [[fallthrough]];
     case DebugInfoSetting::SOURCE_MAP:
     case DebugInfoSetting::ALL:
-      if (ii->hasLocation()) {
+      // Check the case where the instruction has no location, but is the
+      // first instruction in the block.
+      // We don't want the previous block's info to run over into this block,
+      // because it could be anything.
+      // When emitting the RelocationType::DebugInfo in
+      // addDebugSourceLocationInfo, we'll avoid emitting no location
+      // instructions if we haven't emitted any locations yet.
+      if (ii->hasLocation() || &ii->getParent()->front() == ii) {
         relocations_.push_back(
             {BCFGen_->getCurrentLocation(),
              Relocation::RelocationType::DebugInfo,
              ii});
+        break;
       }
-      break;
   }
 
   switch (ii->getKind()) {

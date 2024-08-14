@@ -276,4 +276,4 @@ function f(x) {
 // CHECK-NEXT:    bc 247: line 58 col 14
 // CHECK-NEXT:    bc 282: line 75 col 13
 // CHECK-NEXT:    bc 289: line 75 col 14
-// CHECK-NEXT:  0x0029  end of debug source table
+// CHECK-NEXT:  0x002a  end of debug source table

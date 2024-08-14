@@ -36,6 +36,11 @@ void checkAddress(
   EXPECT_EQ(statement, location->statement);
 }
 
+void checkAddressNoLoc(DebugInfo *info, uint32_t offset, uint32_t address) {
+  auto location = info->getLocationForAddress(offset, address);
+  ASSERT_FALSE(location.hasValue());
+}
+
 static DebugInfoGenerator makeGenerator(DebugInfo &info) {
   DebugInfoGenerator result{info};
   result.addFilename("file1.js");
@@ -58,6 +63,26 @@ TEST(DebugInfo, TestBasicInfo) {
   std::move(dbg).generate();
 
   checkAddress(&info, debugOffset, 0, 1, 2, 1, 1);
+  checkAddress(&info, debugOffset, 2, 1, 3, 1, 1);
+}
+
+TEST(DebugInfo, TestInvalidLocation) {
+  DebugInfo info;
+  auto dbg = makeGenerator(info);
+
+  auto debugOffset = dbg.appendSourceLocations(
+      Loc{0, 1, 1, 1, 0}, // Method starts in file1:1,1
+      0,
+      {
+          Loc{0, 1, 2, 1, 1}, // Opcode at address 0 is file1:2,1
+          Loc{1, 1, 0, 0, 0}, // Opcode at address 1 has no loc
+          Loc{2, 1, 3, 1, 1} // Opcode at address 2 is file1:3,1
+      });
+
+  std::move(dbg).generate();
+
+  checkAddress(&info, debugOffset, 0, 1, 2, 1, 1);
+  checkAddressNoLoc(&info, debugOffset, 1);
   checkAddress(&info, debugOffset, 2, 1, 3, 1, 1);
 }
 
@@ -104,7 +129,8 @@ TEST(DebugInfo, TestMultipleFiles) {
 }
 
 TEST(DebugInfo, TestLargeDeltas) {
-  for (uint32_t i = 0; i < INT32_MAX; i += 123457) {
+  // Start at i = 1 because DebugSourceLocation is 1-based.
+  for (uint32_t i = 1; i < INT32_MAX; i += 123457) {
     DebugInfo info;
     auto dbg = makeGenerator(info);
     auto offset = dbg.appendSourceLocations(

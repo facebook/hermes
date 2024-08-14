@@ -29,12 +29,15 @@ print("finish");
 //CHECK-NEXT: Stepped to anonymous: {{.*}}:18:3
 //CHECK-NEXT: Stepped to anonymous: {{.*}}:21:3
 //CHECK-NEXT: Stepped to anonymous: {{.*}}:18:7
-//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:3
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:19:5
 //CHECK-NEXT: Stepped to funky: {{.*}}:12:3
+
+// step out
 //CHECK-NEXT: funky
-//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:3
 //CHECK-NEXT: Stepped to anonymous: {{.*}}:21:3
 //CHECK-NEXT: Stepped to anonymous: {{.*}}:18:7
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:3
 //CHECK-NEXT: Stepped to global: {{.*}}:17:10
 //CHECK-NEXT: Stepped to global: {{.*}}:23:1
+//CHECK-NEXT: Continuing execution
 //CHECK-NEXT: finish

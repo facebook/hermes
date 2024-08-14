@@ -43,6 +43,7 @@ struct DebugSourceLocation {
   // Use kInvalidSourceMappingUrlId for an invalid URL.
   uint32_t sourceMappingUrlId{kInvalidSourceMappingUrlId};
   // The line count, 1 based.
+  // 0 indicates that there is no source location.
   uint32_t line{0};
   // The column count, 1 based.
   uint32_t column{0};
