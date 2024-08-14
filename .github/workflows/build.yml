@@ -1,5 +1,6 @@
 name: facebook/hermes/build
 on:
+  push
   pull_request:
     branches:
       - main
