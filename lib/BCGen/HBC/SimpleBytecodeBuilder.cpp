@@ -34,6 +34,17 @@ void appendStructToBytecode(std::vector<uint8_t> &bytecode, const T &data) {
       reinterpret_cast<const uint8_t *>((&data) + 1));
 }
 
+/// Append an array of T to the bytecode buffer.
+template <typename T>
+static void appendArrayToBytecode(
+    std::vector<uint8_t> &bytecode,
+    llvh::ArrayRef<T> data) {
+  bytecode.insert(
+      bytecode.end(),
+      reinterpret_cast<const uint8_t *>(data.begin()),
+      reinterpret_cast<const uint8_t *>(data.end()));
+}
+
 std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
   // TODO: There is a fair amount of logic duplication between this function
   // and the BytecodeSerializer. We should consider merging some of them.
@@ -47,10 +58,28 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
     functions_[i].offset = currentSize;
     currentSize += functions_[i].opcodes.size();
   }
+  if (debugInfo_) {
+    // Account for the full FunctionHeaders when there's DebugInfo.
+    for (uint32_t i = 0; i < functionCount; ++i) {
+      currentSize = llvh::alignTo(currentSize, 4);
+      functions_[i].infoOffset = currentSize;
+      currentSize += sizeof(FunctionHeader);
+      currentSize = llvh::alignTo(currentSize, 4);
+      currentSize += sizeof(DebugOffsets);
+    }
+  }
   // DebugInfo comes after the bytescodes, padded by 4 bytes.
   uint32_t debugOffset = llvh::alignTo(currentSize, 4);
   uint32_t totalSize =
       debugOffset + sizeof(DebugInfoHeader) + sizeof(BytecodeFileFooter);
+  if (debugInfo_) {
+    // Account for the DebugInfo.
+    totalSize +=
+        debugInfo_->getFilenameTable().size() * sizeof(StringTableEntry);
+    totalSize += debugInfo_->getFilenameStorage().size();
+    totalSize += debugInfo_->viewFiles().size() * sizeof(DebugFileRegion);
+    totalSize += debugInfo_->viewData().getData().size();
+  }
   BytecodeOptions options;
   BytecodeFileHeader header{
       MAGIC,
@@ -81,21 +110,33 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
   // Write BytecodeFileHeader to the buffer.
   appendStructToBytecode(bytecode, header);
   // Write all function headers to the buffer.
-  for (uint32_t i = 0; i < functionCount; ++i) {
-    uint32_t opcodeSize = functions_[i].opcodes.size();
-    FunctionHeader funcHeader{
-        opcodeSize,
-        functions_[i].paramCount,
-        functions_[i].frameSize,
-        0,
-        functions_[i].highestReadCacheIndex,
-        functions_[i].highestWriteCacheIndex};
-    funcHeader.offset = functions_[i].offset;
-    funcHeader.flags.strictMode = true;
-    SmallFuncHeader small(funcHeader);
-    assert(!small.flags.overflowed);
-    appendStructToBytecode(bytecode, small);
+  if (debugInfo_) {
+    // When there's DebugInfo, use large FunctionHeaders which are appended
+    // after the opcodes.
+    // Write the offset to the FunctionHeaders using SmallFuncHeader here.
+    for (uint32_t i = 0; i < functionCount; ++i) {
+      SmallFuncHeader small(functions_[i].infoOffset);
+      assert(small.flags.overflowed);
+      appendStructToBytecode(bytecode, small);
+    }
+  } else {
+    for (uint32_t i = 0; i < functionCount; ++i) {
+      uint32_t opcodeSize = functions_[i].opcodes.size();
+      FunctionHeader funcHeader{
+          opcodeSize,
+          functions_[i].paramCount,
+          functions_[i].frameSize,
+          0,
+          functions_[i].highestReadCacheIndex,
+          functions_[i].highestWriteCacheIndex};
+      funcHeader.offset = functions_[i].offset;
+      funcHeader.flags.strictMode = true;
+      SmallFuncHeader small(funcHeader);
+      assert(!small.flags.overflowed);
+      appendStructToBytecode(bytecode, small);
+    }
   }
+
   // Write all opcodes to the buffer.
   for (uint32_t i = 0; i < functionCount; ++i) {
     bytecode.insert(
@@ -103,12 +144,66 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
         functions_[i].opcodes.begin(),
         functions_[i].opcodes.end());
   }
+
+  if (debugInfo_) {
+    // Write all full FunctionHeaders to the buffer when necessary.
+    // Pad by 4 bytes.
+    bytecode.resize(llvh::alignTo(bytecode.size(), 4));
+    for (uint32_t i = 0; i < functionCount; ++i) {
+      assert(
+          functions_[i].infoOffset == bytecode.size() &&
+          "Function offset mismatch");
+      uint32_t opcodeSize = functions_[i].opcodes.size();
+      FunctionHeader funcHeader{
+          opcodeSize,
+          functions_[i].paramCount,
+          functions_[i].frameSize,
+          0,
+          functions_[i].highestReadCacheIndex,
+          functions_[i].highestWriteCacheIndex};
+      funcHeader.offset = functions_[i].offset;
+      funcHeader.flags.strictMode = true;
+      funcHeader.flags.hasDebugInfo = true;
+      DebugOffsets offsets{0, 0};
+      bytecode.resize(llvh::alignTo(bytecode.size(), 4));
+      appendStructToBytecode(bytecode, funcHeader);
+      bytecode.resize(llvh::alignTo(bytecode.size(), 4));
+      appendStructToBytecode(bytecode, offsets);
+    }
+  }
+
+  // Write the debug info to the buffer.
   // Pad by 4 bytes.
   bytecode.resize(llvh::alignTo(bytecode.size(), 4));
-  // Write an empty debug info header.
-  DebugInfoHeader debugInfoHeader{0, 0, 0, 0, 0};
-  appendStructToBytecode(bytecode, debugInfoHeader);
-  // Add the bytecode hash.
+  if (debugInfo_) {
+    const llvh::ArrayRef<StringTableEntry> filenameTable =
+        debugInfo_->getFilenameTable();
+    const auto filenameStorage = debugInfo_->getFilenameStorage();
+    const DebugInfo::DebugFileRegionList &files = debugInfo_->viewFiles();
+    const StreamVector<uint8_t> &data = debugInfo_->viewData();
+    assert(debugOffset == bytecode.size() && "Debug offset mismatch");
+    uint32_t lexOffset = data.size();
+    DebugInfoHeader header{
+        (uint32_t)filenameTable.size(),
+        (uint32_t)filenameStorage.size(),
+        (uint32_t)files.size(),
+        lexOffset,
+        (uint32_t)data.size()};
+    appendStructToBytecode(bytecode, header);
+    appendArrayToBytecode(bytecode, filenameTable);
+    appendArrayToBytecode(bytecode, filenameStorage);
+    for (auto &file : files) {
+      appendStructToBytecode(bytecode, file);
+    }
+    appendArrayToBytecode(bytecode, data.getData());
+  } else {
+    // Write an empty debug info header.
+    DebugInfoHeader debugInfoHeader{0, 0, 0, 0, 0};
+    appendStructToBytecode(bytecode, debugInfoHeader);
+  }
+  assert(
+      totalSize == (bytecode.size() + sizeof(BytecodeFileFooter)) &&
+      "Bytecode size mismatch");
   appendStructToBytecode(
       bytecode, BytecodeFileFooter{llvh::SHA1::hash(bytecode)});
   // Generate the buffer.

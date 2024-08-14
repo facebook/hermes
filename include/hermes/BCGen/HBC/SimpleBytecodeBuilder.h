@@ -10,6 +10,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
+#include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/Support/Buffer.h"
 
 #include <memory>
@@ -37,6 +38,8 @@ class SimpleBytecodeBuilder {
     uint8_t highestReadCacheIndex;
     /// Header field for number of write cache slots.
     uint8_t highestWriteCacheIndex;
+    /// Offset of the debug info, if not 0.
+    uint32_t infoOffset = 0;
 
     SimpleFunction(
         uint32_t paramCount,
@@ -57,6 +60,9 @@ class SimpleBytecodeBuilder {
   /// bytecode buffer.
   std::vector<SimpleFunction> functions_{};
 
+  /// Pointer to the debug info, if any.
+  DebugInfo *debugInfo_ = nullptr;
+
  public:
   /// Add a function to the builder. We only need the \p frameSize and
   /// \p opcodes.
@@ -76,6 +82,11 @@ class SimpleBytecodeBuilder {
         std::move(opcodes),
         highestReadCacheIndex,
         highestWriteCacheIndex);
+  }
+
+  /// Set the debug info for the builder.
+  void setDebugInfo(DebugInfo *debugInfo) {
+    debugInfo_ = debugInfo;
   }
 
   /// Generate the bytecode buffer given the list of functions in the builder.

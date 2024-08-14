@@ -159,6 +159,11 @@ class Debugger {
   /// The value indicates the type of step we're trying to take.
   OptValue<StepMode> curStepMode_{llvh::None};
 
+  /// If not None, the debugger is attempting to find a place to break after an
+  /// AsyncTrigger, and the PauseReason should be set to this value instead of
+  /// StepFinish.
+  OptValue<PauseReason> asyncTriggerPauseReason_{llvh::None};
+
   /// If true, all code blocks are breakpointed,
   /// and the debugger should stop on entering any code blocks.
   bool pauseOnAllCodeBlocks_{false};

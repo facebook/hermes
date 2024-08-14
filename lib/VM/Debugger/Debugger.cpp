@@ -147,6 +147,18 @@ ExecutionStatus Debugger::runDebugger(
       isDebugging_ = false;
       return ExecutionStatus::RETURNED;
     }
+
+    auto res = runUntilValidPauseLocation(state);
+    if (res == ExecutionStatus::EXCEPTION) {
+      return res.getStatus();
+    }
+    if (!*res) {
+      // If we shouldn't run the debugger loop (because we're about to return,
+      // call, e.g.)
+      asyncTriggerPauseReason_ = PauseReason::AsyncTriggerImplicit;
+      return ExecutionStatus::RETURNED;
+    }
+
     pauseReason = PauseReason::AsyncTriggerImplicit;
   } else if (runReason == RunReason::AsyncBreakExplicit) {
     // The user requested an async break, so we can clear stepping state
@@ -156,6 +168,18 @@ ExecutionStatus Debugger::runDebugger(
       clearTempBreakpoints();
       curStepMode_ = llvh::None;
     }
+
+    auto res = runUntilValidPauseLocation(state);
+    if (res == ExecutionStatus::EXCEPTION) {
+      return res.getStatus();
+    }
+    if (!*res) {
+      // If we shouldn't run the debugger loop (because we're about to return,
+      // call, e.g.)
+      asyncTriggerPauseReason_ = PauseReason::AsyncTriggerExplicit;
+      return ExecutionStatus::RETURNED;
+    }
+
     pauseReason = PauseReason::AsyncTriggerExplicit;
   } else {
     assert(runReason == RunReason::Opcode && "Unknown run reason");
@@ -173,7 +197,8 @@ ExecutionStatus Debugger::runDebugger(
           breakpointOpt->callStackDepths.count(
               runtime_.getCurrentFrameOffset())) {
         // This is in fact a temp breakpoint we want to stop on right now.
-        assert(curStepMode_ && "no step to finish");
+        assert(
+            (curStepMode_ || asyncTriggerPauseReason_) && "no step to finish");
         clearTempBreakpoints();
 
         // We need to finish the step in progress. After receiving a STEP
@@ -190,8 +215,10 @@ ExecutionStatus Debugger::runDebugger(
         // Continue to run the debugger loop.
 
         // Done stepping.
+        pauseReason =
+            curStepMode_ ? PauseReason::StepFinish : *asyncTriggerPauseReason_;
         curStepMode_ = llvh::None;
-        pauseReason = PauseReason::StepFinish;
+        asyncTriggerPauseReason_ = llvh::None;
       } else {
         // We don't want to stop on this Step breakpoint.
         isDebugging_ = false;
@@ -391,8 +418,15 @@ ExecutionStatus Debugger::debuggerLoop(
 CallResult<bool> Debugger::runUntilValidPauseLocation(InterpreterState &state) {
   auto locationOpt = getLocationForState(state);
 
-  while (!locationOpt.hasValue() || locationOpt->statement == 0 ||
-         sameStatementDifferentInstruction(state, preStepState_)) {
+  // Stop if we're already at a valid location.
+  // If we're in the middle of an actual step, continue if the location
+  // information doesn't indicate that we're at the next step-finish point.
+  // Conditioned on curStepMode_ because this may be called during AsyncTrigger
+  // trying to find a good place to stop.
+  while (!locationOpt.hasValue() ||
+         (curStepMode_ &&
+          (locationOpt->statement == 0 ||
+           sameStatementDifferentInstruction(state, preStepState_)))) {
     // Move to the next source location.
     OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
 
@@ -421,13 +455,14 @@ CallResult<bool> Debugger::runUntilValidPauseLocation(InterpreterState &state) {
 
     // Set a breakpoint at the next instruction and continue.
     breakAtPossibleNextInstructions(state);
-    if (*curStepMode_ == StepMode::Into) {
+    if (curStepMode_ && *curStepMode_ == StepMode::Into) {
       pauseOnAllCodeBlocks_ = true;
     }
     isDebugging_ = false;
     return false;
   }
 
+  assert(locationOpt.hasValue());
   return true;
 }
 
