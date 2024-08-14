@@ -176,19 +176,18 @@ ExecutionStatus Debugger::runDebugger(
         assert(curStepMode_ && "no step to finish");
         clearTempBreakpoints();
 
-        if (*curStepMode_ == StepMode::Into ||
-            *curStepMode_ == StepMode::Over) {
-          // If we're not stepping out, then we need to finish the step
-          // in progress.
-          // Otherwise, we just need to stop at the breakpoint site.
-          auto res = runUntilValidPauseLocation(state);
-          if (res == ExecutionStatus::EXCEPTION || !*res) {
-            // If we hit an exception, or we shouldn't run the debugger loop
-            // (because we're about to return, call, e.g.)
-            return res.getStatus();
-          }
-          // Continue to run the debugger loop.
+        // We need to finish the step in progress. After receiving a STEP
+        // command in a previous debuggerLoop execution, we might still have a
+        // step to finish. So now that runDebugger is executing again, we need
+        // to finish the step to get to a known instruction with debug location
+        // in order to begin the debuggerLoop again.
+        auto res = runUntilValidPauseLocation(state);
+        if (res == ExecutionStatus::EXCEPTION || !*res) {
+          // If we hit an exception, or we shouldn't run the debugger loop
+          // (because we're about to return, call, e.g.)
+          return res.getStatus();
         }
+        // Continue to run the debugger loop.
 
         // Done stepping.
         curStepMode_ = llvh::None;

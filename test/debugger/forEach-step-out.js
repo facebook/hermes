@@ -23,19 +23,18 @@ x.forEach(function(i) {
 print("finish");
 
 //CHECK: Break on 'debugger' statement in global: {{.*}}:15:1
-//CHECK: Stepped to global: {{.*}}:16:9
-//CHECK: Stepped to global: {{.*}}:17:1
-//CHECK: Stepped to anonymous: {{.*}}:18:7
-//CHECK: Stepped to anonymous: {{.*}}:18:3
-//CHECK: Stepped to anonymous: {{.*}}:21:3
-//CHECK: Stepped to anonymous: {{.*}}:17:11
-//CHECK: Stepped to anonymous: {{.*}}:18:7
-//CHECK: Stepped to anonymous: {{.*}}:18:3
-//CHECK: Stepped to funky: {{.*}}:12:3
-//CHECK: funky
-//CHECK: Stepped to anonymous: {{.*}}:18:3
-//CHECK: Stepped to anonymous: {{.*}}:21:3
-//CHECK: Stepped to anonymous: {{.*}}:17:11
-//CHECK: Stepped to global: {{.*}}:17:10
-//CHECK: Stepped to global: {{.*}}:23:1
-//CHECK: finish
+//CHECK-NEXT: Stepped to global: {{.*}}:16:9
+//CHECK-NEXT: Stepped to global: {{.*}}:17:1
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:7
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:3
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:21:3
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:7
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:3
+//CHECK-NEXT: Stepped to funky: {{.*}}:12:3
+//CHECK-NEXT: funky
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:3
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:21:3
+//CHECK-NEXT: Stepped to anonymous: {{.*}}:18:7
+//CHECK-NEXT: Stepped to global: {{.*}}:17:10
+//CHECK-NEXT: Stepped to global: {{.*}}:23:1
+//CHECK-NEXT: finish
