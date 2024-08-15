@@ -272,6 +272,15 @@ class AlignedHeapSegment {
   /// a valid heap object.
   inline static bool getCellMarkBit(const GCCell *cell);
 
+  /// Find the head of the first cell that extends into the card at index
+  /// \p cardIdx.
+  /// \return A cell such that
+  /// cell <= indexToAddress(cardIdx) < cell->nextCell().
+  inline GCCell *getFirstCellHead(size_t cardIdx);
+
+  /// Record the head of this cell so it can be found by the card scanner.
+  static inline void setCellHead(const GCCell *start, const size_t sz);
+
   /// The largest size the allocation region of an aligned heap segment could
   /// be.
   inline static constexpr size_t maxSize();
@@ -468,6 +477,26 @@ bool AlignedHeapSegment::getCellMarkBit(const GCCell *cell) {
   auto *markBits = markBitArrayCovering(cell);
   size_t ind = addressToMarkBitArrayIndex(cell);
   return markBits->at(ind);
+}
+
+GCCell *AlignedHeapSegment::getFirstCellHead(size_t cardIdx) {
+  CardTable &cards = cardTable();
+  GCCell *cell = cards.firstObjForCard(cardIdx);
+  assert(cell->isValid() && "Object head doesn't point to a valid object");
+  return cell;
+}
+
+/* static */
+void AlignedHeapSegment::setCellHead(const GCCell *cellStart, const size_t sz) {
+  const char *start = reinterpret_cast<const char *>(cellStart);
+  const char *end = start + sz;
+  CardTable *cards = cardTableCovering(start);
+  auto boundary = cards->nextBoundary(start);
+  // If this object crosses a card boundary, then update boundaries
+  // appropriately.
+  if (boundary.address() < end) {
+    cards->updateBoundaries(&boundary, start, end);
+  }
 }
 
 /* static */ AlignedHeapSegment::Contents *AlignedHeapSegment::contents(

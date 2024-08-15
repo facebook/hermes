@@ -76,7 +76,7 @@ class HadesGC final : public GCBase {
   static constexpr uint32_t maxAllocationSizeImpl() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
-    return HeapSegment::maxSize();
+    return AlignedHeapSegment::maxSize();
   }
 
   static constexpr uint32_t minAllocationSizeImpl() {
@@ -358,49 +358,37 @@ class HadesGC final : public GCBase {
     AssignableCompressedPointer next_;
   };
 
-  /// Similar to AlignedHeapSegment except it uses a free list.
-  class HeapSegment final : public AlignedHeapSegment {
-   public:
-    explicit HeapSegment(AlignedHeapSegment seg)
-        : AlignedHeapSegment(std::move(seg)) {}
-    HeapSegment() = default;
-
-    /// Record the head of this cell so it can be found by the card scanner.
-    static void setCellHead(const GCCell *start, const size_t sz);
-
-    /// Find the head of the first cell that extends into the card at index
-    /// \p cardIdx.
-    /// \return A cell such that
-    /// cell <= indexToAddress(cardIdx) < cell->nextCell().
-    GCCell *getFirstCellHead(const size_t cardIdx);
-
-    /// Call \p callback on every non-freelist cell allocated in this segment.
-    template <typename CallbackFunction>
-    void forAllObjs(CallbackFunction callback);
-    /// Only call the callback on cells without forwarding pointers.
-    template <typename CallbackFunction>
-    void forCompactedObjs(CallbackFunction callback, PointerBase &base);
-  };
+  /// Call \p callback on every non-freelist cell allocated in this segment.
+  template <typename CallbackFunction>
+  static void forAllObjsInSegment(
+      AlignedHeapSegment &seg,
+      CallbackFunction callback);
+  /// Only call the callback on cells without forwarding pointers.
+  template <typename CallbackFunction>
+  static void forCompactedObjsInSegment(
+      AlignedHeapSegment &seg,
+      CallbackFunction callback,
+      PointerBase &base);
 
   class OldGen final {
    public:
     explicit OldGen(HadesGC &gc);
 
-    std::deque<HeapSegment>::iterator begin();
-    std::deque<HeapSegment>::iterator end();
-    std::deque<HeapSegment>::const_iterator begin() const;
-    std::deque<HeapSegment>::const_iterator end() const;
+    std::deque<AlignedHeapSegment>::iterator begin();
+    std::deque<AlignedHeapSegment>::iterator end();
+    std::deque<AlignedHeapSegment>::const_iterator begin() const;
+    std::deque<AlignedHeapSegment>::const_iterator end() const;
 
     size_t numSegments() const;
 
-    HeapSegment &operator[](size_t i);
+    AlignedHeapSegment &operator[](size_t i);
 
     /// Take ownership of the given segment.
-    void addSegment(HeapSegment seg);
+    void addSegment(AlignedHeapSegment seg);
 
     /// Remove the last segment from the OG.
     /// \return the segment that was removed.
-    HeapSegment popSegment();
+    AlignedHeapSegment popSegment();
 
     /// Indicate that OG should target having a size of \p targetSizeBytes.
     void setTargetSizeBytes(size_t targetSizeBytes);
@@ -519,7 +507,7 @@ class HadesGC final : public GCBase {
     static constexpr size_t kMinSizeForLargeBlock = 1
         << kLogMinSizeForLargeBlock;
     static constexpr size_t kNumLargeFreelistBuckets =
-        llvh::detail::ConstantLog2<HeapSegment::maxSize()>::value -
+        llvh::detail::ConstantLog2<AlignedHeapSegment::maxSize()>::value -
         kLogMinSizeForLargeBlock + 1;
     static constexpr size_t kNumFreelistBuckets =
         kNumSmallFreelistBuckets + kNumLargeFreelistBuckets;
@@ -590,7 +578,7 @@ class HadesGC final : public GCBase {
 
     /// Use a std::deque instead of a std::vector so that references into it
     /// remain valid across a push_back.
-    std::deque<HeapSegment> segments_;
+    std::deque<AlignedHeapSegment> segments_;
 
     /// See \c targetSizeBytes() above.
     ExponentialMovingAverage targetSizeBytes_{0, 0};
@@ -674,7 +662,7 @@ class HadesGC final : public GCBase {
 
   /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
   /// Protected by gcMutex_.
-  HeapSegment youngGen_;
+  AlignedHeapSegment youngGen_;
   AssignableCompressedPointer youngGenCP_;
 
   /// List of cells in YG that have finalizers. Iterate through this to clean
@@ -684,10 +672,10 @@ class HadesGC final : public GCBase {
 
   /// Since YG collection times are the primary driver of pause times, it is
   /// useful to have a knob to reduce the effective size of the YG. This number
-  /// is the fraction of HeapSegment::maxSize() that we should use for the YG..
-  /// Note that we only set the YG size using this at the end of the first real
-  /// YG, since doing it for direct promotions would waste OG memory without a
-  /// pause time benefit.
+  /// is the fraction of AlignedHeapSegment::maxSize() that we should use for
+  /// the YG.. Note that we only set the YG size using this at the end of the
+  /// first real YG, since doing it for direct promotions would waste OG memory
+  /// without a pause time benefit.
   static constexpr double kYGInitialSizeFactor = 0.5;
   double ygSizeFactor_{kYGInitialSizeFactor};
 
@@ -841,7 +829,7 @@ class HadesGC final : public GCBase {
     /// The segment being compacted. This should be removed from the OG right
     /// after it is identified, and freed entirely once the compaction is
     /// complete.
-    std::shared_ptr<HeapSegment> segment;
+    std::shared_ptr<AlignedHeapSegment> segment;
   } compactee_;
 
   /// The number of compactions this GC has performed.
@@ -976,7 +964,7 @@ class HadesGC final : public GCBase {
   template <bool CompactionEnabled>
   void scanDirtyCardsForSegment(
       EvacAcceptor<CompactionEnabled> &acceptor,
-      HeapSegment &segment);
+      AlignedHeapSegment &segment);
 
   /// Find all pointers from OG into the YG/compactee during a YG collection.
   /// This is done quickly through use of write barriers that detect the
@@ -1023,19 +1011,19 @@ class HadesGC final : public GCBase {
   uint64_t heapFootprint() const;
 
   /// Accessor for the YG.
-  HeapSegment &youngGen() {
+  AlignedHeapSegment &youngGen() {
     return youngGen_;
   }
-  const HadesGC::HeapSegment &youngGen() const {
+  const AlignedHeapSegment &youngGen() const {
     return youngGen_;
   }
 
   /// Create a new segment (to be used by either YG or OG).
-  llvh::ErrorOr<HeapSegment> createSegment();
+  llvh::ErrorOr<AlignedHeapSegment> createSegment();
 
   /// Set a given segment as the YG segment.
   /// \return the previous YG segment.
-  HeapSegment setYoungGen(HeapSegment seg);
+  AlignedHeapSegment setYoungGen(AlignedHeapSegment seg);
 
   /// Get/set the current number of external bytes used by the YG.
   size_t getYoungGenExternalBytes() const;
@@ -1060,7 +1048,7 @@ class HadesGC final : public GCBase {
   /// \param extraName append this to the name of the segment. Must be
   ///   non-empty.
   void addSegmentExtentToCrashManager(
-      const HeapSegment &seg,
+      const AlignedHeapSegment &seg,
       const std::string &extraName);
 
   /// Deletes a segment from the CrashManager's custom data.

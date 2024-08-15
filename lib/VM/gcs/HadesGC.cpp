@@ -36,7 +36,7 @@ static constexpr size_t kTargetMaxPauseMs = 50;
 // Assert that it is always safe to construct a cell that is as large as the
 // entire segment. This lets us always assume that contiguous regions in a
 // segment can be safely turned into a single FreelistCell.
-static_assert(HadesGC::HeapSegment::maxSize() <= HadesGC::maxAllocationSize());
+static_assert(AlignedHeapSegment::maxSize() <= HadesGC::maxAllocationSize());
 
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{
@@ -51,7 +51,7 @@ GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
   // Track the number of allocated bytes in a segment.
   incrementAllocatedBytes(sz);
   // Write a mark bit so this entry doesn't get free'd by the sweeper.
-  HeapSegment::setCellMarkBit(cell);
+  AlignedHeapSegment::setCellMarkBit(cell);
   // Could overwrite the VTable, but the allocator will write a new one in
   // anyway.
   return cell;
@@ -80,7 +80,7 @@ void HadesGC::OldGen::addCellToFreelist(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
   FreelistCell *newFreeCell = constructCell<FreelistCell>(addr, sz);
-  HeapSegment::setCellHead(static_cast<GCCell *>(addr), sz);
+  AlignedHeapSegment::setCellHead(static_cast<GCCell *>(addr), sz);
   addCellToFreelist(newFreeCell, segBucket);
 }
 
@@ -125,7 +125,7 @@ void HadesGC::OldGen::addCellToFreelistFromSweep(
   // While coalescing, sweeping may generate new cells, so make sure the cell
   // head is updated.
   if (setHead)
-    HeapSegment::setCellHead(
+    AlignedHeapSegment::setCellHead(
         reinterpret_cast<GCCell *>(freeRangeStart), newCellSize);
   auto *newCell = constructCell<FreelistCell>(freeRangeStart, newCellSize);
   // Get the size bucket for the cell being added;
@@ -170,30 +170,11 @@ HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
 }
 
 /* static */
-void HadesGC::HeapSegment::setCellHead(
-    const GCCell *cellStart,
-    const size_t sz) {
-  const char *start = reinterpret_cast<const char *>(cellStart);
-  const char *end = start + sz;
-  CardTable *cards = cardTableCovering(start);
-  auto boundary = cards->nextBoundary(start);
-  // If this object crosses a card boundary, then update boundaries
-  // appropriately.
-  if (boundary.address() < end) {
-    cards->updateBoundaries(&boundary, start, end);
-  }
-}
-
-GCCell *HadesGC::HeapSegment::getFirstCellHead(size_t cardIdx) {
-  CardTable &cards = cardTable();
-  GCCell *cell = cards.firstObjForCard(cardIdx);
-  assert(cell->isValid() && "Object head doesn't point to a valid object");
-  return cell;
-}
-
 template <typename CallbackFunction>
-void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
-  for (GCCell *cell : cells()) {
+void HadesGC::forAllObjsInSegment(
+    hermes::vm::AlignedHeapSegment &seg,
+    CallbackFunction callback) {
+  for (GCCell *cell : seg.cells()) {
     // Skip free-list entries.
     if (!vmisa<OldGen::FreelistCell>(cell)) {
       callback(cell);
@@ -201,12 +182,14 @@ void HadesGC::HeapSegment::forAllObjs(CallbackFunction callback) {
   }
 }
 
+/* static */
 template <typename CallbackFunction>
-void HadesGC::HeapSegment::forCompactedObjs(
+void HadesGC::forCompactedObjsInSegment(
+    AlignedHeapSegment &seg,
     CallbackFunction callback,
     PointerBase &base) {
-  void *const stop = level();
-  GCCell *cell = reinterpret_cast<GCCell *>(start());
+  void *const stop = seg.level();
+  GCCell *cell = reinterpret_cast<GCCell *>(seg.start());
   while (cell < stop) {
     if (cell->hasMarkedForwardingPointer()) {
       // This cell has been evacuated, do nothing.
@@ -235,7 +218,7 @@ GCCell *HadesGC::OldGen::FreelistCell::carve(uint32_t sz) {
   char *newCellAddress = reinterpret_cast<char *>(this) + finalSize;
   GCCell *const newCell = reinterpret_cast<GCCell *>(newCellAddress);
   setSizeFromGC(finalSize);
-  HeapSegment::setCellHead(newCell, sz);
+  AlignedHeapSegment::setCellHead(newCell, sz);
   return newCell;
 }
 
@@ -425,14 +408,15 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   LLVM_NODISCARD GCCell *acceptHeap(GCCell *ptr, void *heapLoc) {
     if (shouldForward(ptr)) {
       assert(
-          HeapSegment::getCellMarkBit(ptr) &&
+          AlignedHeapSegment::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
       return forwardCell<GCCell *>(ptr);
     }
     if (CompactionEnabled && gc.compactee_.contains(ptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
+      AlignedHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
+          heapLoc);
     }
     return ptr;
   }
@@ -442,14 +426,15 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     if (shouldForward(cptr)) {
       GCCell *ptr = cptr.getNonNull(pointerBase_);
       assert(
-          HeapSegment::getCellMarkBit(ptr) &&
+          AlignedHeapSegment::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
       return forwardCell<CompressedPointer>(ptr);
     }
     if (CompactionEnabled && gc.compactee_.contains(cptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
+      AlignedHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
+          heapLoc);
     }
     return cptr;
   }
@@ -457,7 +442,8 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   template <typename T>
   LLVM_NODISCARD T forwardCell(GCCell *const cell) {
     assert(
-        HeapSegment::getCellMarkBit(cell) && "Cannot forward unmarked object");
+        AlignedHeapSegment::getCellMarkBit(cell) &&
+        "Cannot forward unmarked object");
     if (cell->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
       CompressedPointer forwardedCell = cell->getMarkedForwardingPointer();
@@ -473,7 +459,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     HERMES_SLOW_ASSERT(
         gc.inOldGen(newCell) && "Evacuated cell not in the old gen");
     assert(
-        HeapSegment::getCellMarkBit(newCell) &&
+        AlignedHeapSegment::getCellMarkBit(newCell) &&
         "Cell must be marked when it is allocated into the old gen");
     // Copy the contents of the existing cell over before modifying it.
     std::memcpy(newCell, cell, cellSize);
@@ -560,7 +546,9 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     } else {
       CopyListCell *const cell =
           static_cast<CopyListCell *>(copyListHead_.getNonNull(pointerBase_));
-      assert(HeapSegment::getCellMarkBit(cell) && "Discovered unmarked object");
+      assert(
+          AlignedHeapSegment::getCellMarkBit(cell) &&
+          "Discovered unmarked object");
       copyListHead_ = cell->next_;
       return cell;
     }
@@ -658,9 +646,10 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
-      HeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(heapLoc);
+      AlignedHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
+          heapLoc);
     }
-    if (HeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegment::getCellMarkBit(cell)) {
       // Points to an already marked object, do nothing.
       return;
     }
@@ -672,7 +661,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
 
   void acceptRoot(GCCell *cell) {
     assert(cell->isValid() && "Encountered an invalid cell");
-    if (!HeapSegment::getCellMarkBit(cell))
+    if (!AlignedHeapSegment::getCellMarkBit(cell))
       push(cell);
   }
 
@@ -805,7 +794,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
           "Shouldn't ever traverse a YG object in this loop");
       HERMES_SLOW_ASSERT(
           gc.dbgContains(cell) && "Non-heap cell found in global worklist");
-      if (!HeapSegment::getCellMarkBit(cell)) {
+      if (!AlignedHeapSegment::getCellMarkBit(cell)) {
         // Cell has not yet been marked.
         push(cell);
       }
@@ -817,7 +806,9 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
       GCCell *const cell = localWorklist_.top();
       localWorklist_.pop();
       assert(cell->isValid() && "Invalid cell in marking");
-      assert(HeapSegment::getCellMarkBit(cell) && "Discovered unmarked object");
+      assert(
+          AlignedHeapSegment::getCellMarkBit(cell) &&
+          "Discovered unmarked object");
       assert(
           !gc.inYoungGen(cell) &&
           "Shouldn't ever traverse a YG object in this loop");
@@ -890,12 +881,12 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
 
   void push(GCCell *cell) {
     assert(
-        !HeapSegment::getCellMarkBit(cell) &&
+        !AlignedHeapSegment::getCellMarkBit(cell) &&
         "A marked object should never be pushed onto a worklist");
     assert(
         !gc.inYoungGen(cell) &&
         "Shouldn't ever push a YG object onto the worklist");
-    HeapSegment::setCellMarkBit(cell);
+    AlignedHeapSegment::setCellMarkBit(cell);
     // There could be a race here: however, the mutator will never change a
     // cell's kind after initialization. The GC thread might to a free cell, but
     // only during sweeping, not concurrently with this operation. Therefore
@@ -966,7 +957,7 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     }
     GCCell *const cell = wr.getNoBarrierUnsafe(gc_.getPointerBase());
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
-    if (HeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegment::getCellMarkBit(cell)) {
       // If the cell is marked, no need to do any writes.
       return;
     }
@@ -1063,7 +1054,7 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   int32_t segmentSweptBytes = 0;
   for (GCCell *cell : segments_[sweepIterator_.segNumber].cells()) {
     assert(cell->isValid() && "Invalid cell in sweeping");
-    if (HeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegment::getCellMarkBit(cell)) {
       // Cannot concurrently trim storage. Technically just checking
       // backgroundThread would suffice, but the kConcurrentGC lets us compile
       // away this check in incremental mode.
@@ -1089,9 +1080,9 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
         // Just create a FillerCell, the next iteration will free it.
         constructCell<FillerCell>(newCell, trimmableBytes);
         assert(
-            !HeapSegment::getCellMarkBit(newCell) &&
+            !AlignedHeapSegment::getCellMarkBit(newCell) &&
             "Trimmed space cannot be marked");
-        HeapSegment::setCellHead(newCell, trimmableBytes);
+        AlignedHeapSegment::setCellHead(newCell, trimmableBytes);
 #ifndef NDEBUG
         sweepIterator_.trimmedBytes += trimmableBytes;
 #endif
@@ -1200,7 +1191,7 @@ size_t HadesGC::OldGen::sweepSegmentsRemaining() const {
 }
 
 size_t HadesGC::OldGen::getMemorySize() const {
-  size_t memorySize = segments_.size() * sizeof(HeapSegment);
+  size_t memorySize = segments_.size() * sizeof(AlignedHeapSegment);
   memorySize += segmentBuckets_.size() * sizeof(SegmentBuckets);
   return memorySize;
 }
@@ -1237,22 +1228,22 @@ HadesGC::HadesGC(
       occupancyTarget_(gcConfig.getOccupancyTarget()),
       ygAverageSurvivalBytes_{
           /*weight*/ 0.5,
-          /*init*/ kYGInitialSizeFactor * HeapSegment::maxSize() *
+          /*init*/ kYGInitialSizeFactor * AlignedHeapSegment::maxSize() *
               kYGInitialSurvivalRatio} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", getKindAsStr().c_str());
   // createSegment relies on member variables and should not be called until
   // they are initialised.
-  llvh::ErrorOr<HeapSegment> newYoungGen = createSegment();
+  llvh::ErrorOr<AlignedHeapSegment> newYoungGen = createSegment();
   if (!newYoungGen)
     hermes_fatal("Failed to initialize the young gen", newYoungGen.getError());
   setYoungGen(std::move(newYoungGen.get()));
   const size_t initHeapSize = std::max<uint64_t>(
       {gcConfig.getMinHeapSize(),
        gcConfig.getInitHeapSize(),
-       HeapSegment::maxSize()});
-  oldGen_.setTargetSizeBytes(initHeapSize - HeapSegment::maxSize());
+       AlignedHeapSegment::maxSize()});
+  oldGen_.setTargetSizeBytes(initHeapSize - AlignedHeapSegment::maxSize());
 }
 
 HadesGC::~HadesGC() {
@@ -1499,7 +1490,7 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 
   // First, clear any mark bits that were set by a previous collection or
   // direct-to-OG allocation, they aren't needed anymore.
-  for (HeapSegment &seg : oldGen_)
+  for (AlignedHeapSegment &seg : oldGen_)
     seg.markBitArray().reset();
 
   // Unmark all symbols in the identifier table, as Symbol liveness will be
@@ -1670,12 +1661,13 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   // from the heap, we only want to compact if there are at least 2 segments in
   // the OG.
   uint64_t buffer = std::max<uint64_t>(
-      oldGen_.targetSizeBytes() / 20, HeapSegment::maxSize());
+      oldGen_.targetSizeBytes() / 20, AlignedHeapSegment::maxSize());
   uint64_t threshold = oldGen_.targetSizeBytes() + buffer;
   uint64_t totalBytes = oldGen_.size() + oldGen_.externalBytes();
   if ((forceCompaction || totalBytes > threshold) &&
       oldGen_.numSegments() > 1) {
-    compactee_.segment = std::make_shared<HeapSegment>(oldGen_.popSegment());
+    compactee_.segment =
+        std::make_shared<AlignedHeapSegment>(oldGen_.popSegment());
     addSegmentExtentToCrashManager(
         *compactee_.segment, kCompacteeNameForCrashMgr);
     compactee_.start = compactee_.segment->lowLim();
@@ -1777,12 +1769,12 @@ void HadesGC::markWeakMapEntrySlots() {
         return;
       GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
       // If the owner structure isn't reachable, no need to mark the values.
-      if (!HeapSegment::getCellMarkBit(ownerMapCell))
+      if (!AlignedHeapSegment::getCellMarkBit(ownerMapCell))
         return;
       GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
       // The WeakRef object must be marked for the mapped value to
       // be marked (unless there are other strong refs to the value).
-      if (!HeapSegment::getCellMarkBit(cell))
+      if (!AlignedHeapSegment::getCellMarkBit(cell))
         return;
       oldGenMarker_->accept(slot.mappedValue);
     });
@@ -1798,8 +1790,8 @@ void HadesGC::markWeakMapEntrySlots() {
     }
     GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
     GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
-    if (!HeapSegment::getCellMarkBit(cell) ||
-        !HeapSegment::getCellMarkBit(ownerMapCell)) {
+    if (!AlignedHeapSegment::getCellMarkBit(cell) ||
+        !AlignedHeapSegment::getCellMarkBit(ownerMapCell)) {
       slot.mappedValue = HermesValue::encodeEmptyValue();
     }
   });
@@ -1869,10 +1861,11 @@ void HadesGC::finalizeAll() {
     cell->getVT()->finalizeIfExists(cell, *this);
   };
   if (compactee_.segment)
-    compactee_.segment->forCompactedObjs(finalizeCallback, getPointerBase());
+    forCompactedObjsInSegment(
+        *compactee_.segment, finalizeCallback, getPointerBase());
 
-  for (HeapSegment &seg : oldGen_)
-    seg.forAllObjs(finalizeCallback);
+  for (AlignedHeapSegment &seg : oldGen_)
+    forAllObjsInSegment(seg, finalizeCallback);
 }
 
 void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
@@ -2064,7 +2057,7 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
     // allocation.
     // Note that this *only* applies since the boundaries are updated separately
     // from the card table being marked itself.
-    HeapSegment::cardTableCovering(loc)->dirtyCardForAddress(loc);
+    AlignedHeapSegment::cardTableCovering(loc)->dirtyCardForAddress(loc);
   }
 }
 
@@ -2094,28 +2087,28 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
 
 void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   std::lock_guard<Mutex> lk{gcMutex_};
-  youngGen().forAllObjs(callback);
+  forAllObjsInSegment(youngGen(), callback);
 
   const auto skipGarbageCallback = [callback](GCCell *cell) {
     // If we're doing this check during sweeping, or between sweeping and
     // compaction, there might be some objects that are dead, and could
     // potentially have garbage in them. There's no need to check the
     // pointers of those objects.
-    if (HeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegment::getCellMarkBit(cell)) {
       callback(cell);
     }
   };
-  for (HeapSegment &seg : oldGen_) {
+  for (AlignedHeapSegment &seg : oldGen_) {
     if (concurrentPhase_ != Phase::Sweep)
-      seg.forAllObjs(callback);
+      forAllObjsInSegment(seg, callback);
     else
-      seg.forAllObjs(skipGarbageCallback);
+      forAllObjsInSegment(seg, skipGarbageCallback);
   }
   if (compactee_.segment) {
     if (!compactee_.evacActive())
-      compactee_.segment->forAllObjs(callback);
+      forAllObjsInSegment(*compactee_.segment, callback);
     else
-      compactee_.segment->forAllObjs(skipGarbageCallback);
+      forAllObjsInSegment(*compactee_.segment, skipGarbageCallback);
   }
 }
 
@@ -2223,7 +2216,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   // Before waiting for a collection to finish, check if we're below the max
   // heap size and can simply allocate another segment. This will prevent
   // blocking the YG unnecessarily.
-  llvh::ErrorOr<HeapSegment> seg = gc_.createSegment();
+  llvh::ErrorOr<AlignedHeapSegment> seg = gc_.createSegment();
   if (seg) {
     // Complete this allocation using a bump alloc.
     AllocResult res = seg->alloc(sz);
@@ -2232,12 +2225,12 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
         "A newly created segment should always be able to allocate");
     // Set the cell head for any successful alloc, so that write barriers can
     // move from dirty cards to the head of the object.
-    seg->setCellHead(static_cast<GCCell *>(res.ptr), sz);
+    AlignedHeapSegment::setCellHead(static_cast<GCCell *>(res.ptr), sz);
     // Add the segment to segments_ and add the remainder of the segment to the
     // free list.
     addSegment(std::move(seg.get()));
     GCCell *newObj = static_cast<GCCell *>(res.ptr);
-    HeapSegment::setCellMarkBit(newObj);
+    AlignedHeapSegment::setCellMarkBit(newObj);
     return newObj;
   }
 
@@ -2467,9 +2460,10 @@ void HadesGC::youngGenCollection(
           untrackObject(cell, cell->getAllocatedSize());
         }
       };
-      yg.forCompactedObjs(trackerCallback, getPointerBase());
+      forCompactedObjsInSegment(yg, trackerCallback, getPointerBase());
       if (doCompaction) {
-        compactee_.segment->forCompactedObjs(trackerCallback, getPointerBase());
+        forCompactedObjsInSegment(
+            *compactee_.segment, trackerCallback, getPointerBase());
       }
     }
     // Run finalizers for young gen objects.
@@ -2523,7 +2517,7 @@ void HadesGC::youngGenCollection(
     // 3. The duration of this collection may not have met our pause time goals.
     youngGen().setEffectiveEnd(
         youngGen().start() +
-        static_cast<size_t>(ygSizeFactor_ * HeapSegment::maxSize()));
+        static_cast<size_t>(ygSizeFactor_ * AlignedHeapSegment::maxSize()));
 
     // We have to set these after the collection, in case a compaction took
     // place and updated these metrics.
@@ -2604,7 +2598,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
   // TODO: Add more stringent criteria for turning off this flag, for instance,
   // once the heap reaches a certain size. That would avoid growing the heap to
   // the maximum possible size before stopping promotions.
-  llvh::ErrorOr<HeapSegment> newYoungGen = createSegment();
+  llvh::ErrorOr<AlignedHeapSegment> newYoungGen = createSegment();
   if (!newYoungGen) {
     promoteYGToOG_ = false;
     return false;
@@ -2618,8 +2612,8 @@ bool HadesGC::promoteYoungGenToOldGen() {
   // Before promoting it, set the cell heads correctly for the segment
   // going into OG. This could be done at allocation time, but at a cost
   // to YG alloc times for a case that might not come up.
-  youngGen_.forAllObjs([this](GCCell *cell) {
-    youngGen_.setCellHead(cell, cell->getAllocatedSize());
+  forAllObjsInSegment(youngGen_, [](GCCell *cell) {
+    AlignedHeapSegment::setCellHead(cell, cell->getAllocatedSize());
   });
   // It is important that this operation is just a move of pointers to
   // segments. The addresses have to stay the same or else it would
@@ -2630,7 +2624,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
   return true;
 }
 
-HadesGC::HeapSegment HadesGC::setYoungGen(HeapSegment seg) {
+AlignedHeapSegment HadesGC::setYoungGen(AlignedHeapSegment seg) {
   addSegmentExtentToCrashManager(seg, "YG");
   youngGenFinalizables_.clear();
   std::swap(youngGen_, seg);
@@ -2684,7 +2678,7 @@ void HadesGC::updateYoungGenSizeFactor() {
 template <bool CompactionEnabled>
 void HadesGC::scanDirtyCardsForSegment(
     EvacAcceptor<CompactionEnabled> &acceptor,
-    HeapSegment &seg) {
+    AlignedHeapSegment &seg) {
   const auto &cardTable = seg.cardTable();
   // Use level instead of end in case the OG segment is still in bump alloc
   // mode.
@@ -2736,7 +2730,7 @@ void HadesGC::scanDirtyCardsForSegment(
     // expensive.
 
     // Mark the first object with respect to the dirty card boundaries.
-    if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
+    if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
       markCellWithinRange(acceptor, obj, begin, end);
 
     obj = obj->nextCell();
@@ -2748,7 +2742,7 @@ void HadesGC::scanDirtyCardsForSegment(
       // object where next is within the card.
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
-        if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
+        if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
           markCell(acceptor, obj);
         obj = next;
       }
@@ -2758,7 +2752,7 @@ void HadesGC::scanDirtyCardsForSegment(
       assert(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
-      if (visitUnmarked || HeapSegment::getCellMarkBit(obj))
+      if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
         markCellWithinRange(acceptor, obj, begin, end);
     }
 
@@ -2780,7 +2774,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
   for (size_t i = 0; i < segEnd; ++i) {
     // It is safe to hold this reference across a push_back into
     // oldGen_.segments_ since references into a deque are not invalidated.
-    HeapSegment &seg = oldGen_[i];
+    AlignedHeapSegment &seg = oldGen_[i];
     scanDirtyCardsForSegment(acceptor, seg);
     // Do not clear the card table if the OG thread is currently marking to
     // prepare for a compaction. Note that we should clear the card tables if
@@ -2839,7 +2833,7 @@ uint64_t HadesGC::OldGen::externalBytes() const {
 
 uint64_t HadesGC::OldGen::size() const {
   size_t totalSegments = numSegments() + (gc_.compactee_.segment ? 1 : 0);
-  return totalSegments * HeapSegment::maxSize();
+  return totalSegments * AlignedHeapSegment::maxSize();
 }
 
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
@@ -2870,7 +2864,7 @@ llvh::ErrorOr<size_t> HadesGC::getVMFootprintForTest() const {
     return ygFootprint;
 
   // Add each OG segment.
-  for (const HeapSegment &seg : oldGen_) {
+  for (const AlignedHeapSegment &seg : oldGen_) {
     auto segFootprint =
         hermes::oscompat::vm_footprint(seg.start(), seg.hiLim());
     if (!segFootprint)
@@ -2880,20 +2874,19 @@ llvh::ErrorOr<size_t> HadesGC::getVMFootprintForTest() const {
   return footprint;
 }
 
-std::deque<HadesGC::HeapSegment>::iterator HadesGC::OldGen::begin() {
+std::deque<AlignedHeapSegment>::iterator HadesGC::OldGen::begin() {
   return segments_.begin();
 }
 
-std::deque<HadesGC::HeapSegment>::iterator HadesGC::OldGen::end() {
+std::deque<AlignedHeapSegment>::iterator HadesGC::OldGen::end() {
   return segments_.end();
 }
 
-std::deque<HadesGC::HeapSegment>::const_iterator HadesGC::OldGen::begin()
-    const {
+std::deque<AlignedHeapSegment>::const_iterator HadesGC::OldGen::begin() const {
   return segments_.begin();
 }
 
-std::deque<HadesGC::HeapSegment>::const_iterator HadesGC::OldGen::end() const {
+std::deque<AlignedHeapSegment>::const_iterator HadesGC::OldGen::end() const {
   return segments_.end();
 }
 
@@ -2901,11 +2894,11 @@ size_t HadesGC::OldGen::numSegments() const {
   return segments_.size();
 }
 
-HadesGC::HeapSegment &HadesGC::OldGen::operator[](size_t i) {
+AlignedHeapSegment &HadesGC::OldGen::operator[](size_t i) {
   return segments_[i];
 }
 
-llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
+llvh::ErrorOr<AlignedHeapSegment> HadesGC::createSegment() {
   // No heap size limit when Handle-SAN is on, to allow the heap enough room to
   // keep moving things around.
   if (!sanitizeRate_ && heapFootprint() >= maxHeapSize_)
@@ -2915,7 +2908,7 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   if (!res) {
     return res.getError();
   }
-  HeapSegment seg(std::move(res.get()));
+  AlignedHeapSegment seg(std::move(res.get()));
   // Even if compressed pointers are off, we still use the segment index for
   // crash manager indices.
   size_t segIdx;
@@ -2928,12 +2921,12 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   gcCallbacks_.registerHeapSegment(segIdx, seg.lowLim());
   addSegmentExtentToCrashManager(seg, std::to_string(segIdx));
   seg.markBitArray().set();
-  return llvh::ErrorOr<HadesGC::HeapSegment>(std::move(seg));
+  return llvh::ErrorOr<AlignedHeapSegment>(std::move(seg));
 }
 
-void HadesGC::OldGen::addSegment(HeapSegment seg) {
+void HadesGC::OldGen::addSegment(AlignedHeapSegment seg) {
   segments_.emplace_back(std::move(seg));
-  HeapSegment &newSeg = segments_.back();
+  AlignedHeapSegment &newSeg = segments_.back();
   incrementAllocatedBytes(newSeg.used());
   // Add a set of freelist buckets for this segment.
   segmentBuckets_.emplace_back();
@@ -2954,7 +2947,7 @@ void HadesGC::OldGen::addSegment(HeapSegment seg) {
   gc_.addSegmentExtentToCrashManager(newSeg, std::to_string(numSegments()));
 }
 
-HadesGC::HeapSegment HadesGC::OldGen::popSegment() {
+AlignedHeapSegment HadesGC::OldGen::popSegment() {
   const auto &segBuckets = segmentBuckets_.back();
   for (size_t bucket = 0; bucket < kNumFreelistBuckets; ++bucket) {
     if (segBuckets[bucket].head) {
@@ -2979,9 +2972,10 @@ bool HadesGC::inOldGen(const void *p) const {
   // If it isn't in any OG segment or the compactee, then this pointer is not in
   // the OG.
   return compactee_.contains(p) ||
-      std::any_of(oldGen_.begin(), oldGen_.end(), [p](const HeapSegment &seg) {
-           return seg.contains(p);
-         });
+      std::any_of(
+             oldGen_.begin(),
+             oldGen_.end(),
+             [p](const AlignedHeapSegment &seg) { return seg.contains(p); });
 }
 
 void HadesGC::yieldToOldGen() {
@@ -3034,7 +3028,7 @@ size_t HadesGC::getDrainRate() {
 }
 
 void HadesGC::addSegmentExtentToCrashManager(
-    const HeapSegment &seg,
+    const AlignedHeapSegment &seg,
     const std::string &extraName) {
   assert(!extraName.empty() && "extraName can't be empty");
   if (!crashMgr_) {
@@ -3103,8 +3097,8 @@ void HadesGC::verifyCardTable() {
           gc.compactee_.evacContains(valuePtr);
       if (!gc.inYoungGen(locPtr) &&
           (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
-        assert(HeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
-            locPtr));
+        assert(AlignedHeapSegment::cardTableCovering(locPtr)
+                   ->isCardForAddressDirty(locPtr));
       }
     }
 
@@ -3127,7 +3121,7 @@ void HadesGC::verifyCardTable() {
   VerifyCardDirtyAcceptor acceptor{*this};
   forAllObjs([this, &acceptor](GCCell *cell) { markCell(acceptor, cell); });
 
-  for (const HeapSegment &seg : oldGen_) {
+  for (const AlignedHeapSegment &seg : oldGen_) {
     seg.cardTable().verifyBoundaries(seg.start(), seg.level());
   }
 }
