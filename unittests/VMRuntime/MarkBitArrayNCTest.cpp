@@ -9,9 +9,8 @@
 
 #include "gtest/gtest.h"
 
-#include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/HeapAlign.h"
-#include "hermes/VM/MarkBitArrayNC.h"
 #include "hermes/VM/StorageProvider.h"
 #include "llvh/Support/MathExtras.h"
 
@@ -21,28 +20,29 @@
 #include <vector>
 
 using namespace hermes::vm;
+using MarkBitArray = AlignedHeapSegment::Contents::MarkBitArray;
 
 namespace {
 
-struct MarkBitArrayNCTest : public ::testing::Test {
-  MarkBitArrayNCTest();
+struct MarkBitArrayTest : public ::testing::Test {
+  MarkBitArrayTest();
 
  protected:
   std::unique_ptr<StorageProvider> provider;
-  AlignedStorage as;
-  MarkBitArrayNC *mba;
+  AlignedHeapSegment seg;
+  MarkBitArray &mba;
 
-  // Addresses in the aligned storage to interact with during the tests.
+  // Addresses in the aligned storage to interact w ith during the tests.
   std::vector<char *> addrs;
 };
 
-MarkBitArrayNCTest::MarkBitArrayNCTest()
+MarkBitArrayTest::MarkBitArrayTest()
     : provider(StorageProvider::mmapProvider()),
-      as{std::move(AlignedStorage::create(provider.get()).get())},
-      mba(new(as.lowLim()) MarkBitArrayNC()) {
-  auto first = as.lowLim();
+      seg{std::move(AlignedStorage::create(provider.get()).get())},
+      mba(seg.markBitArray()) {
+  auto first = seg.lowLim();
   auto last = reinterpret_cast<char *>(
-      llvh::alignDown(reinterpret_cast<uintptr_t>(as.hiLim() - 1), HeapAlign));
+      llvh::alignDown(reinterpret_cast<uintptr_t>(seg.hiLim() - 1), HeapAlign));
 
   addrs = {
       first,
@@ -56,184 +56,181 @@ MarkBitArrayNCTest::MarkBitArrayNCTest()
   EXPECT_TRUE(std::is_sorted(addrs.begin(), addrs.end()));
 }
 
-TEST_F(MarkBitArrayNCTest, AddressToIndex) {
+TEST_F(MarkBitArrayTest, AddressToIndex) {
   // Expected indices in the mark bit array corresponding to the probe
   // addresses into the storage.
-  size_t lastIx = MarkBitArrayNC::kNumBits - 1;
+  size_t lastIx = mba.size() - 1;
   std::vector<size_t> indices{0, 1, 42, lastIx - 42, lastIx - 1, lastIx};
 
   for (unsigned i = 0; i < addrs.size(); i++) {
     char *addr = addrs.at(i);
     size_t ind = indices.at(i);
 
-    EXPECT_EQ(ind, mba->addressToIndex(addr))
+    EXPECT_EQ(ind, AlignedHeapSegment::addressToMarkBitArrayIndex(addr))
         << "0x" << std::hex << (void *)addr << " -> " << ind;
-    EXPECT_EQ(mba->indexToAddress(ind), addr)
+    char *toAddr = seg.lowLim() + (ind << LogHeapAlign);
+    EXPECT_EQ(toAddr, addr)
         << "0x" << std::hex << (void *)addr << " <- " << ind;
   }
 }
 
-TEST_F(MarkBitArrayNCTest, MarkGet) {
-  const size_t lastIx = MarkBitArrayNC::kNumBits - 1;
+TEST_F(MarkBitArrayTest, MarkGet) {
+  const size_t lastIx = mba.size() - 1;
 
   for (char *addr : addrs) {
-    size_t ind = mba->addressToIndex(addr);
+    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
 
-    EXPECT_FALSE(ind > 0 && mba->at(ind - 1)) << "initial " << ind << " - 1";
-    EXPECT_FALSE(mba->at(ind)) << "initial " << ind;
-    EXPECT_FALSE(ind < lastIx && mba->at(ind + 1))
+    EXPECT_FALSE(ind > 0 && mba.at(ind - 1)) << "initial " << ind << " - 1";
+    EXPECT_FALSE(mba.at(ind)) << "initial " << ind;
+    EXPECT_FALSE(ind < lastIx && mba.at(ind + 1))
         << "initial " << ind << " + 1";
 
-    mba->mark(ind);
+    mba.set(ind, true);
 
-    EXPECT_FALSE(ind > 0 && mba->at(ind - 1)) << "mark " << ind << " - 1";
-    EXPECT_TRUE(mba->at(ind)) << "mark " << ind;
-    EXPECT_FALSE(ind < lastIx && mba->at(ind + 1)) << "mark " << ind << " + 1";
+    EXPECT_FALSE(ind > 0 && mba.at(ind - 1)) << "mark " << ind << " - 1";
+    EXPECT_TRUE(mba.at(ind)) << "mark " << ind;
+    EXPECT_FALSE(ind < lastIx && mba.at(ind + 1)) << "mark " << ind << " + 1";
 
-    mba->clear();
+    mba.reset();
   }
 }
 
-TEST_F(MarkBitArrayNCTest, Initial) {
+TEST_F(MarkBitArrayTest, Initial) {
   for (char *addr : addrs) {
-    size_t ind = mba->addressToIndex(addr);
-    EXPECT_FALSE(mba->at(ind));
+    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    EXPECT_FALSE(mba.at(ind));
   }
 }
 
-TEST_F(MarkBitArrayNCTest, Clear) {
+TEST_F(MarkBitArrayTest, Clear) {
   for (char *addr : addrs) {
-    size_t ind = mba->addressToIndex(addr);
-    ASSERT_FALSE(mba->at(ind));
+    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    ASSERT_FALSE(mba.at(ind));
   }
 
   for (char *addr : addrs) {
-    size_t ind = mba->addressToIndex(addr);
-    mba->mark(ind);
+    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    mba.set(ind, true);
   }
 
   for (char *addr : addrs) {
-    size_t ind = mba->addressToIndex(addr);
-    ASSERT_TRUE(mba->at(ind));
+    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    ASSERT_TRUE(mba.at(ind));
   }
 
-  mba->clear();
+  mba.reset();
   for (char *addr : addrs) {
-    size_t ind = mba->addressToIndex(addr);
-    EXPECT_FALSE(mba->at(ind));
+    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    EXPECT_FALSE(mba.at(ind));
   }
 }
 
-TEST_F(MarkBitArrayNCTest, NextMarkedBitImmediate) {
+TEST_F(MarkBitArrayTest, NextMarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = mba->addressToIndex(addr);
+  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
 
-  mba->mark(ind);
-  EXPECT_EQ(ind, mba->findNextMarkedBitFrom(ind));
+  mba.set(ind, true);
+  EXPECT_EQ(ind, mba.findNextSetBitFrom(ind));
 }
 
-TEST_F(MarkBitArrayNCTest, NextMarkedBit) {
-  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
+TEST_F(MarkBitArrayTest, NextMarkedBit) {
+  const size_t FOUND_NONE = mba.size();
 
   // Empty case: No marked bits
-  EXPECT_EQ(FOUND_NONE, mba->findNextMarkedBitFrom(0));
+  EXPECT_EQ(FOUND_NONE, mba.findNextSetBitFrom(0));
   std::queue<size_t> indices;
   for (char *addr : addrs) {
-    auto ind = mba->addressToIndex(addr);
-    mba->mark(ind);
+    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    mba.set(ind, true);
     indices.push(ind);
   }
   // Use the same style of loop we use elsewhere for scanning the array.
-  for (size_t from = mba->findNextMarkedBitFrom(0);
-       from < MarkBitArrayNC::kNumBits;
-       from = mba->findNextMarkedBitFrom(from + 1)) {
+  for (size_t from = mba.findNextSetBitFrom(0); from < mba.size();
+       from = mba.findNextSetBitFrom(from + 1)) {
     EXPECT_EQ(indices.front(), from);
     indices.pop();
   }
 }
 
-TEST_F(MarkBitArrayNCTest, NextUnmarkedBitImmediate) {
+TEST_F(MarkBitArrayTest, NextUnmarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = mba->addressToIndex(addr);
-  mba->markAll();
-  mba->bitArray_.set(ind, false);
-  EXPECT_EQ(ind, mba->findNextUnmarkedBitFrom(ind));
+  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+  mba.set();
+  mba.set(ind, false);
+  EXPECT_EQ(ind, mba.findNextZeroBitFrom(ind));
 }
 
-TEST_F(MarkBitArrayNCTest, NextUnmarkedBit) {
-  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
-  mba->markAll();
+TEST_F(MarkBitArrayTest, NextUnmarkedBit) {
+  const size_t FOUND_NONE = mba.size();
+  mba.set();
   /// Full case: No unmarked bits
-  EXPECT_EQ(FOUND_NONE, mba->findNextUnmarkedBitFrom(0));
+  EXPECT_EQ(FOUND_NONE, mba.findNextZeroBitFrom(0));
   std::queue<size_t> indices;
   for (char *addr : addrs) {
-    auto ind = mba->addressToIndex(addr);
-    mba->bitArray_.set(ind, false);
+    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    mba.set(ind, false);
     indices.push(ind);
   }
 
   // Use the same style of loop we use elsewhere for scanning the array.
-  for (size_t from = mba->findNextUnmarkedBitFrom(0);
-       from < MarkBitArrayNC::kNumBits;
-       from = mba->findNextUnmarkedBitFrom(from + 1)) {
+  for (size_t from = mba.findNextZeroBitFrom(0); from < mba.size();
+       from = mba.findNextZeroBitFrom(from + 1)) {
     EXPECT_EQ(indices.front(), from);
     indices.pop();
   }
 }
 
-TEST_F(MarkBitArrayNCTest, PrevMarkedBitImmediate) {
+TEST_F(MarkBitArrayTest, PrevMarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = mba->addressToIndex(addr);
-  mba->bitArray_.set(ind, true);
-  EXPECT_EQ(ind, mba->findPrevMarkedBitFrom(ind + 1));
+  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+  mba.set(ind, true);
+  EXPECT_EQ(ind, mba.findPrevSetBitFrom(ind + 1));
 }
 
-TEST_F(MarkBitArrayNCTest, PrevMarkedBit) {
-  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
-  size_t from = MarkBitArrayNC::kNumBits;
+TEST_F(MarkBitArrayTest, PrevMarkedBit) {
+  const size_t FOUND_NONE = mba.size();
+  size_t from = mba.size();
   /// Empty case: No unmarked bits
-  EXPECT_EQ(FOUND_NONE, mba->findPrevMarkedBitFrom(from));
+  EXPECT_EQ(FOUND_NONE, mba.findPrevSetBitFrom(from));
 
   std::queue<size_t> indices;
   size_t addrIdx = addrs.size();
   while (addrIdx-- > 0) {
-    auto ind = mba->addressToIndex(addrs[addrIdx]);
-    mba->bitArray_.set(ind, true);
+    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addrs[addrIdx]);
+    mba.set(ind, true);
     indices.push(ind);
   }
-  for (size_t from = mba->findPrevMarkedBitFrom(MarkBitArrayNC::kNumBits);
-       from != MarkBitArrayNC::kNumBits;
-       from = mba->findPrevMarkedBitFrom(from)) {
+  for (size_t from = mba.findNextSetBitFrom(mba.size()); from != mba.size();
+       from = mba.findNextSetBitFrom(from)) {
     EXPECT_EQ(indices.front(), from);
     indices.pop();
   }
 }
 
-TEST_F(MarkBitArrayNCTest, PrevUnmarkedBitImmediate) {
+TEST_F(MarkBitArrayTest, PrevUnmarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = mba->addressToIndex(addr);
-  mba->markAll();
-  mba->bitArray_.set(ind, false);
-  EXPECT_EQ(ind, mba->findPrevUnmarkedBitFrom(ind + 1));
+  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+  mba.set();
+  mba.set(ind, false);
+  EXPECT_EQ(ind, mba.findPrevZeroBitFrom(ind + 1));
 }
 
-TEST_F(MarkBitArrayNCTest, PrevUnmarkedBit) {
-  constexpr size_t FOUND_NONE = MarkBitArrayNC::kNumBits;
-  mba->markAll();
-  size_t from = MarkBitArrayNC::kNumBits;
+TEST_F(MarkBitArrayTest, PrevUnmarkedBit) {
+  constexpr size_t FOUND_NONE = MarkBitArray::size();
+  mba.set();
+  size_t from = mba.size();
   /// Full case: No unmarked bits
-  EXPECT_EQ(FOUND_NONE, mba->findPrevUnmarkedBitFrom(from));
+  EXPECT_EQ(FOUND_NONE, mba.findPrevZeroBitFrom(from));
 
   std::queue<size_t> indices;
   size_t addrIdx = addrs.size();
   while (addrIdx-- > 0) {
-    auto ind = mba->addressToIndex(addrs[addrIdx]);
-    mba->bitArray_.set(ind, false);
+    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addrs[addrIdx]);
+    mba.set(ind, false);
     indices.push(ind);
   }
-  for (size_t from = mba->findPrevUnmarkedBitFrom(MarkBitArrayNC::kNumBits);
-       from != MarkBitArrayNC::kNumBits;
-       from = mba->findPrevUnmarkedBitFrom(from)) {
+  for (size_t from = mba.findPrevZeroBitFrom(mba.size()); from != mba.size();
+       from = mba.findPrevZeroBitFrom(from)) {
     EXPECT_EQ(indices.front(), from);
     indices.pop();
   }
