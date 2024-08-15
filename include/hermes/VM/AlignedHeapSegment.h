@@ -28,6 +28,12 @@
 namespace hermes {
 namespace vm {
 
+class StorageProvider;
+
+#ifndef HERMESVM_LOG_HEAP_SEGMENT_SIZE
+#error Heap segment size must be defined.
+#endif
+
 // In this class:
 // TODO (T25527350): Debug Dump
 // TODO (T25527350): Heap Moving
@@ -52,6 +58,58 @@ namespace vm {
 /// into which GCCells are bump allocated.
 class AlignedHeapSegment {
  public:
+  /// @name Constants and utility functions for the aligned storage of \c
+  /// AlignedHeapSegment.
+  ///
+  /// @{
+  /// The size and the alignment of the storage, in bytes.
+  static constexpr unsigned kLogSize = HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+  static constexpr size_t kSize{1 << kLogSize};
+  /// Mask for isolating the offset into a storage for a pointer.
+  static constexpr size_t kLowMask{kSize - 1};
+  /// Mask for isolating the storage being pointed into by a pointer.
+  static constexpr size_t kHighMask{~kLowMask};
+
+  /// Returns the storage size, in bytes, of an \c AlignedHeapSegment.
+  static constexpr size_t storageSize() {
+    return kSize;
+  }
+
+  /// Returns the pointer to the beginning of the storage containing \p ptr
+  /// (inclusive). Assuming such a storage exists. Note that
+  ///
+  ///     storageStart(seg.hiLim()) != seg.lowLim()
+  ///
+  /// as \c seg.hiLim() is not contained in the bounds of \c seg -- it
+  /// is the first address not in the bounds.
+  static void *storageStart(const void *ptr) {
+    return reinterpret_cast<char *>(
+        reinterpret_cast<uintptr_t>(ptr) & kHighMask);
+  }
+
+  /// Returns the pointer to the end of the storage containing \p ptr
+  /// (exclusive). Assuming such a storage exists. Note that
+  ///
+  ///     storageEnd(seg.hiLim()) != seg.hiLim()
+  ///
+  /// as \c seg.hiLim() is not contained in the bounds of \c seg -- it
+  /// is the first address not in the bounds.
+  static void *storageEnd(const void *ptr) {
+    return reinterpret_cast<char *>(storageStart(ptr)) + kSize;
+  }
+
+  /// Returns the offset in bytes to \p ptr from the start of its containing
+  /// storage. Assuming such a storage exists. Note that
+  ///
+  ///     offset(seg.hiLim()) != seg.size()
+  ///
+  /// as \c seg.hiLim() is not contained in the bounds of \c seg -- it
+  /// is the first address not in the bounds.
+  static size_t offset(const char *ptr) {
+    return reinterpret_cast<size_t>(ptr) & kLowMask;
+  }
+  /// @}
+
   explicit AlignedHeapSegment(AlignedStorage storage);
 
   /// Construct a null AlignedHeapSegment (one that does not own memory).
@@ -152,22 +210,21 @@ class AlignedHeapSegment {
   /// space, returns {nullptr, false}.
   inline AllocResult alloc(uint32_t size);
 
-  /// Given the \p lowLim of some valid AlignedStorage's memory region, returns
-  /// a pointer to the AlignedHeapSegment::Contents laid out in that storage,
+  /// Given the \p lowLim of some valid segment's memory region, returns a
+  /// pointer to the AlignedHeapSegment::Contents laid out in that storage,
   /// assuming it exists.
   inline static Contents *contents(void *lowLim);
   inline static const Contents *contents(const void *lowLim);
 
-  /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
-  /// returns a pointer to the CardTable covering the segment containing the
-  /// pointer.
+  /// Given a \p ptr into the memory region of some valid segment \c s, returns
+  /// a pointer to the CardTable covering the segment containing the pointer.
   ///
   /// \pre There exists a currently alive heap that claims to contain \c ptr.
   inline static CardTable *cardTableCovering(const void *ptr);
 
-  /// Given a \p ptr into the memory region of some valid AlignedStorage \c s,
-  /// returns a pointer to the MarkBitArrayNC covering the segment containing
-  /// the pointer.
+  /// Given a \p ptr into the memory region of some valid segment \c s, returns
+  /// a pointer to the MarkBitArrayNC covering the segment containing the
+  /// pointer.
   ///
   /// \pre There exists a currently alive heap that claims to contain \c ptr.
   inline static MarkBitArrayNC *markBitArrayCovering(const void *ptr);
@@ -183,8 +240,7 @@ class AlignedHeapSegment {
   /// be.
   inline static constexpr size_t maxSize();
 
-  /// The size of the allocation region in this aligned heap segment. (Static
-  /// override of \c AlignedStorage::size()).
+  /// The size of the allocation region in this aligned heap segment.
   inline size_t size() const;
 
   /// The number of bytes in the segment that are currently allocated.
@@ -340,7 +396,7 @@ AllocResult AlignedHeapSegment::alloc(uint32_t size) {
 
 /*static*/
 MarkBitArrayNC *AlignedHeapSegment::markBitArrayCovering(const void *ptr) {
-  return &contents(AlignedStorage::start(ptr))->markBitArray_;
+  return &contents(storageStart(ptr))->markBitArray_;
 }
 
 /*static*/
@@ -368,11 +424,11 @@ bool AlignedHeapSegment::getCellMarkBit(const GCCell *cell) {
 }
 
 /* static */ CardTable *AlignedHeapSegment::cardTableCovering(const void *ptr) {
-  return &AlignedHeapSegment::contents(AlignedStorage::start(ptr))->cardTable_;
+  return &AlignedHeapSegment::contents(storageStart(ptr))->cardTable_;
 }
 
 /* static */ constexpr size_t AlignedHeapSegment::maxSize() {
-  return AlignedStorage::size() - offsetof(Contents, allocRegion_);
+  return storageSize() - offsetof(Contents, allocRegion_);
 }
 
 size_t AlignedHeapSegment::size() const {
@@ -420,7 +476,8 @@ AlignedHeapSegment::cells() {
 
 /* static */
 bool AlignedHeapSegment::containedInSame(const void *a, const void *b) {
-  return AlignedStorage::containedInSame(a, b);
+  return (reinterpret_cast<uintptr_t>(a) ^ reinterpret_cast<uintptr_t>(b)) <
+      storageSize();
 }
 
 CardTable &AlignedHeapSegment::cardTable() const {
