@@ -18,6 +18,13 @@ namespace m = ::facebook::hermes::cdp::message;
 
 constexpr size_t kMaxPreviewProperties = 10;
 
+static bool isObjectInstanceOfError(
+    const jsi::Object &obj,
+    facebook::jsi::Runtime &runtime) {
+  return obj.instanceOf(
+      runtime, runtime.global().getPropertyAsFunction(runtime, "Error"));
+}
+
 static m::runtime::PropertyPreview generatePropertyPreview(
     facebook::jsi::Runtime &runtime,
     const std::string &name,
@@ -308,6 +315,16 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
       result.description = "Array(" + std::to_string(arrayCount) + ")";
       if (options.generatePreview) {
         result.preview = generateArrayPreview(runtime, array);
+      }
+    } else if (isObjectInstanceOfError(obj, runtime)) {
+      result.type = "object";
+      result.subtype = "error";
+      // T198854404 we should report subclasses of Error here, e.g. TypeError
+      result.className = "Error";
+      result.description =
+          obj.getProperty(runtime, "stack").toString(runtime).utf8(runtime);
+      if (options.generatePreview) {
+        result.preview = generateObjectPreview(runtime, obj);
       }
     } else {
       result.type = "object";
