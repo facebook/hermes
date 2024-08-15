@@ -121,6 +121,11 @@ class BitArray {
         std::numeric_limits<uintptr_t>::max());
   }
 
+  /// Return the number of bits.
+  static constexpr size_t size() {
+    return N;
+  }
+
   /// Set all bits to 1.
   inline void set() {
     std::fill_n(

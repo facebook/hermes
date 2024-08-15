@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_SEGMENT_H
 #define HERMES_VM_SEGMENT_H
 
+#include "hermes/ADT/BitArray.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AdviseUnused.h"
 #include "hermes/VM/AlignedStorage.h"
@@ -17,7 +18,6 @@
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
-#include "hermes/VM/MarkBitArrayNC.h"
 #include "hermes/VM/SegmentInfo.h"
 
 #include "llvh/Support/MathExtras.h"
@@ -121,6 +121,18 @@ class AlignedHeapSegment {
 
   /// Contents of the memory region managed by this segment.
   class Contents {
+   public:
+    /// The number of bits representing the total number of heap-aligned
+    /// addresses in the segment storage.
+    static constexpr size_t kMarkBitArraySize = kSize >> LogHeapAlign;
+    /// BitArray for marking allocation region of a segment.
+    using MarkBitArray = BitArray<kMarkBitArraySize>;
+
+    /// Set the protection mode of paddedGuardPage_ (if system page size allows
+    /// it).
+    void protectGuardPage(oscompat::ProtectMode mode);
+
+   private:
     friend class AlignedHeapSegment;
 
     /// Note that because of the Contents object, the first few bytes of the
@@ -128,10 +140,10 @@ class AlignedHeapSegment {
     /// struct.
     CardTable cardTable_;
 
-    MarkBitArrayNC markBitArray_;
+    MarkBitArray markBitArray_;
 
     static constexpr size_t kMetadataSize =
-        sizeof(cardTable_) + sizeof(markBitArray_);
+        sizeof(cardTable_) + sizeof(MarkBitArray);
     /// Padding to ensure that the guard page is aligned to a page boundary.
     static constexpr size_t kGuardPagePadding =
         llvh::alignTo<pagesize::kExpectedPageSize>(kMetadataSize) -
@@ -148,11 +160,6 @@ class AlignedHeapSegment {
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
     char allocRegion_[1];
-
-   public:
-    /// Set the protection mode of paddedGuardPage_ (if system page size allows
-    /// it).
-    void protectGuardPage(oscompat::ProtectMode mode);
   };
 
   static_assert(
@@ -223,11 +230,19 @@ class AlignedHeapSegment {
   inline static CardTable *cardTableCovering(const void *ptr);
 
   /// Given a \p ptr into the memory region of some valid segment \c s, returns
-  /// a pointer to the MarkBitArrayNC covering the segment containing the
+  /// a pointer to the MarkBitArray covering the segment containing the
   /// pointer.
   ///
   /// \pre There exists a currently alive heap that claims to contain \c ptr.
-  inline static MarkBitArrayNC *markBitArrayCovering(const void *ptr);
+  inline static Contents::MarkBitArray *markBitArrayCovering(const void *ptr);
+
+  /// Translate the given address to a 0-based index in the MarkBitArray of its
+  /// segment. The base address is the start of the storage of this segment.
+  static size_t addressToMarkBitArrayIndex(const void *ptr) {
+    auto *cp = reinterpret_cast<const char *>(ptr);
+    auto *base = reinterpret_cast<const char *>(storageStart(cp));
+    return (cp - base) >> LogHeapAlign;
+  }
 
   /// Mark the given \p cell.  Assumes the given address is a valid heap object.
   inline static void setCellMarkBit(const GCCell *cell);
@@ -298,7 +313,7 @@ class AlignedHeapSegment {
 
   /// Return a reference to the mark bit array covering the memory region
   /// managed by this segment.
-  inline MarkBitArrayNC &markBitArray() const;
+  inline Contents::MarkBitArray &markBitArray() const;
 
   explicit inline operator bool() const;
 
@@ -395,21 +410,22 @@ AllocResult AlignedHeapSegment::alloc(uint32_t size) {
 }
 
 /*static*/
-MarkBitArrayNC *AlignedHeapSegment::markBitArrayCovering(const void *ptr) {
+AlignedHeapSegment::Contents::MarkBitArray *
+AlignedHeapSegment::markBitArrayCovering(const void *ptr) {
   return &contents(storageStart(ptr))->markBitArray_;
 }
 
 /*static*/
 void AlignedHeapSegment::setCellMarkBit(const GCCell *cell) {
-  MarkBitArrayNC *markBits = markBitArrayCovering(cell);
-  size_t ind = markBits->addressToIndex(cell);
-  markBits->mark(ind);
+  auto *markBits = markBitArrayCovering(cell);
+  size_t ind = addressToMarkBitArrayIndex(cell);
+  markBits->set(ind, true);
 }
 
 /*static*/
 bool AlignedHeapSegment::getCellMarkBit(const GCCell *cell) {
-  MarkBitArrayNC *markBits = markBitArrayCovering(cell);
-  size_t ind = markBits->addressToIndex(cell);
+  auto *markBits = markBitArrayCovering(cell);
+  size_t ind = addressToMarkBitArrayIndex(cell);
   return markBits->at(ind);
 }
 
@@ -484,7 +500,8 @@ CardTable &AlignedHeapSegment::cardTable() const {
   return contents()->cardTable_;
 }
 
-MarkBitArrayNC &AlignedHeapSegment::markBitArray() const {
+AlignedHeapSegment::Contents::MarkBitArray &AlignedHeapSegment::markBitArray()
+    const {
   return contents()->markBitArray_;
 }
 

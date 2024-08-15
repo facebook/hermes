@@ -1499,7 +1499,7 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
   // First, clear any mark bits that were set by a previous collection or
   // direct-to-OG allocation, they aren't needed anymore.
   for (HeapSegment &seg : oldGen_)
-    seg.markBitArray().clear();
+    seg.markBitArray().reset();
 
   // Unmark all symbols in the identifier table, as Symbol liveness will be
   // determined during the collection.
@@ -2420,7 +2420,7 @@ void HadesGC::youngGenCollection(
   verifyCardTable();
 #endif
   assert(
-      youngGen().markBitArray().findNextUnmarkedBitFrom(0) ==
+      youngGen().markBitArray().findNextZeroBitFrom(0) ==
           youngGen().markBitArray().size() &&
       "Young gen segment must have all mark bits set");
   struct {
@@ -2484,8 +2484,7 @@ void HadesGC::youngGenCollection(
     // gen. Clear the level of the young gen.
     yg.resetLevel();
     assert(
-        yg.markBitArray().findNextUnmarkedBitFrom(0) ==
-            yg.markBitArray().size() &&
+        yg.markBitArray().findNextZeroBitFrom(0) == yg.markBitArray().size() &&
         "Young gen segment must have all mark bits set");
 
     if (doCompaction) {
@@ -2927,7 +2926,7 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   }
   gcCallbacks_.registerHeapSegment(segIdx, seg.lowLim());
   addSegmentExtentToCrashManager(seg, std::to_string(segIdx));
-  seg.markBitArray().markAll();
+  seg.markBitArray().set();
   return llvh::ErrorOr<HadesGC::HeapSegment>(std::move(seg));
 }
 
