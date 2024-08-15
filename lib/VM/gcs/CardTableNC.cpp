@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "gc"
 
 #include "hermes/VM/CardTableNC.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 
 #include "hermes/Support/OSCompat.h"
 
@@ -18,6 +19,12 @@
 
 namespace hermes {
 namespace vm {
+
+#ifndef NDEBUG
+/* static */ void *CardTable::storageEnd(const void *ptr) {
+  return AlignedHeapSegment::storageEnd(ptr);
+}
+#endif
 
 void CardTable::dirtyCardsForAddressRange(const void *low, const void *high) {
   // If high is in the middle of some card, ensure that we dirty that card.
@@ -75,7 +82,7 @@ void CardTable::updateBoundaries(
     const char *end) {
   assert(boundary != nullptr && "Need a boundary cursor");
   assert(
-      base() <= start && end <= AlignedStorage::end(base()) &&
+      base() <= start && end <= storageEnd(base()) &&
       "Precondition: [start, end) must be covered by this table.");
   assert(
       boundary->index() == addressToIndex(boundary->address()) &&

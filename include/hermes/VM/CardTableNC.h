@@ -11,7 +11,6 @@
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/OptValue.h"
-#include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/ExpectedPageSize.h"
 #include "hermes/VM/GCCell.h"
 
@@ -62,10 +61,10 @@ class CardTable {
   /// The size (and base-two log of the size) of cards used in the card table.
   static constexpr size_t kLogCardSize = 9; // ==> 512-byte cards.
   static constexpr size_t kCardSize = 1 << kLogCardSize; // ==> 512-byte cards.
+  static constexpr size_t kSegmentSize = 1 << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
 
   /// The number of valid indices into the card table.
-  static constexpr size_t kValidIndices =
-      AlignedStorage::size() >> kLogCardSize;
+  static constexpr size_t kValidIndices = kSegmentSize >> kLogCardSize;
 
   /// The size of the card table.
   static constexpr size_t kCardTableSize = kValidIndices;
@@ -215,6 +214,12 @@ class CardTable {
 #endif // HERMES_SLOW_DEBUG
 
  private:
+#ifndef NDEBUG
+  /// Returns the pointer to the end of the storage containing \p ptr
+  /// (exclusive).
+  static void *storageEnd(const void *ptr);
+#endif
+
   enum class CardStatus : char { Clean = 0, Dirty = 1 };
 
   /// \return The lowest address whose card can be dirtied in this array. i.e.
@@ -294,8 +299,7 @@ inline size_t CardTable::addressToIndex(const void *addr) const {
   auto addrPtr = reinterpret_cast<const char *>(addr);
   assert(
       base() <= addrPtr &&
-      addrPtr < (static_cast<const char *>(AlignedStorage::end(base())) +
-                 kCardSize) &&
+      addrPtr < (static_cast<const char *>(storageEnd(base())) + kCardSize) &&
       "address is required to be within range.");
   return (addrPtr - base()) >> kLogCardSize;
 }
@@ -304,7 +308,7 @@ inline const char *CardTable::indexToAddress(size_t index) const {
   assert(index <= kValidIndices && "index must be within the index range");
   const char *res = base() + (index << kLogCardSize);
   assert(
-      base() <= res && res <= AlignedStorage::end(base()) &&
+      base() <= res && res <= storageEnd(base()) &&
       "result must be within the covered range");
   return res;
 }
