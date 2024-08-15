@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_HEAPRUNTIME_H
 #define HERMES_VM_HEAPRUNTIME_H
 
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/StorageProvider.h"
 
 namespace hermes {
@@ -38,7 +39,8 @@ class HeapRuntime {
     auto ptrOrError = sp_->newStorage("hermes-rt");
     if (!ptrOrError)
       hermes_fatal("Cannot initialize Runtime storage.", ptrOrError.getError());
-    static_assert(sizeof(RT) < AlignedStorage::size(), "Segments too small.");
+    static_assert(
+        sizeof(RT) < AlignedHeapSegment::storageSize(), "Segments too small.");
     runtime_ = static_cast<RT *>(*ptrOrError);
   }
 

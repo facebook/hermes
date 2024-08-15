@@ -11,7 +11,6 @@
 #include "hermes/ADT/BitArray.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AdviseUnused.h"
-#include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/AllocSource.h"
 #include "hermes/VM/CardTableNC.h"
@@ -109,14 +108,20 @@ class AlignedHeapSegment {
   }
   /// @}
 
-  explicit AlignedHeapSegment(AlignedStorage storage);
-
   /// Construct a null AlignedHeapSegment (one that does not own memory).
   AlignedHeapSegment() = default;
-  AlignedHeapSegment(AlignedHeapSegment &&) = default;
-  AlignedHeapSegment &operator=(AlignedHeapSegment &&) = default;
+  /// \c AlignedHeapSegment is movable and assignable, but not copyable.
+  AlignedHeapSegment(AlignedHeapSegment &&);
+  AlignedHeapSegment &operator=(AlignedHeapSegment &&);
+  AlignedHeapSegment(const AlignedHeapSegment &) = delete;
 
   ~AlignedHeapSegment();
+
+  /// Create a AlignedHeapSegment by allocating memory with \p provider.
+  static llvh::ErrorOr<AlignedHeapSegment> create(StorageProvider *provider);
+  static llvh::ErrorOr<AlignedHeapSegment> create(
+      StorageProvider *provider,
+      const char *name);
 
   /// Contents of the memory region managed by this segment.
   class Contents {
@@ -283,10 +288,14 @@ class AlignedHeapSegment {
   /// Returns the address that is the lower bound of the segment.
   /// \post The returned pointer is guaranteed to be aligned to a segment
   ///   boundary.
-  inline char *lowLim() const;
+  char *lowLim() const {
+    return lowLim_;
+  }
 
   /// Returns the address that is the upper bound of the segment.
-  inline char *hiLim() const;
+  char *hiLim() const {
+    return lowLim() + storageSize();
+  }
 
   /// Returns the address at which the first allocation in this segment would
   /// occur.
@@ -331,11 +340,15 @@ class AlignedHeapSegment {
   /// managed by this segment.
   inline Contents::MarkBitArray &markBitArray() const;
 
-  explicit inline operator bool() const;
+  explicit operator bool() const {
+    return lowLim();
+  }
 
   /// \return \c true if and only if \p ptr is within the memory range owned by
   ///     this \c AlignedHeapSegment.
-  inline bool contains(const void *ptr) const;
+  bool contains(const void *ptr) const {
+    return storageStart(ptr) == lowLim();
+  }
 
   /// Mark a set of pages as unused.
   ///
@@ -379,7 +392,12 @@ class AlignedHeapSegment {
   /// segment.
   inline Contents *contents() const;
 
-  AlignedStorage storage_;
+  /// The start of the aligned segment.
+  char *lowLim_{nullptr};
+
+  /// The provider that created this segment. It will be used to properly
+  /// destroy this.
+  StorageProvider *provider_{nullptr};
 
   char *level_{start()};
 
@@ -387,6 +405,13 @@ class AlignedHeapSegment {
   /// this may be decreased when externally allocated memory is credited to
   /// the generation owning this space.
   char *effectiveEnd_{end()};
+
+  /// Used in move constructor and move assignment operator following the copy
+  /// and swap idiom.
+  friend void swap(AlignedHeapSegment &a, AlignedHeapSegment &b);
+
+ private:
+  AlignedHeapSegment(StorageProvider *provider, void *lowLim);
 };
 
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {
@@ -475,14 +500,6 @@ size_t AlignedHeapSegment::available() const {
   return effectiveEnd() - level();
 }
 
-char *AlignedHeapSegment::lowLim() const {
-  return storage_.lowLim();
-}
-
-char *AlignedHeapSegment::hiLim() const {
-  return storage_.hiLim();
-}
-
 char *AlignedHeapSegment::start() const {
   return contents()->allocRegion_;
 }
@@ -523,14 +540,6 @@ AlignedHeapSegment::Contents::MarkBitArray &AlignedHeapSegment::markBitArray()
 
 AlignedHeapSegment::Contents *AlignedHeapSegment::contents() const {
   return contents(lowLim());
-}
-
-AlignedHeapSegment::operator bool() const {
-  return static_cast<bool>(storage_);
-}
-
-bool AlignedHeapSegment::contains(const void *ptr) const {
-  return storage_.contains(ptr);
 }
 
 } // namespace vm

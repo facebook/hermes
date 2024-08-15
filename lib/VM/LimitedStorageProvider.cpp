@@ -8,16 +8,16 @@
 #include "hermes/VM/LimitedStorageProvider.h"
 
 #include "hermes/Support/ErrorHandling.h"
-#include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 
 namespace hermes {
 namespace vm {
 
 llvh::ErrorOr<void *> LimitedStorageProvider::newStorageImpl(const char *name) {
-  if (limit_ < AlignedStorage::size()) {
+  if (limit_ < AlignedHeapSegment::storageSize()) {
     return make_error_code(OOMError::TestVMLimitReached);
   }
-  limit_ -= AlignedStorage::size();
+  limit_ -= AlignedHeapSegment::storageSize();
   return delegate_->newStorage(name);
 }
 
@@ -26,7 +26,7 @@ void LimitedStorageProvider::deleteStorageImpl(void *storage) {
     return;
   }
   delegate_->deleteStorage(storage);
-  limit_ += AlignedStorage::size();
+  limit_ += AlignedHeapSegment::storageSize();
 }
 
 } // namespace vm

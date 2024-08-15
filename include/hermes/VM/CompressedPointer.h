@@ -8,7 +8,6 @@
 #ifndef HERMES_VM_COMPRESSEDPOINTER_H
 #define HERMES_VM_COMPRESSEDPOINTER_H
 
-#include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/sh_runtime.h"
 
 #include "llvh/Support/MathExtras.h"
@@ -72,7 +71,8 @@ class CompressedPointer : private SHCompressedPointer {
 
   CompressedPointer getSegmentStart() const {
     return fromRaw(
-        getRaw() & llvh::maskTrailingZeros<RawType>(AlignedStorage::kLogSize));
+        getRaw() &
+        llvh::maskTrailingZeros<RawType>(HERMESVM_LOG_HEAP_SEGMENT_SIZE));
   }
 
   CompressedPointer(const CompressedPointer &) = default;

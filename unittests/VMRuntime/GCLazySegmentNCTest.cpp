@@ -31,8 +31,9 @@ using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
 
 constexpr size_t kHeapSizeHint = AlignedHeapSegment::maxSize() * 10;
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
-constexpr size_t kHeapVA = AlignedStorage::size() * 10;
-constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
+constexpr size_t kHeapVA = AlignedHeapSegment::storageSize() * 10;
+constexpr size_t kHeapVALimited =
+    kHeapVA / 2 + AlignedHeapSegment::storageSize() - 1;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {

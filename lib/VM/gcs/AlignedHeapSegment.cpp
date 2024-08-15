@@ -33,13 +33,31 @@ void AlignedHeapSegment::Contents::protectGuardPage(
   }
 }
 
-AlignedHeapSegment::AlignedHeapSegment(AlignedStorage storage)
-    : storage_(std::move(storage)) {
+llvh::ErrorOr<AlignedHeapSegment> AlignedHeapSegment::create(
+    StorageProvider *provider) {
+  return create(provider, nullptr);
+}
+
+llvh::ErrorOr<AlignedHeapSegment> AlignedHeapSegment::create(
+    StorageProvider *provider,
+    const char *name) {
+  auto result = provider->newStorage(name);
+  if (!result) {
+    return result.getError();
+  }
+  return AlignedHeapSegment{provider, *result};
+}
+
+AlignedHeapSegment::AlignedHeapSegment(StorageProvider *provider, void *lowLim)
+    : lowLim_(static_cast<char *>(lowLim)), provider_(provider) {
+  assert(
+      storageStart(lowLim_) == lowLim_ &&
+      "The lower limit of this storage must be aligned");
   // Storage end must be page-aligned so that markUnused below stays in
   // segment.
   assert(
       reinterpret_cast<uintptr_t>(hiLim()) % oscompat::page_size() == 0 &&
-      "storage end must be page-aligned");
+      "The higher limit must be page aligned");
   if (*this) {
     new (contents()) Contents();
     contents()->protectGuardPage(oscompat::ProtectMode::None);
@@ -49,6 +67,25 @@ AlignedHeapSegment::AlignedHeapSegment(AlignedStorage storage)
   }
 }
 
+void swap(AlignedHeapSegment &a, AlignedHeapSegment &b) {
+  // Field lowLim_ and provider_ need to be swapped to make sure the storage of
+  // a is not deleted when b is destroyed.
+  std::swap(a.lowLim_, b.lowLim_);
+  std::swap(a.provider_, b.provider_);
+  std::swap(a.level_, b.level_);
+  std::swap(a.effectiveEnd_, b.effectiveEnd_);
+}
+
+AlignedHeapSegment::AlignedHeapSegment(AlignedHeapSegment &&other)
+    : AlignedHeapSegment() {
+  swap(*this, other);
+}
+
+AlignedHeapSegment &AlignedHeapSegment::operator=(AlignedHeapSegment &&other) {
+  swap(*this, other);
+  return *this;
+}
+
 AlignedHeapSegment::~AlignedHeapSegment() {
   if (lowLim() == nullptr) {
     return;
@@ -56,17 +93,25 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
   contents()->~Contents();
   __asan_unpoison_memory_region(start(), end() - start());
+
+  if (provider_) {
+    provider_->deleteStorage(lowLim_);
+  }
 }
 
 void AlignedHeapSegment::markUnused(char *start, char *end) {
   assert(
       !llvh::alignmentAdjustment(start, oscompat::page_size()) &&
       !llvh::alignmentAdjustment(end, oscompat::page_size()));
+  assert(start <= end && "Unused region boundaries inverted");
+  assert(lowLim() <= start && end <= hiLim() && "Unused region out-of-bounds");
   // Some kernels seems to require all pages in the mapping to have the same
   // permissions for the advise to "take", so suspend guard page protection
   // temporarily.
   contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
-  storage_.markUnused(start, end);
+#ifndef HERMES_ALLOW_HUGE_PAGES
+  oscompat::vm_unused(start, end - start);
+#endif
   contents()->protectGuardPage(oscompat::ProtectMode::None);
 }
 

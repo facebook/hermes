@@ -297,7 +297,7 @@ class HadesGC final : public GCBase {
 
   /// \return true if the pointer lives in the young generation.
   bool inYoungGen(const void *p) const override {
-    return youngGen_.lowLim() == AlignedStorage::start(p);
+    return youngGen_.lowLim() == AlignedHeapSegment::storageStart(p);
   }
   bool inYoungGen(CompressedPointer p) const {
     return p.getSegmentStart() == youngGenCP_;
@@ -361,8 +361,8 @@ class HadesGC final : public GCBase {
   /// Similar to AlignedHeapSegment except it uses a free list.
   class HeapSegment final : public AlignedHeapSegment {
    public:
-    explicit HeapSegment(AlignedStorage storage)
-        : AlignedHeapSegment(std::move(storage)) {}
+    explicit HeapSegment(AlignedHeapSegment seg)
+        : AlignedHeapSegment(std::move(seg)) {}
     HeapSegment() = default;
 
     /// Record the head of this cell so it can be found by the card scanner.
@@ -784,7 +784,7 @@ class HadesGC final : public GCBase {
     /// \return true if the pointer lives in the segment that is being marked or
     /// evacuated for compaction.
     bool contains(const void *p) const {
-      return start == AlignedStorage::start(p);
+      return start == AlignedHeapSegment::storageStart(p);
     }
     bool contains(CompressedPointer p) const {
       return p.getSegmentStart() == startCP;
@@ -793,7 +793,7 @@ class HadesGC final : public GCBase {
     /// \return true if the pointer lives in the segment that is currently being
     /// evacuated for compaction.
     bool evacContains(const void *p) const {
-      return evacStart == AlignedStorage::start(p);
+      return evacStart == AlignedHeapSegment::storageStart(p);
     }
     bool evacContains(CompressedPointer p) const {
       return p.getSegmentStart() == evacStartCP;

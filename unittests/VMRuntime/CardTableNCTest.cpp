@@ -9,7 +9,7 @@
 
 #include "gtest/gtest.h"
 
-#include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/CardTableNC.h"
 #include "hermes/VM/StorageProvider.h"
 #include "llvh/Support/MathExtras.h"
@@ -36,8 +36,9 @@ struct CardTableNCTest : public ::testing::Test {
 
  protected:
   std::unique_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
-  AlignedStorage as{std::move(AlignedStorage::create(provider.get()).get())};
-  CardTable *table{new (as.lowLim()) CardTable()};
+  AlignedHeapSegment seg{
+      std::move(AlignedHeapSegment::create(provider.get()).get())};
+  CardTable *table{new (seg.lowLim()) CardTable()};
 
   // Addresses in the aligned storage to interact with during the tests.
   std::vector<char *> addrs;
@@ -59,9 +60,9 @@ CardTableNCTest::CardTableNCTest() {
   // For purposes of this test, we'll assume the first writeable byte of
   // the segment comes just after the card table (which is at the
   // start of the segment).
-  auto first = as.lowLim() + sizeof(CardTable);
+  auto first = seg.lowLim() + sizeof(CardTable);
   auto last = reinterpret_cast<char *>(llvh::alignDown(
-      reinterpret_cast<uintptr_t>(as.hiLim() - 1), CardTable::kCardSize));
+      reinterpret_cast<uintptr_t>(seg.hiLim() - 1), CardTable::kCardSize));
 
   addrs = {
       first,
@@ -101,11 +102,11 @@ TEST_F(CardTableNCTest, AddressToIndex) {
 TEST_F(CardTableNCTest, AddressToIndexBoundary) {
   // This test only works if the card table is laid out at the very beginning of
   // the storage.
-  ASSERT_EQ(as.lowLim(), reinterpret_cast<char *>(table));
+  ASSERT_EQ(seg.lowLim(), reinterpret_cast<char *>(table));
 
   const size_t hiLim = CardTable::kValidIndices;
-  EXPECT_EQ(0, table->addressToIndex(as.lowLim()));
-  EXPECT_EQ(hiLim, table->addressToIndex(as.hiLim()));
+  EXPECT_EQ(0, table->addressToIndex(seg.lowLim()));
+  EXPECT_EQ(hiLim, table->addressToIndex(seg.hiLim()));
 }
 
 TEST_F(CardTableNCTest, DirtyAddress) {

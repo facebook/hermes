@@ -38,7 +38,7 @@ struct MarkBitArrayTest : public ::testing::Test {
 
 MarkBitArrayTest::MarkBitArrayTest()
     : provider(StorageProvider::mmapProvider()),
-      seg{std::move(AlignedStorage::create(provider.get()).get())},
+      seg{std::move(AlignedHeapSegment::create(provider.get()).get())},
       mba(seg.markBitArray()) {
   auto first = seg.lowLim();
   auto last = reinterpret_cast<char *>(

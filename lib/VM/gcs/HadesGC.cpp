@@ -1226,7 +1226,7 @@ HadesGC::HadesGC(
       maxHeapSize_{std::max<uint64_t>(
           gcConfig.getMaxHeapSize(),
           // At least one YG segment and one OG segment.
-          2 * AlignedStorage::size())},
+          2 * AlignedHeapSegment::storageSize())},
       provider_(std::move(provider)),
       oldGen_{*this},
       backgroundExecutor_{
@@ -1268,7 +1268,8 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   GCBase::getHeapInfo(info);
   info.allocatedBytes = allocatedBytes();
   // Heap size includes fragmentation, which means every segment is fully used.
-  info.heapSize = (oldGen_.numSegments() + 1) * AlignedStorage::size();
+  info.heapSize =
+      (oldGen_.numSegments() + 1) * AlignedHeapSegment::storageSize();
   // If YG isn't empty, its bytes haven't been accounted for yet, add them here.
   info.totalAllocatedBytes = totalAllocatedBytes_ + youngGen().used();
   info.va = info.heapSize;
@@ -1961,7 +1962,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
     const GCHermesValue *start,
     uint32_t numHVs) {
   assert(
-      AlignedStorage::containedInSame(start, start + numHVs) &&
+      AlignedHeapSegment::containedInSame(start, start + numHVs) &&
       "Range must start and end within a heap segment.");
 
   // Most constructors should be running in the YG, so in the common case, we
@@ -1977,7 +1978,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
     const GCSmallHermesValue *start,
     uint32_t numHVs) {
   assert(
-      AlignedStorage::containedInSame(start, start + numHVs) &&
+      AlignedHeapSegment::containedInSame(start, start + numHVs) &&
       "Range must start and end within a heap segment.");
   AlignedHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
       start, start + numHVs);
@@ -2054,7 +2055,7 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
   // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
   // pointers. But do dirty cards for compactee->yg pointers, since compaction
   // may not happen in the next YG.
-  if (AlignedStorage::containedInSame(loc, value)) {
+  if (AlignedHeapSegment::containedInSame(loc, value)) {
     return;
   }
   if (inYoungGen(value) || compactee_.contains(value)) {
@@ -2815,7 +2816,7 @@ uint64_t HadesGC::externalBytes() const {
 uint64_t HadesGC::segmentFootprint() const {
   size_t totalSegments = oldGen_.numSegments() + (youngGen_ ? 1 : 0) +
       (compactee_.segment ? 1 : 0);
-  return totalSegments * AlignedStorage::size();
+  return totalSegments * AlignedHeapSegment::storageSize();
 }
 
 uint64_t HadesGC::heapFootprint() const {
@@ -2910,7 +2911,7 @@ llvh::ErrorOr<HadesGC::HeapSegment> HadesGC::createSegment() {
   if (!sanitizeRate_ && heapFootprint() >= maxHeapSize_)
     return make_error_code(OOMError::MaxHeapReached);
 
-  auto res = AlignedStorage::create(provider_.get(), "hades-segment");
+  auto res = AlignedHeapSegment::create(provider_.get(), "hades-segment");
   if (!res) {
     return res.getError();
   }

@@ -17,7 +17,6 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AlignedHeapSegment.h"
-#include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
@@ -159,8 +158,8 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
 #if defined(HERMESVM_CONTIGUOUS_HEAP)
   uint64_t maxHeapSize = runtimeConfig.getGCConfig().getMaxHeapSize();
   // Allow some extra segments for the runtime, and as a buffer for the GC.
-  uint64_t providerSize =
-      std::min<uint64_t>(1ULL << 32, maxHeapSize + AlignedStorage::size() * 4);
+  uint64_t providerSize = std::min<uint64_t>(
+      1ULL << 32, maxHeapSize + AlignedHeapSegment::storageSize() * 4);
   std::shared_ptr<StorageProvider> sp =
       StorageProvider::contiguousVAProvider(providerSize);
   auto rt = HeapRuntime<Runtime>::create(sp);
@@ -250,10 +249,10 @@ RuntimeBase::RuntimeBase() {
 void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
 #if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
   char *bias =
-      reinterpret_cast<char *>(lowLim) - (idx << AlignedStorage::kLogSize);
+      reinterpret_cast<char *>(lowLim) - (idx << AlignedHeapSegment::kLogSize);
   segmentMap[idx] = bias;
 #endif
-  assert(lowLim == AlignedStorage::start(lowLim) && "Precondition");
+  assert(lowLim == AlignedHeapSegment::storageStart(lowLim) && "Precondition");
   AlignedHeapSegment::setSegmentIndexFromStart(lowLim, idx);
 }
 

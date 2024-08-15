@@ -9,7 +9,7 @@
 
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/Support/OSCompat.h"
-#include "hermes/VM/AlignedStorage.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 
 #include "llvh/ADT/STLExtras.h"
@@ -49,7 +49,8 @@ static std::unique_ptr<StorageProvider> GetStorageProvider(
     case MmapProvider:
       return StorageProvider::mmapProvider();
     case ContiguousVAProvider:
-      return StorageProvider::contiguousVAProvider(AlignedStorage::size());
+      return StorageProvider::contiguousVAProvider(
+          AlignedHeapSegment::storageSize());
     default:
       return nullptr;
   }
@@ -106,7 +107,7 @@ TEST(StorageProviderTest, LimitedStorageProviderEnforce) {
   constexpr size_t LIM = 2;
   LimitedStorageProvider provider{
       StorageProvider::mmapProvider(),
-      AlignedStorage::size() * LIM,
+      AlignedHeapSegment::storageSize() * LIM,
   };
   void *live[LIM];
   for (size_t i = 0; i < LIM; ++i) {
@@ -127,7 +128,7 @@ TEST(StorageProviderTest, LimitedStorageProviderTrackDelete) {
   constexpr size_t LIM = 2;
   LimitedStorageProvider provider{
       StorageProvider::mmapProvider(),
-      AlignedStorage::size() * LIM,
+      AlignedHeapSegment::storageSize() * LIM,
   };
 
   // If the storage gets deleted, we should be able to re-allocate it, even if
@@ -144,7 +145,7 @@ TEST(StorageProviderTest, LimitedStorageProviderDeleteNull) {
   constexpr size_t LIM = 2;
   LimitedStorageProvider provider{
       StorageProvider::mmapProvider(),
-      AlignedStorage::size() * LIM,
+      AlignedHeapSegment::storageSize() * LIM,
   };
 
   void *live[LIM];
@@ -172,7 +173,8 @@ TEST(StorageProviderTest, StorageProviderAllocsCount) {
   constexpr size_t LIM = 2;
   auto provider =
       std::unique_ptr<LimitedStorageProvider>{new LimitedStorageProvider{
-          StorageProvider::mmapProvider(), AlignedStorage::size() * LIM}};
+          StorageProvider::mmapProvider(),
+          AlignedHeapSegment::storageSize() * LIM}};
 
   constexpr size_t FAILS = 3;
   void *storages[LIM];
@@ -258,17 +260,17 @@ TEST(StorageProviderTest, SucceedsAfterReducing) {
     EXPECT_LE(memAndSize.second, 40 * MB);
   }
   {
-    // Test using the AlignedStorage alignment
-    SetVALimit limit{50 * AlignedStorage::size()};
+    // Test using the aligned storage alignment
+    SetVALimit limit{50 * AlignedHeapSegment::storageSize()};
     auto result = vmAllocateAllowLess(
-        100 * AlignedStorage::size(),
-        30 * AlignedStorage::size(),
-        AlignedStorage::size());
+        100 * AlignedHeapSegment::storageSize(),
+        30 * AlignedHeapSegment::storageSize(),
+        AlignedHeapSegment::storageSize());
     ASSERT_TRUE(result);
     auto memAndSize = result.get();
     EXPECT_TRUE(memAndSize.first != nullptr);
-    EXPECT_GE(memAndSize.second, 30 * AlignedStorage::size());
-    EXPECT_LE(memAndSize.second, 50 * AlignedStorage::size());
+    EXPECT_GE(memAndSize.second, 30 * AlignedHeapSegment::storageSize());
+    EXPECT_LE(memAndSize.second, 50 * AlignedHeapSegment::storageSize());
   }
 }
 

@@ -12,7 +12,9 @@
 
 #include "libhermesvm-config.h"
 
+#include <assert.h>
 #include <setjmp.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -15,7 +15,7 @@ var arr = [];
 // discover the current max array size...
 try
 {
-  // ~/fbsource/xplat/hermes/include/hermes/VM/AlignedStorage.h
+  // ~/fbsource/xplat/hermes/include/hermes/VM/AlignedHeapSegment.h
   var kLogSize = 22;
   var kSize = 1 << kLogSize;
 
