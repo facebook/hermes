@@ -10,7 +10,6 @@ set(CMAKE_UNITY_BUILD OFF)
 # Some tests are disabled due to needing HBC to run in Static Hermes.
 set(RTSources
   AlignedHeapSegmentTest.cpp
-  AlignedStorageTest.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
   Base64UtilTest.cpp

@@ -133,14 +133,13 @@ if (${HERMESVM_GCKIND} STREQUAL "MALLOC")
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
   list(APPEND source_files
             gcs/AlignedHeapSegment.cpp
-            gcs/AlignedStorage.cpp
             gcs/CardTableNC.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
   )
 elseif (${HERMESVM_GCKIND} STREQUAL "RUNTIME")
   list(APPEND source_files
-          gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
+          gcs/AlignedHeapSegment.cpp
           gcs/CardTableNC.cpp gcs/FillerCell.cpp
           gcs/HadesGC.cpp
   )
