@@ -1713,8 +1713,8 @@ void HadesGC::finalizeCompactee() {
   // allocated in the compactee.
   oldGen_.incrementAllocatedBytes(-preAllocated);
 
-  const size_t segIdx =
-      SegmentInfo::segmentIndexFromStart(compactee_.segment->lowLim());
+  const size_t segIdx = AlignedHeapSegment::getSegmentIndexFromStart(
+      compactee_.segment->lowLim());
   segmentIndices_.push_back(segIdx);
   removeSegmentExtentFromCrashManager(std::to_string(segIdx));
   removeSegmentExtentFromCrashManager(kCompacteeNameForCrashMgr);

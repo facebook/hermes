@@ -13,7 +13,6 @@
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/SegmentInfo.h"
 #include "hermes/VM/SymbolID.h"
 
 #include <cassert>

@@ -16,6 +16,7 @@
 #include "hermes/Platform/Logging.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AlignedStorage.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
@@ -253,7 +254,7 @@ void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
   segmentMap[idx] = bias;
 #endif
   assert(lowLim == AlignedStorage::start(lowLim) && "Precondition");
-  SegmentInfo::setSegmentIndexFromStart(lowLim, idx);
+  AlignedHeapSegment::setSegmentIndexFromStart(lowLim, idx);
 }
 
 Runtime::Runtime(

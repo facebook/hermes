@@ -18,7 +18,6 @@
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
-#include "hermes/VM/SegmentInfo.h"
 
 #include "llvh/Support/MathExtras.h"
 
@@ -136,8 +135,8 @@ class AlignedHeapSegment {
     friend class AlignedHeapSegment;
 
     /// Note that because of the Contents object, the first few bytes of the
-    /// card table are unused, we instead use them to store a small SegmentInfo
-    /// struct.
+    /// card table are unused, we instead use them to store a small
+    /// SHSegmentInfo struct.
     CardTable cardTable_;
 
     MarkBitArray markBitArray_;
@@ -171,8 +170,8 @@ class AlignedHeapSegment {
   static constexpr size_t kCardTableUnusedPrefixBytes =
       Contents::kMetadataAndGuardSize / CardTable::kHeapBytesPerCardByte;
   static_assert(
-      sizeof(SegmentInfo) < kCardTableUnusedPrefixBytes,
-      "SegmentInfo does not fit in available unused CardTable space.");
+      sizeof(SHSegmentInfo) < kCardTableUnusedPrefixBytes,
+      "SHSegmentInfo does not fit in available unused CardTable space.");
 
   /// The offset from the beginning of a segment of the allocatable region.
   static constexpr size_t offsetOfAllocRegion{offsetof(Contents, allocRegion_)};
@@ -210,6 +209,23 @@ class AlignedHeapSegment {
    private:
     GCCell *cell_{nullptr};
   };
+
+  /// Returns the index of the segment containing \p lowLim, which is required
+  /// to be the start of its containing segment.  (This can allow extra
+  /// efficiency, in cases where the segment start has already been computed.)
+  static unsigned getSegmentIndexFromStart(const void *lowLim) {
+    assert(lowLim == storageStart(lowLim) && "Precondition.");
+    auto *segInfo = reinterpret_cast<const SHSegmentInfo *>(lowLim);
+    return segInfo->index;
+  }
+
+  /// Requires that \p lowLim is the start address of a segment, and sets
+  /// that segment's index to \p index.
+  static void setSegmentIndexFromStart(void *lowLim, unsigned index) {
+    assert(lowLim == storageStart(lowLim) && "Precondition.");
+    auto *segInfo = reinterpret_cast<SHSegmentInfo *>(lowLim);
+    segInfo->index = index;
+  }
 
   /// Attempt an allocation of the given size in the segment.  If there is
   /// sufficent space, cast the space as a GCCell, and returns an uninitialized
