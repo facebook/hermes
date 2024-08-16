@@ -23,6 +23,7 @@
 #include "llvh/Support/FileSystem.h"
 #include "llvh/Support/Program.h"
 #include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/DebugOptions.h"
 #include <cassert>
 #include <system_error>
 #include <string>
@@ -30,8 +31,21 @@
 
 using namespace llvh;
 
-static cl::opt<bool> ViewBackground("view-background", cl::Hidden,
-  cl::desc("Execute graph viewer in the background. Creates tmp file litter."));
+#ifdef __APPLE__
+namespace {
+struct CreateViewBackground {
+  static void *call() {
+    return new cl::opt<bool>("view-background", cl::Hidden,
+                             cl::desc("Execute graph viewer in the background. "
+                                      "Creates tmp file litter."));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool>, CreateViewBackground> ViewBackground;
+void llvh::initGraphWriterOptions() { *ViewBackground; }
+#else
+void llvh::initGraphWriterOptions() {}
+#endif
 
 std::string llvh::DOT::EscapeString(const std::string &Label) {
   std::string Str(Label);
@@ -154,7 +168,7 @@ bool llvh::DisplayGraph(StringRef FilenameRef, bool wait,
   GraphSession S;
 
 #ifdef __APPLE__
-  wait &= !ViewBackground;
+  wait &= !*ViewBackground;
   if (S.TryFindProgram("open", ViewerPath)) {
     std::vector<StringRef> args;
     args.push_back(ViewerPath);

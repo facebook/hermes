@@ -9,20 +9,32 @@
 
 #include "llvh/Support/WithColor.h"
 #include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/ManagedStatic.h"
+#include "llvh/Support/DebugOptions.h"
 
 using namespace llvh;
 
-cl::OptionCategory llvh::ColorCategory("Color Options");
-
-static cl::opt<cl::boolOrDefault>
-    UseColor("color", cl::cat(ColorCategory),
-             cl::desc("Use colors in output (default=autodetect)"),
-             cl::init(cl::BOU_UNSET));
+cl::OptionCategory &llvh::getColorCategory() {
+  static cl::OptionCategory ColorCategory("Color Options");
+  return ColorCategory;
+}
+namespace {
+struct CreateUseColor {
+  static void *call() {
+    return new cl::opt<cl::boolOrDefault>(
+        "color", cl::cat(getColorCategory()),
+        cl::desc("Use colors in output (default=autodetect)"),
+        cl::init(cl::BOU_UNSET));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<cl::boolOrDefault>, CreateUseColor> UseColor;
+void llvh::initWithColorOptions() { *UseColor; }
 
 bool WithColor::colorsEnabled(raw_ostream &OS) {
-  if (UseColor == cl::BOU_UNSET)
+  if (*UseColor == cl::BOU_UNSET)
     return OS.has_colors();
-  return UseColor == cl::BOU_TRUE;
+  return *UseColor == cl::BOU_TRUE;
 }
 
 WithColor::WithColor(raw_ostream &OS, HighlightColor Color) : OS(OS) {

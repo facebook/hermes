@@ -39,6 +39,7 @@
 #include "llvh/Support/Process.h"
 #include "llvh/Support/StringSaver.h"
 #include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/DebugOptions.h"
 #include <cstdlib>
 #include <map>
 using namespace llvh;
@@ -375,9 +376,6 @@ void Option::setArgStr(StringRef S) {
   assert((S.empty() || S[0] != '-') && "Option can't start with '-");
   ArgStr = S;
 }
-
-// Initialise the general option category.
-OptionCategory llvh::cl::GeneralCategory("General options");
 
 void OptionCategory::registerCategory() {
   GlobalParser->registerCategory(this);
@@ -1069,8 +1067,10 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
   ParseCommandLineOptions(newArgc, &newArgv[0], StringRef(Overview));
 }
 
+static void initCommonOptions();
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
                                  StringRef Overview, raw_ostream *Errs) {
+  initCommonOptions();
   return GlobalParser->ParseCommandLineOptions(argc, argv, Overview,
                                                Errs);
 }
@@ -2028,102 +2028,6 @@ public:
 
 } // End anonymous namespace
 
-// Declare the four HelpPrinter instances that are used to print out help, or
-// help-hidden as an uncategorized list or in categories.
-static HelpPrinter UncategorizedNormalPrinter(false);
-static HelpPrinter UncategorizedHiddenPrinter(true);
-static CategorizedHelpPrinter CategorizedNormalPrinter(false);
-static CategorizedHelpPrinter CategorizedHiddenPrinter(true);
-
-// Declare HelpPrinter wrappers that will decide whether or not to invoke
-// a categorizing help printer
-static HelpPrinterWrapper WrappedNormalPrinter(UncategorizedNormalPrinter,
-                                               CategorizedNormalPrinter);
-static HelpPrinterWrapper WrappedHiddenPrinter(UncategorizedHiddenPrinter,
-                                               CategorizedHiddenPrinter);
-
-// Define a category for generic options that all tools should have.
-static cl::OptionCategory GenericCategory("Generic Options");
-
-// Define uncategorized help printers.
-// -help-list is hidden by default because if Option categories are being used
-// then -help behaves the same as -help-list.
-static cl::opt<HelpPrinter, true, parser<bool>> HLOp(
-    "help-list",
-    cl::desc("Display list of available options (-help-list-hidden for more)"),
-    cl::location(UncategorizedNormalPrinter), cl::Hidden, cl::ValueDisallowed,
-    cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-static cl::opt<HelpPrinter, true, parser<bool>>
-    HLHOp("help-list-hidden", cl::desc("Display list of all available options"),
-          cl::location(UncategorizedHiddenPrinter), cl::Hidden,
-          cl::ValueDisallowed, cl::cat(GenericCategory),
-          cl::sub(*AllSubCommands));
-
-// Define uncategorized/categorized help printers. These printers change their
-// behaviour at runtime depending on whether one or more Option categories have
-// been declared.
-static cl::opt<HelpPrinterWrapper, true, parser<bool>>
-    HOp("help", cl::desc("Display available options (-help-hidden for more)"),
-        cl::location(WrappedNormalPrinter), cl::ValueDisallowed,
-        cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-static cl::opt<HelpPrinterWrapper, true, parser<bool>>
-    HHOp("help-hidden", cl::desc("Display all available options"),
-         cl::location(WrappedHiddenPrinter), cl::Hidden, cl::ValueDisallowed,
-         cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-static cl::opt<bool> PrintOptions(
-    "print-options",
-    cl::desc("Print non-default options after command line parsing"),
-    cl::Hidden, cl::init(false), cl::cat(GenericCategory),
-    cl::sub(*AllSubCommands));
-
-static cl::opt<bool> PrintAllOptions(
-    "print-all-options",
-    cl::desc("Print all option values after command line parsing"), cl::Hidden,
-    cl::init(false), cl::cat(GenericCategory), cl::sub(*AllSubCommands));
-
-void HelpPrinterWrapper::operator=(bool Value) {
-  if (!Value)
-    return;
-
-  // Decide which printer to invoke. If more than one option category is
-  // registered then it is useful to show the categorized help instead of
-  // uncategorized help.
-  if (GlobalParser->RegisteredOptionCategories.size() > 1) {
-    // unhide -help-list option so user can have uncategorized output if they
-    // want it.
-    HLOp.setHiddenFlag(NotHidden);
-
-    CategorizedPrinter = true; // Invoke categorized printer
-  } else
-    UncategorizedPrinter = true; // Invoke uncategorized printer
-}
-
-// Print the value of each option.
-void cl::PrintOptionValues() { GlobalParser->printOptionValues(); }
-
-void CommandLineParser::printOptionValues() {
-  if (!PrintOptions && !PrintAllOptions)
-    return;
-
-  SmallVector<std::pair<const char *, Option *>, 128> Opts;
-  sortOpts(ActiveSubCommand->OptionsMap, Opts, /*ShowHidden*/ true);
-
-  // Compute the maximum argument length...
-  size_t MaxArgLen = 0;
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
-
-  for (size_t i = 0, e = Opts.size(); i != e; ++i)
-    Opts[i].second->printOptionValue(MaxArgLen, PrintAllOptions);
-}
-
-static VersionPrinterTy OverrideVersionPrinter = nullptr;
-
-static std::vector<VersionPrinterTy> *ExtraVersionPrinters = nullptr;
-
 namespace {
 class VersionPrinter {
 public:
@@ -2157,62 +2061,198 @@ public:
 #endif
     OS << '\n';
   }
-  void operator=(bool OptionWasSpecified) {
+  void operator=(bool OptionWasSpecified);
+};
+
+struct CommandLineCommonOptions {
+  // Declare the four HelpPrinter instances that are used to print out help, or
+  // help-hidden as an uncategorized list or in categories.
+  HelpPrinter UncategorizedNormalPrinter{false};
+  HelpPrinter UncategorizedHiddenPrinter{true};
+  CategorizedHelpPrinter CategorizedNormalPrinter{false};
+  CategorizedHelpPrinter CategorizedHiddenPrinter{true};
+  // Declare HelpPrinter wrappers that will decide whether or not to invoke
+  // a categorizing help printer
+  HelpPrinterWrapper WrappedNormalPrinter{UncategorizedNormalPrinter,
+                                          CategorizedNormalPrinter};
+  HelpPrinterWrapper WrappedHiddenPrinter{UncategorizedHiddenPrinter,
+                                          CategorizedHiddenPrinter};
+  // Define a category for generic options that all tools should have.
+  cl::OptionCategory GenericCategory{"Generic Options"};
+
+  // Define uncategorized help printers.
+  // --help-list is hidden by default because if Option categories are being
+  // used then --help behaves the same as --help-list.
+  cl::opt<HelpPrinter, true, parser<bool>> HLOp{
+      "help-list",
+      cl::desc(
+          "Display list of available options (--help-list-hidden for more)"),
+      cl::location(UncategorizedNormalPrinter),
+      cl::Hidden,
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  cl::opt<HelpPrinter, true, parser<bool>> HLHOp{
+      "help-list-hidden",
+      cl::desc("Display list of all available options"),
+      cl::location(UncategorizedHiddenPrinter),
+      cl::Hidden,
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  // Define uncategorized/categorized help printers. These printers change their
+  // behaviour at runtime depending on whether one or more Option categories
+  // have been declared.
+  cl::opt<HelpPrinterWrapper, true, parser<bool>> HOp{
+      "help",
+      cl::desc("Display available options (--help-hidden for more)"),
+      cl::location(WrappedNormalPrinter),
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  cl::opt<HelpPrinterWrapper, true, parser<bool>> HHOp{
+      "help-hidden",
+      cl::desc("Display all available options"),
+      cl::location(WrappedHiddenPrinter),
+      cl::Hidden,
+      cl::ValueDisallowed,
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  cl::opt<bool> PrintOptions{
+      "print-options",
+      cl::desc("Print non-default options after command line parsing"),
+      cl::Hidden,
+      cl::init(false),
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  cl::opt<bool> PrintAllOptions{
+      "print-all-options",
+      cl::desc("Print all option values after command line parsing"),
+      cl::Hidden,
+      cl::init(false),
+      cl::cat(GenericCategory),
+      cl::sub(*AllSubCommands)};
+
+  VersionPrinterTy OverrideVersionPrinter = nullptr;
+
+  std::vector<VersionPrinterTy> ExtraVersionPrinters;
+
+  // Define the --version option that prints out the LLVM version for the tool
+  VersionPrinter VersionPrinterInstance;
+
+  cl::opt<VersionPrinter, true, parser<bool>> VersOp{
+      "version", cl::desc("Display the version of this program"),
+      cl::location(VersionPrinterInstance), cl::ValueDisallowed,
+      cl::cat(GenericCategory)};
+};
+} // End anonymous namespace
+
+// Lazy-initialized global instance of options controlling the command-line
+// parser and general handling.
+static ManagedStatic<CommandLineCommonOptions> CommonOptions;
+
+static void initCommonOptions() {
+  *CommonOptions;
+  initGraphWriterOptions();
+  initSignalsOptions();
+  initStatisticOptions();
+  initTimerOptions();
+  initWithColorOptions();
+  initDebugOptions();
+}
+
+OptionCategory &cl::getGeneralCategory() {
+  // Initialise the general option category.
+  static OptionCategory GeneralCategory{"General options"};
+  return GeneralCategory;
+}
+
+void VersionPrinter::operator=(bool OptionWasSpecified) {
     if (!OptionWasSpecified)
       return;
 
-    if (OverrideVersionPrinter != nullptr) {
-      OverrideVersionPrinter(outs());
+    if (CommonOptions->OverrideVersionPrinter != nullptr) {
+      CommonOptions->OverrideVersionPrinter(outs());
       exit(0);
     }
     print();
 
     // Iterate over any registered extra printers and call them to add further
     // information.
-    if (ExtraVersionPrinters != nullptr) {
+    if (!CommonOptions->ExtraVersionPrinters.empty()) {
       outs() << '\n';
-      for (auto I : *ExtraVersionPrinters)
+      for (auto I : CommonOptions->ExtraVersionPrinters)
         I(outs());
     }
 
     exit(0);
-  }
-};
-} // End anonymous namespace
+}
 
-// Define the --version option that prints out the LLVM version for the tool
-static VersionPrinter VersionPrinterInstance;
+void HelpPrinterWrapper::operator=(bool Value) {
+  if (!Value)
+    return;
 
-static cl::opt<VersionPrinter, true, parser<bool>>
-    VersOp("version", cl::desc("Display the version of this program"),
-           cl::location(VersionPrinterInstance), cl::ValueDisallowed,
-           cl::cat(GenericCategory));
+  // Decide which printer to invoke. If more than one option category is
+  // registered then it is useful to show the categorized help instead of
+  // uncategorized help.
+  if (GlobalParser->RegisteredOptionCategories.size() > 1) {
+    // unhide --help-list option so user can have uncategorized output if they
+    // want it.
+    CommonOptions->HLOp.setHiddenFlag(NotHidden);
+
+    CategorizedPrinter = true; // Invoke categorized printer
+  } else
+    UncategorizedPrinter = true; // Invoke uncategorized printer
+}
+
+// Print the value of each option.
+void cl::PrintOptionValues() { GlobalParser->printOptionValues(); }
+
+void CommandLineParser::printOptionValues() {
+  if (!CommonOptions->PrintOptions && !CommonOptions->PrintAllOptions)
+    return;
+
+  SmallVector<std::pair<const char *, Option *>, 128> Opts;
+  sortOpts(ActiveSubCommand->OptionsMap, Opts, /*ShowHidden*/ true);
+
+  // Compute the maximum argument length...
+  size_t MaxArgLen = 0;
+  for (size_t i = 0, e = Opts.size(); i != e; ++i)
+    MaxArgLen = std::max(MaxArgLen, Opts[i].second->getOptionWidth());
+
+  for (size_t i = 0, e = Opts.size(); i != e; ++i)
+    Opts[i].second->printOptionValue(MaxArgLen, CommonOptions->PrintAllOptions);
+}
+
 
 // Utility function for printing the help message.
 void cl::PrintHelpMessage(bool Hidden, bool Categorized) {
   if (!Hidden && !Categorized)
-    UncategorizedNormalPrinter.printHelp();
+    CommonOptions->UncategorizedNormalPrinter.printHelp();
   else if (!Hidden && Categorized)
-    CategorizedNormalPrinter.printHelp();
+    CommonOptions->CategorizedNormalPrinter.printHelp();
   else if (Hidden && !Categorized)
-    UncategorizedHiddenPrinter.printHelp();
+    CommonOptions->UncategorizedHiddenPrinter.printHelp();
   else
-    CategorizedHiddenPrinter.printHelp();
+    CommonOptions->CategorizedHiddenPrinter.printHelp();
 }
 
 /// Utility function for printing version number.
-void cl::PrintVersionMessage() { VersionPrinterInstance.print(); }
+void cl::PrintVersionMessage() { CommonOptions->VersionPrinterInstance.print(); }
 
-void cl::SetVersionPrinter(VersionPrinterTy func) { OverrideVersionPrinter = func; }
+void cl::SetVersionPrinter(VersionPrinterTy func) { CommonOptions->OverrideVersionPrinter = func; }
 
 void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
-  if (!ExtraVersionPrinters)
-    ExtraVersionPrinters = new std::vector<VersionPrinterTy>;
-
-  ExtraVersionPrinters->push_back(func);
+  CommonOptions->ExtraVersionPrinters.push_back(func);
 }
 
 StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+  initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
   assert(is_contained(Subs, &Sub));
@@ -2225,21 +2265,23 @@ cl::getRegisteredSubcommands() {
 }
 
 void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
+  initCommonOptions();
   for (auto &I : Sub.OptionsMap) {
     if (I.second->Category != &Category &&
-        I.second->Category != &GenericCategory)
+        I.second->Category != &CommonOptions->GenericCategory)
       I.second->setHiddenFlag(cl::ReallyHidden);
   }
 }
 
 void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
                               SubCommand &Sub) {
+  initCommonOptions();
   auto CategoriesBegin = Categories.begin();
   auto CategoriesEnd = Categories.end();
   for (auto &I : Sub.OptionsMap) {
     if (std::find(CategoriesBegin, CategoriesEnd, I.second->Category) ==
             CategoriesEnd &&
-        I.second->Category != &GenericCategory)
+        I.second->Category != &CommonOptions->GenericCategory)
       I.second->setHiddenFlag(cl::ReallyHidden);
   }
 }
