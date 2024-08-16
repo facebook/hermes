@@ -18,6 +18,18 @@ namespace m = ::facebook::hermes::cdp::message;
 
 constexpr size_t kMaxPreviewProperties = 10;
 
+// Parity with V8. 13 Aug, 2024
+// https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/value-mirror.cc;l=191-201;drc=bdc48d1b1312cc40c00282efb1c9c5f41dcdca9a
+static std::string abbreviateString(const std::string &str) {
+  const std::string::size_type kMaxLength = 100;
+  const std::string kEllipsis = "…";
+  if (str.length() <= kMaxLength) {
+    return str;
+  }
+
+  return str.substr(0, kMaxLength - 1) + kEllipsis;
+}
+
 static bool isObjectInstanceOfError(
     const jsi::Object &obj,
     facebook::jsi::Runtime &runtime) {
@@ -63,6 +75,11 @@ static m::runtime::PropertyPreview generatePropertyPreview(
       preview.subtype = "array";
       preview.value = "Array(" +
           std::to_string(obj.getArray(runtime).length(runtime)) + ")";
+    } else if (isObjectInstanceOfError(obj, runtime)) {
+      preview.type = "object";
+      preview.subtype = "error";
+      preview.value = abbreviateString(
+          obj.getProperty(runtime, "stack").toString(runtime).utf8(runtime));
     } else {
       preview.type = "object";
       preview.value = "Object";
