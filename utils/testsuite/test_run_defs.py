@@ -44,6 +44,8 @@ class TestRunArgs(object):
     """Whether to test with shermes"""
     opt: bool
     """Whether to enable optimizer"""
+    timeout: int
+    """Timeout (in seconds) for compiling/running each test."""
 
 
 class Suite(ABC):
@@ -229,6 +231,7 @@ class Test262Suite(Suite):
             args.lazy,
             args.shermes,
             args.opt,
+            args.timeout,
         )
         return await compile_and_run(js_sources, compile_run_args)
 
@@ -289,6 +292,7 @@ class MjsunitSuite(Suite):
             args.lazy,
             args.shermes,
             args.opt,
+            args.timeout,
             extra_compile_vm_args,
         )
         return await compile_and_run([js_source], compile_run_args)
@@ -372,6 +376,7 @@ class AstCheckSuite(Suite):
                         args.binary_directory,
                         self.is_flow,
                         True,
+                        args.timeout,
                     )
                 ).code
             # Check again after possible retry.
@@ -383,7 +388,12 @@ class AstCheckSuite(Suite):
                 return TestCaseResult(full_test_name, TestResultCode.TEST_FAILED, msg)
 
         result = await generate_ast(
-            full_test_name, args.test_file, args.binary_directory, self.is_flow, False
+            full_test_name,
+            args.test_file,
+            args.binary_directory,
+            self.is_flow,
+            False,
+            args.timeout,
         )
         if expected_file.endswith(".tree.json"):
             try:

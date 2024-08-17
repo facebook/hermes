@@ -19,9 +19,6 @@ ES6_ARGS = ["-Xes6-promise", "-Xes6-proxy"]
 EXTRA_RUN_ARGS = ["-Xhermes-internal-test-methods"]
 USE_MICROTASK_FLAG = ["-Xmicrotask-queue"]
 
-TIMEOUT_COMPILER = 200
-TIMEOUT_VM = 200
-
 
 @dataclass
 class ExtraCompileVMArgs(object):
@@ -51,6 +48,8 @@ class CompileRunArgs(object):
     """Run with shermes."""
     opt: bool
     """Enable optimizer, i.e., use -O flag instead of -O0."""
+    timeout: int
+    """Timeout (in seconds) for compiling/running each test."""
     extra_compile_vm_args: Optional[ExtraCompileVMArgs] = None
     """Extra compile/run arguments given by specific testsuites."""
 
@@ -92,7 +91,9 @@ async def run(
     )
     stdout, stderr = (None, None)
     try:
-        (stdout, stderr) = await wait_for(proc.communicate(), timeout=TIMEOUT_COMPILER)
+        (stdout, stderr) = await wait_for(
+            proc.communicate(), timeout=compile_run_args.timeout
+        )
     except TimeoutError:
         msg = f"FAIL: Execution of binary timed out for {file_to_run}"
         output = f"Run command: {' '.join(cmd_args)}\n"
@@ -152,6 +153,7 @@ async def compile_with_args(
     test_name: str,
     expect_compile_failure: bool,
     args: List[str],
+    timeout: int,
 ) -> Optional[TestCaseResult]:
     """
     Run hermesc with given arguments.
@@ -169,7 +171,7 @@ async def compile_with_args(
     )
     stdout, stderr = (None, None)
     try:
-        (stdout, stderr) = await wait_for(proc.communicate(), timeout=TIMEOUT_COMPILER)
+        (stdout, stderr) = await wait_for(proc.communicate(), timeout=timeout)
     except TimeoutError:
         msg = f"FAIL: Compilation timed out, args: {args}"
         output = f"Run command: {' '.join(args)}"
@@ -266,6 +268,7 @@ async def compile_and_run_single(
         compile_run_args.test_name,
         expect_compile_failure,
         cmd_args,
+        compile_run_args.timeout,
     ):
         return unexpected_compile_result
 
@@ -305,7 +308,10 @@ async def compile_and_run(
 
 
 async def run_hermes_simple(
-    hermes_exe: PathT, test_name: str, args: List[str]
+    hermes_exe: PathT,
+    test_name: str,
+    args: List[str],
+    timeout: int,
 ) -> TestCaseResult:
     """
     Simply invoke hermes on a JS file with given arguments and return the
@@ -320,7 +326,7 @@ async def run_hermes_simple(
     )
     stdout, stderr = (None, None)
     try:
-        (stdout, stderr) = await wait_for(proc.communicate(), timeout=TIMEOUT_COMPILER)
+        (stdout, stderr) = await wait_for(proc.communicate(), timeout=timeout)
     except TimeoutError:
         proc.kill()
         msg = "FAIL: Hermes timeout"
@@ -347,6 +353,7 @@ async def generate_ast(
     binary_path: PathT,
     is_flow: bool,
     transformed: bool,
+    timeout: int,
 ) -> TestCaseResult:
     """
     Generate the AST for given source file.
@@ -380,7 +387,9 @@ async def generate_ast(
             with tempfile.NamedTemporaryFile() as evaluated:
                 # evaluate the source to get the actual test input.
                 eval_args = [to_evaluate.name]
-                result = await run_hermes_simple(hermes_exe, test_name, eval_args)
+                result = await run_hermes_simple(
+                    hermes_exe, test_name, eval_args, timeout
+                )
                 if result.code != TestResultCode.TEST_PASSED:
                     return result
                 # get rid of the newline added by print().
@@ -388,6 +397,6 @@ async def generate_ast(
                 evaluated.flush()
                 # run the test through Hermes parser.
                 return await run_hermes_simple(
-                    hermes_exe, test_name, args + [evaluated.name]
+                    hermes_exe, test_name, args + [evaluated.name], timeout
                 )
-    return await run_hermes_simple(hermes_exe, test_name, args + [test_file])
+    return await run_hermes_simple(hermes_exe, test_name, args + [test_file], timeout)

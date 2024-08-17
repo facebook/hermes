@@ -30,6 +30,7 @@ from .typing_defs import PathT
 from .utils import Color, TestResultCode
 
 N_DEFAULT_CPU = 10
+DEFAULT_TIMEOUT = 200
 try:
     RESOURCE_ROOT = importlib.resources.files(__package__)
 except TypeError:
@@ -114,6 +115,13 @@ def create_parser():
         "test case to standard output, including any generated use-strict "
         "directives or stubbed pragmas. When this flag is provided, only one "
         "path is expected.",
+    )
+    parser.add_argument(
+        "--timeout",
+        dest="timeout",
+        default=DEFAULT_TIMEOUT,
+        type=int,
+        help="Timeout for compiling and running each test.",
     )
     parser.add_argument(
         "paths", type=str, nargs="+", help="Paths to testsuite, can be dir or file"
@@ -242,6 +250,7 @@ async def run(
     lazy: bool,
     shermes: bool,
     opt: bool,
+    timeout: int,
     verbose: bool,
 ) -> int:
     """
@@ -335,6 +344,7 @@ async def run(
             lazy,
             shermes,
             opt,
+            timeout,
         )
         tasks.append(suite.run_test(test_run_args))
 
@@ -446,6 +456,7 @@ async def main() -> int:
         args.lazy,
         args.shermes,
         args.opt,
+        args.timeout,
         args.verbose,
     )
 
