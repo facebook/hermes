@@ -92,10 +92,10 @@ function test2(x,y) {
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "sink0": string
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS4.x]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS4.y]: any
-// CHECK-NEXT:  %9 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %7: any, %8: any
+// CHECK-NEXT:  %9 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: any, %8: any
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) globalObject: object, "sink1": string
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS4.x]: any
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS4.y]: any
-// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: any, %12: any
+// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: any, %12: any
 // CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:function_end

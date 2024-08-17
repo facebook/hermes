@@ -30,9 +30,9 @@ function numberPlusBigInt() {
 // CHKIR:function numberPlusBigInt(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryRightShiftInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number

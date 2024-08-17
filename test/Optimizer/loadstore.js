@@ -44,7 +44,7 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
 // OPT-CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "test2": string
 // OPT-CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// OPT-CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // OPT-CHECK-NEXT:       ReturnInst %8: any
 // OPT-CHECK-NEXT:function_end
 
@@ -66,7 +66,7 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %2: string|number|bigint, 4: number
 // OPT-CHECK-NEXT:  %8 = BinaryAddInst (:string|number) %2: string|number|bigint, 5: number
 // OPT-CHECK-NEXT:  %9 = BinaryAddInst (:string|number) %2: string|number|bigint, 6: number
-// OPT-CHECK-NEXT:  %10 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: string|number, %5: string|number, %6: string|number, %7: string|number, %8: string|number, %9: string|number
+// OPT-CHECK-NEXT:  %10 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: string|number, %5: string|number, %6: string|number, %7: string|number, %8: string|number, %9: string|number
 // OPT-CHECK-NEXT:        ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
 
@@ -84,7 +84,7 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        StoreStackInst %10: any, %7: any
 // CHECK-NEXT:  %12 = LoadStackInst (:any) %7: any
 // CHECK-NEXT:        ReturnInst %12: any
@@ -142,6 +142,6 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %21 = BinaryAddInst (:any) %20: any, 5: number
 // CHECK-NEXT:  %22 = LoadFrameInst (:any) %1: environment, [%VS2.x]: any
 // CHECK-NEXT:  %23 = BinaryAddInst (:any) %22: any, 6: number
-// CHECK-NEXT:  %24 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: any, %15: any, %17: any, %19: any, %21: any, %23: any
+// CHECK-NEXT:  %24 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %13: any, %15: any, %17: any, %19: any, %21: any, %23: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

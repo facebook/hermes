@@ -119,7 +119,7 @@ function foo_var() {
 // CHECK-NEXT:  %17 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %18 = LoadPropertyInst (:any) %17: any, "push": string
 // CHECK-NEXT:  %19 = CreateFunctionInst (:object) %3: environment, %" 1#"(): functionCode
-// CHECK-NEXT:  %20 = CallInst (:any) %18: any, empty: any, empty: any, undefined: undefined, %17: any, %19: object
+// CHECK-NEXT:  %20 = CallInst (:any) %18: any, empty: any, false: boolean, empty: any, undefined: undefined, %17: any, %19: object
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) %3: environment, [%VS1.i#1]: any
 // CHECK-NEXT:  %22 = UnaryIncInst (:number|bigint) %21: any
 // CHECK-NEXT:        StoreFrameInst %3: environment, %22: number|bigint, [%VS1.i#1]: any
@@ -129,7 +129,7 @@ function foo_var() {
 // CHECK-NEXT:  %26 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %27 = LoadPropertyInst (:any) %26: any, "push": string
 // CHECK-NEXT:  %28 = CreateFunctionInst (:object) %3: environment, %""(): functionCode
-// CHECK-NEXT:  %29 = CallInst (:any) %27: any, empty: any, empty: any, undefined: undefined, %26: any, %28: object
+// CHECK-NEXT:  %29 = CallInst (:any) %27: any, empty: any, false: boolean, empty: any, undefined: undefined, %26: any, %28: object
 // CHECK-NEXT:  %30 = LoadFrameInst (:any) %3: environment, [%VS1.i#1]: any
 // CHECK-NEXT:  %31 = BinaryAddInst (:any) %30: any, 2: number
 // CHECK-NEXT:        StoreFrameInst %3: environment, %31: any, [%VS1.i#1]: any
@@ -138,10 +138,10 @@ function foo_var() {
 // CHECK-NEXT:  %34 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %35 = LoadPropertyInst (:any) %34: any, "push": string
 // CHECK-NEXT:  %36 = CreateFunctionInst (:object) %3: environment, %" 2#"(): functionCode
-// CHECK-NEXT:  %37 = CallInst (:any) %35: any, empty: any, empty: any, undefined: undefined, %34: any, %36: object
+// CHECK-NEXT:  %37 = CallInst (:any) %35: any, empty: any, false: boolean, empty: any, undefined: undefined, %34: any, %36: object
 // CHECK-NEXT:  %38 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %39 = LoadFrameInst (:any) %3: environment, [%VS1.i#1]: any
-// CHECK-NEXT:  %40 = CallInst (:any) %38: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %39: any
+// CHECK-NEXT:  %40 = CallInst (:any) %38: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %39: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %42 = LoadFrameInst (:any) %3: environment, [%VS1.i#1]: any
@@ -184,7 +184,7 @@ function foo_var() {
 // CHECK-NEXT:  %22 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %23 = LoadPropertyInst (:any) %22: any, "push": string
 // CHECK-NEXT:  %24 = CreateFunctionInst (:object) %3: environment, %" 3#"(): functionCode
-// CHECK-NEXT:  %25 = CallInst (:any) %23: any, empty: any, empty: any, undefined: undefined, %22: any, %24: object
+// CHECK-NEXT:  %25 = CallInst (:any) %23: any, empty: any, false: boolean, empty: any, undefined: undefined, %22: any, %24: object
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) %3: environment, [%VS2.i#1]: any
 // CHECK-NEXT:  %27 = BinaryAddInst (:any) %26: any, 2: number
 // CHECK-NEXT:        StoreFrameInst %3: environment, %27: any, [%VS2.i#1]: any
@@ -193,10 +193,10 @@ function foo_var() {
 // CHECK-NEXT:  %30 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %31 = LoadPropertyInst (:any) %30: any, "push": string
 // CHECK-NEXT:  %32 = CreateFunctionInst (:object) %3: environment, %" 4#"(): functionCode
-// CHECK-NEXT:  %33 = CallInst (:any) %31: any, empty: any, empty: any, undefined: undefined, %30: any, %32: object
+// CHECK-NEXT:  %33 = CallInst (:any) %31: any, empty: any, false: boolean, empty: any, undefined: undefined, %30: any, %32: object
 // CHECK-NEXT:  %34 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %35 = LoadFrameInst (:any) %3: environment, [%VS2.i#1]: any
-// CHECK-NEXT:  %36 = CallInst (:any) %34: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %35: any
+// CHECK-NEXT:  %36 = CallInst (:any) %34: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %35: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %38 = LoadFrameInst (:any) %3: environment, [%VS2.i#1]: any
@@ -228,7 +228,7 @@ function foo_var() {
 // CHECK-NEXT:  %13 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %14 = LoadPropertyInst (:any) %13: any, "push": string
 // CHECK-NEXT:  %15 = CreateFunctionInst (:object) %3: environment, %" 5#"(): functionCode
-// CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, %13: any, %15: object
+// CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, %13: any, %15: object
 // CHECK-NEXT:  %17 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
 // CHECK-NEXT:  %18 = UnaryIncInst (:number|bigint) %17: any
 // CHECK-NEXT:        StoreFrameInst %3: environment, %18: number|bigint, [%VS3.i#1]: any
@@ -238,10 +238,10 @@ function foo_var() {
 // CHECK-NEXT:  %22 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %23 = LoadPropertyInst (:any) %22: any, "push": string
 // CHECK-NEXT:  %24 = CreateFunctionInst (:object) %3: environment, %" 6#"(): functionCode
-// CHECK-NEXT:  %25 = CallInst (:any) %23: any, empty: any, empty: any, undefined: undefined, %22: any, %24: object
+// CHECK-NEXT:  %25 = CallInst (:any) %23: any, empty: any, false: boolean, empty: any, undefined: undefined, %22: any, %24: object
 // CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
-// CHECK-NEXT:  %28 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %27: any
+// CHECK-NEXT:  %28 = CallInst (:any) %26: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %27: any
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %30 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
@@ -285,10 +285,10 @@ function foo_var() {
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %21 = LoadPropertyInst (:any) %20: any, "push": string
 // CHECK-NEXT:  %22 = CreateFunctionInst (:object) %3: environment, %" 7#"(): functionCode
-// CHECK-NEXT:  %23 = CallInst (:any) %21: any, empty: any, empty: any, undefined: undefined, %20: any, %22: object
+// CHECK-NEXT:  %23 = CallInst (:any) %21: any, empty: any, false: boolean, empty: any, undefined: undefined, %20: any, %22: object
 // CHECK-NEXT:  %24 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %25 = LoadFrameInst (:any) %3: environment, [%VS4.i#1]: any
-// CHECK-NEXT:  %26 = CallInst (:any) %24: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %25: any
+// CHECK-NEXT:  %26 = CallInst (:any) %24: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %25: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %28 = LoadFrameInst (:any) %3: environment, [%VS4.i#1]: any
@@ -325,7 +325,7 @@ function foo_var() {
 // CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %11 = LoadFrameInst (:any|empty) %1: environment, [%VS5.i]: any|empty
 // CHECK-NEXT:  %12 = UnionNarrowTrustedInst (:any) %11: any|empty
-// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: any
+// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
@@ -360,7 +360,7 @@ function foo_var() {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %10: any
+// CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %10: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined

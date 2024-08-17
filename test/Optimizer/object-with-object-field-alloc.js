@@ -46,7 +46,7 @@ new Foo();
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
 // CHECK-NEXT:  %9 = HBCAllocObjectFromBufferInst (:object) "o0": string, 0: number, "o1": string, 0: number, "o2": string, 0: number
 // CHECK-NEXT:        TypedStoreParentInst %7: object, %9: object
-// CHECK-NEXT:  %11 = CallInst (:undefined) %6: object, %Foo(): functionCode, empty: any, %6: object, %9: object
+// CHECK-NEXT:  %11 = CallInst (:undefined) %6: object, %Foo(): functionCode, true: boolean, empty: any, %6: object, %9: object
 // CHECK-NEXT:  %12 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:        ReturnInst %12: undefined
 // CHECK-NEXT:function_end

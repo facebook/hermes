@@ -43,8 +43,8 @@ print(bench(4e6, 100))
 // CHINT-NEXT:  {np0}     %7 [8...12)   = HBCLoadConstInst (:undefined) undefined: undefined
 // CHINT-NEXT:  {np2}     %8 [9...11)   = HBCLoadConstInst (:number) 4000000: number
 // CHINT-NEXT:  {np1}     %9 [10...11)  = HBCLoadConstInst (:number) 100: number
-// CHINT-NEXT:  {loc0}   %10 [11...12)  = CallInst (:any) %6: any, empty: any, empty: any, %7: undefined, %7: undefined, %8: number, %9: number
-// CHINT-NEXT:  {loc0}   %11 [12...13)  = CallInst (:any) %5: any, empty: any, empty: any, %7: undefined, %7: undefined, %10: any
+// CHINT-NEXT:  {loc0}   %10 [11...12)  = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, %7: undefined, %7: undefined, %8: number, %9: number
+// CHINT-NEXT:  {loc0}   %11 [12...13)  = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, %7: undefined, %7: undefined, %10: any
 // CHINT-NEXT:           %12            = ReturnInst %11: any
 // CHINT-NEXT:function_end
 
@@ -110,8 +110,8 @@ print(bench(4e6, 100))
 // CHECK-NEXT:  {np0}     %7 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {np2}     %8 = HBCLoadConstInst (:number) 4000000: number
 // CHECK-NEXT:  {np1}     %9 = HBCLoadConstInst (:number) 100: number
-// CHECK-NEXT:  {loc0}   %10 = CallInst (:any) {loc0} %6: any, empty: any, empty: any, {np0} %7: undefined, {np0} %7: undefined, {np2} %8: number, {np1} %9: number
-// CHECK-NEXT:  {loc0}   %11 = CallInst (:any) {loc1} %5: any, empty: any, empty: any, {np0} %7: undefined, {np0} %7: undefined, {loc0} %10: any
+// CHECK-NEXT:  {loc0}   %10 = CallInst (:any) {loc0} %6: any, empty: any, false: boolean, empty: any, {np0} %7: undefined, {np0} %7: undefined, {np2} %8: number, {np1} %9: number
+// CHECK-NEXT:  {loc0}   %11 = CallInst (:any) {loc1} %5: any, empty: any, false: boolean, empty: any, {np0} %7: undefined, {np0} %7: undefined, {loc0} %10: any
 // CHECK-NEXT:                 ReturnInst {loc0} %11: any
 // CHECK-NEXT:function_end
 

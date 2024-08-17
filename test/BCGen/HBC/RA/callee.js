@@ -69,7 +69,7 @@ function foo(x) {
 // CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:number) 1: number
 // CHECK-NEXT:  $Reg5 = HBCLoadConstInst (:number) 2: number
 // CHECK-NEXT:  $Reg6 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg1, empty: any, empty: any, $Reg2, $Reg3, $Reg4, $Reg5, $Reg6
+// CHECK-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg2, $Reg3, $Reg4, $Reg5, $Reg6
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg1
 // CHECK-NEXT:function_end

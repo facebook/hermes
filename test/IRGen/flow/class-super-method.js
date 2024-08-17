@@ -42,7 +42,7 @@ class B extends A {
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any
@@ -119,7 +119,7 @@ class B extends A {
 // CHECK-NEXT:  %7 = GetNewTargetInst (:object) %new.target: object
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %2: environment, [%VS4.x]: any
 // CHECK-NEXT:  %9 = CheckedTypeCastInst (:number) %8: any, type(number)
-// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %6: object, empty: any, empty: any, %7: object, %0: object, %9: number
+// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %6: object, empty: any, false: boolean, empty: any, %7: object, %0: object, %9: number
 // CHECK-NEXT:  %11 = CheckedTypeCastInst (:undefined) %10: any, type(undefined)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -133,7 +133,7 @@ class B extends A {
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS5: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.?A.prototype]: object
 // CHECK-NEXT:  %4 = PrLoadInst (:object) %3: object, 0: number, "f": string
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %4: object, empty: any, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:  %6 = CheckedTypeCastInst (:number) %5: any, type(number)
 // CHECK-NEXT:  %7 = BinaryAddInst (:any) %6: number, 23: number
 // CHECK-NEXT:  %8 = CheckedTypeCastInst (:number) %7: any, type(number)

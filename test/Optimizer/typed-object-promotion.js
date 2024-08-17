@@ -34,7 +34,7 @@ print(foo.x, foo.y);
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -28,7 +28,7 @@ print(new C().method());
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any
@@ -57,9 +57,9 @@ print(new C().method());
 // CHECK-NEXT:  %16 = AllocObjectLiteralInst (:object) %15: object
 // CHECK-NEXT:  %17 = TypedLoadParentInst (:object) %16: object
 // CHECK-NEXT:  %18 = PrLoadInst (:object) %17: object, 0: number, "method": string
-// CHECK-NEXT:  %19 = CallInst [njsf] (:any) %18: object, %method(): functionCode, empty: any, undefined: undefined, %16: object
+// CHECK-NEXT:  %19 = CallInst [njsf] (:any) %18: object, %method(): functionCode, true: boolean, empty: any, undefined: undefined, %16: object
 // CHECK-NEXT:  %20 = CheckedTypeCastInst (:number) %19: any, type(number)
-// CHECK-NEXT:  %21 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %20: number
+// CHECK-NEXT:  %21 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: number
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

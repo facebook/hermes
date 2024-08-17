@@ -24,7 +24,7 @@ return function main() {
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any

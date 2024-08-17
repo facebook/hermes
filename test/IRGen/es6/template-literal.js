@@ -56,7 +56,7 @@ function f5(x) {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
-// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, "hello": string, 2: number, "world": string
+// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, "hello": string, 2: number, "world": string
 // CHKIR-NEXT:       ReturnInst %2: any
 // CHKIR-NEXT:function_end
 
@@ -74,7 +74,7 @@ function f5(x) {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
-// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, "": string, 666: number
+// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, "": string, 666: number
 // CHKIR-NEXT:       ReturnInst %2: any
 // CHKIR-NEXT:function_end
 
@@ -83,6 +83,6 @@ function f5(x) {
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
 // CHKIR-NEXT:  %2 = LoadPropertyInst (:any) %1: any, "concat": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, "": string, %0: any
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, "": string, %0: any
 // CHKIR-NEXT:       ReturnInst %3: any
 // CHKIR-NEXT:function_end

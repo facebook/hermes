@@ -81,13 +81,13 @@ function outer() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.k2]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.k3]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.k1]: any
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        StoreFrameInst %1: environment, %9: any, [%VS1.k2]: any
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [%VS1.k3]: any
 // CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
 // CHECK-NEXT:        ReturnInst %14: object
@@ -152,7 +152,7 @@ function outer() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %o: any
 // CHECK-NEXT:       StoreFrameInst %0: environment, 42: number, [%VS2.envVar]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %0: environment, 87: number, [%VS2.envVar]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

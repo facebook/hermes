@@ -32,7 +32,7 @@ function outer(a) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %1 = CatchInst (:any)
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: any
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %1: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ThrowInst "Hello!": string, %BB1
@@ -48,10 +48,10 @@ function outer(a) {
 // CHK2-NEXT:%BB1:
 // CHK2-NEXT:  %3 = CatchInst (:any)
 // CHK2-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHK2-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: any
+// CHK2-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: any
 // CHK2-NEXT:       ReturnInst undefined: undefined
 // CHK2-NEXT:%BB2:
-// CHK2-NEXT:  %7 = CallInst (:any) %1: object, %thrower(): functionCode, empty: any, undefined: undefined, 0: number
+// CHK2-NEXT:  %7 = CallInst (:any) %1: object, %thrower(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number
 // CHK2-NEXT:       UnreachableInst
 // CHK2-NEXT:function_end
 

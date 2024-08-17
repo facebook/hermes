@@ -26,6 +26,6 @@ $SHBuiltin.call(foo, 11, 12, 13);
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.foo]: any
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS1.foo]: any
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
-// CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, empty: any, undefined: undefined, 11: number, 12: number, 13: number
+// CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, false: boolean, empty: any, undefined: undefined, 11: number, 12: number, 13: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

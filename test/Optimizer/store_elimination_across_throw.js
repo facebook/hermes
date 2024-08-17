@@ -31,7 +31,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, %0: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, false: boolean, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -51,11 +51,11 @@
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %9 = LoadFrameInst (:undefined|number) %1: environment, [%VS1.x]: undefined|number
-// CHECK-NEXT:  %10 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: undefined|number
+// CHECK-NEXT:  %10 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %9: undefined|number
 // CHECK-NEXT:        StoreFrameInst %1: environment, undefined: undefined, [%VS1.tdz]: empty|undefined
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = CallInst (:undefined) %4: object, %throwTDZ(): functionCode, %1: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst (:undefined) %4: object, %throwTDZ(): functionCode, false: boolean, %1: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        TryEndInst %BB1, %BB2
 // CHECK-NEXT:function_end
 

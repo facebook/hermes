@@ -69,7 +69,7 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.func]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.func]: any
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %6: object, "a": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %6: object, "b": string, true: boolean
@@ -121,11 +121,11 @@ function protoIsDynamic(func, getParent) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS5.getParent]: any
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS5.func]: any
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreNewOwnPropertyInst %8: any, %6: object, "a": string, true: boolean
 // CHECK-NEXT:        StoreNewOwnPropertyInst 10: number, %6: object, "b": string, true: boolean
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS5.getParent]: any
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %13 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: object, %12: any
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: object, %12: any
 // CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end

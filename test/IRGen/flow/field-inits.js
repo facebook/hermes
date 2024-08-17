@@ -62,7 +62,7 @@ function f(i: number): number {
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any
@@ -142,7 +142,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %16 = UnionNarrowTrustedInst (:object) %15: object
 // CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) empty: any, "x": string, undefined: undefined
 // CHECK-NEXT:        TypedStoreParentInst %16: object, %17: object
-// CHECK-NEXT:  %19 = CallInst (:any) %14: object, %"A 1#"(): functionCode, empty: any, %14: object, %17: object
+// CHECK-NEXT:  %19 = CallInst (:any) %14: object, %"A 1#"(): functionCode, true: boolean, empty: any, %14: object, %17: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS2.a]: any
 // CHECK-NEXT:  %21 = LoadFrameInst (:any) %1: environment, [%VS2.a]: any
 // CHECK-NEXT:  %22 = CheckedTypeCastInst (:object) %21: any, type(object)
@@ -170,7 +170,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS4: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.<fieldInitFuncVar:A>]: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %<instance_members_initializer:A>(): functionCode, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %<instance_members_initializer:A>(): functionCode, true: boolean, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:  %5 = PrLoadInst (:any) %0: object, 0: number, "y": string
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) %5: any, 1: number
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
@@ -200,7 +200,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS6: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.<fieldInitFuncVar:B>]: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %<instance_members_initializer:B>(): functionCode, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %<instance_members_initializer:B>(): functionCode, true: boolean, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -223,7 +223,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS8: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.<fieldInitFuncVar:C0>]: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %<instance_members_initializer:C0>(): functionCode, empty: any, undefined: undefined, %0: any
+// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %<instance_members_initializer:C0>(): functionCode, true: boolean, empty: any, undefined: undefined, %0: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -249,7 +249,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS10: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.?C0.prototype]: object
 // CHECK-NEXT:  %4 = PrLoadInst (:object) %3: object, 0: number, "m": string
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %4: object, empty: any, empty: any, undefined: undefined, %0: any
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, %0: any
 // CHECK-NEXT:  %6 = CheckedTypeCastInst (:number) %5: any, type(number)
 // CHECK-NEXT:  %7 = BinaryAddInst (:any) %6: number, 1: number
 // CHECK-NEXT:  %8 = CheckedTypeCastInst (:number) %7: any, type(number)
@@ -267,9 +267,9 @@ function f(i: number): number {
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.C0]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
 // CHECK-NEXT:  %5 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, empty: any, %5: object, %0: object
+// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, %5: object, %0: object
 // CHECK-NEXT:  %7 = LoadFrameInst (:object) %1: environment, [%VS1.<fieldInitFuncVar:C1>]: object
-// CHECK-NEXT:  %8 = CallInst (:undefined) %7: object, %<instance_members_initializer:C1>(): functionCode, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %8 = CallInst (:undefined) %7: object, %<instance_members_initializer:C1>(): functionCode, true: boolean, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -296,6 +296,6 @@ function f(i: number): number {
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS13: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS2.<fieldInitFuncVar:A>]: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %"<instance_members_initializer:A> 1#"(): functionCode, empty: any, undefined: undefined, %0: object
+// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %"<instance_members_initializer:A> 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

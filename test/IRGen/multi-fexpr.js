@@ -103,7 +103,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %fexpr(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS2.fexpr]: any
-// CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       CondBranchInst %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       BranchInst %BB3
@@ -112,7 +112,7 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %fexpr(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS2.fexpr]: any
-// CHECK-NEXT:  %10 = CallInst (:any) %8: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %10 = CallInst (:any) %8: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        CondBranchInst %10: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
@@ -127,18 +127,18 @@ function test_captured_let_in_finally() {
 // CHECK-NEXT:  %3 = CatchInst (:any)
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %"fexpr 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS3.fexpr]: any
-// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ThrowInst %3: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        TryEndInst %BB1, %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %"fexpr 1#"(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS3.fexpr]: any
-// CHECK-NEXT:  %14 = CallInst (:any) %12: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %14 = CallInst (:any) %12: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 

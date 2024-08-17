@@ -35,10 +35,10 @@ return foo;
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %x: object
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %sink: any
 // CHECK-NEXT:  %2 = FastArrayLoadInst (:number) %0: object, 0: number
-// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: number
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: number
 // CHECK-NEXT:       FastArrayPushInst 3.14: number, %0: object
 // CHECK-NEXT:  %5 = FastArrayLengthInst (:number) %0: object
-// CHECK-NEXT:  %6 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: number
+// CHECK-NEXT:  %6 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: number
 // CHECK-NEXT:       FastArrayStoreInst 42: number, %0: object, 3: number
 // CHECK-NEXT:  %8 = FastArrayLengthInst (:number) %0: object
 // CHECK-NEXT:  %9 = FLessThanInst (:boolean) 0: number, %8: number
@@ -46,7 +46,7 @@ return foo;
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %11 = PhiInst (:number) 0: number, %BB0, %14: number, %BB1
 // CHECK-NEXT:  %12 = FastArrayLoadInst (:number) %0: object, %11: number
-// CHECK-NEXT:  %13 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: number
+// CHECK-NEXT:  %13 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: number
 // CHECK-NEXT:  %14 = FAddInst (:number) %11: number, 1: number
 // CHECK-NEXT:  %15 = FLessThanInst (:boolean) %14: number, %8: number
 // CHECK-NEXT:        CondBranchInst %15: boolean, %BB1, %BB2

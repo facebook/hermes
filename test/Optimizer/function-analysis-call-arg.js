@@ -35,13 +35,13 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %f(): functionCode, empty: any, undefined: undefined, undefined: undefined, %1: object
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %f(): functionCode, false: boolean, empty: any, undefined: undefined, undefined: undefined, %1: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

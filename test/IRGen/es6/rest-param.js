@@ -35,7 +35,7 @@ function f1(a, ...b) {}
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.b]: any
 // CHECK-NEXT:  %4 = LoadParamInst (:any) %a: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.a]: any
-// CHECK-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.b]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

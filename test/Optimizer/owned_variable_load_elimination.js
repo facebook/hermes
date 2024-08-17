@@ -45,7 +45,7 @@ function foo(sink){
 // CHECK-NEXT:  %6 = LoadFrameInst (:number) %1: environment, [%VS1.x]: number
 // CHECK-NEXT:  %7 = FAddInst (:number) %6: number, 1: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: number, [%VS1.x]: number
-// CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: number
+// CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: number
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "b": string
@@ -54,7 +54,7 @@ function foo(sink){
 // CHECK-NEXT:  %13 = LoadFrameInst (:number) %1: environment, [%VS1.x]: number
 // CHECK-NEXT:  %14 = FAddInst (:number) %13: number, 1: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %14: number, [%VS1.x]: number
-// CHECK-NEXT:  %16 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: number
+// CHECK-NEXT:  %16 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %13: number
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "c": string
@@ -63,7 +63,7 @@ function foo(sink){
 // CHECK-NEXT:  %20 = LoadFrameInst (:number) %1: environment, [%VS1.x]: number
 // CHECK-NEXT:  %21 = FAddInst (:number) %20: number, 1: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %21: number, [%VS1.x]: number
-// CHECK-NEXT:  %23 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %20: number
+// CHECK-NEXT:  %23 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: number
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %25 = CreateFunctionInst (:object) %1: environment, %""(): functionCode

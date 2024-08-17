@@ -112,11 +112,11 @@ function test_three(x, one, two) {
 // CHECK-NEXT:       CondBranchInst %8: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS3.two]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS3.one]: any
-// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = PhiInst (:any) %14: any, %BB2, %11: any, %BB1

@@ -44,7 +44,7 @@ function foo(sink) {
 // CHECK-NEXT:       CondBranchInst %1: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %7: number, %BB3
-// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       CondBranchInst %0: any, %BB4, %BB3
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -53,11 +53,11 @@ function foo(sink) {
 // CHECK-NEXT:  %8 = BinaryLessThanInst (:boolean) %7: number, %0: any
 // CHECK-NEXT:       CondBranchInst %8: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %10 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        CondBranchInst %11: any, %BB5, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        CondBranchInst %10: any, %BB5, %BB3

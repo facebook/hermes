@@ -81,7 +81,7 @@ function foo(a,b) {
 // CHECK-NEXT:; <stdin>:13:15
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.a]: any
 // CHECK-NEXT:; <stdin>:13:14
-// CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %15: any
+// CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %15: any
 // CHECK-NEXT:; <stdin>:11:5
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB2:
@@ -98,7 +98,7 @@ function foo(a,b) {
 // CHECK-NEXT:; <stdin>:16:15
 // CHECK-NEXT:  %23 = LoadFrameInst (:any) %1: environment, [%VS1.b]: any
 // CHECK-NEXT:; <stdin>:16:14
-// CHECK-NEXT:  %24 = CallInst (:any) %22: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %23: any
+// CHECK-NEXT:  %24 = CallInst (:any) %22: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %23: any
 // CHECK-NEXT:; <stdin>:11:5
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:

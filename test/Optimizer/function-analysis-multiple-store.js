@@ -42,7 +42,7 @@ function main() {
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = PhiInst (:object) %4: object, %BB1, %1: object, %BB0
-// CHECK-NEXT:  %7 = CallInst (:any) %6: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

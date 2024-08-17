@@ -47,7 +47,7 @@ function foo(c: C, d: D){
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any
@@ -100,13 +100,13 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:object) %6: any, type(object)
 // CHECK-NEXT:  %8 = TypedLoadParentInst (:object) %7: object
 // CHECK-NEXT:  %9 = PrLoadInst (:object) %8: object, 0: number, "override": string
-// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %9: object, empty: any, empty: any, undefined: undefined, %7: object
+// CHECK-NEXT:  %10 = CallInst [njsf] (:any) %9: object, empty: any, false: boolean, empty: any, undefined: undefined, %7: object
 // CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS2.d]: any
 // CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
 // CHECK-NEXT:  %14 = TypedLoadParentInst (:object) %13: object
 // CHECK-NEXT:  %15 = PrLoadInst (:object) %14: object, 0: number, "override": string
-// CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, %"override 1#"(): functionCode, empty: any, undefined: undefined, %13: object
+// CHECK-NEXT:  %16 = CallInst [njsf] (:any) %15: object, %"override 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %13: object
 // CHECK-NEXT:  %17 = CheckedTypeCastInst (:number) %16: any, type(number)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -150,7 +150,7 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
 // CHECK-NEXT:  %5 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, empty: any, %5: object, %0: object
+// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, %5: object, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

@@ -39,6 +39,6 @@ class C {
 // CHECK-NEXT:       TypedStoreParentInst %7: object, %8: object
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %11 = CheckedTypeCastInst (:number) %10: any, type(number)
-// CHECK-NEXT:  %12 = CallInst (:any) %5: object, %C(): functionCode, empty: any, %5: object, %8: object, %11: number
+// CHECK-NEXT:  %12 = CallInst (:any) %5: object, %C(): functionCode, true: boolean, empty: any, %5: object, %8: object, %11: number
 // CHECK-NEXT:        ReturnInst %8: object
 // CHECK-NEXT:function_end

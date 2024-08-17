@@ -35,7 +35,7 @@ foo(); // This is still a valid call.
 // CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %5: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreStackInst %8: any, %5: any
 // CHECK-NEXT:  %10 = LoadStackInst (:any) %5: any
 // CHECK-NEXT:        ReturnInst %10: any

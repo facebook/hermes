@@ -91,8 +91,8 @@ function test_async() {
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %3: object, %1: any, "p": string
-// CHECK-NEXT:  %5 = CallInst (:number) %2: object, %foo(): functionCode, empty: any, undefined: undefined, 0: number, 1: number, 2: number
-// CHECK-NEXT:  %6 = CallInst (:string|number|bigint) %3: object, %bar(): functionCode, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %5 = CallInst (:number) %2: object, %foo(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number, 1: number, 2: number
+// CHECK-NEXT:  %6 = CallInst (:string|number|bigint) %3: object, %bar(): functionCode, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
 // CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %5: number, %6: string|number|bigint
 // CHECK-NEXT:       ReturnInst %7: string|number
 // CHECK-NEXT:function_end
@@ -101,8 +101,8 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %builder(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %builder(): functionCode, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %builder(): functionCode, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %builder(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %builder(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %4 = FAddInst (:number) %2: number, %3: number
 // CHECK-NEXT:       ReturnInst %4: number
 // CHECK-NEXT:function_end
@@ -127,7 +127,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %baz(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %baz(): functionCode, empty: any, undefined: undefined, undefined: undefined, 100: number
+// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %baz(): functionCode, false: boolean, empty: any, undefined: undefined, undefined: undefined, 100: number
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
@@ -135,7 +135,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %gen(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:object) %1: object, %gen(): functionCode, %0: environment, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:  %2 = CallInst (:object) %1: object, %gen(): functionCode, false: boolean, %0: environment, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -143,7 +143,7 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %asyncFn(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %asyncFn(): functionCode, %0: environment, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:  %2 = CallInst (:any) %1: object, %asyncFn(): functionCode, false: boolean, %0: environment, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
@@ -182,7 +182,7 @@ function test_async() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %e: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %0: environment, [%VS1.foo2]: object
-// CHECK-NEXT:  %3 = CallInst (:string|number) %2: object, %foo2(): functionCode, empty: any, undefined: undefined, 0: number, %1: any, 2: number, 1: number, 0: number, 0: number, 0: number
+// CHECK-NEXT:  %3 = CallInst (:string|number) %2: object, %foo2(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number, %1: any, 2: number, 1: number, 0: number, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -191,13 +191,13 @@ function test_async() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %e: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %0: environment, [%VS1.foo2]: object
-// CHECK-NEXT:  %3 = CallInst (:string|number) %2: object, %foo2(): functionCode, empty: any, undefined: undefined, 0: number, %1: any, 2: number, 3: number, 0: number, 0: number
+// CHECK-NEXT:  %3 = CallInst (:string|number) %2: object, %foo2(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number, %1: any, 2: number, 3: number, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function baz(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
+// CHECK-NEXT:  %0 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end
 
@@ -221,7 +221,7 @@ function test_async() {
 // CHECK-NEXT:  %2 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %2: environment, %?anon_0_asyncFn(): functionCode
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
-// CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %3: object, %1: undefined, %0: object
+// CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: object, %1: undefined, %0: object
 // CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 

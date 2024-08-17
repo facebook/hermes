@@ -29,6 +29,6 @@
 // CHECK-NEXT:  %6 = HBCStringConcatInst (:string) %5: string, %1: string
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) %2: object, "HermesInternal": string
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "concat": string
-// CHECK-NEXT:  %9 = HBCCallNInst (:string) %8: any, empty: any, empty: any, %3: undefined, %6: string, %6: string, %1: string
+// CHECK-NEXT:  %9 = HBCCallNInst (:string) %8: any, empty: any, false: boolean, empty: any, %3: undefined, %6: string, %6: string, %1: string
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:function_end

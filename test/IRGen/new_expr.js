@@ -73,7 +73,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "Car": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: any, "prototype": string
 // CHECK-NEXT:  %5 = CreateThisInst (:any) %4: any, %3: any
-// CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, empty: any, %3: any, %5: any, "Eagle": string, 1993: number
+// CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, %3: any, %5: any, "Eagle": string, 1993: number
 // CHECK-NEXT:  %7 = GetConstructedObjectInst (:any) %5: any, %6: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: any, [%VS2.ctor]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -87,7 +87,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.call]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "Car": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS3.call]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

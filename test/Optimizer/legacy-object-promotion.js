@@ -103,7 +103,7 @@ function escapingFuncCall() {
 // CHECK:function loadsAndStores(): string|number
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 4: number
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 4: number
 // CHECK-NEXT:  %2 = BinaryAddInst (:string|number) %1: any, 1: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number) 9: number, %2: string|number
 // CHECK-NEXT:       ReturnInst %3: string|number
@@ -124,7 +124,7 @@ function escapingFuncCall() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocObjectLiteralInst (:object) empty: any, "a": string, 1: number
 // CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "sink": string
-// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %0: object
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %0: object
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "a": string
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end

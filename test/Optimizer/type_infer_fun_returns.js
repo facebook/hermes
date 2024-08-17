@@ -44,9 +44,9 @@ function g14(z) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %10 = LoadFrameInst (:object) %1: environment, [%VS1.w]: object
-// CHECK-NEXT:  %11 = CallInst (:any) %10: object, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %11 = CallInst (:any) %10: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %12 = BinaryAddInst (:string|number) %11: any, 1: number
-// CHECK-NEXT:  %13 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: string|number
+// CHECK-NEXT:  %13 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: string|number
 // CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) empty: any, "m": string, null: null
 // CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %m(): functionCode
 // CHECK-NEXT:        PrStoreInst %15: object, %14: object, 0: number, "m": string, false: boolean

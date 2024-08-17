@@ -140,6 +140,6 @@ function level0(x) {
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [%VS3.x]: any
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %0: environment, [%VS5.y]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS7.z]: any
-// CHECK-NEXT:  %9 = CallInst (:any) %4: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %6: any, %7: any, %8: any
+// CHECK-NEXT:  %9 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: any, %7: any, %8: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

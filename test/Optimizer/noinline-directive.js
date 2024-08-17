@@ -61,11 +61,11 @@ function outer(a) {
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %fooNoInline(): functionCode
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %fooNoInlineLast(): functionCode
 // CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %1: any, 5: number
-// CHECK-NEXT:  %5 = CallInst (:string|number) %2: object, %fooNoInline(): functionCode, empty: any, undefined: undefined, 0: number, %1: any
+// CHECK-NEXT:  %5 = CallInst (:string|number) %2: object, %fooNoInline(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number, %1: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %4: string|number, %5: string|number
 // CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %1: any, 50: number
 // CHECK-NEXT:  %8 = BinaryAddInst (:string|number) %6: string|number, %7: string|number
-// CHECK-NEXT:  %9 = CallInst (:string|number) %3: object, %fooNoInlineLast(): functionCode, empty: any, undefined: undefined, 0: number, %1: any
+// CHECK-NEXT:  %9 = CallInst (:string|number) %3: object, %fooNoInlineLast(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number, %1: any
 // CHECK-NEXT:  %10 = BinaryAddInst (:string|number) %8: string|number, %9: string|number
 // CHECK-NEXT:        ReturnInst %10: string|number
 // CHECK-NEXT:function_end

@@ -103,7 +103,7 @@ function test4(f) {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: object
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 

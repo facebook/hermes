@@ -112,7 +112,7 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
-// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %8: any
+// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
@@ -236,13 +236,13 @@ function test_init_update_exprs(param1) {
 // CHECK-NEXT:  %12 = LoadParamInst (:any) %f: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [%VS7.f]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS7.a]: any
-// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [%VS7.b]: any
-// CHECK-NEXT:  %17 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %17 = CallInst (:any) %16: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        CondBranchInst %17: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS7.d]: any
-// CHECK-NEXT:  %20 = CallInst (:any) %19: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %20 = CallInst (:any) %19: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined

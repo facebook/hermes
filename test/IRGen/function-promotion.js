@@ -57,7 +57,7 @@ function foo() {
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS1.y]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.z]: any
-// CHECK-NEXT:  %16 = CallInst (:any) %12: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %13: any, %14: any, %15: any
+// CHECK-NEXT:  %16 = CallInst (:any) %12: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %13: any, %14: any, %15: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

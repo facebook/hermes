@@ -26,7 +26,7 @@ return function main(x: number[]) {
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any
@@ -96,6 +96,6 @@ return function main(x: number[]) {
 // CHECK-NEXT:%BB10:
 // CHECK-NEXT:  %35 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %36 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
-// CHECK-NEXT:  %37 = CallInst (:any) %35: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %36: any
+// CHECK-NEXT:  %37 = CallInst (:any) %35: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %36: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:function_end

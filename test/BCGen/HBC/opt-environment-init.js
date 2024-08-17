@@ -50,7 +50,7 @@ function foo(o) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag1]: undefined|number
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag2]: undefined|number
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.cnt]: number
-// CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag2]: undefined|number
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
 // CHECK-NEXT:        ReturnInst %9: object
@@ -108,7 +108,7 @@ function foo(o) {
 // CHKLIR-NEXT:       StoreFrameInst %0: environment, %1: number, [%VS1.cnt]: number
 // CHKLIR-NEXT:  %3 = LoadParamInst (:any) %o: any
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %3: any, empty: any, empty: any, %4: undefined, %4: undefined
+// CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %3: any, empty: any, false: boolean, empty: any, %4: undefined, %4: undefined
 // CHKLIR-NEXT:       StoreFrameInst %0: environment, %4: undefined, [%VS1.flag2]: undefined|number
 // CHKLIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHKLIR-NEXT:       ReturnInst %7: object

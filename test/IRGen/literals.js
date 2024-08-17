@@ -33,7 +33,7 @@ foo()
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreStackInst %7: any, %4: any
 // CHECK-NEXT:  %9 = LoadStackInst (:any) %4: any
 // CHECK-NEXT:        ReturnInst %9: any

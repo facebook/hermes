@@ -73,7 +73,7 @@ function load_dedup(foo){
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.foo]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.x]: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
-// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS2.x]: any
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
@@ -90,6 +90,6 @@ function load_dedup(foo){
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:any) %0: environment, [%VS2.foo]: any
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS2.x]: any
-// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: any
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end

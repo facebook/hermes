@@ -49,10 +49,10 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
 // CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
 // CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:object) $Reg0
-// CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg3, empty: any, empty: any, $Reg1, $Reg1, $Reg0
+// CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg3, empty: any, false: boolean, empty: any, $Reg1, $Reg1, $Reg0
 // CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
 // CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:any) $Reg0
-// CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg1, $Reg1, $Reg0
+// CHKRA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, false: boolean, empty: any, $Reg1, $Reg1, $Reg0
 // CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 
@@ -60,7 +60,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
 // CHKRA-NEXT:  $Reg2 = ImplicitMovInst (:undefined) undefined: undefined
-// CHKRA-NEXT:  $Reg0 = CallBuiltinInst (:any) [Object.keys]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, $Reg1
+// CHKRA-NEXT:  $Reg0 = CallBuiltinInst (:any) [Object.keys]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, $Reg1
 // CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 
@@ -75,7 +75,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:string) "evil": string
 // CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:object) $Reg3
 // CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:string) $Reg1
-// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg0, $Reg3, $Reg1
+// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg2, empty: any, false: boolean, empty: any, $Reg0, $Reg3, $Reg1
 // CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 
@@ -88,7 +88,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  $Reg1 = HBCLoadConstInst (:string) "hello": string
 // CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:any) $Reg3
 // CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:string) $Reg1
-// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg2, empty: any, empty: any, $Reg0, $Reg3, $Reg1
+// CHKRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg2, empty: any, false: boolean, empty: any, $Reg0, $Reg3, $Reg1
 // CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHKRA-NEXT:function_end
 

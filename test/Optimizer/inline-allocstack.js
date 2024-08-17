@@ -72,7 +72,7 @@
 // CHECK-NEXT:  %15 = LoadFrameInst (:object) %0: environment, [%VS1.arr]: object
 // CHECK-NEXT:  %16 = LoadPropertyInst (:any) %15: object, "push": string
 // CHECK-NEXT:  %17 = CreateFunctionInst (:object) %3: environment, %" 1#"(): functionCode
-// CHECK-NEXT:  %18 = CallInst (:any) %16: any, empty: any, empty: any, undefined: undefined, %15: object, %17: object
+// CHECK-NEXT:  %18 = CallInst (:any) %16: any, empty: any, false: boolean, empty: any, undefined: undefined, %15: object, %17: object
 // CHECK-NEXT:  %19 = LoadStackInst (:number) %2: number
 // CHECK-NEXT:  %20 = FAddInst (:number) %19: number, 1: number
 // CHECK-NEXT:        StoreStackInst %20: number, %2: number

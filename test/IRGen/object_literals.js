@@ -203,7 +203,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object, %8: object
+// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object, %8: object
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
@@ -254,7 +254,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS9.obj]: any
 // CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS9.obj]: any
-// CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: object, %10: any
+// CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %9: object, %10: any
 // CHECK-NEXT:        StoreOwnPropertyInst 42: number, %9: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end

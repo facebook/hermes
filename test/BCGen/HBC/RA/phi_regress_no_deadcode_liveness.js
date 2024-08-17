@@ -247,7 +247,7 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:  $Reg15 = CmpBrEqualInst $Reg16, $Reg15, %BB48, %BB49
 // CHKRA-NEXT:%BB48:
 // CHKRA-NEXT:  $Reg15 = HBCLoadConstInst (:string) "Cannot destructure 'undefined' or 'null'.": string
-// CHKRA-NEXT:  $Reg15 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, $Reg15
+// CHKRA-NEXT:  $Reg15 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, $Reg15
 // CHKRA-NEXT:  $Reg15 = UnreachableInst
 // CHKRA-NEXT:%BB49:
 // CHKRA-NEXT:  $Reg15 = TryEndInst %BB45, %BB46

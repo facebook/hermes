@@ -34,7 +34,7 @@ new D().inherited();
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any
@@ -71,10 +71,10 @@ new D().inherited();
 // CHECK-NEXT:  %24 = LoadFrameInst (:object) %1: environment, [%VS1.?D.prototype]: object
 // CHECK-NEXT:  %25 = UnionNarrowTrustedInst (:object) %24: object
 // CHECK-NEXT:  %26 = AllocObjectLiteralInst (:object) %25: object
-// CHECK-NEXT:  %27 = CallInst (:any) %23: object, %D(): functionCode, empty: any, %23: object, %26: object
+// CHECK-NEXT:  %27 = CallInst (:any) %23: object, %D(): functionCode, true: boolean, empty: any, %23: object, %26: object
 // CHECK-NEXT:  %28 = TypedLoadParentInst (:object) %26: object
 // CHECK-NEXT:  %29 = PrLoadInst (:object) %28: object, 0: number, "inherited": string
-// CHECK-NEXT:  %30 = CallInst [njsf] (:any) %29: object, %inherited(): functionCode, empty: any, undefined: undefined, %26: object
+// CHECK-NEXT:  %30 = CallInst [njsf] (:any) %29: object, %inherited(): functionCode, true: boolean, empty: any, undefined: undefined, %26: object
 // CHECK-NEXT:  %31 = CheckedTypeCastInst (:number) %30: any, type(number)
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -107,6 +107,6 @@ new D().inherited();
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
 // CHECK-NEXT:  %5 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, empty: any, %5: object, %0: object
+// CHECK-NEXT:  %6 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, %5: object, %0: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

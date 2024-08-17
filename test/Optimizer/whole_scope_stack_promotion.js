@@ -45,7 +45,7 @@
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %sink: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 10: number, [%VS1.x]: number
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %" 2#"(): functionCode
-// CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:  %6 = LoadFrameInst (:number) %1: environment, [%VS1.x]: number
 // CHECK-NEXT:       ReturnInst %6: number
 // CHECK-NEXT:function_end

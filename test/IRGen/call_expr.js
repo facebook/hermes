@@ -74,7 +74,7 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS2.x]: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS2.y]: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS2.z]: any
-// CHECK-NEXT:  %12 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %9: any, %10: any, %11: any
+// CHECK-NEXT:  %12 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %9: any, %10: any, %11: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -91,6 +91,6 @@ function test_member_access(obj, param) {
 // CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS3.obj]: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "foo": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS3.param]: any
-// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, %6: any, %8: any
+// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, %6: any, %8: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -45,11 +45,11 @@ function foo(f, g) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = CatchInst (:any)
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.g]: any
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.f]: any
-// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        TryEndInst %BB1, %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:        ReturnInst %12: any

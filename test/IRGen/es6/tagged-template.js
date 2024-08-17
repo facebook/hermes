@@ -121,7 +121,7 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 0: number, true: boolean, "": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: any
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any
 // CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
@@ -133,7 +133,7 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 1: number, true: boolean, "hello": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: any
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any
 // CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
@@ -145,7 +145,7 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 2: number, true: boolean, "": string, "": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: any, 666: number
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any, 666: number
 // CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
@@ -161,7 +161,7 @@ function helloWorld() {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS5.x]: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) 1: number, %5: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
@@ -177,7 +177,7 @@ function helloWorld() {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS6.x]: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) 1: number, %5: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
@@ -195,7 +195,7 @@ function helloWorld() {
 // CHECK-NEXT:  %7 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS7.obj]: any
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "func": string
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %8: any, %7: any
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, %8: any, %7: any
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
@@ -209,8 +209,8 @@ function helloWorld() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS8.func]: any
 // CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS8.func]: any
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
@@ -226,7 +226,7 @@ function helloWorld() {
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS9.x]: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:any) 1: number, %5: any
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
 // CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
@@ -238,7 +238,7 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS10: any, %0: environment
 // CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: any, 7: number
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any, 7: number
 // CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
@@ -250,7 +250,7 @@ function helloWorld() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS11: any, %0: environment
 // CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 6: number, true: boolean, "hello": string, " world!!!": string
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %2: any, 0: number
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any, 0: number
 // CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 

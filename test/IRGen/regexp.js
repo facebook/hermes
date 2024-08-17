@@ -56,7 +56,7 @@ function simple_test1() {
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.str]: any
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "replace": string
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.re]: any
-// CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, %8: any, %10: any, "$2, $1": string
+// CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, %8: any, %10: any, "$2, $1": string
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: any, [%VS1.newstr]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

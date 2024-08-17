@@ -101,9 +101,9 @@ function neg() {
 // CHKIR:function add(): string|number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHKIR-NEXT:  %4 = BinaryAddInst (:string|number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:string|number) 1: number, %4: string|number|bigint
 // CHKIR-NEXT:       ReturnInst %5: string|number
@@ -112,9 +112,9 @@ function neg() {
 // CHKIR:function shl(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryLeftShiftInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number
@@ -123,9 +123,9 @@ function neg() {
 // CHKIR:function asr(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryRightShiftInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number
@@ -134,9 +134,9 @@ function neg() {
 // CHKIR:function div(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryDivideInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number
@@ -145,9 +145,9 @@ function neg() {
 // CHKIR:function mul(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHKIR-NEXT:  %4 = BinaryMultiplyInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number
@@ -156,9 +156,9 @@ function neg() {
 // CHKIR:function rem(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryModuloInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number
@@ -168,7 +168,7 @@ function neg() {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "a": string
 // CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 0: number
+// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHKIR-NEXT:  %3 = BinarySubtractInst (:number|bigint) %0: any, %2: any
 // CHKIR-NEXT:  %4 = BinaryAddInst (:number) 1: number, %3: number|bigint
 // CHKIR-NEXT:       ReturnInst %4: number
@@ -177,9 +177,9 @@ function neg() {
 // CHKIR:function and(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryAndInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number
@@ -188,9 +188,9 @@ function neg() {
 // CHKIR:function or(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryOrInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number
@@ -199,9 +199,9 @@ function neg() {
 // CHKIR:function xor(): number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
 // CHKIR-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "BigInt": string
-// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHKIR-NEXT:  %4 = BinaryXorInst (:number|bigint) %1: any, %3: any
 // CHKIR-NEXT:  %5 = BinaryAddInst (:number) 1: number, %4: number|bigint
 // CHKIR-NEXT:       ReturnInst %5: number

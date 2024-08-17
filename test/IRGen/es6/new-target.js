@@ -89,7 +89,7 @@ function func4() {
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %10 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %11 = BinaryStrictlyNotEqualInst (:boolean) %10: undefined|object, undefined: undefined
-// CHECK-NEXT:  %12 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %11: boolean
+// CHECK-NEXT:  %12 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: boolean
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -110,7 +110,7 @@ function func4() {
 // CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %11 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %12 = BinaryStrictlyNotEqualInst (:boolean) %11: undefined|object, undefined: undefined
-// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %12: boolean
+// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: boolean
 // CHECK-NEXT:  %14 = CreateFunctionInst (:object) %3: environment, %innerArrow1(): functionCode
 // CHECK-NEXT:        StoreFrameInst %3: environment, %14: object, [%VS3.innerArrow1]: any
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) %3: environment, [%VS3.innerFunction]: any
@@ -152,11 +152,11 @@ function func4() {
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %4 = LoadFrameInst (:undefined|object) %0: environment, [%VS3.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:  %5 = BinaryStrictlyNotEqualInst (:boolean) %4: undefined|object, undefined: undefined
-// CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %5: boolean
+// CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: boolean
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %innerArrow2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS6.innerArrow2]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS6.innerArrow2]: any
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 

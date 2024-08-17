@@ -59,6 +59,6 @@ function foo(obj) {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: any, [%VS1.x]: any
 // CHECK-NEXT:  %19 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
-// CHECK-NEXT:  %21 = CallInst (:any) %19: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %20: any
+// CHECK-NEXT:  %21 = CallInst (:any) %19: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: any
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end

@@ -33,7 +33,7 @@ new D();
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %7: any
@@ -67,7 +67,7 @@ new D();
 // CHECK-NEXT:  %21 = LoadFrameInst (:object) %1: environment, [%VS1.?D.prototype]: object
 // CHECK-NEXT:  %22 = UnionNarrowTrustedInst (:object) %21: object
 // CHECK-NEXT:  %23 = AllocObjectLiteralInst (:object) %22: object
-// CHECK-NEXT:  %24 = CallInst (:any) %20: object, %D(): functionCode, empty: any, %20: object, %23: object
+// CHECK-NEXT:  %24 = CallInst (:any) %20: object, %D(): functionCode, true: boolean, empty: any, %20: object, %23: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -90,7 +90,7 @@ new D();
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
 // CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %3: any, type(object)
 // CHECK-NEXT:  %5 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %6 = CallInst [njsf] (:any) %4: object, empty: any, empty: any, %5: object, %0: object
+// CHECK-NEXT:  %6 = CallInst [njsf] (:any) %4: object, empty: any, false: boolean, empty: any, %5: object, %0: object
 // CHECK-NEXT:  %7 = CheckedTypeCastInst (:undefined) %6: any, type(undefined)
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

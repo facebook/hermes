@@ -120,9 +120,9 @@ function test_could_be_int(func) {
 // CHKIR:function test_could_be_int(func: any): undefined|number
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %func: any
-// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHKIR-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHKIR-NEXT:  %2 = BinaryMultiplyInst (:number) %1: any, 100: number
-// CHKIR-NEXT:  %3 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHKIR-NEXT:  %3 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHKIR-NEXT:       CondBranchInst %3: any, %BB1, %BB2
 // CHKIR-NEXT:%BB1:
 // CHKIR-NEXT:  %5 = AsInt32Inst (:number) %2: number

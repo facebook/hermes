@@ -32,7 +32,7 @@ undefined;
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %5: any
 // CHECK-NEXT:       StorePropertyLooseInst 5: number, globalObject: object, "undefined": string
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        StoreStackInst %9: any, %5: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %5: any
 // CHECK-NEXT:  %12 = LoadStackInst (:any) %5: any

@@ -51,7 +51,7 @@ function test_builtin(a) {
 // CHECK-NEXT:  {stack[0]}  %5 = HBCLoadConstInst (:number) 13: number
 // CHECK-NEXT:  {stack[6]}  %6 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {stack[4]}  %7 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {loc0}    %8 = CallInst (:any) {stack[5]} %0: any, empty: any, empty: any, {np4} %1: undefined, {stack[4]} %7: undefined, {stack[3]} %2: number, {stack[2]} %3: number, {stack[1]} %4: number, {stack[0]} %5: number
+// CHECK-NEXT:  {loc0}    %8 = CallInst (:any) {stack[5]} %0: any, empty: any, false: boolean, empty: any, {np4} %1: undefined, {stack[4]} %7: undefined, {stack[3]} %2: number, {stack[2]} %3: number, {stack[1]} %4: number, {stack[0]} %5: number
 // CHECK-NEXT:                 ReturnInst {loc0} %8: any
 // CHECK-NEXT:function_end
 
@@ -67,7 +67,7 @@ function test_builtin(a) {
 // CHECK-NEXT:  {stack[6]}  %7 = MovInst (:any) {loc0} %0: any
 // CHECK-NEXT:  {stack[5]}  %8 = MovInst (:any) {loc0} %0: any
 // CHECK-NEXT:  {stack[4]}  %9 = MovInst (:object) {loc1} %2: object
-// CHECK-NEXT:  {loc0}   %10 = CallInst (:any) {stack[5]} %8: any, empty: any, empty: any, {loc0} %0: any, {stack[4]} %9: object, {stack[3]} %3: number, {stack[2]} %4: number, {stack[1]} %5: number, {stack[0]} %6: number
+// CHECK-NEXT:  {loc0}   %10 = CallInst (:any) {stack[5]} %8: any, empty: any, false: boolean, empty: any, {loc0} %0: any, {stack[4]} %9: object, {stack[3]} %3: number, {stack[2]} %4: number, {stack[1]} %5: number, {stack[0]} %6: number
 // CHECK-NEXT:  {loc0}   %11 = GetConstructedObjectInst (:object) {loc1} %2: object, {loc0} %10: any
 // CHECK-NEXT:                 ReturnInst {loc0} %11: object
 // CHECK-NEXT:function_end
@@ -79,6 +79,6 @@ function test_builtin(a) {
 // CHECK-NEXT:  {stack[4]}  %2 = ImplicitMovInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {stack[3]}  %3 = ImplicitMovInst (:empty) empty: empty
 // CHECK-NEXT:  {stack[2]}  %4 = ImplicitMovInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {np0}     %5 = CallBuiltinInst (:number) [HermesBuiltin.exponentiationOperator]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, {stack[1]} %0: any, {stack[0]} %1: number
+// CHECK-NEXT:  {np0}     %5 = CallBuiltinInst (:number) [HermesBuiltin.exponentiationOperator]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, {stack[1]} %0: any, {stack[0]} %1: number
 // CHECK-NEXT:                 ReturnInst {np0} %5: number
 // CHECK-NEXT:function_end

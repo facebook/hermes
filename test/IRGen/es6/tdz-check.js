@@ -106,7 +106,7 @@ function check4() {
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %check3_inner(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS3.check3_inner]: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS3.check3_inner]: any
-// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS3.x]: any|empty
 // CHECK-NEXT:  %8 = LoadFrameInst (:any|empty) %1: environment, [%VS3.x]: any|empty
 // CHECK-NEXT:  %9 = UnionNarrowTrustedInst (:any) %8: any|empty

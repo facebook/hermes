@@ -30,7 +30,7 @@ function bar() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadFrameInst (:any) %0: environment, [%VS0.foo]: any
 // CHECK-NEXT:  %3 = CheckedTypeCastInst (:object) %2: any, type(object)
-// CHECK-NEXT:  %4 = CallInst [njsf] (:any) %3: object, %foo(): functionCode, %0: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %4 = CallInst [njsf] (:any) %3: object, %foo(): functionCode, false: boolean, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %5 = CheckedTypeCastInst (:undefined) %4: any, type(undefined)
 // CHECK-NEXT:       ReturnInst %5: undefined
 // CHECK-NEXT:function_end

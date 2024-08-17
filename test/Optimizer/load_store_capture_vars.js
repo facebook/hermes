@@ -110,7 +110,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"foo 1#"(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 1#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 1#"(): functionCode, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 9: number
 // CHECK-NEXT:function_end
 
@@ -118,7 +118,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"foo 2#"(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 2#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 2#"(): functionCode, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 9: number
 // CHECK-NEXT:function_end
 
@@ -126,7 +126,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"foo 3#"(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 3#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 3#"(): functionCode, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 4: number
 // CHECK-NEXT:function_end
 
@@ -138,7 +138,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, 4: number, [%VS1.x]: number
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %"foo 4#"(): functionCode
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %"foo 4#"(): functionCode, %1: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %"foo 4#"(): functionCode, false: boolean, %1: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %5 = LoadFrameInst (:number) %1: environment, [%VS1.x]: number
 // CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
@@ -147,7 +147,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"foo 5#"(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 5#"(): functionCode, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %"foo 5#"(): functionCode, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst 4: number
 // CHECK-NEXT:function_end
 
@@ -176,7 +176,7 @@ function postponed_store_in_use_block(x) {
 // CHECK-NEXT:  %12 = BinaryAddInst (:string|number) %11: any, 1: number
 // CHECK-NEXT:        StoreStackInst %12: string|number, %0: any
 // CHECK-NEXT:  %14 = LoadPropertyInst (:any) globalObject: object, "abort": string
-// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %16 = BinaryAddInst (:string|number) %12: string|number, 2: number
 // CHECK-NEXT:        StoreStackInst %16: string|number, %0: any
 // CHECK-NEXT:        TryEndInst %BB1, %BB2
@@ -220,7 +220,7 @@ function postponed_store_in_use_block(x) {
 // CHECK:function "foo 5#"(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, 4: number
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 4: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

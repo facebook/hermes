@@ -37,7 +37,7 @@ function main() {
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
 // CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %1: object, %f(): functionCode, empty: any, %1: object, %3: object
+// CHECK-NEXT:  %4 = CallInst (:undefined) %1: object, %f(): functionCode, false: boolean, empty: any, %1: object, %3: object
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
@@ -45,6 +45,6 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "sink": string
 // CHECK-NEXT:  %1 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %1: undefined|object
+// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %1: undefined|object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

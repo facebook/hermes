@@ -36,11 +36,11 @@ var {} = x;
 // CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) null: null
 // CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %12: object, "a": string, true: boolean
 // CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %15 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %14: object, %9: any, %12: object
+// CHECK-NEXT:  %15 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %14: object, %9: any, %12: object
 // CHECK-NEXT:        StorePropertyLooseInst %15: any, globalObject: object, "rest": string
 // CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %19 = CallInst (:any) %18: any, empty: any, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %19 = CallInst (:any) %18: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) %17: any, %19: any
 // CHECK-NEXT:        StorePropertyLooseInst %20: any, globalObject: object, "b": string
 // CHECK-NEXT:  %22 = LoadPropertyInst (:any) %17: any, "c": string
@@ -49,7 +49,7 @@ var {} = x;
 // CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %24: object, "c": string, true: boolean
 // CHECK-NEXT:        StorePropertyLooseInst 0: number, %24: object, %19: any
 // CHECK-NEXT:  %27 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %28 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, empty: any, undefined: undefined, undefined: undefined, %27: object, %17: any, %24: object
+// CHECK-NEXT:  %28 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %27: object, %17: any, %24: object
 // CHECK-NEXT:        StorePropertyLooseInst %28: any, globalObject: object, "rest": string
 // CHECK-NEXT:  %30 = TryLoadGlobalPropertyInst (:any) globalObject: object, "x": string
 // CHECK-NEXT:  %31 = BinaryEqualInst (:any) %30: any, null: null

@@ -100,7 +100,7 @@ function forof_continue(seq) {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %15: any, [%VS1.i]: any
 // CHECK-NEXT:  %26 = LoadFrameInst (:any) %1: environment, [%VS1.cb]: any
 // CHECK-NEXT:  %27 = LoadFrameInst (:any) %1: environment, [%VS1.i]: any
-// CHECK-NEXT:  %28 = CallInst (:any) %26: any, empty: any, empty: any, undefined: undefined, undefined: undefined, %27: any
+// CHECK-NEXT:  %28 = CallInst (:any) %26: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %27: any
 // CHECK-NEXT:        TryEndInst %BB4, %BB6
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:        BranchInst %BB1
