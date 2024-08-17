@@ -67,6 +67,32 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
   return false;
 }
 
+/// Check if the variable \p V, which is known to be stored to with closure
+/// \p val, can be analyzed such that a call to a value loaded from \p V is
+/// known to call \p val.
+bool isAnalyzableVariable(Variable *V, Value *val) {
+  for (auto *U : V->getUsers()) {
+    if (llvh::isa<LoadFrameInst>(U))
+      continue;
+    auto *SF = llvh::cast<StoreFrameInst>(U);
+
+    // Storing the same closure does not affect our ability to propagate
+    // the target function.
+    if (SF->getValue() == val)
+      continue;
+
+    // Storing empty or uninit is fine, because we are guaranteed to check for
+    // them before a call.
+    if (SF->getValue()->getType().isSubsetOf(
+            Type::unionTy(Type::createEmpty(), Type::createUninit())))
+      continue;
+
+    // Stores to the variable cannot be analyzed, give up.
+    return false;
+  }
+  return true;
+}
+
 /// Find all callsites that could call a function via the closure created
 /// by the \p create instruction and register them.
 /// Looks at calls that use \p create as an operand themselves as well as
@@ -176,12 +202,22 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         }
       }
 
+      // Like CheckedTypeCast, ThrowIf's result is the same as its input.
+      if (auto *TII = llvh::dyn_cast<ThrowIfInst>(closureUser)) {
+        assert(
+            TII->getCheckedValue()->getType().canBeObject() &&
+            "closure type is not object");
+        if (TII->getType().canBeObject()) {
+          worklist.push_back({closureUser, knownScope});
+          continue;
+        }
+      }
+
       // Closure is stored to a variable, look at corresponding loads
       // to find callsites.
       if (auto *store = llvh::dyn_cast<StoreFrameInst>(closureUser)) {
         Variable *var = store->getVariable();
-        if (!isStoreOnceVariable(var)) {
-          // Multiple stores to the variable, give up.
+        if (!isAnalyzableVariable(var, store->getValue())) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
           continue;
         }
