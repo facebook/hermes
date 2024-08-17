@@ -394,8 +394,8 @@ Effects | Unknown
 CallInst | _
 --- | --- |
 Description | Calls another function with some arguments.
-Example | %0 = CallInst %callee, %target, %env, %newtarget %this,  %arg0, %arg1, %arg2, ...
-Arguments | %callee is the closure to execute. %target is either the Function or EmptySentinel. %env is the environment for the function or EmptySentinel. %newtarget is the new.target value to use for the call. %this is a reference to the 'this' value. Arguments %arg0 ... %argN are the arguments passed to the function.
+Example | %0 = CallInst %callee, %target, %calleeIsAlwaysClosure, %env, %newtarget %this,  %arg0, %arg1, %arg2, ...
+Arguments | %callee is the closure to execute. %target is either EmptySentinel or the only possible Function this call can invoke. %calleeIsAlwaysClosure indicates whether the callee needs to be checked for being a function. %env is the environment for the function or EmptySentinel. %newtarget is the new.target value to use for the call. %this is a reference to the 'this' value. Arguments %arg0 ... %argN are the arguments passed to the function.
 Semantics | The instruction passes the control to the callee, that must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.
 
@@ -889,7 +889,7 @@ Effects | May read and write memory.
 HBCCallWithArgCountInst | _
 --- | --- |
 Description | This instruction contains the same operands as CallInst, in addition to explicitly passing in the argument count as an operand.
-Example | %0 = HBCCallWithArgCountInst %callee, %target, %env, %newtarget, $argcount, %this, %arg0, %arg1, %arg2, ...
+Example | %0 = HBCCallWithArgCountInst %callee, %target, %calleeIsAlwaysClosure, %env, %newtarget, $argcount, %this, %arg0, %arg1, %arg2, ...
 Arguments | %argcount is the number of arguments to the function, including 'this'.
 Semantics | The instruction passes the control to the callee, that must be of closure type. The arguments are mapped to the parameters. Unmapped parameters are initialized to 'undefined'.
 Effects | May read and write memory.

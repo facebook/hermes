@@ -326,6 +326,7 @@ class IRBuilder {
   CallInst *createCallInst(
       Value *callee,
       Value *target,
+      bool calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       Value *thisValue,
@@ -338,6 +339,7 @@ class IRBuilder {
     return createCallInst(
         callee,
         getEmptySentinel(),
+        /* calleeIsAlwaysClosure */ false,
         getEmptySentinel(),
         newTarget,
         thisValue,
@@ -347,6 +349,7 @@ class IRBuilder {
   HBCCallWithArgCountInst *createHBCCallWithArgCount(
       Value *callee,
       Value *target,
+      bool calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       LiteralNumber *argCount,
@@ -356,6 +359,7 @@ class IRBuilder {
   HBCCallNInst *createHBCCallNInst(
       Value *callee,
       Value *target,
+      bool calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       Value *thisValue,

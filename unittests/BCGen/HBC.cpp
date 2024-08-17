@@ -179,7 +179,8 @@ TEST(SpillRegisterTest, SpillsParameters) {
     values.push_back(builder.createHBCLoadConstInst(undef));
   }
   // Use them in a call to require 200 parameter registers.
-  builder.createCallInst(undef, emptySen, emptySen, undef, undef, values);
+  builder.createCallInst(
+      undef, emptySen, false, emptySen, undef, undef, values);
   builder.createReturnInst(undef);
 
   HVMRegisterAllocator RA(F);

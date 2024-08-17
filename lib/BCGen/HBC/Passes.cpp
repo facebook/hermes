@@ -215,6 +215,11 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<BaseCallInst>(Inst) &&
+      opIndex == BaseCallInst::CalleeIsAlwaysClosure) {
+    return true;
+  }
+
   // For properties that uint8_t literals, there's a GetByIndex variant
   // that encodes the property as an immediate.
   if (auto *loadPropInst = llvh::dyn_cast_or_null<LoadPropertyInst>(Inst)) {

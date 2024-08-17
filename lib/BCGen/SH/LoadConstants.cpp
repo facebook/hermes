@@ -163,6 +163,11 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<BaseCallInst>(Inst) &&
+      opIndex == BaseCallInst::CalleeIsAlwaysClosure) {
+    return true;
+  }
+
   return false;
 }
 

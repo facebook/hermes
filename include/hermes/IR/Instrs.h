@@ -989,6 +989,7 @@ class BaseCallInst : public Instruction {
       ValueKind kind,
       Value *callee,
       Value *target,
+      LiteralBool *calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       Value *thisValue,
@@ -996,6 +997,7 @@ class BaseCallInst : public Instruction {
       : Instruction(kind) {
     pushOperand(callee);
     pushOperand(target);
+    pushOperand(calleeIsAlwaysClosure);
     pushOperand(env);
     pushOperand(newTarget);
     thisIdx_ = getNumOperands();
@@ -1015,12 +1017,14 @@ class BaseCallInst : public Instruction {
       ValueKind kind,
       Value *callee,
       Value *target,
+      LiteralBool *calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       size_t thisIdx)
       : Instruction(kind) {
     pushOperand(callee);
     pushOperand(target);
+    pushOperand(calleeIsAlwaysClosure);
     pushOperand(env);
     pushOperand(newTarget);
     thisIdx_ = thisIdx;
@@ -1037,7 +1041,14 @@ class BaseCallInst : public Instruction {
   using Instruction::getOperand;
 
  public:
-  enum { CalleeIdx, TargetIdx, EnvIdx, NewTargetIdx, _LastIdx };
+  enum {
+    CalleeIdx,
+    TargetIdx,
+    CalleeIsAlwaysClosure,
+    EnvIdx,
+    NewTargetIdx,
+    _LastIdx
+  };
 
   using ArgumentList = llvh::SmallVector<Value *, 2>;
 
@@ -1056,6 +1067,17 @@ class BaseCallInst : public Instruction {
   void setTarget(Function *func) {
     setOperand(func, TargetIdx);
   }
+
+  /// Get a flag indicating whether the callee is known to always be a closure.
+  LiteralBool *getCalleeIsAlwaysClosure() const {
+    return cast<LiteralBool>(getOperand(CalleeIsAlwaysClosure));
+  }
+
+  /// Set the CalleeIsAlwaysClosure flag.
+  void setCalleeIsAlwaysClosure(LiteralBool *isAlwaysClosure) {
+    setOperand(isAlwaysClosure, CalleeIsAlwaysClosure);
+  }
+
   /// \return the Environment that the target is being called with,
   ///   or EmptySentinel if it's not known at this time.
   Value *getEnvironment() const {
@@ -1117,6 +1139,7 @@ class CallInst : public BaseCallInst {
   explicit CallInst(
       Value *callee,
       Value *target,
+      LiteralBool *calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       Value *thisValue,
@@ -1125,6 +1148,7 @@ class CallInst : public BaseCallInst {
             ValueKind::CallInstKind,
             callee,
             target,
+            calleeIsAlwaysClosure,
             env,
             newTarget,
             thisValue,
@@ -1146,6 +1170,7 @@ class HBCCallWithArgCountInst : public BaseCallInst {
   explicit HBCCallWithArgCountInst(
       Value *callee,
       Value *target,
+      LiteralBool *calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       LiteralNumber *argCount,
@@ -1155,6 +1180,7 @@ class HBCCallWithArgCountInst : public BaseCallInst {
             ValueKind::HBCCallWithArgCountInstKind,
             callee,
             target,
+            calleeIsAlwaysClosure,
             env,
             newTarget,
             ThisIdx) {
@@ -1191,6 +1217,7 @@ class CallBuiltinInst : public BaseCallInst {
   explicit CallBuiltinInst(
       LiteralNumber *callee,
       EmptySentinel *target,
+      LiteralBool *calleeIsAlwaysClosure,
       EmptySentinel *env,
       LiteralUndefined *undefined,
       ArrayRef<Value *> args)
@@ -1198,6 +1225,7 @@ class CallBuiltinInst : public BaseCallInst {
             ValueKind::CallBuiltinInstKind,
             callee,
             target,
+            calleeIsAlwaysClosure,
             env,
             /* newTarget */ undefined,
             /* thisValue */ undefined,
@@ -1280,6 +1308,7 @@ class HBCCallNInst : public BaseCallInst {
   explicit HBCCallNInst(
       Value *callee,
       Value *target,
+      LiteralBool *calleeIsAlwaysClosure,
       Value *env,
       Value *newTarget,
       Value *thisValue,
@@ -1288,6 +1317,7 @@ class HBCCallNInst : public BaseCallInst {
             ValueKind::HBCCallNInstKind,
             callee,
             target,
+            calleeIsAlwaysClosure,
             env,
             newTarget,
             thisValue,

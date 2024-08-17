@@ -1147,6 +1147,7 @@ void ESTreeIRGen::emitFieldInitCall(flow::ClassType *classType) {
       .createCallInst(
           funcVal,
           fieldInitFunc,
+          /* calleeIsAlwaysClosure */ true,
           Builder.getEmptySentinel(),
           /*newTarget*/ Builder.getLiteralUndefined(),
           genThisExpression(),

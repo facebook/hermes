@@ -724,6 +724,7 @@ class ESTreeIRGen {
       ESTree::CallExpressionLikeNode *call,
       Value *callee,
       Value *target,
+      bool calleeIsAlwaysClosure,
       Value *thisVal,
       Value *newTarget);
 

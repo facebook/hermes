@@ -466,6 +466,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   Value *thisVal;
   Value *callee;
   Value *target = Builder.getEmptySentinel();
+  bool calleeIsAlwaysClosure = false;
   Value *newTarget = Builder.getLiteralUndefined();
   // If this is nonnull, the call is a super() call, and
   // we should call the field initialization function for the
@@ -486,7 +487,11 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     // Call the callee with obj as the 'this' pointer.
     thisVal = memResult.base;
     callee = memResult.result;
-    target = memResult.resultFn ? memResult.resultFn : target;
+
+    if (memResult.resultFn) {
+      target = memResult.resultFn;
+      calleeIsAlwaysClosure = true;
+    }
   } else if (
       auto *Mem =
           llvh::dyn_cast<ESTree::OptionalMemberExpressionNode>(call->_callee)) {
@@ -521,7 +526,8 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     callee = genExpression(call->_callee);
   }
 
-  Value *res = emitCall(call, callee, target, thisVal, newTarget);
+  Value *res =
+      emitCall(call, callee, target, calleeIsAlwaysClosure, thisVal, newTarget);
   if (fieldInitClassType) {
     emitFieldInitCall(fieldInitClassType);
   }
@@ -605,6 +611,7 @@ Value *ESTreeIRGen::genOptionalCallExpr(
       call,
       callee,
       /* target */ Builder.getEmptySentinel(),
+      /* calleeIsAlwaysClosure */ false,
       thisVal,
       Builder.getLiteralUndefined());
 
@@ -723,6 +730,7 @@ Value *ESTreeIRGen::emitCall(
     ESTree::CallExpressionLikeNode *call,
     Value *callee,
     Value *target,
+    bool calleeIsAlwaysClosure,
     Value *thisVal,
     Value *newTarget) {
   bool hasSpread = false;
@@ -741,6 +749,7 @@ Value *ESTreeIRGen::emitCall(
     auto *callInst = Builder.createCallInst(
         callee,
         target,
+        calleeIsAlwaysClosure,
         /* env */ Builder.getEmptySentinel(),
         newTarget,
         thisVal,
@@ -2467,7 +2476,13 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
 
       Function *target = it->second.constructorFunc;
       Builder.createCallInst(
-          callee, target, Builder.getEmptySentinel(), callee, newInst, args);
+          callee,
+          target,
+          /* calleeIsAlwaysClosure */ true,
+          Builder.getEmptySentinel(),
+          callee,
+          newInst,
+          args);
     }
     return newInst;
   }

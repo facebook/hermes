@@ -302,6 +302,7 @@ bool LowerCalls::runOnFunction(Function *F) {
           auto *replacement = builder.createHBCCallWithArgCount(
               CI->getCallee(),
               CI->getTarget(),
+              CI->getCalleeIsAlwaysClosure()->getValue(),
               CI->getEnvironment(),
               CI->getNewTarget(),
               builder.getLiteralNumber(argCount),
@@ -321,6 +322,7 @@ bool LowerCalls::runOnFunction(Function *F) {
           HBCCallNInst *newCall = builder.createHBCCallNInst(
               CI->getCallee(),
               CI->getTarget(),
+              CI->getCalleeIsAlwaysClosure()->getValue(),
               CI->getEnvironment(),
               CI->getNewTarget(),
               CI->getThis(),

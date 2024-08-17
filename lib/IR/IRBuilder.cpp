@@ -422,11 +422,19 @@ StoreStackInst *IRBuilder::createStoreStackInst(
 CallInst *IRBuilder::createCallInst(
     Value *callee,
     Value *target,
+    bool calleeIsAlwaysClosure,
     Value *env,
     Value *newTarget,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new CallInst(callee, target, env, newTarget, thisValue, args);
+  auto CI = new CallInst(
+      callee,
+      target,
+      getLiteralBool(calleeIsAlwaysClosure),
+      env,
+      newTarget,
+      thisValue,
+      args);
   insert(CI);
   return CI;
 }
@@ -434,13 +442,21 @@ CallInst *IRBuilder::createCallInst(
 HBCCallWithArgCountInst *IRBuilder::createHBCCallWithArgCount(
     Value *callee,
     Value *target,
+    bool calleeIsAlwaysClosure,
     Value *env,
     Value *newTarget,
     LiteralNumber *argCount,
     Value *thisValue,
     ArrayRef<Value *> args) {
   auto CI = new HBCCallWithArgCountInst(
-      callee, target, env, newTarget, argCount, thisValue, args);
+      callee,
+      target,
+      getLiteralBool(calleeIsAlwaysClosure),
+      env,
+      newTarget,
+      argCount,
+      thisValue,
+      args);
   insert(CI);
   return CI;
 }
@@ -448,11 +464,19 @@ HBCCallWithArgCountInst *IRBuilder::createHBCCallWithArgCount(
 HBCCallNInst *IRBuilder::createHBCCallNInst(
     Value *callee,
     Value *target,
+    bool calleeIsAlwaysClosure,
     Value *env,
     Value *newTarget,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  auto CI = new HBCCallNInst(callee, target, env, newTarget, thisValue, args);
+  auto CI = new HBCCallNInst(
+      callee,
+      target,
+      getLiteralBool(calleeIsAlwaysClosure),
+      env,
+      newTarget,
+      thisValue,
+      args);
   insert(CI);
   return CI;
 }
@@ -999,6 +1023,7 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
   auto *inst = new CallBuiltinInst(
       getLiteralNumber(builtinIndex),
       getEmptySentinel(),
+      getLiteralBool(false),
       getEmptySentinel(),
       getLiteralUndefined(),
       arguments);
