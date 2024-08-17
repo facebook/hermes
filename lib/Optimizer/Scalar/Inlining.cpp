@@ -504,6 +504,13 @@ bool Inlining::runOnModule(Module *M) {
   llvh::SmallDenseSet<Function *, 8> intoFunctions;
   std::vector<Function *> functionOrder = orderFunctions(M);
 
+  IRBuilder builder(M);
+
+  // Literal strings for speculative inlining.
+  auto *functionLS = builder.getLiteralString("function");
+  auto *nonFunctionErrorLS =
+      builder.getLiteralString("Trying to call a non-function");
+
   for (Function *FC : functionOrder) {
     LLVM_DEBUG(
         llvh::dbgs() << "Visiting function '" << FC->getInternalNameStr()
@@ -572,7 +579,6 @@ bool Inlining::runOnModule(Module *M) {
                  llvh::dbgs() << "\n";);
 
       intoFunctions.insert(intoFunction);
-      IRBuilder builder(M);
 
       // Split the block in two and move all instructions following the call
       // to the new block.
@@ -588,6 +594,23 @@ bool Inlining::runOnModule(Module *M) {
 
       // Perform the inlining.
       builder.setInsertionPointAfter(CI);
+
+      // If we need to check the type of the callee, emit code to do it.
+      if (!CI->getCalleeIsAlwaysClosure()->getValue()) {
+        auto *throwBB = builder.createBasicBlock(intoFunction);
+        auto *inlineBB = builder.createBasicBlock(intoFunction);
+
+        // Check if typeof callee === 'function', and throw a type error if not.
+        auto *typeCheck = builder.createTypeOfInst(CI->getCallee());
+        auto *typeCheckResult = builder.createBinaryOperatorInst(
+            typeCheck, functionLS, ValueKind::BinaryStrictlyEqualInstKind);
+        builder.createCondBranchInst(typeCheckResult, inlineBB, throwBB);
+        builder.setInsertionBlock(throwBB);
+        builder.createThrowTypeErrorInst(nonFunctionErrorLS);
+
+        // Continue inserting in inlineBB.
+        builder.setInsertionBlock(inlineBB);
+      }
 
       auto *returnValue = inlineFunction(builder, FC, CI, nextBlock);
       CI->replaceAllUsesWith(returnValue);
