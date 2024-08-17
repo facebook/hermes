@@ -166,12 +166,12 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
           break;
         case ALWAYS:
         case EXCEPTZERO:
-          if (!decimalFormat.getNegativePrefix().isEmpty())
-            decimalFormat.setPositivePrefix(new String(new char[] {symbols.getPlusSign()}));
-
-          if (!decimalFormat.getNegativeSuffix().isEmpty())
-            decimalFormat.setPositiveSuffix(new String(new char[] {symbols.getPlusSign()}));
-
+          if (decimalFormat.getPositivePrefix().isEmpty()) {
+            decimalFormat.setPositivePrefix(new String(new char[]{symbols.getPlusSign()}));
+          } else {
+            // Preserve the existing prefix, which may include the currency symbol, and prepend the plus sign
+            decimalFormat.setPositivePrefix(new String(new char[]{symbols.getPlusSign()}) + decimalFormat.getPositivePrefix());
+          }
           break;
       }
     }
