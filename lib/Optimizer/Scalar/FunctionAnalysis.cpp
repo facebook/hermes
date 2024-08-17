@@ -108,6 +108,7 @@ bool isAnalyzableVariable(Variable *V, Value *val) {
 void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Function *F = create->getFunctionCode();
   Module *M = F->getParent();
+  IRBuilder builder(M);
 
   /// Define an element in the worklist below.
   struct UserInfo {
@@ -183,6 +184,15 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           closureUser->replaceAllUsesWith(knownScope);
 
         // Getting the closure scope does not leak the closure.
+        continue;
+      }
+
+      if (auto *TOI = llvh::dyn_cast<TypeOfInst>(closureUser)) {
+        assert(TOI->getArgument() == closureInst && "unexpected operand");
+        // If we know the operand is always a closure, typeof can be eliminated.
+        if (isAlwaysClosure)
+          TOI->replaceAllUsesWith(builder.getLiteralString("function"));
+        // typeof does not leak the closure.
         continue;
       }
 
