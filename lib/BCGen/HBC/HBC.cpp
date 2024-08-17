@@ -353,27 +353,42 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
   }
 }
 
-bool coordsInLazyFunction(
+SMLoc findSMLocFromCoords(
     hbc::BCProvider *baseProvider,
-    uint32_t funcID,
     uint32_t line,
     uint32_t col) {
+  if (!llvh::isa<BCProviderFromSrc>(baseProvider))
+    return SMLoc{};
+
   auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
   hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
-  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
-  assert(lazyFunc.isLazy() && "function is not lazy");
-  Function *F = lazyFunc.getFunctionIR();
-  assert(F && "no lazy IR for lazy function");
+  assert(bcModule && "no bytecode module while debugging");
+  hbc::BytecodeFunction &globalFunc =
+      bcModule->getFunction(provider->getGlobalFunctionIndex());
+  Function *F = globalFunc.getFunctionIR();
+  assert(F && "no IR for global function while debugging");
 
   SourceErrorManager &manager =
-      F->getParent()->getContext().getSourceErrorManager();
+      provider->getModule()->getContext().getSourceErrorManager();
 
   // Convert the coords to SMLoc to check for membership, because that's simpler
   // than converting the exclusive end SMLoc of the function to coords,
   // plus it only requires one conversion.
   SourceErrorManager::SourceCoords coords{
       manager.findBufferIdForLoc(F->getSourceRange().Start), line, col};
-  SMLoc loc = manager.findSMLocFromCoords(coords);
+  return manager.findSMLocFromCoords(coords);
+}
+
+bool coordsInLazyFunction(
+    hbc::BCProvider *baseProvider,
+    uint32_t funcID,
+    SMLoc loc) {
+  auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
+  assert(lazyFunc.isLazy() && "function is not lazy");
+  Function *F = lazyFunc.getFunctionIR();
+  assert(F && "no lazy IR for lazy function");
 
   if (!loc.isValid())
     return false;

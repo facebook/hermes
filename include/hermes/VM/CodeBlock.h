@@ -188,10 +188,8 @@ class CodeBlock final
   ExecutionStatus lazyCompileImpl(Runtime &runtime);
 
   /// \pre isLazy() is true.
-  /// \param line 1-based line.
-  /// \param col 1-based column.
   /// \return whether the coordinates are in the lazy function.
-  bool coordsInLazyFunction(uint32_t line, uint32_t col) const;
+  bool coordsInLazyFunction(SMLoc loc) const;
 
   /// \return a vector representing the number of Variables for each depth
   ///   of the VariableScope chain.

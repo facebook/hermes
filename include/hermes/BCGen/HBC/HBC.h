@@ -88,19 +88,28 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
     hbc::BCProvider *baseProvider,
     uint32_t funcID);
 
+/// Convert line and column to a SMLoc.
+/// \param provider the BCProvider to lookup in.
+/// \param line 1-based line.
+/// \param col 1-based column.
+/// \return the SMLoc corresponding to the line/col, which may be invalid if
+///   none was able to be found.
+SMLoc findSMLocFromCoords(
+    hbc::BCProvider *provider,
+    uint32_t line,
+    uint32_t col);
+
 /// \pre the BytecodeFunction at funcID is lazy.
 /// \param provider the BCProviderFromSrc owning the BytecodeModule.
 ///   Passed in as BCProvider to avoid BCProviderFromSrc dependencies in
 ///   CodeBlock (for simplicity).
 /// \param funcID the ID of the lazy function.
-/// \param line 1-based line.
-/// \param col 1-based column.
-/// \return whether the line/col location is contained in the lazy function.
+/// \param loc the SMLoc to lookup.
+/// \return whether the loc is contained in the lazy function.
 bool coordsInLazyFunction(
     hbc::BCProvider *provider,
     uint32_t funcID,
-    uint32_t line,
-    uint32_t col);
+    SMLoc loc);
 
 /// Generate the bytecode for eval function by running the full compiler
 /// pipeline without optimizations.

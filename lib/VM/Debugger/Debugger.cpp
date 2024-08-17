@@ -9,6 +9,7 @@
 
 #include "hermes/VM/Debugger/Debugger.h"
 
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
@@ -1146,6 +1147,13 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       toVisit.push_back(runtimeModule.getCodeBlockMayAllocate(i));
     }
 
+    SMLoc loc = hbc::findSMLocFromCoords(
+        runtimeModule.getBytecode(), request.line, request.column);
+    if (!loc.isValid()) {
+      // Unable to resolve a location in this runtimeModule.
+      continue;
+    }
+
     while (!toVisit.empty()) {
       GCScopeMarkerRAII marker{gcScope};
       CodeBlock *codeBlock = toVisit.back();
@@ -1166,7 +1174,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
 
       visited.insert(codeBlock);
 
-      if (codeBlock->coordsInLazyFunction(request.line, request.column)) {
+      if (codeBlock->coordsInLazyFunction(loc)) {
         // The code block probably contains the breakpoint we want to set.
         // First, we compile it.
         if (LLVM_UNLIKELY(
