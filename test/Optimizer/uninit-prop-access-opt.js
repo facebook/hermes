@@ -81,7 +81,7 @@ print(f());
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %0: environment, [%VS1.?Foo.prototype]: object
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any, "o": string, 0: number, "y": string, 0: number
 // CHECK-NEXT:       TypedStoreParentInst %3: object, %4: object
-// CHECK-NEXT:  %6 = CallInst (:undefined) %2: object, %Foo(): functionCode, true: boolean, empty: any, %2: object, %4: object
+// CHECK-NEXT:  %6 = CallInst (:undefined) %2: object, %Foo(): functionCode, true: boolean, %0: environment, %2: object, %4: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

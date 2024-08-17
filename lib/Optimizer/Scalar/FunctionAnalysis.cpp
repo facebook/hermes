@@ -78,7 +78,14 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
 /// Check if the variable \p V, which is known to be stored to with closure
 /// \p val, can be analyzed such that a call to a value loaded from \p V is
 /// known to call \p val.
-bool isAnalyzableVariable(Variable *V, Value *val) {
+/// \return a pair of of [storeIsOnlyClosure, noOtherValues]. The first
+/// indicates whether any successful call to a value loaded from \p V is known
+/// to invoke \p val. The second indicates whether \p V has no stores of values
+/// that will throw when called (e.g. undefined, null, etc.). This can be used
+/// to determine whether a type-check is needed before directly calling or
+/// inlining the target function.
+std::pair<bool, bool> isAnalyzableVariable(Variable *V, Value *val) {
+  bool noOtherValues = true;
   for (auto *U : V->getUsers()) {
     if (llvh::isa<LoadFrameInst>(U))
       continue;
@@ -95,10 +102,18 @@ bool isAnalyzableVariable(Variable *V, Value *val) {
             Type::unionTy(Type::createEmpty(), Type::createUninit())))
       continue;
 
+    // Storing any other value that is definitely not an object is fine since
+    // there will still only be one possible call target once the type is
+    // checked.
+    if (!SF->getValue()->getType().canBeObject()) {
+      noOtherValues = false;
+      continue;
+    }
+
     // Stores to the variable cannot be analyzed, give up.
-    return false;
+    return {false, false};
   }
-  return true;
+  return {true, noOtherValues};
 }
 
 /// Find all callsites that could call a function via the closure created
@@ -243,7 +258,9 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       // to find callsites.
       if (auto *store = llvh::dyn_cast<StoreFrameInst>(closureUser)) {
         Variable *var = store->getVariable();
-        if (!isAnalyzableVariable(var, store->getValue())) {
+        auto [storeIsOnlyClosure, noOtherValues] =
+            isAnalyzableVariable(var, store->getValue());
+        if (!storeIsOnlyClosure) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
           continue;
         }
@@ -266,7 +283,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           }
           worklist.push_back(
               {load,
-               isAlwaysClosure,
+               isAlwaysClosure && noOtherValues,
                propagateScope ? load->getScope() : nullptr});
         }
         continue;
