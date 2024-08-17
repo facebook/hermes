@@ -36,7 +36,6 @@
 
 BEGIN_VALUE(UnaryOperatorInst, Instruction)
 DEF_TAG(UnaryVoidInst, UnaryOperatorInst)
-DEF_TAG(UnaryTypeofInst, UnaryOperatorInst)
 DEF_TAG(UnaryMinusInst, UnaryOperatorInst)
 DEF_TAG(UnaryTildeInst, UnaryOperatorInst)
 DEF_TAG(UnaryBangInst, UnaryOperatorInst)
@@ -44,6 +43,7 @@ DEF_TAG(UnaryIncInst, UnaryOperatorInst)
 DEF_TAG(UnaryDecInst, UnaryOperatorInst)
 END_VALUE(UnaryOperatorInst)
 
+DEF_VALUE(TypeOfInst, Instruction)
 DEF_VALUE(AddEmptyStringInst, Instruction)
 DEF_VALUE(AsNumberInst, Instruction)
 DEF_VALUE(AsNumericInst, Instruction)

@@ -764,6 +764,12 @@ CreateRegExpInst *IRBuilder::createRegExpInst(
   return res;
 }
 
+TypeOfInst *IRBuilder::createTypeOfInst(Value *input) {
+  auto *inst = new TypeOfInst(input);
+  insert(inst);
+  return inst;
+}
+
 UnaryOperatorInst *
 IRBuilder::createUnaryOperatorInst(Value *value, ValueKind kind, Type type) {
   auto UOI = new UnaryOperatorInst(kind, value, type);

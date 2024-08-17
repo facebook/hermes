@@ -183,10 +183,32 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
+  Value *simplifyTypeOf(TypeOfInst *typeOf) {
+    auto *op = typeOf->getArgument();
+    Type t = op->getType();
+    if (t.isNullType() || llvh::isa<GlobalObject>(op)) {
+      return builder_.getLiteralString("object");
+    }
+    if (t.isNumberType()) {
+      return builder_.getLiteralString("number");
+    }
+    if (t.isUndefinedType()) {
+      return builder_.getLiteralString("undefined");
+    }
+    if (t.isBooleanType()) {
+      return builder_.getLiteralString("boolean");
+    }
+    if (t.isStringType()) {
+      return builder_.getLiteralString("string");
+    }
+    // Type is either multiple things or object. We cannot distinguish object
+    // from closure yet, so give up.
+    return nullptr;
+  }
+
   Value *simplifyUnOp(UnaryOperatorInst *unary) {
     auto kind = unary->getKind();
     auto *op = unary->getSingleOperand();
-    Type t = op->getType();
 
     // If the operand is a literal, try to evaluate the expression.
     if (auto *lit = llvh::dyn_cast<Literal>(op)) {
@@ -197,29 +219,6 @@ class InstSimplifyImpl {
 
     // Try to simplify based on type information.
     switch (kind) {
-      case ValueKind::UnaryTypeofInstKind:
-        if (t.isNullType()) {
-          return builder_.getLiteralString("object");
-        }
-        if (t.isNumberType()) {
-          return builder_.getLiteralString("number");
-        }
-        if (t.isUndefinedType()) {
-          return builder_.getLiteralString("undefined");
-        }
-        if (t.isBooleanType()) {
-          return builder_.getLiteralString("boolean");
-        }
-        if (t.isStringType()) {
-          return builder_.getLiteralString("string");
-        }
-        if (t.isObjectType()) {
-          // Object type also includes closures.
-          // Can't know whether this is supposed to be "function" or "object".
-          break;
-        }
-        break;
-
       case ValueKind::UnaryBangInstKind:
         if (op->getType().isSubsetOf(kNullOrUndef)) {
           return builder_.getLiteralBool(true);
@@ -955,6 +954,8 @@ class InstSimplifyImpl {
         return simplifyCheckedTypeCast(cast<CheckedTypeCastInst>(I));
       case ValueKind::ResolveScopeInstKind:
         return simplifyResolveScopeInst(cast<ResolveScopeInst>(I));
+      case ValueKind::TypeOfInstKind:
+        return simplifyTypeOf(cast<TypeOfInst>(I));
 
       default:
         // TODO: handle other kinds of instructions.

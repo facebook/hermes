@@ -2424,6 +2424,43 @@ class UnaryOperatorInst : public SingleOperandInst {
   }
 };
 
+class TypeOfInst : public Instruction {
+ public:
+ private:
+  TypeOfInst(const TypeOfInst &) = delete;
+  void operator=(const TypeOfInst &) = delete;
+
+ public:
+  explicit TypeOfInst(Value *op) : Instruction(ValueKind::TypeOfInstKind) {
+    setType(*getInherentTypeImpl());
+    pushOperand(op);
+  }
+  explicit TypeOfInst(const TypeOfInst *src, llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getArgument() const {
+    return getOperand(0);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createString();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::TypeOfInstKind;
+  }
+};
+
 class BinaryOperatorInst : public Instruction {
  public:
   // A list of textual representation of the operators above.

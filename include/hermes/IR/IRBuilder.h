@@ -498,6 +498,8 @@ class IRBuilder {
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
+  TypeOfInst *createTypeOfInst(Value *input);
+
   UnaryOperatorInst *createUnaryOperatorInst(
       Value *value,
       ValueKind kind,

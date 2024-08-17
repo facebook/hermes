@@ -51,7 +51,7 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
 }
 
 const char *UnaryOperatorInst::opStringRepr[] =
-    {"void", "typeof", "-", "~", "!", "++", "--"};
+    {"void", "-", "~", "!", "++", "--"};
 
 const char *BinaryOperatorInst::opStringRepr[] = {
     "==", "!=", "===", "!==", "<", "<=", ">", ">=", "<<", ">>", ">>>",
@@ -77,7 +77,6 @@ SideEffect UnaryOperatorInst::getSideEffectImpl() const {
 
   switch (getKind()) {
     case ValueKind::UnaryVoidInstKind: // void
-    case ValueKind::UnaryTypeofInstKind: // typeof
       return SideEffect{}.setIdempotent();
 
     default:

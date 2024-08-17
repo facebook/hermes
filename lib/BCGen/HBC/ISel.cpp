@@ -625,6 +625,12 @@ void HBCISel::generateImplicitMovInst(ImplicitMovInst *Inst, BasicBlock *next) {
   // instruction will perform the equivalent of a 'Mov'.
 }
 
+void HBCISel::generateTypeOfInst(TypeOfInst *Inst, hermes::BasicBlock *) {
+  auto dst = encodeValue(Inst);
+  auto src = encodeValue(Inst->getArgument());
+  BCFGen_->emitTypeOf(dst, src);
+}
+
 void HBCISel::generateUnaryOperatorInst(
     UnaryOperatorInst *Inst,
     BasicBlock *next) {
@@ -632,10 +638,6 @@ void HBCISel::generateUnaryOperatorInst(
   auto resReg = encodeValue(Inst);
 
   switch (Inst->getKind()) {
-    case ValueKind::UnaryTypeofInstKind: { // typeof
-      BCFGen_->emitTypeOf(resReg, opReg);
-      break;
-    }
     case ValueKind::UnaryMinusInstKind: { // -
       BCFGen_->emitNegate(resReg, opReg);
       break;

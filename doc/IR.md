@@ -557,6 +557,16 @@ Arguments | %templateObjID is the cache key for the template. %dup indicates whe
 Semantics | If cached, retrieves from the template cache. Otherwise, updates the cache with a new template object with the cooked strings, which also contains an object containing the raw strings. Returns the resultant object.
 Effects | Does not read or write to program memory. Updates template cache.
 
+### TypeOfInst
+
+TypeOfInst | _
+--- | --- |
+Description | The JS `typeof` operator
+Example |  %0 = TypeOfInst %val
+Arguments | %val is the value whose type we want to obtain.
+Semantics | Obtains a string representing the type of the operand.
+Effects | Does not read or write to memory.
+
 ### CreateArgumentsInst
 
 CreateArgumentsInst | _

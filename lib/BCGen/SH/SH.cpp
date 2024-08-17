@@ -734,6 +734,13 @@ class InstrGen {
     // instruction will perform the equivalent of a 'Mov'.
     os_ << "  // ImplicitMovInst\n";
   }
+  void generateTypeOfInst(TypeOfInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_typeof(shr, ";
+    generateRegisterPtr(*inst.getArgument());
+    os_ << ");\n";
+  }
   void generateUnaryOperatorInst(UnaryOperatorInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -764,11 +771,6 @@ class InstrGen {
         break;
       case (ValueKind::UnaryTildeInstKind):
         os_ << "_sh_ljs_bit_not_rjs(shr, &";
-        generateRegister(*inst.getSingleOperand());
-        os_ << ");\n";
-        break;
-      case (ValueKind::UnaryTypeofInstKind):
-        os_ << "_sh_ljs_typeof(shr, &";
         generateRegister(*inst.getSingleOperand());
         os_ << ");\n";
         break;

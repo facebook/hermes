@@ -739,6 +739,11 @@ bool Verifier::visitCondBranchInst(const CondBranchInst &Inst) {
   return true;
 }
 
+bool Verifier::visitTypeOfInst(const TypeOfInst &) {
+  // Nothing to verify at this point.
+  return true;
+}
+
 bool Verifier::visitUnaryOperatorInst(const UnaryOperatorInst &Inst) {
   // Nothing to verify at this point.
   return true;

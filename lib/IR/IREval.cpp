@@ -94,23 +94,6 @@ Literal *hermes::evalUnaryOperator(
           break;
       }
       break;
-    case ValueKind::UnaryTypeofInstKind:
-      switch (operand->getKind()) {
-        case ValueKind::GlobalObjectKind:
-        case ValueKind::LiteralNullKind:
-          return builder.getLiteralString("object");
-        case ValueKind::LiteralUndefinedKind:
-          return builder.getLiteralString("undefined");
-        case ValueKind::LiteralBoolKind:
-          return builder.getLiteralString("boolean");
-        case ValueKind::LiteralNumberKind:
-          return builder.getLiteralString("number");
-        case ValueKind::LiteralStringKind:
-          return builder.getLiteralString("string");
-        default:
-          break;
-      }
-      break;
 
     case ValueKind::UnaryBangInstKind:
       if (evalIsTrue(builder, operand)) {

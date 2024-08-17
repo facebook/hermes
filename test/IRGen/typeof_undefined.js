@@ -20,7 +20,7 @@ var x = typeof foo;
 // CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %5 = UnaryTypeofInst (:string) %4: any
+// CHECK-NEXT:  %5 = TypeOfInst (:string) %4: any
 // CHECK-NEXT:       StorePropertyStrictInst %5: string, globalObject: object, "x": string
 // CHECK-NEXT:  %7 = LoadStackInst (:any) %2: any
 // CHECK-NEXT:       ReturnInst %7: any

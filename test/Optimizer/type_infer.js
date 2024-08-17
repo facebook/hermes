@@ -109,7 +109,7 @@ function test_unary(x) {
 // CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: boolean
 // CHECK-NEXT:  %6 = AsNumericInst (:number|bigint) %0: any
 // CHECK-NEXT:  %7 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: number|bigint
-// CHECK-NEXT:  %8 = UnaryTypeofInst (:string) %0: any
+// CHECK-NEXT:  %8 = TypeOfInst (:string) %0: any
 // CHECK-NEXT:  %9 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -472,8 +472,6 @@ class TypeInferenceImpl {
     switch (inst->getKind()) {
       case ValueKind::UnaryVoidInstKind: // void
         return Type::createUndefined();
-      case ValueKind::UnaryTypeofInstKind: // typeof
-        return Type::createString();
       // https://tc39.es/ecma262/#sec-prefix-increment-operator
       // https://tc39.es/ecma262/#sec-postfix-increment-operator
       case ValueKind::UnaryIncInstKind: // ++
@@ -624,6 +622,9 @@ class TypeInferenceImpl {
   }
   Type inferGetNewTargetInst(GetNewTargetInst *inst) {
     return inst->getOperand(GetNewTargetInst::GetNewTargetParamIdx)->getType();
+  }
+  Type inferTypeOfInst(TypeOfInst *inst) {
+    return *inst->getInherentType();
   }
   Type inferThrowIfInst(ThrowIfInst *inst) {
     Type type = inst->getCheckedValue()->getType();

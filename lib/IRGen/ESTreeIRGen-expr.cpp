@@ -2058,8 +2058,7 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
   if (oper == kw_.identTypeof) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(U->_argument)) {
       Value *argument = genIdentifierExpression(id, true);
-      return Builder.createUnaryOperatorInst(
-          argument, ValueKind::UnaryTypeofInstKind, Type::createString());
+      return Builder.createTypeOfInst(argument);
     }
   }
 
@@ -2068,6 +2067,8 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
 
   if (oper == kw_.identPlus) {
     return Builder.createAsNumberInst(argument);
+  } else if (oper == kw_.identTypeof) {
+    return Builder.createTypeOfInst(argument);
   } else {
     ValueKind kind = UnaryOperatorInst::parseOperator(oper->str());
 
@@ -2076,9 +2077,6 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
     switch (kind) {
       case ValueKind::UnaryVoidInstKind:
         type = Type::createUndefined();
-        break;
-      case ValueKind::UnaryTypeofInstKind:
-        type = Type::createString();
         break;
       case ValueKind::UnaryBangInstKind:
         type = Type::createBoolean();

@@ -932,10 +932,10 @@ function objectCond() {
 // CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, "string": string
 // CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, "boolean": string
 // CHECK-NEXT:  %6 = CreateRegExpInst (:object) "a+b": string, "": string
-// CHECK-NEXT:  %7 = UnaryTypeofInst (:string) %6: object
+// CHECK-NEXT:  %7 = TypeOfInst (:string) %6: object
 // CHECK-NEXT:  %8 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: string
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %10 = UnaryTypeofInst (:string) %9: object
+// CHECK-NEXT:  %10 = TypeOfInst (:string) %9: object
 // CHECK-NEXT:  %11 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %10: string
 // CHECK-NEXT:  %12 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, -9: number
 // CHECK-NEXT:  %13 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, -1: number
