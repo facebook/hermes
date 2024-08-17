@@ -45,7 +45,7 @@ print(f());
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %""(): functionCode, false: boolean, %0: environment, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %""(): functionCode, true: boolean, %0: environment, undefined: undefined, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -68,7 +68,7 @@ print(f());
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.?Foo.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %11: object, %9: object, "prototype": string
 // CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %15 = CallInst [njsf] (:undefined) %3: object, %f(): functionCode, false: boolean, %1: environment, undefined: undefined, 0: number
+// CHECK-NEXT:  %15 = CallInst [njsf] (:undefined) %3: object, %f(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
 // CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

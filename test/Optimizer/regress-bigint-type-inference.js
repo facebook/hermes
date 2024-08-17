@@ -30,7 +30,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, false: boolean, %0: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -38,7 +38,7 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:number|bigint) %1: object, %foo(): functionCode, false: boolean, %0: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = CallInst (:number|bigint) %1: object, %foo(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %4 = UnaryTypeofInst (:string) %2: number|bigint
 // CHECK-NEXT:  %5 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: string, %2: number|bigint

@@ -52,7 +52,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %use_this(): functionCode
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
 // CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
-// CHECK-NEXT:  %4 = CallInst (:object) %1: object, %use_this(): functionCode, false: boolean, empty: any, undefined: undefined, %3: object, 12: number
+// CHECK-NEXT:  %4 = CallInst (:object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %3: object, 12: number
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
@@ -65,7 +65,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"use_this 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.use_this]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %construct_use_this(): functionCode
-// CHECK-NEXT:  %5 = CallInst (:object) %4: object, %construct_use_this(): functionCode, false: boolean, %1: environment, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:object) %4: object, %construct_use_this(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
@@ -89,6 +89,6 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.use_this]: object
 // CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
 // CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, false: boolean, empty: any, undefined: undefined, %3: object, 12: number
+// CHECK-NEXT:  %4 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %3: object, 12: number
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end

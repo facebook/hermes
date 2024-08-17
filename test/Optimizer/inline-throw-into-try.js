@@ -51,7 +51,7 @@ function outer(a) {
 // CHK2-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: any
 // CHK2-NEXT:       ReturnInst undefined: undefined
 // CHK2-NEXT:%BB2:
-// CHK2-NEXT:  %7 = CallInst (:any) %1: object, %thrower(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number
+// CHK2-NEXT:  %7 = CallInst (:any) %1: object, %thrower(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
 // CHK2-NEXT:       UnreachableInst
 // CHK2-NEXT:function_end
 

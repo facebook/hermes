@@ -46,7 +46,7 @@ function main() {
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %x(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS1.x]: object
-// CHECK-NEXT:  %5 = CallInst (:object) %2: object, %foo(): functionCode, false: boolean, %1: environment, undefined: undefined, 0: number
+// CHECK-NEXT:  %5 = CallInst (:object) %2: object, %foo(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -71,6 +71,6 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS2.y]: object
-// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %x(): functionCode, false: boolean, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %x(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

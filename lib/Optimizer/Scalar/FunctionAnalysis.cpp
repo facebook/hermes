@@ -22,15 +22,23 @@ namespace {
 /// if they haven't been set yet.
 /// \param call the Call instruction being analyzed.
 /// \param callee the expected callee of the call instruction.
+/// \param isAlwaysClosure whether the callee is known to be a closure.
 /// \param scope the scope instruction that should be populated on the call, or
 ///        null if the scope is not available.
 void registerCallsite(
     BaseCallInst *call,
     BaseCreateCallableInst *callee,
+    bool isAlwaysClosure,
     Instruction *scope) {
   // Set the target/env operands if possible.
   if (llvh::isa<EmptySentinel>(call->getTarget())) {
     call->setTarget(callee->getFunctionCode());
+  }
+
+  // If we have determined that no type check is needed, set that on the call.
+  if (!call->getCalleeIsAlwaysClosure()->getValue() && isAlwaysClosure) {
+    auto *M = call->getFunction()->getParent();
+    call->setCalleeIsAlwaysClosure(M->getLiteralBool(true));
   }
 
   // Check if the function uses its parent scope, and populate it if possible.
@@ -102,10 +110,16 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Module *M = F->getParent();
 
   /// Define an element in the worklist below.
-  struct UserAndScope {
-    /// An instruction that is known to have the value of the closure at
-    /// runtime.
-    Instruction *closure;
+  struct UserInfo {
+    /// An instruction that is known to have either the value of the closure, or
+    /// some non-closure type.
+    Instruction *maybeClosure;
+
+    /// Whether \c closure is known to always be a closure at runtime and will
+    /// therefore have the same value as \c create. This allows us to track when
+    /// we propagate the closure through variables that have stores of other
+    /// values.
+    bool isAlwaysClosure;
 
     /// An instruction that is known to produce the scope of the closure at the
     /// point where the closure is used.
@@ -119,17 +133,19 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   // The users of the elements of this list can then be iterated to find calls,
   // ways for the closure to escape, and anything else we want to analyze.
   // When the list is empty, we're done analyzing \p create.
-  llvh::SmallVector<UserAndScope, 2> worklist{};
+  llvh::SmallVector<UserInfo, 2> worklist{};
 
   // Use a set to avoid revisiting the same Instruction.
   // For example, if the same function is stored to two vars we need
   // to avoid going back and forth between the corresponding loads.
   llvh::SmallPtrSet<Instruction *, 2> visited{};
 
-  worklist.push_back({create, create->getScope()});
+  worklist.push_back({create, true, create->getScope()});
   while (!worklist.empty()) {
-    // Instruction whose result is known to be the closure.
-    Instruction *closureInst = worklist.back().closure;
+    // Instruction whose only possible closure value is the one being analyzed.
+    Instruction *closureInst = worklist.back().maybeClosure;
+    // Whether closureInst may have some non-closure value.
+    bool isAlwaysClosure = worklist.back().isAlwaysClosure;
 
     // Instruction whose result is known to be the scope of the closure.
     auto *knownScope = worklist.pop_back_val().scope;
@@ -147,7 +163,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         }
         if (call->getCallee() == closureInst) {
-          registerCallsite(call, create, knownScope);
+          registerCallsite(call, create, isAlwaysClosure, knownScope);
         }
         continue;
       }
@@ -184,7 +200,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
                 ->getType()
                 .canBeObject() &&
             "The result UnionNarrowTrusted of closure is not object");
-        worklist.push_back({closureUser, knownScope});
+        worklist.push_back({closureUser, isAlwaysClosure, knownScope});
         continue;
       }
 
@@ -197,7 +213,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             CC->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (CC->getType().canBeObject()) {
-          worklist.push_back({closureUser, knownScope});
+          worklist.push_back({closureUser, isAlwaysClosure, knownScope});
           continue;
         }
       }
@@ -208,7 +224,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             TII->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (TII->getType().canBeObject()) {
-          worklist.push_back({closureUser, knownScope});
+          worklist.push_back({closureUser, isAlwaysClosure, knownScope});
           continue;
         }
       }
@@ -239,7 +255,9 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             continue;
           }
           worklist.push_back(
-              {load, propagateScope ? load->getScope() : nullptr});
+              {load,
+               isAlwaysClosure,
+               propagateScope ? load->getScope() : nullptr});
         }
         continue;
       }
