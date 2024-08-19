@@ -29,13 +29,10 @@ std::unique_ptr<DeclCollector> DeclCollector::clone(
     const DeclCollector &original,
     const llvh::DenseMap<ESTree::Node *, ESTree::Node *> &clonedNodes) {
   std::unique_ptr<DeclCollector> dc(new DeclCollector(
-      clonedNodes.lookup(original.root_),
-      original.kw_,
-      0,
-      std::function([](ESTree::Node *) {
+      clonedNodes.lookup(original.root_), original.kw_, 0, [](ESTree::Node *) {
         // Recursion depth won't be exceeded.
         llvm_unreachable("DeclCollector clone is non-recursive");
-      })));
+      }));
 
   // Clone scopes_.
   for (const auto &[node, decls] : original.scopes_) {
