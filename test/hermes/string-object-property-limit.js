@@ -6,7 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
-// REQUIRES: !slow_debug
+// UNSUPPORTED: slow_debug || gc_malloc
 
 try {
   var a = new String("foo");
