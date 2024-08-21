@@ -29,6 +29,8 @@
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
+#include "hermes/VM/JSObject.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
@@ -2029,7 +2031,20 @@ void HermesRuntimeImpl::setPropertyValue(
 }
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {
-  return vm::vmisa<vm::JSArray>(phv(obj));
+  vm::JSObject *jsobj = static_cast<vm::JSObject *>(phv(obj).getPointer());
+  while (true) {
+    if (vm::vmisa<vm::JSArray>(jsobj)) {
+      return true;
+    }
+    if (LLVM_LIKELY(!jsobj->isProxyObject())) {
+      return false;
+    }
+    if (vm::JSProxy::isRevoked(jsobj, runtime_)) {
+      return false;
+    }
+    jsobj = vm::JSProxy::getTarget(jsobj, runtime_).get();
+    assert(jsobj && "target of non-revoked Proxy is null");
+  }
 }
 
 bool HermesRuntimeImpl::isArrayBuffer(const jsi::Object &obj) const {
