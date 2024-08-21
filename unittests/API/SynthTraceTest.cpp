@@ -18,6 +18,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 
 #include <memory>
@@ -1273,15 +1274,31 @@ TEST_F(SynthTraceEnvironmentTest, NonDeterministicFunctionNames) {
 /// @{
 struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
   std::unique_ptr<jsi::Runtime> replayRt;
+  std::vector<std::string> sources;
+
+  jsi::Value evalCompiled(jsi::Runtime &rt, std::string source) {
+    std::string bytecode;
+    EXPECT_TRUE(hermes::compileJS(source, bytecode));
+    this->sources.push_back(std::move(source));
+    return rt.evaluateJavaScript(
+        std::unique_ptr<facebook::jsi::StringBuffer>(
+            new facebook::jsi::StringBuffer(bytecode)),
+        "");
+  }
 
   void replay() {
     traceRt.reset();
+
+    std::vector<std::unique_ptr<llvh::MemoryBuffer>> sources;
+    for (const std::string &source : this->sources) {
+      sources.emplace_back(llvh::MemoryBuffer::getMemBuffer(source));
+    }
 
     tracing::TraceInterpreter::ExecuteOptions options;
     options.useTraceConfig = true;
     auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
         llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
-        {}, // codeBufs
+        std::move(sources), // codeBufs
         options, // ExecuteOptions
         makeHermesRuntime);
     replayRt = std::move(rt);
@@ -2222,6 +2239,61 @@ TEST_F(NonDeterminismReplayTest, HermesInternalGetInstrumentedStatsTest) {
     EXPECT_EQ(stats1Str, replayStats1Str);
     EXPECT_EQ(stats2Str, replayStats2Str);
   }
+}
+
+// Test that traces replay deterministically, even if the error stack changes.
+TEST_F(NonDeterminismReplayTest, ErrorStackTest) {
+  constexpr auto source = R"(
+var stack;
+var refetchedStack;
+
+function main() {
+  function inlineable2() {
+    var error = new Error('test');
+    stack = error.stack;
+    refetchedStack = error.stack;
+  }
+
+  function inlineable1() {
+    inlineable2();
+    return 123;
+  }
+
+  return inlineable1();
+}  
+main();
+  )";
+
+  // Run with optimizations, producing a stack like:
+  // Error: test
+  //   at main (:6:18)
+  //   at global (:16:5)
+  evalCompiled(*traceRt, source);
+  auto stack = eval(*traceRt, "stack").asString(*traceRt).utf8(*traceRt);
+  auto refetchedStack =
+      eval(*traceRt, "refetchedStack").asString(*traceRt).utf8(*traceRt);
+  // Ensure the stack is correctly fetched after any caching triggered by the
+  // first fetch.
+  EXPECT_EQ(stack, refetchedStack);
+
+  // Run without optimizations, producing a stack like:
+  // Error: test
+  //   at inlineable2 (:6:18)
+  //   at inlineable1 (:10:16)
+  //   at main (:14:21)
+  //   at global (:16:5)
+  // which should be ignored and replaced by the stack captured in the trace.
+  replay();
+  auto replayedStack =
+      eval(*replayRt, "stack").asString(*replayRt).utf8(*replayRt);
+  auto replayedRefetchedStack =
+      eval(*replayRt, "refetchedStack").asString(*replayRt).utf8(*replayRt);
+  // Ensure the stack is correctly fetched after any caching triggered by the
+  // first fetch.
+  EXPECT_EQ(replayedStack, replayedRefetchedStack);
+
+  // Ensure the stack is replayed identically to the recording.
+  EXPECT_EQ(stack, replayedStack);
 }
 
 // Verify that jsi::Runtime::setExternalMemoryPressure() is properly traced and
