@@ -155,7 +155,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
       android.icu.text.DecimalFormat decimalFormat = (android.icu.text.DecimalFormat) mNumberFormat;
       android.icu.text.DecimalFormatSymbols symbols = decimalFormat.getDecimalFormatSymbols();
 
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      if (Build.VERSION.SDK_INT >= 31) {
         switch (signDisplay) {
           case NEVER:
             decimalFormat.setSignAlwaysShown(false);
