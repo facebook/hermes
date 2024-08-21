@@ -155,24 +155,35 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
       android.icu.text.DecimalFormat decimalFormat = (android.icu.text.DecimalFormat) mNumberFormat;
       android.icu.text.DecimalFormatSymbols symbols = decimalFormat.getDecimalFormatSymbols();
 
-      switch (signDisplay) {
-        case NEVER:
-          decimalFormat.setPositivePrefix("");
-          decimalFormat.setPositiveSuffix("");
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        switch (signDisplay) {
+          case NEVER:
+            decimalFormat.setSignAlwaysShown(false);
+            break;
+          case ALWAYS:
+          case EXCEPTZERO:
+            decimalFormat.setSignAlwaysShown(true);
+            break;
+        }
+      } else {
+        switch (signDisplay) {
+          case NEVER:
+            decimalFormat.setPositivePrefix("");
+            decimalFormat.setPositiveSuffix("");
 
-          decimalFormat.setNegativePrefix("");
-          decimalFormat.setNegativeSuffix("");
+            decimalFormat.setNegativePrefix("");
+            decimalFormat.setNegativeSuffix("");
 
-          break;
-        case ALWAYS:
-        case EXCEPTZERO:
-          if (decimalFormat.getPositivePrefix().isEmpty()) {
-            decimalFormat.setPositivePrefix(new String(new char[]{symbols.getPlusSign()}));
-          } else {
-            // Preserve the existing prefix, which may include the currency symbol, and prepend the plus sign
-            decimalFormat.setPositivePrefix(new String(new char[]{symbols.getPlusSign()}) + decimalFormat.getPositivePrefix());
-          }
-          break;
+            break;
+          case ALWAYS:
+          case EXCEPTZERO:
+            if (!decimalFormat.getNegativePrefix().isEmpty())
+              decimalFormat.setPositivePrefix(new String(new char[] {symbols.getPlusSign()}));
+
+            if (!decimalFormat.getNegativeSuffix().isEmpty())
+              decimalFormat.setPositiveSuffix(new String(new char[] {symbols.getPlusSign()}));
+            break;
+        }
       }
     }
 
