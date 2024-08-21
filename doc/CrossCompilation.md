@@ -20,7 +20,7 @@ Then you can use `adb push` to copy any files into `/data/local/tmp/` on an Andr
 
 ```
 cmake ~/fbsource/xplat/static_h \
-  -B ~/static_h/build_android
+  -B ~/static_h/build_android \
   -DHERMES_FACEBOOK_BUILD=OFF \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_TOOLCHAIN_FILE=/opt/android_ndk/r17fb2/build/cmake/android.toolchain.cmake \
