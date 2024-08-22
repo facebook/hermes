@@ -2501,6 +2501,9 @@ class BinaryOperatorInst : public Instruction {
 
   explicit BinaryOperatorInst(ValueKind kind, Value *left, Value *right)
       : Instruction(kind) {
+    assert(
+        HERMES_IR_KIND_IN_CLASS(kind, BinaryOperatorInst) &&
+        "invalid kind given for binary operator");
     pushOperand(left);
     pushOperand(right);
   }
