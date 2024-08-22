@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import com.facebook.hermes.test.JSRuntime;
 // Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
 @RunWith(AndroidJUnit4.class)
