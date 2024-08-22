@@ -7,7 +7,6 @@
 
 import static org.assertj.core.api.Java6Assertions.assertThat;
 
-import android.content.Context;
 import android.content.res.AssetManager;
 import android.text.TextUtils;
 import android.util.Log;

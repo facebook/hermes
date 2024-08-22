@@ -9,7 +9,6 @@ package com.facebook.hermes.test;
 
 import static org.assertj.core.api.Java6Assertions.assertThat;
 
-import android.content.Context;
 import android.content.res.AssetManager;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
