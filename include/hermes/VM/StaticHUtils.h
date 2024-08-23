@@ -14,10 +14,10 @@
 namespace hermes::vm {
 
 inline Runtime &getRuntime(SHRuntime *shr) {
-  return *((Runtime *)(void *)shr);
+  return *static_cast<Runtime *>(shr);
 }
 inline SHRuntime *getSHRuntime(Runtime &runtime) {
-  return (SHRuntime *)(void *)&runtime;
+  return static_cast<SHRuntime *>(&runtime);
 }
 
 inline PinnedHermesValue *toPHV(SHLegacyValue *shv) {
