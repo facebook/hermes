@@ -17,6 +17,7 @@
 
 #include <deque>
 #include <functional>
+#include <unordered_map>
 
 namespace a64 = asmjit::a64;
 
@@ -68,6 +69,9 @@ class Emitter {
   /// Each thunk contains the offset of the function pointer in roData.
   std::vector<std::pair<asmjit::Label, int32_t>> thunks_{};
   llvh::DenseMap<void *, size_t> thunkMap_{};
+
+  /// Map from the bit pattern of a double value to offset in constant pool.
+  std::unordered_map<uint64_t, int32_t> fp64ConstMap_{};
 
  public:
   asmjit::CodeHolder code{};
@@ -275,17 +279,38 @@ class Emitter {
         "_sh_ljs_greater_equal_rjs");
   }
 
+  /// Return true if the specified 64-bit value can be efficiently loaded on
+  /// Arm64 with up to two integer instructions. In other words, it has at most
+  /// two non-zero 16-bit words.
+  static bool isCheapConst(uint64_t k) {
+    unsigned count = 0;
+    for (uint64_t mask = 0xFFFF; mask != 0; mask <<= 16) {
+      if (k & mask)
+        ++count;
+    }
+    return count <= 2;
+  }
+
   void loadConstUInt8(uint32_t rRes, uint8_t val) {
     comment("// LoadConstUInt8 r%u, %u", rRes, val);
 
-    if (a64::Utils::isFP64Imm8((double)val)) {
-      a.fmov(a64::d0, val);
+    if (val == 0) {
+      // TODO: this check should be wider.
+      a.movi(a64::d0, 0);
+      a.str(a64::d0, frameReg(rRes));
+    } else if (a64::Utils::isFP64Imm8((double)val)) {
+      a.fmov(a64::d0, (double)val);
+      a.str(a64::d0, frameReg(rRes));
     } else {
-      // TODO: use a constant pool.
-      a.mov(a64::w0, val);
-      a.ucvtf(a64::d0, a64::w0);
+      uint64_t bits = llvh::DoubleToBits(val);
+      if (isCheapConst(bits)) {
+        a.mov(a64::x0, bits);
+        a.str(a64::x0, frameReg(rRes));
+      } else {
+        a.ldr(a64::d0, a64::Mem(roDataLabel_, uint64Const(bits, "fp64 const")));
+        a.str(a64::d0, frameReg(rRes));
+      }
     }
-    a.str(a64::d0, frameReg(rRes));
   }
 
  private:
@@ -332,6 +357,18 @@ class Emitter {
     }
 
     return (int32_t)dataOfs;
+  }
+
+  /// Register a 64-bit constant in RO DATA and return its offset.
+  int32_t uint64Const(uint64_t bits, const char *comment) {
+    auto [it, inserted] = fp64ConstMap_.try_emplace(bits, 0);
+    if (inserted) {
+      int32_t dataOfs = reserveData(
+          sizeof(double), sizeof(double), asmjit::TypeId::kFloat64, 1, comment);
+      memcpy(roData_.data() + dataOfs, &bits, sizeof(double));
+      it->second = dataOfs;
+    }
+    return it->second;
   }
 
   asmjit::Label registerCall(void *fn, const char *name = nullptr) {
