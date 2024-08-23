@@ -222,88 +222,68 @@ class Emitter {
     storeFrame(a64::x0, rRes);
   }
 
-  void mul(uint32_t rRes, uint32_t rLeft, uint32_t rRight) {
-    binOp(
-        rRes,
-        rLeft,
-        rRight,
-        "mul",
-        [](a64::Assembler &a,
-           const a64::VecD &res,
-           const a64::VecD &dl,
-           const a64::VecD &dr) { a.fmul(res, dl, dr); },
-        (void *)_sh_ljs_mul_rjs,
-        "_sh_ljs_mul_rjs");
-  }
-  void add(uint32_t rRes, uint32_t rLeft, uint32_t rRight) {
-    binOp(
-        rRes,
-        rLeft,
-        rRight,
-        "add",
-        [](a64::Assembler &a,
-           const a64::VecD &res,
-           const a64::VecD &dl,
-           const a64::VecD &dr) { a.fadd(res, dl, dr); },
-        (void *)_sh_ljs_add_rjs,
-        "_sh_ljs_add_rjs");
+#define DECL_BINOP(methodName, commentStr, slowCall, a64body)       \
+  void methodName(uint32_t rRes, uint32_t rLeft, uint32_t rRight) { \
+    binOp(                                                          \
+        rRes,                                                       \
+        rLeft,                                                      \
+        rRight,                                                     \
+        commentStr,                                                 \
+        [](a64::Assembler & as,                                     \
+           const a64::VecD &res,                                    \
+           const a64::VecD &dl,                                     \
+           const a64::VecD &dr) a64body,                            \
+        (void *)slowCall,                                           \
+        #slowCall);                                                 \
   }
 
-  void dec(uint32_t rRes, uint32_t rInput) {
-    unop(
-        rRes,
-        rInput,
-        "dec",
-        [](a64::Assembler &a, const a64::VecD &d, const a64::VecD &tmp) {
-          a.fmov(tmp, -1.0);
-          a.fadd(d, d, tmp);
-        },
-        (void *)_sh_ljs_dec_rjs,
-        "_sh_ljs_dec_rjs");
-  }
-  void inc(uint32_t rRes, uint32_t rInput) {
-    unop(
-        rRes,
-        rInput,
-        "inc",
-        [](a64::Assembler &a, const a64::VecD &d, const a64::VecD &tmp) {
-          a.fmov(tmp, 1.0);
-          a.fadd(d, d, tmp);
-        },
-        (void *)_sh_ljs_inc_rjs,
-        "_sh_ljs_inc_rjs");
+  DECL_BINOP(mul, "mul", _sh_ljs_mul_rjs, { as.fmul(res, dl, dr); })
+  DECL_BINOP(add, "add", _sh_ljs_add_rjs, { as.fadd(res, dl, dr); })
+#undef DECL_BINOP
+
+#define DECL_UNOP(methodName, commentStr, slowCall, a64body)              \
+  void methodName(uint32_t rRes, uint32_t rInput) {                       \
+    unop(                                                                 \
+        rRes,                                                             \
+        rInput,                                                           \
+        commentStr,                                                       \
+        [](a64::Assembler & as, const a64::VecD &d, const a64::VecD &tmp) \
+            a64body,                                                      \
+        (void *)slowCall,                                                 \
+        #slowCall);                                                       \
   }
 
-  void jGreater(
-      bool invert,
-      const asmjit::Label &target,
-      uint32_t rLeft,
-      uint32_t rRight) {
-    jCond(
-        invert,
-        target,
-        rLeft,
-        rRight,
-        "greater",
-        [](a64::Assembler &a, const asmjit::Label &target) { a.b_gt(target); },
-        (void *)_sh_ljs_greater_rjs,
-        "_sh_ljs_greater_rjs");
+  DECL_UNOP(dec, "dec", _sh_ljs_dec_rjs, {
+    as.fmov(tmp, -1.0);
+    as.fadd(d, d, tmp);
+  })
+  DECL_UNOP(inc, "inc", _sh_ljs_inc_rjs, {
+    as.fmov(tmp, -1.0);
+    as.fadd(d, d, tmp);
+  })
+#undef DECL_UNOP
+
+#define DECL_JCOND(methodName, commentStr, slowCall, a64inst) \
+  void methodName(                                            \
+      bool invert,                                            \
+      const asmjit::Label &target,                            \
+      uint32_t rLeft,                                         \
+      uint32_t rRight) {                                      \
+    jCond(                                                    \
+        invert,                                               \
+        target,                                               \
+        rLeft,                                                \
+        rRight,                                               \
+        commentStr,                                           \
+        [](a64::Assembler &as, const asmjit::Label &target) { \
+          as.a64inst(target);                                 \
+        },                                                    \
+        (void *)slowCall,                                     \
+        #slowCall);                                           \
   }
-  void jGreaterEqual(
-      bool invert,
-      const asmjit::Label &target,
-      uint32_t rLeft,
-      uint32_t rRight) {
-    jCond(
-        invert,
-        target,
-        rLeft,
-        rRight,
-        "greater_equal",
-        [](a64::Assembler &a, const asmjit::Label &target) { a.b_ge(target); },
-        (void *)_sh_ljs_greater_equal_rjs,
-        "_sh_ljs_greater_equal_rjs");
-  }
+  DECL_JCOND(jGreater, "greater", _sh_ljs_greater_rjs, b_gt)
+  DECL_JCOND(jGreaterEqual, "greater_equal", _sh_ljs_greater_equal_rjs, b_ge)
+#undef DECL_JCOND
 
   /// Return true if the specified 64-bit value can be efficiently loaded on
   /// Arm64 with up to two integer instructions. In other words, it has at most
