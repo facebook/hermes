@@ -11,3 +11,8 @@ add_hermes_tool(loop1
         loop1-jit.cpp loop1-jit.h
         LINK_LIBS shermes_console_a asmjit
 )
+add_hermes_tool(idisp
+        idisp-exp.c
+        idisp-jit.cpp
+        LINK_LIBS shermes_console_a asmjit
+)
