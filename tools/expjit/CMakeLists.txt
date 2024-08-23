@@ -21,3 +21,8 @@ add_hermes_tool(idispn
         idispn-jit.cpp
         LINK_LIBS shermes_console_a asmjit
 )
+add_hermes_tool(idispnr
+        idisp-exp.c
+        idispnr-jit.cpp
+        LINK_LIBS shermes_console_a asmjit
+)
