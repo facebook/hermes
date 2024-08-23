@@ -6,67 +6,10 @@
  */
 
 #include "hermes/AST/ES6Class.h"
-#include "hermes/AST/RecursiveVisitor.h"
-#include "hermes/Parser/JSLexer.h"
-#include "llvh/ADT/StringRef.h"
+#include "hermes/AST/TransformationsBase.h"
 
 namespace {
 using namespace hermes;
-
-/// Mutable vector that helps dealing with arrays of nodes safely.
-/// Once done with the vector, it can create an ESTree::NodeList
-/// representation which is used by the ESTree API in several places.
-class NodeVector {
- public:
-  using Storage = llvh::SmallVector<ESTree::Node *, 8>;
-
-  NodeVector() = default;
-  NodeVector(std::initializer_list<ESTree::Node *> nodes) {
-    for (auto &node : nodes) {
-      _storage.push_back(node);
-    }
-  }
-
-  NodeVector(ESTree::NodeList &list) {
-    for (auto &node : list) {
-      _storage.push_back(&node);
-    }
-  }
-
-  ~NodeVector() = default;
-
-  size_t size() const {
-    return _storage.size();
-  }
-
-  Storage::const_iterator begin() const {
-    return _storage.begin();
-  }
-
-  Storage::const_iterator end() const {
-    return _storage.end();
-  }
-
-  void append(ESTree::Node *node) {
-    _storage.emplace_back(node);
-  }
-
-  void prepend(ESTree::Node *node) {
-    _storage.insert(_storage.begin(), node);
-  }
-
-  ESTree::NodeList toNodeList() const {
-    ESTree::NodeList nodeList;
-    for (auto &node : _storage) {
-      nodeList.push_back(*node);
-    }
-
-    return nodeList;
-  }
-
- private:
-  Storage _storage;
-};
 
 struct VisitedClass {
   UniqueString *className = nullptr;
@@ -134,15 +77,15 @@ namespace hermes {
 /// them into plain ES5 functions. The generated AST leverages the
 /// HermesES6Internal object, which should be made available at runtime by
 /// enabling the ES6Class option.
-class ES6ClassesTransformations
-    : public ESTree::RecursionDepthTracker<ES6ClassesTransformations> {
+class ES6ClassesTransformations : public TransformationsBase {
  public:
-  /// Required by ESTree::RecursiveVisitorDispatch.
-  static constexpr bool kEnableNodeListMutation = true;
 
-  ES6ClassesTransformations(Context &context)
-      : context_(context),
-        identVar_(context.getIdentifier("var").getUnderlyingPointer()) {}
+  ES6ClassesTransformations(Context &context) : TransformationsBase(context),
+        identVar_(context.getIdentifier("var").getUnderlyingPointer()){}
+
+  void doVisitChildren(ESTree::Node *node) {
+    visitESTreeChildren(*this, node);
+  }
 
   void visit(ESTree::ClassDeclarationNode *classDecl, ESTree::Node **ppNode) {
     auto *classBody = llvh::dyn_cast<ESTree::ClassBodyNode>(classDecl->_body);
@@ -231,40 +174,10 @@ class ES6ClassesTransformations
     visitESTreeChildren(*this, node);
   }
 
-  void recursionDepthExceeded(ESTree::Node *n) {
-    context_.getSourceErrorManager().error(
-        n->getEndLoc(), "Too many nested expressions/statements/declarations");
-  }
-
  private:
-  Context &context_;
   UniqueString *const identVar_;
   VisitedClass *_currentProcessingClass = nullptr;
   const ResolvedClassMember *_currentClassMember = nullptr;
-
-  void doVisitChildren(ESTree::Node *node) {
-    visitESTreeChildren(*this, node);
-  }
-
-  void doCopyLocation(ESTree::Node *src, ESTree::Node *dest) {
-    if (src != nullptr) {
-      dest->setStartLoc(src->getStartLoc());
-      dest->setEndLoc(src->getEndLoc());
-      dest->setDebugLoc(src->getDebugLoc());
-    }
-  }
-
-  template <typename T>
-  T *copyLocation(ESTree::Node *src, T *dest) {
-    doCopyLocation(src, dest);
-    return dest;
-  }
-
-  template <typename T, typename... Args>
-  T *createTransformedNode(ESTree::Node *src, Args &&...args) {
-    auto *node = new (context_) T(std::forward<Args>(args)...);
-    return copyLocation(src, node);
-  }
 
   ESTree::Node *cloneNodeInternal(ESTree::Node *node) {
     if (node == nullptr) {
@@ -333,7 +246,7 @@ class ES6ClassesTransformations
     auto *ctorAsFunction = createClassCtor(
         resolvedClassId, classBody, superClass, classMembers.constructor);
 
-    auto *defineClassResult = makeHermesES6InternalCall(
+    auto *defineClassResult = makeHermesInternalCall(
         classNode,
         "defineClass",
         {copyIdentifier(ctorAsFunction->_id), superClassExpr});
@@ -375,33 +288,9 @@ class ES6ClassesTransformations
         srcNode, identVar_, std::move(variableList));
   }
 
-  ESTree::Node *makeHermesES6InternalCall(
-      ESTree::Node *srcNode,
-      llvh::StringRef methodName,
-      const NodeVector &parameters) {
-    auto hermesInternalIdentifier =
-        makeIdentifierNode(srcNode, "HermesES6Internal");
-    auto methodIdentifier = makeIdentifierNode(srcNode, methodName);
-
-    auto *getPropertyNode = createTransformedNode<ESTree::MemberExpressionNode>(
-        srcNode, hermesInternalIdentifier, methodIdentifier, false);
-    return createTransformedNode<ESTree::CallExpressionNode>(
-        srcNode, getPropertyNode, nullptr, parameters.toNodeList());
-  }
-
-  ESTree::IdentifierNode *makeIdentifierNode(
-      ESTree::Node *srcNode,
-      UniqueString *name) {
-    return createTransformedNode<ESTree::IdentifierNode>(
-        srcNode, name, nullptr, false);
-  }
-
-  ESTree::IdentifierNode *makeIdentifierNode(
-      ESTree::Node *srcNode,
-      llvh::StringRef name) {
-    return makeIdentifierNode(
-        srcNode, context_.getIdentifier(name).getUnderlyingPointer());
-  }
+  ESTree::Node * getHermesInternalIdentifier(ESTree::Node *srcNode) override {
+    return makeIdentifierNode(srcNode, "HermesES6Internal");;
+  };
 
   ESTree::Node *makeUndefinedNode(ESTree::Node *srcNode) {
     return makeIdentifierNode(srcNode, "undefined");
@@ -729,7 +618,7 @@ class ES6ClassesTransformations
       }
 
       auto *call =
-          makeHermesES6InternalCall(srcNode, hermesCallName, parameters);
+          makeHermesInternalCall(srcNode, hermesCallName, parameters);
 
       stmtList.append(toStatement(call));
     }

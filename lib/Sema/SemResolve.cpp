@@ -13,6 +13,7 @@
 #include "SemanticResolver.h"
 #include "hermes/AST/ES6Class.h"
 #include "hermes/AST/ESTree.h"
+#include "hermes/AST/AsyncGenerator.h"
 #include "hermes/Support/PerfSection.h"
 
 namespace hermes {
@@ -162,6 +163,8 @@ bool resolveAST(
     const DeclarationFileListTy &ambientDecls) {
   if (astContext.getConvertES6Classes())
     transformES6Classes(astContext, root);
+
+  transformAsyncGenerators(astContext, root);
 
   PerfSection validation("Resolving JavaScript global AST");
   // Resolve the entire AST.
