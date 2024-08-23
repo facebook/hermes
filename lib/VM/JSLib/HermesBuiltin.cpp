@@ -74,11 +74,17 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
 
   // Try finding the template object in the template object cache.
   uint32_t templateObjID = args.getArg(0).getNumberAs<uint32_t>();
-  auto savedCB = runtime.getStackFrames().begin()->getSavedCodeBlock();
-  if (LLVM_UNLIKELY(!savedCB)) {
+
+  // Retrieve the code block of the caller to get the cache.
+  auto frames = runtime.getStackFrames();
+  auto it = frames.begin();
+  if (LLVM_UNLIKELY(++it == frames.end()))
+    return runtime.raiseTypeError("Cannot be called directly");
+  auto callerCB = it->getCalleeCodeBlock(runtime);
+  if (LLVM_UNLIKELY(!callerCB)) {
     return runtime.raiseTypeError("Cannot be called from native code");
   }
-  RuntimeModule *runtimeModule = savedCB->getRuntimeModule();
+  RuntimeModule *runtimeModule = callerCB->getRuntimeModule();
   JSObject *cachedTemplateObj =
       runtimeModule->findCachedTemplateObject(templateObjID);
   if (cachedTemplateObj) {
