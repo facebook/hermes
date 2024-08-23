@@ -12,6 +12,7 @@
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/static_h.h"
 
+#include "llvh/ADT/DenseMap.h"
 #include "llvh/Support/raw_ostream.h"
 
 #include <deque>
@@ -42,13 +43,31 @@ class ErrorHandler : public asmjit::ErrorHandler {
   }
 };
 
-#define EMIT_RUNTIME_CALL(em, func) (em).call(offsetof(SHRuntime, func), #func)
+#define EMIT_RUNTIME_CALL(em, func) (em).call((void *)func, #func)
 
 class Emitter {
   std::unique_ptr<asmjit::FileLogger> fileLogger_{};
   asmjit::FileLogger *logger_ = nullptr;
   ErrorHandler errorHandler_;
   std::deque<std::function<void()>> slowPaths_{};
+
+  /// Descriptor for a single RO data entry.
+  struct DataDesc {
+    /// Size in bytes.
+    int32_t size;
+    asmjit::TypeId typeId;
+    int32_t itemCount;
+    /// Optional comment.
+    const char *comment;
+  };
+  /// Used for pretty printing when logging data.
+  std::vector<DataDesc> roDataDesc_{};
+  std::vector<uint8_t> roData_{};
+  asmjit::Label roDataLabel_{};
+
+  /// Each thunk contains the offset of the function pointer in roData.
+  std::vector<std::pair<asmjit::Label, int32_t>> thunks_{};
+  llvh::DenseMap<void *, size_t> thunkMap_{};
 
  public:
   asmjit::CodeHolder code{};
@@ -69,6 +88,8 @@ class Emitter {
     if (logger_)
       code.setLogger(logger_);
     code.attach(&a);
+
+    roDataLabel_ = a.newNamedLabel("RO_DATA");
   }
 
   /// Log a comment.
@@ -86,6 +107,8 @@ class Emitter {
 
   JitFn addToRuntime() {
     emitSlowPaths();
+    emitThunks();
+    emitROData();
 
     code.detach(&a);
     JitFn fn;
@@ -127,10 +150,9 @@ class Emitter {
     a.ret(a64::x30);
   }
 
-  void call(int32_t ofs, const char *name) {
-    comment("// call %s", name);
-    a.ldr(a64::x8, a64::Mem(xRuntime, ofs));
-    a.blr(a64::x8);
+  void call(void *fn, const char *name) {
+    //    comment("// call %s", name);
+    a.bl(registerCall(fn, name));
   }
 
   /// Create an a64::Mem to a specifc frame register.
@@ -181,7 +203,7 @@ class Emitter {
         [this](a64::VecD res, a64::VecD dl, a64::VecD dr) {
           a.fmul(res, dl, dr);
         },
-        offsetof(SHRuntime, _sh_ljs_mul_rjs),
+        (void *)_sh_ljs_mul_rjs,
         "_sh_ljs_mul_rjs");
   }
   void add(uint32_t rRes, uint32_t rLeft, uint32_t rRight) {
@@ -193,7 +215,7 @@ class Emitter {
         [this](a64::VecD res, a64::VecD dl, a64::VecD dr) {
           a.fadd(res, dl, dr);
         },
-        offsetof(SHRuntime, _sh_ljs_add_rjs),
+        (void *)_sh_ljs_add_rjs,
         "_sh_ljs_add_rjs");
   }
 
@@ -206,7 +228,7 @@ class Emitter {
           a.fmov(tmp, -1.0);
           a.fadd(d, d, tmp);
         },
-        offsetof(SHRuntime, _sh_ljs_dec_rjs),
+        (void *)_sh_ljs_dec_rjs,
         "_sh_ljs_dec_rjs");
   }
   void inc(uint32_t rRes, uint32_t rInput) {
@@ -218,7 +240,7 @@ class Emitter {
           a.fmov(tmp, 1.0);
           a.fadd(d, d, tmp);
         },
-        offsetof(SHRuntime, _sh_ljs_inc_rjs),
+        (void *)_sh_ljs_inc_rjs,
         "_sh_ljs_inc_rjs");
   }
 
@@ -234,7 +256,7 @@ class Emitter {
         rRight,
         "greater",
         [this](const asmjit::Label &target) { a.b_gt(target); },
-        offsetof(SHRuntime, _sh_ljs_greater_rjs),
+        (void *)_sh_ljs_greater_rjs,
         "_sh_ljs_greater_rjs");
   }
   void jGreaterEqual(
@@ -249,7 +271,7 @@ class Emitter {
         rRight,
         "greater_equal",
         [this](const asmjit::Label &target) { a.b_ge(target); },
-        offsetof(SHRuntime, _sh_ljs_greater_equal_rjs),
+        (void *)_sh_ljs_greater_equal_rjs,
         "_sh_ljs_greater_equal_rjs");
   }
 
@@ -279,10 +301,82 @@ class Emitter {
     return newPrefLabel("CONT_", slowPaths_.size());
   }
 
+  int32_t reserveData(
+      int32_t dsize,
+      size_t align,
+      asmjit::TypeId typeId,
+      int32_t itemCount,
+      const char *comment = nullptr) {
+    // Align the new data.
+    size_t oldSize = roData_.size();
+    size_t dataOfs = (roData_.size() + align - 1) & ~(align - 1);
+    if (dataOfs >= INT32_MAX)
+      hermes::hermes_fatal("JIT RO data overflow");
+    // Grow to include the data.
+    roData_.resize(dataOfs + dsize);
+
+    // If logging is enabled, generate data descriptors.
+    if (logger_) {
+      // Optional padding descriptor.
+      if (dataOfs != oldSize) {
+        int32_t gap = (int32_t)(dataOfs - oldSize);
+        roDataDesc_.push_back(
+            {.size = gap, .typeId = asmjit::TypeId::kUInt8, .itemCount = gap});
+      }
+
+      roDataDesc_.push_back(
+          {.size = dsize,
+           .typeId = typeId,
+           .itemCount = itemCount,
+           .comment = comment});
+    }
+
+    return (int32_t)dataOfs;
+  }
+
+  asmjit::Label registerCall(void *fn, const char *name = nullptr) {
+    auto [it, inserted] = thunkMap_.try_emplace(fn, 0);
+    // Is this a new thunk?
+    if (inserted) {
+      it->second = thunks_.size();
+      int32_t dataOfs =
+          reserveData(sizeof(fn), sizeof(fn), asmjit::TypeId::kUInt64, 1, name);
+      memcpy(roData_.data() + dataOfs, &fn, sizeof(fn));
+      thunks_.emplace_back(
+          name ? a.newNamedLabel(name) : a.newLabel(), dataOfs);
+    }
+
+    return thunks_[it->second].first;
+  }
+
   void emitSlowPaths() {
     while (!slowPaths_.empty()) {
       slowPaths_.front()();
       slowPaths_.pop_front();
+    }
+  }
+
+  void emitThunks() {
+    comment("// Thunks");
+    for (const auto &th : thunks_) {
+      a.bind(th.first);
+      a.ldr(a64::x16, a64::Mem(roDataLabel_, th.second));
+      a.br(a64::x16);
+    }
+  }
+
+  void emitROData() {
+    a.bind(roDataLabel_);
+    if (!logger_) {
+      a.embed(roData_.data(), roData_.size());
+    } else {
+      int32_t ofs = 0;
+      for (const auto &desc : roDataDesc_) {
+        if (desc.comment)
+          comment("// %s", desc.comment);
+        a.embedDataArray(desc.typeId, roData_.data() + ofs, desc.itemCount);
+        ofs += desc.size;
+      }
     }
   }
 
@@ -292,7 +386,7 @@ class Emitter {
       uint32_t rInput,
       const char *name,
       FastPath fast,
-      int32_t slowCallOfs,
+      void *slowCall,
       const char *slowCallName) {
     //  ldr x0, [x20]
     //  cmp x0, x21
@@ -328,7 +422,7 @@ class Emitter {
                              name,
                              rRes,
                              rInput,
-                             slowCallOfs,
+                             slowCall,
                              slowCallName,
                              slowPathLab,
                              contLab]() {
@@ -336,7 +430,7 @@ class Emitter {
       a.bind(slowPathLab);
       a.mov(a64::x0, xRuntime);
       movFrameAddr(a64::x1, rInput);
-      call(slowCallOfs, slowCallName);
+      call(slowCall, slowCallName);
       storeFrame(a64::x0, rRes);
       a.b(contLab);
     });
@@ -349,7 +443,7 @@ class Emitter {
       uint32_t rRight,
       const char *name,
       FastPath fast,
-      int32_t slowCallOfs,
+      void *slowCall,
       const char *slowCallName) {
     //  ldr x0, [x20]
     //  cmp x0, x21
@@ -391,7 +485,7 @@ class Emitter {
                              rRes,
                              rLeft,
                              rRight,
-                             slowCallOfs,
+                             slowCall,
                              slowCallName,
                              slowPathLab,
                              contLab]() {
@@ -400,7 +494,7 @@ class Emitter {
       a.mov(a64::x0, xRuntime);
       movFrameAddr(a64::x1, rLeft);
       movFrameAddr(a64::x2, rRight);
-      call(slowCallOfs, slowCallName);
+      call(slowCall, slowCallName);
       storeFrame(a64::x0, rRes);
       a.b(contLab);
     });
@@ -414,7 +508,7 @@ class Emitter {
       uint32_t rRight,
       const char *name,
       FastPath fast,
-      int32_t slowCallOfs,
+      void *slowCall,
       const char *slowCallName) {
     // if (!_sh_ljs_greater_rjs(shr, frame + 3, frame + 2)) goto L1;
     //  ldr x0, [x20, 3*8]
@@ -469,7 +563,7 @@ class Emitter {
                              rLeft,
                              rRight,
                              name,
-                             slowCallOfs,
+                             slowCall,
                              slowCallName,
                              slowPathLab,
                              contLab]() {
@@ -483,7 +577,7 @@ class Emitter {
       a.mov(a64::x0, xRuntime);
       movFrameAddr(a64::x1, rLeft);
       movFrameAddr(a64::x2, rRight);
-      call(slowCallOfs, slowCallName);
+      call(slowCall, slowCallName);
       if (!invert) {
         a.cbz(a64::w0, target);
         a.b(contLab);
