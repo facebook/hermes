@@ -100,6 +100,7 @@ SHLegacyValue _1_bench_jit_exp(SHRuntime *shr) {
   } locals;
   _sh_check_native_stack_overflow(shr);
   SHLegacyValue *frame = _sh_enter(shr, &locals.head, 6);
+  locals.head.count = 0;
 
   //   LoadParam         r0, 1
   frame[0] = _sh_ljs_param(frame, 1);
@@ -114,6 +115,56 @@ SHLegacyValue _1_bench_jit_exp(SHRuntime *shr) {
   //   JNotGreater       L1, r3, r2
   if (!_sh_ljs_greater_rjs(shr, frame + 3, frame + 2))
     goto L1;
+L2:
+  //   Mul               r1, r1, r3
+  frame[1] = _sh_ljs_mul_rjs(shr, frame + 1, frame + 3);
+  //   Dec               r3, r3
+  frame[3] = _sh_ljs_dec_rjs(shr, frame + 3);
+  //   Mov               r0, r1
+  frame[0] = frame[1];
+  //   JGreater          L2, r3, r2
+  if (_sh_ljs_greater_rjs(shr, frame + 3, frame + 2))
+    goto L2;
+L1:;
+  //   Ret               r0
+  SHLegacyValue tmp = frame[0];
+  _sh_leave(shr, &locals.head, frame);
+  return tmp;
+}
+
+// Manually compiled to C with fast paths.
+SHLegacyValue _1_bench_jit_exp_fastp(SHRuntime *shr) {
+  struct {
+    SHLocals head;
+  } locals;
+  _sh_check_native_stack_overflow(shr);
+  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 6);
+  locals.head.count = 0;
+
+  //   LoadParam         r0, 1
+  frame[0] = _sh_ljs_param(frame, 1);
+
+  //   Dec               r3, r0
+  if (_sh_ljs_is_double(frame[0])) {
+    frame[3] = _sh_ljs_double(_sh_ljs_get_double(frame[0]) - 1.0);
+  } else {
+    frame[3] = _sh_ljs_dec_rjs(shr, frame + 0);
+  }
+
+  //   LoadConstUInt8    r2, 1
+  frame[2] = _sh_ljs_double(1);
+  //   Mov               r1, r0
+  frame[1] = frame[0];
+  //   Mov               r0, r1
+  frame[0] = frame[1];
+  //   JNotGreater       L1, r3, r2
+  if (_sh_ljs_is_double(frame[3]) && _sh_ljs_is_double(frame[2])) {
+    if (!(_sh_ljs_get_double(frame[3]) > _sh_ljs_get_double(frame[2])))
+      goto L1;
+  } else {
+    if (!_sh_ljs_greater_rjs(shr, frame + 3, frame + 2))
+      goto L1;
+  }
 L2:
   //   Mul               r1, r1, r3
   frame[1] = _sh_ljs_mul_rjs(shr, frame + 1, frame + 3);
