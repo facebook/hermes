@@ -50,7 +50,31 @@ class Emitter {
   std::unique_ptr<asmjit::FileLogger> fileLogger_{};
   asmjit::FileLogger *logger_ = nullptr;
   ErrorHandler errorHandler_;
-  std::deque<std::function<void()>> slowPaths_{};
+
+  struct SlowPath {
+    /// Label of the slow path.
+    asmjit::Label slowPathLab;
+    /// Label to jump to after the slow path.
+    asmjit::Label contLab;
+    /// Target if this is a branch.
+    asmjit::Label target;
+
+    /// Name of the slow path.
+    const char *name;
+    /// Frame register indexes;
+    uint32_t rRes, rInput1, rInput2;
+    /// Whether to invert a condition.
+    bool invert;
+
+    /// Pointer to the slow path function that must be called.
+    void *slowCall;
+    /// The name of the slow path function.
+    const char *slowCallName;
+
+    /// Callback to actually emit.
+    void (*emit)(Emitter &em, SlowPath &sl);
+  };
+  std::deque<SlowPath> slowPaths_{};
 
   /// Descriptor for a single RO data entry.
   struct DataDesc {
@@ -204,9 +228,10 @@ class Emitter {
         rLeft,
         rRight,
         "mul",
-        [this](a64::VecD res, a64::VecD dl, a64::VecD dr) {
-          a.fmul(res, dl, dr);
-        },
+        [](a64::Assembler &a,
+           const a64::VecD &res,
+           const a64::VecD &dl,
+           const a64::VecD &dr) { a.fmul(res, dl, dr); },
         (void *)_sh_ljs_mul_rjs,
         "_sh_ljs_mul_rjs");
   }
@@ -216,9 +241,10 @@ class Emitter {
         rLeft,
         rRight,
         "add",
-        [this](a64::VecD res, a64::VecD dl, a64::VecD dr) {
-          a.fadd(res, dl, dr);
-        },
+        [](a64::Assembler &a,
+           const a64::VecD &res,
+           const a64::VecD &dl,
+           const a64::VecD &dr) { a.fadd(res, dl, dr); },
         (void *)_sh_ljs_add_rjs,
         "_sh_ljs_add_rjs");
   }
@@ -228,7 +254,7 @@ class Emitter {
         rRes,
         rInput,
         "dec",
-        [this](a64::VecD d, a64::VecD tmp) {
+        [](a64::Assembler &a, const a64::VecD &d, const a64::VecD &tmp) {
           a.fmov(tmp, -1.0);
           a.fadd(d, d, tmp);
         },
@@ -240,7 +266,7 @@ class Emitter {
         rRes,
         rInput,
         "inc",
-        [this](a64::VecD d, a64::VecD tmp) {
+        [](a64::Assembler &a, const a64::VecD &d, const a64::VecD &tmp) {
           a.fmov(tmp, 1.0);
           a.fadd(d, d, tmp);
         },
@@ -259,7 +285,7 @@ class Emitter {
         rLeft,
         rRight,
         "greater",
-        [this](const asmjit::Label &target) { a.b_gt(target); },
+        [](a64::Assembler &a, const asmjit::Label &target) { a.b_gt(target); },
         (void *)_sh_ljs_greater_rjs,
         "_sh_ljs_greater_rjs");
   }
@@ -274,7 +300,7 @@ class Emitter {
         rLeft,
         rRight,
         "greater_equal",
-        [this](const asmjit::Label &target) { a.b_ge(target); },
+        [](a64::Assembler &a, const asmjit::Label &target) { a.b_ge(target); },
         (void *)_sh_ljs_greater_equal_rjs,
         "_sh_ljs_greater_equal_rjs");
   }
@@ -388,7 +414,8 @@ class Emitter {
 
   void emitSlowPaths() {
     while (!slowPaths_.empty()) {
-      slowPaths_.front()();
+      SlowPath &sp = slowPaths_.front();
+      sp.emit(*this, sp);
       slowPaths_.pop_front();
     }
   }
@@ -417,12 +444,12 @@ class Emitter {
     }
   }
 
-  template <typename FastPath>
   void unop(
       uint32_t rRes,
       uint32_t rInput,
       const char *name,
-      FastPath fast,
+      void (
+          *fast)(a64::Assembler &a, const a64::VecD &dst, const a64::VecD &tmp),
       void *slowCall,
       const char *slowCallName) {
     //  ldr x0, [x20]
@@ -444,7 +471,7 @@ class Emitter {
     a.b_hs(slowPathLab);
 
     a.fmov(a64::d0, a64::x0);
-    fast(a64::d0, a64::d1);
+    fast(a, a64::d0, a64::d1);
     storeFrame(a64::d0, rRes);
     a.bind(contLab);
 
@@ -455,31 +482,36 @@ class Emitter {
     //  bl  __sh_ljs_dec_rjs
     //  str x0, [x20, 3*8]  ; frame[3] =
     //  b CONT_1
-    slowPaths_.emplace_back([this,
-                             name,
-                             rRes,
-                             rInput,
-                             slowCall,
-                             slowCallName,
-                             slowPathLab,
-                             contLab]() {
-      comment("// Slow path: %s r%u, r%u", name, rRes, rInput);
-      a.bind(slowPathLab);
-      a.mov(a64::x0, xRuntime);
-      movFrameAddr(a64::x1, rInput);
-      call(slowCall, slowCallName);
-      storeFrame(a64::x0, rRes);
-      a.b(contLab);
-    });
+    slowPaths_.push_back(
+        {.slowPathLab = slowPathLab,
+         .contLab = contLab,
+         .name = name,
+         .rRes = rRes,
+         .rInput1 = rInput,
+         .slowCall = slowCall,
+         .slowCallName = slowCallName,
+         .emit = [](Emitter &em, SlowPath &sl) {
+           em.comment(
+               "// Slow path: %s r%u, r%u", sl.name, sl.rRes, sl.rInput1);
+           em.a.bind(sl.slowPathLab);
+           em.a.mov(a64::x0, xRuntime);
+           em.movFrameAddr(a64::x1, sl.rInput1);
+           em.call(sl.slowCall, sl.slowCallName);
+           em.storeFrame(a64::x0, sl.rRes);
+           em.a.b(sl.contLab);
+         }});
   }
 
-  template <typename FastPath>
   void binOp(
       uint32_t rRes,
       uint32_t rLeft,
       uint32_t rRight,
       const char *name,
-      FastPath fast,
+      void (*fast)(
+          a64::Assembler &a,
+          const a64::VecD &res,
+          const a64::VecD &dl,
+          const a64::VecD &dr),
       void *slowCall,
       const char *slowCallName) {
     //  ldr x0, [x20]
@@ -505,7 +537,7 @@ class Emitter {
 
     a.fmov(a64::d0, a64::x0);
     a.fmov(a64::d1, a64::x1);
-    fast(a64::d0, a64::d0, a64::d1);
+    fast(a, a64::d0, a64::d0, a64::d1);
     storeFrame(a64::d0, rRes);
     a.bind(contLab);
 
@@ -517,34 +549,35 @@ class Emitter {
     //  bl __sh_ljs_mul_rjs
     //  str x0, [x20, 1*8]
     //  b CONT_3
-    slowPaths_.emplace_back([this,
-                             name,
-                             rRes,
-                             rLeft,
-                             rRight,
-                             slowCall,
-                             slowCallName,
-                             slowPathLab,
-                             contLab]() {
-      comment("// %s r%u, r%u, r%u", name, rRes, rLeft, rRight);
-      a.bind(slowPathLab);
-      a.mov(a64::x0, xRuntime);
-      movFrameAddr(a64::x1, rLeft);
-      movFrameAddr(a64::x2, rRight);
-      call(slowCall, slowCallName);
-      storeFrame(a64::x0, rRes);
-      a.b(contLab);
-    });
+    slowPaths_.push_back(
+        {.slowPathLab = slowPathLab,
+         .contLab = contLab,
+         .name = name,
+         .rRes = rRes,
+         .rInput1 = rLeft,
+         .rInput2 = rRight,
+         .slowCall = slowCall,
+         .slowCallName = slowCallName,
+         .emit = [](Emitter &em, SlowPath &sl) {
+           em.comment(
+               "// %s r%u, r%u, r%u", sl.name, sl.rRes, sl.rInput1, sl.rInput2);
+           em.a.bind(sl.slowPathLab);
+           em.a.mov(a64::x0, xRuntime);
+           em.movFrameAddr(a64::x1, sl.rInput1);
+           em.movFrameAddr(a64::x2, sl.rInput2);
+           em.call(sl.slowCall, sl.slowCallName);
+           em.storeFrame(a64::x0, sl.rRes);
+           em.a.b(sl.contLab);
+         }});
   }
 
-  template <typename FastPath>
   void jCond(
       bool invert,
       const asmjit::Label &target,
       uint32_t rLeft,
       uint32_t rRight,
       const char *name,
-      FastPath fast,
+      void(fast)(a64::Assembler &a, const asmjit::Label &target),
       void *slowCall,
       const char *slowCallName) {
     // if (!_sh_ljs_greater_rjs(shr, frame + 3, frame + 2)) goto L1;
@@ -578,9 +611,9 @@ class Emitter {
     a.fmov(a64::d1, a64::x1);
     a.fcmp(a64::d0, a64::d1);
     if (!invert) {
-      fast(target);
+      fast(a, target);
     } else {
-      fast(contLab);
+      fast(a, contLab);
       a.b(target);
     }
     a.bind(contLab);
@@ -594,35 +627,36 @@ class Emitter {
     //  cbz w0, L1
     //  b CONT_2
     //
-    slowPaths_.emplace_back([this,
-                             invert,
-                             target,
-                             rLeft,
-                             rRight,
-                             name,
-                             slowCall,
-                             slowCallName,
-                             slowPathLab,
-                             contLab]() {
-      comment(
-          "// Slow path: j_%s_%s Lx, r%u, r%u",
-          invert ? "not" : "",
-          name,
-          rLeft,
-          rRight);
-      a.bind(slowPathLab);
-      a.mov(a64::x0, xRuntime);
-      movFrameAddr(a64::x1, rLeft);
-      movFrameAddr(a64::x2, rRight);
-      call(slowCall, slowCallName);
-      if (!invert) {
-        a.cbz(a64::w0, target);
-        a.b(contLab);
-      } else {
-        a.cbz(a64::w0, contLab);
-        a.b(target);
-      }
-    });
+    slowPaths_.push_back(
+        {.slowPathLab = slowPathLab,
+         .contLab = contLab,
+         .target = target,
+         .name = name,
+         .rInput1 = rLeft,
+         .rInput2 = rRight,
+         .invert = invert,
+         .slowCall = slowCall,
+         .slowCallName = slowCallName,
+         .emit = [](Emitter &em, SlowPath &sl) {
+           em.comment(
+               "// Slow path: j_%s_%s Lx, r%u, r%u",
+               sl.invert ? "not" : "",
+               sl.name,
+               sl.rInput1,
+               sl.rInput2);
+           em.a.bind(sl.slowPathLab);
+           em.a.mov(a64::x0, xRuntime);
+           em.movFrameAddr(a64::x1, sl.rInput1);
+           em.movFrameAddr(a64::x2, sl.rInput2);
+           em.call(sl.slowCall, sl.slowCallName);
+           if (!sl.invert) {
+             em.a.cbz(a64::w0, sl.target);
+             em.a.b(sl.contLab);
+           } else {
+             em.a.cbz(a64::w0, sl.contLab);
+             em.a.b(sl.target);
+           }
+         }});
   }
 };
 
