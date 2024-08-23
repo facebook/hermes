@@ -8,6 +8,7 @@
 #ifndef HERMES_SH_RUNTIME_H
 #define HERMES_SH_RUNTIME_H
 
+#include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_segment_info.h"
 
 #include "libhermesvm-config.h"
@@ -20,7 +21,29 @@
 extern "C" {
 #endif
 
+// Disable JIT on Apple platforms that prohibit it.
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#if !defined(HERMESVM_JIT) &&                                      \
+    !((defined(TARGET_OS_MACCATALYST) && TARGET_OS_MACCATALYST) || \
+      (defined(TARGET_OS_OSX) && TARGET_OS_OSX))
+#define HERMESVM_JIT 0
+#endif
+#endif
+
+// If the JIT is allowed by configuration, enable it on platforms that support
+// it, unless it has been explicitly set already.
+#ifndef HERMESVM_JIT
+#if defined(HERMESVM_ALLOW_JIT) && (defined(__aarch64__) || defined(_M_ARM64))
+#define HERMESVM_JIT 1
+#else
+#define HERMESVM_JIT 0
+#endif
+#endif
+
+typedef struct SHLocals SHLocals;
 typedef struct SHUnit SHUnit;
+typedef struct SHRuntime SHRuntime;
 
 /// This struct represents an element in the exception handler stack. This
 /// represents a try, and contains the information necessary to jump to its
@@ -76,6 +99,60 @@ typedef struct SHRuntime {
 
   /// The current top of the exception handler stack.
   SHJmpBuf *shCurJmpBuf;
+
+#if HERMESVM_JIT
+  void (*_sh_check_native_stack_overflow)(SHRuntime *shr);
+  SHLegacyValue *(
+      *_sh_enter)(SHRuntime *shr, SHLocals *locals, uint32_t stackSize);
+  void (*_sh_leave)(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame);
+  SHLegacyValue (*_sh_ljs_param)(SHLegacyValue *frame, uint32_t index);
+  SHLegacyValue (*_sh_ljs_inc_rjs)(SHRuntime *shr, const SHLegacyValue *n);
+  SHLegacyValue (*_sh_ljs_dec_rjs)(SHRuntime *shr, const SHLegacyValue *n);
+
+  SHLegacyValue (*_sh_ljs_add_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  SHLegacyValue (*_sh_ljs_sub_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  SHLegacyValue (*_sh_ljs_mul_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  SHLegacyValue (*_sh_ljs_div_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  SHLegacyValue (*_sh_ljs_mod_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+
+  bool (*_sh_ljs_less_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  bool (*_sh_ljs_greater_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  bool (*_sh_ljs_less_equal_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  bool (*_sh_ljs_greater_equal_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  bool (*_sh_ljs_equal_rjs)(
+      SHRuntime *shr,
+      const SHLegacyValue *a,
+      const SHLegacyValue *b);
+  bool (*_sh_ljs_strict_equal)(SHLegacyValue a, SHLegacyValue b);
+#endif
+
 } SHRuntime;
 
 #ifdef HERMESVM_COMPRESSED_POINTERS

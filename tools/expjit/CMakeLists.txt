@@ -8,5 +8,6 @@ enable_language(ASM)
 add_hermes_tool(loop1
         loop1-exp.c
         loop1-bench.s
-        LINK_LIBS shermes_console_a
-  )
+        loop1-jit.cpp loop1-jit.h
+        LINK_LIBS shermes_console_a asmjit
+)

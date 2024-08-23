@@ -7,6 +7,8 @@
 
 #include "hermes/VM/static_h.h"
 
+#include "loop1-jit.h"
+
 #include <stdlib.h>
 
 static uint32_t unit_index;
@@ -41,7 +43,7 @@ static SHLegacyValue _0_global(SHRuntime *shr) {
   _sh_ljs_declare_global_var(shr, get_symbols(shUnit)[1] /*bench*/);
   locals.t0 = _sh_ljs_create_environment(shr, NULL, 0);
   locals.t1 = _sh_ljs_create_closure(
-      shr, &locals.t0, _1_bench_jit, &s_function_info_table[1], shUnit);
+      shr, &locals.t0, _1_bench, &s_function_info_table[1], shUnit);
   locals.t0 = _sh_ljs_get_global_object(shr);
   _sh_ljs_put_by_id_strict_rjs(
       shr,
@@ -200,6 +202,16 @@ L1:;
 
 // loop1.js:10:1
 SHLegacyValue _1_bench(SHRuntime *shr) {
+  static JitFn s_fn = NULL;
+  static unsigned s_count = 0;
+  if (s_fn)
+    return (*s_fn)(shr);
+  if (++s_count >= 10) {
+    s_fn = compile_loop1();
+    //    exit(1);
+    return (*s_fn)(shr);
+  }
+
   struct {
     SHLocals head;
     SHLegacyValue t0;

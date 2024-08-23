@@ -298,6 +298,8 @@ set(IMPORT_HOST_COMPILERS "" CACHE FILEPATH
 set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
   "Use natively compiled InternalJavaScript. Set OFF to use bytecode version")
 
+set(HERMESVM_ALLOW_JIT OFF CACHE BOOL "Allow JIT if supported by the target platform")
+
 # This definition is used by source that must be kept identical between Hermes and
 # Static Hermes, but needs to behave differently in each case.
 add_definitions(-DSTATIC_HERMES)
@@ -516,6 +518,10 @@ endif()
 if (HERMES_HARDENED)
   add_definitions(-DHERMES_HARDENED)
 endif()
+
+if (HERMESVM_ALLOW_JIT)
+  add_definitions(-DHERMESVM_ALLOW_JIT)
+endif ()
 
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
