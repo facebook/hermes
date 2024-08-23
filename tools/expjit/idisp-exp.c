@@ -175,7 +175,7 @@ static SHLegacyValue _1_bench(SHRuntime *shr) {
     return (*s_fn)(shr);
   if (++s_count >= 10) {
     s_fn = compile_loop1();
-    //        exit(1);
+    // exit(1);
     return (*s_fn)(shr);
   }
 

@@ -7,733 +7,1277 @@
 
 #include "loop1-jit.h"
 
-#include "asmjit/a64.h"
+#include "JitEmitter.h"
 
 #include "hermes/Support/ErrorHandling.h"
-#include "hermes/VM/static_h.h"
 
-#include "llvh/ADT/DenseMap.h"
-#include "llvh/Support/raw_ostream.h"
-
-#include <deque>
-#include <functional>
-#include <unordered_map>
-
-namespace a64 = asmjit::a64;
+namespace hermes::jit {
 
 static asmjit::JitRuntime s_jitRT;
 
-// x19 is runtime
-static constexpr auto xRuntime = a64::x19;
-// x20 is frame
-static constexpr auto xFrame = a64::x20;
-// x0 < xDoubleLim means that it is a double.
-//    cmp   x0, xDoubleLim
-//    b.hs  slowPath
-static constexpr auto xDoubleLim = a64::x21;
-
-class ErrorHandler : public asmjit::ErrorHandler {
-  virtual void handleError(
-      asmjit::Error err,
-      const char *message,
-      asmjit::BaseEmitter *origin) override {
-    llvh::errs() << "AsmJit error: " << err << ": "
-                 << asmjit::DebugUtils::errorAsString(err) << ": " << message
-                 << "\n";
-    hermes::hermes_fatal("AsmJit error");
+/// Return true if the specified 64-bit value can be efficiently loaded on
+/// Arm64 with up to two integer instructions. In other words, it has at most
+/// two non-zero 16-bit words.
+static bool isCheapConst(uint64_t k) {
+  unsigned count = 0;
+  for (uint64_t mask = 0xFFFF; mask != 0; mask <<= 16) {
+    if (k & mask)
+      ++count;
   }
-};
+  return count <= 2;
+}
+
+void ErrorHandler::handleError(
+    asmjit::Error err,
+    const char *message,
+    asmjit::BaseEmitter *origin) {
+  llvh::errs() << "AsmJit error: " << err << ": "
+               << asmjit::DebugUtils::errorAsString(err) << ": " << message
+               << "\n";
+  hermes::hermes_fatal("AsmJit error");
+}
 
 #define EMIT_RUNTIME_CALL(em, func) (em).call((void *)func, #func)
 
-class Emitter {
-  std::unique_ptr<asmjit::FileLogger> fileLogger_{};
-  asmjit::FileLogger *logger_ = nullptr;
-  ErrorHandler errorHandler_;
-
-  struct SlowPath {
-    /// Label of the slow path.
-    asmjit::Label slowPathLab;
-    /// Label to jump to after the slow path.
-    asmjit::Label contLab;
-    /// Target if this is a branch.
-    asmjit::Label target;
-
-    /// Name of the slow path.
-    const char *name;
-    /// Frame register indexes;
-    uint32_t rRes, rInput1, rInput2;
-    /// Whether to invert a condition.
-    bool invert;
-
-    /// Pointer to the slow path function that must be called.
-    void *slowCall;
-    /// The name of the slow path function.
-    const char *slowCallName;
-
-    /// Callback to actually emit.
-    void (*emit)(Emitter &em, SlowPath &sl);
-  };
-  std::deque<SlowPath> slowPaths_{};
-
-  /// Descriptor for a single RO data entry.
-  struct DataDesc {
-    /// Size in bytes.
-    int32_t size;
-    asmjit::TypeId typeId;
-    int32_t itemCount;
-    /// Optional comment.
-    const char *comment;
-  };
-  /// Used for pretty printing when logging data.
-  std::vector<DataDesc> roDataDesc_{};
-  std::vector<uint8_t> roData_{};
-  asmjit::Label roDataLabel_{};
-
-  /// Each thunk contains the offset of the function pointer in roData.
-  std::vector<std::pair<asmjit::Label, int32_t>> thunks_{};
-  llvh::DenseMap<void *, size_t> thunkMap_{};
-
-  /// Map from the bit pattern of a double value to offset in constant pool.
-  std::unordered_map<uint64_t, int32_t> fp64ConstMap_{};
-
- public:
-  asmjit::CodeHolder code{};
-  a64::Assembler a{};
-
-  explicit Emitter(asmjit::JitRuntime &jitRT) {
+Emitter::Emitter(
+    asmjit::JitRuntime &jitRT,
+    uint32_t numFrameRegs,
+    unsigned numCount,
+    unsigned npCount)
+    : frameRegs_(numFrameRegs) {
 #ifndef NDEBUG
-    fileLogger_ = std::make_unique<asmjit::FileLogger>(stdout);
+  fileLogger_ = std::make_unique<asmjit::FileLogger>(stdout);
 #endif
-    if (fileLogger_)
-      logger_ = fileLogger_.get();
+  if (fileLogger_)
+    logger_ = fileLogger_.get();
 
-    if (logger_)
-      logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
+  if (logger_)
+    logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
 
-    code.init(jitRT.environment(), jitRT.cpuFeatures());
-    code.setErrorHandler(&errorHandler_);
-    if (logger_)
-      code.setLogger(logger_);
-    code.attach(&a);
+  code.init(jitRT.environment(), jitRT.cpuFeatures());
+  code.setErrorHandler(&errorHandler_);
+  if (logger_)
+    code.setLogger(logger_);
+  code.attach(&a);
 
-    roDataLabel_ = a.newNamedLabel("RO_DATA");
+  roDataLabel_ = a.newNamedLabel("RO_DATA");
+  returnLabel_ = a.newNamedLabel("leave");
+
+  unsigned nextVec = kVecSaved.first;
+  unsigned nextGp = kGPSaved.first;
+
+  // Number registers: allocate in vector hw regs first.
+  for (unsigned frIndex = 0; frIndex < numCount; ++frIndex) {
+    HWReg hwReg;
+    if (nextVec <= kVecSaved.second) {
+      hwReg = HWReg::vecD(nextVec);
+      comment("    ; alloc: d%u <= r%u", nextVec, frIndex);
+      ++nextVec;
+    } else if (nextGp <= kGPSaved.second) {
+      hwReg = HWReg::gpX(nextGp);
+      comment("    ; alloc: x%u <= r%u", nextGp, frIndex);
+      ++nextGp;
+    } else
+      break;
+
+    frameRegs_[frIndex].globalReg = hwReg;
+    frameRegs_[frIndex].globalType = FRType::Number;
+  }
+  // Non-pointer regs: allocate in gp regs first.
+  for (unsigned frIndex = 0; frIndex < npCount; ++frIndex) {
+    HWReg hwReg;
+    if (nextGp <= kGPSaved.second) {
+      hwReg = HWReg::gpX(nextGp);
+      comment("    ; alloc: x%u <= r%u", nextGp, frIndex);
+      ++nextGp;
+    } else if (nextVec <= kVecSaved.second) {
+      hwReg = HWReg::vecD(nextVec);
+      comment("    ; alloc: d%u <= r%u", nextVec, frIndex);
+      ++nextVec;
+    } else
+      break;
+
+    frameRegs_[frIndex].globalReg = hwReg;
+    frameRegs_[frIndex].globalType = FRType::Unknown;
   }
 
-  /// Log a comment.
-  /// Annotated with printf-style format.
-  void comment(const char *fmt, ...) __attribute__((format(printf, 2, 3))) {
-    if (!logger_)
-      return;
-    va_list args;
-    va_start(args, fmt);
-    char buf[80];
-    vsnprintf(buf, sizeof(buf), fmt, args);
-    va_end(args);
-    a.comment(buf);
+  frameSetup(nextGp - kGPSaved.first, nextVec - kVecSaved.first);
+}
+
+void Emitter::comment(const char *fmt, ...) {
+  if (!logger_)
+    return;
+  va_list args;
+  va_start(args, fmt);
+  char buf[80];
+  vsnprintf(buf, sizeof(buf), fmt, args);
+  va_end(args);
+  a.comment(buf);
+}
+
+JitFn Emitter::addToRuntime() {
+  emitSlowPaths();
+  emitThunks();
+  emitROData();
+
+  code.detach(&a);
+  JitFn fn;
+  asmjit::Error err = s_jitRT.add(&fn, &code);
+  if (err) {
+    llvh::errs() << "AsmJit failed: " << asmjit::DebugUtils::errorAsString(err)
+                 << "\n";
+    hermes::hermes_fatal("AsmJit failed");
+  }
+  return fn;
+}
+
+void Emitter::newBasicBlock(const asmjit::Label &label) {
+  syncAllTempExcept({});
+  freeAllTempExcept({});
+
+  // Clear all local types and regs when starting a new basic block.
+  // TODO: there must be a faster way to do this when there are many regs.
+  for (FRState &frState : frameRegs_) {
+    frState.localType = frState.globalType;
+    assert(!frState.localGpX);
+    assert(!frState.localVecD);
   }
 
-  JitFn addToRuntime() {
-    emitSlowPaths();
-    emitThunks();
-    emitROData();
+  a.bind(label);
+}
 
-    code.detach(&a);
-    JitFn fn;
-    asmjit::Error err = s_jitRT.add(&fn, &code);
-    if (err) {
-      llvh::errs() << "AsmJit failed: "
-                   << asmjit::DebugUtils::errorAsString(err) << "\n";
-      hermes::hermes_fatal("AsmJit failed");
-    }
-    return fn;
-  }
+void Emitter::frameSetup(unsigned gpSaveCount, unsigned vecSaveCount) {
+  assert(
+      gpSaveCount <= kGPSaved.second - kGPSaved.first + 1 &&
+      "Too many callee saved GP regs");
+  assert(
+      vecSaveCount <= kVecSaved.second - kVecSaved.first + 1 &&
+      "Too many callee saved Vec regs");
 
-  void frameSetup() {
-    a.sub(a64::sp, a64::sp, 10 * 8);
-    //  0-3: SHLocals
-    //  4: x22
-    //  5: x21
-    //  6: x20
-    //  7: x19
-    //  8: x29 <- new x29 points here
-    //  9: x30
+  static_assert(
+      kGPSaved.first == 22, "Callee saved GP regs must start from x22");
+  // Always save x22.
+  if (gpSaveCount == 0)
+    gpSaveCount = 1;
+  // We always save x19, x20, x21.
+  gpSaveCount += 3;
 
-    a.stp(a64::x22, a64::x21, a64::Mem(a64::sp, 4 * 8));
-    a.stp(a64::x20, a64::x19, a64::Mem(a64::sp, 6 * 8));
-    a.stp(a64::x29, a64::x30, a64::Mem(a64::sp, 8 * 8));
-    a.add(a64::x29, a64::sp, 8 * 8);
+  gpSaveCount_ = gpSaveCount;
+  vecSaveCount_ = vecSaveCount;
 
-    // ((uint64_t)HVTag_First << kHV_NumDataBits)
-    comment("// xDoubleLim");
-    a.mov(xDoubleLim, ((uint64_t)HVTag_First << kHV_NumDataBits));
-  }
+  //  0-3: SHLocals
+  //  4: x22
+  //  5: x21
+  //  6: x20
+  //  7: x19
+  //  8: x29 <- new x29 points here
+  //  9: x30
+  a.sub(
+      a64::sp,
+      a64::sp,
+      (4 + ((gpSaveCount + 1) & ~1) + ((vecSaveCount + 1) & ~1) + 2) * 8);
 
-  void leaveFrame() {
-    comment("// leaveFrame");
-    a.ldp(a64::x29, a64::x30, a64::Mem(a64::sp, 8 * 8));
-    a.ldp(a64::x20, a64::x19, a64::Mem(a64::sp, 6 * 8));
-    a.ldp(a64::x22, a64::x21, a64::Mem(a64::sp, 4 * 8));
-    a.add(a64::sp, a64::sp, 10 * 8);
-    a.ret(a64::x30);
-  }
-
-  void call(void *fn, const char *name) {
-    //    comment("// call %s", name);
-    a.bl(registerCall(fn, name));
-  }
-
-  /// Create an a64::Mem to a specifc frame register.
-  static constexpr inline a64::Mem frameReg(uint32_t index) {
-    // FIXME: check if the offset fits
-    return a64::Mem(xFrame, index * sizeof(SHLegacyValue));
-  }
-
-  template <typename R>
-  void loadFrame(R dest, uint32_t rFrom) {
-    // FIXME: check if the offset fits
-    a.ldr(dest, frameReg(rFrom));
-  }
-  template <typename R>
-  void storeFrame(R src, uint32_t rFrom) {
-    // FIXME: check if the offset fits
-    a.str(src, frameReg(rFrom));
-  }
-
-  void movFrameAddr(a64::GpX dst, uint32_t frameReg) {
-    // FIXME: check range of frameReg * 8
-    if (frameReg == 0)
-      a.mov(dst, xFrame);
+  unsigned stackOfs = 4 * 8;
+  for (unsigned i = 0; i < gpSaveCount; i += 2, stackOfs += 16) {
+    if (i + 1 < gpSaveCount)
+      a.stp(a64::GpX(19 + i), a64::GpX(20 + i), a64::Mem(a64::sp, stackOfs));
     else
-      a.add(dst, xFrame, frameReg * sizeof(SHLegacyValue));
+      a.str(a64::GpX(19 + i), a64::Mem(a64::sp, stackOfs));
   }
-
-  void loadParam(uint32_t rRes, uint32_t paramIndex) {
-    comment("// LoadParam r%u, %u", rRes, paramIndex);
-    a.mov(a64::x0, xFrame);
-    a.mov(a64::w1, paramIndex);
-    EMIT_RUNTIME_CALL(*this, _sh_ljs_param);
-    storeFrame(a64::x0, rRes);
+  for (unsigned i = 0; i < vecSaveCount; i += 2, stackOfs += 16) {
+    if (i + 1 < vecSaveCount)
+      a.stp(a64::VecD(16 + i), a64::VecD(17 + i), a64::Mem(a64::sp, stackOfs));
+    else
+      a.str(a64::VecD(16 + i), a64::Mem(a64::sp, stackOfs));
   }
+  a.stp(a64::x29, a64::x30, a64::Mem(a64::sp, stackOfs));
+  a.add(a64::x29, a64::sp, stackOfs);
 
-  void mov(uint32_t rRes, uint32_t rInput) {
-    comment("// %s r%u, r%u", "mov", rRes, rInput);
-    loadFrame(a64::x0, rInput);
-    storeFrame(a64::x0, rRes);
-  }
+  // ((uint64_t)HVTag_First << kHV_NumDataBits)
+  comment("// xDoubleLim");
+  a.mov(xDoubleLim, ((uint64_t)HVTag_First << kHV_NumDataBits));
 
-#define DECL_BINOP(methodName, commentStr, slowCall, a64body)       \
-  void methodName(uint32_t rRes, uint32_t rLeft, uint32_t rRight) { \
-    binOp(                                                          \
-        rRes,                                                       \
-        rLeft,                                                      \
-        rRight,                                                     \
-        commentStr,                                                 \
-        [](a64::Assembler & as,                                     \
-           const a64::VecD &res,                                    \
-           const a64::VecD &dl,                                     \
-           const a64::VecD &dr) a64body,                            \
-        (void *)slowCall,                                           \
-        #slowCall);                                                 \
-  }
-
-  DECL_BINOP(mul, "mul", _sh_ljs_mul_rjs, { as.fmul(res, dl, dr); })
-  DECL_BINOP(add, "add", _sh_ljs_add_rjs, { as.fadd(res, dl, dr); })
-#undef DECL_BINOP
-
-#define DECL_UNOP(methodName, commentStr, slowCall, a64body)              \
-  void methodName(uint32_t rRes, uint32_t rInput) {                       \
-    unop(                                                                 \
-        rRes,                                                             \
-        rInput,                                                           \
-        commentStr,                                                       \
-        [](a64::Assembler & as, const a64::VecD &d, const a64::VecD &tmp) \
-            a64body,                                                      \
-        (void *)slowCall,                                                 \
-        #slowCall);                                                       \
-  }
-
-  DECL_UNOP(dec, "dec", _sh_ljs_dec_rjs, {
-    as.fmov(tmp, -1.0);
-    as.fadd(d, d, tmp);
-  })
-  DECL_UNOP(inc, "inc", _sh_ljs_inc_rjs, {
-    as.fmov(tmp, -1.0);
-    as.fadd(d, d, tmp);
-  })
-#undef DECL_UNOP
-
-#define DECL_JCOND(methodName, commentStr, slowCall, a64inst) \
-  void methodName(                                            \
-      bool invert,                                            \
-      const asmjit::Label &target,                            \
-      uint32_t rLeft,                                         \
-      uint32_t rRight) {                                      \
-    jCond(                                                    \
-        invert,                                               \
-        target,                                               \
-        rLeft,                                                \
-        rRight,                                               \
-        commentStr,                                           \
-        [](a64::Assembler &as, const asmjit::Label &target) { \
-          as.a64inst(target);                                 \
-        },                                                    \
-        (void *)slowCall,                                     \
-        #slowCall);                                           \
-  }
-  DECL_JCOND(jGreater, "greater", _sh_ljs_greater_rjs, b_gt)
-  DECL_JCOND(jGreaterEqual, "greater_equal", _sh_ljs_greater_equal_rjs, b_ge)
-#undef DECL_JCOND
-
-  /// Return true if the specified 64-bit value can be efficiently loaded on
-  /// Arm64 with up to two integer instructions. In other words, it has at most
-  /// two non-zero 16-bit words.
-  static bool isCheapConst(uint64_t k) {
-    unsigned count = 0;
-    for (uint64_t mask = 0xFFFF; mask != 0; mask <<= 16) {
-      if (k & mask)
-        ++count;
-    }
-    return count <= 2;
-  }
-
-  void loadConstUInt8(uint32_t rRes, uint8_t val) {
-    comment("// LoadConstUInt8 r%u, %u", rRes, val);
-
-    if (val == 0) {
-      // TODO: this check should be wider.
-      a.movi(a64::d0, 0);
-      a.str(a64::d0, frameReg(rRes));
-    } else if (a64::Utils::isFP64Imm8((double)val)) {
-      a.fmov(a64::d0, (double)val);
-      a.str(a64::d0, frameReg(rRes));
-    } else {
-      uint64_t bits = llvh::DoubleToBits(val);
-      if (isCheapConst(bits)) {
-        a.mov(a64::x0, bits);
-        a.str(a64::x0, frameReg(rRes));
-      } else {
-        a.ldr(a64::d0, a64::Mem(roDataLabel_, uint64Const(bits, "fp64 const")));
-        a.str(a64::d0, frameReg(rRes));
-      }
-    }
-  }
-
- private:
-  asmjit::Label newPrefLabel(const char *pref, size_t index) {
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%s%lu", pref, index);
-    return a.newNamedLabel(buf);
-  }
-  inline asmjit::Label newSlowPathLabel() {
-    return newPrefLabel("SLOW_", slowPaths_.size());
-  }
-  inline asmjit::Label newContLabel() {
-    return newPrefLabel("CONT_", slowPaths_.size());
-  }
-
-  int32_t reserveData(
-      int32_t dsize,
-      size_t align,
-      asmjit::TypeId typeId,
-      int32_t itemCount,
-      const char *comment = nullptr) {
-    // Align the new data.
-    size_t oldSize = roData_.size();
-    size_t dataOfs = (roData_.size() + align - 1) & ~(align - 1);
-    if (dataOfs >= INT32_MAX)
-      hermes::hermes_fatal("JIT RO data overflow");
-    // Grow to include the data.
-    roData_.resize(dataOfs + dsize);
-
-    // If logging is enabled, generate data descriptors.
-    if (logger_) {
-      // Optional padding descriptor.
-      if (dataOfs != oldSize) {
-        int32_t gap = (int32_t)(dataOfs - oldSize);
-        roDataDesc_.push_back(
-            {.size = gap, .typeId = asmjit::TypeId::kUInt8, .itemCount = gap});
-      }
-
-      roDataDesc_.push_back(
-          {.size = dsize,
-           .typeId = typeId,
-           .itemCount = itemCount,
-           .comment = comment});
-    }
-
-    return (int32_t)dataOfs;
-  }
-
-  /// Register a 64-bit constant in RO DATA and return its offset.
-  int32_t uint64Const(uint64_t bits, const char *comment) {
-    auto [it, inserted] = fp64ConstMap_.try_emplace(bits, 0);
-    if (inserted) {
-      int32_t dataOfs = reserveData(
-          sizeof(double), sizeof(double), asmjit::TypeId::kFloat64, 1, comment);
-      memcpy(roData_.data() + dataOfs, &bits, sizeof(double));
-      it->second = dataOfs;
-    }
-    return it->second;
-  }
-
-  asmjit::Label registerCall(void *fn, const char *name = nullptr) {
-    auto [it, inserted] = thunkMap_.try_emplace(fn, 0);
-    // Is this a new thunk?
-    if (inserted) {
-      it->second = thunks_.size();
-      int32_t dataOfs =
-          reserveData(sizeof(fn), sizeof(fn), asmjit::TypeId::kUInt64, 1, name);
-      memcpy(roData_.data() + dataOfs, &fn, sizeof(fn));
-      thunks_.emplace_back(
-          name ? a.newNamedLabel(name) : a.newLabel(), dataOfs);
-    }
-
-    return thunks_[it->second].first;
-  }
-
-  void emitSlowPaths() {
-    while (!slowPaths_.empty()) {
-      SlowPath &sp = slowPaths_.front();
-      sp.emit(*this, sp);
-      slowPaths_.pop_front();
-    }
-  }
-
-  void emitThunks() {
-    comment("// Thunks");
-    for (const auto &th : thunks_) {
-      a.bind(th.first);
-      a.ldr(a64::x16, a64::Mem(roDataLabel_, th.second));
-      a.br(a64::x16);
-    }
-  }
-
-  void emitROData() {
-    a.bind(roDataLabel_);
-    if (!logger_) {
-      a.embed(roData_.data(), roData_.size());
-    } else {
-      int32_t ofs = 0;
-      for (const auto &desc : roDataDesc_) {
-        if (desc.comment)
-          comment("// %s", desc.comment);
-        a.embedDataArray(desc.typeId, roData_.data() + ofs, desc.itemCount);
-        ofs += desc.size;
-      }
-    }
-  }
-
-  void unop(
-      uint32_t rRes,
-      uint32_t rInput,
-      const char *name,
-      void (
-          *fast)(a64::Assembler &a, const a64::VecD &dst, const a64::VecD &tmp),
-      void *slowCall,
-      const char *slowCallName) {
-    //  ldr x0, [x20]
-    //  cmp x0, x21
-    //  b.hi    SLOW_1
-    //
-    //  fmov d0, x0
-    //  fmov d1, #-1.0
-    //  fadd d0, d0, d1
-    //  str d0, [x20, 3*8]
-    //  CONT_1:
-
-    comment("// %s r%u, r%u", name, rRes, rInput);
-    asmjit::Label slowPathLab = newSlowPathLabel();
-    asmjit::Label contLab = newContLabel();
-
-    loadFrame(a64::x0, rInput);
-    a.cmp(a64::x0, xDoubleLim);
-    a.b_hs(slowPathLab);
-
-    a.fmov(a64::d0, a64::x0);
-    fast(a, a64::d0, a64::d1);
-    storeFrame(a64::d0, rRes);
-    a.bind(contLab);
-
-    // frame[3] = _sh_ljs_dec_rjs(shr, frame + 0);
-    //  SLOW_1:
-    //  mov x0, x19     ; runtime
-    //  mov x1, x20     ; frame + 0
-    //  bl  __sh_ljs_dec_rjs
-    //  str x0, [x20, 3*8]  ; frame[3] =
-    //  b CONT_1
-    slowPaths_.push_back(
-        {.slowPathLab = slowPathLab,
-         .contLab = contLab,
-         .name = name,
-         .rRes = rRes,
-         .rInput1 = rInput,
-         .slowCall = slowCall,
-         .slowCallName = slowCallName,
-         .emit = [](Emitter &em, SlowPath &sl) {
-           em.comment(
-               "// Slow path: %s r%u, r%u", sl.name, sl.rRes, sl.rInput1);
-           em.a.bind(sl.slowPathLab);
-           em.a.mov(a64::x0, xRuntime);
-           em.movFrameAddr(a64::x1, sl.rInput1);
-           em.call(sl.slowCall, sl.slowCallName);
-           em.storeFrame(a64::x0, sl.rRes);
-           em.a.b(sl.contLab);
-         }});
-  }
-
-  void binOp(
-      uint32_t rRes,
-      uint32_t rLeft,
-      uint32_t rRight,
-      const char *name,
-      void (*fast)(
-          a64::Assembler &a,
-          const a64::VecD &res,
-          const a64::VecD &dl,
-          const a64::VecD &dr),
-      void *slowCall,
-      const char *slowCallName) {
-    //  ldr x0, [x20]
-    //  cmp x0, x21
-    //  b.hi    SLOW_1
-    //
-    //  fmov d0, x0
-    //  fmov d1, #-1.0
-    //  fadd d0, d0, d1
-    //  str d0, [x20, 3*8]
-    //  CONT_1:
-
-    comment("// %s r%u, r%u, r%u", name, rRes, rLeft, rRight);
-    asmjit::Label slowPathLab = newSlowPathLabel();
-    asmjit::Label contLab = newContLabel();
-
-    loadFrame(a64::x0, rLeft);
-    a.cmp(a64::x0, xDoubleLim);
-    a.b_hs(slowPathLab);
-    loadFrame(a64::x1, rRight);
-    a.cmp(a64::x1, xDoubleLim);
-    a.b_hs(slowPathLab);
-
-    a.fmov(a64::d0, a64::x0);
-    a.fmov(a64::d1, a64::x1);
-    fast(a, a64::d0, a64::d0, a64::d1);
-    storeFrame(a64::d0, rRes);
-    a.bind(contLab);
-
-    //  SLOW_3:
-    //  // frame[1] = _sh_ljs_mul_rjs(shr, frame + 1, frame + 3);
-    //  mov x0, x19
-    //  add x1, x20, 1*8
-    //  add x2, x20, 3*8
-    //  bl __sh_ljs_mul_rjs
-    //  str x0, [x20, 1*8]
-    //  b CONT_3
-    slowPaths_.push_back(
-        {.slowPathLab = slowPathLab,
-         .contLab = contLab,
-         .name = name,
-         .rRes = rRes,
-         .rInput1 = rLeft,
-         .rInput2 = rRight,
-         .slowCall = slowCall,
-         .slowCallName = slowCallName,
-         .emit = [](Emitter &em, SlowPath &sl) {
-           em.comment(
-               "// %s r%u, r%u, r%u", sl.name, sl.rRes, sl.rInput1, sl.rInput2);
-           em.a.bind(sl.slowPathLab);
-           em.a.mov(a64::x0, xRuntime);
-           em.movFrameAddr(a64::x1, sl.rInput1);
-           em.movFrameAddr(a64::x2, sl.rInput2);
-           em.call(sl.slowCall, sl.slowCallName);
-           em.storeFrame(a64::x0, sl.rRes);
-           em.a.b(sl.contLab);
-         }});
-  }
-
-  void jCond(
-      bool invert,
-      const asmjit::Label &target,
-      uint32_t rLeft,
-      uint32_t rRight,
-      const char *name,
-      void(fast)(a64::Assembler &a, const asmjit::Label &target),
-      void *slowCall,
-      const char *slowCallName) {
-    // if (!_sh_ljs_greater_rjs(shr, frame + 3, frame + 2)) goto L1;
-    //  ldr x0, [x20, 3*8]
-    //  cmp x0, x21
-    //  b.hi    SLOW_2
-    //  ldr x1, [x20, 2*8]
-    //  cmp x1, x21
-    //  b.hi    SLOW_2
-    //
-    //  fmov    d0, x0
-    //  fmov    d1, x1
-    //  fcmp d0, d1
-    //  b.gt CONT_2
-    //  b L1
-    //  CONT_2:
-
-    comment(
-        "// j_%s_%s Lx, r%u, r%u", invert ? "not" : "", name, rLeft, rRight);
-    asmjit::Label slowPathLab = newSlowPathLabel();
-    asmjit::Label contLab = newContLabel();
-
-    loadFrame(a64::x0, rLeft);
-    a.cmp(a64::x0, xDoubleLim);
-    a.b_hs(slowPathLab);
-    loadFrame(a64::x1, rRight);
-    a.cmp(a64::x1, xDoubleLim);
-    a.b_hs(slowPathLab);
-
-    a.fmov(a64::d0, a64::x0);
-    a.fmov(a64::d1, a64::x1);
-    a.fcmp(a64::d0, a64::d1);
-    if (!invert) {
-      fast(a, target);
-    } else {
-      fast(a, contLab);
-      a.b(target);
-    }
-    a.bind(contLab);
-
-    //  SLOW_2:
-    //  if (!_sh_ljs_greater_rjs(shr, frame + 3, frame + 2)) goto L1;
-    //  mov x0, x19
-    //  add x1, x20, 3*8
-    //  add x2, x20, 2*8
-    //  bl __sh_ljs_greater_rjs
-    //  cbz w0, L1
-    //  b CONT_2
-    //
-    slowPaths_.push_back(
-        {.slowPathLab = slowPathLab,
-         .contLab = contLab,
-         .target = target,
-         .name = name,
-         .rInput1 = rLeft,
-         .rInput2 = rRight,
-         .invert = invert,
-         .slowCall = slowCall,
-         .slowCallName = slowCallName,
-         .emit = [](Emitter &em, SlowPath &sl) {
-           em.comment(
-               "// Slow path: j_%s_%s Lx, r%u, r%u",
-               sl.invert ? "not" : "",
-               sl.name,
-               sl.rInput1,
-               sl.rInput2);
-           em.a.bind(sl.slowPathLab);
-           em.a.mov(a64::x0, xRuntime);
-           em.movFrameAddr(a64::x1, sl.rInput1);
-           em.movFrameAddr(a64::x2, sl.rInput2);
-           em.call(sl.slowCall, sl.slowCallName);
-           if (!sl.invert) {
-             em.a.cbz(a64::w0, sl.target);
-             em.a.b(sl.contLab);
-           } else {
-             em.a.cbz(a64::w0, sl.contLab);
-             em.a.b(sl.target);
-           }
-         }});
-  }
-};
-
-JitFn compile_loop1(void) {
-  Emitter em(s_jitRT);
-  a64::Assembler &a = em.a;
-
-  em.frameSetup();
-
-  em.comment("// xRuntime");
+  comment("// xRuntime");
   a.mov(xRuntime, a64::x0);
 
   //  _sh_check_native_stack_overflow(shr);
-  EMIT_RUNTIME_CALL(em, _sh_check_native_stack_overflow);
+  EMIT_RUNTIME_CALL(*this, _sh_check_native_stack_overflow);
 
   // Function<bench>(3 params, 13 registers):
   //  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 13);
-  em.comment("// _sh_enter");
+  comment("// _sh_enter");
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
   a.mov(a64::w2, 13);
-  EMIT_RUNTIME_CALL(em, _sh_enter);
-  em.comment("// xFrame");
+  EMIT_RUNTIME_CALL(*this, _sh_enter);
+  comment("// xFrame");
   a.mov(xFrame, a64::x0);
 
   //  locals.head.count = 0;
-  em.comment("// locals.head.count = 0");
+  comment("// locals.head.count = 0");
   a.mov(a64::w1, 0);
   a.str(a64::w1, a64::Mem(a64::sp, offsetof(SHLocals, count)));
+}
 
-  //     LoadParam         r5, 2
-  em.loadParam(5, 2);
-  //     LoadParam         r0, 1
-  em.loadParam(0, 1);
-  //     Dec               r4, r0
-  em.dec(4, 0);
-  //     LoadConstZero     r3
-  em.loadConstUInt8(3, 0);
-  //     LoadConstUInt8    r2, 1
-  em.loadConstUInt8(2, 1);
-  //     LoadConstZero     r1
-  em.loadConstUInt8(1, 0);
-  //     LoadConstZero     r0
-  em.loadConstUInt8(0, 0);
-  //     JNotGreaterEqual  L1, r4, r0
-  auto L1 = a.newLabel();
-  em.jGreaterEqual(true, L1, 4, 0);
-  // L4:
-  auto L4 = a.newLabel();
-  a.bind(L4);
-  //     Dec               r10, r5
-  em.dec(10, 5);
-  //     Mov               r8, r1
-  em.mov(8, 1);
-  //     Mov               r6, r4
-  em.mov(6, 4);
-  //     Mov               r9, r5
-  em.mov(9, 5);
-  //     Mov               r7, r9
-  em.mov(7, 9);
-  //     JNotGreater       L2, r10, r2
-  auto L2 = a.newLabel();
-  em.jGreater(true, L2, 10, 2);
-  // L3:
-  auto L3 = a.newLabel();
-  a.bind(L3);
-  //     Mul               r9, r9, r10
-  em.mul(9, 9, 10);
-  //     Dec               r10, r10
-  em.dec(10, 10);
-  //     Mov               r7, r9
-  em.mov(7, 9);
-  //     JGreater          L3, r10, r2
-  em.jGreater(false, L3, 10, 2);
-  // L2:
-  a.bind(L2);
-  //     Add               r1, r8, r7
-  em.add(1, 8, 7);
-  //     Dec               r4, r6
-  em.dec(4, 6);
-  //     Mov               r0, r1
-  em.mov(0, 1);
-  //     JGreaterEqual     L4, r4, r3
-  em.jGreaterEqual(false, L4, 4, 3);
-  // L1:
-  a.bind(L1);
-  //     Ret               r0
-  em.loadFrame(a64::x22, 0);
-
-  // _sh_leave(shr, &locals.head, frame);
+void Emitter::leave() {
+  comment("// leaveFrame");
+  a.bind(returnLabel_);
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
   a.mov(a64::x2, xFrame);
-  EMIT_RUNTIME_CALL(em, _sh_leave);
+  EMIT_RUNTIME_CALL(*this, _sh_leave);
 
+  // The return value has been stashed in x22 by ret(). Move it to the return
+  // register.
   a.mov(a64::x0, a64::x22);
-  em.leaveFrame();
+
+  unsigned stackOfs = 4 * 8;
+  for (unsigned i = 0; i < gpSaveCount_; i += 2, stackOfs += 16) {
+    if (i + 1 < gpSaveCount_)
+      a.ldp(a64::GpX(19 + i), a64::GpX(20 + i), a64::Mem(a64::sp, stackOfs));
+    else
+      a.ldr(a64::GpX(19 + i), a64::Mem(a64::sp, stackOfs));
+  }
+  for (unsigned i = 0; i < vecSaveCount_; i += 2, stackOfs += 16) {
+    if (i + 1 < vecSaveCount_)
+      a.ldp(
+          a64::VecD(kVecSaved.first + i),
+          a64::VecD(kVecSaved.first + 1 + i),
+          a64::Mem(a64::sp, stackOfs));
+    else
+      a.ldr(a64::VecD(kVecSaved.first + i), a64::Mem(a64::sp, stackOfs));
+  }
+  a.ldp(a64::x29, a64::x30, a64::Mem(a64::sp, stackOfs));
+
+  a.add(
+      a64::sp,
+      a64::sp,
+      (4 + ((gpSaveCount_ + 1) & ~1) + ((vecSaveCount_ + 1) & ~1) + 2) * 8);
+
+  a.ret(a64::x30);
+}
+
+void Emitter::call(void *fn, const char *name) {
+  //    comment("// call %s", name);
+  a.bl(registerCall(fn, name));
+}
+
+void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
+  // FIXME: check range of frameReg * 8
+  if (frameReg == FR(9))
+    a.mov(dst, xFrame);
+  else
+    a.add(dst, xFrame, frameReg.index() * sizeof(SHLegacyValue));
+}
+
+template <bool use>
+void Emitter::movHWReg(HWReg dst, HWReg src) {
+  if (dst != src) {
+    if (dst.isVecD() && src.isVecD())
+      a.fmov(dst.a64VecD(), src.a64VecD());
+    else if (dst.isVecD())
+      a.fmov(dst.a64VecD(), src.a64GpX());
+    else if (src.isVecD())
+      a.fmov(dst.a64GpX(), src.a64VecD());
+    else
+      a.mov(dst.a64GpX(), src.a64GpX());
+  }
+  if constexpr (use) {
+    useReg(src);
+    useReg(dst);
+  }
+}
+
+void Emitter::storeHWRegToFrame(FR fr, HWReg src) {
+  if (src.isVecD())
+    storeFrame(src.a64VecD(), fr);
+  else
+    storeFrame(src.a64GpX(), fr);
+  frameRegs_[fr.index()].frameUpToDate = true;
+}
+
+void Emitter::movHWFromFR(HWReg hwRes, FR src) {
+  FRState &frState = frameRegs_[src.index()];
+  if (frState.localGpX)
+    movHWReg<true>(hwRes, frState.localGpX);
+  else if (frState.localVecD)
+    movHWReg<true>(hwRes, frState.localVecD);
+  else if (frState.globalReg && frState.globalRegUpToDate)
+    movHWReg<true>(hwRes, frState.globalReg);
+  else
+    loadFrame(a64::GpX(useReg(hwRes).indexInClass()), src);
+}
+
+template <class TAG>
+HWReg Emitter::_allocTemp(TempRegAlloc &ra) {
+  if (auto optReg = ra.alloc(); optReg)
+    return HWReg(*optReg, TAG{});
+  // Spill one register.
+  unsigned index = gpTemp_.leastRecentlyUsed();
+  spillTempReg(HWReg(index, TAG{}));
+  ra.free(index);
+  // Allocate again. This must succeed.
+  return HWReg(*gpTemp_.alloc(), TAG{});
+}
+
+void Emitter::freeReg(HWReg hwReg) {
+  if (!hwReg.isValid())
+    return;
+
+  FR fr = hwRegs_[hwReg.combinedIndex()].contains;
+  hwRegs_[hwReg.combinedIndex()].contains = {};
+
+  if (hwReg.isGpX()) {
+    comment("    ; free x%u (r%u)", hwReg.indexInClass(), fr.index());
+    if (fr.isValid()) {
+      assert(frameRegs_[fr.index()].localGpX == hwReg);
+      frameRegs_[fr.index()].localGpX = {};
+    }
+    if (isTempGpX(hwReg))
+      gpTemp_.free(hwReg.indexInClass());
+  } else {
+    comment("    ; free d%u (r%u)", hwReg.indexInClass(), fr.index());
+    if (fr.isValid()) {
+      assert(frameRegs_[fr.index()].localVecD == hwReg);
+      frameRegs_[fr.index()].localVecD = {};
+    }
+    if (isTempVecD(hwReg))
+      vecTemp_.free(hwReg.indexInClass());
+  }
+}
+
+// TODO: check wherger we should make this call require a temp reg.
+HWReg Emitter::useReg(HWReg hwReg) {
+  if (!hwReg.isValid())
+    return hwReg;
+  // Check whether it is a temporary.
+  if (hwReg.isGpX()) {
+    if (isTempGpX(hwReg))
+      gpTemp_.use(hwReg.indexInClass());
+  } else {
+    if (isTempVecD(hwReg))
+      vecTemp_.use(hwReg.indexInClass());
+  }
+  return hwReg;
+}
+
+void Emitter::spillTempReg(HWReg toSpill) {
+  assert(isTemp(toSpill));
+
+  HWRegState &hwState = hwRegs_[toSpill.combinedIndex()];
+  FR fr = hwState.contains;
+  hwState.contains = {};
+  assert(fr.isValid() && "Allocated tmp register is unused");
+
+  FRState &frState = frameRegs_[fr.index()];
+
+  assert(frState.globalReg != toSpill && "global regs can't be temporary");
+  if (frState.globalReg) {
+    if (!frState.globalRegUpToDate) {
+      movHWReg<false>(frState.globalReg, toSpill);
+      frState.globalRegUpToDate = true;
+    }
+  } else {
+    if (!frState.frameUpToDate) {
+      storeHWRegToFrame(fr, toSpill);
+      frState.frameUpToDate = true;
+    }
+  }
+
+  if (frState.localGpX == toSpill)
+    frState.localGpX = {};
+  else if (frState.localVecD == toSpill)
+    frState.localVecD = {};
+  else
+    assert(false && "local reg not used by FR");
+}
+
+void Emitter::syncToMem(FR fr) {
+  FRState &frState = frameRegs_[fr.index()];
+  if (frState.frameUpToDate)
+    return;
+
+  HWReg hwReg = isFRInRegister(fr);
+  assert(
+      hwReg.isValid() && "FR is not synced to frame and is not in a register");
+  storeHWRegToFrame(fr, hwReg);
+}
+
+void Emitter::syncAllTempExcept(FR exceptFR) {
+  for (unsigned i = kGPTemp.first; i <= kGPTemp.second; ++i) {
+    HWReg hwReg(i, HWReg::GpX{});
+    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
+    if (!fr.isValid() || fr == exceptFR)
+      continue;
+
+    FRState &frState = frameRegs_[fr.index()];
+    assert(frState.localGpX == hwReg && "tmpreg not bound to FR localreg");
+    if (frState.globalReg) {
+      if (!frState.globalRegUpToDate) {
+        comment("    ; sync: x%u (r%u)", i, fr.index());
+        movHWReg<false>(frState.globalReg, hwReg);
+        frState.globalRegUpToDate = true;
+      }
+    } else {
+      if (!frState.frameUpToDate) {
+        comment("    ; sync: x%u (r%u)", i, fr.index());
+        storeHWRegToFrame(fr, hwReg);
+      }
+    }
+  }
+
+  for (unsigned i = kVecTemp.first; i <= kVecTemp.second; ++i) {
+    HWReg hwReg(i, HWReg::VecD{});
+    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
+    if (!fr.isValid() || fr == exceptFR)
+      continue;
+
+    FRState &frState = frameRegs_[fr.index()];
+    assert(frState.localVecD == hwReg && "tmpreg not bound to FR localreg");
+    // If there is a local GpX, it already synced the value.
+    if (frState.localGpX)
+      continue;
+    if (frState.globalReg) {
+      if (!frState.globalRegUpToDate) {
+        comment("    ; sync d%u (r%u)", i, fr.index());
+        movHWReg<false>(frState.globalReg, hwReg);
+        frState.globalRegUpToDate = true;
+      }
+    } else {
+      if (!frState.frameUpToDate) {
+        comment("    ; sync d%u (r%u)", i, fr.index());
+        storeHWRegToFrame(fr, hwReg);
+      }
+    }
+  }
+}
+
+void Emitter::freeAllTempExcept(FR exceptFR) {
+  for (unsigned i = kGPTemp.first; i <= kGPTemp.second; ++i) {
+    HWReg hwReg(i, HWReg::GpX{});
+    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
+    if (!fr.isValid() || fr == exceptFR)
+      continue;
+    comment("    ; free: x%u (r%u)", i, fr.index());
+    hwRegs_[hwReg.combinedIndex()].contains = {};
+
+    FRState &frState = frameRegs_[fr.index()];
+    assert(frState.localGpX == hwReg && "tmpreg not bound to FR localreg");
+    frState.localGpX = {};
+    gpTemp_.free(hwReg.indexInClass());
+  }
+
+  for (unsigned i = kVecTemp.first; i <= kVecTemp.second; ++i) {
+    HWReg hwReg(i, HWReg::VecD{});
+    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
+    if (!fr.isValid() || fr == exceptFR)
+      continue;
+    comment("    ; free: d%u (r%u)", i, fr.index());
+    hwRegs_[hwReg.combinedIndex()].contains = {};
+
+    FRState &frState = frameRegs_[fr.index()];
+    assert(frState.localVecD == hwReg && "tmpreg not bound to FR localreg");
+    frState.localVecD = {};
+    vecTemp_.free(hwReg.indexInClass());
+    assert(!frState.localGpX && "We already spilled all GpX temps");
+  }
+}
+
+void Emitter::assignAllocatedLocalHWReg(FR fr, HWReg hwReg) {
+  hwRegs_[hwReg.combinedIndex()].contains = fr;
+  if (hwReg.isGpX()) {
+    comment("    ; alloc: x%u <- r%u", hwReg.indexInClass(), fr.index());
+    frameRegs_[fr.index()].localGpX = hwReg;
+  } else {
+    comment("    ; alloc: d%u <- r%u", hwReg.indexInClass(), fr.index());
+    frameRegs_[fr.index()].localVecD = hwReg;
+  }
+}
+
+HWReg Emitter::isFRInRegister(FR fr) {
+  auto &frState = frameRegs_[fr.index()];
+  if (frState.localGpX)
+    return useReg(frState.localGpX);
+  if (frState.localVecD)
+    return useReg(frState.localVecD);
+  if (frState.globalReg)
+    return frState.globalReg;
+  return {};
+}
+
+HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
+  auto &frState = frameRegs_[fr.index()];
+
+  if (frState.localVecD)
+    return useReg(frState.localVecD);
+
+  // Do we have a global VecD allocated to this FR?
+  if (frState.globalReg.isValidVecD()) {
+    // If the caller requires that the latest value is present, but it isn't,
+    // we need to put it there.
+    if (load && !frState.globalRegUpToDate) {
+      assert(
+          frState.localGpX &&
+          "If globalReg is not up to date, there must be a localReg");
+      movHWReg<true>(frState.globalReg, frState.localGpX);
+      frState.globalRegUpToDate = true;
+    }
+
+    return frState.globalReg;
+  }
+
+  // We have neither global nor local VecD, so we must allocate a new tmp reg.
+  HWReg hwVecD = allocTempVecD();
+  assignAllocatedLocalHWReg(fr, hwVecD);
+
+  if (load) {
+    if (frState.localGpX) {
+      movHWReg<false>(hwVecD, frState.localGpX);
+    } else if (frState.globalReg.isValidGpX()) {
+      assert(
+          frState.globalRegUpToDate &&
+          "globalReg must be up to date if no local regs");
+      movHWReg<false>(hwVecD, frState.globalReg);
+    } else {
+      loadFrame(hwVecD.a64VecD(), fr);
+      frState.frameUpToDate = true;
+    }
+  }
+
+  return hwVecD;
+}
+
+HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
+  auto &frState = frameRegs_[fr.index()];
+
+  if (frState.localGpX)
+    return useReg(frState.localGpX);
+
+  // Do we have a global GpX allocated to this FR?
+  if (frState.globalReg.isValidGpX()) {
+    // If the caller requires that the latest value is present, but it isn't,
+    // we need to put it there.
+    if (load && !frState.globalRegUpToDate) {
+      assert(
+          frState.localVecD &&
+          "If globalReg is not up to date, there must be a localReg");
+      movHWReg<true>(frState.globalReg, frState.localVecD);
+      frState.globalRegUpToDate = true;
+    }
+
+    return frState.globalReg;
+  }
+
+  // We have neither global nor local GpX, so we must allocate a new tmp reg.
+  HWReg hwGpX = allocTempGpX();
+  assignAllocatedLocalHWReg(fr, hwGpX);
+
+  if (load) {
+    if (frState.localVecD) {
+      movHWReg<false>(hwGpX, frState.localVecD);
+    } else if (frState.globalReg.isValidVecD()) {
+      assert(
+          frState.globalRegUpToDate &&
+          "globalReg must be up to date if no local regs");
+      movHWReg<false>(hwGpX, frState.globalReg);
+    } else {
+      loadFrame(hwGpX.a64GpX(), fr);
+      frState.frameUpToDate = true;
+    }
+  }
+
+  return hwGpX;
+}
+
+HWReg Emitter::getOrAllocFRInAnyReg(FR fr, bool load) {
+  if (HWReg tmp = isFRInRegister(fr))
+    return tmp;
+
+  // We have neither global nor local reg, so we must allocate a new tmp reg.
+  HWReg hwGpX = allocTempGpX();
+  assignAllocatedLocalHWReg(fr, hwGpX);
+
+  if (load) {
+    loadFrame(hwGpX.a64GpX(), fr);
+    frameRegs_[fr.index()].frameUpToDate = true;
+  }
+
+  return hwGpX;
+}
+
+void Emitter::frUpdatedWithHWReg(
+    FR fr,
+    HWReg hwReg,
+    hermes::OptValue<FRType> localType) {
+  FRState &frState = frameRegs_[fr.index()];
+
+  frState.frameUpToDate = false;
+
+  if (frState.globalReg == hwReg) {
+    frState.globalRegUpToDate = true;
+
+    if (frState.localGpX)
+      freeReg(frState.localGpX);
+    if (frState.localVecD)
+      freeReg(frState.localVecD);
+  } else {
+    frState.globalRegUpToDate = false;
+    if (hwReg == frState.localGpX) {
+      freeReg(frState.localVecD);
+    } else {
+      assert(
+          hwReg == frState.localVecD &&
+          "Updated reg doesn't match any FRState register");
+      freeReg(frState.localGpX);
+    }
+  }
+  if (localType)
+    frState.localType = *localType;
+}
+
+void Emitter::ret(FR frValue) {
+  if (HWReg hwReg = isFRInRegister(frValue))
+    movHWReg<false>(HWReg::gpX(22), hwReg);
+  else
+    loadFrame(a64::x22, frValue);
+  a.b(returnLabel_);
+}
+
+void Emitter::mov(FR frRes, FR frInput, bool logComment) {
+  // Sometimes mov() is used by other instructions, so logging is optional.
+  if (logComment)
+    comment("// %s r%u, r%u", "mov", frRes.index(), frInput.index());
+  if (frRes == frInput)
+    return;
+
+  HWReg hwInput = getOrAllocFRInAnyReg(frInput, true);
+  HWReg hwDest = getOrAllocFRInAnyReg(frRes, false);
+  movHWReg<false>(hwDest, hwInput);
+  frUpdatedWithHWReg(frRes, hwDest, frameRegs_[frInput.index()].localType);
+}
+
+void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
+  comment("// LoadParam r%u, %u", frRes.index(), paramIndex);
+  syncAllTempExcept(frRes);
+  freeAllTempExcept(frRes);
+  a.mov(a64::x0, xFrame);
+  a.mov(a64::w1, paramIndex);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_param);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::loadConstUInt8(FR frRes, uint8_t val) {
+  comment("// LoadConstUInt8 r%u, %u", frRes.index(), val);
+  HWReg hwRes{};
+
+  if (val == 0) {
+    // TODO: this check should be wider.
+    hwRes = getOrAllocFRInVecD(frRes, false);
+    a.movi(hwRes.a64VecD(), 0);
+  } else if (a64::Utils::isFP64Imm8((double)val)) {
+    hwRes = getOrAllocFRInVecD(frRes, false);
+    a.fmov(hwRes.a64VecD(), (double)val);
+  } else {
+    uint64_t bits = llvh::DoubleToBits(val);
+    if (isCheapConst(bits)) {
+      hwRes = getOrAllocFRInGpX(frRes, false);
+      a.mov(hwRes.a64GpX(), bits);
+    } else {
+      hwRes = getOrAllocFRInVecD(frRes, false);
+      a.ldr(
+          hwRes.a64VecD(),
+          a64::Mem(roDataLabel_, uint64Const(bits, "fp64 const")));
+    }
+  }
+  frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+}
+
+void Emitter::toNumber(FR frRes, FR frInput) {
+  comment("// %s r%u, r%u", "toNumber", frRes.index(), frInput.index());
+  if (isFRKnownNumber(frInput))
+    return mov(frRes, frInput, false);
+
+  HWReg hwRes, hwInput;
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncToMem(frInput);
+
+  hwInput = getOrAllocFRInGpX(frInput, true);
+  a.cmp(hwInput.a64GpX(), xDoubleLim);
+  a.b_hs(slowPathLab);
+
+  if (frRes != frInput) {
+    hwRes = getOrAllocFRInVecD(frRes, false);
+    movHWReg<false>(hwRes, hwInput);
+  } else {
+    hwRes = hwInput;
+  }
+  frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+
+  freeAllTempExcept(frRes);
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = "toNumber",
+       .frRes = frRes,
+       .frInput1 = frInput,
+       .hwRes = hwRes,
+       .slowCall = (void *)_sh_ljs_to_double_rjs,
+       .slowCallName = "_sh_ljs_to_double_rjs",
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: %s r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.call(sl.slowCall, sl.slowCallName);
+         em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
+asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%s%lu", pref, index);
+  return a.newNamedLabel(buf);
+}
+
+int32_t Emitter::reserveData(
+    int32_t dsize,
+    size_t align,
+    asmjit::TypeId typeId,
+    int32_t itemCount,
+    const char *comment) {
+  // Align the new data.
+  size_t oldSize = roData_.size();
+  size_t dataOfs = (roData_.size() + align - 1) & ~(align - 1);
+  if (dataOfs >= INT32_MAX)
+    hermes::hermes_fatal("JIT RO data overflow");
+  // Grow to include the data.
+  roData_.resize(dataOfs + dsize);
+
+  // If logging is enabled, generate data descriptors.
+  if (logger_) {
+    // Optional padding descriptor.
+    if (dataOfs != oldSize) {
+      int32_t gap = (int32_t)(dataOfs - oldSize);
+      roDataDesc_.push_back(
+          {.size = gap, .typeId = asmjit::TypeId::kUInt8, .itemCount = gap});
+    }
+
+    roDataDesc_.push_back(
+        {.size = dsize,
+         .typeId = typeId,
+         .itemCount = itemCount,
+         .comment = comment});
+  }
+
+  return (int32_t)dataOfs;
+}
+
+/// Register a 64-bit constant in RO DATA and return its offset.
+int32_t Emitter::uint64Const(uint64_t bits, const char *comment) {
+  auto [it, inserted] = fp64ConstMap_.try_emplace(bits, 0);
+  if (inserted) {
+    int32_t dataOfs = reserveData(
+        sizeof(double), sizeof(double), asmjit::TypeId::kFloat64, 1, comment);
+    memcpy(roData_.data() + dataOfs, &bits, sizeof(double));
+    it->second = dataOfs;
+  }
+  return it->second;
+}
+
+asmjit::Label Emitter::registerCall(void *fn, const char *name) {
+  auto [it, inserted] = thunkMap_.try_emplace(fn, 0);
+  // Is this a new thunk?
+  if (inserted) {
+    it->second = thunks_.size();
+    int32_t dataOfs =
+        reserveData(sizeof(fn), sizeof(fn), asmjit::TypeId::kUInt64, 1, name);
+    memcpy(roData_.data() + dataOfs, &fn, sizeof(fn));
+    thunks_.emplace_back(name ? a.newNamedLabel(name) : a.newLabel(), dataOfs);
+  }
+
+  return thunks_[it->second].first;
+}
+
+void Emitter::emitSlowPaths() {
+  while (!slowPaths_.empty()) {
+    SlowPath &sp = slowPaths_.front();
+    sp.emit(*this, sp);
+    slowPaths_.pop_front();
+  }
+}
+
+void Emitter::emitThunks() {
+  comment("// Thunks");
+  for (const auto &th : thunks_) {
+    a.bind(th.first);
+    a.ldr(a64::x16, a64::Mem(roDataLabel_, th.second));
+    a.br(a64::x16);
+  }
+}
+
+void Emitter::emitROData() {
+  a.bind(roDataLabel_);
+  if (!logger_) {
+    a.embed(roData_.data(), roData_.size());
+  } else {
+    int32_t ofs = 0;
+    for (const auto &desc : roDataDesc_) {
+      if (desc.comment)
+        comment("// %s", desc.comment);
+      a.embedDataArray(desc.typeId, roData_.data() + ofs, desc.itemCount);
+      ofs += desc.size;
+    }
+  }
+}
+
+void Emitter::arithUnop(
+    bool forceNumber,
+    FR frRes,
+    FR frInput,
+    const char *name,
+    void (*fast)(
+        a64::Assembler &a,
+        const a64::VecD &dst,
+        const a64::VecD &src,
+        const a64::VecD &tmp),
+    void *slowCall,
+    const char *slowCallName) {
+  comment("// %s r%u, r%u", name, frRes.index(), frInput.index());
+
+  HWReg hwRes, hwInput;
+  asmjit::Label slowPathLab;
+  asmjit::Label contLab;
+  bool inputIsNum;
+
+  if (forceNumber) {
+    frameRegs_[frInput.index()].localType = FRType::Number;
+    inputIsNum = true;
+  } else {
+    inputIsNum = isFRKnownNumber(frInput);
+  }
+
+  if (!inputIsNum) {
+    slowPathLab = newSlowPathLabel();
+    contLab = newContLabel();
+    syncAllTempExcept(frRes != frInput ? frRes : FR());
+    syncToMem(frInput);
+  }
+
+  if (inputIsNum) {
+    hwInput = getOrAllocFRInVecD(frInput, true);
+  } else {
+    hwInput = getOrAllocFRInGpX(frInput, true);
+    a.cmp(hwInput.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+    hwInput = getOrAllocFRInVecD(frInput, true);
+  }
+
+  hwRes = getOrAllocFRInVecD(frRes, false);
+  HWReg hwTmp = hwRes != hwInput ? hwRes : allocTempVecD();
+  fast(a, hwRes.a64VecD(), hwInput.a64VecD(), hwTmp.a64VecD());
+  if (hwRes == hwInput)
+    freeReg(hwTmp);
+
+  frUpdatedWithHWReg(
+      frRes, hwRes, inputIsNum ? OptValue(FRType::Number) : OptValue<FRType>());
+
+  if (inputIsNum)
+    return;
+
+  freeAllTempExcept(frRes);
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = name,
+       .frRes = frRes,
+       .frInput1 = frInput,
+       .hwRes = hwRes,
+       .slowCall = slowCall,
+       .slowCallName = slowCallName,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: %s r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.call(sl.slowCall, sl.slowCallName);
+         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::arithBinOp(
+    bool forceNumber,
+    FR frRes,
+    FR frLeft,
+    FR frRight,
+    const char *name,
+    void (*fast)(
+        a64::Assembler &a,
+        const a64::VecD &res,
+        const a64::VecD &dl,
+        const a64::VecD &dr),
+    void *slowCall,
+    const char *slowCallName) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+  HWReg hwRes, hwLeft, hwRight;
+  asmjit::Label slowPathLab;
+  asmjit::Label contLab;
+  bool leftIsNum, rightIsNum, slow;
+
+  if (forceNumber) {
+    frameRegs_[frLeft.index()].localType = FRType::Number;
+    frameRegs_[frRight.index()].localType = FRType::Number;
+    leftIsNum = rightIsNum = true;
+    slow = false;
+  } else {
+    leftIsNum = isFRKnownNumber(frLeft);
+    rightIsNum = isFRKnownNumber(frRight);
+    slow = !(rightIsNum && leftIsNum);
+  }
+
+  if (slow) {
+    slowPathLab = newSlowPathLabel();
+    contLab = newContLabel();
+    syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+    syncToMem(frLeft);
+    syncToMem(frRight);
+  }
+
+  if (leftIsNum) {
+    hwLeft = getOrAllocFRInVecD(frLeft, true);
+  } else {
+    hwLeft = getOrAllocFRInGpX(frLeft, true);
+    a.cmp(hwLeft.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+  if (rightIsNum) {
+    hwRight = getOrAllocFRInVecD(frRight, true);
+  } else {
+    hwRight = getOrAllocFRInGpX(frRight, true);
+    a.cmp(hwRight.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+
+  if (!leftIsNum)
+    hwLeft = getOrAllocFRInVecD(frLeft, true);
+  if (!rightIsNum)
+    hwRight = getOrAllocFRInVecD(frRight, true);
+
+  hwRes = getOrAllocFRInVecD(frRes, false);
+  fast(a, hwRes.a64VecD(), hwLeft.a64VecD(), hwRight.a64VecD());
+
+  frUpdatedWithHWReg(
+      frRes, hwRes, !slow ? OptValue(FRType::Number) : OptValue<FRType>());
+
+  if (!slow)
+    return;
+
+  freeAllTempExcept(frRes);
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = name,
+       .frRes = frRes,
+       .frInput1 = frLeft,
+       .frInput2 = frRight,
+       .hwRes = hwRes,
+       .slowCall = slowCall,
+       .slowCallName = slowCallName,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// %s r%u, r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.loadFrameAddr(a64::x2, sl.frInput2);
+         em.call(sl.slowCall, sl.slowCallName);
+         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::jCond(
+    bool forceNumber,
+    bool invert,
+    const asmjit::Label &target,
+    FR frLeft,
+    FR frRight,
+    const char *name,
+    void(fast)(a64::Assembler &a, const asmjit::Label &target),
+    void *slowCall,
+    const char *slowCallName) {
+  comment(
+      "// j_%s_%s Lx, r%u, r%u",
+      invert ? "not" : "",
+      name,
+      frLeft.index(),
+      frRight.index());
+  HWReg hwLeft, hwRight;
+  asmjit::Label slowPathLab;
+  asmjit::Label contLab;
+  bool leftIsNum, rightIsNum, slow;
+
+  if (forceNumber) {
+    frameRegs_[frLeft.index()].localType = FRType::Number;
+    frameRegs_[frRight.index()].localType = FRType::Number;
+    leftIsNum = rightIsNum = true;
+    slow = false;
+  } else {
+    leftIsNum = isFRKnownNumber(frLeft);
+    rightIsNum = isFRKnownNumber(frRight);
+    slow = !(rightIsNum && leftIsNum);
+  }
+
+  if (slow) {
+    slowPathLab = newSlowPathLabel();
+    contLab = newContLabel();
+  }
+  // Do this always, since this is the end of the BB.
+  syncAllTempExcept(FR());
+
+  if (leftIsNum) {
+    hwLeft = getOrAllocFRInVecD(frLeft, true);
+  } else {
+    hwLeft = getOrAllocFRInGpX(frLeft, true);
+    a.cmp(hwLeft.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+  if (rightIsNum) {
+    hwRight = getOrAllocFRInVecD(frRight, true);
+  } else {
+    hwRight = getOrAllocFRInGpX(frRight, true);
+    a.cmp(hwRight.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+
+  if (!leftIsNum)
+    hwLeft = getOrAllocFRInVecD(frLeft, true);
+  if (!rightIsNum)
+    hwRight = getOrAllocFRInVecD(frRight, true);
+
+  a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
+  if (!invert) {
+    fast(a, target);
+  } else {
+    if (!contLab.isValid())
+      contLab = a.newLabel();
+    fast(a, contLab);
+    a.b(target);
+  }
+  if (contLab.isValid())
+    a.bind(contLab);
+
+  // Do this always, since this is the end of the BB.
+  freeAllTempExcept(FR());
+
+  if (!slow)
+    return;
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .target = target,
+       .name = name,
+       .frInput1 = frLeft,
+       .frInput2 = frRight,
+       .invert = invert,
+       .slowCall = slowCall,
+       .slowCallName = slowCallName,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: j_%s%s Lx, r%u, r%u",
+             sl.invert ? "not_" : "",
+             sl.name,
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.loadFrameAddr(a64::x2, sl.frInput2);
+         em.call(sl.slowCall, sl.slowCallName);
+         if (!sl.invert) {
+           em.a.cbz(a64::w0, sl.target);
+           em.a.b(sl.contLab);
+         } else {
+           em.a.cbz(a64::w0, sl.contLab);
+           em.a.b(sl.target);
+         }
+       }});
+}
+
+JitFn compile_loop(void) {
+  Emitter em(s_jitRT, 13, 0, 0);
+  a64::Assembler &a = em.a;
+
+  //     LoadParam         r5, 2
+  em.loadParam(FR(5), 2);
+  //     LoadParam         r9, 1
+  em.loadParam(FR(9), 1);
+  //     Dec               r11, r9
+  em.dec(FR(11), FR(9));
+  //     LoadConstZero     r10
+  em.loadConstUInt8(FR(10), 0);
+  //     LoadConstUInt8    r2, 1
+  em.loadConstUInt8(FR(2), 1);
+  //     LoadConstZero     r7
+  em.loadConstUInt8(FR(7), 0);
+  //     LoadConstZero     r9
+  em.loadConstUInt8(FR(9), 0);
+  //     JNotGreaterEqual  L1, r11, r9
+  auto L1 = a.newLabel();
+  em.jGreaterEqual(true, L1, FR(11), FR(9));
+  // L4:
+  auto L4 = a.newLabel();
+  em.newBasicBlock(L4);
+  //     Dec               r3, r5
+  em.dec(FR(3), FR(5));
+  //     Mov               r8, r7
+  em.mov(FR(8), FR(7));
+  //     Mov               r6, r11
+  em.mov(FR(6), FR(11));
+  //     Mov               r0, r5
+  em.mov(FR(0), FR(5));
+  //     Mov               r1, r0
+  em.mov(FR(1), FR(0));
+  //     JNotGreater       L2, r3, r2
+  auto L2 = a.newLabel();
+  em.jGreater(true, L2, FR(3), FR(2));
+  // L3:
+  auto L3 = a.newLabel();
+  em.newBasicBlock(L3);
+  //     Mul               r0, r0, r3
+  em.mul(FR(0), FR(0), FR(3));
+  //     Dec               r3, r3
+  em.dec(FR(3), FR(3));
+  //     Mov               r1, r0
+  em.mov(FR(1), FR(0));
+  //     JGreater          L3, r3, r2
+  em.jGreater(false, L3, FR(3), FR(2));
+  // L2:
+  em.newBasicBlock(L2);
+  //     Add               r7, r8, r1
+  em.add(FR(7), FR(8), FR(1));
+  //     Dec               r11, r6
+  em.dec(FR(11), FR(6));
+  //     Mov               r9, r7
+  em.mov(FR(9), FR(7));
+  //     JGreaterEqual     L4, r11, r10
+  em.jGreaterEqual(false, L4, FR(11), FR(10));
+  // L1:
+  em.newBasicBlock(L1);
+  //     Ret               r9
+  em.ret(FR(9));
+
+  em.leave();
 
   return em.addToRuntime();
+}
+
+JitFn compile_loop1n(bool useRA = false) {
+  Emitter em(s_jitRT, 13, useRA ? 12 : 0, 0);
+  a64::Assembler &a = em.a;
+
+  //     LoadParam         r5, 2
+  em.loadParam(FR(12), 2);
+  em.toNumber(FR(5), FR(12));
+  //     LoadParam         r9, 1
+  em.loadParam(FR(12), 1);
+  em.toNumber(FR(9), FR(12));
+  //     LoadConstUInt8    r4, 1
+  em.loadConstUInt8(FR(4), 1);
+  //     SubN              r11, r9, r4
+  em.subN(FR(11), FR(9), FR(4));
+  //     LoadConstZero     r10
+  em.loadConstUInt8(FR(10), 0);
+  //     LoadConstUInt8    r2, 1
+  em.loadConstUInt8(FR(2), 1);
+  //     LoadConstZero     r7
+  em.loadConstUInt8(FR(7), 0);
+  //     LoadConstZero     r9
+  em.loadConstUInt8(FR(9), 0);
+  //     JNotGreaterEqual  L1, r11, r9
+  auto L1 = a.newLabel();
+  em.jGreaterEqualN(true, L1, FR(11), FR(9));
+  // L4:
+  auto L4 = a.newLabel();
+  em.newBasicBlock(L4);
+  //     SubN              r3, r5, r4
+  em.subN(FR(3), FR(5), FR(4));
+  //     Mov               r8, r7
+  em.mov(FR(8), FR(7));
+  //     Mov               r6, r11
+  em.mov(FR(6), FR(11));
+  //     Mov               r0, r5
+  em.mov(FR(0), FR(5));
+  //     Mov               r1, r0
+  em.mov(FR(1), FR(0));
+  //     JNotGreater       L2, r3, r2
+  auto L2 = a.newLabel();
+  em.jGreaterN(true, L2, FR(3), FR(2));
+  // L3:
+  auto L3 = a.newLabel();
+  em.newBasicBlock(L3);
+  //     Mul               r0, r0, r3
+  em.mulN(FR(0), FR(0), FR(3));
+  //     SubN               r3, r3, r4
+  em.subN(FR(3), FR(3), FR(4));
+  //     Mov               r1, r0
+  em.mov(FR(1), FR(0));
+  //     JGreater          L3, r3, r2
+  em.jGreaterN(false, L3, FR(3), FR(2));
+  // L2:
+  em.newBasicBlock(L2);
+  //     Add               r7, r8, r1
+  em.addN(FR(7), FR(8), FR(1));
+  //     SubN              r11, r6, r4
+  em.subN(FR(11), FR(6), FR(4));
+  //     Mov               r9, r7
+  em.mov(FR(9), FR(7));
+  //     JGreaterEqual     L4, r11, r10
+  em.jGreaterEqualN(false, L4, FR(11), FR(10));
+  // L1:
+  em.newBasicBlock(L1);
+  //     Ret               r9
+  em.ret(FR(9));
+
+  em.leave();
+
+  return em.addToRuntime();
+}
+
+} // namespace hermes::jit
+
+JitFn compile_loop1(void) {
+  // return hermes::jit::compile_loop();
+  // return hermes::jit::compile_loop1n();
+  return hermes::jit::compile_loop1n(true);
 }

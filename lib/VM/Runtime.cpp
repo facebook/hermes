@@ -234,30 +234,6 @@ ExecutionStatus Runtime::putNamedThrowOnError(
       .getStatus();
 }
 
-static void initJITPointers(SHRuntime *shr) {
-#if HERMESVM_JIT
-#define IFUNC(name) shr->name = name;
-  IFUNC(_sh_check_native_stack_overflow);
-  IFUNC(_sh_enter);
-  IFUNC(_sh_leave);
-  IFUNC(_sh_ljs_param);
-  IFUNC(_sh_ljs_inc_rjs);
-  IFUNC(_sh_ljs_dec_rjs);
-  IFUNC(_sh_ljs_add_rjs);
-  IFUNC(_sh_ljs_sub_rjs);
-  IFUNC(_sh_ljs_mul_rjs);
-  IFUNC(_sh_ljs_div_rjs);
-  IFUNC(_sh_ljs_mod_rjs);
-  IFUNC(_sh_ljs_less_rjs);
-  IFUNC(_sh_ljs_greater_rjs);
-  IFUNC(_sh_ljs_less_equal_rjs);
-  IFUNC(_sh_ljs_greater_equal_rjs);
-  IFUNC(_sh_ljs_equal_rjs);
-  IFUNC(_sh_ljs_strict_equal);
-#undef IFUNC
-#endif
-}
-
 RuntimeBase::RuntimeBase() {
 #if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
   // Initialize the 0 entry in the segment map to be nullptr.
@@ -268,8 +244,6 @@ RuntimeBase::RuntimeBase() {
   std::fill(std::begin(units), std::end(units), nullptr);
 
   shCurJmpBuf = nullptr;
-
-  initJITPointers(this);
 }
 
 void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
