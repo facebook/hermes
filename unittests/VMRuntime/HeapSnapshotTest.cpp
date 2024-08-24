@@ -988,6 +988,9 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
           FIRST_NAMED_PROPERTY_EDGE + 2));
   EXPECT_EQ(nodesAndEdges.second.size(), FIRST_NAMED_PROPERTY_EDGE + 2);
 
+// When Handle-SAN is enabled, we put all numbers on the heap, which changes
+// what the snapshot ID is.
+#ifndef HERMESVM_SANITIZE_HANDLES
   EXPECT_EQ(
       nodesAndEdges.second[FIRST_NAMED_PROPERTY_EDGE],
       Edge(
@@ -1001,6 +1004,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
           HeapSnapshot::EdgeType::Property,
           "bar",
           runtime.getHeap().getIDTracker().getNumberID(200)));
+#endif
 }
 
 TEST_F(HeapSnapshotRuntimeTest, ArrayElementsCaptureNumeric) {
@@ -1047,24 +1051,32 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsCaptureNumeric) {
           arrayID,
           array->getAllocatedSize(),
           FIRST_NAMED_PROPERTY_EDGE + 6));
+// When Handle-SAN is enabled, we put all numbers on the heap, which changes
+// what the snapshot ID is.
+#ifndef HERMESVM_SANITIZE_HANDLES
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 2],
       Edge(
           HeapSnapshot::EdgeType::Element,
           (1 << 20) + 1000,
           runtime.getHeap().getIDTracker().getNumberID(333)));
+#endif
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 4],
       Edge(
           HeapSnapshot::EdgeType::Element,
           10,
           runtime.getHeap().getObjectID(firstElement.get())));
+// When Handle-SAN is enabled, we put all numbers on the heap, which changes
+// what the snapshot ID is.
+#ifndef HERMESVM_SANITIZE_HANDLES
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 5],
       Edge(
           HeapSnapshot::EdgeType::Element,
           15,
           runtime.getHeap().getIDTracker().getNumberID(222)));
+#endif
 
   // Verify there are numeric nodes
   bool hasNumeric = false;
@@ -1131,6 +1143,9 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsNoNumeric) {
           array->getAllocatedSize(),
           FIRST_NAMED_PROPERTY_EDGE + 6));
 
+// When Handle-SAN is enabled, we put all numbers on the heap, which changes
+// what the snapshot ID is.
+#ifndef HERMESVM_SANITIZE_HANDLES
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 2],
       Edge(
@@ -1138,12 +1153,16 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsNoNumeric) {
           (1 << 20) + 1000,
           GCBase::IDTracker::reserved(
               GCBase::IDTracker::ReservedObjectID::Number)));
+#endif
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 4],
       Edge(
           HeapSnapshot::EdgeType::Element,
           10,
           runtime.getHeap().getObjectID(firstElement.get())));
+// When Handle-SAN is enabled, we put all numbers on the heap, which changes
+// what the snapshot ID is.
+#ifndef HERMESVM_SANITIZE_HANDLES
   EXPECT_EQ(
       nodeAndEdges.second[FIRST_NAMED_PROPERTY_EDGE + 5],
       Edge(
@@ -1151,6 +1170,7 @@ TEST_F(HeapSnapshotRuntimeTest, ArrayElementsNoNumeric) {
           15,
           GCBase::IDTracker::reserved(
               GCBase::IDTracker::ReservedObjectID::Number)));
+#endif
 
   // Verify there are no numeric nodes
   auto nodesIt = nodes.begin();

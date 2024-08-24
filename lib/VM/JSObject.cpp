@@ -2471,7 +2471,7 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
         // Else, it's a user-visible property.
         HermesValue prop =
             getNamedSlotValueUnsafe(self, gc.getPointerBase(), desc.slot)
-                .unboxToHV(gc.getPointerBase());
+                .toHV(gc.getPointerBase());
         const llvh::Optional<HeapSnapshot::NodeID> idForProp =
             gc.getSnapshotID(prop);
         if (!idForProp) {
