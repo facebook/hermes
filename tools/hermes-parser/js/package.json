@@ -23,7 +23,8 @@
     "jest-specific-snapshot": "^5.0.0",
     "mkdirp": "^1.0.4",
     "patch-package": "^6.5.0",
-    "prettier": "2.8.8"
+    "prettier": "2.8.8",
+    "prettier-v3-for-testing": "npm:prettier@3.2.5"
   },
   "resolutions": {
     "jest-snapshot": "^29.2.2"
@@ -35,7 +36,7 @@
     "flow": "flow",
     "format": "prettier --config ./.prettierrc.json --write \"**/*.js\"",
     "postinstall": "patch-package",
-    "test": "jest"
+    "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
   "workspaces": [
     "flow-api-translator",
