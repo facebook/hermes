@@ -229,16 +229,14 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
       if (superClass == null) {
         return [];
       }
-      if (superClass.type !== 'Identifier') {
-        throw unexpectedTranslationError(
-          superClass,
-          'Expected superclass to be an identifier or member expression',
-        );
-      }
+      const id = Transform._expressionToIdOrQualifiedTypeId(
+        superClass,
+        'superClass',
+      );
       return [
         constructFlowNode<FlowESTree.InterfaceExtends>({
           type: 'InterfaceExtends',
-          id: Transform.Identifier(superClass),
+          id,
           typeParameters:
             Transform.TSTypeParameterInstantiationOpt(superTypeParameters),
         }),
@@ -370,7 +368,13 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
       | FlowESTree.ExportNamedDeclaration
       | FlowESTree.DeclareExportDeclarationNamedWithDeclaration
       | FlowESTree.DeclareExportDeclarationNamedWithSpecifiers
-      | $ReadOnlyArray<FlowESTree.DeclareExportDeclarationNamedWithDeclaration> {
+      | $ReadOnlyArray<
+          | FlowESTree.DeclareExportDeclarationNamedWithDeclaration
+          | FlowESTree.TypeAlias
+          | FlowESTree.DeclareNamespace
+          | FlowESTree.DeclareModule
+          | FlowESTree.ExportNamedDeclaration,
+        > {
       if (node.declaration == null) {
         const source: FlowESTree.StringLiteral =
           node.source == null
@@ -436,11 +440,35 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
             },
           );
         case 'TSEnumDeclaration':
-        case 'TSModuleDeclaration':
           throw translationError(
             node.declaration,
             `Unsupported export declaration: ${node.declaration.type}`,
           );
+        case 'TSModuleDeclaration': {
+          const decl = Transform.TSModuleDeclaration(node.declaration);
+          if (decl.id.type !== 'Identifier') {
+            throw translationError(
+              decl.id,
+              `Unsupported module declaration id`,
+            );
+          }
+          return [
+            decl,
+            constructFlowNode<FlowESTree.ExportNamedDeclaration>({
+              type: 'ExportNamedDeclaration',
+              declaration: null,
+              source: null,
+              exportKind: 'value',
+              specifiers: [
+                constructFlowNode<FlowESTree.ExportSpecifier>({
+                  type: 'ExportSpecifier',
+                  local: decl.id,
+                  exported: decl.id,
+                }),
+              ],
+            }),
+          ];
+        }
         case 'TSInterfaceDeclaration': {
           const decl = Transform.TSInterfaceDeclaration(node.declaration);
           return constructFlowNode<FlowESTree.DeclareExportDeclarationNamedWithDeclaration>(
@@ -729,7 +757,11 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         case 'TSModuleDeclaration':
           return Transform.TSModuleDeclaration(node);
         case 'TSNamespaceExportDeclaration':
-          return unsupportedDeclaration(node, 'export as namespace', node.id);
+          // Flow will never support `export as namespace` since we can't allow a normal file to
+          // introduce a global out of nowhere, and because it's only useful for legacy module
+          // system However, it's very reasonable to completely ignore it under some mode, so that
+          // people using these libdefs won't have a lot of pain.
+          return [];
         case 'TSTypeAliasDeclaration':
           return Transform.TSTypeAliasDeclaration(node);
         case 'VariableDeclaration':
@@ -878,6 +910,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
 
     static TSFunctionType(
       node: TSESTree.TSFunctionType,
+      allowMissingReturn: boolean = false,
     ): FlowESTree.FunctionTypeAnnotation {
       const {thisParam, restParam, params} =
         Transform._partitionAndTranslateTSFunctionParams(node.params);
@@ -890,7 +923,11 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         rest: restParam,
         returnType:
           node.returnType?.typeAnnotation == null
-            ? unsupportedAnnotation(node, 'missing return type')
+            ? allowMissingReturn
+              ? constructFlowNode<FlowESTree.VoidTypeAnnotation>({
+                  type: 'VoidTypeAnnotation',
+                })
+              : unsupportedAnnotation(node, 'missing return type')
             : Transform.TSTypeAnnotation(node.returnType.typeAnnotation),
         this: thisParam,
       });
@@ -1034,7 +1071,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
 
     static TSImportEqualsDeclaration(
       node: TSESTree.TSImportEqualsDeclaration,
-    ): FlowESTree.DeclareVariable | FlowESTree.TypeAlias {
+    ): FlowESTree.VariableDeclaration | FlowESTree.TypeAlias {
       if (
         node.moduleReference.type === 'ThisExpression' ||
         node.moduleReference.type === 'TSQualifiedName'
@@ -1047,8 +1084,8 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
       }
       let moduleName: string;
       if (node.moduleReference.type === 'TSExternalModuleReference') {
-        if (node.moduleReference.type === 'Literal') {
-          moduleName = String(node.moduleReference.value);
+        if (node.moduleReference.expression.type === 'Literal') {
+          moduleName = String(node.moduleReference.expression.value);
         } else {
           return unsupportedDeclaration(
             node,
@@ -1059,38 +1096,39 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
       } else {
         moduleName = node.moduleReference.name;
       }
-      const typeAnnotation = constructFlowNode<FlowESTree.TypeAnnotation>({
-        type: 'TypeAnnotation',
-        typeAnnotation: constructFlowNode<FlowESTree.GenericTypeAnnotation>({
-          type: 'GenericTypeAnnotation',
-          id: constructFlowNode<FlowESTree.Identifier>({
-            type: 'Identifier',
-            name: '$Exports',
-            optional: false,
-            typeAnnotation: null,
-          }),
-          typeParameters:
-            constructFlowNode<FlowESTree.TypeParameterInstantiation>({
-              type: 'TypeParameterInstantiation',
-              params: [
-                constructFlowNode<FlowESTree.StringLiteralTypeAnnotation>({
-                  type: 'StringLiteralTypeAnnotation',
+      return constructFlowNode<FlowESTree.VariableDeclaration>({
+        type: 'VariableDeclaration',
+        kind: 'const',
+        declarations: [
+          constructFlowNode<FlowESTree.VariableDeclarator>({
+            type: 'VariableDeclarator',
+            id: constructFlowNode<FlowESTree.Identifier>({
+              type: 'Identifier',
+              name: node.id.name,
+              optional: false,
+              typeAnnotation: null,
+            }),
+            init: constructFlowNode<FlowESTree.CallExpression>({
+              type: 'CallExpression',
+              callee: constructFlowNode<FlowESTree.Identifier>({
+                type: 'Identifier',
+                name: 'require',
+                optional: false,
+                typeAnnotation: null,
+              }),
+              arguments: [
+                constructFlowNode<FlowESTree.StringLiteral>({
+                  type: 'Literal',
+                  literalType: 'string',
                   value: moduleName,
                   raw: `"${moduleName}"`,
                 }),
               ],
+              optional: false,
+              typeArguments: null,
             }),
-        }),
-      });
-      return constructFlowNode<FlowESTree.DeclareVariable>({
-        type: 'DeclareVariable',
-        id: constructFlowNode<FlowESTree.Identifier>({
-          type: 'Identifier',
-          name: node.id.name,
-          optional: false,
-          typeAnnotation,
-        }),
-        kind: 'const',
+          }),
+        ],
       });
     }
 
@@ -1116,13 +1154,16 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     static TSInterfaceDeclaration(
       node: TSESTree.TSInterfaceDeclaration,
     ): FlowESTree.InterfaceDeclaration {
+      const body = Transform.TSTypeLiteralOrInterfaceBody(node.body);
+      // $FlowFixMe[cannot-write]
+      body.inexact = false;
       return constructFlowNode<FlowESTree.InterfaceDeclaration>({
         type: 'InterfaceDeclaration',
         id: Transform.Identifier(node.id),
         typeParameters: Transform.TSTypeParameterDeclarationOpt(
           node.typeParameters,
         ),
-        body: Transform.TSTypeLiteralOrInterfaceBody(node.body),
+        body,
         extends: (node.extends || []).map(e =>
           Transform.TSInterfaceHeritage(e),
         ),
@@ -1132,19 +1173,43 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     static TSInterfaceHeritage(
       node: TSESTree.TSInterfaceHeritage,
     ): FlowESTree.InterfaceExtends {
-      if (node.expression.type !== 'Identifier') {
-        throw unexpectedTranslationError(
-          node,
-          'Expected expression to be an Identifier',
-        );
-      }
       return constructFlowNode<FlowESTree.InterfaceExtends>({
         type: 'InterfaceExtends',
-        id: Transform.Identifier(node.expression),
+        id: Transform._expressionToIdOrQualifiedTypeId(
+          node.expression,
+          'interface extends',
+        ),
         typeParameters: Transform.TSTypeParameterInstantiationOpt(
           node.typeParameters,
         ),
       });
+    }
+
+    static _expressionToIdOrQualifiedTypeId(
+      node: TSESTree.Expression,
+      kind: string,
+    ): FlowESTree.Identifier | FlowESTree.QualifiedTypeIdentifier {
+      if (node.type === 'Identifier') {
+        return Transform.Identifier(node);
+      } else if (
+        node.type === 'MemberExpression' &&
+        node.property.type === 'Identifier'
+      ) {
+        const id = Transform.Identifier(node.property);
+        return constructFlowNode<FlowESTree.QualifiedTypeIdentifier>({
+          type: 'QualifiedTypeIdentifier',
+          qualification: Transform._expressionToIdOrQualifiedTypeId(
+            node.object,
+            kind,
+          ),
+          id,
+        });
+      } else {
+        throw unexpectedTranslationError(
+          node,
+          `Expected ${kind} to be an Identifier or Member`,
+        );
+      }
     }
 
     static TSIntersectionType(
@@ -1175,14 +1240,13 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
       node: TSESTree.TSMappedType,
     ): FlowESTree.ObjectTypeAnnotation {
       const keyTparam = Transform.TSTypeParameter(node.typeParameter);
-      // $FlowFixMe[incompatible-type]
-      const sourceType: FlowESTree.TypeAnnotationType = keyTparam.bound;
+      const sourceType: FlowESTree.TypeAnnotationType = (keyTparam.bound
+        ?.typeAnnotation: $FlowFixMe);
       // $FlowFixMe[cannot-write]
       keyTparam.bound = null;
-      node.readonly;
       const prop = constructFlowNode<FlowESTree.ObjectTypeMappedTypeProperty>({
         type: 'ObjectTypeMappedTypeProperty',
-        keyTparam: Transform.TSTypeParameter(node.typeParameter),
+        keyTparam,
         propType: Transform.TSTypeAnnotationOpt(node.typeAnnotation),
         sourceType,
         variance:
@@ -1581,13 +1645,16 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
                   optional: false,
                   typeAnnotation: null,
                 }),
-                value: Transform.TSFunctionType({
-                  type: 'TSFunctionType',
-                  loc: prop.loc,
-                  params: prop.params,
-                  returnType: prop.returnType,
-                  typeParameters: prop.typeParameters,
-                }),
+                value: Transform.TSFunctionType(
+                  {
+                    type: 'TSFunctionType',
+                    loc: prop.loc,
+                    params: prop.params,
+                    returnType: prop.returnType,
+                    typeParameters: prop.typeParameters,
+                  },
+                  true,
+                ),
               }),
             );
             break;
@@ -1702,21 +1769,24 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
               value: String(originalKey.value),
               raw: JSON.stringify(String(originalKey.value)),
             });
-      const value = Transform.TSFunctionType({
-        type: 'TSFunctionType',
-        loc: prop.loc,
-        params:
-          prop.type === 'MethodDefinition' ||
-          prop.type === 'TSAbstractMethodDefinition'
-            ? prop.value.params
-            : prop.params,
-        returnType:
-          prop.type === 'MethodDefinition' ||
-          prop.type === 'TSAbstractMethodDefinition'
-            ? prop.value.returnType
-            : prop.returnType,
-        typeParameters: prop.typeParameters,
-      });
+      const value = Transform.TSFunctionType(
+        {
+          type: 'TSFunctionType',
+          loc: prop.loc,
+          params:
+            prop.type === 'MethodDefinition' ||
+            prop.type === 'TSAbstractMethodDefinition'
+              ? prop.value.params
+              : prop.params,
+          returnType:
+            prop.type === 'MethodDefinition' ||
+            prop.type === 'TSAbstractMethodDefinition'
+              ? prop.value.returnType
+              : prop.returnType,
+          typeParameters: prop.typeParameters,
+        },
+        true,
+      );
       if (prop.kind === 'method' || prop.kind === 'constructor') {
         properties.push(
           constructFlowNode<FlowESTree.ObjectTypeMethodSignature>({

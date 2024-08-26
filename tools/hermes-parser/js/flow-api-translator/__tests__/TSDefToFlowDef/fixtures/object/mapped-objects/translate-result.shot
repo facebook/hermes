@@ -16,7 +16,7 @@ exports[`TSDefToFlowDef object/mapped-objects 1`] = `
     ...
   },
 > = {
-  +[Key: keyof T in : keyof T]: T[Key] extends {
+  +[Key in keyof T]: T[Key] extends {
     +default: infer X,
 
     +[string]: infer Y,
@@ -33,6 +33,6 @@ type ObjectEntries<
 
     ...
   },
-> = {[Key: keyof Obj in : keyof Obj]?: [Key, Obj[Key]]};
+> = {[Key in keyof Obj]?: [Key, Obj[Key]]};
 "
 `;

@@ -7,4 +7,4 @@
  * @format
  */
 
-interface Foo extends Bar, Baz, Boz.Booz {}
+import foo = require('bar');
