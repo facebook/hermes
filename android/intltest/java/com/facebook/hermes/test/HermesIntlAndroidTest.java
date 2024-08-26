@@ -91,11 +91,11 @@ public class HermesIntlAndroidTest {
     if (Build.VERSION.SDK_INT >= 31) {
       try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
         rt.evaluateJavaScript(
-            "var nf = new Intl.NumberFormat('en-US', { signDisplay: 'always' });\n" +
-            "var result = nf.format(123);");
+            "var nf = new Intl.NumberFormat('de-DE', { signDisplay: 'always', currency: 'EUR', style: 'currency' });\n" +
+            "var result = nf.format(8537.71);");
 
         String result = rt.getGlobalStringProperty("result");
-        assertThat(result).isEqualTo("+123"); // Adjust expected output according to your logic
+        assertThat(result).isEqualTo("+8.537,71 €");
       }
     }
   }
@@ -105,11 +105,11 @@ public class HermesIntlAndroidTest {
     if (Build.VERSION.SDK_INT >= 31) {
       try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
         rt.evaluateJavaScript(
-            "var nf = new Intl.NumberFormat('en-US', { signDisplay: 'never' });\n" +
-            "var result = nf.format(123);");
+            "var nf = new Intl.NumberFormat('de-DE', { signDisplay: 'never', currency: 'EUR', style: 'currency' });\n" +
+            "var result = nf.format(8537.71);");
 
         String result = rt.getGlobalStringProperty("result");
-        assertThat(result).isEqualTo("123");
+        assertThat(result).isEqualTo("8.537,71 €");
       }
     }
   }
@@ -119,7 +119,7 @@ public class HermesIntlAndroidTest {
     if (Build.VERSION.SDK_INT >= 31) {
       try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
         rt.evaluateJavaScript(
-            "var nf = new Intl.NumberFormat('de-DE', { exceptZero: 'never', currency: 'EUR' });\n" +
+            "var nf = new Intl.NumberFormat('de-DE', { signDisplay: 'exceptZero', currency: 'EUR', style: 'currency'});\n" +
             "var result = nf.format(8537.71);");
 
         String result = rt.getGlobalStringProperty("result");
