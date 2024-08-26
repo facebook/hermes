@@ -1404,6 +1404,53 @@ TEST_F(SynthTraceRuntimeTest, TraceWhileReplaying) {
   }
 }
 
+TEST_F(SynthTraceReplayTest, NestedCallToSameHostFunction) {
+  {
+    auto &rt = *traceRt;
+
+    rt.global().setProperty(
+        rt,
+        "foo",
+        jsi::Function::createFromHostFunction(
+            rt,
+            jsi::PropNameID::forAscii(rt, "foo"),
+            1, // Function, ...args
+            [](jsi::Runtime &rt,
+               const jsi::Value &,
+               const jsi::Value *args,
+               size_t) {
+              double i = args[0].getNumber();
+              // Call bar().
+              if (i < 2) {
+                rt.global().getPropertyAsFunction(rt, "bar").call(rt, i);
+              }
+              return jsi::Value(i);
+            }));
+
+    // foo(0) calls bar(0), which calls foo(1), which calls bar(1), which calls
+    // foo(2), which then it returns 2, then foo(1) returns 1, then foo(0)
+    // returns 0.
+    jsi::Value val = eval(rt, R""""(
+function bar(i) {
+  i++;
+  return foo(i);
+}
+foo(0);
+)"""");
+
+    ASSERT_EQ(val.getNumber(), 0);
+    rt.global().setProperty(rt, "ret", val);
+  }
+
+  replay();
+
+  {
+    auto &rt = *replayRt;
+    jsi::Value val = rt.global().getProperty(rt, "ret");
+    EXPECT_EQ(val.getNumber(), 0);
+  }
+}
+
 TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
   {
     auto &rt = *traceRt;
