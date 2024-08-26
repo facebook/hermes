@@ -2007,9 +2007,19 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
             'Non-identifier variable declaration',
           );
         }
+        const id = Transform.Identifier(decl.id);
+        if (id.typeAnnotation == null) {
+          // $FlowExpectedError[cannot-write]
+          id.typeAnnotation = constructFlowNode<FlowESTree.TypeAnnotation>({
+            type: 'TypeAnnotation',
+            typeAnnotation: constructFlowNode<FlowESTree.AnyTypeAnnotation>({
+              type: 'AnyTypeAnnotation',
+            }),
+          });
+        }
         return constructFlowNode<FlowESTree.DeclareVariable>({
           type: 'DeclareVariable',
-          id: Transform.Identifier(decl.id),
+          id,
           kind: node.kind,
         });
       });
