@@ -1288,6 +1288,51 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
   }
 };
 
+TEST_F(SynthTraceReplayTest, WeakObject) {
+  {
+    auto &rt = *traceRt;
+    jsi::Object global = rt.global();
+
+    // Create an Object named "foo" in global.
+    {
+      auto obj = jsi::Object(rt);
+      global.setProperty(rt, "foo", obj);
+    }
+
+    // Create a WeakObject pointing to "foo";
+    jsi::WeakObject weakObj(rt, global.getPropertyAsObject(rt, "foo"));
+
+    // Run GC
+    eval(*traceRt, R"(
+      gc();
+    )");
+
+    // "foo" should still exist and lock() should return an object.
+    {
+      jsi::Value w = weakObj.lock(rt);
+      ASSERT_TRUE(w.isObject());
+      if (w.isObject()) {
+        w.getObject(rt).setProperty(rt, "a", 1);
+      }
+    }
+
+    // Replace "foo" with a new Object.
+    global.setProperty(rt, "foo", jsi::Object(rt));
+
+    // Run GC. This will collect the original "foo" object.
+    eval(*traceRt, R"(
+      gc();
+    )");
+
+    // Now "foo" is different Object. So the lock() should return undefined.
+    {
+      jsi::Value w = weakObj.lock(rt);
+      ASSERT_TRUE(w.isUndefined());
+    }
+  }
+  replay();
+}
+
 TEST_F(SynthTraceReplayTest, MultiUseOfSameObjectAtSameRecord) {
   {
     auto &rt = *traceRt;
