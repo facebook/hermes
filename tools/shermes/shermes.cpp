@@ -102,8 +102,10 @@ cl::list<std::string> ExtraCCOptions(
 
 cl::list<std::string>
     Libs("l", cl::desc("Link with the given library"), cl::Prefix);
-cl::list<std::string>
-    LibSearchPaths("L", cl::desc("Add to the library search path"), cl::Prefix);
+cl::list<std::string> LibSearchPaths(
+    "L",
+    cl::desc("Add to the library search path and rpath"),
+    cl::Prefix);
 
 cl::opt<OptLevel> OptimizationLevel(
     cl::desc("Choose optimization level:"),

@@ -295,6 +295,10 @@ bool invokeCC(
           args.emplace_back("-Wl,-rpath");
           args.emplace_back(s);
         }
+        for (const auto &s : params.libSearchPaths) {
+          args.emplace_back("-Wl,-rpath");
+          args.emplace_back(s);
+        }
       }
 
 #ifndef __APPLE__
