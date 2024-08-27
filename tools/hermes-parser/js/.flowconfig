@@ -26,8 +26,6 @@ module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier
 component_syntax=true
 enums=true
 
-one_sided_type_guards=true
-
 [version]
 ^0.238.0
 
