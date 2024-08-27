@@ -14,6 +14,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/JSLib/DateUtil.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/Operations.h"
 
 namespace hermes {
@@ -436,8 +437,10 @@ dateConstructor_RJS(void *, Runtime &runtime, NativeArgs args) {
 
         if (v->isString()) {
           // Call the String -> Date parsing function.
-          finalDate = timeClip(parseDate(StringPrimitive::createStringView(
-              runtime, Handle<StringPrimitive>::vmcast(v))));
+          finalDate = timeClip(parseDate(
+              StringPrimitive::createStringView(
+                  runtime, Handle<StringPrimitive>::vmcast(v)),
+              runtime.getJSLibStorage()->localTimeOffsetCache));
         } else {
           auto numRes = toNumber_RJS(runtime, v);
           if (numRes == ExecutionStatus::EXCEPTION) {
@@ -456,7 +459,8 @@ dateConstructor_RJS(void *, Runtime &runtime, NativeArgs args) {
       // makeTimeFromArgs interprets arguments as UTC.
       // We want them as local time, so pretend that they are,
       // and call utcTime to get the final UTC value we want to store.
-      finalDate = timeClip(utcTime(*cr));
+      finalDate = timeClip(
+          utcTime(*cr, runtime.getJSLibStorage()->localTimeOffsetCache));
     }
     self->setPrimitiveValue(finalDate);
     return self.getHermesValue();
@@ -464,7 +468,7 @@ dateConstructor_RJS(void *, Runtime &runtime, NativeArgs args) {
 
   llvh::SmallString<32> str{};
   double t = curTime();
-  double local = localTime(t);
+  double local = localTime(t, runtime.getJSLibStorage()->localTimeOffsetCache);
   dateTimeString(local, local - t, str);
   return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, str));
 }
@@ -475,9 +479,10 @@ dateParse_RJS(void *, Runtime &runtime, NativeArgs args) {
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeTrustedNumberValue(
-      parseDate(StringPrimitive::createStringView(
-          runtime, runtime.makeHandle(std::move(*res)))));
+  return HermesValue::encodeTrustedNumberValue(parseDate(
+      StringPrimitive::createStringView(
+          runtime, runtime.makeHandle(std::move(*res))),
+      runtime.getJSLibStorage()->localTimeOffsetCache));
 }
 
 CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime, NativeArgs args) {
@@ -536,7 +541,8 @@ datePrototypeToStringHelper(void *ctx, Runtime &runtime, NativeArgs args) {
   }
   llvh::SmallString<32> str{};
   if (!opts->isUTC) {
-    double local = localTime(t);
+    double local =
+        localTime(t, runtime.getJSLibStorage()->localTimeOffsetCache);
     opts->toStringFn(local, local - t, str);
   } else {
     opts->toStringFn(t, 0, str);
@@ -642,7 +648,7 @@ datePrototypeGetterHelper(void *ctx, Runtime &runtime, NativeArgs args) {
   // Store the original value of t to be used in offset calculations.
   double utc = t;
   if (!opts->isUTC) {
-    t = localTime(t);
+    t = localTime(t, runtime.getJSLibStorage()->localTimeOffsetCache);
   }
 
   double result{std::numeric_limits<double>::quiet_NaN()};
@@ -708,8 +714,9 @@ datePrototypeSetMilliseconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setMilliseconds() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
   if (!isUTC) {
-    t = localTime(t);
+    t = localTime(t, localTimeOffsetCache);
   }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
@@ -718,7 +725,8 @@ datePrototypeSetMilliseconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   double ms = res->getNumber();
   double date = makeDate(
       day(t), makeTime(hourFromTime(t), minFromTime(t), secFromTime(t), ms));
-  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  double utcT =
+      !isUTC ? timeClip(utcTime(date, localTimeOffsetCache)) : timeClip(date);
   self->setPrimitiveValue(utcT);
   return HermesValue::encodeTrustedNumberValue(utcT);
 }
@@ -734,8 +742,9 @@ datePrototypeSetSeconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setSeconds() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
   if (!isUTC) {
-    t = localTime(t);
+    t = localTime(t, localTimeOffsetCache);
   }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
@@ -755,7 +764,8 @@ datePrototypeSetSeconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 
   double date =
       makeDate(day(t), makeTime(hourFromTime(t), minFromTime(t), s, milli));
-  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  double utcT =
+      !isUTC ? timeClip(utcTime(date, localTimeOffsetCache)) : timeClip(date);
   self->setPrimitiveValue(utcT);
   return HermesValue::encodeTrustedNumberValue(utcT);
 }
@@ -771,8 +781,9 @@ datePrototypeSetMinutes_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setMinutes() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
   if (!isUTC) {
-    t = localTime(t);
+    t = localTime(t, localTimeOffsetCache);
   }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
@@ -801,7 +812,8 @@ datePrototypeSetMinutes_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   }
 
   double date = makeDate(day(t), makeTime(hourFromTime(t), m, s, milli));
-  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  double utcT =
+      !isUTC ? timeClip(utcTime(date, localTimeOffsetCache)) : timeClip(date);
   self->setPrimitiveValue(utcT);
   return HermesValue::encodeTrustedNumberValue(utcT);
 }
@@ -817,8 +829,9 @@ datePrototypeSetHours_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setHours() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
   if (!isUTC) {
-    t = localTime(t);
+    t = localTime(t, localTimeOffsetCache);
   }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
@@ -857,7 +870,8 @@ datePrototypeSetHours_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   }
 
   double date = makeDate(day(t), makeTime(h, m, s, milli));
-  double utcT = !isUTC ? timeClip(utcTime(date)) : timeClip(date);
+  double utcT =
+      !isUTC ? timeClip(utcTime(date, localTimeOffsetCache)) : timeClip(date);
   self->setPrimitiveValue(utcT);
   return HermesValue::encodeTrustedNumberValue(utcT);
 }
@@ -872,8 +886,9 @@ datePrototypeSetDate_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setDate() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
   if (!isUTC) {
-    t = localTime(t);
+    t = localTime(t, localTimeOffsetCache);
   }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
@@ -882,7 +897,8 @@ datePrototypeSetDate_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   double dt = res->getNumber();
   double newDate = makeDate(
       makeDay(yearFromTime(t), monthFromTime(t), dt), timeWithinDay(t));
-  double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
+  double utcT = !isUTC ? timeClip(utcTime(newDate, localTimeOffsetCache))
+                       : timeClip(newDate);
   self->setPrimitiveValue(utcT);
   return HermesValue::encodeTrustedNumberValue(utcT);
 }
@@ -898,8 +914,9 @@ datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setMonth() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
   if (!isUTC) {
-    t = localTime(t);
+    t = localTime(t, localTimeOffsetCache);
   }
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
@@ -917,7 +934,8 @@ datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
     dt = dateFromTime(t);
   }
   double newDate = makeDate(makeDay(yearFromTime(t), m, dt), timeWithinDay(t));
-  double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
+  double utcT = !isUTC ? timeClip(utcTime(newDate, localTimeOffsetCache))
+                       : timeClip(newDate);
   self->setPrimitiveValue(utcT);
   return HermesValue::encodeTrustedNumberValue(utcT);
 }
@@ -933,8 +951,9 @@ datePrototypeSetFullYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setFullYear() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
   if (!isUTC) {
-    t = localTime(t);
+    t = localTime(t, localTimeOffsetCache);
   }
   if (std::isnan(t)) {
     t = 0;
@@ -965,7 +984,8 @@ datePrototypeSetFullYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
     dt = dateFromTime(t);
   }
   double newDate = makeDate(makeDay(y, m, dt), timeWithinDay(t));
-  double utcT = !isUTC ? timeClip(utcTime(newDate)) : timeClip(newDate);
+  double utcT = !isUTC ? timeClip(utcTime(newDate, localTimeOffsetCache))
+                       : timeClip(newDate);
   self->setPrimitiveValue(utcT);
   return HermesValue::encodeTrustedNumberValue(utcT);
 }
@@ -981,7 +1001,8 @@ datePrototypeSetYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
         "Date.prototype.setYear() called on non-Date object");
   }
   double t = self->getPrimitiveValue();
-  t = localTime(t);
+  auto &localTimeOffsetCache = runtime.getJSLibStorage()->localTimeOffsetCache;
+  t = localTime(t, localTimeOffsetCache);
   if (std::isnan(t)) {
     t = 0;
   }
@@ -996,8 +1017,10 @@ datePrototypeSetYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   }
   double yint = std::trunc(y);
   double yr = 0 <= yint && yint <= 99 ? yint + 1900 : y;
-  double date = utcTime(makeDate(
-      makeDay(yr, monthFromTime(t), dateFromTime(t)), timeWithinDay(t)));
+  double date = utcTime(
+      makeDate(
+          makeDay(yr, monthFromTime(t), dateFromTime(t)), timeWithinDay(t)),
+      localTimeOffsetCache);
   double d = timeClip(date);
   self->setPrimitiveValue(d);
   return HermesValue::encodeTrustedNumberValue(d);
