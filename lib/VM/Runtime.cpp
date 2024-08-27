@@ -2117,7 +2117,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   for (auto frame : getStackFrames()) {
     auto codeBlock = frame->getCalleeCodeBlock(*this);
     if (codeBlock) {
-      res += codeBlock->getNameString(gcCallbacksWrapper_);
+      res += codeBlock->getNameString();
       // Default to the function entrypoint, this
       // ensures source location is provided for leaf frame even
       // if ip is not available.

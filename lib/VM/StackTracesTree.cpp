@@ -231,7 +231,7 @@ void StackTracesTree::pushCallStack(
   //   }
   //   Object.defineProperty(foo, 'name', {writable:true, value: 'bar'});
   //
-  auto nameStr = codeBlock->getNameString(runtime.getHeap().getCallbacks());
+  auto nameStr = codeBlock->getNameString();
   auto nameID =
       nameStr.empty() ? anonymousFunctionID_ : strings_->insert(nameStr);
 

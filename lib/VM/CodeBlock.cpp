@@ -169,7 +169,7 @@ SymbolID CodeBlock::getNameMayAllocate() const {
       functionHeader_.functionName());
 }
 
-std::string CodeBlock::getNameString(GCBase::GCCallbacks &runtime) const {
+std::string CodeBlock::getNameString() const {
   return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
 }
 

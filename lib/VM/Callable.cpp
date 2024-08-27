@@ -1339,7 +1339,7 @@ std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   if (!funcName.empty()) {
     return funcName;
   }
-  return self->codeBlock_->getNameString(gc.getCallbacks());
+  return self->codeBlock_->getNameString();
 }
 
 void JSFunction::_snapshotAddEdgesImpl(

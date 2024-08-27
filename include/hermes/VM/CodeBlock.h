@@ -128,7 +128,7 @@ class CodeBlock final
 
   /// \return The name of this code block, as a UTF-8 encoded string.
   /// Does no JS heap allocation.
-  std::string getNameString(GCBase::GCCallbacks &runtime) const;
+  std::string getNameString() const;
 
   const_iterator begin() const {
     return bytecode_;

@@ -76,7 +76,7 @@ std::atomic<ProfilerID> Runtime::nextProfilerId;
 ProfilerID Runtime::getProfilerID(CodeBlock *block) {
   auto &profilerID = block->profilerID;
   if (profilerID == NO_PROFILER_ID) {
-    std::string name = block->getNameString(*this);
+    std::string name = block->getNameString();
     profilerID = nextProfilerId.fetch_add(1, std::memory_order_relaxed);
     functionInfo.emplace_back(
         profilerID,
