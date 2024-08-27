@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// Factorial loop with warmup
+
 "use strict";
 
 function bench (lc, fc) {
     var n, fact;
     var res = 0;
-    lc = +lc;
-    fc = +fc;
     while (--lc >= 0) {
         n = fc;
         fact = n;
