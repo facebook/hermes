@@ -675,6 +675,7 @@ class GCBase {
       Null,
       True,
       False,
+      Number,
       FirstNonReservedID,
     };
 
@@ -729,6 +730,15 @@ class GCBase {
     /// Return true if Object IDs have been tracked.
     bool hasTrackedObjectIDs();
 
+    /// Return true if Number IDs are being tracked.
+    bool isTrackingNumberIDs();
+
+    /// Start assigning unique IDs to numbers passed to \p getNumberID
+    void startTrackingNumberIDs();
+
+    /// Stop assigning unique IDs to numbers passed to \p getNumberID
+    void stopTrackingNumberIDs();
+
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
     HeapSnapshot::NodeID getObjectID(CompressedPointer cell);
@@ -757,8 +767,11 @@ class GCBase {
     llvh::SmallVector<HeapSnapshot::NodeID, 1> &getExtraNativeIDs(
         HeapSnapshot::NodeID node);
 
-    /// Assign a unique ID to a literal number value that occurs in the heap.
-    /// Can be used to make fake nodes that will display their numeric value.
+    /// If \p isTrackingNumberIDs_ is true, then assign a unique ID to a literal
+    /// number value that occurs in the heap. Can be used to make fake nodes
+    /// that will display their numeric value. Otherwise if \p
+    /// isTrackingNumberIDs_ is false, then simply returns the reserved ID
+    /// representing Number.
     HeapSnapshot::NodeID getNumberID(double num);
 
     /// Get the object pointer for the given ID. This is the inverse of \c
@@ -857,6 +870,9 @@ class GCBase {
     /// Map of numeric values to IDs. Used to give numbers in the heap a unique
     /// node.
     llvh::DenseMap<double, HeapSnapshot::NodeID, DoubleComparator> numberIDMap_;
+
+    /// Whether to assign an unique ID to the number given to \p getNumberID
+    bool isTrackingNumberIDs_ = true;
   };
 
   enum class HeapKind { HadesGC, MallocGC };

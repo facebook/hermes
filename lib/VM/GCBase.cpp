@@ -1149,13 +1149,18 @@ GCBase::IDTracker::getExtraNativeIDs(HeapSnapshot::NodeID node) {
 
 HeapSnapshot::NodeID GCBase::IDTracker::getNumberID(double num) {
   std::lock_guard<Mutex> lk{mtx_};
-  auto &numberRef = numberIDMap_[num];
-  // If the entry didn't exist, the value was initialized to 0.
-  if (numberRef != 0) {
-    return numberRef;
+  if (isTrackingNumberIDs_) {
+    auto &numberRef = numberIDMap_[num];
+    // If the entry didn't exist, the value was initialized to 0.
+    if (numberRef != 0) {
+      return numberRef;
+    }
+    // Else, it is a number that hasn't been seen before.
+    return numberRef = nextNumberID();
+  } else {
+    return GCBase::IDTracker::reserved(
+        GCBase::IDTracker::ReservedObjectID::Number);
   }
-  // Else, it is a number that hasn't been seen before.
-  return numberRef = nextNumberID();
 }
 
 llvh::Optional<CompressedPointer> GCBase::IDTracker::getObjectForID(
@@ -1189,6 +1194,21 @@ bool GCBase::IDTracker::hasNativeIDs() {
 bool GCBase::IDTracker::hasTrackedObjectIDs() {
   std::lock_guard<Mutex> lk{mtx_};
   return !objectIDMap_.empty();
+}
+
+bool GCBase::IDTracker::isTrackingNumberIDs() {
+  std::lock_guard<Mutex> lk{mtx_};
+  return isTrackingNumberIDs_;
+}
+
+void GCBase::IDTracker::startTrackingNumberIDs() {
+  std::lock_guard<Mutex> lk{mtx_};
+  isTrackingNumberIDs_ = true;
+}
+
+void GCBase::IDTracker::stopTrackingNumberIDs() {
+  std::lock_guard<Mutex> lk{mtx_};
+  isTrackingNumberIDs_ = false;
 }
 
 HeapSnapshot::NodeID GCBase::IDTracker::getObjectID(CompressedPointer cell) {
