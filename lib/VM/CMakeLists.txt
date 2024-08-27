@@ -76,6 +76,8 @@ set(source_files
   StaticHInit.cpp
   StaticHUnit.cpp
 
+  JIT/DiscoverBB.cpp
+
   detail/IdentifierHashTable.cpp
 
   JSLib/Array.cpp

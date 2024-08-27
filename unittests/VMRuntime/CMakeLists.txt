@@ -80,3 +80,7 @@ add_hermes_unittest(HermesVMRuntimeTests
   )
 
 add_subdirectory(Instrumentation)
+
+if(HERMESVM_ALLOW_JIT)
+  add_subdirectory(JIT)
+endif()
