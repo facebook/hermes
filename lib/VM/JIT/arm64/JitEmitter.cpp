@@ -15,6 +15,13 @@ namespace hermes::vm::arm64 {
 
 namespace {
 
+// Ensure that HermesValue tags are handled correctly by updating this every
+// time the HERMESVALUE_VERSION changes, and going through the JIT and updating
+// any relevant code.
+static_assert(
+    HERMESVALUE_VERSION == 1,
+    "HermesValue version mismatch, JIT may need to be updated");
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   void handleError(
       asmjit::Error err,
@@ -210,6 +217,9 @@ void Emitter::frameSetup(
   a.add(a64::x29, a64::sp, stackOfs);
 
   // ((uint64_t)HVTag_First << kHV_NumDataBits)
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "HVTag_First must be the first after double limit");
   comment("// xDoubleLim");
   a.mov(xDoubleLim, ((uint64_t)HVTag_First << kHV_NumDataBits));
 

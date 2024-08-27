@@ -39,6 +39,12 @@ class PseudoHandle;
 class GCCell;
 class Runtime;
 
+// Ensure that HermesValue tags are handled correctly by updating this every
+// time the HERMESVALUE_VERSION changes, and going through the JIT and updating
+static_assert(
+    HERMESVALUE_VERSION == 1,
+    "HermesValue version mismatch, HermesValue methods may need to be updated");
+
 /// A NaN-box encoded value.
 class HermesValue : public HermesValueBase {
  public:
