@@ -139,6 +139,15 @@ struct ExecuteOptions {
   /// Execution time limit.
   uint32_t timeLimit{0};
 
+  /// Force JIT on all functions.
+  bool forceJIT{false};
+
+  /// Dump JIT'ed code.
+  bool dumpJITCode{false};
+
+  /// Fatally crash on any JIT compilation error.
+  bool jitCrashOnError{false};
+
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 

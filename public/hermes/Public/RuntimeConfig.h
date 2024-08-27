@@ -48,6 +48,9 @@ class PinnedHermesValue;
   /* Native stack remaining before assuming overflow */                \
   F(constexpr, unsigned, NativeStackGap, 64 * 1024)                    \
                                                                        \
+  /* Whether or not the JIT is enabled */                              \
+  F(constexpr, bool, EnableJIT, false)                                 \
+                                                                       \
   /* Whether to allow eval and Function ctor */                        \
   F(constexpr, bool, EnableEval, true)                                 \
                                                                        \

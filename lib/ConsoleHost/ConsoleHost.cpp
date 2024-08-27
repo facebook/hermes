@@ -368,6 +368,11 @@ bool executeHBCBytecodeImpl(
   std::unique_ptr<vm::StatSamplingThread> statSampler;
   auto runtime = vm::Runtime::create(options.runtimeConfig);
 
+  // TODO: surely this should use RuntimeConfig?
+  runtime->getJITContext().setForceJIT(options.forceJIT);
+  runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
+  runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
+
   if (options.timeLimit > 0) {
     runtime->timeLimitMonitor = vm::TimeLimitMonitor::getOrCreate();
     runtime->timeLimitMonitor->watchRuntime(

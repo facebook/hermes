@@ -275,6 +275,7 @@ Runtime::Runtime(
           runtimeConfig.getCrashMgr(),
           std::move(provider),
           runtimeConfig.getVMExperimentFlags()),
+      jitContext_(runtimeConfig.getEnableJIT()),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6Class_(runtimeConfig.getES6Class()),

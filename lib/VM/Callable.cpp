@@ -33,6 +33,58 @@
 namespace hermes {
 namespace vm {
 
+namespace {
+
+/// A helper to convert a SH-style function into a CallResult-style function.
+template <typename Res, typename FnPtr, typename ProfileFn>
+#ifndef NDEBUG
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+#endif
+    CallResult<Res>
+    _callWrapper(
+        FnPtr functionPtr,
+        Runtime &runtime,
+        const ProfileFn &profileFn) {
+  // ScopedNativeDepthTracker depthTracker{runtime};
+  // if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+  //   return runtime.raiseStackOverflow(
+  //       Runtime::StackOverflowKind::NativeStack);
+  // }
+
+  StackFramePtr currentFrame = runtime.getCurrentFrame();
+  StackFramePtr newFrame{runtime.getStackPointer()};
+  newFrame.getSavedIPRef() =
+      HermesValue::encodeNativePointer(runtime.getCurrentIP());
+
+  SHJmpBuf jBuf;
+  SHLocals *locals = runtime.shLocals;
+  if (_sh_try(getSHRuntime(runtime), &jBuf) == 0) {
+#ifdef HERMESVM_PROFILER_NATIVECALL
+    auto t1 = HERMESVM_RDTSC();
+#endif
+    SHLegacyValue res = functionPtr(&runtime);
+#ifdef HERMESVM_PROFILER_NATIVECALL
+    profileFn(HERMESVM_RDTSC() - t1);
+#endif
+    _sh_end_try(getSHRuntime(runtime), &jBuf);
+
+    if constexpr (std::is_same_v<Res, HermesValue>)
+      return HermesValue::fromRaw(res.raw);
+    else
+      return createPseudoHandle(HermesValue::fromRaw(res.raw));
+  } else {
+    SHLegacyValue exc = _sh_catch(
+        getSHRuntime(runtime),
+        locals,
+        currentFrame.ptr(),
+        newFrame.ptr() - currentFrame.ptr());
+    runtime.setThrownValue(HermesValue::fromRaw(exc.raw));
+    return ExecutionStatus::EXCEPTION;
+  }
+}
+
+} // unnamed namespace
+
 //===----------------------------------------------------------------------===//
 // class Environment
 
@@ -949,40 +1001,13 @@ Handle<NativeJSFunction> NativeJSFunction::createWithInferredParent(
 CallResult<PseudoHandle<>> NativeJSFunction::_nativeCall(
     NativeJSFunction *self,
     Runtime &runtime) {
-  // ScopedNativeDepthTracker depthTracker{runtime};
-  // if (LLVM_UNLIKELY(depthTracker.overflowed())) {
-  //   return runtime.raiseStackOverflow(
-  //       Runtime::StackOverflowKind::NativeStack);
-  // }
-
-  StackFramePtr currentFrame = runtime.getCurrentFrame();
-  StackFramePtr newFrame{runtime.getStackPointer()};
-  newFrame.getSavedIPRef() =
-      HermesValue::encodeNativePointer(runtime.getCurrentIP());
-
-  SHJmpBuf jBuf;
-  SHLocals *locals = runtime.shLocals;
-  if (_sh_try(getSHRuntime(runtime), &jBuf) == 0) {
+  return _callWrapper<PseudoHandle<>>(
+      self->functionPtr_, runtime, [=](uint64_t duration) {
 #ifdef HERMESVM_PROFILER_NATIVECALL
-    auto t1 = HERMESVM_RDTSC();
+        self->callDuration_ = duration;
+        ++self->callCount_;
 #endif
-    SHLegacyValue res = self->functionPtr_(getSHRuntime(runtime));
-#ifdef HERMESVM_PROFILER_NATIVECALL
-    self->callDuration_ = HERMESVM_RDTSC() - t1;
-    ++self->callCount_;
-#endif
-    _sh_end_try(getSHRuntime(runtime), &jBuf);
-
-    return createPseudoHandle(HermesValue::fromRaw(res.raw));
-  } else {
-    SHLegacyValue exc = _sh_catch(
-        getSHRuntime(runtime),
-        locals,
-        currentFrame.ptr(),
-        newFrame.ptr() - currentFrame.ptr());
-    runtime.setThrownValue(HermesValue::fromRaw(exc.raw));
-    return ExecutionStatus::EXCEPTION;
-  }
+      });
 }
 
 CallResult<PseudoHandle<>> NativeJSFunction::_callImpl(
@@ -1320,15 +1345,25 @@ void JSFunction::addLocationToSnapshot(
 }
 #endif
 
+CallResult<HermesValue> JSFunction::_jittedCall(
+    JITCompiledFunctionPtr functionPtr,
+    Runtime &runtime) {
+  return _callWrapper<HermesValue>(functionPtr, runtime, [](uint64_t) {});
+}
+
 CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
-  CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  result = runtime.interpretFunction(self->getCodeBlock());
-  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+
+  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
+    return _callWrapper<PseudoHandle<>>(jitPtr, runtime, [](uint64_t) {});
+
+  CallResult<HermesValue> result =
+      runtime.interpretFunction(self->getCodeBlock());
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  }
+
   return createPseudoHandle(*result);
 }
 

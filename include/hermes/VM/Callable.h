@@ -1110,6 +1110,11 @@ class JSFunction : public Callable {
         runtime.getEmptyCodeBlock());
   }
 
+  /// A wrapper to convert a SH-style function to CallResult style.
+  static CallResult<HermesValue> _jittedCall(
+      JITCompiledFunctionPtr functionPtr,
+      Runtime &runtime);
+
   /// Create a Function with no environment and a CodeBlock simply returning
   /// undefined, with the prototype property auto-initialized to new Object().
   static PseudoHandle<JSFunction> create(

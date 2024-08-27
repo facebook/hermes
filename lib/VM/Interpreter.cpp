@@ -19,6 +19,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
+#include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSGeneratorObject.h"
@@ -1004,6 +1005,12 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
 
+  if (!SingleStep) {
+    if (auto jitPtr = runtime.jitContext_.compile(runtime, curCodeBlock)) {
+      return JSFunction::_jittedCall(jitPtr, runtime);
+    }
+  }
+
   GCScope gcScope(runtime);
   // Avoid allocating a handle dynamically by reusing this one.
   MutableHandle<> tmpHandle(runtime);
@@ -1031,6 +1038,9 @@ tailCall:
 #endif
 
   runtime.getCodeCoverageProfiler().markExecuted(curCodeBlock);
+
+  // Update function executionCount_ count
+  curCodeBlock->incrementExecutionCount();
 
   if (!SingleStep) {
     auto newFrame = runtime.setCurrentFrameToTopOfStack();
@@ -1662,6 +1672,21 @@ tailCall:
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
+
+        if (auto jitPtr = runtime.jitContext_.compile(runtime, calleeBlock)) {
+          CAPTURE_IP_ASSIGN(
+              auto rres, JSFunction::_jittedCall(jitPtr, runtime));
+          if (LLVM_UNLIKELY(rres == ExecutionStatus::EXCEPTION))
+            goto exception;
+          O1REG(Call) = *rres;
+          SLOW_DEBUG(
+              dbgs() << "JIT return value r" << (unsigned)ip->iCall.op1 << "="
+                     << DumpHermesValue(O1REG(Call)) << "\n");
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          ip = nextIP;
+          DISPATCH;
+        }
+
         curCodeBlock = calleeBlock;
         CAPTURE_IP_SET();
         goto tailCall;

@@ -203,6 +203,34 @@ struct VMOnlyRuntimeFlags {
           "TTI notification"),
       llvh::cl::cat(GCCategory),
       llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> EnableJIT{
+      "Xjit",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("enable JIT compilation"),
+      llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> ForceJIT{
+      "Xforce-jit",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("force JIT compilation of every function"),
+      llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> DumpJITCode{
+      "Xdump-jitcode",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("dump JIT'ed code"),
+      llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> JITCrashOnError{
+      "Xjit-crash-on-error",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("crash on any JIT compilation error"),
+      llvh::cl::init(false)};
 };
 
 /// All command line runtime options relevant to the VM, including options

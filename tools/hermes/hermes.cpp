@@ -83,6 +83,7 @@ static int executeHBCBytecodeFromCL(
                             .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI)
                             .build())
           .withMaxNumRegisters(flags.MaxNumRegisters)
+          .withEnableJIT(flags.DumpJITCode || flags.EnableJIT || flags.ForceJIT)
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withOptimizedEval(cl::OptimizedEval)
@@ -109,6 +110,9 @@ static int executeHBCBytecodeFromCL(
 
   options.stopAfterInit = false;
   options.timeLimit = flags.ExecutionTimeLimit;
+  options.forceJIT = flags.ForceJIT;
+  options.dumpJITCode = flags.DumpJITCode;
+  options.jitCrashOnError = flags.JITCrashOnError;
   options.stopAfterInit = flags.StopAfterInit;
   options.forceGCBeforeStats = flags.GCBeforeStats;
   options.sampleProfiling = flags.SampleProfiling;
