@@ -213,13 +213,21 @@ TEST(DateUtilTest, EquivalentTimeTest) {
 }
 
 TEST(DateUtilTest, DaylightSavingTATest) {
+  LocalTimeOffsetCache localTimeOffsetCache;
+  /// A wrapper that implements the deleted daylightSavingTA() function.
+  auto daylightSavingTA = [&localTimeOffsetCache](double timeMs) {
+    return localTimeOffsetCache.daylightSavingOffsetInMs(timeMs);
+  };
+
   setTimeZone("America/Los_Angeles");
+  localTimeOffsetCache.reset();
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1489530532000)); // Mar 14, 2017
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1019514530000)); // Apr 22, 2002
   EXPECT_EQ(0, daylightSavingTA(1487111330000)); // Feb 14, 2017
   EXPECT_EQ(0, daylightSavingTA(1017700130000)); // Apr 1, 2002
 
   setTimeZone("America/Chicago");
+  localTimeOffsetCache.reset();
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1489530532000)); // Mar 14, 2017
   EXPECT_EQ(MS_PER_HOUR, daylightSavingTA(1019514530000)); // Apr 22, 2002
   EXPECT_EQ(0, daylightSavingTA(1487111330000)); // Feb 14, 2017

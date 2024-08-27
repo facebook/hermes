@@ -368,50 +368,6 @@ int32_t detail::equivalentTime(int64_t epochSecs) {
   return (eqYearAsEpochDays + dayOfYear) * SECONDS_PER_DAY + secsOfDay;
 }
 
-double daylightSavingTA(double t) {
-  // The spec says LocalTime should only take finite time value and return 0 in
-  // case conversion fails. Once we enforce the finite input at the caller site,
-  // we should remove the below check or replace it with an assertion. For now,
-  // let's return NaN instead if it's not finite value.
-  if (!std::isfinite(t)) {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-
-  // Convert t to seconds and get the actual time needed.
-  const double seconds = t / MS_PER_SECOND;
-  // If the number of seconds is higher or lower than a unix timestamp can
-  // support, clamp it. This is not correct in all cases, but returning NaN (for
-  // Invalid Date) breaks date construction entirely. Clamping only results in
-  // small errors in daylight savings time. This is only a problem in systems
-  // with a 32-bit time_t, like some Android systems.
-  time_t local = 0;
-  if (seconds > TIME_RANGE_SECS || seconds < -TIME_RANGE_SECS) {
-    // Return NaN if input is outside Time Range allowed in ES5.1
-    return std::numeric_limits<double>::quiet_NaN();
-  }
-  // This will truncate any fractional seconds, which is ok for daylight
-  // savings time calculations.
-  local = detail::equivalentTime(static_cast<int64_t>(seconds));
-
-  std::tm tm;
-#ifdef _WINDOWS
-  // The return value of localtime_s on Windows is an error code instead of
-  // a pointer to std::tm. For simplicity, we don't inspect the concrete error
-  // code and just return 0.
-  auto err = ::localtime_s(&tm, &local);
-  if (err) {
-    return 0;
-  }
-#else
-  std::tm *brokenTime = ::localtime_r(&local, &tm);
-  if (!brokenTime) {
-    // Local time is invalid.
-    return 0;
-  }
-#endif
-  return tm.tm_isdst ? MS_PER_HOUR : 0;
-}
-
 //===----------------------------------------------------------------------===//
 // ES5.1 15.9.1.9
 
