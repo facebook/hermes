@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<2d6fd9e085abc8347743709393aff722>>
+// @generated SignedSource<<31f8b58788b6a7fcfcd45dd78a74c3f9>>
 
 #pragma once
 
@@ -74,6 +74,7 @@ struct GetPropertiesRequest;
 struct GetPropertiesResponse;
 struct GlobalLexicalScopeNamesRequest;
 struct GlobalLexicalScopeNamesResponse;
+struct InspectRequestedNotification;
 struct InternalPropertyDescriptor;
 struct ObjectPreview;
 struct PropertyDescriptor;
@@ -1186,6 +1187,17 @@ struct runtime::ExecutionContextCreatedNotification : public Notification {
   JSONValue *toJsonVal(JSONFactory &factory) const override;
 
   runtime::ExecutionContextDescription context{};
+};
+
+struct runtime::InspectRequestedNotification : public Notification {
+  InspectRequestedNotification();
+  static std::unique_ptr<InspectRequestedNotification> tryMake(
+      const JSONObject *obj);
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+
+  runtime::RemoteObject object{};
+  JSONBlob hints;
+  std::optional<runtime::ExecutionContextId> executionContextId;
 };
 
 } // namespace message
