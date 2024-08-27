@@ -219,11 +219,16 @@ class TempRegAlloc {
     availBits_ = bitMask32(range);
   }
 
-  llvh::Optional<unsigned> alloc() {
+  llvh::Optional<unsigned> alloc(
+      llvh::Optional<unsigned> preferred = llvh::None) {
     if (availBits_ == 0)
       return llvh::None;
 
-    unsigned index = llvh::findFirstSet(availBits_);
+    unsigned index;
+    if (preferred && (availBits_ & (1u << *preferred)))
+      index = *preferred;
+    else
+      index = llvh::findFirstSet(availBits_);
     availBits_ &= ~(1u << index);
     assert(index >= first_ && "Invalid tmpreg index");
     assert(!map_[index - first_] && "map shows the index as occupied");
@@ -481,12 +486,14 @@ class Emitter {
   void movHWFromFR(HWReg hwRes, FR src);
 
   template <class TAG>
-  HWReg _allocTemp(TempRegAlloc &ra);
-  HWReg allocTempGpX() {
-    return _allocTemp<HWReg::GpX>(gpTemp_);
+  HWReg _allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred);
+  HWReg allocTempGpX(llvh::Optional<HWReg> preferred = llvh::None) {
+    assert((!preferred || preferred->isGpX()) && "invalid preferred register");
+    return _allocTemp<HWReg::GpX>(gpTemp_, preferred);
   }
-  HWReg allocTempVecD() {
-    return _allocTemp<HWReg::VecD>(vecTemp_);
+  HWReg allocTempVecD(llvh::Optional<HWReg> preferred = llvh::None) {
+    assert((!preferred || preferred->isVecD()) && "invalid preferred register");
+    return _allocTemp<HWReg::VecD>(vecTemp_, preferred);
   }
   void freeReg(HWReg hwReg);
   HWReg useReg(HWReg hwReg);
@@ -502,7 +509,10 @@ class Emitter {
   HWReg isFRInRegister(FR fr);
   HWReg getOrAllocFRInVecD(FR fr, bool load);
   HWReg getOrAllocFRInGpX(FR fr, bool load);
-  HWReg getOrAllocFRInAnyReg(FR fr, bool load);
+  HWReg getOrAllocFRInAnyReg(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
 
   void frUpdatedWithHWReg(
       FR fr,

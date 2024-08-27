@@ -335,11 +335,14 @@ void Emitter::movHWFromFR(HWReg hwRes, FR src) {
 }
 
 template <class TAG>
-HWReg Emitter::_allocTemp(TempRegAlloc &ra) {
-  if (auto optReg = ra.alloc(); optReg)
+HWReg Emitter::_allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred) {
+  llvh::Optional<unsigned> pr{};
+  if (preferred)
+    pr = preferred->indexInClass();
+  if (auto optReg = ra.alloc(pr); optReg)
     return HWReg(*optReg, TAG{});
   // Spill one register.
-  unsigned index = ra.leastRecentlyUsed();
+  unsigned index = pr ? *pr : ra.leastRecentlyUsed();
   spillTempReg(HWReg(index, TAG{}));
   ra.free(index);
   // Allocate again. This must succeed.
@@ -615,11 +618,17 @@ HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
   return hwGpX;
 }
 
-HWReg Emitter::getOrAllocFRInAnyReg(FR fr, bool load) {
+HWReg Emitter::getOrAllocFRInAnyReg(
+    FR fr,
+    bool load,
+    llvh::Optional<HWReg> preferred) {
   if (HWReg tmp = isFRInRegister(fr))
     return tmp;
 
   // We have neither global nor local reg, so we must allocate a new tmp reg.
+  // We only allocate GpX though.
+  if (preferred && !preferred->isGpX())
+    preferred.reset();
   HWReg hwGpX = allocTempGpX();
   assignAllocatedLocalHWReg(fr, hwGpX);
 
