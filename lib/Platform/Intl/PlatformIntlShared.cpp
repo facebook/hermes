@@ -7,6 +7,7 @@
 
 // This file includes shared code between Apple and ICU implementation of
 // Intl APIs
+#include "hermes/Platform/Intl/PlatformIntlShared.h"
 #include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 
