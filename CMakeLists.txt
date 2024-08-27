@@ -298,7 +298,10 @@ set(IMPORT_HOST_COMPILERS "" CACHE FILEPATH
 set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
   "Use natively compiled InternalJavaScript. Set OFF to use bytecode version")
 
-set(HERMESVM_ALLOW_JIT OFF CACHE BOOL "Allow JIT if supported by the target platform")
+# 0: JIT is disabled
+# 1: JIT is enabled if supported by the platform
+# 2: JIT is enabled
+set(HERMESVM_ALLOW_JIT 0 CACHE STRING "JIT mode: 0 (off), 1 (auto) or 2 (force on)")
 
 # This definition is used by source that must be kept identical between Hermes and
 # Static Hermes, but needs to behave differently in each case.
@@ -520,7 +523,7 @@ if (HERMES_HARDENED)
 endif()
 
 if (HERMESVM_ALLOW_JIT)
-  add_definitions(-DHERMESVM_ALLOW_JIT)
+  add_definitions(-DHERMESVM_ALLOW_JIT=${HERMESVM_ALLOW_JIT})
 endif ()
 
 if (GCC_COMPATIBLE)
@@ -758,6 +761,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     test_exec_root=${CMAKE_CURRENT_BINARY_DIR}/test
     unittests_dir=${CMAKE_CURRENT_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
+    jit_enabled=${HERMESVM_ALLOW_JIT}
     intl_enabled=${HERMES_ENABLE_INTL}
     regexp_unicode_properties_enabled=${HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep

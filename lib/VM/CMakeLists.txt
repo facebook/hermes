@@ -150,6 +150,13 @@ else()
   message(WARNING "Not linking garbage collector")
 endif()
 
+set(JITLIBS)
+if (HERMESVM_ALLOW_JIT)
+  list(APPEND source_files
+  )
+  set(JITLIBS asmjit)
+endif ()
+
 list(APPEND source_files
   Debugger/Debugger.cpp
   JSLib/DebuggerInternal.cpp
@@ -169,9 +176,13 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
 endif()
 
 # Take dependencies on hermesPublic and hermesapi so their headers are exposed.
-add_hermes_library(hermesVMRuntime ${source_files} LINK_OBJLIBS hermesPublic hermesapi)
+add_hermes_library(hermesVMRuntime ${source_files}
+        LINK_OBJLIBS hermesPublic hermesapi
+        LINK_LIBS ${JITLIBS})
 
-add_hermes_library(hermesVMRuntimeLean ${source_files} LINK_OBJLIBS hermesPublic hermesapiLean)
+add_hermes_library(hermesVMRuntimeLean ${source_files}
+        LINK_OBJLIBS hermesPublic hermesapiLean
+        LINK_LIBS ${JITLIBS})
 target_compile_definitions(hermesVMRuntimeLean_obj PUBLIC HERMESVM_LEAN)
 
 add_subdirectory(Instrumentation)

@@ -8,5 +8,5 @@ enable_language(ASM)
 add_hermes_tool(idisp
         idisp-exp.c loop1-jit.h
         idisp-jit.cpp JitEmitter.h
-        LINK_LIBS shermes_console_a asmjit
+        LINK_LIBS shermes_console_a hermesvm_a
 )
