@@ -1047,8 +1047,12 @@ function convertSuperClass(
         context,
       );
     }
-    case 'TypeCastExpression': {
-      const typeAnnotation = superClass.typeAnnotation.typeAnnotation;
+    case 'TypeCastExpression':
+    case 'AsExpression': {
+      const typeAnnotation =
+        superClass.type === 'TypeCastExpression'
+          ? superClass.typeAnnotation.typeAnnotation
+          : superClass.typeAnnotation;
 
       if (typeAnnotation.type === 'GenericTypeAnnotation') {
         return convertSuperClassHelper(

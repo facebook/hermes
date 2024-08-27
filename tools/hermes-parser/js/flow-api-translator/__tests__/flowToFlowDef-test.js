@@ -521,6 +521,12 @@ describe('flowToFlowDef', () => {
         `declare export class Foo<T> extends X {}`,
       );
     });
+    it('extends as cast expression', async () => {
+      await expectTranslate(
+        `export class Foo<T> extends (Bar as X) {}`,
+        `declare export class Foo<T> extends X {}`,
+      );
+    });
     it('extends type cast typeof expression', async () => {
       await expectTranslate(
         `export class Foo<T> extends (Bar: typeof X) {}`,
