@@ -1058,7 +1058,9 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           objectType: base,
           indexType: constructFlowNode<FlowESTree.StringLiteralTypeAnnotation>({
             type: 'StringLiteralTypeAnnotation',
+            // $FlowFixMe[incompatible-call]
             value: name,
+            // $FlowFixMe[incompatible-type]
             raw: `'${name}'`,
           }),
         });
