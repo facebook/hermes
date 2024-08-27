@@ -27,6 +27,7 @@ import {performRemoveNodeMutation} from './mutations/RemoveNode';
 import {performRemoveStatementMutation} from './mutations/RemoveStatement';
 import {performReplaceNodeMutation} from './mutations/ReplaceNode';
 import {performReplaceStatementWithManyMutation} from './mutations/ReplaceStatementWithMany';
+import {performModifyNodeInPlaceMutation} from './mutations/ModifyNodeInPlace';
 
 export type TransformASTResult = {
   ast: Program,
@@ -56,6 +57,10 @@ export function transformAST(
   for (const mutation of transformContext.mutations) {
     const mutationRoot = ((): ESNode | null => {
       switch (mutation.type) {
+        case 'modifyNodeInPlace': {
+          return performModifyNodeInPlaceMutation(mutationContext, mutation);
+        }
+
         case 'insertStatement': {
           return performInsertStatementMutation(mutationContext, mutation);
         }

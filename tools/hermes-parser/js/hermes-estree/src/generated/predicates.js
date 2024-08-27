@@ -163,6 +163,7 @@ import type {
   OpaqueType,
   OptionalIndexedAccessType,
   PrivateIdentifier,
+  Program,
   Property,
   PropertyDefinition,
   QualifiedTypeIdentifier,
@@ -866,6 +867,11 @@ export function isOptionalIndexedAccessType(node /*: ESNode | Token */) /*: impl
 
 export function isPrivateIdentifier(node /*: ESNode | Token */) /*: implies node is PrivateIdentifier */ {
   return node.type === 'PrivateIdentifier';
+}
+    
+
+export function isProgram(node /*: ESNode | Token */) /*: implies node is Program */ {
+  return node.type === 'Program';
 }
     
 

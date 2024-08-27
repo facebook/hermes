@@ -12,11 +12,7 @@ import type {ESNode} from 'hermes-estree';
 import type {DetachedNode} from '../../detachedNode';
 import type {MutationContext} from '../MutationContext';
 
-import {
-  addCommentsToNode,
-  cloneCommentWithMarkers,
-  getCommentsForNode,
-} from '../comments/comments';
+import {cloneCommentsToNewNode} from '../comments/comments';
 
 export type CloneCommentsToMutation = $ReadOnly<{
   type: 'cloneCommentsTo',
@@ -39,12 +35,6 @@ export function performCloneCommentsToMutation(
   _mutationContext: MutationContext,
   mutation: CloneCommentsToMutation,
 ): null {
-  const newComments = [];
-  for (const originalComment of getCommentsForNode(mutation.target)) {
-    const comment = cloneCommentWithMarkers(originalComment);
-    newComments.push(comment);
-  }
-  addCommentsToNode(mutation.destination, newComments);
-
+  cloneCommentsToNewNode(mutation.target, mutation.destination);
   return null;
 }

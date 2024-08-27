@@ -12,7 +12,6 @@ import {
   GetHermesESTreeJSON,
   formatAndWriteSrcArtifact,
   LITERAL_TYPES,
-  NODES_WITHOUT_TRANSFORM_NODE_TYPES,
 } from './utils/scriptUtils';
 
 const nodeTypesToImport: Array<string> = [];
@@ -47,11 +46,7 @@ const nodes = GetHermesESTreeJSON()
   .map(n => n.name)
   .concat('Literal');
 for (const node of nodes) {
-  if (
-    NODES_WITH_SPECIAL_HANDLING.has(node) ||
-    NODES_WITHOUT_TRANSFORM_NODE_TYPES.has(node) ||
-    LITERAL_TYPES.has(node)
-  ) {
+  if (NODES_WITH_SPECIAL_HANDLING.has(node) || LITERAL_TYPES.has(node)) {
     continue;
   }
 

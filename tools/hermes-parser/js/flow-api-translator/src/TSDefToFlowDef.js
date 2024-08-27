@@ -61,10 +61,7 @@ export function TSDefToFlowDef(
     interpreter: null,
     tokens: [],
     loc: ast.loc,
-    docblock: {
-      comment: {...DUMMY_COMMON, type: 'Block', value: ''},
-      directives: {flow: []},
-    },
+    docblock: null,
   };
 
   const [transform, code] = getTransforms(originalCode, opts);
