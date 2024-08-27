@@ -726,8 +726,8 @@ class GCBase {
 
     explicit IDTracker();
 
-    /// Return true if IDs are being tracked.
-    bool isTrackingIDs();
+    /// Return true if Object IDs have been tracked.
+    bool hasTrackedObjectIDs();
 
     /// Get the unique object id of the given object.
     /// If one does not yet exist, start tracking it.
@@ -1204,11 +1204,11 @@ class GCBase {
 
   bool isTrackingIDs() {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-    return getIDTracker().isTrackingIDs() ||
+    return getIDTracker().hasTrackedObjectIDs() ||
         getAllocationLocationTracker().isEnabled() ||
         getSamplingAllocationTracker().isEnabled();
 #else
-    return getIDTracker().isTrackingIDs();
+    return getIDTracker().hasTrackedObjectIDs();
 #endif
   }
 
