@@ -46,6 +46,15 @@ using ObjectID = SynthTrace::ObjectID;
 
 namespace {
 
+/// Cast a record from type \p FromType to type \p ToType, and assert that it
+/// has the correct tag. Note that this can only be used for "final" types,
+/// since it just compares the type tags.
+template <typename ToType, typename FromType>
+ToType &record_cast(FromType &rec) {
+  assert(ToType::type == rec.getType());
+  return static_cast<ToType &>(rec);
+}
+
 std::pair<
     std::unordered_map<ObjectID, uint64_t>,
     std::vector<std::pair<uint64_t, ObjectID>>>
@@ -104,7 +113,7 @@ static void verifyBundlesExist(
   for (const auto &rec : trace.records()) {
     if (rec->getType() == SynthTrace::RecordType::BeginExecJS) {
       const auto &bejsr =
-          dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
+          record_cast<const SynthTrace::BeginExecJSRecord>(*rec);
 
       if (bundles.count(bejsr.sourceHash()) == 0 &&
           !isAllZeroSourceHash(bejsr.sourceHash())) {
@@ -449,7 +458,7 @@ Function TraceInterpreter::createHostFunction(
         try {
           const auto &rec = trace_.records()[nextExecIndex_];
           const auto &ctnr =
-              dynamic_cast<const SynthTrace::CallToNativeRecord &>(*rec);
+              record_cast<const SynthTrace::CallToNativeRecord>(*rec);
           // Associate the this arg with its object id.
           ifObjectAddToObjectMap(
               ctnr.thisArg_, thisVal, nextExecIndex_, /* isThis = */ true);
@@ -466,7 +475,7 @@ Function TraceInterpreter::createHostFunction(
           executeRecords();
 
           const auto &rfnr =
-              dynamic_cast<const SynthTrace::ReturnFromNativeRecord &>(
+              record_cast<const SynthTrace::ReturnFromNativeRecord>(
                   *trace_.records()[nextExecIndex_ - 1]);
           return traceValueToJSIValue(rfnr.retVal_);
         } catch (const std::exception &e) {
@@ -488,7 +497,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         const auto &rec =
             interpreter_.trace_.records()[interpreter_.nextExecIndex_];
         const auto &gpnr =
-            dynamic_cast<const SynthTrace::GetPropertyNativeRecord &>(*rec);
+            record_cast<const SynthTrace::GetPropertyNativeRecord>(*rec);
         interpreter_.addToPropNameIDMap(
             gpnr.propNameID_,
             jsi::PropNameID{interpreter_.rt_, name},
@@ -497,7 +506,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         interpreter_.executeRecords();
 
         const auto &gpnrr =
-            dynamic_cast<const SynthTrace::GetPropertyNativeReturnRecord &>(
+            record_cast<const SynthTrace::GetPropertyNativeReturnRecord>(
                 *interpreter_.trace_
                      .records()[interpreter_.nextExecIndex_ - 1]);
         return interpreter_.traceValueToJSIValue(gpnrr.retVal_);
@@ -511,7 +520,7 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         const auto &rec =
             interpreter_.trace_.records()[interpreter_.nextExecIndex_];
         const auto &spnr =
-            dynamic_cast<const SynthTrace::SetPropertyNativeRecord &>(*rec);
+            record_cast<const SynthTrace::SetPropertyNativeRecord>(*rec);
         interpreter_.addToPropNameIDMap(
             spnr.propNameID_,
             jsi::PropNameID{interpreter_.rt_, name},
@@ -533,8 +542,9 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
         const auto &rec =
             interpreter_.trace_.records()[interpreter_.nextExecIndex_ - 1];
         assert(rec->getType() == RecordType::GetNativePropertyNamesReturn);
-        const auto &record = dynamic_cast<
-            const SynthTrace::GetNativePropertyNamesReturnRecord &>(*rec);
+        const auto &record =
+            record_cast<const SynthTrace::GetNativePropertyNamesReturnRecord>(
+                *rec);
 
         std::vector<PropNameID> propNameIDs;
         for (const SynthTrace::TraceValue &name : record.propNameIDs_) {
@@ -667,7 +677,7 @@ void TraceInterpreter::executeRecords() {
       switch (rec->getType()) {
         case RecordType::BeginExecJS: {
           const auto &bejsr =
-              dynamic_cast<const SynthTrace::BeginExecJSRecord &>(*rec);
+              record_cast<const SynthTrace::BeginExecJSRecord>(*rec);
           auto it = bundles_.find(bejsr.sourceHash());
           if (it == bundles_.end()) {
             if ((options_.disableSourceHashCheck ||
@@ -702,13 +712,13 @@ void TraceInterpreter::executeRecords() {
         }
         case RecordType::EndExecJS: {
           const auto &eejsr =
-              dynamic_cast<const SynthTrace::EndExecJSRecord &>(*rec);
+              record_cast<const SynthTrace::EndExecJSRecord>(*rec);
           ifObjectAddToObjectMap(
               eejsr.retVal_, std::move(overallRetval), currentExecIndex);
           [[fallthrough]];
         }
         case RecordType::Marker: {
-          const auto &mr = dynamic_cast<const SynthTrace::MarkerRecord &>(*rec);
+          const auto &mr = static_cast<const SynthTrace::MarkerRecord &>(*rec);
           // If the tag is the requested tag, and the stats have not already
           // been collected, collect them.
           checkMarker(mr.tag_);
@@ -990,7 +1000,7 @@ void TraceInterpreter::executeRecords() {
         }
         case RecordType::ReturnToNative: {
           const auto &rtnr =
-              dynamic_cast<const SynthTrace::ReturnToNativeRecord &>(*rec);
+              record_cast<const SynthTrace::ReturnToNativeRecord>(*rec);
           ifObjectAddToObjectMap(
               rtnr.retVal_, std::move(retval), currentExecIndex);
           // If the return value wasn't an object, it can be ignored.
