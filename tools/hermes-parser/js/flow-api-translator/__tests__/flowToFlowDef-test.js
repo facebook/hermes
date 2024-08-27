@@ -510,6 +510,23 @@ describe('flowToFlowDef', () => {
          }`,
       );
     });
+    it('extends member expression', async () => {
+      await expectTranslateUnchanged(
+        `declare export class Foo<T> extends Bar.TClass<T> {}`,
+      );
+    });
+    it('extends type cast expression', async () => {
+      await expectTranslate(
+        `export class Foo<T> extends (Bar: X) {}`,
+        `declare export class Foo<T> extends X {}`,
+      );
+    });
+    it('extends type cast typeof expression', async () => {
+      await expectTranslate(
+        `export class Foo<T> extends (Bar: typeof X) {}`,
+        `declare export class Foo<T> extends X {}`,
+      );
+    });
   });
   describe('Expression', () => {
     async function expectTranslateExpression(
