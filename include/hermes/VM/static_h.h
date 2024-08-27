@@ -452,15 +452,15 @@ SHERMES_EXPORT void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);
 
 SHERMES_EXPORT void _sh_ljs_put_by_id_loose_rjs(
     SHRuntime *shr,
-    const SHLegacyValue *target,
+    SHLegacyValue *target,
     SHSymbolID symID,
-    const SHLegacyValue *value,
+    SHLegacyValue *value,
     SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_put_by_id_strict_rjs(
     SHRuntime *shr,
-    const SHLegacyValue *target,
+    SHLegacyValue *target,
     SHSymbolID symID,
-    const SHLegacyValue *value,
+    SHLegacyValue *value,
     SHPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_try_put_by_id_loose_rjs(
     SHRuntime *shr,

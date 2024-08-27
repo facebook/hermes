@@ -632,7 +632,7 @@ static inline void putById_RJS(
     CompressedPointer clazzPtr{obj->getClassGCPtr()};
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
-    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+    if (LLVM_LIKELY(cacheEntry && cacheEntry->clazz == clazzPtr)) {
       //++NumPutByIdCacheHits;
       JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
       return;
@@ -648,8 +648,7 @@ static inline void putById_RJS(
       // cacheIdx == 0 indicates no caching so don't update the cache in
       // those cases.
       HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-      if (LLVM_LIKELY(!clazz->isDictionary())
-          /* && LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)*/) {
+      if (LLVM_LIKELY(!clazz->isDictionary()) && LLVM_LIKELY(cacheEntry)) {
 #ifdef HERMES_SLOW_DEBUG
         // if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
         //   ++NumPutByIdCacheEvicts;
@@ -695,9 +694,9 @@ static inline void putById_RJS(
 
 extern "C" void _sh_ljs_put_by_id_loose_rjs(
     SHRuntime *shr,
-    const SHLegacyValue *target,
+    SHLegacyValue *target,
     SHSymbolID symID,
-    const SHLegacyValue *value,
+    SHLegacyValue *value,
     SHPropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, false>(
       getRuntime(shr),
@@ -709,9 +708,9 @@ extern "C" void _sh_ljs_put_by_id_loose_rjs(
 
 extern "C" void _sh_ljs_put_by_id_strict_rjs(
     SHRuntime *shr,
-    const SHLegacyValue *target,
+    SHLegacyValue *target,
     SHSymbolID symID,
-    const SHLegacyValue *value,
+    SHLegacyValue *value,
     SHPropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, true>(
       getRuntime(shr),
@@ -824,7 +823,7 @@ static inline HermesValue getById_RJS(
 
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
-    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+    if (LLVM_LIKELY(cacheEntry && cacheEntry->clazz == clazzPtr)) {
       //++NumGetByIdCacheHits;
       return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
           .unboxToHV(runtime);
@@ -839,8 +838,8 @@ static inline HermesValue getById_RJS(
       // cacheIdx == 0 indicates no caching so don't update the cache in
       // those cases.
       HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-      if (LLVM_LIKELY(!clazz->isDictionaryNoCache())
-          /*&& LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)*/) {
+      if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
+          LLVM_LIKELY(cacheEntry)) {
 #ifdef HERMES_SLOW_DEBUG
         // if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
         //   ++NumGetByIdCacheEvicts;
@@ -862,7 +861,7 @@ static inline HermesValue getById_RJS(
     // The cache may also be populated via the prototype of the object.
     // This value is only reliable if the fast path was a definite
     // not-found.
-    if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
+    if (cacheEntry && fastPathResult.hasValue() && !fastPathResult.getValue() &&
         LLVM_LIKELY(!obj->isProxyObject())) {
       JSObject *parent = obj->getParent(runtime);
       // TODO: This isLazy check is because a lazy object is reported as
@@ -898,7 +897,7 @@ static inline HermesValue getById_RJS(
     //(void)NumGetByIdNotFound;
 #endif
 #ifdef HERMES_SLOW_DEBUG
-    // auto *savedClass = true /*cacheIdx != hbc::PROPERTY_CACHING_DISABLED*/
+    // auto *savedClass = true /*cacheEntry*/
     //     ? cacheEntry->clazz.get(runtime, runtime.getHeap())
     //     : nullptr;
 #endif
@@ -912,13 +911,12 @@ static inline HermesValue getById_RJS(
           runtime,
           symID,
           !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
-          true /*cacheIdx != hbc::PROPERTY_CACHING_DISABLED*/ ? cacheEntry
-                                                              : nullptr);
+          cacheEntry);
     }
     if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
       _sh_throw_current(getSHRuntime(runtime));
 #ifdef HERMES_SLOW_DEBUG
-      // if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
+      // if (cacheEntry && savedClass &&
       //     cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
       //   ++NumGetByIdCacheEvicts;
       // }
