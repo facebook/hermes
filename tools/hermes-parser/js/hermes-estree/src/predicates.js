@@ -47,31 +47,31 @@ import type {
 
 export * from './generated/predicates';
 
-export function isClass(node /*: ESNode */) /*: node is (ClassDeclaration | ClassExpression) */ {
+export function isClass(node /*: ESNode */) /*: implies node is (ClassDeclaration | ClassExpression) */ {
   return node.type === 'ClassDeclaration' || node.type === 'ClassExpression';
 }
 
 export function isPropertyDefinitionWithNonComputedName(
   node /*: ESNode */,
-) /*: node is PropertyDefinitionWithNonComputedName */ {
+) /*: implies node is PropertyDefinitionWithNonComputedName */ {
   return node.type === 'PropertyDefinition' && node.computed === false;
 }
 
-export function isClassMember(node /*: ESNode */) /*: node is ClassMember */ {
+export function isClassMember(node /*: ESNode */) /*: implies node is ClassMember */ {
   return node.type === 'PropertyDefinition' || node.type === 'MethodDefinition';
 }
 
 export function isClassMemberWithNonComputedName(
   node /*: ESNode */,
-) /*: node is (PropertyDefinitionWithNonComputedName | MethodDefinitionConstructor | MethodDefinitionWithNonComputedName) */ {
+) /*: implies node is (PropertyDefinitionWithNonComputedName | MethodDefinitionConstructor | MethodDefinitionWithNonComputedName) */ {
   return (node.type === 'PropertyDefinition' || node.type === 'MethodDefinition') && node.computed === false;
 }
 
-export function isComment(node /*: ESNode | Token */) /*: node is (MostTokens | BlockComment | LineComment) */ {
+export function isComment(node /*: ESNode | Token */) /*: implies node is (MostTokens | BlockComment | LineComment) */ {
   return node.type === 'Block' || node.type === 'Line';
 }
 
-export function isFunction(node /*: ESNode */) /*: node is AFunction */ {
+export function isFunction(node /*: ESNode */) /*: implies node is AFunction */ {
   return (
     node.type === 'ArrowFunctionExpression' ||
     node.type === 'FunctionDeclaration' ||
@@ -81,55 +81,55 @@ export function isFunction(node /*: ESNode */) /*: node is AFunction */ {
 
 export function isMethodDefinitionWithNonComputedName(
   node /*: ESNode */,
-) /*: node is (MethodDefinitionConstructor | MethodDefinitionWithNonComputedName) */ {
+) /*: implies node is (MethodDefinitionConstructor | MethodDefinitionWithNonComputedName) */ {
   return node.type === 'MethodDefinition' && node.computed === false;
 }
 
 export function isMemberExpressionWithNonComputedProperty(
   node /*: ESNode */,
-) /*: node is MemberExpressionWithNonComputedName */ {
+) /*: implies node is MemberExpressionWithNonComputedName */ {
   return node.type === 'MemberExpression' && node.computed === false;
 }
 
 export function isOptionalMemberExpressionWithNonComputedProperty(
   node /*: ESNode */,
-) /*: node is MemberExpressionWithNonComputedName */ {
+) /*: implies node is MemberExpressionWithNonComputedName */ {
   return node.type === 'MemberExpression' && node.computed === false;
 }
 
-export function isObjectPropertyWithShorthand(node /*: ESNode */) /*: node is (ObjectPropertyWithShorthandStaticName | DestructuringObjectPropertyWithShorthandStaticName) */ {
+export function isObjectPropertyWithShorthand(node /*: ESNode */) /*: implies node is (ObjectPropertyWithShorthandStaticName | DestructuringObjectPropertyWithShorthandStaticName) */ {
   return node.type === 'Property' && node.shorthand === true;
 }
 
-export function isObjectPropertyWithNonComputedName(node /*: ESNode */) /*: node is (ObjectPropertyWithNonShorthandStaticName | ObjectPropertyWithShorthandStaticName | DestructuringObjectPropertyWithNonShorthandStaticName | DestructuringObjectPropertyWithShorthandStaticName) */ {
+export function isObjectPropertyWithNonComputedName(node /*: ESNode */) /*: implies node is (ObjectPropertyWithNonShorthandStaticName | ObjectPropertyWithShorthandStaticName | DestructuringObjectPropertyWithNonShorthandStaticName | DestructuringObjectPropertyWithShorthandStaticName) */ {
   return node.type === 'Property' && node.computed === false;
 }
 
-export function isBigIntLiteral(node /*: ESNode */) /*: node is BigIntLiteral */ {
+export function isBigIntLiteral(node /*: ESNode */) /*: implies node is BigIntLiteral */ {
   return node.type === 'Literal' && node.literalType === 'bigint';
 }
 
-export function isBooleanLiteral(node /*: ESNode */) /*: node is BooleanLiteral */ {
+export function isBooleanLiteral(node /*: ESNode */) /*: implies node is BooleanLiteral */ {
   return node.type === 'Literal' && node.literalType === 'boolean';
 }
 
-export function isNullLiteral(node /*: ESNode */) /*: node is NullLiteral */ {
+export function isNullLiteral(node /*: ESNode */) /*: implies node is NullLiteral */ {
   return node.type === 'Literal' && node.literalType === 'null';
 }
 
-export function isNumericLiteral(node /*: ESNode */) /*: node is NumericLiteral */ {
+export function isNumericLiteral(node /*: ESNode */) /*: implies node is NumericLiteral */ {
   return node.type === 'Literal' && node.literalType === 'numeric';
 }
 
-export function isRegExpLiteral(node /*: ESNode */) /*: node is RegExpLiteral */ {
+export function isRegExpLiteral(node /*: ESNode */) /*: implies node is RegExpLiteral */ {
   return node.type === 'Literal' &&  node.literalType === 'regexp';
 }
 
-export function isStringLiteral(node /*: ESNode */) /*: node is StringLiteral */ {
+export function isStringLiteral(node /*: ESNode */) /*: implies node is StringLiteral */ {
   return node.type === 'Literal' && node.literalType === 'string';
 }
 
-export function isExpression(node /*: ESNode */) /*: node is Expression */ {
+export function isExpression(node /*: ESNode */) /*: implies node is Expression */ {
   return (
     node.type === 'ThisExpression' ||
     node.type === 'ArrayExpression' ||
@@ -166,7 +166,7 @@ export function isExpression(node /*: ESNode */) /*: node is Expression */ {
   );
 }
 
-export function isStatement(node /*: ESNode */) /*: node is Statement */ {
+export function isStatement(node /*: ESNode */) /*: implies node is Statement */ {
   return (
     node.type === 'BlockStatement' ||
     node.type === 'BreakStatement' ||
