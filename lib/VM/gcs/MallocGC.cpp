@@ -527,9 +527,9 @@ bool MallocGC::needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
 #endif
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-void MallocGC::createSnapshot(llvh::raw_ostream &os) {
+void MallocGC::createSnapshot(llvh::raw_ostream &os, bool captureNumericValue) {
   GCCycle cycle{*this};
-  GCBase::createSnapshot(*this, os);
+  GCBase::createSnapshot(*this, os, captureNumericValue);
 }
 #endif
 

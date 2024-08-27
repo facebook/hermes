@@ -132,7 +132,7 @@ std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
   if (code) {
     return code;
   }
-  createSnapshot(os);
+  createSnapshot(os, true);
   return std::error_code{};
 }
 
@@ -187,13 +187,13 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
   void accept(GCCell *&ptr, const char *name) override {}
 
   void acceptHV(HermesValue &hv, const char *) override {
-    if (hv.isNumber()) {
+    if (tracker_.isTrackingNumberIDs() && hv.isNumber()) {
       seenNumbers_.insert(hv.getNumber());
     }
   }
 
   void acceptSHV(SmallHermesValue &hv, const char *) override {
-    if (hv.isNumber()) {
+    if (tracker_.isTrackingNumberIDs() && hv.isNumber()) {
       seenNumbers_.insert(hv.getNumber(pointerBase_));
     }
   }
@@ -229,18 +229,29 @@ struct PrimitiveNodeAcceptor : public SnapshotAcceptor {
         GCBase::IDTracker::reserved(GCBase::IDTracker::ReservedObjectID::False),
         0,
         0);
-    for (double num : seenNumbers_) {
-      // A number never has any edges, so just make a node for it.
+    if (tracker_.isTrackingNumberIDs()) {
+      for (double num : seenNumbers_) {
+        // A number never has any edges, so just make a node for it.
+        snap_.beginNode();
+        // Convert the number value to a string, according to the JS conversion
+        // routines.
+        char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
+        size_t len = hermes::numberToString(num, buf, sizeof(buf));
+        snap_.endNode(
+            HeapSnapshot::NodeType::Number,
+            llvh::StringRef{buf, len},
+            tracker_.getNumberID(num),
+            // Numbers are zero-sized in the heap because they're stored inline.
+            0,
+            0);
+      }
+    } else {
       snap_.beginNode();
-      // Convert the number value to a string, according to the JS conversion
-      // routines.
-      char buf[hermes::NUMBER_TO_STRING_BUF_SIZE];
-      size_t len = hermes::numberToString(num, buf, sizeof(buf));
       snap_.endNode(
-          HeapSnapshot::NodeType::Number,
-          llvh::StringRef{buf, len},
-          tracker_.getNumberID(num),
-          // Numbers are zero-sized in the heap because they're stored inline.
+          HeapSnapshot::NodeType::Object,
+          "number",
+          GCBase::IDTracker::reserved(
+              GCBase::IDTracker::ReservedObjectID::Number),
           0,
           0);
     }
@@ -589,7 +600,13 @@ void GCBase::createSnapshotImpl(
   snap.endSection(HeapSnapshot::Section::Locations);
 }
 
-void GCBase::createSnapshot(GC &gc, llvh::raw_ostream &os) {
+void GCBase::createSnapshot(
+    GC &gc,
+    llvh::raw_ostream &os,
+    bool captureNumericValue) {
+  if (!captureNumericValue) {
+    idTracker_.stopTrackingNumberIDs();
+  }
   // Chrome 125 requires correct node count and edge count in the "snapshot"
   // field, which is at the beginning of the heap snapshot. We do two passes to
   // populate the correct node/edge count. First, we create a dummy HeapSnapshot
@@ -621,6 +638,7 @@ void GCBase::createSnapshot(GC &gc, llvh::raw_ostream &os) {
   assert(
       dummySnap.getEdgeCount() == snap.getEdgeCount() &&
       "Edge count of two passes of createSnapshotImpl are not equal");
+  idTracker_.startTrackingNumberIDs();
 }
 
 void GCBase::snapshotAddGCNativeNodes(HeapSnapshot &snap) {
@@ -677,9 +695,10 @@ void GCBase::checkTripwire(size_t dataSize) {
       return gc_->createSnapshotToFile(path);
     }
 
-    std::error_code createSnapshot(std::ostream &os) override {
+    std::error_code createSnapshot(std::ostream &os, bool captureNumericValue)
+        override {
       llvh::raw_os_ostream ros(os);
-      gc_->createSnapshot(ros);
+      gc_->createSnapshot(ros, captureNumericValue);
       return std::error_code{};
     }
 
@@ -693,7 +712,8 @@ void GCBase::checkTripwire(size_t dataSize) {
       return std::error_code(ENOSYS, std::system_category());
     }
 
-    std::error_code createSnapshot(std::ostream &os) override {
+    std::error_code createSnapshot(std::ostream &os, bool captureNumericValue)
+        override {
       return std::error_code(ENOSYS, std::system_category());
     }
   } ctx;
