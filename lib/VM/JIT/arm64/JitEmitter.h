@@ -9,17 +9,18 @@
 
 #include "asmjit/a64.h"
 
+#include "hermes/ADT/DenseUInt64.h"
 #include "hermes/ADT/SimpleLRU.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/DenseMap.h"
-#include "llvh/Support/raw_ostream.h"
 
 #include <deque>
-#include <unordered_map>
 
-namespace hermes::jit {
+#include "hermes/VM/CodeBlock.h"
+
+namespace hermes::vm::arm64 {
 
 namespace a64 = asmjit::a64;
 
@@ -256,18 +257,10 @@ class TempRegAlloc {
  private:
 };
 
-class ErrorHandler : public asmjit::ErrorHandler {
-  virtual void handleError(
-      asmjit::Error err,
-      const char *message,
-      asmjit::BaseEmitter *origin) override;
-};
-
 class Emitter {
  public:
-  std::unique_ptr<asmjit::FileLogger> fileLogger_{};
-  asmjit::FileLogger *logger_ = nullptr;
-  ErrorHandler errorHandler_;
+  std::unique_ptr<asmjit::Logger> logger_{};
+  std::unique_ptr<asmjit::ErrorHandler> errorHandler_;
 
   std::vector<FRState> frameRegs_;
   std::array<HWRegState, 64> hwRegs_;
@@ -326,7 +319,7 @@ class Emitter {
   llvh::DenseMap<void *, size_t> thunkMap_{};
 
   /// Map from the bit pattern of a double value to offset in constant pool.
-  std::unordered_map<uint64_t, int32_t> fp64ConstMap_{};
+  llvh::DenseMap<hermes::DenseUInt64, int32_t> fp64ConstMap_{};
 
   /// Label to branch to when returning from a function. Return value will be
   /// in x22.
@@ -341,12 +334,13 @@ class Emitter {
 
   explicit Emitter(
       asmjit::JitRuntime &jitRT,
+      bool dumpJitCode,
       uint32_t numFrameRegs,
       uint32_t numCount,
       uint32_t npCount);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
-  JitFn addToRuntime();
+  JITCompiledFunctionPtr addToRuntime(asmjit::JitRuntime &jr);
 
   /// Log a comment.
   /// Annotated with printf-style format.
@@ -444,6 +438,8 @@ class Emitter {
       b_ge)
 #undef DECL_JCOND
 
+  asmjit::Label newPrefLabel(const char *pref, size_t index);
+
  private:
   /// Create an a64::Mem to a specifc frame register.
   static constexpr inline a64::Mem frA64Mem(FR fr) {
@@ -521,9 +517,10 @@ class Emitter {
   }
 
  private:
-  void frameSetup(unsigned gpSaveCount, unsigned vecSaveCount);
-
-  asmjit::Label newPrefLabel(const char *pref, size_t index);
+  void frameSetup(
+      unsigned numFrameRegs,
+      unsigned gpSaveCount,
+      unsigned vecSaveCount);
 
   asmjit::Label newSlowPathLabel() {
     return newPrefLabel("SLOW_", slowPaths_.size());
@@ -586,4 +583,4 @@ class Emitter {
       const char *slowCallName);
 }; // class Emitter
 
-} // namespace hermes::jit
+} // namespace hermes::vm::arm64

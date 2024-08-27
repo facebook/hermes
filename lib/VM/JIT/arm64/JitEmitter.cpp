@@ -5,15 +5,39 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "loop1-jit.h"
-
+#include "hermes/VM/JIT/Config.h"
+#if HERMESVM_JIT
 #include "JitEmitter.h"
 
 #include "hermes/Support/ErrorHandling.h"
 
-namespace hermes::jit {
+namespace hermes::vm::arm64 {
 
-static asmjit::JitRuntime s_jitRT;
+namespace {
+
+class OurErrorHandler : public asmjit::ErrorHandler {
+  void handleError(
+      asmjit::Error err,
+      const char *message,
+      asmjit::BaseEmitter *origin) override {
+    llvh::errs() << "AsmJit error: " << err << ": "
+                 << asmjit::DebugUtils::errorAsString(err) << ": " << message
+                 << "\n";
+    hermes_fatal("AsmJit error");
+  }
+};
+
+class OurLogger : public asmjit::Logger {
+  ASMJIT_API asmjit::Error _log(const char *data, size_t size) noexcept
+      override {
+    llvh::outs()
+        << (size == SIZE_MAX ? llvh::StringRef(data)
+                             : llvh::StringRef(data, size));
+    return asmjit::kErrorOk;
+  }
+};
+
+} // unnamed namespace
 
 /// Return true if the specified 64-bit value can be efficiently loaded on
 /// Arm64 with up to two integer instructions. In other words, it has at most
@@ -27,37 +51,26 @@ static bool isCheapConst(uint64_t k) {
   return count <= 2;
 }
 
-void ErrorHandler::handleError(
-    asmjit::Error err,
-    const char *message,
-    asmjit::BaseEmitter *origin) {
-  llvh::errs() << "AsmJit error: " << err << ": "
-               << asmjit::DebugUtils::errorAsString(err) << ": " << message
-               << "\n";
-  hermes::hermes_fatal("AsmJit error");
-}
-
 #define EMIT_RUNTIME_CALL(em, func) (em).call((void *)func, #func)
 
 Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
+    bool dumpJitCode,
     uint32_t numFrameRegs,
     unsigned numCount,
     unsigned npCount)
     : frameRegs_(numFrameRegs) {
-#ifndef NDEBUG
-  fileLogger_ = std::make_unique<asmjit::FileLogger>(stdout);
-#endif
-  if (fileLogger_)
-    logger_ = fileLogger_.get();
-
+  if (dumpJitCode)
+    logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
   if (logger_)
     logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
 
+  errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(new OurErrorHandler());
+
   code.init(jitRT.environment(), jitRT.cpuFeatures());
-  code.setErrorHandler(&errorHandler_);
+  code.setErrorHandler(errorHandler_.get());
   if (logger_)
-    code.setLogger(logger_);
+    code.setLogger(logger_.get());
   code.attach(&a);
 
   roDataLabel_ = a.newNamedLabel("RO_DATA");
@@ -101,7 +114,7 @@ Emitter::Emitter(
     frameRegs_[frIndex].globalType = FRType::Unknown;
   }
 
-  frameSetup(nextGp - kGPSaved.first, nextVec - kVecSaved.first);
+  frameSetup(numFrameRegs, nextGp - kGPSaved.first, nextVec - kVecSaved.first);
 }
 
 void Emitter::comment(const char *fmt, ...) {
@@ -115,14 +128,14 @@ void Emitter::comment(const char *fmt, ...) {
   a.comment(buf);
 }
 
-JitFn Emitter::addToRuntime() {
+JITCompiledFunctionPtr Emitter::addToRuntime(asmjit::JitRuntime &jr) {
   emitSlowPaths();
   emitThunks();
   emitROData();
 
   code.detach(&a);
-  JitFn fn;
-  asmjit::Error err = s_jitRT.add(&fn, &code);
+  JITCompiledFunctionPtr fn;
+  asmjit::Error err = jr.add(&fn, &code);
   if (err) {
     llvh::errs() << "AsmJit failed: " << asmjit::DebugUtils::errorAsString(err)
                  << "\n";
@@ -146,7 +159,10 @@ void Emitter::newBasicBlock(const asmjit::Label &label) {
   a.bind(label);
 }
 
-void Emitter::frameSetup(unsigned gpSaveCount, unsigned vecSaveCount) {
+void Emitter::frameSetup(
+    unsigned numFrameRegs,
+    unsigned gpSaveCount,
+    unsigned vecSaveCount) {
   assert(
       gpSaveCount <= kGPSaved.second - kGPSaved.first + 1 &&
       "Too many callee saved GP regs");
@@ -208,7 +224,7 @@ void Emitter::frameSetup(unsigned gpSaveCount, unsigned vecSaveCount) {
   comment("// _sh_enter");
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
-  a.mov(a64::w2, 13);
+  a.mov(a64::w2, numFrameRegs);
   EMIT_RUNTIME_CALL(*this, _sh_enter);
   comment("// xFrame");
   a.mov(xFrame, a64::x0);
@@ -264,7 +280,7 @@ void Emitter::call(void *fn, const char *name) {
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
   // FIXME: check range of frameReg * 8
-  if (frameReg == FR(9))
+  if (frameReg == FR(0))
     a.mov(dst, xFrame);
   else
     a.add(dst, xFrame, frameReg.index() * sizeof(SHLegacyValue));
@@ -313,11 +329,11 @@ HWReg Emitter::_allocTemp(TempRegAlloc &ra) {
   if (auto optReg = ra.alloc(); optReg)
     return HWReg(*optReg, TAG{});
   // Spill one register.
-  unsigned index = gpTemp_.leastRecentlyUsed();
+  unsigned index = ra.leastRecentlyUsed();
   spillTempReg(HWReg(index, TAG{}));
   ra.free(index);
   // Allocate again. This must succeed.
-  return HWReg(*gpTemp_.alloc(), TAG{});
+  return HWReg(*ra.alloc(), TAG{});
 }
 
 void Emitter::freeReg(HWReg hwReg) {
@@ -1061,7 +1077,7 @@ void Emitter::jCond(
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
   }
-  // Do this always, since this is the end of the BB.
+  // Do this always, since this could be the end of the BB.
   syncAllTempExcept(FR());
 
   if (leftIsNum) {
@@ -1096,11 +1112,11 @@ void Emitter::jCond(
   if (contLab.isValid())
     a.bind(contLab);
 
-  // Do this always, since this is the end of the BB.
-  freeAllTempExcept(FR());
-
   if (!slow)
     return;
+
+  // Do this always, since this is the end of the BB.
+  freeAllTempExcept(FR());
 
   slowPaths_.push_back(
       {.slowPathLab = slowPathLab,
@@ -1124,160 +1140,13 @@ void Emitter::jCond(
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
          em.call(sl.slowCall, sl.slowCallName);
-         if (!sl.invert) {
+         if (!sl.invert)
+           em.a.cbnz(a64::w0, sl.target);
+         else
            em.a.cbz(a64::w0, sl.target);
-           em.a.b(sl.contLab);
-         } else {
-           em.a.cbz(a64::w0, sl.contLab);
-           em.a.b(sl.target);
-         }
+         em.a.b(sl.contLab);
        }});
 }
 
-JitFn compile_loop(void) {
-  Emitter em(s_jitRT, 13, 0, 0);
-  a64::Assembler &a = em.a;
-
-  //     LoadParam         r5, 2
-  em.loadParam(FR(5), 2);
-  //     LoadParam         r9, 1
-  em.loadParam(FR(9), 1);
-  //     Dec               r11, r9
-  em.dec(FR(11), FR(9));
-  //     LoadConstZero     r10
-  em.loadConstUInt8(FR(10), 0);
-  //     LoadConstUInt8    r2, 1
-  em.loadConstUInt8(FR(2), 1);
-  //     LoadConstZero     r7
-  em.loadConstUInt8(FR(7), 0);
-  //     LoadConstZero     r9
-  em.loadConstUInt8(FR(9), 0);
-  //     JNotGreaterEqual  L1, r11, r9
-  auto L1 = a.newLabel();
-  em.jGreaterEqual(true, L1, FR(11), FR(9));
-  // L4:
-  auto L4 = a.newLabel();
-  em.newBasicBlock(L4);
-  //     Dec               r3, r5
-  em.dec(FR(3), FR(5));
-  //     Mov               r8, r7
-  em.mov(FR(8), FR(7));
-  //     Mov               r6, r11
-  em.mov(FR(6), FR(11));
-  //     Mov               r0, r5
-  em.mov(FR(0), FR(5));
-  //     Mov               r1, r0
-  em.mov(FR(1), FR(0));
-  //     JNotGreater       L2, r3, r2
-  auto L2 = a.newLabel();
-  em.jGreater(true, L2, FR(3), FR(2));
-  // L3:
-  auto L3 = a.newLabel();
-  em.newBasicBlock(L3);
-  //     Mul               r0, r0, r3
-  em.mul(FR(0), FR(0), FR(3));
-  //     Dec               r3, r3
-  em.dec(FR(3), FR(3));
-  //     Mov               r1, r0
-  em.mov(FR(1), FR(0));
-  //     JGreater          L3, r3, r2
-  em.jGreater(false, L3, FR(3), FR(2));
-  // L2:
-  em.newBasicBlock(L2);
-  //     Add               r7, r8, r1
-  em.add(FR(7), FR(8), FR(1));
-  //     Dec               r11, r6
-  em.dec(FR(11), FR(6));
-  //     Mov               r9, r7
-  em.mov(FR(9), FR(7));
-  //     JGreaterEqual     L4, r11, r10
-  em.jGreaterEqual(false, L4, FR(11), FR(10));
-  // L1:
-  em.newBasicBlock(L1);
-  //     Ret               r9
-  em.ret(FR(9));
-
-  em.leave();
-
-  return em.addToRuntime();
-}
-
-JitFn compile_loop1n(bool useRA = false) {
-  Emitter em(s_jitRT, 13, useRA ? 12 : 0, 0);
-  a64::Assembler &a = em.a;
-
-  //     LoadParam         r5, 2
-  em.loadParam(FR(12), 2);
-  em.toNumber(FR(5), FR(12));
-  //     LoadParam         r9, 1
-  em.loadParam(FR(12), 1);
-  em.toNumber(FR(9), FR(12));
-  //     LoadConstUInt8    r4, 1
-  em.loadConstUInt8(FR(4), 1);
-  //     SubN              r11, r9, r4
-  em.subN(FR(11), FR(9), FR(4));
-  //     LoadConstZero     r10
-  em.loadConstUInt8(FR(10), 0);
-  //     LoadConstUInt8    r2, 1
-  em.loadConstUInt8(FR(2), 1);
-  //     LoadConstZero     r7
-  em.loadConstUInt8(FR(7), 0);
-  //     LoadConstZero     r9
-  em.loadConstUInt8(FR(9), 0);
-  //     JNotGreaterEqual  L1, r11, r9
-  auto L1 = a.newLabel();
-  em.jGreaterEqualN(true, L1, FR(11), FR(9));
-  // L4:
-  auto L4 = a.newLabel();
-  em.newBasicBlock(L4);
-  //     SubN              r3, r5, r4
-  em.subN(FR(3), FR(5), FR(4));
-  //     Mov               r8, r7
-  em.mov(FR(8), FR(7));
-  //     Mov               r6, r11
-  em.mov(FR(6), FR(11));
-  //     Mov               r0, r5
-  em.mov(FR(0), FR(5));
-  //     Mov               r1, r0
-  em.mov(FR(1), FR(0));
-  //     JNotGreater       L2, r3, r2
-  auto L2 = a.newLabel();
-  em.jGreaterN(true, L2, FR(3), FR(2));
-  // L3:
-  auto L3 = a.newLabel();
-  em.newBasicBlock(L3);
-  //     Mul               r0, r0, r3
-  em.mulN(FR(0), FR(0), FR(3));
-  //     SubN               r3, r3, r4
-  em.subN(FR(3), FR(3), FR(4));
-  //     Mov               r1, r0
-  em.mov(FR(1), FR(0));
-  //     JGreater          L3, r3, r2
-  em.jGreaterN(false, L3, FR(3), FR(2));
-  // L2:
-  em.newBasicBlock(L2);
-  //     Add               r7, r8, r1
-  em.addN(FR(7), FR(8), FR(1));
-  //     SubN              r11, r6, r4
-  em.subN(FR(11), FR(6), FR(4));
-  //     Mov               r9, r7
-  em.mov(FR(9), FR(7));
-  //     JGreaterEqual     L4, r11, r10
-  em.jGreaterEqualN(false, L4, FR(11), FR(10));
-  // L1:
-  em.newBasicBlock(L1);
-  //     Ret               r9
-  em.ret(FR(9));
-
-  em.leave();
-
-  return em.addToRuntime();
-}
-
-} // namespace hermes::jit
-
-JitFn compile_loop1(void) {
-  // return hermes::jit::compile_loop();
-  // return hermes::jit::compile_loop1n();
-  return hermes::jit::compile_loop1n(true);
-}
+} // namespace hermes::vm::arm64
+#endif // HERMESVM_JIT

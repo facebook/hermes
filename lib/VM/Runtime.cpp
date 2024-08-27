@@ -418,8 +418,11 @@ Runtime::Runtime(
   symbolRegistry_.init(*this);
 
   codeCoverageProfiler_->disable();
+  // FIXME: temporarily disable JIT for internal bytecode
+  jitContext_.setEnabled(false);
   // Execute our internal bytecode.
   auto jsBuiltinsObj = runInternalJavaScript();
+  jitContext_.setEnabled(runtimeConfig.getEnableJIT());
   codeCoverageProfiler_->restore();
 
   // Populate JS builtins returned from internal bytecode to the builtins table.

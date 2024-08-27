@@ -10,6 +10,28 @@
 
 #include "hermes/VM/JIT/Config.h"
 
+#if HERMESVM_JIT
+
+#if defined(__aarch64__) || defined(_M_ARM64)
+#include "hermes/VM/JIT/arm64/JIT.h"
+#elif defined(__x86_64__) || defined(_M_X64)
+#include "hermes/VM/JIT/x86-64/JIT.h"
+#endif
+
+namespace hermes {
+namespace vm {
+
+#if defined(__aarch64__) || defined(_M_ARM64)
+using arm64::JITContext;
+#elif defined(__x86_64__) || defined(_M_X64)
+using x86_64::JITContext;
+#endif
+
+} // namespace vm
+} // namespace hermes
+
+#else
+
 #include "hermes/VM/CodeBlock.h"
 
 namespace hermes {
@@ -60,11 +82,13 @@ class JITContext {
     return false;
   }
 
-  /// Whether to force jitting of all functions right away.
+  /// Set the flag to force jitting of all functions.
   void setForceJIT(bool force) {}
 };
 
 } // namespace vm
 } // namespace hermes
+
+#endif // HERMESVM_JIT
 
 #endif // HERMES_VM_JIT_JIT_H
