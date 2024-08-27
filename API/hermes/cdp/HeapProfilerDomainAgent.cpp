@@ -64,14 +64,20 @@ HeapProfilerDomainAgent::~HeapProfilerDomainAgent() {
 void HeapProfilerDomainAgent::takeHeapSnapshot(
     const m::heapProfiler::TakeHeapSnapshotRequest &req) {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  sendSnapshot(req.id, req.reportProgress && *req.reportProgress);
+  sendSnapshot(
+      req.id,
+      req.reportProgress && *req.reportProgress,
+      req.captureNumericValue && *req.captureNumericValue);
 #else
   sendResponseToClient(m::makeErrorResponse(
       req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
-void HeapProfilerDomainAgent::sendSnapshot(int reqId, bool reportProgress) {
+void HeapProfilerDomainAgent::sendSnapshot(
+    int reqId,
+    bool reportProgress,
+    bool captureNumericValue) {
   if (reportProgress) {
     // A progress notification with finished = true indicates the
     // snapshot has been captured and is ready to be sent.  Our
@@ -100,7 +106,8 @@ void HeapProfilerDomainAgent::sendSnapshot(int reqId, bool reportProgress) {
           return true;
         });
 
-    runtime_.instrumentation().createSnapshotToStream(cos);
+    runtime_.instrumentation().createSnapshotToStream(
+        cos, {captureNumericValue});
   }
   sendResponseToClient(m::makeOkResponse(reqId));
 }
@@ -238,7 +245,10 @@ void HeapProfilerDomainAgent::stopTrackingHeapObjects(
 
   runtime_.instrumentation().stopTrackingHeapObjectStackTraces();
   trackingHeapObjectStackTraces_ = false;
-  sendSnapshot(req.id, req.reportProgress && *req.reportProgress);
+  sendSnapshot(
+      req.id,
+      req.reportProgress && *req.reportProgress,
+      req.captureNumericValue && *req.captureNumericValue);
 #else
   sendResponseToClient(m::makeErrorResponse(
       req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
