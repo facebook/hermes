@@ -1,3 +1,11 @@
+## 0.23.1
+
+### `hermes-transform`
+* Fixed an issue that caused an error when trying to print a `Program` with an empty `body` array and a docblock comment.
+
+### `flow-api-translator`
+* Added support for `as` expressions in parent classes like `class A extends (Foo as Bar)`.
+
 ## 0.23.0
 
 ### `hermes-estree`
