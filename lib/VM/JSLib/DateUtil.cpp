@@ -343,10 +343,6 @@ static int32_t equivalentYearAsEpochDays(
   return epochDaysForYear2006To2033[eqYear - 2006];
 }
 
-static const int32_t SECS_PER_DAY = 24 * 60 * 60;
-// Numbers are from 15.9.1.1 Time Values and Time Range
-static const int64_t TIME_RANGE_SECS = SECS_PER_DAY * 100000000LL;
-
 /// Returns an equivalent time for the purpose of determining DST using the
 /// rules in ES5.1 15.9.1.8 Daylight Saving Time Adjustment
 ///
@@ -363,12 +359,12 @@ int32_t detail::equivalentTime(int64_t epochSecs) {
   // function in https://github.com/v8/v8/blob/master/src/date.h
   assert(epochSecs >= -TIME_RANGE_SECS && epochSecs <= TIME_RANGE_SECS);
   int64_t epochDays, secsOfDay;
-  floorDivMod(epochSecs, SECS_PER_DAY, &epochDays, &secsOfDay);
+  floorDivMod(epochSecs, SECONDS_PER_DAY, &epochDays, &secsOfDay);
   int32_t year, yearAsEpochDays, dayOfYear;
   // Narrowing of epochDays will not result in truncation
   decomposeEpochDays(epochDays, &year, &yearAsEpochDays, &dayOfYear);
   int32_t eqYearAsEpochDays = equivalentYearAsEpochDays(year, yearAsEpochDays);
-  return (eqYearAsEpochDays + dayOfYear) * SECS_PER_DAY + secsOfDay;
+  return (eqYearAsEpochDays + dayOfYear) * SECONDS_PER_DAY + secsOfDay;
 }
 
 double daylightSavingTA(double t) {

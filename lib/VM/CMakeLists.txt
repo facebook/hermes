@@ -115,6 +115,7 @@ set(source_files
   JSLib/RegExp.cpp
   JSLib/RegExpStringIterator.cpp
   JSLib/DateUtil.cpp
+  JSLib/DateCache.cpp
   JSLib/Sorting.cpp
   JSLib/Symbol.cpp
   JSLib/Date.cpp JSLib/DateUtil.cpp
