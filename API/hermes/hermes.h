@@ -27,6 +27,7 @@ struct SHRuntime;
 namespace hermes {
 namespace vm {
 class GCExecTrace;
+class Runtime;
 } // namespace vm
 } // namespace hermes
 
@@ -223,6 +224,12 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
 
   /// Retrieve the underlying SHRuntime.
   SHRuntime *getSHRuntime() noexcept;
+
+  /// Returns the underlying low level Hermes VM runtime instance.
+  /// This function is considered unsafe and unstable.
+  /// Direct use of a vm::Runtime should be avoided as the lower level APIs are
+  /// unsafe and they can change without notice.
+  ::hermes::vm::Runtime *getVMRuntimeUnsafe() const;
 
  private:
   // Only HermesRuntimeImpl can subclass this.
