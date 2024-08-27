@@ -7,10 +7,9 @@
 
 #pragma once
 
-#include "FixedLRU.h"
-
 #include "asmjit/a64.h"
 
+#include "hermes/ADT/SimpleLRU.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/static_h.h"
 
@@ -208,7 +207,7 @@ static constexpr uint32_t bitMask32(std::pair<T, T> range) {
 
 class TempRegAlloc {
   unsigned first_;
-  FixedLRU<unsigned> lru_{};
+  SimpleLRU<unsigned> lru_{};
   std::vector<unsigned *> map_{};
   uint32_t availBits_;
 

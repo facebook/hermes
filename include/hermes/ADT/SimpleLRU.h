@@ -10,10 +10,12 @@
 #include <cassert>
 #include <vector>
 
-using T = int;
+namespace hermes {
 
+/// A simple LRU container.
 template <typename T>
-class FixedLRU {
+class SimpleLRU {
+  /// Debugging marker.
   static constexpr uint32_t kMark = 0x764ABF12;
 
   struct Item {
@@ -32,18 +34,18 @@ class FixedLRU {
   Item head_;
 
  public:
-  explicit FixedLRU() {
+  explicit SimpleLRU() {
     head_.prev = head_.next = &head_;
   }
-  explicit FixedLRU(size_t capacity) : FixedLRU() {
+  explicit SimpleLRU(size_t capacity) : SimpleLRU() {
     nodes_.reserve(capacity);
     freed_.reserve(capacity);
   }
 
-  explicit FixedLRU(const FixedLRU &) = delete;
-  explicit FixedLRU(FixedLRU &&) = delete;
-  void operator=(const FixedLRU &) = delete;
-  void operator=(FixedLRU &&) = delete;
+  explicit SimpleLRU(const SimpleLRU &) = delete;
+  explicit SimpleLRU(SimpleLRU &&) = delete;
+  void operator=(const SimpleLRU &) = delete;
+  void operator=(SimpleLRU &&) = delete;
 
   bool empty() const {
     return head_.next == &head_;
@@ -109,3 +111,5 @@ class FixedLRU {
 #endif
   }
 };
+
+} // namespace hermes
