@@ -1,6 +1,6 @@
 {
   "name": "hermes-eslint",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "description": "A custom parser for ESLint using the Hermes parser",
   "main": "dist/index.js",
   "license": "MIT",
@@ -16,7 +16,7 @@
   ],
   "dependencies": {
     "esrecurse": "^4.3.0",
-    "hermes-estree": "0.22.0",
-    "hermes-parser": "0.22.0"
+    "hermes-estree": "0.23.0",
+    "hermes-parser": "0.23.0"
   }
 }
