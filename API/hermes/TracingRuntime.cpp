@@ -58,7 +58,29 @@ void TracingRuntime::replaceNondeterministicFuncs() {
           const jsi::Value *args,
           size_t count) {
         auto fun = args[0].getObject(*runtime_).getFunction(*runtime_);
-        return fun.call(*runtime_);
+        jsi::Value result;
+        if (count > 1 && args[1].isObject()) {
+          result = fun.callWithThis(*runtime_, args[1].asObject(*runtime_));
+        } else {
+          result = fun.call(*runtime_);
+        }
+
+        if (result.isString()) {
+          // Recreate the result string via the TracingRuntime, so the string
+          // appears in the resulting trace.
+          const std::string resultStr =
+              result.getString(*runtime_).utf8(*runtime_);
+          jsi::String tracedResult = jsi::String::createFromUtf8(rt, resultStr);
+          return jsi::Value(std::move(tracedResult));
+        } else {
+          // Other values must be primitives that will be included directly in
+          // the trace.
+          assert(
+              (result.isUndefined() || result.isNull() || result.isNumber() ||
+               result.isBool()) &&
+              "Result is a pointer");
+          return result;
+        }
       });
 
   // Below two host functions are for WeakRef hook.
@@ -179,6 +201,25 @@ void TracingRuntime::replaceNondeterministicFuncs() {
   }
   Date.now = nativeDateNow;
   globalThis.Date = Date;
+
+  const defineProperty = Object.defineProperty;
+  const realStackPropertyGetter = Object.getOwnPropertyDescriptor(Error.prototype, 'stack').get;
+  defineProperty(Error.prototype, 'stack', {
+    get: function() {
+      var stack = callUntraced(realStackPropertyGetter, this);
+      // The real getter stores the stack on the error object, meaning that
+      // the real getter (and this wrapper) will not be invoked again if the
+      // stack is accessed again during recording. Mimic that behavior here,
+      // so the getter is also not invoked again during replay.
+      defineProperty(this, 'stack', {
+        value: stack,
+        writable: true,
+        configurable: true
+      });
+      return stack;
+    },
+    configurable: true
+  });
 });
 )";
   global()
