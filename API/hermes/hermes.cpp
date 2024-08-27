@@ -2030,9 +2030,7 @@ void HermesRuntimeImpl::setPropertyValue(
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {
   auto res = llvh::isArray(runtime_, llvh::dyn_vmcast<vm::JSObject>(phv(obj)));
-  if (LLVM_UNLIKELY(res == llvh::ExecutionStatus::EXCEPTION)) {
-    return false;
-  }
+  const_cast<HermesRuntimeImpl *>(this)->checkStatus(res.getStatus());
   return *res;
 }
 
