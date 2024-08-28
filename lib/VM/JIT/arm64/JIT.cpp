@@ -217,6 +217,11 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(Ret);
           break;
 
+        case inst::OpCode::GetGlobalObject:
+          em.getGlobalObject(FR(ip->iGetGlobalObject.op1));
+          ip = NEXTINST(GetGlobalObject);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

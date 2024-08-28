@@ -9,6 +9,7 @@
 #if HERMESVM_JIT
 #include "JitEmitter.h"
 
+#include "../RuntimeOffsets.h"
 #include "hermes/Support/ErrorHandling.h"
 
 namespace hermes::vm::arm64 {
@@ -332,6 +333,13 @@ void Emitter::movHWFromFR(HWReg hwRes, FR src) {
     movHWReg<true>(hwRes, frState.globalReg);
   else
     loadFrame(a64::GpX(useReg(hwRes).indexInClass()), src);
+}
+
+void Emitter::movHWFromMem(HWReg hwRes, a64::Mem src) {
+  if (hwRes.isVecD())
+    a.ldr(hwRes.a64VecD(), src);
+  else
+    a.ldr(hwRes.a64GpX(), src);
 }
 
 template <class TAG>
@@ -778,6 +786,13 @@ void Emitter::toNumber(FR frRes, FR frInput) {
          em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});
+}
+
+void Emitter::getGlobalObject(FR frRes) {
+  comment("// GetGlobalObject r%u", frRes.index());
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWFromMem(hwRes, a64::Mem(xRuntime, RuntimeOffsets::globalObject));
+  frUpdatedWithHWReg(frRes, hwRes);
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {

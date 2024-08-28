@@ -445,6 +445,8 @@ class Emitter {
 
   asmjit::Label newPrefLabel(const char *pref, size_t index);
 
+  void getGlobalObject(FR frRes);
+
  private:
   /// Create an a64::Mem to a specifc frame register.
   static constexpr inline a64::Mem frA64Mem(FR fr) {
@@ -484,6 +486,7 @@ class Emitter {
   void movHWReg(HWReg dst, HWReg src);
   void storeHWRegToFrame(FR fr, HWReg src);
   void movHWFromFR(HWReg hwRes, FR src);
+  void movHWFromMem(HWReg hwRes, a64::Mem src);
 
   template <class TAG>
   HWReg _allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred);
