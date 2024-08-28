@@ -490,6 +490,8 @@ class Emitter {
       "tryPutByIdStrict",
       _sh_ljs_try_put_by_id_strict_rjs);
 
+  void isIn(FR frRes, FR frLeft, FR frRight);
+
   asmjit::Label newPrefLabel(const char *pref, size_t index);
 
   void getGlobalObject(FR frRes);

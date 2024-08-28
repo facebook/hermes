@@ -944,6 +944,25 @@ asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
   return a.newNamedLabel(buf);
 }
 
+void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
+  comment(
+      "// isIn r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
+
+  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncToMem(frLeft);
+  syncToMem(frRight);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frLeft);
+  loadFrameAddr(a64::x2, frRight);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_is_in_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 int32_t Emitter::reserveData(
     int32_t dsize,
     size_t align,

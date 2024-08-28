@@ -385,6 +385,11 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(GetGlobalObject);
           break;
 
+        case inst::OpCode::IsIn:
+          em.isIn(FR(ip->iIsIn.op1), FR(ip->iIsIn.op2), FR(ip->iIsIn.op3));
+          ip = NEXTINST(IsIn);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "
