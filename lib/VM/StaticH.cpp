@@ -310,6 +310,39 @@ extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
   return res->getHermesValue();
 }
 
+extern "C" SHLegacyValue
+_sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint8_t key) {
+  Handle<> sourceHandle{toPHV(source)};
+  Runtime &runtime = getRuntime(shr);
+  if (LLVM_LIKELY(sourceHandle->isObject())) {
+    Handle<JSObject> objHandle = Handle<JSObject>::vmcast(sourceHandle);
+    if (LLVM_LIKELY(objHandle->hasFastIndexProperties())) {
+      auto ourValue = createPseudoHandle(JSObject::getOwnIndexed(
+          createPseudoHandle(*objHandle), runtime, key));
+      if (LLVM_LIKELY(!ourValue->isEmpty())) {
+        return ourValue.getHermesValue();
+      }
+    }
+  }
+
+  // Otherwise...
+  // This is the "slow path".
+  auto res = [&]() {
+    struct : public Locals {
+      PinnedValue<> key;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+
+    lv.key = HermesValue::encodeTrustedNumberValue(key);
+    return Interpreter::getByValTransient_RJS(runtime, sourceHandle, lv.key);
+  }();
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
 extern "C" SHLegacyValue _sh_catch(
     SHRuntime *shr,
     SHLocals *locals,

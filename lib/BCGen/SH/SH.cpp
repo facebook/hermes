@@ -1298,6 +1298,15 @@ class InstrGen {
       genStringConstIC(LS) << ");\n";
       return;
     }
+    // If the prop is a uint8_t constant, generate the special bytecode.
+    if (auto *litNum = llvh::dyn_cast<LiteralNumber>(inst.getProperty());
+        litNum && litNum->isUInt8Representible()) {
+      os_ << "_sh_ljs_get_by_index_rjs(shr,&";
+      generateRegister(*inst.getObject());
+      os_ << ", ";
+      os_ << litNum->asUInt8() << ");\n";
+      return;
+    }
     os_ << "_sh_ljs_get_by_val_rjs(shr,&";
     generateRegister(*inst.getObject());
     os_ << ", &";
