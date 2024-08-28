@@ -10,6 +10,8 @@
 #include "JitEmitter.h"
 
 #include "../RuntimeOffsets.h"
+#include "hermes/BCGen/HBC/StackFrameLayout.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
 
 namespace hermes::vm::arm64 {
@@ -1129,6 +1131,198 @@ void Emitter::emitROData() {
       ofs += desc.size;
     }
   }
+}
+
+void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
+  comment("// Call r%u, r%u, %u", frRes.index(), frCallee.index(), argc);
+  uint32_t nRegs = frameRegs_.size();
+  syncAllTempExcept(FR());
+
+  FR calleeFrameArg{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
+
+  // Store the callee to the right location in the frame, if it isn't already
+  // there.
+  if (frCallee != calleeFrameArg) {
+    // Free any temp register before we mov into it so movFRFromHW stores
+    // directly to the frame.
+    freeFRTemp(calleeFrameArg);
+    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
+    movFRFromHW(
+        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
+  }
+
+  // Store undefined as the new target.
+  FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
+  loadConstBits64(
+      ntFrameArg, _sh_ljs_undefined().raw, FRType::Unknown, "undefined");
+
+  // Ensure that all the outgoing values are stored into the frame registers for
+  // the call.
+  syncToMem(calleeFrameArg);
+  syncToMem(ntFrameArg);
+
+  for (uint32_t i = 0; i < argc; ++i)
+    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  a.mov(a64::w2, argc - 1);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_call);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
+  comment(
+      "// Call%zu r%u, r%u, ...args",
+      args.size(),
+      frRes.index(),
+      frCallee.index());
+  uint32_t nRegs = frameRegs_.size();
+
+  FR calleeFrameArg{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
+  // Store the callee to the right location in the frame.
+  if (frCallee != calleeFrameArg) {
+    // Free any temp register before we mov into it so movFRFromHW stores
+    // directly to the frame.
+    freeFRTemp(calleeFrameArg);
+    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
+    movFRFromHW(
+        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
+  }
+  syncToMem(calleeFrameArg);
+
+  for (uint32_t i = 0; i < args.size(); ++i) {
+    auto argLoc = FR{nRegs + hbc::StackFrameLayout::ThisArg - i};
+
+    if (args[i] != argLoc) {
+      // Free any temp register before we mov into it so movFRFromHW stores
+      // directly to the frame.
+      freeFRTemp(argLoc);
+      auto argReg = getOrAllocFRInAnyReg(args[i], true);
+      movFRFromHW(argLoc, argReg, frameRegs_[args[i].index()].localType);
+    }
+    syncToMem(argLoc);
+  }
+
+  // Get a register for the new target.
+  FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
+  loadConstBits64(
+      ntFrameArg, _sh_ljs_undefined().raw, FRType::Unknown, "undefined");
+  syncToMem(ntFrameArg);
+
+  // For now we sync all registers, since we skip writing to the frame in some
+  // cases above, but in principle, we could track frRes specially.
+  syncAllTempExcept(FR());
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  a.mov(a64::w2, args.size() - 1);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_call);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
+  comment(
+      "// CallBuiltin r%u, %s, %u",
+      frRes.index(),
+      getBuiltinMethodName(builtinIndex),
+      argc);
+  uint32_t nRegs = frameRegs_.size();
+
+  // CallBuiltin internally sets "this", so we don't sync it to memory.
+  for (uint32_t i = 1; i < argc; ++i)
+    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+
+  syncAllTempExcept({});
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  // The bytecode arg count includes "this", but the SH one does not, so
+  // subtract 1.
+  a.mov(a64::w2, argc - 1);
+  a.mov(a64::w3, builtinIndex);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_call_builtin);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::callWithNewTarget(
+    FR frRes,
+    FR frCallee,
+    FR frNewTarget,
+    uint32_t argc) {
+  comment(
+      "// CallWithNewTarget r%u, r%u, r%u, %u",
+      frRes.index(),
+      frCallee.index(),
+      frNewTarget.index(),
+      argc);
+  uint32_t nRegs = frameRegs_.size();
+
+  auto calleeFrameArg = FR{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
+  // Store the callee to the right location in the frame.
+  if (calleeFrameArg != frCallee) {
+    // Free any temp register before we mov into it so movFRFromHW stores
+    // directly to the frame.
+    freeFRTemp(calleeFrameArg);
+    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
+    movFRFromHW(
+        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
+  }
+
+  FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
+  // Store the new target to the right location in the frame.
+  if (ntFrameArg != frNewTarget) {
+    // Free the register before we mov into it so we store directly to the
+    // frame.
+    freeFRTemp(ntFrameArg);
+    auto newTargetReg = getOrAllocFRInAnyReg(frNewTarget, true);
+    movFRFromHW(
+        ntFrameArg, newTargetReg, frameRegs_[frNewTarget.index()].localType);
+  }
+
+  // Sync the set up call stack to the frame memory.
+  for (uint32_t i = 0; i < argc; ++i)
+    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+
+  syncToMem(calleeFrameArg);
+  syncToMem(ntFrameArg);
+
+  syncAllTempExcept({});
+  freeAllTempExcept(frRes);
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  a.mov(a64::w2, argc - 1);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_call);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
+  comment(
+      "// GetBuiltinClosure r%u, %s",
+      frRes.index(),
+      getBuiltinMethodName(builtinIndex));
+  syncAllTempExcept(frRes);
+  freeAllTempExcept(frRes);
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, builtinIndex);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_get_builtin_closure);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
 }
 
 void Emitter::arithUnop(

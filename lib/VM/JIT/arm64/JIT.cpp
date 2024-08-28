@@ -419,6 +419,68 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(IsIn);
           break;
 
+        case inst::OpCode::Call:
+          em.call(
+              FR(ip->iCall.op1),
+              /* callee */ FR(ip->iCall.op2),
+              /* argc */ ip->iCall.op3);
+          ip = NEXTINST(Call);
+          break;
+
+        case inst::OpCode::Call1:
+          em.callN(
+              FR(ip->iCall1.op1),
+              /* callee */ FR(ip->iCall1.op2),
+              /* args */ {FR(ip->iCall1.op3)});
+          ip = NEXTINST(Call1);
+          break;
+
+        case inst::OpCode::Call2:
+          em.callN(
+              FR(ip->iCall2.op1),
+              /* callee */ FR(ip->iCall2.op2),
+              /* args */ {FR(ip->iCall2.op3), FR(ip->iCall2.op4)});
+          ip = NEXTINST(Call2);
+          break;
+
+        case inst::OpCode::Call3:
+          em.callN(
+              FR(ip->iCall3.op1),
+              /* callee */ FR(ip->iCall3.op2),
+              /* args */
+              {FR(ip->iCall3.op3), FR(ip->iCall3.op4), FR(ip->iCall3.op5)});
+          ip = NEXTINST(Call3);
+          break;
+
+        case inst::OpCode::Call4:
+          em.callN(
+              FR(ip->iCall4.op1),
+              /* callee */ FR(ip->iCall4.op2),
+              /* args */
+              {FR(ip->iCall4.op3),
+               FR(ip->iCall4.op4),
+               FR(ip->iCall4.op5),
+               FR(ip->iCall4.op6)});
+          ip = NEXTINST(Call4);
+          break;
+
+        case inst::OpCode::Construct:
+          em.callWithNewTarget(
+              FR(ip->iConstruct.op1),
+              /* callee */ FR(ip->iConstruct.op2),
+              /* newTarget */ FR(ip->iConstruct.op2),
+              /* argc */ ip->iCall.op3);
+          ip = NEXTINST(Construct);
+          break;
+
+        case inst::OpCode::CallBuiltin:
+          em.callBuiltin(
+              FR(ip->iCallBuiltin.op1),
+              /* builtinIndex */ ip->iCallBuiltin.op2,
+              /* argc */ ip->iCallBuiltin.op3);
+          ip = NEXTINST(CallBuiltin);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

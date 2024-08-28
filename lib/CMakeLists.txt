@@ -147,6 +147,7 @@ target_link_libraries(hermesvmlean_a PUBLIC
   dtoa_obj
   hermesapiLean_obj
   hermesADT_obj
+  hermesFrontEndDefs_obj # needed by JIT
   hermesHBCBackendLean_obj
   hermesInst_obj
   hermesInstrumentation_obj

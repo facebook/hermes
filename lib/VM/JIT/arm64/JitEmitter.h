@@ -364,6 +364,16 @@ class Emitter {
   void newBasicBlock(const asmjit::Label &label);
   void call(void *fn, const char *name);
 
+  /// Call a JS function.
+  /// TODO: Distinguish this from the other \c call.
+  void call(FR frRes, FR frCallee, uint32_t argc);
+  void callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args);
+  void callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc);
+  void callWithNewTarget(FR frRes, FR frCallee, FR frNewTarget, uint32_t argc);
+
+  /// Get a builtin closure.
+  void getBuiltinClosure(FR frRes, uint32_t builtinIndex);
+
   /// Save the return value in x22.
   void ret(FR frValue);
   void mov(FR frRes, FR frInput, bool logComment = true);
