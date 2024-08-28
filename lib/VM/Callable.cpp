@@ -37,14 +37,8 @@ namespace {
 
 /// A helper to convert a SH-style function into a CallResult-style function.
 template <typename Res, typename FnPtr, typename ProfileFn>
-#ifndef NDEBUG
-LLVM_ATTRIBUTE_ALWAYS_INLINE
-#endif
-    CallResult<Res>
-    _callWrapper(
-        FnPtr functionPtr,
-        Runtime &runtime,
-        const ProfileFn &profileFn) {
+inline CallResult<Res>
+_callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
   // ScopedNativeDepthTracker depthTracker{runtime};
   // if (LLVM_UNLIKELY(depthTracker.overflowed())) {
   //   return runtime.raiseStackOverflow(
