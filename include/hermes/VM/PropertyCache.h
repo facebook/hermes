@@ -32,6 +32,11 @@ struct PropertyCacheEntry {
 };
 
 static_assert(sizeof(SHPropertyCacheEntry) == sizeof(PropertyCacheEntry));
+static_assert(
+    offsetof(SHPropertyCacheEntry, clazz) ==
+    offsetof(PropertyCacheEntry, clazz));
+static_assert(
+    offsetof(SHPropertyCacheEntry, slot) == offsetof(PropertyCacheEntry, slot));
 
 } // namespace vm
 } // namespace hermes

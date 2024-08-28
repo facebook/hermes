@@ -13,6 +13,7 @@
 
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/VM/JIT/DiscoverBB.h"
+#include "hermes/VM/RuntimeModule.h"
 
 #define DEBUG_TYPE "jit"
 
@@ -40,6 +41,13 @@ JITContext::~JITContext() = default;
 // Add an arbitrary byte offset to ip.
 #define IPADD(val) ((const inst::Inst *)((const uint8_t *)ip + (val)))
 
+/// Map from a string ID encoded in the operand to an SHSymbolID.
+/// This string ID must be used explicitly as identifier.
+#define ID(stringID)                    \
+  (codeBlock->getRuntimeModule()        \
+       ->getSymbolIDMustExist(stringID) \
+       .unsafeGetIndex())
+
 JITCompiledFunctionPtr JITContext::compileImpl(
     Runtime &runtime,
     CodeBlock *codeBlock) {
@@ -62,7 +70,14 @@ JITCompiledFunctionPtr JITContext::compileImpl(
     llvh::outs() << "\n" << funcName << ":\n";
 
   // TODO: is getFrameSize() the right thing to call?
-  Emitter em(impl_->jr, getDumpJITCode(), codeBlock->getFrameSize(), 0, 0);
+  Emitter em(
+      impl_->jr,
+      getDumpJITCode(),
+      codeBlock->propertyCache(),
+      codeBlock->writePropertyCache(),
+      codeBlock->getFrameSize(),
+      0,
+      0);
   std::vector<asmjit::Label> labels{};
   labels.reserve(basicBlocks.size() - 1);
   for (unsigned bbIndex = 0; bbIndex < basicBlocks.size() - 1; ++bbIndex)
@@ -75,6 +90,10 @@ JITCompiledFunctionPtr JITContext::compileImpl(
     em.newBasicBlock(labels[bbIndex]);
     auto *ip = reinterpret_cast<const inst::Inst *>(funcStart + startOfs);
     auto *to = reinterpret_cast<const inst::Inst *>(funcStart + endOfs);
+
+    SHSymbolID idVal;
+    uint8_t cacheIdx;
+    const inst::Inst *nextIP;
 
     while (ip != to) {
       switch (ip->opCode) {
@@ -212,6 +231,127 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(JNotGreater);
           break;
 
+        case inst::OpCode::TryGetByIdLong:
+          idVal = ID(ip->iTryGetByIdLong.op4);
+          cacheIdx = ip->iTryGetByIdLong.op3;
+          nextIP = NEXTINST(TryGetByIdLong);
+          goto tryGetById;
+        case inst::OpCode::TryGetById:
+          idVal = ID(ip->iTryGetById.op4);
+          cacheIdx = ip->iTryGetById.op3;
+          nextIP = NEXTINST(TryGetById);
+          goto tryGetById;
+        tryGetById: {
+          em.tryGetById(
+              FR(ip->iTryGetById.op1),
+              idVal,
+              FR(ip->iTryGetById.op2),
+              cacheIdx);
+          ip = nextIP;
+          break;
+        }
+
+        case inst::OpCode::GetByIdLong:
+          idVal = ID(ip->iGetByIdLong.op4);
+          cacheIdx = ip->iGetByIdLong.op3;
+          nextIP = NEXTINST(GetByIdLong);
+          goto getById;
+        case inst::OpCode::GetById:
+          idVal = ID(ip->iGetById.op4);
+          cacheIdx = ip->iGetById.op3;
+          nextIP = NEXTINST(GetById);
+          goto getById;
+        case inst::OpCode::GetByIdShort:
+          idVal = ID(ip->iGetByIdShort.op4);
+          cacheIdx = ip->iGetByIdShort.op3;
+          nextIP = NEXTINST(GetByIdShort);
+          goto getById;
+        getById: {
+          em.getById(
+              FR(ip->iGetById.op1), idVal, FR(ip->iGetById.op2), cacheIdx);
+          ip = nextIP;
+          break;
+        }
+
+        case inst::OpCode::TryPutByIdLooseLong:
+          idVal = ID(ip->iTryPutByIdLooseLong.op4);
+          cacheIdx = ip->iTryPutByIdLooseLong.op3;
+          nextIP = NEXTINST(TryPutByIdLooseLong);
+          goto tryPutByIdLoose;
+        case inst::OpCode::TryPutByIdLoose:
+          idVal = ID(ip->iTryPutByIdLoose.op4);
+          cacheIdx = ip->iTryPutByIdLoose.op3;
+          nextIP = NEXTINST(TryPutByIdLoose);
+          goto tryPutByIdLoose;
+        tryPutByIdLoose: {
+          em.tryPutByIdLoose(
+              FR(ip->iTryPutByIdLoose.op1),
+              idVal,
+              FR(ip->iTryPutByIdLoose.op2),
+              cacheIdx);
+          ip = nextIP;
+          break;
+        }
+
+        case inst::OpCode::TryPutByIdStrictLong:
+          idVal = ID(ip->iTryPutByIdStrictLong.op4);
+          cacheIdx = ip->iTryPutByIdStrictLong.op3;
+          nextIP = NEXTINST(TryPutByIdStrictLong);
+          goto tryPutByIdStrict;
+        case inst::OpCode::TryPutByIdStrict:
+          idVal = ID(ip->iTryPutByIdStrict.op4);
+          cacheIdx = ip->iTryPutByIdStrict.op3;
+          nextIP = NEXTINST(TryPutByIdStrict);
+          goto tryPutByIdStrict;
+        tryPutByIdStrict: {
+          em.tryPutByIdStrict(
+              FR(ip->iTryPutByIdStrict.op1),
+              idVal,
+              FR(ip->iTryPutByIdStrict.op2),
+              cacheIdx);
+          ip = nextIP;
+          break;
+        }
+
+        case inst::OpCode::PutByIdLooseLong:
+          idVal = ID(ip->iPutByIdLooseLong.op4);
+          cacheIdx = ip->iPutByIdLooseLong.op3;
+          nextIP = NEXTINST(PutByIdLooseLong);
+          goto putByIdLoose;
+        case inst::OpCode::PutByIdLoose:
+          idVal = ID(ip->iPutByIdLoose.op4);
+          cacheIdx = ip->iPutByIdLoose.op3;
+          nextIP = NEXTINST(PutByIdLoose);
+          goto putByIdLoose;
+        putByIdLoose: {
+          em.putByIdLoose(
+              FR(ip->iPutByIdLoose.op1),
+              idVal,
+              FR(ip->iPutByIdLoose.op2),
+              cacheIdx);
+          ip = nextIP;
+          break;
+        }
+
+        case inst::OpCode::PutByIdStrictLong:
+          idVal = ID(ip->iPutByIdStrictLong.op4);
+          cacheIdx = ip->iPutByIdStrictLong.op3;
+          nextIP = NEXTINST(PutByIdStrictLong);
+          goto putByIdStrict;
+        case inst::OpCode::PutByIdStrict:
+          idVal = ID(ip->iPutByIdStrict.op4);
+          cacheIdx = ip->iPutByIdStrict.op3;
+          nextIP = NEXTINST(PutByIdStrict);
+          goto putByIdStrict;
+        putByIdStrict: {
+          em.putByIdStrict(
+              FR(ip->iPutByIdStrict.op1),
+              idVal,
+              FR(ip->iPutByIdStrict.op2),
+              cacheIdx);
+          ip = nextIP;
+          break;
+        }
         case inst::OpCode::Ret:
           em.ret(FR(ip->iRet.op1));
           ip = NEXTINST(Ret);

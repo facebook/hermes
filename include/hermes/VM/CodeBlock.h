@@ -74,15 +74,6 @@ class CodeBlock final
   /// cache.
   const uint32_t writePropCacheOffset_;
 
-  /// \return the base pointer of the property cache.
-  PropertyCacheEntry *propertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>();
-  }
-
-  PropertyCacheEntry *writePropertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>() + writePropCacheOffset_;
-  }
-
   CodeBlock(
       RuntimeModule *runtimeModule,
       hbc::RuntimeFunctionHeader header,
@@ -112,6 +103,15 @@ class CodeBlock final
   }
 
   using const_iterator = const uint8_t *;
+
+  /// \return the base pointer of the property cache.
+  PropertyCacheEntry *propertyCache() {
+    return getTrailingObjects<PropertyCacheEntry>();
+  }
+
+  PropertyCacheEntry *writePropertyCache() {
+    return getTrailingObjects<PropertyCacheEntry>() + writePropCacheOffset_;
+  }
 
   uint32_t getParamCount() const {
     return functionHeader_.paramCount();

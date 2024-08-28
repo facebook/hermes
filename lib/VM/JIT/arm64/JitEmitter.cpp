@@ -64,6 +64,8 @@ static bool isCheapConst(uint64_t k) {
 Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
     bool dumpJitCode,
+    PropertyCacheEntry *readPropertyCache,
+    PropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
     unsigned numCount,
     unsigned npCount)
@@ -121,6 +123,12 @@ Emitter::Emitter(
     frameRegs_[frIndex].globalReg = hwReg;
     frameRegs_[frIndex].globalType = FRType::Unknown;
   }
+
+  // Save read/write property cache addresses.
+  roOfsReadPropertyCachePtr_ =
+      uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
+  roOfsWritePropertyCachePtr_ =
+      uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
 
   frameSetup(numFrameRegs, nextGp - kGPSaved.first, nextVec - kVecSaved.first);
 }
@@ -793,6 +801,88 @@ void Emitter::getGlobalObject(FR frRes) {
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWFromMem(hwRes, a64::Mem(xRuntime, RuntimeOffsets::globalObject));
   frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::getByIdImpl(
+    FR frRes,
+    SHSymbolID symID,
+    FR frSource,
+    uint8_t cacheIdx,
+    const char *name,
+    SHLegacyValue (*shImpl)(
+        SHRuntime *shr,
+        const SHLegacyValue *source,
+        SHSymbolID symID,
+        SHPropertyCacheEntry *propCacheEntry),
+    const char *shImplName) {
+  comment(
+      "// %s r%u, r%u, cache %u, symID %u",
+      name,
+      frRes.index(),
+      frSource.index(),
+      cacheIdx,
+      symID);
+
+  syncAllTempExcept(frRes != frSource ? frRes : FR{});
+  syncToMem(frSource);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frSource);
+  a.mov(a64::w2, symID);
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x3, 0);
+  } else {
+    a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x3, a64::x3, sizeof(SHPropertyCacheEntry) * cacheIdx);
+  }
+  call((void *)shImpl, shImplName);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+  freeAllTempExcept(frRes);
+}
+
+void Emitter::putByIdImpl(
+    FR frTarget,
+    SHSymbolID symID,
+    FR frValue,
+    uint8_t cacheIdx,
+    const char *name,
+    void (*shImpl)(
+        SHRuntime *shr,
+        SHLegacyValue *target,
+        SHSymbolID symID,
+        SHLegacyValue *value,
+        SHPropertyCacheEntry *propCacheEntry),
+    const char *shImplName) {
+  comment(
+      "// %s r%u, r%u, cache %u, symID %u",
+      name,
+      frTarget.index(),
+      frValue.index(),
+      cacheIdx,
+      symID);
+
+  syncAllTempExcept({});
+  syncToMem(frTarget);
+  syncToMem(frValue);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  a.mov(a64::w2, symID);
+  loadFrameAddr(a64::x3, frValue);
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x4, 0);
+  } else {
+    a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsWritePropertyCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x4, a64::x4, sizeof(SHPropertyCacheEntry) * cacheIdx);
+  }
+  call((void *)shImpl, shImplName);
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {

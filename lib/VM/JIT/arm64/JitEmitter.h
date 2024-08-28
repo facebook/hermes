@@ -330,6 +330,13 @@ class Emitter {
   /// in x22.
   asmjit::Label returnLabel_{};
 
+  /// Offset in RODATA of the pointer to the start of the read property
+  /// cache.
+  int32_t roOfsReadPropertyCachePtr_;
+  /// Offset in RODATA of the pointer to the start of the read property
+  /// cache.
+  int32_t roOfsWritePropertyCachePtr_;
+
   unsigned gpSaveCount_ = 0;
   unsigned vecSaveCount_ = 0;
 
@@ -340,6 +347,8 @@ class Emitter {
   explicit Emitter(
       asmjit::JitRuntime &jitRT,
       bool dumpJitCode,
+      PropertyCacheEntry *readPropertyCache,
+      PropertyCacheEntry *writePropertyCache,
       uint32_t numFrameRegs,
       uint32_t numCount,
       uint32_t npCount);
@@ -442,6 +451,31 @@ class Emitter {
       _sh_ljs_greater_equal_rjs,
       b_ge)
 #undef DECL_JCOND
+
+#define DECL_GET_BY_ID(methodName, commentStr, shFn)                           \
+  void methodName(FR frRes, SHSymbolID symID, FR frSource, uint8_t cacheIdx) { \
+    getByIdImpl(frRes, symID, frSource, cacheIdx, commentStr, shFn, #shFn);    \
+  }
+
+  DECL_GET_BY_ID(getById, "getById", _sh_ljs_get_by_id_rjs)
+  DECL_GET_BY_ID(tryGetById, "tryGetById", _sh_ljs_try_get_by_id_rjs)
+
+#define DECL_PUT_BY_ID(methodName, commentStr, shFn)                          \
+  void methodName(                                                            \
+      FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx) {          \
+    putByIdImpl(frTarget, symID, frValue, cacheIdx, commentStr, shFn, #shFn); \
+  }
+
+  DECL_PUT_BY_ID(putByIdLoose, "putByIdLoose", _sh_ljs_put_by_id_loose_rjs);
+  DECL_PUT_BY_ID(putByIdStrict, "putByIdStrict", _sh_ljs_put_by_id_strict_rjs);
+  DECL_PUT_BY_ID(
+      tryPutByIdLoose,
+      "tryPutByIdLoose",
+      _sh_ljs_try_put_by_id_loose_rjs);
+  DECL_PUT_BY_ID(
+      tryPutByIdStrict,
+      "tryPutByIdStrict",
+      _sh_ljs_try_put_by_id_strict_rjs);
 
   asmjit::Label newPrefLabel(const char *pref, size_t index);
 
@@ -594,6 +628,33 @@ class Emitter {
       void(fast)(a64::Assembler &a, const asmjit::Label &target),
       void *slowCall,
       const char *slowCallName);
+
+  void getByIdImpl(
+      FR frRes,
+      SHSymbolID symID,
+      FR frSource,
+      uint8_t cacheIdx,
+      const char *name,
+      SHLegacyValue (*shImpl)(
+          SHRuntime *shr,
+          const SHLegacyValue *source,
+          SHSymbolID symID,
+          SHPropertyCacheEntry *propCacheEntry),
+      const char *shImplName);
+
+  void putByIdImpl(
+      FR frTarget,
+      SHSymbolID symID,
+      FR frValue,
+      uint8_t cacheIdx,
+      const char *name,
+      void (*shImpl)(
+          SHRuntime *shr,
+          SHLegacyValue *target,
+          SHSymbolID symID,
+          SHLegacyValue *value,
+          SHPropertyCacheEntry *propCacheEntry),
+      const char *shImplName);
 }; // class Emitter
 
 } // namespace hermes::vm::arm64
