@@ -54,7 +54,11 @@ void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
     Runtime &runtime,
     Handle<JSObject> targetHandle) {
-  if (targetHandle) {
+  MutableHandle<JSObject> mutHnd =
+      runtime.makeMutableHandle<JSObject>(targetHandle.get());
+  targetHandle = mutHnd;
+
+  while (targetHandle) {
     NamedPropertyDescriptor desc;
     bool exists = JSObject::getOwnNamedDescriptor(
         targetHandle,
@@ -68,6 +72,8 @@ CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
     if (vmisa<JSError>(*targetHandle)) {
       return Handle<JSError>::vmcast(targetHandle);
     }
+
+    mutHnd.set(targetHandle->getParent(runtime));
   }
   return runtime.raiseTypeError(
       "Error.stack getter called with an invalid receiver");
