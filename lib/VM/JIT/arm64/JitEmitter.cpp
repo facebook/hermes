@@ -770,7 +770,8 @@ void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
   comment("// LoadConst%s r%u, %f", name, frRes.index(), val);
   HWReg hwRes{};
 
-  if (val == 0) {
+  // Check bitwise for zero because it may be -0.
+  if (llvh::DoubleToBits(val) == llvh::DoubleToBits(0)) {
     // TODO: this check should be wider.
     hwRes = getOrAllocFRInVecD(frRes, false);
     a.movi(hwRes.a64VecD(), 0);
