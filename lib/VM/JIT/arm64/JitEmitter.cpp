@@ -720,8 +720,8 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
-void Emitter::loadConstUInt8(FR frRes, uint8_t val) {
-  comment("// LoadConstUInt8 r%u, %u", frRes.index(), val);
+void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
+  comment("// LoadConst%s r%u, %f", name, frRes.index(), val);
   HWReg hwRes{};
 
   if (val == 0) {
@@ -744,6 +744,25 @@ void Emitter::loadConstUInt8(FR frRes, uint8_t val) {
     }
   }
   frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+}
+void Emitter::loadConstBits64(
+    FR frRes,
+    uint64_t bits,
+    FRType type,
+    const char *name) {
+  comment(
+      "// LoadConst%s r%u, %llu",
+      name,
+      frRes.index(),
+      (unsigned long long)bits);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+
+  if (isCheapConst(bits)) {
+    a.mov(hwRes.a64GpX(), bits);
+  } else {
+    a.ldr(hwRes.a64GpX(), a64::Mem(roDataLabel_, uint64Const(bits, name)));
+  }
+  frUpdatedWithHWReg(frRes, hwRes, type);
 }
 
 void Emitter::toNumber(FR frRes, FR frInput) {

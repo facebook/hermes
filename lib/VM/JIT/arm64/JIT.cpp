@@ -102,14 +102,35 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(LoadParam);
           break;
         case inst::OpCode::LoadConstZero:
-          em.loadConstUInt8(FR(ip->iLoadConstZero.op1), 0);
+          em.loadConstDouble(FR(ip->iLoadConstZero.op1), 0, "Zero");
           ip = NEXTINST(LoadConstZero);
           break;
         case inst::OpCode::LoadConstUInt8:
-          em.loadConstUInt8(
-              FR(ip->iLoadConstUInt8.op1), ip->iLoadConstUInt8.op2);
+          em.loadConstDouble(
+              FR(ip->iLoadConstUInt8.op1), ip->iLoadConstUInt8.op2, "UInt8");
           ip = NEXTINST(LoadConstUInt8);
           break;
+        case inst::OpCode::LoadConstInt:
+          em.loadConstDouble(
+              FR(ip->iLoadConstInt.op1), ip->iLoadConstInt.op2, "Int");
+          ip = NEXTINST(LoadConstInt);
+          break;
+        case inst::OpCode::LoadConstDouble:
+          em.loadConstDouble(
+              FR(ip->iLoadConstDouble.op1), ip->iLoadConstDouble.op2, "Double");
+          ip = NEXTINST(LoadConstDouble);
+          break;
+#define LOAD_CONST(NAME, val, type)                                     \
+  case inst::OpCode::LoadConst##NAME:                                   \
+    em.loadConstBits64(FR(ip->iLoadConst##NAME.op1), val, type, #NAME); \
+    ip = NEXTINST(LoadConst##NAME);                                     \
+    break;
+          LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::Unknown);
+          LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::Unknown);
+          LOAD_CONST(Null, _sh_ljs_null().raw, FRType::Unknown);
+          LOAD_CONST(True, _sh_ljs_bool(true).raw, FRType::Bool);
+          LOAD_CONST(False, _sh_ljs_bool(false).raw, FRType::Bool);
+#undef LOAD_CONST
 
         case inst::OpCode::Mov:
           em.mov(FR(ip->iMov.op1), FR(ip->iMov.op2));
