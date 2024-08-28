@@ -898,6 +898,23 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::getByIndex(FR frRes, FR frSource, uint8_t key) {
+  comment("// getByIdx r%u, r%u, %u", frRes.index(), frSource.index(), key);
+
+  syncAllTempExcept(frRes != frSource ? frRes : FR());
+  syncToMem(frSource);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frSource);
+  a.mov(a64::w2, key);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_get_by_index_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::putByIdImpl(
     FR frTarget,
     SHSymbolID symID,

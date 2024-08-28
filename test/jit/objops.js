@@ -32,6 +32,10 @@ function isIn(a, prop) {
     return prop in a;
 }
 
+function getByIndex(o) {
+    return o[1];
+}
+
 print("foo", foo());
 // CHECK: JIT successfully compiled FunctionID 1, 'foo'
 // CHECK-NEXT: foo 30
@@ -43,3 +47,12 @@ print("isIn", isIn({}, "prop"));
 // CHECK-NEXT: isIn false
 print("isIn", isIn({prop: 1}, "prop"));
 // CHECK-NEXT: isIn true
+print("getByIndex", getByIndex(0));
+// CHECK: JIT successfully compiled FunctionID 4, 'getByIndex'
+// CHECK-NEXT: getByIndex undefined
+print("getByIndex", getByIndex("abc"));
+// CHECK-NEXT: getByIndex b
+print("getByIndex", getByIndex([10, 20, 30]));
+// CHECK-NEXT: getByIndex 20
+print("getByIndex", getByIndex({0:11, 1: 21, 2: 31}));
+// CHECK-NEXT: getByIndex 21

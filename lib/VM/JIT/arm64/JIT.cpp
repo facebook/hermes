@@ -375,6 +375,14 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(PutByValStrict);
           break;
 
+        case inst::OpCode::GetByIndex:
+          em.getByIndex(
+              FR(ip->iGetByIndex.op1),
+              FR(ip->iGetByIndex.op2),
+              ip->iGetByIndex.op3);
+          ip = NEXTINST(GetByIndex);
+          break;
+
         case inst::OpCode::Ret:
           em.ret(FR(ip->iRet.op1));
           ip = NEXTINST(Ret);

@@ -453,6 +453,7 @@ class Emitter {
 #undef DECL_JCOND
 
   void getByVal(FR frRes, FR frSource, FR frKey);
+  void getByIndex(FR frRes, FR frSource, uint8_t key);
 
 #define DECL_PUT_BY_VAL(methodName, commentStr, shFn)                \
   void methodName(FR frTarget, FR frKey, FR frValue) {               \
