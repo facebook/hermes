@@ -220,9 +220,12 @@ void Emitter::frameSetup(
   }
   for (unsigned i = 0; i < vecSaveCount; i += 2, stackOfs += 16) {
     if (i + 1 < vecSaveCount)
-      a.stp(a64::VecD(16 + i), a64::VecD(17 + i), a64::Mem(a64::sp, stackOfs));
+      a.stp(
+          a64::VecD(kVecSaved.first + i),
+          a64::VecD(kVecSaved.first + 1 + i),
+          a64::Mem(a64::sp, stackOfs));
     else
-      a.str(a64::VecD(16 + i), a64::Mem(a64::sp, stackOfs));
+      a.str(a64::VecD(kVecSaved.first + i), a64::Mem(a64::sp, stackOfs));
   }
   a.stp(a64::x29, a64::x30, a64::Mem(a64::sp, stackOfs));
   a.add(a64::x29, a64::sp, stackOfs);
