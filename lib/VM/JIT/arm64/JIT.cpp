@@ -352,6 +352,29 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = nextIP;
           break;
         }
+
+        case inst::OpCode::GetByVal:
+          em.getByVal(
+              FR(ip->iGetByVal.op1),
+              FR(ip->iGetByVal.op2),
+              FR(ip->iGetByVal.op3));
+          ip = NEXTINST(GetByVal);
+          break;
+        case inst::OpCode::PutByValLoose:
+          em.putByValLoose(
+              FR(ip->iPutByValLoose.op1),
+              FR(ip->iPutByValLoose.op2),
+              FR(ip->iPutByValLoose.op3));
+          ip = NEXTINST(PutByValLoose);
+          break;
+        case inst::OpCode::PutByValStrict:
+          em.putByValStrict(
+              FR(ip->iPutByValStrict.op1),
+              FR(ip->iPutByValStrict.op2),
+              FR(ip->iPutByValStrict.op3));
+          ip = NEXTINST(PutByValStrict);
+          break;
+
         case inst::OpCode::Ret:
           em.ret(FR(ip->iRet.op1));
           ip = NEXTINST(Ret);

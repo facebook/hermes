@@ -452,6 +452,19 @@ class Emitter {
       b_ge)
 #undef DECL_JCOND
 
+  void getByVal(FR frRes, FR frSource, FR frKey);
+
+#define DECL_PUT_BY_VAL(methodName, commentStr, shFn)                \
+  void methodName(FR frTarget, FR frKey, FR frValue) {               \
+    putByValImpl(frTarget, frKey, frValue, commentStr, shFn, #shFn); \
+  }
+
+  DECL_PUT_BY_VAL(putByValLoose, "putByValLoose", _sh_ljs_put_by_val_loose_rjs);
+  DECL_PUT_BY_VAL(
+      putByValStrict,
+      "putByValStrict",
+      _sh_ljs_put_by_val_strict_rjs);
+
 #define DECL_GET_BY_ID(methodName, commentStr, shFn)                           \
   void methodName(FR frRes, SHSymbolID symID, FR frSource, uint8_t cacheIdx) { \
     getByIdImpl(frRes, symID, frSource, cacheIdx, commentStr, shFn, #shFn);    \
@@ -628,6 +641,18 @@ class Emitter {
       void(fast)(a64::Assembler &a, const asmjit::Label &target),
       void *slowCall,
       const char *slowCallName);
+
+  void putByValImpl(
+      FR frTarget,
+      FR frKey,
+      FR frValue,
+      const char *name,
+      void (*shImpl)(
+          SHRuntime *shr,
+          SHLegacyValue *target,
+          SHLegacyValue *key,
+          SHLegacyValue *value),
+      const char *shImplName);
 
   void getByIdImpl(
       FR frRes,

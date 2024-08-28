@@ -18,16 +18,19 @@ function foo() {
 }
 
 // PutByIdLoose
+// PutByValLoose
 // GetById
-function bar(o) {
+// GetByVal
+function bar(o, p) {
     o.a = 1;
     o.b = 2;
-    return o.a + o.b;
+    o[p] = 100;
+    return o.a + o.b + o[p];
 }
 
 print("foo", foo());
 // CHECK: JIT successfully compiled FunctionID 1, 'foo'
 // CHECK-NEXT: foo 30
-print("bar", bar({}));
+print("bar", bar({}, "prop"));
 // CHECK: JIT successfully compiled FunctionID 2, 'bar'
-// CHECK-NEXT: bar 3
+// CHECK-NEXT: bar 103

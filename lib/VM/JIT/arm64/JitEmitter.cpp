@@ -803,6 +803,37 @@ void Emitter::getGlobalObject(FR frRes) {
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::putByValImpl(
+    FR frTarget,
+    FR frKey,
+    FR frValue,
+    const char *name,
+    void (*shImpl)(
+        SHRuntime *shr,
+        SHLegacyValue *target,
+        SHLegacyValue *key,
+        SHLegacyValue *value),
+    const char *shImplName) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frTarget.index(),
+      frKey.index(),
+      frValue.index());
+
+  syncAllTempExcept({});
+  syncToMem(frTarget);
+  syncToMem(frKey);
+  syncToMem(frValue);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frValue);
+  call((void *)shImpl, shImplName);
+}
+
 void Emitter::getByIdImpl(
     FR frRes,
     SHSymbolID symID,
@@ -843,6 +874,28 @@ void Emitter::getByIdImpl(
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
   freeAllTempExcept(frRes);
+}
+
+void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
+  comment(
+      "// getByVal r%u, r%u, r%u",
+      frRes.index(),
+      frSource.index(),
+      frKey.index());
+
+  syncAllTempExcept(frRes != frSource && frRes != frKey ? frRes : FR());
+  syncToMem(frSource);
+  syncToMem(frKey);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frSource);
+  loadFrameAddr(a64::x2, frKey);
+  EMIT_RUNTIME_CALL(*this, _sh_ljs_get_by_val_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
 }
 
 void Emitter::putByIdImpl(
