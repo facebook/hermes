@@ -18,9 +18,20 @@ use std::fs::File;
 use std::io::Read;
 
 use anyhow;
-use base64;
+use base64::alphabet::URL_SAFE;
+use base64::engine::general_purpose::GeneralPurpose;
+use base64::engine::general_purpose::GeneralPurposeConfig;
+use base64::engine::general_purpose::PAD;
+use base64::engine::DecodePaddingMode;
+use base64::Engine;
 use thiserror;
 use url::Url;
+
+// Bring back the pre 0.20 bevahiour and allow either padded or un-padded base64 strings at decode time.
+const URL_SAFE_INDIFFERENT: GeneralPurpose = GeneralPurpose::new(
+    &URL_SAFE,
+    PAD.with_decode_padding_mode(DecodePaddingMode::Indifferent),
+);
 
 #[derive(thiserror::Error, Debug)]
 pub enum FetchError {
@@ -125,7 +136,7 @@ fn fetch_data(url: &Url) -> Result<Data, FetchError> {
         return Err(FetchError::InvalidURL("data URL unsupported encoding"));
     }
 
-    let buf = base64::decode_config(data, base64::URL_SAFE).map_err(|e| {
+    let buf: Vec<u8> = URL_SAFE_INDIFFERENT.decode(data).map_err(|e| {
         FetchError::DecodeError(anyhow::anyhow!(e).context("error decoding data URL"))
     })?;
 
