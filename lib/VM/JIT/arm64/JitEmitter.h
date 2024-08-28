@@ -535,9 +535,13 @@ class Emitter {
   void loadFrameAddr(a64::GpX dst, FR frameReg);
   template <bool use>
   void movHWReg(HWReg dst, HWReg src);
-  void storeHWRegToFrame(FR fr, HWReg src);
+  void _storeHWRegToFrame(FR fr, HWReg src);
   void movHWFromFR(HWReg hwRes, FR src);
   void movHWFromMem(HWReg hwRes, a64::Mem src);
+
+  /// Move a value from a hardware register \p src to the frame register \p
+  /// frDest.
+  void movFRFromHW(FR frDest, HWReg src, OptValue<FRType> type = llvh::None);
 
   template <class TAG>
   HWReg _allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred);
@@ -557,6 +561,9 @@ class Emitter {
   void syncAllTempExcept(FR exceptFR);
   void freeAllTempExcept(FR exceptFR);
 
+  /// Free any temporary register associated with \p FR.
+  void freeFRTemp(FR fr);
+
   void assignAllocatedLocalHWReg(FR fr, HWReg hwReg);
 
   /// \return a valid register if the FR is in a hw register, otherwise invalid.
@@ -572,6 +579,7 @@ class Emitter {
       FR fr,
       HWReg hwReg,
       hermes::OptValue<FRType> localType = llvh::None);
+  void frUpdateType(FR fr, FRType type);
 
   /// \return true if the FR is currently known to contain a number.
   bool isFRKnownNumber(FR fr) const {

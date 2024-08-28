@@ -323,7 +323,7 @@ void Emitter::movHWReg(HWReg dst, HWReg src) {
   }
 }
 
-void Emitter::storeHWRegToFrame(FR fr, HWReg src) {
+void Emitter::_storeHWRegToFrame(FR fr, HWReg src) {
   if (src.isVecD())
     storeFrame(src.a64VecD(), fr);
   else
@@ -348,6 +348,28 @@ void Emitter::movHWFromMem(HWReg hwRes, a64::Mem src) {
     a.ldr(hwRes.a64VecD(), src);
   else
     a.ldr(hwRes.a64GpX(), src);
+}
+
+void Emitter::movFRFromHW(FR dst, HWReg src, OptValue<FRType> type) {
+  FRState &frState = frameRegs_[dst.index()];
+  // If it is a local or global register, move the value into it and mark it as
+  // updated.
+  if (frState.localGpX) {
+    movHWReg<false>(frState.localGpX, src);
+    frUpdatedWithHWReg(dst, frState.localGpX, type);
+  } else if (frState.localVecD) {
+    movHWReg<false>(frState.localVecD, src);
+    frUpdatedWithHWReg(dst, frState.localVecD, type);
+  } else if (frState.globalReg) {
+    movHWReg<false>(frState.globalReg, src);
+    frUpdatedWithHWReg(dst, frState.globalReg, type);
+  } else {
+    // Otherwise store it directly to the frame.
+    _storeHWRegToFrame(dst, src);
+    if (type)
+      frUpdateType(dst, *type);
+    frState.frameUpToDate = true;
+  }
 }
 
 template <class TAG>
@@ -424,7 +446,7 @@ void Emitter::spillTempReg(HWReg toSpill) {
     }
   } else {
     if (!frState.frameUpToDate) {
-      storeHWRegToFrame(fr, toSpill);
+      _storeHWRegToFrame(fr, toSpill);
       frState.frameUpToDate = true;
     }
   }
@@ -445,7 +467,15 @@ void Emitter::syncToMem(FR fr) {
   HWReg hwReg = isFRInRegister(fr);
   assert(
       hwReg.isValid() && "FR is not synced to frame and is not in a register");
-  storeHWRegToFrame(fr, hwReg);
+
+  // We have an invariant that the global reg cannot have an old value if the
+  // frame has a new one.
+  if (frState.globalReg && !frState.globalRegUpToDate) {
+    assert(hwReg != frState.globalReg && "FR is in a global reg");
+    movHWReg<false>(frState.globalReg, hwReg);
+    frState.globalRegUpToDate = true;
+  }
+  _storeHWRegToFrame(fr, hwReg);
 }
 
 void Emitter::syncAllTempExcept(FR exceptFR) {
@@ -466,7 +496,7 @@ void Emitter::syncAllTempExcept(FR exceptFR) {
     } else {
       if (!frState.frameUpToDate) {
         comment("    ; sync: x%u (r%u)", i, fr.index());
-        storeHWRegToFrame(fr, hwReg);
+        _storeHWRegToFrame(fr, hwReg);
       }
     }
   }
@@ -491,7 +521,7 @@ void Emitter::syncAllTempExcept(FR exceptFR) {
     } else {
       if (!frState.frameUpToDate) {
         comment("    ; sync d%u (r%u)", i, fr.index());
-        storeHWRegToFrame(fr, hwReg);
+        _storeHWRegToFrame(fr, hwReg);
       }
     }
   }
@@ -503,13 +533,7 @@ void Emitter::freeAllTempExcept(FR exceptFR) {
     FR fr = hwRegs_[hwReg.combinedIndex()].contains;
     if (!fr.isValid() || fr == exceptFR)
       continue;
-    comment("    ; free: x%u (r%u)", i, fr.index());
-    hwRegs_[hwReg.combinedIndex()].contains = {};
-
-    FRState &frState = frameRegs_[fr.index()];
-    assert(frState.localGpX == hwReg && "tmpreg not bound to FR localreg");
-    frState.localGpX = {};
-    gpTemp_.free(hwReg.indexInClass());
+    freeFRTemp(fr);
   }
 
   for (unsigned i = kVecTemp.first; i <= kVecTemp.second; ++i) {
@@ -517,14 +541,27 @@ void Emitter::freeAllTempExcept(FR exceptFR) {
     FR fr = hwRegs_[hwReg.combinedIndex()].contains;
     if (!fr.isValid() || fr == exceptFR)
       continue;
-    comment("    ; free: d%u (r%u)", i, fr.index());
-    hwRegs_[hwReg.combinedIndex()].contains = {};
+    freeFRTemp(fr);
+  }
+}
 
-    FRState &frState = frameRegs_[fr.index()];
-    assert(frState.localVecD == hwReg && "tmpreg not bound to FR localreg");
+void Emitter::freeFRTemp(FR fr) {
+  auto &frState = frameRegs_[fr.index()];
+  if (frState.localGpX) {
+    assert(isTempGpX(frState.localGpX));
+    comment(
+        "    ; free x%u (r%u)", frState.localGpX.indexInClass(), fr.index());
+    hwRegs_[frState.localGpX.combinedIndex()].contains = {};
+    gpTemp_.free(frState.localGpX.indexInClass());
+    frState.localGpX = {};
+  }
+  if (frState.localVecD) {
+    assert(isTempVecD(frState.localVecD));
+    comment(
+        "    ; free d%u (r%u)", frState.localVecD.indexInClass(), fr.index());
+    hwRegs_[frState.localVecD.combinedIndex()].contains = {};
+    vecTemp_.free(frState.localVecD.indexInClass());
     frState.localVecD = {};
-    vecTemp_.free(hwReg.indexInClass());
-    assert(!frState.localGpX && "We already spilled all GpX temps");
   }
 }
 
@@ -683,7 +720,11 @@ void Emitter::frUpdatedWithHWReg(
     }
   }
   if (localType)
-    frState.localType = *localType;
+    frUpdateType(fr, *localType);
+}
+
+void Emitter::frUpdateType(FR fr, FRType type) {
+  frameRegs_[fr.index()].localType = type;
 }
 
 void Emitter::ret(FR frValue) {
