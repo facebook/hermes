@@ -1069,6 +1069,49 @@ void Emitter::newObjectWithBuffer(
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::newArray(FR frRes, uint32_t size) {
+  comment("// NewArray r%u, %u", frRes.index(), size);
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, size);
+  EMIT_RUNTIME_CALL(
+      *this, SHLegacyValue(*)(SHRuntime *, uint32_t), _sh_ljs_new_array);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::newArrayWithBuffer(
+    CodeBlock *codeBlock,
+    FR frRes,
+    uint32_t numElements,
+    uint32_t numLiterals,
+    uint32_t bufferIndex) {
+  comment(
+      "// NewArrayWithBuffer r%u, %u, %u, %u",
+      frRes.index(),
+      numElements,
+      numLiterals,
+      bufferIndex);
+
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock, "CodeBlock");
+  a.mov(a64::w2, numElements);
+  a.mov(a64::w3, numLiterals);
+  a.mov(a64::w4, bufferIndex);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *, SHCodeBlock *, uint32_t, uint32_t, uint32_t),
+      _interpreter_create_array_from_buffer);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::getGlobalObject(FR frRes) {
   comment("// GetGlobalObject r%u", frRes.index());
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);

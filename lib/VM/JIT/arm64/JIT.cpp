@@ -642,6 +642,20 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(NewObjectWithBuffer);
           break;
 
+        case inst::OpCode::NewArray:
+          em.newArray(FR(ip->iNewArray.op1), ip->iNewArray.op2);
+          ip = NEXTINST(NewArray);
+          break;
+        case inst::OpCode::NewArrayWithBuffer:
+          em.newArrayWithBuffer(
+              codeBlock,
+              FR(ip->iNewArrayWithBuffer.op1),
+              ip->iNewArrayWithBuffer.op2,
+              ip->iNewArrayWithBuffer.op3,
+              ip->iNewArrayWithBuffer.op4);
+          ip = NEXTINST(NewArrayWithBuffer);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

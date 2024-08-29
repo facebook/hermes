@@ -518,6 +518,14 @@ class Emitter {
       uint32_t shapeTableIndex,
       uint32_t valBufferOffset);
 
+  void newArray(FR frRes, uint32_t size);
+  void newArrayWithBuffer(
+      CodeBlock *codeBlock,
+      FR frRes,
+      uint32_t numElements,
+      uint32_t numLiterals,
+      uint32_t bufferIndex);
+
   void getGlobalObject(FR frRes);
   void declareGlobalVar(SHSymbolID symID);
   void createTopLevelEnvironment(FR frRes, uint32_t size);

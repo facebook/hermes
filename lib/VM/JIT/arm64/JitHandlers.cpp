@@ -60,6 +60,22 @@ SHLegacyValue _interpreter_create_object_from_buffer(
   return res->getHermesValue();
 }
 
+/// Wrapper around Interpreter::createArrayFromBuffer.
+SHLegacyValue _interpreter_create_array_from_buffer(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    unsigned numElements,
+    unsigned numLiterals,
+    unsigned bufferIndex) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<PseudoHandle<>> res = Interpreter::createArrayFromBuffer(
+      runtime, (CodeBlock *)codeBlock, numElements, numLiterals, bufferIndex);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
 } // namespace hermes::vm
 
 #endif // HERMESVM_JIT
