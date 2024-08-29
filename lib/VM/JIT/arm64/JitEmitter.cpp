@@ -1299,28 +1299,27 @@ void Emitter::storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue) {
   // FRs may live in the parameter registers we want to use, but some may not.
   // So, first we make sure that the FRs that live in x0, x1, etc., are synced
   // to their primary location and the temps x0, x1, etc., are freed.
-  //
-  // Then we make sure that all FRs are synced to memory or callee-saved reg,
-  // because we will be making a call. But we are *not* freeing the temp regs
-  // yet, because we want to be able to use them to populate the values of the
-  // parameters before the call.
-  //
-  // Only in the end do we free all temps, to reflect the state of the world
-  // after the call.
+  // As we do this, we immediately move the corresponding parameter from its
+  // corresponding FR, to maximize the chance that it can be moved from a
+  // register.
 
   // Make sure x0, x1, x2, x3 are unused.
   syncAndFreeTempReg(HWReg::gpX(0));
+  a.mov(a64::x0, xRuntime);
+
   syncAndFreeTempReg(HWReg::gpX(1));
+  movHWFromFR(HWReg::gpX(1), frEnv);
+
   syncAndFreeTempReg(HWReg::gpX(2));
+  movHWFromFR(HWReg::gpX(2), frValue);
+
   syncAndFreeTempReg(HWReg::gpX(3));
+  a.mov(a64::w3, slot);
 
   // Make sure all FRs can be accessed. Some of them might be in temp regs.
   syncAllTempExcept({});
+  freeAllTempExcept({});
 
-  a.mov(a64::x0, xRuntime);
-  movHWFromFR(HWReg::gpX(1), frEnv);
-  movHWFromFR(HWReg::gpX(2), frValue);
-  a.mov(a64::w3, slot);
   if (np) {
     EMIT_RUNTIME_CALL(
         *this,
@@ -1332,9 +1331,6 @@ void Emitter::storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue) {
         void (*)(SHRuntime *, SHLegacyValue, SHLegacyValue, uint32_t),
         _sh_ljs_store_to_env);
   }
-
-  // No temp registers available anymore.
-  freeAllTempExcept({});
 }
 
 void Emitter::createClosure(
