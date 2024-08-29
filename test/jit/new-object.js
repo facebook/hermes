@@ -16,8 +16,8 @@ function newObjectWithParent() {
   return {__proto__: Math};
 }
 
-function newObjectWithBuffer() {
-  return {a: 1, b: 3};
+function newObjectWithBuffer(c) {
+  return {a: 1, b: 3, [c]: 40};
 }
 
 print("newObject", newObject());
@@ -26,6 +26,7 @@ print("newObject", newObject());
 print("newObjectWithParent", Object.getPrototypeOf(newObjectWithParent()));
 // CHECK: JIT successfully compiled FunctionID 2, 'newObjectWithParent'
 // CHECK-NEXT: newObjectWithParent [object Math]
-print("newObjectWithBuffer", newObjectWithBuffer().a);
+var o = newObjectWithBuffer('c');
+print("newObjectWithBuffer", o.a, o.c);
 // CHECK: JIT successfully compiled FunctionID 3, 'newObjectWithBuffer'
-// CHECK-NEXT: newObjectWithBuffer 1
+// CHECK-NEXT: newObjectWithBuffer 1 40

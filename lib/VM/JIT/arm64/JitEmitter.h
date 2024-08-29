@@ -505,6 +505,7 @@ class Emitter {
       _sh_ljs_try_put_by_id_strict_rjs);
 
   void putOwnByIndex(FR frTarget, FR frValue, uint32_t key);
+  void putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable);
 
   void putNewOwnById(FR frTarget, FR frValue, SHSymbolID key, bool enumerable);
 

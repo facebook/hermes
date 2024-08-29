@@ -467,6 +467,15 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(PutOwnByIndexL);
           break;
 
+        case inst::OpCode::PutOwnByVal:
+          em.putOwnByVal(
+              FR(ip->iPutOwnByVal.op1),
+              FR(ip->iPutOwnByVal.op2),
+              FR(ip->iPutOwnByVal.op3),
+              (bool)ip->iPutOwnByVal.op4);
+          ip = NEXTINST(PutOwnByVal);
+          break;
+
         case inst::OpCode::PutNewOwnById:
           em.putNewOwnById(
               FR(ip->iPutNewOwnById.op1),

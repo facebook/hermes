@@ -1472,6 +1472,38 @@ void Emitter::putOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
       _sh_ljs_put_own_by_index);
 }
 
+void Emitter::putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable) {
+  comment(
+      "// PutOwnByVal r%u, r%u, r%u",
+      frTarget.index(),
+      frValue.index(),
+      frKey.index());
+
+  syncAllTempExcept({});
+  syncToMem(frTarget);
+  syncToMem(frValue);
+  syncToMem(frKey);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frValue);
+  if (enumerable) {
+    EMIT_RUNTIME_CALL(
+        *this,
+        void (*)(
+            SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
+        _sh_ljs_put_own_by_val);
+  } else {
+    EMIT_RUNTIME_CALL(
+        *this,
+        void (*)(
+            SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
+        _sh_ljs_put_own_ne_by_val);
+  }
+}
+
 void Emitter::putNewOwnById(
     FR frTarget,
     FR frValue,
