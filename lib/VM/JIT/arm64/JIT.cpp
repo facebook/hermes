@@ -224,86 +224,49 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(TypeOf);
           break;
 
-        case inst::OpCode::JGreaterEqual:
-          em.jGreaterEqual(
-              false,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJGreaterEqual.op1]],
-              FR(ip->iJGreaterEqual.op2),
-              FR(ip->iJGreaterEqual.op3));
-          ip = NEXTINST(JGreaterEqual);
-          break;
-        case inst::OpCode::JGreaterEqualN:
-          em.jGreaterEqualN(
-              false,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJGreaterEqual.op1]],
-              FR(ip->iJGreaterEqual.op2),
-              FR(ip->iJGreaterEqual.op3));
-          ip = NEXTINST(JGreaterEqual);
-          break;
-        case inst::OpCode::JNotGreaterEqual:
-          em.jGreaterEqual(
-              true,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJNotGreaterEqual.op1]],
-              FR(ip->iJNotGreaterEqual.op2),
-              FR(ip->iJNotGreaterEqual.op3));
-          ip = NEXTINST(JNotGreaterEqual);
-          break;
-        case inst::OpCode::JNotGreaterEqualN:
-          em.jGreaterEqualN(
-              true,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJNotGreaterEqual.op1]],
-              FR(ip->iJNotGreaterEqual.op2),
-              FR(ip->iJNotGreaterEqual.op3));
-          ip = NEXTINST(JNotGreaterEqual);
-          break;
-        case inst::OpCode::JGreater:
-          em.jGreater(
-              false,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJGreater.op1]],
-              FR(ip->iJGreater.op2),
-              FR(ip->iJGreater.op3));
-          ip = NEXTINST(JGreater);
-          break;
-        case inst::OpCode::JGreaterN:
-          em.jGreaterN(
-              false,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJGreater.op1]],
-              FR(ip->iJGreater.op2),
-              FR(ip->iJGreater.op3));
-          ip = NEXTINST(JGreater);
-          break;
-        case inst::OpCode::JNotGreater:
-          em.jGreater(
-              true,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJNotGreater.op1]],
-              FR(ip->iJNotGreater.op2),
-              FR(ip->iJNotGreater.op3));
-          ip = NEXTINST(JNotGreater);
-          break;
-        case inst::OpCode::JNotGreaterN:
-          em.jGreaterN(
-              true,
-              labels[ofsToBBIndex
-                         [(const char *)ip - (const char *)funcStart +
-                          ip->iJNotGreater.op1]],
-              FR(ip->iJNotGreater.op2),
-              FR(ip->iJNotGreater.op3));
-          ip = NEXTINST(JNotGreater);
-          break;
+#define JUMP(name, emit, invert)                                 \
+  case inst::OpCode::name:                                       \
+    em.emit(                                                     \
+        invert,                                                  \
+        labels[ofsToBBIndex                                      \
+                   [(const char *)ip - (const char *)funcStart + \
+                    ip->i##name.op1]],                           \
+        FR(ip->i##name.op2),                                     \
+        FR(ip->i##name.op3));                                    \
+    ip = NEXTINST(name);                                         \
+    break;                                                       \
+  case inst::OpCode::name##Long:                                 \
+    em.emit(                                                     \
+        invert,                                                  \
+        labels[ofsToBBIndex                                      \
+                   [(const char *)ip - (const char *)funcStart + \
+                    ip->i##name##Long.op1]],                     \
+        FR(ip->i##name##Long.op2),                               \
+        FR(ip->i##name##Long.op3));                              \
+    ip = NEXTINST(name##Long);                                   \
+    break;
+
+          JUMP(JLessEqual, jLessEqual, false)
+          JUMP(JLessEqualN, jLessEqualN, false)
+          JUMP(JNotLessEqual, jLessEqual, true)
+          JUMP(JNotLessEqualN, jLessEqualN, true)
+          JUMP(JLess, jLess, false)
+          JUMP(JLessN, jLessN, false)
+          JUMP(JNotLess, jLess, true)
+          JUMP(JNotLessN, jLessN, true)
+          JUMP(JGreaterEqual, jGreaterEqual, false)
+          JUMP(JGreaterEqualN, jGreaterEqualN, false)
+          JUMP(JNotGreaterEqual, jGreaterEqual, true)
+          JUMP(JNotGreaterEqualN, jGreaterEqualN, true)
+          JUMP(JGreater, jGreater, false)
+          JUMP(JGreaterN, jGreaterN, false)
+          JUMP(JNotGreater, jGreater, true)
+          JUMP(JNotGreaterN, jGreaterN, true)
+          JUMP(JEqual, jEqual, false)
+          JUMP(JNotEqual, jEqual, true)
+          JUMP(JStrictEqual, jStrictEqual, false)
+          JUMP(JStrictNotEqual, jStrictEqual, true)
+#undef JUMP
 
         case inst::OpCode::JmpTrue:
           em.jmpTrueFalse(

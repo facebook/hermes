@@ -2351,6 +2351,7 @@ void Emitter::jmp(const asmjit::Label &target) {
 void Emitter::jCond(
     bool forceNumber,
     bool invert,
+    bool passArgsByVal,
     const asmjit::Label &target,
     FR frLeft,
     FR frRight,
@@ -2433,6 +2434,7 @@ void Emitter::jCond(
        .frInput1 = frLeft,
        .frInput2 = frRight,
        .invert = invert,
+       .passArgsByVal = passArgsByVal,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
        .emit = [](Emitter &em, SlowPath &sl) {
@@ -2443,9 +2445,14 @@ void Emitter::jCond(
              sl.frInput1.index(),
              sl.frInput2.index());
          em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.loadFrameAddr(a64::x2, sl.frInput2);
+         if (sl.passArgsByVal) {
+           em._loadFrame(HWReg::gpX(0), sl.frInput1);
+           em._loadFrame(HWReg::gpX(1), sl.frInput2);
+         } else {
+           em.a.mov(a64::x0, xRuntime);
+           em.loadFrameAddr(a64::x1, sl.frInput1);
+           em.loadFrameAddr(a64::x2, sl.frInput2);
+         }
          em.call(sl.slowCall, sl.slowCallName);
          if (!sl.invert)
            em.a.cbnz(a64::w0, sl.target);

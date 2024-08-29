@@ -292,6 +292,8 @@ class Emitter {
     HWReg hwRes;
     /// Whether to invert a condition.
     bool invert;
+    /// Whether to pass arguments by value to the slow path.
+    bool passArgsByVal;
 
     /// Pointer to the slow path function that must be called.
     void *slowCall;
@@ -461,12 +463,14 @@ class Emitter {
   DECL_COMPARE(lessEqual, "less_equal", _sh_ljs_less_equal_rjs, kLS)
 #undef DECL_COMPARE
 
-#define DECL_JCOND(methodName, forceNum, commentStr, slowCall, a64inst) \
+#define DECL_JCOND(                                                     \
+    methodName, forceNum, passArgsByVal, commentStr, slowCall, a64inst) \
   void methodName(                                                      \
       bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {  \
     jCond(                                                              \
         forceNum,                                                       \
         invert,                                                         \
+        passArgsByVal,                                                  \
         target,                                                         \
         rLeft,                                                          \
         rRight,                                                         \
@@ -477,20 +481,40 @@ class Emitter {
         (void *)slowCall,                                               \
         #slowCall);                                                     \
   }
-  DECL_JCOND(jGreater, false, "greater", _sh_ljs_greater_rjs, b_gt)
+  DECL_JCOND(jGreater, false, false, "greater", _sh_ljs_greater_rjs, b_gt)
   DECL_JCOND(
       jGreaterEqual,
+      false,
       false,
       "greater_equal",
       _sh_ljs_greater_equal_rjs,
       b_ge)
-  DECL_JCOND(jGreaterN, true, "greater_n", _sh_ljs_greater_rjs, b_gt)
+  DECL_JCOND(jGreaterN, true, false, "greater_n", _sh_ljs_greater_rjs, b_gt)
   DECL_JCOND(
       jGreaterEqualN,
       true,
+      false,
       "greater_equal_n",
       _sh_ljs_greater_equal_rjs,
       b_ge)
+  DECL_JCOND(jLess, false, false, "less", _sh_ljs_less_rjs, b_mi)
+  DECL_JCOND(
+      jLessEqual,
+      false,
+      false,
+      "less_equal",
+      _sh_ljs_less_equal_rjs,
+      b_ls)
+  DECL_JCOND(jLessN, true, false, "less_n", _sh_ljs_less_rjs, b_mi)
+  DECL_JCOND(
+      jLessEqualN,
+      true,
+      false,
+      "less_equal_n",
+      _sh_ljs_less_equal_rjs,
+      b_ls)
+  DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, b_eq)
+  DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, b_eq)
 #undef DECL_JCOND
 
   void getByVal(FR frRes, FR frSource, FR frKey);
@@ -753,6 +777,7 @@ class Emitter {
   void jCond(
       bool forceNumber,
       bool invert,
+      bool passArgsByVal,
       const asmjit::Label &target,
       FR frLeft,
       FR frRight,
