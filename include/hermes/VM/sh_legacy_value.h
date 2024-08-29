@@ -273,7 +273,7 @@ static inline bool _sh_ljs_is_string(SHLegacyValue v) {
 
 static inline bool _sh_ljs_get_bool(SHLegacyValue v) {
   // Clear the ETag and return the raw values that are left.
-  return (bool)(v.raw & ~_sh_ljs_get_etag(v));
+  return (bool)(v.raw & 1);
 }
 static inline double _sh_ljs_get_double(SHLegacyValue v) {
   return v.f64;
