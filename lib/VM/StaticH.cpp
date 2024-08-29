@@ -9,6 +9,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/JSObject.h"
@@ -403,8 +404,24 @@ static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
         getSHRuntime(runtime), vmcast<NativeJSFunction>(*callTarget));
   }
 
+  if (vmisa<JSFunction>(*callTarget)) {
+    JSFunction *jsFunc = vmcast<JSFunction>(*callTarget);
+#if HERMESVM_JIT
+    if (auto *fnPtr = jsFunc->getCodeBlock()->getJITCompiled())
+      return fnPtr(&runtime);
+#elif !defined(HERMESVM_JIT)
+#error JIT/Config.h has not been included
+#endif
+    CallResult<HermesValue> result = jsFunc->_interpret(runtime);
+    if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(getSHRuntime(runtime));
+
+    return result.getValue();
+  }
+
   // FIXME: check for register stack overflow.
   CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+
   {
     GCScopeMarkerRAII marker{runtime};
     if (vmisa<NativeFunction>(*callTarget)) {

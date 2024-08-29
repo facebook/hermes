@@ -1353,8 +1353,7 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
   if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
     return _callWrapper<PseudoHandle<>>(jitPtr, runtime, [](uint64_t) {});
 
-  CallResult<HermesValue> result =
-      runtime.interpretFunction(self->getCodeBlock());
+  CallResult<HermesValue> result = self->_interpret(runtime);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 

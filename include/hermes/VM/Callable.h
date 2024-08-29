@@ -1173,6 +1173,11 @@ class JSFunction : public Callable {
       HeapSnapshot::NodeID id,
       GC &gc) const;
 
+  /// A helper to call the interpreter on this code block.
+  CallResult<HermesValue> _interpret(Runtime &runtime) {
+    return runtime.interpretFunction(codeBlock_);
+  }
+
  protected:
   /// Call the JavaScript function with arguments already on the stack.
   static CallResult<PseudoHandle<>> _callImpl(
