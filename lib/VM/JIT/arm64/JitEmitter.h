@@ -506,6 +506,8 @@ class Emitter {
 
   void putOwnByIndex(FR frTarget, FR frValue, uint32_t key);
 
+  void putNewOwnById(FR frTarget, FR frValue, SHSymbolID key, bool enumerable);
+
   void isIn(FR frRes, FR frLeft, FR frRight);
 
   asmjit::Label newPrefLabel(const char *pref, size_t index);

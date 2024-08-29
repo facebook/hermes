@@ -467,6 +467,48 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(PutOwnByIndexL);
           break;
 
+        case inst::OpCode::PutNewOwnById:
+          em.putNewOwnById(
+              FR(ip->iPutNewOwnById.op1),
+              FR(ip->iPutNewOwnById.op2),
+              ID(ip->iPutNewOwnById.op3),
+              true);
+          ip = NEXTINST(PutNewOwnById);
+          break;
+        case inst::OpCode::PutNewOwnByIdLong:
+          em.putNewOwnById(
+              FR(ip->iPutNewOwnByIdLong.op1),
+              FR(ip->iPutNewOwnByIdLong.op2),
+              ID(ip->iPutNewOwnByIdLong.op3),
+              true);
+          ip = NEXTINST(PutNewOwnByIdLong);
+          break;
+        case inst::OpCode::PutNewOwnByIdShort:
+          em.putNewOwnById(
+              FR(ip->iPutNewOwnByIdShort.op1),
+              FR(ip->iPutNewOwnByIdShort.op2),
+              ID(ip->iPutNewOwnByIdShort.op3),
+              true);
+          ip = NEXTINST(PutNewOwnByIdShort);
+          break;
+
+        case inst::OpCode::PutNewOwnNEById:
+          em.putNewOwnById(
+              FR(ip->iPutNewOwnNEById.op1),
+              FR(ip->iPutNewOwnNEById.op2),
+              ID(ip->iPutNewOwnNEById.op3),
+              false);
+          ip = NEXTINST(PutNewOwnNEById);
+          break;
+        case inst::OpCode::PutNewOwnNEByIdLong:
+          em.putNewOwnById(
+              FR(ip->iPutNewOwnNEByIdLong.op1),
+              FR(ip->iPutNewOwnNEByIdLong.op2),
+              ID(ip->iPutNewOwnNEByIdLong.op3),
+              false);
+          ip = NEXTINST(PutNewOwnNEByIdLong);
+          break;
+
         case inst::OpCode::Ret:
           em.ret(FR(ip->iRet.op1));
           ip = NEXTINST(Ret);
