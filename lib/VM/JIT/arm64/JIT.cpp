@@ -201,6 +201,14 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.mulN(FR(ip->iMul.op1), FR(ip->iMul.op2), FR(ip->iMul.op3));
           ip = NEXTINST(Mul);
           break;
+        case inst::OpCode::Div:
+          em.div(FR(ip->iDiv.op1), FR(ip->iDiv.op2), FR(ip->iDiv.op3));
+          ip = NEXTINST(Div);
+          break;
+        case inst::OpCode::DivN:
+          em.divN(FR(ip->iDivN.op1), FR(ip->iDivN.op2), FR(ip->iDivN.op3));
+          ip = NEXTINST(DivN);
+          break;
 
         case inst::OpCode::Dec:
           em.dec(FR(ip->iDec.op1), FR(ip->iDec.op2));

@@ -404,9 +404,11 @@ class Emitter {
   DECL_BINOP(mul, false, "mul", _sh_ljs_mul_rjs, { as.fmul(res, dl, dr); })
   DECL_BINOP(add, false, "add", _sh_ljs_add_rjs, { as.fadd(res, dl, dr); })
   DECL_BINOP(sub, false, "sub", _sh_ljs_sub_rjs, { as.fsub(res, dl, dr); })
+  DECL_BINOP(div, false, "div", _sh_ljs_div_rjs, { as.fdiv(res, dl, dr); })
   DECL_BINOP(mulN, true, "mulN", _sh_ljs_mul_rjs, { as.fmul(res, dl, dr); })
   DECL_BINOP(addN, true, "addN", _sh_ljs_add_rjs, { as.fadd(res, dl, dr); })
   DECL_BINOP(subN, true, "subN", _sh_ljs_sub_rjs, { as.fsub(res, dl, dr); })
+  DECL_BINOP(divN, true, "divN", _sh_ljs_div_rjs, { as.fdiv(res, dl, dr); })
 #undef DECL_BINOP
 
 #define DECL_UNOP(methodName, forceNum, commentStr, slowCall, a64body) \
