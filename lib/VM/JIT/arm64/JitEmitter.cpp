@@ -777,18 +777,20 @@ HWReg Emitter::getOrAllocFRInAnyReg(
     return tmp;
 
   // We have neither global nor local reg, so we must allocate a new tmp reg.
-  // We only allocate GpX though.
-  if (preferred && !preferred->isGpX())
-    preferred.reset();
-  HWReg hwGpX = allocTempGpX();
-  assignAllocatedLocalHWReg(fr, hwGpX);
+  HWReg hwReg{};
+  if (preferred && preferred->isVecD()) {
+    hwReg = allocTempVecD(preferred);
+  } else {
+    hwReg = allocTempGpX(preferred);
+  }
+  assignAllocatedLocalHWReg(fr, hwReg);
 
   if (load) {
-    _loadFrame(hwGpX, fr);
+    _loadFrame(hwReg, fr);
     frameRegs_[fr.index()].frameUpToDate = true;
   }
 
-  return hwGpX;
+  return hwReg;
 }
 
 void Emitter::frUpdatedWithHWReg(
