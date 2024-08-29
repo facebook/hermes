@@ -46,7 +46,6 @@ SHLegacyValue _sh_ljs_get_bytecode_string(
           ->getStringPrimFromStringIDMayAllocate(stringID));
 }
 
-/// Wrapper for Interpreter::createObjectFromBuffer.
 SHLegacyValue _interpreter_create_object_from_buffer(
     SHRuntime *shr,
     SHCodeBlock *codeBlock,

@@ -452,6 +452,21 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(GetByIndex);
           break;
 
+        case inst::OpCode::PutOwnByIndex:
+          em.putOwnByIndex(
+              FR(ip->iPutOwnByIndex.op1),
+              FR(ip->iPutOwnByIndex.op2),
+              ip->iPutOwnByIndex.op3);
+          ip = NEXTINST(PutOwnByIndex);
+          break;
+        case inst::OpCode::PutOwnByIndexL:
+          em.putOwnByIndex(
+              FR(ip->iPutOwnByIndexL.op1),
+              FR(ip->iPutOwnByIndexL.op2),
+              ip->iPutOwnByIndexL.op3);
+          ip = NEXTINST(PutOwnByIndexL);
+          break;
+
         case inst::OpCode::Ret:
           em.ret(FR(ip->iRet.op1));
           ip = NEXTINST(Ret);
