@@ -508,6 +508,7 @@ class Emitter {
   asmjit::Label newPrefLabel(const char *pref, size_t index);
 
   void getGlobalObject(FR frRes);
+  void declareGlobalVar(SHSymbolID symID);
 
  private:
   /// Create an a64::Mem to a specifc frame register.

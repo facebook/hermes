@@ -481,6 +481,11 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(CallBuiltin);
           break;
 
+        case inst::OpCode::DeclareGlobalVar:
+          em.declareGlobalVar(ID(ip->iDeclareGlobalVar.op1));
+          ip = NEXTINST(DeclareGlobalVar);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

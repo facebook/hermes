@@ -972,6 +972,18 @@ void Emitter::getGlobalObject(FR frRes) {
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::declareGlobalVar(SHSymbolID symID) {
+  comment("// DeclareGlobalVar %u", symID);
+
+  syncAllTempExcept({});
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, symID);
+  EMIT_RUNTIME_CALL(
+      *this, void (*)(SHRuntime *, SHSymbolID), _sh_ljs_declare_global_var);
+}
+
 void Emitter::putByValImpl(
     FR frTarget,
     FR frKey,
