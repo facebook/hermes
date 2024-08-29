@@ -1592,6 +1592,41 @@ void Emitter::putNewOwnById(
   }
 }
 
+void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
+  comment(
+      "// PutOwnBySlotIdx r%u, r%u, %u",
+      frTarget.index(),
+      frValue.index(),
+      slotIdx);
+
+  syncAllTempExcept({});
+  syncToMem(frTarget);
+  syncToMem(frValue);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  // For indirect stores, 0 is the first indirect index.
+  a.mov(
+      a64::w2,
+      slotIdx < JSObject::DIRECT_PROPERTY_SLOTS
+          ? slotIdx
+          : slotIdx - JSObject::DIRECT_PROPERTY_SLOTS);
+  loadFrameAddr(a64::x3, frValue);
+
+  if (slotIdx < JSObject::DIRECT_PROPERTY_SLOTS) {
+    EMIT_RUNTIME_CALL(
+        *this,
+        void (*)(SHRuntime *, SHLegacyValue *, uint32_t, SHLegacyValue *),
+        _sh_prstore_direct);
+  } else {
+    EMIT_RUNTIME_CALL(
+        *this,
+        void (*)(SHRuntime *, SHLegacyValue *, uint32_t, SHLegacyValue *),
+        _sh_prstore_indirect);
+  }
+}
+
 void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
   comment(
       "// isIn r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
