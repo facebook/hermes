@@ -385,6 +385,8 @@ class Emitter {
   loadConstString(FR frRes, RuntimeModule *runtimeModule, uint32_t stringID);
   void toNumber(FR frRes, FR frInput);
 
+  void mod(bool forceNumber, FR frRes, FR frLeft, FR frRight);
+
 #define DECL_BINOP(methodName, forceNum, commentStr, slowCall, a64body) \
   void methodName(FR rRes, FR rLeft, FR rRight) {                       \
     arithBinOp(                                                         \

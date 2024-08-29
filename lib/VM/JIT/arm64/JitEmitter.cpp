@@ -2282,6 +2282,92 @@ void Emitter::getNextPName(
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
+  comment(
+      "// %s%s r%u, r%u, r%u",
+      "mod",
+      forceNumber ? "N" : "",
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+  HWReg hwRes, hwLeft, hwRight;
+  asmjit::Label slowPathLab;
+  asmjit::Label contLab;
+  bool leftIsNum, rightIsNum, slow;
+
+  if (forceNumber) {
+    frameRegs_[frLeft.index()].localType = FRType::Number;
+    frameRegs_[frRight.index()].localType = FRType::Number;
+    leftIsNum = rightIsNum = true;
+    slow = false;
+  } else {
+    leftIsNum = isFRKnownNumber(frLeft);
+    rightIsNum = isFRKnownNumber(frRight);
+    slow = !(rightIsNum && leftIsNum);
+  }
+
+  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+
+  slowPathLab = newSlowPathLabel();
+  contLab = newContLabel();
+  syncToMem(frLeft);
+  syncToMem(frRight);
+
+  if (!leftIsNum) {
+    hwLeft = getOrAllocFRInGpX(frLeft, true);
+    a.cmp(hwLeft.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+  if (!rightIsNum) {
+    hwRight = getOrAllocFRInGpX(frRight, true);
+    a.cmp(hwRight.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+
+  // Make sure d0, d1 are unused.
+  syncAndFreeTempReg(HWReg::vecD(0));
+  movHWFromFR(HWReg::vecD(0), frLeft);
+  syncAndFreeTempReg(HWReg::vecD(1));
+  movHWFromFR(HWReg::vecD(1), frRight);
+
+  EMIT_RUNTIME_CALL(*this, double (*)(double, double), _sh_mod_double);
+  freeAllTempExcept({});
+  hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::vecD(0));
+  movHWReg<false>(hwRes, HWReg::vecD(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+
+  if (!slow)
+    return;
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = "mod",
+       .frRes = frRes,
+       .frInput1 = frLeft,
+       .frInput2 = frRight,
+       .hwRes = hwRes,
+       .slowCall = (void *)_sh_ljs_mod_rjs,
+       .slowCallName = "_sh_ljs_mod_rjs",
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// %s r%u, r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.loadFrameAddr(a64::x2, sl.frInput2);
+         em.call(sl.slowCall, sl.slowCallName);
+         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
 void Emitter::arithBinOp(
     bool forceNumber,
     FR frRes,
