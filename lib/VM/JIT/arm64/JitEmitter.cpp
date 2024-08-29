@@ -1362,6 +1362,102 @@ void Emitter::createClosure(
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::createThis(FR frRes, FR frPrototype, FR frCallable) {
+  comment(
+      "// CreateThis r%u, r%u, r%u",
+      frRes.index(),
+      frPrototype.index(),
+      frCallable.index());
+
+  syncAllTempExcept(frRes != frPrototype && frRes != frCallable ? frRes : FR());
+  syncToMem(frPrototype);
+  syncToMem(frCallable);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frPrototype);
+  loadFrameAddr(a64::x2, frCallable);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_create_this);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
+  comment(
+      "// SelectObject r%u, r%u, r%u",
+      frRes.index(),
+      frThis.index(),
+      frConstructed.index());
+
+  HWReg hwConstructed = getOrAllocFRInGpX(frConstructed, true);
+  HWReg hwThis = getOrAllocFRInGpX(frThis, true);
+
+  // Check if frConstructed is an object.
+  // Get the tag bits in xTmpConstructedTag by right shifting.
+  HWReg hwTmpConstructedTag = allocTempGpX();
+  a64::GpX xTmpConstructedTag = hwTmpConstructedTag.a64GpX();
+  static_assert(
+      (int16_t)HVTag_Object == (int16_t)(-1) && "HV_TagObject must be -1");
+  a.asr(xTmpConstructedTag, hwConstructed.a64GpX(), kHV_NumDataBits);
+  a.cmn(xTmpConstructedTag, -HVTag_Object);
+  freeReg(hwTmpConstructedTag);
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  // If it is an object, use Constructed, otherwise use This.
+  // Store result in hwRes.
+  a.csel(
+      hwRes.a64GpX(),
+      hwConstructed.a64GpX(),
+      hwThis.a64GpX(),
+      asmjit::arm::CondCode::kEQ);
+
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::loadThisNS(FR frRes) {
+  comment("// LoadThisNS r%u", frRes.index());
+
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.ldur(
+      a64::x1,
+      a64::Mem(
+          xFrame, (int)StackFrameLayout::ThisArg * (int)sizeof(SHLegacyValue)));
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
+      _sh_ljs_coerce_this_ns);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::coerceThisNS(FR frRes, FR frThis) {
+  comment("// CoerceThisNS r%u, r%u", frRes.index(), frThis.index());
+
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  movHWFromFR(HWReg::gpX(1), frThis);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
+      _sh_ljs_coerce_this_ns);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::putByValImpl(
     FR frTarget,
     FR frKey,

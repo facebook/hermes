@@ -614,6 +614,12 @@ class Emitter {
       RuntimeModule *runtimeModule,
       uint32_t functionID);
 
+  void createThis(FR frRes, FR frPrototype, FR frCallable);
+  void selectObject(FR frRes, FR frThis, FR frConstructed);
+
+  void loadThisNS(FR frRes);
+  void coerceThisNS(FR frRes, FR frThis);
+
  private:
   /// Create an a64::Mem to a specifc frame register.
   static constexpr inline a64::Mem frA64Mem(FR fr) {

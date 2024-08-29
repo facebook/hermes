@@ -820,6 +820,30 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(GetNextPName);
           break;
 
+        case inst::OpCode::CreateThis:
+          em.createThis(
+              FR(ip->iCreateThis.op1),
+              FR(ip->iCreateThis.op2),
+              FR(ip->iCreateThis.op3));
+          ip = NEXTINST(CreateThis);
+          break;
+        case inst::OpCode::SelectObject:
+          em.selectObject(
+              FR(ip->iSelectObject.op1),
+              FR(ip->iSelectObject.op2),
+              FR(ip->iSelectObject.op3));
+          ip = NEXTINST(SelectObject);
+          break;
+
+        case inst::OpCode::LoadThisNS:
+          em.loadThisNS(FR(ip->iLoadThisNS.op1));
+          ip = NEXTINST(LoadThisNS);
+          break;
+        case inst::OpCode::CoerceThisNS:
+          em.coerceThisNS(FR(ip->iCoerceThisNS.op1), FR(ip->iCoerceThisNS.op2));
+          ip = NEXTINST(CoerceThisNS);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "
