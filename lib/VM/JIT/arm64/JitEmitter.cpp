@@ -18,7 +18,6 @@
 #define DEBUG_TYPE "jit"
 
 namespace hermes::vm::arm64 {
-
 namespace {
 
 // Ensure that HermesValue tags are handled correctly by updating this every
@@ -79,7 +78,13 @@ static bool isCheapConst(uint64_t k) {
   return count <= 2;
 }
 
-#define EMIT_RUNTIME_CALL(em, func) (em).call((void *)func, #func)
+#define EMIT_RUNTIME_CALL(em, type, func) \
+  do {                                    \
+    using _FnT = type;                    \
+    _FnT _fn = func;                      \
+    (void)_fn;                            \
+    (em).call((void *)func, #func);       \
+  } while (0)
 
 Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
@@ -260,7 +265,8 @@ void Emitter::frameSetup(
   a.mov(xRuntime, a64::x0);
 
   //  _sh_check_native_stack_overflow(shr);
-  EMIT_RUNTIME_CALL(*this, _sh_check_native_stack_overflow);
+  EMIT_RUNTIME_CALL(
+      *this, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
 
   // Function<bench>(3 params, 13 registers):
   //  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 13);
@@ -268,7 +274,8 @@ void Emitter::frameSetup(
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
   a.mov(a64::w2, numFrameRegs);
-  EMIT_RUNTIME_CALL(*this, _sh_enter);
+  EMIT_RUNTIME_CALL(
+      *this, SHLegacyValue * (*)(SHRuntime *, SHLocals *, uint32_t), _sh_enter);
   comment("// xFrame");
   a.mov(xFrame, a64::x0);
 
@@ -284,7 +291,8 @@ void Emitter::leave() {
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
   a.mov(a64::x2, xFrame);
-  EMIT_RUNTIME_CALL(*this, _sh_leave);
+  EMIT_RUNTIME_CALL(
+      *this, void (*)(SHRuntime *, SHLocals *, SHLegacyValue *), _sh_leave);
 
   // The return value has been stashed in x22 by ret(). Move it to the return
   // register.
@@ -1052,7 +1060,10 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frSource);
   loadFrameAddr(a64::x2, frKey);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_get_by_val_rjs);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_get_by_val_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
@@ -1069,7 +1080,10 @@ void Emitter::getByIndex(FR frRes, FR frSource, uint8_t key) {
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frSource);
   a.mov(a64::w2, key);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_get_by_index_rjs);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint8_t),
+      _sh_ljs_get_by_index_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
@@ -1134,7 +1148,10 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frLeft);
   loadFrameAddr(a64::x2, frRight);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_is_in_rjs);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_is_in_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
@@ -1268,7 +1285,10 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
   a.mov(a64::w2, argc - 1);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_call);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      _sh_ljs_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
@@ -1321,7 +1341,10 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
   a.mov(a64::w2, args.size() - 1);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_call);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      _sh_ljs_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
@@ -1348,7 +1371,10 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
   // subtract 1.
   a.mov(a64::w2, argc - 1);
   a.mov(a64::w3, builtinIndex);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_call_builtin);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t, uint32_t),
+      _sh_ljs_call_builtin);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
@@ -1402,7 +1428,10 @@ void Emitter::callWithNewTarget(
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
   a.mov(a64::w2, argc - 1);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_call);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      _sh_ljs_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
@@ -1418,7 +1447,10 @@ void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::w1, builtinIndex);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_get_builtin_closure);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, uint32_t),
+      _sh_ljs_get_builtin_closure);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
