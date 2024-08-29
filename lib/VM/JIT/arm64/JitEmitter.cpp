@@ -2177,6 +2177,14 @@ void Emitter::jmpTrueFalse(
   }
 }
 
+void Emitter::jmp(const asmjit::Label &target) {
+  comment("// Jmp Lx");
+  // Do this always, since this could be the end of the BB.
+  syncAllTempExcept(FR());
+  freeAllTempExcept(FR());
+  a.b(target);
+}
+
 void Emitter::jCond(
     bool forceNumber,
     bool invert,

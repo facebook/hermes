@@ -433,6 +433,8 @@ class Emitter {
 #undef DECL_UNOP
 
   void jmpTrueFalse(bool onTrue, const asmjit::Label &target, FR frInput);
+  void jmp(const asmjit::Label &target);
+
 #define DECL_JCOND(methodName, forceNum, commentStr, slowCall, a64inst) \
   void methodName(                                                      \
       bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {  \
