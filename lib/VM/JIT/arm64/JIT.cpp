@@ -764,6 +764,24 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(NewArrayWithBuffer);
           break;
 
+        case inst::OpCode::GetPNameList:
+          em.getPNameList(
+              FR(ip->iGetPNameList.op1),
+              FR(ip->iGetPNameList.op2),
+              FR(ip->iGetPNameList.op3),
+              FR(ip->iGetPNameList.op4));
+          ip = NEXTINST(GetPNameList);
+          break;
+        case inst::OpCode::GetNextPName:
+          em.getNextPName(
+              FR(ip->iGetNextPName.op1),
+              FR(ip->iGetNextPName.op2),
+              FR(ip->iGetNextPName.op3),
+              FR(ip->iGetNextPName.op4),
+              FR(ip->iGetNextPName.op5));
+          ip = NEXTINST(GetNextPName);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

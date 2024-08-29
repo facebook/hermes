@@ -704,7 +704,7 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_get_pname_list_rjs(
 
 /// \p props is the array of properties
 /// \p base is the object to be iterated.
-/// \p index is the iterating index.
+/// \p index[in/out] is the iterating index.
 /// \p size is the size of the property list.
 /// \return the next property, undefined if unavailable
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_next_pname_rjs(

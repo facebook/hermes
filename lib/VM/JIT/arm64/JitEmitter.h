@@ -441,6 +441,9 @@ class Emitter {
   void bitNot(FR frRes, FR frInput);
   void typeOf(FR frRes, FR frInput);
 
+  void getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize);
+  void getNextPName(FR frRes, FR frProps, FR frObj, FR frIdx, FR frSize);
+
 #define DECL_JCOND(methodName, forceNum, commentStr, slowCall, a64inst) \
   void methodName(                                                      \
       bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {  \
@@ -605,6 +608,12 @@ class Emitter {
   /// Move a value from a hardware register \p src to the frame register \p
   /// frDest.
   void movFRFromHW(FR frDest, HWReg src, OptValue<FRType> type = llvh::None);
+
+  /// In rare cases, such as when we have in/out parameters to operations, the
+  /// frame may get updated with a new value. This will ensure that the frame is
+  /// marked up-to-date, and that any associated global register holds the same
+  /// value.
+  void syncFrameOutParam(FR fr, OptValue<FRType> type = llvh::None);
 
   template <class TAG>
   HWReg _allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred);

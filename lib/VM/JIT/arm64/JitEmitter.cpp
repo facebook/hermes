@@ -440,6 +440,23 @@ void Emitter::movFRFromHW(FR dst, HWReg src, OptValue<FRType> type) {
   }
 }
 
+void Emitter::syncFrameOutParam(FR fr, OptValue<FRType> type) {
+  auto &frState = frameRegs_[fr.index()];
+
+  frState.frameUpToDate = true;
+
+  // Since the frame is the source-of-truth here, there should not be any local
+  // register.
+  assert(!frState.localGpX && !frState.localVecD);
+
+  if (frState.globalReg) {
+    frState.globalRegUpToDate = true;
+    _loadFrame(frState.globalReg, fr);
+  }
+  if(type)
+        frUpdateType(fr, *type);
+}
+
 template <class TAG>
 HWReg Emitter::_allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred) {
   llvh::Optional<unsigned> pr{};
@@ -2096,6 +2113,82 @@ void Emitter::typeOf(FR frRes, FR frInput) {
   // TODO: Use a function that preserves temporary registers.
   EMIT_RUNTIME_CALL(
       *this, SHLegacyValue(*)(SHRuntime *, SHLegacyValue *), _sh_ljs_typeof);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
+  comment(
+      "// GetPNameList r%u, r%u, r%u, r%u",
+      frRes.index(),
+      frObj.index(),
+      frIdx.index(),
+      frSize.index());
+  syncAllTempExcept({});
+  // We have to sync frObj to the frame since it is an in/out parameter.
+  syncToMem(frObj);
+  // No need to sync frIdx and frSize since they are just out parameters.
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frObj);
+  loadFrameAddr(a64::x2, frIdx);
+  loadFrameAddr(a64::x3, frSize);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_get_pname_list_rjs);
+
+  // Ensure that the out params have their frame location marked as up-to-date,
+  // and any global register is updated.
+  syncFrameOutParam(frObj);
+  syncFrameOutParam(frIdx);
+  syncFrameOutParam(frSize);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::getNextPName(
+    FR frRes,
+    FR frProps,
+    FR frObj,
+    FR frIdx,
+    FR frSize) {
+  comment(
+      "// GetNextPName r%u, r%u, r%u, r%u, r%u",
+      frRes.index(),
+      frProps.index(),
+      frObj.index(),
+      frIdx.index(),
+      frSize.index());
+
+  syncAllTempExcept({});
+  syncToMem(frProps);
+  syncToMem(frObj);
+  syncToMem(frIdx);
+  syncToMem(frSize);
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frProps);
+  loadFrameAddr(a64::x2, frObj);
+  loadFrameAddr(a64::x3, frIdx);
+  loadFrameAddr(a64::x4, frSize);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHLegacyValue *),
+      _sh_ljs_get_next_pname_rjs);
+
+  // Ensure that the updated frame location is sync'd back to any global reg.
+  syncFrameOutParam(frIdx);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
