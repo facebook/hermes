@@ -453,8 +453,8 @@ void Emitter::syncFrameOutParam(FR fr, OptValue<FRType> type) {
     frState.globalRegUpToDate = true;
     _loadFrame(frState.globalReg, fr);
   }
-  if(type)
-        frUpdateType(fr, *type);
+  if (type)
+    frUpdateType(fr, *type);
 }
 
 template <class TAG>
@@ -2451,6 +2451,106 @@ void Emitter::jCond(
            em.a.cbnz(a64::w0, sl.target);
          else
            em.a.cbz(a64::w0, sl.target);
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::compareImpl(
+    FR frRes,
+    FR frLeft,
+    FR frRight,
+    const char *name,
+    a64::CondCode condCode,
+    void *slowCall,
+    const char *slowCallName) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+  HWReg hwLeft, hwRight;
+  asmjit::Label slowPathLab;
+  asmjit::Label contLab;
+  bool leftIsNum, rightIsNum, slow;
+
+  leftIsNum = isFRKnownNumber(frLeft);
+  rightIsNum = isFRKnownNumber(frRight);
+  slow = !(rightIsNum && leftIsNum);
+
+  if (slow) {
+    slowPathLab = newSlowPathLabel();
+    contLab = newContLabel();
+    syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+    syncToMem(frLeft);
+    syncToMem(frRight);
+  }
+
+  if (leftIsNum) {
+    hwLeft = getOrAllocFRInVecD(frLeft, true);
+  } else {
+    hwLeft = getOrAllocFRInGpX(frLeft, true);
+    a.cmp(hwLeft.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+  if (rightIsNum) {
+    hwRight = getOrAllocFRInVecD(frRight, true);
+  } else {
+    hwRight = getOrAllocFRInGpX(frRight, true);
+    a.cmp(hwRight.a64GpX(), xDoubleLim);
+    a.b_hs(slowPathLab);
+  }
+
+  if (!leftIsNum)
+    hwLeft = getOrAllocFRInVecD(frLeft, true);
+  if (!rightIsNum)
+    hwRight = getOrAllocFRInVecD(frRight, true);
+  if (slow)
+    freeAllTempExcept({});
+
+  HWReg hwRes = slow ? getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0))
+                     : getOrAllocFRInGpX(frRes, false);
+  a64::GpX xRes = hwRes.a64GpX();
+
+  a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
+  // Store the result of the comparison in the lowest bit of tmpCmpRes.
+  // asmjit will convert CondCode to the correct encoding for use in the opcode.
+  a.cset(xRes, condCode);
+
+  // Encode bool.
+  emit_sh_ljs_bool(a, xRes);
+  frUpdatedWithHWReg(frRes, hwRes, FRType::Bool);
+
+  if (!slow)
+    return;
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = name,
+       .frRes = frRes,
+       .frInput1 = frLeft,
+       .frInput2 = frRight,
+       .hwRes = hwRes,
+       .slowCall = slowCall,
+       .slowCallName = slowCallName,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: j_%s r%u, r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.loadFrameAddr(a64::x2, sl.frInput2);
+         em.call(sl.slowCall, sl.slowCallName);
+         // Comparison functions return bool, so encode it.
+         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         emit_sh_ljs_bool(em.a, sl.hwRes.a64GpX());
          em.a.b(sl.contLab);
        }});
 }

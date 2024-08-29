@@ -444,6 +444,23 @@ class Emitter {
   void getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize);
   void getNextPName(FR frRes, FR frProps, FR frObj, FR frIdx, FR frSize);
 
+#define DECL_COMPARE(methodName, commentStr, slowCall, condCode) \
+  void methodName(FR rRes, FR rLeft, FR rRight) {                \
+    compareImpl(                                                 \
+        rRes,                                                    \
+        rLeft,                                                   \
+        rRight,                                                  \
+        commentStr,                                              \
+        a64::CondCode::condCode,                                 \
+        (void *)slowCall,                                        \
+        #slowCall);                                              \
+  }
+  DECL_COMPARE(greater, "greater", _sh_ljs_greater_rjs, kGT)
+  DECL_COMPARE(greaterEqual, "greater_equal", _sh_ljs_greater_equal_rjs, kGE)
+  DECL_COMPARE(less, "less", _sh_ljs_less_rjs, kMI)
+  DECL_COMPARE(lessEqual, "less_equal", _sh_ljs_less_equal_rjs, kLS)
+#undef DECL_COMPARE
+
 #define DECL_JCOND(methodName, forceNum, commentStr, slowCall, a64inst) \
   void methodName(                                                      \
       bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {  \
@@ -721,6 +738,15 @@ class Emitter {
           const a64::VecD &res,
           const a64::VecD &dl,
           const a64::VecD &dr),
+      void *slowCall,
+      const char *slowCallName);
+
+  void compareImpl(
+      FR frRes,
+      FR frLeft,
+      FR frRight,
+      const char *name,
+      a64::CondCode condCode,
       void *slowCall,
       const char *slowCallName);
 

@@ -155,6 +155,28 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(ToNumber);
           break;
 
+        case inst::OpCode::Greater:
+          em.greater(
+              FR(ip->iGreater.op1), FR(ip->iGreater.op2), FR(ip->iGreater.op3));
+          ip = NEXTINST(Greater);
+          break;
+        case inst::OpCode::GreaterEq:
+          em.greaterEqual(
+              FR(ip->iGreaterEq.op1),
+              FR(ip->iGreaterEq.op2),
+              FR(ip->iGreaterEq.op3));
+          ip = NEXTINST(GreaterEq);
+          break;
+        case inst::OpCode::Less:
+          em.less(FR(ip->iLess.op1), FR(ip->iLess.op2), FR(ip->iLess.op3));
+          ip = NEXTINST(Less);
+          break;
+        case inst::OpCode::LessEq:
+          em.lessEqual(
+              FR(ip->iLessEq.op1), FR(ip->iLessEq.op2), FR(ip->iLessEq.op3));
+          ip = NEXTINST(LessEq);
+          break;
+
         case inst::OpCode::Add:
           em.add(FR(ip->iAdd.op1), FR(ip->iAdd.op2), FR(ip->iAdd.op3));
           ip = NEXTINST(Add);
