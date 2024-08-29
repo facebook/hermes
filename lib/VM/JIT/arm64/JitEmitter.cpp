@@ -2164,11 +2164,6 @@ void Emitter::booleanNot(FR frRes, FR frInput) {
   EMIT_RUNTIME_CALL(*this, bool (*)(SHLegacyValue), _sh_ljs_to_boolean);
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
-  auto baseBool = _sh_ljs_bool(false).raw;
-  static_assert(HERMESVALUE_VERSION == 1);
-  assert(
-      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool)) &&
-      "Boolean tag must be 16 bits.");
   // Negate the result.
   a.eor(hwRes.a64GpX(), a64::x0, 1);
   // Add the bool tag.
