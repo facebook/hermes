@@ -2378,6 +2378,36 @@ void Emitter::jmp(const asmjit::Label &target) {
   a.b(target);
 }
 
+void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
+  comment("// JmpUndefined r%u", frInput.index());
+
+  // Do this always, since this could be the end of the BB.
+  syncAllTempExcept(FR());
+  freeAllTempExcept(FR());
+
+  if (isFRKnownType(frInput, FRType::Number) ||
+      isFRKnownType(frInput, FRType::Bool)) {
+    return;
+  }
+
+  HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+  a64::GpX xInput = hwInput.a64GpX();
+  HWReg hwTmpTag = allocTempGpX();
+  a64::GpX xTmpTag = hwTmpTag.a64GpX();
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "HVETag_Undefined must be at kHV_NumDataBits - 1");
+  static_assert(
+      (int16_t)HVETag_Undefined == (int16_t)(-12) &&
+      "HVETag_Undefined must be -12");
+  // Compare tag bits, jump to retThisLab if not object.
+  a.asr(xTmpTag, xInput, kHV_NumDataBits - 1);
+  a.cmn(xTmpTag, -HVETag_Undefined);
+  a.b_eq(target);
+
+  freeReg(hwTmpTag);
+}
+
 void Emitter::jCond(
     bool forceNumber,
     bool invert,

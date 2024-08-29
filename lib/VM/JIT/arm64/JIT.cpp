@@ -349,6 +349,22 @@ JITCompiledFunctionPtr JITContext::compileImpl(
                             [(const char *)ip - funcStart + ip->iJmpLong.op1]]);
           ip = NEXTINST(JmpLong);
           break;
+        case inst::OpCode::JmpUndefined:
+          em.jmpUndefined(
+              labels[ofsToBBIndex
+                         [(const char *)ip - funcStart +
+                          ip->iJmpUndefined.op1]],
+              FR(ip->iJmpUndefined.op2));
+          ip = NEXTINST(JmpUndefined);
+          break;
+        case inst::OpCode::JmpUndefinedLong:
+          em.jmpUndefined(
+              labels[ofsToBBIndex
+                         [(const char *)ip - funcStart +
+                          ip->iJmpUndefinedLong.op1]],
+              FR(ip->iJmpUndefinedLong.op2));
+          ip = NEXTINST(JmpUndefinedLong);
+          break;
 
         case inst::OpCode::TryGetByIdLong:
           idVal = ID(ip->iTryGetByIdLong.op4);

@@ -453,6 +453,7 @@ class Emitter {
 #undef DECL_UNOP
 
   void jmpTrueFalse(bool onTrue, const asmjit::Label &target, FR frInput);
+  void jmpUndefined(const asmjit::Label &target, FR frInput);
   void jmp(const asmjit::Label &target);
 
   void booleanNot(FR frRes, FR frInput);
