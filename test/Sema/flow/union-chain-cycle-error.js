@@ -6,11 +6,12 @@
  */
 
 // RUN: (! %shermes -Werror -typed -dump-sema %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -Werror -typed -dump-ir %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 type A = B | B;
 type B = C | C;
 type C = A | number;
 
-// CHECK:{{.*}}:11:1: error: ft: type contains a circular reference to itself
+// CHECK:{{.*}}:12:1: error: ft: type contains a circular reference to itself
 // CHECK-NEXT:type B = C | C;
 // CHECK-NEXT:^~~~~~~~~~~~~~~

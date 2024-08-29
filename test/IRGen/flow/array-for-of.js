@@ -6,6 +6,7 @@
  */
 
 // RUN: %shermes -typed -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermes -typed -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 return function main(x: number[]) {
   for (const i of x) {

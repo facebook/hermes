@@ -9,6 +9,7 @@
 #include "ParseJSFile.h"
 #include "compile.h"
 
+#include "hermes/AST/ASTUtils.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/NativeContext.h"
 #include "hermes/AST/TS2Flow.h"
@@ -693,54 +694,6 @@ std::shared_ptr<Context> createContext() {
   // context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
 
   return context;
-}
-
-/// Wrap the given program in a IIFE, e.g.
-/// (function(exports){ ...program body })({});
-/// This function cannot fail.
-ESTree::ProgramNode *wrapInIIFE(
-    std::shared_ptr<Context> &context,
-    ESTree::ProgramNode *program) {
-  // Function body should be the given program body.
-  auto *funcBody =
-      new (*context) ESTree::BlockStatementNode(std::move(program->_body));
-  funcBody->setSourceRange(program->getSourceRange());
-  funcBody->setDebugLoc(program->getDebugLoc());
-
-  // Add an 'exports' parameter to the function.
-  ESTree::NodeList argNames{};
-  auto *exports = new (*context) ESTree::IdentifierNode(
-      context->getIdentifier("exports").getUnderlyingPointer(), nullptr, false);
-  argNames.push_back(*exports);
-  auto *wrappedFn = new (*context) ESTree::FunctionExpressionNode(
-      nullptr,
-      std::move(argNames),
-      funcBody,
-      nullptr,
-      nullptr,
-      nullptr,
-      false,
-      false);
-  wrappedFn->setSourceRange(program->getSourceRange());
-  wrappedFn->setDebugLoc(program->getDebugLoc());
-
-  // Supply an empty object to the call expression.
-  auto *emptyObj = new (*context) ESTree::ObjectExpressionNode({});
-  ESTree::NodeList suppliedArgs{};
-  suppliedArgs.push_back(*emptyObj);
-
-  // Call the function.
-  auto *callExpr = new (*context)
-      ESTree::CallExpressionNode(wrappedFn, nullptr, std::move(suppliedArgs));
-  // Create a top level expression statement of the function call.
-  auto *topLevelExpr =
-      new (*context) ESTree::ExpressionStatementNode(callExpr, nullptr);
-
-  ESTree::NodeList stmtList;
-  stmtList.push_back(*topLevelExpr);
-  program->_body = std::move(stmtList);
-
-  return program;
 }
 
 /// Parse the given files and return a single AST pointer.

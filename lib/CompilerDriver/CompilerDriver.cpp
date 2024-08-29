@@ -7,9 +7,11 @@
 
 #include "hermes/CompilerDriver/CompilerDriver.h"
 
+#include "hermes/AST/ASTUtils.h"
 #include "hermes/AST/CommonJS.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
+#include "hermes/AST/TS2Flow.h"
 #include "hermes/AST2JS/AST2JS.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
@@ -251,6 +253,18 @@ static opt<bool> Pretty(
     init(true),
     desc("Pretty print JSON, JS or disassembled bytecode"),
     cat(CompilerCategory));
+
+static opt<bool> Typed(
+    "typed",
+    init(false),
+    desc("Enable typed mode"),
+    cat(CompilerCategory));
+
+cl::opt<bool> Script(
+    "script",
+    cl::desc("Enable script mode"),
+    cl::init(false),
+    cl::cat(CompilerCategory));
 
 static llvh::cl::alias _PrettyJSON(
     "pretty-json",
@@ -726,6 +740,7 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
     sema::SemContext &semCtx,
+    flow::FlowContext *flowContext,
     const DeclarationFileListTy &ambientDecls,
     std::unique_ptr<llvh::MemoryBuffer> fileBuf,
     std::unique_ptr<SourceMap> sourceMap = nullptr,
@@ -803,10 +818,31 @@ ESTree::NodePtr parseJS(
     return parsedAST;
   }
 
+  // Convert TS AST to Flow AST as an intermediate step until we have a
+  // separate TS type checker.
+  if (flowContext && context->getParseTS()) {
+    parsedAST =
+        convertTSToFlow(*context, llvh::cast<ESTree::ProgramNode>(parsedAST));
+    if (!parsedAST) {
+      return nullptr;
+    }
+  }
+
+  // If we are executing in typed mode and not script, then wrap the program.
+  if (cl::Typed && !cl::Script) {
+    parsedAST = wrapInIIFE(context, llvh::cast<ESTree::ProgramNode>(parsedAST));
+    // In case this API decides it can fail in the future, check for a
+    // nullptr.
+    if (!parsedAST) {
+      return nullptr;
+    }
+  }
+
   if (!wrapCJSModule) {
     if (!hermes::sema::resolveAST(
             *context,
             semCtx,
+            flowContext,
             llvh::cast<ESTree::ProgramNode>(parsedAST),
             ambientDecls)) {
       return nullptr;
@@ -938,6 +974,16 @@ bool validateFlags() {
       err("You can only dump bytecode for HBC bytecode file.");
   }
 
+#if !defined(HERMES_PARSE_FLOW) && !defined(HERMES_PARSE_TS)
+  // Cannot compile in typed mode if no parser support is available.
+  if (cl::Typed)
+    err("error: no typed dialect parser is configured");
+#endif
+
+  if (cl::CommonJS && cl::Typed) {
+    err("error: CommonJS modules are not supported in typed mode");
+  }
+
   return !errored;
 }
 
@@ -1012,6 +1058,10 @@ std::shared_ptr<Context> createContext(
 
   optimizationOpts.reusePropCache = cl::ReusePropCache;
 
+  // Auto enable static builtins in typed mode.
+  if (cl::Typed && cl::StaticBuiltins != cl::StaticBuiltinSetting::ForceOff)
+    cl::StaticBuiltins = cl::StaticBuiltinSetting::ForceOn;
+
   // When the setting is auto-detect, we will set the correct value after
   // parsing.
   optimizationOpts.staticBuiltins =
@@ -1027,8 +1077,8 @@ std::shared_ptr<Context> createContext(
       std::move(resolutionTable),
       std::move(segments));
 
-  // Default is non-strict mode.
-  context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
+  // Default is non-strict mode, unless it is typed..
+  context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
   context->setEnableEval(cl::EnableEval);
   context->setConvertES6Classes(cl::ES6Class);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
@@ -1078,6 +1128,10 @@ std::shared_ptr<Context> createContext(
     context->setParseJSX(true);
   }
 #endif
+
+  // If no type parser is specified, use flow by default.
+  if (cl::Typed && !cl::ParseFlow && !cl::ParseTS)
+    cl::ParseFlow = true;
 
 #if HERMES_PARSE_FLOW
   if (cl::ParseFlow) {
@@ -1520,8 +1574,8 @@ bool generateIRForSourcesAsCJSModules(
   // (main) module, from which other modules may be `require`d.
   auto globalMemBuffer = llvh::MemoryBuffer::getMemBufferCopy("", "<global>");
 
-  auto *globalAST =
-      parseJS(context, semCtx, ambientDecls, std::move(globalMemBuffer));
+  auto *globalAST = parseJS(
+      context, semCtx, nullptr, ambientDecls, std::move(globalMemBuffer));
   if (generateIR) {
     // If we aren't planning to do anything with the IR,
     // don't attempt to generate it.
@@ -1564,6 +1618,7 @@ bool generateIRForSourcesAsCJSModules(
       auto *ast = parseJS(
           context,
           semCtx,
+          nullptr,
           {},
           std::move(fileBuf),
           /*sourceMap*/ nullptr,
@@ -1868,20 +1923,25 @@ CompileResult processSourceFiles(
     auto sourceMapTranslator =
         std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());
     context->getSourceErrorManager().setTranslator(sourceMapTranslator);
+
+    flow::FlowContext flowContext;
     ESTree::NodePtr ast = parseJS(
         context,
         *semCtx,
+        cl::Typed ? &flowContext : nullptr,
         declFileList,
         std::move(mainFileBuf.file),
         std::move(sourceMap),
         sourceMapTranslator);
     if (!ast) {
+      if (auto N = context->getSourceErrorManager().getErrorCount())
+        llvh::errs() << "Emitted " << N << " errors. exiting.\n";
       return ParsingFailed;
     }
     if (cl::DumpTarget < DumpIR) {
       return Success;
     }
-    generateIRFromESTree(&*M, *semCtx, ast);
+    generateIRFromESTree(&*M, *semCtx, flowContext, ast);
   }
 
   // Bail out if there were any errors. We can't ensure that the module is in

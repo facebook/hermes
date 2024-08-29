@@ -6,6 +6,7 @@
  */
 
 // RUN: (! %shermes -Werror -typed -dump-sema %s 2>&1 ) | %FileCheckOrRegen --match-full-lines %s
+// RUN: (! %hermesc -Werror -typed -dump-ir %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 class A {
 }
@@ -22,7 +23,7 @@ class B extends A {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}super-prop-error.js:19:18: error: ft: property x not defined in class A
+// CHECK:{{.*}}super-prop-error.js:20:18: error: ft: property x not defined in class A
 // CHECK-NEXT:    return super.x;
 // CHECK-NEXT:                 ^
 // CHECK-NEXT:Emitted 1 errors. exiting.
