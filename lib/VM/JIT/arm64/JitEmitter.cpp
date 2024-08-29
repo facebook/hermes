@@ -599,7 +599,10 @@ void Emitter::syncAllTempExcept(FR exceptFR) {
     }
   }
 
-  for (unsigned i = kVecTemp.first; i <= kVecTemp.second; ++i) {
+  for (unsigned i = kVecTemp1.first; i <= kVecTemp2.second; ++i) {
+    if (i > kVecTemp1.second && i < kVecTemp2.first)
+      continue;
+
     HWReg hwReg(i, HWReg::VecD{});
     FR fr = hwRegs_[hwReg.combinedIndex()].contains;
     if (!fr.isValid() || fr == exceptFR)
@@ -634,7 +637,10 @@ void Emitter::freeAllTempExcept(FR exceptFR) {
     freeFRTemp(fr);
   }
 
-  for (unsigned i = kVecTemp.first; i <= kVecTemp.second; ++i) {
+  for (unsigned i = kVecTemp1.first; i <= kVecTemp2.second; ++i) {
+    if (i > kVecTemp1.second && i < kVecTemp2.first)
+      continue;
+
     HWReg hwReg(i, HWReg::VecD{});
     FR fr = hwRegs_[hwReg.combinedIndex()].contains;
     if (!fr.isValid() || fr == exceptFR)

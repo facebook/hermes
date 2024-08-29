@@ -194,7 +194,8 @@ static constexpr std::pair<uint8_t, uint8_t> kGPSaved(22, 28);
 /// Vec arg registers (inclusive).
 // static constexpr std::pair<uint8_t, uint8_t> kVecArgs(0, 7);
 /// Temporary vec registers (inclusive).
-static constexpr std::pair<uint8_t, uint8_t> kVecTemp(16, 31);
+static constexpr std::pair<uint8_t, uint8_t> kVecTemp1(0, 7);
+static constexpr std::pair<uint8_t, uint8_t> kVecTemp2(16, 31);
 /// Callee-saved vec registers (inclusive).
 static constexpr std::pair<uint8_t, uint8_t> kVecSaved(8, 15);
 
@@ -213,10 +214,20 @@ class TempRegAlloc {
   uint32_t availBits_;
 
  public:
-  TempRegAlloc(std::pair<uint8_t, uint8_t> range)
+  explicit TempRegAlloc(std::pair<uint8_t, uint8_t> range)
       : first_(range.first), lru_(range.second - range.first + 1) {
     map_.resize(range.second - range.first + 1);
     availBits_ = bitMask32(range);
+  }
+  explicit TempRegAlloc(
+      std::pair<uint8_t, uint8_t> range1,
+      std::pair<uint8_t, uint8_t> range2)
+      : first_(range1.first),
+        lru_(
+            range1.second - range1.first + 1 + range2.second - range2.first +
+            1) {
+    map_.resize(range2.second - range1.first + 1);
+    availBits_ = bitMask32(range1) | bitMask32(range2);
   }
 
   llvh::Optional<unsigned> alloc(
@@ -272,7 +283,7 @@ class Emitter {
   /// GP temp registers.
   TempRegAlloc gpTemp_{kGPTemp};
   /// VecD temp registers.
-  TempRegAlloc vecTemp_{kVecTemp};
+  TempRegAlloc vecTemp_{kVecTemp1, kVecTemp2};
 
   /// Keep enough information to generate a slow path at the end of the
   /// function.
@@ -659,7 +670,8 @@ class Emitter {
   bool isTempVecD(HWReg hwReg) const {
     assert(hwReg.isVecD());
     unsigned index = hwReg.indexInClass();
-    return index >= kVecTemp.first && index <= kVecTemp.second;
+    return (index >= kVecTemp1.first && index <= kVecTemp1.second) ||
+        (index >= kVecTemp2.first && index <= kVecTemp2.second);
   }
 
   bool isTemp(HWReg hwReg) const {
