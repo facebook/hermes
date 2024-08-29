@@ -266,6 +266,40 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(JNotGreater);
           break;
 
+        case inst::OpCode::JmpTrue:
+          em.jmpTrueFalse(
+              true,
+              labels[ofsToBBIndex
+                         [(const char *)ip - funcStart + ip->iJmpTrue.op1]],
+              FR(ip->iJmpTrue.op2));
+          ip = NEXTINST(JmpTrue);
+          break;
+        case inst::OpCode::JmpTrueLong:
+          em.jmpTrueFalse(
+              true,
+              labels[ofsToBBIndex
+                         [(const char *)ip - funcStart + ip->iJmpTrueLong.op1]],
+              FR(ip->iJmpTrueLong.op2));
+          ip = NEXTINST(JmpTrueLong);
+          break;
+        case inst::OpCode::JmpFalse:
+          em.jmpTrueFalse(
+              false,
+              labels[ofsToBBIndex
+                         [(const char *)ip - funcStart + ip->iJmpFalse.op1]],
+              FR(ip->iJmpFalse.op2));
+          ip = NEXTINST(JmpFalse);
+          break;
+        case inst::OpCode::JmpFalseLong:
+          em.jmpTrueFalse(
+              false,
+              labels[ofsToBBIndex
+                         [(const char *)ip - funcStart +
+                          ip->iJmpFalseLong.op1]],
+              FR(ip->iJmpFalseLong.op2));
+          ip = NEXTINST(JmpFalseLong);
+          break;
+
         case inst::OpCode::TryGetByIdLong:
           idVal = ID(ip->iTryGetByIdLong.op4);
           cacheIdx = ip->iTryGetByIdLong.op3;

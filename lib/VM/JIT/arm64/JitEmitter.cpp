@@ -1861,6 +1861,53 @@ void Emitter::arithBinOp(
        }});
 }
 
+void Emitter::jmpTrueFalse(
+    bool onTrue,
+    const asmjit::Label &target,
+    FR frInput) {
+  comment("// Jmp%s r%u", onTrue ? "True" : "False", frInput.index());
+
+  // Do this always, since this could be the end of the BB.
+  syncAllTempExcept(FR());
+
+  if (isFRKnownType(frInput, FRType::Number)) {
+    HWReg hwInput = getOrAllocFRInVecD(frInput, true);
+    a.fcmp(hwInput.a64VecD(), 0.0);
+    if (onTrue) {
+      // Branch on < 0 and > 0. All that remains is 0 and NaN.
+      a.b_mi(target);
+      a.b_gt(target);
+    } else {
+      asmjit::Label label = a.newLabel();
+      a.b_mi(label);
+      a.b_gt(label);
+      a.b(target);
+      a.bind(label);
+    }
+  } else if (isFRKnownType(frInput, FRType::Bool)) {
+    HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+    a64::GpX xInput = hwInput.a64GpX();
+
+    static_assert(
+        HERMESVALUE_VERSION == 1,
+        "bool is encoded as 32-bit value in the low bits");
+    if (onTrue)
+      a.cbnz(xInput.w(), target);
+    else
+      a.cbz(xInput.w(), target);
+  } else {
+    // TODO: we should inline all of it.
+    syncAllTempExcept({});
+    movHWFromFR(HWReg::gpX(0), frInput);
+    EMIT_RUNTIME_CALL(*this, bool (*)(SHLegacyValue), _sh_ljs_to_boolean);
+    if (onTrue)
+      a.cbnz(a64::w0, target);
+    else
+      a.cbz(a64::w0, target);
+    freeAllTempExcept(FR());
+  }
+}
+
 void Emitter::jCond(
     bool forceNumber,
     bool invert,

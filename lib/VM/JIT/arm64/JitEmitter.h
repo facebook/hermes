@@ -432,6 +432,7 @@ class Emitter {
   })
 #undef DECL_UNOP
 
+  void jmpTrueFalse(bool onTrue, const asmjit::Label &target, FR frInput);
 #define DECL_JCOND(methodName, forceNum, commentStr, slowCall, a64inst) \
   void methodName(                                                      \
       bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {  \
@@ -612,11 +613,14 @@ class Emitter {
       hermes::OptValue<FRType> localType = llvh::None);
   void frUpdateType(FR fr, FRType type);
 
+  /// \return true if the FR is currently known to contain the specified type.
+  bool isFRKnownType(FR fr, FRType frType) const {
+    auto &frState = frameRegs_[fr.index()];
+    return frState.globalType == frType || frState.localType == frType;
+  }
   /// \return true if the FR is currently known to contain a number.
   bool isFRKnownNumber(FR fr) const {
-    auto &frState = frameRegs_[fr.index()];
-    return frState.globalType == FRType::Number ||
-        frState.localType == FRType::Number;
+    return isFRKnownType(fr, FRType::Number);
   }
 
  private:
