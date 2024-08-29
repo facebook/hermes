@@ -266,6 +266,7 @@ class Emitter {
  public:
   std::unique_ptr<asmjit::Logger> logger_{};
   std::unique_ptr<asmjit::ErrorHandler> errorHandler_;
+  asmjit::Error expectedError_ = asmjit::kErrorOk;
 
   std::vector<FRState> frameRegs_;
   std::array<HWRegState, 64> hwRegs_;
@@ -515,6 +516,10 @@ class Emitter {
     return a64::Mem(xFrame, fr.index() * sizeof(SHLegacyValue));
   }
 
+  /// Load an arbitrary bit pattern into a Gp.
+  template <typename REG>
+  void loadBits64InGp(const REG &dest, uint64_t bits, const char *constName);
+
   template <typename R>
   void loadFrame(R dest, FR rFrom) {
     // FIXME: check if the offset fits
@@ -562,6 +567,11 @@ class Emitter {
   HWReg allocTempVecD(llvh::Optional<HWReg> preferred = llvh::None) {
     assert((!preferred || preferred->isVecD()) && "invalid preferred register");
     return _allocTemp<HWReg::VecD>(vecTemp_, preferred);
+  }
+  HWReg allocAndLogTempGpX() {
+    HWReg res = allocTempGpX();
+    comment("    ; alloc: x%u (temp)", res.indexInClass());
+    return res;
   }
   void freeReg(HWReg hwReg);
   HWReg useReg(HWReg hwReg);

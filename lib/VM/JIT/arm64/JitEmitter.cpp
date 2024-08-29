@@ -13,6 +13,9 @@
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "llvh/Support/SaveAndRestore.h"
+
+#define DEBUG_TYPE "jit"
 
 namespace hermes::vm::arm64 {
 
@@ -26,10 +29,25 @@ static_assert(
     "HermesValue version mismatch, JIT may need to be updated");
 
 class OurErrorHandler : public asmjit::ErrorHandler {
+  asmjit::Error &expectedError_;
+
+ public:
+  /// \param expectedError if we get an error matching this value, we ignore it.
+  explicit OurErrorHandler(asmjit::Error &expectedError)
+      : expectedError_(expectedError) {}
+
   void handleError(
       asmjit::Error err,
       const char *message,
       asmjit::BaseEmitter *origin) override {
+    if (err == expectedError_) {
+      LLVM_DEBUG(
+          llvh::outs() << "Expected AsmJit error: " << err << ": "
+                       << asmjit::DebugUtils::errorAsString(err) << ": "
+                       << message << "\n");
+      return;
+    }
+
     llvh::errs() << "AsmJit error: " << err << ": "
                  << asmjit::DebugUtils::errorAsString(err) << ": " << message
                  << "\n";
@@ -77,7 +95,8 @@ Emitter::Emitter(
   if (logger_)
     logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
 
-  errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(new OurErrorHandler());
+  errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(
+      new OurErrorHandler(expectedError_));
 
   code.init(jitRT.environment(), jitRT.cpuFeatures());
   code.setErrorHandler(errorHandler_.get());
@@ -400,18 +419,22 @@ void Emitter::freeReg(HWReg hwReg) {
   hwRegs_[hwReg.combinedIndex()].contains = {};
 
   if (hwReg.isGpX()) {
-    comment("    ; free x%u (r%u)", hwReg.indexInClass(), fr.index());
     if (fr.isValid()) {
+      comment("    ; free x%u (r%u)", hwReg.indexInClass(), fr.index());
       assert(frameRegs_[fr.index()].localGpX == hwReg);
       frameRegs_[fr.index()].localGpX = {};
+    } else {
+      comment("    ; free x%u", hwReg.indexInClass());
     }
     if (isTempGpX(hwReg))
       gpTemp_.free(hwReg.indexInClass());
   } else {
-    comment("    ; free d%u (r%u)", hwReg.indexInClass(), fr.index());
     if (fr.isValid()) {
+      comment("    ; free d%u (r%u)", hwReg.indexInClass(), fr.index());
       assert(frameRegs_[fr.index()].localVecD == hwReg);
       frameRegs_[fr.index()].localVecD = {};
+    } else {
+      comment("    ; free d%u", hwReg.indexInClass());
     }
     if (isTempVecD(hwReg))
       vecTemp_.free(hwReg.indexInClass());
@@ -755,15 +778,78 @@ void Emitter::mov(FR frRes, FR frInput, bool logComment) {
 
 void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
   comment("// LoadParam r%u, %u", frRes.index(), paramIndex);
-  syncAllTempExcept(frRes);
-  freeAllTempExcept(frRes);
-  a.mov(a64::x0, xFrame);
-  a.mov(a64::w1, paramIndex);
-  EMIT_RUNTIME_CALL(*this, _sh_ljs_param);
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
-  movHWReg<false>(hwRes, HWReg::gpX(0));
+  asmjit::Error err;
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  HWReg hwTmp = allocAndLogTempGpX();
+  a64::GpW wTmp(hwTmp.indexInClass());
+
+  a.ldur(
+      wTmp,
+      a64::Mem(
+          xFrame,
+          (int)StackFrameLayout::ArgCount * (int)sizeof(SHLegacyValue)));
+
+  {
+    llvh::SaveAndRestore<asmjit::Error> sav(
+        expectedError_, asmjit::kErrorInvalidImmediate);
+    err = a.cmp(wTmp, paramIndex);
+  }
+  // Does paramIndex fit in the 12-bit unsigned immediate?
+  if (err) {
+    HWReg hwTmp2 = allocAndLogTempGpX();
+    a64::GpW wTmp2(hwTmp2.indexInClass());
+    loadBits64InGp(wTmp2, paramIndex, "paramIndex");
+    a.cmp(wTmp, wTmp2);
+    freeReg(hwTmp2);
+  }
+  a.b_lo(slowPathLab);
+
+  freeReg(hwTmp);
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+
+  // FIXME: handle integer overflow better?
+  int32_t ofs = ((int)StackFrameLayout::ThisArg - (int32_t)paramIndex) *
+      (int)sizeof(SHLegacyValue);
+  if (ofs >= 0)
+    hermes_fatal("JIT integer overflow");
+  {
+    llvh::SaveAndRestore<asmjit::Error> sav(
+        expectedError_, asmjit::kErrorInvalidDisplacement);
+    err = a.ldur(hwRes.a64GpX(), a64::Mem(xFrame, ofs));
+  }
+  // Does the offset fit in the 9-bit signed offset?
+  if (err) {
+    ofs = -ofs;
+    a64::GpX xRes = hwRes.a64GpX();
+    if (ofs <= 4095) {
+      a.sub(xRes, xFrame, ofs);
+    } else {
+      loadBits64InGp(xRes, ofs, nullptr);
+      a.sub(xRes, xFrame, xRes);
+    }
+    a.ldr(xRes, a64::Mem(xRes));
+  }
+
+  a.bind(contLab);
   frUpdatedWithHWReg(frRes, hwRes);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = "LoadParam",
+       .frRes = frRes,
+       .hwRes = hwRes,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment("// Slow path: %s r%u", sl.name, sl.frRes.index());
+         em.a.bind(sl.slowPathLab);
+         em.loadBits64InGp(
+             sl.hwRes.a64GpX(), _sh_ljs_undefined().raw, "undefined");
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
@@ -792,6 +878,19 @@ void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
   }
   frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
 }
+
+template <typename REG>
+void Emitter::loadBits64InGp(
+    const REG &dest,
+    uint64_t bits,
+    const char *constName) {
+  if (isCheapConst(bits)) {
+    a.mov(dest, bits);
+  } else {
+    a.ldr(dest, a64::Mem(roDataLabel_, uint64Const(bits, constName)));
+  }
+}
+
 void Emitter::loadConstBits64(
     FR frRes,
     uint64_t bits,
@@ -804,11 +903,7 @@ void Emitter::loadConstBits64(
       (unsigned long long)bits);
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
 
-  if (isCheapConst(bits)) {
-    a.mov(hwRes.a64GpX(), bits);
-  } else {
-    a.ldr(hwRes.a64GpX(), a64::Mem(roDataLabel_, uint64Const(bits, name)));
-  }
+  loadBits64InGp(hwRes.a64GpX(), bits, name);
   frUpdatedWithHWReg(frRes, hwRes, type);
 }
 
