@@ -36,4 +36,13 @@ extern "C" SHLegacyValue _sh_ljs_create_bytecode_closure(
       .getHermesValue();
 }
 
+extern "C" SHLegacyValue _sh_ljs_get_bytecode_string(
+    SHRuntime *shr,
+    SHRuntimeModule *runtimeModule,
+    uint32_t stringID) {
+  return HermesValue::encodeStringValue(
+      ((RuntimeModule *)runtimeModule)
+          ->getStringPrimFromStringIDMayAllocate(stringID));
+}
+
 #endif // HERMESVM_JIT

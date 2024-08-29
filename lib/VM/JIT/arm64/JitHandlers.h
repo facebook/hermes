@@ -24,6 +24,14 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_bytecode_closure(
     SHRuntimeModule *shRuntimeModule,
     uint32_t functionID);
 
+/// Get the string associated with the given RuntimeModule-specific string ID.
+/// This may lazily allocate a SymbolID and the string itself.
+/// This is used when executing with a bytecode CodeBlock.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_get_bytecode_string(
+    SHRuntime *shr,
+    SHRuntimeModule *runtimeModule,
+    uint32_t stringID);
+
 #ifdef __cplusplus
 }
 #endif

@@ -131,6 +131,20 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           LOAD_CONST(True, _sh_ljs_bool(true).raw, FRType::Bool);
           LOAD_CONST(False, _sh_ljs_bool(false).raw, FRType::Bool);
 #undef LOAD_CONST
+        case inst::OpCode::LoadConstString:
+          em.loadConstString(
+              FR(ip->iLoadConstString.op1),
+              codeBlock->getRuntimeModule(),
+              ip->iLoadConstString.op2);
+          ip = NEXTINST(LoadConstString);
+          break;
+        case inst::OpCode::LoadConstStringLongIndex:
+          em.loadConstString(
+              FR(ip->iLoadConstStringLongIndex.op1),
+              codeBlock->getRuntimeModule(),
+              ip->iLoadConstStringLongIndex.op2);
+          ip = NEXTINST(LoadConstStringLongIndex);
+          break;
 
         case inst::OpCode::Mov:
           em.mov(FR(ip->iMov.op1), FR(ip->iMov.op2));

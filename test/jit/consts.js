@@ -17,6 +17,7 @@ function constants(o) {
     o.null = null;
     o.true = true;
     o.false = false;
+    o.str = "Hello";
     return o;
 }
 
@@ -29,5 +30,6 @@ print(JSON.stringify(constants({}), undefined, 2));
 // CHECK-NEXT:   "d": 3.14,
 // CHECK-NEXT:   "null": null,
 // CHECK-NEXT:   "true": true,
-// CHECK-NEXT:   "false": false
+// CHECK-NEXT:   "false": false,
+// CHECK-NEXT:   "str": "Hello"
 // CHECK-NEXT: }

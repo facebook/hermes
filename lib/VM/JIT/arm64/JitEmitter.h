@@ -379,6 +379,8 @@ class Emitter {
   void loadParam(FR frRes, uint32_t paramIndex);
   void loadConstDouble(FR frRes, double val, const char *name);
   void loadConstBits64(FR frRes, uint64_t val, FRType type, const char *name);
+  void
+  loadConstString(FR frRes, RuntimeModule *runtimeModule, uint32_t stringID);
   void toNumber(FR frRes, FR frInput);
 
 #define DECL_BINOP(methodName, forceNum, commentStr, slowCall, a64body) \
