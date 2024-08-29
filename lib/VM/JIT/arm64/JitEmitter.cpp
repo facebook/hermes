@@ -52,6 +52,20 @@ void emit_sh_ljs_object(a64::Assembler &a, const a64::GpX inOut) {
   a.movk(inOut, (uint16_t)HVTag_Object, kHV_NumDataBits);
 }
 
+/// For a register \p inOut that contains a bool (i.e. either 0 or 1), turn it
+/// into a HermesValue boolean by adding the corresponding tag.
+void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
+  static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
+  // We know that the ETag for bool as a 0 in its lowest bit, and is therefore a
+  // shifted 16 bit value. We can exploit this to use movk to set the tag.
+  static_assert(HERMESVALUE_VERSION == 1);
+  static_assert(
+      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
+      "Boolean tag must be 16 bits.");
+  // Add the bool tag.
+  a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
+}
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
 
