@@ -185,6 +185,23 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(Dec);
           break;
 
+        case inst::OpCode::Not:
+          em.booleanNot(FR(ip->iNot.op1), FR(ip->iNot.op2));
+          ip = NEXTINST(Not);
+          break;
+        case inst::OpCode::BitNot:
+          em.bitNot(FR(ip->iNot.op1), FR(ip->iNot.op2));
+          ip = NEXTINST(Not);
+          break;
+        case inst::OpCode::Negate:
+          em.negate(FR(ip->iNegate.op1), FR(ip->iNegate.op2));
+          ip = NEXTINST(Negate);
+          break;
+        case inst::OpCode::TypeOf:
+          em.typeOf(FR(ip->iTypeOf.op1), FR(ip->iTypeOf.op2));
+          ip = NEXTINST(TypeOf);
+          break;
+
         case inst::OpCode::JGreaterEqual:
           em.jGreaterEqual(
               false,

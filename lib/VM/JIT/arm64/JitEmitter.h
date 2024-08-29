@@ -430,10 +430,16 @@ class Emitter {
     as.fmov(tmp, -1.0);
     as.fadd(d, s, tmp);
   })
+  DECL_UNOP(negate, false, "neg", _sh_ljs_minus_rjs, { as.fneg(d, s); });
+
 #undef DECL_UNOP
 
   void jmpTrueFalse(bool onTrue, const asmjit::Label &target, FR frInput);
   void jmp(const asmjit::Label &target);
+
+  void booleanNot(FR frRes, FR frInput);
+  void bitNot(FR frRes, FR frInput);
+  void typeOf(FR frRes, FR frInput);
 
 #define DECL_JCOND(methodName, forceNum, commentStr, slowCall, a64inst) \
   void methodName(                                                      \

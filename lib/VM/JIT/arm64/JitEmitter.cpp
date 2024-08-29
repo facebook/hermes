@@ -2042,6 +2042,66 @@ void Emitter::arithUnop(
        }});
 }
 
+void Emitter::booleanNot(FR frRes, FR frInput) {
+  comment("// Not r%u, r%u", frRes.index(), frInput.index());
+
+  // TODO: Add a fast path, perhaps by sharing some code with JmpTrue.
+  syncAndFreeTempReg(HWReg::gpX(0));
+  movHWFromFR(HWReg::gpX(0), frInput);
+
+  // Since we already loaded the input, no need to check for frRes == frInput.
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+  EMIT_RUNTIME_CALL(*this, bool (*)(SHLegacyValue), _sh_ljs_to_boolean);
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  auto baseBool = _sh_ljs_bool(false).raw;
+  static_assert(HERMESVALUE_VERSION == 1);
+  assert(
+      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool)) &&
+      "Boolean tag must be 16 bits.");
+  // Negate the result.
+  a.eor(hwRes.a64GpX(), a64::x0, 1);
+  // Add the bool tag.
+  emit_sh_ljs_bool(a, hwRes.a64GpX());
+  frUpdatedWithHWReg(frRes, hwRes, FRType::Bool);
+}
+
+void Emitter::bitNot(FR frRes, FR frInput) {
+  comment("// BitNot r%u, r%u", frRes.index(), frInput.index());
+  syncAllTempExcept(frRes == frInput ? FR() : frRes);
+  syncToMem(frInput);
+  freeAllTempExcept(FR());
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frInput);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+      _sh_ljs_bit_not_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::typeOf(FR frRes, FR frInput) {
+  comment("// TypeOf r%u, r%u", frRes.index(), frInput.index());
+  syncAllTempExcept(frRes == frInput ? FR() : frRes);
+  syncToMem(frInput);
+  freeAllTempExcept(FR());
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frInput);
+  // TODO: Use a function that preserves temporary registers.
+  EMIT_RUNTIME_CALL(
+      *this, SHLegacyValue(*)(SHRuntime *, SHLegacyValue *), _sh_ljs_typeof);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::arithBinOp(
     bool forceNumber,
     FR frRes,
