@@ -239,10 +239,8 @@ class TempRegAlloc {
 
   void use(unsigned index) {
     assert(index >= first_ && "Invalid tmpreg index");
-    assert(map_[index - first_] && "map shows the tmpreg is freed");
-    assert(!(availBits_ & (1u << index)) && "bitmask shows tmpreg is freed");
-
-    lru_.use(map_[index - first_]);
+    if (!(availBits_ & (1u << index)))
+      lru_.use(map_[index - first_]);
   }
 
   void free(unsigned index) {
@@ -509,6 +507,15 @@ class Emitter {
 
   void getGlobalObject(FR frRes);
   void declareGlobalVar(SHSymbolID symID);
+  void createTopLevelEnvironment(FR frRes, uint32_t size);
+  void getParentEnvironment(FR frRes, uint32_t level);
+  void loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot);
+  void storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue);
+  void createClosure(
+      FR frRes,
+      FR frEnv,
+      RuntimeModule *runtimeModule,
+      uint32_t functionID);
 
  private:
   /// Create an a64::Mem to a specifc frame register.
@@ -575,6 +582,7 @@ class Emitter {
     return res;
   }
   void freeReg(HWReg hwReg);
+  void syncAndFreeTempReg(HWReg hwReg);
   HWReg useReg(HWReg hwReg);
 
   void spillTempReg(HWReg toSpill);

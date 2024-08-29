@@ -9,6 +9,8 @@
 #if HERMESVM_JIT
 #include "JitEmitter.h"
 
+#include "JitHandlers.h"
+
 #include "../RuntimeOffsets.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -16,6 +18,10 @@
 #include "llvh/Support/SaveAndRestore.h"
 
 #define DEBUG_TYPE "jit"
+
+#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
+#error JIT does not support compressed pointers or boxed doubles yet
+#endif
 
 namespace hermes::vm::arm64 {
 namespace {
@@ -26,6 +32,22 @@ namespace {
 static_assert(
     HERMESVALUE_VERSION == 1,
     "HermesValue version mismatch, JIT may need to be updated");
+
+void emit_sh_ljs_get_pointer(a64::Assembler &a, const a64::GpX inOut) {
+  // See:
+  // https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "kHV_DataMask is 0x000...1111... and can be encoded as a logical immediate");
+  a.and_(inOut, inOut, kHV_DataMask);
+}
+
+void emit_sh_ljs_object(a64::Assembler &a, const a64::GpX inOut) {
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
+  a.movk(inOut, (uint16_t)HVTag_Object, kHV_NumDataBits);
+}
 
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
@@ -447,6 +469,14 @@ void Emitter::freeReg(HWReg hwReg) {
     if (isTempVecD(hwReg))
       vecTemp_.free(hwReg.indexInClass());
   }
+}
+void Emitter::syncAndFreeTempReg(HWReg hwReg) {
+  if (!hwReg.isValid() || !isTemp(hwReg) ||
+      !hwRegs_[hwReg.combinedIndex()].contains.isValid()) {
+    return;
+  }
+  spillTempReg(hwReg);
+  freeReg(hwReg);
 }
 
 // TODO: check wherger we should make this call require a temp reg.
@@ -982,6 +1012,164 @@ void Emitter::declareGlobalVar(SHSymbolID symID) {
   a.mov(a64::w1, symID);
   EMIT_RUNTIME_CALL(
       *this, void (*)(SHRuntime *, SHSymbolID), _sh_ljs_declare_global_var);
+}
+
+void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
+  comment("// CreateTopLevelEnvironment r%u, %u", frRes.index(), size);
+
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, 0);
+  a.mov(a64::w2, size);
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *, uint32_t),
+      _sh_ljs_create_environment);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
+  comment("// GetParentEnvironment r%u, %u", frRes.index(), level);
+
+  HWReg hwTmp1 = allocTempGpX();
+  a64::GpX xTmp1 = hwTmp1.a64GpX();
+
+  // Get current closure.
+  a.ldur(
+      xTmp1,
+      a64::Mem(
+          xFrame,
+          (int)StackFrameLayout::CalleeClosureOrCB *
+              (int)sizeof(SHLegacyValue)));
+  // get pointer.
+  emit_sh_ljs_get_pointer(a, xTmp1);
+  // xTmp1 = closure->environment
+  a.ldr(xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
+  for (; level; --level) {
+    // xTmp1 = env->parent.
+    a.ldr(xTmp1, a64::Mem(xTmp1, offsetof(SHEnvironment, parentEnvironment)));
+  }
+  // encode object.
+  emit_sh_ljs_object(a, xTmp1);
+
+  freeReg(hwTmp1);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, hwTmp1);
+  movHWReg<false>(hwRes, hwTmp1);
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot) {
+  comment(
+      "// LoadFromEnvironment r%u, r%u, %u",
+      frRes.index(),
+      frEnv.index(),
+      slot);
+
+  // TODO: register allocation could be smarter if frRes !=- frEnv.
+
+  HWReg hwTmp1 = allocTempGpX();
+  a64::GpX xTmp1 = hwTmp1.a64GpX();
+
+  movHWFromFR(hwTmp1, frEnv);
+  // get pointer.
+  emit_sh_ljs_get_pointer(a, xTmp1);
+
+  a.ldr(
+      xTmp1,
+      a64::Mem(
+          xTmp1,
+          offsetof(SHEnvironment, slots) + sizeof(SHLegacyValue) * slot));
+
+  freeReg(hwTmp1);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, hwTmp1);
+  movHWReg<false>(hwRes, hwTmp1);
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue) {
+  // TODO: this should really be inlined!
+  comment(
+      "// StoreNPToEnvironment r%u, %u, r%u",
+      frEnv.index(),
+      slot,
+      frValue.index());
+
+  // Here we apply a technique that may be subtle. We have various FRs that we
+  // want to load into parameter registers (x0, x1, etc) by value. Some of these
+  // FRs may live in the parameter registers we want to use, but some may not.
+  // So, first we make sure that the FRs that live in x0, x1, etc., are synced
+  // to their primary location and the temps x0, x1, etc., are freed.
+  //
+  // Then we make sure that all FRs are synced to memory or callee-saved reg,
+  // because we will be making a call. But we are *not* freeing the temp regs
+  // yet, because we want to be able to use them to populate the values of the
+  // parameters before the call.
+  //
+  // Only in the end do we free all temps, to reflect the state of the world
+  // after the call.
+
+  // Make sure x0, x1, x2, x3 are unused.
+  syncAndFreeTempReg(HWReg::gpX(0));
+  syncAndFreeTempReg(HWReg::gpX(1));
+  syncAndFreeTempReg(HWReg::gpX(2));
+  syncAndFreeTempReg(HWReg::gpX(3));
+
+  // Make sure all FRs can be accessed. Some of them might be in temp regs.
+  syncAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  movHWFromFR(HWReg::gpX(1), frEnv);
+  movHWFromFR(HWReg::gpX(2), frValue);
+  a.mov(a64::w3, slot);
+  if (np) {
+    EMIT_RUNTIME_CALL(
+        *this,
+        void (*)(SHRuntime *, SHLegacyValue, SHLegacyValue, uint32_t),
+        _sh_ljs_store_np_to_env);
+  } else {
+    EMIT_RUNTIME_CALL(
+        *this,
+        void (*)(SHRuntime *, SHLegacyValue, SHLegacyValue, uint32_t),
+        _sh_ljs_store_to_env);
+  }
+
+  // No temp registers available anymore.
+  freeAllTempExcept({});
+}
+
+void Emitter::createClosure(
+    FR frRes,
+    FR frEnv,
+    RuntimeModule *runtimeModule,
+    uint32_t functionID) {
+  comment(
+      "// CreateClosure r%u, r%u, %u",
+      frRes.index(),
+      frEnv.index(),
+      functionID);
+  syncAllTempExcept(frRes != frEnv ? frRes : FR());
+  syncToMem(frEnv);
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frEnv);
+  loadBits64InGp(a64::x2, (uint64_t)runtimeModule, "RuntimeModule");
+  loadBits64InGp(a64::w3, functionID, nullptr);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *, const SHLegacyValue *, SHRuntimeModule *, uint32_t),
+      _sh_ljs_create_bytecode_closure);
+
+  freeAllTempExcept({});
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
 }
 
 void Emitter::putByValImpl(

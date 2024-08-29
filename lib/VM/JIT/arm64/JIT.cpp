@@ -485,6 +485,80 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.declareGlobalVar(ID(ip->iDeclareGlobalVar.op1));
           ip = NEXTINST(DeclareGlobalVar);
           break;
+        case inst::OpCode::CreateTopLevelEnvironment:
+          em.createTopLevelEnvironment(
+              FR(ip->iCreateTopLevelEnvironment.op1),
+              ip->iCreateTopLevelEnvironment.op2);
+          ip = NEXTINST(CreateTopLevelEnvironment);
+          break;
+        case inst::OpCode::GetParentEnvironment:
+          em.getParentEnvironment(
+              FR(ip->iGetParentEnvironment.op1), ip->iGetParentEnvironment.op2);
+          ip = NEXTINST(GetParentEnvironment);
+          break;
+        case inst::OpCode::LoadFromEnvironment:
+          em.loadFromEnvironment(
+              FR(ip->iLoadFromEnvironment.op1),
+              FR(ip->iLoadFromEnvironment.op2),
+              ip->iLoadFromEnvironment.op3);
+          ip = NEXTINST(LoadFromEnvironment);
+          break;
+        case inst::OpCode::LoadFromEnvironmentL:
+          em.loadFromEnvironment(
+              FR(ip->iLoadFromEnvironmentL.op1),
+              FR(ip->iLoadFromEnvironmentL.op2),
+              ip->iLoadFromEnvironmentL.op3);
+          ip = NEXTINST(LoadFromEnvironmentL);
+          break;
+        case inst::OpCode::StoreToEnvironment:
+          em.storeToEnvironment(
+              false,
+              FR(ip->iStoreToEnvironment.op1),
+              ip->iStoreToEnvironment.op2,
+              FR(ip->iStoreToEnvironment.op3));
+          ip = NEXTINST(StoreToEnvironment);
+          break;
+        case inst::OpCode::StoreToEnvironmentL:
+          em.storeToEnvironment(
+              false,
+              FR(ip->iStoreToEnvironmentL.op1),
+              ip->iStoreToEnvironmentL.op2,
+              FR(ip->iStoreToEnvironmentL.op3));
+          ip = NEXTINST(StoreToEnvironmentL);
+          break;
+        case inst::OpCode::StoreNPToEnvironment:
+          em.storeToEnvironment(
+              true,
+              FR(ip->iStoreNPToEnvironment.op1),
+              ip->iStoreToEnvironment.op2,
+              FR(ip->iStoreToEnvironment.op3));
+          ip = NEXTINST(StoreNPToEnvironment);
+          break;
+        case inst::OpCode::StoreNPToEnvironmentL:
+          em.storeToEnvironment(
+              true,
+              FR(ip->iStoreNPToEnvironmentL.op1),
+              ip->iStoreToEnvironmentL.op2,
+              FR(ip->iStoreToEnvironmentL.op3));
+          ip = NEXTINST(StoreNPToEnvironmentL);
+          break;
+
+        case inst::OpCode::CreateClosure:
+          em.createClosure(
+              FR(ip->iCreateClosure.op1),
+              FR(ip->iCreateClosure.op2),
+              codeBlock->getRuntimeModule(),
+              ip->iCreateClosure.op3);
+          ip = NEXTINST(CreateClosure);
+          break;
+        case inst::OpCode::CreateClosureLongIndex:
+          em.createClosure(
+              FR(ip->iCreateClosureLongIndex.op1),
+              FR(ip->iCreateClosureLongIndex.op2),
+              codeBlock->getRuntimeModule(),
+              ip->iCreateClosureLongIndex.op3);
+          ip = NEXTINST(CreateClosureLongIndex);
+          break;
 
         default:
           if (crashOnError_) {
