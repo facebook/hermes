@@ -2044,19 +2044,16 @@ tailCall:
       }
 
       CASE(CreateFunctionEnvironment) {
-        tmpHandle = HermesValue::encodeObjectValueUnsafe(
-            FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime));
-
         CAPTURE_IP_ASSIGN(
-            HermesValue envHV,
+            Environment * env,
             Environment::create(
                 runtime,
-                Handle<Environment>::vmcast_or_null(tmpHandle),
+                FRAME.getCalleeClosureHandleUnsafe(),
                 ip->iCreateFunctionEnvironment.op2));
 
-        O1REG(CreateFunctionEnvironment) = envHV;
+        O1REG(CreateFunctionEnvironment) = HermesValue::encodeObjectValue(env);
 #ifdef HERMES_ENABLE_DEBUGGER
-        FRAME.getDebugEnvironmentRef() = envHV;
+        FRAME.getDebugEnvironmentRef() = O1REG(CreateFunctionEnvironment);
 #endif
         tmpHandle = HermesValue::encodeUndefinedValue();
         ip = NEXTINST(CreateFunctionEnvironment);

@@ -57,6 +57,12 @@ class Environment final
     return HermesValue::encodeObjectValue(cell);
   }
 
+  static Environment *
+  create(Runtime &runtime, Handle<Callable> parentFn, uint32_t size) {
+    return runtime.makeAVariable<Environment>(
+        allocationSize(size), runtime, parentFn, size);
+  }
+
   /// \return the parent lexical environment. This value will be nullptr if the
   /// parent is the global scope.
   Environment *getParentEnvironment(PointerBase &runtime) const {
@@ -95,6 +101,14 @@ class Environment final
         HermesValue::encodeUndefinedValue(),
         runtime.getHeap());
   }
+
+  /// Create an environment using the given function to retrieve the parent
+  /// environment. \param parentFn the function whose environment is the parent
+  /// of this one. \param size the number of entries in the environment.
+  inline Environment(
+      Runtime &runtime,
+      Handle<Callable> parentFn,
+      uint32_t size);
 
  private:
   /// \return a pointer to the array of HermesValue.
@@ -350,6 +364,24 @@ void Callable::staticAsserts() {
   static_assert(sizeof(Callable) == sizeof(SHCallable));
   static_assert(
       offsetof(Callable, environment_) == offsetof(SHCallable, environment));
+}
+
+Environment::Environment(
+    Runtime &runtime,
+    Handle<Callable> parentFn,
+    uint32_t size)
+    : parentEnvironment_(
+          runtime,
+          // TODO: Consider keeping the parent as a compressed pointer.
+          parentFn->getEnvironment(runtime),
+          runtime.getHeap()),
+      size_(size) {
+  // Initialize all slots to 'undefined'.
+  GCHermesValue::uninitialized_fill(
+      getSlots(),
+      getSlots() + size,
+      HermesValue::encodeUndefinedValue(),
+      runtime.getHeap());
 }
 
 /// A function produced by Function.prototype.bind(). It packages a function
