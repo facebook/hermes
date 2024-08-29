@@ -411,6 +411,20 @@ class Emitter {
   DECL_BINOP(divN, true, "divN", _sh_ljs_div_rjs, { as.fdiv(res, dl, dr); })
 #undef DECL_BINOP
 
+#define DECL_BIT_BINOP(methodName, commentStr, slowCall)            \
+  void methodName(FR rRes, FR rLeft, FR rRight) {                   \
+    bitBinOp(rRes, rLeft, rRight, commentStr, slowCall, #slowCall); \
+  }
+
+  DECL_BIT_BINOP(bitAnd, "bit_and", _sh_ljs_bit_and_rjs)
+  DECL_BIT_BINOP(bitOr, "bit_or", _sh_ljs_bit_or_rjs)
+  DECL_BIT_BINOP(bitXor, "bit_xor", _sh_ljs_bit_xor_rjs)
+  DECL_BIT_BINOP(lShift, "lshift", _sh_ljs_left_shift_rjs)
+  DECL_BIT_BINOP(rShift, "rshift", _sh_ljs_right_shift_rjs)
+  DECL_BIT_BINOP(urShift, "rshiftu", _sh_ljs_unsigned_right_shift_rjs)
+
+#undef DECL_BIT_BINOP
+
 #define DECL_UNOP(methodName, forceNum, commentStr, slowCall, a64body) \
   void methodName(FR rRes, FR rInput) {                                \
     arithUnop(                                                         \
@@ -765,6 +779,17 @@ class Emitter {
           const a64::VecD &dl,
           const a64::VecD &dr),
       void *slowCall,
+      const char *slowCallName);
+
+  void bitBinOp(
+      FR frRes,
+      FR frLeft,
+      FR frRight,
+      const char *name,
+      SHLegacyValue (*slowCall)(
+          SHRuntime *shr,
+          const SHLegacyValue *a,
+          const SHLegacyValue *b),
       const char *slowCallName);
 
   void compareImpl(

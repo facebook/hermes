@@ -2293,6 +2293,36 @@ void Emitter::arithBinOp(
        }});
 }
 
+void Emitter::bitBinOp(
+    FR frRes,
+    FR frLeft,
+    FR frRight,
+    const char *name,
+    SHLegacyValue (*slowCall)(
+        SHRuntime *shr,
+        const SHLegacyValue *a,
+        const SHLegacyValue *b),
+    const char *slowCallName) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR{});
+  syncToMem(frLeft);
+  syncToMem(frRight);
+  freeAllTempExcept(FR());
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frLeft);
+  loadFrameAddr(a64::x2, frRight);
+  call((void *)slowCall, slowCallName);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
 void Emitter::jmpTrueFalse(
     bool onTrue,
     const asmjit::Label &target,

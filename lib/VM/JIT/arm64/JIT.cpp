@@ -209,6 +209,35 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.divN(FR(ip->iDivN.op1), FR(ip->iDivN.op2), FR(ip->iDivN.op3));
           ip = NEXTINST(DivN);
           break;
+        case inst::OpCode::BitAnd:
+          em.bitAnd(
+              FR(ip->iBitAnd.op1), FR(ip->iBitAnd.op2), FR(ip->iBitAnd.op3));
+          ip = NEXTINST(BitAnd);
+          break;
+        case inst::OpCode::BitOr:
+          em.bitOr(FR(ip->iBitOr.op1), FR(ip->iBitOr.op2), FR(ip->iBitOr.op3));
+          ip = NEXTINST(BitOr);
+          break;
+        case inst::OpCode::BitXor:
+          em.bitXor(
+              FR(ip->iBitXor.op1), FR(ip->iBitXor.op2), FR(ip->iBitXor.op3));
+          ip = NEXTINST(BitXor);
+          break;
+        case inst::OpCode::LShift:
+          em.lShift(
+              FR(ip->iLShift.op1), FR(ip->iLShift.op2), FR(ip->iLShift.op3));
+          ip = NEXTINST(LShift);
+          break;
+        case inst::OpCode::RShift:
+          em.rShift(
+              FR(ip->iRShift.op1), FR(ip->iRShift.op2), FR(ip->iRShift.op3));
+          ip = NEXTINST(RShift);
+          break;
+        case inst::OpCode::URshift:
+          em.urShift(
+              FR(ip->iURshift.op1), FR(ip->iURshift.op2), FR(ip->iURshift.op3));
+          ip = NEXTINST(URshift);
+          break;
 
         case inst::OpCode::Dec:
           em.dec(FR(ip->iDec.op1), FR(ip->iDec.op2));
