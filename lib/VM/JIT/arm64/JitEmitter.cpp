@@ -378,10 +378,7 @@ void Emitter::movHWReg(HWReg dst, HWReg src) {
 }
 
 void Emitter::_storeHWRegToFrame(FR fr, HWReg src) {
-  if (src.isVecD())
-    storeFrame(src.a64VecD(), fr);
-  else
-    storeFrame(src.a64GpX(), fr);
+  _storeFrame(src, fr);
   frameRegs_[fr.index()].frameUpToDate = true;
 }
 
@@ -394,7 +391,7 @@ void Emitter::movHWFromFR(HWReg hwRes, FR src) {
   else if (frState.globalReg && frState.globalRegUpToDate)
     movHWReg<true>(hwRes, frState.globalReg);
   else
-    loadFrame(a64::GpX(useReg(hwRes).indexInClass()), src);
+    _loadFrame(useReg(hwRes), src);
 }
 
 void Emitter::movHWFromMem(HWReg hwRes, a64::Mem src) {
@@ -687,7 +684,7 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
           "globalReg must be up to date if no local regs");
       movHWReg<false>(hwVecD, frState.globalReg);
     } else {
-      loadFrame(hwVecD.a64VecD(), fr);
+      _loadFrame(hwVecD, fr);
       frState.frameUpToDate = true;
     }
   }
@@ -729,7 +726,7 @@ HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
           "globalReg must be up to date if no local regs");
       movHWReg<false>(hwGpX, frState.globalReg);
     } else {
-      loadFrame(hwGpX.a64GpX(), fr);
+      _loadFrame(hwGpX, fr);
       frState.frameUpToDate = true;
     }
   }
@@ -752,7 +749,7 @@ HWReg Emitter::getOrAllocFRInAnyReg(
   assignAllocatedLocalHWReg(fr, hwGpX);
 
   if (load) {
-    loadFrame(hwGpX.a64GpX(), fr);
+    _loadFrame(hwGpX, fr);
     frameRegs_[fr.index()].frameUpToDate = true;
   }
 
@@ -797,7 +794,7 @@ void Emitter::ret(FR frValue) {
   if (HWReg hwReg = isFRInRegister(frValue))
     movHWReg<false>(HWReg::gpX(22), hwReg);
   else
-    loadFrame(a64::x22, frValue);
+    _loadFrame(HWReg::gpX(22), frValue);
   a.b(returnLabel_);
 }
 

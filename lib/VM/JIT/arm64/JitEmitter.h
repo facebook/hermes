@@ -531,15 +531,19 @@ class Emitter {
   template <typename REG>
   void loadBits64InGp(const REG &dest, uint64_t bits, const char *constName);
 
-  template <typename R>
-  void loadFrame(R dest, FR rFrom) {
+  void _loadFrame(HWReg dest, FR rFrom) {
     // FIXME: check if the offset fits
-    a.ldr(dest, frA64Mem(rFrom));
+    if (dest.isGpX())
+      a.ldr(dest.a64GpX(), frA64Mem(rFrom));
+    else
+      a.ldr(dest.a64VecD(), frA64Mem(rFrom));
   }
-  template <typename R>
-  void storeFrame(R src, FR rFrom) {
+  void _storeFrame(HWReg src, FR rFrom) {
     // FIXME: check if the offset fits
-    a.str(src, frA64Mem(rFrom));
+    if (src.isGpX())
+      a.str(src.a64GpX(), frA64Mem(rFrom));
+    else
+      a.str(src.a64VecD(), frA64Mem(rFrom));
   }
 
   bool isTempGpX(HWReg hwReg) const {
