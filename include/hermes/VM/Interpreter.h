@@ -11,10 +11,11 @@
 
 #include "hermes/VM/Runtime.h"
 
-class CodeBlock;
-
 namespace hermes {
 namespace vm {
+
+class CodeBlock;
+
 /// This class is a convenience wrapper for the interpreter implementation that
 /// needs access to the private fields of Runtime, but doesn't belong in
 /// Runtime.

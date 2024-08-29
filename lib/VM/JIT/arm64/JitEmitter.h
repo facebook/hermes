@@ -508,6 +508,14 @@ class Emitter {
 
   asmjit::Label newPrefLabel(const char *pref, size_t index);
 
+  void newObject(FR frRes);
+  void newObjectWithParent(FR frRes, FR frParent);
+  void newObjectWithBuffer(
+      CodeBlock *codeBlock,
+      FR frRes,
+      uint32_t shapeTableIndex,
+      uint32_t valBufferOffset);
+
   void getGlobalObject(FR frRes);
   void declareGlobalVar(SHSymbolID symID);
   void createTopLevelEnvironment(FR frRes, uint32_t size);

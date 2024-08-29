@@ -10,16 +10,17 @@
 #include "JitHandlers.h"
 
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/Interpreter.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StaticHUtils.h"
 
 #define DEBUG_TYPE "jit"
 
-using namespace hermes;
-using namespace hermes::vm;
+namespace hermes::vm {
 
-extern "C" SHLegacyValue _sh_ljs_create_bytecode_closure(
+SHLegacyValue _sh_ljs_create_bytecode_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHRuntimeModule *shRuntimeModule,
@@ -36,7 +37,7 @@ extern "C" SHLegacyValue _sh_ljs_create_bytecode_closure(
       .getHermesValue();
 }
 
-extern "C" SHLegacyValue _sh_ljs_get_bytecode_string(
+SHLegacyValue _sh_ljs_get_bytecode_string(
     SHRuntime *shr,
     SHRuntimeModule *runtimeModule,
     uint32_t stringID) {
@@ -44,5 +45,22 @@ extern "C" SHLegacyValue _sh_ljs_get_bytecode_string(
       ((RuntimeModule *)runtimeModule)
           ->getStringPrimFromStringIDMayAllocate(stringID));
 }
+
+/// Wrapper for Interpreter::createObjectFromBuffer.
+SHLegacyValue _interpreter_create_object_from_buffer(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<PseudoHandle<>> res = Interpreter::createObjectFromBuffer(
+      runtime, (CodeBlock *)codeBlock, shapeTableIndex, valBufferOffset);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
+} // namespace hermes::vm
 
 #endif // HERMESVM_JIT

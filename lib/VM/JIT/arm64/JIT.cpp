@@ -608,6 +608,25 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(CreateClosureLongIndex);
           break;
 
+        case inst::OpCode::NewObject:
+          em.newObject(FR(ip->iNewObject.op1));
+          ip = NEXTINST(NewObject);
+          break;
+        case inst::OpCode::NewObjectWithParent:
+          em.newObjectWithParent(
+              FR(ip->iNewObjectWithParent.op1),
+              FR(ip->iNewObjectWithParent.op2));
+          ip = NEXTINST(NewObjectWithParent);
+          break;
+        case inst::OpCode::NewObjectWithBuffer:
+          em.newObjectWithBuffer(
+              codeBlock,
+              FR(ip->iNewObjectWithBuffer.op1),
+              ip->iNewObjectWithBuffer.op2,
+              ip->iNewObjectWithBuffer.op3);
+          ip = NEXTINST(NewObjectWithBuffer);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

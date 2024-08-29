@@ -11,14 +11,13 @@
 
 typedef struct SHRuntime SHRuntime;
 typedef struct SHRuntimeModule SHRuntimeModule;
+typedef struct SHCodeBlock SHCodeBlock;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace hermes::vm {
 
 /// Create a JSFunction closure. The properties of the function (name, etc.)
 /// will be populated lazily.
-SHERMES_EXPORT SHLegacyValue _sh_ljs_create_bytecode_closure(
+SHLegacyValue _sh_ljs_create_bytecode_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
     SHRuntimeModule *shRuntimeModule,
@@ -27,11 +26,17 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_bytecode_closure(
 /// Get the string associated with the given RuntimeModule-specific string ID.
 /// This may lazily allocate a SymbolID and the string itself.
 /// This is used when executing with a bytecode CodeBlock.
-SHERMES_EXPORT SHLegacyValue _sh_ljs_get_bytecode_string(
+SHLegacyValue _sh_ljs_get_bytecode_string(
     SHRuntime *shr,
     SHRuntimeModule *runtimeModule,
     uint32_t stringID);
 
-#ifdef __cplusplus
-}
-#endif
+/// Wrapper around Interpreter::createObjectFromBuffer.
+SHLegacyValue _interpreter_create_object_from_buffer(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
+
+} // namespace hermes::vm
+

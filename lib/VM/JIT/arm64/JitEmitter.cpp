@@ -15,6 +15,8 @@
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/Interpreter.h"
+#include "hermes/VM/StaticHUtils.h"
 #include "llvh/Support/SaveAndRestore.h"
 
 #define DEBUG_TYPE "jit"
@@ -1012,6 +1014,59 @@ void Emitter::toNumber(FR frRes, FR frInput) {
          em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});
+}
+
+void Emitter::newObject(FR frRes) {
+  comment("// NewObject r%u", frRes.index());
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  EMIT_RUNTIME_CALL(*this, SHLegacyValue(*)(SHRuntime *), _sh_ljs_new_object);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::newObjectWithParent(FR frRes, FR frParent) {
+  comment("// NewObjectWithParent r%u, r%u", frRes.index(), frParent.index());
+  syncAllTempExcept(frRes != frParent ? frRes : FR());
+  syncToMem(frParent);
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frParent);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+      _sh_ljs_new_object_with_parent);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::newObjectWithBuffer(
+    CodeBlock *codeBlock,
+    FR frRes,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  comment(
+      "// NewObjectWithBuffer r%u, %u, %u",
+      frRes.index(),
+      shapeTableIndex,
+      valBufferOffset);
+
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock, "CodeBlock");
+  a.mov(a64::w2, shapeTableIndex);
+  a.mov(a64::w3, valBufferOffset);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHCodeBlock *, uint32_t, uint32_t),
+      _interpreter_create_object_from_buffer);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
 }
 
 void Emitter::getGlobalObject(FR frRes) {
