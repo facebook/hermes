@@ -312,7 +312,9 @@ void Emitter::frameSetup(
   comment("// _sh_enter");
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
-  a.mov(a64::w2, numFrameRegs);
+  // _sh_enter expects the number of registers to include any extra registers at
+  // the start of the frame.
+  a.mov(a64::w2, numFrameRegs + hbc::StackFrameLayout::FirstLocal);
   EMIT_RUNTIME_CALL(
       *this, SHLegacyValue * (*)(SHRuntime *, SHLocals *, uint32_t), _sh_enter);
   comment("// xFrame");
@@ -370,10 +372,9 @@ void Emitter::call(void *fn, const char *name) {
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
   // FIXME: check range of frameReg * 8
-  if (frameReg == FR(0))
-    a.mov(dst, xFrame);
-  else
-    a.add(dst, xFrame, frameReg.index() * sizeof(SHLegacyValue));
+  auto ofs =
+      (frameReg.index() + StackFrameLayout::FirstLocal) * sizeof(SHLegacyValue);
+  a.add(dst, xFrame, ofs);
 }
 
 template <bool use>

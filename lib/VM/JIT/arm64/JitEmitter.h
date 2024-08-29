@@ -11,14 +11,14 @@
 
 #include "hermes/ADT/DenseUInt64.h"
 #include "hermes/ADT/SimpleLRU.h"
+#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/Support/OptValue.h"
+#include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/DenseMap.h"
 
 #include <deque>
-
-#include "hermes/VM/CodeBlock.h"
 
 namespace hermes::vm::arm64 {
 
@@ -626,7 +626,9 @@ class Emitter {
   /// Create an a64::Mem to a specifc frame register.
   static constexpr inline a64::Mem frA64Mem(FR fr) {
     // FIXME: check if the offset fits
-    return a64::Mem(xFrame, fr.index() * sizeof(SHLegacyValue));
+    auto ofs = (fr.index() + hbc::StackFrameLayout::FirstLocal) *
+        sizeof(SHLegacyValue);
+    return a64::Mem(xFrame, ofs);
   }
 
   /// Load an arbitrary bit pattern into a Gp.
