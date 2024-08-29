@@ -46,4 +46,12 @@ SHLegacyValue _interpreter_create_array_from_buffer(
     unsigned numLiterals,
     unsigned bufferIndex);
 
+/// Implementation of createFunctionEnvironment that takes the closure to get
+/// the parentEnvironment from.
+/// The native backend doesn't use createFunctionEnvironment.
+SHLegacyValue _sh_ljs_create_function_environment(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    uint32_t size);
+
 } // namespace hermes::vm

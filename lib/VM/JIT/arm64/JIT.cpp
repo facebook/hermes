@@ -605,6 +605,19 @@ JITCompiledFunctionPtr JITContext::compileImpl(
               ip->iCreateTopLevelEnvironment.op2);
           ip = NEXTINST(CreateTopLevelEnvironment);
           break;
+        case inst::OpCode::CreateFunctionEnvironment:
+          em.createFunctionEnvironment(
+              FR(ip->iCreateFunctionEnvironment.op1),
+              ip->iCreateFunctionEnvironment.op2);
+          ip = NEXTINST(CreateFunctionEnvironment);
+          break;
+        case inst::OpCode::CreateEnvironment:
+          em.createEnvironment(
+              FR(ip->iCreateEnvironment.op1),
+              FR(ip->iCreateEnvironment.op2),
+              ip->iCreateEnvironment.op3);
+          ip = NEXTINST(CreateEnvironment);
+          break;
         case inst::OpCode::GetParentEnvironment:
           em.getParentEnvironment(
               FR(ip->iGetParentEnvironment.op1), ip->iGetParentEnvironment.op2);

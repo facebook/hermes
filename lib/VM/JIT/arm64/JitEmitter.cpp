@@ -15,6 +15,7 @@
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/StaticHUtils.h"
 #include "llvh/Support/SaveAndRestore.h"
@@ -1139,6 +1140,51 @@ void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, 0);
+  a.mov(a64::w2, size);
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *, uint32_t),
+      _sh_ljs_create_environment);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
+  comment("// CreateFunctionEnvironment r%u, %u", frRes.index(), size);
+
+  syncAllTempExcept({});
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  a.mov(a64::w2, size);
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      _sh_ljs_create_function_environment);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
+  comment(
+      "// CreateEnvironment r%u, r%u, %u",
+      frRes.index(),
+      frParent.index(),
+      size);
+
+  syncAllTempExcept(frRes != frParent ? frRes : FR{});
+  syncToMem(frParent);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frParent);
   a.mov(a64::w2, size);
 
   EMIT_RUNTIME_CALL(

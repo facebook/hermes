@@ -14,6 +14,8 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/RuntimeModule.h"
+#include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StackFrame.h"
 #include "hermes/VM/StaticHUtils.h"
 
 #define DEBUG_TYPE "jit"
@@ -74,6 +76,25 @@ SHLegacyValue _interpreter_create_array_from_buffer(
     _sh_throw_current(shr);
   }
   return res->getHermesValue();
+}
+
+/// Implementation of createFunctionEnvironment that takes the closure to get
+/// the parentEnvironment from.
+/// The native backend doesn't use createFunctionEnvironment.
+SHLegacyValue _sh_ljs_create_function_environment(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    uint32_t size) {
+  Runtime &runtime = getRuntime(shr);
+
+  StackFramePtr framePtr{toPHV(frame)};
+  struct : public Locals {
+    PinnedValue<Environment> parent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.parent = framePtr.getCalleeClosureUnsafe()->getEnvironment(runtime);
+  return Environment::create(runtime, lv.parent, size);
 }
 
 } // namespace hermes::vm

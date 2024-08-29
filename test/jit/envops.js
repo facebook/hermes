@@ -13,8 +13,13 @@ let y = closure;
 
 function closure(z) {
   print(x, z, y);
+  // CreateEnvironment
+  return function inner() { return z; }
 }
 
-closure(20);
+var f = closure(20);
 // CHECK: JIT successfully compiled FunctionID 1, 'closure'
 // CHECK-NEXT: 10 20 function closure({{.*}}
+print(f());
+// CHECK: JIT successfully compiled FunctionID 2, 'inner'
+// CHECK-NEXT: 20
