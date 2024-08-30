@@ -601,6 +601,7 @@ class Emitter {
 
   void putNewOwnById(FR frTarget, FR frValue, SHSymbolID key, bool enumerable);
 
+  void getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx);
   void putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx);
 
   void isIn(FR frRes, FR frLeft, FR frRight);

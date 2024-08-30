@@ -605,6 +605,22 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(PutOwnBySlotIdxLong);
           break;
 
+        case inst::OpCode::GetOwnBySlotIdx:
+          em.getOwnBySlotIdx(
+              FR(ip->iGetOwnBySlotIdx.op1),
+              FR(ip->iGetOwnBySlotIdx.op2),
+              ip->iGetOwnBySlotIdx.op3);
+          ip = NEXTINST(PutOwnBySlotIdx);
+          break;
+
+        case inst::OpCode::GetOwnBySlotIdxLong:
+          em.getOwnBySlotIdx(
+              FR(ip->iGetOwnBySlotIdxLong.op1),
+              FR(ip->iGetOwnBySlotIdxLong.op2),
+              ip->iGetOwnBySlotIdxLong.op3);
+          ip = NEXTINST(GetOwnBySlotIdxLong);
+          break;
+
         case inst::OpCode::Ret:
           em.ret(FR(ip->iRet.op1));
           ip = NEXTINST(Ret);

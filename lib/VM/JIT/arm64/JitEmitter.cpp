@@ -1758,6 +1758,67 @@ void Emitter::putNewOwnById(
   }
 }
 
+void Emitter::getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx) {
+  comment(
+      "// GetOwnBySlotIdx r%u, r%u, %u",
+      frRes.index(),
+      frTarget.index(),
+      slotIdx);
+
+#ifndef HERMESVM_BOXED_DOUBLES
+  if (slotIdx < JSObject::DIRECT_PROPERTY_SLOTS) {
+    // If the slot is in the direct property slots, we can just load it
+    // directly.
+    auto ofs = offsetof(SHJSObjectAndDirectProps, directProps) +
+        slotIdx * sizeof(SHLegacyValue);
+    // We allocate a temporary register to compute the address instead of using
+    // the result register in case the result has a VecD allocated for it.
+    HWReg temp = allocTempGpX();
+    movHWFromFR(temp, frTarget);
+    emit_sh_ljs_get_pointer(a, temp.a64GpX());
+    // Free the temporary register before allocating the result so it can be
+    // reused.
+    freeReg(temp);
+    HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+    movHWFromMem(hwRes, a64::Mem(temp.a64GpX(), ofs));
+    frUpdatedWithHWReg(frRes, hwRes);
+    return;
+  }
+#endif
+
+  // Free x1 first, such that if frTarget is in any register (except from x1),
+  // we can mov it in before we free all the registers.
+  syncAndFreeTempReg(HWReg::gpX(1));
+  movHWFromFR(HWReg::gpX(1), frTarget);
+
+  syncAllTempExcept({});
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  // For indirect loads, 0 is the first indirect index.
+  a.mov(
+      a64::w2,
+      slotIdx < JSObject::DIRECT_PROPERTY_SLOTS
+          ? slotIdx
+          : slotIdx - JSObject::DIRECT_PROPERTY_SLOTS);
+
+  if (slotIdx < JSObject::DIRECT_PROPERTY_SLOTS) {
+    EMIT_RUNTIME_CALL(
+        *this,
+        SHLegacyValue(*)(SHRuntime *, SHLegacyValue, uint32_t),
+        _sh_prload_direct);
+  } else {
+    EMIT_RUNTIME_CALL(
+        *this,
+        SHLegacyValue(*)(SHRuntime *, SHLegacyValue, uint32_t),
+        _sh_prload_indirect);
+  }
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
   comment(
       "// PutOwnBySlotIdx r%u, r%u, %u",
