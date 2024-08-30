@@ -726,6 +726,12 @@ JITCompiledFunctionPtr JITContext::compileImpl(
               FR(ip->iGetParentEnvironment.op1), ip->iGetParentEnvironment.op2);
           ip = NEXTINST(GetParentEnvironment);
           break;
+        case inst::OpCode::GetClosureEnvironment:
+          em.getClosureEnvironment(
+              FR(ip->iGetClosureEnvironment.op1),
+              FR(ip->iGetClosureEnvironment.op2));
+          ip = NEXTINST(GetClosureEnvironment);
+          break;
         case inst::OpCode::LoadFromEnvironment:
           em.loadFromEnvironment(
               FR(ip->iLoadFromEnvironment.op1),
