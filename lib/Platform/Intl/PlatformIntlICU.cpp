@@ -280,7 +280,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return impl_icu::LocaleResolver::supportedLocales(runtime, locales, options);
+  return impl_icu::supportedLocales(runtime, locales, options);
 }
 
 vm::ExecutionStatus DateTimeFormatICU::initialize(
@@ -301,7 +301,7 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   Options opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string",
   // «"lookup", "best fit" », "best fit").
-  auto matcherRes = impl_icu::OptionHelpers::getStringOption(
+  auto matcherRes = impl_icu::getStringOption(
       runtime,
       options,
       u"localeMatcher",
@@ -314,8 +314,8 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   opt.emplace(u"localeMatcher", *matcherOpt);
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   // undefined, undefined).
-  auto calendarRes = impl_icu::OptionHelpers::getStringOption(
-      runtime, options, u"calendar", {}, {});
+  auto calendarRes =
+      impl_icu::getStringOption(runtime, options, u"calendar", {}, {});
   // 7. If calendar is not undefined, then
   if (LLVM_UNLIKELY(calendarRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
@@ -338,10 +338,10 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   opt.emplace(u"nu", u"");
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   // undefined, undefined).
-  auto hour12 = impl_icu::OptionHelpers::getBoolOption(options, u"hour12", {});
+  auto hour12 = impl_icu::getBoolOption(options, u"hour12", {});
   // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
   // "h11", "h12", "h23", "h24" », undefined).
-  auto hourCycleRes = impl_icu::OptionHelpers::getStringOption(
+  auto hourCycleRes = impl_icu::getStringOption(
       runtime, options, u"hourCycle", {u"h11", u"h12", u"h23", u"h24"}, {});
   if (LLVM_UNLIKELY(hourCycleRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
@@ -362,9 +362,9 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   // 17. Let r be ResolveLocale(%DateTimeFormat%.[[AvailableLocales]],
   // requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]],
   // localeData).
-  static std::unordered_set<std::u16string> relevantExtensionKeys{
+  static constexpr std::u16string_view relevantExtensionKeys[] = {
       u"ca", u"nu", u"hc"};
-  auto r = impl_icu::LocaleResolver::resolveLocale(
+  auto r = impl_icu::resolveLocale(
       *requestedLocalesRes,
       opt,
       relevantExtensionKeys,
@@ -374,7 +374,7 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
 
   // store the UTF8 version of locale since it is used in almost all other
   // functions
-  locale8_ = impl_icu::IntlUtils::toUTF8ASCII(locale_);
+  locale8_ = impl_icu::toUTF8ASCII(locale_);
 
   // 19. Let calendar be r.[[ca]].
   auto caIt = r.resolvedOpts.find(u"ca");
@@ -424,7 +424,7 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   // "basic", "best fit" », "best fit").
   // 32. Let dateStyle be ? GetOption(options, "dateStyle", "string", « "full",
   // "long", "medium", "short" », undefined).
-  auto dateStyleRes = impl_icu::OptionHelpers::getStringOption(
+  auto dateStyleRes = impl_icu::getStringOption(
       runtime,
       options,
       u"dateStyle",
@@ -436,7 +436,7 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   dateStyle_ = *dateStyleRes;
   // 34. Let timeStyle be ? GetOption(options, "timeStyle", "string", « "full",
   // "long", "medium", "short" », undefined).
-  auto timeStyleRes = impl_icu::OptionHelpers::getStringOption(
+  auto timeStyleRes = impl_icu::getStringOption(
       runtime,
       options,
       u"timeStyle",
@@ -448,25 +448,25 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   timeStyle_ = *timeStyleRes;
 
   // Initialize properties using values from the input options.
-  auto weekdayRes = impl_icu::OptionHelpers::getStringOption(
+  auto weekdayRes = impl_icu::getStringOption(
       runtime, options, u"weekday", {u"narrow", u"short", u"long"}, {});
   if (LLVM_UNLIKELY(weekdayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   weekday_ = *weekdayRes;
 
-  auto eraRes = impl_icu::OptionHelpers::getStringOption(
+  auto eraRes = impl_icu::getStringOption(
       runtime, options, u"era", {u"narrow", u"short", u"long"}, {});
   if (LLVM_UNLIKELY(eraRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   era_ = *eraRes;
 
-  auto yearRes = impl_icu::OptionHelpers::getStringOption(
+  auto yearRes = impl_icu::getStringOption(
       runtime, options, u"year", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(yearRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   year_ = *yearRes;
 
-  auto monthRes = impl_icu::OptionHelpers::getStringOption(
+  auto monthRes = impl_icu::getStringOption(
       runtime,
       options,
       u"month",
@@ -476,37 +476,37 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   month_ = *monthRes;
 
-  auto dayRes = impl_icu::OptionHelpers::getStringOption(
+  auto dayRes = impl_icu::getStringOption(
       runtime, options, u"day", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(dayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   day_ = *dayRes;
 
-  auto dayPeriodRes = impl_icu::OptionHelpers::getStringOption(
+  auto dayPeriodRes = impl_icu::getStringOption(
       runtime, options, u"dayPeriod", {u"narrow", u"short", u"long"}, {});
   if (LLVM_UNLIKELY(dayPeriodRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   dayPeriod_ = *dayPeriodRes;
 
-  auto hourRes = impl_icu::OptionHelpers::getStringOption(
+  auto hourRes = impl_icu::getStringOption(
       runtime, options, u"hour", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(hourRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   hour_ = *hourRes;
 
-  auto minuteRes = impl_icu::OptionHelpers::getStringOption(
+  auto minuteRes = impl_icu::getStringOption(
       runtime, options, u"minute", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(minuteRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   minute_ = *minuteRes;
 
-  auto secondRes = impl_icu::OptionHelpers::getStringOption(
+  auto secondRes = impl_icu::getStringOption(
       runtime, options, u"second", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(secondRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   second_ = *secondRes;
 
-  auto fractionalSecondDigitsRes = impl_icu::OptionHelpers::getNumberOption(
+  auto fractionalSecondDigitsRes = impl_icu::getNumberOption(
       runtime, options, u"fractionalSecondDigits", 1, 3, {});
   if (LLVM_UNLIKELY(
           fractionalSecondDigitsRes == vm::ExecutionStatus::EXCEPTION))
@@ -518,7 +518,7 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   // https://tc39.es/proposal-intl-extend-timezonename
   // they are not in ecma402 spec, but there is a test for them:
   // "test262/test/intl402/DateTimeFormat/constructor-options-timeZoneName-valid.js"
-  auto timeZoneNameRes = impl_icu::OptionHelpers::getStringOption(
+  auto timeZoneNameRes = impl_icu::getStringOption(
       runtime,
       options,
       u"timeZoneName",

@@ -11,9 +11,9 @@ namespace hermes {
 namespace platform_intl {
 namespace impl_icu {
 
-static constexpr auto REPLACEMENT_CHARACTER = '?';
+static constexpr char REPLACEMENT_CHARACTER = '?';
 
-std::string IntlUtils::toUTF8ASCII(std::u16string_view utf16Source) {
+std::string toUTF8ASCII(std::u16string_view utf16Source) {
   // ASCII characters are 7-bit in both UTF8 and UTF16 with the same integer
   // values. Safe to coerce these values from chat16_t (16-bit) to char (8-bit).
   std::string result;
@@ -27,7 +27,7 @@ std::string IntlUtils::toUTF8ASCII(std::u16string_view utf16Source) {
   return result;
 }
 
-std::u16string IntlUtils::toUTF16ASCII(std::string_view utf8Source) {
+std::u16string toUTF16ASCII(std::string_view utf8Source) {
   // ASCII characters are 7-bit in UTF8 and UTF16 with the same integer values.
   // Safe to promote these values from char (8-bit) to char16_t (16-bit).
   std::u16string result;
@@ -41,15 +41,15 @@ std::u16string IntlUtils::toUTF16ASCII(std::string_view utf8Source) {
   return result;
 }
 
-bool IntlUtils::convertToBool(const std::string &str) {
+bool convertToBool(const std::string &str) {
   return (toLowerASCII(str) == "true");
 }
 
-bool IntlUtils::convertToBool(std::u16string_view str) {
+bool convertToBool(std::u16string_view str) {
   return convertToBool(toUTF8ASCII(str));
 }
 
-std::string IntlUtils::toLowerASCII(std::string str) {
+std::string toLowerASCII(std::string str) {
   constexpr std::uint8_t offset = 'a' - 'A';
   for (char &c : str) {
     if (c >= 'A' && c <= 'Z') {

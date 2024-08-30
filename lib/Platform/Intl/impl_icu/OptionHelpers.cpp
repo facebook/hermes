@@ -13,7 +13,7 @@ namespace hermes {
 namespace platform_intl {
 namespace impl_icu {
 
-vm::CallResult<std::optional<std::u16string>> OptionHelpers::getStringOption(
+vm::CallResult<std::optional<std::u16string>> getStringOption(
     vm::Runtime &runtime,
     const Options &options,
     const std::u16string &property,
@@ -43,7 +43,7 @@ vm::CallResult<std::optional<std::u16string>> OptionHelpers::getStringOption(
   return std::optional<std::u16string>(optionValue);
 }
 
-std::optional<bool> OptionHelpers::getBoolOption(
+std::optional<bool> getBoolOption(
     const Options &options,
     const std::u16string &property,
     std::optional<bool> defaultValue) {
@@ -62,7 +62,7 @@ std::optional<bool> OptionHelpers::getBoolOption(
 }
 
 // https://tc39.es/ecma402/#sec-getnumberoption
-vm::CallResult<std::optional<double>> OptionHelpers::getNumberOption(
+vm::CallResult<std::optional<double>> getNumberOption(
     vm::Runtime &runtime,
     const Options &options,
     const std::u16string &property,

@@ -16,8 +16,8 @@ namespace hermes {
 namespace platform_intl {
 namespace impl_icu {
 
-std::string Locale::convertBCP47toICULocale(std::u16string_view localeBCP47) {
-  std::string localeBCP47Str = IntlUtils::toUTF8ASCII(localeBCP47);
+std::string convertBCP47toICULocale(std::u16string_view localeBCP47) {
+  std::string localeBCP47Str = toUTF8ASCII(localeBCP47);
   std::vector<char> localeICU(16);
   UErrorCode errForLanguageTag{U_ZERO_ERROR};
   size_t outputLength = uloc_forLanguageTag(
@@ -45,7 +45,7 @@ std::string Locale::convertBCP47toICULocale(std::u16string_view localeBCP47) {
   return std::string(localeICU.data(), outputLength);
 }
 
-std::string Locale::convertICUtoBCP47Locale(const char *localeICU) {
+std::string convertICUtoBCP47Locale(const char *localeICU) {
   std::vector<char> localeBCP47(16);
   UErrorCode errToLanguageTag{U_ZERO_ERROR};
   size_t outputLength = uloc_toLanguageTag(
