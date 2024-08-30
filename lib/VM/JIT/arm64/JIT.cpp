@@ -177,6 +177,28 @@ JITCompiledFunctionPtr JITContext::compileImpl(
               FR(ip->iLessEq.op1), FR(ip->iLessEq.op2), FR(ip->iLessEq.op3));
           ip = NEXTINST(LessEq);
           break;
+        case inst::OpCode::Eq:
+          em.equal(FR(ip->iEq.op1), FR(ip->iEq.op2), FR(ip->iEq.op3));
+          ip = NEXTINST(Eq);
+          break;
+        case inst::OpCode::Neq:
+          em.notEqual(FR(ip->iNeq.op1), FR(ip->iNeq.op2), FR(ip->iNeq.op3));
+          ip = NEXTINST(Neq);
+          break;
+        case inst::OpCode::StrictEq:
+          em.strictEqual(
+              FR(ip->iStrictEq.op1),
+              FR(ip->iStrictEq.op2),
+              FR(ip->iStrictEq.op3));
+          ip = NEXTINST(StrictEq);
+          break;
+        case inst::OpCode::StrictNeq:
+          em.strictNotEqual(
+              FR(ip->iStrictNeq.op1),
+              FR(ip->iStrictNeq.op2),
+              FR(ip->iStrictNeq.op3));
+          ip = NEXTINST(StrictNeq);
+          break;
 
         case inst::OpCode::Add:
           em.add(FR(ip->iAdd.op1), FR(ip->iAdd.op2), FR(ip->iAdd.op3));

@@ -2830,7 +2830,8 @@ void Emitter::compareImpl(
     const char *name,
     a64::CondCode condCode,
     void *slowCall,
-    const char *slowCallName) {
+    const char *slowCallName,
+    bool invSlow) {
   comment(
       "// %s r%u, r%u, r%u",
       name,
@@ -2902,6 +2903,7 @@ void Emitter::compareImpl(
        .frInput1 = frLeft,
        .frInput2 = frRight,
        .hwRes = hwRes,
+       .invert = invSlow,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
        .emit = [](Emitter &em, SlowPath &sl) {
@@ -2916,8 +2918,14 @@ void Emitter::compareImpl(
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
          em.call(sl.slowCall, sl.slowCallName);
+
+         // Invert the slow path result if needed.
+         if (sl.invert)
+           em.a.eor(sl.hwRes.a64GpX(), a64::x0, 1);
+         else
+           em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+
          // Comparison functions return bool, so encode it.
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
          emit_sh_ljs_bool(em.a, sl.hwRes.a64GpX());
          em.a.b(sl.contLab);
        }});
