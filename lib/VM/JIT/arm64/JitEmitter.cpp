@@ -128,12 +128,15 @@ static bool isCheapConst(uint64_t k) {
 Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
     unsigned dumpJitCode,
+    CodeBlock *codeBlock,
     PropertyCacheEntry *readPropertyCache,
     PropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
     unsigned numCount,
     unsigned npCount)
-    : dumpJitCode_(dumpJitCode), frameRegs_(numFrameRegs) {
+    : dumpJitCode_(dumpJitCode),
+      frameRegs_(numFrameRegs),
+      codeBlock_(codeBlock) {
   if (dumpJitCode_ & 1)
     logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
   if (logger_)
@@ -1085,7 +1088,6 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
 }
 
 void Emitter::newObjectWithBuffer(
-    CodeBlock *codeBlock,
     FR frRes,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
@@ -1098,7 +1100,7 @@ void Emitter::newObjectWithBuffer(
   syncAllTempExcept(frRes);
   freeAllTempExcept({});
   a.mov(a64::x0, xRuntime);
-  loadBits64InGp(a64::x1, (uint64_t)codeBlock, "CodeBlock");
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
   a.mov(a64::w2, shapeTableIndex);
   a.mov(a64::w3, valBufferOffset);
   EMIT_RUNTIME_CALL(
@@ -1124,7 +1126,6 @@ void Emitter::newArray(FR frRes, uint32_t size) {
 }
 
 void Emitter::newArrayWithBuffer(
-    CodeBlock *codeBlock,
     FR frRes,
     uint32_t numElements,
     uint32_t numLiterals,
@@ -1139,7 +1140,7 @@ void Emitter::newArrayWithBuffer(
   syncAllTempExcept(frRes);
   freeAllTempExcept({});
   a.mov(a64::x0, xRuntime);
-  loadBits64InGp(a64::x1, (uint64_t)codeBlock, "CodeBlock");
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
   a.mov(a64::w2, numElements);
   a.mov(a64::w3, numLiterals);
   a.mov(a64::w4, bufferIndex);

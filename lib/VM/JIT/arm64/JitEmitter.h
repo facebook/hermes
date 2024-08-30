@@ -345,6 +345,9 @@ class Emitter {
   /// in x22.
   asmjit::Label returnLabel_{};
 
+  /// The bytecode codeblock.
+  CodeBlock *const codeBlock_;
+
   /// Offset in RODATA of the pointer to the start of the read property
   /// cache.
   int32_t roOfsReadPropertyCachePtr_;
@@ -362,6 +365,7 @@ class Emitter {
   explicit Emitter(
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
+      CodeBlock *codeBlock,
       PropertyCacheEntry *readPropertyCache,
       PropertyCacheEntry *writePropertyCache,
       uint32_t numFrameRegs,
@@ -603,14 +607,12 @@ class Emitter {
   void newObject(FR frRes);
   void newObjectWithParent(FR frRes, FR frParent);
   void newObjectWithBuffer(
-      CodeBlock *codeBlock,
       FR frRes,
       uint32_t shapeTableIndex,
       uint32_t valBufferOffset);
 
   void newArray(FR frRes, uint32_t size);
   void newArrayWithBuffer(
-      CodeBlock *codeBlock,
       FR frRes,
       uint32_t numElements,
       uint32_t numLiterals,

@@ -72,6 +72,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
   // TODO: is getFrameSize() the right thing to call?
   Emitter em(
       impl_->jr,
+      codeBlock,
       getDumpJITCode(),
       codeBlock->propertyCache(),
       codeBlock->writePropertyCache(),
@@ -785,7 +786,6 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           break;
         case inst::OpCode::NewObjectWithBuffer:
           em.newObjectWithBuffer(
-              codeBlock,
               FR(ip->iNewObjectWithBuffer.op1),
               ip->iNewObjectWithBuffer.op2,
               ip->iNewObjectWithBuffer.op3);
@@ -798,7 +798,6 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           break;
         case inst::OpCode::NewArrayWithBuffer:
           em.newArrayWithBuffer(
-              codeBlock,
               FR(ip->iNewArrayWithBuffer.op1),
               ip->iNewArrayWithBuffer.op2,
               ip->iNewArrayWithBuffer.op3,
