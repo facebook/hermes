@@ -1950,8 +1950,12 @@ void HBCISel::generateFUnaryMathInst(FUnaryMathInst *Inst, BasicBlock *) {
       break;
   }
 }
-void HBCISel::generateTypedLoadParentInst(TypedLoadParentInst *, BasicBlock *) {
-  hermes_fatal("TypedLoadParentInst not supported.");
+void HBCISel::generateTypedLoadParentInst(
+    TypedLoadParentInst *Inst,
+    BasicBlock *) {
+  auto object = encodeValue(Inst->getObject());
+  auto res = encodeValue(Inst);
+  BCFGen_->emitTypedLoadParent(res, object);
 }
 void HBCISel::generateNativeCallInst(NativeCallInst *, BasicBlock *) {
   hermes_fatal("NativeCallInst not supported.");
@@ -1962,9 +1966,11 @@ void HBCISel::generateGetNativeRuntimeInst(
   hermes_fatal("GetNativeRuntimeInst not supported.");
 }
 void HBCISel::generateTypedStoreParentInst(
-    TypedStoreParentInst *,
+    TypedStoreParentInst *Inst,
     BasicBlock *) {
-  hermes_fatal("TypedStoreParentInst not supported.");
+  auto storedValue = encodeValue(Inst->getStoredValue());
+  auto object = encodeValue(Inst->getObject());
+  BCFGen_->emitTypedStoreParent(storedValue, object);
 }
 void HBCISel::generateLIRDeadValueInst(LIRDeadValueInst *, BasicBlock *) {
   hermes_fatal("LIRDeadValueInst not supported.");

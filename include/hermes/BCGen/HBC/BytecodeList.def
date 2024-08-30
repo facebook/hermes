@@ -334,7 +334,7 @@ DEFINE_OPCODE_3(PutNewOwnByIdLong, Reg8, Reg8, UInt32)
 OPERAND_STRING_ID(PutNewOwnByIdShort, 3)
 OPERAND_STRING_ID(PutNewOwnById, 3)
 OPERAND_STRING_ID(PutNewOwnByIdLong, 3)
-	
+
 /// Set an existing own property identified at a slot index.
 /// Arg1 is the destination object.
 /// Arg2 is the value to write.
@@ -756,6 +756,14 @@ DEFINE_OPCODE_3(IteratorNext, Reg8, Reg8, Reg8)
 /// If Arg2 is true, ignore exceptions which are thrown by iterator.return().
 /// See IR.md for IteratorCloseInst.
 DEFINE_OPCODE_2(IteratorClose, Reg8, UInt8)
+
+/// Arg1 [out] is the result.
+/// Arg2 [in] is the source (must be an object).
+DEFINE_OPCODE_2(TypedLoadParent, Reg8, Reg8)
+
+/// Arg1 is the new parent.
+/// Arg2 is the target (must be an object).
+DEFINE_OPCODE_2(TypedStoreParent, Reg8, Reg8)
 
 // Jump instructions must be defined through the following DEFINE_JUMP macros.
 // The numeric suffix indicates number of operands the instruction takes.
