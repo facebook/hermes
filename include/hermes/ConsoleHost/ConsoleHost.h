@@ -143,7 +143,7 @@ struct ExecuteOptions {
   bool forceJIT{false};
 
   /// Dump JIT'ed code.
-  bool dumpJITCode{false};
+  unsigned dumpJITCode{0};
 
   /// Fatally crash on any JIT compilation error.
   bool jitCrashOnError{false};

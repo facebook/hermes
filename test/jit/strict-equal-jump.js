@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -fno-inline -Xforce-jit -Xdump-jitcode -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -fno-inline -Xforce-jit -Xdump-jitcode=2 -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
 function equal(x, y) {

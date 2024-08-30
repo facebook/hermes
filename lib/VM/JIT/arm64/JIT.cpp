@@ -52,7 +52,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
     Runtime &runtime,
     CodeBlock *codeBlock) {
   std::string funcName{};
-  if (dumpJITCode_) {
+  if (dumpJITCode_ & 3) {
     funcName = codeBlock->getNameString();
     llvh::outs() << "\nJIT compilation of FunctionID "
                  << codeBlock->getFunctionID() << ", '" << funcName << "'\n";
@@ -66,7 +66,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
 
   const char *funcStart = (const char *)codeBlock->begin();
 
-  if (dumpJITCode_ && !funcName.empty())
+  if ((dumpJITCode_ & 1) && !funcName.empty())
     llvh::outs() << "\n" << funcName << ":\n";
 
   // TODO: is getFrameSize() the right thing to call?
@@ -901,7 +901,7 @@ onError:
         }
       });
 
-  if (dumpJITCode_) {
+  if (dumpJITCode_ & 3) {
     funcName = codeBlock->getNameString();
     llvh::outs() << "\nJIT successfully compiled FunctionID "
                  << codeBlock->getFunctionID() << ", '" << funcName << "'\n";

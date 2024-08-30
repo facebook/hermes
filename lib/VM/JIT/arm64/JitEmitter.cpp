@@ -127,14 +127,14 @@ static bool isCheapConst(uint64_t k) {
 
 Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
-    bool dumpJitCode,
+    unsigned dumpJitCode,
     PropertyCacheEntry *readPropertyCache,
     PropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
     unsigned numCount,
     unsigned npCount)
-    : frameRegs_(numFrameRegs) {
-  if (dumpJitCode)
+    : dumpJitCode_(dumpJitCode), frameRegs_(numFrameRegs) {
+  if (dumpJitCode_ & 1)
     logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
   if (logger_)
     logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);

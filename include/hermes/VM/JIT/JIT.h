@@ -67,11 +67,11 @@ class JITContext {
   void setEnabled(bool enabled) {}
 
   /// Enable or disable dumping JIT'ed Code.
-  void setDumpJITCode(bool dump) {}
+  void setDumpJITCode(unsigned dump) {}
 
   /// \return true if dumping JIT'ed Code is enabled.
-  bool getDumpJITCode() {
-    return false;
+  unsigned getDumpJITCode() {
+    return 0;
   }
 
   /// Set the flag to fatally crash on JIT compilation errors.

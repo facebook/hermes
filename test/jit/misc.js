@@ -5,11 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xforce-jit -Xdump-jitcode %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xforce-jit -Xdump-jitcode=2 %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
 var a = 10;
 print(a);
 // CHECK: JIT successfully compiled FunctionID 0, 'global'
 // CHECK-NEXT: 10
-

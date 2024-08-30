@@ -218,12 +218,14 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::desc("force JIT compilation of every function"),
       llvh::cl::init(false)};
 
-  llvh::cl::opt<bool> DumpJITCode{
+  /// To get the value of this CLI option, use the method below.
+  llvh::cl::opt<unsigned> DumpJITCode{
       "Xdump-jitcode",
       llvh::cl::Hidden,
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("dump JIT'ed code"),
-      llvh::cl::init(false)};
+      llvh::cl::init(0),
+      llvh::cl::ValueRequired};
 
   llvh::cl::opt<bool> JITCrashOnError{
       "Xjit-crash-on-error",
