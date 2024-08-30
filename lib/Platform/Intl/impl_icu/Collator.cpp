@@ -22,9 +22,9 @@ namespace hermes {
 namespace platform_intl {
 namespace impl_icu {
 
-constexpr auto &collationTypeDefault = u"default";
-constexpr auto &collationTypeSearch = u"search";
-constexpr auto &collationTypeStandard = u"standard";
+constexpr char16_t collationTypeDefault[] = u"default";
+constexpr char16_t collationTypeSearch[] = u"search";
+constexpr char16_t collationTypeStandard[] = u"standard";
 
 vm::ExecutionStatus Collator::initialize(
     vm::Runtime &runtime,
@@ -36,8 +36,7 @@ vm::ExecutionStatus Collator::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   };
 
-  std::string localeICU =
-      Locale::convertBCP47toICULocale(resolvedInternalLocale_);
+  std::string localeICU = convertBCP47toICULocale(resolvedInternalLocale_);
 
   UErrorCode err{U_ZERO_ERROR};
   coll_ = ucol_open(localeICU.c_str(), &err);
@@ -240,7 +239,7 @@ vm::ExecutionStatus Collator::initializeCollator(
   // Whether the comparison is for sorting or for searching for matching
   // strings. Possible values are "sort" and "search"; the default is "sort".
   // 4. Set collator.[[Usage]] to usage.
-  auto usageRes = OptionHelpers::getStringOption(
+  auto usageRes = getStringOption(
       runtime,
       options,
       constants::opt_name::usage,
@@ -280,7 +279,7 @@ vm::ExecutionStatus Collator::initializeCollator(
   // The locale matching algorithm to use. Possible values are "lookup" and
   // "best fit"; the default is "best fit". For information about this option,
   // see the Intl page.
-  auto matcherRes = OptionHelpers::getStringOption(
+  auto matcherRes = getStringOption(
       runtime,
       options,
       constants::opt_name::localeMatcher,
@@ -294,7 +293,7 @@ vm::ExecutionStatus Collator::initializeCollator(
 
   // 10. Let collation be ? GetOption(options, "collation", "string", empty,
   // undefined).
-  auto collationValueRes = OptionHelpers::getStringOption(
+  auto collationValueRes = getStringOption(
       runtime, options, constants::opt_name::collation, {}, std::nullopt);
   if (LLVM_UNLIKELY(collationValueRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
@@ -314,8 +313,8 @@ vm::ExecutionStatus Collator::initializeCollator(
 
   // 13. Let numeric be ? GetOption(options, "numeric", "boolean", empty,
   // undefined).
-  auto numericValue = OptionHelpers::getBoolOption(
-      options, constants::opt_name::numeric, std::nullopt);
+  auto numericValue =
+      getBoolOption(options, constants::opt_name::numeric, std::nullopt);
   // 14. If numeric is not undefined, then
   // a. Let numeric be ! ToString(numeric).
   // Note: We omit the ToString(numeric) operation as it's not observable.
@@ -328,7 +327,7 @@ vm::ExecutionStatus Collator::initializeCollator(
 
   // 16. Let caseFirst be ? GetOption(options, "caseFirst", "string", « "upper",
   // "lower", "false" », undefined).
-  auto caseFirstValueRes = OptionHelpers::getStringOption(
+  auto caseFirstValueRes = getStringOption(
       runtime,
       options,
       constants::opt_name::caseFirst,
@@ -345,7 +344,7 @@ vm::ExecutionStatus Collator::initializeCollator(
   // The relevant unicode extensions accepted by Collator as specified here:
   // https://tc39.github.io/ecma402/#sec-intl-collator-internal-slots
   // 18. Let relevantExtensionKeys be %Collator%.[[RelevantExtensionKeys]].
-  std::unordered_set<std::u16string> relevantExtensionKeys{
+  static constexpr std::u16string_view relevantExtensionKeys[] = {
       constants::extension_key::co,
       constants::extension_key::kn,
       constants::extension_key::kf};
@@ -356,7 +355,7 @@ vm::ExecutionStatus Collator::initializeCollator(
   // specified through locale extension subtag and options are supported.
   // In particular, the collation type check is done by querying ICU
   // for collation types that are supported for the resolved locale.
-  LocaleResolver::ResolvedResult result = LocaleResolver::resolveLocale(
+  ResolvedResult result = resolveLocale(
       *requestedLocalesRes,
       opt,
       relevantExtensionKeys,
@@ -406,8 +405,7 @@ vm::ExecutionStatus Collator::initializeCollator(
     if (numericEntry->second.isBool()) {
       resolvedNumericValue_ = numericEntry->second.getBool();
     } else {
-      resolvedNumericValue_ =
-          IntlUtils::convertToBool(numericEntry->second.getString());
+      resolvedNumericValue_ = convertToBool(numericEntry->second.getString());
     }
   }
 
@@ -428,7 +426,7 @@ vm::ExecutionStatus Collator::initializeCollator(
   // ii. Let dataLocaleData be localeData.[[<dataLocale>]].
   // iii. Let sensitivity be dataLocaleData.[[sensitivity]].
   // 28. Set collator.[[Sensitivity]] to sensitivity.
-  auto sensitivitiesValueRes = OptionHelpers::getStringOption(
+  auto sensitivitiesValueRes = getStringOption(
       runtime,
       options,
       constants::opt_name::sensitivity,
@@ -451,8 +449,8 @@ vm::ExecutionStatus Collator::initializeCollator(
   // "boolean", empty, false).
   // 30. Set collator.[[IgnorePunctuation]] to ignorePunctuation.
   // 31. Return collator.
-  auto ignorePunctuationValue = OptionHelpers::getBoolOption(
-      options, constants::opt_name::ignorePunctuation, false);
+  auto ignorePunctuationValue =
+      getBoolOption(options, constants::opt_name::ignorePunctuation, false);
 
   resolvedIgnorePunctuationValue_ = *ignorePunctuationValue;
 
@@ -511,7 +509,7 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return LocaleResolver::supportedLocales(runtime, locales, options);
+  return supportedLocales(runtime, locales, options);
 }
 
 bool Collator::isExtensionTypeSupported(
@@ -545,14 +543,14 @@ bool Collator::isExtensionTypeSupported(
     // 3 - 8 alphanumeric characters. Map these alias / legacy type ids to
     // Unicode extension type ids.
     // https://github.com/unicode-org/cldr/blob/main/common/bcp47/collation.xml
-    static std::unordered_map<std::u16string_view, std::u16string_view>
-        aliasMap = {
+    static constexpr std::pair<std::u16string_view, std::u16string_view>
+        aliasMap[] = {
             {u"dictionary", u"dict"},
             {u"gb2312han", u"gb2312"},
             {u"phonebook", u"phonebk"},
             {u"traditional", u"trad"}};
     auto icuLocale =
-        Locale::convertBCP47toICULocale(localeBCP47Object.getLocaleNoExt());
+        convertBCP47toICULocale(localeBCP47Object.getLocaleNoExt());
     UErrorCode status = U_ZERO_ERROR;
     UEnumeration *supportedTypes = ucol_getKeywordValuesForLocale(
         "collation",
@@ -570,9 +568,11 @@ bool Collator::isExtensionTypeSupported(
     while (type != nullptr && U_SUCCESS(status)) {
       std::u16string_view supportedType(
           reinterpret_cast<const char16_t *>(type), length);
-      auto aliasMapIter = aliasMap.find(supportedType);
-      if (aliasMapIter != aliasMap.end()) {
-        supportedType = aliasMapIter->second;
+      for (const auto &aliasPair : aliasMap) {
+        if (supportedType == aliasPair.first) {
+          supportedType = aliasPair.second;
+          break;
+        }
       }
       if (extensionType == supportedType) {
         supported = true;
