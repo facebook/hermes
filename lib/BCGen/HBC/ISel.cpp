@@ -1815,8 +1815,13 @@ void HBCISel::generateSwitchImmInst(
 }
 
 void HBCISel::generatePrLoadInst(PrLoadInst *inst, BasicBlock *) {
-  F_->getContext().getSourceErrorManager().error(
-      inst->getLocation(), inst->getKindStr() + " not implemented");
+  auto objReg = encodeValue(inst->getObject());
+  auto resReg = encodeValue(inst);
+  if (inst->getPropIndex() <= UINT8_MAX) {
+    BCFGen_->emitGetOwnBySlotIdx(resReg, objReg, inst->getPropIndex());
+  } else {
+    BCFGen_->emitGetOwnBySlotIdxLong(resReg, objReg, inst->getPropIndex());
+  }
 }
 void HBCISel::generatePrStoreInst(PrStoreInst *Inst, BasicBlock *) {
   auto valueReg = encodeValue(Inst->getOperand(PrStoreInst::StoredValueIdx));

@@ -3216,6 +3216,23 @@ tailCall:
       DISPATCH;
     }
 
+      CASE(GetOwnBySlotIdxLong) {
+        nextIP = NEXTINST(GetOwnBySlotIdxLong);
+        idVal = ip->iGetOwnBySlotIdxLong.op3;
+        goto getOwnBySlotIdx;
+      }
+      CASE(GetOwnBySlotIdx) {
+        nextIP = NEXTINST(GetOwnBySlotIdx);
+        idVal = ip->iGetOwnBySlotIdx.op3;
+      }
+    getOwnBySlotIdx: {
+      O1REG(GetOwnBySlotIdx) =
+          JSObject::getNamedSlotValueUnsafe(
+              vmcast<JSObject>(O2REG(GetOwnBySlotIdx)), runtime, idVal)
+              .unboxToHV(runtime);
+      ip = nextIP;
+      DISPATCH;
+    }
       CASE(DelByIdLooseLong) {
         idVal = ip->iDelByIdLooseLong.op3;
         strictMode = false;

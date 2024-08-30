@@ -343,6 +343,14 @@ OPERAND_STRING_ID(PutNewOwnByIdLong, 3)
 DEFINE_OPCODE_3(PutOwnBySlotIdx, Reg8, Reg8, UInt8)
 DEFINE_OPCODE_3(PutOwnBySlotIdxLong, Reg8, Reg8, UInt32)
 
+/// Get an existing own property at a given slot index.
+/// Arg1 is the result register.
+/// Arg2 is the object.
+/// Arg3 is the hidden class slot index.
+/// Arg2[Arg3] = Arg2;
+DEFINE_OPCODE_3(GetOwnBySlotIdx, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(GetOwnBySlotIdxLong, Reg8, Reg8, UInt32)
+
 /// Create a new non-enumerable own property on an object. This is the same as
 /// PutNewOwnById, but creates the property with different enumerability.
 /// Arg1 is the destination object.
