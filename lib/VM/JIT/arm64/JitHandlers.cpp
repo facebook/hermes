@@ -97,6 +97,19 @@ SHLegacyValue _sh_ljs_create_function_environment(
   return Environment::create(runtime, lv.parent, size);
 }
 
+void _sh_print_function_entry_exit(bool enter, const char *msg) {
+  static unsigned level = 0;
+  if (enter) {
+    printf("%*s*** Enter FunctionID ", level * 4, "");
+    ++level;
+  } else {
+    --level;
+    printf("%*s*** Leave FunctionID ", level * 4, "");
+  }
+  printf("%s", msg);
+  fflush(stdout);
+}
+
 } // namespace hermes::vm
 
 #endif // HERMESVM_JIT

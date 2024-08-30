@@ -348,6 +348,9 @@ class Emitter {
   /// The bytecode codeblock.
   CodeBlock *const codeBlock_;
 
+  /// Optionally, the offset of the string name, used for debug printing.
+  int32_t roOfsDebugFunctionName_ = -1;
+
   /// Offset in RODATA of the pointer to the start of the read property
   /// cache.
   int32_t roOfsReadPropertyCachePtr_;
@@ -755,6 +758,10 @@ class Emitter {
   }
 
  private:
+  /// Allocate or return the offset in RO DATA of the current function's debug
+  /// name, in the format ID(name).
+  int32_t getDebugFunctionName();
+
   void frameSetup(
       unsigned numFrameRegs,
       unsigned gpSaveCount,

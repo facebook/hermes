@@ -54,4 +54,8 @@ SHLegacyValue _sh_ljs_create_function_environment(
     SHLegacyValue *frame,
     uint32_t size);
 
+/// Print a message about entering or exiting the specified string, with
+/// nesting tracking. Used for debugging.
+void _sh_print_function_entry_exit(bool enter, const char *msg);
+
 } // namespace hermes::vm

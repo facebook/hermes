@@ -72,8 +72,8 @@ JITCompiledFunctionPtr JITContext::compileImpl(
   // TODO: is getFrameSize() the right thing to call?
   Emitter em(
       impl_->jr,
-      codeBlock,
       getDumpJITCode(),
+      codeBlock,
       codeBlock->propertyCache(),
       codeBlock->writePropertyCache(),
       codeBlock->getFrameSize(),

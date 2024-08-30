@@ -243,6 +243,20 @@ void Emitter::newBasicBlock(const asmjit::Label &label) {
   a.bind(label);
 }
 
+int32_t Emitter::getDebugFunctionName() {
+  if (roOfsDebugFunctionName_ < 0) {
+    std::string str;
+    llvh::raw_string_ostream ss(str);
+    ss << codeBlock_->getFunctionID() << "(" << codeBlock_->getNameString()
+       << ")\n";
+    ss.flush();
+    int32_t size = str.size() + 1;
+    roOfsDebugFunctionName_ = reserveData(size, 1, asmjit::TypeId::kInt8, size);
+    memcpy(roData_.data() + roOfsDebugFunctionName_, str.data(), size);
+  }
+  return roOfsDebugFunctionName_;
+}
+
 void Emitter::frameSetup(
     unsigned numFrameRegs,
     unsigned gpSaveCount,
@@ -327,11 +341,28 @@ void Emitter::frameSetup(
   comment("// locals.head.count = 0");
   a.mov(a64::w1, 0);
   a.str(a64::w1, a64::Mem(a64::sp, offsetof(SHLocals, count)));
+
+  if (dumpJitCode_ & 0x80) {
+    comment("// print entry");
+    a.mov(a64::w0, 1);
+    a.adr(a64::x1, roDataLabel_);
+    a.add(a64::x1, a64::x1, getDebugFunctionName());
+    EMIT_RUNTIME_CALL(
+        *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
+  }
 }
 
 void Emitter::leave() {
   comment("// leaveFrame");
   a.bind(returnLabel_);
+  if (dumpJitCode_ & 0x80) {
+    comment("// print exit");
+    a.mov(a64::w0, 0);
+    a.adr(a64::x1, roDataLabel_);
+    a.add(a64::x1, a64::x1, getDebugFunctionName());
+    EMIT_RUNTIME_CALL(
+        *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
+  }
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
   a.mov(a64::x2, xFrame);
