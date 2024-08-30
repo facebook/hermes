@@ -238,6 +238,8 @@ void Emitter::newBasicBlock(const asmjit::Label &label) {
     frState.localType = frState.globalType;
     assert(!frState.localGpX);
     assert(!frState.localVecD);
+    if (frState.globalReg)
+      frState.frameUpToDate = false;
   }
 
   a.bind(label);
