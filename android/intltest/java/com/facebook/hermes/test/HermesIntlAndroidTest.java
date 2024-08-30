@@ -95,7 +95,7 @@ public class HermesIntlAndroidTest {
             "var result = nf.format(8537.71);");
 
         String result = rt.getGlobalStringProperty("result");
-        assertThat(result).isEqualTo("+8.537,71 €");
+        assertThat(result).isEqualTo("+8.537,71 €");
       }
     }
   }
@@ -109,7 +109,7 @@ public class HermesIntlAndroidTest {
             "var result = nf.format(8537.71);");
 
         String result = rt.getGlobalStringProperty("result");
-        assertThat(result).isEqualTo("8.537,71 €");
+        assertThat(result).isEqualTo("8.537,71 €");
       }
     }
   }
@@ -123,7 +123,7 @@ public class HermesIntlAndroidTest {
             "var result = nf.format(8537.71);");
 
         String result = rt.getGlobalStringProperty("result");
-        assertThat(result).isEqualTo("+8.537,71 €");
+        assertThat(result).isEqualTo("+8.537,71 €");
       }
     }
   }
