@@ -873,6 +873,13 @@ JITCompiledFunctionPtr JITContext::compileImpl(
               ip->iNewObjectWithBuffer.op3);
           ip = NEXTINST(NewObjectWithBuffer);
           break;
+        case inst::OpCode::NewObjectWithBufferLong:
+          em.newObjectWithBuffer(
+              FR(ip->iNewObjectWithBufferLong.op1),
+              ip->iNewObjectWithBufferLong.op2,
+              ip->iNewObjectWithBufferLong.op3);
+          ip = NEXTINST(NewObjectWithBufferLong);
+          break;
 
         case inst::OpCode::NewArray:
           em.newArray(FR(ip->iNewArray.op1), ip->iNewArray.op2);
@@ -885,6 +892,14 @@ JITCompiledFunctionPtr JITContext::compileImpl(
               ip->iNewArrayWithBuffer.op3,
               ip->iNewArrayWithBuffer.op4);
           ip = NEXTINST(NewArrayWithBuffer);
+          break;
+        case inst::OpCode::NewArrayWithBufferLong:
+          em.newArrayWithBuffer(
+              FR(ip->iNewArrayWithBufferLong.op1),
+              ip->iNewArrayWithBufferLong.op2,
+              ip->iNewArrayWithBufferLong.op3,
+              ip->iNewArrayWithBufferLong.op4);
+          ip = NEXTINST(NewArrayWithBufferLong);
           break;
 
         case inst::OpCode::GetPNameList:
