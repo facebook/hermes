@@ -50,12 +50,13 @@ class FR {
 };
 
 enum class FRType : uint8_t {
-  Union = 1,
-  Number = 2,
-  Bool = 4,
+  Number = 1,
+  Bool = 2,
+  /// Any other non-pointer type.
+  OtherNonPtr = 4,
   Pointer = 8,
-  Unknown = 16,
-  UnknownPtr = Union | Unknown | Pointer,
+  UnknownNonPtr = Number | Bool | OtherNonPtr,
+  UnknownPtr = UnknownNonPtr | Pointer,
 };
 
 class HWReg {
@@ -729,13 +730,13 @@ class Emitter {
 
   /// Move a value from a hardware register \p src to the frame register \p
   /// frDest.
-  void movFRFromHW(FR frDest, HWReg src, OptValue<FRType> type = llvh::None);
+  void movFRFromHW(FR frDest, HWReg src, FRType type);
 
   /// In rare cases, such as when we have in/out parameters to operations, the
   /// frame may get updated with a new value. This will ensure that the frame is
   /// marked up-to-date, and that any associated global register holds the same
   /// value.
-  void syncFrameOutParam(FR fr, OptValue<FRType> type = llvh::None);
+  void syncFrameOutParam(FR fr, FRType type = FRType::UnknownPtr);
 
   template <class TAG>
   HWReg _allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred);
@@ -775,10 +776,8 @@ class Emitter {
       bool load,
       llvh::Optional<HWReg> preferred = llvh::None);
 
-  void frUpdatedWithHWReg(
-      FR fr,
-      HWReg hwReg,
-      hermes::OptValue<FRType> localType = llvh::None);
+  void
+  frUpdatedWithHWReg(FR fr, HWReg hwReg, FRType localType = FRType::UnknownPtr);
   void frUpdateType(FR fr, FRType type);
 
   /// \return true if the FR is currently known to contain the specified type.

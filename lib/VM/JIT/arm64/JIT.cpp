@@ -126,9 +126,9 @@ JITCompiledFunctionPtr JITContext::compileImpl(
     em.loadConstBits64(FR(ip->iLoadConst##NAME.op1), val, type, #NAME); \
     ip = NEXTINST(LoadConst##NAME);                                     \
     break;
-          LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::Unknown);
-          LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::Unknown);
-          LOAD_CONST(Null, _sh_ljs_null().raw, FRType::Unknown);
+          LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::UnknownNonPtr);
+          LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::UnknownNonPtr);
+          LOAD_CONST(Null, _sh_ljs_null().raw, FRType::UnknownNonPtr);
           LOAD_CONST(True, _sh_ljs_bool(true).raw, FRType::Bool);
           LOAD_CONST(False, _sh_ljs_bool(false).raw, FRType::Bool);
 #undef LOAD_CONST

@@ -208,7 +208,7 @@ Emitter::Emitter(
       break;
 
     frameRegs_[frIndex].globalReg = hwReg;
-    frameRegs_[frIndex].globalType = FRType::Unknown;
+    frameRegs_[frIndex].globalType = FRType::UnknownNonPtr;
   }
 
   // Save read/write property cache addresses.
@@ -474,7 +474,7 @@ void Emitter::movHWFromMem(HWReg hwRes, a64::Mem src) {
     a.ldr(hwRes.a64GpX(), src);
 }
 
-void Emitter::movFRFromHW(FR dst, HWReg src, OptValue<FRType> type) {
+void Emitter::movFRFromHW(FR dst, HWReg src, FRType type) {
   FRState &frState = frameRegs_[dst.index()];
   // If it is a local or global register, move the value into it and mark it as
   // updated.
@@ -490,13 +490,12 @@ void Emitter::movFRFromHW(FR dst, HWReg src, OptValue<FRType> type) {
   } else {
     // Otherwise store it directly to the frame.
     _storeHWRegToFrame(dst, src);
-    if (type)
-      frUpdateType(dst, *type);
+    frUpdateType(dst, type);
     frState.frameUpToDate = true;
   }
 }
 
-void Emitter::syncFrameOutParam(FR fr, OptValue<FRType> type) {
+void Emitter::syncFrameOutParam(FR fr, FRType type) {
   auto &frState = frameRegs_[fr.index()];
 
   frState.frameUpToDate = true;
@@ -509,8 +508,7 @@ void Emitter::syncFrameOutParam(FR fr, OptValue<FRType> type) {
     frState.globalRegUpToDate = true;
     _loadFrame(frState.globalReg, fr);
   }
-  if (type)
-    frUpdateType(fr, *type);
+  frUpdateType(fr, type);
 }
 
 template <class TAG>
@@ -854,10 +852,7 @@ HWReg Emitter::getOrAllocFRInAnyReg(
   return hwReg;
 }
 
-void Emitter::frUpdatedWithHWReg(
-    FR fr,
-    HWReg hwReg,
-    hermes::OptValue<FRType> localType) {
+void Emitter::frUpdatedWithHWReg(FR fr, HWReg hwReg, FRType localType) {
   FRState &frState = frameRegs_[fr.index()];
 
   frState.frameUpToDate = false;
@@ -880,8 +875,7 @@ void Emitter::frUpdatedWithHWReg(
       freeReg(frState.localGpX);
     }
   }
-  if (localType)
-    frUpdateType(fr, *localType);
+  frUpdateType(fr, localType);
 }
 
 void Emitter::frUpdateType(FR fr, FRType type) {
@@ -1133,7 +1127,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
   } else {
     hwRes = hwInput;
   }
-  frUpdatedWithHWReg(frRes, hwRes, FRType::Unknown);
+  frUpdatedWithHWReg(frRes, hwRes, FRType::UnknownPtr);
 
   freeAllTempExcept(frRes);
   a.bind(contLab);
@@ -2247,7 +2241,7 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   // Store undefined as the new target.
   FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
   loadConstBits64(
-      ntFrameArg, _sh_ljs_undefined().raw, FRType::Unknown, "undefined");
+      ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
 
   // Ensure that all the outgoing values are stored into the frame registers for
   // the call.
@@ -2307,7 +2301,7 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
   // Get a register for the new target.
   FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
   loadConstBits64(
-      ntFrameArg, _sh_ljs_undefined().raw, FRType::Unknown, "undefined");
+      ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
   syncToMem(ntFrameArg);
 
   // For now we sync all registers, since we skip writing to the frame in some
@@ -2482,7 +2476,7 @@ void Emitter::arithUnop(
     freeReg(hwTmp);
 
   frUpdatedWithHWReg(
-      frRes, hwRes, inputIsNum ? OptValue(FRType::Number) : OptValue<FRType>());
+      frRes, hwRes, inputIsNum ? FRType::Number : FRType::UnknownPtr);
 
   if (inputIsNum)
     return;
@@ -2820,8 +2814,7 @@ void Emitter::arithBinOp(
   hwRes = getOrAllocFRInVecD(frRes, false);
   fast(a, hwRes.a64VecD(), hwLeft.a64VecD(), hwRight.a64VecD());
 
-  frUpdatedWithHWReg(
-      frRes, hwRes, !slow ? OptValue(FRType::Number) : OptValue<FRType>());
+  frUpdatedWithHWReg(frRes, hwRes, !slow ? FRType::Number : FRType::UnknownPtr);
 
   if (!slow)
     return;
