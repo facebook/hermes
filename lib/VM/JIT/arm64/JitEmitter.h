@@ -469,7 +469,7 @@ class Emitter {
     as.fadd(d, s, tmp);
   })
   DECL_UNOP(inc, false, "inc", _sh_ljs_inc_rjs, {
-    as.fmov(tmp, -1.0);
+    as.fmov(tmp, 1.0);
     as.fadd(d, s, tmp);
   })
   DECL_UNOP(negate, false, "neg", _sh_ljs_minus_rjs, { as.fneg(d, s); });
