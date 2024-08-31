@@ -269,7 +269,7 @@ int32_t Emitter::getDebugFunctionName() {
     std::string str;
     llvh::raw_string_ostream ss(str);
     ss << codeBlock_->getFunctionID() << "(" << codeBlock_->getNameString()
-       << ")\n";
+       << ")";
     ss.flush();
     int32_t size = str.size() + 1;
     roOfsDebugFunctionName_ = reserveData(size, 1, asmjit::TypeId::kInt8, size);

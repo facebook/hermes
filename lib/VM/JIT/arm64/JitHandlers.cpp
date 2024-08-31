@@ -21,7 +21,6 @@
 #define DEBUG_TYPE "jit"
 
 namespace hermes::vm {
-
 SHLegacyValue _sh_ljs_create_bytecode_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
@@ -106,7 +105,7 @@ void _sh_print_function_entry_exit(bool enter, const char *msg) {
     --level;
     printf("%*s*** Leave FunctionID ", level * 4, "");
   }
-  printf("%s", msg);
+  printf("%s\n", msg);
   fflush(stdout);
 }
 
