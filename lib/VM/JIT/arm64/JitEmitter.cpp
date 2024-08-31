@@ -156,7 +156,7 @@ Emitter::Emitter(
     : dumpJitCode_(dumpJitCode),
       frameRegs_(numFrameRegs),
       codeBlock_(codeBlock) {
-  if (dumpJitCode_ & 1)
+  if (dumpJitCode_ & DumpJitCode::Code)
     logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
   if (logger_)
     logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
@@ -363,7 +363,7 @@ void Emitter::frameSetup(
   a.mov(a64::w1, 0);
   a.str(a64::w1, a64::Mem(a64::sp, offsetof(SHLocals, count)));
 
-  if (dumpJitCode_ & 0x80) {
+  if (dumpJitCode_ & DumpJitCode::EntryExit) {
     comment("// print entry");
     a.mov(a64::w0, 1);
     a.adr(a64::x1, roDataLabel_);
@@ -376,7 +376,7 @@ void Emitter::frameSetup(
 void Emitter::leave() {
   comment("// leaveFrame");
   a.bind(returnLabel_);
-  if (dumpJitCode_ & 0x80) {
+  if (dumpJitCode_ & DumpJitCode::EntryExit) {
     comment("// print exit");
     a.mov(a64::w0, 0);
     a.adr(a64::x1, roDataLabel_);

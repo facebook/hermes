@@ -14,6 +14,14 @@ namespace hermes {
 namespace vm {
 namespace arm64 {
 
+namespace DumpJitCode {
+enum : unsigned {
+  Code = 0x01,
+  CompileStatus = 0x02,
+  EntryExit = 0x80,
+};
+}
+
 /// All state related to JIT compilation.
 class JITContext {
  public:

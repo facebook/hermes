@@ -52,7 +52,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
     Runtime &runtime,
     CodeBlock *codeBlock) {
   std::string funcName{};
-  if (dumpJITCode_ & 3) {
+  if (dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
     funcName = codeBlock->getNameString();
     llvh::outs() << "\nJIT compilation of FunctionID "
                  << codeBlock->getFunctionID() << ", '" << funcName << "'\n";
@@ -66,7 +66,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
 
   const char *funcStart = (const char *)codeBlock->begin();
 
-  if ((dumpJITCode_ & 1) && !funcName.empty())
+  if ((dumpJITCode_ & DumpJitCode::Code) && !funcName.empty())
     llvh::outs() << "\n" << funcName << ":\n";
 
   // TODO: is getFrameSize() the right thing to call?
@@ -899,7 +899,8 @@ JITCompiledFunctionPtr JITContext::compileImpl(
                          << ": " << inst::decodeInstruction(ip) << "\n";
             hermes_fatal("jit: unsupported instruction");
           } else {
-            if (dumpJITCode_) {
+            if (dumpJITCode_ &
+                (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
               llvh::outs() << "** Unsupported instruction: "
                            << llvh::format_decimal(
                                   (const char *)ip - (const char *)funcStart, 3)
@@ -944,7 +945,7 @@ onError:
         }
       });
 
-  if (dumpJITCode_ & 3) {
+  if (dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
     funcName = codeBlock->getNameString();
     llvh::outs() << "\nJIT successfully compiled FunctionID "
                  << codeBlock->getFunctionID() << ", '" << funcName << "'\n";
