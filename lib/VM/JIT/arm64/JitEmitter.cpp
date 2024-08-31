@@ -36,20 +36,39 @@ static_assert(
     HERMESVALUE_VERSION == 1,
     "HermesValue version mismatch, JIT may need to be updated");
 
-void emit_sh_ljs_get_pointer(a64::Assembler &a, const a64::GpX inOut) {
+void emit_sh_ljs_get_pointer(
+    a64::Assembler &a,
+    const a64::GpX &xOut,
+    const a64::GpX &xIn) {
   // See:
   // https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
   static_assert(
       HERMESVALUE_VERSION == 1,
       "kHV_DataMask is 0x000...1111... and can be encoded as a logical immediate");
-  a.and_(inOut, inOut, kHV_DataMask);
+  a.and_(xOut, xIn, kHV_DataMask);
 }
 
-void emit_sh_ljs_object(a64::Assembler &a, const a64::GpX inOut) {
+void emit_sh_ljs_object(a64::Assembler &a, const a64::GpX &inOut) {
   static_assert(
       HERMESVALUE_VERSION == 1,
       "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
   a.movk(inOut, (uint16_t)HVTag_Object, kHV_NumDataBits);
+}
+
+/// Emit code to check whether the input reg is an object, using the specified
+/// temp register. The input reg is not
+/// modified unless it is the same as the temp, which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_object(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Check if frConstructed is an object.
+  // Get the tag bits in xTmpConstructedTag by right shifting.
+  static_assert(
+      (int16_t)HVTag_Object == (int16_t)(-1) && "HV_TagObject must be -1");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits);
+  a.cmn(xTempReg, -HVTag_Object);
 }
 
 /// For a register \p inOut that contains a bool (i.e. either 0 or 1), turn it
@@ -1285,7 +1304,7 @@ void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
           (int)StackFrameLayout::CalleeClosureOrCB *
               (int)sizeof(SHLegacyValue)));
   // get pointer.
-  emit_sh_ljs_get_pointer(a, xTmp1);
+  emit_sh_ljs_get_pointer(a, xTmp1, xTmp1);
   // xTmp1 = closure->environment
   a.ldr(xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
   for (; level; --level) {
@@ -1314,7 +1333,7 @@ void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
     movHWFromFR(hwRes, frClosure);
   }
   // Use the result register as a scratch register for computing the address.
-  emit_sh_ljs_get_pointer(a, hwRes.a64GpX());
+  emit_sh_ljs_get_pointer(a, hwRes.a64GpX(), hwRes.a64GpX());
   movHWFromMem(hwRes, a64::Mem(hwRes.a64GpX(), ofs));
   // The result is a pointer, so add the object tag.
   emit_sh_ljs_object(a, hwRes.a64GpX());
@@ -1335,7 +1354,7 @@ void Emitter::loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot) {
 
   movHWFromFR(hwTmp1, frEnv);
   // get pointer.
-  emit_sh_ljs_get_pointer(a, xTmp1);
+  emit_sh_ljs_get_pointer(a, xTmp1, xTmp1);
 
   a.ldr(
       xTmp1,
@@ -1463,11 +1482,8 @@ void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
   // Check if frConstructed is an object.
   // Get the tag bits in xTmpConstructedTag by right shifting.
   HWReg hwTmpConstructedTag = allocTempGpX();
-  a64::GpX xTmpConstructedTag = hwTmpConstructedTag.a64GpX();
-  static_assert(
-      (int16_t)HVTag_Object == (int16_t)(-1) && "HV_TagObject must be -1");
-  a.asr(xTmpConstructedTag, hwConstructed.a64GpX(), kHV_NumDataBits);
-  a.cmn(xTmpConstructedTag, -HVTag_Object);
+  emit_sh_ljs_is_object(
+      a, hwTmpConstructedTag.a64GpX(), hwConstructed.a64GpX());
   freeReg(hwTmpConstructedTag);
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
@@ -1795,7 +1811,7 @@ void Emitter::getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx) {
     // the result register in case the result has a VecD allocated for it.
     HWReg temp = allocTempGpX();
     movHWFromFR(temp, frTarget);
-    emit_sh_ljs_get_pointer(a, temp.a64GpX());
+    emit_sh_ljs_get_pointer(a, temp.a64GpX(), temp.a64GpX());
     // Free the temporary register before allocating the result so it can be
     // reused.
     freeReg(temp);
