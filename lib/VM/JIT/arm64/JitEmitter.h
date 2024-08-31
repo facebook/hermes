@@ -488,31 +488,46 @@ class Emitter {
   void getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize);
   void getNextPName(FR frRes, FR frProps, FR frObj, FR frIdx, FR frSize);
 
-#define DECL_COMPARE(methodName, commentStr, slowCall, condCode, invSlow) \
-  void methodName(FR rRes, FR rLeft, FR rRight) {                         \
-    compareImpl(                                                          \
-        rRes,                                                             \
-        rLeft,                                                            \
-        rRight,                                                           \
-        commentStr,                                                       \
-        a64::CondCode::condCode,                                          \
-        (void *)slowCall,                                                 \
-        #slowCall,                                                        \
-        invSlow);                                                         \
+#define DECL_COMPARE(                                                   \
+    methodName, commentStr, slowCall, condCode, invSlow, passArgsByVal) \
+  void methodName(FR rRes, FR rLeft, FR rRight) {                       \
+    compareImpl(                                                        \
+        rRes,                                                           \
+        rLeft,                                                          \
+        rRight,                                                         \
+        commentStr,                                                     \
+        a64::CondCode::condCode,                                        \
+        (void *)slowCall,                                               \
+        #slowCall,                                                      \
+        invSlow,                                                        \
+        passArgsByVal);                                                 \
   }
-  DECL_COMPARE(greater, "greater", _sh_ljs_greater_rjs, kGT, false)
+  DECL_COMPARE(greater, "greater", _sh_ljs_greater_rjs, kGT, false, false)
   DECL_COMPARE(
       greaterEqual,
       "greater_equal",
       _sh_ljs_greater_equal_rjs,
       kGE,
+      false,
       false)
-  DECL_COMPARE(less, "less", _sh_ljs_less_rjs, kMI, false)
-  DECL_COMPARE(lessEqual, "less_equal", _sh_ljs_less_equal_rjs, kLS, false)
-  DECL_COMPARE(equal, "Eq", _sh_ljs_equal_rjs, kEQ, false)
-  DECL_COMPARE(strictEqual, "StrictEq", _sh_ljs_strict_equal, kEQ, false)
-  DECL_COMPARE(notEqual, "Neq", _sh_ljs_equal_rjs, kNE, true)
-  DECL_COMPARE(strictNotEqual, "StrictNeq", _sh_ljs_strict_equal, kNE, true)
+  DECL_COMPARE(less, "less", _sh_ljs_less_rjs, kMI, false, false)
+  DECL_COMPARE(
+      lessEqual,
+      "less_equal",
+      _sh_ljs_less_equal_rjs,
+      kLS,
+      false,
+      false)
+  DECL_COMPARE(equal, "Eq", _sh_ljs_equal_rjs, kEQ, false, false)
+  DECL_COMPARE(strictEqual, "StrictEq", _sh_ljs_strict_equal, kEQ, false, true)
+  DECL_COMPARE(notEqual, "Neq", _sh_ljs_equal_rjs, kNE, true, false)
+  DECL_COMPARE(
+      strictNotEqual,
+      "StrictNeq",
+      _sh_ljs_strict_equal,
+      kNE,
+      true,
+      true)
 #undef DECL_COMPARE
 
 #define DECL_JCOND(                                                     \
@@ -854,7 +869,8 @@ class Emitter {
       a64::CondCode condCode,
       void *slowCall,
       const char *slowCallName,
-      bool invSlow);
+      bool invSlow,
+      bool passArgsByVal);
 
   void jCond(
       bool forceNumber,

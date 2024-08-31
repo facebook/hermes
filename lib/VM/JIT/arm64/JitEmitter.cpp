@@ -3098,7 +3098,8 @@ void Emitter::compareImpl(
     a64::CondCode condCode,
     void *slowCall,
     const char *slowCallName,
-    bool invSlow) {
+    bool invSlow,
+    bool passArgsByVal) {
   comment(
       "// %s r%u, r%u, r%u",
       name,
@@ -3171,6 +3172,7 @@ void Emitter::compareImpl(
        .frInput2 = frRight,
        .hwRes = hwRes,
        .invert = invSlow,
+       .passArgsByVal = passArgsByVal,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
        .emit = [](Emitter &em, SlowPath &sl) {
@@ -3181,9 +3183,14 @@ void Emitter::compareImpl(
              sl.frInput1.index(),
              sl.frInput2.index());
          em.a.bind(sl.slowPathLab);
-         em.a.mov(a64::x0, xRuntime);
-         em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.loadFrameAddr(a64::x2, sl.frInput2);
+         if (sl.passArgsByVal) {
+           em._loadFrame(HWReg::gpX(0), sl.frInput1);
+           em._loadFrame(HWReg::gpX(1), sl.frInput2);
+         } else {
+           em.a.mov(a64::x0, xRuntime);
+           em.loadFrameAddr(a64::x1, sl.frInput1);
+           em.loadFrameAddr(a64::x2, sl.frInput2);
+         }
          em.call(sl.slowCall, sl.slowCallName);
 
          // Invert the slow path result if needed.
