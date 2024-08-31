@@ -266,6 +266,10 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(URshift);
           break;
 
+        case inst::OpCode::Inc:
+          em.inc(FR(ip->iInc.op1), FR(ip->iInc.op2));
+          ip = NEXTINST(Inc);
+          break;
         case inst::OpCode::Dec:
           em.dec(FR(ip->iDec.op1), FR(ip->iDec.op2));
           ip = NEXTINST(Dec);
