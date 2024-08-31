@@ -936,7 +936,8 @@ JITCompiledFunctionPtr JITContext::compileImpl(
             hermes_fatal("jit: unsupported instruction");
           } else {
             if (dumpJITCode_ &
-                (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
+                (DumpJitCode::Code | DumpJitCode::CompileStatus |
+                 DumpJitCode::InstErr)) {
               llvh::outs() << "** Unsupported instruction: "
                            << llvh::format_decimal(
                                   (const char *)ip - (const char *)funcStart, 3)
