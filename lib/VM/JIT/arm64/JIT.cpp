@@ -647,6 +647,17 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(GetOwnBySlotIdxLong);
           break;
 
+        case inst::OpCode::TypedLoadParent:
+          em.typedLoadParent(
+              FR(ip->iTypedLoadParent.op1), FR(ip->iTypedLoadParent.op2));
+          ip = NEXTINST(TypedLoadParent);
+          break;
+        case inst::OpCode::TypedStoreParent:
+          em.typedStoreParent(
+              FR(ip->iTypedStoreParent.op1), FR(ip->iTypedStoreParent.op2));
+          ip = NEXTINST(TypedStoreParent);
+          break;
+
         case inst::OpCode::Ret:
           em.ret(FR(ip->iRet.op1));
           ip = NEXTINST(Ret);

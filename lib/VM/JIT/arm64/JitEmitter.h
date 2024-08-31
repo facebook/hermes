@@ -655,6 +655,9 @@ class Emitter {
 
   void debugger();
 
+  void typedLoadParent(FR frRes, FR frObj);
+  void typedStoreParent(FR frStoredValue, FR frObj);
+
  private:
   /// Create an a64::Mem to a specifc frame register.
   static constexpr inline a64::Mem frA64Mem(FR fr) {

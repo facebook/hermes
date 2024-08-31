@@ -1543,6 +1543,36 @@ void Emitter::debugger() {
     a.brk(0);
 }
 
+void Emitter::typedLoadParent(FR frRes, FR frObj) {
+  comment("// TypedLoadParent r%u, r%u", frRes.index(), frObj.index());
+
+  HWReg hwObj = getOrAllocFRInGpX(frRes, true);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  a64::GpX xRes = hwRes.a64GpX();
+  emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
+  a.ldr(xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_sh_ljs_object(a, xRes);
+
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::typedStoreParent(FR frStoredValue, FR frObj) {
+  comment("// TypedStoreParent r%u, r%u", frStoredValue.index(), frObj.index());
+
+  syncAllTempExcept({});
+  syncToMem(frStoredValue);
+  syncToMem(frObj);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frStoredValue);
+  loadFrameAddr(a64::x2, frObj);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, const SHLegacyValue *, const SHLegacyValue *),
+      _sh_typed_store_parent);
+}
+
 void Emitter::putByValImpl(
     FR frTarget,
     FR frKey,
