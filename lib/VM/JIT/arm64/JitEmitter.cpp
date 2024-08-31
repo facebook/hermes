@@ -1546,7 +1546,7 @@ void Emitter::debugger() {
 void Emitter::typedLoadParent(FR frRes, FR frObj) {
   comment("// TypedLoadParent r%u, r%u", frRes.index(), frObj.index());
 
-  HWReg hwObj = getOrAllocFRInGpX(frRes, true);
+  HWReg hwObj = getOrAllocFRInGpX(frObj, true);
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
