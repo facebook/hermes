@@ -891,6 +891,11 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(CoerceThisNS);
           break;
 
+        case inst::OpCode::Debugger:
+          em.debugger();
+          ip = NEXTINST(Debugger);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

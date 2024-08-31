@@ -653,6 +653,8 @@ class Emitter {
   void loadThisNS(FR frRes);
   void coerceThisNS(FR frRes, FR frThis);
 
+  void debugger();
+
  private:
   /// Create an a64::Mem to a specifc frame register.
   static constexpr inline a64::Mem frA64Mem(FR fr) {

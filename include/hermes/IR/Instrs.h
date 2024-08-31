@@ -3203,7 +3203,7 @@ class DebuggerInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    return SideEffect::createUnknown();
   }
 
   static bool classof(const Value *V) {

@@ -1537,6 +1537,12 @@ void Emitter::coerceThisNS(FR frRes, FR frThis) {
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::debugger() {
+  comment("// Debugger");
+  if (dumpJitCode_ & DumpJitCode::BRK)
+    a.brk(0);
+}
+
 void Emitter::putByValImpl(
     FR frTarget,
     FR frKey,

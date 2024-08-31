@@ -18,6 +18,7 @@ namespace DumpJitCode {
 enum : unsigned {
   Code = 0x01,
   CompileStatus = 0x02,
+  BRK = 0x40,
   EntryExit = 0x80,
 };
 }
