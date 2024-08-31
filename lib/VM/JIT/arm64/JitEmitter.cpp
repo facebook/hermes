@@ -2505,10 +2505,12 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
 
   syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
 
-  slowPathLab = newSlowPathLabel();
-  contLab = newContLabel();
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  if (slow) {
+    slowPathLab = newSlowPathLabel();
+    contLab = newContLabel();
+    syncToMem(frLeft);
+    syncToMem(frRight);
+  }
 
   if (!leftIsNum) {
     hwLeft = getOrAllocFRInGpX(frLeft, true);
