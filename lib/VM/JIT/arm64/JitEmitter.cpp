@@ -1156,6 +1156,24 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
        }});
 }
 
+void Emitter::toInt32(FR frRes, FR frInput) {
+  comment("// %s r%u, r%u", "toInt32", frRes.index(), frInput.index());
+  // TODO: do this much more efficiently.
+
+  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncToMem(frInput);
+  freeAllTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frInput);
+  EMIT_RUNTIME_CALL(
+      *this,
+      double (*)(SHRuntime *, const SHLegacyValue *),
+      _sh_ljs_to_int32_rjs);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::vecD(0));
+  movHWReg<false>(hwRes, HWReg::vecD(0));
+  frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+}
+
 void Emitter::newObject(FR frRes) {
   comment("// NewObject r%u", frRes.index());
   syncAllTempExcept(frRes);
@@ -1580,6 +1598,17 @@ void Emitter::debugger() {
   comment("// Debugger");
   if (dumpJitCode_ & DumpJitCode::BRK)
     a.brk(0);
+}
+
+void Emitter::throwInst(FR frInput) {
+  comment("// Throw r%u", frInput.index());
+
+  syncAllTempExcept({});
+  movHWFromFR(HWReg::gpX(1), frInput);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  EMIT_RUNTIME_CALL(*this, void (*)(SHRuntime *, SHLegacyValue), _sh_throw);
 }
 
 void Emitter::typedLoadParent(FR frRes, FR frObj) {

@@ -407,6 +407,7 @@ class Emitter {
   loadConstString(FR frRes, RuntimeModule *runtimeModule, uint32_t stringID);
   void toNumber(FR frRes, FR frInput);
   void toNumeric(FR frRes, FR frInput);
+  void toInt32(FR frRes, FR frInput);
 
   void addS(FR frRes, FR frLeft, FR frRight);
   void mod(bool forceNumber, FR frRes, FR frLeft, FR frRight);
@@ -672,6 +673,7 @@ class Emitter {
   void coerceThisNS(FR frRes, FR frThis);
 
   void debugger();
+  void throwInst(FR frInput);
 
   void typedLoadParent(FR frRes, FR frObj);
   void typedStoreParent(FR frStoredValue, FR frObj);

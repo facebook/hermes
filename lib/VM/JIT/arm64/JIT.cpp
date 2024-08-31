@@ -167,6 +167,10 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.toNumeric(FR(ip->iToNumeric.op1), FR(ip->iToNumeric.op2));
           ip = NEXTINST(ToNumeric);
           break;
+        case inst::OpCode::ToInt32:
+          em.toInt32(FR(ip->iToInt32.op1), FR(ip->iToInt32.op2));
+          ip = NEXTINST(ToInt32);
+          break;
 
         case inst::OpCode::Greater:
           em.greater(
@@ -928,6 +932,10 @@ JITCompiledFunctionPtr JITContext::compileImpl(
         case inst::OpCode::Debugger:
           em.debugger();
           ip = NEXTINST(Debugger);
+          break;
+        case inst::OpCode::Throw:
+          em.throwInst(FR(ip->iThrow.op1));
+          ip = NEXTINST(Throw);
           break;
 
         case inst::OpCode::AddS:

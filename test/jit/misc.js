@@ -12,3 +12,12 @@ var a = 10;
 print(a);
 // CHECK: JIT successfully compiled FunctionID 0, 'global'
 // CHECK-NEXT: 10
+
+
+function foo(p) {
+    return p | 0;
+}
+
+print(foo(3.14));
+// CHECK: JIT successfully compiled FunctionID 1, 'foo'
+// CHECK-NEXT: 3
