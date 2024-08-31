@@ -1732,7 +1732,7 @@ void Emitter::putByIdImpl(
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
-  char buf[8];
+  char buf[16];
   snprintf(buf, sizeof(buf), "%s%lu", pref, index);
   return a.newNamedLabel(buf);
 }
