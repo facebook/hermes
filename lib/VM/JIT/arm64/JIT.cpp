@@ -739,6 +739,13 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(CallBuiltin);
           break;
 
+        case inst::OpCode::GetBuiltinClosure:
+          em.getBuiltinClosure(
+              FR(ip->iGetBuiltinClosure.op1),
+              /* builtinIndex */ ip->iGetBuiltinClosure.op2);
+          ip = NEXTINST(GetBuiltinClosure);
+          break;
+
         case inst::OpCode::DeclareGlobalVar:
           em.declareGlobalVar(ID(ip->iDeclareGlobalVar.op1));
           ip = NEXTINST(DeclareGlobalVar);
