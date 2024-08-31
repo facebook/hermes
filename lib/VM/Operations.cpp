@@ -2502,12 +2502,10 @@ extern "C" SHLegacyValue _sh_ljs_to_numeric_rjs(
   return *cr;
 }
 
-extern "C" SHLegacyValue _sh_ljs_to_int32_rjs(
-    SHRuntime *shr,
-    const SHLegacyValue *n) {
+extern "C" double _sh_ljs_to_int32_rjs(SHRuntime *shr, const SHLegacyValue *n) {
   auto *pn = toPHV(n);
   if (LLVM_LIKELY(pn->isNumber()))
-    return _sh_ljs_double(hermes::truncateToInt32(pn->getNumber()));
+    return hermes::truncateToInt32(pn->getNumber());
   Runtime &runtime = getRuntime(shr);
   CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
   {
@@ -2516,7 +2514,7 @@ extern "C" SHLegacyValue _sh_ljs_to_int32_rjs(
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
-  return *cr;
+  return cr->getDouble();
 }
 
 #define SH_COMPARISON_OP(name, call, oper)                              \

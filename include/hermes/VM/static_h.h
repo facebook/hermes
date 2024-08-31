@@ -574,8 +574,9 @@ SHERMES_EXPORT double _sh_ljs_to_double_rjs(
 SHERMES_EXPORT bool _sh_ljs_to_boolean(SHLegacyValue b);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_to_numeric_rjs(SHRuntime *shr, const SHLegacyValue *n);
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_to_int32_rjs(SHRuntime *shr, const SHLegacyValue *n);
+SHERMES_EXPORT double _sh_ljs_to_int32_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n);
 
 SHERMES_EXPORT bool _sh_ljs_less_rjs(
     SHRuntime *shr,

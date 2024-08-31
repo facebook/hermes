@@ -709,9 +709,9 @@ class InstrGen {
       generateRegister(*inst.getSingleOperand());
       os_ << ")));\n";
     } else {
-      os_ << "_sh_ljs_to_int32_rjs(shr, ";
+      os_ << "_sh_ljs_double(_sh_ljs_to_int32_rjs(shr, ";
       generateRegisterPtr(*inst.getSingleOperand());
-      os_ << ");\n";
+      os_ << "));\n";
     }
   }
   void generateLoadStackInst(LoadStackInst &inst) {
