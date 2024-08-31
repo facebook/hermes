@@ -155,6 +155,10 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.toNumber(FR(ip->iToNumber.op1), FR(ip->iToNumber.op2));
           ip = NEXTINST(ToNumber);
           break;
+        case inst::OpCode::ToNumeric:
+          em.toNumeric(FR(ip->iToNumeric.op1), FR(ip->iToNumeric.op2));
+          ip = NEXTINST(ToNumeric);
+          break;
 
         case inst::OpCode::Greater:
           em.greater(

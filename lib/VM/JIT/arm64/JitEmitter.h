@@ -405,6 +405,7 @@ class Emitter {
   void
   loadConstString(FR frRes, RuntimeModule *runtimeModule, uint32_t stringID);
   void toNumber(FR frRes, FR frInput);
+  void toNumeric(FR frRes, FR frInput);
 
   void addS(FR frRes, FR frLeft, FR frRight);
   void mod(bool forceNumber, FR frRes, FR frLeft, FR frRight);

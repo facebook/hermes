@@ -1112,6 +1112,56 @@ void Emitter::toNumber(FR frRes, FR frInput) {
        }});
 }
 
+void Emitter::toNumeric(FR frRes, FR frInput) {
+  comment("// %s r%u, r%u", "toNumeric", frRes.index(), frInput.index());
+  if (isFRKnownNumber(frInput))
+    return mov(frRes, frInput, false);
+
+  HWReg hwRes, hwInput;
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncToMem(frInput);
+
+  hwInput = getOrAllocFRInGpX(frInput, true);
+  a.cmp(hwInput.a64GpX(), xDoubleLim);
+  a.b_hs(slowPathLab);
+
+  if (frRes != frInput) {
+    hwRes = getOrAllocFRInVecD(frRes, false);
+    movHWReg<false>(hwRes, hwInput);
+  } else {
+    hwRes = hwInput;
+  }
+  frUpdatedWithHWReg(frRes, hwRes, FRType::Unknown);
+
+  freeAllTempExcept(frRes);
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = "toNumeric",
+       .frRes = frRes,
+       .frInput1 = frInput,
+       .hwRes = hwRes,
+       .slowCall = (void *)_sh_ljs_to_numeric_rjs,
+       .slowCallName = "_sh_ljs_to_numeric_rjs",
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: %s r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.call(sl.slowCall, sl.slowCallName);
+         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
 void Emitter::newObject(FR frRes) {
   comment("// NewObject r%u", frRes.index());
   syncAllTempExcept(frRes);
