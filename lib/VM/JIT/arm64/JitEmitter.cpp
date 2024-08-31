@@ -1674,9 +1674,150 @@ void Emitter::getByIdImpl(
       cacheIdx,
       symID);
 
+  asmjit::Label slowPathLab;
+  asmjit::Label contLab;
+  HWReg hwRes;
+
+  // All temporaries will potentially be clobbered by the slow path.
   syncAllTempExcept(frRes != frSource ? frRes : FR{});
-  syncToMem(frSource);
-  freeAllTempExcept({});
+
+  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
+    // Label for indirect property access.
+    asmjit::Label indirectLab = a.newLabel();
+    slowPathLab = a.newLabel();
+    contLab = a.newLabel();
+
+    // We don't need the other temporaries.
+    freeAllTempExcept(frSource);
+
+    // We need the source in a GPx register.
+    HWReg hwSourceGpx = getOrAllocFRInGpX(frSource, true);
+
+    // Here we start allocating and freeing registers. It is important to
+    // realize that this doesn't generate any code, it only updates metadata,
+    // marking registers as used or free. So, we have to perform a series of
+    // register allocs and frees, ahead of time, based on our understanding of
+    // how the live ranges of these registers overlap. Then we just use the
+    // recorded registers at the right time.
+
+    // xTemp1 will contain the input object.
+    HWReg hwTemp1Gpx = allocTempGpX();
+    auto xTemp1 = hwTemp1Gpx.a64GpX();
+    // Free frSource before allocating more temporaries, because we won't need
+    // it at the same time as them.
+    freeFRTemp(frSource);
+
+    // Get register assignments for the rest of the temporaries.
+    HWReg hwTemp2Gpx = allocTempGpX();
+    HWReg hwTemp3Gpx = allocTempGpX();
+    HWReg hwTemp4Gpx = allocTempGpX();
+    auto xTemp2 = hwTemp2Gpx.a64GpX();
+    auto xTemp3 = hwTemp3Gpx.a64GpX();
+    auto xTemp4 = hwTemp4Gpx.a64GpX();
+
+    // Now that we have recorded their registers, mark all temp registers as
+    // free.
+    freeReg(hwTemp1Gpx);
+    freeReg(hwTemp2Gpx);
+    freeReg(hwTemp3Gpx);
+    freeReg(hwTemp4Gpx);
+
+    // Allocate the result register. Note that it can overlap the temps we just
+    // freed.
+    hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+
+    // Finally we begin code generation for the fast path.
+
+    // Is the input an object.
+    emit_sh_ljs_is_object(a, xTemp1, hwSourceGpx.a64GpX());
+    a.b_ne(slowPathLab);
+    // xTemp1 is the pointer to the object.
+    emit_sh_ljs_get_pointer(a, xTemp1, hwSourceGpx.a64GpX());
+
+#ifdef HERMESVM_COMPRESSED_POINTERS
+#error Compressed pointers not implemented
+#endif
+    // xTemp2 is the hidden class.
+    a.ldr(xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
+
+    // xTemp3 points to the start of read property cache.
+    a.ldr(xTemp3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
+    // xTemp4 = cacheEntry->clazz.
+    a.ldr(
+        xTemp4,
+        a64::Mem(
+            xTemp3,
+            sizeof(SHPropertyCacheEntry) * cacheIdx +
+                offsetof(SHPropertyCacheEntry, clazz)));
+
+    // Compare hidden classes.
+    a.cmp(xTemp2, xTemp4);
+    a.b_ne(slowPathLab);
+
+    // Hidden class matches. Fetch the slot in xTemp4
+    a.ldr(
+        xTemp4.w(),
+        a64::Mem(
+            xTemp3,
+            sizeof(SHPropertyCacheEntry) * cacheIdx +
+                offsetof(SHPropertyCacheEntry, slot)));
+
+    // Is it an indirect slot?
+    a.cmp(xTemp4.w(), HERMESVM_DIRECT_PROPERTY_SLOTS);
+    a.b_hs(indirectLab);
+
+    // Load from a direct slot.
+    a.add(xTemp3, xTemp1, offsetof(SHJSObjectAndDirectProps, directProps));
+    a.ldr(
+        hwRes.a64GpX(),
+        a64::Mem(xTemp3, xTemp4, a64::Shift(a64::ShiftOp::kLSL, 3)));
+
+    a.b(contLab);
+
+    a.bind(indirectLab);
+    // Load from an in-direct slot.
+    // xTemp1 is the object
+    // xTemp4 is the slot
+
+    // xTemp1 = xTemp1->propStorage
+    a.ldr(xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, propStorage)));
+    constexpr ssize_t ofs = offsetof(SHArrayStorageSmall, storage) -
+        HERMESVM_DIRECT_PROPERTY_SLOTS * sizeof(SHGCSmallHermesValue);
+    if constexpr (ofs < 0)
+      a.sub(xTemp1, xTemp1, -ofs);
+    else
+      a.add(xTemp1, xTemp1, ofs);
+    a.ldr(
+        hwRes.a64GpX(),
+        a64::Mem(xTemp1, xTemp4, a64::Shift(a64::ShiftOp::kLSL, 3)));
+    a.b(contLab);
+
+    a.bind(slowPathLab);
+
+    // Ensure the frSource is in memory for the fast path. Note that we haven't
+    // done it before.
+    // Note that this is the reason we can't use a regular slow path at the
+    // end of the function. We need syncToMem() to execute in the slow path,
+    // but by then the state is gone.
+    syncToMem(frSource);
+  } else {
+    // We arrive here if there is no fast path. Ensure that frSource is in
+    // memory.
+    syncToMem(frSource);
+    // All temporaries will be clobbered.
+    freeAllTempExcept({});
+
+    // Remember the result register.
+    hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  }
+
+  comment(
+      "// %s r%u, r%u, cache %u, symID %u",
+      name,
+      frRes.index(),
+      frSource.index(),
+      cacheIdx,
+      symID);
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frSource);
@@ -1690,10 +1831,11 @@ void Emitter::getByIdImpl(
   }
   call((void *)shImpl, shImplName);
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
-  freeAllTempExcept(frRes);
+
+  if (contLab.isValid())
+    a.bind(contLab);
 }
 
 void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
