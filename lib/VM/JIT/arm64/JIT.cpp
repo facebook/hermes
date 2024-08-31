@@ -151,6 +151,14 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.mov(FR(ip->iMov.op1), FR(ip->iMov.op2));
           ip = NEXTINST(Mov);
           break;
+#if 0
+        // MovLong is usually an indicator of very large functions, which
+        // currently crash the JIT.
+        case inst::OpCode::MovLong:
+          em.mov(FR(ip->iMovLong.op1), FR(ip->iMovLong.op2));
+          ip = NEXTINST(MovLong);
+          break;
+#endif
         case inst::OpCode::ToNumber:
           em.toNumber(FR(ip->iToNumber.op1), FR(ip->iToNumber.op2));
           ip = NEXTINST(ToNumber);
