@@ -58,4 +58,8 @@ SHLegacyValue _sh_ljs_create_function_environment(
 /// nesting tracking. Used for debugging.
 void _sh_print_function_entry_exit(bool enter, const char *msg);
 
+/// Concat two values that are known to be strings.
+SHLegacyValue
+_sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right);
+
 } // namespace hermes::vm

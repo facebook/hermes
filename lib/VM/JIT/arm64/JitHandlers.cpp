@@ -109,6 +109,23 @@ void _sh_print_function_entry_exit(bool enter, const char *msg) {
   fflush(stdout);
 }
 
+SHLegacyValue
+_sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right) {
+  Runtime &runtime = getRuntime(shr);
+
+  // StringPrimitive::concat has special handling for two arguments,
+  auto lhsHandle = Handle<StringPrimitive>::vmcast(toPHV(left));
+  auto rhsHandle = Handle<StringPrimitive>::vmcast(toPHV(right));
+  CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    result = StringPrimitive::concat(runtime, lhsHandle, rhsHandle);
+  }
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *result;
+}
+
 } // namespace hermes::vm
 
 #endif // HERMESVM_JIT

@@ -13,6 +13,12 @@ function mod(a, b) {
     return a % b;
 }
 
-print(mod(10, 3));
-// CHECK: 1
+print("mod", mod(10, 3));
+// CHECK: mod 1
 
+function addS(b) {
+    return "a" + b + "c";
+}
+
+print("addS", addS("B"));
+// CHECK-NEXT: addS aBc

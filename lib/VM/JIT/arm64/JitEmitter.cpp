@@ -2458,6 +2458,27 @@ void Emitter::getNextPName(
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
+void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
+  comment(
+      "// AddS r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
+
+  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncToMem(frLeft);
+  syncToMem(frRight);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frLeft);
+  loadFrameAddr(a64::x2, frRight);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_string_add);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   comment(
       "// %s%s r%u, r%u, r%u",
