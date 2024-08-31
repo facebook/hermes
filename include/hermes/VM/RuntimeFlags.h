@@ -216,7 +216,7 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::Hidden,
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("force JIT compilation of every function"),
-      llvh::cl::init(false)};
+      llvh::cl::init(true)};
 
   /// To get the value of this CLI option, use the method below.
   llvh::cl::opt<unsigned> DumpJITCode{

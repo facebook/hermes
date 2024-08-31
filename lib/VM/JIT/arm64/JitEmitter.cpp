@@ -1375,15 +1375,10 @@ void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
       "// GetClosureEnvironment r%u, r%u", frRes.index(), frClosure.index());
   // We know the layout of the closure, so we can load directly.
   auto ofs = offsetof(SHCallable, environment);
-  HWReg hwRes;
-  if (frRes == frClosure) {
-    hwRes = getOrAllocFRInGpX(frRes, true);
-  } else {
-    hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-    movHWFromFR(hwRes, frClosure);
-  }
+  auto hwClosure = getOrAllocFRInGpX(frClosure, true);
+  auto hwRes = getOrAllocFRInGpX(frRes, false);
   // Use the result register as a scratch register for computing the address.
-  emit_sh_ljs_get_pointer(a, hwRes.a64GpX(), hwRes.a64GpX());
+  emit_sh_ljs_get_pointer(a, hwRes.a64GpX(), hwClosure.a64GpX());
   movHWFromMem(hwRes, a64::Mem(hwRes.a64GpX(), ofs));
   // The result is a pointer, so add the object tag.
   emit_sh_ljs_object(a, hwRes.a64GpX());
