@@ -778,6 +778,12 @@ _sh_to_int32_double_slow_path(double d);
 static inline int32_t _sh_to_int32_double(double d)
     SHERMES_NO_SANITIZE("float-cast-overflow");
 inline int32_t _sh_to_int32_double(double d) {
+  // If we are compiling with ARM v8.3 or above, there is a special instruction
+  // to do the conversion.
+#ifdef __ARM_FEATURE_JCVT
+  return __builtin_arm_jcvt(d);
+#endif
+
   // ARM64 has different behavior when the double value can't fit into
   // int64_t (results in 2^63-1 instead of -2^63 on x86-64), and 2^63-1 can't
   // be represented precisely in double, so it's converted to 2^63. The result
@@ -810,7 +816,7 @@ inline int32_t _sh_to_int32_double(double d) {
       }
 #if defined(__GNUC__) || defined(__clang__)
     } else {
-      int64_t fast = (int64_t)((uint64_t)d << 1) >> 1;
+      int64_t fast = (int64_t)((uint64_t)(int64_t)d << 1) >> 1;
       if (__builtin_expect(fast == d, true))
         return (int32_t)fast;
     }

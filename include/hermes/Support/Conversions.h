@@ -83,7 +83,7 @@ inline int32_t truncateToInt32(double d) {
       }
 #if defined(__GNUC__) || defined(__clang__)
     } else {
-      int64_t fast = (int64_t)((uint64_t)d << 1) >> 1;
+      int64_t fast = (int64_t)((uint64_t)(int64_t)d << 1) >> 1;
       if (LLVM_LIKELY(fast == d))
         return (int32_t)fast;
     }
