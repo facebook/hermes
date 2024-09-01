@@ -182,7 +182,7 @@ class JSTypedArrayBase : public JSObject {
 
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *selfObj,
-      Runtime &runtime);
+      PointerBase &runtime);
 
   static bool
   _haveOwnIndexedImpl(JSObject *selfObj, Runtime &runtime, uint32_t index);

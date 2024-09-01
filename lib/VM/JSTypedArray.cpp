@@ -37,7 +37,7 @@ void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(
     JSObject *selfObj,
-    Runtime &) {
+    PointerBase &) {
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
   return {0, self->getLength()};
 }

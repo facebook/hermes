@@ -204,7 +204,7 @@ HERMES_VM__DECLARE_FLAGS_CLASS(OwnKeysFlags, HERMES_VM__LIST_OwnKeysFlags);
 struct ObjectVTable : public VTable {
   /// \return the range of indexes (end-exclusive) stored in indexed storage.
   std::pair<uint32_t, uint32_t> (
-      *getOwnIndexedRange)(JSObject *self, Runtime &runtime);
+      *getOwnIndexedRange)(JSObject *self, PointerBase &runtime);
 
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
@@ -1070,6 +1070,11 @@ class JSObject : public GCCell {
       Handle<> nameValHandle,
       PropOpFlags opFlags = PropOpFlags());
 
+  /// Calls ObjectVTable::getOwnIndexedRange.
+  static std::pair<uint32_t, uint32_t> getOwnIndexedRange(
+      JSObject *self,
+      PointerBase &runtime);
+
   /// Calls ObjectVTable::getOwnIndexed.
   static HermesValue
   getOwnIndexed(PseudoHandle<JSObject> self, Runtime &runtime, uint32_t index) {
@@ -1300,7 +1305,7 @@ class JSObject : public GCCell {
   /// \return the range of indexes (end-exclusive) stored in indexed storage.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *self,
-      Runtime &runtime);
+      PointerBase &runtime);
 
   /// Check whether property with index \p index exists in indexed storage and
   /// \return true if it does.
@@ -1467,11 +1472,6 @@ class JSObject : public GCCell {
       HermesValue curValueOrAccessor,
       Handle<> valueOrAccessor,
       PropOpFlags opFlags);
-
-  /// Calls ObjectVTable::getOwnIndexedRange.
-  static std::pair<uint32_t, uint32_t> getOwnIndexedRange(
-      JSObject *self,
-      Runtime &runtime);
 
   /// Calls ObjectVTable::haveOwnIndexed.
   static bool haveOwnIndexed(JSObject *self, Runtime &runtime, uint32_t index);
@@ -2050,7 +2050,7 @@ inline CallResult<bool> JSObject::putComputed_RJS(
 
 inline std::pair<uint32_t, uint32_t> JSObject::getOwnIndexedRange(
     JSObject *self,
-    Runtime &runtime) {
+    PointerBase &runtime) {
   return self->getVT()->getOwnIndexedRange(self, runtime);
 };
 

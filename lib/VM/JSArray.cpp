@@ -107,7 +107,7 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
 
 std::pair<uint32_t, uint32_t> ArrayImpl::_getOwnIndexedRangeImpl(
     JSObject *selfObj,
-    Runtime &runtime) {
+    PointerBase &) {
   auto *self = vmcast<ArrayImpl>(selfObj);
   return {self->beginIndex_, self->endIndex_};
 }

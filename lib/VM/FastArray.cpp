@@ -199,7 +199,7 @@ OptValue<PropertyFlags> FastArray::_getOwnIndexedPropertyFlagsImpl(
 
 std::pair<uint32_t, uint32_t> FastArray::_getOwnIndexedRangeImpl(
     JSObject *selfObj,
-    Runtime &runtime) {
+    PointerBase &runtime) {
   return {0, vmcast<FastArray>(selfObj)->getLength(runtime)};
 }
 

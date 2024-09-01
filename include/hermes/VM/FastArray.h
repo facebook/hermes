@@ -179,7 +179,7 @@ class FastArray : public JSObject {
   /// \return the range of indices (end-exclusive) in the array.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *selfObj,
-      Runtime &runtime);
+      PointerBase &runtime);
 
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.

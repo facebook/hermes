@@ -108,7 +108,7 @@ OptValue<PropertyFlags> JSString::_getOwnIndexedPropertyFlagsImpl(
 
 std::pair<uint32_t, uint32_t> JSString::_getOwnIndexedRangeImpl(
     JSObject *selfObj,
-    Runtime &runtime) {
+    PointerBase &runtime) {
   auto *str = getPrimitiveString(vmcast<JSString>(selfObj), runtime);
   return {0, str->getStringLength()};
 }
