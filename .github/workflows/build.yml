@@ -1,6 +1,6 @@
 name: facebook/hermes/build
 on:
-  push
+  push:
   pull_request:
     branches:
       - main
@@ -43,7 +43,7 @@ jobs:
         name: android-hermes
         path: output
   linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Install dependencies
       run: |-
