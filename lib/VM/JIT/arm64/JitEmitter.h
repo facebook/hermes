@@ -438,17 +438,37 @@ class Emitter {
   DECL_BINOP(divN, true, "divN", _sh_ljs_div_rjs, { as.fdiv(res, dl, dr); })
 #undef DECL_BINOP
 
-#define DECL_BIT_BINOP(methodName, commentStr, slowCall)            \
-  void methodName(FR rRes, FR rLeft, FR rRight) {                   \
-    bitBinOp(rRes, rLeft, rRight, commentStr, slowCall, #slowCall); \
+#define DECL_BIT_BINOP(methodName, commentStr, slowCall, a64body) \
+  void methodName(FR rRes, FR rLeft, FR rRight) {                 \
+    bitBinOp(                                                     \
+        rRes,                                                     \
+        rLeft,                                                    \
+        rRight,                                                   \
+        commentStr,                                               \
+        slowCall,                                                 \
+        #slowCall,                                                \
+        [](a64::Assembler & a,                                    \
+           const a64::GpX &res,                                   \
+           const a64::GpX &dl,                                    \
+           const a64::GpX &dr) a64body);                          \
   }
 
-  DECL_BIT_BINOP(bitAnd, "bit_and", _sh_ljs_bit_and_rjs)
-  DECL_BIT_BINOP(bitOr, "bit_or", _sh_ljs_bit_or_rjs)
-  DECL_BIT_BINOP(bitXor, "bit_xor", _sh_ljs_bit_xor_rjs)
-  DECL_BIT_BINOP(lShift, "lshift", _sh_ljs_left_shift_rjs)
-  DECL_BIT_BINOP(rShift, "rshift", _sh_ljs_right_shift_rjs)
-  DECL_BIT_BINOP(urShift, "rshiftu", _sh_ljs_unsigned_right_shift_rjs)
+  DECL_BIT_BINOP(bitAnd, "bit_and", _sh_ljs_bit_and_rjs, {
+    a.and_(res, dl, dr);
+  })
+  DECL_BIT_BINOP(bitOr, "bit_or", _sh_ljs_bit_or_rjs, { a.orr(res, dl, dr); })
+  DECL_BIT_BINOP(bitXor, "bit_xor", _sh_ljs_bit_xor_rjs, {
+    a.eor(res, dl, dr);
+  })
+  DECL_BIT_BINOP(lShift, "lshift", _sh_ljs_left_shift_rjs, {
+    a.lsl(res.w(), dl.w(), dr.w());
+  })
+  DECL_BIT_BINOP(rShift, "rshift", _sh_ljs_right_shift_rjs, {
+    a.asr(res.w(), dl.w(), dr.w());
+  })
+  DECL_BIT_BINOP(urShift, "rshiftu", _sh_ljs_unsigned_right_shift_rjs, {
+    a.lsr(res.w(), dl.w(), dr.w());
+  })
 
 #undef DECL_BIT_BINOP
 
@@ -860,7 +880,12 @@ class Emitter {
           SHRuntime *shr,
           const SHLegacyValue *a,
           const SHLegacyValue *b),
-      const char *slowCallName);
+      const char *slowCallName,
+      void (*fast)(
+          a64::Assembler &a,
+          const a64::GpX &res,
+          const a64::GpX &dl,
+          const a64::GpX &dr));
 
   void compareImpl(
       FR frRes,

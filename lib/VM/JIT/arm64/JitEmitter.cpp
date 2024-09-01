@@ -2887,26 +2887,101 @@ void Emitter::bitBinOp(
         SHRuntime *shr,
         const SHLegacyValue *a,
         const SHLegacyValue *b),
-    const char *slowCallName) {
+    const char *slowCallName,
+    void (*fast)(
+        a64::Assembler &a,
+        const a64::GpX &res,
+        const a64::GpX &dl,
+        const a64::GpX &dr)) {
   comment(
       "// %s r%u, r%u, r%u",
       name,
       frRes.index(),
       frLeft.index(),
       frRight.index());
-  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR{});
+
+  HWReg hwTempLGpX = allocTempGpX();
+  HWReg hwTempRGpX = allocTempGpX();
+  HWReg hwTempLVecD = allocTempVecD();
+  HWReg hwTempRVecD = allocTempVecD();
+
+  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  // TODO: In principle, it should be possible to only sync these in the slow
+  // path. If we do that, we have to ensure that the frameUpToDate bit is not
+  // set, since subsequent instructions cannot rely on it. To do this, we would
+  // need to preserve information for the slow path to know whether they were
+  // already sync'd to memory.
   syncToMem(frLeft);
   syncToMem(frRight);
-  freeAllTempExcept(FR());
 
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frLeft);
-  loadFrameAddr(a64::x2, frRight);
-  call((void *)slowCall, slowCallName);
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  HWReg hwLeft = getOrAllocFRInVecD(frLeft, true);
+  // Convert the operand to a signed 64 bit integer.
+  a.fcvtzs(hwTempLGpX.a64GpX(), hwLeft.a64VecD());
+  // Sign extend it from the second-to-last bit. This is necessary because
+  // fcvtzs is saturating and will convert the double 2^63 to 2^63 - 1, which
+  // will get converted back to 2^63 by scvtf. They will therefore incorrectly
+  // compare equal after truncation.
+  a.sbfx(hwTempLGpX.a64GpX(), hwTempLGpX.a64GpX(), 0, 63);
+  // Convert back to a double and see if they compare equal.
+  a.scvtf(hwTempLVecD.a64VecD(), hwTempLGpX.a64GpX());
+  a.fcmp(hwTempLVecD.a64VecD(), hwLeft.a64VecD());
+  a.b_ne(slowPathLab);
+
+  // Do the same for the RHS.
+  HWReg hwRight = getOrAllocFRInVecD(frRight, true);
+  a.fcvtzs(hwTempRGpX.a64GpX(), hwRight.a64VecD());
+  a.sbfx(hwTempRGpX.a64GpX(), hwTempRGpX.a64GpX(), 0, 63);
+  a.scvtf(hwTempRVecD.a64VecD(), hwTempRGpX.a64GpX());
+  a.fcmp(hwTempRVecD.a64VecD(), hwRight.a64VecD());
+  a.b_ne(slowPathLab);
+
+  // Done allocating registers. Free them all and allocate the result.
+  freeAllTempExcept({});
+  freeReg(hwTempLGpX);
+  freeReg(hwTempRGpX);
+  freeReg(hwTempLVecD);
+  freeReg(hwTempRVecD);
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
+  frUpdatedWithHWReg(
+      frRes,
+      hwRes,
+      isFRKnownNumber(frLeft) && isFRKnownNumber(frRight) ? FRType::Number
+                                                          : FRType::UnknownPtr);
+
+  // Invoke the fast path, and move the result back as a 32 bit integer.
+  fast(a, hwTempLGpX.a64GpX(), hwTempLGpX.a64GpX(), hwTempRGpX.a64GpX());
+  a.scvtf(hwRes.a64VecD(), hwTempLGpX.a64GpX().w());
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = name,
+       .frRes = frRes,
+       .frInput1 = frLeft,
+       .frInput2 = frRight,
+       .hwRes = hwRes,
+       .slowCall = (void *)slowCall,
+       .slowCallName = slowCallName,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// %s r%u, r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.loadFrameAddr(a64::x2, sl.frInput2);
+         em.call(sl.slowCall, sl.slowCallName);
+         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 void Emitter::jmpTrueFalse(
     bool onTrue,
