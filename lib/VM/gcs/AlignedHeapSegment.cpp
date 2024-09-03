@@ -61,7 +61,7 @@ llvh::ErrorOr<AlignedHeapSegment> AlignedHeapSegment::create(
 }
 
 AlignedHeapSegment::AlignedHeapSegment(StorageProvider *provider, void *lowLim)
-    : AlignedHeapSegmentBase(lowLim), provider_(provider) {
+    : AlignedHeapSegmentBase(lowLim, kSize), provider_(provider) {
   assert(
       storageStart(lowLim_) == lowLim_ &&
       "The lower limit of this storage must be aligned");

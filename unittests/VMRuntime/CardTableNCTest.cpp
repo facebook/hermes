@@ -22,7 +22,11 @@ using namespace hermes::vm;
 
 namespace {
 
-struct CardTableNCTest : public ::testing::Test {
+struct CardTableParam {
+  size_t segmentSize;
+};
+
+struct CardTableNCTest : public ::testing::TestWithParam<CardTableParam> {
   CardTableNCTest();
 
   /// Run a test scenario whereby we dirty [dirtyStart, dirtyEnd], and then test
@@ -38,7 +42,7 @@ struct CardTableNCTest : public ::testing::Test {
   std::unique_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
   AlignedHeapSegment seg{
       std::move(AlignedHeapSegment::create(provider.get()).get())};
-  CardTable *table{new (seg.lowLim()) CardTable()};
+  CardTable *table{nullptr};
 
   // Addresses in the aligned storage to interact with during the tests.
   std::vector<char *> addrs;
@@ -57,6 +61,9 @@ void CardTableNCTest::dirtyRangeTest(
 }
 
 CardTableNCTest::CardTableNCTest() {
+  auto &param = GetParam();
+  table = new (seg.lowLim()) CardTable(param.segmentSize);
+
   // For purposes of this test, we'll assume the first writeable byte of
   // the segment comes just after the memory region that can be mapped by
   // kFirstUsedIndex bytes.
@@ -77,7 +84,7 @@ CardTableNCTest::CardTableNCTest() {
   EXPECT_TRUE(std::is_sorted(addrs.begin(), addrs.end()));
 }
 
-TEST_F(CardTableNCTest, AddressToIndex) {
+TEST_P(CardTableNCTest, AddressToIndex) {
   // Expected indices in the card table corresponding to the probe
   // addresses into the storage.
   const size_t lastIx = table->getEndIndex() - 1;
@@ -100,7 +107,7 @@ TEST_F(CardTableNCTest, AddressToIndex) {
   }
 }
 
-TEST_F(CardTableNCTest, AddressToIndexBoundary) {
+TEST_P(CardTableNCTest, AddressToIndexBoundary) {
   // This test only works if the card table is laid out at the very beginning of
   // the storage.
   ASSERT_EQ(seg.lowLim(), reinterpret_cast<char *>(table));
@@ -110,7 +117,7 @@ TEST_F(CardTableNCTest, AddressToIndexBoundary) {
   EXPECT_EQ(hiLim, table->addressToIndex(seg.hiLim()));
 }
 
-TEST_F(CardTableNCTest, DirtyAddress) {
+TEST_P(CardTableNCTest, DirtyAddress) {
   const size_t lastIx = table->getEndIndex() - 1;
 
   for (char *addr : addrs) {
@@ -135,7 +142,7 @@ TEST_F(CardTableNCTest, DirtyAddress) {
 }
 
 /// Dirty an emtpy range.
-TEST_F(CardTableNCTest, DirtyAddressRangeEmpty) {
+TEST_P(CardTableNCTest, DirtyAddressRangeEmpty) {
   char *addr = addrs.at(0);
   table->dirtyCardsForAddressRange(addr, addr);
   EXPECT_FALSE(table->findNextDirtyCard(
@@ -143,7 +150,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeEmpty) {
 }
 
 /// Dirty an address range smaller than a single card.
-TEST_F(CardTableNCTest, DirtyAddressRangeSmall) {
+TEST_P(CardTableNCTest, DirtyAddressRangeSmall) {
   char *addr = addrs.at(0);
   dirtyRangeTest(
       /* expectedStart */ addr,
@@ -153,7 +160,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeSmall) {
 }
 
 /// Dirty an address range corresponding exactly to a card.
-TEST_F(CardTableNCTest, DirtyAddressRangeCard) {
+TEST_P(CardTableNCTest, DirtyAddressRangeCard) {
   char *addr = addrs.at(0);
   dirtyRangeTest(
       /* expectedStart */ addr,
@@ -164,7 +171,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeCard) {
 
 /// Dirty an address range the width of a card but spread across a card
 /// boundary.
-TEST_F(CardTableNCTest, DirtyAddressRangeCardOverlapping) {
+TEST_P(CardTableNCTest, DirtyAddressRangeCardOverlapping) {
   char *addr = addrs.at(0);
   char *start = addr + CardTable::kCardSize / 2;
   dirtyRangeTest(
@@ -176,7 +183,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeCardOverlapping) {
 
 /// Dirty an address range spanning multiple cards, with overhang on either
 /// side.
-TEST_F(CardTableNCTest, DirtyAddressRangeLarge) {
+TEST_P(CardTableNCTest, DirtyAddressRangeLarge) {
   char *addr = addrs.at(0);
   char *start = addr + CardTable::kCardSize / 2;
   dirtyRangeTest(
@@ -186,13 +193,13 @@ TEST_F(CardTableNCTest, DirtyAddressRangeLarge) {
       /* expectedEnd */ addr + 4 * CardTable::kCardSize);
 }
 
-TEST_F(CardTableNCTest, Initial) {
+TEST_P(CardTableNCTest, Initial) {
   for (char *addr : addrs) {
     EXPECT_FALSE(table->isCardForAddressDirty(addr));
   }
 }
 
-TEST_F(CardTableNCTest, Clear) {
+TEST_P(CardTableNCTest, Clear) {
   for (char *addr : addrs) {
     ASSERT_FALSE(table->isCardForAddressDirty(addr));
   }
@@ -211,7 +218,7 @@ TEST_F(CardTableNCTest, Clear) {
   }
 }
 
-TEST_F(CardTableNCTest, NextDirtyCardImmediate) {
+TEST_P(CardTableNCTest, NextDirtyCardImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
   size_t ind = table->addressToIndex(addr);
 
@@ -222,7 +229,7 @@ TEST_F(CardTableNCTest, NextDirtyCardImmediate) {
   EXPECT_EQ(ind, *dirty);
 }
 
-TEST_F(CardTableNCTest, NextDirtyCard) {
+TEST_P(CardTableNCTest, NextDirtyCard) {
   /// Empty case: No dirty cards
   EXPECT_FALSE(table->findNextDirtyCard(
       CardTable::kFirstUsedIndex, table->getEndIndex()));
@@ -245,6 +252,14 @@ TEST_F(CardTableNCTest, NextDirtyCard) {
     from = ind + 1;
   }
 }
+
+INSTANTIATE_TEST_CASE_P(
+    CardTableNCTests,
+    CardTableNCTest,
+    ::testing::Values(
+        CardTableParam{AlignedHeapSegmentBase::kSegmentUnitSize},
+        CardTableParam{AlignedHeapSegmentBase::kSegmentUnitSize * 8},
+        CardTableParam{AlignedHeapSegmentBase::kSegmentUnitSize * 128}));
 
 } // namespace
 
