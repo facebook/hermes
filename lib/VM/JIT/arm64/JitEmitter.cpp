@@ -1856,6 +1856,109 @@ void Emitter::getByIdImpl(
     a.bind(contLab);
 }
 
+void Emitter::switchImm(
+    FR frInput,
+    const asmjit::Label &defaultLabel,
+    llvh::ArrayRef<const asmjit::Label *> labels,
+    uint32_t minVal,
+    uint32_t maxVal) {
+  comment("// switchImm r%u, min %u, max %u", frInput.index(), minVal, maxVal);
+
+  asmjit::Error err;
+
+  // End of the basic block.
+  syncAllTempExcept({});
+
+  // Load the input value into a double register to check if it's an int.
+  HWReg hwInput = getOrAllocFRInVecD(frInput, true);
+
+  HWReg hwTempInput = allocTempGpX();
+  HWReg hwTempTarget = allocTempGpX();
+  HWReg hwTempD = allocTempVecD();
+  a64::VecD dInput = hwInput.a64VecD();
+  a64::GpW wTempInput = hwTempInput.a64GpX().w();
+
+  // Convert the input to an integer and back to double,
+  // and check if the value remained the same.
+  // If it didn't, jump to the default label.
+  a.fcvtzu(wTempInput, dInput);
+  a.ucvtf(hwTempD.a64VecD(), wTempInput);
+  a.fcmp(dInput, hwTempD.a64VecD());
+  a.b_ne(defaultLabel);
+
+  // Check if the integer value in xTemp is in range.
+  // First check minVal.
+  {
+    llvh::SaveAndRestore<asmjit::Error> sav(
+        expectedError_, asmjit::kErrorInvalidImmediate);
+    err = a.cmp(wTempInput, minVal);
+  }
+  if (err) {
+    a.mov(hwTempTarget.a64GpX().w(), minVal);
+    a.cmp(wTempInput, hwTempTarget.a64GpX().w());
+  }
+  // If the value is lower than minVal, jump to the default label.
+  a.b_lo(defaultLabel);
+
+  // Now check maxVal.
+  {
+    llvh::SaveAndRestore<asmjit::Error> sav(
+        expectedError_, asmjit::kErrorInvalidImmediate);
+    err = a.cmp(wTempInput, maxVal);
+  }
+  if (err) {
+    a.mov(hwTempTarget.a64GpX().w(), maxVal);
+    a.cmp(wTempInput, hwTempTarget.a64GpX().w());
+  }
+  // If the value is higher than maxVal, jump to the default label.
+  a.b_hi(defaultLabel);
+
+  // Compute the offset into the jump table, dereference, and jump.
+  // Offset by the minVal if necessary.
+  if (minVal != 0) {
+    {
+      llvh::SaveAndRestore<asmjit::Error> sav(
+          expectedError_, asmjit::kErrorInvalidImmediate);
+      err = a.sub(wTempInput, wTempInput, minVal);
+    }
+    if (err) {
+      a.mov(hwTempTarget.a64GpX().w(), minVal);
+      a.sub(wTempInput, wTempInput, hwTempTarget.a64GpX().w());
+    }
+  }
+
+  // Label for the start of the jump table and the base of the br instruction
+  // that actually executes the switch.
+  // Used for both purposes due to placement of the jump table directly after
+  // the br.
+  asmjit::Label tableLab = a.newLabel();
+
+  // wTempInput contains the index into the jump table.
+  a64::GpX xTempTarget = hwTempTarget.a64GpX();
+  // Load the jump offset into wTempInput by using adr to find the address of
+  // the table and then reading 4 bytes from an offset of wTempInput bytes.
+  a.adr(xTempTarget, tableLab);
+  // Left shift 2 to get the byte offset into the table.
+  a.ldr(
+      wTempInput,
+      a64::Mem(xTempTarget, wTempInput, a64::Shift(a64::ShiftOp::kLSL, 2)));
+  // Add the jump offset to the base of the table to get the target address.
+  a.add(xTempTarget, xTempTarget, wTempInput.x());
+  // Branch to the target address.
+  a.br(xTempTarget);
+
+  // Emit the jump table.
+  // NOTE: The jump table is emitted immediately after the br instruction that
+  // uses it.
+  a.bind(tableLab);
+  for (const asmjit::Label *label : labels) {
+    a.embedLabelDelta(*label, tableLab, /* size */ 4);
+  }
+
+  // Do this always, since this could be the end of the BB.
+  freeAllTempExcept({});
+}
+
 void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
   comment(
       "// getByVal r%u, r%u, r%u",

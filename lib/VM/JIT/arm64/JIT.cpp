@@ -413,6 +413,39 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(JmpUndefinedLong);
           break;
 
+        case inst::OpCode::SwitchImm: {
+          uint32_t min = ip->iSwitchImm.op4;
+          uint32_t max = ip->iSwitchImm.op5;
+          // Max is inclusive, so add 1 to get the number of entries.
+          uint32_t entries = max - min + 1;
+
+          // Calculate the offset into the bytecode where the jump table for
+          // this SwitchImm starts.
+          const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
+              (const uint8_t *)ip + ip->iSwitchImm.op2, sizeof(uint32_t));
+
+          std::vector<const asmjit::Label *> jumpTableLabels{};
+          jumpTableLabels.reserve(entries);
+
+          // Add a label for each offset in the table.
+          for (uint32_t i = 0; i < entries; ++i) {
+            const int32_t *loc = (const int32_t *)tablestart + i;
+            int32_t offset = *loc;
+            jumpTableLabels.push_back(
+                &labels[ofsToBBIndex[(const char *)ip - funcStart + offset]]);
+          }
+
+          em.switchImm(
+              FR(ip->iSwitchImm.op1),
+              labels[ofsToBBIndex
+                         [(const char *)ip - funcStart + ip->iSwitchImm.op3]],
+              jumpTableLabels,
+              min,
+              max);
+          ip = NEXTINST(SwitchImm);
+          break;
+        }
+
         case inst::OpCode::TryGetByIdLong:
           idVal = ID(ip->iTryGetByIdLong.op4);
           cacheIdx = ip->iTryGetByIdLong.op3;

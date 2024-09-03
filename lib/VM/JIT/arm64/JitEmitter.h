@@ -606,6 +606,13 @@ class Emitter {
   DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, b_eq)
 #undef DECL_JCOND
 
+  void switchImm(
+      FR frInput,
+      const asmjit::Label &defaultLabel,
+      llvh::ArrayRef<const asmjit::Label *> labels,
+      uint32_t minVal,
+      uint32_t maxVal);
+
   void getByVal(FR frRes, FR frSource, FR frKey);
   void getByIndex(FR frRes, FR frSource, uint8_t key);
 
