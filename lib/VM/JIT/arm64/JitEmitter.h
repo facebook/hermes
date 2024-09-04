@@ -654,6 +654,12 @@ class Emitter {
 
   void putOwnByIndex(FR frTarget, FR frValue, uint32_t key);
   void putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable);
+  void putOwnGetterSetterByVal(
+      FR frTarget,
+      FR frKey,
+      FR frGetter,
+      FR frSetter,
+      bool enumerable);
 
   void putNewOwnById(FR frTarget, FR frValue, SHSymbolID key, bool enumerable);
 

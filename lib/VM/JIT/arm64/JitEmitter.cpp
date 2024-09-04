@@ -2163,6 +2163,46 @@ void Emitter::putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable) {
   }
 }
 
+void Emitter::putOwnGetterSetterByVal(
+    FR frTarget,
+    FR frKey,
+    FR frGetter,
+    FR frSetter,
+    bool enumerable) {
+  comment(
+      "// PutOwnGetterSetterByVal r%u, r%u, r%u, r%u, %d",
+      frTarget.index(),
+      frKey.index(),
+      frGetter.index(),
+      frSetter.index(),
+      enumerable);
+
+  syncAllTempExcept({});
+  syncToMem(frTarget);
+  syncToMem(frKey);
+  syncToMem(frGetter);
+  syncToMem(frSetter);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frGetter);
+  loadFrameAddr(a64::x4, frSetter);
+  a.mov(a64::w5, enumerable);
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(
+          SHRuntime *shr,
+          SHLegacyValue *target,
+          SHLegacyValue *key,
+          SHLegacyValue *getter,
+          SHLegacyValue *setter,
+          bool enumerable),
+      _sh_ljs_put_own_getter_setter_by_val);
+}
+
 void Emitter::putNewOwnById(
     FR frTarget,
     FR frValue,
