@@ -666,6 +666,22 @@ class Emitter {
   void getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx);
   void putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx);
 
+#define DECL_DEL_BY_ID(methodName, commentStr, shFn)            \
+  void methodName(FR frRes, FR frTarget, SHSymbolID key) {      \
+    delByIdImpl(frRes, frTarget, key, commentStr, shFn, #shFn); \
+  }
+
+  DECL_DEL_BY_ID(delByIdLoose, "delByIdLoose", _sh_ljs_del_by_id_loose);
+  DECL_DEL_BY_ID(delByIdStrict, "delByIdStrict", _sh_ljs_del_by_id_strict);
+
+#define DECL_DEL_BY_VAL(methodName, commentStr, shFn)              \
+  void methodName(FR frRes, FR frTarget, FR frKey) {               \
+    delByValImpl(frRes, frTarget, frKey, commentStr, shFn, #shFn); \
+  }
+
+  DECL_DEL_BY_VAL(delByValLoose, "delByValLoose", _sh_ljs_del_by_val_loose);
+  DECL_DEL_BY_VAL(delByValStrict, "delByValStrict", _sh_ljs_del_by_val_strict);
+
   void isIn(FR frRes, FR frLeft, FR frRight);
 
   asmjit::Label newPrefLabel(const char *pref, size_t index);
@@ -934,6 +950,24 @@ class Emitter {
           SHLegacyValue *target,
           SHLegacyValue *key,
           SHLegacyValue *value),
+      const char *shImplName);
+
+  void delByIdImpl(
+      FR frRes,
+      FR frTarget,
+      SHSymbolID key,
+      const char *name,
+      SHLegacyValue (
+          *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key),
+      const char *shImplName);
+
+  void delByValImpl(
+      FR frRes,
+      FR frTarget,
+      FR frKey,
+      const char *name,
+      SHLegacyValue (
+          *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHLegacyValue *key),
       const char *shImplName);
 
   void getByIdImpl(

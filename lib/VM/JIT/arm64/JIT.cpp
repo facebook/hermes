@@ -590,6 +590,50 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(PutByValStrict);
           break;
 
+        case inst::OpCode::DelByIdLoose:
+          em.delByIdLoose(
+              FR(ip->iDelByIdLoose.op1),
+              FR(ip->iDelByIdLoose.op2),
+              ID(ip->iDelByIdLoose.op3));
+          ip = NEXTINST(DelByIdLoose);
+          break;
+        case inst::OpCode::DelByIdLooseLong:
+          em.delByIdLoose(
+              FR(ip->iDelByIdLooseLong.op1),
+              FR(ip->iDelByIdLooseLong.op2),
+              ID(ip->iDelByIdLooseLong.op3));
+          ip = NEXTINST(DelByIdLooseLong);
+          break;
+        case inst::OpCode::DelByIdStrict:
+          em.delByIdStrict(
+              FR(ip->iDelByIdStrict.op1),
+              FR(ip->iDelByIdStrict.op2),
+              ID(ip->iDelByIdStrict.op3));
+          ip = NEXTINST(DelByIdStrict);
+          break;
+        case inst::OpCode::DelByIdStrictLong:
+          em.delByIdStrict(
+              FR(ip->iDelByIdStrictLong.op1),
+              FR(ip->iDelByIdStrictLong.op2),
+              ID(ip->iDelByIdStrictLong.op3));
+          ip = NEXTINST(DelByIdStrictLong);
+          break;
+
+        case inst::OpCode::DelByValLoose:
+          em.delByValLoose(
+              FR(ip->iDelByValLoose.op1),
+              FR(ip->iDelByValLoose.op2),
+              FR(ip->iDelByValLoose.op3));
+          ip = NEXTINST(DelByValLoose);
+          break;
+        case inst::OpCode::DelByValStrict:
+          em.delByValStrict(
+              FR(ip->iDelByValStrict.op1),
+              FR(ip->iDelByValStrict.op2),
+              FR(ip->iDelByValStrict.op3));
+          ip = NEXTINST(DelByValStrict);
+          break;
+
         case inst::OpCode::GetByIndex:
           em.getByIndex(
               FR(ip->iGetByIndex.op1),

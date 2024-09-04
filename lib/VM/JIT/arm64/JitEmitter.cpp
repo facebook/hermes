@@ -1730,6 +1730,60 @@ void Emitter::putByValImpl(
   call((void *)shImpl, shImplName);
 }
 
+void Emitter::delByIdImpl(
+    FR frRes,
+    FR frTarget,
+    SHSymbolID key,
+    const char *name,
+    SHLegacyValue (
+        *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key),
+    const char *shImplName) {
+  comment("// %s r%u, r%u, %u", name, frRes.index(), frTarget.index(), key);
+
+  syncAllTempExcept(frRes != frTarget ? frRes : FR{});
+  syncToMem(frTarget);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  a.mov(a64::w2, key);
+  call((void *)shImpl, shImplName);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
+void Emitter::delByValImpl(
+    FR frRes,
+    FR frTarget,
+    FR frKey,
+    const char *name,
+    SHLegacyValue (
+        *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHLegacyValue *key),
+    const char *shImplName) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frRes.index(),
+      frTarget.index(),
+      frKey.index());
+
+  syncAllTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR{});
+  syncToMem(frTarget);
+  syncToMem(frKey);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  call((void *)shImpl, shImplName);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::getByIdImpl(
     FR frRes,
     SHSymbolID symID,
