@@ -499,8 +499,11 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_val_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,
     SHLegacyValue *key);
+
+/// Get a property from the given object \p source given a valid array index
+/// \p key.
 SHERMES_EXPORT SHLegacyValue
-_sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint8_t key);
+_sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key);
 
 /// Put an enumerable property.
 SHERMES_EXPORT void _sh_ljs_put_own_by_val(

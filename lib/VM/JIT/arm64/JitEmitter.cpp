@@ -2035,7 +2035,7 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
   frUpdatedWithHWReg(frRes, hwRes);
 }
 
-void Emitter::getByIndex(FR frRes, FR frSource, uint8_t key) {
+void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
   comment("// getByIdx r%u, r%u, %u", frRes.index(), frSource.index(), key);
 
   syncAllTempExcept(frRes != frSource ? frRes : FR());
@@ -2047,7 +2047,7 @@ void Emitter::getByIndex(FR frRes, FR frSource, uint8_t key) {
   a.mov(a64::w2, key);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint8_t),
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
       _sh_ljs_get_by_index_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));

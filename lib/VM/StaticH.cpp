@@ -312,7 +312,7 @@ extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
 }
 
 extern "C" SHLegacyValue
-_sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint8_t key) {
+_sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   Handle<> sourceHandle{toPHV(source)};
   Runtime &runtime = getRuntime(shr);
   if (LLVM_LIKELY(sourceHandle->isObject())) {
