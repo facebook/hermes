@@ -1875,6 +1875,10 @@ void Emitter::switchImm(
   HWReg hwTempInput = allocTempGpX();
   HWReg hwTempTarget = allocTempGpX();
   HWReg hwTempD = allocTempVecD();
+  freeReg(hwTempInput);
+  freeReg(hwTempTarget);
+  freeReg(hwTempD);
+
   a64::VecD dInput = hwInput.a64VecD();
   a64::GpW wTempInput = hwTempInput.a64GpX().w();
 
