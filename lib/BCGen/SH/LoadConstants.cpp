@@ -76,6 +76,18 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
     return true;
 
+  // For properties that valid index-like literals, there's a get_by_index
+  // variant that encodes the property as an immediate.
+  if (auto *loadPropInst = llvh::dyn_cast_or_null<LoadPropertyInst>(Inst)) {
+    if (opIndex == LoadPropertyInst::PropertyIdx) {
+      if (auto *litNum =
+              llvh::dyn_cast<LiteralNumber>(loadPropInst->getProperty());
+          litNum && doubleToArrayIndex(litNum->getValue())) {
+        return true;
+      }
+    }
+  }
+
   // If DeletePropertyInst's property ID is a LiteralString, we will keep it
   // untouched and emit try_put_by_id eventually.
   if (llvh::isa<DeletePropertyInst>(Inst) &&

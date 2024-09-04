@@ -318,6 +318,7 @@ _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   if (LLVM_LIKELY(sourceHandle->isObject())) {
     Handle<JSObject> objHandle = Handle<JSObject>::vmcast(sourceHandle);
     if (LLVM_LIKELY(objHandle->hasFastIndexProperties())) {
+      GCScopeMarkerRAII marker{runtime};
       auto ourValue = createPseudoHandle(JSObject::getOwnIndexed(
           createPseudoHandle(*objHandle), runtime, key));
       if (LLVM_LIKELY(!ourValue->isEmpty())) {
@@ -329,6 +330,7 @@ _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   // Otherwise...
   // This is the "slow path".
   auto res = [&]() {
+    GCScopeMarkerRAII marker{runtime};
     struct : public Locals {
       PinnedValue<> key;
     } lv;
