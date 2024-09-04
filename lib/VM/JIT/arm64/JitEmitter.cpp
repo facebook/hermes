@@ -1647,6 +1647,17 @@ void Emitter::debugger() {
     a.brk(0);
 }
 
+void Emitter::getNewTarget(FR frRes) {
+  comment("// GetNewTarget r%u", frRes.index());
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  a.ldur(
+      hwRes.a64GpX(),
+      a64::Mem(
+          xFrame,
+          (int)StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::throwInst(FR frInput) {
   comment("// Throw r%u", frInput.index());
 

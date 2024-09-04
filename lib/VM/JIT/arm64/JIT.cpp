@@ -976,6 +976,10 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.coerceThisNS(FR(ip->iCoerceThisNS.op1), FR(ip->iCoerceThisNS.op2));
           ip = NEXTINST(CoerceThisNS);
           break;
+        case inst::OpCode::GetNewTarget:
+          em.getNewTarget(FR(ip->iGetNewTarget.op1));
+          ip = NEXTINST(GetNewTarget);
+          break;
 
         case inst::OpCode::Debugger:
           em.debugger();

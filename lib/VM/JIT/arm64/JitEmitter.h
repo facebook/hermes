@@ -698,6 +698,7 @@ class Emitter {
 
   void loadThisNS(FR frRes);
   void coerceThisNS(FR frRes, FR frThis);
+  void getNewTarget(FR frRes);
 
   void debugger();
   void throwInst(FR frInput);
