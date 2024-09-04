@@ -194,6 +194,14 @@ class AlignedHeapSegmentBase {
     return contents()->cardTable_;
   }
 
+  /// Given a \p cell into the memory region of some valid segment \c s, returns
+  /// a pointer to the CardTable covering the segment containing the cell.
+  ///
+  /// \pre There exists a currently alive heap in which \p cell is allocated.
+  static CardTable *cardTableCovering(const GCCell *cell) {
+    return &contents(alignedStorageStart(cell))->cardTable_;
+  }
+
   /// Return a reference to the mark bit array covering the memory region
   /// managed by this segment.
   Contents::MarkBitArray &markBitArray() const {
@@ -214,6 +222,15 @@ class AlignedHeapSegmentBase {
     size_t ind = addressToMarkBitArrayIndex(cell);
     return markBits->at(ind);
   }
+
+#ifndef NDEBUG
+  /// Get the storage end of segment that \p cell resides in.
+  static char *storageEnd(const GCCell *cell) {
+    auto *start = alignedStorageStart(cell);
+    auto *segmentInfo = reinterpret_cast<const SHSegmentInfo *>(start);
+    return start + segmentInfo->segmentSize;
+  }
+#endif
 
  protected:
   AlignedHeapSegmentBase() = default;

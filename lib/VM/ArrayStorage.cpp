@@ -103,7 +103,8 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
   {
     GCHVType *from = self->data() + fromFirst;
     GCHVType *to = newSelf->data() + toFirst;
-    GCHVType::uninitialized_copy(from, from + copySize, to, runtime.getHeap());
+    GCHVType::uninitialized_copy(
+        from, from + copySize, to, runtime.getHeap(), self);
   }
 
   // Initialize the elements before the first copied element.
