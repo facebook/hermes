@@ -1157,21 +1157,68 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
 }
 
 void Emitter::toInt32(FR frRes, FR frInput) {
-  comment("// %s r%u, r%u", "toInt32", frRes.index(), frInput.index());
-  // TODO: do this much more efficiently.
+  comment("// toInt32 r%u, r%u", frRes.index(), frInput.index());
+
+  HWReg hwTempGpX = allocTempGpX();
+  HWReg hwTempVecD = allocTempVecD();
 
   syncAllTempExcept(frRes != frInput ? frRes : FR());
+  // TODO: As with binary bit ops, it should be possible to only do this in the
+  // slow path.
   syncToMem(frInput);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  HWReg hwInput = getOrAllocFRInVecD(frInput, true);
+  // Convert the operand to a signed 64 bit integer.
+  a.fcvtzs(hwTempGpX.a64GpX(), hwInput.a64VecD());
+  // Sign extend it from the second-to-last bit. This is necessary because
+  // fcvtzs is saturating and will convert the double 2^63 to 2^63 - 1, which
+  // will get converted back to 2^63 by scvtf. They will therefore incorrectly
+  // compare equal after truncation.
+  a.sbfx(hwTempGpX.a64GpX(), hwTempGpX.a64GpX(), 0, 63);
+  // Convert back to a double and see if they compare equal.
+  a.scvtf(hwTempVecD.a64VecD(), hwTempGpX.a64GpX());
+  a.fcmp(hwTempVecD.a64VecD(), hwInput.a64VecD());
+  a.b_ne(slowPathLab);
+
+  // Done allocating registers. Free them all and allocate the result.
   freeAllTempExcept({});
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frInput);
-  EMIT_RUNTIME_CALL(
-      *this,
-      double (*)(SHRuntime *, const SHLegacyValue *),
-      _sh_ljs_to_int32_rjs);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::vecD(0));
-  movHWReg<false>(hwRes, HWReg::vecD(0));
+  freeReg(hwTempGpX);
+  freeReg(hwTempVecD);
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
   frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+
+  // Truncate to an int32 in the fast path.
+  a.scvtf(hwRes.a64VecD(), hwTempGpX.a64GpX().w());
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = "to_int32",
+       .frRes = frRes,
+       .frInput1 = frInput,
+       .hwRes = hwRes,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// %s r%u, r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         EMIT_RUNTIME_CALL(
+             em,
+             double (*)(SHRuntime *, const SHLegacyValue *),
+             _sh_ljs_to_int32_rjs);
+         em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::newObject(FR frRes) {
