@@ -247,6 +247,32 @@ JITCompiledFunctionPtr Emitter::addToRuntime(asmjit::JitRuntime &jr) {
   return fn;
 }
 
+#ifndef NDEBUG
+void Emitter::assertPostInstructionInvariants() {
+  for (const auto &frState : frameRegs_)
+    assert(!frState.regIsDirty && "Frame register is dirty");
+
+  // Check that any temps have an associated FR.
+  for (unsigned i = kGPTemp.first; i <= kGPTemp.second; ++i) {
+    HWReg hwReg(i, HWReg::GpX{});
+    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
+    if (!fr.isValid()) {
+      assert(gpTemp_.isAllocated(i) && "Temp register is not freed");
+    }
+  }
+
+  for (unsigned i = kVecTemp1.first; i <= kVecTemp2.second; ++i) {
+    if (i > kVecTemp1.second && i < kVecTemp2.first)
+      continue;
+    HWReg hwReg(i, HWReg::VecD{});
+    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
+    if (!fr.isValid()) {
+      assert(vecTemp_.isAllocated(i) && "Temp register is not freed");
+    }
+  }
+}
+#endif
+
 void Emitter::newBasicBlock(const asmjit::Label &label) {
   syncAllTempExcept({});
   freeAllTempExcept({});
@@ -457,6 +483,7 @@ void Emitter::_storeHWRegToFrame(FR fr, HWReg src) {
 
 void Emitter::movHWFromFR(HWReg hwRes, FR src) {
   FRState &frState = frameRegs_[src.index()];
+  assert(!frState.regIsDirty && "Any local should have a valid value");
   if (frState.localGpX)
     movHWReg<true>(hwRes, frState.localGpX);
   else if (frState.localVecD)
@@ -747,8 +774,15 @@ HWReg Emitter::isFRInRegister(FR fr) {
 HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
   auto &frState = frameRegs_[fr.index()];
 
-  if (frState.localVecD)
+  assert(!(load && frState.regIsDirty) && "Local is dirty");
+#ifndef NDEBUG
+  if (!load)
+    frState.regIsDirty = true;
+#endif
+
+  if (frState.localVecD) {
     return useReg(frState.localVecD);
+  }
 
   // Do we have a global VecD allocated to this FR?
   if (frState.globalReg.isValidVecD()) {
@@ -779,7 +813,7 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
       movHWReg<false>(hwVecD, frState.globalReg);
     } else {
       _loadFrame(hwVecD, fr);
-      frState.frameUpToDate = true;
+      assert(frState.frameUpToDate && "frame not up-to-date");
     }
   }
 
@@ -789,8 +823,16 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
 HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
   auto &frState = frameRegs_[fr.index()];
 
-  if (frState.localGpX)
+  assert(!(load && frState.regIsDirty) && "Local is dirty");
+#ifndef NDEBUG
+  if (!load)
+    frState.regIsDirty = true;
+#endif
+
+  if (frState.localGpX) {
+    assert(!(load && frState.regIsDirty) && "Local is dirty");
     return useReg(frState.localGpX);
+  }
 
   // Do we have a global GpX allocated to this FR?
   if (frState.globalReg.isValidGpX()) {
@@ -820,8 +862,8 @@ HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
           "globalReg must be up to date if no local regs");
       movHWReg<false>(hwGpX, frState.globalReg);
     } else {
+      assert(frState.frameUpToDate && "frame not up-to-date");
       _loadFrame(hwGpX, fr);
-      frState.frameUpToDate = true;
     }
   }
 
@@ -845,8 +887,10 @@ HWReg Emitter::getOrAllocFRInAnyReg(
   assignAllocatedLocalHWReg(fr, hwReg);
 
   if (load) {
+    assert(
+        frameRegs_[fr.index()].frameUpToDate &&
+        "Frame must be up to date when loading");
     _loadFrame(hwReg, fr);
-    frameRegs_[fr.index()].frameUpToDate = true;
   }
 
   return hwReg;
@@ -856,6 +900,9 @@ void Emitter::frUpdatedWithHWReg(FR fr, HWReg hwReg, FRType localType) {
   FRState &frState = frameRegs_[fr.index()];
 
   frState.frameUpToDate = false;
+#ifndef NDEBUG
+  frState.regIsDirty = false;
+#endif
 
   if (frState.globalReg == hwReg) {
     frState.globalRegUpToDate = true;

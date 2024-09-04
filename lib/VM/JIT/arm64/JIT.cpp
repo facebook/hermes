@@ -1075,6 +1075,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           fail = true;
           goto onError;
       }
+      em.assertPostInstructionInvariants();
     }
   }
 

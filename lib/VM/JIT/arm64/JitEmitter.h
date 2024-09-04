@@ -170,6 +170,12 @@ struct FRState {
   /// false, either there is no globalReg, or there must be a local register
   /// allocated.
   bool globalRegUpToDate = false;
+
+#ifndef NDEBUG
+  /// Whether the currently associated register is dirty and about to be
+  /// overwritten. This FR should not be read when in this state.
+  bool regIsDirty = false;
+#endif
 };
 
 struct HWRegState {
@@ -263,6 +269,11 @@ class TempRegAlloc {
     availBits_ |= (1u << index);
     lru_.remove(map_[index - first_]);
     map_[index - first_] = nullptr;
+  }
+
+  bool isAllocated(unsigned index) {
+    assert(index >= first_ && "Invalid tmpreg index");
+    return availBits_ & (1u << index);
   }
 
   unsigned leastRecentlyUsed() {
@@ -378,6 +389,12 @@ class Emitter {
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
   JITCompiledFunctionPtr addToRuntime(asmjit::JitRuntime &jr);
+
+#ifdef NDEBUG
+  void assertPostInstructionInvariants() {}
+#else
+  void assertPostInstructionInvariants();
+#endif
 
   /// Log a comment.
   /// Annotated with printf-style format.
