@@ -20,6 +20,7 @@ set(SupportSources
   PageAccessTrackerTest.cpp
   PlatformLoggingTest.cpp
   RegexTest.cpp
+  SerialExecutorTest.cpp
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
   StatsAccumulatorTest.cpp
