@@ -207,7 +207,7 @@ class OrderedHashMapBase {
       return ExecutionStatus::EXCEPTION;
     }
 
-    self->hashTable_.set(runtime, arrRes->get(), runtime.getHeap());
+    self->hashTable_.set(runtime, arrRes->get(), runtime.getHeap(), *self);
     return ExecutionStatus::RETURNED;
   }
 
