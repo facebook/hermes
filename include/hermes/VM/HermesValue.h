@@ -531,10 +531,11 @@ class GCHermesValueBase final : public HVType {
   GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t);
   GCHermesValueBase(const HVType &) = delete;
 
-  /// The HermesValue \p hv may be an object pointer.  Assign the
-  /// value, and perform any necessary write barriers.
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers. \p cell is the object that contains
+  /// this GCHermesValueBase. It's needed by the write barrier.
   template <typename NeedsBarriers = std::true_type>
-  inline void set(HVType hv, GC &gc);
+  inline void set(HVType hv, GC &gc, const GCCell *cell);
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
@@ -552,7 +553,8 @@ class GCHermesValueBase final : public HVType {
   /// value \p fill.  If the fill value is an object pointer, must
   /// provide a non-null \p gc argument, to perform write barriers.
   template <typename InputIt>
-  static inline void fill(InputIt first, InputIt last, HVType fill, GC &gc);
+  static inline void
+  fill(InputIt first, InputIt last, HVType fill, GC &gc, const GCCell *cell);
 
   /// Same as \p fill except the range expressed by  [\p first, \p last) has not
   /// been previously initialized. Cannot use this on previously initialized
@@ -563,8 +565,12 @@ class GCHermesValueBase final : public HVType {
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
-  static inline OutputIt
-  copy(InputIt first, InputIt last, OutputIt result, GC &gc);
+  static inline OutputIt copy(
+      InputIt first,
+      InputIt last,
+      OutputIt result,
+      GC &gc,
+      const GCCell *cell);
 
   /// Same as \p copy, but the range [result, result + (last - first)) has not
   /// been previously initialized. Cannot use this on previously initialized
@@ -579,7 +585,8 @@ class GCHermesValueBase final : public HVType {
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
       GCHermesValueBase<HVType> *result,
-      GC &gc);
+      GC &gc,
+      const GCCell *cell);
 #endif
 
   /// Same as \p uninitialized_copy, but specialized for raw pointers. This is
@@ -595,8 +602,12 @@ class GCHermesValueBase final : public HVType {
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
-  static inline OutputIt
-  copy_backward(InputIt first, InputIt last, OutputIt result, GC &gc);
+  static inline OutputIt copy_backward(
+      InputIt first,
+      InputIt last,
+      OutputIt result,
+      GC &gc,
+      const GCCell *cell);
 
   /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
   /// unreachable.

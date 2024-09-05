@@ -265,7 +265,7 @@ void SegmentedArrayBase<HVType>::allocateSegment(
       "Allocating into a non-empty segment");
   PseudoHandle<Segment> c = Segment::create(runtime);
   self->segmentAtPossiblyUnallocated(segment)->set(
-      HVType::encodeObjectValue(c.get(), runtime), runtime.getHeap());
+      HVType::encodeObjectValue(c.get(), runtime), runtime.getHeap(), c.get());
 }
 
 template <typename HVType>
@@ -327,7 +327,8 @@ ExecutionStatus SegmentedArrayBase<HVType>::growLeft(
       self->begin(runtime),
       self->end(runtime),
       newSegmentedArray->begin(runtime) + amount,
-      runtime.getHeap());
+      runtime.getHeap(),
+      *self);
   // Assign back to self.
   self = newSegmentedArray.get();
   return ExecutionStatus::RETURNED;
@@ -348,13 +349,15 @@ void SegmentedArrayBase<HVType>::growLeftWithinCapacity(
       self->begin(runtime),
       self->end(runtime) - amount,
       self->end(runtime),
-      runtime.getHeap());
+      runtime.getHeap(),
+      self.get());
   // Fill the beginning with empty values.
   GCHVType::fill(
       self->begin(runtime),
       self->begin(runtime) + amount,
       HVType::encodeEmptyValue(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      self.get());
 }
 
 template <typename HVType>
@@ -370,7 +373,11 @@ void SegmentedArrayBase<HVType>::shrinkLeft(
     size_type amount) {
   // Copy the end values leftwards to the beginning.
   GCHVType::copy(
-      begin(runtime) + amount, end(runtime), begin(runtime), runtime.getHeap());
+      begin(runtime) + amount,
+      end(runtime),
+      begin(runtime),
+      runtime.getHeap(),
+      this);
   // Now that all the values are moved down, fill the end with empty values.
   decreaseSize(runtime, amount);
 }
