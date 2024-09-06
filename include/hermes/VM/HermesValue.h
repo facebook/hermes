@@ -523,7 +523,7 @@ class GCHermesValueBase final : public HVType {
   GCHermesValueBase() : HVType(HVType::encodeUndefinedValue()) {}
   /// Initialize a GCHermesValue from another HV. Performs a write barrier.
   template <typename NeedsBarriers = std::true_type>
-  GCHermesValueBase(HVType hv, GC &gc);
+  GCHermesValueBase(HVType hv, GC &gc, const GCCell *cell);
   /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
   /// barrier, depending on the GC.
   /// NOTE: The last parameter is unused, but acts as an overload selector.
@@ -564,8 +564,12 @@ class GCHermesValueBase final : public HVType {
   /// been previously initialized. Cannot use this on previously initialized
   /// memory, as it will use an incorrect write barrier.
   template <typename InputIt>
-  static inline void
-  uninitialized_fill(InputIt first, InputIt last, HVType fill, GC &gc);
+  static inline void uninitialized_fill(
+      InputIt first,
+      InputIt last,
+      HVType fill,
+      GC &gc,
+      const GCCell *cell);
 
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
@@ -576,8 +580,12 @@ class GCHermesValueBase final : public HVType {
   /// been previously initialized. Cannot use this on previously initialized
   /// memory, as it will use an incorrect write barrier.
   template <typename InputIt, typename OutputIt>
-  static inline OutputIt
-  uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC &gc);
+  static inline OutputIt uninitialized_copy(
+      InputIt first,
+      InputIt last,
+      OutputIt result,
+      GC &gc,
+      const GCCell *cell);
 
   /// Same as \p copy, but specialized for raw pointers.
   static inline GCHermesValueBase<HVType> *copy(

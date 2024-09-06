@@ -185,7 +185,7 @@ class ArrayStorageBase final
     assert(sz < capacity());
     // Use the constructor of GCHermesValue to use the correct write barrier
     // for uninitialized memory.
-    new (&data()[sz]) GCHVType(value, runtime.getHeap());
+    new (&data()[sz]) GCHVType(value, runtime.getHeap(), this);
     size_.store(sz + 1, std::memory_order_release);
   }
 

@@ -62,7 +62,8 @@ void SegmentedArrayBase<HVType>::Segment::setLength(
         data_ + len,
         data_ + newLength,
         HVType::encodeEmptyValue(),
-        runtime.getHeap());
+        runtime.getHeap(),
+        this);
     length_.store(newLength, std::memory_order_release);
   } else if (newLength < len) {
     // If length is decreasing a write barrier needs to be done.
@@ -193,8 +194,16 @@ ExecutionStatus SegmentedArrayBase<HVType>::push_back(
     return ExecutionStatus::EXCEPTION;
   }
   const auto shv = HVType::encodeHermesValue(*value, runtime);
-  auto &elm = self->atRef(runtime, oldSize);
-  new (&elm) GCHVType(shv, runtime.getHeap());
+  if (oldSize < kValueToSegmentThreshold) {
+    auto &elm = self->inlineStorage()[oldSize];
+    new (&elm) GCHVType(shv, runtime.getHeap(), *self);
+  } else {
+    auto segmentNumber = toSegment(oldSize);
+    auto *segment = self->segmentAt(runtime, segmentNumber);
+    auto &elm = segment->at(toInterior(oldSize));
+    // elm lives in segment, which is not the same cell as SegmentedArrayBase.
+    new (&elm) GCHVType(shv, runtime.getHeap(), segment);
+  }
   return ExecutionStatus::RETURNED;
 }
 
@@ -395,7 +404,8 @@ void SegmentedArrayBase<HVType>::increaseSizeWithinCapacity(
         inlineStorage() + currSize,
         inlineStorage() + finalSize,
         HVType::encodeEmptyValue(),
-        runtime.getHeap());
+        runtime.getHeap(),
+        this);
     // Set the final size.
     numSlotsUsed_.store(finalSize, std::memory_order_release);
     return;
@@ -410,7 +420,8 @@ void SegmentedArrayBase<HVType>::increaseSizeWithinCapacity(
         inlineStorage() + currSize,
         inlineStorage() + kValueToSegmentThreshold,
         HVType::encodeEmptyValue(),
-        runtime.getHeap());
+        runtime.getHeap(),
+        this);
   }
   segmentAt(runtime, segment)->setLength(runtime, segmentLength);
 }
@@ -443,7 +454,8 @@ SegmentedArrayBase<HVType>::increaseSize(
         self->inlineStorage() + currSize,
         self->inlineStorage() + kValueToSegmentThreshold,
         HVType::encodeEmptyValue(),
-        runtime.getHeap());
+        runtime.getHeap(),
+        self.get());
     // Set the size to the inline storage threshold.
     self->numSlotsUsed_.store(
         kValueToSegmentThreshold, std::memory_order_release);
@@ -469,7 +481,8 @@ SegmentedArrayBase<HVType>::increaseSize(
           self->numSlotsUsed_.load(std::memory_order_relaxed),
       self->inlineStorage() + newNumSlotsUsed,
       HVType::encodeEmptyValue(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      self.get());
   self->numSlotsUsed_.store(newNumSlotsUsed, std::memory_order_release);
 
   // Allocate a handle to track the current array.

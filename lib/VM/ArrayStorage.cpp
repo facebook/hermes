@@ -112,7 +112,8 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
       newSelf->data(),
       newSelf->data() + toFirst,
       HVType::encodeEmptyValue(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      newSelf);
 
   // Initialize the elements after the last copied element and toLast.
   if (toFirst + copySize < toLast) {
@@ -120,7 +121,8 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
         newSelf->data() + toFirst + copySize,
         newSelf->data() + toLast,
         HVType::encodeEmptyValue(),
-        runtime.getHeap());
+        runtime.getHeap(),
+        newSelf);
   }
 
   newSelf->size_.store(toLast, std::memory_order_release);
@@ -152,7 +154,8 @@ void ArrayStorageBase<HVType>::resizeWithinCapacity(
         self->data() + sz,
         self->data() + newSize,
         HVType::encodeEmptyValue(),
-        gc);
+        gc,
+        self);
   } else if (newSize < sz) {
     // Execute write barriers on elements about to be conceptually changed to
     // null.
@@ -212,7 +215,8 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + toFirst + copySize,
           self->data() + toLast,
           HVType::encodeEmptyValue(),
-          runtime.getHeap());
+          runtime.getHeap(),
+          self);
     }
     if (toLast < self->size()) {
       // Some elements are becoming unreachable, let the GC know.

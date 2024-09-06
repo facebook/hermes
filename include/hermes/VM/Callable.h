@@ -99,7 +99,8 @@ class Environment final
         getSlots(),
         getSlots() + size,
         HermesValue::encodeUndefinedValue(),
-        runtime.getHeap());
+        runtime.getHeap(),
+        this);
   }
 
   /// Create an environment using the given function to retrieve the parent
@@ -381,7 +382,8 @@ Environment::Environment(
       getSlots(),
       getSlots() + size,
       HermesValue::encodeUndefinedValue(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      this);
 }
 
 /// A function produced by Function.prototype.bind(). It packages a function

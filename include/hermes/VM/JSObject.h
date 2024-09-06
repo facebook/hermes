@@ -1722,7 +1722,8 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
       self->directProps() + numOverlapSlots<T>(),
       self->directProps() + DIRECT_PROPERTY_SLOTS,
       SmallHermesValue::encodeUndefinedValue(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      self);
   return self;
 }
 
