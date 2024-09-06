@@ -58,6 +58,24 @@ struct GotoLabel {
   SurroundingTry *surroundingTry = nullptr;
 };
 
+/// This struct holds information which is passed down through certain capturing
+/// functions, such as arrow functions.
+struct CapturedState {
+  /// Parents of arrow functions need to capture their "this" parameter so the
+  /// arrow function can use it. Normal functions and constructors store their
+  /// "this" in a variable and record it here, if they contain at least one
+  /// arrow function. Arrow functions always copy their parent's value.
+  Variable *thisVal;
+  /// Captured value of new target. In ES5 functions and ES6 constructors it is
+  /// a Variable with the result of GetNewTargetInst executed at the start of
+  /// the function. In ES6 methods it will be initialized to LiteralUndefined.
+  /// In arrow functions it is a copy of the parent's capturedState.newTarget.
+  Value *newTarget;
+  /// Optionally captured value of the eagerly created Arguments object. Used
+  /// when arrow functions need to access it.
+  Variable *arguments;
+};
+
 // A context structure (pushed/popped within class declarations) for
 // conveying info about the current typed class, for use in compiling
 // constructors and related implicit methods.
@@ -150,22 +168,8 @@ class FunctionContext {
   /// when emitting the epilogue if not used.
   llvh::SmallVector<Instruction *, 4> jsParams{};
 
-  /// Parents of arrow functions need to capture their "this" parameter so the
-  /// arrow function can use it. Normal functions and constructors store their
-  /// "this" in a variable and record it here, if they contain at least one
-  /// arrow function. Arrow functions always copy their parent's value.
-  Variable *capturedThis{};
-
-  /// Captured value of new target. In ES5 functions and ES6 constructors it
-  /// is a Variable with the result of GetNewTargetInst executed at the start
-  /// of the function. In ES6 methods it will be initialized to
-  /// LiteralUndefined. In arrow functions it is a copy of the parent's
-  /// capturedNewTarget.
-  Value *capturedNewTarget{};
-
-  /// Optionally captured value of the eagerly created Arguments object. Used
-  /// when arrow functions need to access it.
-  Variable *capturedArguments{};
+  /// Holds state that needs to be persisted between arrow functions.
+  CapturedState capturedState{};
 
   /// The set of TDZ variables whose declaration initialization has completed.
   /// If a TDZ variable is accessed in its own function before it is
@@ -962,16 +966,12 @@ class ESTreeIRGen {
   /// \param functionNode is the ESTree arrow function node.
   /// \param parentScope is the VariableScope of the enclosing function, or null
   ///   if there isn't one.
-  /// \param capturedThis the captured value of this (nullable).
-  /// \param capturedNewTarget the captured value of new.target.
-  /// \param capturedArguments the captured value of arguments (nullable).
+  /// \param capturedState the relevant captured state.
   NormalFunction *genCapturingFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
-      Variable *capturedThis,
-      Value *capturedNewTarget,
-      Variable *capturedArguments,
+      const CapturedState &capturedState,
       Function::DefinitionKind functionKind);
 
   /// Generate IR for a function (function declaration or expression) that is
@@ -1021,17 +1021,13 @@ class ESTreeIRGen {
   ///   or inferred according to the rules of ES6.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
-  /// \param capturedThis the captured value of this (nullable).
-  /// \param capturedNewTarget the captured value of new.target.
-  /// \param capturedArguments the captured value of arguments (nullable).
+  /// \param capturedState the relevant captured state.
   /// \return the async Function.
   Function *genAsyncFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
-      Variable *capturedThis,
-      Value *capturedNewTarget,
-      Variable *capturedArgument);
+      const CapturedState &capturedState);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -1139,9 +1135,7 @@ class ESTreeIRGen {
       ESTree::BlockStatementNode *bodyBlock,
       VariableScope *parentVarScope,
       ExtraKey extraKey,
-      Variable *capturedThis = nullptr,
-      Value *capturedNewTarget = nullptr,
-      Variable *capturedArguments = nullptr);
+      const CapturedState &capturedState = {});
 
   /// Invoked after IR for a function has been emitted to perform any needed
   /// adjustments. Specifically, it updates all catch targets.

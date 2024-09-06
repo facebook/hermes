@@ -2345,8 +2345,8 @@ Value *ESTreeIRGen::genIdentifierExpression(
 
   if (decl->special == sema::Decl::Special::Arguments) {
     // If it is captured, we must use the captured value.
-    if (curFunction()->capturedArguments) {
-      auto *capturedArguments = curFunction()->capturedArguments;
+    if (curFunction()->capturedState.arguments) {
+      auto *capturedArguments = curFunction()->capturedState.arguments;
       auto *RSI = emitResolveScopeInstIfNeeded(capturedArguments->getParent());
       return Builder.createLoadFrameInst(RSI, capturedArguments);
     }
@@ -2398,7 +2398,7 @@ Value *ESTreeIRGen::genNewTarget() {
       break;
     case Function::DefinitionKind::GeneratorInnerArrow:
     case Function::DefinitionKind::ES6Arrow:
-      value = curFunction()->capturedNewTarget;
+      value = curFunction()->capturedState.newTarget;
       break;
     // Generators cannot be invoked with new, so new.target will be
     // undefined.
@@ -2590,11 +2590,12 @@ Value *ESTreeIRGen::genThisExpression() {
   if ((funcDefKind == Function::DefinitionKind::ES6Arrow) ||
       (funcDefKind == Function::DefinitionKind::GeneratorInnerArrow)) {
     assert(
-        curFunction()->capturedThis &&
+        curFunction()->capturedState.thisVal &&
         "arrow function must have a captured this");
-    auto *RSI =
-        emitResolveScopeInstIfNeeded(curFunction()->capturedThis->getParent());
-    return Builder.createLoadFrameInst(RSI, curFunction()->capturedThis);
+    auto *RSI = emitResolveScopeInstIfNeeded(
+        curFunction()->capturedState.thisVal->getParent());
+    return Builder.createLoadFrameInst(
+        RSI, curFunction()->capturedState.thisVal);
   }
   return curFunction()->jsParams[0];
 }

@@ -268,6 +268,10 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
 
   VariableScope *parentVarScope = lazyDataInst->getParentVarScope();
 
+  CapturedState capturedState{
+      lazyDataInst->getCapturedThis(),
+      lazyDataInst->getCapturedNewTarget(),
+      lazyDataInst->getCapturedArguments()};
   Function *compiledFunc;
   if (auto *arrow = llvh::dyn_cast<ESTree::ArrowFunctionExpressionNode>(Root)) {
     if (arrow->_async) {
@@ -275,17 +279,13 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
           lazyFunc->getOriginalOrInferredName(),
           arrow,
           parentVarScope,
-          lazyDataInst->getCapturedThis(),
-          lazyDataInst->getCapturedNewTarget(),
-          lazyDataInst->getCapturedArguments());
+          capturedState);
     } else {
       compiledFunc = genCapturingFunction(
           lazyFunc->getOriginalOrInferredName(),
           arrow,
           parentVarScope,
-          lazyDataInst->getCapturedThis(),
-          lazyDataInst->getCapturedNewTarget(),
-          lazyDataInst->getCapturedArguments(),
+          capturedState,
           Function::DefinitionKind::ES6Arrow);
     }
   } else {
@@ -297,9 +297,7 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
               lazyFunc->getOriginalOrInferredName(),
               node,
               parentVarScope,
-              curFunction()->capturedThis,
-              curFunction()->capturedNewTarget,
-              curFunction()->capturedArguments)
+              curFunction()->capturedState)
         : ESTree::isGenerator(node)
         ? genGeneratorFunction(
               lazyFunc->getOriginalOrInferredName(), node, parentVarScope)
