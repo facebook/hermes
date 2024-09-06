@@ -110,7 +110,7 @@ struct GCAnalyticsEvent {
     nullptr)                                                                   \
   /* GC_TRIPWIRE_FIELDS END */
 
-_HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
+_HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {})
 
 #undef HEAP_TRIPWIRE_FIELDS
 
@@ -124,7 +124,7 @@ _HERMES_CTORCONFIG_STRUCT(GCTripwireConfig, GC_TRIPWIRE_FIELDS, {});
   F(constexpr, int64_t, RandomSeed, -1)                               \
   /* GC_HANDLESAN_FIELDS END */
 
-_HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {});
+_HERMES_CTORCONFIG_STRUCT(GCSanitizeConfig, GC_HANDLESAN_FIELDS, {})
 
 #undef GC_HANDLESAN_FIELDS
 
@@ -221,7 +221,7 @@ _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
 
   // Make sure the max is at least the Init.
   MaxHeapSize_ = std::max(InitHeapSize_, MaxHeapSize_);
-});
+})
 
 #undef GC_FIELDS
 

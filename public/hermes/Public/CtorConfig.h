@@ -69,7 +69,7 @@
    public:                                                              \
     Builder() = default;                                                \
                                                                         \
-    explicit Builder(const NAME &config) : config_(config){};           \
+    explicit Builder(const NAME &config) : config_(config) {}           \
                                                                         \
     inline const NAME build() {                                         \
       config_.doBuild(*this);                                           \
