@@ -85,10 +85,13 @@ Handle<HiddenClass> FastArray::createClass(
   return classHandle;
 }
 
-CallResult<Handle<FastArray>> FastArray::create(
-    Runtime &runtime,
-    size_t capacity) {
-  auto self = JSObjectInit::initToHandle(
+CallResult<HermesValue> FastArray::create(Runtime &runtime, size_t capacity) {
+  struct : Locals {
+    PinnedValue<FastArray> self;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.self = JSObjectInit::initToPointer(
       runtime,
       runtime.makeAFixed<FastArray>(
           runtime,
@@ -100,13 +103,13 @@ CallResult<Handle<FastArray>> FastArray::create(
   if (arrRes == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
-  self->indexedStorage_.setNonNull(
+  lv.self->indexedStorage_.setNonNull(
       runtime, vmcast<ArrayStorageSmall>(*arrRes), runtime.getHeap());
 
   auto shv = SmallHermesValue::encodeNumberValue(0, runtime);
-  self->setLength(runtime, shv);
+  lv.self->setLength(runtime, shv);
 
-  return self;
+  return lv.self.getHermesValue();
 }
 
 ExecutionStatus

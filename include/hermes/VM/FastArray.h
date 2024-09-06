@@ -127,9 +127,7 @@ class FastArray : public JSObject {
   /// Create a new FastArray with the given capacity. Note that storage will be
   /// allocated even if the capacity is zero, to maintain indexedStorage_ as
   /// non-null.
-  static CallResult<Handle<FastArray>> create(
-      Runtime &runtime,
-      size_t capacity = 4);
+  static CallResult<HermesValue> create(Runtime &runtime, size_t capacity = 4);
 
   template <typename NeedsBarriers>
   FastArray(

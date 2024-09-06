@@ -1568,8 +1568,8 @@ extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
 
   CallResult<HermesValue> arrayRes = [&runtime, sizeHint]() {
-    GCScopeMarkerRAII marker{runtime};
-    return toCallResultHermesValue(FastArray::create(runtime, sizeHint));
+    NoLeakHandleScope noLeakHandles{runtime};
+    return FastArray::create(runtime, sizeHint);
   }();
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
