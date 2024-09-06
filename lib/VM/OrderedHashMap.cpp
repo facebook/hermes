@@ -207,7 +207,8 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   }
 
   rawSelf->deletedCount_ = 0;
-  rawSelf->hashTable_.setNonNull(runtime, newHashTable, runtime.getHeap());
+  rawSelf->hashTable_.setNonNull(
+      runtime, newHashTable, runtime.getHeap(), *self);
   assert(
       rawSelf->hashTable_.getNonNull(runtime)->size(runtime) ==
           rawSelf->capacity_ &&
@@ -270,7 +271,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
     if (entry) {
       // Element for the key already exists, update value and return.
-      entry->value.set(shv, runtime.getHeap());
+      entry->value.set(shv, runtime.getHeap(), entry);
       return ExecutionStatus::RETURNED;
     }
   }
@@ -337,11 +338,11 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
   // call it and set to newMapEntry one at a time.
   auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
   auto k = SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
-  newMapEntry->key.set(k, runtime.getHeap());
+  newMapEntry->key.set(k, runtime.getHeap(), *newMapEntry);
   if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
     auto v =
         SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
-    newMapEntry->value.set(v, runtime.getHeap());
+    newMapEntry->value.set(v, runtime.getHeap(), *newMapEntry);
   }
 
   // After here, no allocation
@@ -361,17 +362,17 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
   if (!rawSelf->firstIterationEntry_) {
     // If we are inserting the first ever element, update
     // first iteration entry pointer.
-    rawSelf->firstIterationEntry_.set(runtime, newMapEntry.get(), heap);
-    rawSelf->lastIterationEntry_.set(runtime, newMapEntry.get(), heap);
+    rawSelf->firstIterationEntry_.set(runtime, newMapEntry.get(), heap, *self);
+    rawSelf->lastIterationEntry_.set(runtime, newMapEntry.get(), heap, *self);
   } else {
     // Connect the new entry with the last entry.
-    rawSelf->lastIterationEntry_.getNonNull(runtime)->nextIterationEntry.set(
-        runtime, newMapEntry.get(), heap);
+    auto *previousLastEntry = rawSelf->lastIterationEntry_.getNonNull(runtime);
+    previousLastEntry->nextIterationEntry.set(
+        runtime, newMapEntry.get(), heap, previousLastEntry);
     newMapEntry->prevIterationEntry.set(
         runtime, rawSelf->lastIterationEntry_, heap);
 
-    BucketType *previousLastEntry = rawSelf->lastIterationEntry_.get(runtime);
-    rawSelf->lastIterationEntry_.set(runtime, newMapEntry.get(), heap);
+    rawSelf->lastIterationEntry_.set(runtime, newMapEntry.get(), heap, *self);
 
     if (previousLastEntry && previousLastEntry->isDeleted()) {
       // If the last entry was a deleted entry, we no longer need to keep it.
