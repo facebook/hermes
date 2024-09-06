@@ -325,8 +325,8 @@ class JSObject : public GCCell {
       JSObject *parent,
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
-      : parent_(runtime, parent, runtime.getHeap(), needsBarriers),
-        clazz_(runtime, clazz, runtime.getHeap(), needsBarriers),
+      : parent_(runtime, parent, runtime.getHeap(), this, needsBarriers),
+        clazz_(runtime, clazz, runtime.getHeap(), this, needsBarriers),
         propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
@@ -337,8 +337,8 @@ class JSObject : public GCCell {
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
       NeedsBarriers needsBarriers)
-      : parent_(runtime, *parent, runtime.getHeap(), needsBarriers),
-        clazz_(runtime, *clazz, runtime.getHeap(), needsBarriers),
+      : parent_(runtime, *parent, runtime.getHeap(), this, needsBarriers),
+        clazz_(runtime, *clazz, runtime.getHeap(), this, needsBarriers),
         propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
@@ -509,7 +509,7 @@ class JSObject : public GCCell {
   /// cycle checking.
   static void
   unsafeSetParentInternal(JSObject *self, Runtime &runtime, JSObject *parent) {
-    self->parent_.set(runtime, parent, runtime.getHeap());
+    self->parent_.set(runtime, parent, runtime.getHeap(), self);
   }
 
   /// Return the value of an internal property slot. Use getDirectSlotValue if
@@ -1686,7 +1686,7 @@ inline ExecutionStatus JSObject::allocatePropStorage(
     return ExecutionStatus::EXCEPTION;
 
   selfHandle->propStorage_.setNonNull(
-      runtime, vmcast<PropStorage>(*res), runtime.getHeap());
+      runtime, vmcast<PropStorage>(*res), runtime.getHeap(), *selfHandle);
   return ExecutionStatus::RETURNED;
 }
 
@@ -1722,7 +1722,8 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
       self->directProps() + numOverlapSlots<T>(),
       self->directProps() + DIRECT_PROPERTY_SLOTS,
       SmallHermesValue::encodeUndefinedValue(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      self);
   return self;
 }
 
@@ -1736,7 +1737,7 @@ template <SlotIndex index>
 inline void
 JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc) {
   static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
-  self->directProps()[index].set(value, gc);
+  self->directProps()[index].set(value, gc, self);
 }
 
 inline SmallHermesValue JSObject::getNamedSlotValueUnsafe(
@@ -1839,7 +1840,7 @@ inline void JSObject::setNamedSlotValueDirectUnsafe(
   // to namedSlotRef(), it is a slight performance regression, which is not
   // entirely unexpected.
   return self->directProps()[index].set<NeedsBarriers>(
-      value, runtime.getHeap());
+      value, runtime.getHeap(), self);
 }
 
 inline void JSObject::setNamedSlotValueIndirectUnsafe(
