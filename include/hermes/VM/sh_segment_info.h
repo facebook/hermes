@@ -12,6 +12,15 @@
 /// contain segment-specific information.
 typedef struct SHSegmentInfo {
   unsigned index;
+  /// The storage size for this segment. We practically don't support segment
+  /// with size larger than UINT32_MAX.
+  unsigned segmentSize;
+  /// Pointer that points to the CardStatus array for this segment.
+  /// Erase the actual type AtomicIfConcurrent<CardStatus> here to avoid using
+  /// C++ type and forward declaring nested type.
+  void *cards;
+  /// Pointer that points to the boundary array for this segment.
+  int8_t *boundaries;
 } SHSegmentInfo;
 
 #endif

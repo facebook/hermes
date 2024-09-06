@@ -152,93 +152,116 @@ class HadesGC final : public GCBase {
   /// be in the heap). If value is a pointer, execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value) {
+  template <typename HVType>
+  void writeBarrier(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *loc,
+      HVType value) {
     assert(
         !calledByBackgroundThread() &&
         "Write barrier invoked by background thread.");
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      writeBarrierSlow(loc, value);
+      writeBarrierSlow(cell, loc, value);
   }
-  void writeBarrierSlow(const GCHermesValue *loc, HermesValue value);
-
-  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value) {
-    assert(
-        !calledByBackgroundThread() &&
-        "Write barrier invoked by background thread.");
-    // A pointer that lives in YG never needs any write barriers.
-    if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      writeBarrierSlow(loc, value);
+  template <typename HVType>
+  void writeBarrierSlow(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *loc,
+      HVType value) {
+    if (ogMarkingBarriers_) {
+      snapshotWriteBarrierInternal(*loc);
+    }
+    if (!value.isPointer()) {
+      return;
+    }
+    relocationWriteBarrier(cell, loc, value.getPointer(getPointerBase()));
   }
-  void writeBarrierSlow(const GCSmallHermesValue *loc, SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value) {
+  void writeBarrier(
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value) {
     assert(
         !calledByBackgroundThread() &&
         "Write barrier invoked by background thread.");
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      writeBarrierSlow(loc, value);
+      writeBarrierSlow(cell, loc, value);
   }
-  void writeBarrierSlow(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrierSlow(
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value);
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
+  template <typename HVType>
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *loc,
+      HVType value) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      constructorWriteBarrierSlow(loc, value);
+      constructorWriteBarrierSlow(cell, loc, value);
   }
-  void constructorWriteBarrierSlow(const GCHermesValue *loc, HermesValue value);
+  template <typename HVType>
+  void constructorWriteBarrierSlow(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *loc,
+      HVType value) {
+    // A constructor never needs to execute a SATB write barrier, since its
+    // previous value was definitely not live.
+    if (!value.isPointer()) {
+      return;
+    }
+    relocationWriteBarrier(cell, loc, value.getPointer(getPointerBase()));
+  }
 
   void constructorWriteBarrier(
-      const GCSmallHermesValue *loc,
-      SmallHermesValue value) {
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      constructorWriteBarrierSlow(loc, value);
-  }
-  void constructorWriteBarrierSlow(
-      const GCSmallHermesValue *loc,
-      SmallHermesValue value);
-
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
-    // A pointer that lives in YG never needs any write barriers.
-    if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      relocationWriteBarrier(loc, value);
+      relocationWriteBarrier(cell, loc, value);
   }
 
+  template <typename HVType>
   void constructorWriteBarrierRange(
-      const GCHermesValue *start,
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *start,
       uint32_t numHVs) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(start)))
-      constructorWriteBarrierRangeSlow(start, numHVs);
+      constructorWriteBarrierRangeSlow(cell, start, numHVs);
   }
+  template <typename HVType>
   void constructorWriteBarrierRangeSlow(
-      const GCHermesValue *start,
-      uint32_t numHVs);
-
-  void constructorWriteBarrierRange(
-      const GCSmallHermesValue *start,
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *start,
       uint32_t numHVs) {
-    // A pointer that lives in YG never needs any write barriers.
-    if (LLVM_UNLIKELY(!inYoungGen(start)))
-      constructorWriteBarrierRangeSlow(start, numHVs);
-  }
-  void constructorWriteBarrierRangeSlow(
-      const GCSmallHermesValue *start,
-      uint32_t numHVs);
+    assert(
+        reinterpret_cast<const char *>(start + numHVs) <
+            AlignedHeapSegmentBase::storageEnd(cell) &&
+        "Range must start and end within a heap segment.");
 
-  void snapshotWriteBarrier(const GCHermesValue *loc) {
-    if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
-      snapshotWriteBarrierInternal(*loc);
+    // Most constructors should be running in the YG, so in the common case,
+    // we can avoid doing anything for the whole range. If the range is in
+    // the OG, then just dirty all the cards corresponding to it, and we can
+    // scan them for pointers later. This is less precise but makes the
+    // write barrier faster.
+
+    AlignedHeapSegmentBase::cardTableCovering(cell)->dirtyCardsForAddressRange(
+        start, start + numHVs);
   }
-  void snapshotWriteBarrier(const GCSmallHermesValue *loc) {
+
+  template <typename HVType>
+  void snapshotWriteBarrier(const GCHermesValueBase<HVType> *loc) {
     if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
       snapshotWriteBarrierInternal(*loc);
   }
@@ -252,23 +275,21 @@ class HadesGC final : public GCBase {
       snapshotWriteBarrierInternal(*loc);
   }
 
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
-    if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
-      snapshotWriteBarrierRangeSlow(start, numHVs);
-  }
-  void snapshotWriteBarrierRangeSlow(
-      const GCHermesValue *start,
-      uint32_t numHVs);
-
+  template <typename HVType>
   void snapshotWriteBarrierRange(
-      const GCSmallHermesValue *start,
+      const GCHermesValueBase<HVType> *start,
       uint32_t numHVs) {
     if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
       snapshotWriteBarrierRangeSlow(start, numHVs);
   }
+  template <typename HVType>
   void snapshotWriteBarrierRangeSlow(
-      const GCSmallHermesValue *start,
-      uint32_t numHVs);
+      const GCHermesValueBase<HVType> *start,
+      uint32_t numHVs) {
+    for (uint32_t i = 0; i < numHVs; ++i) {
+      snapshotWriteBarrierInternal(start[i]);
+    }
+  }
 
   /// Add read barrier for \p value. This is only used when reading entry
   /// value from WeakMap/WeakSet.
@@ -990,7 +1011,10 @@ class HadesGC final : public GCBase {
   /// Common logic for doing the relocation write barrier for detecting
   /// pointers into YG and for tracking newly created pointers into the
   /// compactee.
-  void relocationWriteBarrier(const void *loc, const void *value);
+  void relocationWriteBarrier(
+      const GCCell *cell,
+      const void *loc,
+      const GCCell *value);
 
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();

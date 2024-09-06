@@ -25,7 +25,12 @@ class GCPointerBase : public CompressedPointer {
   explicit GCPointerBase(std::nullptr_t) : CompressedPointer(nullptr) {}
 
   template <typename NeedsBarriers>
-  inline GCPointerBase(PointerBase &base, GCCell *ptr, GC &gc, NeedsBarriers);
+  inline GCPointerBase(
+      PointerBase &base,
+      GCCell *ptr,
+      GC &gc,
+      const GCCell *owningObj,
+      NeedsBarriers);
 
  public:
   // These classes are used as arguments to GCPointer constructors, to
@@ -38,9 +43,16 @@ class GCPointerBase : public CompressedPointer {
   /// \param ptr The memory being pointed to.
   /// \param base The base of ptr.
   /// \param gc Used for write barriers.
-  inline void set(PointerBase &base, GCCell *ptr, GC &gc);
-  inline void set(PointerBase &base, CompressedPointer ptr, GC &gc);
-  inline void setNonNull(PointerBase &base, GCCell *ptr, GC &gc);
+  /// \param owningObj The object that contains this GCPointer.
+  inline void
+  set(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
+  inline void set(
+      PointerBase &base,
+      CompressedPointer ptr,
+      GC &gc,
+      const GCCell *owningObj);
+  inline void
+  setNonNull(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
 
   /// Set this pointer to null. This needs a write barrier in some types of
   /// garbage collectors.
@@ -62,14 +74,19 @@ class GCPointer : public GCPointerBase {
   /// this argument is unused, but its type's boolean value constant indicates
   /// whether barriers are required.)
   template <typename NeedsBarriers>
-  GCPointer(PointerBase &base, T *ptr, GC &gc, NeedsBarriers needsBarriers)
-      : GCPointerBase(base, ptr, gc, needsBarriers) {}
+  GCPointer(
+      PointerBase &base,
+      T *ptr,
+      GC &gc,
+      const GCCell *owningObj,
+      NeedsBarriers needsBarriers)
+      : GCPointerBase(base, ptr, gc, owningObj, needsBarriers) {}
 
   /// Same as the constructor above, with the default for
   /// NeedsBarriers as "YesBarriers".  (We can't use default template
   /// arguments with the idiom used above.)
-  inline GCPointer(PointerBase &base, T *ptr, GC &gc)
-      : GCPointer<T>(base, ptr, gc, YesBarriers()) {}
+  inline GCPointer(PointerBase &base, T *ptr, GC &gc, const GCCell *owningObj)
+      : GCPointer<T>(base, ptr, gc, owningObj, YesBarriers()) {}
 
   /// We are not allowed to copy-construct or assign GCPointers.
   GCPointer(const GCPointerBase &) = delete;
@@ -90,16 +107,21 @@ class GCPointer : public GCPointerBase {
   /// \param base The base of ptr.
   /// \param ptr The memory being pointed to.
   /// \param gc Used for write barriers.
-  void set(PointerBase &base, T *ptr, GC &gc) {
-    GCPointerBase::set(base, ptr, gc);
+  /// \param owningObj The object that contains this GCPointer.
+  void set(PointerBase &base, T *ptr, GC &gc, const GCCell *owningObj) {
+    GCPointerBase::set(base, ptr, gc, owningObj);
   }
-  void setNonNull(PointerBase &base, T *ptr, GC &gc) {
-    GCPointerBase::setNonNull(base, ptr, gc);
+  void setNonNull(PointerBase &base, T *ptr, GC &gc, const GCCell *owningObj) {
+    GCPointerBase::setNonNull(base, ptr, gc, owningObj);
   }
 
   /// Convenience overload of GCPointer::set for other GCPointers.
-  void set(PointerBase &base, const GCPointer<T> &ptr, GC &gc) {
-    GCPointerBase::set(base, ptr, gc);
+  void set(
+      PointerBase &base,
+      const GCPointer<T> &ptr,
+      GC &gc,
+      const GCCell *owningObj) {
+    GCPointerBase::set(base, ptr, gc, owningObj);
   }
 };
 

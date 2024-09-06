@@ -233,22 +233,33 @@ class MallocGC final : public GCBase {
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) override;
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
-  void writeBarrier(const GCHermesValue *, HermesValue) {}
-  void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
-  void writeBarrier(const GCPointerBase *, const GCCell *) {}
-  void constructorWriteBarrier(const GCHermesValue *, HermesValue) {}
-  void constructorWriteBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
-  void constructorWriteBarrier(const GCPointerBase *, const GCCell *) {}
-  void writeBarrierRange(const GCHermesValue *, uint32_t) {}
-  void writeBarrierRange(const GCSmallHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
-  void snapshotWriteBarrier(const GCHermesValue *) {}
-  void snapshotWriteBarrier(const GCSmallHermesValue *) {}
+  template <typename HVType>
+  void
+  writeBarrier(const GCCell *cell, const GCHermesValueBase<HVType> *, HVType) {}
+  void writeBarrier(const GCCell *cell, const GCPointerBase *, const GCCell *) {
+  }
+  template <typename HVType>
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *,
+      HVType) {}
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCPointerBase *,
+      const GCCell *) {}
+  template <typename HVType>
+  void writeBarrierRange(const GCHermesValueBase<HVType> *, uint32_t) {}
+  template <typename HVType>
+  void constructorWriteBarrierRange(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *,
+      uint32_t) {}
+  template <typename HVType>
+  void snapshotWriteBarrier(const GCHermesValueBase<HVType> *) {}
   void snapshotWriteBarrier(const GCPointerBase *) {}
   void snapshotWriteBarrier(const GCSymbolID *) {}
-  void snapshotWriteBarrierRange(const GCHermesValue *, uint32_t) {}
-  void snapshotWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  template <typename HVType>
+  void snapshotWriteBarrierRange(const GCHermesValueBase<HVType> *, uint32_t) {}
   void weakRefReadBarrier(HermesValue) {}
   void weakRefReadBarrier(GCCell *) {}
 
