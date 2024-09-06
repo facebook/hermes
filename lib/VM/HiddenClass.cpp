@@ -213,7 +213,7 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
     initializeMissingPropertyMap(selfHandle, runtime);
 
   newClassHandle->propertyMap_.set(
-      runtime, selfHandle->propertyMap_, runtime.getHeap());
+      runtime, selfHandle->propertyMap_, runtime.getHeap(), *newClassHandle);
   selfHandle->propertyMap_.setNull(runtime.getHeap());
 
   LLVM_DEBUG(
@@ -436,7 +436,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
         return ExecutionStatus::EXCEPTION;
       }
       childHandle->propertyMap_.set(
-          runtime, selfHandle->propertyMap_, runtime.getHeap());
+          runtime, selfHandle->propertyMap_, runtime.getHeap(), *childHandle);
     } else {
       LLVM_DEBUG(
           dbgs() << "Adding property " << runtime.formatSymbolID(name)
@@ -512,7 +512,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
 
     // Move the map to the child class.
     childHandle->propertyMap_.set(
-        runtime, selfHandle->propertyMap_, runtime.getHeap());
+        runtime, selfHandle->propertyMap_, runtime.getHeap(), *childHandle);
     selfHandle->propertyMap_.setNull(runtime.getHeap());
 
     if (LLVM_UNLIKELY(
@@ -589,7 +589,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 
       descPair->second.flags = newFlags;
       existingChild->propertyMap_.set(
-          runtime, selfHandle->propertyMap_, runtime.getHeap());
+          runtime, selfHandle->propertyMap_, runtime.getHeap(), existingChild);
     } else {
       LLVM_DEBUG(
           dbgs() << "Updating property " << runtime.formatSymbolID(name)
@@ -634,7 +634,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
 
   // Move the updated map to the child class.
   childHandle->propertyMap_.set(
-      runtime, selfHandle->propertyMap_, runtime.getHeap());
+      runtime, selfHandle->propertyMap_, runtime.getHeap(), *childHandle);
   selfHandle->propertyMap_.setNull(runtime.getHeap());
 
   return childHandle;
@@ -915,7 +915,8 @@ void HiddenClass::stealPropertyMapFromParent(
   self->propertyMap_.set(
       runtime,
       self->parent_.getNonNull(runtime)->propertyMap_,
-      runtime.getHeap());
+      runtime.getHeap(),
+      self);
   self->parent_.getNonNull(runtime)->propertyMap_.setNull(runtime.getHeap());
 
   // Does our class add a new property?
