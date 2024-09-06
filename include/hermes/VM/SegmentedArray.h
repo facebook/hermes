@@ -288,7 +288,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   /// Sets the element located at \p index to \p val.
   template <Inline inl = Inline::No>
   void set(Runtime &runtime, TotalIndex index, HVType val) {
-    atRef<inl>(runtime, index).set(val, runtime.getHeap());
+    atRef<inl>(runtime, index).set(val, runtime.getHeap(), this);
   }
   template <Inline inl = Inline::No>
   void setNonPtr(Runtime &runtime, TotalIndex index, HVType val) {
