@@ -101,7 +101,7 @@ void JSRegExp::initialize(
   assert(
       pattern && flags &&
       "Null pattern and/or flags passed to JSRegExp::initialize");
-  selfHandle->pattern_.set(runtime, *pattern, runtime.getHeap());
+  selfHandle->pattern_.set(runtime, *pattern, runtime.getHeap(), *selfHandle);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -220,7 +220,8 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
       return ExecutionStatus::EXCEPTION;
   }
 
-  selfHandle->groupNameMappings_.set(runtime, *obj, runtime.getHeap());
+  selfHandle->groupNameMappings_.set(
+      runtime, *obj, runtime.getHeap(), *selfHandle);
   return ExecutionStatus::RETURNED;
 }
 
@@ -231,7 +232,7 @@ Handle<JSObject> JSRegExp::getGroupNameMappings(Runtime &runtime) {
 }
 
 void JSRegExp::setGroupNameMappings(Runtime &runtime, JSObject *groupObj) {
-  groupNameMappings_.set(runtime, groupObj, runtime.getHeap());
+  groupNameMappings_.set(runtime, groupObj, runtime.getHeap(), this);
 }
 
 void JSRegExp::initializeBytecode(llvh::ArrayRef<uint8_t> bytecode) {
