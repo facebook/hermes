@@ -53,7 +53,7 @@ void DummyObject::releaseExtMem(GC &gc) {
 }
 
 void DummyObject::setPointer(GC &gc, DummyObject *obj) {
-  other.set(gc.getPointerBase(), obj, gc);
+  other.set(gc.getPointerBase(), obj, gc, this);
 }
 
 /* static */ constexpr CellKind DummyObject::getCellKind() {

@@ -167,7 +167,7 @@ ExecutionStatus Domain::importCJSModuleTable(
       return ExecutionStatus::EXCEPTION;
     }
 
-    self->throwingRequire_.set(runtime, *requireFn, runtime.getHeap());
+    self->throwingRequire_.set(runtime, *requireFn, runtime.getHeap(), *self);
   } else {
     cjsModules = self->cjsModules_.get(runtime);
   }
@@ -308,7 +308,7 @@ ExecutionStatus Domain::importCJSModuleTable(
     }
   }
 
-  self->cjsModules_.set(runtime, cjsModules.get(), runtime.getHeap());
+  self->cjsModules_.set(runtime, cjsModules.get(), runtime.getHeap(), *self);
   return ExecutionStatus::RETURNED;
 }
 
@@ -343,8 +343,8 @@ Handle<RequireContext> RequireContext::create(
       runtime.getHiddenClassForPrototype(
           *objProto, numOverlapSlots<RequireContext>()));
   auto self = JSObjectInit::initToHandle(runtime, cell);
-  self->domain_.set(runtime, *domain, runtime.getHeap());
-  self->dirname_.set(runtime, *dirname, runtime.getHeap());
+  self->domain_.set(runtime, *domain, runtime.getHeap(), *self);
+  self->dirname_.set(runtime, *dirname, runtime.getHeap(), *self);
   return self;
 }
 

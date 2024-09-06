@@ -38,9 +38,12 @@ class GCPointerBase : public CompressedPointer {
   /// \param ptr The memory being pointed to.
   /// \param base The base of ptr.
   /// \param gc Used for write barriers.
-  inline void set(PointerBase &base, GCCell *ptr, GC &gc);
+  /// \param owningObj The object that contains this GCPointer.
+  inline void
+  set(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
   inline void set(PointerBase &base, CompressedPointer ptr, GC &gc);
-  inline void setNonNull(PointerBase &base, GCCell *ptr, GC &gc);
+  inline void
+  setNonNull(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
 
   /// Set this pointer to null. This needs a write barrier in some types of
   /// garbage collectors.
@@ -90,11 +93,12 @@ class GCPointer : public GCPointerBase {
   /// \param base The base of ptr.
   /// \param ptr The memory being pointed to.
   /// \param gc Used for write barriers.
-  void set(PointerBase &base, T *ptr, GC &gc) {
-    GCPointerBase::set(base, ptr, gc);
+  /// \param owningObj The object that contains this GCPointer.
+  void set(PointerBase &base, T *ptr, GC &gc, const GCCell *owningObj) {
+    GCPointerBase::set(base, ptr, gc, owningObj);
   }
-  void setNonNull(PointerBase &base, T *ptr, GC &gc) {
-    GCPointerBase::setNonNull(base, ptr, gc);
+  void setNonNull(PointerBase &base, T *ptr, GC &gc, const GCCell *owningObj) {
+    GCPointerBase::setNonNull(base, ptr, gc, owningObj);
   }
 
   /// Convenience overload of GCPointer::set for other GCPointers.

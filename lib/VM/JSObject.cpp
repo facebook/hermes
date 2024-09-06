@@ -101,7 +101,7 @@ PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
-  obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap());
+  obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap(), obj.get());
   // If the hidden class has index like property, we need to clear the fast path
   // flag.
   if (LLVM_UNLIKELY(
@@ -115,7 +115,7 @@ PseudoHandle<JSObject> JSObject::create(
     Handle<JSObject> parentHandle,
     Handle<HiddenClass> clazz) {
   PseudoHandle<JSObject> obj = JSObject::create(runtime, clazz);
-  obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap());
+  obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap(), obj.get());
   return obj;
 }
 
@@ -224,7 +224,7 @@ CallResult<bool> JSObject::setParent(
     }
   }
   // 9.
-  self->parent_.set(runtime, parent, runtime.getHeap());
+  self->parent_.set(runtime, parent, runtime.getHeap(), self);
   // 10.
   return true;
 }
@@ -252,7 +252,7 @@ void JSObject::allocateNewSlotStorage(
     auto arrRes = runtime.ignoreAllocationFailure(
         PropStorage::create(runtime, DEFAULT_PROPERTY_CAPACITY));
     selfHandle->propStorage_.setNonNull(
-        runtime, vmcast<PropStorage>(arrRes), runtime.getHeap());
+        runtime, vmcast<PropStorage>(arrRes), runtime.getHeap(), *selfHandle);
   } else if (LLVM_UNLIKELY(
                  newSlotIndex >=
                  selfHandle->propStorage_.getNonNull(runtime)->capacity())) {
@@ -262,7 +262,8 @@ void JSObject::allocateNewSlotStorage(
         "allocated slot must be at end");
     auto hnd = runtime.makeMutableHandle(selfHandle->propStorage_);
     PropStorage::resize(hnd, runtime, newSlotIndex + 1);
-    selfHandle->propStorage_.setNonNull(runtime, *hnd, runtime.getHeap());
+    selfHandle->propStorage_.setNonNull(
+        runtime, *hnd, runtime.getHeap(), *selfHandle);
   }
 
   {
@@ -1924,7 +1925,8 @@ CallResult<bool> JSObject::deleteNamed(
   // Perform the actual deletion.
   auto newClazz = HiddenClass::deleteProperty(
       runtime.makeHandle(selfHandle->clazz_), runtime, *pos);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+  selfHandle->clazz_.setNonNull(
+      runtime, *newClazz, runtime.getHeap(), *selfHandle);
 
   return true;
 }
@@ -2024,7 +2026,8 @@ CallResult<bool> JSObject::deleteComputed(
     // Remove the property descriptor.
     auto newClazz = HiddenClass::deleteProperty(
         runtime.makeHandle(selfHandle->clazz_), runtime, *pos);
-    selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+    selfHandle->clazz_.setNonNull(
+        runtime, *newClazz, runtime.getHeap(), *selfHandle);
   } else if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
     if (key == ExecutionStatus::EXCEPTION)
@@ -2613,7 +2616,8 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
 
   auto newClazz = HiddenClass::makeAllNonConfigurable(
       runtime.makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+  selfHandle->clazz_.setNonNull(
+      runtime, *newClazz, runtime.getHeap(), *selfHandle);
 
   selfHandle->flags_.sealed = true;
 
@@ -2638,7 +2642,8 @@ ExecutionStatus JSObject::freeze(
 
   auto newClazz = HiddenClass::makeAllReadOnly(
       runtime.makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+  selfHandle->clazz_.setNonNull(
+      runtime, *newClazz, runtime.getHeap(), *selfHandle);
 
   selfHandle->flags_.frozen = true;
   selfHandle->flags_.sealed = true;
@@ -2658,7 +2663,8 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
       flagsToClear,
       flagsToSet,
       props);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+  selfHandle->clazz_.setNonNull(
+      runtime, *newClazz, runtime.getHeap(), *selfHandle);
 }
 
 CallResult<bool> JSObject::isExtensible(
@@ -2783,7 +2789,8 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->clazz_.setNonNull(runtime, *addResult->first, runtime.getHeap());
+  selfHandle->clazz_.setNonNull(
+      runtime, *addResult->first, runtime.getHeap(), *selfHandle);
 
   allocateNewSlotStorage(
       selfHandle, runtime, addResult->second, valueOrAccessor);
@@ -2826,7 +2833,8 @@ CallResult<bool> JSObject::updateOwnProperty(
         runtime,
         propertyPos,
         desc.flags);
-    selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+    selfHandle->clazz_.setNonNull(
+        runtime, *newClazz, runtime.getHeap(), *selfHandle);
   }
 
   if (updateStatus->first == PropertyUpdateStatus::done)

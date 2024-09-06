@@ -507,7 +507,8 @@ ExecutionStatus JSError::recordStackTrace(
       }
     }
   }
-  selfHandle->domains_.set(runtime, domains.get(), runtime.getHeap());
+  selfHandle->domains_.set(
+      runtime, domains.get(), runtime.getHeap(), *selfHandle);
 
   // Remove the last entry.
   stack->pop_back();
@@ -521,7 +522,8 @@ ExecutionStatus JSError::recordStackTrace(
       "Function names and stack trace must have same size.");
 
   selfHandle->stacktrace_ = std::move(stack);
-  selfHandle->funcNames_.set(runtime, *funcNames, runtime.getHeap());
+  selfHandle->funcNames_.set(
+      runtime, *funcNames, runtime.getHeap(), *selfHandle);
   return ExecutionStatus::RETURNED;
 }
 

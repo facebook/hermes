@@ -32,19 +32,29 @@ GCPointerBase::GCPointerBase(
   }
 }
 
-inline void GCPointerBase::set(PointerBase &base, GCCell *ptr, GC &gc) {
+inline void GCPointerBase::set(
+    PointerBase &base,
+    GCCell *ptr,
+    GC &gc,
+    const GCCell *owningObj) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
+  (void)owningObj;
   gc.writeBarrier(this, ptr);
   setNoBarrier(CompressedPointer::encode(ptr, base));
 }
 
-inline void GCPointerBase::setNonNull(PointerBase &base, GCCell *ptr, GC &gc) {
+inline void GCPointerBase::setNonNull(
+    PointerBase &base,
+    GCCell *ptr,
+    GC &gc,
+    const GCCell *owningObj) {
   assert(
       gc.validPointer(ptr) && "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
+  (void)owningObj;
   gc.writeBarrier(this, ptr);
   setNoBarrier(CompressedPointer::encodeNonNull(ptr, base));
 }

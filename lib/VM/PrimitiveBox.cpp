@@ -81,7 +81,8 @@ void JSString::setPrimitiveString(
   auto shv =
       SmallHermesValue::encodeNumberValue(string->getStringLength(), runtime);
   JSObject::setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
-  selfHandle->primitiveValue_.set(runtime, *string, runtime.getHeap());
+  selfHandle->primitiveValue_.set(
+      runtime, *string, runtime.getHeap(), *selfHandle);
 }
 
 bool JSString::_haveOwnIndexedImpl(

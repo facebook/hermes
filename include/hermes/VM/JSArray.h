@@ -121,7 +121,7 @@ class ArrayImpl : public JSObject {
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
   /// to be null.
   void setIndexedStorage(PointerBase &base, StorageType *p, GC &gc) {
-    indexedStorage_.set(base, p, gc);
+    indexedStorage_.set(base, p, gc, this);
   }
 
   /// @}

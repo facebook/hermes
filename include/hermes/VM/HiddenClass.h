@@ -326,7 +326,7 @@ class HiddenClass final : public GCCell {
   }
 
   void setForInCache(BigStorage *arr, Runtime &runtime) {
-    forInCache_.set(runtime, arr, runtime.getHeap());
+    forInCache_.set(runtime, arr, runtime.getHeap(), this);
   }
 
   void clearForInCache(Runtime &runtime) {

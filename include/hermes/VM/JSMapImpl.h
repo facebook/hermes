@@ -146,7 +146,7 @@ class JSMapIteratorImpl final : public JSObject {
       Runtime &runtime,
       Handle<JSMapImpl<JSMapTypeTraits<C>::ContainerKind>> data,
       IterationKind kind) {
-    data_.set(runtime, data.get(), runtime.getHeap());
+    data_.set(runtime, data.get(), runtime.getHeap(), this);
     iterationKind_ = kind;
 
     assert(data_ && "Invalid storage data");
@@ -172,7 +172,8 @@ class JSMapIteratorImpl final : public JSObject {
           runtime,
           self->data_.getNonNull(runtime)->iteratorNext(
               runtime, self->itr_.get(runtime)),
-          runtime.getHeap());
+          runtime.getHeap(),
+          *self);
       if (self->itr_) {
         switch (self->iterationKind_) {
           case IterationKind::Key:
