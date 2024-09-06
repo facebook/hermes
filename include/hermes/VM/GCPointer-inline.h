@@ -59,12 +59,16 @@ inline void GCPointerBase::setNonNull(
   setNoBarrier(CompressedPointer::encodeNonNull(ptr, base));
 }
 
-inline void
-GCPointerBase::set(PointerBase &base, CompressedPointer ptr, GC &gc) {
+inline void GCPointerBase::set(
+    PointerBase &base,
+    CompressedPointer ptr,
+    GC &gc,
+    const GCCell *owningObj) {
   assert(
       (!ptr || gc.validPointer(ptr.get(base))) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
+  (void)owningObj;
   gc.writeBarrier(this, ptr.get(base));
   setNoBarrier(ptr);
 }

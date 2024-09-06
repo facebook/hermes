@@ -99,15 +99,18 @@ void OrderedHashMapBase<BucketType, Derived>::removeLinkedListNode(
       entry != lastIterationEntry_.get(runtime) &&
       "Cannot remove the last entry");
   if (entry->prevIterationEntry) {
-    entry->prevIterationEntry.getNonNull(runtime)->nextIterationEntry.set(
-        runtime, entry->nextIterationEntry, gc);
+    auto *prevIterationEntry = entry->prevIterationEntry.getNonNull(runtime);
+    prevIterationEntry->nextIterationEntry.set(
+        runtime, entry->nextIterationEntry, gc, prevIterationEntry);
   }
   if (entry->nextIterationEntry) {
-    entry->nextIterationEntry.getNonNull(runtime)->prevIterationEntry.set(
-        runtime, entry->prevIterationEntry, gc);
+    auto *nextIterationEntry = entry->nextIterationEntry.getNonNull(runtime);
+    nextIterationEntry->prevIterationEntry.set(
+        runtime, entry->prevIterationEntry, gc, nextIterationEntry);
   }
   if (entry == firstIterationEntry_.get(runtime)) {
-    firstIterationEntry_.set(runtime, entry->nextIterationEntry, gc);
+    firstIterationEntry_.set(
+        runtime, entry->nextIterationEntry, gc, static_cast<Derived *>(this));
   }
   entry->prevIterationEntry.setNull(runtime.getHeap());
 }
@@ -370,7 +373,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
     previousLastEntry->nextIterationEntry.set(
         runtime, newMapEntry.get(), heap, previousLastEntry);
     newMapEntry->prevIterationEntry.set(
-        runtime, rawSelf->lastIterationEntry_, heap);
+        runtime, rawSelf->lastIterationEntry_, heap, *newMapEntry);
 
     rawSelf->lastIterationEntry_.set(runtime, newMapEntry.get(), heap, *self);
 
@@ -467,7 +470,11 @@ void OrderedHashMapBase<BucketType, Derived>::clear(Runtime &runtime) {
   // in case there is an iterator out there
   // pointing to the middle of the iteration chain. We need it to be
   // able to merge back eventually.
-  firstIterationEntry_.set(runtime, lastIterationEntry_, runtime.getHeap());
+  firstIterationEntry_.set(
+      runtime,
+      lastIterationEntry_,
+      runtime.getHeap(),
+      static_cast<Derived *>(this));
   firstIterationEntry_.getNonNull(runtime)->prevIterationEntry.setNull(
       runtime.getHeap());
   size_ = 0;

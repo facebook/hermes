@@ -41,7 +41,11 @@ class GCPointerBase : public CompressedPointer {
   /// \param owningObj The object that contains this GCPointer.
   inline void
   set(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
-  inline void set(PointerBase &base, CompressedPointer ptr, GC &gc);
+  inline void set(
+      PointerBase &base,
+      CompressedPointer ptr,
+      GC &gc,
+      const GCCell *owningObj);
   inline void
   setNonNull(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
 
@@ -102,8 +106,12 @@ class GCPointer : public GCPointerBase {
   }
 
   /// Convenience overload of GCPointer::set for other GCPointers.
-  void set(PointerBase &base, const GCPointer<T> &ptr, GC &gc) {
-    GCPointerBase::set(base, ptr, gc);
+  void set(
+      PointerBase &base,
+      const GCPointer<T> &ptr,
+      GC &gc,
+      const GCCell *owningObj) {
+    GCPointerBase::set(base, ptr, gc, owningObj);
   }
 };
 

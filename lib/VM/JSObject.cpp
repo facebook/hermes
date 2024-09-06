@@ -3015,9 +3015,11 @@ JSObject::checkPropertyUpdate(
 
     // If not setting the getter or the setter, re-use the current one.
     if (!dpFlags.setGetter)
-      newAccessor->getter.set(runtime, curAccessor->getter, runtime.getHeap());
+      newAccessor->getter.set(
+          runtime, curAccessor->getter, runtime.getHeap(), newAccessor);
     if (!dpFlags.setSetter)
-      newAccessor->setter.set(runtime, curAccessor->setter, runtime.getHeap());
+      newAccessor->setter.set(
+          runtime, curAccessor->setter, runtime.getHeap(), newAccessor);
   }
 
   // 8.12.9 [12] For each attribute field of Desc that is present, set the
