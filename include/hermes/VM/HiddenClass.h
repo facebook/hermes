@@ -495,7 +495,7 @@ class HiddenClass final : public GCCell {
         propertyFlags_(propertyFlags),
         flags_(flags),
         numProperties_(numProperties),
-        parent_(runtime, *parent, runtime.getHeap()) {
+        parent_(runtime, *parent, runtime.getHeap(), this) {
     assert(propertyFlags.isValid() && "propertyFlags must be valid");
   }
 

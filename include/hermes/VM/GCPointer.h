@@ -25,7 +25,12 @@ class GCPointerBase : public CompressedPointer {
   explicit GCPointerBase(std::nullptr_t) : CompressedPointer(nullptr) {}
 
   template <typename NeedsBarriers>
-  inline GCPointerBase(PointerBase &base, GCCell *ptr, GC &gc, NeedsBarriers);
+  inline GCPointerBase(
+      PointerBase &base,
+      GCCell *ptr,
+      GC &gc,
+      const GCCell *owningObj,
+      NeedsBarriers);
 
  public:
   // These classes are used as arguments to GCPointer constructors, to
@@ -69,14 +74,19 @@ class GCPointer : public GCPointerBase {
   /// this argument is unused, but its type's boolean value constant indicates
   /// whether barriers are required.)
   template <typename NeedsBarriers>
-  GCPointer(PointerBase &base, T *ptr, GC &gc, NeedsBarriers needsBarriers)
-      : GCPointerBase(base, ptr, gc, needsBarriers) {}
+  GCPointer(
+      PointerBase &base,
+      T *ptr,
+      GC &gc,
+      const GCCell *owningObj,
+      NeedsBarriers needsBarriers)
+      : GCPointerBase(base, ptr, gc, owningObj, needsBarriers) {}
 
   /// Same as the constructor above, with the default for
   /// NeedsBarriers as "YesBarriers".  (We can't use default template
   /// arguments with the idiom used above.)
-  inline GCPointer(PointerBase &base, T *ptr, GC &gc)
-      : GCPointer<T>(base, ptr, gc, YesBarriers()) {}
+  inline GCPointer(PointerBase &base, T *ptr, GC &gc, const GCCell *owningObj)
+      : GCPointer<T>(base, ptr, gc, owningObj, YesBarriers()) {}
 
   /// We are not allowed to copy-construct or assign GCPointers.
   GCPointer(const GCPointerBase &) = delete;

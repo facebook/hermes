@@ -75,7 +75,13 @@ template <typename BucketType, typename Derived>
 OrderedHashMapBase<BucketType, Derived>::OrderedHashMapBase(
     Runtime &runtime,
     Handle<SegmentedArraySmall> hashTableStorage)
-    : hashTable_(runtime, hashTableStorage.get(), runtime.getHeap()) {}
+    : hashTable_(
+          runtime,
+          hashTableStorage.get(),
+          runtime.getHeap(),
+          // The casted pointer is only used to provide the GCCell starting
+          // address.
+          static_cast<Derived *>(this)) {}
 
 template <typename BucketType, typename Derived>
 OrderedHashMapBase<BucketType, Derived>::OrderedHashMapBase() {}

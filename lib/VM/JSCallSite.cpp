@@ -40,7 +40,7 @@ JSCallSite::JSCallSite(
     Handle<JSError> error,
     size_t stackFrameIndex)
     : JSObject(runtime, *parent, *clazz),
-      error_(runtime, *error, runtime.getHeap()),
+      error_(runtime, *error, runtime.getHeap(), this),
       stackFrameIndex_(stackFrameIndex) {
   assert(
       error_.getNonNull(runtime)->getStackTrace() &&

@@ -54,8 +54,8 @@ class JSRegExpStringIterator : public JSObject {
       bool global,
       bool unicode)
       : JSObject(runtime, *parent, *clazz),
-        iteratedRegExp_(runtime, *iteratedRegExp, runtime.getHeap()),
-        iteratedString_(runtime, *iteratedString, runtime.getHeap()),
+        iteratedRegExp_(runtime, *iteratedRegExp, runtime.getHeap(), this),
+        iteratedString_(runtime, *iteratedString, runtime.getHeap(), this),
         global_(global),
         unicode_(unicode) {}
 

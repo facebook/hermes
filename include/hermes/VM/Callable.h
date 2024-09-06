@@ -92,7 +92,11 @@ class Environment final
       Runtime &runtime,
       Handle<Environment> parentEnvironment,
       uint32_t size)
-      : parentEnvironment_(runtime, parentEnvironment.get(), runtime.getHeap()),
+      : parentEnvironment_(
+            runtime,
+            parentEnvironment.get(),
+            runtime.getHeap(),
+            this),
         size_(size) {
     // Initialize all slots to 'undefined'.
     GCHermesValue::uninitialized_fill(
@@ -345,7 +349,7 @@ class Callable : public JSObject {
       HiddenClass *clazz,
       Handle<Environment> env)
       : JSObject(runtime, parent, clazz),
-        environment_(runtime, *env, runtime.getHeap()) {}
+        environment_(runtime, *env, runtime.getHeap(), this) {}
   Callable(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
       : JSObject(runtime, parent, clazz), environment_() {}
 
@@ -375,7 +379,8 @@ Environment::Environment(
           runtime,
           // TODO: Consider keeping the parent as a compressed pointer.
           parentFn->getEnvironment(runtime),
-          runtime.getHeap()),
+          runtime.getHeap(),
+          this),
       size_(size) {
   // Initialize all slots to 'undefined'.
   GCHermesValue::uninitialized_fill(
@@ -453,8 +458,8 @@ class BoundFunction final : public Callable {
       Handle<Callable> target,
       Handle<ArrayStorage> argStorage)
       : Callable(runtime, *parent, *clazz),
-        target_(runtime, *target, runtime.getHeap()),
-        argStorage_(runtime, *argStorage, runtime.getHeap()) {}
+        target_(runtime, *target, runtime.getHeap(), this),
+        argStorage_(runtime, *argStorage, runtime.getHeap(), this) {}
 
  private:
   /// Return a pointer to the stored arguments, including \c this. \c this is
@@ -1095,7 +1100,7 @@ class JSFunction : public Callable {
       CodeBlock *codeBlock)
       : Callable(runtime, *parent, *clazz, environment),
         codeBlock_(codeBlock),
-        domain_(runtime, *domain, runtime.getHeap()) {
+        domain_(runtime, *domain, runtime.getHeap(), this) {
     assert(
         !vt.finalize_ == (kHasFinalizer != HasFinalizer::Yes) &&
         "kHasFinalizer invalid value");

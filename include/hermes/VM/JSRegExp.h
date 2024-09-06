@@ -131,7 +131,8 @@ class JSRegExp final : public JSObject {
         pattern_(
             runtime,
             runtime.getPredefinedString(Predefined::emptyString),
-            runtime.getHeap()) {}
+            runtime.getHeap(),
+            this) {}
 
  private:
   ~JSRegExp();
