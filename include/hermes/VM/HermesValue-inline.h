@@ -37,9 +37,8 @@ GCHermesValueBase<HVType>::GCHermesValueBase(
     const GCCell *cell)
     : HVType{hv} {
   assert(!hv.isPointer() || hv.getPointer());
-  (void)cell;
   if (NeedsBarriers::value)
-    gc.constructorWriteBarrier(this, hv);
+    gc.constructorWriteBarrier(cell, this, hv);
 }
 
 template <typename HVType>
@@ -62,9 +61,8 @@ GCHermesValueBase<HVType>::set(HVType hv, GC &gc, const GCCell *owningObj) {
         "Setting an invalid pointer into a GCHermesValue");
   }
   assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
-  (void)owningObj;
   if (NeedsBarriers::value)
-    gc.writeBarrier(this, hv);
+    gc.writeBarrier(owningObj, this, hv);
   HVType::setNoBarrier(hv);
 }
 

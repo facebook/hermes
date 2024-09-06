@@ -153,51 +153,65 @@ class HadesGC final : public GCBase {
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
   template <typename HVType>
-  void writeBarrier(const GCHermesValueBase<HVType> *loc, HVType value) {
+  void writeBarrier(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *loc,
+      HVType value) {
     assert(
         !calledByBackgroundThread() &&
         "Write barrier invoked by background thread.");
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      writeBarrierSlow(loc, value);
+      writeBarrierSlow(cell, loc, value);
   }
   template <typename HVType>
-  void writeBarrierSlow(const GCHermesValueBase<HVType> *loc, HVType value) {
+  void writeBarrierSlow(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *loc,
+      HVType value) {
     if (ogMarkingBarriers_) {
       snapshotWriteBarrierInternal(*loc);
     }
     if (!value.isPointer()) {
       return;
     }
-    relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
+    relocationWriteBarrier(cell, loc, value.getPointer(getPointerBase()));
   }
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
   /// NOTE: The write barrier call must be placed *before* the write to the
   /// pointer, so that the current value can be fetched.
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value) {
+  void writeBarrier(
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value) {
     assert(
         !calledByBackgroundThread() &&
         "Write barrier invoked by background thread.");
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      writeBarrierSlow(loc, value);
+      writeBarrierSlow(cell, loc, value);
   }
-  void writeBarrierSlow(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrierSlow(
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value);
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
   template <typename HVType>
   void constructorWriteBarrier(
+      const GCCell *cell,
       const GCHermesValueBase<HVType> *loc,
       HVType value) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      constructorWriteBarrierSlow(loc, value);
+      constructorWriteBarrierSlow(cell, loc, value);
   }
   template <typename HVType>
   void constructorWriteBarrierSlow(
+      const GCCell *cell,
       const GCHermesValueBase<HVType> *loc,
       HVType value) {
     // A constructor never needs to execute a SATB write barrier, since its
@@ -205,13 +219,16 @@ class HadesGC final : public GCBase {
     if (!value.isPointer()) {
       return;
     }
-    relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
+    relocationWriteBarrier(cell, loc, value.getPointer(getPointerBase()));
   }
 
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
-      relocationWriteBarrier(loc, value);
+      relocationWriteBarrier(cell, loc, value);
   }
 
   template <typename HVType>
@@ -994,7 +1011,10 @@ class HadesGC final : public GCBase {
   /// Common logic for doing the relocation write barrier for detecting
   /// pointers into YG and for tracking newly created pointers into the
   /// compactee.
-  void relocationWriteBarrier(const void *loc, const void *value);
+  void relocationWriteBarrier(
+      const GCCell *cell,
+      const void *loc,
+      const GCCell *value);
 
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();

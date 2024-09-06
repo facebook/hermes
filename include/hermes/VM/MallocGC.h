@@ -234,11 +234,19 @@ class MallocGC final : public GCBase {
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
   template <typename HVType>
-  void writeBarrier(const GCHermesValueBase<HVType> *, HVType) {}
-  void writeBarrier(const GCPointerBase *, const GCCell *) {}
+  void
+  writeBarrier(const GCCell *cell, const GCHermesValueBase<HVType> *, HVType) {}
+  void writeBarrier(const GCCell *cell, const GCPointerBase *, const GCCell *) {
+  }
   template <typename HVType>
-  void constructorWriteBarrier(const GCHermesValueBase<HVType> *, HVType) {}
-  void constructorWriteBarrier(const GCPointerBase *, const GCCell *) {}
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *,
+      HVType) {}
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCPointerBase *,
+      const GCCell *) {}
   template <typename HVType>
   void writeBarrierRange(const GCHermesValueBase<HVType> *, uint32_t) {}
   template <typename HVType>

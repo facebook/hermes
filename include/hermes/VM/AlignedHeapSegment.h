@@ -223,6 +223,15 @@ class AlignedHeapSegmentBase {
     return markBits->at(ind);
   }
 
+  /// Return true if object \p a and \p b live in the same segment. This is used
+  /// to check if a pointer field in \p a may points to an object in same
+  /// segment (so that we don't need to dirty the cards).
+  static bool containedInSame(const GCCell *a, const GCCell *b) {
+    return ((reinterpret_cast<uintptr_t>(a) ^ reinterpret_cast<uintptr_t>(b)) <
+            kSegmentUnitSize) ||
+        a == b;
+  }
+
 #ifndef NDEBUG
   /// Get the storage end of segment that \p cell resides in.
   static char *storageEnd(const GCCell *cell) {

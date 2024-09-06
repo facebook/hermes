@@ -1153,13 +1153,23 @@ class GCBase {
 #ifdef HERMESVM_GC_RUNTIME
   /// Default implementations for read and write barriers: do nothing.
   template <typename HVType>
-  void writeBarrier(const GCHermesValueBase<HVType> *loc, HVType value);
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
-  template <typename HVType>
-  void constructorWriteBarrier(
+  void writeBarrier(
+      const GCCell *cell,
       const GCHermesValueBase<HVType> *loc,
       HVType value);
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrier(
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value);
+  template <typename HVType>
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCHermesValueBase<HVType> *loc,
+      HVType value);
+  void constructorWriteBarrier(
+      const GCCell *cell,
+      const GCPointerBase *loc,
+      const GCCell *value);
   template <typename HVType>
   void constructorWriteBarrierRange(
       const GCCell *cell,

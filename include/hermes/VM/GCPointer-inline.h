@@ -26,9 +26,8 @@ GCPointerBase::GCPointerBase(
   assert(
       (!ptr || gc.validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
-  (void)owningObj;
   if (NeedsBarriers::value) {
-    gc.constructorWriteBarrier(this, ptr);
+    gc.constructorWriteBarrier(owningObj, this, ptr);
   } else {
     assert(!gc.needsWriteBarrier(this, ptr));
   }
@@ -43,8 +42,7 @@ inline void GCPointerBase::set(
       (!ptr || gc.validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
-  (void)owningObj;
-  gc.writeBarrier(this, ptr);
+  gc.writeBarrier(owningObj, this, ptr);
   setNoBarrier(CompressedPointer::encode(ptr, base));
 }
 
@@ -56,8 +54,7 @@ inline void GCPointerBase::setNonNull(
   assert(
       gc.validPointer(ptr) && "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
-  (void)owningObj;
-  gc.writeBarrier(this, ptr);
+  gc.writeBarrier(owningObj, this, ptr);
   setNoBarrier(CompressedPointer::encodeNonNull(ptr, base));
 }
 
@@ -71,7 +68,7 @@ inline void GCPointerBase::set(
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
   (void)owningObj;
-  gc.writeBarrier(this, ptr.get(base));
+  gc.writeBarrier(owningObj, this, ptr.get(base));
   setNoBarrier(ptr);
 }
 

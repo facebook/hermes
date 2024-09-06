@@ -1899,12 +1899,15 @@ void HadesGC::debitExternalMemory(GCCell *cell, uint32_t sz) {
   }
 }
 
-void HadesGC::writeBarrierSlow(const GCPointerBase *loc, const GCCell *value) {
+void HadesGC::writeBarrierSlow(
+    const GCCell *cell,
+    const GCPointerBase *loc,
+    const GCCell *value) {
   if (*loc && ogMarkingBarriers_)
     snapshotWriteBarrierInternal(*loc);
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
-  relocationWriteBarrier(loc, value);
+  relocationWriteBarrier(cell, loc, value);
 }
 
 void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
@@ -1957,12 +1960,15 @@ void HadesGC::snapshotWriteBarrierInternal(SymbolID symbol) {
   oldGenMarker_->markSymbol(symbol);
 }
 
-void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
+void HadesGC::relocationWriteBarrier(
+    const GCCell *cell,
+    const void *loc,
+    const GCCell *value) {
   assert(!inYoungGen(loc) && "Pre-condition from other callers");
   // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
   // pointers. But do dirty cards for compactee->yg pointers, since compaction
   // may not happen in the next YG.
-  if (AlignedHeapSegment::containedInSame(loc, value)) {
+  if (AlignedHeapSegmentBase::containedInSame(cell, value)) {
     return;
   }
   if (inYoungGen(value) || compactee_.contains(value)) {
@@ -1971,7 +1977,7 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
     // allocation.
     // Note that this *only* applies since the boundaries are updated separately
     // from the card table being marked itself.
-    AlignedHeapSegment::cardTableCovering(loc)->dirtyCardForAddress(loc);
+    AlignedHeapSegmentBase::cardTableCovering(cell)->dirtyCardForAddress(loc);
   }
 }
 

@@ -965,16 +965,34 @@ bool GCBase::shouldSanitizeHandles() {
     runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2); }); \
   }
 
-GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
-GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
-GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
-GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_2(
+    writeBarrier,
+    const GCCell *,
+    const GCHermesValue *,
+    HermesValue);
+GCBASE_BARRIER_2(
+    writeBarrier,
+    const GCCell *,
+    const GCSmallHermesValue *,
+    SmallHermesValue);
+GCBASE_BARRIER_2(
+    writeBarrier,
+    const GCCell *,
+    const GCPointerBase *,
+    const GCCell *);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
+    const GCCell *,
+    const GCHermesValue *,
+    HermesValue);
+GCBASE_BARRIER_2(
+    constructorWriteBarrier,
+    const GCCell *,
     const GCSmallHermesValue *,
     SmallHermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
+    const GCCell *,
     const GCPointerBase *,
     const GCCell *);
 GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
