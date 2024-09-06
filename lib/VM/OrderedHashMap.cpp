@@ -270,7 +270,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
     if (entry) {
       // Element for the key already exists, update value and return.
-      entry->value.set(shv, runtime.getHeap());
+      entry->value.set(shv, runtime.getHeap(), entry);
       return ExecutionStatus::RETURNED;
     }
   }
@@ -337,11 +337,11 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
   // call it and set to newMapEntry one at a time.
   auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
   auto k = SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
-  newMapEntry->key.set(k, runtime.getHeap());
+  newMapEntry->key.set(k, runtime.getHeap(), *newMapEntry);
   if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
     auto v =
         SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
-    newMapEntry->value.set(v, runtime.getHeap());
+    newMapEntry->value.set(v, runtime.getHeap(), *newMapEntry);
   }
 
   // After here, no allocation

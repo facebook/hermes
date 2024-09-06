@@ -1736,7 +1736,7 @@ template <SlotIndex index>
 inline void
 JSObject::setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc) {
   static_assert(index < DIRECT_PROPERTY_SLOTS, "Must be a direct property");
-  self->directProps()[index].set(value, gc);
+  self->directProps()[index].set(value, gc, self);
 }
 
 inline SmallHermesValue JSObject::getNamedSlotValueUnsafe(
@@ -1839,7 +1839,7 @@ inline void JSObject::setNamedSlotValueDirectUnsafe(
   // to namedSlotRef(), it is a slight performance regression, which is not
   // entirely unexpected.
   return self->directProps()[index].set<NeedsBarriers>(
-      value, runtime.getHeap());
+      value, runtime.getHeap(), self);
 }
 
 inline void JSObject::setNamedSlotValueIndirectUnsafe(

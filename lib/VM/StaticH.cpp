@@ -519,9 +519,10 @@ extern "C" void _sh_ljs_store_to_env(
     SHLegacyValue env,
     SHLegacyValue val,
     uint32_t index) {
-  vmcast<Environment>(HermesValue::fromRaw(env.raw))
-      ->slot(index)
-      .set(HermesValue::fromRaw(val.raw), getRuntime(shr).getHeap());
+  auto *environment = vmcast<Environment>(HermesValue::fromRaw(env.raw));
+
+  environment->slot(index).set(
+      HermesValue::fromRaw(val.raw), getRuntime(shr).getHeap(), environment);
 }
 
 extern "C" void _sh_ljs_store_np_to_env(

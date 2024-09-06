@@ -237,7 +237,8 @@ void JSObject::allocateNewSlotStorage(
   // If it is a direct property, just store the value and we are done.
   if (LLVM_LIKELY(newSlotIndex < DIRECT_PROPERTY_SLOTS)) {
     auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
-    selfHandle->directProps()[newSlotIndex].set(shv, runtime.getHeap());
+    selfHandle->directProps()[newSlotIndex].set(
+        shv, runtime.getHeap(), *selfHandle);
     return;
   }
 

@@ -151,7 +151,7 @@ class ArrayStorageBase final
   template <Inline inl = Inline::No>
   void set(size_type index, HVType val, GC &gc) {
     assert(index < size() && "index out of range");
-    data()[index].set(val, gc);
+    data()[index].set(val, gc, this);
   }
 
   /// \return the element at index \p index

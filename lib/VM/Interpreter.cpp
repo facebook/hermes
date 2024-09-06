@@ -2077,16 +2077,16 @@ tailCall:
       }
 
       CASE(StoreToEnvironment) {
-        vmcast<Environment>(O1REG(StoreToEnvironment))
-            ->slot(ip->iStoreToEnvironment.op2)
-            .set(O3REG(StoreToEnvironment), runtime.getHeap());
+        auto *environment = vmcast<Environment>(O1REG(StoreToEnvironment));
+        environment->slot(ip->iStoreToEnvironment.op2)
+            .set(O3REG(StoreToEnvironment), runtime.getHeap(), environment);
         ip = NEXTINST(StoreToEnvironment);
         DISPATCH;
       }
       CASE(StoreToEnvironmentL) {
-        vmcast<Environment>(O1REG(StoreToEnvironmentL))
-            ->slot(ip->iStoreToEnvironmentL.op2)
-            .set(O3REG(StoreToEnvironmentL), runtime.getHeap());
+        auto *environment = vmcast<Environment>(O1REG(StoreToEnvironmentL));
+        environment->slot(ip->iStoreToEnvironmentL.op2)
+            .set(O3REG(StoreToEnvironmentL), runtime.getHeap(), environment);
         ip = NEXTINST(StoreToEnvironmentL);
         DISPATCH;
       }
