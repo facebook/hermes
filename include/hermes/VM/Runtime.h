@@ -1861,6 +1861,15 @@ class NoAllocScope {
 using NoHandleScope = NoAllocScope;
 using NoRJSScope = NoAllocScope;
 
+class NoLeakHandleScope {
+ public:
+  explicit NoLeakHandleScope(Runtime &runtime) {}
+
+  NoLeakHandleScope(const NoLeakHandleScope &) = delete;
+  NoLeakHandleScope &operator=(const NoLeakHandleScope &) = delete;
+  NoLeakHandleScope(NoLeakHandleScope &&) = delete;
+  NoLeakHandleScope &operator=(NoLeakHandleScope &&) = delete;
+};
 #else
 
 /// RAII class to temporarily disallow allocation of something.
@@ -1938,6 +1947,28 @@ class NoRJSScope : public BaseNoScope {
   explicit NoRJSScope(Runtime &runtime) : BaseNoScope(&runtime.noRJSLevel_) {}
   using BaseNoScope::BaseNoScope;
   using BaseNoScope::operator=;
+};
+
+/// RAII class that ensures all handles allocated during its lifetime are freed
+/// before it is destroyed.
+class NoLeakHandleScope {
+  Runtime &runtime_;
+  size_t handleCount_;
+
+ public:
+  explicit NoLeakHandleScope(Runtime &runtime)
+      : runtime_(runtime),
+        handleCount_(runtime_.getTopGCScope()->getHandleCountDbg()) {}
+  ~NoLeakHandleScope() {
+    assert(
+        handleCount_ == runtime_.getTopGCScope()->getHandleCountDbg() &&
+        "Handle leak detected");
+  }
+
+  NoLeakHandleScope(const NoLeakHandleScope &) = delete;
+  NoLeakHandleScope &operator=(const NoLeakHandleScope &) = delete;
+  NoLeakHandleScope(NoLeakHandleScope &&) = delete;
+  NoLeakHandleScope &operator=(NoLeakHandleScope &&) = delete;
 };
 #endif
 

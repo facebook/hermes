@@ -139,6 +139,7 @@ class HandleRootOwner {
   uint32_t noHandleLevel_{0};
 
   friend class NoHandleScope;
+  friend class NoLeakHandleScope;
 #endif
 
   /// Allocate storage for a new PinnedHermesValue in the specified GCScope and
