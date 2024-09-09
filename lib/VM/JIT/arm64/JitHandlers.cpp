@@ -77,6 +77,24 @@ SHLegacyValue _interpreter_create_array_from_buffer(
   return res->getHermesValue();
 }
 
+/// Alternative to _sh_ljs_create_regexp that allows using the precompiled
+/// regexp bytecode.
+SHLegacyValue _interpreter_create_regexp(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHSymbolID patternID,
+    SHSymbolID flagsID,
+    uint32_t regexpID) {
+  Runtime &runtime = getRuntime(shr);
+  return Interpreter::createRegExp(
+             runtime,
+             (CodeBlock *)codeBlock,
+             SymbolID::unsafeCreate(patternID),
+             SymbolID::unsafeCreate(flagsID),
+             regexpID)
+      .getHermesValue();
+}
+
 /// Implementation of createFunctionEnvironment that takes the closure to get
 /// the parentEnvironment from.
 /// The native backend doesn't use createFunctionEnvironment.

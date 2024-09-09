@@ -742,6 +742,12 @@ class Emitter {
   void debugger();
   void throwInst(FR frInput);
 
+  void createRegExp(
+      FR frRes,
+      SHSymbolID patternID,
+      SHSymbolID flagsID,
+      uint32_t regexpID);
+
   void typedLoadParent(FR frRes, FR frObj);
   void typedStoreParent(FR frStoredValue, FR frObj);
 

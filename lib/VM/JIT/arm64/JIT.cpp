@@ -1048,6 +1048,19 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(AddS);
           break;
 
+        case inst::OpCode::CreateRegExp:
+          em.createRegExp(
+              FR(ip->iCreateRegExp.op1),
+              codeBlock->getRuntimeModule()
+                  ->getSymbolIDFromStringIDMayAllocate(ip->iCreateRegExp.op2)
+                  .unsafeGetRaw(),
+              codeBlock->getRuntimeModule()
+                  ->getSymbolIDFromStringIDMayAllocate(ip->iCreateRegExp.op3)
+                  .unsafeGetRaw(),
+              ip->iCreateRegExp.op4);
+          ip = NEXTINST(CreateRegExp);
+          break;
+
         default:
           if (crashOnError_) {
             llvh::errs() << "*** Unsupported instruction: "

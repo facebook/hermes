@@ -1716,6 +1716,32 @@ void Emitter::throwInst(FR frInput) {
   EMIT_RUNTIME_CALL(*this, void (*)(SHRuntime *, SHLegacyValue), _sh_throw);
 }
 
+void Emitter::createRegExp(
+    FR frRes,
+    SHSymbolID patternID,
+    SHSymbolID flagsID,
+    uint32_t regexpID) {
+  comment("// CreateRegExp r%u, %u, %u", frRes.index(), patternID, flagsID);
+
+  syncAllTempExcept(frRes);
+  freeAllTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
+  a.mov(a64::w2, patternID);
+  a.mov(a64::w3, flagsID);
+  a.mov(a64::w4, regexpID);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *, SHCodeBlock *, uint32_t, uint32_t, uint32_t),
+      _interpreter_create_regexp);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWReg<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHWReg(frRes, hwRes);
+}
+
 void Emitter::typedLoadParent(FR frRes, FR frObj) {
   comment("// TypedLoadParent r%u, r%u", frRes.index(), frObj.index());
 

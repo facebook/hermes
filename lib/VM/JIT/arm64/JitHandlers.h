@@ -8,6 +8,7 @@
 #pragma once
 
 #include "hermes/VM/sh_legacy_value.h"
+#include "hermes/VM/static_h.h"
 
 typedef struct SHRuntime SHRuntime;
 typedef struct SHRuntimeModule SHRuntimeModule;
@@ -45,6 +46,15 @@ SHLegacyValue _interpreter_create_array_from_buffer(
     unsigned numElements,
     unsigned numLiterals,
     unsigned bufferIndex);
+
+/// Alternative to _sh_ljs_create_regexp that allows using the precompiled
+/// regexp bytecode.
+SHLegacyValue _interpreter_create_regexp(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    uint32_t pattern,
+    uint32_t flags,
+    uint32_t regexpID);
 
 /// Implementation of createFunctionEnvironment that takes the closure to get
 /// the parentEnvironment from.

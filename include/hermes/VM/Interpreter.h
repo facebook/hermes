@@ -160,6 +160,17 @@ class Interpreter {
       unsigned numLiterals,
       unsigned bufferIndex);
 
+  /// Create a JSRegExp for the precompiled regexp bytecode.
+  /// \param patternID the pattern string.
+  /// \param flagsID the flags string.
+  /// \param regexpId the regexp bytecode ID.
+  static PseudoHandle<JSRegExp> createRegExp(
+      Runtime &runtime,
+      CodeBlock *curCodeBlock,
+      SymbolID patternID,
+      SymbolID flagsID,
+      uint32_t regexpId);
+
   /// Implements global variable declaration as per ES2023 16.1.7.10.a.i.
   /// \return ExecutionStatus::EXCEPTION if the global object cannot be
   /// expanded.
