@@ -435,6 +435,18 @@ class SemContext {
   /// Set the "declaration decl" of the specified identifier node.
   void setDeclarationDecl(ESTree::IdentifierNode *node, Decl *decl);
 
+  void setPromotedDecl(ESTree::IdentifierNode *node, Decl *decl) {
+    promotedFunctionGlobalDecls[node] = decl;
+  }
+
+  Decl *getPromotedDecl(ESTree::IdentifierNode *node) {
+    if (auto it = promotedFunctionGlobalDecls.find(node);
+        it != promotedFunctionGlobalDecls.end()) {
+      return it->second;
+    }
+    return nullptr;
+  }
+
   /// Set the "declaration decl" and the "expression decl" of the identifier
   /// node to the same value.
   void setBothDecl(ESTree::IdentifierNode *node, Decl *decl) {
@@ -490,6 +502,9 @@ class SemContext {
   /// "expression decl" are both set and are not the same value.
   llvh::DenseMap<ESTree::IdentifierNode *, Decl *>
       sideIdentifierDeclarationDecl_{};
+
+  llvh::DenseMap<ESTree::IdentifierNode *, Decl *>
+      promotedFunctionGlobalDecls{};
 };
 
 class SemContextDumper {

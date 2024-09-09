@@ -1783,6 +1783,22 @@ void SemanticResolver::validateAndDeclareIdentifier(
     }
   }
 
+  if (functionContext()->isIdentifierPromoted(ident)) {
+    decl = semCtx_.newDeclInScope(ident->_name, kind, curScope_);
+    bindingTable_.put(ident->_name, Binding{decl, ident});
+
+    // If promoted decl already exists, that means the identifier promoted to
+    // function level has already been processed, and we are processing block
+    // scope identifiers
+    if (semCtx_.getPromotedDecl(ident)) {
+      semCtx_.setDeclarationDecl(ident, decl);
+    } else {
+      semCtx_.setPromotedDecl(ident, decl);
+    }
+
+    return;
+  }
+
   // Create new decl.
   if (!decl) {
     if (Decl::isKindGlobal(kind))
