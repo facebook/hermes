@@ -425,6 +425,7 @@ class Emitter {
   void toNumber(FR frRes, FR frInput);
   void toNumeric(FR frRes, FR frInput);
   void toInt32(FR frRes, FR frInput);
+  void addEmptyString(FR frRes, FR frInput);
 
   void addS(FR frRes, FR frLeft, FR frRight);
   void mod(bool forceNumber, FR frRes, FR frLeft, FR frRight);

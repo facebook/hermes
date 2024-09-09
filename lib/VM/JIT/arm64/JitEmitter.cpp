@@ -71,6 +71,20 @@ void emit_sh_ljs_is_object(
   a.cmn(xTempReg, -HVTag_Object);
 }
 
+/// Emit code to check whether the input reg is a string, using the specified
+/// temp register. The input reg is not
+/// modified unless it is the same as the temp, which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_string(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert((int16_t)HVTag_Str == (int16_t)(-3) && "HV_TagStr must be -3");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits);
+  a.cmn(xTempReg, -HVTag_Str);
+}
+
 /// For a register \p inOut that contains a bool (i.e. either 0 or 1), turn it
 /// into a HermesValue boolean by adding the corresponding tag.
 void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
@@ -1264,6 +1278,57 @@ void Emitter::toInt32(FR frRes, FR frInput) {
              double (*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_to_int32_rjs);
          em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::addEmptyString(FR frRes, FR frInput) {
+  comment("// AddEmptyString r%u, r%u", frRes.index(), frInput.index());
+
+  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  // TODO: As with binary bit ops, it should be possible to only do this in the
+  // slow path.
+  syncToMem(frInput);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+  HWReg hwTemp = allocTempGpX();
+  freeReg(hwTemp);
+  freeAllTempExcept(frRes);
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+
+  // Check if the input is already a string and don't do anything.
+  emit_sh_ljs_is_string(a, hwTemp.a64GpX(), hwInput.a64GpX());
+  a.b_ne(slowPathLab);
+
+  // Fast path.
+  movHWReg<false>(hwRes, hwInput);
+  frUpdatedWithHWReg(frRes, hwRes, FRType::Pointer);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .frInput1 = frInput,
+       .hwRes = hwRes,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: AddEmptyString r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         EMIT_RUNTIME_CALL(
+             em,
+             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+             _sh_ljs_add_empty_string_rjs);
+         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }

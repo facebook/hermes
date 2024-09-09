@@ -171,6 +171,11 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           em.toInt32(FR(ip->iToInt32.op1), FR(ip->iToInt32.op2));
           ip = NEXTINST(ToInt32);
           break;
+        case inst::OpCode::AddEmptyString:
+          em.addEmptyString(
+              FR(ip->iAddEmptyString.op1), FR(ip->iAddEmptyString.op2));
+          ip = NEXTINST(AddEmptyString);
+          break;
 
         case inst::OpCode::Greater:
           em.greater(
