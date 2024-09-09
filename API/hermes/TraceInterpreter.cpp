@@ -456,6 +456,14 @@ Function TraceInterpreter::createHostFunction(
           const Value *args,
           size_t count) mutable -> Value {
         try {
+          // Javascript execution has invoked this host function,
+          // expecting the trace to contain records for the execution of
+          // the function.  If the trace is truncated, those records
+          // may not exist -- return early in that case.
+          if (nextExecIndex_ >= trace_.records().size()) {
+            return Value::undefined();
+          }
+
           const auto &rec = trace_.records()[nextExecIndex_];
           const auto &ctnr =
               record_cast<const SynthTrace::CallToNativeRecord>(*rec);
@@ -494,6 +502,15 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 
     Value get(Runtime &rt, const PropNameID &name) override {
       try {
+        // Javascript execution has invoked this host object getter,
+        // expecting the trace to contain records for the execution of
+        // the function.  If the trace is truncated, those records
+        // may not exist -- return early in that case.
+        if (interpreter_.nextExecIndex_ >=
+            interpreter_.trace_.records().size()) {
+          return Value::undefined();
+        }
+
         const auto &rec =
             interpreter_.trace_.records()[interpreter_.nextExecIndex_];
         const auto &gpnr =
@@ -517,6 +534,15 @@ Object TraceInterpreter::createHostObject(ObjectID objID) {
 
     void set(Runtime &rt, const PropNameID &name, const Value &value) override {
       try {
+        // Javascript execution has invoked this host object setter,
+        // expecting the trace to contain records for the execution of
+        // the function.  If the trace is truncated, those records
+        // may not exist -- return early in that case.
+        if (interpreter_.nextExecIndex_ >=
+            interpreter_.trace_.records().size()) {
+          return;
+        }
+
         const auto &rec =
             interpreter_.trace_.records()[interpreter_.nextExecIndex_];
         const auto &spnr =
