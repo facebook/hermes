@@ -3553,6 +3553,8 @@ void Emitter::jCond(
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
+    syncToMem(frLeft);
+    syncToMem(frRight);
   }
   // Do this always, since this could be the end of the BB.
   syncAllTempExcept(FR());
