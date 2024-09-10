@@ -338,10 +338,6 @@ void BytecodeModuleGenerator::collectStrings() {
     }
   }
 
-  if (options_.stripFunctionNames) {
-    strings.addString(kStrippedFunctionName, /* isIdentifier */ false);
-  }
-
   /// Add the original function source \p str to the \c strings table.
   /// If it's not ASCII, re-encode it using the string table's string literal
   /// encoding and map from the original source to the newly encoded source in
@@ -398,6 +394,17 @@ void BytecodeModuleGenerator::collectStrings() {
         strings.addString(cjsModule->filename.str(), /* isIdentifier */ false);
       }
     }
+  }
+
+  if (options_.stripFunctionNames) {
+    strings.addString(kStrippedFunctionName, /* isIdentifier */ true);
+    // Force the string table to treat the kStrippedFunctionName as very
+    // important, so that it gets a low string ID (under 256).
+    // Setting the number of identifier references to the maximum makes the
+    // string table sort it into the earliest frequency bucket it can.
+    // Do this _after_ all other strings have been collected to ensure nothing
+    // else increments/changes the number of identifier references.
+    strings.tryEnsure8BitStringIDForIdentifier(kStrippedFunctionName);
   }
 
   if (M_->getContext().isLazyCompilation()) {

@@ -114,6 +114,15 @@ class StringLiteralTable {
   /// identifier.
   void addString(llvh::StringRef str, bool isIdentifier);
 
+  /// Override the number of identifier references for the string at \p idx to
+  /// UINT32_MAX, allowing the user to give 8-bit string IDs to strings
+  /// that aren't added multiple times.
+  /// Used for 'function-name-stripped' to make sure its ID fits in the
+  /// SmallFunctionHeader in optimized HBC.
+  /// If 'str' is not an identifier or it's an existing string, this function
+  /// does nothing.
+  void tryEnsure8BitStringIDForIdentifier(llvh::StringRef str);
+
   /// Mode for storing new strings to the storage.
   enum class OptimizeMode {
     /// Do not perform any optimizations.

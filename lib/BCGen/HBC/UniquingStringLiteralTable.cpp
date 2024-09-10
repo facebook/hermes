@@ -7,6 +7,8 @@
 
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 
+#include "BytecodeGenerator.h"
+
 #include <cassert>
 
 namespace hermes {
@@ -88,7 +90,9 @@ void StringLiteralTable::addString(llvh::StringRef str, bool isIdentifier) {
     if (id >= existingStrings) {
       // We only track the frequency of new strings, so the ID needs to be
       // translated.
-      ++numIdentifierRefs_[id - existingStrings];
+      if (numIdentifierRefs_[id - existingStrings] != UINT32_MAX) {
+        ++numIdentifierRefs_[id - existingStrings];
+      }
     }
     return;
   }
@@ -115,9 +119,29 @@ void StringLiteralTable::addString(llvh::StringRef str, bool isIdentifier) {
     if (id >= existingStrings) {
       // We only track the frequency of new strings, so the ID needs to be
       // translated.
-      ++numIdentifierRefs_[id - existingStrings];
+      if (numIdentifierRefs_[id - existingStrings] != UINT32_MAX) {
+        ++numIdentifierRefs_[id - existingStrings];
+      }
     }
   }
+}
+
+void StringLiteralTable::tryEnsure8BitStringIDForIdentifier(
+    llvh::StringRef str) {
+  auto it = strings_.find(str);
+  if (it == strings_.end())
+    return;
+  uint32_t id = it->second;
+  if (!isIdentifier_[id])
+    return;
+  const size_t existingStrings = storage_.count();
+
+  // We only track the frequency of new strings, so the ID needs to be
+  // translated.
+  // If this is NOT a new string (i.e. id < existingStrings), then we can't
+  // do anything about its ID so we dont do anything.
+  if (id >= existingStrings)
+    numIdentifierRefs_[id - existingStrings] = UINT32_MAX;
 }
 
 void StringLiteralTable::populateStorage(
