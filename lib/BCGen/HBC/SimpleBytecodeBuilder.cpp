@@ -126,6 +126,8 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
           opcodeSize,
           functions_[i].paramCount,
           functions_[i].frameSize,
+          /* numberRegCount */ 0,
+          /* nonPtrRegCount */ 0,
           0,
           functions_[i].highestReadCacheIndex,
           functions_[i].highestWriteCacheIndex};
@@ -158,6 +160,8 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
           opcodeSize,
           functions_[i].paramCount,
           functions_[i].frameSize,
+          /* numberRegCount */ 0,
+          /* nonPtrRegCount */ 0,
           0,
           functions_[i].highestReadCacheIndex,
           functions_[i].highestWriteCacheIndex};

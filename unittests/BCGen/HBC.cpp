@@ -76,6 +76,12 @@ var obj = {a:1, b:2, c:3};
   ASSERT_EQ(BM->getLiteralValueBufferSize(), 13u);
 }
 
+TEST(HBCBytecodeGen, SmallFuncHeaderOffsetTest) {
+  // Ensure the roundtrip survives.
+  SmallFuncHeader small{0xdeadbeef};
+  ASSERT_EQ(small.getLargeHeaderOffset(), 0xdeadbeef);
+}
+
 // For the following 'easy' tests, exact duplicate literals are used. These will
 // always be de-duplicated, so we don't have to turn optimizations on.
 TEST(HBCBytecodeGen, EasyArrayDedupBufferTest) {

@@ -116,6 +116,8 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       funcGen.bytecodeSize_,
       F->getExpectedParamCountIncludingThis(),
       funcGen.frameSize_,
+      RA.getNumberRegCount(),
+      RA.getNonPtrRegCount(),
       nameID,
       funcGen.highestReadCacheIndex_,
       funcGen.highestWriteCacheIndex_};

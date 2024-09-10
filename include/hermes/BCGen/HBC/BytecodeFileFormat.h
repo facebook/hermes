@@ -259,8 +259,10 @@ static_assert(
   V(uint32_t, uint32_t, offset, 25)              \
   V(uint32_t, uint32_t, paramCount, 7)           \
   /* second word */                              \
-  V(uint32_t, uint32_t, bytecodeSizeInBytes, 15) \
-  V(uint32_t, uint32_t, functionName, 17)        \
+  V(uint32_t, uint32_t, bytecodeSizeInBytes, 14) \
+  V(uint32_t, uint32_t, functionName, 8)         \
+  V(uint32_t, uint32_t, numberRegCount, 5)       \
+  V(uint32_t, uint32_t, nonPtrRegCount, 5)       \
   /* third word, with flags below */             \
   V(uint32_t, uint8_t, frameSize, 8)             \
   V(uint8_t, uint8_t, highestReadCacheIndex, 8)  \
@@ -282,6 +284,8 @@ struct FunctionHeader {
       uint32_t size,
       uint32_t paramCount,
       uint32_t frameSize,
+      uint32_t numberRegCount,
+      uint32_t nonPtrRegCount,
       uint32_t functionNameID,
       uint8_t hiRCacheIndex,
       uint8_t hiWCacheIndex)
@@ -289,6 +293,8 @@ struct FunctionHeader {
         paramCount(paramCount),
         bytecodeSizeInBytes(size),
         functionName(functionNameID),
+        numberRegCount(numberRegCount),
+        nonPtrRegCount(nonPtrRegCount),
         frameSize(frameSize),
         highestReadCacheIndex(hiRCacheIndex),
         highestWriteCacheIndex(hiWCacheIndex) {}
@@ -333,8 +339,11 @@ struct SmallFuncHeader {
     std::memset(this, 0, sizeof(SmallFuncHeader)); // Avoid leaking junk.
     flags.overflowed = true;
     // Can use any fields to store the large offset; pick two big ones.
-    offset = largeHeaderOffset & 0xffff;
-    functionName = largeHeaderOffset >> 16;
+    offset = largeHeaderOffset & 0xffffff;
+    functionName = (largeHeaderOffset >> 24) & 0xff;
+    assert(
+        getLargeHeaderOffset() == largeHeaderOffset &&
+        "offset encoding is wrong");
   }
 
   /// Check if the fields in \p large will fit in a small header.
@@ -352,7 +361,7 @@ struct SmallFuncHeader {
   /// have overflowed.
   uint32_t getLargeHeaderOffset() const {
     assert(flags.overflowed);
-    return (functionName << 16) | offset;
+    return (functionName << 24) | offset;
   }
 };
 
