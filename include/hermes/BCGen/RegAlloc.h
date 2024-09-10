@@ -290,6 +290,16 @@ class RegisterAllocator {
   /// Holds the live interval of each instruction.
   llvh::SmallVector<Interval, 32> instructionInterval_;
 
+  /// How many registers are numbers.
+  /// Allocated regs [0, numberRegCount_).
+  /// Populated after reorderRegsByType.
+  uint32_t numberRegCount_ = 0;
+
+  /// How many registers are nonPointers.
+  /// Allocated regs [numberRegCount_, numberRegCount_ + nonPointerRegCount_).
+  /// Populated after reorderRegsByType.
+  uint32_t nonPtrRegCount_ = 0;
+
   /// Returns the last index allocated.
   unsigned getMaxInstrIndex() {
     return instructionsByNumbers_.size();
@@ -413,6 +423,26 @@ class RegisterAllocator {
   /// registers that were allocated during the lifetime of the program.
   virtual unsigned getMaxRegisterUsage() {
     return file.getMaxRegisterUsage();
+  }
+
+  /// \returns the number of registers that are allocated for numbers.
+  /// Allocated regs [0, numberRegCount).
+  uint32_t getNumberRegCount() const {
+    return numberRegCount_;
+  }
+  /// Set the numberRegCount.
+  void setNumberRegCount(uint32_t count) {
+    numberRegCount_ = count;
+  }
+
+  /// \returns the number of registers that are allocated for non-pointers.
+  /// Allocated regs [numberRegCount, numberRegCount + nonPointerRegCount).
+  uint32_t getNonPtrRegCount() const {
+    return nonPtrRegCount_;
+  }
+  /// Set the nonPtrRegCount.
+  void setNonPtrRegCount(uint32_t count) {
+    nonPtrRegCount_ = count;
   }
 };
 

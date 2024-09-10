@@ -24,6 +24,7 @@ add_hermes_library(hermesHBCBackend
   Passes/InsertProfilePoint.cpp
   Passes/OptParentEnvironment.cpp
   Passes/PeepholeLowering.cpp
+  Passes/ReorderRegisters.cpp
   LINK_OBJLIBS
   hermesBackend
   hermesInst

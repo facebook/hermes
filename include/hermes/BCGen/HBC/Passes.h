@@ -111,6 +111,12 @@ class SpillRegisters : public FunctionPass {
   ~SpillRegisters() override = default;
   bool runOnFunction(Function *F) override;
 
+  /// \return whether the register \p reg is a "short" register, false if the
+  /// register requires spilling.
+  static bool isShort(Register reg) {
+    return reg.getIndex() < boundary_;
+  }
+
  protected:
   HVMRegisterAllocator &RA_;
   /// The first "high" register.
@@ -123,9 +129,6 @@ class SpillRegisters : public FunctionPass {
   bool requiresShortOperand(Instruction *I, int op);
   bool modifiesOperandRegister(Instruction *I, int op);
 
-  bool isShort(Register reg) {
-    return reg.getIndex() < boundary_;
-  }
   Register getReserved(int i) {
     assert(i < reserved_ && "Using too many reserved regs.");
     return Register(i);

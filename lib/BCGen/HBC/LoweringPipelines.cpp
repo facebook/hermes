@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
 #include "hermes/BCGen/HBC/Passes/OptParentEnvironment.h"
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
+#include "hermes/BCGen/HBC/Passes/ReorderRegisters.h"
 #include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
@@ -93,6 +94,10 @@ void lowerAllocatedFunctionIR(
     HVMRegisterAllocator &RA,
     const BytecodeGenerationOptions &options) {
   PassManager PM("HBC LowerAllocatedFunctionIR");
+  if (options.optimizationEnabled) {
+    PM.addPass(new MovElimination(RA));
+    PM.addPass(new ReorderRegisters(RA));
+  }
   PM.addPass(new LowerStoreInstrs(RA));
   PM.addPass(new InitCallFrame(RA));
   if (options.optimizationEnabled) {
