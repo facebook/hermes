@@ -72,7 +72,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  Function ID 8 -> s0
 // CHECK-NEXT:  Function ID 9 -> s0
 
-// CHECK:Function<global>(1 params, 4 registers):
+// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r2, 0
 // CHECK-NEXT:    DeclareGlobalVar  "simpleReturn"
@@ -91,7 +91,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    PutByIdLoose      r3, r2, 3, "simpleAsyncFE"
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<simpleReturn>(1 params, 18 registers):
+// CHECK:NCFunction<simpleReturn>(1 params, 18 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0016, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r5
 // CHECK-NEXT:    Mov               r6, r5
@@ -106,7 +106,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Call4             r1, r1, r3, r4, r5, r6
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<simpleAwait>(1 params, 18 registers):
+// CHECK:NCFunction<simpleAwait>(1 params, 18 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r5
 // CHECK-NEXT:    Mov               r6, r5
@@ -121,7 +121,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Call4             r1, r1, r3, r4, r5, r6
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<simpleAsyncFE>(1 params, 18 registers):
+// CHECK:NCFunction<simpleAsyncFE>(1 params, 18 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r5
 // CHECK-NEXT:    Mov               r6, r5
@@ -136,7 +136,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Call4             r1, r1, r3, r4, r5, r6
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<?anon_0_simpleReturn>(1 params, 3 registers):
+// CHECK:NCFunction<?anon_0_simpleReturn>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 5
@@ -149,7 +149,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleReturn?inner>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<?anon_0_simpleAwait>(1 params, 3 registers):
+// CHECK:NCFunction<?anon_0_simpleAwait>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 7
@@ -162,7 +162,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAwait?inner>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<?anon_0_simpleAsyncFE>(1 params, 3 registers):
+// CHECK:NCFunction<?anon_0_simpleAsyncFE>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 7
@@ -175,7 +175,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAsyncFE?inner>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<?anon_0_simpleReturn?inner>(1 params, 17 registers):
+// CHECK:Function<?anon_0_simpleReturn?inner>(1 params, 17 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r5, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -245,7 +245,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_simpleAwait?inner>(1 params, 20 registers):
+// CHECK:Function<?anon_0_simpleAwait?inner>(1 params, 20 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x002b, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r5, 1
@@ -357,7 +357,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_simpleAsyncFE?inner>(1 params, 20 registers):
+// CHECK:Function<?anon_0_simpleAsyncFE?inner>(1 params, 20 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0037, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r5, 1

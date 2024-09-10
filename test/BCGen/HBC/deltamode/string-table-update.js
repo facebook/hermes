@@ -50,4 +50,4 @@ var ascii = 'hello how are you';
 //CHECK-NEXT:  i25[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: c
 //CHECK-NEXT:  i26[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key11
 //CHECK-NOT: string-table-update.js
-//CHECK-LABEL: Function<global>(1 params, 2 registers):
+//CHECK-LABEL: Function<global>({{.*}}):

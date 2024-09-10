@@ -34,7 +34,7 @@ function foo(fn, x) {
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 3 registers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
@@ -45,7 +45,7 @@ function foo(fn, x) {
 // CHECK-NEXT:    Mov               r1, r2
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<foo>(3 params, 18 registers):
+// CHECK:Function<foo>(3 params, 18 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    CreateEnvironment r3, r3, 2

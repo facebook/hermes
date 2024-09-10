@@ -23,38 +23,38 @@ function negzero(f) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  $Reg2 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "poszero": string
 // CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "negzero": string
-// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg0, %poszero(): functionCode
+// CHECK-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg2, %poszero(): functionCode
 // CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "poszero": string
-// CHECK-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg0, %negzero(): functionCode
-// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "negzero": string
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "poszero": string
+// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg2, %negzero(): functionCode
+// CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "negzero": string
+// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHECK-NEXT:function_end
 
 // CHECK:function poszero(f: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %f: any
-// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
-// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg0
-// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg0
-// CHECK-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, false: boolean, empty: any, $Reg1, $Reg1, $Reg0, $Reg0
-// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg0
+// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg2
+// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg2
+// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg0, $Reg0, $Reg2, $Reg2
+// CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHECK-NEXT:function_end
 
 // CHECK:function negzero(f: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg2 = LoadParamInst (:any) %f: any
-// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) -0: number
-// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg1
-// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg0
-// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg0
-// CHECK-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg2, empty: any, false: boolean, empty: any, $Reg1, $Reg1, $Reg0, $Reg0
-// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:number) -0: number
+// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg0
+// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg2
+// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg2
+// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg0, $Reg0, $Reg2, $Reg2
+// CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHECK-NEXT:function_end

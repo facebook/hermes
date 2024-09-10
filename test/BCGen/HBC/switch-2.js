@@ -100,27 +100,27 @@ function f(x) {
 // CHECK-NEXT:i1[ASCII, 0..0] #00019A16: g
 // CHECK-NEXT:i2[ASCII, 6..6] #00019E07: f
 
-// CHECK:Function<global>(1 params, 3 registers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 0<Reg8>, 0<UInt32>
+// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 2<Reg8>, 0<UInt32>
 // CHECK-NEXT:[@ 6] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 11] DeclareGlobalVar 2<UInt32>
-// CHECK-NEXT:[@ 16] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 16] CreateClosure 0<Reg8>, 2<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 21] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 23] PutByIdStrict 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 29] CreateClosure 0<Reg8>, 0<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 34] PutByIdStrict 1<Reg8>, 0<Reg8>, 2<UInt8>, 2<UInt16>
-// CHECK-NEXT:[@ 40] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 42] Ret 0<Reg8>
+// CHECK-NEXT:[@ 23] PutByIdStrict 1<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 29] CreateClosure 2<Reg8>, 2<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 34] PutByIdStrict 1<Reg8>, 2<Reg8>, 2<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 40] LoadConstUndefined 2<Reg8>
+// CHECK-NEXT:[@ 42] Ret 2<Reg8>
 
-// CHECK:Function<g>(1 params, 1 registers):
+// CHECK:Function<g>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:[@ 0] LoadConstUndefined 0<Reg8>
 // CHECK-NEXT:[@ 2] Ret 0<Reg8>
 
-// CHECK:Function<f>(2 params, 11 registers):
+// CHECK:Function<f>(2 params, 11 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 0<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] SwitchImm 0<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
+// CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 3] SwitchImm 2<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
 // CHECK-NEXT:[@ 21] LoadConstInt 1<Reg8>, 3352<Imm32>
 // CHECK-NEXT:[@ 27] Ret 1<Reg8>
 // CHECK-NEXT:[@ 29] LoadConstInt 1<Reg8>, 3523<Imm32>
@@ -146,9 +146,9 @@ function f(x) {
 // CHECK-NEXT:[@ 109] LoadConstInt 1<Reg8>, 362<Imm32>
 // CHECK-NEXT:[@ 115] Ret 1<Reg8>
 // CHECK-NEXT:[@ 117] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 119] GetByIdShort 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 119] GetByIdShort 0<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 124] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 126] Call1 1<Reg8>, 2<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 126] Call1 1<Reg8>, 0<Reg8>, 1<Reg8>
 // CHECK-NEXT:[@ 130] LoadConstInt 1<Reg8>, 342<Imm32>
 // CHECK-NEXT:[@ 136] Ret 1<Reg8>
 // CHECK-NEXT:[@ 138] LoadConstUInt8 1<Reg8>, 132<UInt8>
@@ -159,38 +159,38 @@ function f(x) {
 // CHECK-NEXT:[@ 157] Ret 1<Reg8>
 // CHECK-NEXT:[@ 159] LoadConstUInt8 1<Reg8>, 32<UInt8>
 // CHECK-NEXT:[@ 162] Ret 1<Reg8>
-// CHECK-NEXT:[@ 164] SwitchImm 0<Reg8>, 199<UInt32>, 116<Addr32>, 1<UInt32>, 14<UInt32>
-// CHECK-NEXT:[@ 182] LoadConstInt 0<Reg8>, 3342<Imm32>
-// CHECK-NEXT:[@ 188] Ret 0<Reg8>
-// CHECK-NEXT:[@ 190] LoadConstInt 0<Reg8>, 3254<Imm32>
-// CHECK-NEXT:[@ 196] Ret 0<Reg8>
-// CHECK-NEXT:[@ 198] LoadConstInt 0<Reg8>, 3243<Imm32>
-// CHECK-NEXT:[@ 204] Ret 0<Reg8>
-// CHECK-NEXT:[@ 206] LoadConstInt 0<Reg8>, 2332<Imm32>
-// CHECK-NEXT:[@ 212] Ret 0<Reg8>
-// CHECK-NEXT:[@ 214] LoadConstInt 0<Reg8>, 3211<Imm32>
-// CHECK-NEXT:[@ 220] Ret 0<Reg8>
-// CHECK-NEXT:[@ 222] LoadConstInt 0<Reg8>, 3642<Imm32>
-// CHECK-NEXT:[@ 228] Ret 0<Reg8>
-// CHECK-NEXT:[@ 230] LoadConstInt 0<Reg8>, 2332<Imm32>
-// CHECK-NEXT:[@ 236] Ret 0<Reg8>
-// CHECK-NEXT:[@ 238] GetGlobalObject 0<Reg8>
-// CHECK-NEXT:[@ 240] GetByIdShort 1<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 245] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 247] Call1 0<Reg8>, 1<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 251] LoadConstInt 0<Reg8>, 342<Imm32>
-// CHECK-NEXT:[@ 257] Ret 0<Reg8>
-// CHECK-NEXT:[@ 259] LoadConstUInt8 0<Reg8>, 132<UInt8>
-// CHECK-NEXT:[@ 262] Ret 0<Reg8>
-// CHECK-NEXT:[@ 264] LoadConstInt 0<Reg8>, 322<Imm32>
-// CHECK-NEXT:[@ 270] Ret 0<Reg8>
-// CHECK-NEXT:[@ 272] LoadConstInt 0<Reg8>, 342<Imm32>
-// CHECK-NEXT:[@ 278] Ret 0<Reg8>
-// CHECK-NEXT:[@ 280] GetGlobalObject 0<Reg8>
-// CHECK-NEXT:[@ 282] GetByIdShort 1<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 287] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 289] Call1 1<Reg8>, 1<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 293] Ret 0<Reg8>
+// CHECK-NEXT:[@ 164] SwitchImm 2<Reg8>, 199<UInt32>, 116<Addr32>, 1<UInt32>, 14<UInt32>
+// CHECK-NEXT:[@ 182] LoadConstInt 2<Reg8>, 3342<Imm32>
+// CHECK-NEXT:[@ 188] Ret 2<Reg8>
+// CHECK-NEXT:[@ 190] LoadConstInt 2<Reg8>, 3254<Imm32>
+// CHECK-NEXT:[@ 196] Ret 2<Reg8>
+// CHECK-NEXT:[@ 198] LoadConstInt 2<Reg8>, 3243<Imm32>
+// CHECK-NEXT:[@ 204] Ret 2<Reg8>
+// CHECK-NEXT:[@ 206] LoadConstInt 2<Reg8>, 2332<Imm32>
+// CHECK-NEXT:[@ 212] Ret 2<Reg8>
+// CHECK-NEXT:[@ 214] LoadConstInt 2<Reg8>, 3211<Imm32>
+// CHECK-NEXT:[@ 220] Ret 2<Reg8>
+// CHECK-NEXT:[@ 222] LoadConstInt 2<Reg8>, 3642<Imm32>
+// CHECK-NEXT:[@ 228] Ret 2<Reg8>
+// CHECK-NEXT:[@ 230] LoadConstInt 2<Reg8>, 2332<Imm32>
+// CHECK-NEXT:[@ 236] Ret 2<Reg8>
+// CHECK-NEXT:[@ 238] GetGlobalObject 2<Reg8>
+// CHECK-NEXT:[@ 240] GetByIdShort 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 245] LoadConstUndefined 2<Reg8>
+// CHECK-NEXT:[@ 247] Call1 2<Reg8>, 1<Reg8>, 2<Reg8>
+// CHECK-NEXT:[@ 251] LoadConstInt 2<Reg8>, 342<Imm32>
+// CHECK-NEXT:[@ 257] Ret 2<Reg8>
+// CHECK-NEXT:[@ 259] LoadConstUInt8 2<Reg8>, 132<UInt8>
+// CHECK-NEXT:[@ 262] Ret 2<Reg8>
+// CHECK-NEXT:[@ 264] LoadConstInt 2<Reg8>, 322<Imm32>
+// CHECK-NEXT:[@ 270] Ret 2<Reg8>
+// CHECK-NEXT:[@ 272] LoadConstInt 2<Reg8>, 342<Imm32>
+// CHECK-NEXT:[@ 278] Ret 2<Reg8>
+// CHECK-NEXT:[@ 280] GetGlobalObject 2<Reg8>
+// CHECK-NEXT:[@ 282] GetByIdShort 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 287] LoadConstUndefined 2<Reg8>
+// CHECK-NEXT:[@ 289] Call1 1<Reg8>, 1<Reg8>, 2<Reg8>
+// CHECK-NEXT:[@ 293] Ret 2<Reg8>
 
 // CHECK: Jump Tables:
 // CHECK-NEXT:  offset 292

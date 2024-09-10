@@ -355,4 +355,4 @@ try{}catch(a){}
 try{}catch(a){}
 try{}catch(a){}
 
-//CHECK-LABEL:Function<global>(1 params, {{[0-9]+}} registers):
+//CHECK-LABEL:Function<global>(1 params, {{[0-9]+}} registers, {{.*}}):

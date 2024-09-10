@@ -50,54 +50,54 @@ print(bench(4e6, 100))
 // CHECK-NEXT:i1[ASCII, 6..10] #20300996: bench
 // CHECK-NEXT:i2[ASCII, 11..15] #A689F65B: print
 
-// CHECK:Function<global>(1 params, 15 registers):
+// CHECK:Function<global>(1 params, 15 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "bench"
-// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
-// CHECK-NEXT:    CreateClosure     r1, r0, Function<bench>
-// CHECK-NEXT:    GetGlobalObject   r0
-// CHECK-NEXT:    PutByIdStrict     r0, r1, 1, "bench"
-// CHECK-NEXT:    TryGetById        r2, r0, 1, "print"
-// CHECK-NEXT:    GetByIdShort      r4, r0, 2, "bench"
-// CHECK-NEXT:    LoadConstUndefined r1
-// CHECK-NEXT:    LoadConstInt      r3, 4000000
-// CHECK-NEXT:    LoadConstUInt8    r0, 100
-// CHECK-NEXT:    Call3             r0, r4, r1, r3, r0
-// CHECK-NEXT:    Call2             r0, r2, r1, r0
-// CHECK-NEXT:    Ret               r0
+// CHECK-NEXT:    CreateTopLevelEnvironment r4, 0
+// CHECK-NEXT:    CreateClosure     r3, r4, Function<bench>
+// CHECK-NEXT:    GetGlobalObject   r4
+// CHECK-NEXT:    PutByIdStrict     r4, r3, 1, "bench"
+// CHECK-NEXT:    TryGetById        r2, r4, 1, "print"
+// CHECK-NEXT:    GetByIdShort      r1, r4, 2, "bench"
+// CHECK-NEXT:    LoadConstUndefined r3
+// CHECK-NEXT:    LoadConstInt      r0, 4000000
+// CHECK-NEXT:    LoadConstUInt8    r4, 100
+// CHECK-NEXT:    Call3             r4, r1, r3, r0, r4
+// CHECK-NEXT:    Call2             r4, r2, r3, r4
+// CHECK-NEXT:    Ret               r4
 
-// CHECK:Function<bench>(3 params, 14 registers):
+// CHECK:Function<bench>(3 params, 14 registers, 10 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r0, 1
-// CHECK-NEXT:    ToNumber          r0, r0
-// CHECK-NEXT:    LoadParam         r1, 2
-// CHECK-NEXT:    ToNumber          r6, r1
-// CHECK-NEXT:    LoadConstUInt8    r5, 1
-// CHECK-NEXT:    SubN              r4, r0, r5
-// CHECK-NEXT:    LoadConstZero     r3
-// CHECK-NEXT:    SubN              r2, r6, r5
-// CHECK-NEXT:    LoadConstZero     r1
-// CHECK-NEXT:    LoadConstZero     r0
-// CHECK-NEXT:    JNotGreaterEqualN L1, r4, r0
+// CHECK-NEXT:    LoadParam         r11, 1
+// CHECK-NEXT:    ToNumber          r11, r11
+// CHECK-NEXT:    LoadParam         r10, 2
+// CHECK-NEXT:    ToNumber          r5, r10
+// CHECK-NEXT:    LoadConstUInt8    r6, 1
+// CHECK-NEXT:    SubN              r7, r11, r6
+// CHECK-NEXT:    LoadConstZero     r8
+// CHECK-NEXT:    SubN              r9, r5, r6
+// CHECK-NEXT:    LoadConstZero     r10
+// CHECK-NEXT:    LoadConstZero     r11
+// CHECK-NEXT:    JNotGreaterEqualN L1, r7, r11
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    Mov               r9, r1
-// CHECK-NEXT:    Mov               r7, r4
-// CHECK-NEXT:    Mov               r11, r6
-// CHECK-NEXT:    Mov               r8, r11
-// CHECK-NEXT:    Mov               r10, r2
-// CHECK-NEXT:    JNotGreaterN      L2, r10, r5
+// CHECK-NEXT:    Mov               r2, r10
+// CHECK-NEXT:    Mov               r4, r7
+// CHECK-NEXT:    Mov               r0, r5
+// CHECK-NEXT:    Mov               r3, r0
+// CHECK-NEXT:    Mov               r1, r9
+// CHECK-NEXT:    JNotGreaterN      L2, r1, r6
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    MulN              r11, r11, r10
-// CHECK-NEXT:    SubN              r10, r10, r5
-// CHECK-NEXT:    Mov               r8, r11
-// CHECK-NEXT:    JGreaterN         L3, r10, r5
+// CHECK-NEXT:    MulN              r0, r0, r1
+// CHECK-NEXT:    SubN              r1, r1, r6
+// CHECK-NEXT:    Mov               r3, r0
+// CHECK-NEXT:    JGreaterN         L3, r1, r6
 // CHECK-NEXT:L2:
-// CHECK-NEXT:    AddN              r1, r9, r8
-// CHECK-NEXT:    SubN              r4, r7, r5
-// CHECK-NEXT:    Mov               r0, r1
-// CHECK-NEXT:    JGreaterEqualN    L4, r4, r3
+// CHECK-NEXT:    AddN              r10, r2, r3
+// CHECK-NEXT:    SubN              r7, r4, r6
+// CHECK-NEXT:    Mov               r11, r10
+// CHECK-NEXT:    JGreaterEqualN    L4, r7, r8
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    Ret               r0
+// CHECK-NEXT:    Ret               r11
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}interp-dispatch.js

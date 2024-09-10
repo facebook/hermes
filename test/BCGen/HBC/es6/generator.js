@@ -66,7 +66,7 @@ function *args() {
 // CHECK-NEXT:  Function ID 3 -> s0
 // CHECK-NEXT:  Function ID 4 -> s0
 
-// CHECK:Function<global>(1 params, 4 registers):
+// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "loop"
@@ -81,7 +81,7 @@ function *args() {
 // CHECK-NEXT:    Mov               r1, r2
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<loop>(2 params, 3 registers):
+// CHECK:NCFunction<loop>(2 params, 3 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 8
@@ -96,7 +96,7 @@ function *args() {
 // CHECK-NEXT:    CreateGenerator   r1, r1, Function<loop?inner>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<args>(1 params, 4 registers):
+// CHECK:NCFunction<args>(1 params, 4 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 7
@@ -113,7 +113,7 @@ function *args() {
 // CHECK-NEXT:    CreateGenerator   r1, r1, Function<args?inner>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<loop?inner>(2 params, 22 registers):
+// CHECK:Function<loop?inner>(2 params, 22 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r5, 1
@@ -242,7 +242,7 @@ function *args() {
 // CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<args?inner>(1 params, 20 registers):
+// CHECK:Function<args?inner>(1 params, 20 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r5, 1

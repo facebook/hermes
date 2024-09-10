@@ -45,56 +45,56 @@ function test1() {
 // CHECK-NEXT:i3[ASCII, 14..18] #13935A76: test1
 // CHECK-NEXT:i4[ASCII, 19..24] #50223B1A: random
 
-// CHECK:Function<global>(1 params, 2 registers):
+// CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "test1"
-// CHECK-NEXT:    CreateTopLevelEnvironment r0, 0
-// CHECK-NEXT:    CreateClosure     r1, r0, Function<test1>
-// CHECK-NEXT:    GetGlobalObject   r0
-// CHECK-NEXT:    PutByIdLoose      r0, r1, 1, "test1"
-// CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    Ret               r0
-
-// CHECK:Function<test1>(1 params, 18 registers):
-// CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0000
-// CHECK-NEXT:    LoadConstUInt8    r5, 1
+// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateClosure     r0, r1, Function<test1>
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    LoadConstUInt8    r4, 5
-// CHECK-NEXT:    LoadConstUInt8    r3, 3
-// CHECK-NEXT:    LoadConstZero     r6
+// CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "test1"
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    AsyncBreakCheck
+// CHECK-NEXT:    Ret               r1
+
+// CHECK:Function<test1>(1 params, 18 registers, 4 numbers, 1 non-pointers):
+// CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0000
+// CHECK-NEXT:    LoadConstUInt8    r2, 1
+// CHECK-NEXT:    GetGlobalObject   r8
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    LoadConstUInt8    r3, 5
+// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    LoadConstZero     r0
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    TryGetById        r7, r1, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r2, r7, 2, "random"
-// CHECK-NEXT:    Call1             r7, r2, r7
-// CHECK-NEXT:    Mov               r2, r6
+// CHECK-NEXT:    TryGetById        r6, r8, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r7, r6, 2, "random"
+// CHECK-NEXT:    Call1             r6, r7, r6
+// CHECK-NEXT:    Mov               r7, r0
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JStrictEqual      L1, r7, r3
-// CHECK-NEXT:    TryGetById        r8, r1, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r7, r8, 2, "random"
-// CHECK-NEXT:    Call1             r7, r7, r8
-// CHECK-NEXT:    JStrictEqual      L2, r7, r4
-// CHECK-NEXT:    AddN              r6, r2, r5
+// CHECK-NEXT:    JStrictEqual      L1, r6, r1
+// CHECK-NEXT:    TryGetById        r5, r8, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r6, r5, 2, "random"
+// CHECK-NEXT:    Call1             r6, r6, r5
+// CHECK-NEXT:    JStrictEqual      L2, r6, r3
+// CHECK-NEXT:    AddN              r0, r7, r2
 // CHECK-NEXT:    Jmp               L3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadConstUInt8    r4, 10
-// CHECK-NEXT:    Mov               r3, r2
-// CHECK-NEXT:    Mov               r2, r3
-// CHECK-NEXT:    JNotGreaterN      L4, r2, r4
+// CHECK-NEXT:    LoadConstUInt8    r3, 10
+// CHECK-NEXT:    Mov               r1, r7
+// CHECK-NEXT:    Mov               r7, r1
+// CHECK-NEXT:    JNotGreaterN      L4, r7, r3
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    SubN              r3, r3, r5
-// CHECK-NEXT:    Mov               r2, r3
+// CHECK-NEXT:    SubN              r1, r1, r2
+// CHECK-NEXT:    Mov               r7, r1
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JGreaterN         L5, r2, r4
+// CHECK-NEXT:    JGreaterN         L5, r7, r3
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    TryGetById        r1, r1, 3, "print"
-// CHECK-NEXT:    Call2             r1, r1, r0, r2
-// CHECK-NEXT:    Ret               r0
+// CHECK-NEXT:    TryGetById        r8, r8, 3, "print"
+// CHECK-NEXT:    Call2             r8, r8, r4, r7
+// CHECK-NEXT:    Ret               r4
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}debuggercheckbreak.js

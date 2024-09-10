@@ -12,9 +12,9 @@ print("hello");
 //CHECK-LABEL:{{.*}}: file format HBC-{{.*}}
 //CHECK-LABEL:Disassembly of section .text:
 //CHECK-LABEL:00000000000000b4 <_0>:
-//CHECK-NEXT:000000b4:{{.*}}GetGlobalObject {{.*}}%r0
-//CHECK-NEXT:000000b6:{{.*}}TryGetById {{.*}}%r2, %r0, $0x1, $0x02
-//CHECK-NEXT:000000bc:{{.*}}LoadConstUndefined {{.*}}%r1
-//CHECK-NEXT:000000be:{{.*}}LoadConstString {{.*}}%r0, $0x01
-//CHECK-NEXT:000000c2:{{.*}}Call2 {{.*}}%r0, %r2, %r1, %r0
-//CHECK-NEXT:000000c7:{{.*}}Ret {{.*}}%r0
+//CHECK-NEXT:000000b4:{{.*}}GetGlobalObject {{.*}}%r2
+//CHECK-NEXT:000000b6:{{.*}}TryGetById {{.*}}%r1, %r2, $0x1, $0x02
+//CHECK-NEXT:000000bc:{{.*}}LoadConstUndefined {{.*}}%r0
+//CHECK-NEXT:000000be:{{.*}}LoadConstString {{.*}}%r2, $0x01
+//CHECK-NEXT:000000c2:{{.*}}Call2 {{.*}}%r2, %r1, %r0, %r2
+//CHECK-NEXT:000000c7:{{.*}}Ret {{.*}}%r2

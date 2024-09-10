@@ -31,23 +31,23 @@ var z = [{}];
 //CHECK-NEXT:[String 0]
 
 //CHECK-LABEL:Function<global>{{.*}}:
-//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-//CHECK-NEXT:    DeclareGlobalVar  "x"
-//CHECK-NEXT:    DeclareGlobalVar  "y"
+//CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000               
+//CHECK-NEXT:    DeclareGlobalVar  "x"                                          
+//CHECK-NEXT:    DeclareGlobalVar  "y"                                          
 //CHECK-NEXT:    DeclareGlobalVar  "z"
-//CHECK-NEXT:    NewArrayWithBuffer r1, 6, 4, 0
+//CHECK-NEXT:    NewArrayWithBuffer r3, 6, 4, 0
 //CHECK-NEXT:    LoadConstUndefined r0
-//CHECK-NEXT:    PutOwnByIndex     r1, r0, 4
+//CHECK-NEXT:    PutOwnByIndex     r3, r0, 4
 //CHECK-NEXT:    LoadConstNull     r2
-//CHECK-NEXT:    PutOwnByIndex     r1, r2, 5
+//CHECK-NEXT:    PutOwnByIndex     r3, r2, 5
 //CHECK-NEXT:    GetGlobalObject   r2
-//CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "x"
-//CHECK-NEXT:    NewArrayWithBuffer r1, 5, 3, 11
-//CHECK-NEXT:    LoadConstUInt8    r3, 5
-//CHECK-NEXT:    PutByIdLoose      r1, r3, 2, "length"
-//CHECK-NEXT:    PutByIdLoose      r2, r1, 3, "y"
-//CHECK-NEXT:    NewArray          r1, 1
-//CHECK-NEXT:    NewObject         r3
-//CHECK-NEXT:    PutOwnByIndex     r1, r3, 0
-//CHECK-NEXT:    PutByIdLoose      r2, r1, 4, "z"
+//CHECK-NEXT:    PutByIdLoose      r2, r3, 1, "x"
+//CHECK-NEXT:    NewArrayWithBuffer r3, 5, 3, 11
+//CHECK-NEXT:    LoadConstUInt8    r1, 5
+//CHECK-NEXT:    PutByIdLoose      r3, r1, 2, "length"
+//CHECK-NEXT:    PutByIdLoose      r2, r3, 3, "y"
+//CHECK-NEXT:    NewArray          r3, 1
+//CHECK-NEXT:    NewObject         r1
+//CHECK-NEXT:    PutOwnByIndex     r3, r1, 0
+//CHECK-NEXT:    PutByIdLoose      r2, r3, 4, "z"
 //CHECK-NEXT:    Ret               r0

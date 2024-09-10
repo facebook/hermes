@@ -71,30 +71,30 @@ function foo(x) {
 
 // CHKOPT:function global(): undefined
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "a": string
-// CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "b": string
-// CHKOPT-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
-// CHKOPT-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKOPT-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
-// CHKOPT-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
-// CHKOPT-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
-// CHKOPT-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKOPT-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHKOPT-NEXT:  $Reg1 = DeclareGlobalVarInst "a": string
+// CHKOPT-NEXT:  $Reg1 = DeclareGlobalVarInst "b": string
+// CHKOPT-NEXT:  $Reg1 = DeclareGlobalVarInst "foo": string
+// CHKOPT-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKOPT-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg1, %foo(): functionCode
+// CHKOPT-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
+// CHKOPT-NEXT:  $Reg1 = StorePropertyLooseInst $Reg0, $Reg1, "foo": string
+// CHKOPT-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKOPT-NEXT:  $Reg1 = ReturnInst $Reg1
 // CHKOPT-NEXT:function_end
 
 // CHKOPT:function foo(x: any): undefined
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  $Reg1 = HBCLoadConstInst (:number) 10: number
-// CHKOPT-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
-// CHKOPT-NEXT:  $Reg2 = LoadParamInst (:any) %x: any
-// CHKOPT-NEXT:  $Reg2 = CondBranchInst $Reg2, %BB1, %BB2
+// CHKOPT-NEXT:  $Reg0 = HBCLoadConstInst (:number) 10: number
+// CHKOPT-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
+// CHKOPT-NEXT:  $Reg1 = LoadParamInst (:any) %x: any
+// CHKOPT-NEXT:  $Reg1 = CondBranchInst $Reg1, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
-// CHKOPT-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "a": string
-// CHKOPT-NEXT:  $Reg0 = BranchInst %BB3
-// CHKOPT-NEXT:%BB2:
-// CHKOPT-NEXT:  $Reg2 = StorePropertyLooseInst $Reg1, $Reg0, "b": string
+// CHKOPT-NEXT:  $Reg2 = StorePropertyLooseInst $Reg0, $Reg2, "a": string
 // CHKOPT-NEXT:  $Reg2 = BranchInst %BB3
+// CHKOPT-NEXT:%BB2:
+// CHKOPT-NEXT:  $Reg1 = StorePropertyLooseInst $Reg0, $Reg2, "b": string
+// CHKOPT-NEXT:  $Reg1 = BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
-// CHKOPT-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKOPT-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHKOPT-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKOPT-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHKOPT-NEXT:function_end
