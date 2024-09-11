@@ -89,6 +89,7 @@ void JSParserImpl::initializeIdentifiers() {
   keyofIdent_ = lexer_.getIdentifier("keyof");
   declareIdent_ = lexer_.getIdentifier("declare");
   protoIdent_ = lexer_.getIdentifier("proto");
+  prototypeIdent_ = lexer_.getIdentifier("prototype");
   opaqueIdent_ = lexer_.getIdentifier("opaque");
   plusIdent_ = lexer_.getIdentifier("plus");
   minusIdent_ = lexer_.getIdentifier("minus");
@@ -5041,6 +5042,11 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           new (context_) ESTree::TSModifiersNode(accessibility, readonly);
     }
 #endif
+    if (isStatic && propName == prototypeIdent_) {
+      error(
+          prop->getSourceRange(),
+          "Static class properties cannot be named 'prototype'");
+    }
     return setLocation(
         startRange,
         getPrevTokenEndLoc(),
@@ -5161,7 +5167,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   }
 #endif
 
-  if (isStatic && propName && propName->str() == "prototype") {
+  if (isStatic && propName == prototypeIdent_) {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
     error(
