@@ -833,8 +833,10 @@ class Emitter {
 
   void spillTempReg(HWReg toSpill);
   void syncToMem(FR fr);
-  void syncAllTempExcept(FR exceptFR);
-  void freeAllTempExcept(FR exceptFR);
+  void syncAllFRTempExcept(FR exceptFR);
+
+  /// Free all temporary registers associated with FRs except \p exceptFR.
+  void freeAllFRTempExcept(FR exceptFR);
 
   /// Free any temporary register associated with \p FR.
   void freeFRTemp(FR fr);

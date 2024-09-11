@@ -288,8 +288,8 @@ void Emitter::assertPostInstructionInvariants() {
 #endif
 
 void Emitter::newBasicBlock(const asmjit::Label &label) {
-  syncAllTempExcept({});
-  freeAllTempExcept({});
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
 
   // Clear all local types and regs when starting a new basic block.
   // TODO: there must be a faster way to do this when there are many regs.
@@ -670,7 +670,7 @@ void Emitter::syncToMem(FR fr) {
   _storeHWRegToFrame(fr, hwReg);
 }
 
-void Emitter::syncAllTempExcept(FR exceptFR) {
+void Emitter::syncAllFRTempExcept(FR exceptFR) {
   for (unsigned i = kGPTemp.first; i <= kGPTemp.second; ++i) {
     HWReg hwReg(i, HWReg::GpX{});
     FR fr = hwRegs_[hwReg.combinedIndex()].contains;
@@ -722,7 +722,7 @@ void Emitter::syncAllTempExcept(FR exceptFR) {
   }
 }
 
-void Emitter::freeAllTempExcept(FR exceptFR) {
+void Emitter::freeAllFRTempExcept(FR exceptFR) {
   for (unsigned i = kGPTemp.first; i <= kGPTemp.second; ++i) {
     HWReg hwReg(i, HWReg::GpX{});
     FR fr = hwRegs_[hwReg.combinedIndex()].contains;
@@ -1098,8 +1098,8 @@ void Emitter::loadConstString(
     uint32_t stringID) {
   comment("// LoadConstString r%u, stringID %u", frRes.index(), stringID);
 
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadBits64InGp(a64::x1, (uint64_t)runtimeModule, "RuntimeModule");
@@ -1122,7 +1122,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
   HWReg hwRes, hwInput;
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
-  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   syncToMem(frInput);
 
   hwInput = getOrAllocFRInGpX(frInput, true);
@@ -1137,7 +1137,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
   }
   frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
 
-  freeAllTempExcept(frRes);
+  freeAllFRTempExcept(frRes);
   a.bind(contLab);
 
   slowPaths_.push_back(
@@ -1172,7 +1172,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
   HWReg hwRes, hwInput;
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
-  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   syncToMem(frInput);
 
   hwInput = getOrAllocFRInGpX(frInput, true);
@@ -1187,7 +1187,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
   }
   frUpdatedWithHWReg(frRes, hwRes, FRType::UnknownPtr);
 
-  freeAllTempExcept(frRes);
+  freeAllFRTempExcept(frRes);
   a.bind(contLab);
 
   slowPaths_.push_back(
@@ -1220,7 +1220,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
   HWReg hwTempGpX = allocTempGpX();
   HWReg hwTempVecD = allocTempVecD();
 
-  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
   syncToMem(frInput);
@@ -1242,7 +1242,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
   a.b_ne(slowPathLab);
 
   // Done allocating registers. Free them all and allocate the result.
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   freeReg(hwTempGpX);
   freeReg(hwTempVecD);
   HWReg hwRes = getOrAllocFRInVecD(frRes, false);
@@ -1282,7 +1282,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
 void Emitter::addEmptyString(FR frRes, FR frInput) {
   comment("// AddEmptyString r%u, r%u", frRes.index(), frInput.index());
 
-  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
   syncToMem(frInput);
@@ -1293,7 +1293,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
   HWReg hwInput = getOrAllocFRInGpX(frInput, true);
   HWReg hwTemp = allocTempGpX();
   freeReg(hwTemp);
-  freeAllTempExcept(frRes);
+  freeAllFRTempExcept(frRes);
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
 
@@ -1332,8 +1332,8 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
 
 void Emitter::newObject(FR frRes) {
   comment("// NewObject r%u", frRes.index());
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   EMIT_RUNTIME_CALL(*this, SHLegacyValue(*)(SHRuntime *), _sh_ljs_new_object);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -1343,9 +1343,9 @@ void Emitter::newObject(FR frRes) {
 
 void Emitter::newObjectWithParent(FR frRes, FR frParent) {
   comment("// NewObjectWithParent r%u, r%u", frRes.index(), frParent.index());
-  syncAllTempExcept(frRes != frParent ? frRes : FR());
+  syncAllFRTempExcept(frRes != frParent ? frRes : FR());
   syncToMem(frParent);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frParent);
   EMIT_RUNTIME_CALL(
@@ -1367,8 +1367,8 @@ void Emitter::newObjectWithBuffer(
       shapeTableIndex,
       valBufferOffset);
 
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
   a.mov(a64::w2, shapeTableIndex);
@@ -1384,8 +1384,8 @@ void Emitter::newObjectWithBuffer(
 
 void Emitter::newArray(FR frRes, uint32_t size) {
   comment("// NewArray r%u, %u", frRes.index(), size);
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   a.mov(a64::w1, size);
   EMIT_RUNTIME_CALL(
@@ -1407,8 +1407,8 @@ void Emitter::newArrayWithBuffer(
       numLiterals,
       bufferIndex);
 
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
   a.mov(a64::w2, numElements);
@@ -1434,8 +1434,8 @@ void Emitter::getGlobalObject(FR frRes) {
 void Emitter::declareGlobalVar(SHSymbolID symID) {
   comment("// DeclareGlobalVar %u", symID);
 
-  syncAllTempExcept({});
-  freeAllTempExcept({});
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::w1, symID);
@@ -1446,8 +1446,8 @@ void Emitter::declareGlobalVar(SHSymbolID symID) {
 void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
   comment("// CreateTopLevelEnvironment r%u, %u", frRes.index(), size);
 
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, 0);
@@ -1466,8 +1466,8 @@ void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
 void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
   comment("// CreateFunctionEnvironment r%u, %u", frRes.index(), size);
 
-  syncAllTempExcept({});
-  freeAllTempExcept({});
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
@@ -1490,9 +1490,9 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
       frParent.index(),
       size);
 
-  syncAllTempExcept(frRes != frParent ? frRes : FR{});
+  syncAllFRTempExcept(frRes != frParent ? frRes : FR{});
   syncToMem(frParent);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frParent);
@@ -1612,8 +1612,8 @@ void Emitter::storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue) {
   a.mov(a64::w3, slot);
 
   // Make sure all FRs can be accessed. Some of them might be in temp regs.
-  syncAllTempExcept({});
-  freeAllTempExcept({});
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
 
   if (np) {
     EMIT_RUNTIME_CALL(
@@ -1638,7 +1638,7 @@ void Emitter::createClosure(
       frRes.index(),
       frEnv.index(),
       functionID);
-  syncAllTempExcept(frRes != frEnv ? frRes : FR());
+  syncAllFRTempExcept(frRes != frEnv ? frRes : FR());
   syncToMem(frEnv);
 
   a.mov(a64::x0, xRuntime);
@@ -1651,7 +1651,7 @@ void Emitter::createClosure(
           SHRuntime *, const SHLegacyValue *, SHRuntimeModule *, uint32_t),
       _sh_ljs_create_bytecode_closure);
 
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
@@ -1664,10 +1664,11 @@ void Emitter::createThis(FR frRes, FR frPrototype, FR frCallable) {
       frPrototype.index(),
       frCallable.index());
 
-  syncAllTempExcept(frRes != frPrototype && frRes != frCallable ? frRes : FR());
+  syncAllFRTempExcept(
+      frRes != frPrototype && frRes != frCallable ? frRes : FR());
   syncToMem(frPrototype);
   syncToMem(frCallable);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frPrototype);
@@ -1714,8 +1715,8 @@ void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
 void Emitter::loadThisNS(FR frRes) {
   comment("// LoadThisNS r%u", frRes.index());
 
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   a.ldur(
@@ -1735,8 +1736,8 @@ void Emitter::loadThisNS(FR frRes) {
 void Emitter::coerceThisNS(FR frRes, FR frThis) {
   comment("// CoerceThisNS r%u, r%u", frRes.index(), frThis.index());
 
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   movHWFromFR(HWReg::gpX(1), frThis);
@@ -1770,9 +1771,9 @@ void Emitter::getNewTarget(FR frRes) {
 void Emitter::throwInst(FR frInput) {
   comment("// Throw r%u", frInput.index());
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   movHWFromFR(HWReg::gpX(1), frInput);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   EMIT_RUNTIME_CALL(*this, void (*)(SHRuntime *, SHLegacyValue), _sh_throw);
@@ -1785,8 +1786,8 @@ void Emitter::createRegExp(
     uint32_t regexpID) {
   comment("// CreateRegExp r%u, %u, %u", frRes.index(), patternID, flagsID);
 
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
@@ -1820,10 +1821,10 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
 void Emitter::typedStoreParent(FR frStoredValue, FR frObj) {
   comment("// TypedStoreParent r%u, r%u", frStoredValue.index(), frObj.index());
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frStoredValue);
   syncToMem(frObj);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frStoredValue);
@@ -1852,11 +1853,11 @@ void Emitter::putByValImpl(
       frKey.index(),
       frValue.index());
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frTarget);
   syncToMem(frKey);
   syncToMem(frValue);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -1875,9 +1876,9 @@ void Emitter::delByIdImpl(
     const char *shImplName) {
   comment("// %s r%u, r%u, %u", name, frRes.index(), frTarget.index(), key);
 
-  syncAllTempExcept(frRes != frTarget ? frRes : FR{});
+  syncAllFRTempExcept(frRes != frTarget ? frRes : FR{});
   syncToMem(frTarget);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -1904,10 +1905,10 @@ void Emitter::delByValImpl(
       frTarget.index(),
       frKey.index());
 
-  syncAllTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR{});
+  syncAllFRTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR{});
   syncToMem(frTarget);
   syncToMem(frKey);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -1944,7 +1945,7 @@ void Emitter::getByIdImpl(
   HWReg hwRes;
 
   // All temporaries will potentially be clobbered by the slow path.
-  syncAllTempExcept(frRes != frSource ? frRes : FR{});
+  syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
 
   if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
     // Label for indirect property access.
@@ -1953,7 +1954,7 @@ void Emitter::getByIdImpl(
     contLab = a.newLabel();
 
     // We don't need the other temporaries.
-    freeAllTempExcept(frSource);
+    freeAllFRTempExcept(frSource);
 
     // We need the source in a GPx register.
     HWReg hwSourceGpx = getOrAllocFRInGpX(frSource, true);
@@ -2070,7 +2071,7 @@ void Emitter::getByIdImpl(
     // memory.
     syncToMem(frSource);
     // All temporaries will be clobbered.
-    freeAllTempExcept({});
+    freeAllFRTempExcept({});
 
     // Remember the result register.
     hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -2114,7 +2115,7 @@ void Emitter::switchImm(
   asmjit::Error err;
 
   // End of the basic block.
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
 
   // Load the input value into a double register to check if it's an int.
   HWReg hwInput = getOrAllocFRInVecD(frInput, true);
@@ -2207,7 +2208,7 @@ void Emitter::switchImm(
   }
 
   // Do this always, since this could be the end of the BB.
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 }
 
 void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
@@ -2217,10 +2218,10 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
       frSource.index(),
       frKey.index());
 
-  syncAllTempExcept(frRes != frSource && frRes != frKey ? frRes : FR());
+  syncAllFRTempExcept(frRes != frSource && frRes != frKey ? frRes : FR());
   syncToMem(frSource);
   syncToMem(frKey);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frSource);
@@ -2238,9 +2239,9 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
 void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
   comment("// getByIdx r%u, r%u, %u", frRes.index(), frSource.index(), key);
 
-  syncAllTempExcept(frRes != frSource ? frRes : FR());
+  syncAllFRTempExcept(frRes != frSource ? frRes : FR());
   syncToMem(frSource);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frSource);
@@ -2276,10 +2277,10 @@ void Emitter::putByIdImpl(
       cacheIdx,
       symID);
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frTarget);
   syncToMem(frValue);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -2305,10 +2306,10 @@ void Emitter::putOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
   comment(
       "// putOwnByIdx r%u, r%u, %u", frTarget.index(), frValue.index(), key);
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frTarget);
   syncToMem(frValue);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -2327,11 +2328,11 @@ void Emitter::putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable) {
       frValue.index(),
       frKey.index());
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frTarget);
   syncToMem(frValue);
   syncToMem(frKey);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -2366,12 +2367,12 @@ void Emitter::putOwnGetterSetterByVal(
       frSetter.index(),
       enumerable);
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frTarget);
   syncToMem(frKey);
   syncToMem(frGetter);
   syncToMem(frSetter);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -2404,10 +2405,10 @@ void Emitter::putNewOwnById(
       frValue.index(),
       key);
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frTarget);
   syncToMem(frValue);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -2467,8 +2468,8 @@ void Emitter::getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx) {
   syncAndFreeTempReg(HWReg::gpX(1));
   movHWFromFR(HWReg::gpX(1), frTarget);
 
-  syncAllTempExcept({});
-  freeAllTempExcept({});
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   // For indirect loads, 0 is the first indirect index.
@@ -2502,10 +2503,10 @@ void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
       frValue.index(),
       slotIdx);
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frTarget);
   syncToMem(frValue);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
@@ -2534,10 +2535,10 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
   comment(
       "// isIn r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
 
-  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
   syncToMem(frLeft);
   syncToMem(frRight);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frLeft);
@@ -2646,7 +2647,7 @@ void Emitter::emitROData() {
 void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   comment("// Call r%u, r%u, %u", frRes.index(), frCallee.index(), argc);
   uint32_t nRegs = frameRegs_.size();
-  syncAllTempExcept(FR());
+  syncAllFRTempExcept(FR());
 
   FR calleeFrameArg{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
 
@@ -2674,7 +2675,7 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   for (uint32_t i = 0; i < argc; ++i)
     syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
 
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
@@ -2729,8 +2730,8 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
 
   // For now we sync all registers, since we skip writing to the frame in some
   // cases above, but in principle, we could track frRes specially.
-  syncAllTempExcept(FR());
-  freeAllTempExcept({});
+  syncAllFRTempExcept(FR());
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
@@ -2756,8 +2757,8 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
   for (uint32_t i = 1; i < argc; ++i)
     syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
 
-  syncAllTempExcept({});
-  freeAllTempExcept({});
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
@@ -2816,8 +2817,8 @@ void Emitter::callWithNewTarget(
   syncToMem(calleeFrameArg);
   syncToMem(ntFrameArg);
 
-  syncAllTempExcept({});
-  freeAllTempExcept(frRes);
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept(frRes);
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
@@ -2836,8 +2837,8 @@ void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
       "// GetBuiltinClosure r%u, %s",
       frRes.index(),
       getBuiltinMethodName(builtinIndex));
-  syncAllTempExcept(frRes);
-  freeAllTempExcept(frRes);
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept(frRes);
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::w1, builtinIndex);
@@ -2879,7 +2880,7 @@ void Emitter::arithUnop(
   if (!inputIsNum) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
-    syncAllTempExcept(frRes != frInput ? frRes : FR());
+    syncAllFRTempExcept(frRes != frInput ? frRes : FR());
     syncToMem(frInput);
   }
 
@@ -2904,7 +2905,7 @@ void Emitter::arithUnop(
   if (inputIsNum)
     return;
 
-  freeAllTempExcept(frRes);
+  freeAllFRTempExcept(frRes);
   a.bind(contLab);
 
   slowPaths_.push_back(
@@ -2939,8 +2940,8 @@ void Emitter::booleanNot(FR frRes, FR frInput) {
   movHWFromFR(HWReg::gpX(0), frInput);
 
   // Since we already loaded the input, no need to check for frRes == frInput.
-  syncAllTempExcept(frRes);
-  freeAllTempExcept({});
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
   EMIT_RUNTIME_CALL(*this, bool (*)(SHLegacyValue), _sh_ljs_to_boolean);
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
@@ -2957,7 +2958,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
   HWReg hwTempGpX = allocTempGpX();
   HWReg hwTempVecD = allocTempVecD();
 
-  syncAllTempExcept(frRes != frInput ? frRes : FR());
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
   syncToMem(frInput);
@@ -2979,7 +2980,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
   a.b_ne(slowPathLab);
 
   // Done allocating registers. Free them all and allocate the result.
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   freeReg(hwTempGpX);
   freeReg(hwTempVecD);
   HWReg hwRes = getOrAllocFRInVecD(frRes, false);
@@ -3023,9 +3024,9 @@ void Emitter::bitNot(FR frRes, FR frInput) {
 
 void Emitter::typeOf(FR frRes, FR frInput) {
   comment("// TypeOf r%u, r%u", frRes.index(), frInput.index());
-  syncAllTempExcept(frRes == frInput ? FR() : frRes);
+  syncAllFRTempExcept(frRes == frInput ? FR() : frRes);
   syncToMem(frInput);
-  freeAllTempExcept(FR());
+  freeAllFRTempExcept(FR());
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frInput);
@@ -3045,11 +3046,11 @@ void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
       frObj.index(),
       frIdx.index(),
       frSize.index());
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   // We have to sync frObj to the frame since it is an in/out parameter.
   syncToMem(frObj);
   // No need to sync frIdx and frSize since they are just out parameters.
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frObj);
   loadFrameAddr(a64::x2, frIdx);
@@ -3085,12 +3086,12 @@ void Emitter::getNextPName(
       frIdx.index(),
       frSize.index());
 
-  syncAllTempExcept({});
+  syncAllFRTempExcept({});
   syncToMem(frProps);
   syncToMem(frObj);
   syncToMem(frIdx);
   syncToMem(frSize);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frProps);
   loadFrameAddr(a64::x2, frObj);
@@ -3118,10 +3119,10 @@ void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
   comment(
       "// AddS r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
 
-  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
   syncToMem(frLeft);
   syncToMem(frRight);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frLeft);
@@ -3159,7 +3160,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
     slow = !(rightIsNum && leftIsNum);
   }
 
-  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
 
   if (slow) {
     slowPathLab = newSlowPathLabel();
@@ -3186,7 +3187,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   movHWFromFR(HWReg::vecD(1), frRight);
 
   EMIT_RUNTIME_CALL(*this, double (*)(double, double), _sh_mod_double);
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::vecD(0));
   movHWReg<false>(hwRes, HWReg::vecD(0));
   frUpdatedWithHWReg(frRes, hwRes);
@@ -3261,7 +3262,7 @@ void Emitter::arithBinOp(
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
-    syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+    syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
     syncToMem(frLeft);
     syncToMem(frRight);
   }
@@ -3294,7 +3295,7 @@ void Emitter::arithBinOp(
   if (!slow)
     return;
 
-  freeAllTempExcept(frRes);
+  freeAllFRTempExcept(frRes);
   a.bind(contLab);
 
   slowPaths_.push_back(
@@ -3351,7 +3352,7 @@ void Emitter::bitBinOp(
   HWReg hwTempLVecD = allocTempVecD();
   HWReg hwTempRVecD = allocTempVecD();
 
-  syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
   // TODO: In principle, it should be possible to only sync these in the slow
   // path. If we do that, we have to ensure that the frameUpToDate bit is not
   // set, since subsequent instructions cannot rely on it. To do this, we would
@@ -3385,7 +3386,7 @@ void Emitter::bitBinOp(
   a.b_ne(slowPathLab);
 
   // Done allocating registers. Free them all and allocate the result.
-  freeAllTempExcept({});
+  freeAllFRTempExcept({});
   freeReg(hwTempLGpX);
   freeReg(hwTempRGpX);
   freeReg(hwTempLVecD);
@@ -3436,7 +3437,7 @@ void Emitter::jmpTrueFalse(
   comment("// Jmp%s r%u", onTrue ? "True" : "False", frInput.index());
 
   // Do this always, since this could be the end of the BB.
-  syncAllTempExcept(FR());
+  syncAllFRTempExcept(FR());
 
   if (isFRKnownType(frInput, FRType::Number)) {
     HWReg hwInput = getOrAllocFRInVecD(frInput, true);
@@ -3465,22 +3466,22 @@ void Emitter::jmpTrueFalse(
       a.cbz(xInput.w(), target);
   } else {
     // TODO: we should inline all of it.
-    syncAllTempExcept({});
+    syncAllFRTempExcept({});
     movHWFromFR(HWReg::gpX(0), frInput);
     EMIT_RUNTIME_CALL(*this, bool (*)(SHLegacyValue), _sh_ljs_to_boolean);
     if (onTrue)
       a.cbnz(a64::w0, target);
     else
       a.cbz(a64::w0, target);
-    freeAllTempExcept(FR());
+    freeAllFRTempExcept(FR());
   }
 }
 
 void Emitter::jmp(const asmjit::Label &target) {
   comment("// Jmp Lx");
   // Do this always, since this could be the end of the BB.
-  syncAllTempExcept(FR());
-  freeAllTempExcept(FR());
+  syncAllFRTempExcept(FR());
+  freeAllFRTempExcept(FR());
   a.b(target);
 }
 
@@ -3488,8 +3489,8 @@ void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
   comment("// JmpUndefined r%u", frInput.index());
 
   // Do this always, since this could be the end of the BB.
-  syncAllTempExcept(FR());
-  freeAllTempExcept(FR());
+  syncAllFRTempExcept(FR());
+  freeAllFRTempExcept(FR());
 
   if (isFRKnownType(frInput, FRType::Number) ||
       isFRKnownType(frInput, FRType::Bool)) {
@@ -3554,7 +3555,7 @@ void Emitter::jCond(
     syncToMem(frRight);
   }
   // Do this always, since this could be the end of the BB.
-  syncAllTempExcept(FR());
+  syncAllFRTempExcept(FR());
 
   if (leftIsNum) {
     hwLeft = getOrAllocFRInVecD(frLeft, true);
@@ -3592,7 +3593,7 @@ void Emitter::jCond(
     return;
 
   // Do this always, since this is the end of the BB.
-  freeAllTempExcept(FR());
+  freeAllFRTempExcept(FR());
 
   slowPaths_.push_back(
       {.slowPathLab = slowPathLab,
@@ -3658,7 +3659,7 @@ void Emitter::compareImpl(
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
-    syncAllTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+    syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
     syncToMem(frLeft);
     syncToMem(frRight);
   }
@@ -3683,7 +3684,7 @@ void Emitter::compareImpl(
   if (!rightIsNum)
     hwRight = getOrAllocFRInVecD(frRight, true);
   if (slow)
-    freeAllTempExcept({});
+    freeAllFRTempExcept({});
 
   HWReg hwRes = slow ? getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0))
                      : getOrAllocFRInGpX(frRes, false);
