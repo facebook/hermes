@@ -23,11 +23,19 @@
 
 namespace hermes {
 
-/// Simple executor that guarantees serial execution of tasks. If there are
-/// remaining tasks in the queue when the SerialExecutor destructs, they will
-/// not be processed.
+/// Simple executor that guarantees serial execution of tasks.
 class SerialExecutor {
  private:
+  /// The state of the background executor thread. Protected by mutex_.
+  enum class ThreadState {
+    /// No thread has been created yet.
+    Uninitialized,
+    /// The thread is ready to run tasks.
+    Initialized,
+    /// The thread is draining tasks and exiting during teardown.
+    Terminating
+  } threadState_{ThreadState::Uninitialized};
+
   /// The thread on which all work is done.
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
   pthread_t tid_;
@@ -45,8 +53,8 @@ class SerialExecutor {
   /// do, and wake it up when that changes.
   std::condition_variable wakeUpSig_;
 
-  /// Indicates to run() that it should stop. Protected by mutex_.
-  bool shouldStop_{false};
+  /// The configured stack size for the worker thread.
+  size_t stackSize_;
 
   /// This is executed on a new thread. It will run forever, executing tasks as
   /// they are posted. This stops running when shouldStop_ is set to true.
@@ -58,13 +66,14 @@ class SerialExecutor {
  public:
   /// Construct a thread which will run for the duration of this object's
   /// lifetime.
-  SerialExecutor(size_t stackSize = 0);
+  SerialExecutor(size_t stackSize = 0) : stackSize_(stackSize) {}
 
   /// Make sure that the spawned thread has terminated. Will block if there is a
   /// long-running task currently being executed.
   ~SerialExecutor();
 
-  /// Push a task to the back of the queue.
+  /// Push a task to the back of the queue, lazily creating the worker thread if
+  /// it does not exist.
   void add(std::function<void()> task);
 };
 } // namespace hermes

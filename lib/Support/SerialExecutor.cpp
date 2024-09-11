@@ -11,44 +11,58 @@
 
 namespace hermes {
 
-SerialExecutor::SerialExecutor(size_t stackSize) {
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
-  pthread_attr_t attr;
-
-  int ret;
-  (void)ret;
-  ret = pthread_attr_init(&attr);
-  assert(ret == 0 && "Failed pthread_attr_init");
-
-  if (stackSize != 0) {
-    ret = pthread_attr_setstacksize(&attr, stackSize);
-    assert(ret == 0 && "Failed pthread_attr_setstacksize");
-  }
-
-  ret = pthread_create(&tid_, &attr, SerialExecutor::threadMain, this);
-  assert(ret == 0 && "Failed pthread_create");
-
-#else
-  workerThread_ = std::thread(threadMain, this);
-#endif
-}
-
 SerialExecutor::~SerialExecutor() {
   // Tell the worker thread to stop, then wait for it to do so.
+  ThreadState oldState;
   {
     std::unique_lock<std::mutex> lock(mutex_);
-    shouldStop_ = true;
+    oldState = std::exchange(threadState_, ThreadState::Terminating);
     wakeUpSig_.notify_one();
   }
+  // If there was a thread, join it.
+  if (oldState != ThreadState::Uninitialized) {
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
-  pthread_join(tid_, nullptr);
+    pthread_join(tid_, nullptr);
 #else
-  workerThread_.join();
+    workerThread_.join();
 #endif
+  }
+  assert(tasks_.empty() && "Thread should have drained all tasks.");
 }
 
 void SerialExecutor::add(std::function<void()> task) {
   std::unique_lock<std::mutex> lock(mutex_);
+  assert(
+      threadState_ != ThreadState::Terminating &&
+      "Adding tasks during teardown.");
+
+  // If the thread is exiting or has already exited, we need to create a new
+  // one.
+  if (threadState_ != ThreadState::Initialized) {
+    assert(tasks_.empty() && "Exited thread should have drained tasks.");
+
+#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+    pthread_attr_t attr;
+
+    int ret;
+    (void)ret;
+    ret = pthread_attr_init(&attr);
+    assert(ret == 0 && "Failed pthread_attr_init");
+
+    if (stackSize_ != 0) {
+      ret = pthread_attr_setstacksize(&attr, stackSize_);
+      assert(ret == 0 && "Failed pthread_attr_setstacksize");
+    }
+
+    ret = pthread_create(&tid_, &attr, SerialExecutor::threadMain, this);
+    assert(ret == 0 && "Failed pthread_create");
+#else
+    workerThread_ = std::thread(threadMain, this);
+#endif
+
+    threadState_ = ThreadState::Initialized;
+  }
+
   tasks_.push_back(task);
   wakeUpSig_.notify_one();
 }
@@ -67,7 +81,7 @@ void SerialExecutor::run() {
       task();
       lock.lock();
     }
-    if (shouldStop_) {
+    if (threadState_ == ThreadState::Terminating) {
       return;
     }
 
