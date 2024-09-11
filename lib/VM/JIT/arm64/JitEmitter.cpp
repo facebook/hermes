@@ -944,10 +944,7 @@ void Emitter::frUpdateType(FR fr, FRType type) {
 }
 
 void Emitter::ret(FR frValue) {
-  if (HWReg hwReg = isFRInRegister(frValue))
-    movHWReg<false>(HWReg::gpX(22), hwReg);
-  else
-    _loadFrame(HWReg::gpX(22), frValue);
+  movHWFromFR(HWReg::gpX(22), frValue);
   a.b(returnLabel_);
 }
 
