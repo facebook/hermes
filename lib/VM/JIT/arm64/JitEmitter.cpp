@@ -656,7 +656,7 @@ void Emitter::syncToMem(FR fr) {
   if (frState.frameUpToDate)
     return;
 
-  HWReg hwReg = isFRInRegister(fr);
+  HWReg hwReg = _isFRInRegister(fr);
   assert(
       hwReg.isValid() && "FR is not synced to frame and is not in a register");
 
@@ -763,7 +763,7 @@ void Emitter::freeFRTemp(FR fr) {
   }
 }
 
-void Emitter::assignAllocatedLocalHWReg(FR fr, HWReg hwReg) {
+void Emitter::_assignAllocatedLocalHWReg(FR fr, HWReg hwReg) {
   hwRegs_[hwReg.combinedIndex()].contains = fr;
   if (hwReg.isGpX()) {
     comment("    ; alloc: x%u <- r%u", hwReg.indexInClass(), fr.index());
@@ -774,7 +774,7 @@ void Emitter::assignAllocatedLocalHWReg(FR fr, HWReg hwReg) {
   }
 }
 
-HWReg Emitter::isFRInRegister(FR fr) {
+HWReg Emitter::_isFRInRegister(FR fr) {
   auto &frState = frameRegs_[fr.index()];
   if (frState.localGpX)
     return useReg(frState.localGpX);
@@ -815,7 +815,7 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
 
   // We have neither global nor local VecD, so we must allocate a new tmp reg.
   HWReg hwVecD = allocTempVecD();
-  assignAllocatedLocalHWReg(fr, hwVecD);
+  _assignAllocatedLocalHWReg(fr, hwVecD);
 
   if (load) {
     if (frState.localGpX) {
@@ -865,7 +865,7 @@ HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
 
   // We have neither global nor local GpX, so we must allocate a new tmp reg.
   HWReg hwGpX = allocTempGpX();
-  assignAllocatedLocalHWReg(fr, hwGpX);
+  _assignAllocatedLocalHWReg(fr, hwGpX);
 
   if (load) {
     if (frState.localVecD) {
@@ -888,7 +888,7 @@ HWReg Emitter::getOrAllocFRInAnyReg(
     FR fr,
     bool load,
     llvh::Optional<HWReg> preferred) {
-  if (HWReg tmp = isFRInRegister(fr))
+  if (HWReg tmp = _isFRInRegister(fr))
     return tmp;
 
   // We have neither global nor local reg, so we must allocate a new tmp reg.
@@ -898,7 +898,7 @@ HWReg Emitter::getOrAllocFRInAnyReg(
   } else {
     hwReg = allocTempGpX(preferred);
   }
-  assignAllocatedLocalHWReg(fr, hwReg);
+  _assignAllocatedLocalHWReg(fr, hwReg);
 
   if (load) {
     assert(

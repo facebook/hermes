@@ -841,10 +841,10 @@ class Emitter {
   /// Free any temporary register associated with \p FR.
   void freeFRTemp(FR fr);
 
-  void assignAllocatedLocalHWReg(FR fr, HWReg hwReg);
+  void _assignAllocatedLocalHWReg(FR fr, HWReg hwReg);
 
   /// \return a valid register if the FR is in a hw register, otherwise invalid.
-  HWReg isFRInRegister(FR fr);
+  HWReg _isFRInRegister(FR fr);
   HWReg getOrAllocFRInVecD(FR fr, bool load);
   HWReg getOrAllocFRInGpX(FR fr, bool load);
   HWReg getOrAllocFRInAnyReg(
