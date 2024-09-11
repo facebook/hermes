@@ -360,6 +360,14 @@ void ProfileAnalyzer::dumpFunctionStats() {
         return x.second.instFrequency > y.second.instFrequency;
       });
 
+  // Get and print the total instruction count.
+  unsigned totalInstructions = 0;
+  for (const auto &pair : sortedElements) {
+    totalInstructions += pair.second.instFrequency;
+  }
+
+  os_ << "Total instrs executed: " << totalInstructions << "\n\n";
+
   int maxOutputCount = 100;
   // Put function name as the last column because its length varies a lot.
   os_ << llvh::left_justify("Inst(%)", 12)
