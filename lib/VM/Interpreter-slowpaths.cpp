@@ -34,12 +34,14 @@ ExecutionStatus Interpreter::caseDirectEval(
   }
 
   GCScopeMarkerRAII gcMarker{runtime};
+  auto cb = FRAME.getCalleeCodeBlock(runtime);
 
   auto cr = vm::directEval(
       runtime,
       Handle<StringPrimitive>::vmcast(evalText),
       strictCaller,
-      nullptr,
+      cb,
+      FRAME.getEnvironmentHandle(),
       false);
   if (cr == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;

@@ -454,6 +454,15 @@ CallResult<HermesValue> directEval(
     const CodeBlock *codeBlock,
     bool singleFunction = false);
 
+/// A direct passthrough to call eval() on \p str.
+CallResult<HermesValue> directEval(
+    Runtime &runtime,
+    Handle<StringPrimitive> str,
+    bool strictCaller,
+    const CodeBlock *codeBlock,
+    Handle<Environment> environment,
+    bool singleFunction = false);
+
 /// ES10 23.1.1.2 AddEntriesFromIterable
 /// Calls a callback with each pair of [key, value] from an iterable.
 /// \param target the object to which to add the entries

@@ -129,6 +129,16 @@ CallResult<HermesValue> directEval(
     bool strictCaller,
     const CodeBlock *codeBlock,
     bool singleFunction) {
+  return directEval(runtime, str, strictCaller, codeBlock, Runtime::makeNullHandle<Environment>(), singleFunction);
+}
+
+CallResult<HermesValue> directEval(
+    Runtime &runtime,
+    Handle<StringPrimitive> str,
+    bool strictCaller,
+    const CodeBlock *codeBlock,
+    Handle<Environment> environment,
+    bool singleFunction) {
   // Convert the code into UTF8.
   std::string code;
   auto view = StringPrimitive::createStringView(runtime, str);
@@ -143,7 +153,7 @@ CallResult<HermesValue> directEval(
       runtime,
       code,
       strictCaller,
-      Runtime::makeNullHandle<Environment>(),
+      environment,
       codeBlock,
       runtime.getGlobal(),
       singleFunction);
