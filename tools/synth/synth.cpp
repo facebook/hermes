@@ -139,6 +139,15 @@ struct Flags : public cli::RuntimeFlags {
       cat(GCCategory),
       init(true)};
 
+  opt<bool> BasicBlockProfiling{
+      "basic-block-profiling",
+      init(false),
+      desc("Enable basic block profiling (HBC only)")};
+
+  opt<std::string> ProfilingOutFile{
+      "profiling-out",
+      desc("File to write profiling info to")};
+
   opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused{
       "release-unused",
       desc("How aggressively to return unused memory to the OS."),
@@ -217,6 +226,12 @@ int main(int argc, char **argv) {
   try {
     TraceInterpreter::ExecuteOptions options;
 
+    if (cl::flags.BasicBlockProfiling && (cl::Reps > 1)) {
+      llvh::errs() << "Warning: -basic-block-profiling and -reps set.  "
+                   << "Profiling info will be written separately after "
+                   << "each rep, which probably isn't what you want.\n";
+    }
+
     // These are not config parameters: just set them according to the
     // runtime flag.
     options.useTraceConfig = cl::UseTraceConfig;
@@ -232,6 +247,9 @@ int main(int argc, char **argv) {
     }
     options.forceGCBeforeStats = cl::flags.GCBeforeStats;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
+
+    options.basicBlockProfiling = cl::flags.BasicBlockProfiling;
+    options.profilingOutFile = cl::flags.ProfilingOutFile;
 
     // These are the config parameters.
 

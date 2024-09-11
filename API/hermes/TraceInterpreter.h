@@ -12,6 +12,7 @@
 #include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 
+#include <jsi/instrumentation.h>
 #include <jsi/jsi.h>
 #include <llvh/Support/MemoryBuffer.h>
 #include <llvh/Support/raw_ostream.h>
@@ -45,6 +46,13 @@ class TraceInterpreter final {
     /// If true, command-line options override the config options recorded in
     /// the trace.  If false, start from the default config.
     bool useTraceConfig{false};
+
+    /// Enable basic block profiling.
+    bool basicBlockProfiling{false};
+
+    // If non-empty, write profiling output to this file, rather than
+    // to stderr.
+    std::string profilingOutFile;
 
     /// Number of initial executions whose stats are discarded.
     int warmupReps{0};

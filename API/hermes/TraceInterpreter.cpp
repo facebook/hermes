@@ -437,7 +437,14 @@ std::string TraceInterpreter::exec(
     const SynthTrace &trace,
     std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles) {
   TraceInterpreter interpreter(rt, options, trace, std::move(bundles));
-  return interpreter.executeRecordsWithMarkerOptions();
+  std::string res = interpreter.executeRecordsWithMarkerOptions();
+#ifdef HERMESVM_PROFILER_BB
+  if (options.basicBlockProfiling) {
+    rt.instrumentation().writeBasicBlockProfileTraceToFile(
+        options.profilingOutFile);
+  }
+#endif
+  return res;
 }
 
 Function TraceInterpreter::createHostFunction(
@@ -619,12 +626,6 @@ std::string TraceInterpreter::executeRecordsWithMarkerOptions() {
       break;
   }
   executeRecords();
-
-#ifdef HERMESVM_PROFILER_BB
-  if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-    hermesRuntime->dumpBasicBlockProfileTrace(std::cerr);
-  }
-#endif
 
   checkMarker(std::string("end"));
   if (!markerFound_) {
