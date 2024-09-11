@@ -473,7 +473,7 @@ void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
 }
 
 template <bool use>
-void Emitter::movHWReg(HWReg dst, HWReg src) {
+void Emitter::movHWFromHW(HWReg dst, HWReg src) {
   if (dst != src) {
     if (dst.isVecD() && src.isVecD())
       a.fmov(dst.a64VecD(), src.a64VecD());
@@ -490,7 +490,7 @@ void Emitter::movHWReg(HWReg dst, HWReg src) {
   }
 }
 
-void Emitter::_storeHWRegToFrame(FR fr, HWReg src) {
+void Emitter::_storeHWToFrame(FR fr, HWReg src) {
   _storeFrame(src, fr);
   frameRegs_[fr.index()].frameUpToDate = true;
 }
@@ -499,11 +499,11 @@ void Emitter::movHWFromFR(HWReg hwRes, FR src) {
   FRState &frState = frameRegs_[src.index()];
   assert(!frState.regIsDirty && "Any local should have a valid value");
   if (frState.localGpX)
-    movHWReg<true>(hwRes, frState.localGpX);
+    movHWFromHW<true>(hwRes, frState.localGpX);
   else if (frState.localVecD)
-    movHWReg<true>(hwRes, frState.localVecD);
+    movHWFromHW<true>(hwRes, frState.localVecD);
   else if (frState.globalReg && frState.globalRegUpToDate)
-    movHWReg<true>(hwRes, frState.globalReg);
+    movHWFromHW<true>(hwRes, frState.globalReg);
   else
     _loadFrame(useReg(hwRes), src);
 }
@@ -520,17 +520,17 @@ void Emitter::movFRFromHW(FR dst, HWReg src, FRType type) {
   // If it is a local or global register, move the value into it and mark it as
   // updated.
   if (frState.localGpX) {
-    movHWReg<false>(frState.localGpX, src);
-    frUpdatedWithHWReg(dst, frState.localGpX, type);
+    movHWFromHW<false>(frState.localGpX, src);
+    frUpdatedWithHW(dst, frState.localGpX, type);
   } else if (frState.localVecD) {
-    movHWReg<false>(frState.localVecD, src);
-    frUpdatedWithHWReg(dst, frState.localVecD, type);
+    movHWFromHW<false>(frState.localVecD, src);
+    frUpdatedWithHW(dst, frState.localVecD, type);
   } else if (frState.globalReg) {
-    movHWReg<false>(frState.globalReg, src);
-    frUpdatedWithHWReg(dst, frState.globalReg, type);
+    movHWFromHW<false>(frState.globalReg, src);
+    frUpdatedWithHW(dst, frState.globalReg, type);
   } else {
     // Otherwise store it directly to the frame.
-    _storeHWRegToFrame(dst, src);
+    _storeHWToFrame(dst, src);
     frUpdateType(dst, type);
     frState.frameUpToDate = true;
   }
@@ -633,12 +633,12 @@ void Emitter::spillTempReg(HWReg toSpill) {
   assert(frState.globalReg != toSpill && "global regs can't be temporary");
   if (frState.globalReg) {
     if (!frState.globalRegUpToDate) {
-      movHWReg<false>(frState.globalReg, toSpill);
+      movHWFromHW<false>(frState.globalReg, toSpill);
       frState.globalRegUpToDate = true;
     }
   } else {
     if (!frState.frameUpToDate) {
-      _storeHWRegToFrame(fr, toSpill);
+      _storeHWToFrame(fr, toSpill);
       frState.frameUpToDate = true;
     }
   }
@@ -664,10 +664,10 @@ void Emitter::syncToMem(FR fr) {
   // frame has a new one.
   if (frState.globalReg && !frState.globalRegUpToDate) {
     assert(hwReg != frState.globalReg && "FR is in a global reg");
-    movHWReg<false>(frState.globalReg, hwReg);
+    movHWFromHW<false>(frState.globalReg, hwReg);
     frState.globalRegUpToDate = true;
   }
-  _storeHWRegToFrame(fr, hwReg);
+  _storeHWToFrame(fr, hwReg);
 }
 
 void Emitter::syncAllFRTempExcept(FR exceptFR) {
@@ -682,13 +682,13 @@ void Emitter::syncAllFRTempExcept(FR exceptFR) {
     if (frState.globalReg) {
       if (!frState.globalRegUpToDate) {
         comment("    ; sync: x%u (r%u)", i, fr.index());
-        movHWReg<false>(frState.globalReg, hwReg);
+        movHWFromHW<false>(frState.globalReg, hwReg);
         frState.globalRegUpToDate = true;
       }
     } else {
       if (!frState.frameUpToDate) {
         comment("    ; sync: x%u (r%u)", i, fr.index());
-        _storeHWRegToFrame(fr, hwReg);
+        _storeHWToFrame(fr, hwReg);
       }
     }
   }
@@ -710,13 +710,13 @@ void Emitter::syncAllFRTempExcept(FR exceptFR) {
     if (frState.globalReg) {
       if (!frState.globalRegUpToDate) {
         comment("    ; sync d%u (r%u)", i, fr.index());
-        movHWReg<false>(frState.globalReg, hwReg);
+        movHWFromHW<false>(frState.globalReg, hwReg);
         frState.globalRegUpToDate = true;
       }
     } else {
       if (!frState.frameUpToDate) {
         comment("    ; sync d%u (r%u)", i, fr.index());
-        _storeHWRegToFrame(fr, hwReg);
+        _storeHWToFrame(fr, hwReg);
       }
     }
   }
@@ -806,7 +806,7 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
       assert(
           frState.localGpX &&
           "If globalReg is not up to date, there must be a localReg");
-      movHWReg<true>(frState.globalReg, frState.localGpX);
+      movHWFromHW<true>(frState.globalReg, frState.localGpX);
       frState.globalRegUpToDate = true;
     }
 
@@ -819,12 +819,12 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
 
   if (load) {
     if (frState.localGpX) {
-      movHWReg<false>(hwVecD, frState.localGpX);
+      movHWFromHW<false>(hwVecD, frState.localGpX);
     } else if (frState.globalReg.isValidGpX()) {
       assert(
           frState.globalRegUpToDate &&
           "globalReg must be up to date if no local regs");
-      movHWReg<false>(hwVecD, frState.globalReg);
+      movHWFromHW<false>(hwVecD, frState.globalReg);
     } else {
       _loadFrame(hwVecD, fr);
       assert(frState.frameUpToDate && "frame not up-to-date");
@@ -856,7 +856,7 @@ HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
       assert(
           frState.localVecD &&
           "If globalReg is not up to date, there must be a localReg");
-      movHWReg<true>(frState.globalReg, frState.localVecD);
+      movHWFromHW<true>(frState.globalReg, frState.localVecD);
       frState.globalRegUpToDate = true;
     }
 
@@ -869,12 +869,12 @@ HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
 
   if (load) {
     if (frState.localVecD) {
-      movHWReg<false>(hwGpX, frState.localVecD);
+      movHWFromHW<false>(hwGpX, frState.localVecD);
     } else if (frState.globalReg.isValidVecD()) {
       assert(
           frState.globalRegUpToDate &&
           "globalReg must be up to date if no local regs");
-      movHWReg<false>(hwGpX, frState.globalReg);
+      movHWFromHW<false>(hwGpX, frState.globalReg);
     } else {
       assert(frState.frameUpToDate && "frame not up-to-date");
       _loadFrame(hwGpX, fr);
@@ -910,7 +910,7 @@ HWReg Emitter::getOrAllocFRInAnyReg(
   return hwReg;
 }
 
-void Emitter::frUpdatedWithHWReg(FR fr, HWReg hwReg, FRType localType) {
+void Emitter::frUpdatedWithHW(FR fr, HWReg hwReg, FRType localType) {
   FRState &frState = frameRegs_[fr.index()];
 
   frState.frameUpToDate = false;
@@ -957,8 +957,8 @@ void Emitter::mov(FR frRes, FR frInput, bool logComment) {
 
   HWReg hwInput = getOrAllocFRInAnyReg(frInput, true);
   HWReg hwDest = getOrAllocFRInAnyReg(frRes, false);
-  movHWReg<false>(hwDest, hwInput);
-  frUpdatedWithHWReg(frRes, hwDest, frameRegs_[frInput.index()].localType);
+  movHWFromHW<false>(hwDest, hwInput);
+  frUpdatedWithHW(frRes, hwDest, frameRegs_[frInput.index()].localType);
 }
 
 void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
@@ -1020,7 +1020,7 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
   }
 
   a.bind(contLab);
-  frUpdatedWithHWReg(frRes, hwRes);
+  frUpdatedWithHW(frRes, hwRes);
 
   slowPaths_.push_back(
       {.slowPathLab = slowPathLab,
@@ -1061,7 +1061,7 @@ void Emitter::loadConstDouble(FR frRes, double val, const char *name) {
           a64::Mem(roDataLabel_, uint64Const(bits, "fp64 const")));
     }
   }
-  frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+  frUpdatedWithHW(frRes, hwRes, FRType::Number);
 }
 
 template <typename REG>
@@ -1089,7 +1089,7 @@ void Emitter::loadConstBits64(
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
 
   loadBits64InGp(hwRes.a64GpX(), bits, name);
-  frUpdatedWithHWReg(frRes, hwRes, type);
+  frUpdatedWithHW(frRes, hwRes, type);
 }
 
 void Emitter::loadConstString(
@@ -1110,8 +1110,8 @@ void Emitter::loadConstString(
       _sh_ljs_get_bytecode_string);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<true>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<true>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::toNumber(FR frRes, FR frInput) {
@@ -1131,11 +1131,11 @@ void Emitter::toNumber(FR frRes, FR frInput) {
 
   if (frRes != frInput) {
     hwRes = getOrAllocFRInVecD(frRes, false);
-    movHWReg<false>(hwRes, hwInput);
+    movHWFromHW<false>(hwRes, hwInput);
   } else {
     hwRes = hwInput;
   }
-  frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+  frUpdatedWithHW(frRes, hwRes, FRType::Number);
 
   freeAllFRTempExcept(frRes);
   a.bind(contLab);
@@ -1159,7 +1159,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.callThunk(sl.slowCall, sl.slowCallName);
-         em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -1181,11 +1181,11 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
 
   if (frRes != frInput) {
     hwRes = getOrAllocFRInVecD(frRes, false);
-    movHWReg<false>(hwRes, hwInput);
+    movHWFromHW<false>(hwRes, hwInput);
   } else {
     hwRes = hwInput;
   }
-  frUpdatedWithHWReg(frRes, hwRes, FRType::UnknownPtr);
+  frUpdatedWithHW(frRes, hwRes, FRType::UnknownPtr);
 
   freeAllFRTempExcept(frRes);
   a.bind(contLab);
@@ -1209,7 +1209,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.callThunk(sl.slowCall, sl.slowCallName);
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -1246,7 +1246,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
   freeReg(hwTempGpX);
   freeReg(hwTempVecD);
   HWReg hwRes = getOrAllocFRInVecD(frRes, false);
-  frUpdatedWithHWReg(frRes, hwRes, FRType::Number);
+  frUpdatedWithHW(frRes, hwRes, FRType::Number);
 
   // Truncate to an int32 in the fast path.
   a.scvtf(hwRes.a64VecD(), hwTempGpX.a64GpX().w());
@@ -1274,7 +1274,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
              em,
              double (*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_to_int32_rjs);
-         em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -1302,8 +1302,8 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
   a.b_ne(slowPathLab);
 
   // Fast path.
-  movHWReg<false>(hwRes, hwInput);
-  frUpdatedWithHWReg(frRes, hwRes, FRType::Pointer);
+  movHWFromHW<false>(hwRes, hwInput);
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
 
   a.bind(contLab);
 
@@ -1325,7 +1325,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
              em,
              SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_add_empty_string_rjs);
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -1337,8 +1337,8 @@ void Emitter::newObject(FR frRes) {
   a.mov(a64::x0, xRuntime);
   EMIT_RUNTIME_CALL(*this, SHLegacyValue(*)(SHRuntime *), _sh_ljs_new_object);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::newObjectWithParent(FR frRes, FR frParent) {
@@ -1353,8 +1353,8 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
       SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
       _sh_ljs_new_object_with_parent);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::newObjectWithBuffer(
@@ -1378,8 +1378,8 @@ void Emitter::newObjectWithBuffer(
       SHLegacyValue(*)(SHRuntime *, SHCodeBlock *, uint32_t, uint32_t),
       _interpreter_create_object_from_buffer);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::newArray(FR frRes, uint32_t size) {
@@ -1391,8 +1391,8 @@ void Emitter::newArray(FR frRes, uint32_t size) {
   EMIT_RUNTIME_CALL(
       *this, SHLegacyValue(*)(SHRuntime *, uint32_t), _sh_ljs_new_array);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::newArrayWithBuffer(
@@ -1420,15 +1420,15 @@ void Emitter::newArrayWithBuffer(
           SHRuntime *, SHCodeBlock *, uint32_t, uint32_t, uint32_t),
       _interpreter_create_array_from_buffer);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getGlobalObject(FR frRes) {
   comment("// GetGlobalObject r%u", frRes.index());
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWFromMem(hwRes, a64::Mem(xRuntime, RuntimeOffsets::globalObject));
-  frUpdatedWithHWReg(frRes, hwRes);
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::declareGlobalVar(SHSymbolID symID) {
@@ -1459,8 +1459,8 @@ void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
       _sh_ljs_create_environment);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
@@ -1479,8 +1479,8 @@ void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
       _sh_ljs_create_function_environment);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
@@ -1504,8 +1504,8 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
       _sh_ljs_create_environment);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
@@ -1534,8 +1534,8 @@ void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
 
   freeReg(hwTmp1);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, hwTmp1);
-  movHWReg<false>(hwRes, hwTmp1);
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, hwTmp1);
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
@@ -1550,7 +1550,7 @@ void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
   movHWFromMem(hwRes, a64::Mem(hwRes.a64GpX(), ofs));
   // The result is a pointer, so add the object tag.
   emit_sh_ljs_object(a, hwRes.a64GpX());
-  frUpdatedWithHWReg(frRes, hwRes);
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot) {
@@ -1577,8 +1577,8 @@ void Emitter::loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot) {
 
   freeReg(hwTmp1);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, hwTmp1);
-  movHWReg<false>(hwRes, hwTmp1);
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, hwTmp1);
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue) {
@@ -1653,8 +1653,8 @@ void Emitter::createClosure(
 
   freeAllFRTempExcept({});
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::createThis(FR frRes, FR frPrototype, FR frCallable) {
@@ -1679,8 +1679,8 @@ void Emitter::createThis(FR frRes, FR frPrototype, FR frCallable) {
       _sh_ljs_create_this);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
@@ -1709,7 +1709,7 @@ void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
       hwThis.a64GpX(),
       asmjit::arm::CondCode::kEQ);
 
-  frUpdatedWithHWReg(frRes, hwRes);
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::loadThisNS(FR frRes) {
@@ -1729,8 +1729,8 @@ void Emitter::loadThisNS(FR frRes) {
       _sh_ljs_coerce_this_ns);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::coerceThisNS(FR frRes, FR frThis) {
@@ -1747,8 +1747,8 @@ void Emitter::coerceThisNS(FR frRes, FR frThis) {
       _sh_ljs_coerce_this_ns);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::debugger() {
@@ -1765,7 +1765,7 @@ void Emitter::getNewTarget(FR frRes) {
       a64::Mem(
           xFrame,
           (int)StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
-  frUpdatedWithHWReg(frRes, hwRes);
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::throwInst(FR frInput) {
@@ -1801,8 +1801,8 @@ void Emitter::createRegExp(
       _interpreter_create_regexp);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::typedLoadParent(FR frRes, FR frObj) {
@@ -1815,7 +1815,7 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   a.ldr(xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
   emit_sh_ljs_object(a, xRes);
 
-  frUpdatedWithHWReg(frRes, hwRes);
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::typedStoreParent(FR frStoredValue, FR frObj) {
@@ -1886,8 +1886,8 @@ void Emitter::delByIdImpl(
   callThunk((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::delByValImpl(
@@ -1916,8 +1916,8 @@ void Emitter::delByValImpl(
   callThunk((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getByIdImpl(
@@ -2097,8 +2097,8 @@ void Emitter::getByIdImpl(
   }
   callThunk((void *)shImpl, shImplName);
 
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 
   if (contLab.isValid())
     a.bind(contLab);
@@ -2232,8 +2232,8 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
       _sh_ljs_get_by_val_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
@@ -2252,8 +2252,8 @@ void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
       _sh_ljs_get_by_index_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::putByIdImpl(
@@ -2458,7 +2458,7 @@ void Emitter::getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx) {
     freeReg(temp);
     HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
     movHWFromMem(hwRes, a64::Mem(temp.a64GpX(), ofs));
-    frUpdatedWithHWReg(frRes, hwRes);
+    frUpdatedWithHW(frRes, hwRes);
     return;
   }
 #endif
@@ -2492,8 +2492,8 @@ void Emitter::getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx) {
   }
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
@@ -2549,8 +2549,8 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
       _sh_ljs_is_in_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 int32_t Emitter::reserveData(
@@ -2685,8 +2685,8 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
       _sh_ljs_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
@@ -2741,8 +2741,8 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
       _sh_ljs_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
@@ -2771,8 +2771,8 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t, uint32_t),
       _sh_ljs_call_builtin);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::callWithNewTarget(
@@ -2828,8 +2828,8 @@ void Emitter::callWithNewTarget(
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
       _sh_ljs_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
@@ -2847,8 +2847,8 @@ void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
       SHLegacyValue(*)(SHRuntime *, uint32_t),
       _sh_ljs_get_builtin_closure);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::arithUnop(
@@ -2899,7 +2899,7 @@ void Emitter::arithUnop(
   if (hwRes == hwInput)
     freeReg(hwTmp);
 
-  frUpdatedWithHWReg(
+  frUpdatedWithHW(
       frRes, hwRes, inputIsNum ? FRType::Number : FRType::UnknownPtr);
 
   if (inputIsNum)
@@ -2927,7 +2927,7 @@ void Emitter::arithUnop(
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.callThunk(sl.slowCall, sl.slowCallName);
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -2949,7 +2949,7 @@ void Emitter::booleanNot(FR frRes, FR frInput) {
   a.eor(hwRes.a64GpX(), a64::x0, 1);
   // Add the bool tag.
   emit_sh_ljs_bool(a, hwRes.a64GpX());
-  frUpdatedWithHWReg(frRes, hwRes, FRType::Bool);
+  frUpdatedWithHW(frRes, hwRes, FRType::Bool);
 }
 
 void Emitter::bitNot(FR frRes, FR frInput) {
@@ -2984,7 +2984,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
   freeReg(hwTempGpX);
   freeReg(hwTempVecD);
   HWReg hwRes = getOrAllocFRInVecD(frRes, false);
-  frUpdatedWithHWReg(
+  frUpdatedWithHW(
       frRes,
       hwRes,
       isFRKnownType(frInput, FRType::Number) ? FRType::Number
@@ -3017,7 +3017,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
              em,
              SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_bit_not_rjs);
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -3035,8 +3035,8 @@ void Emitter::typeOf(FR frRes, FR frInput) {
       *this, SHLegacyValue(*)(SHRuntime *, SHLegacyValue *), _sh_ljs_typeof);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
@@ -3068,8 +3068,8 @@ void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
   syncFrameOutParam(frSize);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::getNextPName(
@@ -3111,8 +3111,8 @@ void Emitter::getNextPName(
   syncFrameOutParam(frIdx);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
@@ -3132,8 +3132,8 @@ void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
       _sh_ljs_string_add);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWReg<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
 }
 
 void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
@@ -3189,8 +3189,8 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   EMIT_RUNTIME_CALL(*this, double (*)(double, double), _sh_mod_double);
   freeAllFRTempExcept({});
   hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::vecD(0));
-  movHWReg<false>(hwRes, HWReg::vecD(0));
-  frUpdatedWithHWReg(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::vecD(0));
+  frUpdatedWithHW(frRes, hwRes);
 
   if (!slow)
     return;
@@ -3219,7 +3219,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
          em.callThunk(sl.slowCall, sl.slowCallName);
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -3290,7 +3290,7 @@ void Emitter::arithBinOp(
   hwRes = getOrAllocFRInVecD(frRes, false);
   fast(a, hwRes.a64VecD(), hwLeft.a64VecD(), hwRight.a64VecD());
 
-  frUpdatedWithHWReg(frRes, hwRes, !slow ? FRType::Number : FRType::UnknownPtr);
+  frUpdatedWithHW(frRes, hwRes, !slow ? FRType::Number : FRType::UnknownPtr);
 
   if (!slow)
     return;
@@ -3320,7 +3320,7 @@ void Emitter::arithBinOp(
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
          em.callThunk(sl.slowCall, sl.slowCallName);
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -3392,7 +3392,7 @@ void Emitter::bitBinOp(
   freeReg(hwTempLVecD);
   freeReg(hwTempRVecD);
   HWReg hwRes = getOrAllocFRInVecD(frRes, false);
-  frUpdatedWithHWReg(
+  frUpdatedWithHW(
       frRes,
       hwRes,
       isFRKnownNumber(frLeft) && isFRKnownNumber(frRight) ? FRType::Number
@@ -3426,7 +3426,7 @@ void Emitter::bitBinOp(
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
          em.callThunk(sl.slowCall, sl.slowCallName);
-         em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
 }
@@ -3697,7 +3697,7 @@ void Emitter::compareImpl(
 
   // Encode bool.
   emit_sh_ljs_bool(a, xRes);
-  frUpdatedWithHWReg(frRes, hwRes, FRType::Bool);
+  frUpdatedWithHW(frRes, hwRes, FRType::Bool);
 
   if (!slow)
     return;
@@ -3738,7 +3738,7 @@ void Emitter::compareImpl(
          if (sl.invert)
            em.a.eor(sl.hwRes.a64GpX(), a64::x0, 1);
          else
-           em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
+           em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
 
          // Comparison functions return bool, so encode it.
          emit_sh_ljs_bool(em.a, sl.hwRes.a64GpX());

@@ -797,8 +797,8 @@ class Emitter {
 
   void loadFrameAddr(a64::GpX dst, FR frameReg);
   template <bool use>
-  void movHWReg(HWReg dst, HWReg src);
-  void _storeHWRegToFrame(FR fr, HWReg src);
+  void movHWFromHW(HWReg dst, HWReg src);
+  void _storeHWToFrame(FR fr, HWReg src);
   void movHWFromFR(HWReg hwRes, FR src);
   void movHWFromMem(HWReg hwRes, a64::Mem src);
 
@@ -853,7 +853,7 @@ class Emitter {
       llvh::Optional<HWReg> preferred = llvh::None);
 
   void
-  frUpdatedWithHWReg(FR fr, HWReg hwReg, FRType localType = FRType::UnknownPtr);
+  frUpdatedWithHW(FR fr, HWReg hwReg, FRType localType = FRType::UnknownPtr);
   void frUpdateType(FR fr, FRType type);
 
   /// \return true if the FR is currently known to contain the specified type.
