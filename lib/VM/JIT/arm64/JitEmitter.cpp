@@ -155,7 +155,7 @@ static bool isCheapConst(uint64_t k) {
     using _FnT = type;                    \
     _FnT _fn = func;                      \
     (void)_fn;                            \
-    (em).call((void *)func, #func);       \
+    (em).callThunk((void *)func, #func);  \
   } while (0)
 
 Emitter::Emitter(
@@ -460,9 +460,9 @@ void Emitter::leave() {
   a.ret(a64::x30);
 }
 
-void Emitter::call(void *fn, const char *name) {
+void Emitter::callThunk(void *fn, const char *name) {
   //    comment("// call %s", name);
-  a.bl(registerCall(fn, name));
+  a.bl(registerThunk(fn, name));
 }
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
@@ -1158,7 +1158,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
          em.movHWReg<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});
@@ -1208,7 +1208,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
          em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -1862,7 +1862,7 @@ void Emitter::putByValImpl(
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
   loadFrameAddr(a64::x3, frValue);
-  call((void *)shImpl, shImplName);
+  callThunk((void *)shImpl, shImplName);
 }
 
 void Emitter::delByIdImpl(
@@ -1882,7 +1882,7 @@ void Emitter::delByIdImpl(
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   a.mov(a64::w2, key);
-  call((void *)shImpl, shImplName);
+  callThunk((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
@@ -1912,7 +1912,7 @@ void Emitter::delByValImpl(
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
-  call((void *)shImpl, shImplName);
+  callThunk((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWReg<false>(hwRes, HWReg::gpX(0));
@@ -2094,7 +2094,7 @@ void Emitter::getByIdImpl(
     if (cacheIdx != 0)
       a.add(a64::x3, a64::x3, sizeof(SHPropertyCacheEntry) * cacheIdx);
   }
-  call((void *)shImpl, shImplName);
+  callThunk((void *)shImpl, shImplName);
 
   movHWReg<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHWReg(frRes, hwRes);
@@ -2292,7 +2292,7 @@ void Emitter::putByIdImpl(
     if (cacheIdx != 0)
       a.add(a64::x4, a64::x4, sizeof(SHPropertyCacheEntry) * cacheIdx);
   }
-  call((void *)shImpl, shImplName);
+  callThunk((void *)shImpl, shImplName);
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
@@ -2597,7 +2597,7 @@ int32_t Emitter::uint64Const(uint64_t bits, const char *comment) {
   return it->second;
 }
 
-asmjit::Label Emitter::registerCall(void *fn, const char *name) {
+asmjit::Label Emitter::registerThunk(void *fn, const char *name) {
   auto [it, inserted] = thunkMap_.try_emplace(fn, 0);
   // Is this a new thunk?
   if (inserted) {
@@ -2925,7 +2925,7 @@ void Emitter::arithUnop(
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
          em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3217,7 +3217,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
          em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3318,7 +3318,7 @@ void Emitter::arithBinOp(
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
          em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3424,7 +3424,7 @@ void Emitter::bitBinOp(
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
          em.movHWReg<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3621,7 +3621,7 @@ void Emitter::jCond(
            em.loadFrameAddr(a64::x1, sl.frInput1);
            em.loadFrameAddr(a64::x2, sl.frInput2);
          }
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
          if (!sl.invert)
            em.a.cbnz(a64::w0, sl.target);
          else
@@ -3731,7 +3731,7 @@ void Emitter::compareImpl(
            em.loadFrameAddr(a64::x1, sl.frInput1);
            em.loadFrameAddr(a64::x2, sl.frInput2);
          }
-         em.call(sl.slowCall, sl.slowCallName);
+         em.callThunk(sl.slowCall, sl.slowCallName);
 
          // Invert the slow path result if needed.
          if (sl.invert)

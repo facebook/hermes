@@ -402,10 +402,8 @@ class Emitter {
 
   void leave();
   void newBasicBlock(const asmjit::Label &label);
-  void call(void *fn, const char *name);
 
   /// Call a JS function.
-  /// TODO: Distinguish this from the other \c call.
   void call(FR frRes, FR frCallee, uint32_t argc);
   void callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args);
   void callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc);
@@ -891,7 +889,13 @@ class Emitter {
       const char *comment = nullptr);
   /// Register a 64-bit constant in RO DATA and return its offset.
   int32_t uint64Const(uint64_t bits, const char *comment);
-  asmjit::Label registerCall(void *fn, const char *name = nullptr);
+
+  /// Register \p fn as a thunk and return its label.
+  /// \param name is an optional name for the thunk.
+  asmjit::Label registerThunk(void *fn, const char *name = nullptr);
+
+  /// Register a call as a thunk and emit a call to it.
+  void callThunk(void *fn, const char *name);
 
   void emitSlowPaths();
   void emitThunks();
