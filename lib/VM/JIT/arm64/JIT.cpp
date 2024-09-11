@@ -77,8 +77,8 @@ JITCompiledFunctionPtr JITContext::compileImpl(
       codeBlock->propertyCache(),
       codeBlock->writePropertyCache(),
       codeBlock->getFrameSize(),
-      0,
-      0);
+      codeBlock->getFunctionHeader().numberRegCount(),
+      codeBlock->getFunctionHeader().nonPtrRegCount());
   std::vector<asmjit::Label> labels{};
   labels.reserve(basicBlocks.size() - 1);
   for (unsigned bbIndex = 0; bbIndex < basicBlocks.size() - 1; ++bbIndex)

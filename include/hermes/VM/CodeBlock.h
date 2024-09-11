@@ -137,6 +137,10 @@ class CodeBlock final
     return runtimeModule_;
   }
 
+  const hbc::RuntimeFunctionHeader &getFunctionHeader() const {
+    return functionHeader_;
+  }
+
   hbc::FunctionHeaderFlag getHeaderFlags() const {
     return functionHeader_.flags();
   }
