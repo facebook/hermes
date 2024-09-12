@@ -99,6 +99,31 @@ void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
   a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
 }
 
+/// For a register \p dInput, which contains a double, check whether it is a
+/// valid signed 64-bit integer.
+/// CPU flags are updated. b_eq on success.
+/// If successful, \p xTemp will contain the number converted to int,
+/// and \p dTemp will contain the same number as \p dInput.
+/// \pre dTemp != dInput, because both are used in the comparison.
+void emit_double_is_int(
+    a64::Assembler &a,
+    const a64::GpX &xTemp,
+    const a64::VecD &dTemp,
+    const a64::VecD &dInput) {
+  assert(dTemp != dInput && "must use a different temp");
+
+  // Convert the operand to a signed 64 bit integer.
+  a.fcvtzs(xTemp, dInput);
+  // Sign extend it from the second-to-last bit. This is necessary because
+  // fcvtzs is saturating and will convert the double 2^63 to 2^63 - 1, which
+  // will get converted back to 2^63 by scvtf. They will therefore incorrectly
+  // compare equal after truncation.
+  a.sbfx(xTemp, xTemp, 0, 63);
+  // Convert back to a double and see if they compare equal.
+  a.scvtf(dTemp, xTemp);
+  a.fcmp(dTemp, dInput);
+}
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
 
@@ -1229,16 +1254,8 @@ void Emitter::toInt32(FR frRes, FR frInput) {
   asmjit::Label contLab = newContLabel();
 
   HWReg hwInput = getOrAllocFRInVecD(frInput, true);
-  // Convert the operand to a signed 64 bit integer.
-  a.fcvtzs(hwTempGpX.a64GpX(), hwInput.a64VecD());
-  // Sign extend it from the second-to-last bit. This is necessary because
-  // fcvtzs is saturating and will convert the double 2^63 to 2^63 - 1, which
-  // will get converted back to 2^63 by scvtf. They will therefore incorrectly
-  // compare equal after truncation.
-  a.sbfx(hwTempGpX.a64GpX(), hwTempGpX.a64GpX(), 0, 63);
-  // Convert back to a double and see if they compare equal.
-  a.scvtf(hwTempVecD.a64VecD(), hwTempGpX.a64GpX());
-  a.fcmp(hwTempVecD.a64VecD(), hwInput.a64VecD());
+  emit_double_is_int(
+      a, hwTempGpX.a64GpX(), hwTempVecD.a64VecD(), hwInput.a64VecD());
   a.b_ne(slowPathLab);
 
   // Done allocating registers. Free them all and allocate the result.
@@ -2967,16 +2984,8 @@ void Emitter::bitNot(FR frRes, FR frInput) {
   asmjit::Label contLab = newContLabel();
 
   HWReg hwInput = getOrAllocFRInVecD(frInput, true);
-  // Convert the operand to a signed 64 bit integer.
-  a.fcvtzs(hwTempGpX.a64GpX(), hwInput.a64VecD());
-  // Sign extend it from the second-to-last bit. This is necessary because
-  // fcvtzs is saturating and will convert the double 2^63 to 2^63 - 1, which
-  // will get converted back to 2^63 by scvtf. They will therefore incorrectly
-  // compare equal after truncation.
-  a.sbfx(hwTempGpX.a64GpX(), hwTempGpX.a64GpX(), 0, 63);
-  // Convert back to a double and see if they compare equal.
-  a.scvtf(hwTempVecD.a64VecD(), hwTempGpX.a64GpX());
-  a.fcmp(hwTempVecD.a64VecD(), hwInput.a64VecD());
+  emit_double_is_int(
+      a, hwTempGpX.a64GpX(), hwTempVecD.a64VecD(), hwInput.a64VecD());
   a.b_ne(slowPathLab);
 
   // Done allocating registers. Free them all and allocate the result.
@@ -3365,24 +3374,14 @@ void Emitter::bitBinOp(
   asmjit::Label contLab = newContLabel();
 
   HWReg hwLeft = getOrAllocFRInVecD(frLeft, true);
-  // Convert the operand to a signed 64 bit integer.
-  a.fcvtzs(hwTempLGpX.a64GpX(), hwLeft.a64VecD());
-  // Sign extend it from the second-to-last bit. This is necessary because
-  // fcvtzs is saturating and will convert the double 2^63 to 2^63 - 1, which
-  // will get converted back to 2^63 by scvtf. They will therefore incorrectly
-  // compare equal after truncation.
-  a.sbfx(hwTempLGpX.a64GpX(), hwTempLGpX.a64GpX(), 0, 63);
-  // Convert back to a double and see if they compare equal.
-  a.scvtf(hwTempLVecD.a64VecD(), hwTempLGpX.a64GpX());
-  a.fcmp(hwTempLVecD.a64VecD(), hwLeft.a64VecD());
+  emit_double_is_int(
+      a, hwTempLGpX.a64GpX(), hwTempLVecD.a64VecD(), hwLeft.a64VecD());
   a.b_ne(slowPathLab);
 
   // Do the same for the RHS.
   HWReg hwRight = getOrAllocFRInVecD(frRight, true);
-  a.fcvtzs(hwTempRGpX.a64GpX(), hwRight.a64VecD());
-  a.sbfx(hwTempRGpX.a64GpX(), hwTempRGpX.a64GpX(), 0, 63);
-  a.scvtf(hwTempRVecD.a64VecD(), hwTempRGpX.a64GpX());
-  a.fcmp(hwTempRVecD.a64VecD(), hwRight.a64VecD());
+  emit_double_is_int(
+      a, hwTempRGpX.a64GpX(), hwTempRVecD.a64VecD(), hwRight.a64VecD());
   a.b_ne(slowPathLab);
 
   // Done allocating registers. Free them all and allocate the result.
