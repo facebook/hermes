@@ -44,6 +44,12 @@ void SerialExecutor::add(std::function<void()> task) {
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
     pthread_attr_t attr;
 
+    // Ensure the old thread is completely dead. Note that we don't need to
+    // release the mutex here because on timeouts, ThreadState::TimedOut is set
+    // by the worker right before returning.
+    if (threadState_ == ThreadState::TimedOut)
+      pthread_join(tid_, nullptr);
+
     int ret;
     (void)ret;
     ret = pthread_attr_init(&attr);
@@ -57,6 +63,9 @@ void SerialExecutor::add(std::function<void()> task) {
     ret = pthread_create(&tid_, &attr, SerialExecutor::threadMain, this);
     assert(ret == 0 && "Failed pthread_create");
 #else
+    // Ensure the old thread is completely dead.
+    if (threadState_ == ThreadState::TimedOut)
+      workerThread_.join();
     workerThread_ = std::thread(threadMain, this);
 #endif
 
@@ -85,9 +94,16 @@ void SerialExecutor::run() {
       return;
     }
 
-    // Wait for a new task to be enqueued. Note we do this at the end to ensure
-    // that any tasks added before we entered this function are executed.
-    wakeUpSig_.wait(lock);
+    // Wait for a new task to be enqueued, or for the timeout to expire. Note we
+    // do this at the end to ensure that any tasks added before we entered this
+    // function are executed.
+    auto waitRes = wakeUpSig_.wait_for(lock, timeout_);
+
+    // Timed out and there is nothing to do, exit.
+    if (waitRes == std::cv_status::timeout && tasks_.empty()) {
+      threadState_ = ThreadState::TimedOut;
+      return;
+    }
   }
 }
 

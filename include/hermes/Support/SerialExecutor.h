@@ -32,6 +32,8 @@ class SerialExecutor {
     Uninitialized,
     /// The thread is ready to run tasks.
     Initialized,
+    /// The thread has exited because it timed out.
+    TimedOut,
     /// The thread is draining tasks and exiting during teardown.
     Terminating
   } threadState_{ThreadState::Uninitialized};
@@ -56,6 +58,10 @@ class SerialExecutor {
   /// The configured stack size for the worker thread.
   size_t stackSize_;
 
+  /// The configured timeout after which the worker thread will exit if no
+  /// additional work is enqueued.
+  std::chrono::milliseconds timeout_;
+
   /// This is executed on a new thread. It will run forever, executing tasks as
   /// they are posted. This stops running when shouldStop_ is set to true.
   void run();
@@ -64,9 +70,12 @@ class SerialExecutor {
   static void *threadMain(void *p);
 
  public:
-  /// Construct a thread which will run for the duration of this object's
-  /// lifetime.
-  SerialExecutor(size_t stackSize = 0) : stackSize_(stackSize) {}
+  /// Initialize a SerialExecutor with a worker thread that has a stack size of
+  /// \p stackSize and will remain live for \p timeout without additional work.
+  SerialExecutor(
+      size_t stackSize = 0,
+      std::chrono::milliseconds timeout = std::chrono::milliseconds::max())
+      : stackSize_(stackSize), timeout_(timeout) {}
 
   /// Make sure that the spawned thread has terminated. Will block if there is a
   /// long-running task currently being executed.
