@@ -2606,6 +2606,31 @@ void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
   }
 }
 
+void Emitter::instanceOf(FR frRes, FR frLeft, FR frRight) {
+  comment(
+      "// InstanceOf r%u, r%u, r%u",
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncToMem(frLeft);
+  syncToMem(frRight);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frLeft);
+  loadFrameAddr(a64::x2, frRight);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_instance_of_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
   comment(
       "// isIn r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());

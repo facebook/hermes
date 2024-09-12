@@ -698,6 +698,7 @@ class Emitter {
   DECL_DEL_BY_VAL(delByValLoose, "delByValLoose", _sh_ljs_del_by_val_loose);
   DECL_DEL_BY_VAL(delByValStrict, "delByValStrict", _sh_ljs_del_by_val_strict);
 
+  void instanceOf(FR frRes, FR frLeft, FR frRight);
   void isIn(FR frRes, FR frLeft, FR frRight);
 
   asmjit::Label newPrefLabel(const char *pref, size_t index);

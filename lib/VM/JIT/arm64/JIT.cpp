@@ -775,6 +775,13 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(GetGlobalObject);
           break;
 
+        case inst::OpCode::InstanceOf:
+          em.instanceOf(
+              FR(ip->iInstanceOf.op1),
+              FR(ip->iInstanceOf.op2),
+              FR(ip->iInstanceOf.op3));
+          ip = NEXTINST(InstanceOf);
+          break;
         case inst::OpCode::IsIn:
           em.isIn(FR(ip->iIsIn.op1), FR(ip->iIsIn.op2), FR(ip->iIsIn.op3));
           ip = NEXTINST(IsIn);
