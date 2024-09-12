@@ -1674,6 +1674,64 @@ void Emitter::createClosure(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
+  comment("// GetArgumentsLength r%u, r%u", frRes.index(), frLazyReg.index());
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  syncAllFRTempExcept(frRes != frLazyReg ? frRes : FR());
+  syncToMem(frLazyReg);
+
+  HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
+  HWReg hwTemp = allocTempGpX();
+  freeAllFRTempExcept({});
+  freeReg(hwTemp);
+  // Avoid an extra mov by using the temp register for the result if possible.
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
+  frUpdatedWithHW(frRes, hwRes, FRType::Number);
+
+  emit_sh_ljs_is_object(a, hwTemp.a64GpX(), hwLazyReg.a64GpX());
+  a.b_eq(slowPathLab);
+
+  // Fast path: if it's not an object, read from the frame.
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "NativeUint32 is stored as the lower 32 bits of the raw HermesValue");
+  a.ldur(
+      hwTemp.a64GpX().w(),
+      a64::Mem(
+          xFrame,
+          (int)StackFrameLayout::ArgCount * (int)sizeof(SHLegacyValue)));
+
+  // Encode the uint32_t as a double (making it a HermesValue).
+  a.ucvtf(hwRes.a64VecD(), hwTemp.a64GpX().w());
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .frInput1 = frLazyReg,
+       .hwRes = hwRes,
+       .slowCall = (void *)_sh_ljs_get_arguments_length,
+       .slowCallName = "_sh_ljs_get_arguments_length",
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: GetArgumentsLength r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.a.mov(a64::x1, xFrame);
+         em.loadFrameAddr(a64::x2, sl.frInput1);
+         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
 void Emitter::createThis(FR frRes, FR frPrototype, FR frCallable) {
   comment(
       "// CreateThis r%u, r%u, r%u",
@@ -3741,6 +3799,144 @@ void Emitter::compareImpl(
 
          // Comparison functions return bool, so encode it.
          emit_sh_ljs_bool(em.a, sl.hwRes.a64GpX());
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::getArgumentsPropByValImpl(
+    FR frRes,
+    FR frIndex,
+    FR frLazyReg,
+    const char *name,
+    SHLegacyValue (*shImpl)(
+        SHRuntime *shr,
+        SHLegacyValue *frame,
+        SHLegacyValue *idx,
+        SHLegacyValue *lazyReg),
+    const char *shImplName) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      name,
+      frRes.index(),
+      frIndex.index(),
+      frLazyReg.index());
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  syncAllFRTempExcept(frRes != frIndex && frRes != frLazyReg ? frRes : FR());
+  syncToMem(frIndex);
+  syncToMem(frLazyReg);
+  HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
+  HWReg hwIndex = getOrAllocFRInVecD(frIndex, true);
+  HWReg hwTempIndex = allocTempGpX();
+  a64::GpW wTempIndex = hwTempIndex.a64GpX().w();
+  HWReg hwTempArgCount = allocTempGpX();
+  HWReg hwTempVecD = allocTempVecD();
+  freeAllFRTempExcept({});
+  freeReg(hwTempIndex);
+  freeReg(hwTempArgCount);
+  freeReg(hwTempVecD);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+
+  // If lazyReg is an object, go to slow path.
+  emit_sh_ljs_is_object(a, hwTempIndex.a64GpX(), hwLazyReg.a64GpX());
+  a.b_eq(slowPathLab);
+
+  // If index is not an array index, go to slow path.
+  emit_double_is_int(
+      a, hwTempIndex.a64GpX(), hwTempVecD.a64VecD(), hwIndex.a64VecD());
+  a.b_ne(slowPathLab);
+
+  // If index >= arg count or index < 0, go to slow path.
+  // Use an unsigned comparison to handle the negative index case.
+  a.ldur(
+      hwTempArgCount.a64GpX().w(),
+      a64::Mem(
+          xFrame,
+          (int)StackFrameLayout::ArgCount * (int)sizeof(SHLegacyValue)));
+  a.cmp(hwTempIndex.a64GpX(), hwTempArgCount.a64GpX());
+  a.b_hs(slowPathLab);
+
+  // Load the argument from the stack.
+  // We want framePtr[(firstArg - index) * 8].
+  // Use shift SXTW to shift the signed w register by 3.
+  a.mov(hwTempArgCount.a64GpX().w(), (int)StackFrameLayout::FirstArg);
+  a.sub(wTempIndex, hwTempArgCount.a64GpX().w(), wTempIndex);
+  a.ldr(
+      hwRes.a64GpX(),
+      a64::Mem(xFrame, wTempIndex, a64::Shift(a64::ShiftOp::kSXTW, 3)));
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = name,
+       .frRes = frRes,
+       .frInput1 = frIndex,
+       .frInput2 = frLazyReg,
+       .hwRes = hwRes,
+       .slowCall = (void *)shImpl,
+       .slowCallName = shImplName,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.a.mov(a64::x1, xFrame);
+         em.loadFrameAddr(a64::x2, sl.frInput1);
+         em.loadFrameAddr(a64::x3, sl.frInput2);
+         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
+  comment("// %s r%u", name, frLazyReg.index());
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  syncAllFRTempExcept({});
+  syncToMem(frLazyReg);
+
+  HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
+  HWReg hwTemp = allocTempGpX();
+  freeAllFRTempExcept({});
+  freeReg(hwTemp);
+
+  emit_sh_ljs_is_object(a, hwTemp.a64GpX(), hwLazyReg.a64GpX());
+  // If the lazyReg is not an object, it needs to be reified, go to slow path.
+  a.b_ne(slowPathLab);
+
+  // Fast path: do nothing.
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = name,
+       .frInput1 = frLazyReg,
+       // Use hwRes field to pass the global reg for the in/out param.
+       .hwRes = frameRegs_[frLazyReg.index()].globalReg,
+       .slowCall = strict ? (void *)_sh_ljs_reify_arguments_strict
+                          : (void *)_sh_ljs_reify_arguments_loose,
+       .slowCallName = strict ? "_sh_ljs_reify_arguments_strict"
+                              : "_sh_ljs_reify_arguments_loose",
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.a.mov(a64::x1, xFrame);
+         em.loadFrameAddr(a64::x2, sl.frInput1);
+         em.callThunk(sl.slowCall, sl.slowCallName);
+         // Slow path modifies the frame so we need to sync it if there's a
+         // global reg.
+         if (sl.hwRes.isValid()) {
+           em._loadFrame(sl.hwRes, sl.frInput1);
+         }
          em.a.b(sl.contLab);
        }});
 }

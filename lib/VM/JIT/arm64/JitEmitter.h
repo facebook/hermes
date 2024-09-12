@@ -731,6 +731,30 @@ class Emitter {
       RuntimeModule *runtimeModule,
       uint32_t functionID);
 
+#define DECL_GET_ARGUMENTS_PROP_BY_VAL(methodName, commentStr, shFn) \
+  void methodName(FR frRes, FR frIndex, FR frLazyReg) {              \
+    getArgumentsPropByValImpl(                                       \
+        frRes, frIndex, frLazyReg, commentStr, shFn, #shFn);         \
+  }
+
+  DECL_GET_ARGUMENTS_PROP_BY_VAL(
+      getArgumentsPropByValLoose,
+      "GetArgumentsPropByValLoose",
+      _sh_ljs_get_arguments_prop_by_val_loose);
+  DECL_GET_ARGUMENTS_PROP_BY_VAL(
+      getArgumentsPropByValStrict,
+      "GetArgumentsPropByValStrict",
+      _sh_ljs_get_arguments_prop_by_val_strict);
+
+  void reifyArgumentsLoose(FR frLazyReg) {
+    reifyArgumentsImpl(frLazyReg, false, "ReifyArgumentsLoose");
+  }
+  void reifyArgumentsStrict(FR frLazyReg) {
+    reifyArgumentsImpl(frLazyReg, true, "ReifyArgumentsStrict");
+  }
+
+  void getArgumentsLength(FR frRes, FR frLazyReg);
+
   void createThis(FR frRes, FR frPrototype, FR frCallable);
   void selectObject(FR frRes, FR frThis, FR frConstructed);
 
@@ -1026,6 +1050,20 @@ class Emitter {
           SHLegacyValue *value,
           SHPropertyCacheEntry *propCacheEntry),
       const char *shImplName);
+
+  void getArgumentsPropByValImpl(
+      FR frRes,
+      FR frIndex,
+      FR frLazyReg,
+      const char *name,
+      SHLegacyValue (*shImpl)(
+          SHRuntime *shr,
+          SHLegacyValue *frame,
+          SHLegacyValue *idx,
+          SHLegacyValue *lazyReg),
+      const char *shImplName);
+
+  void reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name);
 }; // class Emitter
 
 } // namespace hermes::vm::arm64

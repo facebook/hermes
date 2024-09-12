@@ -1011,6 +1011,36 @@ JITCompiledFunctionPtr JITContext::compileImpl(
           ip = NEXTINST(GetNextPName);
           break;
 
+        case inst::OpCode::GetArgumentsPropByValLoose:
+          em.getArgumentsPropByValLoose(
+              FR(ip->iGetArgumentsPropByValLoose.op1),
+              FR(ip->iGetArgumentsPropByValLoose.op2),
+              FR(ip->iGetArgumentsPropByValLoose.op3));
+          ip = NEXTINST(GetArgumentsPropByValLoose);
+          break;
+        case inst::OpCode::GetArgumentsPropByValStrict:
+          em.getArgumentsPropByValStrict(
+              FR(ip->iGetArgumentsPropByValStrict.op1),
+              FR(ip->iGetArgumentsPropByValStrict.op2),
+              FR(ip->iGetArgumentsPropByValStrict.op3));
+          ip = NEXTINST(GetArgumentsPropByValStrict);
+          break;
+
+        case inst::OpCode::GetArgumentsLength:
+          em.getArgumentsLength(
+              FR(ip->iGetArgumentsLength.op1), FR(ip->iGetArgumentsLength.op2));
+          ip = NEXTINST(GetArgumentsLength);
+          break;
+
+        case inst::OpCode::ReifyArgumentsLoose:
+          em.reifyArgumentsLoose(FR(ip->iReifyArgumentsLoose.op1));
+          ip = NEXTINST(ReifyArgumentsLoose);
+          break;
+        case inst::OpCode::ReifyArgumentsStrict:
+          em.reifyArgumentsStrict(FR(ip->iReifyArgumentsStrict.op1));
+          ip = NEXTINST(ReifyArgumentsStrict);
+          break;
+
         case inst::OpCode::CreateThis:
           em.createThis(
               FR(ip->iCreateThis.op1),
