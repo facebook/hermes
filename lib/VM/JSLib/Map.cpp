@@ -166,7 +166,13 @@ mapConstructor(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError("Map Constructor only applies to Map object");
   }
-  JSMap::initializeStorage(selfHandle, runtime);
+
+  if (LLVM_UNLIKELY(
+          JSMap::initializeStorage(selfHandle, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   if (args.getArgCount() == 0 || args.getArg(0).isUndefined() ||
       args.getArg(0).isNull()) {
     return selfHandle.getHermesValue();

@@ -157,7 +157,11 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Set Constructor only applies to Set object");
   }
 
-  JSSet::initializeStorage(selfHandle, runtime);
+  if (LLVM_UNLIKELY(
+          JSSet::initializeStorage(selfHandle, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   if (args.getArgCount() == 0 || args.getArg(0).isUndefined() ||
       args.getArg(0).isNull()) {
