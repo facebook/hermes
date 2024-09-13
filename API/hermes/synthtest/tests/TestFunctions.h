@@ -27,6 +27,9 @@
   F(nativePropertyNames)             \
   F(nativeSetsConstant)              \
   F(parseGCConfig)                   \
+  F(partialTraceHostFunction)        \
+  F(partialTraceHostObjectGet)       \
+  F(partialTraceHostObjectSet)       \
   F(surrogatePairString)
 
 #define TEST_FUNC_FORWARD_DECL(name) \
