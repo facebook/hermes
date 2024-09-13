@@ -6,7 +6,7 @@ on:
         description: "The React Native version that will use this tag"
         required: true
       targetSha:
-        description: "The SHA you want to tag. If not specified it will tag the HEAD of main"
+        description: "The SHA you want to tag. If not specified it will tag the HEAD of the selected branch"
         required: false
 
 jobs:
