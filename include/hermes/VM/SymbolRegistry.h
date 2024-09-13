@@ -22,6 +22,8 @@ namespace vm {
 struct RootAcceptor;
 class StringPrimitive;
 class Runtime;
+template <CellKind C>
+class JSMapImpl;
 
 /// The global symbol registry, used to store information on which Symbols
 /// have been created with Symbol.for and looked up with Symbol.keyFor.
@@ -40,9 +42,9 @@ class Runtime;
 /// description.
 class SymbolRegistry {
   /// OrderedHashMap from the string key to the SymbolID.
-  /// Uses PinnedHermesValue to avoid allocating a new handle whenever we want
-  /// to use it.
-  PinnedHermesValue stringMap_;
+  /// Uses PinnedValue to avoid allocating a new handle whenever we want to use
+  /// it.
+  PinnedValue<JSMapImpl<CellKind::JSMapKind>> stringMap_;
 
   /// The set of SymbolIDs that have been registered in the SymbolRegistry.
   /// Note that these are guaranteed to be values in stringMap_,

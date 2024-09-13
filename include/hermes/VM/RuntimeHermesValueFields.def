@@ -84,8 +84,7 @@ RUNTIME_HV_FIELD(specialCodeBlockDomain_, Domain)
 
 RUNTIME_HV_FIELD(global_, JSObject)
 RUNTIME_HV_FIELD(thrownValue_, HermesValue)
-// TODO(T194880545) change to OrderedHashMap
-RUNTIME_HV_FIELD(keptObjects_, HermesValue)
+RUNTIME_HV_FIELD(keptObjects_, JSMapImpl<CellKind::JSSetKind>)
 #ifdef HERMES_ENABLE_DEBUGGER
 RUNTIME_HV_FIELD(debuggerInternalObject_, JSObject)
 #endif // HERMES_ENABLE_DEBUGGER

@@ -11,7 +11,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
-#include "hermes/VM/OrderedHashMap.h"
+#include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/PropertyAccessor.h"
 
 #include "llvh/ADT/SmallSet.h"
@@ -1333,6 +1333,10 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     OwnKeysFlags okFlags) {
+  struct : Locals {
+    PinnedValue<JSMap> map;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   GCScope gcScope{runtime};
   ScopedNativeDepthTracker depthTracker(runtime);
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -1397,18 +1401,18 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     return ExecutionStatus::EXCEPTION;
   }
   Handle<JSArray> trapResult = runtime.makeHandle(std::move(*trapResultRes));
-  CallResult<PseudoHandle<OrderedHashMap>> dupcheckRes =
-      OrderedHashMap::create(runtime);
-  if (LLVM_UNLIKELY(dupcheckRes == ExecutionStatus::EXCEPTION)) {
+  lv.map = JSMap::create(runtime, runtime.mapPrototype);
+  if (LLVM_UNLIKELY(
+          JSMap::initializeStorage(lv.map, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<OrderedHashMap> dupcheck = runtime.makeHandle(std::move(*dupcheckRes));
   if (LLVM_UNLIKELY(
           createListFromArrayLike_RJS(
               trapResultArray,
               runtime,
               count,
-              [&dupcheck, &trapResult](
+              [&lv, &trapResult](
                   Runtime &runtime, uint64_t index, PseudoHandle<> value) {
                 Handle<> valHandle = runtime.makeHandle(std::move(value));
                 if (!valHandle->isString() && !valHandle->isSymbol()) {
@@ -1416,13 +1420,12 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
                       valHandle,
                       " ownKeys trap result element is not String or Symbol");
                 }
-                if (OrderedHashMap::has(dupcheck, runtime, valHandle)) {
+                if (JSMap::has(lv.map, runtime, valHandle)) {
                   return runtime.raiseTypeErrorForValue(
                       "ownKeys trap result has duplicate ", valHandle, "");
                 }
                 if (LLVM_UNLIKELY(
-                        OrderedHashMap::insert(
-                            dupcheck, runtime, valHandle, valHandle) ==
+                        JSMap::insert(lv.map, runtime, valHandle, valHandle) ==
                         ExecutionStatus::EXCEPTION))
                   return ExecutionStatus::RETURNED;
                 JSArray::setElementAt(trapResult, runtime, index, valHandle);

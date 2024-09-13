@@ -94,6 +94,8 @@ class ScopedNativeCallFrame;
 class CodeCoverageProfiler;
 struct StackTracesTree;
 struct Locals;
+template <CellKind C>
+class JSMapImpl;
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 class SamplingProfiler;
