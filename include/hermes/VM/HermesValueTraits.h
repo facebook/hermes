@@ -68,8 +68,6 @@ HERMES_VM_GCOBJECT(NativeJSFunction);
 HERMES_VM_GCOBJECT(NativeConstructor);
 HERMES_VM_GCOBJECT(NativeFunction);
 HERMES_VM_GCOBJECT(NativeState);
-HERMES_VM_GCOBJECT(OrderedHashMap);
-HERMES_VM_GCOBJECT(OrderedHashSet);
 HERMES_VM_GCOBJECT(PropertyAccessor);
 HERMES_VM_GCOBJECT(RequireContext);
 HERMES_VM_GCOBJECT(StringPrimitive);

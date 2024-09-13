@@ -119,11 +119,10 @@ struct JSMapTypeTraits<CellKind::JSMapIteratorKind> {
 template <CellKind C>
 class JSMapIteratorImpl final : public JSObject {
   using Super = JSObject;
-  using OrderedHashTable = typename std::conditional<
+  using HashMapEntryType = typename std::conditional<
       C == CellKind::JSMapIteratorKind,
-      OrderedHashMap,
-      OrderedHashSet>::type;
-  using HashMapEntryType = typename OrderedHashTable::Entry;
+      HashMapEntry,
+      HashSetEntry>::type;
 
  public:
   static const ObjectVTable vt;
@@ -192,7 +191,7 @@ class JSMapIteratorImpl final : public JSObject {
             Handle<JSArray> arrHandle = runtime.makeHandle(std::move(*arrRes));
             value = self->itr_.getNonNull(runtime)->key.unboxToHV(runtime);
             JSArray::setElementAt(arrHandle, runtime, 0, value);
-            if constexpr (std::is_same_v<OrderedHashTable, OrderedHashMap>) {
+            if constexpr (std::is_same_v<HashMapEntryType, HashMapEntry>) {
               value = self->itr_.getNonNull(runtime)->value.unboxToHV(runtime);
             }
             JSArray::setElementAt(arrHandle, runtime, 1, value);

@@ -61,22 +61,6 @@ template class HashMapEntryBase<HashMapEntryKey>;
 //===----------------------------------------------------------------------===//
 // class OrderedHashMapBase
 
-void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.setVTable(&OrderedHashMap::vt);
-  OrderedHashMap::buildMetadata(cell, mb);
-}
-
-void OrderedHashSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.setVTable(&OrderedHashSet::vt);
-  OrderedHashSet::buildMetadata(cell, mb);
-}
-
-template <typename BucketType, typename Derived>
-OrderedHashMapBase<BucketType, Derived>::OrderedHashMapBase(
-    Runtime &runtime,
-    Handle<SegmentedArraySmall> hashTableStorage)
-    : hashTable_(runtime, hashTableStorage.get(), runtime.getHeap()) {}
-
 template <typename BucketType, typename Derived>
 OrderedHashMapBase<BucketType, Derived>::OrderedHashMapBase() {}
 
@@ -472,22 +456,9 @@ void OrderedHashMapBase<BucketType, Derived>::clear(Runtime &runtime) {
   size_ = 0;
 }
 
-template class OrderedHashMapBase<HashMapEntry, OrderedHashMap>;
-template class OrderedHashMapBase<HashSetEntry, OrderedHashSet>;
 template class OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>;
 template class OrderedHashMapBase<HashSetEntry, JSMapImpl<CellKind::JSSetKind>>;
 
-template ExecutionStatus
-OrderedHashMapBase<HashMapEntry, OrderedHashMap>::insert(
-    Handle<OrderedHashMap> self,
-    Runtime &runtime,
-    Handle<> key,
-    Handle<> value);
-template ExecutionStatus
-OrderedHashMapBase<HashSetEntry, OrderedHashSet>::insert(
-    Handle<OrderedHashSet> self,
-    Runtime &runtime,
-    Handle<> key);
 template ExecutionStatus
 OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>::insert(
     Handle<JSMapImpl<CellKind::JSMapKind>> self,
@@ -499,42 +470,6 @@ OrderedHashMapBase<HashSetEntry, JSMapImpl<CellKind::JSSetKind>>::insert(
     Handle<JSMapImpl<CellKind::JSSetKind>> self,
     Runtime &runtime,
     Handle<> key);
-
-const VTable OrderedHashMap::vt{
-    CellKind::OrderedHashMapKind,
-    cellSize<OrderedHashMap>()};
-
-CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
-    Runtime &runtime) {
-  auto arrRes =
-      SegmentedArraySmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto hashTableStorage =
-      runtime.makeHandle<SegmentedArraySmall>(std::move(*arrRes));
-
-  return createPseudoHandle(
-      runtime.makeAFixed<OrderedHashMap>(runtime, hashTableStorage));
-}
-
-const VTable OrderedHashSet::vt{
-    CellKind::OrderedHashSetKind,
-    cellSize<OrderedHashSet>()};
-
-CallResult<PseudoHandle<OrderedHashSet>> OrderedHashSet::create(
-    Runtime &runtime) {
-  auto arrRes =
-      SegmentedArraySmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto hashTableStorage =
-      runtime.makeHandle<SegmentedArraySmall>(std::move(*arrRes));
-
-  return createPseudoHandle(
-      runtime.makeAFixed<OrderedHashSet>(runtime, hashTableStorage));
-}
 
 } // namespace vm
 } // namespace hermes

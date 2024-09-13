@@ -191,10 +191,6 @@ class OrderedHashMapBase {
   /// deleted.
   BucketType *iteratorNext(Runtime &runtime, BucketType *entry = nullptr) const;
 
-  OrderedHashMapBase(
-      Runtime &runtime,
-      Handle<SegmentedArraySmall> hashTableStorage);
-
   explicit OrderedHashMapBase();
 
   /// Allocate the internal element storage.
@@ -328,50 +324,6 @@ class OrderedHashMapBase {
       Handle<> value);
 
 }; // OrderedHashMapBase
-
-/// OrderedHashMap is a gc-managed hash map storing key/value pairs.
-class OrderedHashMap final
-    : public GCCell,
-      public OrderedHashMapBase<HashMapEntry, OrderedHashMap> {
- public:
-  static const VTable vt;
-
-  OrderedHashMap(Runtime &runtime, Handle<SegmentedArraySmall> hashTableStorage)
-      : OrderedHashMapBase<HashMapEntry, OrderedHashMap>(
-            runtime,
-            hashTableStorage) {}
-
-  static constexpr CellKind getCellKind() {
-    return CellKind::OrderedHashMapKind;
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::OrderedHashMapKind;
-  }
-
-  static CallResult<PseudoHandle<OrderedHashMap>> create(Runtime &runtime);
-};
-
-/// OrderedHashSet is a gc-managed hash map storing keys.
-class OrderedHashSet final
-    : public GCCell,
-      public OrderedHashMapBase<HashSetEntry, OrderedHashSet> {
- public:
-  static const VTable vt;
-
-  OrderedHashSet(Runtime &runtime, Handle<SegmentedArraySmall> hashTableStorage)
-      : OrderedHashMapBase<HashSetEntry, OrderedHashSet>(
-            runtime,
-            hashTableStorage) {}
-
-  static constexpr CellKind getCellKind() {
-    return CellKind::OrderedHashSetKind;
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::OrderedHashSetKind;
-  }
-
-  static CallResult<PseudoHandle<OrderedHashSet>> create(Runtime &runtime);
-};
 
 } // namespace vm
 } // namespace hermes
