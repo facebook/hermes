@@ -210,26 +210,18 @@ bool OrderedHashMapBase<BucketType, Derived>::has(
 }
 
 template <typename BucketType, typename Derived>
-BucketType *OrderedHashMapBase<BucketType, Derived>::find(
+SmallHermesValue OrderedHashMapBase<BucketType, Derived>::get(
     Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
   self->assertInitialized();
   auto bucket = hashToBucket(self->capacity_, runtime, key);
-  return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
-}
-
-template <typename BucketType, typename Derived>
-HermesValue OrderedHashMapBase<BucketType, Derived>::get(
-    Handle<Derived> self,
-    Runtime &runtime,
-    Handle<> key) {
-  self->assertInitialized();
-  auto *entry = find(self, runtime, key);
+  auto *entry =
+      self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
   if (!entry) {
-    return HermesValue::encodeUndefinedValue();
+    return SmallHermesValue::encodeUndefinedValue();
   }
-  return entry->getValue().unboxToHV(runtime);
+  return entry->getValue();
 }
 
 template <typename BucketType, typename Derived>

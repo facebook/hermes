@@ -299,7 +299,8 @@ mapPrototypeGet(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError("Non-Map object called on Map.prototype.get");
   }
-  return JSMap::get(selfHandle, runtime, args.getArgHandle(0));
+  return JSMap::get(selfHandle, runtime, args.getArgHandle(0))
+      .unboxToHV(runtime);
 }
 
 CallResult<HermesValue>

@@ -150,7 +150,8 @@ class OrderedHashMapBase {
 
   /// Lookup \p key in the table and \return the value if exists.
   /// Otherwise \return undefined.
-  static HermesValue get(Handle<Derived> self, Runtime &runtime, Handle<> key);
+  static SmallHermesValue
+  get(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
   /// Lookup \p key in the table and \return the value if exists.
   /// Otherwise \return nullptr.

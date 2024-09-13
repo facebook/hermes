@@ -37,9 +37,9 @@ void SymbolRegistry::markRoots(RootAcceptor &acceptor) {
 CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
     Runtime &runtime,
     Handle<StringPrimitive> key) {
-  HashMapEntry *it = JSMap::find(stringMap_, runtime, key);
-  if (it) {
-    return it->value.getSymbol();
+  SmallHermesValue hv = JSMap::get(stringMap_, runtime, key);
+  if (!hv.isUndefined()) {
+    return hv.getSymbol();
   }
 
   auto symbolRes =
