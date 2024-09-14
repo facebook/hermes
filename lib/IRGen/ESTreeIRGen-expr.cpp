@@ -1032,6 +1032,7 @@ void ESTreeIRGen::emitMemberStore(
           *optIndex,
           Builder.getLiteralString(propName),
           flowTypeToIRType(field.type).isNonPtr());
+      return;
     }
   }
 

@@ -37,12 +37,11 @@ let t2: {x: number, y: number} = {x: 3, x: 4, y: t.x};
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.t]: any
 // CHECK-NEXT:  %14 = CheckedTypeCastInst (:object) %13: any, type(object)
 // CHECK-NEXT:        PrStoreInst 5: number, %14: object, 0: number, "x": string, true: boolean
-// CHECK-NEXT:        StorePropertyStrictInst 5: number, %14: object, "x": string
-// CHECK-NEXT:  %17 = LoadFrameInst (:any) %1: environment, [%VS1.t]: any
-// CHECK-NEXT:  %18 = CheckedTypeCastInst (:object) %17: any, type(object)
-// CHECK-NEXT:  %19 = PrLoadInst (:number) %18: object, 0: number, "x": string
-// CHECK-NEXT:  %20 = AllocObjectLiteralInst (:object) empty: any, "x": string, 4: number, "y": string, 0: number
-// CHECK-NEXT:        PrStoreInst %19: number, %20: object, 1: number, "y": string, true: boolean
-// CHECK-NEXT:        StoreFrameInst %1: environment, %20: object, [%VS1.t2]: any
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [%VS1.t]: any
+// CHECK-NEXT:  %17 = CheckedTypeCastInst (:object) %16: any, type(object)
+// CHECK-NEXT:  %18 = PrLoadInst (:number) %17: object, 0: number, "x": string
+// CHECK-NEXT:  %19 = AllocObjectLiteralInst (:object) empty: any, "x": string, 4: number, "y": string, 0: number
+// CHECK-NEXT:        PrStoreInst %18: number, %19: object, 1: number, "y": string, true: boolean
+// CHECK-NEXT:        StoreFrameInst %1: environment, %19: object, [%VS1.t2]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
