@@ -8,9 +8,10 @@
 import static org.assertj.core.api.Java6Assertions.assertThat;
 
 import android.content.res.AssetManager;
-import android.test.InstrumentationTestCase;
 import android.text.TextUtils;
 import android.util.Log;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.runner.AndroidJUnit4;
 import com.facebook.hermes.test.JSRuntime;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,15 +24,19 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 // Run "./gradlew :intltest:prepareTests" from the root to copy the test files to the
 // APK assets.
-public class HermesIntlTest262 extends InstrumentationTestCase {
+@RunWith(AndroidJUnit4.class)
+public class HermesIntlTest262 {
 
   private static final String LOG_TAG = "HermesIntlTest";
 
   protected void evalScriptFromAsset(JSRuntime rt, String filename) throws IOException {
-    AssetManager assets = getInstrumentation().getContext().getAssets();
+    AssetManager assets =
+        InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets();
     InputStream is = assets.open(filename);
 
     BufferedReader r = new BufferedReader(new InputStreamReader(is));
@@ -56,11 +61,13 @@ public class HermesIntlTest262 extends InstrumentationTestCase {
     evalScriptFromAsset(rt, "test262/harness/testTypedArray.js");
   }
 
+  @Test
   public void test262Intl() throws IOException {
     Set<String> skipList = getSkipList();
     Stack<String> testFiles = new Stack<>();
     testFiles.push("test262/test");
-    AssetManager assets = getInstrumentation().getContext().getAssets();
+    AssetManager assets =
+        InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets();
     ArrayList<String> ranTests = new ArrayList<>();
     HashMap<String, String> failedTests = new HashMap<>();
 

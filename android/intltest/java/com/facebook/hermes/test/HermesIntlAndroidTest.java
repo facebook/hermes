@@ -10,18 +10,24 @@ package com.facebook.hermes.test;
 import static org.assertj.core.api.Java6Assertions.assertThat;
 
 import android.content.res.AssetManager;
-import android.test.InstrumentationTestCase;
+import android.os.Build;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.runner.AndroidJUnit4;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.stream.Collectors;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
-public class HermesIntlAndroidTest extends InstrumentationTestCase {
+@RunWith(AndroidJUnit4.class)
+public class HermesIntlAndroidTest {
+
   @Test
   public void testIntlFromAsset() throws IOException {
-    AssetManager assets = getInstrumentation().getContext().getAssets();
+    AssetManager assets =
+        InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets();
     InputStream is = assets.open("intl.js");
     String script =
         new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
@@ -32,7 +38,8 @@ public class HermesIntlAndroidTest extends InstrumentationTestCase {
 
   @Test
   public void testNumberFormatFractionDigitsFromAsset() throws IOException {
-    AssetManager assets = getInstrumentation().getContext().getAssets();
+    AssetManager assets =
+        InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets();
     InputStream is = assets.open("number-format-fraction-digits.js");
     String script =
         new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
@@ -78,6 +85,51 @@ public class HermesIntlAndroidTest extends InstrumentationTestCase {
 
       String result = rt.getGlobalStringProperty("formattedDate");
       assertThat(result).isEqualTo("9/24, 6:00 PM");
+    }
+  }
+
+  @Test
+  public void testSignDisplayAlwaysForApiLevelAbove31() {
+    if (Build.VERSION.SDK_INT >= 31) {
+      try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+        rt.evaluateJavaScript(
+            "var nf = new Intl.NumberFormat('de-DE', { signDisplay: 'always', currency: 'EUR',"
+                + " style: 'currency' });\n"
+                + "var result = nf.format(8537.71);");
+
+        String result = rt.getGlobalStringProperty("result");
+        assertThat(result).isEqualTo("+8.537,71 €");
+      }
+    }
+  }
+
+  @Test
+  public void testSignDisplayNeverForApiLevelAbove31() {
+    if (Build.VERSION.SDK_INT >= 31) {
+      try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+        rt.evaluateJavaScript(
+            "var nf = new Intl.NumberFormat('de-DE', { signDisplay: 'never', currency: 'EUR',"
+                + " style: 'currency' });\n"
+                + "var result = nf.format(8537.71);");
+
+        String result = rt.getGlobalStringProperty("result");
+        assertThat(result).isEqualTo("8.537,71 €");
+      }
+    }
+  }
+
+  @Test
+  public void testSignDisplayExceptZeroForApiLevelAbove31() {
+    if (Build.VERSION.SDK_INT >= 31) {
+      try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+        rt.evaluateJavaScript(
+            "var nf = new Intl.NumberFormat('de-DE', { signDisplay: 'exceptZero', currency: 'EUR',"
+                + " style: 'currency'});\n"
+                + "var result = nf.format(8537.71);");
+
+        String result = rt.getGlobalStringProperty("result");
+        assertThat(result).isEqualTo("+8.537,71 €");
+      }
     }
   }
 }
