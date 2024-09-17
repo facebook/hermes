@@ -2922,6 +2922,11 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           new (context_)
               ESTree::PropertyNode(key, value, initIdent_, false, false, true));
     } else {
+      if (lexer_.isNewLineBeforeCurrentToken()) {
+        error(
+            tok_->getSourceRange(),
+            "newline not allowed after 'async' in a method definition");
+      }
       // This is an async function, parse the key and set `async` to true.
       async = true;
       method = true;
