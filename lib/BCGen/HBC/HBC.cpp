@@ -419,12 +419,21 @@ std::vector<uint32_t> getVariableCounts(
     hbc::BCProviderFromSrc *provider,
     uint32_t funcID) {
   hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
-  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
-  Function *F = lazyFunc.getFunctionIR();
-  assert(F && "no lazy IR for lazy function");
+  hbc::BytecodeFunction &bcFunc = bcModule->getFunction(funcID);
+  Function *F = bcFunc.getFunctionIR();
+  if (!F) {
+    // Couldn't find an IR function, possibly unsupported function kind or
+    // compiled without -g.
+    return std::vector<uint32_t>({0});
+  }
 
   const EvalCompilationDataInst *evalDataInst = F->getEvalCompilationDataInst();
-  assert(evalDataInst && "function must be lazy");
+  if (!evalDataInst) {
+    // No known way to do this, defensive programming.
+    // functionIR is either lazy or has EvalCompilationDataInst, and we can't be
+    // here if the function was lazy.
+    return std::vector<uint32_t>({0});
+  }
 
   std::vector<uint32_t> counts;
 

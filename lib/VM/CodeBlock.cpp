@@ -238,7 +238,10 @@ bool CodeBlock::coordsInLazyFunction(SMLoc loc) const {
 
 std::vector<uint32_t> CodeBlock::getVariableCounts() const {
   auto *provider =
-      llvh::cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
+  if (!provider) {
+    return std::vector<uint32_t>({0});
+  }
   return hbc::getVariableCounts(provider, functionID_);
 }
 
