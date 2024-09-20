@@ -380,6 +380,7 @@ if (GCC_COMPATIBLE)
 
   append("-Wextra -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append("-Wcast-qual" CMAKE_CXX_FLAGS)
+  append("-Wno-invalid-offsetof" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
   # false positives with empty {}. Turn them on otherwise (they're off by
