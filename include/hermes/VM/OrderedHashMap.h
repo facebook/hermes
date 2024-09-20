@@ -153,10 +153,6 @@ class OrderedHashMapBase {
   static SmallHermesValue
   get(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
-  /// Lookup \p key in the table and \return the value if exists.
-  /// Otherwise \return nullptr.
-  static BucketType *find(Handle<Derived> self, Runtime &runtime, Handle<> key);
-
   /// Insert a key/value pair, if not already existing. Function enabled only if
   /// this is a Map.
   template <
