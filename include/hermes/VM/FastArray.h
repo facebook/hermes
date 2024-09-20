@@ -48,6 +48,14 @@ class FastArray : public JSObject {
     return getDirectSlotValue<lengthPropIndex()>(this).getNumber(pb);
   }
 
+  /// \return the backing storage of this FastArray. This is useful if we want
+  /// to make multiple accesses to the storage without having to retrieve it
+  /// each time. Note that this must never be used to push or pop elements (or
+  /// otherwise resize the array), as that will invalidate the length property.
+  ArrayStorageSmall *unsafeGetIndexedStorage(PointerBase &pb) {
+    return indexedStorage_.getNonNull(pb);
+  }
+
   /// \return the value at index \p index, or throw if the index is not
   /// within bounds
   CallResult<SmallHermesValue> at(Runtime &runtime, size_t index) const {

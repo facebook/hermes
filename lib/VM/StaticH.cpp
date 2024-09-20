@@ -1840,29 +1840,19 @@ extern "C" void _sh_throw_array_oob(SHRuntime *shr) {
   _sh_throw_current(shr);
 }
 
-#ifdef HERMESVM_BOXED_DOUBLES
 extern "C" SHLegacyValue
 _sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
   Runtime &runtime = getRuntime(shr);
-  auto arrayHandle = Handle<FastArray>::vmcast(toPHV(array));
+  auto *arr = vmcast<FastArray>(*toPHV(array));
+  ArrayStorageSmall *storage = arr->unsafeGetIndexedStorage(runtime);
 
-  uint32_t intIndex =
-      fastarrayBoundsCheck(shr, arrayHandle->getLength(runtime), index);
-  return arrayHandle->at(runtime, intIndex)->unboxToHV(runtime);
-}
-#else
-extern "C" SHLegacyValue
-_sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
-  SHFastArray *arr = (SHFastArray *)_sh_ljs_get_pointer(*array);
-  SHArrayStorageSmall *storage =
-      (SHArrayStorageSmall *)_sh_cp_decode_non_null(shr, arr->indexedStorage);
-  uint32_t idx = index;
+  uint32_t intIndex = unsafeTruncateDouble<uint32_t>(index);
   // Check that the index is an unsigned integer that is within range.
-  if (idx >= storage->size || idx != index)
+  if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != index))
     _sh_throw_array_oob(shr);
-  return storage->storage[idx];
+
+  return storage->at(intIndex).unboxToHV(runtime);
 }
-#endif
 
 extern "C" void _sh_fastarray_store(
     SHRuntime *shr,
