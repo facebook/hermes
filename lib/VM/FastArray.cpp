@@ -212,9 +212,10 @@ HermesValue FastArray::_getOwnIndexedImpl(
     uint32_t index) {
   NoHandleScope noHandles{runtime};
   auto *self = vmcast<FastArray>(selfObj.get());
-  if (index >= self->getLength(runtime))
+  auto *storage = self->indexedStorage_.getNonNull(runtime);
+  if (index >= storage->size())
     return HermesValue::encodeEmptyValue();
-  return self->unsafeAt(runtime, index).unboxToHV(runtime);
+  return storage->at(index).unboxToHV(runtime);
 }
 
 CallResult<bool> FastArray::_setOwnIndexedImpl(

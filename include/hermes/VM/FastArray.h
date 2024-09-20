@@ -60,7 +60,7 @@ class FastArray : public JSObject {
   /// within bounds
   CallResult<SmallHermesValue> at(Runtime &runtime, size_t index) const {
     auto *storage = indexedStorage_.getNonNull(runtime);
-    if (index >= getLength(runtime))
+    if (index >= storage->size())
       return runtime.raiseRangeError("Array index out of bounds");
     return storage->at(index);
   }
@@ -86,7 +86,7 @@ class FastArray : public JSObject {
   /// bounds.
   ExecutionStatus set(Runtime &runtime, size_t index, SmallHermesValue val) {
     auto *storage = indexedStorage_.getNonNull(runtime);
-    if (index >= indexedStorage_.getNonNull(runtime)->size())
+    if (index >= storage->size())
       return runtime.raiseRangeError("Array index out of bounds");
     storage->set(index, val, runtime.getHeap());
     return ExecutionStatus::RETURNED;
