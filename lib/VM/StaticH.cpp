@@ -1824,17 +1824,6 @@ extern "C" void _sh_typed_store_parent(
       objectHandle.get(), runtime, parentHandle.get());
 }
 
-/// Check that \p index is an unsigned integer smaller than \p length. If it is,
-/// return it, otherwise, throw.
-inline static uint32_t
-fastarrayBoundsCheck(SHRuntime *shr, uint32_t length, double index) {
-  uint32_t intIndex = hermes::unsafeTruncateDouble<uint32_t>(index);
-  if (LLVM_LIKELY(intIndex < length && intIndex == index))
-    return intIndex;
-
-  _sh_throw_array_oob(shr);
-}
-
 extern "C" void _sh_throw_array_oob(SHRuntime *shr) {
   (void)getRuntime(shr).raiseRangeError("array load index out of range");
   _sh_throw_current(shr);
@@ -1860,12 +1849,16 @@ extern "C" void _sh_fastarray_store(
     SHLegacyValue *array,
     double index) {
   Runtime &runtime = getRuntime(shr);
-  auto arrayHandle = Handle<FastArray>::vmcast(toPHV(array));
-
-  uint32_t intIndex =
-      fastarrayBoundsCheck(shr, arrayHandle->getLength(runtime), index);
   auto shv = SmallHermesValue::encodeHermesValue(*toPHV(storedValue), runtime);
-  arrayHandle->unsafeSet(runtime, intIndex, shv);
+  auto *arr = vmcast<FastArray>(*toPHV(array));
+  ArrayStorageSmall *storage = arr->unsafeGetIndexedStorage(runtime);
+
+  uint32_t intIndex = unsafeTruncateDouble<uint32_t>(index);
+  // Check that the index is an unsigned integer that is within range.
+  if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != index))
+    _sh_throw_array_oob(shr);
+
+  return storage->set(intIndex, shv, runtime.getHeap());
 }
 
 extern "C" void _sh_fastarray_push(
