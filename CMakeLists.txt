@@ -466,6 +466,11 @@ if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
     add_definitions(-DHERMES_UBSAN)
     # Do not enable the vptr sanitizer, as it requires RTTI.
     append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    # Function signature sanitization produces false positives on Apple platforms.
+    # https://github.com/llvm/llvm-project/issues/109074
+    if (APPLE)
+        add_flag_if_supported("-fno-sanitize=function" APPLE_NO_SANITIZE_FUNCTION)
+    endif()
 endif()
 if (HERMES_ENABLE_THREAD_SANITIZER)
     append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
