@@ -256,7 +256,9 @@ inline HermesValue operator"" _hd(long double d) {
 }
 
 /// A minimal Runtime for GC tests.
-class DummyRuntime final : public HandleRootOwner, public RuntimeBase {
+/// Note that RuntimeBase must be the first base class to ensure that
+/// PointerBase is at the start of the segment in contiguous heap mode.
+class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
  private:
   GCBase::GCCallbacksWrapper<DummyRuntime> gcCallbacksWrapper_;
   GCStorage gcStorage_;
