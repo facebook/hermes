@@ -469,9 +469,9 @@ static struct {
   int8_t bold;
 } s_palette[] = {
     // None
-    {.bold = -1},
+    {llvh::raw_ostream::Colors::BLACK, -1},
     // Inst
-    {.bold = -1},
+    {llvh::raw_ostream::Colors::BLACK, -1},
     // Type like :number.
     {llvh::raw_ostream::Colors::GREEN, false},
     // Name like %15 or %BB3
