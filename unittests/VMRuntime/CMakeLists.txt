@@ -72,6 +72,7 @@ set(RTSources
   TwineChar16Test.cpp
   WeakValueMapTest.cpp
   MetadataTest.cpp
+  test_sh_fp_trunc.cpp
   )
 
 add_hermes_unittest(HermesVMRuntimeTests

@@ -303,6 +303,9 @@ set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
 # 2: JIT is enabled
 set(HERMESVM_ALLOW_JIT 0 CACHE STRING "JIT mode: 0 (off), 1 (auto) or 2 (force on)")
 
+set(HERMES_FP_TRUNC_ENABLE_UNSUPPORTED 0 CACHE STRING
+  "Enable fp_trunc on unsupported platforms: 0 (off), 1 (slow), or 2 (fast with UB)")
+
 # This definition is used by source that must be kept identical between Hermes and
 # Static Hermes, but needs to behave differently in each case.
 add_definitions(-DSTATIC_HERMES)
@@ -529,6 +532,10 @@ endif()
 
 if (HERMESVM_ALLOW_JIT)
   add_definitions(-DHERMESVM_ALLOW_JIT=${HERMESVM_ALLOW_JIT})
+endif ()
+
+if (HERMES_FP_TRUNC_ENABLE_UNSUPPORTED)
+  add_definitions(-DHERMES_FP_TRUNC_ENABLE_UNSUPPORTED=${HERMES_FP_TRUNC_ENABLE_UNSUPPORTED})
 endif ()
 
 if (GCC_COMPATIBLE)

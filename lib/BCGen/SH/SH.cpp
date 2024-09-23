@@ -639,7 +639,7 @@ class InstrGen {
     } else if (auto LN = llvh::dyn_cast<LiteralNumber>(&val)) {
       os_ << "_sh_ljs_double(";
       if (!LN->isNegativeZero() &&
-          LN->getValue() == unsafeTruncateDouble<int>(LN->getValue())) {
+          LN->getValue() == _sh_trunc_f64_to_i32(LN->getValue())) {
         os_ << static_cast<int>(LN->getValue());
       } else {
         os_ << "((struct HermesValueBase){.raw = "

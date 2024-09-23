@@ -9,6 +9,7 @@
 #define HERMES_SUPPORT_CONVERSIONS_H
 
 #include "hermes/Support/OptValue.h"
+#include "hermes/Support/sh_fp_trunc.h"
 
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/MathExtras.h"
@@ -17,14 +18,12 @@
 
 namespace hermes {
 
-/// Helper function to silence UBSAN complaints when truncating a double to some
-/// type that cannot hold its original value (e.g. integer types and float).
-template <typename T>
-T unsafeTruncateDouble(double d) LLVM_NO_SANITIZE("float-cast-overflow");
-
-template <typename T>
-T unsafeTruncateDouble(double d) {
-  return static_cast<T>(d);
+/// Helper function to silence UBSAN complaints when truncating a double to
+/// float, even though that is not really UB, since the behavior is governed
+/// by IEEE 754.
+float truncDoubleToFloat(double d) LLVM_NO_SANITIZE("float-cast-overflow");
+inline float truncDoubleToFloat(double d) {
+  return (float)d;
 }
 
 /// Convert a double to a 32-bit integer according to ES5.1 section 9.5.
@@ -164,7 +163,7 @@ inline OptValue<uint32_t> toArrayIndex(llvh::StringRef str) {
 
 /// Attempt to convert a double to a valid JavaScript array number.
 inline OptValue<uint32_t> doubleToArrayIndex(double d) {
-  uint32_t index = unsafeTruncateDouble<uint32_t>(d);
+  uint32_t index = _sh_trunc_f64_to_u32(d);
   if (index == d && index != 0xFFFFFFFFu)
     return index;
   return llvh::None;

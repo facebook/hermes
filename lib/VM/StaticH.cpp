@@ -1835,7 +1835,7 @@ _sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
   auto *arr = vmcast<FastArray>(*toPHV(array));
   ArrayStorageSmall *storage = arr->unsafeGetIndexedStorage(runtime);
 
-  uint32_t intIndex = unsafeTruncateDouble<uint32_t>(index);
+  uint32_t intIndex = _sh_trunc_f64_to_u32(index);
   // Check that the index is an unsigned integer that is within range.
   if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != index))
     _sh_throw_array_oob(shr);
@@ -1853,7 +1853,7 @@ extern "C" void _sh_fastarray_store(
   auto *arr = vmcast<FastArray>(*toPHV(array));
   ArrayStorageSmall *storage = arr->unsafeGetIndexedStorage(runtime);
 
-  uint32_t intIndex = unsafeTruncateDouble<uint32_t>(index);
+  uint32_t intIndex = _sh_trunc_f64_to_u32(index);
   // Check that the index is an unsigned integer that is within range.
   if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != index))
     _sh_throw_array_oob(shr);

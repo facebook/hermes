@@ -297,7 +297,7 @@ static CallResult<PseudoHandle<StringPrimitive>> numberToString(
   char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
 
   // Optimization: Fast-case for positive integers < 2^31
-  int32_t n = unsafeTruncateDouble<int32_t>(m);
+  int32_t n = _sh_trunc_f64_to_i32(m);
   if (m == static_cast<double>(n) && n > 0) {
     // Write base 10 digits in reverse from end of buf8.
     char *p = buf8 + sizeof(buf8);
