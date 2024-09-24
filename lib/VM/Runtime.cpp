@@ -2026,19 +2026,6 @@ llvh::raw_ostream &operator<<(
   return OS << "\")";
 }
 
-template <typename T>
-static std::string &llvmStreamableToString(const T &v) {
-  // Use a static string to back this function to avoid allocations. We should
-  // only be calling this from the crash dumper so not have to worry about
-  // multi-threaded usage.
-  static std::string buf;
-  buf.clear();
-  llvh::raw_string_ostream strstrm(buf);
-  strstrm << v;
-  strstrm.flush();
-  return buf;
-}
-
 /****************************************************************************
  * WARNING: This code is run after a crash. Avoid walking data structures,
  *          doing memory allocation, or using libc etc. as much as possible
@@ -2046,25 +2033,25 @@ static std::string &llvmStreamableToString(const T &v) {
 void Runtime::crashCallback(int fd) {
   llvh::raw_fd_ostream jsonStream(fd, false);
   JSONEmitter json(jsonStream);
+
+  // Temporary buffer for pointers converted to strings. 20 bytes is enough,
+  // since an 8 byte pointer is 16 characters, plus the "0x" and the null
+  // terminator.
+  char hexBuf[20];
+  auto writeHex = [&hexBuf](void *ptr) {
+    unsigned len = snprintf(hexBuf, sizeof(hexBuf), "%p", ptr);
+    assert(len < sizeof(hexBuf) && "Need more chars than expected");
+    return llvh::StringRef{hexBuf, len};
+  };
+
   json.openDict();
   json.emitKeyValue("type", "runtime");
+  json.emitKeyValue("address", writeHex(this));
   json.emitKeyValue(
-      "address", llvmStreamableToString(llvh::format_hex((uintptr_t)this, 10)));
-  json.emitKeyValue(
-      "registerStackAllocation",
-      llvmStreamableToString(
-          llvh::format_hex((uintptr_t)registerStackAllocation_.data(), 10)));
-  json.emitKeyValue(
-      "registerStackStart",
-      llvmStreamableToString(
-          llvh::format_hex((uintptr_t)registerStackStart_, 10)));
-  json.emitKeyValue(
-      "registerStackPointer",
-      llvmStreamableToString(llvh::format_hex((uintptr_t)stackPointer_, 10)));
-  json.emitKeyValue(
-      "registerStackEnd",
-      llvmStreamableToString(
-          llvh::format_hex((uintptr_t)registerStackEnd_, 10)));
+      "registerStackAllocation", writeHex(registerStackAllocation_.data()));
+  json.emitKeyValue("registerStackStart", writeHex(registerStackStart_));
+  json.emitKeyValue("registerStackPointer", writeHex(stackPointer_));
+  json.emitKeyValue("registerStackEnd", writeHex(registerStackEnd_));
   json.emitKey("callstack");
   crashWriteCallStack(json);
   json.closeDict();
@@ -2094,13 +2081,18 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
         if (sourceLocation) {
           auto file =
               debugInfo->getUTF8FilenameByID(sourceLocation->filenameId);
-          llvh::SmallString<256> srcLocStorage;
-          json.emitKeyValue(
-              "SourceLocation",
-              (llvh::Twine(file) + llvh::Twine(":") +
-               llvh::Twine(sourceLocation->line) + llvh::Twine(":") +
-               llvh::Twine(sourceLocation->column))
-                  .toStringRef(srcLocStorage));
+          char buf[256];
+          unsigned len = snprintf(
+              buf,
+              sizeof(buf),
+              "%s:%d:%d",
+              file.c_str(),
+              sourceLocation->line,
+              sourceLocation->column);
+          // The length is either the return value of snprintf, or the buffer
+          // size without the null terminator, whichever is smaller.
+          llvh::StringRef str{buf, std::min<size_t>(len, sizeof(buf) - 1)};
+          json.emitKeyValue("SourceLocation", str);
         }
       }
       uint32_t segmentID = runtimeModule->getBytecode()->getSegmentID();
