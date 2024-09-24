@@ -6,6 +6,7 @@
  */
 
 #include <cassert>
+#include <utility>
 
 #include "hermes/Support/SerialExecutor.h"
 
