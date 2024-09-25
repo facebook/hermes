@@ -43,8 +43,16 @@ class FastArray : public JSObject {
   }
 
   /// \return the length of this FastArray, by reading it from the known length
-  /// property slot.
-  uint32_t getLength(PointerBase &pb) const {
+  /// property slot. We provide two versions so we are explicit about
+  /// conversions to/from double. In general, if we are comparing against an
+  /// integer, the uint32 version is preferable, so the other integer does not
+  /// need to be converted to a double for the comparison. On the other hand, if
+  /// we need the value as a double, we should use the double version to avoid a
+  /// roundtrip through uint32.
+  uint32_t getLengthAsUint32(PointerBase &pb) const {
+    return getDirectSlotValue<lengthPropIndex()>(this).getNumber(pb);
+  }
+  double getLengthAsDouble(PointerBase &pb) const {
     return getDirectSlotValue<lengthPropIndex()>(this).getNumber(pb);
   }
 
@@ -68,7 +76,7 @@ class FastArray : public JSObject {
   /// \return the value at \p index, where it is known to be within bounds.
   SmallHermesValue unsafeAt(Runtime &runtime, size_t index) const {
     auto *storage = indexedStorage_.getNonNull(runtime);
-    assert(index < getLength(runtime));
+    assert(index < getLengthAsUint32(runtime));
     return storage->at(index);
   }
 
@@ -77,7 +85,7 @@ class FastArray : public JSObject {
   ExecutionStatus
   unsafeSet(Runtime &runtime, size_t index, SmallHermesValue val) {
     auto *storage = indexedStorage_.getNonNull(runtime);
-    assert(index < getLength(runtime));
+    assert(index < getLengthAsUint32(runtime));
     storage->set(index, val, runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
