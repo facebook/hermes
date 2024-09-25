@@ -7,6 +7,7 @@
 
 // RUN: %shermes -typed -O0 -exec %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -typed -exec %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -typed %s | %FileCheck --match-full-lines %s
 
 print('for of');
 // CHECK-LABEL: for of

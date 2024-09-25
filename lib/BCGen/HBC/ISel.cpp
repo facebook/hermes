@@ -1980,17 +1980,30 @@ void HBCISel::generateTypedStoreParentInst(
 void HBCISel::generateLIRDeadValueInst(LIRDeadValueInst *, BasicBlock *) {
   hermes_fatal("LIRDeadValueInst not supported.");
 }
-void HBCISel::generateFastArrayLoadInst(FastArrayLoadInst *, BasicBlock *) {
-  hermes_fatal("FastArrayLoadInst not supported.");
+void HBCISel::generateFastArrayLoadInst(FastArrayLoadInst *inst, BasicBlock *) {
+  BCFGen_->emitFastArrayLoad(
+      encodeValue(inst),
+      encodeValue(inst->getArray()),
+      encodeValue(inst->getIndex()));
 }
-void HBCISel::generateFastArrayPushInst(FastArrayPushInst *, BasicBlock *) {
-  hermes_fatal("FastArrayPushInst not supported.");
+void HBCISel::generateFastArrayPushInst(FastArrayPushInst *inst, BasicBlock *) {
+  BCFGen_->emitFastArrayPush(
+      encodeValue(inst->getArray()), encodeValue(inst->getPushedValue()));
 }
-void HBCISel::generateAllocFastArrayInst(AllocFastArrayInst *, BasicBlock *) {
-  hermes_fatal("AllocFastArrayInst not supported.");
+void HBCISel::generateAllocFastArrayInst(
+    AllocFastArrayInst *inst,
+    BasicBlock *) {
+  BCFGen_->emitNewFastArray(
+      encodeValue(inst),
+      std::min<uint32_t>(inst->getCapacity()->asUInt32(), UINT16_MAX));
 }
-void HBCISel::generateFastArrayStoreInst(FastArrayStoreInst *, BasicBlock *) {
-  hermes_fatal("FastArrayStoreInst not supported.");
+void HBCISel::generateFastArrayStoreInst(
+    FastArrayStoreInst *inst,
+    BasicBlock *) {
+  BCFGen_->emitFastArrayStore(
+      encodeValue(inst->getArray()),
+      encodeValue(inst->getIndex()),
+      encodeValue(inst->getStoredValue()));
 }
 void HBCISel::generateThrowTypeErrorInst(ThrowTypeErrorInst *, BasicBlock *) {
   hermes_fatal("ThrowTypeErrorInst should have been lowered.");
@@ -1998,11 +2011,17 @@ void HBCISel::generateThrowTypeErrorInst(ThrowTypeErrorInst *, BasicBlock *) {
 void HBCISel::generateCheckedTypeCastInst(CheckedTypeCastInst *, BasicBlock *) {
   hermes_fatal("CheckedTypeCastInst not supported.");
 }
-void HBCISel::generateFastArrayAppendInst(FastArrayAppendInst *, BasicBlock *) {
-  hermes_fatal("FastArrayAppendInst not supported.");
+void HBCISel::generateFastArrayAppendInst(
+    FastArrayAppendInst *inst,
+    BasicBlock *) {
+  BCFGen_->emitFastArrayAppend(
+      encodeValue(inst->getArray()), encodeValue(inst->getOther()));
 }
-void HBCISel::generateFastArrayLengthInst(FastArrayLengthInst *, BasicBlock *) {
-  hermes_fatal("FastArrayLengthInst not supported.");
+void HBCISel::generateFastArrayLengthInst(
+    FastArrayLengthInst *inst,
+    BasicBlock *) {
+  BCFGen_->emitFastArrayLength(
+      encodeValue(inst), encodeValue(inst->getArray()));
 }
 void HBCISel::generateUnionNarrowTrustedInst(
     UnionNarrowTrustedInst *Inst,

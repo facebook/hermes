@@ -111,6 +111,30 @@ DEFINE_OPCODE_4(NewArrayWithBufferLong, Reg8, UInt16, UInt16, UInt32)
 /// Arg1 = new Array(Arg2)
 DEFINE_OPCODE_2(NewArray, Reg8, UInt16)
 
+/// Create a new FastArray.
+/// Arg1 = new FastArray(Arg2)
+DEFINE_OPCODE_2(NewFastArray, Reg8, UInt16)
+
+/// Get the length of a FastArray.
+/// Arg1 = Arg2.length
+DEFINE_OPCODE_2(FastArrayLength, Reg8, Reg8)
+
+/// Load from a FastArray.
+/// Arg1 = Arg2[Arg3]
+DEFINE_OPCODE_3(FastArrayLoad, Reg8, Reg8, Reg8)
+
+/// Store to a FastArray.
+/// Arg1[Arg2] = Arg3
+DEFINE_OPCODE_3(FastArrayStore, Reg8, Reg8, Reg8)
+
+/// Push an element onto the end of a FastArray.
+/// Arg1.push(Arg2)
+DEFINE_OPCODE_2(FastArrayPush, Reg8, Reg8)
+
+/// Append a FastArray onto another FastArray.
+/// Arg1.append(Arg2)
+DEFINE_OPCODE_2(FastArrayAppend, Reg8, Reg8)
+
 /// Arg1 = Arg2 (Register copy)
 DEFINE_OPCODE_2(Mov, Reg8, Reg8)
 

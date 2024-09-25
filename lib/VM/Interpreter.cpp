@@ -18,6 +18,7 @@
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JSArray.h"
@@ -3002,6 +3003,81 @@ tailCall:
           O1REG(NewArray) = createRes->getHermesValue();
         }
         ip = NEXTINST(NewArray);
+        DISPATCH;
+      }
+
+      CASE(NewFastArray) {
+        CAPTURE_IP_ASSIGN(
+            auto createRes, FastArray::create(runtime, ip->iNewFastArray.op2));
+        if (createRes == ExecutionStatus::EXCEPTION)
+          goto exception;
+        O1REG(NewFastArray) = *createRes;
+        ip = NEXTINST(NewFastArray);
+        DISPATCH;
+      }
+      CASE(FastArrayLength) {
+        O1REG(FastArrayLength) = HermesValue::encodeTrustedNumberValue(
+            vmcast<FastArray>(O2REG(FastArrayLength))
+                ->getLengthAsDouble(runtime));
+        ip = NEXTINST(FastArrayLength);
+        DISPATCH;
+      }
+      CASE(FastArrayLoad) {
+        double idx = O3REG(FastArrayStore).getNumber();
+        uint32_t intIndex = unsafeTruncateDouble<uint32_t>(idx);
+        auto *storage = vmcast<FastArray>(O2REG(FastArrayStore))
+                            ->unsafeGetIndexedStorage(runtime);
+
+        if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != idx)) {
+          CAPTURE_IP(runtime.raiseRangeError("array load index out of range"));
+          goto exception;
+        }
+
+        O1REG(FastArrayLoad) = storage->at(intIndex).unboxToHV(runtime);
+        ip = NEXTINST(FastArrayLoad);
+        DISPATCH;
+      }
+      CASE(FastArrayStore) {
+        double idx = O2REG(FastArrayStore).getNumber();
+        uint32_t intIndex = unsafeTruncateDouble<uint32_t>(idx);
+        CAPTURE_IP_ASSIGN(
+            auto shv,
+            SmallHermesValue::encodeHermesValue(
+                O3REG(FastArrayStore), runtime));
+        auto *storage = vmcast<FastArray>(O1REG(FastArrayStore))
+                            ->unsafeGetIndexedStorage(runtime);
+
+        if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != idx)) {
+          CAPTURE_IP(runtime.raiseRangeError("array store index out of range"));
+          goto exception;
+        }
+
+        storage->set(intIndex, shv, runtime.getHeap());
+        ip = NEXTINST(FastArrayStore);
+        DISPATCH;
+      }
+      CASE(FastArrayPush) {
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            FastArray::push(
+                Handle<FastArray>::vmcast(&O1REG(FastArrayPush)),
+                runtime,
+                Handle<>(&O2REG(FastArrayPush))));
+        if (res == ExecutionStatus::EXCEPTION)
+          goto exception;
+        ip = NEXTINST(FastArrayPush);
+        DISPATCH;
+      }
+      CASE(FastArrayAppend) {
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            FastArray::append(
+                Handle<FastArray>::vmcast(&O1REG(FastArrayAppend)),
+                runtime,
+                Handle<FastArray>::vmcast(&O2REG(FastArrayAppend))));
+        if (res == ExecutionStatus::EXCEPTION)
+          goto exception;
+        ip = NEXTINST(FastArrayAppend);
         DISPATCH;
       }
 

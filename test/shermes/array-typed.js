@@ -6,6 +6,7 @@
  */
 
 // RUN: %shermes -typed -exec %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -typed %s | %FileCheck --match-full-lines %s
 
 'use strict';
 
