@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict
- * @format
+ * @noformat
  */
 
 'use strict';
@@ -15,8 +15,7 @@ import type {VisitorKeys as VisitorKeysType} from '../generated/ESTreeVisitorKey
 
 import FlowVisitorKeys from '../generated/ESTreeVisitorKeys';
 
-// $FlowFixMe[deprecated-type]
-export function isNode(thing: mixed): boolean %checks {
+export function isNode(thing: mixed) /*: implies thing is {+[string]: mixed} */ {
   return (
     typeof thing === 'object' && thing != null && typeof thing.type === 'string'
   );
