@@ -5,14 +5,34 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict-local
- * @format
+ * @noformat
  */
 
-import type {ESNode, ModuleDeclaration, Statement} from 'hermes-estree';
+import type {
+  ESNode,
+  // Used in flow comments
+  // eslint-disable-next-line no-unused-vars
+  ExportAllDeclaration,
+  // Used in flow comments
+  // eslint-disable-next-line no-unused-vars
+  ExportDefaultDeclaration,
+  // Used in flow comments
+  // eslint-disable-next-line no-unused-vars
+  ExportNamedDeclaration,
+  // Used in flow comments
+  // eslint-disable-next-line no-unused-vars
+  ImportDeclaration,
+  ModuleDeclaration,
+  Statement,
+} from 'hermes-estree';
 import type {DetachedNode} from '../../../detachedNode';
 
-// $FlowFixMe[deprecated-type]
-function isModuleDeclaration(node: ESNode): boolean %checks {
+function isModuleDeclaration(node: ESNode) /*: node is (
+  | ImportDeclaration
+  | ExportNamedDeclaration
+  | ExportDefaultDeclaration
+  | ExportAllDeclaration
+) */ {
   return (
     node.type === 'ImportDeclaration' ||
     node.type === 'ExportNamedDeclaration' ||

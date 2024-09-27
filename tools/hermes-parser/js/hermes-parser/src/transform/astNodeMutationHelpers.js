@@ -53,6 +53,7 @@ function getParentKey(
       }
     } else if (Array.isArray(parent[key])) {
       for (let i = 0; i < parent[key].length; i += 1) {
+        // $FlowExpectedError[invalid-tuple-index]
         const current = parent[key][i];
         if (current === target) {
           return {type: 'array', node: parent, key, targetIndex: i};
@@ -132,6 +133,7 @@ export function setParentPointersInDirectChildren(
 ): void {
   for (const key: $FlowFixMe of getVisitorKeys(node, visitorKeys)) {
     if (isNode(node[key])) {
+      // $FlowExpectedError[cannot-write]
       node[key].parent = node;
     } else if (Array.isArray(node[key])) {
       for (const child of node[key]) {

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  *
  * @flow strict
- * @format
+ * @noformat
  */
 
 'use strict';
@@ -19,8 +19,7 @@ type VisitorOptions = $ReadOnly<{
   childVisitorKeys?: VisitorKeysType | null,
 }>;
 
-// $FlowFixMe[deprecated-type]
-function isNode(node: mixed): boolean %checks {
+function isNode(node: mixed) /*: implies node is {+[string]: mixed} */ {
   return (
     typeof node === 'object' && node != null && typeof node.type === 'string'
   );
