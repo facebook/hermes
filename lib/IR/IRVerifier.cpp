@@ -874,6 +874,10 @@ bool Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
       HBCCallNInst::kMinArgs <= Inst.getNumArguments() &&
           Inst.getNumArguments() <= HBCCallNInst::kMaxArgs,
       "CallNInst has too many args");
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<LiteralUndefined>(Inst.getNewTarget()),
+      "CallNInst NewTarget must be undefined");
   return true;
 }
 

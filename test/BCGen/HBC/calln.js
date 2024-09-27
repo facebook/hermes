@@ -54,7 +54,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg1 = LoadParamInst (:any) %f: any
 // LRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
 // LRA-NEXT:  $Reg2 = ImplicitMovInst (:undefined) $Reg0
-// LRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg0, $Reg0
+// LRA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0
 // LRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // LRA-NEXT:function_end
 
@@ -65,7 +65,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg2 = HBCLoadConstInst (:number) 1: number
 // LRA-NEXT:  $Reg4 = ImplicitMovInst (:undefined) $Reg0
 // LRA-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg2
-// LRA-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg0, $Reg0, $Reg2
+// LRA-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0, $Reg2
 // LRA-NEXT:  $Reg0 = ReturnInst $Reg0
 // LRA-NEXT:function_end
 
@@ -78,7 +78,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg6 = ImplicitMovInst (:undefined) $Reg1
 // LRA-NEXT:  $Reg5 = ImplicitMovInst (:number) $Reg0
 // LRA-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg3
-// LRA-NEXT:  $Reg3 = HBCCallNInst (:any) $Reg2, empty: any, false: boolean, empty: any, $Reg1, $Reg1, $Reg0, $Reg3
+// LRA-NEXT:  $Reg3 = HBCCallNInst (:any) $Reg2, empty: any, false: boolean, empty: any, undefined: undefined, $Reg1, $Reg0, $Reg3
 // LRA-NEXT:  $Reg1 = ReturnInst $Reg1
 // LRA-NEXT:function_end
 
@@ -93,7 +93,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:  $Reg7 = ImplicitMovInst (:number) $Reg0
 // LRA-NEXT:  $Reg6 = ImplicitMovInst (:number) $Reg1
 // LRA-NEXT:  $Reg5 = ImplicitMovInst (:number) $Reg4
-// LRA-NEXT:  $Reg4 = HBCCallNInst (:any) $Reg3, empty: any, false: boolean, empty: any, $Reg2, $Reg2, $Reg0, $Reg1, $Reg4
+// LRA-NEXT:  $Reg4 = HBCCallNInst (:any) $Reg3, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2, $Reg0, $Reg1, $Reg4
 // LRA-NEXT:  $Reg2 = ReturnInst $Reg2
 // LRA-NEXT:function_end
 

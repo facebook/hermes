@@ -56,45 +56,45 @@ function test1() {
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<test1>(1 params, 18 registers, 4 numbers, 1 non-pointers):
+// CHECK:Function<test1>(1 params, 17 registers, 3 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0000
-// CHECK-NEXT:    LoadConstUInt8    r2, 1
-// CHECK-NEXT:    GetGlobalObject   r8
-// CHECK-NEXT:    LoadConstUndefined r4
-// CHECK-NEXT:    LoadConstUInt8    r3, 5
-// CHECK-NEXT:    LoadConstUInt8    r1, 3
+// CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    GetGlobalObject   r7
+// CHECK-NEXT:    LoadConstUInt8    r2, 5
+// CHECK-NEXT:    LoadConstUInt8    r6, 3
 // CHECK-NEXT:    LoadConstZero     r0
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    TryGetById        r6, r8, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r7, r6, 2, "random"
-// CHECK-NEXT:    Call1             r6, r7, r6
-// CHECK-NEXT:    Mov               r7, r0
+// CHECK-NEXT:    TryGetById        r4, r7, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r5, r4, 2, "random"
+// CHECK-NEXT:    Call1             r4, r5, r4
+// CHECK-NEXT:    Mov               r5, r0
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JStrictEqual      L1, r6, r1
-// CHECK-NEXT:    TryGetById        r5, r8, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r6, r5, 2, "random"
-// CHECK-NEXT:    Call1             r6, r6, r5
-// CHECK-NEXT:    JStrictEqual      L2, r6, r3
-// CHECK-NEXT:    AddN              r0, r7, r2
+// CHECK-NEXT:    JStrictEqual      L1, r4, r6
+// CHECK-NEXT:    TryGetById        r3, r7, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r4, r3, 2, "random"
+// CHECK-NEXT:    Call1             r4, r4, r3
+// CHECK-NEXT:    JStrictEqual      L2, r4, r2
+// CHECK-NEXT:    AddN              r0, r5, r1
 // CHECK-NEXT:    Jmp               L3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadConstUInt8    r3, 10
-// CHECK-NEXT:    Mov               r1, r7
-// CHECK-NEXT:    Mov               r7, r1
-// CHECK-NEXT:    JNotGreaterN      L4, r7, r3
+// CHECK-NEXT:    LoadConstUInt8    r2, 10
+// CHECK-NEXT:    Mov               r6, r5
+// CHECK-NEXT:    Mov               r5, r6
+// CHECK-NEXT:    JNotGreaterN      L4, r5, r2
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    SubN              r1, r1, r2
-// CHECK-NEXT:    Mov               r7, r1
+// CHECK-NEXT:    SubN              r6, r6, r1
+// CHECK-NEXT:    Mov               r5, r6
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JGreaterN         L5, r7, r3
+// CHECK-NEXT:    JGreaterN         L5, r5, r2
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    TryGetById        r8, r8, 3, "print"
-// CHECK-NEXT:    Call2             r8, r8, r4, r7
-// CHECK-NEXT:    Ret               r4
+// CHECK-NEXT:    TryGetById        r6, r7, 3, "print"
+// CHECK-NEXT:    LoadConstUndefined r7
+// CHECK-NEXT:    Call2             r6, r6, r7, r5
+// CHECK-NEXT:    Ret               r7
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}debuggercheckbreak.js
@@ -110,19 +110,19 @@ function test1() {
 // CHECK-NEXT:    bc 18: line 10 col 1
 // CHECK-NEXT:    bc 27: line 21 col 1
 // CHECK-NEXT:  0x0014  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 16: line 13 col 9
-// CHECK-NEXT:    bc 22: line 13 col 20
-// CHECK-NEXT:    bc 27: line 13 col 20
-// CHECK-NEXT:    bc 35: line 13 col 5
-// CHECK-NEXT:    bc 39: line 15 col 9
-// CHECK-NEXT:    bc 45: line 15 col 20
-// CHECK-NEXT:    bc 50: line 15 col 20
-// CHECK-NEXT:    bc 54: line 15 col 5
-// CHECK-NEXT:    bc 62: line 12 col 3
-// CHECK-NEXT:    bc 65: line 16 col 7
-// CHECK-NEXT:    bc 76: line 18 col 3
-// CHECK-NEXT:    bc 88: line 18 col 3
-// CHECK-NEXT:    bc 92: line 20 col 3
+// CHECK-NEXT:    bc 14: line 13 col 9
+// CHECK-NEXT:    bc 20: line 13 col 20
+// CHECK-NEXT:    bc 25: line 13 col 20
+// CHECK-NEXT:    bc 33: line 13 col 5
+// CHECK-NEXT:    bc 37: line 15 col 9
+// CHECK-NEXT:    bc 43: line 15 col 20
+// CHECK-NEXT:    bc 48: line 15 col 20
+// CHECK-NEXT:    bc 52: line 15 col 5
+// CHECK-NEXT:    bc 60: line 12 col 3
+// CHECK-NEXT:    bc 63: line 16 col 7
+// CHECK-NEXT:    bc 74: line 18 col 3
+// CHECK-NEXT:    bc 86: line 18 col 3
+// CHECK-NEXT:    bc 90: line 20 col 3
 // CHECK-NEXT:    bc 98: line 20 col 8
 // CHECK-NEXT:    bc 103: line 21 col 1
 // CHECK-NEXT:  0x0052  end of debug source table

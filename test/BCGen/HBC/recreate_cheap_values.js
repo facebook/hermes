@@ -43,7 +43,7 @@ function negzero(f) {
 // CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg0
 // CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg2
 // CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg0, $Reg0, $Reg2, $Reg2
+// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0, $Reg2, $Reg2
 // CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHECK-NEXT:function_end
 
@@ -55,6 +55,6 @@ function negzero(f) {
 // CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg0
 // CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg2
 // CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg0, $Reg0, $Reg2, $Reg2
+// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0, $Reg2, $Reg2
 // CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHECK-NEXT:function_end

@@ -46,11 +46,11 @@ print(e);
 // RA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
 // RA-NEXT:  $Reg1 = TryLoadGlobalPropertyInst (:any) $Reg0, "local": string
 // RA-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
-// RA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg2, $Reg2
-// RA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg3, empty: any, false: boolean, empty: any, $Reg2, $Reg2, $Reg1
+// RA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2
+// RA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg3, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2, $Reg1
 // RA-NEXT:  $Reg1 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
 // RA-NEXT:  $Reg0 = LoadPropertyInst (:any) $Reg0, "e": string
-// RA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg2, $Reg2, $Reg0
+// RA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2, $Reg0
 // RA-NEXT:  $Reg0 = ReturnInst $Reg0
 // RA-NEXT:%BB2:
 // RA-NEXT:  $Reg2 = HBCLoadConstInst (:string) "local": string
