@@ -19,3 +19,4 @@ function f1(v1 = this, \u0074his) {
 // CHECK-NEXT:{{.*}}escaped-this.js:10:24: error: identifier, '{' or '[' expected in binding pattern
 // CHECK-NEXT:function f1(v1 = this, \u0074his) {
 // CHECK-NEXT:                       ^
+// CHECK-NEXT:Emitted 1 errors. exiting.
