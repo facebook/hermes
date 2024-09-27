@@ -24,3 +24,4 @@
 // CHECK-NEXT:{{.*}}private-escape-error.js:11:1: error: Private name can only be used as left-hand side of `in` expression
 // CHECK-NEXT:#do\
 // CHECK-NEXT:^~~~
+// CHECK-NEXT:Emitted 3 errors. exiting.

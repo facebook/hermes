@@ -19,3 +19,4 @@ async function f2(x = 1 + await 2) {}
 // CHECK-NEXT:{{.*}}await-param-error.js:12:27: error: 'await' not allowed in a formal parameter
 // CHECK-NEXT:async function f2(x = 1 + await 2) {}
 // CHECK-NEXT:                          ^~~~~~~
+// CHECK-NEXT:Emitted 2 errors. exiting.
