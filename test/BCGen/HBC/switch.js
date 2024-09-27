@@ -194,7 +194,7 @@ function switch_neg(x) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  $Reg0 = PhiInst (:number) $Reg0, %BB0, $Reg0, %BB2, $Reg0, %BB3
 // CHECK-NEXT:  $Reg7 = TryLoadGlobalPropertyInst (:any) $Reg2, "print": string
-// CHECK-NEXT:  $Reg7 = HBCCallNInst (:any) $Reg7, empty: any, false: boolean, empty: any, $Reg1, $Reg1, $Reg0
+// CHECK-NEXT:  $Reg7 = HBCCallNInst (:any) $Reg7, empty: any, false: boolean, empty: any, undefined: undefined, $Reg1, $Reg0
 // CHECK-NEXT:  $Reg7 = BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  $Reg0 = MovInst (:number) $Reg4

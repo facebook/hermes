@@ -87,11 +87,10 @@ function daa(a) {
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: object, "bar": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS2.a]: any
 // CHECK-NEXT:  %9 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  %10 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  %11 = HBCCallNInst (:any) %7: any, empty: any, false: boolean, empty: any, %9: undefined, %10: undefined, %8: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %11: any, [%VS2.b]: any
-// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS2.b]: any
-// CHECK-NEXT:        ReturnInst %13: any
+// CHECK-NEXT:  %10 = HBCCallNInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, %9: undefined, %8: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [%VS2.b]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS2.b]: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS3 [a: any, b: any, daa_capture: any]
@@ -158,7 +157,7 @@ function daa(a) {
 // CHKOPT-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "bar": string
 // CHKOPT-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKOPT-NEXT:  %3 = LoadParamInst (:any) %a: any
-// CHKOPT-NEXT:  %4 = HBCCallNInst (:any) %1: any, empty: any, false: boolean, empty: any, %2: undefined, %2: undefined, %3: any
+// CHKOPT-NEXT:  %4 = HBCCallNInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: undefined, %3: any
 // CHKOPT-NEXT:       ReturnInst %4: any
 // CHKOPT-NEXT:function_end
 

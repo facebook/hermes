@@ -91,49 +91,46 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    PutByIdLoose      r3, r2, 3, "simpleAsyncFE"
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<simpleReturn>(1 params, 18 registers, 0 numbers, 0 non-pointers):
+// CHECK:NCFunction<simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0016, lexical 0x0000
-// CHECK-NEXT:    LoadConstUndefined r5
-// CHECK-NEXT:    Mov               r6, r5
-// CHECK-NEXT:    LoadThisNS        r5
-// CHECK-NEXT:    GetParentEnvironment r4, 0
-// CHECK-NEXT:    CreateEnvironment r4, r4, 0
-// CHECK-NEXT:    CreateClosure     r4, r4, NCFunction<?anon_0_simpleReturn>
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    Mov               r5, r4
+// CHECK-NEXT:    LoadThisNS        r4
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    CreateEnvironment r3, r3, 0
+// CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleReturn>
 // CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArgumentsLoose r6
+// CHECK-NEXT:    ReifyArgumentsLoose r5
 // CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call4             r1, r1, r3, r4, r5, r6
+// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<simpleAwait>(1 params, 18 registers, 0 numbers, 0 non-pointers):
+// CHECK:NCFunction<simpleAwait>(1 params, 17 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
-// CHECK-NEXT:    LoadConstUndefined r5
-// CHECK-NEXT:    Mov               r6, r5
-// CHECK-NEXT:    LoadThisNS        r5
-// CHECK-NEXT:    GetParentEnvironment r4, 0
-// CHECK-NEXT:    CreateEnvironment r4, r4, 0
-// CHECK-NEXT:    CreateClosure     r4, r4, NCFunction<?anon_0_simpleAwait>
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    Mov               r5, r4
+// CHECK-NEXT:    LoadThisNS        r4
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    CreateEnvironment r3, r3, 0
+// CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleAwait>
 // CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArgumentsLoose r6
+// CHECK-NEXT:    ReifyArgumentsLoose r5
 // CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call4             r1, r1, r3, r4, r5, r6
+// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:NCFunction<simpleAsyncFE>(1 params, 18 registers, 0 numbers, 0 non-pointers):
+// CHECK:NCFunction<simpleAsyncFE>(1 params, 17 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
-// CHECK-NEXT:    LoadConstUndefined r5
-// CHECK-NEXT:    Mov               r6, r5
-// CHECK-NEXT:    LoadThisNS        r5
-// CHECK-NEXT:    GetParentEnvironment r4, 0
-// CHECK-NEXT:    CreateEnvironment r4, r4, 0
-// CHECK-NEXT:    CreateClosure     r4, r4, NCFunction<?anon_0_simpleAsyncFE>
+// CHECK-NEXT:    LoadConstUndefined r4
+// CHECK-NEXT:    Mov               r5, r4
+// CHECK-NEXT:    LoadThisNS        r4
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    CreateEnvironment r3, r3, 0
+// CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleAsyncFE>
 // CHECK-NEXT:    GetBuiltinClosure r1, "HermesBuiltin.spawnAsync"
-// CHECK-NEXT:    ReifyArgumentsLoose r6
+// CHECK-NEXT:    ReifyArgumentsLoose r5
 // CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call4             r1, r1, r3, r4, r5, r6
+// CHECK-NEXT:    Call4             r1, r1, r2, r3, r4, r5
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<?anon_0_simpleReturn>(1 params, 3 registers, 0 numbers, 0 non-pointers):
@@ -484,11 +481,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    bc 41: line 10 col 1
 // CHECK-NEXT:    bc 59: line 19 col 19
 // CHECK-NEXT:  0x0016  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 31: line 10 col 1
+// CHECK-NEXT:    bc 29: line 10 col 1
 // CHECK-NEXT:  0x001d  function idx 2, starts at line 14 col 1
-// CHECK-NEXT:    bc 31: line 14 col 1
+// CHECK-NEXT:    bc 29: line 14 col 1
 // CHECK-NEXT:  0x0024  function idx 3, starts at line 19 col 21
-// CHECK-NEXT:    bc 31: line 19 col 21
+// CHECK-NEXT:    bc 29: line 19 col 21
 // CHECK-NEXT:  0x002b  function idx 8, starts at line 14 col 1
 // CHECK-NEXT:    bc 169: line 15 col 11
 // CHECK-NEXT:    bc 337: line 15 col 11

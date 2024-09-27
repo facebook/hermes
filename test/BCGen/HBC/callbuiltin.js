@@ -49,10 +49,10 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:  $Reg3 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
 // CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg2
 // CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:object) $Reg3
-// CHKRA-NEXT:  $Reg3 = HBCCallNInst (:any) $Reg0, empty: any, false: boolean, empty: any, $Reg2, $Reg2, $Reg3
+// CHKRA-NEXT:  $Reg3 = HBCCallNInst (:any) $Reg0, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2, $Reg3
 // CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg2
 // CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:any) $Reg3
-// CHKRA-NEXT:  $Reg3 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg2, $Reg2, $Reg3
+// CHKRA-NEXT:  $Reg3 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2, $Reg3
 // CHKRA-NEXT:  $Reg3 = ReturnInst $Reg3
 // CHKRA-NEXT:function_end
 
@@ -67,29 +67,29 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA:function shadows(): undefined
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  $Reg0 = HBCAllocObjectFromBufferInst (:object) "keys": string, null: null
-// CHKRA-NEXT:  $Reg3 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg3, "print": string
-// CHKRA-NEXT:  $Reg3 = PrStoreInst $Reg3, $Reg0, 0: number, "keys": string, false: boolean
+// CHKRA-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg2 = TryLoadGlobalPropertyInst (:any) $Reg2, "print": string
+// CHKRA-NEXT:  $Reg2 = PrStoreInst $Reg2, $Reg0, 0: number, "keys": string, false: boolean
 // CHKRA-NEXT:  $Reg1 = LoadPropertyInst (:any) $Reg0, "keys": string
-// CHKRA-NEXT:  $Reg3 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  $Reg2 = HBCLoadConstInst (:string) "evil": string
-// CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:object) $Reg0
-// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:string) $Reg2
-// CHKRA-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg3, $Reg0, $Reg2
-// CHKRA-NEXT:  $Reg3 = ReturnInst $Reg3
+// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:object) $Reg0
+// CHKRA-NEXT:  $Reg3 = ImplicitMovInst (:string) $Reg2
+// CHKRA-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0, $Reg2
+// CHKRA-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHKRA-NEXT:function_end
 
 // CHKRA:function checkNonStaticBuiltin(): undefined
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg3 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  $Reg0 = TryLoadGlobalPropertyInst (:any) $Reg3, "HermesInternal": string
+// CHKRA-NEXT:  $Reg2 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  $Reg0 = TryLoadGlobalPropertyInst (:any) $Reg2, "HermesInternal": string
 // CHKRA-NEXT:  $Reg1 = LoadPropertyInst (:any) $Reg0, "concat": string
-// CHKRA-NEXT:  $Reg3 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  $Reg2 = HBCLoadConstInst (:string) "hello": string
-// CHKRA-NEXT:  $Reg5 = ImplicitMovInst (:any) $Reg0
-// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:string) $Reg2
-// CHKRA-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, $Reg3, $Reg0, $Reg2
-// CHKRA-NEXT:  $Reg3 = ReturnInst $Reg3
+// CHKRA-NEXT:  $Reg4 = ImplicitMovInst (:any) $Reg0
+// CHKRA-NEXT:  $Reg3 = ImplicitMovInst (:string) $Reg2
+// CHKRA-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0, $Reg2
+// CHKRA-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  $Reg2 = ReturnInst $Reg2
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
@@ -165,27 +165,27 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    CallBuiltin       r0, "Object.keys", 2
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<shadows>(1 params, 13 registers, 0 numbers, 0 non-pointers):
+// CHKBC:Function<shadows>(1 params, 12 registers, 0 numbers, 0 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHKBC-NEXT:    NewObjectWithBuffer r0, 1, 17
-// CHKBC-NEXT:    GetGlobalObject   r3
-// CHKBC-NEXT:    TryGetById        r3, r3, 1, "print"
-// CHKBC-NEXT:    PutOwnBySlotIdx   r0, r3, 0
+// CHKBC-NEXT:    GetGlobalObject   r2
+// CHKBC-NEXT:    TryGetById        r2, r2, 1, "print"
+// CHKBC-NEXT:    PutOwnBySlotIdx   r0, r2, 0
 // CHKBC-NEXT:    GetByIdShort      r1, r0, 2, "keys"
-// CHKBC-NEXT:    LoadConstUndefined r3
 // CHKBC-NEXT:    LoadConstString   r2, "evil"
 // CHKBC-NEXT:    Call2             r2, r1, r0, r2
-// CHKBC-NEXT:    Ret               r3
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    Ret               r2
 
-// CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers, 0 numbers, 0 non-pointers):
+// CHKBC:Function<checkNonStaticBuiltin>(1 params, 12 registers, 0 numbers, 0 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0036, lexical 0x0000
-// CHKBC-NEXT:    GetGlobalObject   r3
-// CHKBC-NEXT:    TryGetById        r0, r3, 1, "HermesInternal"
+// CHKBC-NEXT:    GetGlobalObject   r2
+// CHKBC-NEXT:    TryGetById        r0, r2, 1, "HermesInternal"
 // CHKBC-NEXT:    GetByIdShort      r1, r0, 2, "concat"
-// CHKBC-NEXT:    LoadConstUndefined r3
 // CHKBC-NEXT:    LoadConstString   r2, "hello"
 // CHKBC-NEXT:    Call2             r2, r1, r0, r2
-// CHKBC-NEXT:    Ret               r3
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    Ret               r2
 
 // CHKBC:Debug filename table:
 // CHKBC-NEXT:  0: {{.*}}callbuiltin.js
@@ -210,9 +210,9 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1
 // CHKBC-NEXT:    bc 8: line 18 col 25
 // CHKBC-NEXT:    bc 18: line 19 col 16
-// CHKBC-NEXT:    bc 29: line 19 col 16
+// CHKBC-NEXT:    bc 27: line 19 col 16
 // CHKBC-NEXT:  0x0036  function idx 3, starts at line 22 col 1
 // CHKBC-NEXT:    bc 2: line 23 col 3
 // CHKBC-NEXT:    bc 8: line 23 col 24
-// CHKBC-NEXT:    bc 19: line 23 col 24
+// CHKBC-NEXT:    bc 17: line 23 col 24
 // CHKBC-NEXT:  0x0043  end of debug source table

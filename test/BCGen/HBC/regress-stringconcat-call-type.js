@@ -22,13 +22,12 @@
 // CHECK-NEXT:  %0 = HBCLoadConstInst (:string) "": string
 // CHECK-NEXT:  %1 = HBCLoadConstInst (:string) " ": string
 // CHECK-NEXT:  %2 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = PhiInst (:string) %0: string, %BB0, %9: string, %BB1
-// CHECK-NEXT:  %6 = HBCStringConcatInst (:string) %5: string, %1: string
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) %2: object, "HermesInternal": string
-// CHECK-NEXT:  %8 = LoadPropertyInst (:any) %7: any, "concat": string
-// CHECK-NEXT:  %9 = HBCCallNInst (:string) %8: any, empty: any, false: boolean, empty: any, %3: undefined, %6: string, %6: string, %1: string
-// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:  %4 = PhiInst (:string) %0: string, %BB0, %8: string, %BB1
+// CHECK-NEXT:  %5 = HBCStringConcatInst (:string) %4: string, %1: string
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) %2: object, "HermesInternal": string
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "concat": string
+// CHECK-NEXT:  %8 = HBCCallNInst (:string) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, %5: string, %5: string, %1: string
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

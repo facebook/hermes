@@ -154,6 +154,13 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return llvh::isa<LiteralUndefined>(CI->getNewTarget());
   }
 
+  // HBCCallNInst does not use its NewTarget operand because it is always
+  // undefined.
+  if (auto *HCNI = llvh::dyn_cast<HBCCallNInst>(Inst);
+      HCNI && opIndex == HBCCallNInst::NewTargetIdx) {
+    return true;
+  }
+
   /// GetBuiltinClosureInst's builtin index is always literal.
   if (llvh::isa<GetBuiltinClosureInst>(Inst) &&
       opIndex == GetBuiltinClosureInst::BuiltinIndexIdx)
