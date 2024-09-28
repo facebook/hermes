@@ -10,6 +10,7 @@
 
 #include "hermes/Support/ErrorHandling.h"
 
+#include <cassert>
 #include <limits>
 #include <type_traits>
 
@@ -95,6 +96,19 @@ constexpr ToType unsafeNarrow(FromType from) {
   // then we would need a directive here to disable the linter
   // on this instance.
   return static_cast<ToType>(from);
+}
+
+/// Cast from double to an integer type, when it is known ahead of time that
+/// the cast is safe (the value is in range). This just marks the cast as such
+/// and ensures that it is in debug mode.
+template <typename ToType>
+ToType ubcastFromDouble(double x) {
+  static_assert(std::is_integral<ToType>::value, "ToType must be integral");
+  assert(
+      std::numeric_limits<ToType>::min() <= x &&
+      x <= std::numeric_limits<ToType>::max() &&
+      "Double value is not in range");
+  return (ToType)x;
 }
 
 } // namespace hermes

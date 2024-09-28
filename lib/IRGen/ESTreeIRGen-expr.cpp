@@ -919,7 +919,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         idx && mem->_computed) {
       double d = idx->_value;
       // Safe cast because this has been typechecked.
-      uint32_t ulen = hermes::unsafeTruncateDouble<uint32_t>(d);
+      uint32_t ulen = ubcastFromDouble<uint32_t>(d);
       return MemberExpressionResult{
           Builder.createPrLoadInst(
               baseValue,
@@ -1055,7 +1055,7 @@ void ESTreeIRGen::emitMemberStore(
         idx && mem->_computed) {
       double d = idx->_value;
       // Safe cast because this has been typechecked.
-      uint32_t ulen = hermes::unsafeTruncateDouble<uint32_t>(d);
+      uint32_t ulen = ubcastFromDouble<uint32_t>(d);
       Builder.createPrStoreInst(
           storedValue,
           baseValue,
