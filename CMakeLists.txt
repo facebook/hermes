@@ -303,6 +303,10 @@ set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
 # 2: JIT is enabled
 set(HERMESVM_ALLOW_JIT 0 CACHE STRING "JIT mode: 0 (off), 1 (auto) or 2 (force on)")
 
+# Used in the compiler, for various compilation statistics.
+set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
+  "Enable gathering, printing of Statistics.")
+
 # This definition is used by source that must be kept identical between Hermes and
 # Static Hermes, but needs to behave differently in each case.
 add_definitions(-DSTATIC_HERMES)

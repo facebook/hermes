@@ -25,7 +25,7 @@ struct DummyCounter {
 };
 } // namespace hermes
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
+#if !defined(NDEBUG) || LLVM_FORCE_ENABLE_STATS
 // Debug - forward to llvm.
 #include "llvh/ADT/Statistic.h"
 
