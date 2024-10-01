@@ -618,6 +618,8 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentTypeRestParameterFlow(
     typeAnnotation = *optLeft;
   }
 
+  checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type);
+
   return setLocation(
       start,
       getPrevTokenEndLoc(),
