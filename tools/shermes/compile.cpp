@@ -115,6 +115,8 @@ bool compileToC(
 /// Configuration for invoking the C compiler.
 struct CCCfg {
   std::string cc;
+  std::string syscflags;
+  std::string sysldflags;
   std::string cflags;
   std::string ldflags;
   std::string ldlibs;
@@ -131,7 +133,9 @@ void populateCCCfg(CCCfg &cfg) {
       res = defVal;
   };
 
-  init(cfg.cc, "CC", "cc");
+  init(cfg.cc, "CC", SHERMES_CC);
+  cfg.syscflags = SHERMES_CC_SYSCFLAGS;
+  cfg.sysldflags = SHERMES_CC_SYSLDFLAGS;
   init(cfg.cflags, "CFLAGS", "");
   init(cfg.ldflags, "LDFLAGS", "");
   init(cfg.ldlibs, "LDLIBS", "");
@@ -226,6 +230,7 @@ bool invokeCC(
   // If CFLAGS were specified, they override our optimization level and include
   // path.
   if (cfg.cflags.empty()) {
+    splitArgs(cfg.syscflags, args);
     switch (params.nativeOptimize) {
       case OptLevel::O0:
         break;
@@ -271,6 +276,7 @@ bool invokeCC(
       args.push_back("-l" + s);
 
     if (cfg.ldflags.empty()) {
+      splitArgs(cfg.sysldflags, args);
       for (const auto &s : cfg.hermesLibPath)
         args.push_back("-L" + s);
 
