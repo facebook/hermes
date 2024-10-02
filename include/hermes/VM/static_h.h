@@ -8,6 +8,7 @@
 #ifndef HERMES_STATIC_H_H
 #define HERMES_STATIC_H_H
 
+#include "hermes/Support/sh_tryfast_fp_cvt.h"
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_mirror.h"
 #include "hermes/VM/sh_runtime.h"
@@ -778,69 +779,38 @@ _sh_to_int32_double_slow_path(double d);
 
 /// C version of the hermes::truncateToInt32 function.
 /// Inlines the fast path for SH to use, calls out to the slow path.
-static inline int32_t _sh_to_int32_double(double d)
-    SHERMES_NO_SANITIZE("float-cast-overflow");
-inline int32_t _sh_to_int32_double(double d) {
+static inline int32_t _sh_to_int32_double(double d) {
   // If we are compiling with ARM v8.3 or above, there is a special instruction
   // to do the conversion.
 #ifdef __ARM_FEATURE_JCVT
   return __builtin_arm_jcvt(d);
 #endif
 
-  // ARM64 has different behavior when the double value can't fit into
-  // int64_t (results in 2^63-1 instead of -2^63 on x86-64), and 2^63-1 can't
-  // be represented precisely in double, so it's converted to 2^63. The result
-  // is that a double value 2^63 still goes through the fast path and
-  // eventually is casted to int32_t and -1 is returned, which is wrong. The
-  // solution is to use smaller width integer (so every value can be
-  // represented in double). In constant path, we check the range of
-  // [-2^53, 2^53], where 53 is the number of precision bits for double. In
-  // non-constant fast path, we do a left shift followed by right shift of 1
-  // bit to avoid imprecise conversion between double and int64_t on 2^63 (
-  // the top 2 bits "10" becomes "00" after the shifting).
-  // On 32bit platform, this non-constant path produces less efficient code,
-  // so instead, we use conversion to int32_t directly.
-  // In addition, use __builtin_constant_p() to avoid UB caused by constant
-  // propagation.
-
   // NOTE: this implementation should be consistent with truncateToInt32()
   // in Support/Conversions.h
 
-  if (sizeof(void *) == 8) {
-    // Use this builtin to avoid undefined behavior caused by constant
-    // propagation when \p d can't fit into int64_t.
-#if defined(__GNUC__) || defined(__clang__)
-    if (__builtin_constant_p(d)) {
-#endif
-      // Be aggressive on constant path, use the maximum precision bits
-      // of double type for range check.
-      if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53)) {
-        return (int32_t)(int64_t)d;
-      }
-#if defined(__GNUC__) || defined(__clang__)
-    } else {
-      int64_t fast = (int64_t)((uint64_t)(int64_t)d << 1) >> 1;
-      if (__builtin_expect(fast == d, true))
-        return (int32_t)fast;
-    }
-#endif
-  } else {
-#if defined(__GNUC__) || defined(__clang__)
-    if (__builtin_constant_p(d)) {
-#endif
-      // Converted to int32_t directly on 32bit arch for efficiency.
-      // Many uint32_t values may fall to slow path though.
-      if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53)) {
-        return (int32_t)(int64_t)d;
-      }
-#if defined(__GNUC__) || defined(__clang__)
-    } else {
-      int32_t fast = (int32_t)d;
-      if (__builtin_expect(fast == d, true))
-        return fast;
-    }
-#endif
+  // Use __builtin_constant_p() for better perf and to avoid UB caused by
+  // constant propagation.
+#if defined(__GNUC__)
+  if (__builtin_constant_p(d)) {
+    // Be aggressive on constant path, use the maximum precision bits
+    // of double type for range check.
+    if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53))
+      return (int32_t)(int64_t)d;
+    return _sh_to_int32_double_slow_path(d);
   }
+#endif
+
+  if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
+    int64_t fast;
+    if (__builtin_expect(sh_tryfast_f64_to_i64(d, fast), 1))
+      return (int32_t)fast;
+  } else {
+    int32_t fast;
+    if (__builtin_expect(sh_tryfast_f64_to_i32(d, fast), 1))
+      return fast;
+  }
+
   return _sh_to_int32_double_slow_path(d);
 }
 

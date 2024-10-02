@@ -9,6 +9,7 @@
 #define HERMES_SUPPORT_CONVERSIONS_H
 
 #include "hermes/Support/OptValue.h"
+#include "hermes/Support/sh_tryfast_fp_cvt.h"
 
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/MathExtras.h"
@@ -17,14 +18,12 @@
 
 namespace hermes {
 
-/// Helper function to silence UBSAN complaints when truncating a double to some
-/// type that cannot hold its original value (e.g. integer types and float).
-template <typename T>
-T unsafeTruncateDouble(double d) LLVM_NO_SANITIZE("float-cast-overflow");
-
-template <typename T>
-T unsafeTruncateDouble(double d) {
-  return static_cast<T>(d);
+/// Helper function to silence UBSAN complaints when truncating a double to
+/// float, even though that is not really UB, since the behavior is governed
+/// by IEEE 754.
+float truncDoubleToFloat(double d) LLVM_NO_SANITIZE("float-cast-overflow");
+inline float truncDoubleToFloat(double d) {
+  return (float)d;
 }
 
 /// Convert a double to a 32-bit integer according to ES5.1 section 9.5.
@@ -43,7 +42,6 @@ int32_t truncateToInt32SlowPath(double d);
 /// NaN and Infinity are always converted to 0. The rest of the numbers are
 /// converted to a (conceptually) infinite-width integer and the low 32 bits of
 /// the integer are then returned.
-int32_t truncateToInt32(double d) LLVM_NO_SANITIZE("float-cast-overflow");
 inline int32_t truncateToInt32(double d) {
   // If we are compiling with ARM v8.3 or above, there is a special instruction
   // to do the conversion.
@@ -51,60 +49,31 @@ inline int32_t truncateToInt32(double d) {
   return __builtin_arm_jcvt(d);
 #endif
 
-  // ARM64 has different behavior when the double value can't fit into
-  // int64_t (results in 2^63-1 instead of -2^63 on x86-64), and 2^63-1 can't
-  // be represented precisely in double, so it's converted to 2^63. The result
-  // is that a double value 2^63 still goes through the fast path and
-  // eventually is casted to int32_t and -1 is returned, which is wrong. The
-  // solution is to use smaller width integer (so every value can be
-  // represented in double). In constant path, we check the range of
-  // [-2^53, 2^53], where 53 is the number of precision bits for double. In
-  // non-constant fast path, we do a left shift followed by right shift of 1
-  // bit to avoid imprecise conversion between double and int64_t on 2^63 (
-  // the top 2 bits "10" becomes "00" after the shifting).
-  // On 32bit platform, this non-constant path produces less efficient code,
-  // so instead, we use conversion to int32_t directly.
-  // In addition, use __builtin_constant_p() to avoid UB caused by constant
-  // propagation.
-
   // NOTE: this implementation should be consistent with _sh_to_int32_double()
   // in VM/static_h.h
 
-  if constexpr (sizeof(void *) == 8) {
-    // Use this builtin to avoid undefined behavior caused by constant
-    // propagation when \p d can't fit into int64_t.
-#if defined(__GNUC__) || defined(__clang__)
-    if (__builtin_constant_p(d)) {
-#endif
-      // Be aggressive on constant path, use the maximum precision bits
-      // of double type for range check.
-      if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53)) {
-        return (int32_t)(int64_t)d;
-      }
-#if defined(__GNUC__) || defined(__clang__)
-    } else {
-      int64_t fast = (int64_t)((uint64_t)(int64_t)d << 1) >> 1;
-      if (LLVM_LIKELY(fast == d))
-        return (int32_t)fast;
-    }
-#endif
-  } else {
-#if defined(__GNUC__) || defined(__clang__)
-    if (__builtin_constant_p(d)) {
-#endif
-      // Converted to int32_t directly on 32bit arch for efficiency.
-      // Many uint32_t values may fall to slow path though.
-      if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53)) {
-        return (int32_t)(int64_t)d;
-      }
-#if defined(__GNUC__) || defined(__clang__)
-    } else {
-      int32_t fast = (int32_t)d;
-      if (LLVM_LIKELY(fast == d))
-        return fast;
-    }
-#endif
+  // Use __builtin_constant_p() for better perf and to avoid UB caused by
+  // constant propagation.
+#if defined(__GNUC__)
+  if (__builtin_constant_p(d)) {
+    // Be aggressive on constant path, use the maximum precision bits
+    // of double type for range check.
+    if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53))
+      return (int32_t)(int64_t)d;
+    return truncateToInt32SlowPath(d);
   }
+#endif
+
+  if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
+    int64_t fast;
+    if (LLVM_LIKELY(sh_tryfast_f64_to_i64(d, fast)))
+      return (int32_t)fast;
+  } else {
+    int32_t fast;
+    if (LLVM_LIKELY(sh_tryfast_f64_to_i32(d, fast)))
+      return fast;
+  }
+
   return truncateToInt32SlowPath(d);
 }
 
@@ -164,8 +133,8 @@ inline OptValue<uint32_t> toArrayIndex(llvh::StringRef str) {
 
 /// Attempt to convert a double to a valid JavaScript array number.
 inline OptValue<uint32_t> doubleToArrayIndex(double d) {
-  uint32_t index = unsafeTruncateDouble<uint32_t>(d);
-  if (index == d && index != 0xFFFFFFFFu)
+  uint32_t index;
+  if (sh_tryfast_f64_to_u32(d, index) && index != 0xFFFFFFFFu)
     return index;
   return llvh::None;
 }

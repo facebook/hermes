@@ -638,9 +638,10 @@ class InstrGen {
       os_ << "_sh_ljs_bool(" << boolStr(B->getValue()) << ")";
     } else if (auto LN = llvh::dyn_cast<LiteralNumber>(&val)) {
       os_ << "_sh_ljs_double(";
+      int32_t intval;
       if (!LN->isNegativeZero() &&
-          LN->getValue() == unsafeTruncateDouble<int>(LN->getValue())) {
-        os_ << static_cast<int>(LN->getValue());
+          sh_tryfast_f64_to_i32(LN->getValue(), intval)) {
+        os_ << intval;
       } else {
         os_ << "((struct HermesValueBase){.raw = "
             << llvh::DoubleToBits(LN->getValue()) << "u}).f64";

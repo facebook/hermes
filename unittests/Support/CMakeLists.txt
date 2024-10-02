@@ -26,6 +26,7 @@ set(SupportSources
   StatsAccumulatorTest.cpp
   StringSetVectorTest.cpp
   UnicodeTest.cpp
+  test_sh_fp_trunc.cpp
   )
 
 add_hermes_unittest(HermesSupportTests

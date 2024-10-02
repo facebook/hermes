@@ -74,10 +74,12 @@ static double roundHalfwaysTowardsInfinity(double x) {
 enum class MathKind {
 #define MATHFUNC_1ARG(name, func) name,
 #include "MathStdFunctions.def"
+
 #undef MATHFUNC_1ARG
   Num1ArgKinds,
 #define MATHFUNC_2ARG(name, func) name,
 #include "MathStdFunctions.def"
+
 #undef MATHFUNC_2ARG
   Num2ArgKinds
 };
@@ -91,6 +93,7 @@ runContextFunc1Arg(void *ctx, Runtime &runtime, NativeArgs args) {
   static Math1ArgFuncPtr math1ArgFuncs[] = {
 #define MATHFUNC_1ARG(name, func) func,
 #include "MathStdFunctions.def"
+
 #undef MATHFUNC_1ARG
   };
   assert(
@@ -114,6 +117,7 @@ runContextFunc2Arg(void *ctx, Runtime &runtime, NativeArgs args) {
   static Math2ArgFuncPtr math2ArgFuncs[] = {
 #define MATHFUNC_2ARG(name, func) func,
 #include "MathStdFunctions.def"
+
 #undef MATHFUNC_2ARG
   };
   assert(
@@ -234,12 +238,7 @@ CallResult<HermesValue> mathFround(void *, Runtime &runtime, NativeArgs args) {
 
   // Make the double x into a 32-bit float,
   // and then recast it back to a 64-bit float to return it.
-  // This is UB for values outside of the range of a float, but this works on
-  // our current compilers.
-  // TODO(T43892577): Find an alternative that doesn't use UB (or validate that
-  // the UB is ok).
-  return HermesValue::encodeTrustedNumberValue(
-      static_cast<double>(unsafeTruncateDouble<float>(x)));
+  return HermesValue::encodeTrustedNumberValue(truncDoubleToFloat(x));
 }
 
 // ES2022 21.3.2.18

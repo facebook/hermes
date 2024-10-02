@@ -3024,7 +3024,7 @@ tailCall:
       }
       CASE(FastArrayLoad) {
         double idx = O3REG(FastArrayStore).getNumber();
-        uint32_t intIndex = unsafeTruncateDouble<uint32_t>(idx);
+        uint32_t intIndex = _sh_tryfast_f64_to_u32_cvt(idx);
         auto *storage = vmcast<FastArray>(O2REG(FastArrayStore))
                             ->unsafeGetIndexedStorage(runtime);
 
@@ -3039,7 +3039,7 @@ tailCall:
       }
       CASE(FastArrayStore) {
         double idx = O2REG(FastArrayStore).getNumber();
-        uint32_t intIndex = unsafeTruncateDouble<uint32_t>(idx);
+        uint32_t intIndex = _sh_tryfast_f64_to_u32_cvt(idx);
         CAPTURE_IP_ASSIGN(
             auto shv,
             SmallHermesValue::encodeHermesValue(

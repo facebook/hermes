@@ -310,7 +310,7 @@ inline float JSTypedArray<float, CellKind::Float32ArrayKind>::toDestType(
     const HermesValue &numeric) {
   // This can overflow a float, but float overflow goes to Infinity
   // (the correct behavior) on all modern platforms.
-  return unsafeTruncateDouble<float>(numeric.getNumber());
+  return truncDoubleToFloat(numeric.getNumber());
 }
 
 template <>

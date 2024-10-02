@@ -641,7 +641,7 @@ CallResult<bool> JSArray::setLength(
   double d;
   if (LLVM_LIKELY(newLength->isNumber())) {
     d = newLength->getNumber();
-    ulen = unsafeTruncateDouble<uint32_t>(d);
+    ulen = _sh_tryfast_f64_to_u32_cvt(d);
   } else {
     // According to the spec, toNumber() has to be called twice.
     // https://tc39.es/ecma262/multipage/ordinary-and-exotic-objects-behaviours.html#sec-arraysetlength
@@ -653,7 +653,7 @@ CallResult<bool> JSArray::setLength(
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     d = res->getNumber();
-    ulen = unsafeTruncateDouble<uint32_t>(d);
+    ulen = _sh_tryfast_f64_to_u32_cvt(d);
     // If it is a string, no need to convert again, since it is pretty
     // expensive. Other types are not so important, since their conversions are
     // either fast (bool) or slow (object).
