@@ -257,8 +257,9 @@ class HBCISel {
 };
 
 unsigned HBCISel::encodeValue(Value *value) {
-  if (llvh::isa<Instruction>(value)) {
-    return RA_.getRegister(value).getIndex();
+  if (auto *I = llvh::dyn_cast<Instruction>(value)) {
+    assert(I->hasOutput() && "Instruction has no output");
+    return RA_.getRegister(I).getIndex();
   } else if (auto *var = llvh::dyn_cast<Variable>(value)) {
     return var->getIndexInVariableList();
   } else {
@@ -1260,7 +1261,6 @@ void HBCISel::generateHBCCompareBranchInst(
     BasicBlock *next) {
   auto left = encodeValue(Inst->getLeftHandSide());
   auto right = encodeValue(Inst->getRightHandSide());
-  auto res = encodeValue(Inst);
 
   bool isBothNumber = Inst->getLeftHandSide()->getType().isNumberType() &&
       Inst->getRightHandSide()->getType().isNumberType();
@@ -1280,52 +1280,51 @@ void HBCISel::generateHBCCompareBranchInst(
   offset_t loc;
   switch (Inst->getKind()) {
     case ValueKind::CmpBrLessThanInstKind: // <
-      loc = invert
-          ? (isBothNumber ? BCFGen_->emitJNotLessNLong(res, left, right)
-                          : BCFGen_->emitJNotLessLong(res, left, right))
-          : (isBothNumber ? BCFGen_->emitJLessNLong(res, left, right)
-                          : BCFGen_->emitJLessLong(res, left, right));
+      loc = invert ? (isBothNumber ? BCFGen_->emitJNotLessNLong(0, left, right)
+                                   : BCFGen_->emitJNotLessLong(0, left, right))
+                   : (isBothNumber ? BCFGen_->emitJLessNLong(0, left, right)
+                                   : BCFGen_->emitJLessLong(0, left, right));
       break;
     case ValueKind::CmpBrLessThanOrEqualInstKind: // <=
       loc = invert
-          ? (isBothNumber ? BCFGen_->emitJNotLessEqualNLong(res, left, right)
-                          : BCFGen_->emitJNotLessEqualLong(res, left, right))
-          : (isBothNumber ? BCFGen_->emitJLessEqualNLong(res, left, right)
-                          : BCFGen_->emitJLessEqualLong(res, left, right));
+          ? (isBothNumber ? BCFGen_->emitJNotLessEqualNLong(0, left, right)
+                          : BCFGen_->emitJNotLessEqualLong(0, left, right))
+          : (isBothNumber ? BCFGen_->emitJLessEqualNLong(0, left, right)
+                          : BCFGen_->emitJLessEqualLong(0, left, right));
       break;
     case ValueKind::CmpBrGreaterThanInstKind: // >
       loc = invert
-          ? (isBothNumber ? BCFGen_->emitJNotGreaterNLong(res, left, right)
-                          : BCFGen_->emitJNotGreaterLong(res, left, right))
-          : (isBothNumber ? BCFGen_->emitJGreaterNLong(res, left, right)
-                          : BCFGen_->emitJGreaterLong(res, left, right));
+          ? (isBothNumber ? BCFGen_->emitJNotGreaterNLong(0, left, right)
+                          : BCFGen_->emitJNotGreaterLong(0, left, right))
+          : (isBothNumber ? BCFGen_->emitJGreaterNLong(0, left, right)
+                          : BCFGen_->emitJGreaterLong(0, left, right));
       break;
     case ValueKind::CmpBrGreaterThanOrEqualInstKind: // >=
       loc = invert
-          ? (isBothNumber ? BCFGen_->emitJNotGreaterEqualNLong(res, left, right)
-                          : BCFGen_->emitJNotGreaterEqualLong(res, left, right))
-          : (isBothNumber ? BCFGen_->emitJGreaterEqualNLong(res, left, right)
-                          : BCFGen_->emitJGreaterEqualLong(res, left, right));
+          ? (isBothNumber ? BCFGen_->emitJNotGreaterEqualNLong(0, left, right)
+                          : BCFGen_->emitJNotGreaterEqualLong(0, left, right))
+          : (isBothNumber ? BCFGen_->emitJGreaterEqualNLong(0, left, right)
+                          : BCFGen_->emitJGreaterEqualLong(0, left, right));
       break;
 
     case ValueKind::CmpBrEqualInstKind:
-      loc = invert ? BCFGen_->emitJNotEqualLong(res, left, right)
-                   : BCFGen_->emitJEqualLong(res, left, right);
+      loc = invert ? BCFGen_->emitJNotEqualLong(0, left, right)
+                   : BCFGen_->emitJEqualLong(0, left, right);
       break;
 
     case ValueKind::CmpBrNotEqualInstKind:
-      loc = invert ? BCFGen_->emitJEqualLong(res, left, right)
-                   : BCFGen_->emitJNotEqualLong(res, left, right);
+      loc = invert ? BCFGen_->emitJEqualLong(0, left, right)
+                   : BCFGen_->emitJNotEqualLong(0, left, right);
       break;
 
     case ValueKind::CmpBrStrictlyEqualInstKind:
-      loc = invert ? BCFGen_->emitJStrictNotEqualLong(res, left, right)
-                   : BCFGen_->emitJStrictEqualLong(res, left, right);
+      loc = invert ? BCFGen_->emitJStrictNotEqualLong(0, left, right)
+                   : BCFGen_->emitJStrictEqualLong(0, left, right);
       break;
 
     case ValueKind::CmpBrStrictlyNotEqualInstKind:
-      loc = invert ? BCFGen_->emitJStrictEqualLong(res, left, right)
-                   : BCFGen_->emitJStrictNotEqualLong(res, left, right);
+      loc = invert ? BCFGen_->emitJStrictEqualLong(0, left, right)
+                   : BCFGen_->emitJStrictNotEqualLong(0, left, right);
       break;
 
     default:
@@ -1342,7 +1341,7 @@ void HBCISel::generateHBCCompareBranchInst(
     return;
   }
 
-  loc = BCFGen_->emitJmpLong(res);
+  loc = BCFGen_->emitJmpLong(0);
   registerLongJump(loc, falseBlock);
 }
 void HBCISel::generateGetPNamesInst(GetPNamesInst *Inst, BasicBlock *next) {
@@ -1866,7 +1865,6 @@ void HBCISel::generateHBCFCompareBranchInst(
     BasicBlock *next) {
   auto left = encodeValue(Inst->getLeftHandSide());
   auto right = encodeValue(Inst->getRightHandSide());
-  auto res = encodeValue(Inst);
 
   BasicBlock *trueBlock = Inst->getTrueDest();
   BasicBlock *falseBlock = Inst->getFalseDest();
@@ -1883,28 +1881,28 @@ void HBCISel::generateHBCFCompareBranchInst(
   offset_t loc;
   switch (Inst->getKind()) {
     case ValueKind::HBCFCmpBrEqualInstKind:
-      loc = invert ? BCFGen_->emitJStrictNotEqualLong(res, left, right)
-                   : BCFGen_->emitJStrictEqualLong(res, left, right);
+      loc = invert ? BCFGen_->emitJStrictNotEqualLong(0, left, right)
+                   : BCFGen_->emitJStrictEqualLong(0, left, right);
       break;
     case ValueKind::HBCFCmpBrNotEqualInstKind:
-      loc = invert ? BCFGen_->emitJStrictEqualLong(res, left, right)
-                   : BCFGen_->emitJStrictNotEqualLong(res, left, right);
+      loc = invert ? BCFGen_->emitJStrictEqualLong(0, left, right)
+                   : BCFGen_->emitJStrictNotEqualLong(0, left, right);
       break;
     case ValueKind::HBCFCmpBrLessThanInstKind:
-      loc = invert ? BCFGen_->emitJNotLessNLong(res, left, right)
-                   : BCFGen_->emitJLessNLong(res, left, right);
+      loc = invert ? BCFGen_->emitJNotLessNLong(0, left, right)
+                   : BCFGen_->emitJLessNLong(0, left, right);
       break;
     case ValueKind::HBCFCmpBrLessThanOrEqualInstKind:
-      loc = invert ? BCFGen_->emitJNotLessEqualNLong(res, left, right)
-                   : BCFGen_->emitJLessEqualNLong(res, left, right);
+      loc = invert ? BCFGen_->emitJNotLessEqualNLong(0, left, right)
+                   : BCFGen_->emitJLessEqualNLong(0, left, right);
       break;
     case ValueKind::HBCFCmpBrGreaterThanInstKind:
-      loc = invert ? BCFGen_->emitJNotGreaterNLong(res, left, right)
-                   : BCFGen_->emitJGreaterNLong(res, left, right);
+      loc = invert ? BCFGen_->emitJNotGreaterNLong(0, left, right)
+                   : BCFGen_->emitJGreaterNLong(0, left, right);
       break;
     case ValueKind::HBCFCmpBrGreaterThanOrEqualInstKind:
-      loc = invert ? BCFGen_->emitJNotGreaterEqualNLong(res, left, right)
-                   : BCFGen_->emitJGreaterEqualNLong(res, left, right);
+      loc = invert ? BCFGen_->emitJNotGreaterEqualNLong(0, left, right)
+                   : BCFGen_->emitJGreaterEqualNLong(0, left, right);
       break;
     default:
       hermes_fatal("invalid kind for FCompareBranchInst");
@@ -1915,7 +1913,7 @@ void HBCISel::generateHBCFCompareBranchInst(
   if (next == falseBlock)
     return;
 
-  loc = BCFGen_->emitJmpLong(res);
+  loc = BCFGen_->emitJmpLong(0);
   registerLongJump(loc, falseBlock);
 }
 void HBCISel::generateFBinaryMathInst(FBinaryMathInst *Inst, BasicBlock *) {
