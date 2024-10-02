@@ -26,6 +26,8 @@ enum : unsigned {
 
 /// All state related to JIT compilation.
 class JITContext {
+  class Compiler;
+
  public:
   /// Construct a JIT context. No executable memory is allocated before it is
   /// needed.

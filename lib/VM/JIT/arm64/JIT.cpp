@@ -44,1128 +44,957 @@ JITContext::~JITContext() = default;
 /// Map from a string ID encoded in the operand to an SHSymbolID.
 /// This string ID must be used explicitly as identifier.
 #define ID(stringID)                    \
-  (codeBlock->getRuntimeModule()        \
+  (codeBlock_->getRuntimeModule()       \
        ->getSymbolIDMustExist(stringID) \
        .unsafeGetIndex())
 
-JITCompiledFunctionPtr JITContext::compileImpl(
-    Runtime &runtime,
-    CodeBlock *codeBlock) {
-  std::string funcName{};
-  if (dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
-    funcName = codeBlock->getNameString();
-    llvh::outs() << "\nJIT compilation of FunctionID "
-                 << codeBlock->getFunctionID() << ", '" << funcName << "'\n";
-  }
+/// JIT_INLINE forces some methods to be inlined, but only in release mode.
+#ifdef NDEBUG
+#define JIT_INLINE LLVM_ATTRIBUTE_ALWAYS_INLINE inline
+#else
+#define JIT_INLINE inline
+#endif
 
-  std::vector<uint32_t> basicBlocks{};
-  llvh::DenseMap<uint32_t, unsigned> ofsToBBIndex{};
+class JITContext::Compiler {
+  JITContext &jc_;
+  /// The implementation of the assembly emitter.
+  Emitter em_;
+  /// The CodeBlock compiled by this instance.
+  CodeBlock *const codeBlock_;
+  /// Pointer to the first bytecode instruction.
+  const char *const funcStart_;
+  /// The byte offset of every bytecode basic block start. The last entry is
+  /// the exclusive end of the bytecode.
+  std::vector<uint32_t> basicBlocks_{};
+  /// Map bytecode offset to a basic block.
+  llvh::DenseMap<uint32_t, unsigned> ofsToBBIndex_{};
+  /// The ASMJIT label associated with every basic block.
+  std::vector<asmjit::Label> bbLabels_{};
+  /// The function name for debugging.
+  std::string funcName_{};
 
-  bool fail = false;
-  discoverBasicBlocks(codeBlock, basicBlocks, ofsToBBIndex);
+  /// Jump buffer used for errors.
+  jmp_buf errorJmpBuf_{};
 
-  const char *funcStart = (const char *)codeBlock->begin();
+  enum class Error {
+    NoError,
+    UnsupportedInst,
+    Other,
+  };
+  /// In case of error, the error reason is stored here.
+  Error error_ = Error::NoError;
+  /// In case of error, the problem instruction is optionally recorded here.
+  const inst::Inst *errorIP_{nullptr};
 
-  if ((dumpJITCode_ & DumpJitCode::Code) && !funcName.empty())
-    llvh::outs() << "\n" << funcName << ":\n";
+ public:
+  Compiler(JITContext &jc, CodeBlock *codeBlock)
+      : jc_(jc),
+        em_(jc.impl_->jr,
+            jc.getDumpJITCode(),
+            codeBlock,
+            codeBlock->propertyCache(),
+            codeBlock->writePropertyCache(),
+            // TODO: is getFrameSize() the right thing to call?
+            codeBlock->getFrameSize(),
+            codeBlock->getFunctionHeader().numberRegCount(),
+            codeBlock->getFunctionHeader().nonPtrRegCount()),
+        codeBlock_(codeBlock),
+        funcStart_((const char *)codeBlock->begin()) {}
 
-  // TODO: is getFrameSize() the right thing to call?
-  Emitter em(
-      impl_->jr,
-      getDumpJITCode(),
-      codeBlock,
-      codeBlock->propertyCache(),
-      codeBlock->writePropertyCache(),
-      codeBlock->getFrameSize(),
-      codeBlock->getFunctionHeader().numberRegCount(),
-      codeBlock->getFunctionHeader().nonPtrRegCount());
-  std::vector<asmjit::Label> labels{};
-  labels.reserve(basicBlocks.size() - 1);
-  for (unsigned bbIndex = 0; bbIndex < basicBlocks.size() - 1; ++bbIndex)
-    labels.push_back(em.newPrefLabel("BB", bbIndex));
+  /// Compile the codeblock that this object was instantiated for. On failure,
+  /// set the "don't JIT" flag of the codeblock.
+  /// \return the compiled native function or nullptr.
+  JITCompiledFunctionPtr compileCodeBlock();
 
-  for (unsigned bbIndex = 0; bbIndex < basicBlocks.size() - 1; ++bbIndex) {
-    uint32_t startOfs = basicBlocks[bbIndex];
-    uint32_t endOfs = basicBlocks[bbIndex + 1];
+ private:
+  /// Compile the codeblock that this object was instantiated for. On failure,
+  /// longjmp(errorJmpBuf).
+  /// \return the compiled native function.
+  JITCompiledFunctionPtr compileCodeBlockImpl();
 
-    em.newBasicBlock(labels[bbIndex]);
-    auto *ip = reinterpret_cast<const inst::Inst *>(funcStart + startOfs);
-    auto *to = reinterpret_cast<const inst::Inst *>(funcStart + endOfs);
-
-    SHSymbolID idVal;
-    uint8_t cacheIdx;
-    const inst::Inst *nextIP;
+  /// Compile the basic block with index \p bbIndex.
+  JIT_INLINE void compileBB(uint32_t bbIndex) {
+    uint32_t startOfs = basicBlocks_[bbIndex];
+    uint32_t endOfs = basicBlocks_[bbIndex + 1];
+    em_.newBasicBlock(bbLabels_[bbIndex]);
+    auto *ip = reinterpret_cast<const inst::Inst *>(funcStart_ + startOfs);
+    auto *to = reinterpret_cast<const inst::Inst *>(funcStart_ + endOfs);
 
     while (ip != to) {
-      switch (ip->opCode) {
-        case inst::OpCode::LoadParam:
-          em.loadParam(FR(ip->iLoadParam.op1), ip->iLoadParam.op2);
-          ip = NEXTINST(LoadParam);
-          break;
-        case inst::OpCode::LoadConstZero:
-          em.loadConstDouble(FR(ip->iLoadConstZero.op1), 0, "Zero");
-          ip = NEXTINST(LoadConstZero);
-          break;
-        case inst::OpCode::LoadConstUInt8:
-          em.loadConstDouble(
-              FR(ip->iLoadConstUInt8.op1), ip->iLoadConstUInt8.op2, "UInt8");
-          ip = NEXTINST(LoadConstUInt8);
-          break;
-        case inst::OpCode::LoadConstInt:
-          em.loadConstDouble(
-              FR(ip->iLoadConstInt.op1), ip->iLoadConstInt.op2, "Int");
-          ip = NEXTINST(LoadConstInt);
-          break;
-        case inst::OpCode::LoadConstDouble:
-          em.loadConstDouble(
-              FR(ip->iLoadConstDouble.op1), ip->iLoadConstDouble.op2, "Double");
-          ip = NEXTINST(LoadConstDouble);
-          break;
-#define LOAD_CONST(NAME, val, type)                                     \
-  case inst::OpCode::LoadConst##NAME:                                   \
-    em.loadConstBits64(FR(ip->iLoadConst##NAME.op1), val, type, #NAME); \
-    ip = NEXTINST(LoadConst##NAME);                                     \
-    break;
-          LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::UnknownNonPtr);
-          LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::UnknownNonPtr);
-          LOAD_CONST(Null, _sh_ljs_null().raw, FRType::UnknownNonPtr);
-          LOAD_CONST(True, _sh_ljs_bool(true).raw, FRType::Bool);
-          LOAD_CONST(False, _sh_ljs_bool(false).raw, FRType::Bool);
-#undef LOAD_CONST
-        case inst::OpCode::LoadConstString:
-          em.loadConstString(
-              FR(ip->iLoadConstString.op1),
-              codeBlock->getRuntimeModule(),
-              ip->iLoadConstString.op2);
-          ip = NEXTINST(LoadConstString);
-          break;
-        case inst::OpCode::LoadConstStringLongIndex:
-          em.loadConstString(
-              FR(ip->iLoadConstStringLongIndex.op1),
-              codeBlock->getRuntimeModule(),
-              ip->iLoadConstStringLongIndex.op2);
-          ip = NEXTINST(LoadConstStringLongIndex);
-          break;
-
-        case inst::OpCode::Mov:
-          em.mov(FR(ip->iMov.op1), FR(ip->iMov.op2));
-          ip = NEXTINST(Mov);
-          break;
-#if 0
-        // MovLong is usually an indicator of very large functions, which
-        // currently crash the JIT.
-        case inst::OpCode::MovLong:
-          em.mov(FR(ip->iMovLong.op1), FR(ip->iMovLong.op2));
-          ip = NEXTINST(MovLong);
-          break;
-#endif
-        case inst::OpCode::ToNumber:
-          em.toNumber(FR(ip->iToNumber.op1), FR(ip->iToNumber.op2));
-          ip = NEXTINST(ToNumber);
-          break;
-        case inst::OpCode::ToNumeric:
-          em.toNumeric(FR(ip->iToNumeric.op1), FR(ip->iToNumeric.op2));
-          ip = NEXTINST(ToNumeric);
-          break;
-        case inst::OpCode::ToInt32:
-          em.toInt32(FR(ip->iToInt32.op1), FR(ip->iToInt32.op2));
-          ip = NEXTINST(ToInt32);
-          break;
-        case inst::OpCode::AddEmptyString:
-          em.addEmptyString(
-              FR(ip->iAddEmptyString.op1), FR(ip->iAddEmptyString.op2));
-          ip = NEXTINST(AddEmptyString);
-          break;
-
-        case inst::OpCode::Greater:
-          em.greater(
-              FR(ip->iGreater.op1), FR(ip->iGreater.op2), FR(ip->iGreater.op3));
-          ip = NEXTINST(Greater);
-          break;
-        case inst::OpCode::GreaterEq:
-          em.greaterEqual(
-              FR(ip->iGreaterEq.op1),
-              FR(ip->iGreaterEq.op2),
-              FR(ip->iGreaterEq.op3));
-          ip = NEXTINST(GreaterEq);
-          break;
-        case inst::OpCode::Less:
-          em.less(FR(ip->iLess.op1), FR(ip->iLess.op2), FR(ip->iLess.op3));
-          ip = NEXTINST(Less);
-          break;
-        case inst::OpCode::LessEq:
-          em.lessEqual(
-              FR(ip->iLessEq.op1), FR(ip->iLessEq.op2), FR(ip->iLessEq.op3));
-          ip = NEXTINST(LessEq);
-          break;
-        case inst::OpCode::Eq:
-          em.equal(FR(ip->iEq.op1), FR(ip->iEq.op2), FR(ip->iEq.op3));
-          ip = NEXTINST(Eq);
-          break;
-        case inst::OpCode::Neq:
-          em.notEqual(FR(ip->iNeq.op1), FR(ip->iNeq.op2), FR(ip->iNeq.op3));
-          ip = NEXTINST(Neq);
-          break;
-        case inst::OpCode::StrictEq:
-          em.strictEqual(
-              FR(ip->iStrictEq.op1),
-              FR(ip->iStrictEq.op2),
-              FR(ip->iStrictEq.op3));
-          ip = NEXTINST(StrictEq);
-          break;
-        case inst::OpCode::StrictNeq:
-          em.strictNotEqual(
-              FR(ip->iStrictNeq.op1),
-              FR(ip->iStrictNeq.op2),
-              FR(ip->iStrictNeq.op3));
-          ip = NEXTINST(StrictNeq);
-          break;
-
-        case inst::OpCode::Add:
-          em.add(FR(ip->iAdd.op1), FR(ip->iAdd.op2), FR(ip->iAdd.op3));
-          ip = NEXTINST(Add);
-          break;
-        case inst::OpCode::AddN:
-          em.addN(FR(ip->iAdd.op1), FR(ip->iAdd.op2), FR(ip->iAdd.op3));
-          ip = NEXTINST(Add);
-          break;
-        case inst::OpCode::Sub:
-          em.sub(FR(ip->iSub.op1), FR(ip->iSub.op2), FR(ip->iSub.op3));
-          ip = NEXTINST(Add);
-          break;
-        case inst::OpCode::SubN:
-          em.subN(FR(ip->iSub.op1), FR(ip->iSub.op2), FR(ip->iSub.op3));
-          ip = NEXTINST(SubN);
-          break;
-        case inst::OpCode::Mul:
-          em.mul(FR(ip->iMul.op1), FR(ip->iMul.op2), FR(ip->iMul.op3));
-          ip = NEXTINST(Mul);
-          break;
-        case inst::OpCode::MulN:
-          em.mulN(FR(ip->iMul.op1), FR(ip->iMul.op2), FR(ip->iMul.op3));
-          ip = NEXTINST(Mul);
-          break;
-        case inst::OpCode::Div:
-          em.div(FR(ip->iDiv.op1), FR(ip->iDiv.op2), FR(ip->iDiv.op3));
-          ip = NEXTINST(Div);
-          break;
-        case inst::OpCode::DivN:
-          em.divN(FR(ip->iDivN.op1), FR(ip->iDivN.op2), FR(ip->iDivN.op3));
-          ip = NEXTINST(DivN);
-          break;
-        case inst::OpCode::Mod:
-          em.mod(false, FR(ip->iMod.op1), FR(ip->iMod.op2), FR(ip->iMod.op3));
-          ip = NEXTINST(Mod);
-          break;
-        case inst::OpCode::BitAnd:
-          em.bitAnd(
-              FR(ip->iBitAnd.op1), FR(ip->iBitAnd.op2), FR(ip->iBitAnd.op3));
-          ip = NEXTINST(BitAnd);
-          break;
-        case inst::OpCode::BitOr:
-          em.bitOr(FR(ip->iBitOr.op1), FR(ip->iBitOr.op2), FR(ip->iBitOr.op3));
-          ip = NEXTINST(BitOr);
-          break;
-        case inst::OpCode::BitXor:
-          em.bitXor(
-              FR(ip->iBitXor.op1), FR(ip->iBitXor.op2), FR(ip->iBitXor.op3));
-          ip = NEXTINST(BitXor);
-          break;
-        case inst::OpCode::LShift:
-          em.lShift(
-              FR(ip->iLShift.op1), FR(ip->iLShift.op2), FR(ip->iLShift.op3));
-          ip = NEXTINST(LShift);
-          break;
-        case inst::OpCode::RShift:
-          em.rShift(
-              FR(ip->iRShift.op1), FR(ip->iRShift.op2), FR(ip->iRShift.op3));
-          ip = NEXTINST(RShift);
-          break;
-        case inst::OpCode::URshift:
-          em.urShift(
-              FR(ip->iURshift.op1), FR(ip->iURshift.op2), FR(ip->iURshift.op3));
-          ip = NEXTINST(URshift);
-          break;
-
-        case inst::OpCode::Inc:
-          em.inc(FR(ip->iInc.op1), FR(ip->iInc.op2));
-          ip = NEXTINST(Inc);
-          break;
-        case inst::OpCode::Dec:
-          em.dec(FR(ip->iDec.op1), FR(ip->iDec.op2));
-          ip = NEXTINST(Dec);
-          break;
-
-        case inst::OpCode::Not:
-          em.booleanNot(FR(ip->iNot.op1), FR(ip->iNot.op2));
-          ip = NEXTINST(Not);
-          break;
-        case inst::OpCode::BitNot:
-          em.bitNot(FR(ip->iNot.op1), FR(ip->iNot.op2));
-          ip = NEXTINST(Not);
-          break;
-        case inst::OpCode::Negate:
-          em.negate(FR(ip->iNegate.op1), FR(ip->iNegate.op2));
-          ip = NEXTINST(Negate);
-          break;
-        case inst::OpCode::TypeOf:
-          em.typeOf(FR(ip->iTypeOf.op1), FR(ip->iTypeOf.op2));
-          ip = NEXTINST(TypeOf);
-          break;
-
-#define JUMP(name, emit, invert)                                 \
-  case inst::OpCode::name:                                       \
-    em.emit(                                                     \
-        invert,                                                  \
-        labels[ofsToBBIndex                                      \
-                   [(const char *)ip - (const char *)funcStart + \
-                    ip->i##name.op1]],                           \
-        FR(ip->i##name.op2),                                     \
-        FR(ip->i##name.op3));                                    \
-    ip = NEXTINST(name);                                         \
-    break;                                                       \
-  case inst::OpCode::name##Long:                                 \
-    em.emit(                                                     \
-        invert,                                                  \
-        labels[ofsToBBIndex                                      \
-                   [(const char *)ip - (const char *)funcStart + \
-                    ip->i##name##Long.op1]],                     \
-        FR(ip->i##name##Long.op2),                               \
-        FR(ip->i##name##Long.op3));                              \
-    ip = NEXTINST(name##Long);                                   \
-    break;
-
-          JUMP(JLessEqual, jLessEqual, false)
-          JUMP(JLessEqualN, jLessEqualN, false)
-          JUMP(JNotLessEqual, jLessEqual, true)
-          JUMP(JNotLessEqualN, jLessEqualN, true)
-          JUMP(JLess, jLess, false)
-          JUMP(JLessN, jLessN, false)
-          JUMP(JNotLess, jLess, true)
-          JUMP(JNotLessN, jLessN, true)
-          JUMP(JGreaterEqual, jGreaterEqual, false)
-          JUMP(JGreaterEqualN, jGreaterEqualN, false)
-          JUMP(JNotGreaterEqual, jGreaterEqual, true)
-          JUMP(JNotGreaterEqualN, jGreaterEqualN, true)
-          JUMP(JGreater, jGreater, false)
-          JUMP(JGreaterN, jGreaterN, false)
-          JUMP(JNotGreater, jGreater, true)
-          JUMP(JNotGreaterN, jGreaterN, true)
-          JUMP(JEqual, jEqual, false)
-          JUMP(JNotEqual, jEqual, true)
-          JUMP(JStrictEqual, jStrictEqual, false)
-          JUMP(JStrictNotEqual, jStrictEqual, true)
-#undef JUMP
-
-        case inst::OpCode::JmpTrue:
-          em.jmpTrueFalse(
-              true,
-              labels[ofsToBBIndex
-                         [(const char *)ip - funcStart + ip->iJmpTrue.op1]],
-              FR(ip->iJmpTrue.op2));
-          ip = NEXTINST(JmpTrue);
-          break;
-        case inst::OpCode::JmpTrueLong:
-          em.jmpTrueFalse(
-              true,
-              labels[ofsToBBIndex
-                         [(const char *)ip - funcStart + ip->iJmpTrueLong.op1]],
-              FR(ip->iJmpTrueLong.op2));
-          ip = NEXTINST(JmpTrueLong);
-          break;
-        case inst::OpCode::JmpFalse:
-          em.jmpTrueFalse(
-              false,
-              labels[ofsToBBIndex
-                         [(const char *)ip - funcStart + ip->iJmpFalse.op1]],
-              FR(ip->iJmpFalse.op2));
-          ip = NEXTINST(JmpFalse);
-          break;
-        case inst::OpCode::JmpFalseLong:
-          em.jmpTrueFalse(
-              false,
-              labels[ofsToBBIndex
-                         [(const char *)ip - funcStart +
-                          ip->iJmpFalseLong.op1]],
-              FR(ip->iJmpFalseLong.op2));
-          ip = NEXTINST(JmpFalseLong);
-          break;
-        case inst::OpCode::Jmp:
-          em.jmp(
-              labels
-                  [ofsToBBIndex[(const char *)ip - funcStart + ip->iJmp.op1]]);
-          ip = NEXTINST(Jmp);
-          break;
-        case inst::OpCode::JmpLong:
-          em.jmp(labels[ofsToBBIndex
-                            [(const char *)ip - funcStart + ip->iJmpLong.op1]]);
-          ip = NEXTINST(JmpLong);
-          break;
-        case inst::OpCode::JmpUndefined:
-          em.jmpUndefined(
-              labels[ofsToBBIndex
-                         [(const char *)ip - funcStart +
-                          ip->iJmpUndefined.op1]],
-              FR(ip->iJmpUndefined.op2));
-          ip = NEXTINST(JmpUndefined);
-          break;
-        case inst::OpCode::JmpUndefinedLong:
-          em.jmpUndefined(
-              labels[ofsToBBIndex
-                         [(const char *)ip - funcStart +
-                          ip->iJmpUndefinedLong.op1]],
-              FR(ip->iJmpUndefinedLong.op2));
-          ip = NEXTINST(JmpUndefinedLong);
-          break;
-
-        case inst::OpCode::SwitchImm: {
-          uint32_t min = ip->iSwitchImm.op4;
-          uint32_t max = ip->iSwitchImm.op5;
-          // Max is inclusive, so add 1 to get the number of entries.
-          uint32_t entries = max - min + 1;
-
-          // Calculate the offset into the bytecode where the jump table for
-          // this SwitchImm starts.
-          const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
-              (const uint8_t *)ip + ip->iSwitchImm.op2, sizeof(uint32_t));
-
-          std::vector<const asmjit::Label *> jumpTableLabels{};
-          jumpTableLabels.reserve(entries);
-
-          // Add a label for each offset in the table.
-          for (uint32_t i = 0; i < entries; ++i) {
-            const int32_t *loc = (const int32_t *)tablestart + i;
-            int32_t offset = *loc;
-            jumpTableLabels.push_back(
-                &labels[ofsToBBIndex[(const char *)ip - funcStart + offset]]);
-          }
-
-          em.switchImm(
-              FR(ip->iSwitchImm.op1),
-              labels[ofsToBBIndex
-                         [(const char *)ip - funcStart + ip->iSwitchImm.op3]],
-              jumpTableLabels,
-              min,
-              max);
-          ip = NEXTINST(SwitchImm);
-          break;
-        }
-
-        case inst::OpCode::TryGetByIdLong:
-          idVal = ID(ip->iTryGetByIdLong.op4);
-          cacheIdx = ip->iTryGetByIdLong.op3;
-          nextIP = NEXTINST(TryGetByIdLong);
-          goto tryGetById;
-        case inst::OpCode::TryGetById:
-          idVal = ID(ip->iTryGetById.op4);
-          cacheIdx = ip->iTryGetById.op3;
-          nextIP = NEXTINST(TryGetById);
-          goto tryGetById;
-        tryGetById: {
-          em.tryGetById(
-              FR(ip->iTryGetById.op1),
-              idVal,
-              FR(ip->iTryGetById.op2),
-              cacheIdx);
-          ip = nextIP;
-          break;
-        }
-
-        case inst::OpCode::GetByIdLong:
-          idVal = ID(ip->iGetByIdLong.op4);
-          cacheIdx = ip->iGetByIdLong.op3;
-          nextIP = NEXTINST(GetByIdLong);
-          goto getById;
-        case inst::OpCode::GetById:
-          idVal = ID(ip->iGetById.op4);
-          cacheIdx = ip->iGetById.op3;
-          nextIP = NEXTINST(GetById);
-          goto getById;
-        case inst::OpCode::GetByIdShort:
-          idVal = ID(ip->iGetByIdShort.op4);
-          cacheIdx = ip->iGetByIdShort.op3;
-          nextIP = NEXTINST(GetByIdShort);
-          goto getById;
-        getById: {
-          em.getById(
-              FR(ip->iGetById.op1), idVal, FR(ip->iGetById.op2), cacheIdx);
-          ip = nextIP;
-          break;
-        }
-
-        case inst::OpCode::TryPutByIdLooseLong:
-          idVal = ID(ip->iTryPutByIdLooseLong.op4);
-          cacheIdx = ip->iTryPutByIdLooseLong.op3;
-          nextIP = NEXTINST(TryPutByIdLooseLong);
-          goto tryPutByIdLoose;
-        case inst::OpCode::TryPutByIdLoose:
-          idVal = ID(ip->iTryPutByIdLoose.op4);
-          cacheIdx = ip->iTryPutByIdLoose.op3;
-          nextIP = NEXTINST(TryPutByIdLoose);
-          goto tryPutByIdLoose;
-        tryPutByIdLoose: {
-          em.tryPutByIdLoose(
-              FR(ip->iTryPutByIdLoose.op1),
-              idVal,
-              FR(ip->iTryPutByIdLoose.op2),
-              cacheIdx);
-          ip = nextIP;
-          break;
-        }
-
-        case inst::OpCode::TryPutByIdStrictLong:
-          idVal = ID(ip->iTryPutByIdStrictLong.op4);
-          cacheIdx = ip->iTryPutByIdStrictLong.op3;
-          nextIP = NEXTINST(TryPutByIdStrictLong);
-          goto tryPutByIdStrict;
-        case inst::OpCode::TryPutByIdStrict:
-          idVal = ID(ip->iTryPutByIdStrict.op4);
-          cacheIdx = ip->iTryPutByIdStrict.op3;
-          nextIP = NEXTINST(TryPutByIdStrict);
-          goto tryPutByIdStrict;
-        tryPutByIdStrict: {
-          em.tryPutByIdStrict(
-              FR(ip->iTryPutByIdStrict.op1),
-              idVal,
-              FR(ip->iTryPutByIdStrict.op2),
-              cacheIdx);
-          ip = nextIP;
-          break;
-        }
-
-        case inst::OpCode::PutByIdLooseLong:
-          idVal = ID(ip->iPutByIdLooseLong.op4);
-          cacheIdx = ip->iPutByIdLooseLong.op3;
-          nextIP = NEXTINST(PutByIdLooseLong);
-          goto putByIdLoose;
-        case inst::OpCode::PutByIdLoose:
-          idVal = ID(ip->iPutByIdLoose.op4);
-          cacheIdx = ip->iPutByIdLoose.op3;
-          nextIP = NEXTINST(PutByIdLoose);
-          goto putByIdLoose;
-        putByIdLoose: {
-          em.putByIdLoose(
-              FR(ip->iPutByIdLoose.op1),
-              idVal,
-              FR(ip->iPutByIdLoose.op2),
-              cacheIdx);
-          ip = nextIP;
-          break;
-        }
-
-        case inst::OpCode::PutByIdStrictLong:
-          idVal = ID(ip->iPutByIdStrictLong.op4);
-          cacheIdx = ip->iPutByIdStrictLong.op3;
-          nextIP = NEXTINST(PutByIdStrictLong);
-          goto putByIdStrict;
-        case inst::OpCode::PutByIdStrict:
-          idVal = ID(ip->iPutByIdStrict.op4);
-          cacheIdx = ip->iPutByIdStrict.op3;
-          nextIP = NEXTINST(PutByIdStrict);
-          goto putByIdStrict;
-        putByIdStrict: {
-          em.putByIdStrict(
-              FR(ip->iPutByIdStrict.op1),
-              idVal,
-              FR(ip->iPutByIdStrict.op2),
-              cacheIdx);
-          ip = nextIP;
-          break;
-        }
-
-        case inst::OpCode::GetByVal:
-          em.getByVal(
-              FR(ip->iGetByVal.op1),
-              FR(ip->iGetByVal.op2),
-              FR(ip->iGetByVal.op3));
-          ip = NEXTINST(GetByVal);
-          break;
-        case inst::OpCode::PutByValLoose:
-          em.putByValLoose(
-              FR(ip->iPutByValLoose.op1),
-              FR(ip->iPutByValLoose.op2),
-              FR(ip->iPutByValLoose.op3));
-          ip = NEXTINST(PutByValLoose);
-          break;
-        case inst::OpCode::PutByValStrict:
-          em.putByValStrict(
-              FR(ip->iPutByValStrict.op1),
-              FR(ip->iPutByValStrict.op2),
-              FR(ip->iPutByValStrict.op3));
-          ip = NEXTINST(PutByValStrict);
-          break;
-
-        case inst::OpCode::DelByIdLoose:
-          em.delByIdLoose(
-              FR(ip->iDelByIdLoose.op1),
-              FR(ip->iDelByIdLoose.op2),
-              ID(ip->iDelByIdLoose.op3));
-          ip = NEXTINST(DelByIdLoose);
-          break;
-        case inst::OpCode::DelByIdLooseLong:
-          em.delByIdLoose(
-              FR(ip->iDelByIdLooseLong.op1),
-              FR(ip->iDelByIdLooseLong.op2),
-              ID(ip->iDelByIdLooseLong.op3));
-          ip = NEXTINST(DelByIdLooseLong);
-          break;
-        case inst::OpCode::DelByIdStrict:
-          em.delByIdStrict(
-              FR(ip->iDelByIdStrict.op1),
-              FR(ip->iDelByIdStrict.op2),
-              ID(ip->iDelByIdStrict.op3));
-          ip = NEXTINST(DelByIdStrict);
-          break;
-        case inst::OpCode::DelByIdStrictLong:
-          em.delByIdStrict(
-              FR(ip->iDelByIdStrictLong.op1),
-              FR(ip->iDelByIdStrictLong.op2),
-              ID(ip->iDelByIdStrictLong.op3));
-          ip = NEXTINST(DelByIdStrictLong);
-          break;
-
-        case inst::OpCode::DelByValLoose:
-          em.delByValLoose(
-              FR(ip->iDelByValLoose.op1),
-              FR(ip->iDelByValLoose.op2),
-              FR(ip->iDelByValLoose.op3));
-          ip = NEXTINST(DelByValLoose);
-          break;
-        case inst::OpCode::DelByValStrict:
-          em.delByValStrict(
-              FR(ip->iDelByValStrict.op1),
-              FR(ip->iDelByValStrict.op2),
-              FR(ip->iDelByValStrict.op3));
-          ip = NEXTINST(DelByValStrict);
-          break;
-
-        case inst::OpCode::GetByIndex:
-          em.getByIndex(
-              FR(ip->iGetByIndex.op1),
-              FR(ip->iGetByIndex.op2),
-              ip->iGetByIndex.op3);
-          ip = NEXTINST(GetByIndex);
-          break;
-
-        case inst::OpCode::PutOwnByIndex:
-          em.putOwnByIndex(
-              FR(ip->iPutOwnByIndex.op1),
-              FR(ip->iPutOwnByIndex.op2),
-              ip->iPutOwnByIndex.op3);
-          ip = NEXTINST(PutOwnByIndex);
-          break;
-        case inst::OpCode::PutOwnByIndexL:
-          em.putOwnByIndex(
-              FR(ip->iPutOwnByIndexL.op1),
-              FR(ip->iPutOwnByIndexL.op2),
-              ip->iPutOwnByIndexL.op3);
-          ip = NEXTINST(PutOwnByIndexL);
-          break;
-
-        case inst::OpCode::PutOwnByVal:
-          em.putOwnByVal(
-              FR(ip->iPutOwnByVal.op1),
-              FR(ip->iPutOwnByVal.op2),
-              FR(ip->iPutOwnByVal.op3),
-              (bool)ip->iPutOwnByVal.op4);
-          ip = NEXTINST(PutOwnByVal);
-          break;
-        case inst::OpCode::PutOwnGetterSetterByVal:
-          em.putOwnGetterSetterByVal(
-              FR(ip->iPutOwnGetterSetterByVal.op1),
-              FR(ip->iPutOwnGetterSetterByVal.op2),
-              FR(ip->iPutOwnGetterSetterByVal.op3),
-              FR(ip->iPutOwnGetterSetterByVal.op4),
-              (bool)ip->iPutOwnGetterSetterByVal.op5);
-          ip = NEXTINST(PutOwnGetterSetterByVal);
-          break;
-
-        case inst::OpCode::PutNewOwnById:
-          em.putNewOwnById(
-              FR(ip->iPutNewOwnById.op1),
-              FR(ip->iPutNewOwnById.op2),
-              ID(ip->iPutNewOwnById.op3),
-              true);
-          ip = NEXTINST(PutNewOwnById);
-          break;
-        case inst::OpCode::PutNewOwnByIdLong:
-          em.putNewOwnById(
-              FR(ip->iPutNewOwnByIdLong.op1),
-              FR(ip->iPutNewOwnByIdLong.op2),
-              ID(ip->iPutNewOwnByIdLong.op3),
-              true);
-          ip = NEXTINST(PutNewOwnByIdLong);
-          break;
-        case inst::OpCode::PutNewOwnByIdShort:
-          em.putNewOwnById(
-              FR(ip->iPutNewOwnByIdShort.op1),
-              FR(ip->iPutNewOwnByIdShort.op2),
-              ID(ip->iPutNewOwnByIdShort.op3),
-              true);
-          ip = NEXTINST(PutNewOwnByIdShort);
-          break;
-
-        case inst::OpCode::PutNewOwnNEById:
-          em.putNewOwnById(
-              FR(ip->iPutNewOwnNEById.op1),
-              FR(ip->iPutNewOwnNEById.op2),
-              ID(ip->iPutNewOwnNEById.op3),
-              false);
-          ip = NEXTINST(PutNewOwnNEById);
-          break;
-        case inst::OpCode::PutNewOwnNEByIdLong:
-          em.putNewOwnById(
-              FR(ip->iPutNewOwnNEByIdLong.op1),
-              FR(ip->iPutNewOwnNEByIdLong.op2),
-              ID(ip->iPutNewOwnNEByIdLong.op3),
-              false);
-          ip = NEXTINST(PutNewOwnNEByIdLong);
-          break;
-
-        case inst::OpCode::PutOwnBySlotIdx:
-          em.putOwnBySlotIdx(
-              FR(ip->iPutOwnBySlotIdx.op1),
-              FR(ip->iPutOwnBySlotIdx.op2),
-              ip->iPutOwnBySlotIdx.op3);
-          ip = NEXTINST(PutOwnBySlotIdx);
-          break;
-
-        case inst::OpCode::PutOwnBySlotIdxLong:
-          em.putOwnBySlotIdx(
-              FR(ip->iPutOwnBySlotIdxLong.op1),
-              FR(ip->iPutOwnBySlotIdxLong.op2),
-              ip->iPutOwnBySlotIdxLong.op3);
-          ip = NEXTINST(PutOwnBySlotIdxLong);
-          break;
-
-        case inst::OpCode::GetOwnBySlotIdx:
-          em.getOwnBySlotIdx(
-              FR(ip->iGetOwnBySlotIdx.op1),
-              FR(ip->iGetOwnBySlotIdx.op2),
-              ip->iGetOwnBySlotIdx.op3);
-          ip = NEXTINST(PutOwnBySlotIdx);
-          break;
-
-        case inst::OpCode::GetOwnBySlotIdxLong:
-          em.getOwnBySlotIdx(
-              FR(ip->iGetOwnBySlotIdxLong.op1),
-              FR(ip->iGetOwnBySlotIdxLong.op2),
-              ip->iGetOwnBySlotIdxLong.op3);
-          ip = NEXTINST(GetOwnBySlotIdxLong);
-          break;
-
-        case inst::OpCode::TypedLoadParent:
-          em.typedLoadParent(
-              FR(ip->iTypedLoadParent.op1), FR(ip->iTypedLoadParent.op2));
-          ip = NEXTINST(TypedLoadParent);
-          break;
-        case inst::OpCode::TypedStoreParent:
-          em.typedStoreParent(
-              FR(ip->iTypedStoreParent.op1), FR(ip->iTypedStoreParent.op2));
-          ip = NEXTINST(TypedStoreParent);
-          break;
-
-        case inst::OpCode::Ret:
-          em.ret(FR(ip->iRet.op1));
-          ip = NEXTINST(Ret);
-          break;
-
-        case inst::OpCode::GetGlobalObject:
-          em.getGlobalObject(FR(ip->iGetGlobalObject.op1));
-          ip = NEXTINST(GetGlobalObject);
-          break;
-
-        case inst::OpCode::InstanceOf:
-          em.instanceOf(
-              FR(ip->iInstanceOf.op1),
-              FR(ip->iInstanceOf.op2),
-              FR(ip->iInstanceOf.op3));
-          ip = NEXTINST(InstanceOf);
-          break;
-        case inst::OpCode::IsIn:
-          em.isIn(FR(ip->iIsIn.op1), FR(ip->iIsIn.op2), FR(ip->iIsIn.op3));
-          ip = NEXTINST(IsIn);
-          break;
-
-        case inst::OpCode::Call:
-          em.call(
-              FR(ip->iCall.op1),
-              /* callee */ FR(ip->iCall.op2),
-              /* argc */ ip->iCall.op3);
-          ip = NEXTINST(Call);
-          break;
-
-        case inst::OpCode::Call1:
-          em.callN(
-              FR(ip->iCall1.op1),
-              /* callee */ FR(ip->iCall1.op2),
-              /* args */ {FR(ip->iCall1.op3)});
-          ip = NEXTINST(Call1);
-          break;
-
-        case inst::OpCode::Call2:
-          em.callN(
-              FR(ip->iCall2.op1),
-              /* callee */ FR(ip->iCall2.op2),
-              /* args */ {FR(ip->iCall2.op3), FR(ip->iCall2.op4)});
-          ip = NEXTINST(Call2);
-          break;
-
-        case inst::OpCode::Call3:
-          em.callN(
-              FR(ip->iCall3.op1),
-              /* callee */ FR(ip->iCall3.op2),
-              /* args */
-              {FR(ip->iCall3.op3), FR(ip->iCall3.op4), FR(ip->iCall3.op5)});
-          ip = NEXTINST(Call3);
-          break;
-
-        case inst::OpCode::Call4:
-          em.callN(
-              FR(ip->iCall4.op1),
-              /* callee */ FR(ip->iCall4.op2),
-              /* args */
-              {FR(ip->iCall4.op3),
-               FR(ip->iCall4.op4),
-               FR(ip->iCall4.op5),
-               FR(ip->iCall4.op6)});
-          ip = NEXTINST(Call4);
-          break;
-
-        case inst::OpCode::Construct:
-          em.callWithNewTarget(
-              FR(ip->iConstruct.op1),
-              /* callee */ FR(ip->iConstruct.op2),
-              /* newTarget */ FR(ip->iConstruct.op2),
-              /* argc */ ip->iCall.op3);
-          ip = NEXTINST(Construct);
-          break;
-
-        case inst::OpCode::CallBuiltin:
-          em.callBuiltin(
-              FR(ip->iCallBuiltin.op1),
-              /* builtinIndex */ ip->iCallBuiltin.op2,
-              /* argc */ ip->iCallBuiltin.op3);
-          ip = NEXTINST(CallBuiltin);
-          break;
-
-        case inst::OpCode::GetBuiltinClosure:
-          em.getBuiltinClosure(
-              FR(ip->iGetBuiltinClosure.op1),
-              /* builtinIndex */ ip->iGetBuiltinClosure.op2);
-          ip = NEXTINST(GetBuiltinClosure);
-          break;
-
-        case inst::OpCode::DeclareGlobalVar:
-          em.declareGlobalVar(ID(ip->iDeclareGlobalVar.op1));
-          ip = NEXTINST(DeclareGlobalVar);
-          break;
-        case inst::OpCode::CreateTopLevelEnvironment:
-          em.createTopLevelEnvironment(
-              FR(ip->iCreateTopLevelEnvironment.op1),
-              ip->iCreateTopLevelEnvironment.op2);
-          ip = NEXTINST(CreateTopLevelEnvironment);
-          break;
-        case inst::OpCode::CreateFunctionEnvironment:
-          em.createFunctionEnvironment(
-              FR(ip->iCreateFunctionEnvironment.op1),
-              ip->iCreateFunctionEnvironment.op2);
-          ip = NEXTINST(CreateFunctionEnvironment);
-          break;
-        case inst::OpCode::CreateEnvironment:
-          em.createEnvironment(
-              FR(ip->iCreateEnvironment.op1),
-              FR(ip->iCreateEnvironment.op2),
-              ip->iCreateEnvironment.op3);
-          ip = NEXTINST(CreateEnvironment);
-          break;
-        case inst::OpCode::GetParentEnvironment:
-          em.getParentEnvironment(
-              FR(ip->iGetParentEnvironment.op1), ip->iGetParentEnvironment.op2);
-          ip = NEXTINST(GetParentEnvironment);
-          break;
-        case inst::OpCode::GetClosureEnvironment:
-          em.getClosureEnvironment(
-              FR(ip->iGetClosureEnvironment.op1),
-              FR(ip->iGetClosureEnvironment.op2));
-          ip = NEXTINST(GetClosureEnvironment);
-          break;
-        case inst::OpCode::LoadFromEnvironment:
-          em.loadFromEnvironment(
-              FR(ip->iLoadFromEnvironment.op1),
-              FR(ip->iLoadFromEnvironment.op2),
-              ip->iLoadFromEnvironment.op3);
-          ip = NEXTINST(LoadFromEnvironment);
-          break;
-        case inst::OpCode::LoadFromEnvironmentL:
-          em.loadFromEnvironment(
-              FR(ip->iLoadFromEnvironmentL.op1),
-              FR(ip->iLoadFromEnvironmentL.op2),
-              ip->iLoadFromEnvironmentL.op3);
-          ip = NEXTINST(LoadFromEnvironmentL);
-          break;
-        case inst::OpCode::StoreToEnvironment:
-          em.storeToEnvironment(
-              false,
-              FR(ip->iStoreToEnvironment.op1),
-              ip->iStoreToEnvironment.op2,
-              FR(ip->iStoreToEnvironment.op3));
-          ip = NEXTINST(StoreToEnvironment);
-          break;
-        case inst::OpCode::StoreToEnvironmentL:
-          em.storeToEnvironment(
-              false,
-              FR(ip->iStoreToEnvironmentL.op1),
-              ip->iStoreToEnvironmentL.op2,
-              FR(ip->iStoreToEnvironmentL.op3));
-          ip = NEXTINST(StoreToEnvironmentL);
-          break;
-        case inst::OpCode::StoreNPToEnvironment:
-          em.storeToEnvironment(
-              true,
-              FR(ip->iStoreNPToEnvironment.op1),
-              ip->iStoreToEnvironment.op2,
-              FR(ip->iStoreToEnvironment.op3));
-          ip = NEXTINST(StoreNPToEnvironment);
-          break;
-        case inst::OpCode::StoreNPToEnvironmentL:
-          em.storeToEnvironment(
-              true,
-              FR(ip->iStoreNPToEnvironmentL.op1),
-              ip->iStoreToEnvironmentL.op2,
-              FR(ip->iStoreToEnvironmentL.op3));
-          ip = NEXTINST(StoreNPToEnvironmentL);
-          break;
-
-        case inst::OpCode::CreateClosure:
-          em.createClosure(
-              FR(ip->iCreateClosure.op1),
-              FR(ip->iCreateClosure.op2),
-              codeBlock->getRuntimeModule(),
-              ip->iCreateClosure.op3);
-          ip = NEXTINST(CreateClosure);
-          break;
-        case inst::OpCode::CreateClosureLongIndex:
-          em.createClosure(
-              FR(ip->iCreateClosureLongIndex.op1),
-              FR(ip->iCreateClosureLongIndex.op2),
-              codeBlock->getRuntimeModule(),
-              ip->iCreateClosureLongIndex.op3);
-          ip = NEXTINST(CreateClosureLongIndex);
-          break;
-
-        case inst::OpCode::NewObject:
-          em.newObject(FR(ip->iNewObject.op1));
-          ip = NEXTINST(NewObject);
-          break;
-        case inst::OpCode::NewObjectWithParent:
-          em.newObjectWithParent(
-              FR(ip->iNewObjectWithParent.op1),
-              FR(ip->iNewObjectWithParent.op2));
-          ip = NEXTINST(NewObjectWithParent);
-          break;
-        case inst::OpCode::NewObjectWithBuffer:
-          em.newObjectWithBuffer(
-              FR(ip->iNewObjectWithBuffer.op1),
-              ip->iNewObjectWithBuffer.op2,
-              ip->iNewObjectWithBuffer.op3);
-          ip = NEXTINST(NewObjectWithBuffer);
-          break;
-        case inst::OpCode::NewObjectWithBufferLong:
-          em.newObjectWithBuffer(
-              FR(ip->iNewObjectWithBufferLong.op1),
-              ip->iNewObjectWithBufferLong.op2,
-              ip->iNewObjectWithBufferLong.op3);
-          ip = NEXTINST(NewObjectWithBufferLong);
-          break;
-
-        case inst::OpCode::NewArray:
-          em.newArray(FR(ip->iNewArray.op1), ip->iNewArray.op2);
-          ip = NEXTINST(NewArray);
-          break;
-        case inst::OpCode::NewArrayWithBuffer:
-          em.newArrayWithBuffer(
-              FR(ip->iNewArrayWithBuffer.op1),
-              ip->iNewArrayWithBuffer.op2,
-              ip->iNewArrayWithBuffer.op3,
-              ip->iNewArrayWithBuffer.op4);
-          ip = NEXTINST(NewArrayWithBuffer);
-          break;
-        case inst::OpCode::NewArrayWithBufferLong:
-          em.newArrayWithBuffer(
-              FR(ip->iNewArrayWithBufferLong.op1),
-              ip->iNewArrayWithBufferLong.op2,
-              ip->iNewArrayWithBufferLong.op3,
-              ip->iNewArrayWithBufferLong.op4);
-          ip = NEXTINST(NewArrayWithBufferLong);
-          break;
-
-        case inst::OpCode::GetPNameList:
-          em.getPNameList(
-              FR(ip->iGetPNameList.op1),
-              FR(ip->iGetPNameList.op2),
-              FR(ip->iGetPNameList.op3),
-              FR(ip->iGetPNameList.op4));
-          ip = NEXTINST(GetPNameList);
-          break;
-        case inst::OpCode::GetNextPName:
-          em.getNextPName(
-              FR(ip->iGetNextPName.op1),
-              FR(ip->iGetNextPName.op2),
-              FR(ip->iGetNextPName.op3),
-              FR(ip->iGetNextPName.op4),
-              FR(ip->iGetNextPName.op5));
-          ip = NEXTINST(GetNextPName);
-          break;
-
-        case inst::OpCode::GetArgumentsPropByValLoose:
-          em.getArgumentsPropByValLoose(
-              FR(ip->iGetArgumentsPropByValLoose.op1),
-              FR(ip->iGetArgumentsPropByValLoose.op2),
-              FR(ip->iGetArgumentsPropByValLoose.op3));
-          ip = NEXTINST(GetArgumentsPropByValLoose);
-          break;
-        case inst::OpCode::GetArgumentsPropByValStrict:
-          em.getArgumentsPropByValStrict(
-              FR(ip->iGetArgumentsPropByValStrict.op1),
-              FR(ip->iGetArgumentsPropByValStrict.op2),
-              FR(ip->iGetArgumentsPropByValStrict.op3));
-          ip = NEXTINST(GetArgumentsPropByValStrict);
-          break;
-
-        case inst::OpCode::GetArgumentsLength:
-          em.getArgumentsLength(
-              FR(ip->iGetArgumentsLength.op1), FR(ip->iGetArgumentsLength.op2));
-          ip = NEXTINST(GetArgumentsLength);
-          break;
-
-        case inst::OpCode::ReifyArgumentsLoose:
-          em.reifyArgumentsLoose(FR(ip->iReifyArgumentsLoose.op1));
-          ip = NEXTINST(ReifyArgumentsLoose);
-          break;
-        case inst::OpCode::ReifyArgumentsStrict:
-          em.reifyArgumentsStrict(FR(ip->iReifyArgumentsStrict.op1));
-          ip = NEXTINST(ReifyArgumentsStrict);
-          break;
-
-        case inst::OpCode::CreateThis:
-          em.createThis(
-              FR(ip->iCreateThis.op1),
-              FR(ip->iCreateThis.op2),
-              FR(ip->iCreateThis.op3));
-          ip = NEXTINST(CreateThis);
-          break;
-        case inst::OpCode::SelectObject:
-          em.selectObject(
-              FR(ip->iSelectObject.op1),
-              FR(ip->iSelectObject.op2),
-              FR(ip->iSelectObject.op3));
-          ip = NEXTINST(SelectObject);
-          break;
-
-        case inst::OpCode::LoadThisNS:
-          em.loadThisNS(FR(ip->iLoadThisNS.op1));
-          ip = NEXTINST(LoadThisNS);
-          break;
-        case inst::OpCode::CoerceThisNS:
-          em.coerceThisNS(FR(ip->iCoerceThisNS.op1), FR(ip->iCoerceThisNS.op2));
-          ip = NEXTINST(CoerceThisNS);
-          break;
-        case inst::OpCode::GetNewTarget:
-          em.getNewTarget(FR(ip->iGetNewTarget.op1));
-          ip = NEXTINST(GetNewTarget);
-          break;
-
-        case inst::OpCode::Debugger:
-          em.debugger();
-          ip = NEXTINST(Debugger);
-          break;
-        case inst::OpCode::Throw:
-          em.throwInst(FR(ip->iThrow.op1));
-          ip = NEXTINST(Throw);
-          break;
-
-        case inst::OpCode::AddS:
-          em.addS(FR(ip->iAddS.op1), FR(ip->iAddS.op2), FR(ip->iAddS.op3));
-          ip = NEXTINST(AddS);
-          break;
-
-        case inst::OpCode::CreateRegExp:
-          em.createRegExp(
-              FR(ip->iCreateRegExp.op1),
-              codeBlock->getRuntimeModule()
-                  ->getSymbolIDFromStringIDMayAllocate(ip->iCreateRegExp.op2)
-                  .unsafeGetRaw(),
-              codeBlock->getRuntimeModule()
-                  ->getSymbolIDFromStringIDMayAllocate(ip->iCreateRegExp.op3)
-                  .unsafeGetRaw(),
-              ip->iCreateRegExp.op4);
-          ip = NEXTINST(CreateRegExp);
-          break;
-
-        default:
-          if (crashOnError_) {
-            llvh::errs() << "*** Unsupported instruction: "
-                         << llvh::format_decimal(
-                                (const char *)ip - (const char *)funcStart, 3)
-                         << ": " << inst::decodeInstruction(ip) << "\n";
-            hermes_fatal("jit: unsupported instruction");
-          } else {
-            if (dumpJITCode_ &
-                (DumpJitCode::Code | DumpJitCode::CompileStatus |
-                 DumpJitCode::InstErr)) {
-              llvh::outs() << "** Unsupported instruction: "
-                           << llvh::format_decimal(
-                                  (const char *)ip - (const char *)funcStart, 3)
-                           << ": " << inst::decodeInstruction(ip) << "\n";
-            } else {
-              LLVM_DEBUG(
-                  llvh::outs()
-                  << "** Unsupported instruction: "
-                  << llvh::format_decimal(
-                         (const char *)ip - (const char *)funcStart, 3)
-                  << ": " << inst::decodeInstruction(ip) << "\n");
-            }
-          }
-          fail = true;
-          goto onError;
-      }
-      em.assertPostInstructionInvariants();
+      ip = dispatch(ip);
+      em_.assertPostInstructionInvariants();
     }
   }
 
-onError:
-  if (fail) {
-    codeBlock->setDontJIT(true);
-    return nullptr;
+  /// Compile a single instruction by dispatching to its emitter method.
+  /// \return the instruction pointer for the next instruction.
+  JIT_INLINE const inst::Inst *dispatch(const inst::Inst *ip) {
+    switch (ip->opCode) {
+#define DEFINE_OPCODE(name)   \
+  case inst::OpCode::name:    \
+    emit##name(&ip->i##name); \
+    ip = NEXTINST(name);      \
+    break;
+#include "hermes/BCGen/HBC/BytecodeList.def"
+
+#undef DEFINE_OPCODE
+
+      case inst::OpCode::_last:
+      default:
+        hermes_fatal("Invalid opcode");
+    }
+    return ip;
   }
 
-  em.leave();
-  codeBlock->setJITCompiled(em.addToRuntime(impl_->jr));
+  /// Calculate the target branch offset relative to the current instruction
+  /// and return the AsmJit label associated with the BB starting at that
+  /// address.
+  ///
+  /// \param inst pointer to the start of he current instruction.
+  /// \param targetOfs offset of the branch targer relative to \p inst.
+  ///
+  /// \return the corresponding AsmJit label.
+  const asmjit::Label &bbLabelFromInst(const void *inst, int32_t targetOfs)
+      const {
+    uint32_t addr = (const char *)inst - funcStart_ + targetOfs;
+    auto bbIndexIt = ofsToBBIndex_.find(addr);
+    if (LLVM_UNLIKELY(bbIndexIt == ofsToBBIndex_.end())) {
+      llvh::errs() << "bbLabelFromInst: invalid addr "
+                   << llvh::format_hex(addr, 4) << "\n";
+      hermes_fatal("jit: invalid BB addr");
+    }
+    return bbLabels_[bbIndexIt->second];
+  }
+
+#define DEFINE_OPCODE(name) \
+  JIT_INLINE void emit##name(const inst::name##Inst *inst);
+#include "hermes/BCGen/HBC/BytecodeList.def"
+
+#undef DEFINE_OPCODE
+}; // class
+
+JITCompiledFunctionPtr JITContext::compileImpl(
+    Runtime &runtime,
+    CodeBlock *codeBlock_) {
+  Compiler compiler(*this, codeBlock_);
+  return compiler.compileCodeBlock();
+}
+
+JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
+  if (_setjmp(errorJmpBuf_) == 0) {
+    return compileCodeBlockImpl();
+  } else {
+    // We arrive here on error.
+
+    const char *errMsg = error_ == Error::UnsupportedInst
+        ? "jit: unsupported instruction"
+        : "jit: other error";
+    auto printError = [this, errMsg](llvh::raw_ostream &OS) {
+      OS << errMsg << '\n';
+      if (errorIP_) {
+        OS << llvh::format_decimal(
+                  (const char *)errorIP_ - (const char *)funcStart_, 3)
+           << ": " << inst::decodeInstruction(errorIP_) << "\n";
+      }
+    };
+
+    if (jc_.crashOnError_) {
+      printError(llvh::errs());
+      hermes_fatal(errMsg);
+    } else {
+      if (jc_.dumpJITCode_ &
+          (DumpJitCode::Code | DumpJitCode::CompileStatus |
+           DumpJitCode::InstErr)) {
+        printError(llvh::outs());
+      } else {
+        LLVM_DEBUG(printError(llvh::outs()));
+      }
+    }
+
+    codeBlock_->setDontJIT(true);
+    return nullptr;
+  }
+}
+
+JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
+  if (jc_.dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
+    funcName_ = codeBlock_->getNameString();
+    llvh::outs() << "\nJIT compilation of FunctionID "
+                 << codeBlock_->getFunctionID() << ", '" << funcName_ << "'\n";
+  }
+
+  discoverBasicBlocks(codeBlock_, basicBlocks_, ofsToBBIndex_);
+
+  if ((jc_.dumpJITCode_ & DumpJitCode::Code) && !funcName_.empty())
+    llvh::outs() << "\n" << funcName_ << ":\n";
+
+  bbLabels_.reserve(basicBlocks_.size() - 1);
+  for (unsigned bbIndex = 0, e = basicBlocks_.size() - 1; bbIndex < e;
+       ++bbIndex) {
+    bbLabels_.push_back(em_.newPrefLabel("BB", bbIndex));
+  }
+
+  for (uint32_t bbIndex = 0, e = basicBlocks_.size() - 1; bbIndex < e;
+       ++bbIndex) {
+    compileBB(bbIndex);
+  }
+
+  em_.leave();
+  codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr));
 
   LLVM_DEBUG(
       llvh::outs() << "\n Bytecode:";
-      for (unsigned bbIndex = 0; bbIndex < basicBlocks.size() - 1; ++bbIndex) {
-        uint32_t startOfs = basicBlocks[bbIndex];
-        uint32_t endOfs = basicBlocks[bbIndex + 1];
+      for (unsigned bbIndex = 0; bbIndex < basicBlocks_.size() - 1; ++bbIndex) {
+        uint32_t startOfs = basicBlocks_[bbIndex];
+        uint32_t endOfs = basicBlocks_[bbIndex + 1];
         llvh::outs() << "BB" << bbIndex << ":\n";
-        auto *ip = funcStart + startOfs;
-        auto *to = funcStart + endOfs;
+        auto *ip = funcStart_ + startOfs;
+        auto *to = funcStart_ + endOfs;
         while (ip != to) {
           auto di = inst::decodeInstruction((const inst::Inst *)ip);
-          llvh::outs() << "    " << llvh::format_decimal(ip - funcStart, 3)
+          llvh::outs() << "    " << llvh::format_decimal(ip - funcStart_, 3)
                        << ": " << di << "\n";
           ip += di.meta.size;
         }
       });
 
-  if (dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
-    funcName = codeBlock->getNameString();
+  if (jc_.dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
     llvh::outs() << "\nJIT successfully compiled FunctionID "
-                 << codeBlock->getFunctionID() << ", '" << funcName << "'\n";
+                 << codeBlock_->getFunctionID() << ", '" << funcName_ << "'\n";
   }
 
-  return codeBlock->getJITCompiled();
+  return codeBlock_->getJITCompiled();
+}
+
+#define EMIT_UNIMPLEMENTED(name)                                               \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    error_ = Error::UnsupportedInst;                                           \
+    errorIP_ = (const inst::Inst *)inst;                                       \
+    _longjmp(errorJmpBuf_, 1);                                                 \
+  }
+
+EMIT_UNIMPLEMENTED(NewFastArray)
+EMIT_UNIMPLEMENTED(FastArrayLength)
+EMIT_UNIMPLEMENTED(FastArrayLoad)
+EMIT_UNIMPLEMENTED(FastArrayStore)
+EMIT_UNIMPLEMENTED(FastArrayPush)
+EMIT_UNIMPLEMENTED(FastArrayAppend)
+EMIT_UNIMPLEMENTED(Unreachable)
+EMIT_UNIMPLEMENTED(GetEnvironment)
+EMIT_UNIMPLEMENTED(LoadConstBigInt)
+EMIT_UNIMPLEMENTED(LoadConstBigIntLongIndex)
+EMIT_UNIMPLEMENTED(CallWithNewTarget)
+EMIT_UNIMPLEMENTED(CallWithNewTargetLong)
+EMIT_UNIMPLEMENTED(Catch)
+EMIT_UNIMPLEMENTED(DirectEval)
+EMIT_UNIMPLEMENTED(ThrowIfEmpty)
+EMIT_UNIMPLEMENTED(AsyncBreakCheck)
+EMIT_UNIMPLEMENTED(ProfilePoint)
+EMIT_UNIMPLEMENTED(CreateGenerator)
+EMIT_UNIMPLEMENTED(CreateGeneratorLongIndex)
+EMIT_UNIMPLEMENTED(IteratorBegin)
+EMIT_UNIMPLEMENTED(IteratorNext)
+EMIT_UNIMPLEMENTED(IteratorClose)
+
+#undef EMIT_UNIMPLEMENTED
+
+inline void JITContext::Compiler::emitLoadParam(
+    const inst::LoadParamInst *inst) {
+  em_.loadParam(FR(inst->op1), inst->op2);
+}
+inline void JITContext::Compiler::emitLoadParamLong(
+    const inst::LoadParamLongInst *inst) {
+  em_.loadParam(FR(inst->op1), inst->op2);
+}
+
+inline void JITContext::Compiler::emitLoadConstZero(
+    const inst::LoadConstZeroInst *inst) {
+  em_.loadConstDouble(FR(inst->op1), 0, "Zero");
+}
+
+inline void JITContext::Compiler::emitLoadConstUInt8(
+    const inst::LoadConstUInt8Inst *inst) {
+  em_.loadConstDouble(FR(inst->op1), inst->op2, "UInt8");
+}
+
+inline void JITContext::Compiler::emitLoadConstInt(
+    const inst::LoadConstIntInst *inst) {
+  em_.loadConstDouble(FR(inst->op1), inst->op2, "Int");
+}
+
+inline void JITContext::Compiler::emitLoadConstDouble(
+    const inst::LoadConstDoubleInst *inst) {
+  em_.loadConstDouble(FR(inst->op1), inst->op2, "Double");
+}
+
+#define EMIT_LOAD_CONST(NAME, val, type)                  \
+  inline void JITContext::Compiler::emitLoadConst##NAME(  \
+      const inst::LoadConst##NAME##Inst *inst) {          \
+    em_.loadConstBits64(FR(inst->op1), val, type, #NAME); \
+  }
+
+EMIT_LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::UnknownNonPtr);
+EMIT_LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::UnknownNonPtr);
+EMIT_LOAD_CONST(Null, _sh_ljs_null().raw, FRType::UnknownNonPtr);
+EMIT_LOAD_CONST(True, _sh_ljs_bool(true).raw, FRType::Bool);
+EMIT_LOAD_CONST(False, _sh_ljs_bool(false).raw, FRType::Bool);
+
+#undef EMIT_LOAD_CONST
+
+inline void JITContext::Compiler::emitLoadConstString(
+    const inst::LoadConstStringInst *inst) {
+  em_.loadConstString(FR(inst->op1), codeBlock_->getRuntimeModule(), inst->op2);
+}
+
+inline void JITContext::Compiler::emitLoadConstStringLongIndex(
+    const inst::LoadConstStringLongIndexInst *inst) {
+  em_.loadConstString(FR(inst->op1), codeBlock_->getRuntimeModule(), inst->op2);
+}
+
+inline void JITContext::Compiler::emitMov(const inst::MovInst *inst) {
+  em_.mov(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitMovLong(const inst::MovLongInst *inst) {
+  em_.mov(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitToNumber(const inst::ToNumberInst *inst) {
+  em_.toNumber(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitToNumeric(
+    const inst::ToNumericInst *inst) {
+  em_.toNumeric(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitToInt32(const inst::ToInt32Inst *inst) {
+  em_.toInt32(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitAddEmptyString(
+    const inst::AddEmptyStringInst *inst) {
+  em_.addEmptyString(FR(inst->op1), FR(inst->op2));
+}
+#define EMIT_BINARY_OP(NAME, op)                                               \
+  inline void JITContext::Compiler::emit##NAME(const inst::NAME##Inst *inst) { \
+    em_.op(FR(inst->op1), FR(inst->op2), FR(inst->op3));                       \
+  }
+
+EMIT_BINARY_OP(Greater, greater)
+EMIT_BINARY_OP(Less, less)
+EMIT_BINARY_OP(Eq, equal)
+EMIT_BINARY_OP(Neq, notEqual)
+EMIT_BINARY_OP(StrictEq, strictEqual)
+EMIT_BINARY_OP(StrictNeq, strictNotEqual)
+
+EMIT_BINARY_OP(GreaterEq, greaterEqual)
+EMIT_BINARY_OP(LessEq, lessEqual)
+
+EMIT_BINARY_OP(Add, add)
+EMIT_BINARY_OP(AddN, addN)
+EMIT_BINARY_OP(Sub, sub)
+EMIT_BINARY_OP(SubN, subN)
+EMIT_BINARY_OP(Mul, mul)
+EMIT_BINARY_OP(MulN, mulN)
+EMIT_BINARY_OP(Div, div)
+EMIT_BINARY_OP(DivN, divN)
+EMIT_BINARY_OP(BitAnd, bitAnd)
+EMIT_BINARY_OP(BitOr, bitOr)
+EMIT_BINARY_OP(BitXor, bitXor)
+EMIT_BINARY_OP(LShift, lShift)
+EMIT_BINARY_OP(RShift, rShift)
+EMIT_BINARY_OP(URshift, urShift)
+
+#undef EMIT_BINARY_OP
+inline void JITContext::Compiler::emitMod(const inst::ModInst *inst) {
+  em_.mod(false, FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+#define EMIT_UNARY_OP(NAME, op)                                                \
+  inline void JITContext::Compiler::emit##NAME(const inst::NAME##Inst *inst) { \
+    em_.op(FR(inst->op1), FR(inst->op2));                                      \
+  }
+
+EMIT_UNARY_OP(Inc, inc)
+EMIT_UNARY_OP(Dec, dec)
+EMIT_UNARY_OP(Not, booleanNot)
+EMIT_UNARY_OP(BitNot, bitNot)
+EMIT_UNARY_OP(Negate, negate)
+EMIT_UNARY_OP(TypeOf, typeOf)
+
+#undef EMIT_UNARY_OP
+
+#define EMIT_JCOND(name, impl, invert)                                         \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.impl(                                                                  \
+        invert,                                                                \
+        bbLabelFromInst(inst, inst->op1),                                      \
+        FR(inst->op2),                                                         \
+        FR(inst->op3));                                                        \
+  }                                                                            \
+  inline void JITContext::Compiler::emit##name##Long(                          \
+      const inst::name##LongInst *inst) {                                      \
+    em_.impl(                                                                  \
+        invert,                                                                \
+        bbLabelFromInst(inst, inst->op1),                                      \
+        FR(inst->op2),                                                         \
+        FR(inst->op3));                                                        \
+  }
+
+EMIT_JCOND(JLessEqual, jLessEqual, false)
+EMIT_JCOND(JLessEqualN, jLessEqualN, false)
+EMIT_JCOND(JNotLessEqual, jLessEqual, true)
+EMIT_JCOND(JNotLessEqualN, jLessEqualN, true)
+EMIT_JCOND(JLess, jLess, false)
+EMIT_JCOND(JLessN, jLessN, false)
+EMIT_JCOND(JNotLess, jLess, true)
+EMIT_JCOND(JNotLessN, jLessN, true)
+EMIT_JCOND(JGreaterEqual, jGreaterEqual, false)
+EMIT_JCOND(JGreaterEqualN, jGreaterEqualN, false)
+EMIT_JCOND(JNotGreaterEqual, jGreaterEqual, true)
+EMIT_JCOND(JNotGreaterEqualN, jGreaterEqualN, true)
+EMIT_JCOND(JGreater, jGreater, false)
+EMIT_JCOND(JGreaterN, jGreaterN, false)
+EMIT_JCOND(JNotGreater, jGreater, true)
+EMIT_JCOND(JNotGreaterN, jGreaterN, true)
+EMIT_JCOND(JEqual, jEqual, false)
+EMIT_JCOND(JNotEqual, jEqual, true)
+EMIT_JCOND(JStrictEqual, jStrictEqual, false)
+EMIT_JCOND(JStrictNotEqual, jStrictEqual, true)
+
+#undef EMIT_JCOND
+
+#define EMIT_JMP_TRUE_FALSE(name, onTrue)                                      \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.jmpTrueFalse(onTrue, bbLabelFromInst(inst, inst->op1), FR(inst->op2)); \
+  }                                                                            \
+  inline void JITContext::Compiler::emit##name##Long(                          \
+      const inst::name##LongInst *inst) {                                      \
+    em_.jmpTrueFalse(onTrue, bbLabelFromInst(inst, inst->op1), FR(inst->op2)); \
+  }
+
+EMIT_JMP_TRUE_FALSE(JmpTrue, true)
+EMIT_JMP_TRUE_FALSE(JmpFalse, false)
+#undef EMIT_JMP_TRUE_FALSE
+inline void JITContext::Compiler::emitJmpUndefined(
+    const inst::JmpUndefinedInst *inst) {
+  em_.jmpUndefined(bbLabelFromInst(inst, inst->op1), FR(inst->op2));
+}
+inline void JITContext::Compiler::emitJmpUndefinedLong(
+    const inst::JmpUndefinedLongInst *inst) {
+  em_.jmpUndefined(bbLabelFromInst(inst, inst->op1), FR(inst->op2));
+}
+
+#define EMIT_JMP_NO_COND(name)                                                 \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.jmp(bbLabelFromInst(inst, inst->op1));                                 \
+  }                                                                            \
+  inline void JITContext::Compiler::emit##name##Long(                          \
+      const inst::name##LongInst *inst) {                                      \
+    em_.jmp(bbLabelFromInst(inst, inst->op1));                                 \
+  }
+
+EMIT_JMP_NO_COND(Jmp)
+
+#undef EMIT_JMP_NO_COND
+
+inline void JITContext::Compiler::emitSwitchImm(
+    const inst::SwitchImmInst *inst) {
+  uint32_t min = inst->op4;
+  uint32_t max = inst->op5;
+  // Max is inclusive, so add 1 to get the number of entries.
+  uint32_t entries = max - min + 1;
+
+  // Calculate the offset into the bytecode where the jump table for
+  // this SwitchImm starts.
+  const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
+      (const uint8_t *)inst + inst->op2, sizeof(uint32_t));
+
+  std::vector<const asmjit::Label *> jumpTableLabels{};
+  jumpTableLabels.reserve(entries);
+
+  // Add a label for each offset in the table.
+  for (uint32_t i = 0; i < entries; ++i) {
+    const int32_t *loc = (const int32_t *)tablestart + i;
+    int32_t offset = *loc;
+    jumpTableLabels.push_back(&bbLabelFromInst(inst, offset));
+  }
+
+  em_.switchImm(
+      FR(inst->op1),
+      bbLabelFromInst(inst, inst->op3),
+      jumpTableLabels,
+      min,
+      max);
+}
+
+inline void JITContext::Compiler::emitTryGetByIdLong(
+    const inst::TryGetByIdLongInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.tryGetById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitTryGetById(
+    const inst::TryGetByIdInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.tryGetById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitGetByIdLong(
+    const inst::GetByIdLongInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.getById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitGetById(const inst::GetByIdInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.getById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitGetByIdShort(
+    const inst::GetByIdShortInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.getById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitTryPutByIdLooseLong(
+    const inst::TryPutByIdLooseLongInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.tryPutByIdLoose(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitTryPutByIdLoose(
+    const inst::TryPutByIdLooseInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.tryPutByIdLoose(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitTryPutByIdStrictLong(
+    const inst::TryPutByIdStrictLongInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.tryPutByIdStrict(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitTryPutByIdStrict(
+    const inst::TryPutByIdStrictInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.tryPutByIdStrict(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitPutByIdLooseLong(
+    const inst::PutByIdLooseLongInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.putByIdLoose(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitPutByIdLoose(
+    const inst::PutByIdLooseInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.putByIdLoose(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitPutByIdStrictLong(
+    const inst::PutByIdStrictLongInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.putByIdStrict(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitPutByIdStrict(
+    const inst::PutByIdStrictInst *inst) {
+  auto idVal = ID(inst->op4);
+  auto cacheIdx = inst->op3;
+  em_.putByIdStrict(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+#define EMIT_BY_VAL(name, op)                                                  \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.op(FR(inst->op1), FR(inst->op2), FR(inst->op3));                       \
+  }
+
+EMIT_BY_VAL(GetByVal, getByVal)
+EMIT_BY_VAL(PutByValLoose, putByValLoose)
+EMIT_BY_VAL(PutByValStrict, putByValStrict)
+
+#undef EMIT_BY_VAL
+
+#define EMIT_DEL_BY_ID(name, op)                                               \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.delById##op(FR(inst->op1), FR(inst->op2), ID(inst->op3));              \
+  }
+
+EMIT_DEL_BY_ID(DelByIdLoose, Loose)
+EMIT_DEL_BY_ID(DelByIdLooseLong, Loose)
+EMIT_DEL_BY_ID(DelByIdStrict, Strict)
+EMIT_DEL_BY_ID(DelByIdStrictLong, Strict)
+
+#undef EMIT_DEL_BY_ID
+
+#define EMIT_DEL_BY_VAL(name, op)                                              \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.delByVal##op(FR(inst->op1), FR(inst->op2), FR(inst->op3));             \
+  }
+
+EMIT_DEL_BY_VAL(DelByValLoose, Loose)
+EMIT_DEL_BY_VAL(DelByValStrict, Strict)
+
+#undef EMIT_DEL_BY_VAL
+
+inline void JITContext::Compiler::emitGetByIndex(
+    const inst::GetByIndexInst *inst) {
+  em_.getByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+}
+
+inline void JITContext::Compiler::emitPutOwnByIndex(
+    const inst::PutOwnByIndexInst *inst) {
+  em_.putOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+}
+
+inline void JITContext::Compiler::emitPutOwnByIndexL(
+    const inst::PutOwnByIndexLInst *inst) {
+  em_.putOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+}
+
+inline void JITContext::Compiler::emitPutOwnByVal(
+    const inst::PutOwnByValInst *inst) {
+  em_.putOwnByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), (bool)inst->op4);
+}
+
+inline void JITContext::Compiler::emitPutOwnGetterSetterByVal(
+    const inst::PutOwnGetterSetterByValInst *inst) {
+  em_.putOwnGetterSetterByVal(
+      FR(inst->op1),
+      FR(inst->op2),
+      FR(inst->op3),
+      FR(inst->op4),
+      (bool)inst->op5);
+}
+
+#define EMIT_PUT_NEW_OWN_BY_ID(name, enumerable)                               \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.putNewOwnById(                                                         \
+        FR(inst->op1), FR(inst->op2), ID(inst->op3), enumerable);              \
+  }
+
+EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnById, true)
+EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnByIdLong, true)
+EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnByIdShort, true)
+EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnNEById, false)
+EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnNEByIdLong, false)
+
+#undef EMIT_PUT_NEW_OWN_BY_ID
+
+#define EMIT_OWN_BY_SLOT_IDX(name, op)                                         \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.op(FR(inst->op1), FR(inst->op2), inst->op3);                           \
+  }                                                                            \
+  inline void JITContext::Compiler::emit##name##Long(                          \
+      const inst::name##LongInst *inst) {                                      \
+    em_.op(FR(inst->op1), FR(inst->op2), inst->op3);                           \
+  }
+
+EMIT_OWN_BY_SLOT_IDX(PutOwnBySlotIdx, putOwnBySlotIdx)
+EMIT_OWN_BY_SLOT_IDX(GetOwnBySlotIdx, getOwnBySlotIdx)
+
+#undef EMIT_OWN_BY_SLOT_IDX
+
+inline void JITContext::Compiler::emitTypedLoadParent(
+    const inst::TypedLoadParentInst *inst) {
+  em_.typedLoadParent(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitTypedStoreParent(
+    const inst::TypedStoreParentInst *inst) {
+  em_.typedStoreParent(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitRet(const inst::RetInst *inst) {
+  em_.ret(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitGetGlobalObject(
+    const inst::GetGlobalObjectInst *inst) {
+  em_.getGlobalObject(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitInstanceOf(
+    const inst::InstanceOfInst *inst) {
+  em_.instanceOf(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+inline void JITContext::Compiler::emitIsIn(const inst::IsInInst *inst) {
+  em_.isIn(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+inline void JITContext::Compiler::emitCall(const inst::CallInst *inst) {
+  em_.call(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* argc */ inst->op3);
+}
+
+inline void JITContext::Compiler::emitCall1(const inst::Call1Inst *inst) {
+  em_.callN(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* args */ {FR(inst->op3)});
+}
+
+inline void JITContext::Compiler::emitCall2(const inst::Call2Inst *inst) {
+  em_.callN(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* args */ {FR(inst->op3), FR(inst->op4)});
+}
+
+inline void JITContext::Compiler::emitCall3(const inst::Call3Inst *inst) {
+  em_.callN(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* args */
+      {FR(inst->op3), FR(inst->op4), FR(inst->op5)});
+}
+
+inline void JITContext::Compiler::emitCall4(const inst::Call4Inst *inst) {
+  em_.callN(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* args */
+      {FR(inst->op3), FR(inst->op4), FR(inst->op5), FR(inst->op6)});
+}
+
+inline void JITContext::Compiler::emitConstruct(
+    const inst::ConstructInst *inst) {
+  em_.callWithNewTarget(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* newTarget */ FR(inst->op2),
+      /* argc */ inst->op3);
+}
+
+inline void JITContext::Compiler::emitCallBuiltin(
+    const inst::CallBuiltinInst *inst) {
+  em_.callBuiltin(
+      FR(inst->op1),
+      /* builtinIndex */ inst->op2,
+      /* argc */ inst->op3);
+}
+inline void JITContext::Compiler::emitCallBuiltinLong(
+    const inst::CallBuiltinLongInst *inst) {
+  em_.callBuiltin(
+      FR(inst->op1),
+      /* builtinIndex */ inst->op2,
+      /* argc */ inst->op3);
+}
+
+inline void JITContext::Compiler::emitGetBuiltinClosure(
+    const inst::GetBuiltinClosureInst *inst) {
+  em_.getBuiltinClosure(
+      FR(inst->op1),
+      /* builtinIndex */ inst->op2);
+}
+
+inline void JITContext::Compiler::emitDeclareGlobalVar(
+    const inst::DeclareGlobalVarInst *inst) {
+  em_.declareGlobalVar(ID(inst->op1));
+}
+
+inline void JITContext::Compiler::emitCreateTopLevelEnvironment(
+    const inst::CreateTopLevelEnvironmentInst *inst) {
+  em_.createTopLevelEnvironment(FR(inst->op1), inst->op2);
+}
+
+inline void JITContext::Compiler::emitCreateFunctionEnvironment(
+    const inst::CreateFunctionEnvironmentInst *inst) {
+  em_.createFunctionEnvironment(FR(inst->op1), inst->op2);
+}
+
+inline void JITContext::Compiler::emitCreateEnvironment(
+    const inst::CreateEnvironmentInst *inst) {
+  em_.createEnvironment(FR(inst->op1), FR(inst->op2), inst->op3);
+}
+
+inline void JITContext::Compiler::emitGetParentEnvironment(
+    const inst::GetParentEnvironmentInst *inst) {
+  em_.getParentEnvironment(FR(inst->op1), inst->op2);
+}
+
+inline void JITContext::Compiler::emitGetClosureEnvironment(
+    const inst::GetClosureEnvironmentInst *inst) {
+  em_.getClosureEnvironment(FR(inst->op1), FR(inst->op2));
+}
+
+#define EMIT_LOAD_FROM_ENV(name)                                               \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.loadFromEnvironment(FR(inst->op1), FR(inst->op2), inst->op3);          \
+  }
+
+EMIT_LOAD_FROM_ENV(LoadFromEnvironment)
+EMIT_LOAD_FROM_ENV(LoadFromEnvironmentL)
+
+#undef EMIT_LOAD_FROM_ENV
+
+#define EMIT_STORE_TO_ENV(name, np)                                            \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.storeToEnvironment(np, FR(inst->op1), inst->op2, FR(inst->op3));       \
+  }
+
+EMIT_STORE_TO_ENV(StoreToEnvironment, false)
+EMIT_STORE_TO_ENV(StoreToEnvironmentL, false)
+EMIT_STORE_TO_ENV(StoreNPToEnvironment, true)
+EMIT_STORE_TO_ENV(StoreNPToEnvironmentL, true)
+
+#undef EMIT_STORE_TO_ENV
+
+#define EMIT_CREATE_CLOSURE(name)                                              \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.createClosure(                                                         \
+        FR(inst->op1),                                                         \
+        FR(inst->op2),                                                         \
+        codeBlock_->getRuntimeModule(),                                        \
+        inst->op3);                                                            \
+  }
+
+EMIT_CREATE_CLOSURE(CreateClosure)
+EMIT_CREATE_CLOSURE(CreateClosureLongIndex)
+
+#undef EMIT_CREATE_CLOSURE
+
+inline void JITContext::Compiler::emitNewObject(
+    const inst::NewObjectInst *inst) {
+  em_.newObject(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitNewObjectWithParent(
+    const inst::NewObjectWithParentInst *inst) {
+  em_.newObjectWithParent(FR(inst->op1), FR(inst->op2));
+}
+
+#define EMIT_NEW_OBJECT_WITH_BUFFER(name)                                      \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.newObjectWithBuffer(FR(inst->op1), inst->op2, inst->op3);              \
+  }
+
+EMIT_NEW_OBJECT_WITH_BUFFER(NewObjectWithBuffer)
+EMIT_NEW_OBJECT_WITH_BUFFER(NewObjectWithBufferLong)
+
+#undef EMIT_NEW_OBJECT_WITH_BUFFER
+
+inline void JITContext::Compiler::emitNewArray(const inst::NewArrayInst *inst) {
+  em_.newArray(FR(inst->op1), inst->op2);
+}
+
+#define EMIT_NEW_ARRAY_WITH_BUFFER(name)                                       \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.newArrayWithBuffer(FR(inst->op1), inst->op2, inst->op3, inst->op4);    \
+  }
+
+EMIT_NEW_ARRAY_WITH_BUFFER(NewArrayWithBuffer)
+EMIT_NEW_ARRAY_WITH_BUFFER(NewArrayWithBufferLong)
+
+#undef EMIT_NEW_ARRAY_WITH_BUFFER
+
+inline void JITContext::Compiler::emitGetPNameList(
+    const inst::GetPNameListInst *inst) {
+  em_.getPNameList(FR(inst->op1), FR(inst->op2), FR(inst->op3), FR(inst->op4));
+}
+
+inline void JITContext::Compiler::emitGetNextPName(
+    const inst::GetNextPNameInst *inst) {
+  em_.getNextPName(
+      FR(inst->op1),
+      FR(inst->op2),
+      FR(inst->op3),
+      FR(inst->op4),
+      FR(inst->op5));
+}
+
+#define EMIT_GET_ARGUMENTS_PROP_BY_VAL(name, op)                               \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.getArgumentsPropByVal##op(                                             \
+        FR(inst->op1), FR(inst->op2), FR(inst->op3));                          \
+  }
+
+EMIT_GET_ARGUMENTS_PROP_BY_VAL(GetArgumentsPropByValLoose, Loose)
+EMIT_GET_ARGUMENTS_PROP_BY_VAL(GetArgumentsPropByValStrict, Strict)
+
+#undef EMIT_GET_ARGUMENTS_PROP_BY_VAL
+
+inline void JITContext::Compiler::emitGetArgumentsLength(
+    const inst::GetArgumentsLengthInst *inst) {
+  em_.getArgumentsLength(FR(inst->op1), FR(inst->op2));
+}
+
+#define EMIT_REIFY_ARGUMENTS(name, op)                                         \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.reifyArguments##op(FR(inst->op1));                                     \
+  }
+
+EMIT_REIFY_ARGUMENTS(ReifyArgumentsLoose, Loose)
+EMIT_REIFY_ARGUMENTS(ReifyArgumentsStrict, Strict)
+
+#undef EMIT_REIFY_ARGUMENTS
+
+inline void JITContext::Compiler::emitCreateThis(
+    const inst::CreateThisInst *inst) {
+  em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+inline void JITContext::Compiler::emitSelectObject(
+    const inst::SelectObjectInst *inst) {
+  em_.selectObject(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+inline void JITContext::Compiler::emitLoadThisNS(
+    const inst::LoadThisNSInst *inst) {
+  em_.loadThisNS(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitCoerceThisNS(
+    const inst::CoerceThisNSInst *inst) {
+  em_.coerceThisNS(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitGetNewTarget(
+    const inst::GetNewTargetInst *inst) {
+  em_.getNewTarget(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitDebugger(const inst::DebuggerInst *inst) {
+  em_.debugger();
+}
+
+inline void JITContext::Compiler::emitThrow(const inst::ThrowInst *inst) {
+  em_.throwInst(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitAddS(const inst::AddSInst *inst) {
+  em_.addS(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+inline void JITContext::Compiler::emitCreateRegExp(
+    const inst::CreateRegExpInst *inst) {
+  em_.createRegExp(
+      FR(inst->op1),
+      codeBlock_->getRuntimeModule()
+          ->getSymbolIDFromStringIDMayAllocate(inst->op2)
+          .unsafeGetRaw(),
+      codeBlock_->getRuntimeModule()
+          ->getSymbolIDFromStringIDMayAllocate(inst->op3)
+          .unsafeGetRaw(),
+      inst->op4);
 }
 
 } // namespace arm64

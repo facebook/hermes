@@ -802,20 +802,26 @@ DEFINE_OPCODE_2(TypedStoreParent, Reg8, Reg8)
 // The macros will automatically generate two opcodes for each definition,
 // one short jump that takes Addr8 as target and one long jump that takes
 // Addr32 as target. The address is relative to the offset of the instruction.
+#ifndef DEFINE_JUMP_1
 #define DEFINE_JUMP_1(name)           \
   DEFINE_OPCODE_1(name, Addr8)        \
   DEFINE_OPCODE_1(name##Long, Addr32) \
   DEFINE_JUMP_LONG_VARIANT(name, name##Long)
+#endif
 
+#ifndef DEFINE_JUMP_2
 #define DEFINE_JUMP_2(name)                 \
   DEFINE_OPCODE_2(name, Addr8, Reg8)        \
   DEFINE_OPCODE_2(name##Long, Addr32, Reg8) \
   DEFINE_JUMP_LONG_VARIANT(name, name##Long)
+#endif
 
+#ifndef DEFINE_JUMP_3
 #define DEFINE_JUMP_3(name)                       \
   DEFINE_OPCODE_3(name, Addr8, Reg8, Reg8)        \
   DEFINE_OPCODE_3(name##Long, Addr32, Reg8, Reg8) \
   DEFINE_JUMP_LONG_VARIANT(name, name##Long)
+#endif
 
 /// Unconditional branch to Arg1.
 DEFINE_JUMP_1(Jmp)
