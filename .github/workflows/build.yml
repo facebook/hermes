@@ -179,7 +179,7 @@ jobs:
           build_macosx
           destroot
     - name: Install dependencies
-      run: brew install cmake ninja
+      run: brew install cmake ninja && xcodebuild -downloadPlatform visionOS
     - name: Build the test application
       run: pod install
       working-directory: test/ApplePlatformsIntegrationTestApp
@@ -200,6 +200,14 @@ jobs:
           -configuration Debug \
           -destination 'platform=iOS Simulator,name=iPhone 14' \
           -scheme ApplePlatformsIntegrationMobileTests
+      working-directory: test/ApplePlatformsIntegrationTestApp
+    - name: Test Apple Vision application
+      run: |-
+        xcodebuild test \
+          -workspace ApplePlatformsIntegrationTests.xcworkspace \
+          -configuration Debug \
+          -destination 'platform=visionOS Simulator,name=Apple Vision Pro' \
+          -scheme ApplePlatformsIntegrationVisionOSTests
       working-directory: test/ApplePlatformsIntegrationTestApp
   package-apple-runtime:
     runs-on: macos-latest
