@@ -60,7 +60,8 @@ void TracingRuntime::replaceNondeterministicFuncs() {
         auto fun = args[0].getObject(*runtime_).getFunction(*runtime_);
         jsi::Value result;
         if (count > 1 && args[1].isObject()) {
-          result = fun.callWithThis(*runtime_, args[1].asObject(*runtime_));
+          result = fun.callWithThis(
+              *runtime_, args[1].asObject(*runtime_), &args[2], count - 2);
         } else {
           result = fun.call(*runtime_);
         }
@@ -181,25 +182,71 @@ void TracingRuntime::replaceNondeterministicFuncs() {
     globalThis.WeakRef = WeakRef;
   }
 
+  // Trace date getters and conversion functions as they can produce values
+  // that depend on the execution environment's timezone. Setters can set
+  // values that use the timezone, but the effect will not be observable
+  // because of the overridden getters.
   var DateReal = globalThis.Date;
-  var dateNowReal = DateReal.now;
-  var nativeDateNow = function now() { return callUntraced(dateNowReal); };
+  [
+    "getDate",
+    "getDay",
+    "getFullYear",
+    "getHours",
+    "getMilliseconds",
+    "getMinutes",
+    "getMonth",
+    "getSeconds",
+    "getTime",
+    "getTimezoneOffset",
+    "getUTCDate",
+    "getUTCDay",
+    "getUTCFullYear",
+    "getUTCHours",
+    "getUTCMilliseconds",
+    "getUTCMinutes",
+    "getUTCMonth",
+    "getUTCSeconds",
+    "getYear",
+    "toDateString",
+    "toGMTString",
+    "toISOString",
+    "toJSON",
+    "toLocaleDateString",
+    "toLocaleString",
+    "toLocaleTimeString",
+    "toString",
+    "toTimeString",
+    "toUTCString",
+    "valueOf",
+    Symbol.toPrimitive
+  ].forEach((property) => {
+    const original = DateReal.prototype[property];
+    const replacement = function(...args) {
+      return callUntraced(original, this, ...args);
+    };
+    Object.defineProperty(replacement, "name", {value: original.name});
+    Object.defineProperty(DateReal.prototype, property, {
+      value: replacement,
+      writable: true,
+      configurable: true
+    });
+  });
+
   function Date(...args){
-    // Convert non-deterministic calls like `Date()` and `new Date()` into the
-    // deterministic form `new Date(Date.now())`, so they can be traced.
+    // Trace calls to `Date()`.
     if(!new.target){
-      return new DateReal(nativeDateNow()).toString();
+      return callUntraced(DateReal);
     }
-    if (arguments.length == 0){
-      return new DateReal(nativeDateNow());
-    }
+    // While `new Date()` technically records the current time, there is no way
+    // to observe it since we override all the getters.
     return new DateReal(...args);
   }
   // Cannot use Object.assign because Date methods are not enumerable
   for (p of Object.getOwnPropertyNames(DateReal)){
     Date[p] = DateReal[p];
   }
-  Date.now = nativeDateNow;
+  var dateNowReal = DateReal.now;
+  Date.now = function now() { return callUntraced(dateNowReal); };
   globalThis.Date = Date;
 
   const defineProperty = Object.defineProperty;

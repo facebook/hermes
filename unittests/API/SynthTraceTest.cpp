@@ -2092,12 +2092,12 @@ TEST_F(NonDeterminismReplayTest, DateFuncTest) {
 }
 
 TEST_F(NonDeterminismReplayTest, DateNewTest) {
-  eval(*traceRt, "var x = new Date();");
-  auto dateTime = eval(*traceRt, "x.getTime()").asNumber();
+  eval(*traceRt, "var x = new Date(); var y = x.getTime();");
+  auto dateTime = eval(*traceRt, "y").asNumber();
 
   replay();
 
-  auto replayedTime = eval(*replayRt, "x.getTime()").asNumber();
+  auto replayedTime = eval(*replayRt, "y").asNumber();
   EXPECT_EQ(dateTime, replayedTime);
 }
 
@@ -2116,12 +2116,13 @@ TEST_F(NonDeterminismReplayTest, DateReplacedTest) {
 var oldDate = Date;
 Date = undefined;
 var x = new oldDate();
+var y = x.getTime();
 )");
-  auto traceTime = eval(*traceRt, "x.getTime()").asNumber();
+  auto traceTime = eval(*traceRt, "y").asNumber();
 
   replay();
 
-  auto replayedTime = eval(*replayRt, "x.getTime()").asNumber();
+  auto replayedTime = eval(*replayRt, "y").asNumber();
   EXPECT_EQ(traceTime, replayedTime);
 }
 
