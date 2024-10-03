@@ -597,7 +597,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Only define WeakRef constructor if microtasks are being used.
   if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {
     // WeakRef constructor.
-    createWeakRefConstructor(runtime);
+    runtime.weakRefConstructor = createWeakRefConstructor(runtime);
   }
 
   // Symbol constructor.

@@ -74,16 +74,38 @@ weakRefConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("target argument is not an object");
   }
 
+  // Create the `this` for JSWeakRef.
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSWeakRef> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.weakRefConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.weakRefPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.weakRefPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  lv.self = JSWeakRef::create(runtime, lv.selfParent);
+
   // When a WeakRef is created with a target:
   // 4. Perform AddToKeptObjects(target).
   runtime.addToKeptObjects(target);
 
   // 5. Set weakRef.[[WeakRefTarget]] to target.
-  auto self = args.vmcastThis<JSWeakRef>();
-  self->setTarget(runtime, target);
+  lv.self->setTarget(runtime, target);
 
   // 6. Return weakRef.
-  return self.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 // ES2021 26.1.4.1
