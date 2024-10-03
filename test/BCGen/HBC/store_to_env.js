@@ -31,7 +31,7 @@ function foo() {
 // CHECK-NEXT:  Bytecode version number: {{.*}}
 // CHECK-NEXT:  Source hash: {{.*}}
 // CHECK-NEXT:  Function count: 3
-// CHECK-NEXT:  String count: 8
+// CHECK-NEXT:  String count: 7
 // CHECK-NEXT:  BigInt count: 0
 // CHECK-NEXT:  String Kind Entry count: 2
 // CHECK-NEXT:  RegExp count: 1
@@ -51,7 +51,6 @@ function foo() {
 // CHECK-NEXT:i4[ASCII, 16..21] #9615E9FA: Object
 // CHECK-NEXT:i5[ASCII, 22..24] #9290584E: foo
 // CHECK-NEXT:i6[ASCII, 25..29] #A689F65B: print
-// CHECK-NEXT:i7[ASCII, 30..38] #807C5F3D: prototype
 
 // CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
@@ -70,8 +69,7 @@ function foo() {
 // CHECK-NEXT:    StoreNPToEnvironment r2, 0, r1
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    TryGetById        r1, r1, 1, "Object"
-// CHECK-NEXT:    GetByIdShort      r0, r1, 2, "prototype"
-// CHECK-NEXT:    CreateThis        r0, r0, r1
+// CHECK-NEXT:    CreateThisForNew  r0, r1, 2
 // CHECK-NEXT:    Mov               r3, r0
 // CHECK-NEXT:    Construct         r1, r1, 1
 // CHECK-NEXT:    SelectObject      r1, r0, r1
@@ -117,7 +115,7 @@ function foo() {
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 15: line 14 col 21
 // CHECK-NEXT:    bc 21: line 14 col 27
-// CHECK-NEXT:    bc 33: line 14 col 27
+// CHECK-NEXT:    bc 28: line 14 col 27
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 17 col 18
 // CHECK-NEXT:    bc 20: line 21 col 9
 // CHECK-NEXT:    bc 32: line 21 col 14

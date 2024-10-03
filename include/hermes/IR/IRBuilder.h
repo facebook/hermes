@@ -604,7 +604,7 @@ class IRBuilder {
   HBCReifyArgumentsStrictInst *createHBCReifyArgumentsStrictInst(
       AllocStackInst *lazyReg);
 
-  CreateThisInst *createCreateThisInst(Value *prototype, Value *closure);
+  CreateThisInst *createCreateThisInst(Value *closure, Value *newTarget);
 
   GetConstructedObjectInst *createGetConstructedObjectInst(
       CreateThisInst *thisValue,

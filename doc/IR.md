@@ -389,6 +389,16 @@ Arguments | %evalArg is the value which will be evaluated.
 Semantics | Implement the semantics of ES6 `PerformEval(%evalText, evalRealm, strictCaller, direct=true)` (ES6 18.2.1.1).
 Effects | Unknown
 
+### CreateThisInst
+
+CreateThisInst | _
+--- | --- |
+Description | Creates the object to be used as the `this` parameter of a construct call.
+Example | %0 = CreateThisInst %closure, %newtarget
+Arguments | %closure is the closure that will be invoked as a constructor, %newtarget is the new.target value to use for the call.
+Semantics | The instruction is responsible for preparing the `this` parameter of a construct call. In normal cases, this means creating an object with its parent set to the .prototype of %newtarget. However, there are some functions which are responsible for making their own this. In these cases, this instruction returns undefined.
+Effects | May read and write memory.
+
 ### CallInst
 
 CallInst | _

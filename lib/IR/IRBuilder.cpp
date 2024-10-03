@@ -1003,9 +1003,9 @@ HBCReifyArgumentsStrictInst *IRBuilder::createHBCReifyArgumentsStrictInst(
   return inst;
 }
 CreateThisInst *IRBuilder::createCreateThisInst(
-    Value *prototype,
-    Value *closure) {
-  auto inst = new CreateThisInst(prototype, closure);
+    Value *closure,
+    Value *newTarget) {
+  auto inst = new CreateThisInst(closure, newTarget);
   insert(inst);
   return inst;
 }

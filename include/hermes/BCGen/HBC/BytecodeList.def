@@ -621,12 +621,13 @@ DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
 OPERAND_FUNCTION_ID(CreateClosure, 3)
 OPERAND_FUNCTION_ID(CreateClosureLongIndex, 3)
 
-/// Allocate an empty, uninitialized object (immediately before a constructor).
+/// Allocate an empty, uninitialized object to be used as the `this` parameter
+/// in a `new` expression. Some closures are responsible for making their own `this`,
+/// so in these cases this instruction will simply return undefined.
 /// Arg1 is the destination register.
-/// Arg2 is the prototype to assign it.
-/// Arg3 is the constructor closure that will be used*.
-/// * To allow internal constructors to have special objects allocated.
-DEFINE_OPCODE_3(CreateThis, Reg8, Reg8, Reg8)
+/// Arg2 is the constructor closure that will be invoked.
+/// Arg3 is a cache index used to speed up fetching the new target prototype property.
+DEFINE_OPCODE_3(CreateThisForNew, Reg8, Reg8, UInt8)
 
 /// Choose the result of a constructor: 'this' or a returned object.
 /// Arg1 is the result.

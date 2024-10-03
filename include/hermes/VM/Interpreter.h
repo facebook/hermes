@@ -243,6 +243,18 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const Inst *ip);
 
+  /// \return the `this` to be used for a construct call on \p callee, with \p
+  /// newTarget as the new.target. We need to take special care when \p callee
+  /// is a NativeConstructor, ES6 function, or JSCallableProxy. In these cases,
+  /// those functions will create their own `this`, so this function will
+  /// \return undefined.
+  static CallResult<HermesValue> createThisImpl(
+      Runtime &runtime,
+      PinnedHermesValue *callee,
+      PinnedHermesValue *newTarget,
+      uint8_t cacheIdx,
+      CodeBlock *curCodeBlock);
+
   /// Evaluate callBuiltin and store the result in the register stack. it must
   /// must be invoked with CallBuiltin or CallBuiltinLong. \p op3 contains the
   /// value of operand3, which is the only difference in encoding between the

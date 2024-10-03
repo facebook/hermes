@@ -3117,26 +3117,19 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(CreateThis) {
-        // Registers: output, prototype, closure.
-        if (LLVM_UNLIKELY(!vmisa<Callable>(O3REG(CreateThis)))) {
-          CAPTURE_IP(runtime.raiseTypeError("constructor is not callable"));
-          goto exception;
-        }
-        CAPTURE_IP_ASSIGN(
-            auto res,
-            Callable::newObject(
-                Handle<Callable>::vmcast(&O3REG(CreateThis)),
+      CASE(CreateThisForNew) {
+        CAPTURE_IP(
+            res = createThisImpl(
                 runtime,
-                O2REG(CreateThis).isObject()
-                    ? Handle<JSObject>::vmcast(&O2REG(CreateThis))
-                    : runtime.objectPrototype));
+                &O2REG(CreateThisForNew),
+                &O2REG(CreateThisForNew),
+                ip->iCreateThisForNew.op3,
+                curCodeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(CreateThis) = res->getHermesValue();
-        ip = NEXTINST(CreateThis);
+        O1REG(CreateThisForNew) = *res;
+        ip = NEXTINST(CreateThisForNew);
         DISPATCH;
       }
 

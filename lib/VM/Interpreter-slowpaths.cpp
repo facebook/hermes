@@ -10,6 +10,7 @@
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -266,6 +267,115 @@ ExecutionStatus Interpreter::caseGetPNameList(
   // operands.
   O1REG(GetPNameList) = arr.getHermesValue();
   return ExecutionStatus::RETURNED;
+}
+
+CallResult<HermesValue> Interpreter::createThisImpl(
+    Runtime &runtime,
+    PinnedHermesValue *callee,
+    PinnedHermesValue *newTarget,
+    uint8_t cacheIdx,
+    CodeBlock *curCodeBlock) {
+  if (LLVM_UNLIKELY(!callee->isObject())) {
+    // Add a leading space because the value will come first when we use
+    // raiseTypeErrorForValue.
+    return runtime.raiseTypeErrorForValue(
+        Handle<>(callee), " cannot be used as a constructor.");
+  }
+
+  auto *calleeFunc = vmcast<JSObject>(*callee);
+  auto cellKind = calleeFunc->getKind();
+  Callable *correctNewTarget;
+  // CellKind.h documents the invariants we take advantage of here to
+  // efficiently check what kind of callable we are dealing with.
+  // If this is a callable that expects a `this`, then skip ahead and start
+  // making the object.
+  if (cellKind >= CellKind::CallableExpectsThisKind_first) {
+    correctNewTarget = vmcast<Callable>(*newTarget);
+  } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
+    // Callables that make their own this should be given undefined in a
+    // construct call.
+    return HermesValue::encodeUndefinedValue();
+  } else if (cellKind >= CellKind::CallableKind_first) {
+    correctNewTarget = vmcast<Callable>(*newTarget);
+    while (auto *bound = dyn_vmcast<BoundFunction>(calleeFunc)) {
+      calleeFunc = bound->getTarget(runtime);
+      // From ES15 10.4.1.2 [[Construct]] Step 5: If SameValue(F, newTarget) is
+      // true, set newTarget to target.
+      if (bound == vmcast<Callable>(correctNewTarget)) {
+        correctNewTarget = vmcast<Callable>(calleeFunc);
+      }
+    }
+    cellKind = calleeFunc->getKind();
+    // Repeat the checks, now against the target.
+    if (cellKind >= CellKind::CallableExpectsThisKind_first) {
+      correctNewTarget = vmcast<Callable>(calleeFunc);
+    } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
+      return HermesValue::encodeUndefinedValue();
+    } else {
+      // If we still can't recognize what to do after advancing through bound
+      // functions (if any), error out. This code path is hit when invoking a
+      // NativeFunction as a constructor.
+      return runtime.raiseTypeError(
+          "This function cannot be used as a constructor.");
+    }
+  } else {
+    // Not a Callable.
+    return runtime.raiseTypeErrorForValue(
+        Handle<>(callee), " cannot be used as a constructor.");
+  }
+
+  // We shouldn't need to check that new.target is a constructor explicitly.
+  // There are 2 cases where this instruction is emitted.
+  // 1. new expressions. In this case, new.target == callee. We always verify
+  // that a function call is performed correctly, so don't need to double-verify
+  // new.target.
+  // 2. super() calls in derived constructors. In this case, new.target will be
+  // set to the original callee for the new expression which triggered the
+  // constructor now invoking super. This means that new.target will be checked.
+  // Unfortunately, this check for constructors is done *after* this
+  // instruction, so we can't add an assert that newTarget is a constructor
+  // here. For example, using `new` on an arrow function, newTarget is not a
+  // constructor, but we don't find that out until after this instruction.
+
+  struct : public Locals {
+    PinnedValue<Callable> newTarget;
+    // This is the .prototype of new.target
+    PinnedValue<JSObject> newTargetPrototype;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.newTarget = correctNewTarget;
+
+  auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
+  CompressedPointer clazzPtr{lv.newTarget->getClassGCPtr()};
+  // If we have a cache hit, reuse the cached offset and immediately
+  // return the property.
+  if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+    auto shvPrototype = JSObject::getNamedSlotValueUnsafe(
+        *lv.newTarget, runtime, cacheEntry->slot);
+    if (LLVM_LIKELY(shvPrototype.isObject())) {
+      lv.newTargetPrototype = vmcast<JSObject>(shvPrototype.getObject(runtime));
+    } else {
+      lv.newTargetPrototype = runtime.objectPrototype;
+    }
+  } else {
+    GCScopeMarkerRAII marker{runtime};
+    auto newTargetProtoRes = JSObject::getNamed_RJS(
+        lv.newTarget,
+        runtime,
+        Predefined::getSymbolID(Predefined::prototype),
+        PropOpFlags(),
+        cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry : nullptr);
+    if (LLVM_UNLIKELY(newTargetProtoRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if ((*newTargetProtoRes)->isObject()) {
+      lv.newTargetPrototype = vmcast<JSObject>(newTargetProtoRes->get());
+    } else {
+      lv.newTargetPrototype = runtime.objectPrototype;
+    }
+  }
+
+  return JSObject::create(runtime, lv.newTargetPrototype).getHermesValue();
 }
 
 ExecutionStatus Interpreter::implCallBuiltin(

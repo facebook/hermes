@@ -50,10 +50,9 @@ function ctor_load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %use_this(): functionCode
-// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
-// CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
-// CHECK-NEXT:  %4 = CallInst (:object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %3: object, 12: number
-// CHECK-NEXT:       ReturnInst %3: object
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
+// CHECK-NEXT:  %3 = CallInst (:object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS1 [use_this: object]
@@ -87,8 +86,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.use_this]: object
-// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
-// CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %3: object, 12: number
-// CHECK-NEXT:       ReturnInst %3: object
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
+// CHECK-NEXT:  %3 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end

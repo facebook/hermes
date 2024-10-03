@@ -206,11 +206,7 @@ CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
   if (!isConstructor(runtime, *callable)) {
     return runtime.raiseTypeError("Function is not a constructor");
   }
-  return vm::Callable::newObject(
-      Handle<Callable>::vmcast(
-          runtime.makeHandle(detail::slots(*callable).target)),
-      runtime,
-      protoHandle);
+  return createPseudoHandle<JSObject>(nullptr);
 }
 
 } // namespace vm

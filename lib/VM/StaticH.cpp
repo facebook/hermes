@@ -128,23 +128,20 @@ extern "C" SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index) {
 
 extern "C" SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
-    SHLegacyValue *prototype,
-    SHLegacyValue *callable) {
+    SHLegacyValue *callable,
+    SHLegacyValue *newTarget) {
   Handle<> callableHandle{toPHV(callable)};
+  Handle<> newTargetHandle{toPHV(newTarget)};
   Runtime &runtime = getRuntime(shr);
   if (LLVM_UNLIKELY(!vmisa<Callable>(*callableHandle))) {
     (void)runtime.raiseTypeError("constructor is not callable");
     _sh_throw_current(shr);
   }
-  CallResult<PseudoHandle<JSObject>> res{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
   {
     GCScopeMarkerRAII marker{runtime};
-    res = Callable::newObject(
-        Handle<Callable>::vmcast(callableHandle),
-        runtime,
-        toPHV(prototype)->isObject()
-            ? Handle<JSObject>::vmcast(toPHV(prototype))
-            : runtime.objectPrototype);
+    res = Callable::createThisForConstruct_RJS(
+        callableHandle, runtime, newTargetHandle);
   }
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);

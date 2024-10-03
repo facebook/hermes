@@ -148,6 +148,8 @@ class HBCISel {
 
   /// Saved identifier of "__proto__" for fast comparisons.
   Identifier protoIdent_{};
+  /// Saved identifier of "prototype" for fast lookup.
+  Identifier prototypeIdent_{};
 
   /// Encode a value into a param_t type.
   unsigned encodeValue(Value *);
@@ -250,6 +252,7 @@ class HBCISel {
         bytecodeGenerationOptions_(options),
         fileAndSourceMapIdCache_(debugIdCache) {
     protoIdent_ = F->getContext().getIdentifier("__proto__");
+    prototypeIdent_ = F->getContext().getIdentifier("prototype");
   }
 
   /// Generate the bytecode stream for the function.
@@ -1752,10 +1755,13 @@ void HBCISel::generateHBCReifyArgumentsStrictInst(
   BCFGen_->emitReifyArgumentsStrict(reg);
 }
 void HBCISel::generateCreateThisInst(CreateThisInst *Inst, BasicBlock *next) {
+  assert(
+      llvh::isa<EmptySentinel>(Inst->getNewTarget()) &&
+      "CreateThis currently only supported for `new`");
   auto output = encodeValue(Inst);
-  auto proto = encodeValue(Inst->getPrototype());
   auto closure = encodeValue(Inst->getClosure());
-  BCFGen_->emitCreateThis(output, proto, closure);
+  BCFGen_->emitCreateThisForNew(
+      output, closure, acquirePropertyReadCacheIndex(prototypeIdent_));
 }
 void HBCISel::generateGetConstructedObjectInst(
     GetConstructedObjectInst *Inst,

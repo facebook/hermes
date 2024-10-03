@@ -321,8 +321,8 @@ SHERMES_EXPORT void _sh_ljs_reify_arguments_strict(
 /// Allocate an empty, uninitialized object (immediately before a constructor).
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
-    SHLegacyValue *prototype,
-    SHLegacyValue *callable);
+    SHLegacyValue *callable,
+    SHLegacyValue *newTarget);
 
 #define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _setjmp((jbuf)->buf))
 

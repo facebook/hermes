@@ -80,10 +80,9 @@ function load_store_multiple_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"foo 1#"(): functionCode
-// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
-// CHECK-NEXT:  %3 = CreateThisInst (:object) %2: any, %1: object
-// CHECK-NEXT:  %4 = CallInst (:number) %1: object, %"foo 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 12: number
-// CHECK-NEXT:       ReturnInst %3: object
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
+// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %"foo 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 12: number
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS1 [k: object]

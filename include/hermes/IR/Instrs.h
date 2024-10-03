@@ -4005,23 +4005,23 @@ class CreateThisInst : public Instruction {
   void operator=(const CreateThisInst &) = delete;
 
  public:
-  enum { PrototypeIdx, ClosureIdx };
+  enum { ClosureIdx, NewTargetIdx };
 
-  explicit CreateThisInst(Value *prototype, Value *closure)
+  explicit CreateThisInst(Value *closure, Value *newTarget)
       : Instruction(ValueKind::CreateThisInstKind) {
-    pushOperand(prototype);
     pushOperand(closure);
+    pushOperand(newTarget);
   }
   explicit CreateThisInst(
       const CreateThisInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  Value *getPrototype() const {
-    return getOperand(PrototypeIdx);
-  }
   Value *getClosure() const {
     return getOperand(ClosureIdx);
+  }
+  Value *getNewTarget() const {
+    return getOperand(NewTargetIdx);
   }
 
   static bool hasOutput() {
@@ -4032,7 +4032,9 @@ class CreateThisInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return {};
+    // This instruction will fetch the .prototype property on the newTarget. If
+    // it's a proxy, that can execute JS.
+    return SideEffect::createExecute();
   }
 
   static bool classof(const Value *V) {
