@@ -110,13 +110,6 @@ std::string Callable::_snapshotNameImpl(GCCell *cell, GC &gc) {
 }
 #endif
 
-CallResult<PseudoHandle<JSObject>> Callable::_newObjectImpl(
-    Handle<Callable> /*selfHandle*/,
-    Runtime &runtime,
-    Handle<JSObject> parentHandle) {
-  return JSObject::create(runtime, parentHandle);
-}
-
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   // lazy functions can be Bound or JS Functions.
   if (auto jsFun = Handle<JSFunction>::dyn_vmcast(fn)) {
@@ -615,7 +608,6 @@ const CallableVTable BoundFunction::vt{
         BoundFunction::_deleteOwnIndexedImpl,
         BoundFunction::_checkAllOwnIndexedImpl,
     },
-    BoundFunction::_newObjectImpl_RJS,
     BoundFunction::_callImpl};
 
 void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -745,38 +737,6 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
   }
 
   return ExecutionStatus::RETURNED;
-}
-
-CallResult<PseudoHandle<JSObject>> BoundFunction::_newObjectImpl_RJS(
-    Handle<Callable> selfHandle,
-    Runtime &runtime,
-    Handle<JSObject>) {
-  auto *self = vmcast<BoundFunction>(*selfHandle);
-
-  // If it is a chain of bound functions, skip directly to the end.
-  while (auto *targetAsBound =
-             dyn_vmcast<BoundFunction>(self->getTarget(runtime)))
-    self = targetAsBound;
-
-  auto targetHandle = runtime.makeHandle(self->getTarget(runtime));
-
-  // We must duplicate the [[Construct]] functionality here.
-
-  // Obtain "target.prototype".
-  auto propRes = JSObject::getNamed_RJS(
-      targetHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
-  if (propRes == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
-  auto prototype = runtime.makeHandle(std::move(*propRes));
-
-  // If target.prototype is an object, use it, otherwise use the standard
-  // object prototype.
-  return targetHandle->getVT()->newObject(
-      targetHandle,
-      runtime,
-      prototype->isObject()
-          ? Handle<JSObject>::vmcast(prototype)
-          : Handle<JSObject>::vmcast(&runtime.objectPrototype));
 }
 
 CallResult<PseudoHandle<>> BoundFunction::_boundCall(
@@ -960,7 +920,6 @@ const CallableVTable NativeJSFunction::vt{
         NativeJSFunction::_deleteOwnIndexedImpl,
         NativeJSFunction::_checkAllOwnIndexedImpl,
     },
-    NativeJSFunction::_newObjectImpl,
     NativeJSFunction::_callImpl};
 
 void NativeJSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -1110,7 +1069,6 @@ const CallableVTable NativeFunction::vt{
         NativeFunction::_deleteOwnIndexedImpl,
         NativeFunction::_checkAllOwnIndexedImpl,
     },
-    NativeFunction::_newObjectImpl,
     NativeFunction::_callImpl};
 
 void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -1204,14 +1162,6 @@ CallResult<PseudoHandle<>> NativeFunction::_callImpl(
   return _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
 }
 
-CallResult<PseudoHandle<JSObject>> NativeFunction::_newObjectImpl(
-    Handle<Callable>,
-    Runtime &runtime,
-    Handle<JSObject>) {
-  return runtime.raiseTypeError(
-      "This function cannot be used as a constructor.");
-}
-
 //===----------------------------------------------------------------------===//
 // class NativeConstructor
 
@@ -1249,15 +1199,6 @@ template <class From>
 static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
     Handle<From> other) {
   return PseudoHandle<JSObject>{other};
-}
-
-template <class NativeClass>
-CallResult<PseudoHandle<JSObject>> NativeConstructor::creatorFunction(
-    Runtime &runtime,
-    Handle<JSObject> prototype,
-    void *) {
-  return toCallResultPseudoHandleJSObject(
-      NativeClass::create(runtime, prototype));
 }
 
 CallResult<PseudoHandle<JSObject>> NativeConstructor::parentForNewThis_RJS(
@@ -1307,7 +1248,6 @@ const CallableVTable NativeConstructor::vt{
         NativeConstructor::_deleteOwnIndexedImpl,
         NativeConstructor::_checkAllOwnIndexedImpl,
     },
-    NativeConstructor::_newObjectImpl,
     NativeConstructor::_callImpl};
 
 void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -1320,7 +1260,6 @@ void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
-  (void)Handle<NativeConstructor>::vmcast(selfHandle)->targetKind_;
   return NativeFunction::_callImpl(selfHandle, runtime);
 }
 #endif
@@ -1354,7 +1293,6 @@ const CallableVTable JSFunction::vt{
         JSFunction::_deleteOwnIndexedImpl,
         JSFunction::_checkAllOwnIndexedImpl,
     },
-    JSFunction::_newObjectImpl,
     JSFunction::_callImpl};
 
 void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {

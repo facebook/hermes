@@ -29,7 +29,6 @@ const CallableVTable FinalizableNativeFunction::vt{
         FinalizableNativeFunction::_deleteOwnIndexedImpl,
         FinalizableNativeFunction::_checkAllOwnIndexedImpl,
     },
-    FinalizableNativeFunction::_newObjectImpl,
     FinalizableNativeFunction::_callImpl};
 
 void FinalizableNativeFunctionBuildMeta(

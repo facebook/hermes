@@ -43,13 +43,12 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
 
   Handle<JSString> stringPrototype{runtime.stringPrototype};
 
-  auto cons = defineSystemConstructor<JSString>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::String),
       stringConstructor,
       stringPrototype,
-      1,
-      CellKind::JSStringKind);
+      1);
 
   // String.prototype.xxx methods.
   void *ctx = nullptr;

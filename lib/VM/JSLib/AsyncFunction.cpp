@@ -31,9 +31,7 @@ Handle<NativeConstructor> createAsyncFunctionConstructor(Runtime &runtime) {
       Handle<JSObject>::vmcast(&runtime.functionConstructor),
       nullptr,
       asyncFunctionConstructor,
-      1,
-      NativeConstructor::creatorFunction<JSFunction>,
-      CellKind::JSFunctionKind));
+      1));
 
   /// has a "name" property whose value is "AsyncFunction".
   /// 26.7.2.1 AsyncFunction.length

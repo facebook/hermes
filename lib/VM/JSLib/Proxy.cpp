@@ -176,13 +176,12 @@ proxyRevocable(void *, Runtime &runtime, NativeArgs args) {
 }
 
 Handle<NativeConstructor> createProxyConstructor(Runtime &runtime) {
-  Handle<NativeConstructor> cons = defineSystemConstructor<JSProxy>(
+  Handle<NativeConstructor> cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Proxy),
       proxyConstructor,
       runtime.makeNullHandle<JSObject>(),
-      2,
-      CellKind::JSProxyKind);
+      2);
 
   defineMethod(
       runtime,

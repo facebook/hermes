@@ -155,13 +155,12 @@ Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
       dpf,
       runtime.arrayPrototypeValues));
 
-  auto cons = defineSystemConstructor<JSArray>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Array),
       arrayConstructor,
       arrayPrototype,
-      1,
-      CellKind::JSArrayKind);
+      1);
 
   defineMethod(
       runtime,

@@ -59,13 +59,12 @@ Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime) {
       textEncoderPrototypeEncodeInto,
       2);
 
-  auto cons = defineSystemConstructor<JSObject>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::TextEncoder),
       textEncoderConstructor,
       textEncoderPrototype,
-      0,
-      CellKind::JSObjectKind);
+      0);
 
   defineProperty(
       runtime,

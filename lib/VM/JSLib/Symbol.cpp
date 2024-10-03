@@ -23,13 +23,12 @@ namespace vm {
 Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   auto symbolPrototype = Handle<JSObject>::vmcast(&runtime.symbolPrototype);
 
-  auto cons = defineSystemConstructor<JSSymbol>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Symbol),
       symbolConstructor,
       symbolPrototype,
-      0,
-      CellKind::JSSymbolKind);
+      0);
 
   defineMethod(
       runtime,

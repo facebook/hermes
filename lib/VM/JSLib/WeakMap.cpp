@@ -59,13 +59,12 @@ Handle<NativeConstructor> createWeakMapConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::WeakMap),
       dpf);
 
-  auto cons = defineSystemConstructor<JSWeakMap>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::WeakMap),
       weakMapConstructor,
       weakMapPrototype,
-      0,
-      CellKind::JSWeakMapKind);
+      0);
 
   // ES6.0 23.3.3.1
   defineProperty(

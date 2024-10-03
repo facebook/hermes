@@ -23,13 +23,12 @@ namespace vm {
 Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime) {
   auto weakRefPrototype = Handle<JSObject>::vmcast(&runtime.weakRefPrototype);
 
-  auto cons = defineSystemConstructor<JSWeakRef>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::WeakRef),
       weakRefConstructor,
       weakRefPrototype,
-      1,
-      CellKind::JSWeakRefKind);
+      1);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;

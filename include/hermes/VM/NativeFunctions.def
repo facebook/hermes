@@ -12,10 +12,6 @@
 #define NATIVE_FUNCTION(func)
 #endif
 
-#ifndef NATIVE_CONSTRUCTOR
-#define NATIVE_CONSTRUCTOR(func)
-#endif
-
 NATIVE_FUNCTION(arrayBufferConstructor)
 NATIVE_FUNCTION(arrayBufferIsView)
 
@@ -406,34 +402,6 @@ NATIVE_FUNCTION(weakRefPrototypeDeref)
 #include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
 
-// NativeConstructor
-
-// Creator functions
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSObject>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSFunction>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArray>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArrayBuffer>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSBoolean>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDataView>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDate>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSError>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSMap>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSBigInt>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSNumber>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSProxy>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSRegExp>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSet>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSString>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSymbol>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakMap>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakRef>)
-
-#define TYPED_ARRAY(name, type) \
-  NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<name##Array>)
-#include "hermes/VM/TypedArrays.def"
-#undef TYPED_ARRAY
-
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these somewhere more modular.
 // I would prefer these be in the ::hermes::intl namespace, but the current
@@ -468,4 +436,3 @@ NATIVE_FUNCTION(intlStringPrototypeToLocaleUpperCase)
 #endif
 
 #undef NATIVE_FUNCTION
-#undef NATIVE_CONSTRUCTOR

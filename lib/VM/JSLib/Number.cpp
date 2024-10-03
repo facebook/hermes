@@ -28,13 +28,12 @@ namespace vm {
 Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
   Handle<JSNumber> numberPrototype{runtime.numberPrototype};
 
-  auto cons = defineSystemConstructor<JSNumber>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Number),
       numberConstructor,
       numberPrototype,
-      1,
-      CellKind::JSNumberKind);
+      1);
 
   defineMethod(
       runtime,

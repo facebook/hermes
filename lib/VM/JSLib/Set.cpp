@@ -113,13 +113,12 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::Set),
       dpf);
 
-  auto cons = defineSystemConstructor<JSSet>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Set),
       setConstructor,
       setPrototype,
-      0,
-      CellKind::JSSetKind);
+      0);
 
   return cons;
 }

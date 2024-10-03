@@ -37,15 +37,7 @@ TEST(NativeFunctionNameTest, SmokeTest) {
       "dataViewPrototypeGetInt8", getFunctionName(dataViewPrototypeGetInt8));
   EXPECT_STREQ(
       "dataViewPrototypeSetInt8", getFunctionName(dataViewPrototypeSetInt8));
-
-  using CreatorFunction = NativeConstructor::CreatorFunction;
-  CreatorFunction *func = NativeConstructor::creatorFunction<JSError>;
-  EXPECT_STREQ(
-      "NativeConstructor::creatorFunction<JSError>", getFunctionName(func));
-
-  func = NativeConstructor::creatorFunction<
-      JSTypedArray<int16_t, CellKind::Int16ArrayKind>>;
-  EXPECT_STREQ(
-      "NativeConstructor::creatorFunction<Int16Array>", getFunctionName(func));
+  EXPECT_STREQ("ErrorConstructor", getFunctionName(ErrorConstructor));
+  EXPECT_STREQ("Int16ArrayConstructor", getFunctionName(Int16ArrayConstructor));
 }
 } // namespace

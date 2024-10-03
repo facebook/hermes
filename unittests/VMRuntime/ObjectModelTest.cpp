@@ -551,30 +551,6 @@ TEST_F(ObjectModelTest, EnvironmentSmokeTest) {
   ASSERT_TRUE(env->slot(1).isUndefined());
 }
 
-TEST_F(ObjectModelTest, NativeConstructorTest) {
-  static char sContext{0};
-
-  auto creator = [](Runtime &runtime, Handle<JSObject> proto, void *context) {
-    // Verify the specified context is passed.
-    EXPECT_EQ(&sContext, context);
-    return NativeConstructor::creatorFunction<JSDate>(runtime, proto, context);
-  };
-
-  auto dateCons = runtime.makeHandle(NativeConstructor::create(
-      runtime,
-      Runtime::makeNullHandle<JSObject>(),
-      &sContext,
-      nullptr,
-      0,
-      creator,
-      CellKind::JSFunctionKind));
-  auto crtRes = dateCons->newObject(
-      dateCons, runtime, Runtime::makeNullHandle<JSObject>());
-  ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());
-
-  ASSERT_TRUE(dyn_vmcast<JSDate>(crtRes->get()));
-}
-
 /// Test "computed" methods on a non-array object.
 TEST_F(ObjectModelTest, NonArrayComputedTest) {
   GCScope gcScope{runtime, "ObjectModelTest.NonArrayComputedTest", 128};

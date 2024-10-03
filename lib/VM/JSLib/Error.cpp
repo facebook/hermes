@@ -95,13 +95,12 @@ Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
 
   assert(*stackRes && "Failed to define stack accessor");
 
-  auto cons = defineSystemConstructor<JSError>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Error),
       ErrorConstructor,
       errorPrototype,
-      1,
-      CellKind::JSErrorKind);
+      1);
 
   defineMethod(
       runtime,
@@ -138,9 +137,7 @@ Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
         error_name##Constructor,                                            \
         errorPrototype,                                                     \
         Handle<JSObject>::vmcast(&runtime.ErrorConstructor),                \
-        argCount,                                                           \
-        NativeConstructor::creatorFunction<JSError>,                        \
-        CellKind::JSErrorKind);                                             \
+        argCount);                                                          \
   }
 // The AggregateError constructor takes in two parameters, while all the other
 // Error types take in one.

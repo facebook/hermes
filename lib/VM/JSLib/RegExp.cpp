@@ -54,13 +54,12 @@ static inline bool thisIsRegExpProto(Runtime &runtime, NativeArgs args) {
 Handle<NativeConstructor> createRegExpConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.regExpPrototype);
 
-  auto cons = defineSystemConstructor<JSRegExp>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::RegExp),
       regExpConstructor,
       proto,
-      2,
-      CellKind::JSRegExpKind);
+      2);
 
   defineMethod(
       runtime,

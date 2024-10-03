@@ -21,13 +21,12 @@ namespace vm {
 Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime) {
   Handle<JSObject> bigintPrototype{runtime.bigintPrototype};
 
-  auto cons = defineSystemConstructor<JSBigInt>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::BigInt),
       bigintConstructor,
       bigintPrototype,
-      1,
-      CellKind::JSBigIntKind);
+      1);
 
   // BigInt.prototype.xxx methods.
   // https://tc39.es/ecma262/#sec-properties-of-the-bigint-prototype-object

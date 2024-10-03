@@ -121,13 +121,12 @@ Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::Map),
       dpf);
 
-  auto cons = defineSystemConstructor<JSMap>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Map),
       mapConstructor,
       mapPrototype,
-      0,
-      CellKind::JSMapKind);
+      0);
 
   return cons;
 }

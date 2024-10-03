@@ -27,13 +27,12 @@ namespace vm {
 Handle<NativeConstructor> createObjectConstructor(Runtime &runtime) {
   auto objectPrototype = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
-  auto cons = defineSystemConstructor<JSObject>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Object),
       objectConstructor,
       Handle<JSObject>::vmcast(&runtime.objectPrototype),
-      1,
-      CellKind::JSObjectKind);
+      1);
   void *ctx = nullptr;
 
   // Object.prototype.xxx methods.

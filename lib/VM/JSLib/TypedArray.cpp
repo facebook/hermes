@@ -290,9 +290,7 @@ Handle<NativeConstructor> createTypedArrayConstructor(Runtime &runtime) {
       Ctor,
       proto,
       Handle<JSObject>::vmcast(&runtime.typedArrayBaseConstructor),
-      3,
-      NativeConstructor::creatorFunction<TA>,
-      C);
+      3);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -1775,9 +1773,7 @@ Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime) {
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
       nullptr,
       typedArrayBaseConstructor,
-      0,
-      NativeConstructor::creatorFunction<JSObject>,
-      CellKind::JSObjectKind));
+      0));
 
   // Define %TypedArray%.prototype to be proto.
   auto st = Callable::defineNameLengthAndPrototype(

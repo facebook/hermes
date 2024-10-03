@@ -25,17 +25,13 @@ Handle<NativeConstructor> defineSystemConstructor(
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
     Handle<JSObject> constructorProtoObjectHandle,
-    unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind) {
+    unsigned paramCount) {
   auto constructor = runtime.makeHandle(NativeConstructor::create(
       runtime,
       constructorProtoObjectHandle,
       nullptr,
       nativeFunctionPtr,
-      paramCount,
-      creator,
-      targetKind));
+      paramCount));
 
   auto st = Callable::defineNameLengthAndPrototype(
       constructor,
@@ -96,18 +92,14 @@ Handle<NativeConstructor> defineSystemConstructor(
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
-    unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind) {
+    unsigned paramCount) {
   return defineSystemConstructor(
       runtime,
       name,
       nativeFunctionPtr,
       prototypeObjectHandle,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      paramCount,
-      creator,
-      targetKind);
+      paramCount);
 }
 
 NativeFunction *defineMethod(

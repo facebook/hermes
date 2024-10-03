@@ -29,13 +29,12 @@ using std::min;
 Handle<NativeConstructor> createArrayBufferConstructor(Runtime &runtime) {
   auto arrayBufferPrototype =
       Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype);
-  auto cons = defineSystemConstructor<JSArrayBuffer>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::ArrayBuffer),
       arrayBufferConstructor,
       arrayBufferPrototype,
-      1,
-      CellKind::JSArrayBufferKind);
+      1);
 
   // ArrayBuffer.prototype.xxx() methods.
   defineAccessor(

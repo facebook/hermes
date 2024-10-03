@@ -49,36 +49,14 @@ Handle<NativeConstructor> defineSystemConstructor(
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
     Handle<JSObject> constructorProtoObjectHandle,
-    unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind);
+    unsigned paramCount);
 
 Handle<NativeConstructor> defineSystemConstructor(
     Runtime &runtime,
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
-    unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind);
-
-template <class NativeClass>
-Handle<NativeConstructor> defineSystemConstructor(
-    Runtime &runtime,
-    SymbolID name,
-    NativeFunctionPtr nativeFunctionPtr,
-    Handle<JSObject> prototypeObjectHandle,
-    unsigned paramCount,
-    CellKind targetKind) {
-  return defineSystemConstructor(
-      runtime,
-      name,
-      nativeFunctionPtr,
-      prototypeObjectHandle,
-      paramCount,
-      NativeConstructor::creatorFunction<NativeClass>,
-      targetKind);
-}
+    unsigned paramCount);
 
 /// Define a method in an object instance.
 /// Currently, it's only used to define global %HermesInternal object in

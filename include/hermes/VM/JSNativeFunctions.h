@@ -22,7 +22,6 @@ namespace vm {
 
 /// Get a human-readable name of a native function.
 const char *getFunctionName(NativeFunctionPtr);
-const char *getFunctionName(NativeConstructor::CreatorFunction *);
 
 } // namespace vm
 } // namespace hermes

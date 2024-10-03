@@ -239,13 +239,12 @@ dataViewConstructor(void *, Runtime &runtime, NativeArgs args) {
 
 Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.dataViewPrototype);
-  auto cons = defineSystemConstructor<JSDataView>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::DataView),
       dataViewConstructor,
       proto,
-      1,
-      CellKind::JSDataViewKind);
+      1);
 
   // DataView.prototype.xxx() methods.
   defineAccessor(

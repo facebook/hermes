@@ -29,13 +29,12 @@ namespace vm {
 Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime) {
   auto functionPrototype = Handle<Callable>::vmcast(&runtime.functionPrototype);
 
-  auto cons = defineSystemConstructor<JSFunction>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Function),
       functionConstructor,
       functionPrototype,
-      1,
-      CellKind::JSFunctionKind);
+      1);
 
   // Function.prototype.xxx() methods.
   defineMethod(

@@ -51,13 +51,12 @@ Handle<NativeConstructor> createWeakSetConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::WeakSet),
       dpf);
 
-  auto cons = defineSystemConstructor<JSWeakSet>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::WeakSet),
       weakSetConstructor,
       weakSetPrototype,
-      0,
-      CellKind::JSWeakSetKind);
+      0);
 
   // ES6.0 23.4.3.1
   defineProperty(

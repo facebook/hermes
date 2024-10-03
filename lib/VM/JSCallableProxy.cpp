@@ -26,7 +26,6 @@ const CallableVTable JSCallableProxy::vt{
         JSCallableProxy::_deleteOwnIndexedImpl,
         JSCallableProxy::_checkAllOwnIndexedImpl,
     },
-    JSCallableProxy::_newObjectImpl,
     JSCallableProxy::_callImpl,
 };
 
@@ -197,16 +196,6 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
     }
     return res->get();
   }
-}
-
-CallResult<PseudoHandle<JSObject>> JSCallableProxy::_newObjectImpl(
-    Handle<Callable> callable,
-    Runtime &runtime,
-    Handle<JSObject> protoHandle) {
-  if (!isConstructor(runtime, *callable)) {
-    return runtime.raiseTypeError("Function is not a constructor");
-  }
-  return createPseudoHandle<JSObject>(nullptr);
 }
 
 } // namespace vm

@@ -103,13 +103,12 @@ enum class GetterKind {
 
 Handle<NativeConstructor> createDateConstructor(Runtime &runtime) {
   auto datePrototype = Handle<JSObject>::vmcast(&runtime.datePrototype);
-  auto cons = defineSystemConstructor<JSDate>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Date),
       dateConstructor_RJS,
       datePrototype,
-      7,
-      CellKind::JSDateKind);
+      7);
 
   // Date.prototype.xxx() methods.
   defineMethod(

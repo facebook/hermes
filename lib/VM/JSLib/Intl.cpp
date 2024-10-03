@@ -619,17 +619,6 @@ void setCollator(
       SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
-CallResult<PseudoHandle<JSObject>>
-intlCollatorCreator(Runtime &runtime, Handle<JSObject> parentHandle, void *) {
-  return createPseudoHandle<JSObject>(
-      DecoratedObject::create(
-          runtime,
-          parentHandle,
-          nullptr,
-          static_cast<unsigned int>(CollatorSlotIndexes::COUNT))
-          .get());
-}
-
 void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
   // Create %CollatorPrototype% intrinsic.  Properties will be added later.
   runtime.intlCollatorPrototype = JSObject::create(runtime);
@@ -641,9 +630,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
       Predefined::getSymbolID(Predefined::Collator),
       intlCollatorConstructor,
       prototype,
-      0,
-      intlCollatorCreator,
-      CellKind::DecoratedObjectKind);
+      0);
   runtime.intlCollator = constructor;
 
   {
@@ -857,19 +844,6 @@ void setDateTimeFormat(
       SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
-CallResult<PseudoHandle<JSObject>> intlDateTimeFormatCreator(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    void *) {
-  return createPseudoHandle<JSObject>(
-      DecoratedObject::create(
-          runtime,
-          parentHandle,
-          nullptr,
-          static_cast<unsigned int>(DTFSlotIndexes::COUNT))
-          .get());
-}
-
 void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
   // Create %DateTimeFormatPrototype% intrinsic.  Properties will be added
   // later.
@@ -882,9 +856,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       Predefined::getSymbolID(Predefined::DateTimeFormat),
       intlDateTimeFormatConstructor,
       prototype,
-      0,
-      intlDateTimeFormatCreator,
-      CellKind::DecoratedObjectKind);
+      0);
   runtime.intlDateTimeFormat = constructor;
 
   {
@@ -1174,19 +1146,6 @@ void setNumberFormat(
       SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
-CallResult<PseudoHandle<JSObject>> intlNumberFormatCreator(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    void *) {
-  return createPseudoHandle<JSObject>(
-      DecoratedObject::create(
-          runtime,
-          parentHandle,
-          nullptr,
-          static_cast<unsigned int>(NFSlotIndexes::COUNT))
-          .get());
-}
-
 void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
   // Create %NumberFormatPrototype% intrinsic.  Properties will be added later.
   runtime.intlNumberFormatPrototype = JSObject::create(runtime);
@@ -1198,9 +1157,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       Predefined::getSymbolID(Predefined::NumberFormat),
       intlNumberFormatConstructor,
       prototype,
-      0,
-      intlNumberFormatCreator,
-      CellKind::DecoratedObjectKind);
+      0);
   runtime.intlNumberFormat = constructor;
 
   {

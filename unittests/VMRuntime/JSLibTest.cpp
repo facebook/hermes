@@ -54,17 +54,20 @@ TEST_F(JSLibTest, CreateObjectTest) {
   GET_VALUE(objectCons, prototype);
   auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
 
-  // create a new instance.
-  auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
+  // NativeConstructor take undefined `this`.
+  auto crtRes =
+      Callable::createThisForConstruct_RJS(objectCons, runtime, objectCons);
+  // Call the constructor.
   ASSERT_RETURNED(crtRes.getStatus());
-  auto newObj = runtime.makeHandle<JSObject>(std::move(*crtRes));
+  EXPECT_TRUE(crtRes->getHermesValue().isUndefined());
+
+  auto callRes = Callable::executeCall0(
+      objectCons, runtime, Runtime::getUndefinedValue(), true);
+  ASSERT_RETURNED(crtRes.getStatus());
+  auto newObj = runtime.makeHandle<JSObject>(std::move(*callRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newObj->getParent(runtime));
-
-  // Call the constructor.
-  auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
-  ASSERT_RETURNED(callRes.getStatus());
 }
 
 static Handle<JSObject> createObject(Runtime &runtime) {
@@ -75,24 +78,10 @@ static Handle<JSObject> createObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::Object));
   assert(propRes == ExecutionStatus::RETURNED);
   auto objectCons = runtime.makeHandle<Callable>(std::move(*propRes));
-
-  // Object.prototype.
-  propRes = JSObject::getNamed_RJS(
-      objectCons, runtime, Predefined::getSymbolID(Predefined::prototype));
-  assert(propRes == ExecutionStatus::RETURNED);
-  auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
-
-  // create a new instance.
-  auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
-  assert(crtRes == ExecutionStatus::RETURNED);
-  auto newObj = runtime.makeHandle<JSObject>(std::move(*crtRes));
-
-  // Call the constructor.
-  auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
+  auto callRes = Callable::executeCall0(
+      objectCons, runtime, Runtime::getUndefinedValue(), true);
   assert(callRes == ExecutionStatus::RETURNED);
-  return (*callRes)->isUndefined()
-      ? newObj
-      : runtime.makeHandle<JSObject>(std::move(*callRes));
+  return runtime.makeHandle<JSObject>(std::move(*callRes));
 }
 
 TEST_F(JSLibTest, ObjectToStringTest) {
@@ -934,16 +923,13 @@ TEST_F(JSLibTest, CreateStringTest) {
   auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
-  auto crtRes = stringCons->newObject(stringCons, runtime, prototype);
+  auto crtRes = Callable::executeCall0(
+      stringCons, runtime, Runtime::getUndefinedValue(), true);
   ASSERT_RETURNED(crtRes.getStatus());
   auto newStr = runtime.makeHandle<JSObject>(std::move(*crtRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newStr->getParent(runtime));
-
-  // Call the constructor.
-  ASSERT_RETURNED(
-      Callable::executeCall0(stringCons, runtime, newStr, true).getStatus());
 }
 
 TEST_F(JSLibTest, SmallSortTest) {

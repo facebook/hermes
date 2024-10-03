@@ -21,13 +21,12 @@ namespace vm {
 Handle<NativeConstructor> createBooleanConstructor(Runtime &runtime) {
   auto booleanPrototype = Handle<JSBoolean>::vmcast(&runtime.booleanPrototype);
 
-  auto cons = defineSystemConstructor<JSBoolean>(
+  auto cons = defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Boolean),
       booleanConstructor,
       booleanPrototype,
-      1,
-      CellKind::JSBooleanKind);
+      1);
 
   // Boolean.prototype.xxx methods.
   defineMethod(
