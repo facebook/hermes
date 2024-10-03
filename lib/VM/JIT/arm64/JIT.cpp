@@ -975,9 +975,10 @@ EMIT_REIFY_ARGUMENTS(ReifyArgumentsStrict, Strict)
 
 #undef EMIT_REIFY_ARGUMENTS
 
-inline void JITContext::Compiler::emitCreateThis(
-    const inst::CreateThisInst *inst) {
-  em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+inline void JITContext::Compiler::emitCreateThisForNew(
+    const inst::CreateThisForNewInst *inst) {
+  auto cacheIdx = inst->op3;
+  em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op2), cacheIdx);
 }
 
 inline void JITContext::Compiler::emitSelectObject(

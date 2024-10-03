@@ -1814,25 +1814,40 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
        }});
 }
 
-void Emitter::createThis(FR frRes, FR frPrototype, FR frCallable) {
+void Emitter::createThis(
+    FR frRes,
+    FR frCallee,
+    FR frNewTarget,
+    uint8_t cacheIdx) {
   comment(
-      "// CreateThis r%u, r%u, r%u",
+      "// CreateThis r%u, r%u, r%u, cache %u",
       frRes.index(),
-      frPrototype.index(),
-      frCallable.index());
+      frCallee.index(),
+      frNewTarget.index(),
+      cacheIdx);
 
-  syncAllFRTempExcept(
-      frRes != frPrototype && frRes != frCallable ? frRes : FR());
-  syncToMem(frPrototype);
-  syncToMem(frCallable);
+  syncAllFRTempExcept(frRes != frCallee && frRes != frNewTarget ? frRes : FR());
+  syncToMem(frCallee);
+  syncToMem(frNewTarget);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frPrototype);
-  loadFrameAddr(a64::x2, frCallable);
+  loadFrameAddr(a64::x1, frCallee);
+  loadFrameAddr(a64::x2, frNewTarget);
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x3, 0);
+  } else {
+    a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x3, a64::x3, sizeof(SHPropertyCacheEntry) * cacheIdx);
+  }
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      SHLegacyValue(*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHPropertyCacheEntry *),
       _sh_ljs_create_this);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));

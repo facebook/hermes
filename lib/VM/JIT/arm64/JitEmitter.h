@@ -765,7 +765,7 @@ class Emitter {
 
   void getArgumentsLength(FR frRes, FR frLazyReg);
 
-  void createThis(FR frRes, FR frPrototype, FR frCallable);
+  void createThis(FR frRes, FR frCallee, FR frNewTarget, uint8_t cacheIdx);
   void selectObject(FR frRes, FR frThis, FR frConstructed);
 
   void loadThisNS(FR frRes);
