@@ -1445,6 +1445,69 @@ void Emitter::newArrayWithBuffer(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::newFastArray(FR frRes, uint32_t size) {
+  comment("// NewFastArray r%u, %u", frRes.index(), size);
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, size);
+  EMIT_RUNTIME_CALL(
+      *this, SHLegacyValue(*)(SHRuntime *, uint32_t), _sh_new_fastarray);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
+  comment(
+      "// FastArrayStore r%u, r%u, r%u",
+      frArr.index(),
+      frIdx.index(),
+      frVal.index());
+  syncAllFRTempExcept({});
+  syncToMem(frArr);
+  syncToMem(frVal);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frVal);
+  loadFrameAddr(a64::x2, frArr);
+  movHWFromFR(HWReg{a64::d0}, frIdx);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, const SHLegacyValue *, SHLegacyValue *, double idx),
+      _sh_fastarray_store);
+}
+
+void Emitter::fastArrayPush(FR frArr, FR frVal) {
+  comment("// FastArrayPush r%u, r%u", frArr.index(), frVal.index());
+  syncAllFRTempExcept({});
+  syncToMem(frArr);
+  syncToMem(frVal);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frVal);
+  loadFrameAddr(a64::x2, frArr);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      _sh_fastarray_push);
+}
+
+void Emitter::fastArrayAppend(FR frArr, FR frOther) {
+  comment("// FastArrayAppend r%u, r%u", frArr.index(), frOther.index());
+  syncAllFRTempExcept({});
+  syncToMem(frArr);
+  syncToMem(frOther);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frOther);
+  loadFrameAddr(a64::x2, frArr);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      _sh_fastarray_append);
+}
+
 void Emitter::getGlobalObject(FR frRes) {
   comment("// GetGlobalObject r%u", frRes.index());
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);

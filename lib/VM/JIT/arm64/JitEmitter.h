@@ -720,6 +720,11 @@ class Emitter {
       uint32_t numLiterals,
       uint32_t bufferIndex);
 
+  void newFastArray(FR frRes, uint32_t size);
+  void fastArrayStore(FR arr, FR idx, FR val);
+  void fastArrayPush(FR arr, FR val);
+  void fastArrayAppend(FR arr, FR other);
+
   void getGlobalObject(FR frRes);
   void declareGlobalVar(SHSymbolID symID);
   void createTopLevelEnvironment(FR frRes, uint32_t size);

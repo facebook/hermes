@@ -273,12 +273,8 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
     _longjmp(errorJmpBuf_, 1);                                                 \
   }
 
-EMIT_UNIMPLEMENTED(NewFastArray)
 EMIT_UNIMPLEMENTED(FastArrayLength)
 EMIT_UNIMPLEMENTED(FastArrayLoad)
-EMIT_UNIMPLEMENTED(FastArrayStore)
-EMIT_UNIMPLEMENTED(FastArrayPush)
-EMIT_UNIMPLEMENTED(FastArrayAppend)
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(LoadConstBigInt)
 EMIT_UNIMPLEMENTED(LoadConstBigIntLongIndex)
@@ -917,6 +913,23 @@ EMIT_NEW_ARRAY_WITH_BUFFER(NewArrayWithBuffer)
 EMIT_NEW_ARRAY_WITH_BUFFER(NewArrayWithBufferLong)
 
 #undef EMIT_NEW_ARRAY_WITH_BUFFER
+
+inline void JITContext::Compiler::emitNewFastArray(
+    const inst::NewFastArrayInst *inst) {
+  em_.newFastArray(FR(inst->op1), inst->op2);
+}
+inline void JITContext::Compiler::emitFastArrayStore(
+    const inst::FastArrayStoreInst *inst) {
+  em_.fastArrayStore(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+inline void JITContext::Compiler::emitFastArrayPush(
+    const inst::FastArrayPushInst *inst) {
+  em_.fastArrayPush(FR(inst->op1), FR(inst->op2));
+}
+inline void JITContext::Compiler::emitFastArrayAppend(
+    const inst::FastArrayAppendInst *inst) {
+  em_.fastArrayAppend(FR(inst->op1), FR(inst->op2));
+}
 
 inline void JITContext::Compiler::emitGetPNameList(
     const inst::GetPNameListInst *inst) {
