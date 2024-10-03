@@ -201,13 +201,13 @@ class HBCISel {
   uint8_t lastPropertyWriteCacheIndex_{0};
 
   /// Map from property name to the read/write cache index for that name.
-  llvh::DenseMap<unsigned /* name */, uint8_t> propertyReadCacheIndexForId_;
-  llvh::DenseMap<unsigned /* name */, uint8_t> propertyWriteCacheIndexForId_;
+  llvh::DenseMap<Identifier, uint8_t> propertyReadCacheIndexForId_;
+  llvh::DenseMap<Identifier, uint8_t> propertyWriteCacheIndexForId_;
 
   /// Compute and return the index to use for caching the read/write of a
   /// property with the given identifier name.
-  uint8_t acquirePropertyReadCacheIndex(unsigned id);
-  uint8_t acquirePropertyWriteCacheIndex(unsigned id);
+  uint8_t acquirePropertyReadCacheIndex(Identifier prop);
+  uint8_t acquirePropertyWriteCacheIndex(Identifier prop);
 
   /// A cache mapping from buffer ID to filelname+source map.
   FileAndSourceMapIdCache &fileAndSourceMapIdCache_;
@@ -797,10 +797,16 @@ void HBCISel::generateStorePropertyLooseInst(
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
       BCFGen_->emitPutByIdLoose(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+          objReg,
+          valueReg,
+          acquirePropertyWriteCacheIndex(Lit->getValue()),
+          id);
     else
       BCFGen_->emitPutByIdLooseLong(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+          objReg,
+          valueReg,
+          acquirePropertyWriteCacheIndex(Lit->getValue()),
+          id);
     return;
   }
 
@@ -820,10 +826,16 @@ void HBCISel::generateStorePropertyStrictInst(
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id <= UINT16_MAX)
       BCFGen_->emitPutByIdStrict(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+          objReg,
+          valueReg,
+          acquirePropertyWriteCacheIndex(Lit->getValue()),
+          id);
     else
       BCFGen_->emitPutByIdStrictLong(
-          objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+          objReg,
+          valueReg,
+          acquirePropertyWriteCacheIndex(Lit->getValue()),
+          id);
     return;
   }
 
@@ -843,10 +855,10 @@ void HBCISel::generateTryStoreGlobalPropertyLooseInst(
   auto id = BCFGen_->getIdentifierID(Lit);
   if (id <= UINT16_MAX)
     BCFGen_->emitTryPutByIdLoose(
-        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+        objReg, valueReg, acquirePropertyWriteCacheIndex(Lit->getValue()), id);
   else
     BCFGen_->emitTryPutByIdLooseLong(
-        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+        objReg, valueReg, acquirePropertyWriteCacheIndex(Lit->getValue()), id);
 }
 
 void HBCISel::generateTryStoreGlobalPropertyStrictInst(
@@ -861,10 +873,10 @@ void HBCISel::generateTryStoreGlobalPropertyStrictInst(
   auto id = BCFGen_->getIdentifierID(Lit);
   if (id <= UINT16_MAX)
     BCFGen_->emitTryPutByIdStrict(
-        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+        objReg, valueReg, acquirePropertyWriteCacheIndex(Lit->getValue()), id);
   else
     BCFGen_->emitTryPutByIdStrictLong(
-        objReg, valueReg, acquirePropertyWriteCacheIndex(id), id);
+        objReg, valueReg, acquirePropertyWriteCacheIndex(Lit->getValue()), id);
 }
 
 void HBCISel::generateStoreOwnPropertyInst(
@@ -999,13 +1011,22 @@ void HBCISel::generateLoadPropertyInst(
     auto id = BCFGen_->getIdentifierID(Lit);
     if (id > UINT16_MAX) {
       BCFGen_->emitGetByIdLong(
-          resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
+          resultReg,
+          objReg,
+          acquirePropertyReadCacheIndex(Lit->getValue()),
+          id);
     } else if (id > UINT8_MAX) {
       BCFGen_->emitGetById(
-          resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
+          resultReg,
+          objReg,
+          acquirePropertyReadCacheIndex(Lit->getValue()),
+          id);
     } else {
       BCFGen_->emitGetByIdShort(
-          resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
+          resultReg,
+          objReg,
+          acquirePropertyReadCacheIndex(Lit->getValue()),
+          id);
     }
     return;
   }
@@ -1033,10 +1054,10 @@ void HBCISel::generateTryLoadGlobalPropertyInst(
   auto id = BCFGen_->getIdentifierID(Lit);
   if (id > UINT16_MAX) {
     BCFGen_->emitTryGetByIdLong(
-        resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
+        resultReg, objReg, acquirePropertyReadCacheIndex(Lit->getValue()), id);
   } else {
     BCFGen_->emitTryGetById(
-        resultReg, objReg, acquirePropertyReadCacheIndex(id), id);
+        resultReg, objReg, acquirePropertyReadCacheIndex(Lit->getValue()), id);
   }
 }
 
@@ -2180,11 +2201,11 @@ void HBCISel::run(SourceMapGenerator *outSourceMap) {
   BCFGen_->bytecodeGenerationComplete();
 }
 
-uint8_t HBCISel::acquirePropertyReadCacheIndex(unsigned id) {
+uint8_t HBCISel::acquirePropertyReadCacheIndex(Identifier prop) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
   // Zero is reserved for indicating no-cache, so cannot be a value in the map.
   uint8_t dummyZero = 0;
-  auto &idx = reuse ? propertyReadCacheIndexForId_[id] : dummyZero;
+  auto &idx = reuse ? propertyReadCacheIndexForId_[prop] : dummyZero;
   if (idx) {
     ++NumCachedNodes;
     return idx;
@@ -2202,11 +2223,11 @@ uint8_t HBCISel::acquirePropertyReadCacheIndex(unsigned id) {
   return idx;
 }
 
-uint8_t HBCISel::acquirePropertyWriteCacheIndex(unsigned id) {
+uint8_t HBCISel::acquirePropertyWriteCacheIndex(Identifier prop) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
   // Zero is reserved for indicating no-cache, so cannot be a value in the map.
   uint8_t dummyZero = 0;
-  auto &idx = reuse ? propertyWriteCacheIndexForId_[id] : dummyZero;
+  auto &idx = reuse ? propertyWriteCacheIndexForId_[prop] : dummyZero;
   if (idx) {
     ++NumCachedNodes;
     return idx;
