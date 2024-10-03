@@ -622,7 +622,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   createAsyncFunctionConstructor(runtime);
 
   // TextEncoder constructor.
-  createTextEncoderConstructor(runtime);
+  runtime.textEncoderConstructor = createTextEncoderConstructor(runtime);
 
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);

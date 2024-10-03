@@ -79,6 +79,7 @@ RUNTIME_HV_FIELD(parseFloatFunction, NativeFunction)
 RUNTIME_HV_FIELD(requireFunction, NativeFunction)
 RUNTIME_HV_FIELD(jsErrorStackAccessor, PropertyAccessor)
 RUNTIME_HV_FIELD(callSitePrototype, JSObject)
+RUNTIME_HV_FIELD(textEncoderConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(textEncoderPrototype, JSObject)
 RUNTIME_HV_FIELD(functionPrototypeSymbolHasInstance, NativeFunction)
 

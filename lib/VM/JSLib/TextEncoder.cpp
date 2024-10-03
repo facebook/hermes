@@ -85,12 +85,32 @@ textEncoderConstructor(void *, Runtime &runtime, NativeArgs args) {
         "TextEncoder must be called as a constructor");
   }
 
-  auto selfHandle = args.vmcastThis<JSObject>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSObject> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.textEncoderConstructor.getHermesValue().getRaw())) {
+    lv.self = JSObject::create(runtime, runtime.textEncoderPrototype);
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.textEncoderPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+    lv.self = JSObject::create(runtime, lv.selfParent);
+  }
 
   auto valueHandle = Runtime::getUndefinedValue();
   if (LLVM_UNLIKELY(
           JSObject::defineNewOwnProperty(
-              selfHandle,
+              lv.self,
               runtime,
               Predefined::getSymbolID(
                   Predefined::InternalPropertyTextEncoderType),
@@ -99,7 +119,7 @@ textEncoderConstructor(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return selfHandle.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 CallResult<HermesValue>
