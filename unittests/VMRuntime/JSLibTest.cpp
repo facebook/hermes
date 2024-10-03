@@ -65,8 +65,6 @@ TEST_F(JSLibTest, CreateObjectTest) {
   // Call the constructor.
   auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
   ASSERT_RETURNED(callRes.getStatus());
-  auto newObj1 = runtime.makeHandle<JSObject>(std::move(*callRes));
-  ASSERT_EQ(newObj, newObj1);
 }
 
 static Handle<JSObject> createObject(Runtime &runtime) {

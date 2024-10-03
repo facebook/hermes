@@ -9,6 +9,7 @@
 #error "RUNTIME_HV_FIELD must be defined"
 #endif
 
+RUNTIME_HV_FIELD(objectConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(objectPrototype, JSObject)
 
 /// All error constructors and prototypes.

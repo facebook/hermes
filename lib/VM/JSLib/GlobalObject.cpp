@@ -524,7 +524,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.textEncoderPrototype = JSObject::create(runtime);
 
   // Object constructor.
-  createObjectConstructor(runtime);
+  runtime.objectConstructor = createObjectConstructor(runtime);
 
 // All Error constructors.
 #define ALL_ERROR_TYPE(name)                                      \

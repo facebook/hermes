@@ -288,16 +288,26 @@ objectConstructor(void *, Runtime &runtime, NativeArgs args) {
   // The other cases must have been handled above.
   assert(arg0->isUndefined() || arg0->isNull());
 
-  if (args.isConstructorCall()) {
-    assert(
-        args.getThisArg().isObject() &&
-        "'this' must be an object in a constructor call");
-    return args.getThisArg();
+  if (LLVM_LIKELY(
+          !args.isConstructorCall() ||
+          (args.getNewTarget().getRaw() ==
+           runtime.objectConstructor.getHermesValue().getRaw()))) {
+    return JSObject::create(runtime, runtime.objectPrototype).getHermesValue();
   }
-
-  // This is a function call that must act as a constructor and create a new
-  // object.
-  return JSObject::create(runtime).getHermesValue();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  CallResult<PseudoHandle<JSObject>> thisParentRes =
+      NativeConstructor::parentForNewThis_RJS(
+          runtime,
+          Handle<Callable>::vmcast(&args.getNewTarget()),
+          runtime.objectPrototype);
+  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.selfParent = std::move(*thisParentRes);
+  return JSObject::create(runtime, lv.selfParent).getHermesValue();
 }
 
 CallResult<HermesValue> getPrototypeOf(Runtime &runtime, Handle<JSObject> obj) {
