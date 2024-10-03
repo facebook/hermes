@@ -82,12 +82,43 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
   // worth tweaking the abstractions to avoid the small overhead in
   // this case.
   // Make sure to retrieve the target and handler before any JS can execute.
+  bool isConstructorCall = callerFrame->isConstructorCall();
+  struct : public Locals {
+    PinnedValue<> thisArg;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // We do the constructor related work of checking for a valid call and making
+  // `this` here, before obtaining the slots for the actual call operation. In
+  // the spec, this work happens first so it's important to keep the order. For
+  // instance, if obtaining the `.prototype` of the new.target during
+  // ordinaryCreateFromConstructor ends up revoking this proxy, then we should
+  // throw an error when we attempt to find the "construct" trap.
+  if (isConstructorCall) {
+    // The interpreter won't verify if a construct call to a proxy is valid, so
+    // we do that validation here. We should check before we run any user JS
+    // from findTrap.
+    if (!(isConstructor(runtime, *selfHandle) &&
+          isConstructor(runtime, callerFrame->getNewTargetRef()))) {
+      return runtime.raiseTypeError("Function is not a constructor");
+    }
+    // When called as a constructor, JSCallableProxy does not receive a
+    // populated `this` parameter. So we create it here.
+    auto thisArgRes = ordinaryCreateFromConstructor_RJS(
+        runtime,
+        Handle<Callable>::vmcast(&callerFrame->getNewTargetRef()),
+        runtime.objectPrototype);
+    if (LLVM_UNLIKELY(thisArgRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.thisArg = std::move(*thisArgRes);
+  } else {
+    lv.thisArg = callerFrame.getThisArgRef();
+  }
   auto &slots = detail::slots(*selfHandle);
   Handle<JSObject> target = runtime.makeHandle(slots.target);
   Handle<JSObject> handler = runtime.makeHandle(slots.handler);
-  Predefined::Str trapName = callerFrame->isConstructorCall()
-      ? Predefined::construct
-      : Predefined::apply;
+  Predefined::Str trapName =
+      isConstructorCall ? Predefined::construct : Predefined::apply;
   CallResult<Handle<Callable>> trapRes =
       detail::findTrap(selfHandle, runtime, trapName);
   if (trapRes == ExecutionStatus::EXCEPTION) {
@@ -104,7 +135,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
         callerFrame.getArgCount(),
         target.getHermesValue(),
         callerFrame.getNewTargetRef(),
-        callerFrame.getThisArgRef()};
+        lv.thisArg.getHermesValue()};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return runtime.raiseStackOverflow(
           Runtime::StackOverflowKind::NativeStack);
@@ -135,7 +166,7 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
     JSArray::unsafeSetExistingElementAt(*argArray, runtime, i, shv);
   }
   // 8. Let newObj be ? Call(trap, handler, « target, argArray, newTarget »).
-  if (callerFrame->isConstructorCall()) {
+  if (isConstructorCall) {
     CallResult<PseudoHandle<>> newObjRes = Callable::executeCall3(
         *trapRes,
         runtime,

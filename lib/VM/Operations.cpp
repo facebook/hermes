@@ -1821,6 +1821,30 @@ bool isConstructor(Runtime &runtime, Callable *callable) {
   return false;
 }
 
+CallResult<PseudoHandle<JSObject>> ordinaryCreateFromConstructor_RJS(
+    Runtime &runtime,
+    Handle<Callable> constructor,
+    Handle<JSObject> intrinsicDefaultProto) {
+  struct : public Locals {
+    PinnedValue<> proto;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // 2. Let proto be ? Get(constructor, "prototype").
+  auto protoRes = JSObject::getNamed_RJS(
+      constructor, runtime, Predefined::getSymbolID(Predefined::prototype));
+  if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  lv.proto = std::move(*protoRes);
+
+  // 3. If proto is not an Object, then
+  // b. Set proto to realm's intrinsic object named intrinsicDefaultProto.
+  // 4. Return proto.
+  return JSObject::create(
+      runtime,
+      LLVM_LIKELY(lv.proto->isObject()) ? Handle<JSObject>::vmcast(&lv.proto)
+                                        : intrinsicDefaultProto);
+}
+
 CallResult<bool>
 ordinaryHasInstance(Runtime &runtime, Handle<> constructor, Handle<> object) {
   // 1. If IsCallable(C) is false, return false.

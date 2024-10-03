@@ -387,6 +387,14 @@ bool isConstructor(Runtime &runtime, HermesValue value);
 /// is allowed, and returns false.
 bool isConstructor(Runtime &runtime, Callable *callable);
 
+/// ES15 10.1.13 OrdinaryCreateFromConstructor
+/// Return an object which is intended to be used as the `this` argument in a
+/// construct call.
+CallResult<PseudoHandle<JSObject>> ordinaryCreateFromConstructor_RJS(
+    Runtime &runtime,
+    Handle<Callable> constructor,
+    Handle<JSObject> intrinsicDefaultProto);
+
 /// ES6.0 7.2.8
 /// Returns true if the object is a JSRegExp or has a Symbol.match property that
 /// evaluates to true.
