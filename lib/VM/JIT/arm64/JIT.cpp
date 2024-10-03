@@ -273,7 +273,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
     _longjmp(errorJmpBuf_, 1);                                                 \
   }
 
-EMIT_UNIMPLEMENTED(FastArrayLength)
 EMIT_UNIMPLEMENTED(FastArrayLoad)
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(LoadConstBigInt)
@@ -917,6 +916,10 @@ EMIT_NEW_ARRAY_WITH_BUFFER(NewArrayWithBufferLong)
 inline void JITContext::Compiler::emitNewFastArray(
     const inst::NewFastArrayInst *inst) {
   em_.newFastArray(FR(inst->op1), inst->op2);
+}
+inline void JITContext::Compiler::emitFastArrayLength(
+    const inst::FastArrayLengthInst *inst) {
+  em_.fastArrayLength(FR(inst->op1), FR(inst->op2));
 }
 inline void JITContext::Compiler::emitFastArrayStore(
     const inst::FastArrayStoreInst *inst) {

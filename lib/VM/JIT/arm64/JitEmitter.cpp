@@ -1458,6 +1458,21 @@ void Emitter::newFastArray(FR frRes, uint32_t size) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::fastArrayLength(FR frRes, FR frArr) {
+  comment("// FastArrayLength r%u, r%u", frRes.index(), frArr.index());
+  // We allocate a temporary register to compute the address instead of using
+  // the result register in case the result has a VecD allocated for it.
+  HWReg temp = allocTempGpX();
+  HWReg hwArr = getOrAllocFRInGpX(frArr, true);
+  // Done allocating, free the temp so it can be reused for the result.
+  freeReg(temp);
+  emit_sh_ljs_get_pointer(a, temp.a64GpX(), hwArr.a64GpX());
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWFromMem(hwRes, a64::Mem(temp.a64GpX(), offsetof(SHFastArray, length)));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
   comment(
       "// FastArrayStore r%u, r%u, r%u",

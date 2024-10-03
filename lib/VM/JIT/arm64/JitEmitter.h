@@ -721,6 +721,7 @@ class Emitter {
       uint32_t bufferIndex);
 
   void newFastArray(FR frRes, uint32_t size);
+  void fastArrayLength(FR frRes, FR arr);
   void fastArrayStore(FR arr, FR idx, FR val);
   void fastArrayPush(FR arr, FR val);
   void fastArrayAppend(FR arr, FR other);
