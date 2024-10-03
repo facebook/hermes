@@ -612,10 +612,11 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   populateRegExpStringIteratorPrototype(runtime);
 
   // GeneratorFunction constructor (not directly exposed in the global object).
-  createGeneratorFunctionConstructor(runtime);
+  runtime.generatorFunctionConstructor =
+      createGeneratorFunctionConstructor(runtime);
 
   // AsyncFunction constructor (not directly exposed in the global object).
-  createAsyncFunctionConstructor(runtime);
+  runtime.asyncFunctionConstructor = createAsyncFunctionConstructor(runtime);
 
   // TextEncoder constructor.
   runtime.textEncoderConstructor = createTextEncoderConstructor(runtime);

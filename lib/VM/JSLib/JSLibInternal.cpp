@@ -328,32 +328,54 @@ CallResult<HermesValue> createDynamicFunction(
   // If at least two arguments to the function (3 in total), there's a comma.
   SafeUInt32 size{paramCount > 0 ? paramCount - 1 : 0};
 
-  // es2020 19.2.1.1.1 Runtime Semantics: CreateDynamicFunction: If
-  // NewTarget is given, such as with Reflect.construct, use
-  // NewParent.prototype as the parent.  The prototype on NewParent
-  // has already been looked up to use as the parent of 'this', so
-  // instead of looking it up again, just use this's parent.  If
-  // NewTarget isn't given, fall back to a default.
+  // es2020 19.2.1.1.1 Runtime Semantics: CreateDynamicFunction: If this is a
+  // construct call, we must use new.target.prototype as the parent of the
+  // function we are going to create. In order to avoid this `.prototype`
+  // lookup, we make an informed guess as to what the new.target is based on the
+  // function kind. If this guess is correct, we immediately know the
+  // `.prototype` without a lookup. We also use this precomputed parent in the
+  // case that the lookup gives a value which cannot be used as the parent, e.g.
+  // it's not a function.
   MutableHandle<JSObject> fallbackProto{runtime};
+  PinnedValue<NativeConstructor> *expectedNewTarget;
   switch (kind) {
     case DynamicFunctionKind::Normal:
       fallbackProto = Handle<JSObject>::vmcast(&runtime.functionPrototype);
+      expectedNewTarget = &runtime.functionConstructor;
       break;
     case DynamicFunctionKind::Generator:
       fallbackProto =
           Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
+      expectedNewTarget = &runtime.generatorFunctionConstructor;
       break;
     case DynamicFunctionKind::Async:
       fallbackProto = Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype);
+      expectedNewTarget = &runtime.asyncFunctionConstructor;
       break;
     default:
       llvm_unreachable("unknown kind for CreateDynamicFunction.");
   }
 
-  Handle<JSObject> parent = !args.getNewTarget().isUndefined()
-      ? runtime.makeHandle(
-            vmcast<JSObject>(args.getThisArg())->getParent(runtime))
-      : fallbackProto;
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          !args.isConstructorCall() ||
+          (args.getNewTarget().getRaw() ==
+           expectedNewTarget->getHermesValue().getRaw()))) {
+    lv.selfParent = fallbackProto;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            fallbackProto);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
 
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
@@ -386,7 +408,7 @@ CallResult<HermesValue> createDynamicFunction(
       return JSFunction::create(
                  runtime,
                  runtime.makeHandle(Domain::create(runtime)),
-                 parent,
+                 lv.selfParent,
                  Handle<Environment>(runtime, nullptr),
                  runtime.getReturnThisCodeBlock())
           .getHermesValue();
@@ -470,7 +492,8 @@ CallResult<HermesValue> createDynamicFunction(
   // through to Runtime::runBytecode where the object is actually
   // created, but this is the only place we need to do this so it
   // keeps the code simpler.
-  CallResult<bool> parentRes = JSObject::setParent(*function, runtime, *parent);
+  CallResult<bool> parentRes =
+      JSObject::setParent(*function, runtime, *lv.selfParent);
   if (LLVM_UNLIKELY(parentRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
