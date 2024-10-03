@@ -102,7 +102,7 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
   vm::ScopedNativeDepthReducer reducer(runtime);
   SmallU16String<32> stack;
 
-  auto errorCtor = Handle<JSObject>::vmcast(&runtime.errorConstructor);
+  auto errorCtor = Handle<JSObject>::vmcast(&runtime.ErrorConstructor);
 
   auto prepareStackTraceRes = JSObject::getNamed_RJS(
       errorCtor,

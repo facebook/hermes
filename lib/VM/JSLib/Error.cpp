@@ -137,7 +137,7 @@ Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
         Predefined::getSymbolID(Predefined::error_name),                    \
         error_name##Constructor,                                            \
         errorPrototype,                                                     \
-        Handle<JSObject>::vmcast(&runtime.errorConstructor),                \
+        Handle<JSObject>::vmcast(&runtime.ErrorConstructor),                \
         argCount,                                                           \
         NativeConstructor::creatorFunction<JSError>,                        \
         CellKind::JSErrorKind);                                             \
@@ -153,23 +153,44 @@ static CallResult<HermesValue> constructErrorObject(
     NativeArgs args,
     Handle<> message,
     Handle<> opts,
-    Handle<JSObject> prototype) {
-  MutableHandle<JSError> selfHandle{runtime};
-  // If constructor, use the allocated object, otherwise allocate a new one.
-  if (args.isConstructorCall()) {
-    selfHandle = vmcast<JSError>(args.getThisArg());
+    const PinnedValue<NativeConstructor> *errConstructor,
+    const PinnedValue<JSObject> *errConstructorProto) {
+  // If called constructor or called regularly, we want to always create a new
+  // error.
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSError> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // If this is not a construct call, or it is a construct call and new.target
+  // is the error constructor, then we know what parent to use to create the new
+  // JSArray.
+  if (LLVM_LIKELY(
+          !args.isConstructorCall() ||
+          (args.getNewTarget().getRaw() ==
+           errConstructor->getHermesValue().getRaw()))) {
+    lv.selfParent = *errConstructorProto;
   } else {
-    selfHandle = JSError::create(runtime, prototype).get();
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            *errConstructorProto);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
   }
+  lv.self = JSError::create(runtime, lv.selfParent);
 
   // Record the stack trace, skipping this entry.
-  JSError::recordStackTrace(selfHandle, runtime, true);
+  JSError::recordStackTrace(lv.self, runtime, true);
 
   // new Error(message).
   // Only proceed when 'typeof message' isn't undefined.
   if (!message->isUndefined()) {
     if (LLVM_UNLIKELY(
-            JSError::setMessage(selfHandle, runtime, message) ==
+            JSError::setMessage(lv.self, runtime, message) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -187,7 +208,7 @@ static CallResult<HermesValue> constructErrorObject(
     if (propObj) {
       // a. Let cause be ? Get(options, "cause").
       auto causeRes = JSObject::getNamedPropertyValue_RJS(
-          selfHandle, runtime, std::move(propObj), desc);
+          lv.self, runtime, std::move(propObj), desc);
       if (LLVM_UNLIKELY(causeRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -195,7 +216,7 @@ static CallResult<HermesValue> constructErrorObject(
       // b. Perform ! CreateNonEnumerableDataPropertyOrThrow(O, "cause", cause).
       if (LLVM_UNLIKELY(
               JSObject::defineOwnProperty(
-                  selfHandle,
+                  lv.self,
                   runtime,
                   Predefined::getSymbolID(Predefined::cause),
                   DefinePropertyFlags::getNewNonEnumerableFlags(),
@@ -207,7 +228,7 @@ static CallResult<HermesValue> constructErrorObject(
     }
   }
 
-  return selfHandle.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 // ES2023 20.5.7.1.1
@@ -217,7 +238,12 @@ static CallResult<HermesValue> constructAggregateErrorObject(
     Handle<JSObject> prototype) {
   // 1-4 handled in constructErrorObject
   CallResult<HermesValue> errorObj = constructErrorObject(
-      runtime, args, args.getArgHandle(1), args.getArgHandle(2), prototype);
+      runtime,
+      args,
+      args.getArgHandle(1),
+      args.getArgHandle(2),
+      &runtime.AggregateErrorConstructor,
+      &runtime.AggregateErrorPrototype);
   if (LLVM_UNLIKELY(errorObj == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -256,7 +282,8 @@ ErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
       args,
       args.getArgHandle(0),
       args.getArgHandle(1),
-      runtime.ErrorPrototype);
+      &runtime.ErrorConstructor,
+      &runtime.ErrorPrototype);
 }
 
 // AggregateError has a different constructor body than the other errors.
@@ -278,7 +305,8 @@ AggregateErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
         args,                                      \
         args.getArgHandle(0),                      \
         args.getArgHandle(1),                      \
-        runtime.name##Prototype);                  \
+        &runtime.name##Constructor,                \
+        &runtime.name##Prototype);                 \
   }
 #include "hermes/VM/NativeErrorTypes.def"
 

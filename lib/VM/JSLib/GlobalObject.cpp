@@ -526,14 +526,10 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Object constructor.
   createObjectConstructor(runtime);
 
-  // JSError constructor.
-  runtime.errorConstructor = createErrorConstructor(runtime);
-
-// All Native Error constructors.
-#define NATIVE_ERROR_TYPE(name)       \
-  create##name##Constructor(runtime); \
+// All Error constructors.
+#define ALL_ERROR_TYPE(name)                                      \
+  runtime.name##Constructor = create##name##Constructor(runtime); \
   gcScope.clearAllHandles();
-#define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
 #include "hermes/VM/NativeErrorTypes.def"
 
   // Populate the internal CallSite prototype.

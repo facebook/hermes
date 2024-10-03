@@ -10,10 +10,11 @@
 #endif
 
 RUNTIME_HV_FIELD(objectPrototype, JSObject)
-RUNTIME_HV_FIELD(errorConstructor, NativeConstructor)
 
-/// JSError.prototype, and prototype of all native error types.
-#define ALL_ERROR_TYPE(name) RUNTIME_HV_FIELD(name##Prototype, JSObject)
+/// All error constructors and prototypes.
+#define ALL_ERROR_TYPE(name)                           \
+RUNTIME_HV_FIELD(name##Constructor, NativeConstructor) \
+RUNTIME_HV_FIELD(name##Prototype, JSObject)
 #include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
 RUNTIME_HV_FIELD(functionPrototype, NativeFunction)
