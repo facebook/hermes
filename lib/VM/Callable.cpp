@@ -746,6 +746,14 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
   StackFramePtr originalCalleeFrame = StackFramePtr(runtime.getStackPointer());
   // Save the original newTarget since we will overwrite it.
   HermesValue originalNewTarget = originalCalleeFrame.getNewTargetRef();
+  Callable *originalNewTargetPtr = originalNewTarget.isUndefined()
+      ? nullptr
+      : vmcast<Callable>(originalNewTarget);
+  // From ES15 10.4.1.2 [[Construct]] Step 5: If SameValue(F, newTarget) is
+  // true, set newTarget to target. Target in this context means the bound
+  // function target. If this boolean is true, then we will set new.target to
+  // target as the spec says.
+  bool forwardNewTarget = false;
   // Save the original arg count since we will lose it.
   auto originalArgCount = originalCalleeFrame.getArgCount();
   // Keep track of the total arg count.
@@ -797,6 +805,14 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     std::uninitialized_copy_n(
         self->getArgsWithThis(runtime) + 1, boundArgCount, ArgIterator(stack));
 
+    // We need to do this check at each layer of bound functions, since in the
+    // spec, each bound function would be a invoked separately, and each
+    // invocation compares the callee of the construct to the original
+    // new.target.
+    if (self == originalNewTargetPtr) {
+      forwardNewTarget = true;
+    }
+
     // Loop while the target is another bound function.
     auto *targetAsBound = dyn_vmcast<BoundFunction>(self->getTarget(runtime));
     if (!targetAsBound)
@@ -811,6 +827,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // stack.
     auto *stack = runtime.allocUninitializedStack(
         StackFrameLayout::CallerExtraRegistersAtEnd + 1);
+    auto callee = HermesValue::encodeObjectValue(self->getTarget(runtime));
 
     // Initialize the new frame metadata.
     auto newCalleeFrame = StackFramePtr::initFrame(
@@ -820,8 +837,8 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
         nullptr,
         nullptr,
         totalArgCount,
-        HermesValue::encodeObjectValue(self->getTarget(runtime)),
-        originalNewTarget);
+        callee,
+        forwardNewTarget ? callee : originalNewTarget);
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
     newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
