@@ -283,7 +283,6 @@ EMIT_UNIMPLEMENTED(Unreachable)
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(LoadConstBigInt)
 EMIT_UNIMPLEMENTED(LoadConstBigIntLongIndex)
-EMIT_UNIMPLEMENTED(CallWithNewTarget)
 EMIT_UNIMPLEMENTED(CallWithNewTargetLong)
 EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
@@ -797,6 +796,15 @@ inline void JITContext::Compiler::emitCallBuiltinLong(
       FR(inst->op1),
       /* builtinIndex */ inst->op2,
       /* argc */ inst->op3);
+}
+
+inline void JITContext::Compiler::emitCallWithNewTarget(
+    const inst::CallWithNewTargetInst *inst) {
+  em_.callWithNewTarget(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* newTarget */ FR(inst->op3),
+      /* argc */ inst->op4);
 }
 
 inline void JITContext::Compiler::emitGetBuiltinClosure(
