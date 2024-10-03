@@ -89,11 +89,16 @@ proxyConstructor(void *, Runtime &runtime, NativeArgs args) {
         "Proxy() called in function context instead of constructor");
   }
   // 2. Return ? ProxyCreate(target, handler).
+  struct : public Locals {
+    PinnedValue<JSProxy> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.self = JSProxy::create(runtime);
   auto proxyRes = proxyCreate(
       runtime,
       args.dyncastArg<JSObject>(0),
       args.dyncastArg<JSObject>(1),
-      args.vmcastThis<JSProxy>());
+      lv.self);
   if (proxyRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
