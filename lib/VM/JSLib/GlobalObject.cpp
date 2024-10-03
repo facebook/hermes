@@ -555,7 +555,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.booleanConstructor = createBooleanConstructor(runtime);
 
   // Date constructor.
-  createDateConstructor(runtime);
+  runtime.dateConstructor = createDateConstructor(runtime);
 
   // RegExp constructor
   createRegExpConstructor(runtime);

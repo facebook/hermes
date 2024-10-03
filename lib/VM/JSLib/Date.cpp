@@ -413,64 +413,83 @@ static CallResult<double> makeTimeFromArgs_RJS(
 
 CallResult<HermesValue>
 dateConstructor_RJS(void *, Runtime &runtime, NativeArgs args) {
-  if (args.isConstructorCall()) {
-    auto self = args.vmcastThis<JSDate>();
-    uint32_t argCount = args.getArgCount();
-    double finalDate;
-
-    if (argCount == 0) {
-      // No arguments, just set it to the current time.
-      finalDate = curTime();
-    } else if (argCount == 1) {
-      if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
-        // No handle needed here because we just retrieve a double.
-        NoAllocScope noAlloc(runtime);
-        finalDate = dateArg->getPrimitiveValue();
-      } else {
-        // Parse the argument if it's a string, else just convert to number.
-        auto res =
-            toPrimitive_RJS(runtime, args.getArgHandle(0), PreferredType::NONE);
-        if (res == ExecutionStatus::EXCEPTION) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        auto v = runtime.makeHandle(res.getValue());
-
-        if (v->isString()) {
-          // Call the String -> Date parsing function.
-          finalDate = timeClip(parseDate(
-              StringPrimitive::createStringView(
-                  runtime, Handle<StringPrimitive>::vmcast(v)),
-              runtime.getJSLibStorage()->localTimeOffsetCache));
-        } else {
-          auto numRes = toNumber_RJS(runtime, v);
-          if (numRes == ExecutionStatus::EXCEPTION) {
-            return ExecutionStatus::EXCEPTION;
-          }
-          finalDate = timeClip(numRes->getNumber());
-        }
-      }
-    } else {
-      // General case: read all fields in and compute timestamp.
-      CallResult<double> cr{0};
-      cr = makeTimeFromArgs_RJS(runtime, args);
-      if (cr == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      // makeTimeFromArgs interprets arguments as UTC.
-      // We want them as local time, so pretend that they are,
-      // and call utcTime to get the final UTC value we want to store.
-      finalDate = timeClip(
-          utcTime(*cr, runtime.getJSLibStorage()->localTimeOffsetCache));
-    }
-    self->setPrimitiveValue(finalDate);
-    return self.getHermesValue();
+  if (!args.isConstructorCall()) {
+    llvh::SmallString<32> str{};
+    double t = curTime();
+    double local =
+        localTime(t, runtime.getJSLibStorage()->localTimeOffsetCache);
+    dateTimeString(local, local - t, str);
+    return runtime.ignoreAllocationFailure(
+        StringPrimitive::create(runtime, str));
   }
 
-  llvh::SmallString<32> str{};
-  double t = curTime();
-  double local = localTime(t, runtime.getJSLibStorage()->localTimeOffsetCache);
-  dateTimeString(local, local - t, str);
-  return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, str));
+  uint32_t argCount = args.getArgCount();
+  double finalDate;
+  if (argCount == 0) {
+    // No arguments, just set it to the current time.
+    finalDate = curTime();
+  } else if (argCount == 1) {
+    if (auto *dateArg = dyn_vmcast<JSDate>(args.getArg(0))) {
+      // No handle needed here because we just retrieve a double.
+      NoAllocScope noAlloc(runtime);
+      finalDate = dateArg->getPrimitiveValue();
+    } else {
+      // Parse the argument if it's a string, else just convert to number.
+      auto res =
+          toPrimitive_RJS(runtime, args.getArgHandle(0), PreferredType::NONE);
+      if (res == ExecutionStatus::EXCEPTION) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      auto v = runtime.makeHandle(res.getValue());
+
+      if (v->isString()) {
+        // Call the String -> Date parsing function.
+        finalDate = timeClip(parseDate(
+            StringPrimitive::createStringView(
+                runtime, Handle<StringPrimitive>::vmcast(v)),
+            runtime.getJSLibStorage()->localTimeOffsetCache));
+      } else {
+        auto numRes = toNumber_RJS(runtime, v);
+        if (numRes == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        finalDate = timeClip(numRes->getNumber());
+      }
+    }
+  } else {
+    // General case: read all fields in and compute timestamp.
+    CallResult<double> cr{0};
+    cr = makeTimeFromArgs_RJS(runtime, args);
+    if (cr == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // makeTimeFromArgs interprets arguments as UTC.
+    // We want them as local time, so pretend that they are,
+    // and call utcTime to get the final UTC value we want to store.
+    finalDate =
+        timeClip(utcTime(*cr, runtime.getJSLibStorage()->localTimeOffsetCache));
+  }
+
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.dateConstructor.getHermesValue().getRaw())) {
+    return JSDate::create(runtime, finalDate, runtime.datePrototype)
+        .getHermesValue();
+  }
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  CallResult<PseudoHandle<JSObject>> thisParentRes =
+      NativeConstructor::parentForNewThis_RJS(
+          runtime,
+          Handle<Callable>::vmcast(&args.getNewTarget()),
+          runtime.datePrototype);
+  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.selfParent = std::move(*thisParentRes);
+  return JSDate::create(runtime, finalDate, lv.selfParent).getHermesValue();
 }
 
 CallResult<HermesValue>
