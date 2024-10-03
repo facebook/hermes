@@ -1133,3 +1133,6 @@ print("abcde".search(pattern));
 pattern[Symbol.search] = "dumdidum";
 try { "abcde".search(pattern); } catch (e) { print(e.name); }
 // CHECK-NEXT: TypeError
+
+try { new String(new Symbol()); } catch (e) { print(e.name); }
+// CHECK-NEXT: TypeError

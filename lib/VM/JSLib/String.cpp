@@ -336,40 +336,49 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
   return cons;
 }
 
+// ES2024 22.1.1.1 String(value)
 CallResult<HermesValue>
 stringConstructor(void *, Runtime &runtime, NativeArgs args) {
+  PseudoHandle<StringPrimitive> strPrim;
+  // 1. If value is not present, then
   if (args.getArgCount() == 0) {
-    return HermesValue::encodeStringValue(
+    // a. Let s be the empty String.
+    strPrim = createPseudoHandle(
         runtime.getPredefinedString(Predefined::emptyString));
-  }
-
-  if (!args.isConstructorCall() && args.getArg(0).isSymbol()) {
-    auto str = symbolDescriptiveString(
-        runtime, Handle<SymbolID>::vmcast(args.getArgHandle(0)));
-    if (LLVM_UNLIKELY(str == ExecutionStatus::EXCEPTION)) {
+  } else {
+    // 2. Else,
+    // a. If NewTarget is undefined and value is a Symbol, return
+    // SymbolDescriptiveString(value).
+    if (!args.isConstructorCall() && args.getArg(0).isSymbol()) {
+      auto strPrimRes = symbolDescriptiveString(
+          runtime, Handle<SymbolID>::vmcast(args.getArgHandle(0)));
+      if (LLVM_UNLIKELY(strPrimRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return strPrimRes->getHermesValue();
+    }
+    // b. Let s be ? ToString(value).
+    auto strPrimRes = toString_RJS(runtime, args.getArgHandle(0));
+    if (strPrimRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    return str->getHermesValue();
+    strPrim = std::move(*strPrimRes);
   }
 
-  auto sRes = toString_RJS(runtime, args.getArgHandle(0));
-  if (sRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
+  // 3. If NewTarget is undefined, return s.
   if (!args.isConstructorCall()) {
-    // Not a constructor call, just return the string value.
-    return sRes->getHermesValue();
+    return strPrim.getHermesValue();
   }
 
+  // 4. Return StringCreate(s, ? GetPrototypeFromConstructor(NewTarget,
+  // "%String.prototype%")).
   struct : public Locals {
     PinnedValue<StringPrimitive> s;
     PinnedValue<JSObject> selfParent;
   } lv;
   LocalsRAII lraii(runtime, &lv);
-  lv.s = std::move(*sRes);
+  lv.s = std::move(strPrim);
 
-  // Constructor call: create and initialize the JSString.
   if (LLVM_LIKELY(
           args.getNewTarget().getRaw() ==
           runtime.stringConstructor.getHermesValue().getRaw())) {
