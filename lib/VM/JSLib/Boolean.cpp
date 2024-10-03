@@ -52,13 +52,30 @@ CallResult<HermesValue>
 booleanConstructor(void *, Runtime &runtime, NativeArgs args) {
   bool value = toBoolean(args.getArg(0));
 
-  if (args.isConstructorCall()) {
-    auto *self = vmcast<JSBoolean>(args.getThisArg());
-    self->setPrimitiveBoolean(value);
-    return args.getThisArg();
+  if (!args.isConstructorCall()) {
+    return HermesValue::encodeBoolValue(value);
   }
 
-  return HermesValue::encodeBoolValue(value);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.booleanConstructor.getHermesValue().getRaw())) {
+    return JSBoolean::create(runtime, value, runtime.booleanPrototype)
+        .getHermesValue();
+  }
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  CallResult<PseudoHandle<JSObject>> thisParentRes =
+      NativeConstructor::parentForNewThis_RJS(
+          runtime,
+          Handle<Callable>::vmcast(&args.getNewTarget()),
+          runtime.booleanPrototype);
+  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.selfParent = std::move(*thisParentRes);
+  return JSBoolean::create(runtime, value, lv.selfParent).getHermesValue();
 }
 
 CallResult<HermesValue>

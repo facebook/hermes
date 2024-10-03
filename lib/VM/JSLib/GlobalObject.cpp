@@ -552,7 +552,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.numberConstructor = createNumberConstructor(runtime);
 
   // Boolean constructor.
-  createBooleanConstructor(runtime);
+  runtime.booleanConstructor = createBooleanConstructor(runtime);
 
   // Date constructor.
   createDateConstructor(runtime);
