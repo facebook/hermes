@@ -1774,11 +1774,11 @@ CallResult<Handle<Callable>> speciesConstructor(
   return defaultConstructor;
 }
 
-CallResult<bool> isConstructor(Runtime &runtime, HermesValue value) {
+bool isConstructor(Runtime &runtime, HermesValue value) {
   return isConstructor(runtime, dyn_vmcast<Callable>(value));
 }
 
-CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
+bool isConstructor(Runtime &runtime, Callable *callable) {
   // This is not a complete definition, since ES6 and later define member
   // functions of objects to not be constructors; however, Hermes does not have
   // ES6 classes implemented yet, so we cannot check for that case.
@@ -1786,9 +1786,21 @@ CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
     return false;
   }
 
-  // We traverse the BoundFunction target chain to find the eventual target.
-  while (BoundFunction *b = dyn_vmcast<BoundFunction>(callable)) {
-    callable = b->getTarget(runtime);
+  // Traverse through BoundFunction & JSCallableProxy target chain to find the
+  // eventual target.
+  while (true) {
+    if (auto *proxy = dyn_vmcast<JSCallableProxy>(callable)) {
+      callable = proxy->getTarget(runtime);
+      if (!callable) {
+        return false;
+      }
+      continue;
+    }
+    if (auto *bound = dyn_vmcast<BoundFunction>(callable)) {
+      callable = bound->getTarget(runtime);
+      continue;
+    }
+    break;
   }
 
   // If it is a bytecode function, check the flags.
@@ -1804,12 +1816,6 @@ CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
   // constructible, with the exception of NativeConstructor.
   if (!vmisa<NativeFunction>(callable) || vmisa<NativeConstructor>(callable)) {
     return true;
-  }
-
-  // JSCallableProxy is a NativeFunction, but may or may not be a
-  // constructor, so we ask it.
-  if (auto *cproxy = dyn_vmcast<JSCallableProxy>(callable)) {
-    return cproxy->isConstructor(runtime);
   }
 
   return false;

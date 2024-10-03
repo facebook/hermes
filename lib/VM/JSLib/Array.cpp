@@ -4384,12 +4384,8 @@ CallResult<HermesValue> arrayOf(void *, Runtime &runtime, NativeArgs args) {
   // 3. Let C be the this value.
   auto C = args.getThisHandle();
 
-  CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
-  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
   // 4. If IsConstructor(C) is true, then
-  if (*isConstructorRes) {
+  if (isConstructor(runtime, *C)) {
     // a. Let A be Construct(C, «len»).
     lv.lenProp = HermesValue::encodeTrustedNumberValue(len);
     auto aRes = Callable::executeConstruct1(
@@ -4496,12 +4492,8 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
 
   // 6. If usingIterator is not undefined, then
   if (!lv.usingIterator->isUndefined()) {
-    CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
-    if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
     // a. If IsConstructor(C) is true, then
-    if (*isConstructorRes) {
+    if (isConstructor(runtime, *C)) {
       GCScopeMarkerRAII markerConstruct{gcScope};
       // i. Let A be Construct(C).
       auto callRes =
@@ -4622,12 +4614,8 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   uint64_t len = lengthRes->getNumberAs<uint64_t>();
-  CallResult<bool> isConstructorRes = isConstructor(runtime, *C);
-  if (LLVM_UNLIKELY(isConstructorRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
   // 12. If IsConstructor(C) is true, then
-  if (*isConstructorRes) {
+  if (isConstructor(runtime, *C)) {
     // a. Let A be Construct(C, «len»).
     lv.lenProp = std::move(*lengthRes);
     auto callRes = Callable::executeConstruct1(
