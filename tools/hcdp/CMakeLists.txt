@@ -5,12 +5,9 @@
 
 set(NO_EH_RTTI_SOURCES
   JSONHelpers.cpp
-  ../../API/hermes/cdp/JSONValueInterfaces.cpp
-  ../../API/hermes/cdp/MessageInterfaces.cpp
-  ../../API/hermes/cdp/MessageTypes.cpp
   )
 
-if (NOT HERMES_ENABLE_EH_RTTI)
+if (NOT HERMES_ENABLE_EH AND NOT HERMES_ENABLE_RTTI)
   if (GCC_COMPATIBLE)
     set_property(SOURCE ${NO_EH_RTTI_SOURCES} APPEND_STRING
       PROPERTY COMPILE_FLAGS "-fno-exceptions -fno-rtti")
@@ -20,7 +17,9 @@ if (NOT HERMES_ENABLE_EH_RTTI)
   endif ()
 endif ()
 
-set(HERMES_ENABLE_EH_RTTI ON)
+set(HERMES_ENABLE_RTTI ON)
+set(HERMES_ENABLE_EH ON)
+
 add_hermes_tool(hcdp
   hcdp.cpp
   IPC.cpp
@@ -28,7 +27,7 @@ add_hermes_tool(hcdp
   ${ALL_HEADER_FILES}
   )
 
-target_link_libraries(hcdp hermesSupport libhermes hermesParser)
+target_link_libraries(hcdp hermesvm_a)
 
 install(TARGETS hcdp
   RUNTIME DESTINATION bin

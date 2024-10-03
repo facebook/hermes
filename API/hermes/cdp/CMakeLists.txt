@@ -4,4 +4,4 @@
 # LICENSE file in the root directory of this source tree.
 
 # Make a library to enable unit testing
-add_hermes_library(cdpInternal ConsoleMessage.cpp DomainState.cpp LINK_LIBS jsi libhermes)
+add_hermes_library(cdpInternal ConsoleMessage.cpp DomainState.cpp LINK_LIBS jsi hermesapi)
