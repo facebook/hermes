@@ -582,7 +582,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.setConstructor = createSetConstructor(runtime);
 
   // Map constructor.
-  createMapConstructor(runtime);
+  runtime.mapConstructor = createMapConstructor(runtime);
 
   // WeakMap constructor.
   runtime.weakMapConstructor = createWeakMapConstructor(runtime);

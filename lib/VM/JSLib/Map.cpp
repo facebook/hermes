@@ -162,24 +162,43 @@ mapConstructor(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
     return runtime.raiseTypeError("Constructor Map requires 'new'");
   }
-  auto selfHandle = args.dyncastThis<JSMap>();
-  if (LLVM_UNLIKELY(!selfHandle)) {
-    return runtime.raiseTypeError("Map Constructor only applies to Map object");
+
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSMap> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.mapConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.mapPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.mapPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
   }
 
+  lv.self = JSMap::create(runtime, lv.selfParent);
+
   if (LLVM_UNLIKELY(
-          JSMap::initializeStorage(selfHandle, runtime) ==
+          JSMap::initializeStorage(lv.self, runtime) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
   if (args.getArgCount() == 0 || args.getArg(0).isUndefined() ||
       args.getArg(0).isNull()) {
-    return selfHandle.getHermesValue();
+    return lv.self.getHermesValue();
   }
 
   auto propRes = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::set));
+      lv.self, runtime, Predefined::getSymbolID(Predefined::set));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -213,11 +232,11 @@ mapConstructor(void *, Runtime &runtime, NativeArgs args) {
         LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
                     runtime.mapPrototypeEntries.getHermesValue().getRaw())) {
       if (LLVM_UNLIKELY(
-              mapFromMapFastPath(runtime, selfHandle, inputMap) ==
+              mapFromMapFastPath(runtime, lv.self, inputMap) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      return selfHandle.getHermesValue();
+      return lv.self.getHermesValue();
     }
 
     // TODO: Fast path for JSArray input.
@@ -225,14 +244,15 @@ mapConstructor(void *, Runtime &runtime, NativeArgs args) {
 
   return addEntriesFromIterable(
       runtime,
-      selfHandle,
+      lv.self,
       args.getArgHandle(0),
       iterMethod,
-      [&runtime, selfHandle, adder](Runtime &, Handle<> key, Handle<> value) {
+      [&runtime, &self = lv.self, adder](
+          Runtime &, Handle<> key, Handle<> value) {
         return Callable::executeCall2(
                    adder,
                    runtime,
-                   selfHandle,
+                   self,
                    key.getHermesValue(),
                    value.getHermesValue())
             .getStatus();
