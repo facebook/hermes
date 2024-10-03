@@ -152,24 +152,42 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
     return runtime.raiseTypeError("Constructor Set requires 'new'");
   }
-  auto selfHandle = args.dyncastThis<JSSet>();
-  if (LLVM_UNLIKELY(!selfHandle)) {
-    return runtime.raiseTypeError("Set Constructor only applies to Set object");
+
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSSet> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.setConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.setPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.setPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
   }
+  lv.self = JSSet::create(runtime, lv.selfParent);
 
   if (LLVM_UNLIKELY(
-          JSSet::initializeStorage(selfHandle, runtime) ==
+          JSSet::initializeStorage(lv.self, runtime) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
   if (args.getArgCount() == 0 || args.getArg(0).isUndefined() ||
       args.getArg(0).isNull()) {
-    return selfHandle.getHermesValue();
+    return lv.self.getHermesValue();
   }
 
   auto propRes = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::add));
+      lv.self, runtime, Predefined::getSymbolID(Predefined::add));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -213,7 +231,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
         auto element = arr.get()->at(runtime, i);
         if (LLVM_LIKELY(!element.isEmpty())) {
           tmpHandle = element.unboxToHV(runtime);
-          JSSet::insert(selfHandle, runtime, tmpHandle);
+          JSSet::insert(lv.self, runtime, tmpHandle);
         } else {
           tmpHandle = HermesValue::encodeUntrustedNumberValue(i);
           CallResult<PseudoHandle<>> valueRes =
@@ -223,11 +241,11 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
           }
 
           tmpHandle = valueRes->getHermesValue();
-          JSSet::insert(selfHandle, runtime, tmpHandle);
+          JSSet::insert(lv.self, runtime, tmpHandle);
         }
       }
 
-      return selfHandle.getHermesValue();
+      return lv.self.getHermesValue();
     }
 
     // If the iterable is a Set with an unmodified iterator,
@@ -236,11 +254,11 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
         LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
                     runtime.setPrototypeValues.getHermesValue().getRaw())) {
       if (LLVM_UNLIKELY(
-              setFromSetFastPath(runtime, selfHandle, inputSet) ==
+              setFromSetFastPath(runtime, lv.self, inputSet) ==
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      return selfHandle.getHermesValue();
+      return lv.self.getHermesValue();
     }
   }
   // Slow path
@@ -266,7 +284,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
     }
     if (!*nextRes) {
       // Done with iteration.
-      return selfHandle.getHermesValue();
+      return lv.self.getHermesValue();
     }
     tmpHandle = vmcast<JSObject>(nextRes->getHermesValue());
     auto nextValueRes = JSObject::getNamed_RJS(
@@ -277,13 +295,13 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
 
     if (LLVM_UNLIKELY(
             Callable::executeCall1(
-                adder, runtime, selfHandle, nextValueRes->get()) ==
+                adder, runtime, lv.self, nextValueRes->get()) ==
             ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
 
-  return selfHandle.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 // ES12 23.2.3.1 Set.prototype.add ( value )

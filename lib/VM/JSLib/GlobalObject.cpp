@@ -579,7 +579,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   } // hasArrayBuffer
 
   // Set constructor.
-  createSetConstructor(runtime);
+  runtime.setConstructor = createSetConstructor(runtime);
 
   // Map constructor.
   createMapConstructor(runtime);
