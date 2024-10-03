@@ -899,9 +899,9 @@ TEST_F(StackTracesTreeTest, WithSourceMap) {
   ASSERT_TRUE(stackTracesTree);
   (void)expectedTree;
   // Turn this back on at the end of the stack.
-  // ASSERT_STREQ(
-  //     stackTraceToJSON(*stackTracesTree, sourceMap.get()).c_str(),
-  //     expectedTree.str().c_str());
+  ASSERT_STREQ(
+      stackTraceToJSON(*stackTracesTree, sourceMap.get()).c_str(),
+      expectedTree.str().c_str());
 }
 
 } // namespace stacktracestreetest
