@@ -85,15 +85,39 @@ weakMapConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("WeakMap must be called as a constructor");
   }
 
-  auto selfHandle = args.dyncastThis<JSWeakMap>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSWeakMap> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.weakMapConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.weakMapPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.weakMapPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  auto selfRes = JSWeakMap::create(runtime, lv.selfParent);
+  if (LLVM_UNLIKELY(selfRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.self = std::move(*selfRes);
 
   if (args.getArgCount() == 0 || args.getArg(0).isUndefined() ||
       args.getArg(0).isNull()) {
-    return selfHandle.getHermesValue();
+    return lv.self.getHermesValue();
   }
 
   auto propRes = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::set));
+      lv.self, runtime, Predefined::getSymbolID(Predefined::set));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -123,7 +147,7 @@ weakMapConstructor(void *, Runtime &runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     if (!*nextRes) {
-      return selfHandle.getHermesValue();
+      return lv.self.getHermesValue();
     }
     auto nextItemRes = JSObject::getNamed_RJS(
         *nextRes, runtime, Predefined::getSymbolID(Predefined::value));
@@ -150,14 +174,14 @@ weakMapConstructor(void *, Runtime &runtime, NativeArgs args) {
             Callable::executeCall2(
                 adder,
                 runtime,
-                selfHandle,
+                lv.self,
                 keyHandle.getHermesValue(),
                 valueHandle.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
 
-  return selfHandle.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 CallResult<HermesValue>

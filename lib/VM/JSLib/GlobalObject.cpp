@@ -585,7 +585,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   createMapConstructor(runtime);
 
   // WeakMap constructor.
-  createWeakMapConstructor(runtime);
+  runtime.weakMapConstructor = createWeakMapConstructor(runtime);
 
   // WeakSet constructor.
   runtime.weakSetConstructor = createWeakSetConstructor(runtime);
