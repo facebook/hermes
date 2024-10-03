@@ -77,15 +77,39 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("WeakSet must be called as a constructor");
   }
 
-  auto selfHandle = args.dyncastThis<JSWeakSet>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSWeakSet> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.weakSetConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.weakSetPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.weakSetPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  auto selfRes = JSWeakSet::create(runtime, lv.selfParent);
+  if (LLVM_UNLIKELY(selfRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.self = std::move(*selfRes);
 
   if (args.getArgCount() == 0 || args.getArg(0).isUndefined() ||
       args.getArg(0).isNull()) {
-    return selfHandle.getHermesValue();
+    return lv.self.getHermesValue();
   }
 
   auto propRes = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::add));
+      lv.self, runtime, Predefined::getSymbolID(Predefined::add));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -111,7 +135,7 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
     }
     if (!*nextRes) {
       // Done with iteration.
-      return selfHandle.getHermesValue();
+      return lv.self.getHermesValue();
     }
     auto nextValueRes = JSObject::getNamed_RJS(
         *nextRes, runtime, Predefined::getSymbolID(Predefined::value));
@@ -121,7 +145,7 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
 
     if (LLVM_UNLIKELY(
             Callable::executeCall1(
-                adder, runtime, selfHandle, nextValueRes->get()) ==
+                adder, runtime, lv.self, nextValueRes->get()) ==
             ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }

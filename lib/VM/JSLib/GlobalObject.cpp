@@ -588,7 +588,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   createWeakMapConstructor(runtime);
 
   // WeakSet constructor.
-  createWeakSetConstructor(runtime);
+  runtime.weakSetConstructor = createWeakSetConstructor(runtime);
 
   // Only define WeakRef constructor if microtasks are being used.
   if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {
