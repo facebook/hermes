@@ -968,6 +968,10 @@ void Emitter::frUpdateType(FR fr, FRType type) {
   frameRegs_[fr.index()].localType = type;
 }
 
+void Emitter::unreachable() {
+  EMIT_RUNTIME_CALL(*this, void (*)(), abort);
+}
+
 void Emitter::ret(FR frValue) {
   movHWFromFR(HWReg::gpX(22), frValue);
   a.b(returnLabel_);

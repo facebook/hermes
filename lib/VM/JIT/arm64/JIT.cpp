@@ -279,7 +279,6 @@ EMIT_UNIMPLEMENTED(FastArrayLoad)
 EMIT_UNIMPLEMENTED(FastArrayStore)
 EMIT_UNIMPLEMENTED(FastArrayPush)
 EMIT_UNIMPLEMENTED(FastArrayAppend)
-EMIT_UNIMPLEMENTED(Unreachable)
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(LoadConstBigInt)
 EMIT_UNIMPLEMENTED(LoadConstBigIntLongIndex)
@@ -296,6 +295,11 @@ EMIT_UNIMPLEMENTED(IteratorNext)
 EMIT_UNIMPLEMENTED(IteratorClose)
 
 #undef EMIT_UNIMPLEMENTED
+
+inline void JITContext::Compiler::emitUnreachable(
+    const inst::UnreachableInst *inst) {
+  em_.unreachable();
+}
 
 inline void JITContext::Compiler::emitLoadParam(
     const inst::LoadParamInst *inst) {

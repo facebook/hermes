@@ -403,6 +403,9 @@ class Emitter {
   void leave();
   void newBasicBlock(const asmjit::Label &label);
 
+  /// Abort execution.
+  void unreachable();
+
   /// Call a JS function.
   void call(FR frRes, FR frCallee, uint32_t argc);
   void callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args);
