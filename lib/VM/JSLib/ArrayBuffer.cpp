@@ -84,7 +84,28 @@ arrayBufferConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "ArrayBuffer() called in function context instead of constructor");
   }
-  auto self = args.vmcastThis<JSArrayBuffer>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSArrayBuffer> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.arrayBufferConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.arrayBufferPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.arrayBufferPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  lv.self = JSArrayBuffer::create(runtime, lv.selfParent);
+
   auto length = args.getArgHandle(0);
 
   // 2. Let byteLength be ToIndex(length).
@@ -97,18 +118,18 @@ arrayBufferConstructor(void *, Runtime &runtime, NativeArgs args) {
   // 3. Return AllocateArrayBuffer(NewTarget, byteLength).
   // This object should not have been initialized yet, ensure this is true
   assert(
-      !self->attached() &&
+      !lv.self->attached() &&
       "A new array buffer should not have an existing buffer");
   if (byteLength > std::numeric_limits<JSArrayBuffer::size_type>::max()) {
     // On a non-64-bit platform and requested a buffer size greater than
     // this platform's size type can hold
     return runtime.raiseRangeError("Too large of a byteLength requested");
   }
-  if (JSArrayBuffer::createDataBlock(runtime, self, byteLength) ==
+  if (JSArrayBuffer::createDataBlock(runtime, lv.self, byteLength) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return self.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 CallResult<HermesValue>
