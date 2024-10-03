@@ -886,12 +886,12 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
 }
 
 //===----------------------------------------------------------------------===//
-// class SHLegacyFunction
+// class NativeJSFunction
 
 const CallableVTable NativeJSFunction::vt{
     {
         VTable(
-            CellKind::SHLegacyFunctionKind,
+            CellKind::NativeJSFunctionKind,
             cellSize<NativeJSFunction>(),
             nullptr,
             nullptr,
@@ -917,7 +917,7 @@ const CallableVTable NativeJSFunction::vt{
     NativeJSFunction::_newObjectImpl,
     NativeJSFunction::_callImpl};
 
-void SHLegacyFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+void NativeJSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSFunction>());
   CallableBuildMeta(cell, mb);
   mb.setVTable(&NativeJSFunction::vt);
@@ -925,7 +925,7 @@ void SHLegacyFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string NativeJSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
-  return "SHLegacyFunction";
+  return "NativeJSFunction";
 }
 #endif
 

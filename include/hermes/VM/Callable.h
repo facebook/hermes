@@ -496,10 +496,10 @@ class NativeJSFunction : public Callable {
   static const CallableVTable vt;
 
   static constexpr CellKind getCellKind() {
-    return CellKind::SHLegacyFunctionKind;
+    return CellKind::NativeJSFunctionKind;
   }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::SHLegacyFunctionKind;
+    return cell->getKind() == CellKind::NativeJSFunctionKind;
   }
 
   NativeJSFunctionPtr getFunctionPtr() const {
@@ -542,7 +542,7 @@ class NativeJSFunction : public Callable {
     return self->functionPtr_(shr);
   }
 
-  /// Create an instance of SHLegacyFunction.
+  /// Create an instance of NativeJSFunction.
   /// \param parentHandle object to use as [[Prototype]].
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
@@ -557,7 +557,7 @@ class NativeJSFunction : public Callable {
       const SHUnit *unit,
       unsigned additionalSlotCount = 0);
 
-  /// Create an instance of SHLegacyFunction.
+  /// Create an instance of NativeJSFunction.
   /// \param parentHandle object to use as [[Prototype]].
   /// \param parentEnvHandle the parent environment
   /// \param context the context to be passed to the function
