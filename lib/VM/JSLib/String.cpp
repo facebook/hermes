@@ -356,18 +356,43 @@ stringConstructor(void *, Runtime &runtime, NativeArgs args) {
   if (sRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto s = runtime.makeHandle(std::move(*sRes));
 
   if (!args.isConstructorCall()) {
     // Not a constructor call, just return the string value.
-    return s.getHermesValue();
+    return sRes->getHermesValue();
   }
 
-  // Constructor call: initialize the JSString.
-  auto self = args.vmcastThis<JSString>();
-  JSString::setPrimitiveString(self, runtime, s);
+  struct : public Locals {
+    PinnedValue<StringPrimitive> s;
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.s = std::move(*sRes);
 
-  return self.getHermesValue();
+  // Constructor call: create and initialize the JSString.
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.stringConstructor.getHermesValue().getRaw())) {
+    auto selfRes = JSString::create(runtime, lv.s, runtime.stringPrototype);
+    if (LLVM_UNLIKELY(selfRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return selfRes->getHermesValue();
+  }
+  CallResult<PseudoHandle<JSObject>> thisParentRes =
+      NativeConstructor::parentForNewThis_RJS(
+          runtime,
+          Handle<Callable>::vmcast(&args.getNewTarget()),
+          runtime.stringPrototype);
+  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.selfParent = std::move(*thisParentRes);
+  auto selfRes = JSString::create(runtime, lv.s, lv.selfParent);
+  if (LLVM_UNLIKELY(selfRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return selfRes->getHermesValue();
 }
 
 CallResult<HermesValue>

@@ -540,7 +540,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   populateCallSitePrototype(runtime);
 
   // String constructor.
-  createStringConstructor(runtime);
+  runtime.stringConstructor = createStringConstructor(runtime);
 
   // BigInt constructor.
   createBigIntConstructor(runtime);
