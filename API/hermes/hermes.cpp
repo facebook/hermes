@@ -2323,10 +2323,12 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   //    in 15.2.4
   //
   // Note that 13.2.2.1-4 are also handled by the call to newObject.
-  auto thisRes = vm::Callable::createThisForConstruct_RJS(funcHandle, runtime_);
+  auto thisArgRes = vm::Callable::createThisForConstruct_RJS(
+      funcHandle, runtime_, funcHandle);
+  checkStatus(thisArgRes.getStatus());
   // We need to capture this in case the ctor doesn't return an object,
   // we need to return this object.
-  auto objHandle = runtime_.makeHandle<vm::JSObject>(std::move(*thisRes));
+  auto thisArg = runtime_.makeHandle<>(std::move(*thisArgRes));
 
   // 13.2.2.8:
   //    Let result be the result of calling the [[Call]] internal property of
@@ -2340,7 +2342,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
       static_cast<uint32_t>(count),
       funcHandle.getHermesValue(),
       funcHandle.getHermesValue(),
-      objHandle.getHermesValue()};
+      thisArg.getHermesValue()};
   if (newFrame.overflowed()) {
     checkStatus(runtime_.raiseStackOverflow(
         ::hermes::vm::Runtime::StackOverflowKind::NativeStack));
@@ -2358,7 +2360,7 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   //    Return obj
   auto resultValue = callRes->get();
   vm::HermesValue resultHValue =
-      resultValue.isObject() ? resultValue : objHandle.getHermesValue();
+      resultValue.isObject() ? resultValue : thisArg.getHermesValue();
   return valueFromHermesValue(resultHValue);
 }
 

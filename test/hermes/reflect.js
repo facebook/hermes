@@ -203,6 +203,15 @@ nonobjProto.prototype = 1;
 assert.equal(Reflect.construct(nonobjProto, []) instanceof Object, true);
 assert.equal(Reflect.construct(Date, [], nonobjProto) instanceof Date, true);
 
+// Non-object new.target.prototype results in Object.prototype being used.
+(function () {
+  function bar() {}
+  function foo() {}
+  foo.prototype = 5;
+  let arr = Reflect.construct(bar, [], foo);
+  assert.equal(Object.getPrototypeOf(arr), Object.prototype);
+})();
+
 print('defineProperty');
 // CHECK-LABEL: defineProperty
 

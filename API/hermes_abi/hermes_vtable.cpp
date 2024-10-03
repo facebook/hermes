@@ -922,7 +922,8 @@ HermesABIValueOrError call_as_constructor(
 
   // Create the new object for the constructor call and save it in case the
   // function does not return an object.
-  auto thisRes = vm::Callable::createThisForConstruct_RJS(funcHandle, runtime);
+  auto thisRes =
+      vm::Callable::createThisForConstruct_RJS(funcHandle, runtime, funcHandle);
   auto objHandle = runtime.makeHandle<vm::JSObject>(std::move(*thisRes));
 
   // Set up the call frame and create space for the arguments.

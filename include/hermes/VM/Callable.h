@@ -327,15 +327,26 @@ class Callable : public JSObject {
   /// creation has been delayed by lazy objects.
   static void defineLazyProperties(Handle<Callable> fn, Runtime &runtime);
 
-  /// Create an object by calling newObject on \p selfHandle.
-  /// The object can then be used as the "this" argument when calling
-  /// \p selfHandle to construct an object.
-  /// Retrieves the "prototype" property from \p selfHandle,
-  /// and calls newObject() on it if it's an object,
-  /// else calls newObject() on the built-in Object prototype object.
-  static CallResult<PseudoHandle<JSObject>> createThisForConstruct_RJS(
-      Handle<Callable> selfHandle,
-      Runtime &runtime);
+  /// \return the `this` to be used for a construct call on \p callee, with \p
+  /// newTarget as the new.target. We need take special care when \p callee is a
+  /// NativeConstructor, ES6 function, or JSCallableProxy. In these cases, those
+  /// functions will create their own `this`, so this function will \return
+  /// undefined.
+  /// \param callee the function to be called as constructor.
+  /// \param newTarget is the new.target of the construct call.
+  static CallResult<PseudoHandle<>> createThisForConstruct_RJS(
+      Handle<> callee,
+      Runtime &runtime,
+      Handle<> newTarget);
+
+  /// \return true if \p F is responsible for making its own `this` parameter
+  /// when called as a constructor.
+  static inline bool makesOwnThis(Callable *F) {
+    return kindInRange(
+        F->getKind(),
+        CellKind::CallableMakesThisKind_first,
+        CellKind::CallableMakesThisKind_last);
+  }
 
  protected:
   Callable(

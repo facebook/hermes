@@ -43,69 +43,37 @@ reflectConstruct(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not constructible");
   }
-  if (LLVM_UNLIKELY(!isConstructor(runtime, *target))) {
-    return runtime.raiseTypeError("target is not constructible");
-  }
-  Handle<Callable> newTarget = args.dyncastArg<Callable>(2);
+  // We don't verify for constructors here. That is handled when we attempt to
+  // create the 'this' object later.
+  struct : public Locals {
+    PinnedValue<> newTarget;
+    PinnedValue<> thisVal;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   if (args.getArgCount() >= 3) {
-    if (LLVM_UNLIKELY(!newTarget)) {
-      return runtime.raiseTypeError("newTarget is not constructible");
-    }
-    if (LLVM_UNLIKELY(!isConstructor(runtime, *newTarget))) {
-      return runtime.raiseTypeError("newTarget is not constructible");
-    }
+    lv.newTarget = args.getArg(2);
+  } else {
+    lv.newTarget = target;
   }
   auto arguments = args.dyncastArg<JSObject>(1);
   if (LLVM_UNLIKELY(!arguments)) {
     return runtime.raiseTypeError("target arguments is not an object");
   }
 
-  MutableHandle<JSObject> prototype{runtime};
-
-  if (newTarget) {
-    CallResult<PseudoHandle<>> ntProtoRes = JSObject::getNamed_RJS(
-        newTarget, runtime, Predefined::getSymbolID(Predefined::prototype));
-    if (LLVM_UNLIKELY(ntProtoRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    prototype = PseudoHandle<JSObject>::dyn_vmcast(std::move(*ntProtoRes));
-  }
-  if (!prototype) {
-    // If newTarget.prototype is not an object, then we need to
-    // use a built-in-specific intrinsicDefaultPrototype in
-    // OrdinaryCreateFromConstructor (es9 9.1.13).  We don't have
-    // this directly available.  However, target.prototype has the
-    // right value for builtins, and the prototype property is
-    // non-configurable and non-writable for all of them (enforced
-    // in Callable::defineNameLengthAndPrototype).  So if
-    // newTarget.prototype is not an object, we fall back to using
-    // target.prototype.
-    CallResult<PseudoHandle<>> tProtoRes = JSObject::getNamed_RJS(
-        target, runtime, Predefined::getSymbolID(Predefined::prototype));
-    if (LLVM_UNLIKELY(tProtoRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    prototype = PseudoHandle<JSObject>::dyn_vmcast(std::move(*tProtoRes));
-    if (!prototype) {
-      // If all else fails, use %ObjectPrototype%
-      prototype = runtime.objectPrototypeRawPtr;
-    }
-  }
-  assert(prototype && "prototype was never set");
-  CallResult<PseudoHandle<JSObject>> thisValRes =
-      Callable::newObject(target, runtime, prototype);
+  CallResult<PseudoHandle<>> thisValRes =
+      Callable::createThisForConstruct_RJS(target, runtime, lv.newTarget);
   if (LLVM_UNLIKELY(thisValRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  Handle<JSObject> thisVal = runtime.makeHandle(std::move(*thisValRes));
+  lv.thisVal = std::move(*thisValRes);
   CallResult<PseudoHandle<>> objRes = Callable::executeCall(
-      target, runtime, newTarget ? newTarget : target, thisVal, arguments);
+      target, runtime, lv.newTarget, lv.thisVal, arguments);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*objRes)->isObject() ? objRes.toCallResultHermesValue()
-                               : thisVal.getHermesValue();
+                               : lv.thisVal.getHermesValue();
 }
 
 namespace {

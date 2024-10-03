@@ -101,7 +101,9 @@ new barBound();
   }
   var boundA = a.bind();
   var boundA2 = boundA.bind();
-  Reflect.construct(boundA2, [], boundA);
+  let o = Reflect.construct(boundA2, [], boundA);
+//CHECK-NEXT: true
+  print(Object.getPrototypeOf(o).constructor === a);
 //CHECK-NEXT: true
   new boundA2();
 //CHECK-NEXT: true

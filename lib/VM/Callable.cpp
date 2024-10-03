@@ -10,6 +10,7 @@
 #include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSError.h"
@@ -439,51 +440,96 @@ CallResult<PseudoHandle<>> Callable::executeCall(
 CallResult<PseudoHandle<>> Callable::executeConstruct0(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
-  auto thisVal = Callable::createThisForConstruct_RJS(selfHandle, runtime);
-  if (LLVM_UNLIKELY(thisVal == ExecutionStatus::EXCEPTION)) {
+  CallResult<PseudoHandle<HermesValue>> thisArgRes =
+      Callable::createThisForConstruct_RJS(selfHandle, runtime, selfHandle);
+  if (LLVM_UNLIKELY(thisArgRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto thisValHandle = runtime.makeHandle<JSObject>(std::move(thisVal->get()));
-  auto result = executeCall0(selfHandle, runtime, thisValHandle, true);
+  struct : public Locals {
+    PinnedValue<> thisArg;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.thisArg = std::move(*thisArgRes);
+  auto result = executeCall0(selfHandle, runtime, lv.thisArg, true);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*result)->isObject() ? std::move(result)
                                : CallResult<PseudoHandle<>>(createPseudoHandle(
-                                     thisValHandle.getHermesValue()));
+                                     lv.thisArg.getHermesValue()));
 }
 
 CallResult<PseudoHandle<>> Callable::executeConstruct1(
     Handle<Callable> selfHandle,
     Runtime &runtime,
     Handle<> param1) {
-  auto thisVal = Callable::createThisForConstruct_RJS(selfHandle, runtime);
-  if (LLVM_UNLIKELY(thisVal == ExecutionStatus::EXCEPTION)) {
+  CallResult<PseudoHandle<>> thisArgRes =
+      Callable::createThisForConstruct_RJS(selfHandle, runtime, selfHandle);
+  if (LLVM_UNLIKELY(thisArgRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto thisValHandle = runtime.makeHandle<JSObject>(std::move(thisVal->get()));
+  struct : public Locals {
+    PinnedValue<> thisArg;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.thisArg = std::move(*thisArgRes);
   CallResult<PseudoHandle<>> result =
-      executeCall1(selfHandle, runtime, thisValHandle, *param1, true);
+      executeCall1(selfHandle, runtime, lv.thisArg, *param1, true);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*result)->isObject() ? std::move(result)
                                : CallResult<PseudoHandle<>>(createPseudoHandle(
-                                     thisValHandle.getHermesValue()));
+                                     lv.thisArg.getHermesValue()));
 }
 
-CallResult<PseudoHandle<JSObject>> Callable::createThisForConstruct_RJS(
-    Handle<Callable> selfHandle,
-    Runtime &runtime) {
-  CallResult<PseudoHandle<>> prototypeProp = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
-  if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
+CallResult<PseudoHandle<>> Callable::createThisForConstruct_RJS(
+    Handle<> callee,
+    Runtime &runtime,
+    Handle<> newTarget) {
+  if (LLVM_UNLIKELY(!isConstructor(runtime, *callee))) {
+    return runtime.raiseTypeError(
+        "This function cannot be used as a constructor.");
+  }
+  // Don't verify newTarget if it's the same as callee.
+  if (callee->getRaw() != newTarget->getRaw()) {
+    if (LLVM_UNLIKELY(!isConstructor(runtime, *newTarget))) {
+      return runtime.raiseTypeError(
+          "new.target cannot be used as a constructor.");
+    }
+  }
+
+  // Advance past bound functions to see what we will actually be invoking.
+  auto *calleeTargetFunc = vmcast<Callable>(*callee);
+  auto *newTargetPtr = vmcast<Callable>(*newTarget);
+  while (auto *bound = dyn_vmcast<BoundFunction>(calleeTargetFunc)) {
+    NoAllocScope scope(runtime);
+    calleeTargetFunc = bound->getTarget(runtime);
+    // From ES15 10.4.1.2 [[Construct]] Step 5: If SameValue(F, newTarget) is
+    // true, set newTarget to target.
+    if (bound == newTargetPtr) {
+      newTargetPtr = calleeTargetFunc;
+    }
+  }
+
+  // Callables that make their own this should be given undefined in a construct
+  // call.
+  if (Callable::makesOwnThis(calleeTargetFunc)) {
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
+  }
+
+  struct : public Locals {
+    PinnedValue<Callable> newTarget;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.newTarget = newTargetPtr;
+
+  auto thisArgRes = ordinaryCreateFromConstructor_RJS(
+      runtime, lv.newTarget, runtime.objectPrototype);
+  if (LLVM_UNLIKELY(thisArgRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> prototype = vmisa<JSObject>(prototypeProp->get())
-      ? runtime.makeHandle<JSObject>(prototypeProp->get())
-      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
-  return Callable::newObject(selfHandle, runtime, prototype);
+  return createPseudoHandle(thisArgRes->getHermesValue());
 }
 
 CallResult<double> Callable::extractOwnLengthProperty_RJS(
@@ -1274,15 +1320,7 @@ void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
-  StackFramePtr newFrame{runtime.getStackPointer()};
-
-  if (newFrame.isConstructorCall()) {
-    auto consHandle = Handle<NativeConstructor>::vmcast(selfHandle);
-    assert(
-        consHandle->targetKind_ ==
-            vmcast<JSObject>(newFrame.getThisArgRef())->getKind() &&
-        "call(construct=true) called without the correct 'this' value");
-  }
+  (void)Handle<NativeConstructor>::vmcast(selfHandle)->targetKind_;
   return NativeFunction::_callImpl(selfHandle, runtime);
 }
 #endif
