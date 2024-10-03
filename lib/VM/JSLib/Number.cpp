@@ -184,13 +184,30 @@ numberConstructor(void *, Runtime &runtime, NativeArgs args) {
     }
   }
 
-  if (args.isConstructorCall()) {
-    auto *self = vmcast<JSNumber>(args.getThisArg());
-    self->setPrimitiveNumber(value);
-    return args.getThisArg();
+  if (!args.isConstructorCall()) {
+    return HermesValue::encodeTrustedNumberValue(value);
   }
 
-  return HermesValue::encodeTrustedNumberValue(value);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.numberConstructor.getHermesValue().getRaw())) {
+    return JSNumber::create(runtime, value, runtime.numberPrototype)
+        .getHermesValue();
+  }
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  CallResult<PseudoHandle<JSObject>> thisParentRes =
+      NativeConstructor::parentForNewThis_RJS(
+          runtime,
+          Handle<Callable>::vmcast(&args.getNewTarget()),
+          runtime.numberPrototype);
+  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.selfParent = std::move(*thisParentRes);
+  return JSNumber::create(runtime, value, lv.selfParent).getHermesValue();
 }
 
 CallResult<HermesValue>

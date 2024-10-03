@@ -549,7 +549,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.functionConstructor = createFunctionConstructor(runtime);
 
   // Number constructor.
-  createNumberConstructor(runtime);
+  runtime.numberConstructor = createNumberConstructor(runtime);
 
   // Boolean constructor.
   createBooleanConstructor(runtime);

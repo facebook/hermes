@@ -21,6 +21,7 @@ RUNTIME_HV_FIELD(functionConstructor, NativeConstructor)
 
 RUNTIME_HV_FIELD(stringPrototype, JSString)
 RUNTIME_HV_FIELD(bigintPrototype, JSObject)
+RUNTIME_HV_FIELD(numberConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(numberPrototype, JSNumber)
 RUNTIME_HV_FIELD(booleanPrototype, JSBoolean)
 RUNTIME_HV_FIELD(symbolPrototype, JSObject)
