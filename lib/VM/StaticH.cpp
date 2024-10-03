@@ -11,6 +11,7 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
@@ -124,28 +125,6 @@ extern "C" SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index) {
   } else {
     return _sh_ljs_undefined();
   }
-}
-
-extern "C" SHLegacyValue _sh_ljs_create_this(
-    SHRuntime *shr,
-    SHLegacyValue *callable,
-    SHLegacyValue *newTarget) {
-  Handle<> callableHandle{toPHV(callable)};
-  Handle<> newTargetHandle{toPHV(newTarget)};
-  Runtime &runtime = getRuntime(shr);
-  if (LLVM_UNLIKELY(!vmisa<Callable>(*callableHandle))) {
-    (void)runtime.raiseTypeError("constructor is not callable");
-    _sh_throw_current(shr);
-  }
-  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
-  {
-    GCScopeMarkerRAII marker{runtime};
-    res = Callable::createThisForConstruct_RJS(
-        callableHandle, runtime, newTargetHandle);
-  }
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    _sh_throw_current(shr);
-  return res->getHermesValue();
 }
 
 extern "C" SHLegacyValue _sh_ljs_coerce_this_ns(
@@ -852,7 +831,7 @@ extern "C" void _sh_ljs_put_by_val_strict_rjs(
 template <bool tryProp>
 static inline HermesValue getById_RJS(
     Runtime &runtime,
-    const PinnedHermesValue *source,
+    Handle<> source,
     SymbolID symID,
     PropertyCacheEntry *cacheEntry) {
   //++NumGetById;
@@ -978,13 +957,105 @@ static inline HermesValue getById_RJS(
     CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
     {
       GCScopeMarkerRAII marker{runtime};
-      resPH =
-          Interpreter::getByIdTransient_RJS(runtime, Handle<>(source), symID);
+      resPH = Interpreter::getByIdTransient_RJS(runtime, source, symID);
     }
     if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
       _sh_throw_current(getSHRuntime(runtime));
     return resPH->get();
   }
+}
+
+extern "C" SHLegacyValue _sh_ljs_create_this(
+    SHRuntime *shr,
+    SHLegacyValue *callee,
+    SHLegacyValue *newTarget,
+    SHPropertyCacheEntry *propCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  auto *calleePHV = toPHV(callee);
+  {
+    if (LLVM_UNLIKELY(!calleePHV->isObject())) {
+      (void)runtime.raiseTypeErrorForValue(
+          Handle<>(calleePHV), " cannot be used as a constructor.");
+      goto invalidCallee;
+    }
+
+    auto *calleeFunc = vmcast<JSObject>(*calleePHV);
+    auto cellKind = calleeFunc->getKind();
+    Callable *correctNewTarget;
+    // If this is a callable that expects a `this`, then skip ahead and start
+    // making the object.
+    if (cellKind >= CellKind::CallableExpectsThisKind_first) {
+      correctNewTarget = vmcast<Callable>(*toPHV(newTarget));
+    } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
+      // Callables that make their own this should be given undefined in a
+      // construct call.
+      return HermesValue::encodeUndefinedValue();
+    } else if (cellKind >= CellKind::CallableKind_first) {
+      correctNewTarget = vmcast<Callable>(*toPHV(newTarget));
+      while (auto *bound = dyn_vmcast<BoundFunction>(calleeFunc)) {
+        calleeFunc = bound->getTarget(runtime);
+        // From ES15 10.4.1.2 [[Construct]] Step 5: If SameValue(F, newTarget)
+        // is true, set newTarget to target.
+        if (bound == vmcast<Callable>(correctNewTarget)) {
+          correctNewTarget = vmcast<Callable>(calleeFunc);
+        }
+      }
+      cellKind = calleeFunc->getKind();
+      // Repeat the checks, now against the target.
+      if (cellKind >= CellKind::CallableExpectsThisKind_first) {
+        correctNewTarget = vmcast<Callable>(calleeFunc);
+      } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
+        return HermesValue::encodeUndefinedValue();
+      } else {
+        // If we still can't recognize what to do after advancing through bound
+        // functions (if any), error out. This code path is hit when invoking a
+        // NativeFunction as a constructor.
+        (void)runtime.raiseTypeError(
+            "This function cannot be used as a constructor.");
+        goto invalidCallee;
+      }
+    } else {
+      // Not a Callable.
+      (void)runtime.raiseTypeErrorForValue(
+          Handle<>(calleePHV), " cannot be used as a constructor.");
+      goto invalidCallee;
+    }
+
+    // We shouldn't need to check that new.target is a constructor explicitly.
+    // There are 2 cases where this instruction is emitted.
+    // 1. new expressions. In this case, new.target == callee. We always verify
+    // that a function call is performed correctly, so don't need to
+    // double-verify new.target.
+    // 2. super() calls in derived constructors. In this case, new.target will
+    // be set to the original callee for the new expression which triggered the
+    // constructor now invoking super. This means that new.target will be
+    // checked. Unfortunately, this check for constructors is done *after* this
+    // instruction, so we can't add an assert that newTarget is a constructor
+    // here. For example, using `new` on an arrow function, newTarget is not a
+    // constructor, but we don't find that out until after this instruction.
+
+    struct : public Locals {
+      PinnedValue<Callable> newTarget;
+      // This is the .prototype of new.target
+      PinnedValue<> newTargetPrototype;
+    } lv;
+    LocalsRAII lraii(runtime, &lv);
+    lv.newTarget = correctNewTarget;
+    lv.newTargetPrototype = getById_RJS<true>(
+        getRuntime(shr),
+        lv.newTarget,
+        Predefined::getSymbolID(Predefined::prototype),
+        reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+
+    return JSObject::create(
+               runtime,
+               lv.newTargetPrototype->isObject()
+                   ? Handle<JSObject>::vmcast(&lv.newTargetPrototype)
+                   : runtime.objectPrototype)
+        .getHermesValue();
+  }
+invalidCallee:
+  _sh_throw_current(shr);
 }
 
 extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
@@ -994,7 +1065,7 @@ extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<true>(
       getRuntime(shr),
-      toPHV(source),
+      Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
 }
@@ -1005,7 +1076,7 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
     SHPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<false>(
       getRuntime(shr),
-      toPHV(source),
+      Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
 }

@@ -586,7 +586,18 @@ class InstrGen {
       os_ << ", ";
       generateRegisterPtr(*optValue);
     }
-    return os_ << ", get_prop_cache(shUnit) + " << nextCacheIdx_++;
+    os_ << ", ";
+    return genIC(LS);
+  }
+
+  /// Generate a cache index. This must be used when passing parameters to API
+  /// functions that will use the cache index.
+  /// \p LS is currently unused. In the future, it might be used in the
+  /// optimization controlled by OptimizationSettings::reusePropCache: that
+  /// different instructions accessing the same property probably are for
+  /// objects of the same hidden class, and should get the same offset.
+  llvh::raw_ostream &genIC(LiteralString *LS) {
+    return os_ << "get_prop_cache(shUnit) + " << nextCacheIdx_++;
   }
 
   /// Helper to generate a value in a register,
@@ -1873,6 +1884,11 @@ class InstrGen {
     generateRegister(*inst.getClosure());
     os_ << ", &";
     generateRegister(*inst.getClosure());
+    os_ << ", ";
+    Module *M = F_.getParent();
+    auto *protoStr =
+        M->getLiteralString(M->getContext().getIdentifier("prototype"));
+    genIC(protoStr);
     os_ << ");\n";
   }
   void generateHBCGetArgumentsPropByValLooseInst(
