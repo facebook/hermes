@@ -1197,6 +1197,21 @@ CallResult<PseudoHandle<JSObject>> NativeConstructor::creatorFunction(
       NativeClass::create(runtime, prototype));
 }
 
+CallResult<PseudoHandle<JSObject>> NativeConstructor::parentForNewThis_RJS(
+    Runtime &runtime,
+    Handle<Callable> newTarget,
+    Handle<JSObject> nativeCtorProto) {
+  // Slow path, only taken when called via super (or Reflect.construct.)
+  CallResult<PseudoHandle<>> prototypeProp = JSObject::getNamed_RJS(
+      newTarget, runtime, Predefined::getSymbolID(Predefined::prototype));
+  if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (vmisa<JSObject>(prototypeProp->get()))
+    return PseudoHandle<JSObject>::vmcast(std::move(prototypeProp.getValue()));
+  return PseudoHandle<JSObject>{nativeCtorProto};
+}
+
 #define NATIVE_CONSTRUCTOR(fun)                    \
   template CallResult<PseudoHandle<JSObject>> fun( \
       Runtime &, Handle<JSObject>, void *);

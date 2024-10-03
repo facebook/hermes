@@ -561,7 +561,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   createRegExpConstructor(runtime);
 
   // Array constructor.
-  createArrayConstructor(runtime);
+  runtime.arrayConstructor = createArrayConstructor(runtime);
 
   if (runtime.hasArrayBuffer()) {
     // ArrayBuffer constructor.

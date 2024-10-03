@@ -16,6 +16,7 @@
         "test262/test/language/statements/let/",
         "mjsunit/debug-",
         "mjsunit/es6/debug-",
+        "mjsunit/es6/classes-proxy.js",
         "esprima/test_fixtures/tokenize/",
         "esprima/test_fixtures/comment/",
         "esprima/test_fixtures/tolerant-parse/"

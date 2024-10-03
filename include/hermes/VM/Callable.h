@@ -1001,6 +1001,18 @@ class NativeConstructor final : public NativeFunction {
     return JSObjectInit::initToPseudoHandle(runtime, cell);
   }
 
+  /// Obtain the correct parent for the `this` to be created for the current
+  /// constructor call. First, fetch the .prototype of new.target. If it's an
+  /// object, that is used as the parent. If not, then we use \p
+  /// nativeCtorProto.
+  /// \param newTarget is the new.target of the current construct call.
+  /// \param nativeCtorProto is the .prototype of the native constructor that
+  /// was called as a constructor.
+  static CallResult<PseudoHandle<JSObject>> parentForNewThis_RJS(
+      Runtime &runtime,
+      Handle<Callable> newTarget,
+      Handle<JSObject> nativeCtorProto);
+
  private:
 #ifndef NDEBUG
   /// Kind of the object returned by this native constructor.

@@ -341,17 +341,38 @@ Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
 
 CallResult<HermesValue>
 arrayConstructor(void *, Runtime &runtime, NativeArgs args) {
-  struct : Locals {
+  // NativeConstructors create their own this when called with new. The array
+  // constructor also creates a new JSArray when it's called normally. So, we
+  // will always create a new JSArray when called.
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
     PinnedValue<JSArray> self;
   } lv;
-  LocalsRAII lraii{runtime, &lv};
-
-  // If constructor, use the allocated object, otherwise allocate a new one.
-  // Everything else is the same after that.
-  if (args.isConstructorCall())
-    lv.self = vmcast<JSArray>(args.getThisArg());
-  else {
-    auto arrRes = JSArray::create(runtime, 0, 0);
+  LocalsRAII lraii(runtime, &lv);
+  // If this is not a construct call, or it is a construct call and new.target
+  // is the array constructor, then we know what parent to use to create the new
+  // JSArray.
+  if (LLVM_LIKELY(
+          !args.isConstructorCall() ||
+          (args.getNewTarget().getRaw() ==
+           runtime.arrayConstructor.getHermesValue().getRaw()))) {
+    CallResult<PseudoHandle<JSArray>> selfRes =
+        JSArray::create(runtime, runtime.arrayPrototype);
+    if (LLVM_UNLIKELY(selfRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.self = std::move(*selfRes);
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.arrayPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+    auto arrRes = JSArray::create(runtime, lv.selfParent);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
