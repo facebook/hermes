@@ -36,6 +36,7 @@ RUNTIME_HV_FIELD(fastArrayPrototype, JSObject)
 
 RUNTIME_HV_FIELD(arrayBufferConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(arrayBufferPrototype, JSObject)
+RUNTIME_HV_FIELD(dataViewConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(dataViewPrototype, JSObject)
 RUNTIME_HV_FIELD(typedArrayBasePrototype, JSObject)
 

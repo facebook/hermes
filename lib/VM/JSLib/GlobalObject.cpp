@@ -564,7 +564,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
     runtime.arrayBufferConstructor = createArrayBufferConstructor(runtime);
 
     // DataView constructor.
-    createDataViewConstructor(runtime);
+    runtime.dataViewConstructor = createDataViewConstructor(runtime);
 
     // TypedArrayBase constructor.
     runtime.typedArrayBaseConstructor =

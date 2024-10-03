@@ -164,7 +164,28 @@ dataViewConstructor(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "DataView() called in function context instead of constructor");
   }
-  auto self = args.vmcastThis<JSDataView>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSDataView> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.dataViewConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.dataViewPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.dataViewPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  lv.self = JSDataView::create(runtime, lv.selfParent);
+
   auto buffer = args.dyncastArg<JSArrayBuffer>(0);
   auto byteLength = args.getArgHandle(2);
   // 2. If Type(buffer) is not Object, throw a TypeError exception
@@ -212,8 +233,8 @@ dataViewConstructor(void *, Runtime &runtime, NativeArgs args) {
           "<= the length of the buffer");
     }
   }
-  self->setBuffer(runtime, *buffer, offset, viewByteLength);
-  return self.getHermesValue();
+  lv.self->setBuffer(runtime, *buffer, offset, viewByteLength);
+  return lv.self.getHermesValue();
 }
 
 Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime) {
