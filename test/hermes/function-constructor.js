@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xes6-proxy -O -Wno-direct-eval %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xes6-proxy -lazy -O0 -Wno-direct-eval %s | %FileCheck --match-full-lines %s
 "use strict";
 
 print('Function');
@@ -189,3 +190,13 @@ Reflect.apply(Function,
                   getPrototypeOf() { throw new Error("getPrototypeOf"); },
                   get() { throw new Error("die"); }}),
               [])
+
+try {
+  // Test that we correctly read a (lazy) function's header info.
+  // The header info will be accessed when checking if a function
+  // can be called as a constructor.
+  Reflect.construct(Function, [], () => {});
+} catch (e) {
+  print(e.name);
+// CHECK-NEXT: TypeError
+}
