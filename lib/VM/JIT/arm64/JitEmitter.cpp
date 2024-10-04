@@ -2367,7 +2367,7 @@ void Emitter::switchImm(
       wTempInput,
       a64::Mem(xTempTarget, wTempInput, a64::Shift(a64::ShiftOp::kLSL, 2)));
   // Add the jump offset to the base of the table to get the target address.
-  a.add(xTempTarget, xTempTarget, wTempInput.x());
+  a.add(xTempTarget, xTempTarget, wTempInput.x(), a64::sxtw(0));
   // Branch to the target address.
   a.br(xTempTarget);
 
