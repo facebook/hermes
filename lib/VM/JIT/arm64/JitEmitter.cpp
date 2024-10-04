@@ -123,6 +123,23 @@ void emit_double_is_int(
   a.fcmp(dTemp, dInput);
 }
 
+/// For a register \p dInput, which contains a double, check whether it is a
+/// valid unsigned 32-bit integer.
+/// CPU flags are updated. b_eq on success.
+/// If successful, \p wTemp will contain the number converted to int,
+/// and \p dTemp will contain the same number as \p dInput.
+/// \pre dTemp != dInput, because both are used in the comparison.
+void emit_double_is_uint32(
+    a64::Assembler &a,
+    const a64::GpW &wTemp,
+    const a64::VecD &dTemp,
+    const a64::VecD &dInput) {
+  assert(dTemp != dInput && "must use a different temp");
+  a.fcvtzu(wTemp, dInput);
+  a.ucvtf(dTemp, wTemp);
+  a.fcmp(dTemp, dInput);
+}
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
   std::function<void(std::string &&message)> const longjmpError_;
@@ -2323,9 +2340,7 @@ void Emitter::switchImm(
   // Convert the input to an integer and back to double,
   // and check if the value remained the same.
   // If it didn't, jump to the default label.
-  a.fcvtzu(wTempInput, dInput);
-  a.ucvtf(hwTempD.a64VecD(), wTempInput);
-  a.fcmp(dInput, hwTempD.a64VecD());
+  emit_double_is_uint32(a, wTempInput, hwTempD.a64VecD(), dInput);
   a.b_ne(defaultLabel);
 
   // Check if the integer value in xTemp is in range.
