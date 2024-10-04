@@ -63,7 +63,7 @@ class DedupReifyArguments : public FunctionPass {
 class InitCallFrame : public FunctionPass {
  public:
   explicit InitCallFrame(HVMRegisterAllocator &RA)
-      : FunctionPass("LowerCalls"), RA_(RA) {}
+      : FunctionPass("InitCallFrame"), RA_(RA) {}
   ~InitCallFrame() override = default;
   bool runOnFunction(Function *F) override;
 
