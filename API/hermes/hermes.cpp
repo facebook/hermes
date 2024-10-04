@@ -2029,7 +2029,9 @@ void HermesRuntimeImpl::setPropertyValue(
 }
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {
-  return vm::vmisa<vm::JSArray>(phv(obj));
+  auto res = llvh::isArray(runtime_, llvh::dyn_vmcast<vm::JSObject>(phv(obj)));
+  const_cast<HermesRuntimeImpl *>(this)->checkStatus(res.getStatus());
+  return *res;
 }
 
 bool HermesRuntimeImpl::isArrayBuffer(const jsi::Object &obj) const {
