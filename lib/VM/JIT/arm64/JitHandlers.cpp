@@ -69,8 +69,11 @@ SHLegacyValue _interpreter_create_array_from_buffer(
     unsigned numLiterals,
     unsigned bufferIndex) {
   Runtime &runtime = getRuntime(shr);
-  CallResult<PseudoHandle<>> res = Interpreter::createArrayFromBuffer(
-      runtime, (CodeBlock *)codeBlock, numElements, numLiterals, bufferIndex);
+  CallResult<PseudoHandle<>> res = [&] {
+    GCScopeMarkerRAII marker{runtime};
+    return Interpreter::createArrayFromBuffer(
+        runtime, (CodeBlock *)codeBlock, numElements, numLiterals, bufferIndex);
+  }();
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     _sh_throw_current(shr);
   }
