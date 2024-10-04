@@ -284,7 +284,6 @@ class TempRegAlloc {
 };
 
 class Emitter {
- public:
   /// Level of dumping JIT code. Bit 0 indicates code printing on or off.
   unsigned const dumpJitCode_;
 
@@ -385,7 +384,8 @@ class Emitter {
       PropertyCacheEntry *writePropertyCache,
       uint32_t numFrameRegs,
       uint32_t numCount,
-      uint32_t npCount);
+      uint32_t npCount,
+      const std::function<void(std::string &&message)> &longjmpError);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
   JITCompiledFunctionPtr addToRuntime(asmjit::JitRuntime &jr);

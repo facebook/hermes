@@ -18,7 +18,6 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/StaticHUtils.h"
-#include "llvh/Support/SaveAndRestore.h"
 
 #define DEBUG_TYPE "jit"
 
@@ -126,11 +125,14 @@ void emit_double_is_int(
 
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
+  std::function<void(std::string &&message)> const longjmpError_;
 
  public:
   /// \param expectedError if we get an error matching this value, we ignore it.
-  explicit OurErrorHandler(asmjit::Error &expectedError)
-      : expectedError_(expectedError) {}
+  explicit OurErrorHandler(
+      asmjit::Error &expectedError,
+      const std::function<void(std::string &&message)> &longjmpError)
+      : expectedError_(expectedError), longjmpError_(longjmpError) {}
 
   void handleError(
       asmjit::Error err,
@@ -144,12 +146,33 @@ class OurErrorHandler : public asmjit::ErrorHandler {
       return;
     }
 
-    llvh::errs() << "AsmJit error: " << err << ": "
-                 << asmjit::DebugUtils::errorAsString(err) << ": " << message
-                 << "\n";
-    hermes_fatal("AsmJit error");
+    std::string formattedMsg{};
+    llvh::raw_string_ostream OS{formattedMsg};
+    OS << "AsmJit error: " << err << ": "
+       << asmjit::DebugUtils::errorAsString(err) << ": " << message;
+    OS.flush();
+
+    LLVM_DEBUG(llvh::dbgs() << formattedMsg << "\n");
+    longjmpError_(std::move(formattedMsg));
   }
 };
+
+/// This macro is used to catch and handle low probability instructing encoding
+/// errors - i.e. when an immediate operand doesn't fit in the instruction
+/// encoding. It causes Asmjit to just return an error code instead of
+/// terminating the entire compilation.
+///
+/// \param expValue the error value that we want to handle.
+/// \param code  C++ code to invoke asmjit and store the result in a variable.
+#define EXPECT_ERROR(expValue, code)          \
+  do {                                        \
+    assert(                                   \
+        expectedError_ == asmjit::kErrorOk && \
+        "expectedError_ is not cleared");     \
+    expectedError_ = (expValue);              \
+    code;                                     \
+    expectedError_ = asmjit::kErrorOk;        \
+  } while (0)
 
 class OurLogger : public asmjit::Logger {
   ASMJIT_API asmjit::Error _log(const char *data, size_t size) noexcept
@@ -191,7 +214,8 @@ Emitter::Emitter(
     PropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
     unsigned numCount,
-    unsigned npCount)
+    unsigned npCount,
+    const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
       frameRegs_(numFrameRegs),
       codeBlock_(codeBlock) {
@@ -201,7 +225,7 @@ Emitter::Emitter(
     logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
 
   errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(
-      new OurErrorHandler(expectedError_));
+      new OurErrorHandler(expectedError_, longjmpError));
 
   code.init(jitRT.environment(), jitRT.cpuFeatures());
   code.setErrorHandler(errorHandler_.get());
@@ -1006,11 +1030,7 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
           xFrame,
           (int)StackFrameLayout::ArgCount * (int)sizeof(SHLegacyValue)));
 
-  {
-    llvh::SaveAndRestore<asmjit::Error> sav(
-        expectedError_, asmjit::kErrorInvalidImmediate);
-    err = a.cmp(wTmp, paramIndex);
-  }
+  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTmp, paramIndex));
   // Does paramIndex fit in the 12-bit unsigned immediate?
   if (err) {
     HWReg hwTmp2 = allocAndLogTempGpX();
@@ -1030,11 +1050,9 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
       (int)sizeof(SHLegacyValue);
   if (ofs >= 0)
     hermes_fatal("JIT integer overflow");
-  {
-    llvh::SaveAndRestore<asmjit::Error> sav(
-        expectedError_, asmjit::kErrorInvalidDisplacement);
-    err = a.ldur(hwRes.a64GpX(), a64::Mem(xFrame, ofs));
-  }
+  EXPECT_ERROR(
+      asmjit::kErrorInvalidDisplacement,
+      err = a.ldur(hwRes.a64GpX(), a64::Mem(xFrame, ofs)));
   // Does the offset fit in the 9-bit signed offset?
   if (err) {
     ofs = -ofs;
@@ -2312,11 +2330,7 @@ void Emitter::switchImm(
 
   // Check if the integer value in xTemp is in range.
   // First check minVal.
-  {
-    llvh::SaveAndRestore<asmjit::Error> sav(
-        expectedError_, asmjit::kErrorInvalidImmediate);
-    err = a.cmp(wTempInput, minVal);
-  }
+  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTempInput, minVal));
   if (err) {
     a.mov(hwTempTarget.a64GpX().w(), minVal);
     a.cmp(wTempInput, hwTempTarget.a64GpX().w());
@@ -2325,11 +2339,7 @@ void Emitter::switchImm(
   a.b_lo(defaultLabel);
 
   // Now check maxVal.
-  {
-    llvh::SaveAndRestore<asmjit::Error> sav(
-        expectedError_, asmjit::kErrorInvalidImmediate);
-    err = a.cmp(wTempInput, maxVal);
-  }
+  EXPECT_ERROR(asmjit::kErrorInvalidImmediate, err = a.cmp(wTempInput, maxVal));
   if (err) {
     a.mov(hwTempTarget.a64GpX().w(), maxVal);
     a.cmp(wTempInput, hwTempTarget.a64GpX().w());
@@ -2340,11 +2350,9 @@ void Emitter::switchImm(
   // Compute the offset into the jump table, dereference, and jump.
   // Offset by the minVal if necessary.
   if (minVal != 0) {
-    {
-      llvh::SaveAndRestore<asmjit::Error> sav(
-          expectedError_, asmjit::kErrorInvalidImmediate);
-      err = a.sub(wTempInput, wTempInput, minVal);
-    }
+    EXPECT_ERROR(
+        asmjit::kErrorInvalidImmediate,
+        err = a.sub(wTempInput, wTempInput, minVal));
     if (err) {
       a.mov(hwTempTarget.a64GpX().w(), minVal);
       a.sub(wTempInput, wTempInput, hwTempTarget.a64GpX().w());

@@ -83,8 +83,10 @@ class JITContext::Compiler {
   };
   /// In case of error, the error reason is stored here.
   Error error_ = Error::NoError;
-  /// In case of error, the problem instruction is optionally recorded here.
-  const inst::Inst *errorIP_{nullptr};
+  /// The IP of the instruction being emitted.
+  const inst::Inst *emittingIP_{nullptr};
+  /// In case of "other" error, the error message is recorded here.
+  std::string otherErrorMessage_{};
 
  public:
   Compiler(JITContext &jc, CodeBlock *codeBlock)
@@ -97,7 +99,12 @@ class JITContext::Compiler {
             // TODO: is getFrameSize() the right thing to call?
             codeBlock->getFrameSize(),
             codeBlock->getFunctionHeader().numberRegCount(),
-            codeBlock->getFunctionHeader().nonPtrRegCount()),
+            codeBlock->getFunctionHeader().nonPtrRegCount(),
+            [this](std::string &&message) {
+              otherErrorMessage_ = std::move(message);
+              error_ = Error::Other;
+              _longjmp(errorJmpBuf_, 1);
+            }),
         codeBlock_(codeBlock),
         funcStart_((const char *)codeBlock->begin()) {}
 
@@ -121,9 +128,11 @@ class JITContext::Compiler {
     auto *to = reinterpret_cast<const inst::Inst *>(funcStart_ + endOfs);
 
     while (ip != to) {
+      emittingIP_ = ip;
       ip = dispatch(ip);
       em_.assertPostInstructionInvariants();
     }
+    emittingIP_ = nullptr;
   }
 
   /// Compile a single instruction by dispatching to its emitter method.
@@ -187,14 +196,15 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
     // We arrive here on error.
 
     const char *errMsg = error_ == Error::UnsupportedInst
-        ? "jit: unsupported instruction"
-        : "jit: other error";
+        ? "unsupported instruction"
+        : otherErrorMessage_.c_str();
     auto printError = [this, errMsg](llvh::raw_ostream &OS) {
-      OS << errMsg << '\n';
-      if (errorIP_) {
+      OS << "jit error: " << errMsg << '\n';
+      if (emittingIP_) {
+        OS << "Emitting:\n";
         OS << llvh::format_decimal(
-                  (const char *)errorIP_ - (const char *)funcStart_, 3)
-           << ": " << inst::decodeInstruction(errorIP_) << "\n";
+                  (const char *)emittingIP_ - (const char *)funcStart_, 3)
+           << ": " << inst::decodeInstruction(emittingIP_) << "\n";
       }
     };
 
@@ -269,7 +279,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 #define EMIT_UNIMPLEMENTED(name)                                               \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
     error_ = Error::UnsupportedInst;                                           \
-    errorIP_ = (const inst::Inst *)inst;                                       \
     _longjmp(errorJmpBuf_, 1);                                                 \
   }
 
