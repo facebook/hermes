@@ -204,6 +204,15 @@ jobs:
               -destination 'platform=visionOS Simulator,name=Apple Vision Pro' \
               -scheme ApplePlatformsIntegrationVisionOSTests
           working_directory: test/ApplePlatformsIntegrationTestApp
+      - run:
+          name: Test Apple TV application
+          command: |
+            xcodebuild test \
+              -workspace ApplePlatformsIntegrationTests.xcworkspace \
+              -configuration Debug \
+              -destination 'platform=tvOS Simulator,name=Apple TV' \
+              -scheme ApplePlatformsIntegrationTVOSTests
+          working_directory: test/ApplePlatformsIntegrationTestApp
 
   build-apple-runtime:
     <<: *apple_defaults
