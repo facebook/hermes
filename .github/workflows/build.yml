@@ -179,7 +179,7 @@ jobs:
           build_macosx
           destroot
     - name: Install dependencies
-      run: brew install cmake ninja
+      run: brew install cmake ninja && xcodebuild -downloadPlatform visionOS && xcodebuild -downloadPlatform tvOS
     - name: Build the test application
       run: pod install
       working-directory: test/ApplePlatformsIntegrationTestApp
