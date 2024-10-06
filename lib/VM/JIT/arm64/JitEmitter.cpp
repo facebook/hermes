@@ -1010,7 +1010,7 @@ void Emitter::frUpdateType(FR fr, FRType type) {
 }
 
 void Emitter::unreachable() {
-  EMIT_RUNTIME_CALL(*this, void (*)(), abort);
+  EMIT_RUNTIME_CALL(*this, void (*)(), _sh_unreachable);
 }
 
 void Emitter::ret(FR frValue) {

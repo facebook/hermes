@@ -1892,6 +1892,10 @@ extern "C" void _sh_typed_store_parent(
       objectHandle.get(), runtime, parentHandle.get());
 }
 
+extern "C" void _sh_unreachable() {
+  hermes_fatal("Unreachable code reached");
+}
+
 extern "C" void _sh_throw_array_oob(SHRuntime *shr) {
   (void)getRuntime(shr).raiseRangeError("array load index out of range");
   _sh_throw_current(shr);

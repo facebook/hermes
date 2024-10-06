@@ -1620,7 +1620,7 @@ class InstrGen {
   }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);
-    os_ << "abort();\n";
+    os_ << "_sh_unreachable();\n";
   }
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
     os_.indent(2);

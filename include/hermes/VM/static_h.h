@@ -863,6 +863,8 @@ SHERMES_EXPORT void _sh_prstore_indirect(
     uint32_t propIndex,
     SHLegacyValue *value);
 
+SHERMES_EXPORT void _sh_unreachable() __attribute__((noreturn));
+
 static inline SHLegacyValue
 _sh_prload(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
   if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
