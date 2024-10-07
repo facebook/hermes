@@ -24,7 +24,7 @@ namespace hbc {
 
 void HVMRegisterAllocator::handleInstruction(Instruction *I) {
   if (auto *CI = llvh::dyn_cast<BaseCallInst>(I)) {
-    return allocateCallInst(CI);
+    allocateCallInst(CI);
   }
 }
 
