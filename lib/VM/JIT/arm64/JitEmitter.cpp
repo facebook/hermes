@@ -1508,6 +1508,83 @@ void Emitter::fastArrayLength(FR frRes, FR frArr) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
+  comment(
+      "// FastArrayLoad r%u, r%u, r%u",
+      frRes.index(),
+      frArr.index(),
+      frIdx.index());
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  // We allocate a temporary register to compute the address instead of using
+  // the result register in case the result has a VecD allocated for it.
+  HWReg hwTmpStorage = allocTempGpX();
+  HWReg hwTmpSize = allocTempGpX();
+  HWReg hwTmpIdxGpX = allocTempGpX();
+  HWReg hwTmpIdxVecD = allocTempVecD();
+  HWReg hwArr = getOrAllocFRInGpX(frArr, true);
+  HWReg hwIdx = getOrAllocFRInVecD(frIdx, true);
+  // Done allocating, free the temps so they can be reused for the result.
+  freeReg(hwTmpStorage);
+  freeReg(hwTmpSize);
+  freeReg(hwTmpIdxGpX);
+  freeReg(hwTmpIdxVecD);
+
+  // Retrieve the FastArray pointer and use it to load the indexed storage
+  // pointer.
+  emit_sh_ljs_get_pointer(a, hwTmpStorage.a64GpX(), hwArr.a64GpX());
+  movHWFromMem(
+      hwTmpStorage,
+      a64::Mem(hwTmpStorage.a64GpX(), offsetof(SHFastArray, indexedStorage)));
+
+  // Load the size from the indexed storage.
+  a.ldr(
+      hwTmpSize.a64GpX().w(),
+      a64::Mem(hwTmpStorage.a64GpX(), offsetof(SHArrayStorageSmall, size)));
+
+  // Check if the index is a uint32.
+  emit_double_is_uint32(
+      a, hwTmpIdxGpX.a64GpX().w(), hwTmpIdxVecD.a64VecD(), hwIdx.a64VecD());
+  // If the conversion was successful, compare the size against the index.
+  // Otherwise, set the flags to zero to force the subsequent b_ls to be taken.
+  a.ccmp(
+      hwTmpSize.a64GpX().w(), hwTmpIdxGpX.a64GpX().w(), 0, a64::CondCode::kEQ);
+  // If the index is out-of-bounds jump to the failure path.
+  // TODO: We currently disregard the state of the registers on an OOB access
+  // because we cannot JIT try-catch, so we are guaranteed to be leaving the
+  // current function. If we add support for JIT of try-catch, we will have to
+  // sync registers when the access is inside a try region.
+  a.b_ls(slowPathLab);
+
+  // Add the offset of the actual data in the ArrayStorage.
+  a.add(
+      hwTmpStorage.a64GpX(),
+      hwTmpStorage.a64GpX(),
+      offsetof(SHArrayStorageSmall, storage));
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWFromMem(
+      hwRes,
+      a64::Mem(hwTmpStorage.a64GpX(), hwTmpIdxGpX.a64GpX(), a64::lsl(3)));
+  frUpdatedWithHW(frRes, hwRes);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .frRes = frRes,
+       .frInput1 = frArr,
+       .frInput2 = frIdx,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: FastArrayLoad r%u, r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_array_oob);
+         // Call does not return.
+       }});
+}
+
 void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
   comment(
       "// FastArrayStore r%u, r%u, r%u",
