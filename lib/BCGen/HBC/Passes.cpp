@@ -653,6 +653,7 @@ bool SpillRegisters::requiresShortOutput(Instruction *I) {
     case ValueKind::AllocStackInstKind:
     case ValueKind::TryEndInstKind:
     case ValueKind::TryStartInstKind:
+    case ValueKind::ImplicitMovInstKind:
       return false;
     default:
       return true;
@@ -666,6 +667,7 @@ bool SpillRegisters::requiresShortOperand(Instruction *I, int op) {
     case ValueKind::HBCSpillMovInstKind:
     case ValueKind::LoadStackInstKind:
     case ValueKind::StoreStackInstKind:
+    case ValueKind::ImplicitMovInstKind:
       return false;
     // For all the call instructions, ensure that the *arguments* are not moved
     // around, because they are going to be placed in the stack and not directly
