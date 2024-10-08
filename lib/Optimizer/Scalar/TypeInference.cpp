@@ -510,10 +510,10 @@ class TypeInferenceImpl {
   }
   Type inferHBCResolveParentEnvironmentInst(
       HBCResolveParentEnvironmentInst *inst) {
-    return Type::createEnvironment();
+    return *inst->getInherentType();
   }
   Type inferHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst *inst) {
-    return Type::createNumber();
+    return *inst->getInherentType();
   }
   Type inferHBCReifyArgumentsInst(HBCReifyArgumentsInst *inst) {
     hermes_fatal("This is not a concrete instruction");
@@ -563,10 +563,10 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferDeletePropertyLooseInst(DeletePropertyLooseInst *inst) {
-    return Type::createBoolean();
+    return *inst->getInherentType();
   }
   Type inferDeletePropertyStrictInst(DeletePropertyStrictInst *inst) {
-    return Type::createBoolean();
+    return *inst->getInherentType();
   }
   Type inferLoadPropertyInst(LoadPropertyInst *inst) {
     return Type::createAnyType();
@@ -781,13 +781,13 @@ class TypeInferenceImpl {
   }
   Type inferHBCCreateFunctionEnvironmentInst(
       HBCCreateFunctionEnvironmentInst *inst) {
-    return Type::createEnvironment();
+    return *inst->getInherentType();
   }
   Type inferLIRGetThisNSInst(LIRGetThisNSInst *inst) {
-    return Type::createObject();
+    return *inst->getInherentType();
   }
   Type inferCreateThisInst(CreateThisInst *inst) {
-    return Type::createObject();
+    return *inst->getInherentType();
   }
   Type inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
     hermes_fatal("This is not a concrete instruction");
@@ -801,7 +801,7 @@ class TypeInferenceImpl {
     return Type::createAnyType();
   }
   Type inferGetConstructedObjectInst(GetConstructedObjectInst *inst) {
-    return Type::createObject();
+    return *inst->getInherentType();
   }
   Type inferHBCAllocObjectFromBufferInst(HBCAllocObjectFromBufferInst *inst) {
     return *inst->getInherentType();

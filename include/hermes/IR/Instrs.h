@@ -1773,7 +1773,9 @@ class DeletePropertyInst : public Instruction {
   explicit DeletePropertyInst(
       const DeletePropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
+      : Instruction(src, operands) {
+    setType(*getInherentTypeImpl());
+  }
 
  public:
   enum { ObjectIdx, PropertyIdx };
@@ -1790,6 +1792,9 @@ class DeletePropertyInst : public Instruction {
   }
   static bool isTyped() {
     return false;
+  }
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createBoolean();
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3351,6 +3356,7 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
       LiteralNumber *numLevels,
       JSDynamicParam *parentScopeParam)
       : BaseScopeInst(ValueKind::HBCResolveParentEnvironmentInstKind, scope) {
+    setType(*getInherentTypeImpl());
     pushOperand(numLevels);
     pushOperand(parentScopeParam);
   }
@@ -3369,6 +3375,10 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
 
   SideEffect getSideEffectImpl() const {
     return SideEffect{}.setIdempotent();
+  }
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createEnvironment();
   }
 
   static bool classof(const Value *V) {
@@ -3622,6 +3632,7 @@ class HBCCreateFunctionEnvironmentInst : public BaseScopeInst {
         scope->getVariables().size() <=
             HBCCreateFunctionEnvironmentInst::kMaxScopeSize &&
         "Scope is too large");
+    setType(*getInherentTypeImpl());
     pushOperand(parentScopeParam);
   }
   explicit HBCCreateFunctionEnvironmentInst(
@@ -3635,6 +3646,10 @@ class HBCCreateFunctionEnvironmentInst : public BaseScopeInst {
 
   SideEffect getSideEffectImpl() const {
     return {};
+  }
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createEnvironment();
   }
 
   static bool classof(const Value *V) {
@@ -3804,7 +3819,9 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
   explicit HBCGetArgumentsLengthInst(Value *lazyRegValue)
       : SingleOperandInst(
             ValueKind::HBCGetArgumentsLengthInstKind,
-            lazyRegValue) {}
+            lazyRegValue) {
+    setType(*getInherentTypeImpl());
+  }
   explicit HBCGetArgumentsLengthInst(
       const HBCGetArgumentsLengthInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -3819,6 +3836,9 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
   }
   static bool isTyped() {
     return false;
+  }
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createNumber();
   }
 
   SideEffect getSideEffectImpl() const {
@@ -4009,6 +4029,7 @@ class CreateThisInst : public Instruction {
 
   explicit CreateThisInst(Value *closure, Value *newTarget)
       : Instruction(ValueKind::CreateThisInstKind) {
+    setType(*getInherentTypeImpl());
     pushOperand(closure);
     pushOperand(newTarget);
   }
@@ -4029,6 +4050,9 @@ class CreateThisInst : public Instruction {
   }
   static bool isTyped() {
     return false;
+  }
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
   }
 
   SideEffect getSideEffectImpl() const {
@@ -4055,6 +4079,7 @@ class GetConstructedObjectInst : public Instruction {
       CreateThisInst *thisValue,
       CallInst *constructorReturnValue)
       : Instruction(ValueKind::GetConstructedObjectInstKind) {
+    setType(*getInherentTypeImpl());
     pushOperand(thisValue);
     pushOperand(constructorReturnValue);
   }
@@ -4077,6 +4102,9 @@ class GetConstructedObjectInst : public Instruction {
   }
   static bool isTyped() {
     return false;
+  }
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
   }
 
   SideEffect getSideEffectImpl() const {
