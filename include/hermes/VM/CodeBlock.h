@@ -356,9 +356,6 @@ class CodeBlock final
   /// Requires that a breakpoint has been set at \p offset.
   /// Decrements the user count of the associated runtime module.
   void uninstallBreakpointAtOffset(uint32_t offset, uint8_t opCode);
-
-  /// \return the offset of the next instruction after the one at \p offset.
-  uint32_t getNextOffset(uint32_t offset) const;
 #endif
 };
 

@@ -308,21 +308,6 @@ uint32_t CodeBlock::getVirtualOffset() const {
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-uint32_t CodeBlock::getNextOffset(uint32_t offset) const {
-  auto opcodes = getOpcodeArray();
-  assert(offset < opcodes.size() && "invalid offset to breakOnNextInstruction");
-
-  auto opCode = reinterpret_cast<const Inst *>(&opcodes[offset])->opCode;
-  assert(opCode < OpCode::_last && "invalid opcode");
-
-  static const uint8_t sizes[] = {
-#define DEFINE_OPCODE(name) sizeof(inst::name##Inst),
-#include "hermes/BCGen/HBC/BytecodeList.def"
-  };
-
-  return offset + sizes[(unsigned)opCode];
-}
-
 /// Makes the page that \p address is in writable.
 /// If it fails, aborts execution.
 static void makeWritable(void *address, size_t length) {

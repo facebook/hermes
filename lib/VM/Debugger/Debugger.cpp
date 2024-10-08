@@ -10,6 +10,7 @@
 #include "hermes/VM/Debugger/Debugger.h"
 
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/Inst/InstDecode.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
@@ -80,7 +81,8 @@ llvh::Optional<uint32_t> Debugger::findJumpTarget(
 }
 
 void Debugger::breakAtPossibleNextInstructions(const InterpreterState &state) {
-  auto nextOffset = state.codeBlock->getNextOffset(state.offset);
+  auto nextOffset =
+      state.offset + getInstSize(getRealOpCode(state.codeBlock, state.offset));
   // Set a breakpoint at the next instruction in the code block if this is not
   // the last instruction.
   if (nextOffset < state.codeBlock->getOpcodeArray().size()) {
@@ -852,8 +854,11 @@ void Debugger::breakpointCaller() {
   CodeBlock *codeBlock = frameIt->getCalleeCodeBlock(runtime_);
   assert(codeBlock && "The code block must exist since we have ip");
   // Track the call stack depth that the breakpoint would be set on.
-  uint32_t offset = codeBlock->getNextOffset(codeBlock->getOffsetOf(ip));
-  setStepBreakpoint(codeBlock, offset, runtime_.calcFrameOffset(frameIt));
+
+  uint32_t offset = codeBlock->getOffsetOf(ip);
+  uint32_t newOffset = offset + getInstSize(getRealOpCode(codeBlock, offset));
+
+  setStepBreakpoint(codeBlock, newOffset, runtime_.calcFrameOffset(frameIt));
 }
 
 void Debugger::breakpointExceptionHandler(const InterpreterState &state) {
