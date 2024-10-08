@@ -57,12 +57,12 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:function_end
 
-// CHECK:function count(): any
+// CHECK:function count(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = AllocStackInst (:undefined|object) $arguments: any
+// CHECK-NEXT:  $Reg0 = AllocStackInst (:undefined) $arguments: any
 // CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  $Reg1 = StoreStackInst $Reg1, $Reg0
-// CHECK-NEXT:  $Reg0 = LoadStackInst (:undefined|object) $Reg0
+// CHECK-NEXT:  $Reg0 = LoadStackInst (:undefined) $Reg0
 // CHECK-NEXT:  $Reg0 = HBCGetArgumentsLengthInst (:number) $Reg0
 // CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
 // CHECK-NEXT:function_end

@@ -38,10 +38,6 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   // HermesInternal.
   PM.addPass(new PeepholeLowering());
   PM.addPass(createLowerScopes());
-  if (options.optimizationEnabled) {
-    // OptEnvironmentInit needs to run before LowerConstants.
-    PM.addPass(createOptEnvironmentInit());
-  }
   // LowerBuilinCalls needs to run before the rest of the lowering.
   PM.addPass(new LowerBuiltinCalls());
   PM.addPass(new LowerCalls());
@@ -56,6 +52,13 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(new DedupReifyArguments());
   PM.addPass(new LowerSwitchIntoJumpTables());
   PM.addPass(new SwitchLowering());
+  if (options.optimizationEnabled) {
+    // TODO(T204084366): TypeInference must run before OptEnvironmentInit,
+    // because the latter will remove stores that may affect the inferred type.
+    PM.addTypeInference();
+    // OptEnvironmentInit needs to run before LowerConstants.
+    PM.addPass(createOptEnvironmentInit());
+  }
   PM.addPass(new LoadConstants());
   if (options.optimizationEnabled) {
     PM.addPass(createOptParentEnvironment());
