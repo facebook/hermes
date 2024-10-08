@@ -21,6 +21,10 @@ namespace hermes {
 
 /// Eliminate any stores of undefined to newly created environments, since we
 /// know the VM will always initialize slots in an environment to undefined.
+/// WARNING: This pass violates IR invariants, because it removes
+/// initializing stores to Variables. It should be run very late in the pipeline
+/// after any passes that depend on the stores being present (e.g.
+/// StackPromotion, TypeInference, etc.). (TODO: T204084366)
 static bool optEnvironmentInit(Function *F) {
   bool changed = false;
 

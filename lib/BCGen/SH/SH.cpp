@@ -2313,14 +2313,17 @@ bool lowerModuleIR(Module *M, bool optimize) {
   PM.addPass(new hbc::DedupReifyArguments());
   // TODO Consider supporting LowerSwitchIntoJumpTables for optimization
   PM.addPass(new SwitchLowering());
-  // OptEnvironmentInit checks for LiteralUndefined, so it needs to run before
-  // LoadConstants.
-  if (optimize)
+  if (optimize) {
+    // TODO(T204084366): TypeInference must run before OptEnvironmentInit,
+    // because the latter will remove stores that may affect the inferred type.
+    PM.addTypeInference();
+    // OptEnvironmentInit checks for LiteralUndefined, so it needs to run before
+    // LoadConstants.
     PM.addPass(createOptEnvironmentInit());
+  }
   PM.addPass(sh::createLoadConstants());
   PM.addPass(createLowerScopes());
   if (optimize) {
-    PM.addTypeInference();
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
