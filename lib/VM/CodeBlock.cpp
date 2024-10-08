@@ -341,6 +341,7 @@ void CodeBlock::installBreakpointAtOffset(uint32_t offset) {
 
   makeWritable(address, sizeof(inst::DebuggerInst));
   *address = debuggerOpcode;
+  ++numInstalledBreakpoints_;
 }
 
 void CodeBlock::uninstallBreakpointAtOffset(
@@ -357,6 +358,7 @@ void CodeBlock::uninstallBreakpointAtOffset(
   // This is valid because we can only uninstall breakpoints that we installed.
   // Therefore, the page here must be writable.
   *address = opCode;
+  --numInstalledBreakpoints_;
 }
 
 #endif

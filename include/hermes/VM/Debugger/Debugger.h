@@ -414,6 +414,10 @@ class Debugger {
   ScriptID resolveScriptId(RuntimeModule *runtimeModule, uint32_t filenameId)
       const;
 
+  /// Get the actual OpCode produced from the source without being affected by
+  /// any user installed breakpoint "Debugger" OpCode overrides.
+  inst::OpCode getRealOpCode(CodeBlock *block, uint32_t offset) const;
+
  private:
   /// The primary debugger command loop.
   ExecutionStatus debuggerLoop(
@@ -573,10 +577,6 @@ class Debugger {
 
   /// Set breakpoints at all possible next instructions after the current one.
   void breakAtPossibleNextInstructions(const InterpreterState &state);
-
-  /// Get the actual OpCode produced from the source without being affected by
-  /// any user installed breakpoint "Debugger" OpCode overrides.
-  inst::OpCode getRealOpCode(CodeBlock *block, uint32_t offset) const;
 };
 
 } // namespace vm

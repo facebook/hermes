@@ -1817,7 +1817,23 @@ tailCall:
 
         INIT_STATE_FOR_CODEBLOCK(curCodeBlock);
         O1REG(Call) = res.getValue();
+
+#ifdef HERMES_ENABLE_DEBUGGER
+        // Only do the more expensive check for breakpoint location (in
+        // getRealOpCode) if there are breakpoints installed in the function
+        // we're returning into.
+        if (LLVM_UNLIKELY(curCodeBlock->getNumInstalledBreakpoints() > 0)) {
+          ip = IPADD(inst::getInstSize(
+              runtime.debugger_.getRealOpCode(curCodeBlock, CUROFFSET)));
+        } else {
+          // No breakpoints in the function being returned to, just use
+          // nextInstCall().
+          ip = nextInstCall(ip);
+        }
+#else
         ip = nextInstCall(ip);
+#endif
+
         DISPATCH;
       }
 
