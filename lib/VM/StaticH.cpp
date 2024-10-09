@@ -1041,7 +1041,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
     } lv;
     LocalsRAII lraii(runtime, &lv);
     lv.newTarget = correctNewTarget;
-    lv.newTargetPrototype = getById_RJS<true>(
+    lv.newTargetPrototype = getById_RJS<false>(
         getRuntime(shr),
         lv.newTarget,
         Predefined::getSymbolID(Predefined::prototype),
