@@ -722,7 +722,7 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
   // because initializer expressions capture a different environment than the
   // environment the function body names are added to, and it would add some
   // complexity to optimize a use case that's never actually encountered.
-  if (pass_ == LazyParse && !eagerly && !isFormalParams_) {
+  if (pass_ == LazyParse && !eagerly && !isFormalParams_ && !insideWithStatement) {
     auto startLoc = tok_->getStartLoc();
     assert(
         preParsed_->functionInfo.count(startLoc) == 1 &&
@@ -2038,6 +2038,8 @@ Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement(
           startLoc))
     return None;
 
+  auto oldInsideWithStatement = insideWithStatement;
+  insideWithStatement = true;
   auto optExpr = parseExpression();
   if (!optExpr)
     return None;
@@ -2053,6 +2055,11 @@ Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement(
   auto optBody = parseStatement(param.get(ParamReturn));
   if (!optBody)
     return None;
+
+  // More work is needed to support 'with' statements in lazy mode.
+  // Since 'with' statements are not often used, and to avoid having too many changes in IRGen,
+  // we can avoid supporting them in lazy mode for now. This will also make merging changes easier.
+  insideWithStatement = oldInsideWithStatement;
 
   return setLocation(
       startLoc,

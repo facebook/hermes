@@ -191,6 +191,7 @@ class FunctionContext {
   /// \param irGen the associated ESTreeIRGen object.
   /// \param function the newly created Function IR node.
   /// \param semInfo semantic info obtained from the AST node.
+  /// \param scopeInfo the scope information on depth and with blocks
   FunctionContext(
       ESTreeIRGen *irGen,
       Function *function,
@@ -405,12 +406,29 @@ class ESTreeIRGen {
   /// whenever we enter a nested function.
   FunctionContext *functionContext_{};
 
+  static constexpr std::string_view internal_with = "__internal_with_";
+
   /// The type of the key stored in \c compiledEntities_. It is a pair of an
   /// AST node pointer and an extra key, which is a small integer value.
   /// The purpose of the extra key is to enable us to distinguish different
   /// "compiled entities" associated with the same AST node. For example,
   /// "outer" and "inner" generator function.
   using CompiledMapKey = llvh::PointerIntPair<ESTree::Node *, 2>;
+
+
+  // Information about each nested 'with' statement, used to resolve identifiers correctly.
+  struct WithScopeInfo {
+
+    // Lexical depth of the 'with' body (=depth where `with` is defined + 1).
+    uint32_t depth;
+
+    // The variable that holds the object of the 'with' statement.
+    Variable *object;
+  };
+
+  // Vector holding information about all encountered 'with' statements.
+  using WithScopes = std::vector<WithScopeInfo>;
+  WithScopes withScopes{};
 
   /// An "additional key" when mapping from an AST node to a compiled Value,
   /// used to distinguish between different values that may be associated with
@@ -829,6 +847,13 @@ class ESTreeIRGen {
   Value *genLogicalExpression(ESTree::LogicalExpressionNode *logical);
   Value *genThisExpression();
 
+  // Similar to genConditionalExpr, but we can generate condition, consequent
+  // and alternate lazily when creating the branches. This is useful when we
+  // want to generate cond. blocks directly from Value* instead of AST nodes
+  Value *genConditionalExpr(
+      const std::function<Value *()> &conditionGenerator,
+      const std::function<Value *()> &consequentGenerator,
+      const std::function<Value *()> &alternateGenerator);
   /// A helper function to unify the largely same IRGen logic of \c genYieldExpr
   /// and \c genAwaitExpr.
   /// \param value the value operand of the will-generate SaveAndYieldInst.
@@ -1028,6 +1053,8 @@ class ESTreeIRGen {
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       const CapturedState &capturedState);
+
+  void genWithStatement(ESTree::WithStatementNode *with);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -1363,6 +1390,21 @@ class ESTreeIRGen {
   /// \return the instruction performing the load.
   Instruction *emitLoad(Value *from, bool inhibitThrow);
 
+  enum ConditionalChainType {
+    // Multiple options to create the conditional chain:
+    MEMBER_EXPRESSION, // (a.var ? a.var : var)
+    OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE, // (a.var ? a : undefined)
+    OBJECT_ONLY_WITH_GLOBAL_ALTERNATE // (a.var ? a : global)
+  };
+
+  Value *withAwareEmitLoad(
+      Value *ptr,
+      ESTree::Node *node,
+      ConditionalChainType conditionalChainType,
+      bool inhibitThrow = false);
+  Value *
+  withAwareEmitStore(Value *storedValue, Value *ptr, bool declInit_, ESTree::Node *node);
+
   /// Emit an instruction to a store a value into the specified location.
   /// \param storedValue value to store
   /// \param ptr location to store into, either a Variable or
@@ -1402,7 +1444,10 @@ class ESTreeIRGen {
     CompiledMapKey key(node, (unsigned)extraKey);
     assert(compiledEntities_.count(key) == 0 && "Overwriting compiled entity");
     compiledEntities_[key] = value;
-    compilationQueue_.emplace_back(f);
+    compilationQueue_.emplace_back([this, f = std::forward<F>(f), withScopesCopy = withScopes]() mutable {
+      this->withScopes = std::move(withScopesCopy);
+      f();
+    });
   }
 
   /// Run all tasks in the compilation queue until it is empty.
@@ -1427,6 +1472,24 @@ class ESTreeIRGen {
     assert(decl->customData);
     return static_cast<Value *>(decl->customData);
   }
+
+  Value *emitLoadOrStoreWithStatementImpl(
+      Value *value, // value to store, nullptr if reading
+      Value *ptr,   // ptr used to read/store the value
+      bool declInit_,
+      ESTree::IdentifierNode *id,
+      ConditionalChainType conditionalChainType,
+      bool inhibitThrow = false);
+
+  Value *createConditionalChainImpl(
+      std::vector<WithScopeInfo>::iterator begin,
+      std::vector<WithScopeInfo>::iterator end,
+      Value *ptr,
+      Value *value,
+      bool declInit_,
+      std::string_view name,
+      ConditionalChainType conditionalChainType,
+      bool inhibitThrow);
 };
 
 template <typename EB, typename EF, typename EH>

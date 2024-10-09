@@ -208,6 +208,8 @@ class JSParserImpl {
   /// This is used when checking if `await` is a valid Identifier name.
   bool paramAwait_{false};
 
+  bool insideWithStatement{false};
+
   /// Appended when the parser has seen an directive being visited in the
   /// current function scope (It's intended to be used with
   /// `SaveStrictModeAndSeenDirectives`).
