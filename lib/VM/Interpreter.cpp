@@ -3154,6 +3154,9 @@ tailCall:
         O1REG(SelectObject) = O3REG(SelectObject).isObject()
             ? O3REG(SelectObject)
             : O2REG(SelectObject);
+        assert(
+            O1REG(SelectObject).isObject() &&
+            "SelectObject should always produce an object");
         ip = NEXTINST(SelectObject);
         DISPATCH;
       }

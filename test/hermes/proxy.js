@@ -2226,5 +2226,12 @@ var p2 = new Proxy(p1, {
 
 assert.throws(() => p2.foo, RangeError, "Maximum call stack size exceeded");
 
+(function () {
+  function callableTarget() {}
+  let p = new Proxy(callableTarget, {});
+  assert.equal(typeof new p(), "object", "construct call on a proxy should always return an object");
+})();
+
+print('hi');
 print('done');
 // CHECK-LABEL: done
