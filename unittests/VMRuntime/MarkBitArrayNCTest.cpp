@@ -27,6 +27,13 @@ namespace {
 struct MarkBitArrayTest : public ::testing::Test {
   MarkBitArrayTest();
 
+  static size_t addressToMarkBitArrayIndex(const void *addr) {
+    auto *cp = reinterpret_cast<const char *>(addr);
+    auto *base =
+        reinterpret_cast<const char *>(AlignedHeapSegment::storageStart(addr));
+    return (cp - base) >> LogHeapAlign;
+  }
+
  protected:
   std::unique_ptr<StorageProvider> provider;
   AlignedHeapSegment seg;
@@ -66,7 +73,7 @@ TEST_F(MarkBitArrayTest, AddressToIndex) {
     char *addr = addrs.at(i);
     size_t ind = indices.at(i);
 
-    EXPECT_EQ(ind, AlignedHeapSegment::addressToMarkBitArrayIndex(addr))
+    EXPECT_EQ(ind, addressToMarkBitArrayIndex(addr))
         << "0x" << std::hex << (void *)addr << " -> " << ind;
     char *toAddr = seg.lowLim() + (ind << LogHeapAlign);
     EXPECT_EQ(toAddr, addr)
@@ -78,7 +85,7 @@ TEST_F(MarkBitArrayTest, MarkGet) {
   const size_t lastIx = mba.size() - 1;
 
   for (char *addr : addrs) {
-    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    size_t ind = addressToMarkBitArrayIndex(addr);
 
     EXPECT_FALSE(ind > 0 && mba.at(ind - 1)) << "initial " << ind << " - 1";
     EXPECT_FALSE(mba.at(ind)) << "initial " << ind;
@@ -97,37 +104,37 @@ TEST_F(MarkBitArrayTest, MarkGet) {
 
 TEST_F(MarkBitArrayTest, Initial) {
   for (char *addr : addrs) {
-    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    size_t ind = addressToMarkBitArrayIndex(addr);
     EXPECT_FALSE(mba.at(ind));
   }
 }
 
 TEST_F(MarkBitArrayTest, Clear) {
   for (char *addr : addrs) {
-    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    size_t ind = addressToMarkBitArrayIndex(addr);
     ASSERT_FALSE(mba.at(ind));
   }
 
   for (char *addr : addrs) {
-    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    size_t ind = addressToMarkBitArrayIndex(addr);
     mba.set(ind, true);
   }
 
   for (char *addr : addrs) {
-    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    size_t ind = addressToMarkBitArrayIndex(addr);
     ASSERT_TRUE(mba.at(ind));
   }
 
   mba.reset();
   for (char *addr : addrs) {
-    size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    size_t ind = addressToMarkBitArrayIndex(addr);
     EXPECT_FALSE(mba.at(ind));
   }
 }
 
 TEST_F(MarkBitArrayTest, NextMarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+  size_t ind = addressToMarkBitArrayIndex(addr);
 
   mba.set(ind, true);
   EXPECT_EQ(ind, mba.findNextSetBitFrom(ind));
@@ -140,7 +147,7 @@ TEST_F(MarkBitArrayTest, NextMarkedBit) {
   EXPECT_EQ(FOUND_NONE, mba.findNextSetBitFrom(0));
   std::queue<size_t> indices;
   for (char *addr : addrs) {
-    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    auto ind = addressToMarkBitArrayIndex(addr);
     mba.set(ind, true);
     indices.push(ind);
   }
@@ -154,7 +161,7 @@ TEST_F(MarkBitArrayTest, NextMarkedBit) {
 
 TEST_F(MarkBitArrayTest, NextUnmarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+  size_t ind = addressToMarkBitArrayIndex(addr);
   mba.set();
   mba.set(ind, false);
   EXPECT_EQ(ind, mba.findNextZeroBitFrom(ind));
@@ -167,7 +174,7 @@ TEST_F(MarkBitArrayTest, NextUnmarkedBit) {
   EXPECT_EQ(FOUND_NONE, mba.findNextZeroBitFrom(0));
   std::queue<size_t> indices;
   for (char *addr : addrs) {
-    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+    auto ind = addressToMarkBitArrayIndex(addr);
     mba.set(ind, false);
     indices.push(ind);
   }
@@ -182,7 +189,7 @@ TEST_F(MarkBitArrayTest, NextUnmarkedBit) {
 
 TEST_F(MarkBitArrayTest, PrevMarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+  size_t ind = addressToMarkBitArrayIndex(addr);
   mba.set(ind, true);
   EXPECT_EQ(ind, mba.findPrevSetBitFrom(ind + 1));
 }
@@ -196,7 +203,7 @@ TEST_F(MarkBitArrayTest, PrevMarkedBit) {
   std::queue<size_t> indices;
   size_t addrIdx = addrs.size();
   while (addrIdx-- > 0) {
-    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addrs[addrIdx]);
+    auto ind = addressToMarkBitArrayIndex(addrs[addrIdx]);
     mba.set(ind, true);
     indices.push(ind);
   }
@@ -209,7 +216,7 @@ TEST_F(MarkBitArrayTest, PrevMarkedBit) {
 
 TEST_F(MarkBitArrayTest, PrevUnmarkedBitImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addr);
+  size_t ind = addressToMarkBitArrayIndex(addr);
   mba.set();
   mba.set(ind, false);
   EXPECT_EQ(ind, mba.findPrevZeroBitFrom(ind + 1));
@@ -225,7 +232,7 @@ TEST_F(MarkBitArrayTest, PrevUnmarkedBit) {
   std::queue<size_t> indices;
   size_t addrIdx = addrs.size();
   while (addrIdx-- > 0) {
-    auto ind = AlignedHeapSegment::addressToMarkBitArrayIndex(addrs[addrIdx]);
+    auto ind = addressToMarkBitArrayIndex(addrs[addrIdx]);
     mba.set(ind, false);
     indices.push(ind);
   }
