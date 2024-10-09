@@ -58,9 +58,10 @@ void CardTableNCTest::dirtyRangeTest(
 
 CardTableNCTest::CardTableNCTest() {
   // For purposes of this test, we'll assume the first writeable byte of
-  // the segment comes just after the card table (which is at the
-  // start of the segment).
-  auto first = seg.lowLim() + sizeof(CardTable);
+  // the segment comes just after the memory region that can be mapped by
+  // kFirstUsedIndex bytes.
+  auto first = seg.lowLim() +
+      CardTable::kFirstUsedIndex * CardTable::kHeapBytesPerCardByte;
   auto last = reinterpret_cast<char *>(llvh::alignDown(
       reinterpret_cast<uintptr_t>(seg.hiLim() - 1), CardTable::kCardSize));
 
@@ -79,7 +80,7 @@ CardTableNCTest::CardTableNCTest() {
 TEST_F(CardTableNCTest, AddressToIndex) {
   // Expected indices in the card table corresponding to the probe
   // addresses into the storage.
-  const size_t lastIx = CardTable::kValidIndices - 1;
+  const size_t lastIx = table->getEndIndex() - 1;
   std::vector<size_t> indices{
       CardTable::kFirstUsedIndex,
       CardTable::kFirstUsedIndex + 1,
@@ -104,13 +105,13 @@ TEST_F(CardTableNCTest, AddressToIndexBoundary) {
   // the storage.
   ASSERT_EQ(seg.lowLim(), reinterpret_cast<char *>(table));
 
-  const size_t hiLim = CardTable::kValidIndices;
+  const size_t hiLim = table->getEndIndex();
   EXPECT_EQ(0, table->addressToIndex(seg.lowLim()));
   EXPECT_EQ(hiLim, table->addressToIndex(seg.hiLim()));
 }
 
 TEST_F(CardTableNCTest, DirtyAddress) {
-  const size_t lastIx = CardTable::kValidIndices - 1;
+  const size_t lastIx = table->getEndIndex() - 1;
 
   for (char *addr : addrs) {
     size_t ind = table->addressToIndex(addr);
@@ -137,7 +138,8 @@ TEST_F(CardTableNCTest, DirtyAddress) {
 TEST_F(CardTableNCTest, DirtyAddressRangeEmpty) {
   char *addr = addrs.at(0);
   table->dirtyCardsForAddressRange(addr, addr);
-  EXPECT_FALSE(table->findNextDirtyCard(0, CardTable::kValidIndices));
+  EXPECT_FALSE(table->findNextDirtyCard(
+      CardTable::kFirstUsedIndex, table->getEndIndex()));
 }
 
 /// Dirty an address range smaller than a single card.
@@ -214,7 +216,7 @@ TEST_F(CardTableNCTest, NextDirtyCardImmediate) {
   size_t ind = table->addressToIndex(addr);
 
   table->dirtyCardForAddress(addr);
-  auto dirty = table->findNextDirtyCard(ind, CardTable::kValidIndices);
+  auto dirty = table->findNextDirtyCard(ind, table->getEndIndex());
 
   ASSERT_TRUE(dirty);
   EXPECT_EQ(ind, *dirty);
@@ -222,9 +224,10 @@ TEST_F(CardTableNCTest, NextDirtyCardImmediate) {
 
 TEST_F(CardTableNCTest, NextDirtyCard) {
   /// Empty case: No dirty cards
-  EXPECT_FALSE(table->findNextDirtyCard(0, CardTable::kValidIndices));
+  EXPECT_FALSE(table->findNextDirtyCard(
+      CardTable::kFirstUsedIndex, table->getEndIndex()));
 
-  size_t from = 0;
+  size_t from = CardTable::kFirstUsedIndex;
   for (char *addr : addrs) {
     table->dirtyCardForAddress(addr);
 
@@ -232,7 +235,7 @@ TEST_F(CardTableNCTest, NextDirtyCard) {
     EXPECT_FALSE(table->findNextDirtyCard(from, ind));
 
     auto atEnd = table->findNextDirtyCard(from, ind + 1);
-    auto inMiddle = table->findNextDirtyCard(from, CardTable::kValidIndices);
+    auto inMiddle = table->findNextDirtyCard(from, table->getEndIndex());
 
     ASSERT_TRUE(atEnd);
     EXPECT_EQ(ind, *atEnd);
