@@ -151,7 +151,7 @@ class ArrayStorageBase final
   template <Inline inl = Inline::No>
   void set(size_type index, HVType val, GC &gc) {
     assert(index < size() && "index out of range");
-    data()[index].set(val, gc);
+    data()[index].set(val, gc, this);
   }
 
   /// \return the element at index \p index
@@ -237,7 +237,7 @@ class ArrayStorageBase final
     auto *fromStart = other->data();
     auto *fromEnd = fromStart + otherSz;
     GCHVType::uninitialized_copy(
-        fromStart, fromEnd, data() + sz, runtime.getHeap());
+        fromStart, fromEnd, data() + sz, runtime.getHeap(), this);
     size_.store(sz + otherSz, std::memory_order_release);
   }
 
