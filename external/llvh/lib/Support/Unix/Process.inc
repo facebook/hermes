@@ -51,6 +51,9 @@
 #ifdef HAVE_TERMIOS_H
 #  include <termios.h>
 #endif
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
 
 //===----------------------------------------------------------------------===//
 //=== WARNING: Implementation here must contain only generic UNIX code that
