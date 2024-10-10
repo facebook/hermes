@@ -2397,8 +2397,12 @@ TEST_F(CDPAgentTest, RuntimeGetProperties) {
 
   // all old object ids should be invalid after resuming
   for (std::string oldObjId : objIds) {
-    getAndEnsureProps(
-        msgId++, oldObjId, std::unordered_map<std::string, PropInfo>{});
+    sendRequest(
+        "Runtime.getProperties", msgId, [&](::hermes::JSONEmitter &json) {
+          json.emitKeyValue("objectId", oldObjId);
+        });
+
+    ensureErrorResponse(waitForMessage(), msgId++);
   }
 
   sendAndCheckResponse("Debugger.resume", msgId++);
