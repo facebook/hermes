@@ -741,6 +741,11 @@ class Emitter {
       FR frEnv,
       RuntimeModule *runtimeModule,
       uint32_t functionID);
+  void createGenerator(
+      FR frRes,
+      FR frEnv,
+      RuntimeModule *runtimeModule,
+      uint32_t functionID);
 
 #define DECL_GET_ARGUMENTS_PROP_BY_VAL(methodName, commentStr, shFn) \
   void methodName(FR frRes, FR frIndex, FR frLazyReg) {              \

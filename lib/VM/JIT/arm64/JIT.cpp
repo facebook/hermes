@@ -290,8 +290,6 @@ EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 EMIT_UNIMPLEMENTED(ProfilePoint)
-EMIT_UNIMPLEMENTED(CreateGenerator)
-EMIT_UNIMPLEMENTED(CreateGeneratorLongIndex)
 EMIT_UNIMPLEMENTED(IteratorBegin)
 EMIT_UNIMPLEMENTED(IteratorNext)
 EMIT_UNIMPLEMENTED(IteratorClose)
@@ -885,6 +883,20 @@ EMIT_CREATE_CLOSURE(CreateClosure)
 EMIT_CREATE_CLOSURE(CreateClosureLongIndex)
 
 #undef EMIT_CREATE_CLOSURE
+
+#define EMIT_CREATE_GENERATOR(name)                                            \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.createGenerator(                                                       \
+        FR(inst->op1),                                                         \
+        FR(inst->op2),                                                         \
+        codeBlock_->getRuntimeModule(),                                        \
+        inst->op3);                                                            \
+  }
+
+EMIT_CREATE_GENERATOR(CreateGenerator)
+EMIT_CREATE_GENERATOR(CreateGeneratorLongIndex)
+
+#undef EMIT_CREATE_GENERATOR
 
 inline void JITContext::Compiler::emitNewObject(
     const inst::NewObjectInst *inst) {

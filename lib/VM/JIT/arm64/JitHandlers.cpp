@@ -38,6 +38,32 @@ SHLegacyValue _sh_ljs_create_bytecode_closure(
       .getHermesValue();
 }
 
+SHLegacyValue _interpreter_create_generator(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    const SHLegacyValue *env,
+    SHRuntimeModule *shRuntimeModule,
+    uint32_t functionID) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr framePtr{toPHV(frame)};
+  auto *runtimeModule = (RuntimeModule *)shRuntimeModule;
+  CallResult<PseudoHandle<JSGeneratorObject>> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = Interpreter::createGenerator_RJS(
+        runtime,
+        runtimeModule,
+        functionID,
+        env ? Handle<Environment>::vmcast(toPHV(env))
+            : Runtime::makeNullHandle<Environment>(),
+        framePtr.getNativeArgs());
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
 SHLegacyValue _sh_ljs_get_bytecode_string(
     SHRuntime *shr,
     SHRuntimeModule *runtimeModule,

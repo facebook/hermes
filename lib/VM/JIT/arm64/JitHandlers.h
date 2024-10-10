@@ -24,6 +24,14 @@ SHLegacyValue _sh_ljs_create_bytecode_closure(
     SHRuntimeModule *shRuntimeModule,
     uint32_t functionID);
 
+/// Create a generator from bytecode.
+SHLegacyValue _interpreter_create_generator(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    const SHLegacyValue *env,
+    SHRuntimeModule *shRuntimeModule,
+    uint32_t functionID);
+
 /// Get the string associated with the given RuntimeModule-specific string ID.
 /// This may lazily allocate a SymbolID and the string itself.
 /// This is used when executing with a bytecode CodeBlock.

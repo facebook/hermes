@@ -1884,6 +1884,40 @@ void Emitter::createClosure(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::createGenerator(
+    FR frRes,
+    FR frEnv,
+    RuntimeModule *runtimeModule,
+    uint32_t functionID) {
+  comment(
+      "// CreateGenerator r%u, r%u, %u",
+      frRes.index(),
+      frEnv.index(),
+      functionID);
+  syncAllFRTempExcept(frRes != frEnv ? frRes : FR());
+  syncToFrame(frEnv);
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  loadFrameAddr(a64::x2, frEnv);
+  loadBits64InGp(a64::x3, (uint64_t)runtimeModule, "RuntimeModule");
+  a.mov(a64::w4, functionID);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          const SHLegacyValue *,
+          SHRuntimeModule *,
+          uint32_t),
+      _interpreter_create_generator);
+
+  freeAllFRTempExcept({});
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
   comment("// GetArgumentsLength r%u, r%u", frRes.index(), frLazyReg.index());
 
