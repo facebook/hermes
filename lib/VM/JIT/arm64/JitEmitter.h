@@ -775,6 +775,7 @@ class Emitter {
 
   void debugger();
   void throwInst(FR frInput);
+  void throwIfEmpty(FR frRes, FR frInput);
 
   void createRegExp(
       FR frRes,

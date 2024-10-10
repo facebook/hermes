@@ -288,7 +288,6 @@ EMIT_UNIMPLEMENTED(LoadConstBigIntLongIndex)
 EMIT_UNIMPLEMENTED(CallWithNewTargetLong)
 EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
-EMIT_UNIMPLEMENTED(ThrowIfEmpty)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 EMIT_UNIMPLEMENTED(ProfilePoint)
 EMIT_UNIMPLEMENTED(CreateGenerator)
@@ -1019,6 +1018,11 @@ inline void JITContext::Compiler::emitDebugger(const inst::DebuggerInst *inst) {
 
 inline void JITContext::Compiler::emitThrow(const inst::ThrowInst *inst) {
   em_.throwInst(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitThrowIfEmpty(
+    const inst::ThrowIfEmptyInst *inst) {
+  em_.throwIfEmpty(FR(inst->op1), FR(inst->op2));
 }
 
 inline void JITContext::Compiler::emitAddS(const inst::AddSInst *inst) {

@@ -84,6 +84,22 @@ void emit_sh_ljs_is_string(
   a.cmn(xTempReg, -HVTag_Str);
 }
 
+/// Emit code to check whether the input reg is empty, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_empty(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      (int16_t)HVETag_Empty == (int16_t)(-14) && "HVETag_Empty must be -14");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
+  a.cmn(xTempReg, -HVETag_Empty);
+}
+
 /// For a register \p inOut that contains a bool (i.e. either 0 or 1), turn it
 /// into a HermesValue boolean by adding the corresponding tag.
 void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
@@ -2061,6 +2077,42 @@ void Emitter::throwInst(FR frInput) {
 
   a.mov(a64::x0, xRuntime);
   EMIT_RUNTIME_CALL(*this, void (*)(SHRuntime *, SHLegacyValue), _sh_throw);
+}
+
+void Emitter::throwIfEmpty(FR frRes, FR frInput) {
+  comment("// ThrowIfEmpty r%u, r%u", frRes.index(), frInput.index());
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+
+  // TODO: Add back the sync/free calls inside try.
+  // Outside a try it's not observable behavior.
+  // syncAllFRTempExcept(frRes != frInput ? frRes : FR());
+  HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+  HWReg hwTemp = allocTempGpX();
+  // freeAllFRTempExcept({});
+  freeReg(hwTemp);
+
+  emit_sh_ljs_is_empty(a, hwTemp.a64GpX(), hwInput.a64GpX());
+  a.b_eq(slowPathLab);
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  movHWFromHW<false>(hwRes, hwInput);
+  frUpdatedWithHW(frRes, hwRes);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .frRes = frRes,
+       .frInput1 = frInput,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: ThrowIfEmpty r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_empty);
+         // Call does not return.
+       }});
 }
 
 void Emitter::createRegExp(
