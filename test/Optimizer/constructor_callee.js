@@ -50,9 +50,10 @@ function ctor_load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %use_this(): functionCode
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
-// CHECK-NEXT:  %3 = CallInst (:object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: object, empty: any
+// CHECK-NEXT:  %3 = CallInst (:undefined|object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %2: undefined|object, 12: number
+// CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: undefined|object, %2: undefined|object
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS1 [use_this: object]
@@ -68,17 +69,17 @@ function ctor_load_store_test() {
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
-// CHECK:function use_this(k: number): object [allCallsitesKnownInStrictMode]
+// CHECK:function use_this(k: number): undefined|object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: object, "k": string
-// CHECK-NEXT:       ReturnInst %0: object
+// CHECK-NEXT:  %0 = LoadParamInst (:undefined|object) %<this>: undefined|object
+// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: undefined|object, "k": string
+// CHECK-NEXT:       ReturnInst %0: undefined|object
 // CHECK-NEXT:function_end
 
 // CHECK:function "use_this 1#"(k: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: object, "k": string
+// CHECK-NEXT:  %0 = LoadParamInst (:undefined|object) %<this>: undefined|object
+// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: undefined|object, "k": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -86,7 +87,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.use_this]: object
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
-// CHECK-NEXT:  %3 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: object, empty: any
+// CHECK-NEXT:  %3 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %2: undefined|object, 12: number
+// CHECK-NEXT:       ReturnInst %2: undefined|object
 // CHECK-NEXT:function_end

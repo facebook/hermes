@@ -61,8 +61,8 @@ function outer2(){
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.foo]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
-// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
-// CHECK-NEXT:  %6 = CreateThisInst (:object) %2: object, empty: any
+// CHECK-NEXT:  %5 = CreateThisInst (:undefined|object) %4: object, empty: any
+// CHECK-NEXT:  %6 = CreateThisInst (:undefined|object) %2: object, empty: any
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 

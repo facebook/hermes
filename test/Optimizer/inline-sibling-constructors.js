@@ -57,9 +57,9 @@ function outer() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %3 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:object) %0: environment, [%VS1.Point]: object
-// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %1: any, %5: object, "x": string
-// CHECK-NEXT:       StorePropertyStrictInst %2: any, %5: object, "y": string
-// CHECK-NEXT:       StorePropertyStrictInst %3: any, %5: object, "z": string
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %5 = CreateThisInst (:undefined|object) %4: object, empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %1: any, %5: undefined|object, "x": string
+// CHECK-NEXT:       StorePropertyStrictInst %2: any, %5: undefined|object, "y": string
+// CHECK-NEXT:       StorePropertyStrictInst %3: any, %5: undefined|object, "z": string
+// CHECK-NEXT:       ReturnInst %5: undefined|object
 // CHECK-NEXT:function_end

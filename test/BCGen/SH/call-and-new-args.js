@@ -58,16 +58,16 @@ function test_builtin(a) {
 // CHECK:function test_new(bar: any): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc0}    %0 = LoadParamInst (:any) %bar: any
-// CHECK-NEXT:  {loc1}    %1 = CreateThisInst (:object) {loc0} %0: any, empty: any
+// CHECK-NEXT:  {loc1}    %1 = CreateThisInst (:undefined|object) {loc0} %0: any, empty: any
 // CHECK-NEXT:  {stack[3]}  %2 = HBCLoadConstInst (:number) 10: number
 // CHECK-NEXT:  {stack[2]}  %3 = HBCLoadConstInst (:number) 11: number
 // CHECK-NEXT:  {stack[1]}  %4 = HBCLoadConstInst (:number) 12: number
 // CHECK-NEXT:  {stack[0]}  %5 = HBCLoadConstInst (:number) 13: number
 // CHECK-NEXT:  {stack[6]}  %6 = MovInst (:any) {loc0} %0: any
 // CHECK-NEXT:  {stack[5]}  %7 = MovInst (:any) {loc0} %0: any
-// CHECK-NEXT:  {stack[4]}  %8 = MovInst (:object) {loc1} %1: object
-// CHECK-NEXT:  {loc0}    %9 = CallInst (:any) {stack[5]} %7: any, empty: any, false: boolean, empty: any, {loc0} %0: any, {stack[4]} %8: object, {stack[3]} %2: number, {stack[2]} %3: number, {stack[1]} %4: number, {stack[0]} %5: number
-// CHECK-NEXT:  {loc0}   %10 = GetConstructedObjectInst (:object) {loc1} %1: object, {loc0} %9: any
+// CHECK-NEXT:  {stack[4]}  %8 = MovInst (:undefined|object) {loc1} %1: undefined|object
+// CHECK-NEXT:  {loc0}    %9 = CallInst (:any) {stack[5]} %7: any, empty: any, false: boolean, empty: any, {loc0} %0: any, {stack[4]} %8: undefined|object, {stack[3]} %2: number, {stack[2]} %3: number, {stack[1]} %4: number, {stack[0]} %5: number
+// CHECK-NEXT:  {loc0}   %10 = GetConstructedObjectInst (:object) {loc1} %1: undefined|object, {loc0} %9: any
 // CHECK-NEXT:                 ReturnInst {loc0} %10: object
 // CHECK-NEXT:function_end
 

@@ -787,7 +787,7 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
   Type inferCreateThisInst(CreateThisInst *inst) {
-    return *inst->getInherentType();
+    return Type::unionTy(Type::createObject(), Type::createUndefined());
   }
   Type inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
     hermes_fatal("This is not a concrete instruction");

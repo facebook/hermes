@@ -4029,7 +4029,6 @@ class CreateThisInst : public Instruction {
 
   explicit CreateThisInst(Value *closure, Value *newTarget)
       : Instruction(ValueKind::CreateThisInstKind) {
-    setType(*getInherentTypeImpl());
     pushOperand(closure);
     pushOperand(newTarget);
   }
@@ -4050,9 +4049,6 @@ class CreateThisInst : public Instruction {
   }
   static bool isTyped() {
     return false;
-  }
-  static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createObject();
   }
 
   SideEffect getSideEffectImpl() const {
