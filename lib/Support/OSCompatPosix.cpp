@@ -63,6 +63,10 @@
 #endif
 #endif // __ANDROID__
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 #include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
