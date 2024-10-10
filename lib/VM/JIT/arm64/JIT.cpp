@@ -283,8 +283,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
   }
 
 EMIT_UNIMPLEMENTED(GetEnvironment)
-EMIT_UNIMPLEMENTED(LoadConstBigInt)
-EMIT_UNIMPLEMENTED(LoadConstBigIntLongIndex)
 EMIT_UNIMPLEMENTED(CallWithNewTargetLong)
 EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
@@ -348,6 +346,17 @@ inline void JITContext::Compiler::emitLoadConstString(
     const inst::LoadConstStringInst *inst) {
   em_.loadConstString(FR(inst->op1), codeBlock_->getRuntimeModule(), inst->op2);
 }
+
+#define EMIT_LOAD_CONST_BIGINT(name)                                           \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.loadConstBigInt(                                                       \
+        FR(inst->op1), codeBlock_->getRuntimeModule(), inst->op2);             \
+  }
+
+EMIT_LOAD_CONST_BIGINT(LoadConstBigInt);
+EMIT_LOAD_CONST_BIGINT(LoadConstBigIntLongIndex);
+
+#undef EMIT_LOAD_CONST_BIGINT
 
 inline void JITContext::Compiler::emitLoadConstStringLongIndex(
     const inst::LoadConstStringLongIndexInst *inst) {

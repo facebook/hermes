@@ -40,6 +40,12 @@ SHLegacyValue _sh_ljs_get_bytecode_string(
     SHRuntimeModule *runtimeModule,
     uint32_t stringID);
 
+/// Get the BigInt associated with the given RuntimeModule-specific BigInt ID.
+SHLegacyValue _sh_ljs_get_bytecode_bigint(
+    SHRuntime *shr,
+    SHRuntimeModule *runtimeModule,
+    uint32_t bigintID);
+
 /// Wrapper around Interpreter::createObjectFromBuffer.
 SHLegacyValue _interpreter_create_object_from_buffer(
     SHRuntime *shr,

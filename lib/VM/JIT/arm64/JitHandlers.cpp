@@ -73,6 +73,24 @@ SHLegacyValue _sh_ljs_get_bytecode_string(
           ->getStringPrimFromStringIDMayAllocate(stringID));
 }
 
+SHLegacyValue _sh_ljs_get_bytecode_bigint(
+    SHRuntime *shr,
+    SHRuntimeModule *runtimeModule,
+    uint32_t bigintID) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = BigIntPrimitive::fromBytes(
+        runtime,
+        ((RuntimeModule *)runtimeModule)->getBigIntBytesFromBigIntId(bigintID));
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return *res;
+}
+
 SHLegacyValue _interpreter_create_object_from_buffer(
     SHRuntime *shr,
     SHCodeBlock *codeBlock,

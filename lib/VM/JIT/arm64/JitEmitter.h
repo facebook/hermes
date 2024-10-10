@@ -423,6 +423,8 @@ class Emitter {
   void loadConstBits64(FR frRes, uint64_t val, FRType type, const char *name);
   void
   loadConstString(FR frRes, RuntimeModule *runtimeModule, uint32_t stringID);
+  void
+  loadConstBigInt(FR frRes, RuntimeModule *runtimeModule, uint32_t bigIntID);
   void toNumber(FR frRes, FR frInput);
   void toNumeric(FR frRes, FR frInput);
   void toInt32(FR frRes, FR frInput);

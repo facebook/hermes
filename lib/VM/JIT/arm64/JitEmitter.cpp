@@ -1194,6 +1194,28 @@ void Emitter::loadConstString(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::loadConstBigInt(
+    FR frRes,
+    RuntimeModule *runtimeModule,
+    uint32_t bigIntID) {
+  comment("// LoadConstBigInt r%u, bigIntID %u", frRes.index(), bigIntID);
+
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadBits64InGp(a64::x1, (uint64_t)runtimeModule, "RuntimeModule");
+  a.mov(a64::w2, bigIntID);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHRuntimeModule *, uint32_t),
+      _sh_ljs_get_bytecode_bigint);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<true>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::toNumber(FR frRes, FR frInput) {
   comment("// %s r%u, r%u", "toNumber", frRes.index(), frInput.index());
   if (isFRKnownNumber(frInput))
