@@ -3088,13 +3088,24 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   loadConstBits64(
       ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
 
-  // Ensure that all the outgoing values are stored into the frame registers for
-  // the call.
-  syncToFrame(calleeFrameArg);
-  syncToFrame(ntFrameArg);
+#ifndef NDEBUG
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  assert(
+      !frameRegs_[calleeFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
+  assert(
+      !frameRegs_[ntFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
 
-  for (uint32_t i = 0; i < argc; ++i)
-    syncToFrame(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  for (uint32_t i = 0; i < argc; ++i) {
+    assert(
+        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
+  }
+#endif
 
   freeAllFRTempExcept({});
 
@@ -3140,7 +3151,9 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
       auto argReg = getOrAllocFRInAnyReg(args[i], true);
       movFRFromHW(argLoc, argReg, frameRegs_[args[i].index()].localType);
     }
-    syncToFrame(argLoc);
+    assert(
+        !frameRegs_[argLoc.index()].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
   }
 
   // Get a register for the new target.
@@ -3175,8 +3188,15 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
   uint32_t nRegs = frameRegs_.size();
 
   // CallBuiltin internally sets "this", so we don't sync it to memory.
-  for (uint32_t i = 1; i < argc; ++i)
-    syncToFrame(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+#ifndef NDEBUG
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  for (uint32_t i = 0; i < argc; ++i) {
+    assert(
+        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
+  }
+#endif
 
   syncAllFRTempExcept({});
   freeAllFRTempExcept({});
@@ -3231,12 +3251,22 @@ void Emitter::callWithNewTarget(
         ntFrameArg, newTargetReg, frameRegs_[frNewTarget.index()].localType);
   }
 
-  // Sync the set up call stack to the frame memory.
-  for (uint32_t i = 0; i < argc; ++i)
-    syncToFrame(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+#ifndef NDEBUG
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  for (uint32_t i = 0; i < argc; ++i) {
+    assert(
+        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
+  }
 
-  syncToFrame(calleeFrameArg);
-  syncToFrame(ntFrameArg);
+  assert(
+      !frameRegs_[calleeFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
+  assert(
+      !frameRegs_[ntFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
+#endif
 
   syncAllFRTempExcept({});
   freeAllFRTempExcept(frRes);
