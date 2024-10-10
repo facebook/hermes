@@ -266,6 +266,9 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   }
 #endif
 
+// error: 'fork' is unavailable: not available on tvOS
+// error: 'execve' is unavailable: not available on tvOS
+#if !(defined(TARGET_OS_TV) && TARGET_OS_TV)
   // Create a child process.
   int child = fork();
   switch (child) {
@@ -325,6 +328,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   PI.Process = child;
 
   return true;
+#endif // TARGET_OS_TV
 }
 
 namespace llvh {

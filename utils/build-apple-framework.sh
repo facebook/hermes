@@ -37,6 +37,10 @@ function get_visionos_deployment_target {
   ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').deployment_target('visionos')"
 }
 
+function get_tvos_deployment_target {
+  ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').deployment_target('tvos')"
+}
+
 function get_mac_deployment_target {
   ruby -rcocoapods-core -rjson -e "puts Pod::Specification.from_file('hermes-engine.podspec').deployment_target('osx')"
 }
@@ -51,7 +55,7 @@ function build_host_hermesc {
 function configure_apple_framework {
   local build_cli_tools enable_bitcode
 
-  if [[ $1 == iphoneos || $1 == catalyst || $1 == visionos ]]; then
+  if [[ $1 == appletvos || $1 == iphoneos || $1 == catalyst || $1 == visionos ]]; then
     enable_bitcode="true"
   else
     enable_bitcode="false"
