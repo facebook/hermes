@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<31f8b58788b6a7fcfcd45dd78a74c3f9>>
+// @generated SignedSource<<cedec18119ebdcfb5d5e9616cf9b28bd>>
 
 #pragma once
 
@@ -79,6 +79,8 @@ struct InternalPropertyDescriptor;
 struct ObjectPreview;
 struct PropertyDescriptor;
 struct PropertyPreview;
+struct ReleaseObjectGroupRequest;
+struct ReleaseObjectRequest;
 struct RemoteObject;
 using RemoteObjectId = std::string;
 struct RunIfWaitingForDebuggerRequest;
@@ -161,6 +163,8 @@ struct RequestHandler {
   virtual void handle(const runtime::GetHeapUsageRequest &req) = 0;
   virtual void handle(const runtime::GetPropertiesRequest &req) = 0;
   virtual void handle(const runtime::GlobalLexicalScopeNamesRequest &req) = 0;
+  virtual void handle(const runtime::ReleaseObjectRequest &req) = 0;
+  virtual void handle(const runtime::ReleaseObjectGroupRequest &req) = 0;
   virtual void handle(const runtime::RunIfWaitingForDebuggerRequest &req) = 0;
 };
 
@@ -204,6 +208,8 @@ struct NoopRequestHandler : public RequestHandler {
   void handle(const runtime::GetHeapUsageRequest &req) override {}
   void handle(const runtime::GetPropertiesRequest &req) override {}
   void handle(const runtime::GlobalLexicalScopeNamesRequest &req) override {}
+  void handle(const runtime::ReleaseObjectRequest &req) override {}
+  void handle(const runtime::ReleaseObjectGroupRequest &req) override {}
   void handle(const runtime::RunIfWaitingForDebuggerRequest &req) override {}
 };
 
@@ -921,6 +927,27 @@ struct runtime::GlobalLexicalScopeNamesRequest : public Request {
   void accept(RequestHandler &handler) const override;
 
   std::optional<runtime::ExecutionContextId> executionContextId;
+};
+
+struct runtime::ReleaseObjectRequest : public Request {
+  ReleaseObjectRequest();
+  static std::unique_ptr<ReleaseObjectRequest> tryMake(const JSONObject *obj);
+
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+  void accept(RequestHandler &handler) const override;
+
+  runtime::RemoteObjectId objectId{};
+};
+
+struct runtime::ReleaseObjectGroupRequest : public Request {
+  ReleaseObjectGroupRequest();
+  static std::unique_ptr<ReleaseObjectGroupRequest> tryMake(
+      const JSONObject *obj);
+
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+  void accept(RequestHandler &handler) const override;
+
+  std::string objectGroup;
 };
 
 struct runtime::RunIfWaitingForDebuggerRequest : public Request {

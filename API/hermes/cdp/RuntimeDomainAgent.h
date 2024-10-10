@@ -70,6 +70,12 @@ class RuntimeDomainAgent : public DomainAgent {
   void callFunctionOn(const m::runtime::CallFunctionOnRequest &req);
   /// Dispatches a Runtime.consoleAPICalled notification
   void consoleAPICalled(const ConsoleMessage &message, bool isBuffered);
+  /// Handles Runtime.releaseObject request
+  /// @cdp Runtime.releaseObject Allowed even if domain is not enabled.
+  void releaseObject(const m::runtime::ReleaseObjectRequest &req);
+  /// Handles Runtime.releaseObjectGroup request
+  /// @cdp Runtime.releaseObjectGroup Allowed even if domain is not enabled.
+  void releaseObjectGroup(const m::runtime::ReleaseObjectGroupRequest &req);
 
  private:
   struct Helpers {

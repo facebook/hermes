@@ -43,3 +43,5 @@ Runtime.runIfWaitingForDebugger
 Runtime.globalLexicalScopeNames
 Runtime.compileScript
 Runtime.inspectRequested
+Runtime.releaseObject
+Runtime.releaseObjectGroup

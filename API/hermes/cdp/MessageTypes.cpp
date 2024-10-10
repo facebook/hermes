@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<1aad3e25cb0b790476e59a2c064e6ccb>>
+// @generated SignedSource<<da57bd95099acd0d931a2ed451676ff8>>
 
 #include "MessageTypes.h"
 
@@ -137,6 +137,9 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
       {"Runtime.getProperties", tryMake<runtime::GetPropertiesRequest>},
       {"Runtime.globalLexicalScopeNames",
        tryMake<runtime::GlobalLexicalScopeNamesRequest>},
+      {"Runtime.releaseObject", tryMake<runtime::ReleaseObjectRequest>},
+      {"Runtime.releaseObjectGroup",
+       tryMake<runtime::ReleaseObjectGroupRequest>},
       {"Runtime.runIfWaitingForDebugger",
        tryMake<runtime::RunIfWaitingForDebuggerRequest>},
   };
@@ -1893,6 +1896,90 @@ JSONValue *runtime::GlobalLexicalScopeNamesRequest::toJsonVal(
 
 void runtime::GlobalLexicalScopeNamesRequest::accept(
     RequestHandler &handler) const {
+  handler.handle(*this);
+}
+
+runtime::ReleaseObjectRequest::ReleaseObjectRequest()
+    : Request("Runtime.releaseObject") {}
+
+std::unique_ptr<runtime::ReleaseObjectRequest>
+runtime::ReleaseObjectRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::ReleaseObjectRequest> req =
+      std::make_unique<runtime::ReleaseObjectRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->objectId, params, "objectId");
+  return req;
+}
+
+JSONValue *runtime::ReleaseObjectRequest::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
+  put(paramsProps, "objectId", objectId, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "id", id, factory);
+  put(props, "method", method, factory);
+  put(props,
+      "params",
+      factory.newObject(paramsProps.begin(), paramsProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+void runtime::ReleaseObjectRequest::accept(RequestHandler &handler) const {
+  handler.handle(*this);
+}
+
+runtime::ReleaseObjectGroupRequest::ReleaseObjectGroupRequest()
+    : Request("Runtime.releaseObjectGroup") {}
+
+std::unique_ptr<runtime::ReleaseObjectGroupRequest>
+runtime::ReleaseObjectGroupRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<runtime::ReleaseObjectGroupRequest> req =
+      std::make_unique<runtime::ReleaseObjectGroupRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->objectGroup, params, "objectGroup");
+  return req;
+}
+
+JSONValue *runtime::ReleaseObjectGroupRequest::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
+  put(paramsProps, "objectGroup", objectGroup, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "id", id, factory);
+  put(props, "method", method, factory);
+  put(props,
+      "params",
+      factory.newObject(paramsProps.begin(), paramsProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+void runtime::ReleaseObjectGroupRequest::accept(RequestHandler &handler) const {
   handler.handle(*this);
 }
 
