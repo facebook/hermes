@@ -67,6 +67,7 @@
 #include <TargetConditionals.h>
 #endif
 
+#include "llvh/Config/config.h"
 #include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
@@ -823,8 +824,7 @@ bool unset_env(const char *name) {
 void *SigAltStackLeakSuppressor::stackRoot_{nullptr};
 
 SigAltStackLeakSuppressor::~SigAltStackLeakSuppressor() {
-// error: 'sigaltstack' is unavailable: not available on tvOS
-#if !(defined(TARGET_OS_TV) && TARGET_OS_TV)
+#ifdef HAVE_SIGALTSTACK
   stack_t oldAltStack;
   if (sigaltstack(nullptr, &oldAltStack) == 0) {
     stackRoot_ = oldAltStack.ss_sp;
