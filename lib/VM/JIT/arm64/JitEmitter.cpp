@@ -1029,6 +1029,22 @@ void Emitter::unreachable() {
   EMIT_RUNTIME_CALL(*this, void (*)(), _sh_unreachable);
 }
 
+void Emitter::profilePoint(uint16_t pointIndex) {
+  comment("// ProfilePoint %u", pointIndex);
+#ifdef HERMESVM_PROFILER_BB
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, pointIndex);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, uint16_t),
+      _interpreter_register_bb_execution);
+#else
+  // No-op if profiling is not enabled.
+#endif
+}
+
 void Emitter::ret(FR frValue) {
   movHWFromFR(HWReg::gpX(22), frValue);
   a.b(returnLabel_);

@@ -287,7 +287,6 @@ EMIT_UNIMPLEMENTED(CallWithNewTargetLong)
 EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(ProfilePoint)
 EMIT_UNIMPLEMENTED(IteratorBegin)
 EMIT_UNIMPLEMENTED(IteratorNext)
 EMIT_UNIMPLEMENTED(IteratorClose)
@@ -297,6 +296,11 @@ EMIT_UNIMPLEMENTED(IteratorClose)
 inline void JITContext::Compiler::emitUnreachable(
     const inst::UnreachableInst *inst) {
   em_.unreachable();
+}
+
+inline void JITContext::Compiler::emitProfilePoint(
+    const inst::ProfilePointInst *inst) {
+  em_.profilePoint(inst->op1);
 }
 
 inline void JITContext::Compiler::emitLoadParam(

@@ -406,6 +406,9 @@ class Emitter {
   /// Abort execution.
   void unreachable();
 
+  /// Emit profiling information if profiling is enabled.
+  void profilePoint(uint16_t point);
+
   /// Call a JS function.
   void call(FR frRes, FR frCallee, uint32_t argc);
   void callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args);

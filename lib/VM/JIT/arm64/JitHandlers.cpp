@@ -191,6 +191,14 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right) {
   return *result;
 }
 
+#ifdef HERMESVM_PROFILER_BB
+void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex) {
+  Runtime &runtime = getRuntime(shr);
+  CodeBlock *codeBlock = runtime.getCurrentFrame().getCalleeCodeBlock(runtime);
+  runtime.getBasicBlockExecutionInfo().executeBlock(codeBlock, pointIndex);
+}
+#endif
+
 } // namespace hermes::vm
 
 #endif // HERMESVM_JIT
