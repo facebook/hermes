@@ -863,12 +863,38 @@ class Emitter {
     comment("    ; alloc: x%u (temp)", res.indexInClass());
     return res;
   }
+  /// Free \p hwReg, which may be any HWReg.
   void freeReg(HWReg hwReg);
+  /// If \p hwReg is a valid temp associated with an FR, sync it to the global
+  /// register if the FR has one, else store it in the frame. Then free the
+  /// temp, making it available to be used again.
+  /// Else, do nothing.
   void syncAndFreeTempReg(HWReg hwReg);
   HWReg useReg(HWReg hwReg);
 
-  void spillTempReg(HWReg toSpill);
-  void syncToMem(FR fr);
+  /// Ensure that an HWReg currently containing an FR is available to be used
+  /// again by "spilling" its value to its canonical location (either the frame
+  /// or a global reg). Conceptually it then frees the HWReg and immediately
+  /// allocates it again, so now it is as if it was just allocated.
+  /// \pre \p toSpill must have a corresponding FR.
+  void _spillTempForFR(HWReg toSpill);
+
+  /// Ensure that \p fr is stored in the frame so that we can take its address
+  /// (e.g. when passing the address of \p fr as a param to a function).
+  ///
+  /// Store any temporary or global register associated with \p fr to the frame
+  /// in memory.
+  void syncToFrame(FR fr);
+
+  /// Ensure all FRs have their values stored in either global registers or the
+  /// frame, not just temporary registers.
+  /// Must run before calls because temporary registers will be clobbered by the
+  /// call.
+  ///
+  /// Sync all temporary registers associated with FRs to either the global
+  /// register or the frame.
+  /// \param exceptFR If specified, do not sync this FR (used for output FRs
+  /// that we aren't going to load from before storing to them anyway).
   void syncAllFRTempExcept(FR exceptFR);
 
   /// Free all temporary registers associated with FRs except \p exceptFR.

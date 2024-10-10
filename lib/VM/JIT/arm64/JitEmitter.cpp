@@ -643,7 +643,7 @@ HWReg Emitter::_allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred) {
     return HWReg(*optReg, TAG{});
   // Spill one register.
   unsigned index = pr ? *pr : ra.leastRecentlyUsed();
-  spillTempReg(HWReg(index, TAG{}));
+  _spillTempForFR(HWReg(index, TAG{}));
   ra.free(index);
   // Allocate again. This must succeed.
   return HWReg(*ra.alloc(), TAG{});
@@ -683,7 +683,7 @@ void Emitter::syncAndFreeTempReg(HWReg hwReg) {
       !hwRegs_[hwReg.combinedIndex()].contains.isValid()) {
     return;
   }
-  spillTempReg(hwReg);
+  _spillTempForFR(hwReg);
   freeReg(hwReg);
 }
 
@@ -702,7 +702,7 @@ HWReg Emitter::useReg(HWReg hwReg) {
   return hwReg;
 }
 
-void Emitter::spillTempReg(HWReg toSpill) {
+void Emitter::_spillTempForFR(HWReg toSpill) {
   assert(isTemp(toSpill));
 
   HWRegState &hwState = hwRegs_[toSpill.combinedIndex()];
@@ -733,7 +733,7 @@ void Emitter::spillTempReg(HWReg toSpill) {
     assert(false && "local reg not used by FR");
 }
 
-void Emitter::syncToMem(FR fr) {
+void Emitter::syncToFrame(FR fr) {
   FRState &frState = frameRegs_[fr.index()];
   if (frState.frameUpToDate)
     return;
@@ -1203,7 +1203,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   hwInput = getOrAllocFRInGpX(frInput, true);
   a.cmp(hwInput.a64GpX(), xDoubleLim);
@@ -1253,7 +1253,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   hwInput = getOrAllocFRInGpX(frInput, true);
   a.cmp(hwInput.a64GpX(), xDoubleLim);
@@ -1303,7 +1303,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -1357,7 +1357,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -1416,7 +1416,7 @@ void Emitter::newObject(FR frRes) {
 void Emitter::newObjectWithParent(FR frRes, FR frParent) {
   comment("// NewObjectWithParent r%u, r%u", frRes.index(), frParent.index());
   syncAllFRTempExcept(frRes != frParent ? frRes : FR());
-  syncToMem(frParent);
+  syncToFrame(frParent);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frParent);
@@ -1608,8 +1608,8 @@ void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
       frIdx.index(),
       frVal.index());
   syncAllFRTempExcept({});
-  syncToMem(frArr);
-  syncToMem(frVal);
+  syncToFrame(frArr);
+  syncToFrame(frVal);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frVal);
@@ -1624,8 +1624,8 @@ void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
 void Emitter::fastArrayPush(FR frArr, FR frVal) {
   comment("// FastArrayPush r%u, r%u", frArr.index(), frVal.index());
   syncAllFRTempExcept({});
-  syncToMem(frArr);
-  syncToMem(frVal);
+  syncToFrame(frArr);
+  syncToFrame(frVal);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frVal);
@@ -1639,8 +1639,8 @@ void Emitter::fastArrayPush(FR frArr, FR frVal) {
 void Emitter::fastArrayAppend(FR frArr, FR frOther) {
   comment("// FastArrayAppend r%u, r%u", frArr.index(), frOther.index());
   syncAllFRTempExcept({});
-  syncToMem(frArr);
-  syncToMem(frOther);
+  syncToFrame(frArr);
+  syncToFrame(frOther);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frOther);
@@ -1718,7 +1718,7 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
       size);
 
   syncAllFRTempExcept(frRes != frParent ? frRes : FR{});
-  syncToMem(frParent);
+  syncToFrame(frParent);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -1866,7 +1866,7 @@ void Emitter::createClosure(
       frEnv.index(),
       functionID);
   syncAllFRTempExcept(frRes != frEnv ? frRes : FR());
-  syncToMem(frEnv);
+  syncToFrame(frEnv);
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frEnv);
@@ -1891,7 +1891,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
   asmjit::Label contLab = newContLabel();
 
   syncAllFRTempExcept(frRes != frLazyReg ? frRes : FR());
-  syncToMem(frLazyReg);
+  syncToFrame(frLazyReg);
 
   HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
   HWReg hwTemp = allocTempGpX();
@@ -1955,8 +1955,8 @@ void Emitter::createThis(
       cacheIdx);
 
   syncAllFRTempExcept(frRes != frCallee && frRes != frNewTarget ? frRes : FR());
-  syncToMem(frCallee);
-  syncToMem(frNewTarget);
+  syncToFrame(frCallee);
+  syncToFrame(frNewTarget);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2158,8 +2158,8 @@ void Emitter::typedStoreParent(FR frStoredValue, FR frObj) {
   comment("// TypedStoreParent r%u, r%u", frStoredValue.index(), frObj.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frStoredValue);
-  syncToMem(frObj);
+  syncToFrame(frStoredValue);
+  syncToFrame(frObj);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2190,9 +2190,9 @@ void Emitter::putByValImpl(
       frValue.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frKey);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2213,7 +2213,7 @@ void Emitter::delByIdImpl(
   comment("// %s r%u, r%u, %u", name, frRes.index(), frTarget.index(), key);
 
   syncAllFRTempExcept(frRes != frTarget ? frRes : FR{});
-  syncToMem(frTarget);
+  syncToFrame(frTarget);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2242,8 +2242,8 @@ void Emitter::delByValImpl(
       frKey.index());
 
   syncAllFRTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR{});
-  syncToMem(frTarget);
-  syncToMem(frKey);
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2399,13 +2399,13 @@ void Emitter::getByIdImpl(
     // Ensure the frSource is in memory for the fast path. Note that we haven't
     // done it before.
     // Note that this is the reason we can't use a regular slow path at the
-    // end of the function. We need syncToMem() to execute in the slow path,
+    // end of the function. We need syncToFrame() to execute in the slow path,
     // but by then the state is gone.
-    syncToMem(frSource);
+    syncToFrame(frSource);
   } else {
     // We arrive here if there is no fast path. Ensure that frSource is in
     // memory.
-    syncToMem(frSource);
+    syncToFrame(frSource);
     // All temporaries will be clobbered.
     freeAllFRTempExcept({});
 
@@ -2543,8 +2543,8 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
       frKey.index());
 
   syncAllFRTempExcept(frRes != frSource && frRes != frKey ? frRes : FR());
-  syncToMem(frSource);
-  syncToMem(frKey);
+  syncToFrame(frSource);
+  syncToFrame(frKey);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2564,7 +2564,7 @@ void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
   comment("// getByIdx r%u, r%u, %u", frRes.index(), frSource.index(), key);
 
   syncAllFRTempExcept(frRes != frSource ? frRes : FR());
-  syncToMem(frSource);
+  syncToFrame(frSource);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2602,8 +2602,8 @@ void Emitter::putByIdImpl(
       symID);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2631,8 +2631,8 @@ void Emitter::putOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
       "// putOwnByIdx r%u, r%u, %u", frTarget.index(), frValue.index(), key);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2653,9 +2653,9 @@ void Emitter::putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable) {
       frKey.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
-  syncToMem(frKey);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
+  syncToFrame(frKey);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2692,10 +2692,10 @@ void Emitter::putOwnGetterSetterByVal(
       enumerable);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frKey);
-  syncToMem(frGetter);
-  syncToMem(frSetter);
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frGetter);
+  syncToFrame(frSetter);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2730,8 +2730,8 @@ void Emitter::putNewOwnById(
       key);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2828,8 +2828,8 @@ void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
       slotIdx);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2863,8 +2863,8 @@ void Emitter::instanceOf(FR frRes, FR frLeft, FR frRight) {
       frRight.index());
 
   syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2885,8 +2885,8 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
       "// isIn r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
 
   syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -3018,11 +3018,11 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
 
   // Ensure that all the outgoing values are stored into the frame registers for
   // the call.
-  syncToMem(calleeFrameArg);
-  syncToMem(ntFrameArg);
+  syncToFrame(calleeFrameArg);
+  syncToFrame(ntFrameArg);
 
   for (uint32_t i = 0; i < argc; ++i)
-    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+    syncToFrame(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
 
   freeAllFRTempExcept({});
 
@@ -3056,7 +3056,7 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
     movFRFromHW(
         calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
   }
-  syncToMem(calleeFrameArg);
+  syncToFrame(calleeFrameArg);
 
   for (uint32_t i = 0; i < args.size(); ++i) {
     auto argLoc = FR{nRegs + hbc::StackFrameLayout::ThisArg - i};
@@ -3068,14 +3068,14 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
       auto argReg = getOrAllocFRInAnyReg(args[i], true);
       movFRFromHW(argLoc, argReg, frameRegs_[args[i].index()].localType);
     }
-    syncToMem(argLoc);
+    syncToFrame(argLoc);
   }
 
   // Get a register for the new target.
   FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
   loadConstBits64(
       ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
-  syncToMem(ntFrameArg);
+  syncToFrame(ntFrameArg);
 
   // For now we sync all registers, since we skip writing to the frame in some
   // cases above, but in principle, we could track frRes specially.
@@ -3104,7 +3104,7 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
 
   // CallBuiltin internally sets "this", so we don't sync it to memory.
   for (uint32_t i = 1; i < argc; ++i)
-    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+    syncToFrame(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
 
   syncAllFRTempExcept({});
   freeAllFRTempExcept({});
@@ -3161,10 +3161,10 @@ void Emitter::callWithNewTarget(
 
   // Sync the set up call stack to the frame memory.
   for (uint32_t i = 0; i < argc; ++i)
-    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+    syncToFrame(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
 
-  syncToMem(calleeFrameArg);
-  syncToMem(ntFrameArg);
+  syncToFrame(calleeFrameArg);
+  syncToFrame(ntFrameArg);
 
   syncAllFRTempExcept({});
   freeAllFRTempExcept(frRes);
@@ -3230,7 +3230,7 @@ void Emitter::arithUnop(
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frInput ? frRes : FR());
-    syncToMem(frInput);
+    syncToFrame(frInput);
   }
 
   if (inputIsNum) {
@@ -3310,7 +3310,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -3366,7 +3366,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
 void Emitter::typeOf(FR frRes, FR frInput) {
   comment("// TypeOf r%u, r%u", frRes.index(), frInput.index());
   syncAllFRTempExcept(frRes == frInput ? FR() : frRes);
-  syncToMem(frInput);
+  syncToFrame(frInput);
   freeAllFRTempExcept(FR());
 
   a.mov(a64::x0, xRuntime);
@@ -3389,7 +3389,7 @@ void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
       frSize.index());
   syncAllFRTempExcept({});
   // We have to sync frObj to the frame since it is an in/out parameter.
-  syncToMem(frObj);
+  syncToFrame(frObj);
   // No need to sync frIdx and frSize since they are just out parameters.
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
@@ -3428,10 +3428,10 @@ void Emitter::getNextPName(
       frSize.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frProps);
-  syncToMem(frObj);
-  syncToMem(frIdx);
-  syncToMem(frSize);
+  syncToFrame(frProps);
+  syncToFrame(frObj);
+  syncToFrame(frIdx);
+  syncToFrame(frSize);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frProps);
@@ -3461,8 +3461,8 @@ void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
       "// AddS r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
 
   syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -3506,8 +3506,8 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
 
   if (!leftIsNum) {
@@ -3604,8 +3604,8 @@ void Emitter::arithBinOp(
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
 
   if (leftIsNum) {
@@ -3699,8 +3699,8 @@ void Emitter::bitBinOp(
   // set, since subsequent instructions cannot rely on it. To do this, we would
   // need to preserve information for the slow path to know whether they were
   // already sync'd to memory.
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -3882,8 +3882,8 @@ void Emitter::jCond(
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
   // Do this always, since this could be the end of the BB.
   syncAllFRTempExcept(FR());
@@ -3991,8 +3991,8 @@ void Emitter::compareImpl(
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
 
   if (leftIsNum) {
@@ -4099,8 +4099,8 @@ void Emitter::getArgumentsPropByValImpl(
   asmjit::Label contLab = newContLabel();
 
   syncAllFRTempExcept(frRes != frIndex && frRes != frLazyReg ? frRes : FR());
-  syncToMem(frIndex);
-  syncToMem(frLazyReg);
+  syncToFrame(frIndex);
+  syncToFrame(frLazyReg);
   HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
   HWReg hwIndex = getOrAllocFRInVecD(frIndex, true);
   HWReg hwTempIndex = allocTempGpX();
@@ -4174,7 +4174,7 @@ void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
   asmjit::Label contLab = newContLabel();
 
   syncAllFRTempExcept({});
-  syncToMem(frLazyReg);
+  syncToFrame(frLazyReg);
 
   HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
   HWReg hwTemp = allocTempGpX();
