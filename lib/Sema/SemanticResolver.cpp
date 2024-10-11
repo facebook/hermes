@@ -70,9 +70,6 @@ bool SemanticResolver::runLazy(
     }
   });
 
-  // Functions that were defined using method syntax can reference super.
-  canReferenceSuper_ = rootNode->isMethodDefinition;
-
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{
       *this, rootNode, semInfo, FunctionContext::LazyTag{}};

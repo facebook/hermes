@@ -98,7 +98,8 @@ Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint,
     ESTree::Node *superClassNode,
-    Function::DefinitionKind functionKind) {
+    Function::DefinitionKind functionKind,
+    Variable *homeObject) {
   if (FE->_async && FE->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
         FE->getSourceRange(), Twine("async generators are unsupported"));
@@ -113,13 +114,22 @@ Value *ESTreeIRGen::genFunctionExpression(
       id ? Identifier::getFromPointer(id->_name) : nameHint;
 
   auto *parentScope = curFunction()->curScope->getVariableScope();
+  auto capturedStateForAsync = curFunction()->capturedState;
+  // Update the captured state of the async function to use the homeObject we
+  // were given.
+  capturedStateForAsync.homeObject = homeObject;
   Function *newFunc = FE->_async
       ? genAsyncFunction(
-            originalNameIden, FE, parentScope, curFunction()->capturedState)
+            originalNameIden, FE, parentScope, capturedStateForAsync)
       : FE->_generator
-      ? genGeneratorFunction(originalNameIden, FE, parentScope)
+      ? genGeneratorFunction(originalNameIden, FE, parentScope, homeObject)
       : genBasicFunction(
-            originalNameIden, FE, parentScope, superClassNode, functionKind);
+            originalNameIden,
+            FE,
+            parentScope,
+            superClassNode,
+            functionKind,
+            homeObject);
 
   Value *closure =
       Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
@@ -225,7 +235,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     ESTree::Node *superClassNode,
-    Function::DefinitionKind functionKind) {
+    Function::DefinitionKind functionKind,
+    Variable *homeObject) {
   assert(functionNode && "Function AST cannot be null");
   assert(
       functionKind != Function::DefinitionKind::GeneratorInnerArrow &&
@@ -279,11 +290,13 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
                       isGeneratorInnerFunction,
                       superClassNode,
                       body,
-                      parentScope] {
+                      parentScope,
+                      homeObject] {
     FunctionContext newFunctionContext{
         this, newFunction, functionNode->getSemInfo()};
     newFunctionContext.superClassNode_ = superClassNode;
     newFunctionContext.typedClassContext = typedClassContext;
+    newFunctionContext.capturedState.homeObject = homeObject;
 
     if (isGeneratorInnerFunction) {
       // StartGeneratorInst
@@ -375,7 +388,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
 Function *ESTreeIRGen::genGeneratorFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
-    VariableScope *parentScope) {
+    VariableScope *parentScope,
+    Variable *homeObject) {
   assert(functionNode && "Function AST cannot be null");
 
   if (Value *compiled =
@@ -409,7 +423,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
                       functionNode,
                       originalName,
                       capturedState = curFunction()->capturedState,
-                      parentScope]() {
+                      parentScope,
+                      homeObject]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
 
     // We pass InitES5CaptureState::No to emitFunctionPrologue because generator
@@ -454,12 +469,15 @@ Function *ESTreeIRGen::genGeneratorFunction(
           capturedState,
           Function::DefinitionKind::GeneratorInnerArrow);
     } else {
+      // Here we pass the homeObject because we want the actual user code to be
+      // able to use the super that the outer generator had access to.
       innerFn = genBasicFunction(
           innerName,
           functionNode,
           parentScope,
           /* superClassNode */ nullptr,
-          Function::DefinitionKind::GeneratorInner);
+          Function::DefinitionKind::GeneratorInner,
+          homeObject);
     }
 
     // Generator functions do not create their own scope, so use the parent's
@@ -562,7 +580,8 @@ Function *ESTreeIRGen::genAsyncFunction(
     auto *gen = genGeneratorFunction(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
-        curFunction()->curScope->getVariableScope());
+        curFunction()->curScope->getVariableScope(),
+        capturedState.homeObject);
 
     auto *genClosure =
         Builder.createCreateFunctionInst(curFunction()->curScope, gen);
