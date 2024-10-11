@@ -376,6 +376,8 @@ class Emitter {
   asmjit::CodeHolder code{};
   a64::Assembler a{};
 
+  /// Create an Emitter, but do not emit any actual code.
+  /// Use \c enter to set up the stack frame before emitting the actual code.
   explicit Emitter(
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
@@ -383,8 +385,6 @@ class Emitter {
       PropertyCacheEntry *readPropertyCache,
       PropertyCacheEntry *writePropertyCache,
       uint32_t numFrameRegs,
-      uint32_t numCount,
-      uint32_t npCount,
       const std::function<void(std::string &&message)> &longjmpError);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
@@ -395,6 +395,13 @@ class Emitter {
 #else
   void assertPostInstructionInvariants();
 #endif
+
+  /// Allocate global registers and set up the stack frame.
+  /// Must be called before emitting any real code.
+  /// \param numCount the first numCount registers are "number" registers.
+  /// \param npCount the first npCount registers after the number registers are
+  ///   non-pointer registers.
+  void enter(uint32_t numCount, uint32_t npCount);
 
   /// Log a comment.
   /// Annotated with printf-style format.

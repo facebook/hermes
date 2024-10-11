@@ -98,8 +98,6 @@ class JITContext::Compiler {
             codeBlock->writePropertyCache(),
             // TODO: is getFrameSize() the right thing to call?
             codeBlock->getFrameSize(),
-            codeBlock->getFunctionHeader().numberRegCount(),
-            codeBlock->getFunctionHeader().nonPtrRegCount(),
             [this](std::string &&message) {
               otherErrorMessage_ = std::move(message);
               error_ = Error::Other;
@@ -243,6 +241,10 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
        ++bbIndex) {
     bbLabels_.push_back(em_.newPrefLabel("BB", bbIndex));
   }
+
+  em_.enter(
+      codeBlock_->getFunctionHeader().numberRegCount(),
+      codeBlock_->getFunctionHeader().nonPtrRegCount());
 
   for (uint32_t bbIndex = 0, e = basicBlocks_.size() - 1; bbIndex < e;
        ++bbIndex) {

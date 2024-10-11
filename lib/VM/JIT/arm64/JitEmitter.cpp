@@ -246,8 +246,6 @@ Emitter::Emitter(
     PropertyCacheEntry *readPropertyCache,
     PropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
-    unsigned numCount,
-    unsigned npCount,
     const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
       frameRegs_(numFrameRegs),
@@ -269,6 +267,14 @@ Emitter::Emitter(
   roDataLabel_ = a.newNamedLabel("RO_DATA");
   returnLabel_ = a.newNamedLabel("leave");
 
+  // Save read/write property cache addresses.
+  roOfsReadPropertyCachePtr_ =
+      uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
+  roOfsWritePropertyCachePtr_ =
+      uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
+}
+
+void Emitter::enter(uint32_t numCount, uint32_t npCount) {
   unsigned nextVec = kVecSaved.first;
   unsigned nextGp = kGPSaved.first;
 
@@ -307,13 +313,8 @@ Emitter::Emitter(
     frameRegs_[frIndex].globalType = FRType::UnknownNonPtr;
   }
 
-  // Save read/write property cache addresses.
-  roOfsReadPropertyCachePtr_ =
-      uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
-  roOfsWritePropertyCachePtr_ =
-      uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
-
-  frameSetup(numFrameRegs, nextGp - kGPSaved.first, nextVec - kVecSaved.first);
+  frameSetup(
+      frameRegs_.size(), nextGp - kGPSaved.first, nextVec - kVecSaved.first);
 }
 
 void Emitter::comment(const char *fmt, ...) {
