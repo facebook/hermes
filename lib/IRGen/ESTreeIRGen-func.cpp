@@ -1274,11 +1274,13 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
     Builder.setInsertionPoint(&*entry.begin());
 
     EvalCompilationData data{curFunction()->getSemInfo()};
-
+    // Only persist `this` and `new.target` if we are saving eval data for an
+    // arrow function.
+    bool isArrow = F->getDefinitionKind() == Function::DefinitionKind::ES6Arrow;
     auto *evalData = Builder.createEvalCompilationDataInst(
         std::move(data),
-        nullptr,
-        nullptr,
+        isArrow ? curFunction()->capturedState.thisVal : nullptr,
+        isArrow ? curFunction()->capturedState.newTarget : nullptr,
         nullptr,
         curFunction()->curScope->getVariableScope());
     // This is never emitted, it has no location.

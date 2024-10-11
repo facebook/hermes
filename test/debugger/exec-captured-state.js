@@ -29,6 +29,18 @@ foo.call(10);
   Reflect.construct(foo, [], bar);
 })();
 
+(function () {
+  function foo() {
+    let arr = () => {
+      debugger;
+    };
+    this.a = 10;
+    arr();
+  }
+  foo.b = 11;
+  new foo();
+})();
+
 // CHECK: Break on 'debugger' statement in baz: {{.*}}:14:7
 // CHECK-NEXT: 3
 // CHECK-NEXT: 10
@@ -41,3 +53,10 @@ foo.call(10);
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: Break on 'debugger' statement in foo: {{.*}}:25:5
 // CHECK-NEXT: 42
+// CHECK-NEXT: Continuing execution
+// CHECK-NEXT: Break on 'debugger' statement in arr: {{.*}}:35:7
+// CHECK-NEXT: 10
+// CHECK-NEXT: 11
+// CHECK-NEXT: Stepped to foo: {{.*}}:38:8
+// CHECK-NEXT: 10
+// CHECK-NEXT: 11

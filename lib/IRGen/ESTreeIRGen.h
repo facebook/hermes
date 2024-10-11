@@ -508,8 +508,8 @@ class ESTreeIRGen {
   void doIt(llvh::StringRef topLevelFunctionName);
 
   /// Perform IRGeneration for the whole module.
-  /// \param varScope the variable scope to resolve in, never nullptr.
-  Function *doItInScope(VariableScope *varScope);
+  /// \param evalDataInst must not contain a null varScope.
+  Function *doItInScope(EvalCompilationDataInst *evalDataInst);
 
   /// Perform IR generation for a given CJS module.
   void doCJSModule(

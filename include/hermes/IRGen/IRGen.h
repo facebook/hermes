@@ -73,12 +73,12 @@ Function *generateLazyFunctionIR(
 /// Generate IR for strict-mode local eval, in a new function.
 /// Populates the module with any new Functions created as a result.
 /// \param M the module to add the new Functions to.
-/// \param parentVarScope the parent variable scope for the new function.
+/// \param evalDataInst contains needed information to seed irgen.
 /// \param semCtx the semantic context for resolution.
 /// \return the newly generated function.
 Function *generateEvalIR(
     Module *M,
-    VariableScope *varScope,
+    EvalCompilationDataInst *evalDataInst,
     ESTree::FunctionLikeNode *node,
     sema::SemContext &semCtx);
 

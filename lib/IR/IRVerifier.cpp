@@ -535,9 +535,10 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
       AssertIWithMsg(
           Inst,
           llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst) ||
-              llvh::isa<LazyCompilationDataInst>(Inst),
+              llvh::isa<LazyCompilationDataInst>(Inst) ||
+              llvh::isa<EvalCompilationDataInst>(Inst),
           "Variable can only be accessed in "
-          "LoadFrame/StoreFrame/LazyData Inst.");
+          "LoadFrame/StoreFrame/LazyData/EvalData Inst.");
     }
 
     // Most instructions that accepts a stack operand must write to it. If it

@@ -294,7 +294,7 @@ static void compileEvalWorker(void *argPtr) {
 
   Function *newFunc = hermes::generateEvalIR(
       F->getParent(),
-      evalDataInst->getFuncVarScope(),
+      evalDataInst,
       llvh::cast<ESTree::FunctionLikeNode>(*optParsed),
       *semCtx);
   if (outputManager.haveErrors()) {

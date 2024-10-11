@@ -170,8 +170,10 @@ void ESTreeIRGen::doIt(llvh::StringRef topLevelFunctionName) {
   drainCompilationQueue();
 }
 
-Function *ESTreeIRGen::doItInScope(VariableScope *varScope) {
+Function *ESTreeIRGen::doItInScope(EvalCompilationDataInst *evalDataInst) {
   LLVM_DEBUG(llvh::dbgs() << "Processing program in scope.\n");
+  auto *varScope = evalDataInst->getFuncVarScope();
+  assert(varScope && "eval IRGen cannot have null variable scope");
 
   ESTree::ProgramNode *Program;
 
@@ -189,16 +191,29 @@ Function *ESTreeIRGen::doItInScope(VariableScope *varScope) {
 
   emitLazyGlobalDeclarations(semCtx_.getGlobalScope());
 
+  auto defKind = Function::DefinitionKind::ES5Function;
+  if (evalDataInst->getCapturedThis()) {
+    // If evalDataInst has a populated captured this, that means we are stopped
+    // inside of an arrow function. The way to resolve new.target/this now is to
+    // pretend that we are executing in an arrow function. Then set up the
+    // captured state before we generate the program node.
+    // If not stopped in an arrow, then new.target/this will be resolved with
+    // normal IR for looking into the function's frame, which is populated when
+    // we invoke this top-level eval function.
+    defKind = Function::DefinitionKind::ES6Arrow;
+  }
   // The function which will "execute" the module.
   Function *const newFunc = Builder.createFunction(
       "",
-      Function::DefinitionKind::ES5Function,
+      defKind,
       ESTree::isStrict(Program->strictness),
       Program->getSemInfo()->customDirectives,
       Program->getSourceRange());
 
   // Function context for topLevelFunction.
   FunctionContext mainFunctionContext{this, newFunc, Program->getSemInfo()};
+  curFunction()->capturedState.newTarget = evalDataInst->getCapturedNewTarget();
+  curFunction()->capturedState.thisVal = evalDataInst->getCapturedThis();
 
   emitFunctionPrologue(
       Program,

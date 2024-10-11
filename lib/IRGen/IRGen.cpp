@@ -63,11 +63,11 @@ Function *generateLazyFunctionIR(
 
 Function *generateEvalIR(
     Module *M,
-    VariableScope *parentVarScope,
+    EvalCompilationDataInst *evalDataInst,
     ESTree::FunctionLikeNode *node,
     sema::SemContext &semCtx) {
   flow::FlowContext flowContext{};
-  return ESTreeIRGen{M, semCtx, flowContext, node}.doItInScope(parentVarScope);
+  return ESTreeIRGen{M, semCtx, flowContext, node}.doItInScope(evalDataInst);
 }
 
 } // namespace hermes
