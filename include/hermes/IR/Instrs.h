@@ -5613,6 +5613,7 @@ class EvalCompilationDataInst : public Instruction {
     CapturedThisIdx,
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
+    HomeObjectIdx,
     FuncVarScopeIdx
   };
 
@@ -5621,6 +5622,7 @@ class EvalCompilationDataInst : public Instruction {
       Value *capturedThis,
       Value *capturedNewTarget,
       Value *capturedArguments,
+      Value *homeObject,
       VariableScope *funcVarScope)
       : Instruction(ValueKind::EvalCompilationDataInstKind), data_(data) {
     assert(
@@ -5633,6 +5635,7 @@ class EvalCompilationDataInst : public Instruction {
     pushOperand(capturedThis);
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
+    pushOperand(homeObject);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: EvalCompilationData relies on the fact that we don't delete
@@ -5676,6 +5679,10 @@ class EvalCompilationDataInst : public Instruction {
   /// \return the captured \c arguments Variable, nullptr if there is none.
   Variable *getCapturedArguments() {
     return llvh::dyn_cast<Variable>(getOperand(CapturedArgumentsIdx));
+  }
+  /// \return the captured \c homeObject Variable, nullptr if there is none.
+  Variable *getHomeObject() {
+    return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
   }
 
   static bool hasOutput() {

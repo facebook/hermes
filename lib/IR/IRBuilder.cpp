@@ -1306,6 +1306,7 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
     Variable *capturedThis,
     Value *capturedNewTarget,
     Variable *capturedArguments,
+    Variable *homeObject,
     VariableScope *funcVarScope) {
   auto *inst = new EvalCompilationDataInst(
       std::move(data),
@@ -1313,6 +1314,7 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
       capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
+      homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
       funcVarScope);
   insert(inst);
   return inst;

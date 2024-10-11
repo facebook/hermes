@@ -14,3 +14,7 @@ exec new.target.b
 finish
 exec this.a
 exec new.target.b
+continue
+exec super.prop
+finish
+exec super.prop

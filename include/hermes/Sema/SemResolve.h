@@ -79,7 +79,8 @@ bool resolveASTInScope(
     Context &astContext,
     SemContext &semCtx,
     ESTree::ProgramNode *root,
-    FunctionInfo *semInfo);
+    FunctionInfo *semInfo,
+    bool parentHadSuperBinding);
 
 /// Perform semantic resolution of a CommonJS module.
 bool resolveCommonJSAST(

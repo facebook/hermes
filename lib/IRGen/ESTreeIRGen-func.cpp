@@ -1275,13 +1275,16 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
 
     EvalCompilationData data{curFunction()->getSemInfo()};
     // Only persist `this` and `new.target` if we are saving eval data for an
-    // arrow function.
+    // arrow function. Note that the home object should always be persisted,
+    // since elsewhere in IRGen we always look into the captured state to find
+    // the home object (e.g. for arrow and non-arrow)
     bool isArrow = F->getDefinitionKind() == Function::DefinitionKind::ES6Arrow;
     auto *evalData = Builder.createEvalCompilationDataInst(
         std::move(data),
         isArrow ? curFunction()->capturedState.thisVal : nullptr,
         isArrow ? curFunction()->capturedState.newTarget : nullptr,
         nullptr,
+        curFunction()->capturedState.homeObject,
         curFunction()->curScope->getVariableScope());
     // This is never emitted, it has no location.
     evalData->setLocation({});

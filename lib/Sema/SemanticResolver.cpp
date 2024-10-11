@@ -90,7 +90,8 @@ bool SemanticResolver::runLazy(
 
 bool SemanticResolver::runInScope(
     ESTree::ProgramNode *rootNode,
-    sema::FunctionInfo *semInfo) {
+    sema::FunctionInfo *semInfo,
+    bool parentHadSuperBinding) {
   llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
       globalScope_, semCtx_.getBindingTableGlobalScope());
 
@@ -101,6 +102,8 @@ bool SemanticResolver::runInScope(
     bindingTable_.activateScope({});
   });
   rootNode->strictness = makeStrictness(semInfo->strict);
+
+  canReferenceSuper_ = parentHadSuperBinding;
 
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{*this, rootNode, semInfo, semInfo->strict, {}};

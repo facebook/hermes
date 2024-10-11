@@ -41,6 +41,17 @@ foo.call(10);
   new foo();
 })();
 
+var o = {
+  __proto__: { prop: 42 },
+  m1() {
+    let arr = () => {
+      debugger;
+    };
+    arr();
+  }
+};
+o.m1();
+
 // CHECK: Break on 'debugger' statement in baz: {{.*}}:14:7
 // CHECK-NEXT: 3
 // CHECK-NEXT: 10
@@ -60,3 +71,8 @@ foo.call(10);
 // CHECK-NEXT: Stepped to foo: {{.*}}:38:8
 // CHECK-NEXT: 10
 // CHECK-NEXT: 11
+// CHECK-NEXT: Continuing execution
+// CHECK-NEXT: Break on 'debugger' statement in arr: {{.*}}:48:7
+// CHECK-NEXT: 42
+// CHECK-NEXT: Stepped to m1: {{.*}}:50:8
+// CHECK-NEXT: 42

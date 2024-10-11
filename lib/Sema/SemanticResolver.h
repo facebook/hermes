@@ -132,8 +132,13 @@ class SemanticResolver
   /// existing function scope and store the result in \c semCtx_.
   /// \param rootNode the top-level program node to run resolution on.
   /// \param semInfo the original FunctionInfo for the parent of the local eval.
+  /// \param parentHadSuperBinding the context in which rootNode was declared in
+  /// was allowed to make property references to `super`.
   /// \return false on error.
-  bool runInScope(ESTree::ProgramNode *rootNode, sema::FunctionInfo *semInfo);
+  bool runInScope(
+      ESTree::ProgramNode *rootNode,
+      sema::FunctionInfo *semInfo,
+      bool parentHadSuperBinding);
 
   /// Validate and resolve a CommonJS function expression. It will use the
   /// existing global function and global scope, which must have been created

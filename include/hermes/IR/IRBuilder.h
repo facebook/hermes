@@ -716,6 +716,7 @@ class IRBuilder {
       Variable *capturedThis,
       Value *capturedNewTarget,
       Variable *capturedArguments,
+      Variable *homeObject,
       VariableScope *funcVarScope);
 
   /// This is an RAII object that saves and restores the source location of the

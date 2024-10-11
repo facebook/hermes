@@ -214,6 +214,7 @@ Function *ESTreeIRGen::doItInScope(EvalCompilationDataInst *evalDataInst) {
   FunctionContext mainFunctionContext{this, newFunc, Program->getSemInfo()};
   curFunction()->capturedState.newTarget = evalDataInst->getCapturedNewTarget();
   curFunction()->capturedState.thisVal = evalDataInst->getCapturedThis();
+  curFunction()->capturedState.homeObject = evalDataInst->getHomeObject();
 
   emitFunctionPrologue(
       Program,

@@ -280,13 +280,17 @@ static void compileEvalWorker(void *argPtr) {
   std::shared_ptr<sema::SemContext> semCtx =
       std::make_shared<sema::SemContext>(context, provider->shareSemCtx());
 
+  // A non-null home object means the parent function context could reference
+  // super.
+  bool parentHadSuperBinding = evalDataInst->getHomeObject() != nullptr;
   // If parsing or resolution fails, report the error and return.
   if (!optParsed ||
       !sema::resolveASTInScope(
           context,
           *semCtx,
           llvh::cast<ESTree::ProgramNode>(*optParsed),
-          evalData.semInfo)) {
+          evalData.semInfo,
+          parentHadSuperBinding)) {
     data->success = false;
     data->error = outputManager.getErrorString();
     return;
