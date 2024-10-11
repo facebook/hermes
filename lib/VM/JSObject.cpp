@@ -697,7 +697,7 @@ static bool canNewPropertyBeIndexed(DefinePropertyFlags dpf) {
 struct JSObject::Helper {
  public:
   LLVM_ATTRIBUTE_ALWAYS_INLINE
-  static ObjectFlags &flags(JSObject *self) {
+  static SHObjectFlags &flags(JSObject *self) {
     return self->flags_;
   }
 
