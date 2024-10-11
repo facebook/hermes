@@ -449,6 +449,12 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     } else if (method == "discardConsoleEntries") {
       runtimeAgent_->discardConsoleEntries(
           static_cast<m::runtime::DiscardConsoleEntriesRequest &>(*command));
+    } else if (method == "releaseObject") {
+      runtimeAgent_->releaseObject(
+          static_cast<m::runtime::ReleaseObjectRequest &>(*command));
+    } else if (method == "releaseObjectGroup") {
+      runtimeAgent_->releaseObjectGroup(
+          static_cast<m::runtime::ReleaseObjectGroupRequest &>(*command));
     } else {
       handled = false;
     }

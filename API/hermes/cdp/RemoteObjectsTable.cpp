@@ -115,17 +115,19 @@ std::string RemoteObjectsTable::getObjectGroup(const std::string &objId) const {
   return it->second;
 }
 
-void RemoteObjectsTable::releaseObject(int64_t id) {
+bool RemoteObjectsTable::releaseObject(int64_t id) {
   if (::isScopeId(id)) {
-    scopes_.erase(id);
-  } else if (isValueId(id)) {
-    values_.erase(id);
+    return scopes_.erase(id) != 0;
   }
+  if (isValueId(id)) {
+    return values_.erase(id) != 0;
+  }
+  return false;
 }
 
-void RemoteObjectsTable::releaseObject(const std::string &objId) {
+bool RemoteObjectsTable::releaseObject(const std::string &objId) {
   int64_t id = toId(objId);
-  releaseObject(id);
+  return releaseObject(id);
 }
 
 void RemoteObjectsTable::releaseObjectGroup(const std::string &objectGroup) {
