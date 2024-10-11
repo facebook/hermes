@@ -4828,6 +4828,55 @@ class TypedLoadParentInst : public Instruction {
   }
 };
 
+class LoadParentNoTrapsInst : public Instruction {
+  LoadParentNoTrapsInst(const LoadParentNoTrapsInst &) = delete;
+  void operator=(const LoadParentNoTrapsInst &) = delete;
+
+ public:
+  enum { ObjectIdx };
+
+  explicit LoadParentNoTrapsInst(Value *object)
+      : Instruction(ValueKind::LoadParentNoTrapsInstKind) {
+    assert(
+        object->getType().isObjectType() &&
+        "object input must be of type object");
+    setType(*getInherentTypeImpl());
+    pushOperand(object);
+  }
+  explicit LoadParentNoTrapsInst(
+      const LoadParentNoTrapsInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    // The parent of an object is either another object or null.
+    return Type::unionTy(Type::createObject(), Type::createNull());
+  }
+
+  Value *getObject() {
+    return getOperand(ObjectIdx);
+  }
+
+  const Value *getObject() const {
+    return getOperand(ObjectIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setReadHeap().setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LoadParentNoTrapsInstKind;
+  }
+};
+
 class TypedStoreParentInst : public Instruction {
   TypedStoreParentInst(const TypedStoreParentInst &) = delete;
   void operator=(const TypedStoreParentInst &) = delete;

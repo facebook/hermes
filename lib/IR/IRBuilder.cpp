@@ -1174,6 +1174,12 @@ FastArrayLengthInst *IRBuilder::createFastArrayLengthInst(Value *array) {
   return I;
 }
 
+LoadParentNoTrapsInst *IRBuilder::createLoadParentNoTrapsInst(Value *object) {
+  auto *inst = new LoadParentNoTrapsInst(object);
+  insert(inst);
+  return inst;
+}
+
 TypedLoadParentInst *IRBuilder::createTypedLoadParentInst(Value *object) {
   auto *inst = new TypedLoadParentInst(object);
   insert(inst);

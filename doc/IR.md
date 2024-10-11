@@ -984,6 +984,16 @@ Arguments | %other is array from which elements will be copied, %array is the ar
 Semantics | Copy the elements from %other into the end of %array, increasing its length by the number of elements in %other. If accommodating the additional elements causes a reallocation past the maximum allowable allocation size, throw an exception.
 Effects | May write memory or throw.
 
+### LoadParentNoTraps
+
+LoadParentNoTraps | _
+--- | --- |
+Description | Loads the parent for a legacy, ordinary untyped object. The given object cannot be proxy. Returns `null` or an object.
+Example | %0 = LoadParentNoTraps %object
+Arguments | %object must be of type object.
+Semantics | Read the parent.
+Effects | May read memory.
+
 ### TypedLoadParent
 
 TypedLoadParent | _

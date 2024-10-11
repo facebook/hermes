@@ -809,6 +809,9 @@ class TypeInferenceImpl {
   Type inferHBCProfilePointInst(HBCProfilePointInst *inst) {
     return Type::createNoType();
   }
+  Type inferLoadParentNoTrapsInst(LoadParentNoTrapsInst *inst) {
+    return *inst->getInherentType();
+  }
   Type inferPrLoadInst(PrLoadInst *inst) {
     hermes_fatal("typed instruction");
   }
