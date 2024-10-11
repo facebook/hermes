@@ -70,6 +70,9 @@ bool SemanticResolver::runLazy(
     }
   });
 
+  // Functions that were defined using method syntax can reference super.
+  canReferenceSuper_ = rootNode->isMethodDefinition;
+
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{
       *this, rootNode, semInfo, FunctionContext::LazyTag{}};
@@ -861,16 +864,29 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
 
 void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
   // If computed property, the key expression needs to be resolved.
-  if (node->_computed)
+  if (node->_computed) {
+    // Computed keys cannot reference super.
+    llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, false};
     visitESTreeNode(*this, node->_key, node);
+  }
 
   // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
     // We visit the initializer expression in the context of a synthesized
     // method that performs the initializations.
+    // Field initializers can always reference super.
+    llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, true};
     FunctionContext funcCtx(
         *this, curClassContext_->getOrCreateFieldInitFunctionInfo());
     visitESTreeNode(*this, node->_value, node);
+  }
+}
+
+void SemanticResolver::visit(ESTree::SuperNode *node, ESTree::Node *parent) {
+  // Error if we try to reference super but there is currently no valid binding
+  // to it.
+  if (llvh::isa<MemberExpressionLikeNode>(parent) && !canReferenceSuper_) {
+    sm_.error(parent->getSourceRange(), "super not allowed here");
   }
 }
 
@@ -1162,6 +1178,13 @@ void SemanticResolver::visitFunctionLike(
     }
   }
 
+  // Arrow functions should inherit their current super binding. All other
+  // functions can only reference super properties if it was defined as a
+  // method.
+  bool newCanRefSuper = llvh::isa<ArrowFunctionExpressionNode>(node)
+      ? canReferenceSuper_
+      : node->isMethodDefinition;
+  llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, newCanRefSuper};
   visitFunctionLikeInFunctionContext(node, id, body, params);
 }
 

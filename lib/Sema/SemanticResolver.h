@@ -66,6 +66,12 @@ class SemanticResolver
   /// The global scope.
   BindingTableScopePtrTy globalScope_;
 
+  /// Whether this function can currently make super references. When entering a
+  /// function that was defined using method syntax, a super binding exists.
+  /// Arrow functions inherit this flag. The only other super bindings exist in
+  /// class field initializer values and static blocks.
+  bool canReferenceSuper_{false};
+
   /// True if we are preparing the AST to be compiled by Hermes, including
   /// erroring on features which we parse but don't compile and transforming
   /// the AST. False if we just want to validate the AST.
@@ -214,6 +220,8 @@ class SemanticResolver
   void visit(ESTree::ClassPrivatePropertyNode *node);
   void visit(ESTree::ClassPropertyNode *node);
   void visit(ESTree::MethodDefinitionNode *node, ESTree::Node *parent);
+
+  void visit(ESTree::SuperNode *node, ESTree::Node *parent);
 
   void visit(ESTree::CallExpressionNode *node);
 
