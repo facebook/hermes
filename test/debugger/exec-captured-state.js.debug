@@ -7,3 +7,4 @@ finish
 exec +this
 exec this + 3
 continue
+exec new.target.prop

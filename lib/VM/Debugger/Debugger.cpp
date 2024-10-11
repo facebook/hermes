@@ -1081,6 +1081,7 @@ HermesValue Debugger::evalInFrame(
       env,
       cb,
       Handle<>(&frameInfo->frame->getThisArgRef()),
+      Handle<>(&frameInfo->frame->getNewTargetRef()),
       singleFunction);
 
   // Check if an exception was thrown.

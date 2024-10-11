@@ -270,14 +270,14 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// sourceURL, if not empty, is reported as the file name in backtraces. If \p
   /// environment is not null, set it as the environment associated with the
   /// initial JSFunction, which enables local eval. \p thisArg the "this"
-  /// argument to use initially. \p isPersistent indicates whether the created
-  /// runtime module should persist in memory.
+  /// argument to use initially. \p newTarget the "new.target" to use initially.
   CallResult<HermesValue> runBytecode(
       std::shared_ptr<hbc::BCProvider> &&bytecode,
       RuntimeModuleFlags runtimeModuleFlags,
       llvh::StringRef sourceURL,
       Handle<Environment> environment,
-      Handle<> thisArg);
+      Handle<> thisArg,
+      Handle<> newTarget = Runtime::getUndefinedValue());
 
   /// Runs the given \p bytecode. If \p environment is not null, set it as the
   /// environment associated with the initial JSFunction, which enables local

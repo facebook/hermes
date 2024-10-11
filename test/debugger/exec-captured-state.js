@@ -20,6 +20,15 @@ function foo() {
 
 foo.call(10);
 
+(function () {
+  function foo() {
+    debugger;
+  }
+  function bar() { }
+  bar.prop = 42;
+  Reflect.construct(foo, [], bar);
+})();
+
 // CHECK: Break on 'debugger' statement in baz: {{.*}}:14:7
 // CHECK-NEXT: 3
 // CHECK-NEXT: 10
@@ -30,3 +39,5 @@ foo.call(10);
 // CHECK-NEXT: 10
 // CHECK-NEXT: 13
 // CHECK-NEXT: Continuing execution
+// CHECK-NEXT: Break on 'debugger' statement in foo: {{.*}}:25:5
+// CHECK-NEXT: 42
