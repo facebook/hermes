@@ -25,6 +25,9 @@ var obj = {
   },
   m4() {
     return async function inner() { return super.x };
+  },
+  delSup() {
+    delete super.x;
   }
 };
 
@@ -63,16 +66,19 @@ var obj = {
 // CHECK-NEXT:{{.*}}reject-super-references.js:27:44: error: super not allowed here
 // CHECK-NEXT:    return async function inner() { return super.x };
 // CHECK-NEXT:                                           ^~~~~~~
-// CHECK-NEXT:{{.*}}reject-super-references.js:33:19: error: super not allowed here
+// CHECK-NEXT:{{.*}}reject-super-references.js:30:5: error: 'delete' of super property is not allowed
+// CHECK-NEXT:    delete super.x;
+// CHECK-NEXT:    ^~~~~~~~~~~~~~
+// CHECK-NEXT:{{.*}}reject-super-references.js:36:19: error: super not allowed here
 // CHECK-NEXT:    static ["f" + super.f1] = 10;
 // CHECK-NEXT:                  ^~~~~~~~
-// CHECK-NEXT:{{.*}}reject-super-references.js:40:19: error: super not allowed here
+// CHECK-NEXT:{{.*}}reject-super-references.js:43:19: error: super not allowed here
 // CHECK-NEXT:    static ["f" + super.f1] = 10;
 // CHECK-NEXT:                  ^~~~~~~~
-// CHECK-NEXT:{{.*}}reject-super-references.js:41:13: error: super not allowed here
+// CHECK-NEXT:{{.*}}reject-super-references.js:44:13: error: super not allowed here
 // CHECK-NEXT:    ["m1" + super.f1]() {}
 // CHECK-NEXT:            ^~~~~~~~
-// CHECK-NEXT:{{.*}}reject-super-references.js:42:20: error: super not allowed here
+// CHECK-NEXT:{{.*}}reject-super-references.js:45:20: error: super not allowed here
 // CHECK-NEXT:    static ["m1" + super.f1]() {}
 // CHECK-NEXT:                   ^~~~~~~~
-// CHECK-NEXT:Emitted 10 errors. exiting.
+// CHECK-NEXT:Emitted 11 errors. exiting.

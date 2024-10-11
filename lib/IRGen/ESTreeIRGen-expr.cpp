@@ -802,11 +802,19 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
     ESTree::MemberExpressionNode *mem,
     MemberExpressionOperation op) {
   if (auto *superNode = llvh::dyn_cast<ESTree::SuperNode>(mem->_object)) {
+    if (op == MemberExpressionOperation::Delete) {
+      Builder.createCallBuiltinInst(
+          BuiltinMethod::HermesBuiltin_throwReferenceError,
+          {Builder.getLiteralString("Cannot delete a super property.")});
+      return MemberExpressionResult{
+          Builder.getLiteralUndefined(),
+          nullptr,
+          Builder.getLiteralUndefined()};
+    }
     if (auto *classType = llvh::dyn_cast<flow::ClassType>(
             flowContext_.getNodeTypeOrAny(superNode)->info)) {
       auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
-      if (op != MemberExpressionOperation::Load || !property ||
-          mem->_computed) {
+      if (!property || mem->_computed) {
         // We can only handle super.foo, where foo is an identifier.
         Mod->getContext().getSourceErrorManager().error(
             mem->getSourceRange(), "unsupported use of 'super'");
@@ -816,17 +824,17 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
             Builder.getLiteralUndefined()};
       }
       return emitTypedSuperLoad(superNode, property);
-    } else if (op == MemberExpressionOperation::Load) {
-      auto *homeObjectVar = curFunction()->capturedState.homeObject;
-      auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
-      Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
-      // We know that home objects are always ordinary objects.
-      Value *superObj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
-      Value *propVal = Builder.createLoadPropertyInst(
-          superObj, genMemberExpressionProperty(mem));
-      Value *thisValue = genThisExpression();
-      return MemberExpressionResult{propVal, nullptr, thisValue};
     }
+    auto *homeObjectVar = curFunction()->capturedState.homeObject;
+    assert(homeObjectVar && "homeObjectVar not populated");
+    auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+    Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+    // We know that home objects are always ordinary objects.
+    Value *superObj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+    Value *propVal = Builder.createLoadPropertyInst(
+        superObj, genMemberExpressionProperty(mem));
+    Value *thisValue = genThisExpression();
+    return MemberExpressionResult{propVal, nullptr, thisValue};
   }
 
   Value *baseValue = genExpression(mem->_object);

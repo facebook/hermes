@@ -417,6 +417,16 @@ void SemanticResolver::visit(
           node->getSourceRange(),
           "'delete' of a variable is not allowed in strict mode");
     }
+    // Unless we are running under compliance tests, report an error on
+    // `delete super.x`.
+    if (!astContext_.getCodeGenerationSettings().test262) {
+      if (auto *mem = llvh::dyn_cast<MemberExpressionNode>(node->_argument);
+          mem && llvh::isa<SuperNode>(mem->_object)) {
+        sm_.error(
+            node->getSourceRange(),
+            "'delete' of super property is not allowed");
+      }
+    }
   }
   visitESTreeChildren(*this, node);
   if (compile_)

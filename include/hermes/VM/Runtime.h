@@ -702,6 +702,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// \return ExecutionStatus::EXCEPTION
   LLVM_NODISCARD ExecutionStatus raiseReferenceError(const TwineChar16 &msg);
 
+  /// Overload that accepts any value as the message.
+  /// If \p message is not a string, it is converted using toString().
+  LLVM_NODISCARD ExecutionStatus raiseReferenceError(Handle<> message);
+
   /// Raise a \c URIError exception.
   /// \return ExecutionStatus::EXCEPTION
   LLVM_NODISCARD ExecutionStatus raiseURIError(const TwineChar16 &msg);

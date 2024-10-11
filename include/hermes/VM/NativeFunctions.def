@@ -148,6 +148,7 @@ NATIVE_FUNCTION(hermesBuiltinExponentiate)
 NATIVE_FUNCTION(hermesBuiltinExportAll)
 NATIVE_FUNCTION(hermesBuiltinInitRegexNamedGroups)
 NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
+NATIVE_FUNCTION(hermesBuiltinThrowReferenceError)
 NATIVE_FUNCTION(hermesBuiltinGetTemplateObject)
 
 #ifdef HERMESVM_EXCEPTION_ON_OOM

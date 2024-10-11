@@ -1446,6 +1446,11 @@ ExecutionStatus Runtime::raiseReferenceError(const TwineChar16 &msg) {
       *this, Handle<JSObject>::vmcast(&ReferenceErrorPrototype), msg);
 }
 
+ExecutionStatus Runtime::raiseReferenceError(Handle<> message) {
+  return raisePlaceholder(
+      *this, Handle<JSObject>::vmcast(&ReferenceErrorPrototype), message);
+}
+
 ExecutionStatus Runtime::raiseURIError(const TwineChar16 &msg) {
   return raisePlaceholder(
       *this, Handle<JSObject>::vmcast(&URIErrorPrototype), msg);
