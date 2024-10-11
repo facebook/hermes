@@ -180,24 +180,25 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
   }
 }
 
-void SemanticResolver::visit(ESTree::FunctionDeclarationNode *funcDecl) {
+void SemanticResolver::visit(
+    ESTree::FunctionDeclarationNode *funcDecl,
+    ESTree::Node *parent) {
   curScope_->hoistedFunctions.push_back(funcDecl);
   visitFunctionLike(
       funcDecl,
       llvh::cast_or_null<ESTree::IdentifierNode>(funcDecl->_id),
       funcDecl->_body,
-      funcDecl->_params);
+      funcDecl->_params,
+      parent);
 }
 void SemanticResolver::visit(
     ESTree::FunctionExpressionNode *funcExpr,
     ESTree::Node *parent) {
-  visitFunctionExpression(
-      funcExpr,
-      funcExpr->_body,
-      funcExpr->_params,
-      llvh::dyn_cast_or_null<MethodDefinitionNode>(parent));
+  visitFunctionExpression(funcExpr, funcExpr->_body, funcExpr->_params, parent);
 }
-void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
+void SemanticResolver::visit(
+    ESTree::ArrowFunctionExpressionNode *arrowFunc,
+    ESTree::Node *parent) {
   // Convert expression functions to a full-body to simplify IRGen.
   if (compile_ && arrowFunc->_expression) {
     auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
@@ -212,7 +213,8 @@ void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
     arrowFunc->_body = blockStmt;
     arrowFunc->_expression = false;
   }
-  visitFunctionLike(arrowFunc, nullptr, arrowFunc->_body, arrowFunc->_params);
+  visitFunctionLike(
+      arrowFunc, nullptr, arrowFunc->_body, arrowFunc->_params, parent);
 
   curFunctionInfo()->containsArrowFunctions = true;
   curFunctionInfo()->containsArrowFunctionsUsingArguments =
@@ -1096,20 +1098,26 @@ void SemanticResolver::visit(AsExpressionNode *node) {
 }
 
 /// Process a component declaration by creating a new FunctionContext.
-void SemanticResolver::visit(ComponentDeclarationNode *componentDecl) {
+void SemanticResolver::visit(
+    ComponentDeclarationNode *componentDecl,
+    ESTree::Node *parent) {
   visitFunctionLike(
       componentDecl,
       llvh::cast<ESTree::IdentifierNode>(componentDecl->_id),
       componentDecl->_body,
-      componentDecl->_params);
+      componentDecl->_params,
+      parent);
 }
 
-void SemanticResolver::visit(HookDeclarationNode *hookDecl) {
+void SemanticResolver::visit(
+    HookDeclarationNode *hookDecl,
+    ESTree::Node *parent) {
   visitFunctionLike(
       hookDecl,
       llvh::cast<ESTree::IdentifierNode>(hookDecl->_id),
       hookDecl->_body,
-      hookDecl->_params);
+      hookDecl->_params,
+      parent);
 }
 
 #endif
@@ -1139,29 +1147,29 @@ void SemanticResolver::visitFunctionLike(
     ESTree::IdentifierNode *id,
     ESTree::Node *body,
     ESTree::NodeList &params,
-    ESTree::MethodDefinitionNode *method) {
+    ESTree::Node *parent) {
   FunctionContext newFuncCtx{
       *this,
       node,
       curFunctionInfo(),
       curFunctionInfo()->strict,
       curFunctionInfo()->customDirectives};
-  if (method) {
+  if (auto *method =
+          llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parent)) {
     newFuncCtx.isConstructor = method->_kind == kw_.identConstructor;
     if (newFuncCtx.isConstructor) {
       curClassContext_->hasConstructor = true;
     }
   }
 
-  visitFunctionLikeInFunctionContext(node, id, body, params, method);
+  visitFunctionLikeInFunctionContext(node, id, body, params);
 }
 
 void SemanticResolver::visitFunctionLikeInFunctionContext(
     ESTree::FunctionLikeNode *node,
     ESTree::IdentifierNode *id,
     ESTree::Node *body,
-    ESTree::NodeList &params,
-    ESTree::MethodDefinitionNode *method) {
+    ESTree::NodeList &params) {
   if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
     sm_.error(node->getSourceRange(), "async generators are unsupported");
   }
@@ -1368,7 +1376,7 @@ void SemanticResolver::visitFunctionExpression(
     ESTree::FunctionExpressionNode *node,
     ESTree::Node *body,
     ESTree::NodeList &params,
-    ESTree::MethodDefinitionNode *method) {
+    ESTree::Node *parent) {
   if (ESTree::IdentifierNode *ident =
           llvh::dyn_cast_or_null<IdentifierNode>(node->_id)) {
     // If there is a name, declare it.
@@ -1377,10 +1385,10 @@ void SemanticResolver::visitFunctionExpression(
         ident->_name, Decl::Kind::FunctionExprName, curScope_);
     semCtx_.setDeclarationDecl(ident, decl);
     bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
-    visitFunctionLike(node, ident, body, params, method);
+    visitFunctionLike(node, ident, body, params, parent);
   } else {
     // Otherwise, no extra scope needed, just move on.
-    visitFunctionLike(node, nullptr, body, params, method);
+    visitFunctionLike(node, nullptr, body, params, parent);
   }
 }
 

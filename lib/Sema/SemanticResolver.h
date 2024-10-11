@@ -158,9 +158,11 @@ class SemanticResolver
 
   void visit(ESTree::ProgramNode *node);
 
-  void visit(ESTree::FunctionDeclarationNode *funcDecl);
+  void visit(ESTree::FunctionDeclarationNode *funcDecl, ESTree::Node *parent);
   void visit(ESTree::FunctionExpressionNode *funcExpr, ESTree::Node *parent);
-  void visit(ESTree::ArrowFunctionExpressionNode *arrowFunc);
+  void visit(
+      ESTree::ArrowFunctionExpressionNode *arrowFunc,
+      ESTree::Node *parent);
 
   void visit(ESTree::IdentifierNode *identifier, ESTree::Node *parent);
 
@@ -236,8 +238,10 @@ class SemanticResolver
   void visit(ESTree::TypeParameterInstantiationNode *node);
   void visit(ESTree::TypeCastExpressionNode *node);
   void visit(ESTree::AsExpressionNode *node);
-  void visit(ESTree::ComponentDeclarationNode *componentDecl);
-  void visit(ESTree::HookDeclarationNode *hookDecl);
+  void visit(
+      ESTree::ComponentDeclarationNode *componentDecl,
+      ESTree::Node *parent);
+  void visit(ESTree::HookDeclarationNode *hookDecl, ESTree::Node *parent);
 #endif
 #if HERMES_PARSE_TS
   void visit(ESTree::TSTypeAliasDeclarationNode *node);
@@ -289,21 +293,20 @@ class SemanticResolver
       ESTree::IdentifierNode *id,
       ESTree::Node *body,
       ESTree::NodeList &params,
-      ESTree::MethodDefinitionNode *method = nullptr);
+      ESTree::Node *parent);
   /// Visit a function-like node with the FunctionContext already created.
   /// Used by visitFunctionLike and by runLazy.
   void visitFunctionLikeInFunctionContext(
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
       ESTree::Node *body,
-      ESTree::NodeList &params,
-      ESTree::MethodDefinitionNode *method = nullptr);
+      ESTree::NodeList &params);
 
   void visitFunctionExpression(
       ESTree::FunctionExpressionNode *node,
       ESTree::Node *body,
       ESTree::NodeList &params,
-      ESTree::MethodDefinitionNode *method);
+      ESTree::Node *parent);
 
   /// Resolve an identifier to a declaration and record the resolution.
   /// Emit a warning for undeclared identifiers in strict mode.
