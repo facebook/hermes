@@ -277,8 +277,17 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
   }
 
   if (body->isLazyFunctionBody) {
+    // This function could be a method, in which case we need to remember what
+    // the homeObject was going to be.
+    CapturedState lazyState{};
+    lazyState.homeObject = homeObject;
     setupLazyFunction(
-        newFunction, functionNode, body, parentScope, ExtraKey::Normal);
+        newFunction,
+        functionNode,
+        body,
+        parentScope,
+        ExtraKey::Normal,
+        lazyState);
     return newFunction;
   }
 
@@ -413,8 +422,17 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
   auto *body = ESTree::getBlockStatement(functionNode);
   if (body->isLazyFunctionBody) {
+    // This function could be a method, in which case we need to remember what
+    // the homeObject was going to be.
+    CapturedState lazyState{};
+    lazyState.homeObject = homeObject;
     setupLazyFunction(
-        outerFn, functionNode, body, parentScope, ExtraKey::GeneratorOuter);
+        outerFn,
+        functionNode,
+        body,
+        parentScope,
+        ExtraKey::GeneratorOuter,
+        lazyState);
     return outerFn;
   }
 
@@ -542,7 +560,12 @@ Function *ESTreeIRGen::genAsyncFunction(
           capturedState);
     } else {
       setupLazyFunction(
-          asyncFn, functionNode, body, parentScope, ExtraKey::AsyncOuter);
+          asyncFn,
+          functionNode,
+          body,
+          parentScope,
+          ExtraKey::AsyncOuter,
+          capturedState);
     }
     return asyncFn;
   }
@@ -1191,6 +1214,7 @@ void ESTreeIRGen::setupLazyFunction(
       capturedState.thisVal,
       capturedState.newTarget,
       capturedState.arguments,
+      capturedState.homeObject,
       parentVarScope);
   Builder.createUnreachableInst();
 

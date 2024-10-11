@@ -120,8 +120,13 @@ class SemanticResolver
   /// \param semInfo the original FunctionInfo for the root node,
   ///   which was created on the first pass and will be populated with real
   ///   scopes now.
+  /// \param parentHadSuperBinding is true if the parent of \p rootNode could
+  /// make a reference to super.
   /// \return false on error.
-  bool runLazy(ESTree::FunctionLikeNode *rootNode, sema::FunctionInfo *semInfo);
+  bool runLazy(
+      ESTree::FunctionLikeNode *rootNode,
+      sema::FunctionInfo *semInfo,
+      bool parentHadSuperBinding);
 
   /// Run semantic resolution for a program as if it was executed within an
   /// existing function scope and store the result in \c semCtx_.

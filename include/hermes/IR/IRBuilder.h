@@ -708,6 +708,7 @@ class IRBuilder {
       Variable *capturedThis,
       Value *capturedNewTarget,
       Variable *capturedArguments,
+      Variable *homeObject,
       VariableScope *parentVarScope);
 
   EvalCompilationDataInst *createEvalCompilationDataInst(

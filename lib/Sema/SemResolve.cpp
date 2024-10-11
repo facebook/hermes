@@ -192,11 +192,12 @@ bool resolveASTLazy(
     Context &astContext,
     SemContext &semCtx,
     ESTree::FunctionLikeNode *root,
-    FunctionInfo *semInfo) {
+    FunctionInfo *semInfo,
+    bool parentHadSuperBinding) {
   PerfSection validation("Resolving JavaScript lazy AST");
   // Resolve the entire AST.
   SemanticResolver resolver{astContext, semCtx, {}, nullptr, true};
-  return resolver.runLazy(root, semInfo);
+  return resolver.runLazy(root, semInfo, parentHadSuperBinding);
 }
 
 bool resolveASTInScope(

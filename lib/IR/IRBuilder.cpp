@@ -1287,6 +1287,7 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
     Variable *capturedThis,
     Value *capturedNewTarget,
     Variable *capturedArguments,
+    Variable *homeObject,
     VariableScope *parentVarScope) {
   auto *inst = new LazyCompilationDataInst(
       std::move(data),
@@ -1294,6 +1295,7 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
       capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
+      homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
       parentVarScope);
   insert(inst);
   return inst;

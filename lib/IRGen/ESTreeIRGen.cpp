@@ -268,10 +268,12 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
 
   VariableScope *parentVarScope = lazyDataInst->getParentVarScope();
 
+  auto *homeObj = lazyDataInst->getHomeObject();
   CapturedState capturedState{
       lazyDataInst->getCapturedThis(),
       lazyDataInst->getCapturedNewTarget(),
-      lazyDataInst->getCapturedArguments()};
+      lazyDataInst->getCapturedArguments(),
+      homeObj};
   Function *compiledFunc;
   if (auto *arrow = llvh::dyn_cast<ESTree::ArrowFunctionExpressionNode>(Root)) {
     if (arrow->_async) {
@@ -297,16 +299,19 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
               lazyFunc->getOriginalOrInferredName(),
               node,
               parentVarScope,
-              curFunction()->capturedState)
-        : ESTree::isGenerator(node)
-        ? genGeneratorFunction(
-              lazyFunc->getOriginalOrInferredName(), node, parentVarScope)
-        : genBasicFunction(
-              lazyFunc->getOriginalOrInferredName(),
-              node,
-              parentVarScope,
-              /* superClassNode */ nullptr,
-              lazyFunc->getDefinitionKind());
+              capturedState)
+        : ESTree::isGenerator(node) ? genGeneratorFunction(
+                                          lazyFunc->getOriginalOrInferredName(),
+                                          node,
+                                          parentVarScope,
+                                          homeObj)
+                                    : genBasicFunction(
+                                          lazyFunc->getOriginalOrInferredName(),
+                                          node,
+                                          parentVarScope,
+                                          /* superClassNode */ nullptr,
+                                          lazyFunc->getDefinitionKind(),
+                                          homeObj);
   }
 
   drainCompilationQueue();

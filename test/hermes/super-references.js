@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %hermes %s -lazy | %FileCheck --match-full-lines %s
 
 print("super properties");
 // CHECK-LABEL: super properties

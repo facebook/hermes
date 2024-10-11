@@ -5495,6 +5495,7 @@ class LazyCompilationDataInst : public Instruction {
     CapturedThisIdx,
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
+    HomeObjectIdx,
     ParentVarScopeIdx
   };
 
@@ -5503,6 +5504,7 @@ class LazyCompilationDataInst : public Instruction {
       Value *capturedThis,
       Value *capturedNewTarget,
       Value *capturedArguments,
+      Value *capturedHomeObject,
       VariableScope *parentVarScope)
       : Instruction(ValueKind::LazyCompilationDataInstKind), data_(data) {
     // Store the captured variables as EmptySentinel if they were null.
@@ -5517,6 +5519,7 @@ class LazyCompilationDataInst : public Instruction {
     pushOperand(capturedThis);
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
+    pushOperand(capturedHomeObject);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: LazyCompilationData relies on the fact that we don't delete
@@ -5560,6 +5563,13 @@ class LazyCompilationDataInst : public Instruction {
   /// \return the captured \c arguments Variable, nullptr if there is none.
   Variable *getCapturedArguments() {
     return llvh::dyn_cast<Variable>(getOperand(CapturedArgumentsIdx));
+  }
+  /// \return the captured \c homeObject Variable, nullptr if there is none.
+  Variable *getHomeObject() {
+    return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
+  }
+  const Variable *getHomeObject() const {
+    return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
   }
 
   static bool hasOutput() {

@@ -1122,8 +1122,8 @@ NOTE: LazyCompilationData relies on the fact that we don't delete Variables duri
 LazyCompilationData | _
 --- |-----------------------------------------------|
 Description | Data needed for lazy compilation, including the VariableScope chain used to access captured variables.
-Example | LazyCompilationData %capturedThis, %capturedNewTarget, %capturedArguments, %parentVS, %parentParentVS, ...
-Arguments | The captured values are used in case the lazy function may have arrow functions as children which need to capture the values as variables. %parentVS the immediately enclosing VariableScope. The remaining operands are successively the ancestors of %parentVS, which are kept as operands to ensure the VariableScopes aren't deleted across lazy compilation calls.
+Example | LazyCompilationData %capturedThis, %capturedNewTarget, %capturedArguments, %capturedHomeObject, %parentVS, %parentParentVS, ...
+Arguments | The captured values are used in case the lazy function may have arrow functions as children which need to capture the values as variables. In the case of %capturedHomeObject, this is needed even for non-arrow functions. %parentVS the immediately enclosing VariableScope. The remaining operands are successively the ancestors of %parentVS, which are kept as operands to ensure the VariableScopes aren't deleted across lazy compilation calls.
 Semantics | Information needed for lazy compilation. Deleted after use.
 Effects | None
 

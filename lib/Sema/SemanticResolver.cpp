@@ -45,7 +45,8 @@ bool SemanticResolver::run(ESTree::ProgramNode *rootNode) {
 
 bool SemanticResolver::runLazy(
     ESTree::FunctionLikeNode *rootNode,
-    sema::FunctionInfo *semInfo) {
+    sema::FunctionInfo *semInfo,
+    bool parentHadSuperBinding) {
   semCtx_.assertGlobalFunctionAndScope();
 
   if (sm_.getErrorCount())
@@ -69,6 +70,10 @@ bool SemanticResolver::runLazy(
       semInfo->bindingTableScope.reset();
     }
   });
+
+  canReferenceSuper_ = rootNode->isMethodDefinition ||
+      (llvh::isa<ESTree::ArrowFunctionExpressionNode>(rootNode) &&
+       parentHadSuperBinding);
 
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{
