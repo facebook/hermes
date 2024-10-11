@@ -1,3 +1,10 @@
+## 0.24.0
+
+### `hermes-parser`
+* Allow trailing comma after rest param in component declaration
+* Allow trailing comma after rest param for component types
+* Don't allow newline after async in method proper
+
 ## 0.23.1
 
 ### `hermes-transform`
