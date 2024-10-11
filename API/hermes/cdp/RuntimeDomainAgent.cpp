@@ -593,6 +593,12 @@ void RuntimeDomainAgent::getProperties(
           resp.internalProperties = std::move(internalProps);
         }
       }
+    } else {
+      sendResponseToClient(m::makeErrorResponse(
+          req.id,
+          m::ErrorCode::ServerError,
+          "Could not find an object with the given ID"));
+      return;
     }
   } catch (const jsi::JSError &error) {
     resp.exceptionDetails =
