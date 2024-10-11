@@ -2178,6 +2178,19 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(LoadParentNoTraps) {
+        assert(
+            !vmcast<JSObject>(O2REG(LoadParentNoTraps))->isProxyObject() &&
+            "proxy is not supported");
+        auto *parent =
+            vmcast<JSObject>(O2REG(LoadParentNoTraps))->getParent(runtime);
+        O1REG(LoadParentNoTraps) = parent
+            ? HermesValue::encodeObjectValue(parent)
+            : HermesValue::encodeNullValue();
+        ip = NEXTINST(LoadParentNoTraps);
+        DISPATCH;
+      }
+
       CASE(DeclareGlobalVar) {
         CAPTURE_IP_ASSIGN(
             auto res, declareGlobalVarImpl(runtime, curCodeBlock, ip));
