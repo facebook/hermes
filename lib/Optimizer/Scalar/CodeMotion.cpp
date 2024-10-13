@@ -195,9 +195,12 @@ static bool sinkInstructionsInBlock(
           llvh::isa<CreateArgumentsInst>(I))
         continue;
 
-      // If block is in a loop, only sink instructions from the same loop.
+      // If block is in a loop, only sink instructions from the same loop. Note
+      // that the loop header must be non-null for us to prove that they are in
+      // the same loop.
       BasicBlock *parent = I->getParent();
-      if (inLoop && parent != BB && (loops.getLoopHeader(parent) != header)) {
+      if (inLoop && parent != BB &&
+          (!header || loops.getLoopHeader(parent) != header)) {
         continue;
       }
 
