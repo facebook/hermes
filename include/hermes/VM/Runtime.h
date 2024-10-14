@@ -1393,21 +1393,17 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   ExecutionStatus notifyTimeout();
 
  private:
-#ifdef NDEBUG
   /// See \c ::setCurrentIP() and \c ::getCurrentIP() .
   const inst::Inst *currentIP_{nullptr};
-#else
-  /// When assertions are enabled we track whether \c currentIP_ is "valid" by
-  /// making it optional. If this is accessed when the optional value is cleared
-  /// (the invalid state) we assert.
-  ///
-  /// It starts as *initialized*, but with a null pointer. It is only ever
-  /// cleared
-  //// (without a value) inside the interpreter between calls to CAPTURE_IP().
-  /// The interpreter itself saves and restores it on entry and exit.
-  /// The purpose of these games is to catch if the interpreter ever makes a JS
-  /// call without setting the IP.
-  llvh::Optional<const inst::Inst *> currentIP_{(const inst::Inst *)nullptr};
+
+#ifndef NDEBUG
+  /// Sentinel value for \c currentIP_ to indicate that the currently stored
+  /// value is invalid and should not be used.
+  /// This is used to invalidate \c currentIP inside the interpreter between
+  /// calls to CAPTURE_IP(). The interpreter itself saves and restores it on
+  /// entry and exit. The purpose of these games is to catch if the interpreter
+  /// ever calls out into a function that may observe the IP without setting it.
+  static constexpr uintptr_t kInvalidCurrentIP = 0x1;
 
   /// The number of alive/active NoRJSScopes. If nonzero, then no JS execution
   /// is allowed
@@ -1432,14 +1428,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// we are not in the interpeter loop (i.e. we've made it into the VM
   /// internals via a native call), this this will return nullptr.
   inline const inst::Inst *getCurrentIP() const {
-#ifdef NDEBUG
-    return currentIP_;
-#else
     assert(
-        currentIP_.hasValue() &&
+        (uintptr_t)currentIP_ != kInvalidCurrentIP &&
         "Current IP unknown - this probably means a CAPTURE_IP_* is missing in the interpreter.");
-    return *currentIP_;
-#endif
+    return currentIP_;
   }
 
   /// This is slow compared to \c getCurrentIP() as it's virtual.
@@ -1451,7 +1443,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void invalidateCurrentIP() {}
 #else
   void invalidateCurrentIP() {
-    currentIP_.reset();
+    currentIP_ = (const inst::Inst *)kInvalidCurrentIP;
   }
 #endif
 
@@ -1462,7 +1454,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 #ifndef NDEBUG
     assert(
         (!currentFrame_.getSavedIP() ||
-         (currentIP_.hasValue() && currentFrame_.getSavedIP() == currentIP_)) &&
+         ((uintptr_t)currentIP_ != kInvalidCurrentIP &&
+          currentFrame_.getSavedIP() == currentIP_)) &&
         "The ip should either be null or already have the expected value");
 #endif
     currentFrame_.getSavedIPRef() =
