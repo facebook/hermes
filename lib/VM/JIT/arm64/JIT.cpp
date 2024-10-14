@@ -728,6 +728,10 @@ EMIT_OWN_BY_SLOT_IDX(GetOwnBySlotIdx, getOwnBySlotIdx)
 
 #undef EMIT_OWN_BY_SLOT_IDX
 
+inline void JITContext::Compiler::emitLoadParentNoTraps(
+    const inst::LoadParentNoTrapsInst *inst) {
+  em_.loadParentNoTraps(FR(inst->op1), FR(inst->op2));
+}
 inline void JITContext::Compiler::emitTypedLoadParent(
     const inst::TypedLoadParentInst *inst) {
   em_.typedLoadParent(FR(inst->op1), FR(inst->op2));

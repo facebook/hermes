@@ -47,11 +47,26 @@ void emit_sh_ljs_get_pointer(
   a.and_(xOut, xIn, kHV_DataMask);
 }
 
+/// Encode a native pointer into a tagged object pointer (SHLegacyValue).
+/// The same register is used for input and output.
 void emit_sh_ljs_object(a64::Assembler &a, const a64::GpX &inOut) {
   static_assert(
       HERMESVALUE_VERSION == 1,
       "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
   a.movk(inOut, (uint16_t)HVTag_Object, kHV_NumDataBits);
+}
+
+/// Encode a native pointer into a tagged object pointer (SHLegacyValue).
+/// Takes an input and output register, which can be the same.
+/// In some sense this supersedes
+void emit_sh_ljs_object2(
+    a64::Assembler &a,
+    const a64::GpX &xOut,
+    const a64::GpX &xIn) {
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
+  a.orr(xOut, xIn, (uint64_t)HVTag_Object << kHV_NumDataBits);
 }
 
 /// Emit code to check whether the input reg is an object, using the specified
@@ -2214,6 +2229,30 @@ void Emitter::createRegExp(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
+  comment("// LoadParentNoTraps r%u, r%u", frRes.index(), frObj.index());
+
+  HWReg hwObj = getOrAllocFRInGpX(frObj, true);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  HWReg hwTmp = allocTempGpX();
+  freeReg(hwTmp);
+  a64::GpX xTmp = hwTmp.a64GpX();
+  a64::GpX xRes = hwRes.a64GpX();
+  emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
+  // xTmp contains the unencoded pointer value.
+  a.ldr(xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  // Check whether it is nullptr and set flags.
+  a.cmp(xTmp, 0);
+  // xRes contains the encoded pointer.
+  emit_sh_ljs_object2(a, xRes, xTmp);
+  // xTmp contains encoded null.
+  loadBits64InGp(xTmp, _sh_ljs_null().raw, "null");
+  // If the pointer was nullptr, use encoded null, otherwise encoded ptr.
+  a.csel(xRes, xTmp, xRes, asmjit::arm::CondCode::kEQ);
+
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::typedLoadParent(FR frRes, FR frObj) {
   comment("// TypedLoadParent r%u, r%u", frRes.index(), frObj.index());
 
@@ -3186,10 +3225,10 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
       frRes.index(),
       getBuiltinMethodName(builtinIndex),
       argc);
-  uint32_t nRegs = frameRegs_.size();
-
   // CallBuiltin internally sets "this", so we don't sync it to memory.
 #ifndef NDEBUG
+  uint32_t nRegs = frameRegs_.size();
+
   // No need to sync the set up call stack to the frame memory,
   // because it these registers can't have global registers.
   for (uint32_t i = 0; i < argc; ++i) {

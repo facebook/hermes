@@ -800,6 +800,7 @@ class Emitter {
       SHSymbolID flagsID,
       uint32_t regexpID);
 
+  void loadParentNoTraps(FR frRes, FR frObj);
   void typedLoadParent(FR frRes, FR frObj);
   void typedStoreParent(FR frStoredValue, FR frObj);
 
