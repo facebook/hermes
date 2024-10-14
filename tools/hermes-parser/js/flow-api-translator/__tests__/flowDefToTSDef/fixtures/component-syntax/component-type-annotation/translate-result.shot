@@ -17,7 +17,10 @@ type ExtraPropsFoo = {foo: string};
 type T = (props: ExtraPropsFoo) => React.ReactNode;
 type ExtraPropsBar = {bar: string};
 type T = (
-  props: Omit<ExtraPropsBar, keyof ({foo: string})> & {foo: string},
+  props: Omit<ExtraPropsBar, keyof ({ref?: React.Ref<Foo>; foo: string})> & {
+    ref?: React.Ref<Foo>;
+    foo: string;
+  },
 ) => React.ReactNode;
 "
 `;
