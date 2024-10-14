@@ -642,7 +642,24 @@ std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
 
   void *origin;
   size_t size;
-  pthread_attr_getstack(&attr, &origin, &size);
+  if (pthread_attr_getstack(&attr, &origin, &size))
+    hermes_fatal("Unable to obtain native stack bounds");
+
+#ifdef __BIONIC__
+  // It appears that on Android/Bionic, the range returned by
+  // pthread_attr_getstack() includes the stack guard pages. We must remove them
+  // from the bounds.
+  size_t guardSize;
+  if (pthread_attr_getguardsize(&attr, &guardSize)) {
+    // Don't give up in case of error.
+    guardSize = 0;
+  }
+  if (guardSize > size)
+    guardSize = size;
+  // Exclude the guard pages from the available stack.
+  origin = (char *)origin + guardSize;
+  size -= guardSize;
+#endif
 
   pthread_attr_destroy(&attr);
 
