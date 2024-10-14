@@ -1180,10 +1180,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   friend class RuntimeModule;
   friend class MarkRootsPhaseTimer;
   friend struct RuntimeOffsets;
-  friend class JITContext;
   friend class ScopedNativeDepthReducer;
   friend class ScopedNativeDepthTracker;
   friend class ScopedNativeCallFrame;
+  FRIEND_JIT;
 
   class StackRuntime;
   class MarkRootsPhaseTimer;

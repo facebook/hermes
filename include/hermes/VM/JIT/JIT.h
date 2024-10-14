@@ -23,8 +23,15 @@ namespace vm {
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 using arm64::JITContext;
+namespace arm64 {
+class Emitter;
+}
+#define FRIEND_JIT                \
+  friend class arm64::JITContext; \
+  friend class arm64::Emitter;
 #elif defined(__x86_64__) || defined(_M_X64)
 using x86_64::JITContext;
+#define FRIEND_JIT friend class x86_64::JITContext;
 #endif
 
 } // namespace vm
@@ -33,6 +40,8 @@ using x86_64::JITContext;
 #else
 
 #include "hermes/VM/CodeBlock.h"
+
+#define FRIEND_JIT
 
 namespace hermes {
 namespace vm {
