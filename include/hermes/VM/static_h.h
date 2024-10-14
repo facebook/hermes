@@ -1014,8 +1014,8 @@ static inline SHLegacyValue _sh_fastarray_length(
 /// a proxy.
 static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
     SHRuntime *shr,
-    const SHLegacyValue *object) {
-  SHJSObject *objectPtr = (SHJSObject *)_sh_ljs_get_pointer(*object);
+    SHLegacyValue object) {
+  SHJSObject *objectPtr = (SHJSObject *)_sh_ljs_get_pointer(object);
   assert(!objectPtr->flags.proxyObject && "proxy is not supported");
   if (objectPtr->parent) {
     SHCompressedPointer parent = {.raw = objectPtr->parent};
