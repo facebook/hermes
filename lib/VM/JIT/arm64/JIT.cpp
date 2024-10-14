@@ -83,8 +83,6 @@ class JITContext::Compiler {
   };
   /// In case of error, the error reason is stored here.
   Error error_ = Error::NoError;
-  /// The IP of the instruction being emitted.
-  const inst::Inst *emittingIP_{nullptr};
   /// In case of "other" error, the error message is recorded here.
   std::string otherErrorMessage_{};
 
@@ -126,11 +124,11 @@ class JITContext::Compiler {
     auto *to = reinterpret_cast<const inst::Inst *>(funcStart_ + endOfs);
 
     while (ip != to) {
-      emittingIP_ = ip;
+      em_.emittingIP = ip;
       ip = dispatch(ip);
       em_.assertPostInstructionInvariants();
     }
-    emittingIP_ = nullptr;
+    em_.emittingIP = nullptr;
   }
 
   /// Compile a single instruction by dispatching to its emitter method.
@@ -198,11 +196,11 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
         : otherErrorMessage_.c_str();
     auto printError = [this, errMsg](llvh::raw_ostream &OS) {
       OS << "jit error: " << errMsg << '\n';
-      if (emittingIP_) {
+      if (em_.emittingIP) {
         OS << "Emitting:\n";
         OS << llvh::format_decimal(
-                  (const char *)emittingIP_ - (const char *)funcStart_, 3)
-           << ": " << inst::decodeInstruction(emittingIP_) << "\n";
+                  (const char *)em_.emittingIP - (const char *)funcStart_, 3)
+           << ": " << inst::decodeInstruction(em_.emittingIP) << "\n";
       }
     };
 
@@ -242,6 +240,8 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
     bbLabels_.push_back(em_.newPrefLabel("BB", bbIndex));
   }
 
+  // Any code emitted at the start gets treated as the first instruction.
+  em_.emittingIP = (const inst::Inst *)codeBlock_->begin();
   em_.enter(
       codeBlock_->getFunctionHeader().numberRegCount(),
       codeBlock_->getFunctionHeader().nonPtrRegCount());
@@ -292,6 +292,7 @@ EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 EMIT_UNIMPLEMENTED(IteratorBegin)
 EMIT_UNIMPLEMENTED(IteratorNext)
 EMIT_UNIMPLEMENTED(IteratorClose)
+EMIT_UNIMPLEMENTED(LoadParentNoTraps)
 
 #undef EMIT_UNIMPLEMENTED
 

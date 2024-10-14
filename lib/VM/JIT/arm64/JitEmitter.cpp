@@ -1140,6 +1140,7 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
        .name = "LoadParam",
        .frRes = frRes,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment("// Slow path: %s r%u", sl.name, sl.frRes.index());
          em.a.bind(sl.slowPathLab);
@@ -1283,6 +1284,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_to_double_rjs,
        .slowCallName = "_sh_ljs_to_double_rjs",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: %s r%u, r%u",
@@ -1333,6 +1335,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_to_numeric_rjs,
        .slowCallName = "_sh_ljs_to_numeric_rjs",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: %s r%u, r%u",
@@ -1386,6 +1389,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
        .frRes = frRes,
        .frInput1 = frInput,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -1439,6 +1443,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
        .frRes = frRes,
        .frInput1 = frInput,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: AddEmptyString r%u, r%u",
@@ -1642,6 +1647,7 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
        .frRes = frRes,
        .frInput1 = frArr,
        .frInput2 = frIdx,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: FastArrayLoad r%u, r%u, r%u",
@@ -2015,6 +2021,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_get_arguments_length,
        .slowCallName = "_sh_ljs_get_arguments_length",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: GetArgumentsLength r%u, r%u",
@@ -2191,6 +2198,7 @@ void Emitter::throwIfEmpty(FR frRes, FR frInput) {
       {.slowPathLab = slowPathLab,
        .frRes = frRes,
        .frInput1 = frInput,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: ThrowIfEmpty r%u, r%u",
@@ -3076,9 +3084,11 @@ asmjit::Label Emitter::registerThunk(void *fn, const char *name) {
 void Emitter::emitSlowPaths() {
   while (!slowPaths_.empty()) {
     SlowPath &sp = slowPaths_.front();
+    emittingIP = sp.emittingIP;
     sp.emit(*this, sp);
     slowPaths_.pop_front();
   }
+  emittingIP = nullptr;
 }
 
 void Emitter::emitThunks() {
@@ -3408,6 +3418,7 @@ void Emitter::arithUnop(
        .hwRes = hwRes,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: %s r%u, r%u",
@@ -3486,6 +3497,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
        .frRes = frRes,
        .frInput1 = frInput,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -3690,6 +3702,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_mod_rjs,
        .slowCallName = "_sh_ljs_mod_rjs",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -3791,6 +3804,7 @@ void Emitter::arithBinOp(
        .hwRes = hwRes,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -3887,6 +3901,7 @@ void Emitter::bitBinOp(
        .hwRes = hwRes,
        .slowCall = (void *)slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -4079,6 +4094,7 @@ void Emitter::jCond(
        .passArgsByVal = passArgsByVal,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: j_%s%s Lx, r%u, r%u",
@@ -4189,6 +4205,7 @@ void Emitter::compareImpl(
        .passArgsByVal = passArgsByVal,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: j_%s r%u, r%u, r%u",
@@ -4296,6 +4313,7 @@ void Emitter::getArgumentsPropByValImpl(
        .hwRes = hwRes,
        .slowCall = (void *)shImpl,
        .slowCallName = shImplName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
          em.a.bind(sl.slowPathLab);
@@ -4341,6 +4359,7 @@ void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
                           : (void *)_sh_ljs_reify_arguments_loose,
        .slowCallName = strict ? "_sh_ljs_reify_arguments_strict"
                               : "_sh_ljs_reify_arguments_loose",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
          em.a.bind(sl.slowPathLab);

@@ -325,6 +325,9 @@ class Emitter {
     /// The name of the slow path function.
     const char *slowCallName;
 
+    /// Bytecode IP of the instruction that this is a slow path for.
+    const inst::Inst *emittingIP;
+
     /// Callback to actually emit.
     void (*emit)(Emitter &em, SlowPath &sl);
   };
@@ -375,6 +378,8 @@ class Emitter {
  public:
   asmjit::CodeHolder code{};
   a64::Assembler a{};
+  /// The IP of the instruction being emitted.
+  const inst::Inst *emittingIP{nullptr};
 
   /// Create an Emitter, but do not emit any actual code.
   /// Use \c enter to set up the stack frame before emitting the actual code.
