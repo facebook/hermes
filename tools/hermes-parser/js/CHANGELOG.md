@@ -1,3 +1,8 @@
+## 0.25.0
+
+### `flow-api-translator`
+* Support `React.RefSetter` translation and remove support for incorrect `React.Ref` translation.
+
 ## 0.24.0
 
 ### `hermes-parser`
