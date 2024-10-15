@@ -2163,6 +2163,72 @@ void Emitter::getNewTarget(FR frRes) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::iteratorBegin(FR frRes, FR frSource) {
+  comment("// IteratorBegin r%u, r%u", frRes.index(), frSource.index());
+
+  syncAllFRTempExcept(frRes != frSource ? frRes : FR());
+  syncToFrame(frSource);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frSource);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
+      _sh_ljs_iterator_begin_rjs);
+
+  syncFrameOutParam(frSource);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::iteratorNext(FR frRes, FR frIteratorOrIdx, FR frSourceOrNext) {
+  comment(
+      "// IteratorNext r%u, r%u, r%u",
+      frRes.index(),
+      frIteratorOrIdx.index(),
+      frSourceOrNext.index());
+
+  syncAllFRTempExcept(
+      frRes != frIteratorOrIdx && frRes != frSourceOrNext ? frRes : FR());
+  syncToFrame(frIteratorOrIdx);
+  syncToFrame(frSourceOrNext);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frIteratorOrIdx);
+  loadFrameAddr(a64::x2, frSourceOrNext);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, const SHLegacyValue *),
+      _sh_ljs_iterator_next_rjs);
+
+  syncFrameOutParam(frIteratorOrIdx);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::iteratorClose(FR frIteratorOrIdx, bool ignoreExceptions) {
+  comment(
+      "// IteratorClose r%u, %u", frIteratorOrIdx.index(), ignoreExceptions);
+
+  syncAllFRTempExcept({});
+  syncToFrame(frIteratorOrIdx);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frIteratorOrIdx);
+  a.mov(a64::w2, ignoreExceptions);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, const SHLegacyValue *, bool),
+      _sh_ljs_iterator_close_rjs);
+}
+
 void Emitter::throwInst(FR frInput) {
   comment("// Throw r%u", frInput.index());
 

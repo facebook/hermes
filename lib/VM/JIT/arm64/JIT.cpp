@@ -288,9 +288,6 @@ EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(IteratorBegin)
-EMIT_UNIMPLEMENTED(IteratorNext)
-EMIT_UNIMPLEMENTED(IteratorClose)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -997,6 +994,21 @@ inline void JITContext::Compiler::emitGetNextPName(
       FR(inst->op3),
       FR(inst->op4),
       FR(inst->op5));
+}
+
+inline void JITContext::Compiler::emitIteratorBegin(
+    const inst::IteratorBeginInst *inst) {
+  em_.iteratorBegin(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitIteratorNext(
+    const inst::IteratorNextInst *inst) {
+  em_.iteratorNext(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+inline void JITContext::Compiler::emitIteratorClose(
+    const inst::IteratorCloseInst *inst) {
+  em_.iteratorClose(FR(inst->op1), (bool)inst->op2);
 }
 
 #define EMIT_GET_ARGUMENTS_PROP_BY_VAL(name, op)                               \

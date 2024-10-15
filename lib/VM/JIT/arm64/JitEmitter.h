@@ -798,6 +798,10 @@ class Emitter {
   void coerceThisNS(FR frRes, FR frThis);
   void getNewTarget(FR frRes);
 
+  void iteratorBegin(FR frRes, FR frSource);
+  void iteratorNext(FR frRes, FR frIteratorOrIdx, FR frSourceOrNext);
+  void iteratorClose(FR frIteratorOrIdx, bool ignoreExceptions);
+
   void debugger();
   void throwInst(FR frInput);
   void throwIfEmpty(FR frRes, FR frInput);
