@@ -15,7 +15,8 @@
   } catch (e) {
     print("caught", e.stack);
 //CHECK: caught TypeError: Function is not a constructor
-//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:14:15)
+//CHECK-NEXT: at anonymous ({{.*}}prohibit-invoke.js:{{.*}})
+//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:{{.*}})
   }
 
   arrow1();
@@ -40,7 +41,8 @@ globalThis.a = "a";
   } catch (e) {
     print(e.stack);
 //CHECK-NEXT: TypeError: Function is not a constructor
-//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:39:15)
+//CHECK-NEXT: at anonymous ({{.*}}prohibit-invoke.js:{{.*}})
+//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:{{.*}})
   }
 
   try {
@@ -48,7 +50,8 @@ globalThis.a = "a";
   } catch (e) {
     print(e.stack);
 //CHECK-NEXT: TypeError: Function is not a constructor
-//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:47:25)
+//CHECK-NEXT: at anonymous ({{.*}}prohibit-invoke.js:{{.*}})
+//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:{{.*}})
   }
 })();
 

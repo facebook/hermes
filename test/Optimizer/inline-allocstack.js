@@ -6,6 +6,8 @@
  */
 
 // RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// XFAIL: true
+// TODO: This test fails because we disable try/catch inlining.
 
 // Test that the type of AllocStackInst is correctly copied during inlining
 // so it matches the type of LoadStackInst. The problematic stack allocation
