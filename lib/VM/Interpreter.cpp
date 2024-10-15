@@ -1037,6 +1037,17 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     if (auto jitPtr = runtime.jitContext_.compile(runtime, curCodeBlock)) {
       return JSFunction::_jittedCall(jitPtr, runtime);
     }
+
+    // Check for invalid invocation. This is done before setting up the stack so
+    // the exception appears to come from the call site.
+    auto newFrame = StackFramePtr(runtime.getStackPointer());
+    bool isCtorCall = newFrame.isConstructorCall();
+    if (LLVM_UNLIKELY(
+            curCodeBlock->getHeaderFlags().isCallProhibited(isCtorCall))) {
+      return runtime.raiseTypeError(
+          isCtorCall ? "Function is not a constructor"
+                     : "Class constructor invoked without new");
+    }
   }
 
   GCScope gcScope(runtime);
@@ -1114,17 +1125,6 @@ tailCall:
 
     ip = (Inst const *)curCodeBlock->begin();
 
-    // Check for invalid invocation.
-    if (LLVM_UNLIKELY(curCodeBlock->getHeaderFlags().isCallProhibited(
-            newFrame.isConstructorCall()))) {
-      if (!newFrame.isConstructorCall()) {
-        CAPTURE_IP(
-            runtime.raiseTypeError("Class constructor invoked without new"));
-      } else {
-        CAPTURE_IP(runtime.raiseTypeError("Function is not a constructor"));
-      }
-      goto handleExceptionInParent;
-    }
   } else {
     // Point frameRegs to the first register in the frame.
     frameRegs = &runtime.getCurrentFrame().getFirstLocalRef();
@@ -1713,6 +1713,16 @@ tailCall:
           gcScope.flushToSmallCount(KEEP_HANDLES);
           ip = nextIP;
           DISPATCH;
+        }
+
+        // Check for invalid invocation.
+        bool isCtorCall = !HermesValue::fromRaw(callNewTarget).isUndefined();
+        if (LLVM_UNLIKELY(
+                calleeBlock->getHeaderFlags().isCallProhibited(isCtorCall))) {
+          CAPTURE_IP(runtime.raiseTypeError(
+              isCtorCall ? "Function is not a constructor"
+                         : "Class constructor invoked without new"));
+          goto exception;
         }
 
         curCodeBlock = calleeBlock;
@@ -3678,21 +3688,6 @@ tailCall:
     CAPTURE_IP(runtime.raiseStackOverflow(
         Runtime::StackOverflowKind::JSRegisterStack));
 
-  // We arrive here when we raised an exception in a callee, but we don't want
-  // the callee to be able to handle it.
-  handleExceptionInParent:
-    // Restore the caller code block and IP.
-    curCodeBlock = FRAME.getSavedCodeBlock();
-    ip = FRAME.getSavedIP();
-
-    // Pop to the previous frame where technically the error happened.
-    frameRegs = &runtime.restoreStackAndPreviousFrame(FRAME).getFirstLocalRef();
-
-    // If we are coming from native code, return.
-    if (!curCodeBlock)
-      return ExecutionStatus::EXCEPTION;
-
-  // Handle the exception.
   exception:
     UPDATE_OPCODE_TIME_SPENT;
     assert(
