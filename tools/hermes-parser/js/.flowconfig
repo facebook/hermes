@@ -30,7 +30,7 @@ as_const=true
 experimental.natural_inference.object_freeze=true
 
 [version]
-^0.247.1
+^0.248.0
 
 [lints]
 untyped-type-import=error
