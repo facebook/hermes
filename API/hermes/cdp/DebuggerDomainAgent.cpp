@@ -248,6 +248,14 @@ void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
+void DebuggerDomainAgent::setBlackboxedRanges(
+    const m::debugger::SetBlackboxedRangesRequest &req) {
+  sendResponseToClient(m::makeErrorResponse(
+      req.id,
+      m::ErrorCode::MethodNotFound,
+      "setBlackboxedRanges is not implemented yet"));
+}
+
 void DebuggerDomainAgent::setPauseOnExceptions(
     const m::debugger::SetPauseOnExceptionsRequest &req) {
   if (!checkDebuggerEnabled(req)) {

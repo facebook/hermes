@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<cedec18119ebdcfb5d5e9616cf9b28bd>>
+// @generated SignedSource<<c0e78c8bc8eb1a38a58038991c7b0fdf>>
 
 #pragma once
 
@@ -36,6 +36,8 @@ struct ResumeRequest;
 struct ResumedNotification;
 struct Scope;
 struct ScriptParsedNotification;
+struct ScriptPosition;
+struct SetBlackboxedRangesRequest;
 struct SetBreakpointByUrlRequest;
 struct SetBreakpointByUrlResponse;
 struct SetBreakpointRequest;
@@ -132,6 +134,7 @@ struct RequestHandler {
   virtual void handle(const debugger::PauseRequest &req) = 0;
   virtual void handle(const debugger::RemoveBreakpointRequest &req) = 0;
   virtual void handle(const debugger::ResumeRequest &req) = 0;
+  virtual void handle(const debugger::SetBlackboxedRangesRequest &req) = 0;
   virtual void handle(const debugger::SetBreakpointRequest &req) = 0;
   virtual void handle(const debugger::SetBreakpointByUrlRequest &req) = 0;
   virtual void handle(const debugger::SetBreakpointsActiveRequest &req) = 0;
@@ -177,6 +180,7 @@ struct NoopRequestHandler : public RequestHandler {
   void handle(const debugger::PauseRequest &req) override {}
   void handle(const debugger::RemoveBreakpointRequest &req) override {}
   void handle(const debugger::ResumeRequest &req) override {}
+  void handle(const debugger::SetBlackboxedRangesRequest &req) override {}
   void handle(const debugger::SetBreakpointRequest &req) override {}
   void handle(const debugger::SetBreakpointByUrlRequest &req) override {}
   void handle(const debugger::SetBreakpointsActiveRequest &req) override {}
@@ -399,6 +403,19 @@ struct debugger::CallFrame : public Serializable {
   std::vector<debugger::Scope> scopeChain;
   runtime::RemoteObject thisObj{};
   std::optional<runtime::RemoteObject> returnValue;
+};
+
+struct debugger::ScriptPosition : public Serializable {
+  ScriptPosition() = default;
+  ScriptPosition(ScriptPosition &&) = default;
+  ScriptPosition(const ScriptPosition &) = delete;
+  static std::unique_ptr<ScriptPosition> tryMake(const JSONObject *obj);
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+  ScriptPosition &operator=(const ScriptPosition &) = delete;
+  ScriptPosition &operator=(ScriptPosition &&) = default;
+
+  long long lineNumber{};
+  long long columnNumber{};
 };
 
 struct heapProfiler::SamplingHeapProfileNode : public Serializable {
@@ -633,6 +650,18 @@ struct debugger::ResumeRequest : public Request {
   void accept(RequestHandler &handler) const override;
 
   std::optional<bool> terminateOnResume;
+};
+
+struct debugger::SetBlackboxedRangesRequest : public Request {
+  SetBlackboxedRangesRequest();
+  static std::unique_ptr<SetBlackboxedRangesRequest> tryMake(
+      const JSONObject *obj);
+
+  JSONValue *toJsonVal(JSONFactory &factory) const override;
+  void accept(RequestHandler &handler) const override;
+
+  runtime::ScriptId scriptId{};
+  std::vector<debugger::ScriptPosition> positions;
 };
 
 struct debugger::SetBreakpointRequest : public Request {
