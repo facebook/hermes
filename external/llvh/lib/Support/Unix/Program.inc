@@ -40,12 +40,11 @@
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef HAVE_POSIX_SPAWN
-#include <spawn.h>
-
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
+#ifdef HAVE_POSIX_SPAWN
+#include <spawn.h>
 
 #if defined(__APPLE__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
 #define USE_NSGETENVIRON 1
