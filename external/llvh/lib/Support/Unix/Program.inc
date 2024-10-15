@@ -177,6 +177,13 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
                     ArrayRef<Optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg) {
+ // fork, exec and posix_spawn are all unavailable on tvOS, so just report an
+ // error.
+#if defined(TARGET_OS_TV) && TARGET_OS_TV
+  if (ErrMsg)
+    *ErrMsg = "Executing another program is unsupported on this platform";
+  return false;
+#else
   if (!llvh::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
@@ -265,9 +272,6 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   }
 #endif
 
-// error: 'fork' is unavailable: not available on tvOS
-// error: 'execve' is unavailable: not available on tvOS
-#if !(defined(TARGET_OS_TV) && TARGET_OS_TV)
   // Create a child process.
   int child = fork();
   switch (child) {
