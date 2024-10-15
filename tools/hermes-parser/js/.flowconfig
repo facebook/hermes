@@ -27,7 +27,6 @@ component_syntax=true
 enums=true
 
 as_const=true
-experimental.natural_inference.object_freeze=true
 
 [version]
 ^0.248.0
