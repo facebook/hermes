@@ -148,8 +148,6 @@
 #   include <TargetConditionals.h>
 #   if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE  /* variant of TARGET_OS_MAC */
 #       define U_PLATFORM U_PF_IPHONE
-#   elif defined(TARGET_OS_TV) && TARGET_OS_TV  /* variant of TARGET_OS_MAC */
-#       define U_PLATFORM U_PF_IPHONE
 #   else
 #       define U_PLATFORM U_PF_DARWIN
 #   endif
