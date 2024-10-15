@@ -426,6 +426,9 @@ class Emitter {
   void callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args);
   void callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc);
   void callWithNewTarget(FR frRes, FR frCallee, FR frNewTarget, uint32_t argc);
+  /// Note that this technically allows different arguments at runtime because
+  /// argc is a register.
+  void callWithNewTargetLong(FR frRes, FR frCallee, FR frNewTarget, FR frArgc);
 
   /// Get a builtin closure.
   void getBuiltinClosure(FR frRes, uint32_t builtinIndex);

@@ -3333,6 +3333,64 @@ void Emitter::callWithNewTarget(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::callWithNewTargetLong(
+    FR frRes,
+    FR frCallee,
+    FR frNewTarget,
+    FR frArgc) {
+  comment(
+      "// CallWithNewTarget r%u, r%u, r%u, r%u",
+      frRes.index(),
+      frCallee.index(),
+      frNewTarget.index(),
+      frArgc.index());
+  uint32_t nRegs = frameRegs_.size();
+
+  auto calleeFrameArg = FR{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
+  // Store the callee to the right location in the frame.
+  if (calleeFrameArg != frCallee) {
+    // Free any temp register before we mov into it so movFRFromHW stores
+    // directly to the frame.
+    freeFRTemp(calleeFrameArg);
+    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
+    movFRFromHW(
+        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
+  }
+
+  FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
+  // Store the new target to the right location in the frame.
+  if (ntFrameArg != frNewTarget) {
+    // Free the register before we mov into it so we store directly to the
+    // frame.
+    freeFRTemp(ntFrameArg);
+    auto newTargetReg = getOrAllocFRInAnyReg(frNewTarget, true);
+    movFRFromHW(
+        ntFrameArg, newTargetReg, frameRegs_[frNewTarget.index()].localType);
+  }
+
+  syncToFrame(calleeFrameArg);
+  syncToFrame(ntFrameArg);
+
+  HWReg hwArgc = getOrAllocFRInVecD(frArgc, true);
+  HWReg hwTemp = allocTempGpX(HWReg::gpX(2));
+  freeReg(hwTemp);
+  a.fcvtzu(hwTemp.a64GpX(), hwArgc.a64VecD());
+
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept(frRes);
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  a.mov(a64::w2, hwTemp.a64GpX().w());
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      _sh_ljs_call);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
   comment(
       "// GetBuiltinClosure r%u, %s",

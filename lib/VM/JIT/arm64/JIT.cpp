@@ -285,7 +285,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
   }
 
 EMIT_UNIMPLEMENTED(GetEnvironment)
-EMIT_UNIMPLEMENTED(CallWithNewTargetLong)
 EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
@@ -828,6 +827,15 @@ inline void JITContext::Compiler::emitCallWithNewTarget(
       /* callee */ FR(inst->op2),
       /* newTarget */ FR(inst->op3),
       /* argc */ inst->op4);
+}
+
+inline void JITContext::Compiler::emitCallWithNewTargetLong(
+    const inst::CallWithNewTargetLongInst *inst) {
+  em_.callWithNewTargetLong(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* newTarget */ FR(inst->op3),
+      /* argc */ FR(inst->op4));
 }
 
 inline void JITContext::Compiler::emitGetBuiltinClosure(
