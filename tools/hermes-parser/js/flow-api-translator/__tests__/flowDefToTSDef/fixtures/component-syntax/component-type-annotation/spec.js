@@ -15,4 +15,4 @@ type ExtraPropsFoo = {foo: string};
 type T = component(...rest: ExtraPropsFoo);
 
 type ExtraPropsBar = {'bar': string};
-type T = component(foo: string, ...rest: ExtraPropsBar);
+type T = component(ref?: React.RefSetter<Foo>, foo: string, ...rest: ExtraPropsBar);

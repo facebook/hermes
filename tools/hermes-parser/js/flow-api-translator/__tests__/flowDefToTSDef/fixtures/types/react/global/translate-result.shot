@@ -25,7 +25,7 @@ type T10 = JSX.LibraryManagedAttributes<
   typeof Component,
   React.ComponentProps<typeof Component>
 >;
-type T11 = NonNullable<React.Ref<typeof Component> | string | number>;
+type T11 = React.Ref<Instance>;
 type T12 = React.Key;
 type T13 = React.Component<Props, {}>;
 type T14 = React.ElementType;
