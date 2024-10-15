@@ -12,7 +12,7 @@
 
 // Enable thread safety attributes only with clang.
 // The attributes can be safely erased when compiling with other compilers.
-#if defined(__clang__) && (!defined(SWIG)) && \
+#if defined(__clang__) && (!defined(SWIG)) && defined(_LIBCPP_VERSION) && \
     defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS)
 #define TSA_THREAD_ANNOTATION_ATTRIBUTE__(x) __attribute__((x))
 #else
