@@ -9,8 +9,8 @@
 
 #include "Constants.h"
 #include "IntlUtils.h"
-#include "Locale.h"
 #include "LocaleBCP47Object.h"
+#include "LocaleConverter.h"
 #include "OptionHelpers.h"
 #include "hermes/Platform/Unicode/icu.h"
 

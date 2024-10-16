@@ -27,7 +27,7 @@ if(HERMES_ENABLE_INTL)
         PlatformIntlShared.cpp
         impl_icu/Collator.cpp
         impl_icu/IntlUtils.cpp
-        impl_icu/Locale.cpp
+        impl_icu/LocaleConverter.cpp
         impl_icu/LocaleBCP47Object.cpp
         impl_icu/LocaleResolver.cpp
         impl_icu/OptionHelpers.cpp

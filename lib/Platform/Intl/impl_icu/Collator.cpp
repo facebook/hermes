@@ -9,8 +9,8 @@
 
 #include "Constants.h"
 #include "IntlUtils.h"
-#include "Locale.h"
 #include "LocaleBCP47Object.h"
+#include "LocaleConverter.h"
 #include "LocaleResolver.h"
 #include "OptionHelpers.h"
 #include "hermes/Platform/Intl/BCP47Parser.h"
@@ -386,6 +386,12 @@ vm::ExecutionStatus Collator::initializeCollator(
   std::map<std::u16string, std::u16string> resolvedExtMap =
       resolvedBCP47Locale.getExtensionMap();
   if (resolvedUsageValue_ == constants::opt_value::usage::search) {
+    // If resolvedLocale_ has a collation unicode extension, remove it.
+    auto nodeHandle = resolvedExtMap.extract(constants::extension_key::co);
+    if (!nodeHandle.empty()) {
+      resolvedBCP47Locale.updateExtensionMap(resolvedExtMap);
+      resolvedLocale_ = resolvedBCP47Locale.getCanonicalizedLocaleId();
+    }
     resolvedExtMap[constants::extension_key::co] = collationTypeSearch;
   } else {
     auto collationEntry = resolvedOpt.find(constants::extension_key::co);

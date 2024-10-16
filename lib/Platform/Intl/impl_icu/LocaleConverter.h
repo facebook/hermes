@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PLATFORMINTL_IMPLICU_LOCALE_H
-#define HERMES_PLATFORMINTL_IMPLICU_LOCALE_H
+#ifndef HERMES_PLATFORMINTL_IMPLICU_LOCALECONVERTER_H
+#define HERMES_PLATFORMINTL_IMPLICU_LOCALECONVERTER_H
 
 #include <string>
 #include <string_view>
@@ -33,4 +33,4 @@ std::string convertICUtoBCP47Locale(const char *localeICU);
 } // namespace platform_intl
 } // namespace hermes
 
-#endif // HERMES_PLATFORMINTL_IMPLICU_LOCALE_H
+#endif // HERMES_PLATFORMINTL_IMPLICU_LOCALECONVERTER_H

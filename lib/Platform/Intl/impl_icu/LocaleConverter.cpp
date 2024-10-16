@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "Locale.h"
+#include "LocaleConverter.h"
 
 #include "IntlUtils.h"
 #include "hermes/Platform/Unicode/icu.h"

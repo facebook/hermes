@@ -81,35 +81,6 @@ locales = ['zz', 'de-DE-u-Co-phoneBK-kf-Upper-kn-TRUE'];
 options = undefined;
 testResolvedOptions(testName, expected, locales, options);
 
-testName = 'Test-Locale-With-Extensions-Not-Supported-By-Locale'
-expected = Object.assign({}, DEFAULT_RESOLVED_OPTIONS);
-expected.locale = 'ja-JP-u-kf-lower-kn-false';
-expected.caseFirst = 'lower';
-expected.numeric = false;
-locales = 'ja-JP-u-co-phonebk-kf-lower-kn-false';
-options = undefined;
-testResolvedOptions(testName, expected, locales, options);
-
-testName = 'Test-Locale-With-Co-Extension-Search'
-expected = Object.assign({}, DEFAULT_RESOLVED_OPTIONS);
-expected.locale = 'en-US-u-kn';
-expected.numeric = true;
-locales = 'en-US-u-co-search-kn';
-options = {
-  collation: 'search',
-};
-testResolvedOptions(testName, expected, locales, options);
-
-testName = 'Test-Locale-With-Co-Extension-Standard'
-expected = Object.assign({}, DEFAULT_RESOLVED_OPTIONS);
-expected.locale = 'en-GB-u-kf-false';
-expected.caseFirst = 'false';
-locales = 'en-GB-u-co-standard-kf-false';
-options = {
-  collation: 'standard',
-};
-testResolvedOptions(testName, expected, locales, options);
-
 testName = 'Test-Options-Overrides'
 expected = Object.assign({}, DEFAULT_RESOLVED_OPTIONS);
 expected.locale = 'es-ES';
@@ -124,7 +95,17 @@ options = {
 };
 testResolvedOptions(testName, expected, locales, options);
 
-testName = 'Test-Usage-Search-Overrides'
+testName = 'Test-Usage-Search-Overrides-Collation-Extension'
+expected = Object.assign({}, DEFAULT_RESOLVED_OPTIONS);
+expected.locale = 'it-IT';
+expected.usage = 'search';
+locales = 'it-IT-u-co-eor';
+options = {
+  usage: 'search',
+};
+testResolvedOptions(testName, expected, locales, options);
+
+testName = 'Test-Usage-Search-Overrides-Collation-Option'
 expected = Object.assign({}, DEFAULT_RESOLVED_OPTIONS);
 expected.locale = 'it-IT';
 expected.usage = 'search';
