@@ -43,5 +43,6 @@ PASS(
     "Move StartGenerator to start of function")
 PASS(Auditor, "auditor", "Auditor")
 PASS(TDZDedup, "tdzdedup", "TDZ Deduplication")
+PASS(StripDebugInsts, "stripdebug", "Strip debug instructions")
 
 #undef PASS

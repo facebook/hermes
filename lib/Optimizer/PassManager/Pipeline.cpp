@@ -128,4 +128,13 @@ void hermes::runNoOptimizationPasses(Module &) {
   LLVM_DEBUG(dbgs() << "Running -O0 optimizations...\n");
 }
 
+void hermes::runNativeBackendOptimizationPasses(Module &M) {
+  LLVM_DEBUG(dbgs() << "Running native backend optimizations...\n");
+  PassManager PM("Native backend opts");
+
+  PM.addStripDebugInsts();
+
+  PM.run(&M);
+}
+
 #undef DEBUG_TYPE
