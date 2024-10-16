@@ -1048,6 +1048,22 @@ CallResult<HermesValue> Interpreter::interpretFunction(
           isCtorCall ? "Function is not a constructor"
                      : "Class constructor invoked without new");
     }
+
+    // Allocate the registers for the new frame. As with ProhibitInvoke, if this
+    // fails, we want the exception to come from the call site.
+    if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
+            curCodeBlock->getFrameSize() +
+                StackFrameLayout::CalleeExtraRegistersAtStart,
+            HermesValue::encodeUndefinedValue()))) {
+      return runtime.raiseStackOverflow(
+          Runtime::StackOverflowKind::JSRegisterStack);
+    }
+
+    // Advance the frame pointer.
+    runtime.setCurrentFrame(newFrame);
+    // Point frameRegs to the first register in the new frame.
+    frameRegs = &newFrame.getFirstLocalRef();
+    ip = (Inst const *)curCodeBlock->begin();
   }
 
   GCScope gcScope(runtime);
@@ -1082,16 +1098,10 @@ tailCall:
   curCodeBlock->incrementExecutionCount();
 
   if (!SingleStep) {
-    auto newFrame = runtime.setCurrentFrameToTopOfStack();
     runtime.saveCallerIPInStackFrame();
 #ifndef NDEBUG
     runtime.invalidateCurrentIP();
 #endif
-
-    // Point frameRegs to the first register in the new frame. Note that at this
-    // moment technically it points above the top of the stack, but we are never
-    // going to access it.
-    frameRegs = &newFrame.getFirstLocalRef();
 
 #ifndef NDEBUG
     LLVM_DEBUG(
@@ -1115,15 +1125,6 @@ tailCall:
                  << "\n");
     }
 #endif
-
-    // Allocate the registers for the new frame.
-    if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
-            curCodeBlock->getFrameSize() +
-                StackFrameLayout::CalleeExtraRegistersAtStart,
-            HermesValue::encodeUndefinedValue())))
-      goto stackOverflow;
-
-    ip = (Inst const *)curCodeBlock->begin();
 
   } else {
     // Point frameRegs to the first register in the frame.
@@ -1725,8 +1726,28 @@ tailCall:
           goto exception;
         }
 
+        // Allocate the registers for the new frame.
+        if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
+                calleeBlock->getFrameSize() +
+                    StackFrameLayout::CalleeExtraRegistersAtStart,
+                HermesValue::encodeUndefinedValue()))) {
+          CAPTURE_IP(runtime.raiseStackOverflow(
+              Runtime::StackOverflowKind::JSRegisterStack));
+          goto exception;
+        }
+
+        // Advance the frame pointer.
+        runtime.setCurrentFrame(newFrame);
+
+        // Update the executing CodeBlock to the callee.
         curCodeBlock = calleeBlock;
+        // Point frameRegs to the first register in the new frame.
+        frameRegs = &newFrame.getFirstLocalRef();
+
+        // Save the caller IP in the runtime before we update the IP.
         CAPTURE_IP_SET();
+        ip = (Inst const *)curCodeBlock->begin();
+
         goto tailCall;
       }
       CAPTURE_IP(
@@ -3682,11 +3703,6 @@ tailCall:
     hermes_fatal(
         "All opcodes should dispatch to the next and not fallthrough "
         "to here");
-
-  // We arrive here if we couldn't allocate the registers for the current frame.
-  stackOverflow:
-    CAPTURE_IP(runtime.raiseStackOverflow(
-        Runtime::StackOverflowKind::JSRegisterStack));
 
   exception:
     UPDATE_OPCODE_TIME_SPENT;
