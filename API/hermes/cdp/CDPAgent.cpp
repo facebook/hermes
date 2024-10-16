@@ -401,6 +401,9 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     } else if (method == "stepOver") {
       debuggerAgent_->stepOver(
           static_cast<m::debugger::StepOverRequest &>(*command));
+    } else if (method == "setBlackboxedRanges") {
+      debuggerAgent_->setBlackboxedRanges(
+          static_cast<m::debugger::SetBlackboxedRangesRequest &>(*command));
     } else if (method == "setPauseOnExceptions") {
       debuggerAgent_->setPauseOnExceptions(
           static_cast<m::debugger::SetPauseOnExceptionsRequest &>(*command));

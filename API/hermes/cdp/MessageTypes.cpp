@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<da57bd95099acd0d931a2ed451676ff8>>
+// @generated SignedSource<<c5d806e6bc7d2a1f696a1cf32e7e06cb>>
 
 #include "MessageTypes.h"
 
@@ -97,6 +97,8 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
       {"Debugger.pause", tryMake<debugger::PauseRequest>},
       {"Debugger.removeBreakpoint", tryMake<debugger::RemoveBreakpointRequest>},
       {"Debugger.resume", tryMake<debugger::ResumeRequest>},
+      {"Debugger.setBlackboxedRanges",
+       tryMake<debugger::SetBlackboxedRangesRequest>},
       {"Debugger.setBreakpoint", tryMake<debugger::SetBreakpointRequest>},
       {"Debugger.setBreakpointByUrl",
        tryMake<debugger::SetBreakpointByUrlRequest>},
@@ -419,6 +421,23 @@ JSONValue *debugger::CallFrame::toJsonVal(JSONFactory &factory) const {
   put(props, "scopeChain", scopeChain, factory);
   put(props, "this", thisObj, factory);
   put(props, "returnValue", returnValue, factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+std::unique_ptr<debugger::ScriptPosition> debugger::ScriptPosition::tryMake(
+    const JSONObject *obj) {
+  std::unique_ptr<debugger::ScriptPosition> type =
+      std::make_unique<debugger::ScriptPosition>();
+  TRY_ASSIGN(type->lineNumber, obj, "lineNumber");
+  TRY_ASSIGN(type->columnNumber, obj, "columnNumber");
+  return type;
+}
+
+JSONValue *debugger::ScriptPosition::toJsonVal(JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 2> props;
+
+  put(props, "lineNumber", lineNumber, factory);
+  put(props, "columnNumber", columnNumber, factory);
   return factory.newObject(props.begin(), props.end());
 }
 
@@ -866,6 +885,51 @@ JSONValue *debugger::ResumeRequest::toJsonVal(JSONFactory &factory) const {
 }
 
 void debugger::ResumeRequest::accept(RequestHandler &handler) const {
+  handler.handle(*this);
+}
+
+debugger::SetBlackboxedRangesRequest::SetBlackboxedRangesRequest()
+    : Request("Debugger.setBlackboxedRanges") {}
+
+std::unique_ptr<debugger::SetBlackboxedRangesRequest>
+debugger::SetBlackboxedRangesRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetBlackboxedRangesRequest> req =
+      std::make_unique<debugger::SetBlackboxedRangesRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->scriptId, params, "scriptId");
+  TRY_ASSIGN(req->positions, params, "positions");
+  return req;
+}
+
+JSONValue *debugger::SetBlackboxedRangesRequest::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 2> paramsProps;
+  put(paramsProps, "scriptId", scriptId, factory);
+  put(paramsProps, "positions", positions, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "id", id, factory);
+  put(props, "method", method, factory);
+  put(props,
+      "params",
+      factory.newObject(paramsProps.begin(), paramsProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+void debugger::SetBlackboxedRangesRequest::accept(
+    RequestHandler &handler) const {
   handler.handle(*this);
 }
 

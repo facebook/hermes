@@ -16,6 +16,7 @@ Debugger.setPauseOnExceptions
 Debugger.stepInto
 Debugger.stepOut
 Debugger.stepOver
+Debugger.setBlackboxedRanges
 HeapProfiler.addHeapSnapshotChunk
 HeapProfiler.collectGarbage
 HeapProfiler.reportHeapSnapshotProgress
