@@ -1096,10 +1096,12 @@ ExecutionStatus Debugger::processInstUnderDebuggerOpCode(
       // since we've already called the debugger on this instruction.
       newState.offset = offset + 1;
       state = newState;
-    } else if (ip->opCode == OpCode::Ret) {
-      // Breakpoint the caller to make sure we'll get a chance to restore the
-      // uninstalled breakpoint.
-      breakpointCaller(/*forRestorationBreakpoint*/ true);
+    } else if (ip->opCode == OpCode::Ret || isCallType(ip->opCode)) {
+      if (ip->opCode == OpCode::Ret) {
+        // Breakpoint the caller to make sure we'll get a chance to restore the
+        // uninstalled breakpoint.
+        breakpointCaller(/*forRestorationBreakpoint*/ true);
+      }
 
       // Set pause on all CodeBlocks so that we get a chance to restore the
       // uninstalled breakpoint.

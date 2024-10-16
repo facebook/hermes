@@ -152,6 +152,17 @@ DecodedInstruction decodeInstruction(const Inst *inst) {
   return decoded;
 }
 
+bool isCallType(OpCode opcode) {
+  switch (opcode) {
+#define DEFINE_RET_TARGET(name) \
+  case OpCode::name:            \
+    return true;
+#include "hermes/BCGen/HBC/BytecodeList.def"
+    default:
+      return false;
+  }
+}
+
 void dumpOperand(llvh::raw_ostream &OS, OperandType type, OperandValue value) {
   switch (type) {
     case OperandType::Reg8:

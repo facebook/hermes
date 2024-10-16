@@ -715,20 +715,6 @@ static void printDebugInfo(
   dbgs() << "\n";
 }
 
-/// \return whether \p opcode is a call opcode (Call, CallDirect, Construct,
-/// CallLongIndex, etc). Note CallBuiltin is not really a Call.
-LLVM_ATTRIBUTE_UNUSED
-static bool isCallType(OpCode opcode) {
-  switch (opcode) {
-#define DEFINE_RET_TARGET(name) \
-  case OpCode::name:            \
-    return true;
-#include "hermes/BCGen/HBC/BytecodeList.def"
-    default:
-      return false;
-  }
-}
-
 #endif
 
 /// \return the address of the next instruction after \p ip, which must be a
