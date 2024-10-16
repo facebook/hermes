@@ -287,7 +287,6 @@ static inline void *_sh_ljs_get_native_pointer(SHLegacyValue v) {
 }
 
 /// Flags associated with an object.
-static const unsigned kObjectFlagsIDHashWidth = 24;
 typedef struct SHObjectFlags {
   /// New properties cannot be added.
   uint32_t noExtend : 1;
@@ -325,7 +324,7 @@ typedef struct SHObjectFlags {
   /// A non-zero object id value, assigned lazily. It is 0 before it is
   /// assigned. If an object started out as lazy, the objectID is the lazy
   /// object index used to identify when it gets initialized.
-  uint32_t objectID : kObjectFlagsIDHashWidth;
+  uint32_t objectID : 24;
 } SHObjectFlags;
 
 #ifdef __cplusplus
