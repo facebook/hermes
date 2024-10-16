@@ -1899,98 +1899,12 @@ void HadesGC::debitExternalMemory(GCCell *cell, uint32_t sz) {
   }
 }
 
-void HadesGC::writeBarrierSlow(const GCHermesValue *loc, HermesValue value) {
-  if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(*loc);
-  }
-  if (!value.isPointer()) {
-    return;
-  }
-  relocationWriteBarrier(loc, value.getPointer());
-}
-
-void HadesGC::writeBarrierSlow(
-    const GCSmallHermesValue *loc,
-    SmallHermesValue value) {
-  if (ogMarkingBarriers_) {
-    snapshotWriteBarrierInternal(*loc);
-  }
-  if (!value.isPointer()) {
-    return;
-  }
-  relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
-}
-
 void HadesGC::writeBarrierSlow(const GCPointerBase *loc, const GCCell *value) {
   if (*loc && ogMarkingBarriers_)
     snapshotWriteBarrierInternal(*loc);
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
   relocationWriteBarrier(loc, value);
-}
-
-void HadesGC::constructorWriteBarrierSlow(
-    const GCHermesValue *loc,
-    HermesValue value) {
-  // A constructor never needs to execute a SATB write barrier, since its
-  // previous value was definitely not live.
-  if (!value.isPointer()) {
-    return;
-  }
-  relocationWriteBarrier(loc, value.getPointer());
-}
-
-void HadesGC::constructorWriteBarrierSlow(
-    const GCSmallHermesValue *loc,
-    SmallHermesValue value) {
-  // A constructor never needs to execute a SATB write barrier, since its
-  // previous value was definitely not live.
-  if (!value.isPointer()) {
-    return;
-  }
-  relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
-}
-
-void HadesGC::constructorWriteBarrierRangeSlow(
-    const GCHermesValue *start,
-    uint32_t numHVs) {
-  assert(
-      AlignedHeapSegment::containedInSame(start, start + numHVs) &&
-      "Range must start and end within a heap segment.");
-
-  // Most constructors should be running in the YG, so in the common case, we
-  // can avoid doing anything for the whole range. If the range is in the OG,
-  // then just dirty all the cards corresponding to it, and we can scan them for
-  // pointers later. This is less precise but makes the write barrier faster.
-
-  AlignedHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
-      start, start + numHVs);
-}
-
-void HadesGC::constructorWriteBarrierRangeSlow(
-    const GCSmallHermesValue *start,
-    uint32_t numHVs) {
-  assert(
-      AlignedHeapSegment::containedInSame(start, start + numHVs) &&
-      "Range must start and end within a heap segment.");
-  AlignedHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
-      start, start + numHVs);
-}
-
-void HadesGC::snapshotWriteBarrierRangeSlow(
-    const GCHermesValue *start,
-    uint32_t numHVs) {
-  for (uint32_t i = 0; i < numHVs; ++i) {
-    snapshotWriteBarrierInternal(start[i]);
-  }
-}
-
-void HadesGC::snapshotWriteBarrierRangeSlow(
-    const GCSmallHermesValue *start,
-    uint32_t numHVs) {
-  for (uint32_t i = 0; i < numHVs; ++i) {
-    snapshotWriteBarrierInternal(start[i]);
-  }
 }
 
 void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
