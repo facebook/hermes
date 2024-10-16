@@ -553,7 +553,7 @@ jobs:
         cd "$HERMES_WS_DIR"
         git clone https://github.com/tc39/test262
         cd test262
-        git checkout 19da3ca0757248f7595ee09d532bb83dd438f2b5
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
     - name: Build Hermes Compiler
       run: |-
         cd "$HERMES_WS_DIR"
