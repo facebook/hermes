@@ -1023,9 +1023,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     (void)expr;                    \
   } while (false)
 
-// When performing a tail call, we need to set the runtime IP and leave it set.
-#define CAPTURE_IP_SET() runtime.setCurrentIP(ip)
-
   LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
   ScopedNativeDepthTracker depthTracker{runtime};
@@ -1061,6 +1058,10 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
     // Advance the frame pointer.
     runtime.setCurrentFrame(newFrame);
+    // If the interpreter was invoked indirectly from another JS function, the
+    // caller's IP may not have been saved to the stack frame. Ensure that it is
+    // correctly recorded.
+    runtime.saveCallerIPInStackFrame();
     // Point frameRegs to the first register in the new frame.
     frameRegs = &newFrame.getFirstLocalRef();
     ip = (Inst const *)curCodeBlock->begin();
@@ -1098,7 +1099,6 @@ tailCall:
   curCodeBlock->incrementExecutionCount();
 
   if (!SingleStep) {
-    runtime.saveCallerIPInStackFrame();
 #ifndef NDEBUG
     runtime.invalidateCurrentIP();
 #endif
@@ -1743,9 +1743,7 @@ tailCall:
         curCodeBlock = calleeBlock;
         // Point frameRegs to the first register in the new frame.
         frameRegs = &newFrame.getFirstLocalRef();
-
-        // Save the caller IP in the runtime before we update the IP.
-        CAPTURE_IP_SET();
+        // Update the IP to the start of the callee.
         ip = (Inst const *)curCodeBlock->begin();
 
         goto tailCall;
