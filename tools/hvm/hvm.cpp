@@ -135,7 +135,6 @@ int main(int argc, char **argv) {
           .withEnableHermesInternal(flags.EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
               flags.EnableHermesInternalTestMethods)
-          .withMaxNumRegisters(1024 * 1024)
           .build();
 
   options.stopAfterInit = flags.StopAfterInit;

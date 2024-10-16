@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -gc-sanitize-handles=0 -max-register-stack=1048576 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 -max-register-stack=1048576 %t.hbc | %FileCheck --match-full-lines %s
 // RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0,-max-register-stack=1048576 | %FileCheck --match-full-lines %s
 // REQUIRES: !slow_debug
 
