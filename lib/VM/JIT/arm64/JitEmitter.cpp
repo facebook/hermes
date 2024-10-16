@@ -3447,7 +3447,9 @@ void Emitter::callWithNewTargetLong(
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
-  a.mov(a64::w2, hwTemp.a64GpX().w());
+  // The bytecode arg count includes "this", but the SH one does not, so
+  // subtract 1.
+  a.sub(a64::w2, hwTemp.a64GpX().w(), 1);
   EMIT_RUNTIME_CALL(
       *this,
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
