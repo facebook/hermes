@@ -988,8 +988,15 @@ class Emitter {
   /// \param name is an optional name for the thunk.
   asmjit::Label registerThunk(void *fn, const char *name = nullptr);
 
-  /// Register a call as a thunk and emit a call to it.
+  /// Register a call as a thunk and emit a call to it. Note that most calls
+  /// into runtime functions should use \c callThunkWithSavedIP below.
   void callThunk(void *fn, const char *name);
+
+  /// Register a call as a thunk and emit a call to it, saving the bytecode IP
+  /// to Runtime::currentIP before making the call. This should be used for all
+  /// calls that may observe the IP, such as calls that may throw exceptions, or
+  /// perform allocations.
+  void callThunkWithSavedIP(void *fn, const char *name);
 
   void emitSlowPaths();
   void emitThunks();

@@ -246,12 +246,26 @@ static bool isCheapConst(uint64_t k) {
   return count <= 2;
 }
 
-#define EMIT_RUNTIME_CALL(em, type, func) \
-  do {                                    \
-    using _FnT = type;                    \
-    _FnT _fn = func;                      \
-    (void)_fn;                            \
-    (em).callThunk((void *)func, #func);  \
+/// Save the current IP and emit a call to a runtime function. This should be
+/// used in most cases when invoking slow paths and handlers for complex
+/// functionality.
+#define EMIT_RUNTIME_CALL(em, type, func)           \
+  do {                                              \
+    using _FnT = type;                              \
+    _FnT _fn = func;                                \
+    (void)_fn;                                      \
+    (em).callThunkWithSavedIP((void *)func, #func); \
+  } while (0)
+
+/// Call a runtime function without saving the IP. This is intended for special
+/// cases where we want to preserve the currently saved IP or if the IP is not
+/// needed.
+#define EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(em, type, func) \
+  do {                                                     \
+    using _FnT = type;                                     \
+    _FnT _fn = func;                                       \
+    (void)_fn;                                             \
+    (em).callThunk((void *)func, #func);                   \
   } while (0)
 
 Emitter::Emitter(
@@ -480,7 +494,9 @@ void Emitter::frameSetup(
   a.mov(xRuntime, a64::x0);
 
   //  _sh_check_native_stack_overflow(shr);
-  EMIT_RUNTIME_CALL(
+  // Do not save the IP because we have not yet set up the stack frame for this
+  // function. If this throws, the exception should appear in the caller.
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
 
   // Function<bench>(3 params, 13 registers):
@@ -491,7 +507,9 @@ void Emitter::frameSetup(
   // _sh_enter expects the number of registers to include any extra registers at
   // the start of the frame.
   a.mov(a64::w2, numFrameRegs + hbc::StackFrameLayout::FirstLocal);
-  EMIT_RUNTIME_CALL(
+  // Like _sh_check_native_stack_overflow, we do not save the IP here so that
+  // thrown exceptions appear in the caller.
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this, SHLegacyValue * (*)(SHRuntime *, SHLocals *, uint32_t), _sh_enter);
   comment("// xFrame");
   a.mov(xFrame, a64::x0);
@@ -506,7 +524,7 @@ void Emitter::frameSetup(
     a.mov(a64::w0, 1);
     a.adr(a64::x1, roDataLabel_);
     a.add(a64::x1, a64::x1, getDebugFunctionName());
-    EMIT_RUNTIME_CALL(
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
         *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
   }
 }
@@ -519,13 +537,14 @@ void Emitter::leave() {
     a.mov(a64::w0, 0);
     a.adr(a64::x1, roDataLabel_);
     a.add(a64::x1, a64::x1, getDebugFunctionName());
-    EMIT_RUNTIME_CALL(
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
         *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
   }
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
   a.mov(a64::x2, xFrame);
-  EMIT_RUNTIME_CALL(
+  // _sh_leave cannot throw or observe the IP.
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this, void (*)(SHRuntime *, SHLocals *, SHLegacyValue *), _sh_leave);
 
   // The return value has been stashed in x22 by ret(). Move it to the return
@@ -561,6 +580,28 @@ void Emitter::leave() {
 void Emitter::callThunk(void *fn, const char *name) {
   //    comment("// call %s", name);
   a.bl(registerThunk(fn, name));
+}
+
+void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
+  // Save the current IP in the runtime.
+  auto ofs = codeBlock_->getOffsetOf(emittingIP);
+  loadBits64InGp(a64::x16, (uint64_t)codeBlock_->begin(), "Bytecode start");
+  if (a64::Utils::isAddSubImm(ofs)) {
+    a.add(a64::x16, a64::x16, ofs);
+  } else {
+    a.mov(a64::x17, ofs);
+    a.add(a64::x16, a64::x16, a64::x17);
+  }
+  a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+
+  // Call the passed function.
+  callThunk(fn, name);
+
+// Invalidate the current IP to make sure it is set before the next call.
+#ifndef NDEBUG
+  a.mov(a64::x16, Runtime::kInvalidCurrentIP);
+  a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+#endif
 }
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
@@ -1294,7 +1335,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});
@@ -1345,7 +1386,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -2031,7 +2072,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
          em.a.mov(a64::x0, xRuntime);
          em.a.mov(a64::x1, xFrame);
          em.loadFrameAddr(a64::x2, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -2385,7 +2426,7 @@ void Emitter::putByValImpl(
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
   loadFrameAddr(a64::x3, frValue);
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 }
 
 void Emitter::delByIdImpl(
@@ -2405,7 +2446,7 @@ void Emitter::delByIdImpl(
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   a.mov(a64::w2, key);
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -2435,7 +2476,7 @@ void Emitter::delByValImpl(
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -2617,7 +2658,7 @@ void Emitter::getByIdImpl(
     if (cacheIdx != 0)
       a.add(a64::x3, a64::x3, sizeof(SHPropertyCacheEntry) * cacheIdx);
   }
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
@@ -2803,7 +2844,7 @@ void Emitter::putByIdImpl(
     if (cacheIdx != 0)
       a.add(a64::x4, a64::x4, sizeof(SHPropertyCacheEntry) * cacheIdx);
   }
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
@@ -3554,7 +3595,7 @@ void Emitter::arithUnop(
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3840,7 +3881,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3942,7 +3983,7 @@ void Emitter::arithBinOp(
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -4039,7 +4080,7 @@ void Emitter::bitBinOp(
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -4237,7 +4278,7 @@ void Emitter::jCond(
            em.loadFrameAddr(a64::x1, sl.frInput1);
            em.loadFrameAddr(a64::x2, sl.frInput2);
          }
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          if (!sl.invert)
            em.a.cbnz(a64::w0, sl.target);
          else
@@ -4348,7 +4389,7 @@ void Emitter::compareImpl(
            em.loadFrameAddr(a64::x1, sl.frInput1);
            em.loadFrameAddr(a64::x2, sl.frInput2);
          }
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
 
          // Invert the slow path result if needed.
          if (sl.invert)
@@ -4447,7 +4488,7 @@ void Emitter::getArgumentsPropByValImpl(
          em.a.mov(a64::x1, xFrame);
          em.loadFrameAddr(a64::x2, sl.frInput1);
          em.loadFrameAddr(a64::x3, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -4492,7 +4533,7 @@ void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
          em.a.mov(a64::x0, xRuntime);
          em.a.mov(a64::x1, xFrame);
          em.loadFrameAddr(a64::x2, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          // Slow path modifies the frame so we need to sync it if there's a
          // global reg.
          if (sl.hwRes.isValid()) {

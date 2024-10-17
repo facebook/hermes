@@ -30,6 +30,7 @@
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace vm {
@@ -48,8 +49,16 @@ _callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
 
   StackFramePtr currentFrame = runtime.getCurrentFrame();
   StackFramePtr newFrame{runtime.getStackPointer()};
-  newFrame.getSavedIPRef() =
-      HermesValue::encodeNativePointer(runtime.getCurrentIP());
+
+  auto *callerIP = runtime.getCurrentIP();
+  // If the caller is a JSFunction, we have to ensure that its IP is saved so we
+  // can use it for stack traces.
+  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(callerIP);
+
+  // If we call into the JIT (either directly or transitively), it may modify
+  // the saved IP. Make sure the IP is restored before we return to the caller.
+  auto restoreIP = llvh::make_scope_exit(
+      [callerIP, &runtime]() { runtime.setCurrentIP(callerIP); });
 
   SHJmpBuf jBuf;
   SHLocals *locals = runtime.shLocals;
