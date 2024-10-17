@@ -733,7 +733,7 @@ jobs:
 
   test-linux-test262:
     docker:
-      - image: debian:bullseye
+      - image: debian:bookworm
     working_directory: /root
     steps:
       - checkout:
