@@ -3,7 +3,7 @@ on:
   push:
   pull_request:
     branches:
-      - main
+      - static_h
 jobs:
   android:
     runs-on: ubuntu-latest
