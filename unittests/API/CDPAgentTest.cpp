@@ -1486,7 +1486,10 @@ TEST_F(CDPAgentTest, DebuggerEvalOnCallFrameException) {
   sendEvalRequest(msgId + 2, frame, "count");
 
   ensureEvalException(
-      waitForMessage(), msgId + 0, "SyntaxError: 1:6:';' expected", {});
+      waitForMessage(),
+      msgId + 0,
+      "SyntaxError: 1:6:';' expected",
+      {{"callme", 12, 0}, {"global", 18, 0}});
   ensureEvalException(
       waitForMessage(),
       msgId + 1,

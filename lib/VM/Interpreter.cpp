@@ -3683,26 +3683,8 @@ tailCall:
         "thrownValue unavailable at exception");
 
     bool catchable = true;
-    // If this is an Error object that was thrown internally, it didn't have
-    // access to the current codeblock and IP, so collect the stack trace here.
     if (auto *jsError = dyn_vmcast<JSError>(*runtime.thrownValue_)) {
       catchable = jsError->catchable();
-      if (!jsError->getStackTrace()) {
-        // Temporarily clear the thrown value for following operations. Before
-        // we clear it, save the value in tmpHandle.
-        tmpHandle = *runtime.thrownValue_;
-        runtime.clearThrownValue();
-
-        CAPTURE_IP(JSError::recordStackTrace(
-            Handle<JSError>::vmcast(tmpHandle),
-            runtime,
-            false,
-            curCodeBlock,
-            ip));
-
-        // Restore the thrown value.
-        runtime.setThrownValue(*tmpHandle);
-      }
     }
 
     gcScope.flushToSmallCount(KEEP_HANDLES);

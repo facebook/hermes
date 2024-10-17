@@ -77,15 +77,10 @@ class JSError final : public JSObject {
   ///
   /// \param skipTopFrame don't record the topmost frame. This is used when
   ///   we want to skip the Error() constructor itself.
-  /// \param codeBlock optional current CodeBlock.
-  /// \param ip if \c codeBlock is not \c nullptr, the instruction in the
-  ///   current CodeBlock.
   static ExecutionStatus recordStackTrace(
       Handle<JSError> selfHandle,
       Runtime &runtime,
-      bool skipTopFrame = false,
-      CodeBlock *codeBlock = nullptr,
-      const Inst *ip = nullptr);
+      bool skipTopFrame = false);
 
   /// Define the stack setter and getter, for later stack trace creation.
   /// May be used on JSError instances, or on any JSObject that has a

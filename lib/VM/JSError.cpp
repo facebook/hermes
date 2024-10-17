@@ -399,20 +399,11 @@ static Handle<PropStorage> getCallStackFunctionNames(
 ExecutionStatus JSError::recordStackTrace(
     Handle<JSError> selfHandle,
     Runtime &runtime,
-    bool skipTopFrame,
-    CodeBlock *codeBlock,
-    const Inst *ip) {
+    bool skipTopFrame) {
   if (selfHandle->stacktrace_)
     return ExecutionStatus::RETURNED;
 
   auto frames = runtime.getStackFrames();
-  // Check if the top frame is a JSFunction and we don't have the current
-  // CodeBlock, do nothing. The interpreter will call us again with the proper
-  // CodeBlock and IP.
-  if (!skipTopFrame && !codeBlock && frames.begin() != frames.end() &&
-      frames.begin()->getCalleeCodeBlock(runtime)) {
-    return ExecutionStatus::RETURNED;
-  }
 
   StackTracePtr stack{new StackTrace()};
   auto domainsRes = ArrayStorageSmall::create(runtime, 1);
@@ -453,17 +444,16 @@ ExecutionStatus JSError::recordStackTrace(
   };
 
   if (!skipTopFrame) {
-    if (codeBlock) {
-      stack->emplace_back(
-          BytecodeStackTraceInfo(codeBlock, codeBlock->getOffsetOf(ip)));
+    if (frames.begin() == frames.end()) {
+      stack->emplace_back(BytecodeStackTraceInfo(nullptr, 0));
+    } else if (auto *codeBlock = frames.begin()->getCalleeCodeBlock(runtime)) {
+      stack->emplace_back(BytecodeStackTraceInfo(
+          codeBlock, codeBlock->getOffsetOf(runtime.getCurrentIP())));
       if (LLVM_UNLIKELY(addDomain(codeBlock) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-    } else {
-      if (!(frames.begin() != frames.end() &&
-            tryAddNativeFrame(runtime.getCurrentFrame().getSHLocals()))) {
-        stack->emplace_back(BytecodeStackTraceInfo(nullptr, 0));
-      }
+    } else if (!tryAddNativeFrame(runtime.getCurrentFrame().getSHLocals())) {
+      stack->emplace_back(BytecodeStackTraceInfo(nullptr, 0));
     }
   }
 
