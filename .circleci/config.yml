@@ -68,5 +68,5 @@ jobs:
           name: Run Hermes regression tests
           command: |
             cmake -S hermes -B build
-            cmake --build build -j 4
+            cmake --build build -j 2
             cmake --build build --target check-hermes -j 4
