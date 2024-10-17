@@ -8,12 +8,15 @@
 #include "hermes/Platform/Intl/BCP47Parser.h"
 #include "hermes/Platform/Intl/PlatformIntl.h"
 #include "hermes/Platform/Intl/PlatformIntlShared.h"
+#include "impl_icu/Collator.h"
+#include "impl_icu/IntlUtils.h"
+#include "impl_icu/LocaleBCP47Object.h"
+#include "impl_icu/LocaleResolver.h"
+#include "impl_icu/OptionHelpers.h"
 
-#include <deque>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
-#include "llvh/Support/ConvertUTF.h"
 
 // ICU changed the default UChar type on version 59, but we still need to
 // support 52+ However, ICU allows us to manually set a type for UChar using
@@ -31,238 +34,6 @@ using namespace U_ICU_NAMESPACE;
 namespace hermes {
 namespace platform_intl {
 namespace {
-vm::CallResult<std::u16string> UTF8toUTF16(
-    vm::Runtime &runtime,
-    std::string_view in) {
-  std::u16string out;
-  size_t length = in.length();
-  out.resize(length);
-  const llvh::UTF8 *sourceStart = reinterpret_cast<const llvh::UTF8 *>(&in[0]);
-  const llvh::UTF8 *sourceEnd = sourceStart + length;
-  llvh::UTF16 *targetStart = reinterpret_cast<llvh::UTF16 *>(&out[0]);
-  llvh::UTF16 *targetEnd = targetStart + out.size();
-  llvh::ConversionResult convRes = ConvertUTF8toUTF16(
-      &sourceStart,
-      sourceEnd,
-      &targetStart,
-      targetEnd,
-      llvh::lenientConversion);
-  if (convRes != llvh::ConversionResult::conversionOK) {
-    return runtime.raiseRangeError("utf8 to utf16 conversion failed");
-  }
-  out.resize(reinterpret_cast<char16_t *>(targetStart) - &out[0]);
-  return out;
-}
-
-vm::CallResult<std::string> UTF16toUTF8(
-    vm::Runtime &runtime,
-    std::u16string in) {
-  std::string out;
-  size_t length = in.length();
-  out.resize(length);
-  const llvh::UTF16 *sourceStart =
-      reinterpret_cast<const llvh::UTF16 *>(&in[0]);
-  const llvh::UTF16 *sourceEnd = sourceStart + length;
-  llvh::UTF8 *targetStart = reinterpret_cast<llvh::UTF8 *>(&out[0]);
-  llvh::UTF8 *targetEnd = targetStart + out.size();
-  llvh::ConversionResult convRes = ConvertUTF16toUTF8(
-      &sourceStart,
-      sourceEnd,
-      &targetStart,
-      targetEnd,
-      llvh::lenientConversion);
-  if (convRes != llvh::ConversionResult::conversionOK) {
-    return runtime.raiseRangeError("utf16 to utf8 conversion failed");
-  }
-  out.resize(reinterpret_cast<char *>(targetStart) - &out[0]);
-  return out;
-}
-
-const std::vector<std::u16string> &getAvailableLocales(vm::Runtime &runtime) {
-  static const std::vector<std::u16string> *availableLocales = [&runtime] {
-    auto *vec = new std::vector<std::u16string>();
-
-    for (int32_t i = 0, count = uloc_countAvailable(); i < count; i++) {
-      auto locale = uloc_getAvailable(i);
-      auto u16locale = UTF8toUTF16(runtime, locale).getValue();
-
-      // ICU sometimes gives locale identifiers with an underscore instead
-      // of a dash. We only consider dashes valid, so fix up any identifiers we
-      // get from ICU.
-      std::replace(u16locale.begin(), u16locale.end(), u'_', u'-');
-      vec->push_back(u16locale);
-    }
-
-    return vec;
-  }();
-
-  return *availableLocales;
-}
-
-const std::u16string &getDefaultLocale(vm::Runtime &runtime) {
-  // UTF8toUTF16(runtime, uloc_getDefault()).getValue();
-  static const std::u16string *defaultLocale = new std::u16string([&runtime] {
-    // Environment variable used for testing only
-    auto defaultLocale = UTF8toUTF16(runtime, uloc_getDefault()).getValue();
-
-    // See the comment in getAvailableLocales.
-    std::replace(defaultLocale.begin(), defaultLocale.end(), u'_', u'-');
-    if (auto parsed = ParsedLocaleIdentifier::parse(defaultLocale))
-      return parsed->canonicalize();
-    return std::u16string(u"und");
-  }());
-  return *defaultLocale;
-}
-
-/// https://402.ecma-international.org/8.0/#sec-lookupmatcher
-LocaleMatch lookupMatcher(
-    vm::Runtime &runtime,
-    const std::vector<std::u16string> &availableLocales,
-    const std::vector<std::u16string> &requestedLocales) {
-  // 1. Let result be a new Record.
-  LocaleMatch result;
-  // 2. For each element locale of requestedLocales, do
-  for (const std::u16string &locale : requestedLocales) {
-    // a. Let noExtensionsLocale be the String value that is locale with
-    // any Unicode locale extension sequences removed.
-    // In practice, we can skip this step because availableLocales never
-    // contains any extensions, so bestAvailableLocale will trim away any
-    // unicode extensions.
-    // b. Let availableLocale be BestAvailableLocale(availableLocales,
-    // noExtensionsLocale).
-    std::optional<std::u16string> availableLocale =
-        bestAvailableLocale(availableLocales, locale);
-    // c. If availableLocale is not undefined, then
-    if (availableLocale) {
-      // i. Set result.[[locale]] to availableLocale.
-      result.locale = std::move(*availableLocale);
-      // ii. If locale and noExtensionsLocale are not the same String value,
-      // then
-      // 1. Let extension be the String value consisting of the substring of
-      // the Unicode locale extension sequence within locale.
-      // 2. Set result.[[extension]] to extension.
-      auto parsed = ParsedLocaleIdentifier::parse(locale);
-      result.extensions = std::move(parsed->unicodeExtensionKeywords);
-      // iii. Return result.
-      return result;
-    }
-  }
-  // availableLocale was undefined, so set result.[[locale]] to defLocale.
-  result.locale = getDefaultLocale(runtime);
-  // 5. Return result.
-  return result;
-}
-
-/// https://402.ecma-international.org/8.0/#sec-resolvelocale
-ResolvedLocale resolveLocale(
-    vm::Runtime &runtime,
-    const std::vector<std::u16string> &availableLocales,
-    const std::vector<std::u16string> &requestedLocales,
-    const std::unordered_map<std::u16string, std::u16string> &options,
-    llvh::ArrayRef<std::u16string_view> relevantExtensionKeys) {
-  // 1. Let matcher be options.[[localeMatcher]].
-  // 2. If matcher is "lookup", then
-  // a. Let r be LookupMatcher(availableLocales, requestedLocales).
-  // 3. Else,
-  // a. Let r be BestFitMatcher(availableLocales, requestedLocales).
-  auto r = lookupMatcher(runtime, availableLocales, requestedLocales);
-  // 4. Let foundLocale be r.[[locale]].
-  auto foundLocale = r.locale;
-  // 5. Let result be a new Record.
-  ResolvedLocale result;
-  // 6. Set result.[[dataLocale]] to foundLocale.
-  result.dataLocale = foundLocale;
-  // 7. If r has an [[extension]] field, then
-  // a. Let components be ! UnicodeExtensionComponents(r.[[extension]]).
-  // b. Let keywords be components.[[Keywords]].
-  // 8. Let supportedExtension be "-u".
-  std::u16string supportedExtension = u"-u";
-  // 9. For each element key of relevantExtensionKeys, do
-  for (const auto &keyView : relevantExtensionKeys) {
-    // TODO(T116352920): Make relevantExtensionKeys an ArrayRef<std::u16string>
-    // and remove this temporary once we have constexpr std::u16string.
-    std::u16string key{keyView};
-    // a. Let foundLocaleData be localeData.[[<foundLocale>]].
-    // b. Assert: Type(foundLocaleData) is Record.
-    // c. Let keyLocaleData be foundLocaleData.[[<key>]].
-    // d. Assert: Type(keyLocaleData) is List.
-    // e. Let value be keyLocaleData[0].
-    // f. Assert: Type(value) is either String or Null.
-    // g. Let supportedExtensionAddition be "".
-    // h. If r has an [[extension]] field, then
-    auto extIt = r.extensions.find(key);
-    std::optional<std::u16string> value;
-    std::u16string supportedExtensionAddition;
-    // i. If keywords contains an element whose [[Key]] is the same as key, then
-    if (extIt != r.extensions.end()) {
-      // 1. Let entry be the element of keywords whose [[Key]] is the same as
-      // key.
-      // 2. Let requestedValue be entry.[[Value]].
-      // 3. If requestedValue is not the empty String, then
-      // a. If keyLocaleData contains requestedValue, then
-      // i. Let value be requestedValue.
-      // ii. Let supportedExtensionAddition be the string-concatenation of "-",
-      // key, "-", and value.
-      // 4. Else if keyLocaleData contains "true", then
-      // a. Let value be "true".
-      // b. Let supportedExtensionAddition be the string-concatenation of "-"
-      // and key.
-      supportedExtensionAddition.append(u"-").append(key);
-      if (extIt->second.empty())
-        value = u"true";
-      else {
-        value = extIt->second;
-        supportedExtensionAddition.append(u"-").append(*value);
-      }
-    }
-    // i. If options has a field [[<key>]], then
-    auto optIt = options.find(key);
-    if (optIt != options.end()) {
-      // i. Let optionsValue be options.[[<key>]].
-      std::u16string optionsValue = optIt->second;
-      // ii. Assert: Type(optionsValue) is either String, Undefined, or Null.
-      // iii. If Type(optionsValue) is String, then
-      // 1. Let optionsValue be the string optionsValue after performing the
-      // algorithm steps to transform Unicode extension values to canonical
-      // syntax per Unicode Technical Standard #35 LDML § 3.2.1 Canonical
-      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
-      // uvalue productions.
-      // 2. Let optionsValue be the string optionsValue after performing the
-      // algorithm steps to replace Unicode extension values with their
-      // canonical form per Technical Standard #35 LDML § 3.2.1 Canonical
-      // Unicode Locale Identifiers, treating key as ukey and optionsValue as
-      // uvalue productions
-      // 3. If optionsValue is the empty String, then
-      if (optionsValue.empty()) {
-        // a. Let optionsValue be "true".
-        optionsValue = u"true";
-      }
-      // iv. If keyLocaleData contains optionsValue, then
-      // 1. If SameValue(optionsValue, value) is false, then
-      if (optionsValue != value) {
-        // a. Let value be optionsValue.
-        value = optionsValue;
-        // b. Let supportedExtensionAddition be "".
-        supportedExtensionAddition = u"";
-      }
-    }
-    // j. Set result.[[<key>]] to value.
-    if (value)
-      result.extensions.emplace(key, std::move(*value));
-    // k. Append supportedExtensionAddition to supportedExtension.
-    supportedExtension.append(supportedExtensionAddition);
-  }
-  // 10. If the number of elements in supportedExtension is greater than 2, then
-  if (supportedExtension.size() > 2) {
-    // a. Let foundLocale be InsertUnicodeExtensionAndCanonicalize(foundLocale,
-    // supportedExtension).
-    foundLocale.append(supportedExtension);
-  }
-  // 11. Set result.[[locale]] to foundLocale.
-  result.locale = std::move(foundLocale);
-  // 12. Return result.
-  return result;
-}
 
 /// Thread safe management of time zone names map.
 class TimeZoneNames {
@@ -270,15 +41,15 @@ class TimeZoneNames {
   /// Initializing the underlying map with all known time zone names in
   /// ICU::TimeZone
   TimeZoneNames() {
-    StringEnumeration *icuTimeZones = TimeZone::createEnumeration();
+    std::unique_ptr<StringEnumeration> icuTimeZones(
+        TimeZone::createEnumeration());
     UErrorCode status = U_ZERO_ERROR;
-    int32_t *resultLength = new int32_t();
-    auto *zoneId = icuTimeZones->unext(resultLength, status);
+    auto *zoneId = icuTimeZones->unext(nullptr, status);
 
     while (zoneId != nullptr && status == U_ZERO_ERROR) {
       auto upper = toASCIIUppercase(zoneId);
       timeZoneNamesMap_.emplace(std::move(upper), std::move(zoneId));
-      zoneId = icuTimeZones->unext(resultLength, status);
+      zoneId = icuTimeZones->unext(nullptr, status);
     }
   }
 
@@ -335,14 +106,10 @@ static bool isValidTimeZoneName(std::u16string_view tz) {
 
 /// https://402.ecma-international.org/8.0/#sec-defaulttimezone
 std::u16string getDefaultTimeZone(vm::Runtime &runtime) {
-  auto *timeZone = TimeZone::createDefault();
+  std::unique_ptr<TimeZone> timeZone(TimeZone::createDefault());
   UnicodeString unicodeTz;
   timeZone->getID(unicodeTz);
-  std::string timeZoneId;
-  unicodeTz.toUTF8String(timeZoneId);
-
-  std::u16string tz = UTF8toUTF16(runtime, timeZoneId).getValue();
-
+  std::u16string tz(unicodeTz.getBuffer(), unicodeTz.length());
   validTimeZoneNames().update(tz);
   return tz;
 }
@@ -364,6 +131,26 @@ std::u16string canonicalizeTimeZoneName(std::u16string_view tz) {
   return ianaTimeZone;
 }
 
+// T is a type of the intl service implementation classes.
+// BaseT is the base platform_intl class that the intl service
+// implementation class inherits from.
+// Instance creation and initialization across the intl service
+// implementation classes is the same. This function template
+// provides the common code.
+template <typename T, typename BaseT>
+vm::CallResult<std::unique_ptr<BaseT>> createInstance(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &locales,
+    const Options &options) noexcept {
+  auto instance = std::make_unique<T>();
+  if (LLVM_UNLIKELY(
+          instance->initialize(runtime, locales, options) ==
+          vm::ExecutionStatus::EXCEPTION)) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  return std::move(instance);
+}
+
 } // namespace
 
 // Not yet implemented.
@@ -381,13 +168,6 @@ vm::CallResult<std::u16string> toLocaleUpperCase(
   return std::u16string(u"uppered");
 }
 
-namespace {
-struct CollatorDummy : Collator {
-  CollatorDummy(const char16_t *l) : locale(l) {}
-  std::u16string locale;
-};
-} // namespace
-
 Collator::Collator() = default;
 Collator::~Collator() = default;
 
@@ -395,28 +175,25 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::vector<std::u16string>{u"en-CA", u"de-DE"};
+  return impl_icu::Collator::supportedLocalesOf(runtime, locales, options);
 }
 
 vm::CallResult<std::unique_ptr<Collator>> Collator::create(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  return std::make_unique<CollatorDummy>(u"en-US");
+  return createInstance<impl_icu::Collator, Collator>(
+      runtime, locales, options);
 }
 
 Options Collator::resolvedOptions() noexcept {
-  Options options;
-  options.emplace(
-      u"locale", Option(static_cast<CollatorDummy *>(this)->locale));
-  options.emplace(u"numeric", Option(false));
-  return options;
+  return static_cast<impl_icu::Collator *>(this)->resolvedOptions();
 }
 
 double Collator::compare(
     const std::u16string &x,
     const std::u16string &y) noexcept {
-  return x.compare(y);
+  return static_cast<impl_icu::Collator *>(this)->compare(x, y);
 }
 
 namespace {
@@ -503,13 +280,7 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
     vm::Runtime &runtime,
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
-  // 1. Let availableLocales be %DateTimeFormat%.[[AvailableLocales]].
-  // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  auto requestedLocales = getCanonicalLocales(runtime, locales);
-  const std::vector<std::u16string> &availableLocales =
-      getAvailableLocales(runtime);
-  // 3. Return ? (availableLocales, requestedLocales, options).
-  return supportedLocales(availableLocales, requestedLocales.getValue());
+  return impl_icu::supportedLocales(runtime, locales, options);
 }
 
 vm::ExecutionStatus DateTimeFormatICU::initialize(
@@ -517,7 +288,8 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
     const std::vector<std::u16string> &locales,
     const Options &inputOptions) noexcept {
   // 1. Let requestedLocales be ? CanonicalizeLocaleList(locales).
-  auto requestedLocalesRes = canonicalizeLocaleList(runtime, locales);
+  auto requestedLocalesRes =
+      impl_icu::LocaleBCP47Object::canonicalizeLocaleList(runtime, locales);
   if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 2. Let options be ? ToDateTimeOptions(options, "any", "date").
@@ -526,10 +298,10 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
     return vm::ExecutionStatus::EXCEPTION;
   auto options = *optionsRes;
   // 3. Let opt be a new Record.
-  std::unordered_map<std::u16string, std::u16string> opt;
+  Options opt;
   // 4. Let matcher be ? GetOption(options, "localeMatcher", "string",
   // «"lookup", "best fit" », "best fit").
-  auto matcherRes = getOptionString(
+  auto matcherRes = impl_icu::getStringOption(
       runtime,
       options,
       u"localeMatcher",
@@ -542,7 +314,8 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   opt.emplace(u"localeMatcher", *matcherOpt);
   // 6. Let calendar be ? GetOption(options, "calendar", "string",
   // undefined, undefined).
-  auto calendarRes = getOptionString(runtime, options, u"calendar", {}, {});
+  auto calendarRes =
+      impl_icu::getStringOption(runtime, options, u"calendar", {}, {});
   // 7. If calendar is not undefined, then
   if (LLVM_UNLIKELY(calendarRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
@@ -565,13 +338,11 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   opt.emplace(u"nu", u"");
   // 12. Let hour12 be ? GetOption(options, "hour12", "boolean",
   // undefined, undefined).
-  auto hour12 = getOptionBool(runtime, options, u"hour12", {});
+  auto hour12 = impl_icu::getBoolOption(options, u"hour12", {});
   // 13. Let hourCycle be ? GetOption(options, "hourCycle", "string", «
   // "h11", "h12", "h23", "h24" », undefined).
-  static constexpr std::u16string_view hourCycles[] = {
-      u"h11", u"h12", u"h23", u"h24"};
-  auto hourCycleRes =
-      getOptionString(runtime, options, u"hourCycle", hourCycles, {});
+  auto hourCycleRes = impl_icu::getStringOption(
+      runtime, options, u"hourCycle", {u"h11", u"h12", u"h23", u"h24"}, {});
   if (LLVM_UNLIKELY(hourCycleRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   auto hourCycleOpt = *hourCycleRes;
@@ -593,33 +364,29 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   // localeData).
   static constexpr std::u16string_view relevantExtensionKeys[] = {
       u"ca", u"nu", u"hc"};
-  auto r = resolveLocale(
-      runtime,
-      getAvailableLocales(runtime),
+  auto r = impl_icu::resolveLocale(
       *requestedLocalesRes,
       opt,
-      relevantExtensionKeys);
+      relevantExtensionKeys,
+      [](auto key, auto type, auto locale) { return true; });
   // 18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
-  locale_ = std::move(r.locale);
+  locale_ = r.localeBcp47Object.getCanonicalizedLocaleId();
 
-  auto conversion = UTF16toUTF8(runtime, locale_);
-  if (conversion.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-    return conversion.getStatus();
-  }
-  locale8_ = conversion.getValue(); // store the UTF8 version of locale since it
-                                    // is used in almost all other functions
+  // store the UTF8 version of locale since it is used in almost all other
+  // functions
+  locale8_ = impl_icu::toUTF8ASCII(locale_);
+
   // 19. Let calendar be r.[[ca]].
-  auto caIt = r.extensions.find(u"ca");
+  auto caIt = r.resolvedOpts.find(u"ca");
   // 20. Set dateTimeFormat.[[Calendar]] to calendar.
-  if (caIt != r.extensions.end())
-    calendar_ = std::move(caIt->second);
+  if (caIt != r.resolvedOpts.end())
+    calendar_ = caIt->second.getString();
   // 21. Set dateTimeFormat.[[HourCycle]] to r.[[hc]].
-  auto hcIt = r.extensions.find(u"hc");
-  if (hcIt != r.extensions.end())
-    hourCycle_ = std::move(hcIt->second);
+  auto hcIt = r.resolvedOpts.find(u"hc");
+  if (hcIt != r.resolvedOpts.end())
+    hourCycle_ = hcIt->second.getString();
   // 22. Set dateTimeFormat.[[NumberingSystem]] to r.[[nu]].
   // 23. Let dataLocale be r.[[dataLocale]].
-  auto dataLocale = r.dataLocale;
   // 24. Let timeZone be ? Get(options, "timeZone").
   auto timeZoneIt = options.find(u"timeZone");
   std::u16string timeZone;
@@ -657,92 +424,90 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   // "basic", "best fit" », "best fit").
   // 32. Let dateStyle be ? GetOption(options, "dateStyle", "string", « "full",
   // "long", "medium", "short" », undefined).
-  static constexpr std::u16string_view dateStyles[] = {
-      u"full", u"long", u"medium", u"short"};
-  auto dateStyleRes =
-      getOptionString(runtime, options, u"dateStyle", dateStyles, {});
+  auto dateStyleRes = impl_icu::getStringOption(
+      runtime,
+      options,
+      u"dateStyle",
+      {u"full", u"long", u"medium", u"short"},
+      {});
   if (LLVM_UNLIKELY(dateStyleRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 33. Set dateTimeFormat.[[DateStyle]] to dateStyle.
   dateStyle_ = *dateStyleRes;
   // 34. Let timeStyle be ? GetOption(options, "timeStyle", "string", « "full",
   // "long", "medium", "short" », undefined).
-  static constexpr std::u16string_view timeStyles[] = {
-      u"full", u"long", u"medium", u"short"};
-  auto timeStyleRes =
-      getOptionString(runtime, options, u"timeStyle", timeStyles, {});
+  auto timeStyleRes = impl_icu::getStringOption(
+      runtime,
+      options,
+      u"timeStyle",
+      {u"full", u"long", u"medium", u"short"},
+      {});
   if (LLVM_UNLIKELY(timeStyleRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 35. Set dateTimeFormat.[[TimeStyle]] to timeStyle.
   timeStyle_ = *timeStyleRes;
 
   // Initialize properties using values from the input options.
-  static constexpr std::u16string_view weekdayValues[] = {
-      u"narrow", u"short", u"long"};
-  auto weekdayRes =
-      getOptionString(runtime, options, u"weekday", weekdayValues, {});
+  auto weekdayRes = impl_icu::getStringOption(
+      runtime, options, u"weekday", {u"narrow", u"short", u"long"}, {});
   if (LLVM_UNLIKELY(weekdayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   weekday_ = *weekdayRes;
 
-  static constexpr std::u16string_view eraValues[] = {
-      u"narrow", u"short", u"long"};
-  auto eraRes = getOptionString(runtime, options, u"era", eraValues, {});
+  auto eraRes = impl_icu::getStringOption(
+      runtime, options, u"era", {u"narrow", u"short", u"long"}, {});
   if (LLVM_UNLIKELY(eraRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   era_ = *eraRes;
 
-  static constexpr std::u16string_view yearValues[] = {u"2-digit", u"numeric"};
-  auto yearRes = getOptionString(runtime, options, u"year", yearValues, {});
+  auto yearRes = impl_icu::getStringOption(
+      runtime, options, u"year", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(yearRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   year_ = *yearRes;
 
-  static constexpr std::u16string_view monthValues[] = {
-      u"2-digit", u"numeric", u"narrow", u"short", u"long"};
-  auto monthRes = getOptionString(runtime, options, u"month", monthValues, {});
+  auto monthRes = impl_icu::getStringOption(
+      runtime,
+      options,
+      u"month",
+      {u"2-digit", u"numeric", u"narrow", u"short", u"long"},
+      {});
   if (LLVM_UNLIKELY(monthRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   month_ = *monthRes;
 
-  static constexpr std::u16string_view dayValues[] = {u"2-digit", u"numeric"};
-  auto dayRes = getOptionString(runtime, options, u"day", dayValues, {});
+  auto dayRes = impl_icu::getStringOption(
+      runtime, options, u"day", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(dayRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   day_ = *dayRes;
 
-  static constexpr std::u16string_view dayPeriodValues[] = {
-      u"narrow", u"short", u"long"};
-  auto dayPeriodRes =
-      getOptionString(runtime, options, u"dayPeriod", dayPeriodValues, {});
+  auto dayPeriodRes = impl_icu::getStringOption(
+      runtime, options, u"dayPeriod", {u"narrow", u"short", u"long"}, {});
   if (LLVM_UNLIKELY(dayPeriodRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   dayPeriod_ = *dayPeriodRes;
 
-  static constexpr std::u16string_view hourValues[] = {u"2-digit", u"numeric"};
-  auto hourRes = getOptionString(runtime, options, u"hour", hourValues, {});
+  auto hourRes = impl_icu::getStringOption(
+      runtime, options, u"hour", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(hourRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   hour_ = *hourRes;
 
-  static constexpr std::u16string_view minuteValues[] = {
-      u"2-digit", u"numeric"};
-  auto minuteRes =
-      getOptionString(runtime, options, u"minute", minuteValues, {});
+  auto minuteRes = impl_icu::getStringOption(
+      runtime, options, u"minute", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(minuteRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   minute_ = *minuteRes;
 
-  static constexpr std::u16string_view secondValues[] = {
-      u"2-digit", u"numeric"};
-  auto secondRes =
-      getOptionString(runtime, options, u"second", secondValues, {});
+  auto secondRes = impl_icu::getStringOption(
+      runtime, options, u"second", {u"2-digit", u"numeric"}, {});
   if (LLVM_UNLIKELY(secondRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   second_ = *secondRes;
 
-  auto fractionalSecondDigitsRes =
-      getNumberOption(runtime, options, u"fractionalSecondDigits", 1, 3, {});
+  auto fractionalSecondDigitsRes = impl_icu::getNumberOption(
+      runtime, options, u"fractionalSecondDigits", 1, 3, {});
   if (LLVM_UNLIKELY(
           fractionalSecondDigitsRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
@@ -753,15 +518,17 @@ vm::ExecutionStatus DateTimeFormatICU::initialize(
   // https://tc39.es/proposal-intl-extend-timezonename
   // they are not in ecma402 spec, but there is a test for them:
   // "test262/test/intl402/DateTimeFormat/constructor-options-timeZoneName-valid.js"
-  static constexpr std::u16string_view timeZoneNameValues[] = {
-      u"short",
-      u"long",
-      u"shortOffset",
-      u"longOffset",
-      u"shortGeneric",
-      u"longGeneric"};
-  auto timeZoneNameRes = getOptionString(
-      runtime, options, u"timeZoneName", timeZoneNameValues, {});
+  auto timeZoneNameRes = impl_icu::getStringOption(
+      runtime,
+      options,
+      u"timeZoneName",
+      {u"short",
+       u"long",
+       u"shortOffset",
+       u"longOffset",
+       u"shortGeneric",
+       u"longGeneric"},
+      {});
   if (LLVM_UNLIKELY(timeZoneNameRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   timeZoneName_ = *timeZoneNameRes;
@@ -1023,9 +790,10 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
   std::u16string bestpattern;
   int32_t patternLength;
 
-  UDateTimePatternGenerator *dtpGenerator = udatpg_open(&locale8_[0], &status);
+  std::unique_ptr<UDateTimePatternGenerator, decltype(&udatpg_close)>
+      dtpGenerator(udatpg_open(&locale8_[0], &status), &udatpg_close);
   patternLength = udatpg_getBestPatternWithOptions(
-      dtpGenerator,
+      dtpGenerator.get(),
       &skeleton[0],
       -1,
       UDATPG_MATCH_ALL_FIELDS_LENGTH,
@@ -1037,7 +805,7 @@ UDateFormat *DateTimeFormatICU::getUDateFormatter(vm::Runtime &runtime) {
     status = U_ZERO_ERROR;
     bestpattern.resize(patternLength);
     udatpg_getBestPatternWithOptions(
-        dtpGenerator,
+        dtpGenerator.get(),
         &skeleton[0],
         skeleton.length(),
         UDATPG_MATCH_ALL_FIELDS_LENGTH,
