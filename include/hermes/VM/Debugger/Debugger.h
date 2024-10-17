@@ -113,6 +113,11 @@ class Debugger {
   /// These are typically cleared immediately after breaking.
   std::vector<Breakpoint> tempBreakpoints_{};
 
+  /// One-shot breakpoints that are used for restoring breakpoint after using \p
+  /// processInstUnderDebuggerOpCode(). These are cleared immediately after
+  /// breaking.
+  std::vector<Breakpoint> restorationBreakpoints_{};
+
   /// Physical breakpoint location.
   struct BreakpointLocation {
     /// Opcode that was replaced.
@@ -125,6 +130,10 @@ class Debugger {
 
     /// Whether this location has an on-load breakpoint set.
     bool onLoad{false};
+    /// Whether this location has a Step breakpoint set.
+    bool hasStepBreakpoint{false};
+    /// Whether this location has a Restoration breakpoint set.
+    bool hasRestorationBreakpoint{false};
 
     /// This is the set of callStackDepths at which we are supposed to stop
     /// on this breakpoint for Step breakpoints.
@@ -142,10 +151,6 @@ class Debugger {
     /// Total number of logical breakpoints set at this location.
     uint32_t count() const {
       return callStackDepths.size() + (user ? 1 : 0) + (onLoad ? 1 : 0);
-    }
-
-    bool hasStepBreakpoint() const {
-      return !callStackDepths.empty();
     }
   };
 
@@ -167,6 +172,22 @@ class Debugger {
   /// If true, all code blocks are breakpointed,
   /// and the debugger should stop on entering any code blocks.
   bool pauseOnAllCodeBlocks_{false};
+
+  /// Similar to \p pauseOnAllCodeBlocks_, except this flag specifically
+  /// indicates whether Restoration breakpoint should be created. This can be
+  /// set at the same time as \p pauseOnAllCodeBlocks_. If both are set, then in
+  /// \p setEntryBreakpointForCodeBlock(), both a Step breakpoint and a
+  /// Restoration breakpoint will be created at the same location. In \p
+  /// runDebugger(), the Restoration breakpoint will be handled first and be
+  /// cleared out, then if there is a Step breakpoint due to \p
+  /// pauseOnAllCodeBlocks_, that will be handled as if the Restoration
+  /// breakpoint was never there.
+  bool pauseOnAllCodeBlocksToRestoreBreakpoint_{false};
+
+  /// Stores the CodeBlock and offset where in \p
+  /// processInstUnderDebuggerOpCode() we purposely keep breakpoint uninstalled
+  /// to reuse the Interpreter loop.
+  std::pair<CodeBlock *, uint32_t> breakpointToRestore_{nullptr, 0};
 
   /// What conditions the debugger needs to stop on exceptions.
   PauseOnThrowMode pauseOnThrowMode_{PauseOnThrowMode::None};
@@ -418,6 +439,20 @@ class Debugger {
   /// any user installed breakpoint "Debugger" OpCode overrides.
   inst::OpCode getRealOpCode(CodeBlock *block, uint32_t offset) const;
 
+  /// Processes an instruction that had Debugger OpCode installed on top of it.
+  /// This is meant to be done after Interpreter encounters Debugger OpCode. It
+  /// differs from \p stepInstruction() in that this function will handle Ret.
+  /// Ret requires special logic in the case if it's returning to native code.
+  /// The Interpreter has special logic to exit out of the Interpreter if we're
+  /// returning to native code. But when \p stepFunction() is used, we have
+  /// recursive Interpreter loop and the expectation is to exit out of both.
+  /// This function will avoid using stepFunction() for Ret. It will instead
+  /// keep breakpoint uninstalled and re-use the same Interpreter loop.
+  /// \param[in,out] InterpreterState for where the Interpreter is currently at,
+  /// and gets filled with where Interpreter should resume executing
+  /// \return status after processing
+  ExecutionStatus processInstUnderDebuggerOpCode(InterpreterState &state);
+
  private:
   /// The primary debugger command loop.
   ExecutionStatus debuggerLoop(
@@ -439,6 +474,14 @@ class Debugger {
   /// \return the location at which the breakpoint was installed.
   BreakpointLocation &installBreakpoint(CodeBlock *codeBlock, uint32_t offset);
 
+  /// Helper function to uninstall a breakpoint. Always use this function to
+  /// uninstall breakpoints. This takes care of the case when we purposely keep
+  /// breakpoint uninstalled in \p processInstUnderDebuggerOpCode().
+  void uninstallBreakpoint(
+      CodeBlock *codeBlock,
+      uint32_t offset,
+      hbc::opcode_atom_t opCode);
+
   /// Set a user breakpoint at \p offset in \p codeBlock.
   /// Increments the count at a breakpoint if it already exists.
   /// If the physical breakpoint isn't enabled yet, patches the debugger
@@ -447,15 +490,25 @@ class Debugger {
   void
   setUserBreakpoint(CodeBlock *codeBlock, uint32_t offset, BreakpointID id);
 
-  /// Set a stepping breakpoint at \p offset in \p codeBlock.
-  /// Increments the count at a breakpoint if it already exists.
-  /// If the physical breakpoint isn't enabled yet, patches the debugger
+  /// Should not be called directly except from \p setStepBreakpoint() or \p
+  /// setRestorationBreakpoint(). This function sets a non-user breakpoint at \p
+  /// offset in \p codeBlock. Increments the count at a breakpoint if it already
+  /// exists. If the physical breakpoint isn't enabled yet, patches the debugger
   /// instruction in.
   /// The breakpoint is set to be a one-shot.
   /// If \p callStackDepth != 0, then the Interpreter should only
   /// break if the callStack is exactly \p callStackDepth frames long.
   /// If \p callStackDepth == 0, then the Step breakpoint should break
   /// regardless of the actual depth of the call stack.
+  /// /param isStepBreakpoint true if creating a Step breakpoint, false for
+  /// Restoration breakpoint.
+  void doSetNonUserBreakpoint(
+      CodeBlock *codeBlock,
+      uint32_t offset,
+      uint32_t callStackDepth,
+      bool isStepBreakpoint);
+
+  /// Set a stepping breakpoint at \p offset in \p codeBlock.
   void setStepBreakpoint(
       CodeBlock *codeBlock,
       uint32_t offset,
@@ -479,19 +532,39 @@ class Debugger {
   /// The breakpoint will clear on the next call to clearTempBreakpoints.
   void setEntryBreakpointForCodeBlock(CodeBlock *codeBlock);
 
-  /// Add a Step breakpoint to the last interpreted function on the
+  /// Add a non-user breakpoint to the last interpreted function on the
   /// call stack, at the next offset after the saved return address.
   /// This allows stepping out of the currently executing function.
-  void breakpointCaller();
+  /// \param forRestorationBreakpoint whether to create as a restoration
+  /// breakpoint or a Step breakpoint
+  void breakpointCaller(bool forRestorationBreakpoint);
 
   /// Add a Step breakpoint at the exception handler for the current state.
   /// Does nothing if the exception is uncaught.
   void breakpointExceptionHandler(const InterpreterState &state);
 
+  /// Should not be called directly except from \p clearTempBreakpoints() or \p
+  /// clearRestorationBreakpoints(). This function clears all of the given type
+  /// of non-user breakpoint that have been set.
+  /// /param isStepBreakpoint true to clear Step breakpoints, false to clear
+  /// Restoration breakpoints.
+  void doClearNonUserBreakpoints(bool isStepBreakpoint);
+
   /// Clear all the Step and OnLoad breakpoints that have been set.
-  /// Uninstall the debugger instruction from any locations
-  /// that no longer have any logical breakpoints.
   void clearTempBreakpoints();
+
+  /// Set a Restoration breakpoint at \p offset in \p codeBlock.
+  void setRestorationBreakpoint(
+      CodeBlock *codeBlock,
+      uint32_t offset,
+      uint32_t callStackDepth);
+
+  /// Re-install any breakpoint stored by \p breakpointToRestore_.
+  /// \return true if there was a breakpoint to restore, false otherwise.
+  bool restoreBreakpointIfAny();
+
+  /// Clear all the Restoration breakpoints that have been set.
+  void clearRestorationBreakpoints();
 
   /// Steps a single instruction.
   /// Requires that the current instruction steps to somewhere else in the
