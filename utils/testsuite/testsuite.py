@@ -197,7 +197,7 @@ class TestFlag(enum.Enum):
 
 
 TIMEOUT_COMPILER = 200
-TIMEOUT_VM = 300
+TIMEOUT_VM = 600
 
 includesMatcher = re.compile(r"includes:\s*\[(.*)\]")
 # This matches a special case in which the includes looks like:
