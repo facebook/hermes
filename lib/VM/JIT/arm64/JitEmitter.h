@@ -998,6 +998,12 @@ class Emitter {
   /// perform allocations.
   void callThunkWithSavedIP(void *fn, const char *name);
 
+  /// Call a function without registering it as a thunk. This should be used for
+  /// functions that will only have a single call site in the emitted function,
+  /// and therefore do not benefit from a thunk. Note that like \c callThunk,
+  /// this does not save the IP.
+  void callWithoutThunk(void *fn, const char *name);
+
   void emitSlowPaths();
   void emitThunks();
   void emitROData();

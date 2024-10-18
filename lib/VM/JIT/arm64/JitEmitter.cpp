@@ -268,6 +268,18 @@ static bool isCheapConst(uint64_t k) {
     (em).callThunk((void *)func, #func);                   \
   } while (0)
 
+/// Make call without creating a thunk for it or saving the IP. This is useful
+/// for specific functionality where saving the IP is either unnecessary or
+/// incorrect, and where the call target is only going to be invoked at most
+/// once in the function.
+#define EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(em, type, func) \
+  do {                                                               \
+    using _FnT = type;                                               \
+    _FnT _fn = func;                                                 \
+    (void)_fn;                                                       \
+    (em).callWithoutThunk((void *)func, #func);                      \
+  } while (0)
+
 Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
     unsigned dumpJitCode,
@@ -496,7 +508,7 @@ void Emitter::frameSetup(
   //  _sh_check_native_stack_overflow(shr);
   // Do not save the IP because we have not yet set up the stack frame for this
   // function. If this throws, the exception should appear in the caller.
-  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
       *this, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
 
   // Function<bench>(3 params, 13 registers):
@@ -509,7 +521,7 @@ void Emitter::frameSetup(
   a.mov(a64::w2, numFrameRegs + hbc::StackFrameLayout::FirstLocal);
   // Like _sh_check_native_stack_overflow, we do not save the IP here so that
   // thrown exceptions appear in the caller.
-  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
       *this, SHLegacyValue * (*)(SHRuntime *, SHLocals *, uint32_t), _sh_enter);
   comment("// xFrame");
   a.mov(xFrame, a64::x0);
@@ -544,7 +556,7 @@ void Emitter::leave() {
   a.mov(a64::x1, a64::sp);
   a.mov(a64::x2, xFrame);
   // _sh_leave cannot throw or observe the IP.
-  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
       *this, void (*)(SHRuntime *, SHLocals *, SHLegacyValue *), _sh_leave);
 
   // The return value has been stashed in x22 by ret(). Move it to the return
@@ -602,6 +614,12 @@ void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   a.mov(a64::x16, Runtime::kInvalidCurrentIP);
   a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
 #endif
+}
+
+void Emitter::callWithoutThunk(void *fn, const char *name) {
+  comment("// call %s", name);
+  loadBits64InGp(a64::x16, (uint64_t)fn, name);
+  a.blr(a64::x16);
 }
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
