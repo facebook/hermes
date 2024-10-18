@@ -68,7 +68,7 @@ void LineDirectiveEmitter::disableLineDirectives() {
   enabled_ = false;
   // Reset the line directive information when we disable. We shouldn't carry
   // over line info between uses of the emitter.
-  info_ = {};
+  info_ = LineDirectiveInfo{};
 }
 
 } // namespace hermes::sh
