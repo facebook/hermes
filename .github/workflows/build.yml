@@ -53,16 +53,22 @@ jobs:
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
-    - name: Build linux CLI
+    - name: Build linux CLI 1
       run: |-
         cmake -S hermes -B build_hdb -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
           -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive"
+    - name: Build linux CLI 2
+      run: |-
         cmake -S hermes -B build -DHERMES_STATIC_LINK=ON -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_CXX_FLAGS=-s -DCMAKE_C_FLAGS=-s \
           -DCMAKE_EXE_LINKER_FLAGS="-Wl,--whole-archive -lpthread -Wl,--no-whole-archive" \
           -DHERMES_ENABLE_DEBUGGER=False
+    - name: Build linux CLI 3
+      run: |-
         cmake --build build_hdb --target hdb
+    - name: Build linux CLI 4
+      run: |-
         cmake --build build --target check-hermes hermes hvm hbcdump hermesc
     - name: Create CLI tarball
       run: |-
