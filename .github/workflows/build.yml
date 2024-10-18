@@ -69,7 +69,19 @@ jobs:
         cmake --build build_hdb --target hdb
     - name: Build linux CLI 4
       run: |-
-        cmake --build build --target check-hermes hermes hvm hbcdump hermesc
+        cmake --build build --target check-hermes
+    - name: Build linux CLI 5
+      run: |-
+        cmake --build build --target hermes
+    - name: Build linux CLI 6
+      run: |-
+        cmake --build build --target hvm
+    - name: Build linux CLI 7
+      run: |-
+        cmake --build build --target hbcdump
+    - name: Build linux CLI 8
+      run: |-
+        cmake --build build --target hermesc
     - name: Create CLI tarball
       run: |-
         mkdir output staging
