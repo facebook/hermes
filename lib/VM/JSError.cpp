@@ -463,7 +463,7 @@ ExecutionStatus JSError::recordStackTrace(
   // from either bytecode, native JS, or an unknown location. Use
   // BytecodeStackTraceInfo(nullptr, 0) to denote the 'unknown' case.
   for (StackFramePtr cf : runtime.getStackFrames()) {
-    CodeBlock *savedCodeBlock = cf.getSavedCodeBlock();
+    CodeBlock *codeBlock = nullptr;
     const Inst *const savedIP = cf.getSavedIP();
     // Each bytecode stack frame tracks information about the caller. But, each
     // native stack frame's SHLocals tracks information about the callee. This
@@ -473,19 +473,17 @@ ExecutionStatus JSError::recordStackTrace(
     StackFramePtr prev = cf->getPreviousFrame();
     if (prev != framesEnd) {
       // Go up one frame and get the callee code block but use the current
-      // frame's saved IP. This also allows us to account for bound functions,
-      // which have savedCodeBlock == nullptr in order to allow proper returns
-      // in the interpreter.
-      if (CodeBlock *parentCB = prev->getCalleeCodeBlock(runtime)) {
-        savedCodeBlock = parentCB;
-      }
+      // frame's saved IP. This is preferable to using the SavedCodeBlock in the
+      // frame because it is always available, whereas the SavedCodeBlock is
+      // unavailable if the interpreter makes a call indirectly (e.g. through a
+      // getter/setter) or in BoundFunction calls.
+      codeBlock = prev->getCalleeCodeBlock(runtime);
       locals = prev->getSHLocals();
     }
-    if (savedCodeBlock && savedIP) {
-      stack->emplace_back(BytecodeStackTraceInfo(
-          savedCodeBlock, savedCodeBlock->getOffsetOf(savedIP)));
-      if (LLVM_UNLIKELY(
-              addDomain(savedCodeBlock) == ExecutionStatus::EXCEPTION)) {
+    if (codeBlock && savedIP) {
+      stack->emplace_back(
+          BytecodeStackTraceInfo(codeBlock, codeBlock->getOffsetOf(savedIP)));
+      if (LLVM_UNLIKELY(addDomain(codeBlock) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
     } else {
