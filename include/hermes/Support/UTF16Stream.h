@@ -10,7 +10,6 @@
 
 #include <cstdint>
 
-#include "hermes/ADT/OwningArray.h"
 #include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
