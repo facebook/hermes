@@ -1359,6 +1359,9 @@ void JSFunction::addLocationToSnapshot(
 CallResult<HermesValue> JSFunction::_jittedCall(
     JITCompiledFunctionPtr functionPtr,
     Runtime &runtime) {
+  // We should not need a GCScope here because all calls to _jittedCall
+  // originate either in the interpreter, NativeJSFunctions, or other JIT code.
+  // Deep recursion purely between these 3 should not produce excess handles.
   return _callWrapper<HermesValue>(functionPtr, runtime, [](uint64_t) {});
 }
 
@@ -1367,8 +1370,10 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime &runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
 
-  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
+  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
+    GCScope scope{runtime};
     return _callWrapper<PseudoHandle<>>(jitPtr, runtime, [](uint64_t) {});
+  }
 
   CallResult<HermesValue> result = self->_interpret(runtime);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
