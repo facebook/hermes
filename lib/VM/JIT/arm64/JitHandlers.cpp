@@ -199,6 +199,17 @@ void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex) {
 }
 #endif
 
+void _sh_throw_invalid_construct(SHRuntime *shr) {
+  Runtime &runtime = getRuntime(shr);
+  (void)runtime.raiseTypeError("Function is not a constructor");
+  _sh_throw_current(shr);
+}
+void _sh_throw_invalid_call(SHRuntime *shr) {
+  Runtime &runtime = getRuntime(shr);
+  (void)runtime.raiseTypeError("Class constructor invoked without new");
+  _sh_throw_current(shr);
+}
+
 } // namespace hermes::vm
 
 #endif // HERMESVM_JIT

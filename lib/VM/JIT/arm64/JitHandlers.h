@@ -91,4 +91,9 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right);
 void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex);
 #endif
 
+/// Throw an exception that the current function was incorrectly called as a
+/// constructor/non-constructor.
+[[noreturn]] void _sh_throw_invalid_construct(SHRuntime *shr);
+[[noreturn]] void _sh_throw_invalid_call(SHRuntime *shr);
+
 } // namespace hermes::vm

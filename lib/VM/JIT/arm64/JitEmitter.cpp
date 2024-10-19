@@ -115,6 +115,26 @@ void emit_sh_ljs_is_empty(
   a.cmn(xTempReg, -HVETag_Empty);
 }
 
+/// Emit code to check whether the input reg is undefined, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_undefined(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "HVETag_Undefined must be at kHV_NumDataBits - 1");
+  static_assert(
+      (int16_t)HVETag_Undefined == (int16_t)(-12) &&
+      "HVETag_Undefined must be -12");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
+  a.cmn(xTempReg, -HVETag_Undefined);
+}
+
 /// For a register \p inOut that contains a bool (i.e. either 0 or 1), turn it
 /// into a HermesValue boolean by adding the corresponding tag.
 void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
@@ -452,6 +472,33 @@ void Emitter::frameSetup(
   assert(
       vecSaveCount <= kVecSaved.second - kVecSaved.first + 1 &&
       "Too many callee saved Vec regs");
+
+  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
+  if (prohibitInvoke != ProhibitInvoke::None) {
+    // Load the new frame pointer. We leave x0 untouched since it contains the
+    // runtime parameter, which is used below and in throwInvalidInvoke_.
+    a.ldr(a64::x1, a64::Mem(a64::x0, offsetof(Runtime, stackPointer_)));
+    // Load new.target.
+    a.ldur(
+        a64::x1,
+        a64::Mem(
+            a64::x1, StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
+    // Compare new.target against undefined.
+    emit_sh_ljs_is_undefined(a, a64::x1, a64::x1);
+    a.cmn(a64::x1, -HVETag_Undefined);
+
+    if (prohibitInvoke == ProhibitInvoke::Call) {
+      // If regular calls are prohibited, then we jump to throwInvalidInvoke if
+      // new.target is undefined.
+      throwInvalidInvoke_ = a.newNamedLabel("throwInvalidCall");
+      a.b_eq(throwInvalidInvoke_);
+    } else if (prohibitInvoke == ProhibitInvoke::Construct) {
+      // If construct calls are prohibited, then we jump to throwInvalidInvoke
+      // if new.target is not undefined.
+      throwInvalidInvoke_ = a.newNamedLabel("throwInvalidConstruct");
+      a.b_ne(throwInvalidInvoke_);
+    }
+  }
 
   static_assert(
       kGPSaved.first == 22, "Callee saved GP regs must start from x22");
@@ -3214,6 +3261,21 @@ void Emitter::emitSlowPaths() {
     slowPaths_.pop_front();
   }
   emittingIP = nullptr;
+
+  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
+  if (prohibitInvoke != ProhibitInvoke::None) {
+    a.bind(throwInvalidInvoke_);
+    // We don't register a thunk since there will only be a single call to this.
+    // Note that we also don't save the IP, because this is being thrown in the
+    // caller's context.
+    // This is thrown at the start of the function, so runtime is already in x0.
+    if (prohibitInvoke == ProhibitInvoke::Call)
+      EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+          *this, void (*)(SHRuntime *), _sh_throw_invalid_call);
+    else
+      EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+          *this, void (*)(SHRuntime *), _sh_throw_invalid_construct);
+  }
 }
 
 void Emitter::emitThunks() {
@@ -4174,15 +4236,8 @@ void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
   a64::GpX xInput = hwInput.a64GpX();
   HWReg hwTmpTag = allocTempGpX();
   a64::GpX xTmpTag = hwTmpTag.a64GpX();
-  static_assert(
-      HERMESVALUE_VERSION == 1,
-      "HVETag_Undefined must be at kHV_NumDataBits - 1");
-  static_assert(
-      (int16_t)HVETag_Undefined == (int16_t)(-12) &&
-      "HVETag_Undefined must be -12");
-  // Compare tag bits, jump to retThisLab if not object.
-  a.asr(xTmpTag, xInput, kHV_NumDataBits - 1);
-  a.cmn(xTmpTag, -HVETag_Undefined);
+
+  emit_sh_ljs_is_undefined(a, xTmpTag, xInput);
   a.b_eq(target);
 
   freeReg(hwTmpTag);
