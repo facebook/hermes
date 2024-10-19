@@ -1697,7 +1697,6 @@ tailCall:
           SLOW_DEBUG(
               dbgs() << "JIT return value r" << (unsigned)ip->iCall.op1 << "="
                      << DumpHermesValue(O1REG(Call)) << "\n");
-          gcScope.flushToSmallCount(KEEP_HANDLES);
           ip = nextIP;
           DISPATCH;
         }
