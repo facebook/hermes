@@ -185,7 +185,8 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst,
-          runtime.getHeap());
+          runtime.getHeap(),
+          self);
     } else if (fromFirst < toFirst) {
       // Copying to the right, need to copy backwards to avoid overwriting what
       // is being copied.
@@ -193,7 +194,8 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst + copySize,
-          runtime.getHeap());
+          runtime.getHeap(),
+          self);
     }
 
     // Initialize the elements which were emptied in front.
@@ -201,7 +203,8 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
         self->data(),
         self->data() + toFirst,
         HVType::encodeEmptyValue(),
-        runtime.getHeap());
+        runtime.getHeap(),
+        self);
 
     // Initialize the elements between the last copied element and toLast.
     if (toFirst + copySize < toLast) {
