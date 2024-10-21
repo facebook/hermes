@@ -485,7 +485,6 @@ void Emitter::frameSetup(
             a64::x1, StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
     // Compare new.target against undefined.
     emit_sh_ljs_is_undefined(a, a64::x1, a64::x1);
-    a.cmn(a64::x1, -HVETag_Undefined);
 
     if (prohibitInvoke == ProhibitInvoke::Call) {
       // If regular calls are prohibited, then we jump to throwInvalidInvoke if
