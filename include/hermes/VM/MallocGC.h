@@ -243,6 +243,7 @@ class MallocGC final : public GCBase {
   void writeBarrierRange(const GCHermesValueBase<HVType> *, uint32_t) {}
   template <typename HVType>
   void constructorWriteBarrierRange(
+      const GCCell *cell,
       const GCHermesValueBase<HVType> *,
       uint32_t) {}
   template <typename HVType>
