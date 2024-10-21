@@ -979,9 +979,14 @@ GCBASE_BARRIER_2(
     const GCCell *);
 GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
 GCBASE_BARRIER_2(writeBarrierRange, const GCSmallHermesValue *, uint32_t);
-GCBASE_BARRIER_2(constructorWriteBarrierRange, const GCHermesValue *, uint32_t);
 GCBASE_BARRIER_2(
     constructorWriteBarrierRange,
+    const GCCell *,
+    const GCHermesValue *,
+    uint32_t);
+GCBASE_BARRIER_2(
+    constructorWriteBarrierRange,
+    const GCCell *,
     const GCSmallHermesValue *,
     uint32_t);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
