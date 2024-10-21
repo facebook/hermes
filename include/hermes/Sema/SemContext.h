@@ -435,13 +435,16 @@ class SemContext {
   /// Set the "declaration decl" of the specified identifier node.
   void setDeclarationDecl(ESTree::IdentifierNode *node, Decl *decl);
 
+  /// Set a promoted "declaration decl" for the specified identifier node.
   void setPromotedDecl(ESTree::IdentifierNode *node, Decl *decl) {
-    promotedFunctionGlobalDecls[node] = decl;
+    promotedFunctionDecls_[node] = decl;
   }
 
+  /// \return a global "declaration decl" associated with a promoted function
+  /// identifier if one exists, else nullptr.
   Decl *getPromotedDecl(ESTree::IdentifierNode *node) {
-    if (auto it = promotedFunctionGlobalDecls.find(node);
-        it != promotedFunctionGlobalDecls.end()) {
+    if (auto it = promotedFunctionDecls_.find(node);
+        it != promotedFunctionDecls_.end()) {
       return it->second;
     }
     return nullptr;
@@ -503,8 +506,13 @@ class SemContext {
   llvh::DenseMap<ESTree::IdentifierNode *, Decl *>
       sideIdentifierDeclarationDecl_{};
 
+  /// This side table is used to associate a "declaration decl" with an
+  /// ESTree::IdentifierNode in scenarios where a scoped function
+  /// is promoted to the global scope.
+  /// In promotedFunctionDecls_ we store the scoped declaration, while in
+  /// sideIdentifierDeclarationDecl_ the global-like declaration
   llvh::DenseMap<ESTree::IdentifierNode *, Decl *>
-      promotedFunctionGlobalDecls{};
+      promotedFunctionDecls_{};
 };
 
 class SemContextDumper {

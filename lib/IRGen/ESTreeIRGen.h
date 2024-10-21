@@ -1168,6 +1168,8 @@ class ESTreeIRGen {
     return getDeclData(getIDDecl(id));
   }
 
+  /// Resolve the identifier node associated with the promoted function
+  /// to the corresponding global variable in expression context.
   Value *resolveIdentifierPromoted(ESTree::IdentifierNode *id) {
     auto declPromoted = getIDDeclPromoted(id);
     return declPromoted ? getDeclData(declPromoted) : nullptr;
@@ -1434,6 +1436,7 @@ class ESTreeIRGen {
     return decl;
   }
 
+  /// Return the global Decl associated with the promoted function identifier.
   sema::Decl *getIDDeclPromoted(ESTree::IdentifierNode *id) {
     assert(id && "IdentifierNode cannot be null");
     sema::Decl *decl = semCtx_.getPromotedDecl(id);
