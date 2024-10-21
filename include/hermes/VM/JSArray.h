@@ -430,7 +430,7 @@ class JSArrayIterator : public JSObject {
       Handle<JSObject> iteratedObject,
       IterationKind iterationKind)
       : JSObject(runtime, *parent, *clazz),
-        iteratedObject_(runtime, *iteratedObject, runtime.getHeap()),
+        iteratedObject_(runtime, *iteratedObject, runtime.getHeap(), this),
         iterationKind_(iterationKind) {}
 
  private:

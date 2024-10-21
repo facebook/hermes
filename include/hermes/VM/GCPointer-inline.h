@@ -20,11 +20,13 @@ GCPointerBase::GCPointerBase(
     PointerBase &base,
     GCCell *ptr,
     GC &gc,
+    const GCCell *owningObj,
     NeedsBarriers)
     : CompressedPointer(CompressedPointer::encode(ptr, base)) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
+  (void)owningObj;
   if (NeedsBarriers::value) {
     gc.constructorWriteBarrier(this, ptr);
   } else {
