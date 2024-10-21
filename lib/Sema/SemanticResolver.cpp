@@ -1829,8 +1829,10 @@ void SemanticResolver::validateAndDeclareIdentifier(
     }
   }
 
-  if (functionContext()->promotedFuncDecls.count(ident->_name)
-      && semCtx_.getDeclarationDecl(ident)) {
+  // if the identifier is promoted and we already have a (global) declaration
+  // for it, then we need to create and assign a scoped declaration
+  if (semCtx_.getDeclarationDecl(ident) &&
+      functionContext()->promotedFuncDecls.count(ident->_name)) {
     decl = semCtx_.newDeclInScope(ident->_name, kind, curScope_);
     bindingTable_.put(ident->_name, Binding{decl, ident});
     semCtx_.setPromotedDecl(ident, decl);
