@@ -1336,6 +1336,13 @@ class InstrGen {
     os_ << ", ";
     genStringConstIC(LS) << ");\n";
   }
+  void generateLoadParentNoTrapsInst(LoadParentNoTrapsInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_load_parent_no_traps(shr, ";
+    generateRegister(*inst.getObject());
+    os_ << ");\n";
+  }
   void generateTypedLoadParentInst(TypedLoadParentInst &inst) {
     os_.indent(2);
     generateRegister(inst);

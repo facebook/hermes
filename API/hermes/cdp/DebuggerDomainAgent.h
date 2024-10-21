@@ -117,6 +117,9 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Handles Debugger.stepOver request
   void stepOver(const m::debugger::StepOverRequest &req);
 
+  /// Handles Debugger.setBlackboxedRanges request
+  void setBlackboxedRanges(const m::debugger::SetBlackboxedRangesRequest &req);
+
   /// Handles Debugger.setPauseOnExceptions
   void setPauseOnExceptions(
       const m::debugger::SetPauseOnExceptionsRequest &req);

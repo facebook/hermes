@@ -24,6 +24,14 @@ SHLegacyValue _sh_ljs_create_bytecode_closure(
     SHRuntimeModule *shRuntimeModule,
     uint32_t functionID);
 
+/// Create a generator from bytecode.
+SHLegacyValue _interpreter_create_generator(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    const SHLegacyValue *env,
+    SHRuntimeModule *shRuntimeModule,
+    uint32_t functionID);
+
 /// Get the string associated with the given RuntimeModule-specific string ID.
 /// This may lazily allocate a SymbolID and the string itself.
 /// This is used when executing with a bytecode CodeBlock.
@@ -31,6 +39,12 @@ SHLegacyValue _sh_ljs_get_bytecode_string(
     SHRuntime *shr,
     SHRuntimeModule *runtimeModule,
     uint32_t stringID);
+
+/// Get the BigInt associated with the given RuntimeModule-specific BigInt ID.
+SHLegacyValue _sh_ljs_get_bytecode_bigint(
+    SHRuntime *shr,
+    SHRuntimeModule *runtimeModule,
+    uint32_t bigintID);
 
 /// Wrapper around Interpreter::createObjectFromBuffer.
 SHLegacyValue _interpreter_create_object_from_buffer(
@@ -71,5 +85,15 @@ void _sh_print_function_entry_exit(bool enter, const char *msg);
 /// Concat two values that are known to be strings.
 SHLegacyValue
 _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right);
+
+#ifdef HERMESVM_PROFILER_BB
+/// Register BB execution for BB profiler based on the current callee CodeBlock.
+void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex);
+#endif
+
+/// Throw an exception that the current function was incorrectly called as a
+/// constructor/non-constructor.
+[[noreturn]] void _sh_throw_invalid_construct(SHRuntime *shr);
+[[noreturn]] void _sh_throw_invalid_call(SHRuntime *shr);
 
 } // namespace hermes::vm

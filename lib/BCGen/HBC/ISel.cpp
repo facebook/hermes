@@ -1840,6 +1840,14 @@ void HBCISel::generateSwitchImmInst(
   switchImmInfo_[Inst] = {0, Inst->getDefaultDestination(), jmpTable};
 }
 
+void HBCISel::generateLoadParentNoTrapsInst(
+    LoadParentNoTrapsInst *Inst,
+    BasicBlock *) {
+  auto resultReg = encodeValue(Inst);
+  auto objReg = encodeValue(Inst->getObject());
+  BCFGen_->emitLoadParentNoTraps(resultReg, objReg);
+}
+
 void HBCISel::generatePrLoadInst(PrLoadInst *inst, BasicBlock *) {
   auto objReg = encodeValue(inst->getObject());
   auto resReg = encodeValue(inst);

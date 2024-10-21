@@ -939,6 +939,9 @@ bool compileFromCommandLineOptions() {
       return false;
     }
   } else {
+    // Always run the native backend optimizations.
+    runNativeBackendOptimizationPasses(M);
+
     switch (cli::OptimizationLevel) {
       case OptLevel::O0:
         runNoOptimizationPasses(M);

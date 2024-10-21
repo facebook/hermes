@@ -1033,7 +1033,8 @@ CallResult<HermesValue> Runtime::runBytecode(
     RuntimeModuleFlags flags,
     llvh::StringRef sourceURL,
     Handle<Environment> environment,
-    Handle<> thisArg) {
+    Handle<> thisArg,
+    Handle<> newTarget) {
   clearThrownValue();
 
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
@@ -1143,11 +1144,7 @@ CallResult<HermesValue> Runtime::runBytecode(
         globalCode);
 
     ScopedNativeCallFrame newFrame{
-        *this,
-        0,
-        func.getHermesValue(),
-        HermesValue::encodeUndefinedValue(),
-        *thisArg};
+        *this, 0, func.getHermesValue(), *newTarget, *thisArg};
     if (LLVM_UNLIKELY(newFrame.overflowed()))
       return raiseStackOverflow(StackOverflowKind::NativeStack);
     return shouldRandomizeMemoryLayout_
@@ -1444,6 +1441,11 @@ ExecutionStatus Runtime::raiseRangeError(const TwineChar16 &msg) {
 ExecutionStatus Runtime::raiseReferenceError(const TwineChar16 &msg) {
   return raisePlaceholder(
       *this, Handle<JSObject>::vmcast(&ReferenceErrorPrototype), msg);
+}
+
+ExecutionStatus Runtime::raiseReferenceError(Handle<> message) {
+  return raisePlaceholder(
+      *this, Handle<JSObject>::vmcast(&ReferenceErrorPrototype), message);
 }
 
 ExecutionStatus Runtime::raiseURIError(const TwineChar16 &msg) {

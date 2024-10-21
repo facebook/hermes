@@ -2792,56 +2792,27 @@ const getTransforms = (
               },
             };
           }
-          // React.Ref<C> -> NonNullable<React.Ref<C> | string | number>
-          // React$Ref<C> -> NonNullable<React.Ref<C> | string | number>
-          case 'React.Ref':
-          case 'React$Ref':
+          // React.RefSetter<C> -> React.Ref<C>
+          // React$RefSetter<C> -> React.Ref<C>
+          case 'React.RefSetter':
+          case 'React$RefSetter':
             return {
               type: 'TSTypeReference',
               loc: DUMMY_LOC,
               typeName: {
-                type: 'Identifier',
+                type: 'TSQualifiedName',
                 loc: DUMMY_LOC,
-                name: 'NonNullable',
+                left: getReactIdentifier(hasReactImport),
+                right: {
+                  type: 'Identifier',
+                  loc: DUMMY_LOC,
+                  name: 'Ref',
+                },
               },
               typeParameters: {
                 type: 'TSTypeParameterInstantiation',
                 loc: DUMMY_LOC,
-                params: [
-                  {
-                    type: 'TSUnionType',
-                    loc: DUMMY_LOC,
-                    types: [
-                      {
-                        type: 'TSTypeReference',
-                        loc: DUMMY_LOC,
-                        typeName: {
-                          type: 'TSQualifiedName',
-                          loc: DUMMY_LOC,
-                          left: getReactIdentifier(hasReactImport),
-                          right: {
-                            type: 'Identifier',
-                            loc: DUMMY_LOC,
-                            name: 'Ref',
-                          },
-                        },
-                        typeParameters: {
-                          type: 'TSTypeParameterInstantiation',
-                          loc: DUMMY_LOC,
-                          params: assertHasExactlyNTypeParameters(1),
-                        },
-                      },
-                      {
-                        type: 'TSStringKeyword',
-                        loc: DUMMY_LOC,
-                      },
-                      {
-                        type: 'TSNumberKeyword',
-                        loc: DUMMY_LOC,
-                      },
-                    ],
-                  },
-                ],
+                params: assertHasExactlyNTypeParameters(1),
               },
             };
           default:

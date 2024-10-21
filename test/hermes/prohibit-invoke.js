@@ -13,8 +13,10 @@
   try {
     new arrow1();
   } catch (e) {
-    print("caught", e.name, e.message);
-//CHECK: caught TypeError Function is not a constructor
+    print("caught", e.stack);
+//CHECK: caught TypeError: Function is not a constructor
+//CHECK-NEXT: at anonymous ({{.*}}prohibit-invoke.js:{{.*}})
+//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:{{.*}})
   }
 
   arrow1();
@@ -37,15 +39,19 @@ globalThis.a = "a";
   try {
     new obj.m1();
   } catch (e) {
-    print(e);
+    print(e.stack);
 //CHECK-NEXT: TypeError: Function is not a constructor
+//CHECK-NEXT: at anonymous ({{.*}}prohibit-invoke.js:{{.*}})
+//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:{{.*}})
   }
 
   try {
     new obj[computedKey]();
   } catch (e) {
-    print(e);
+    print(e.stack);
 //CHECK-NEXT: TypeError: Function is not a constructor
+//CHECK-NEXT: at anonymous ({{.*}}prohibit-invoke.js:{{.*}})
+//CHECK-NEXT: at global ({{.*}}prohibit-invoke.js:{{.*}})
   }
 })();
 

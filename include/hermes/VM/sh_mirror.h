@@ -40,7 +40,7 @@ typedef struct SHGCCell {
 /// Struct mirroring the layout of JSObject (without the direct props).
 typedef struct SHJSObject {
   SHGCCell base;
-  uint32_t flags;
+  SHObjectFlags flags;
   SHCompressedPointerRawType parent;
   SHCompressedPointerRawType clazz;
   SHCompressedPointerRawType propStorage;

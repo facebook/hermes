@@ -149,7 +149,13 @@ JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return res->get();
+    // Constructor calls *must* return an object. If the returned value is not
+    // an object, choose the `this` we created. Non-construct calls can just use
+    // the value directly.
+    if (!isConstructorCall) {
+      return res->get();
+    }
+    return (*res)->isObject() ? res->get() : lv.thisArg.getHermesValue();
   }
   // 7. Let argArray be CreateArrayFromList(argumentsList).
   auto argArrayRes = JSArray::create(

@@ -49,8 +49,11 @@ std::unique_ptr<JSLibStorage> createJSLibStorage();
 /// eval() entry point. Evaluate the given source \p utf8code within the given
 /// \p environment, using the given \p scopeChain to resolve identifiers.
 /// \p thisArg is the initial "this" value of the function being evaluated.
-/// If \p singleFunction is set, require that the output be only a single
-/// function. \return the result of evaluation.
+/// \p new.target is the initial "new.target" value of the function being
+/// evaluated.
+/// If \p singleFunction is set, require that the output be only a
+/// single function.
+/// \return the result of evaluation.
 CallResult<HermesValue> evalInEnvironment(
     Runtime &runtime,
     llvh::StringRef utf8code,
@@ -58,6 +61,7 @@ CallResult<HermesValue> evalInEnvironment(
     Handle<Environment> environment,
     const CodeBlock *codeBlock,
     Handle<> thisArg,
+    Handle<> newTarget,
     bool singleFunction);
 
 /// If the target CJS module is not initialized, execute it.

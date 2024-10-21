@@ -133,13 +133,17 @@ static void compileLazyFunctionWorker(void *argPtr) {
   sema::SemContext *semCtx = provider->getSemCtx();
   assert(semCtx && "missing semantic data to compile");
 
+  // A non-null home object means the parent function context could reference
+  // super.
+  bool parentHadSuperBinding = lazyDataInst->getHomeObject();
   // If parsing or resolution fails, report the error and return.
   if (!optParsed ||
       !sema::resolveASTLazy(
           context,
           *semCtx,
           llvh::cast<ESTree::FunctionLikeNode>(*optParsed),
-          lazyData.semInfo)) {
+          lazyData.semInfo,
+          parentHadSuperBinding)) {
     data->success = false;
     data->error = outputManager.getErrorString();
     return;
@@ -276,13 +280,17 @@ static void compileEvalWorker(void *argPtr) {
   std::shared_ptr<sema::SemContext> semCtx =
       std::make_shared<sema::SemContext>(context, provider->shareSemCtx());
 
+  // A non-null home object means the parent function context could reference
+  // super.
+  bool parentHadSuperBinding = evalDataInst->getHomeObject() != nullptr;
   // If parsing or resolution fails, report the error and return.
   if (!optParsed ||
       !sema::resolveASTInScope(
           context,
           *semCtx,
           llvh::cast<ESTree::ProgramNode>(*optParsed),
-          evalData.semInfo)) {
+          evalData.semInfo,
+          parentHadSuperBinding)) {
     data->success = false;
     data->error = outputManager.getErrorString();
     return;
@@ -290,7 +298,7 @@ static void compileEvalWorker(void *argPtr) {
 
   Function *newFunc = hermes::generateEvalIR(
       F->getParent(),
-      evalDataInst->getFuncVarScope(),
+      evalDataInst,
       llvh::cast<ESTree::FunctionLikeNode>(*optParsed),
       *semCtx);
   if (outputManager.haveErrors()) {

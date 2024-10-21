@@ -76,7 +76,6 @@ _sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
   Runtime &runtime = getRuntime(shr);
 
   PinnedHermesValue *frame = runtime.getStackPointer();
-  runtime.setCurrentFrame(StackFramePtr(frame));
 
   // Allocate the registers for the new frame.
   if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
@@ -86,6 +85,7 @@ _sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
     _sh_throw_current(shr);
   }
 
+  runtime.setCurrentFrame(StackFramePtr(frame));
   locals->prev = runtime.shLocals;
   runtime.shLocals = locals;
   return frame;
@@ -1041,7 +1041,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
     } lv;
     LocalsRAII lraii(runtime, &lv);
     lv.newTarget = correctNewTarget;
-    lv.newTargetPrototype = getById_RJS<true>(
+    lv.newTargetPrototype = getById_RJS<false>(
         getRuntime(shr),
         lv.newTarget,
         Predefined::getSymbolID(Predefined::prototype),

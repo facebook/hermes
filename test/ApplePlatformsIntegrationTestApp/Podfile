@@ -6,6 +6,12 @@ target 'ApplePlatformsIntegrationMobileTests' do
   pod 'hermes-engine', :path => '../../'
 end
 
+target 'ApplePlatformsIntegrationTVOSTests' do
+  use_frameworks!
+  platform :tvos, '15.0'
+  pod 'hermes-engine', :path => '../../'
+end
+
 target 'ApplePlatformsIntegrationMacTests' do
   use_frameworks!
   platform :osx, '10.14'

@@ -802,17 +802,39 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
     ESTree::MemberExpressionNode *mem,
     MemberExpressionOperation op) {
   if (auto *superNode = llvh::dyn_cast<ESTree::SuperNode>(mem->_object)) {
-    auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
-    if (op != MemberExpressionOperation::Load || !property || mem->_computed) {
-      // We can only handle super.foo, where foo is an identifier.
-      Mod->getContext().getSourceErrorManager().error(
-          mem->getSourceRange(), "unsupported use of 'super'");
+    if (op == MemberExpressionOperation::Delete) {
+      Builder.createCallBuiltinInst(
+          BuiltinMethod::HermesBuiltin_throwReferenceError,
+          {Builder.getLiteralString("Cannot delete a super property.")});
       return MemberExpressionResult{
           Builder.getLiteralUndefined(),
           nullptr,
           Builder.getLiteralUndefined()};
     }
-    return emitSuperLoad(superNode, property);
+    if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+            flowContext_.getNodeTypeOrAny(superNode)->info)) {
+      auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
+      if (!property || mem->_computed) {
+        // We can only handle super.foo, where foo is an identifier.
+        Mod->getContext().getSourceErrorManager().error(
+            mem->getSourceRange(), "unsupported use of 'super'");
+        return MemberExpressionResult{
+            Builder.getLiteralUndefined(),
+            nullptr,
+            Builder.getLiteralUndefined()};
+      }
+      return emitTypedSuperLoad(superNode, property);
+    }
+    auto *homeObjectVar = curFunction()->capturedState.homeObject;
+    assert(homeObjectVar && "homeObjectVar not populated");
+    auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+    Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+    // We know that home objects are always ordinary objects.
+    Value *superObj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+    Value *propVal = Builder.createLoadPropertyInst(
+        superObj, genMemberExpressionProperty(mem));
+    Value *thisValue = genThisExpression();
+    return MemberExpressionResult{propVal, nullptr, thisValue};
   }
 
   Value *baseValue = genExpression(mem->_object);
@@ -937,54 +959,46 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       Builder.createLoadPropertyInst(baseValue, propValue), nullptr, baseValue};
 }
 
-ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitSuperLoad(
+ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
     ESTree::SuperNode *superNode,
     ESTree::IdentifierNode *property) {
-  if (auto *classType = llvh::dyn_cast<flow::ClassType>(
-          flowContext_.getNodeTypeOrAny(superNode)->info)) {
-    auto propName = Identifier::getFromPointer(
-        llvh::cast<ESTree::IdentifierNode>(property)->_name);
-    Value *thisValue = genThisExpression();
-    if (auto optFieldLookup = classType->findField(propName)) {
-      // Found the field on the class, so load it directly from 'this'.
-      size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
-      return MemberExpressionResult{
-          Builder.createPrLoadInst(
-              thisValue,
-              fieldIndex,
-              Builder.getLiteralString(propName),
-              flowTypeToIRType(optFieldLookup->getField()->type)),
-          nullptr,
-          thisValue};
-    }
-    // Failed to find a class field, check the home object for methods.
-    auto optMethodLookup =
-        classType->getHomeObjectTypeInfo()->findField(propName);
-    assert(
-        optMethodLookup && "must have typechecked as either method or field");
-    size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
-    // Lookup method on the parent, return thisValue in the result to
-    // correctly populate 'this' argument.
-    auto it = classConstructors_.find(classType);
-    auto *RSI =
-        emitResolveScopeInstIfNeeded(it->second.homeObjectVar->getParent());
-    Value *superHomeObject =
-        Builder.createLoadFrameInst(RSI, it->second.homeObjectVar);
+  auto *classType = llvh::cast<flow::ClassType>(
+      flowContext_.getNodeTypeOrAny(superNode)->info);
+  auto propName = Identifier::getFromPointer(
+      llvh::cast<ESTree::IdentifierNode>(property)->_name);
+  Value *thisValue = genThisExpression();
+  if (auto optFieldLookup = classType->findField(propName)) {
+    // Found the field on the class, so load it directly from 'this'.
+    size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
     return MemberExpressionResult{
         Builder.createPrLoadInst(
-            superHomeObject,
-            methodIndex,
+            thisValue,
+            fieldIndex,
             Builder.getLiteralString(propName),
-            flowTypeToIRType(optMethodLookup->getField()->type)),
+            flowTypeToIRType(optFieldLookup->getField()->type)),
         nullptr,
         thisValue};
   }
-
-  Mod->getContext().getSourceErrorManager().error(
-      superNode->getSourceRange(),
-      "'super' in legacy JS classes not supported (yet)");
+  // Failed to find a class field, check the home object for methods.
+  auto optMethodLookup =
+      classType->getHomeObjectTypeInfo()->findField(propName);
+  assert(optMethodLookup && "must have typechecked as either method or field");
+  size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
+  // Lookup method on the parent, return thisValue in the result to
+  // correctly populate 'this' argument.
+  auto it = classConstructors_.find(classType);
+  auto *RSI =
+      emitResolveScopeInstIfNeeded(it->second.homeObjectVar->getParent());
+  Value *superHomeObject =
+      Builder.createLoadFrameInst(RSI, it->second.homeObjectVar);
   return MemberExpressionResult{
-      Builder.getLiteralUndefined(), nullptr, Builder.getLiteralUndefined()};
+      Builder.createPrLoadInst(
+          superHomeObject,
+          methodIndex,
+          Builder.getLiteralString(propName),
+          flowTypeToIRType(optMethodLookup->getField()->type)),
+      nullptr,
+      thisValue};
 }
 
 void ESTreeIRGen::emitFieldStore(
@@ -1305,6 +1319,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   llvh::SmallVector<char, 32> stringStorage;
   /// The optional __proto__ property.
   ESTree::PropertyNode *protoProperty = nullptr;
+  // Keep track of if we've seen a method property. This is used to decide if we
+  // should capture the object literal we are building in a variable.
+  bool hasMethodProp = false;
 
   for (auto &P : Expr->_properties) {
     if (llvh::isa<ESTree::SpreadElementNode>(&P)) {
@@ -1316,6 +1333,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     stringStorage.clear();
 
     auto *prop = cast<ESTree::PropertyNode>(&P);
+    hasMethodProp |= prop->_method;
     if (prop->_computed) {
       // Can't store any useful information if the name is computed.
       // Just generate the code in the next loop.
@@ -1380,6 +1398,18 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
   // Allocate a new javascript object on the heap.
   auto Obj = Builder.createAllocObjectLiteralInst({}, objectParent);
+  Variable *capturedObj = nullptr;
+  // If we see a method, there may be a super property reference. We need to
+  // capture the value of this object literal, which will become the home object
+  // for any methods defined in this literal.
+  if (hasMethodProp) {
+    capturedObj = Builder.createVariable(
+        curFunction()->curScope->getVariableScope(),
+        "?obj",
+        Type::createObject(),
+        true);
+    Builder.createStoreFrameInst(curFunction()->curScope, Obj, capturedObj);
+  }
 
   // haveSeenComputedProp tracks whether we have processed a computed property.
   // Once we do, for all future properties, we can no longer generate
@@ -1417,7 +1447,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
                 llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
                 Identifier{},
                 nullptr,
-                Function::DefinitionKind::ES6Method)
+                Function::DefinitionKind::ES6Method,
+                capturedObj)
           : genExpression(prop->_value, Identifier{});
       if (prop->_kind->str() == "get") {
         Builder.createStoreGetterSetterInst(
@@ -1533,7 +1564,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
               llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
               nameHint,
               nullptr,
-              Function::DefinitionKind::ES6Method)
+              Function::DefinitionKind::ES6Method,
+              capturedObj)
         : genExpression(prop->_value, nameHint);
 
     // Only store the value if it won't be overwritten.

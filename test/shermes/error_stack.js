@@ -41,6 +41,7 @@ try {
 } catch (e) {
   print(e.stack);
 // CHECK-NEXT:ReferenceError: Property 'Foo' doesn't exist
+// CHECK-NEXT:    at anonymous ({{.*}}error_stack.js{{.*}})
 // CHECK-NEXT:    at global ({{.*}}error_stack.js{{.*}})
 }
 
@@ -50,6 +51,7 @@ try {
   Error.captureStackTrace(err);
   print(err.stack);
 // CHECK-NEXT:Error
+// CHECK-NEXT:    at anonymous ({{.*}}error_stack.js{{.*}})
 // CHECK-NEXT:    at global ({{.*}}error_stack.js{{.*}})
 })();
 

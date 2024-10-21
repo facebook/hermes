@@ -535,9 +535,10 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
       AssertIWithMsg(
           Inst,
           llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst) ||
-              llvh::isa<LazyCompilationDataInst>(Inst),
+              llvh::isa<LazyCompilationDataInst>(Inst) ||
+              llvh::isa<EvalCompilationDataInst>(Inst),
           "Variable can only be accessed in "
-          "LoadFrame/StoreFrame/LazyData Inst.");
+          "LoadFrame/StoreFrame/LazyData/EvalData Inst.");
     }
 
     // Most instructions that accepts a stack operand must write to it. If it
@@ -1501,6 +1502,14 @@ bool Verifier::visitFastArrayAppendInst(const FastArrayAppendInst &Inst) {
   return true;
 }
 bool Verifier::visitFastArrayLengthInst(const FastArrayLengthInst &Inst) {
+  return true;
+}
+
+bool Verifier::visitLoadParentNoTrapsInst(const LoadParentNoTrapsInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getObject()->getType().isObjectType(),
+      "input object value must be of object type");
   return true;
 }
 

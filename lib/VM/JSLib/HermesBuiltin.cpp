@@ -186,6 +186,16 @@ hermesBuiltinThrowTypeError(void *, Runtime &runtime, NativeArgs args) {
   return runtime.raiseTypeError(args.getArgHandle(0));
 }
 
+/// Throw a reference error with the argument as a message.
+///
+/// \code
+///   HermesBuiltin.throwReferenceError = function(errorMessage) {...}
+/// \endcode
+CallResult<HermesValue>
+hermesBuiltinThrowReferenceError(void *, Runtime &runtime, NativeArgs args) {
+  return runtime.raiseReferenceError(args.getArgHandle(0));
+}
+
 namespace {
 
 CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
@@ -804,6 +814,11 @@ void createHermesBuiltins(
       B::HermesBuiltin_throwTypeError,
       P::throwTypeError,
       hermesBuiltinThrowTypeError,
+      1);
+  defineInternMethod(
+      B::HermesBuiltin_throwReferenceError,
+      P::throwReferenceError,
+      hermesBuiltinThrowReferenceError,
       1);
   defineInternMethod(
       B::HermesBuiltin_copyDataProperties,

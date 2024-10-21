@@ -186,10 +186,35 @@ ExecutionStatus Debugger::runDebugger(
     pauseReason = PauseReason::AsyncTriggerExplicit;
   } else {
     assert(runReason == RunReason::Opcode && "Unknown run reason");
+
+    // Whether we breakpoint on all CodeBlocks, or breakpoint caller, they'll
+    // eventually hit the installed Debugger OpCode and get here. We need to
+    // restore any breakpoint that we delayed restoring in
+    // processInstUnderDebuggerOpCode().
+    if (restoreBreakpointIfAny()) {
+      // And if we do get here and restored a breakpoint, it means that we're
+      // stopping here because of the Restoration breakpoint we added from
+      // pauseOnAllCodeBlocksToRestoreBreakpoint_ or breakpointCaller(). Clear
+      // them out because we're not reliant on them to handle any stepping.
+      clearRestorationBreakpoints();
+
+      // If after clearing Restoration breakpoints, there is no longer a
+      // breakpoint at the current location, then that means there isn't any
+      // user or temp breakpoint at this location. If the instruction is also
+      // not an actual debugger statement, then we can just exit out of the
+      // debugger loop.
+      auto breakpointOpt = getBreakpointLocation(state.codeBlock, state.offset);
+      OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
+      if (!breakpointOpt.hasValue() && curCode != OpCode::Debugger) {
+        isDebugging_ = false;
+        return ExecutionStatus::RETURNED;
+      }
+    }
+
     // First, check if we have to finish a step that's in progress.
     auto breakpointOpt = getBreakpointLocation(state.codeBlock, state.offset);
     if (breakpointOpt.hasValue() &&
-        (breakpointOpt->hasStepBreakpoint() || breakpointOpt->onLoad)) {
+        (breakpointOpt->hasStepBreakpoint || breakpointOpt->onLoad)) {
       // We've hit a Step, which must mean we were stepping, or
       // pause-on-load if it's the first instruction of the global function.
       if (breakpointOpt->onLoad) {
@@ -347,7 +372,7 @@ ExecutionStatus Debugger::debuggerLoop(
             OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
 
             if (curCode == OpCode::Ret) {
-              breakpointCaller();
+              breakpointCaller(/*forRestorationBreakpoint*/ false);
               pauseOnAllCodeBlocks_ = true;
               isDebugging_ = false;
               // Equivalent to a step out.
@@ -382,8 +407,8 @@ ExecutionStatus Debugger::debuggerLoop(
             auto breakpointOpt =
                 getBreakpointLocation(state.codeBlock, state.offset);
             if (breakpointOpt) {
-              state.codeBlock->uninstallBreakpointAtOffset(
-                  state.offset, breakpointOpt->opCode);
+              uninstallBreakpoint(
+                  state.codeBlock, state.offset, breakpointOpt->opCode);
             }
             breakAtPossibleNextInstructions(state);
             if (breakpointOpt) {
@@ -404,7 +429,7 @@ ExecutionStatus Debugger::debuggerLoop(
             breakpointExceptionHandler(state);
             status = ExecutionStatus::EXCEPTION;
           } else {
-            breakpointCaller();
+            breakpointCaller(/*forRestorationBreakpoint*/ false);
             status = ExecutionStatus::RETURNED;
           }
           // Stepping out of here is the same as continuing.
@@ -435,7 +460,7 @@ CallResult<bool> Debugger::runUntilValidPauseLocation(InterpreterState &state) {
 
     if (curCode == OpCode::Ret) {
       // We're stepping out now.
-      breakpointCaller();
+      breakpointCaller(/*forRestorationBreakpoint*/ false);
       pauseOnAllCodeBlocks_ = true;
       curStepMode_ = StepMode::Out;
       isDebugging_ = false;
@@ -480,7 +505,8 @@ void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
 }
 
 void Debugger::willUnloadModule(RuntimeModule *module) {
-  if (tempBreakpoints_.size() == 0 && userBreakpoints_.size() == 0) {
+  if (tempBreakpoints_.size() == 0 && restorationBreakpoints_.size() == 0 &&
+      userBreakpoints_.size() == 0) {
     return;
   }
 
@@ -497,7 +523,7 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
     }
   }
 
-  auto cleanTempBreakpoint = [&](Breakpoint &bp) {
+  auto cleanNonUserBreakpoint = [&](Breakpoint &bp) {
     if (!unloadingBlocks.count(bp.codeBlock))
       return false;
 
@@ -506,7 +532,7 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
     if (it != breakpointLocations_.end()) {
       auto &location = it->second;
       assert(!location.user.hasValue() && "Unexpected user breakpoint");
-      bp.codeBlock->uninstallBreakpointAtOffset(bp.offset, location.opCode);
+      uninstallBreakpoint(bp.codeBlock, bp.offset, location.opCode);
       breakpointLocations_.erase(it);
     }
     return true;
@@ -516,8 +542,15 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
       std::remove_if(
           tempBreakpoints_.begin(),
           tempBreakpoints_.end(),
-          cleanTempBreakpoint),
+          cleanNonUserBreakpoint),
       tempBreakpoints_.end());
+
+  restorationBreakpoints_.erase(
+      std::remove_if(
+          restorationBreakpoints_.begin(),
+          restorationBreakpoints_.end(),
+          cleanNonUserBreakpoint),
+      restorationBreakpoints_.end());
 }
 
 void Debugger::resolveBreakpoints(CodeBlock *codeBlock) {
@@ -749,6 +782,21 @@ auto Debugger::installBreakpoint(CodeBlock *codeBlock, uint32_t offset)
   return location;
 }
 
+void Debugger::uninstallBreakpoint(
+    CodeBlock *codeBlock,
+    uint32_t offset,
+    hbc::opcode_atom_t opCode) {
+  // Check to see if we had temporarily kept the breakpoint uninstalled. If we
+  // already did, and it's to be removed, then we don't need to restore it
+  // anymore.
+  if (breakpointToRestore_.first == codeBlock &&
+      breakpointToRestore_.second == offset) {
+    breakpointToRestore_ = {nullptr, 0};
+  } else {
+    codeBlock->uninstallBreakpointAtOffset(offset, opCode);
+  }
+}
+
 void Debugger::setUserBreakpoint(
     CodeBlock *codeBlock,
     uint32_t offset,
@@ -757,22 +805,42 @@ void Debugger::setUserBreakpoint(
   location.user = id;
 }
 
+void Debugger::doSetNonUserBreakpoint(
+    CodeBlock *codeBlock,
+    uint32_t offset,
+    uint32_t callStackDepth,
+    bool isStepBreakpoint) {
+  BreakpointLocation &location = installBreakpoint(codeBlock, offset);
+  std::vector<Breakpoint> &breakpoints =
+      isStepBreakpoint ? tempBreakpoints_ : restorationBreakpoints_;
+  if (location.callStackDepths.count(callStackDepth) == 0) {
+    location.callStackDepths.insert(callStackDepth);
+  }
+
+  if ((isStepBreakpoint && !location.hasStepBreakpoint) ||
+      (!isStepBreakpoint && !location.hasRestorationBreakpoint)) {
+    // Leave the resolved location empty for now,
+    // let the caller fill it in lazily.
+    Breakpoint breakpoint{};
+    breakpoint.codeBlock = codeBlock;
+    breakpoint.offset = offset;
+    breakpoint.enabled = true;
+    breakpoints.push_back(breakpoint);
+  }
+
+  if (isStepBreakpoint) {
+    location.hasStepBreakpoint = true;
+  } else {
+    location.hasRestorationBreakpoint = true;
+  }
+}
+
 void Debugger::setStepBreakpoint(
     CodeBlock *codeBlock,
     uint32_t offset,
     uint32_t callStackDepth) {
-  BreakpointLocation &location = installBreakpoint(codeBlock, offset);
-  // Leave the resolved location empty for now,
-  // let the caller fill it in lazily.
-  Breakpoint breakpoint{};
-  breakpoint.codeBlock = codeBlock;
-  breakpoint.offset = offset;
-  breakpoint.enabled = true;
-  assert(
-      location.callStackDepths.count(callStackDepth) == 0 &&
-      "can't set duplicate Step breakpoint");
-  location.callStackDepths.insert(callStackDepth);
-  tempBreakpoints_.push_back(breakpoint);
+  doSetNonUserBreakpoint(
+      codeBlock, offset, callStackDepth, /*isStepBreakpoint*/ true);
 }
 
 void Debugger::setOnLoadBreakpoint(CodeBlock *codeBlock, uint32_t offset) {
@@ -811,7 +879,7 @@ void Debugger::unsetUserBreakpoint(const Breakpoint &breakpoint) {
   if (location.count() == 0) {
     // No more reason to keep this location around.
     // Unpatch it from the opcode stream and delete it from the map.
-    codeBlock->uninstallBreakpointAtOffset(offset, location.opCode);
+    uninstallBreakpoint(codeBlock, offset, location.opCode);
     breakpointLocations_.erase(offsetPtr);
   }
 }
@@ -819,11 +887,17 @@ void Debugger::unsetUserBreakpoint(const Breakpoint &breakpoint) {
 void Debugger::setEntryBreakpointForCodeBlock(CodeBlock *codeBlock) {
   assert(!codeBlock->isLazy() && "can't set breakpoint on a lazy codeblock");
   assert(
-      pauseOnAllCodeBlocks_ && "can't set temp breakpoint while not stepping");
-  setStepBreakpoint(codeBlock, 0, 0);
+      (pauseOnAllCodeBlocks_ || pauseOnAllCodeBlocksToRestoreBreakpoint_) &&
+      "can't set temp breakpoint while not stepping");
+  if (pauseOnAllCodeBlocks_) {
+    setStepBreakpoint(codeBlock, 0, 0);
+  }
+  if (pauseOnAllCodeBlocksToRestoreBreakpoint_) {
+    setRestorationBreakpoint(codeBlock, 0, 0);
+  }
 }
 
-void Debugger::breakpointCaller() {
+void Debugger::breakpointCaller(bool forRestorationBreakpoint) {
   auto callFrames = runtime_.getStackFrames();
 
   assert(callFrames.begin() != callFrames.end() && "empty call stack");
@@ -858,7 +932,12 @@ void Debugger::breakpointCaller() {
   uint32_t offset = codeBlock->getOffsetOf(ip);
   uint32_t newOffset = offset + getInstSize(getRealOpCode(codeBlock, offset));
 
-  setStepBreakpoint(codeBlock, newOffset, runtime_.calcFrameOffset(frameIt));
+  if (forRestorationBreakpoint) {
+    setRestorationBreakpoint(
+        codeBlock, newOffset, runtime_.calcFrameOffset(frameIt));
+  } else {
+    setStepBreakpoint(codeBlock, newOffset, runtime_.calcFrameOffset(frameIt));
+  }
 }
 
 void Debugger::breakpointExceptionHandler(const InterpreterState &state) {
@@ -871,9 +950,13 @@ void Debugger::breakpointExceptionHandler(const InterpreterState &state) {
   setStepBreakpoint(codeBlock, offset, target->second);
 }
 
-void Debugger::clearTempBreakpoints() {
+void Debugger::doClearNonUserBreakpoints(bool isStepBreakpoint) {
   llvh::SmallVector<const Inst *, 4> toErase{};
-  for (const auto &breakpoint : tempBreakpoints_) {
+
+  std::vector<Breakpoint> &breakpointsToClear =
+      isStepBreakpoint ? tempBreakpoints_ : restorationBreakpoints_;
+
+  for (const auto &breakpoint : breakpointsToClear) {
     auto *codeBlock = breakpoint.codeBlock;
     auto offset = breakpoint.offset;
     const Inst *inst = codeBlock->getOffsetPtr(offset);
@@ -882,11 +965,24 @@ void Debugger::clearTempBreakpoints() {
       continue;
     }
     auto &location = it->second;
+
+    if (isStepBreakpoint) {
+      location.hasStepBreakpoint = false;
+      if (location.hasRestorationBreakpoint) {
+        continue;
+      }
+    } else {
+      location.hasRestorationBreakpoint = false;
+      if (location.hasStepBreakpoint) {
+        continue;
+      }
+    }
+
     if (location.count()) {
       location.callStackDepths.clear();
       location.onLoad = false;
       if (location.count() == 0) {
-        codeBlock->uninstallBreakpointAtOffset(offset, location.opCode);
+        uninstallBreakpoint(codeBlock, offset, location.opCode);
         toErase.push_back(inst);
       }
     }
@@ -894,8 +990,35 @@ void Debugger::clearTempBreakpoints() {
   for (const Inst *inst : toErase) {
     breakpointLocations_.erase(inst);
   }
-  tempBreakpoints_.clear();
+  breakpointsToClear.clear();
+}
+
+void Debugger::clearTempBreakpoints() {
+  doClearNonUserBreakpoints(/*isStepBreakpoint*/ true);
   pauseOnAllCodeBlocks_ = false;
+}
+
+void Debugger::setRestorationBreakpoint(
+    CodeBlock *codeBlock,
+    uint32_t offset,
+    uint32_t callStackDepth) {
+  doSetNonUserBreakpoint(
+      codeBlock, offset, callStackDepth, /*isStepBreakpoint*/ false);
+}
+
+bool Debugger::restoreBreakpointIfAny() {
+  if (breakpointToRestore_.first != nullptr) {
+    breakpointToRestore_.first->installBreakpointAtOffset(
+        breakpointToRestore_.second);
+    breakpointToRestore_ = {nullptr, 0};
+    return true;
+  }
+  return false;
+}
+
+void Debugger::clearRestorationBreakpoints() {
+  doClearNonUserBreakpoints(/*isStepBreakpoint*/ false);
+  pauseOnAllCodeBlocksToRestoreBreakpoint_ = false;
 }
 
 ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
@@ -912,7 +1035,7 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
   InterpreterState newState{state};
   if (locationOpt.hasValue()) {
     // Temporarily uninstall the breakpoint so we can run the real instruction.
-    codeBlock->uninstallBreakpointAtOffset(offset, locationOpt->opCode);
+    uninstallBreakpoint(codeBlock, offset, locationOpt->opCode);
     status = runtime_.stepFunction(newState);
     codeBlock->installBreakpointAtOffset(offset);
   } else {
@@ -922,6 +1045,60 @@ ExecutionStatus Debugger::stepInstruction(InterpreterState &state) {
   if (status != ExecutionStatus::EXCEPTION)
     state = newState;
   return status;
+}
+
+ExecutionStatus Debugger::processInstUnderDebuggerOpCode(
+    InterpreterState &state) {
+  auto *codeBlock = state.codeBlock;
+  uint32_t offset = state.offset;
+  InterpreterState newState{state};
+  const inst::Inst *ip = codeBlock->getOffsetPtr(offset);
+
+  auto locationOpt = getBreakpointLocation(codeBlock, offset);
+  if (locationOpt.hasValue()) {
+    uninstallBreakpoint(codeBlock, offset, locationOpt->opCode);
+    if (ip->opCode == OpCode::Debugger) {
+      // Breakpointed a debugger instruction, so move past it
+      // since we've already called the debugger on this instruction.
+      newState.offset = offset + 1;
+      state = newState;
+    } else if (ip->opCode == OpCode::Ret || isCallType(ip->opCode)) {
+      if (ip->opCode == OpCode::Ret) {
+        // Breakpoint the caller to make sure we'll get a chance to restore the
+        // uninstalled breakpoint.
+        breakpointCaller(/*forRestorationBreakpoint*/ true);
+      }
+
+      // Set pause on all CodeBlocks so that we get a chance to restore the
+      // uninstalled breakpoint.
+      pauseOnAllCodeBlocksToRestoreBreakpoint_ = true;
+
+      // For Ret & call opcodes, we won't recursively call the Interpreter.
+      // Instead, we'll leave the breakpoint uninstalled so that the Interpreter
+      // can continue to execute the real instruction. Then at the next
+      // opportunity we'll install the breakpoint back. This variable keeps
+      // track of the breakpoint to restore.
+      breakpointToRestore_ = {codeBlock, offset};
+    } else {
+      runtime_.setCurrentIP(ip);
+      ExecutionStatus status = runtime_.stepFunction(newState);
+      runtime_.invalidateCurrentIP();
+      codeBlock->installBreakpointAtOffset(offset);
+      if (status == ExecutionStatus::EXCEPTION) {
+        return status;
+      }
+      state = newState;
+    }
+  } else if (ip->opCode == OpCode::Debugger) {
+    // No breakpoint and we've already run the debugger, just continue on.
+    newState.offset = offset + 1;
+    state = newState;
+  }
+  // Else, if the current instruction is no longer a debugger instruction,
+  // we're just going to keep executing from the current IP. So no change to
+  // InterpreterState.
+
+  return ExecutionStatus::RETURNED;
 }
 
 auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
@@ -1081,6 +1258,7 @@ HermesValue Debugger::evalInFrame(
       env,
       cb,
       Handle<>(&frameInfo->frame->getThisArgRef()),
+      Handle<>(&frameInfo->frame->getNewTargetRef()),
       singleFunction);
 
   // Check if an exception was thrown.

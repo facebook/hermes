@@ -1174,6 +1174,12 @@ FastArrayLengthInst *IRBuilder::createFastArrayLengthInst(Value *array) {
   return I;
 }
 
+LoadParentNoTrapsInst *IRBuilder::createLoadParentNoTrapsInst(Value *object) {
+  auto *inst = new LoadParentNoTrapsInst(object);
+  insert(inst);
+  return inst;
+}
+
 TypedLoadParentInst *IRBuilder::createTypedLoadParentInst(Value *object) {
   auto *inst = new TypedLoadParentInst(object);
   insert(inst);
@@ -1281,6 +1287,7 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
     Variable *capturedThis,
     Value *capturedNewTarget,
     Variable *capturedArguments,
+    Variable *homeObject,
     VariableScope *parentVarScope) {
   auto *inst = new LazyCompilationDataInst(
       std::move(data),
@@ -1288,6 +1295,7 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
       capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
+      homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
       parentVarScope);
   insert(inst);
   return inst;
@@ -1298,6 +1306,7 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
     Variable *capturedThis,
     Value *capturedNewTarget,
     Variable *capturedArguments,
+    Variable *homeObject,
     VariableScope *funcVarScope) {
   auto *inst = new EvalCompilationDataInst(
       std::move(data),
@@ -1305,6 +1314,7 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
       capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
+      homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
       funcVarScope);
   insert(inst);
   return inst;

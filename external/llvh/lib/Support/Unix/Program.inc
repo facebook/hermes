@@ -40,12 +40,11 @@
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef HAVE_POSIX_SPAWN
-#include <spawn.h>
-
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
 #endif
+#ifdef HAVE_POSIX_SPAWN
+#include <spawn.h>
 
 #if defined(__APPLE__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE)
 #define USE_NSGETENVIRON 1
@@ -178,6 +177,13 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
                     ArrayRef<Optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg) {
+ // fork, exec and posix_spawn are all unavailable on tvOS, so just report an
+ // error.
+#if defined(TARGET_OS_TV) && TARGET_OS_TV
+  if (ErrMsg)
+    *ErrMsg = "Executing another program is unsupported on this platform";
+  return false;
+#else
   if (!llvh::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
@@ -325,6 +331,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   PI.Process = child;
 
   return true;
+#endif // TARGET_OS_TV
 }
 
 namespace llvh {

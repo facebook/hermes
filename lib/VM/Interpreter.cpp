@@ -795,20 +795,6 @@ static void printDebugInfo(
   dbgs() << "\n";
 }
 
-/// \return whether \p opcode is a call opcode (Call, Construct,
-/// CallLongIndex, etc). Note CallBuiltin is not really a Call.
-LLVM_ATTRIBUTE_UNUSED
-static bool isCallType(OpCode opcode) {
-  switch (opcode) {
-#define DEFINE_RET_TARGET(name) \
-  case OpCode::name:            \
-    return true;
-#include "hermes/BCGen/HBC/BytecodeList.def"
-    default:
-      return false;
-  }
-}
-
 #endif
 
 /// \return the address of the next instruction after \p ip, which must be a
@@ -1023,9 +1009,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     (void)expr;                    \
   } while (false)
 
-// When performing a tail call, we need to set the runtime IP and leave it set.
-#define CAPTURE_IP_SET() runtime.setCurrentIP(ip)
-
   LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
   ScopedNativeDepthTracker depthTracker{runtime};
@@ -1037,6 +1020,37 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     if (auto jitPtr = runtime.jitContext_.compile(runtime, curCodeBlock)) {
       return JSFunction::_jittedCall(jitPtr, runtime);
     }
+
+    // Check for invalid invocation. This is done before setting up the stack so
+    // the exception appears to come from the call site.
+    auto newFrame = StackFramePtr(runtime.getStackPointer());
+    bool isCtorCall = newFrame.isConstructorCall();
+    if (LLVM_UNLIKELY(
+            curCodeBlock->getHeaderFlags().isCallProhibited(isCtorCall))) {
+      return runtime.raiseTypeError(
+          isCtorCall ? "Function is not a constructor"
+                     : "Class constructor invoked without new");
+    }
+
+    // Allocate the registers for the new frame. As with ProhibitInvoke, if this
+    // fails, we want the exception to come from the call site.
+    if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
+            curCodeBlock->getFrameSize() +
+                StackFrameLayout::CalleeExtraRegistersAtStart,
+            HermesValue::encodeUndefinedValue()))) {
+      return runtime.raiseStackOverflow(
+          Runtime::StackOverflowKind::JSRegisterStack);
+    }
+
+    // Advance the frame pointer.
+    runtime.setCurrentFrame(newFrame);
+    // If the interpreter was invoked indirectly from another JS function, the
+    // caller's IP may not have been saved to the stack frame. Ensure that it is
+    // correctly recorded.
+    runtime.saveCallerIPInStackFrame();
+    // Point frameRegs to the first register in the new frame.
+    frameRegs = &newFrame.getFirstLocalRef();
+    ip = (Inst const *)curCodeBlock->begin();
   }
 
   GCScope gcScope(runtime);
@@ -1071,16 +1085,9 @@ tailCall:
   curCodeBlock->incrementExecutionCount();
 
   if (!SingleStep) {
-    auto newFrame = runtime.setCurrentFrameToTopOfStack();
-    runtime.saveCallerIPInStackFrame();
 #ifndef NDEBUG
     runtime.invalidateCurrentIP();
 #endif
-
-    // Point frameRegs to the first register in the new frame. Note that at this
-    // moment technically it points above the top of the stack, but we are never
-    // going to access it.
-    frameRegs = &newFrame.getFirstLocalRef();
 
 #ifndef NDEBUG
     LLVM_DEBUG(
@@ -1105,26 +1112,6 @@ tailCall:
     }
 #endif
 
-    // Allocate the registers for the new frame.
-    if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
-            curCodeBlock->getFrameSize() +
-                StackFrameLayout::CalleeExtraRegistersAtStart,
-            HermesValue::encodeUndefinedValue())))
-      goto stackOverflow;
-
-    ip = (Inst const *)curCodeBlock->begin();
-
-    // Check for invalid invocation.
-    if (LLVM_UNLIKELY(curCodeBlock->getHeaderFlags().isCallProhibited(
-            newFrame.isConstructorCall()))) {
-      if (!newFrame.isConstructorCall()) {
-        CAPTURE_IP(
-            runtime.raiseTypeError("Class constructor invoked without new"));
-      } else {
-        CAPTURE_IP(runtime.raiseTypeError("Function is not a constructor"));
-      }
-      goto handleExceptionInParent;
-    }
   } else {
     // Point frameRegs to the first register in the frame.
     frameRegs = &runtime.getCurrentFrame().getFirstLocalRef();
@@ -1710,13 +1697,40 @@ tailCall:
           SLOW_DEBUG(
               dbgs() << "JIT return value r" << (unsigned)ip->iCall.op1 << "="
                      << DumpHermesValue(O1REG(Call)) << "\n");
-          gcScope.flushToSmallCount(KEEP_HANDLES);
           ip = nextIP;
           DISPATCH;
         }
 
+        // Check for invalid invocation.
+        bool isCtorCall = !HermesValue::fromRaw(callNewTarget).isUndefined();
+        if (LLVM_UNLIKELY(
+                calleeBlock->getHeaderFlags().isCallProhibited(isCtorCall))) {
+          CAPTURE_IP(runtime.raiseTypeError(
+              isCtorCall ? "Function is not a constructor"
+                         : "Class constructor invoked without new"));
+          goto exception;
+        }
+
+        // Allocate the registers for the new frame.
+        if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
+                calleeBlock->getFrameSize() +
+                    StackFrameLayout::CalleeExtraRegistersAtStart,
+                HermesValue::encodeUndefinedValue()))) {
+          CAPTURE_IP(runtime.raiseStackOverflow(
+              Runtime::StackOverflowKind::JSRegisterStack));
+          goto exception;
+        }
+
+        // Advance the frame pointer.
+        runtime.setCurrentFrame(newFrame);
+
+        // Update the executing CodeBlock to the callee.
         curCodeBlock = calleeBlock;
-        CAPTURE_IP_SET();
+        // Point frameRegs to the first register in the new frame.
+        frameRegs = &newFrame.getFirstLocalRef();
+        // Update the IP to the start of the callee.
+        ip = (Inst const *)curCodeBlock->begin();
+
         goto tailCall;
       }
       CAPTURE_IP(
@@ -1898,35 +1912,23 @@ tailCall:
               goto exception;
             }
           }
-          auto breakpointOpt = runtime.debugger_.getBreakpointLocation(ip);
-          if (breakpointOpt.hasValue()) {
-            // We're on a breakpoint but we're supposed to continue.
-            curCodeBlock->uninstallBreakpointAtOffset(
-                CUROFFSET, breakpointOpt->opCode);
-            if (ip->opCode == OpCode::Debugger) {
-              // Breakpointed a debugger instruction, so move past it
-              // since we've already called the debugger on this instruction.
-              ip = NEXTINST(Debugger);
-            } else {
-              InterpreterState newState{curCodeBlock, (uint32_t)CUROFFSET};
-              CAPTURE_IP_ASSIGN(
-                  ExecutionStatus status, runtime.stepFunction(newState));
-              curCodeBlock->installBreakpointAtOffset(CUROFFSET);
-              if (status == ExecutionStatus::EXCEPTION) {
-                goto exception;
-              }
+          InterpreterState newState{curCodeBlock, (uint32_t)CUROFFSET};
+          ExecutionStatus status =
+              runtime.debugger_.processInstUnderDebuggerOpCode(newState);
+          if (status == ExecutionStatus::EXCEPTION) {
+            goto exception;
+          }
+
+          if (newState.codeBlock != curCodeBlock ||
+              newState.offset != (uint32_t)CUROFFSET) {
+            ip = newState.codeBlock->getOffsetPtr(newState.offset);
+
+            if (newState.codeBlock != curCodeBlock) {
               curCodeBlock = newState.codeBlock;
-              ip = newState.codeBlock->getOffsetPtr(newState.offset);
               INIT_STATE_FOR_CODEBLOCK(curCodeBlock);
               // Single-stepping should handle call stack management for us.
               frameRegs = &runtime.getCurrentFrame().getFirstLocalRef();
             }
-          } else if (ip->opCode == OpCode::Debugger) {
-            // No breakpoint here and we've already run the debugger,
-            // just continue on.
-            // If the current instruction is no longer a debugger instruction,
-            // we're just going to keep executing from the current IP.
-            ip = NEXTINST(Debugger);
           }
           gcScope.flushToSmallCount(KEEP_HANDLES);
         }
@@ -2175,6 +2177,19 @@ tailCall:
       CASE(GetNewTarget) {
         O1REG(GetNewTarget) = FRAME.getNewTargetRef();
         ip = NEXTINST(GetNewTarget);
+        DISPATCH;
+      }
+
+      CASE(LoadParentNoTraps) {
+        assert(
+            !vmcast<JSObject>(O2REG(LoadParentNoTraps))->isProxyObject() &&
+            "proxy is not supported");
+        auto *parent =
+            vmcast<JSObject>(O2REG(LoadParentNoTraps))->getParent(runtime);
+        O1REG(LoadParentNoTraps) = parent
+            ? HermesValue::encodeObjectValue(parent)
+            : HermesValue::encodeNullValue();
+        ip = NEXTINST(LoadParentNoTraps);
         DISPATCH;
       }
 
@@ -3154,6 +3169,9 @@ tailCall:
         O1REG(SelectObject) = O3REG(SelectObject).isObject()
             ? O3REG(SelectObject)
             : O2REG(SelectObject);
+        assert(
+            O1REG(SelectObject).isObject() &&
+            "SelectObject should always produce an object");
         ip = NEXTINST(SelectObject);
         DISPATCH;
       }
@@ -3657,26 +3675,6 @@ tailCall:
         "All opcodes should dispatch to the next and not fallthrough "
         "to here");
 
-  // We arrive here if we couldn't allocate the registers for the current frame.
-  stackOverflow:
-    CAPTURE_IP(runtime.raiseStackOverflow(
-        Runtime::StackOverflowKind::JSRegisterStack));
-
-  // We arrive here when we raised an exception in a callee, but we don't want
-  // the callee to be able to handle it.
-  handleExceptionInParent:
-    // Restore the caller code block and IP.
-    curCodeBlock = FRAME.getSavedCodeBlock();
-    ip = FRAME.getSavedIP();
-
-    // Pop to the previous frame where technically the error happened.
-    frameRegs = &runtime.restoreStackAndPreviousFrame(FRAME).getFirstLocalRef();
-
-    // If we are coming from native code, return.
-    if (!curCodeBlock)
-      return ExecutionStatus::EXCEPTION;
-
-  // Handle the exception.
   exception:
     UPDATE_OPCODE_TIME_SPENT;
     assert(
@@ -3684,26 +3682,8 @@ tailCall:
         "thrownValue unavailable at exception");
 
     bool catchable = true;
-    // If this is an Error object that was thrown internally, it didn't have
-    // access to the current codeblock and IP, so collect the stack trace here.
     if (auto *jsError = dyn_vmcast<JSError>(*runtime.thrownValue_)) {
       catchable = jsError->catchable();
-      if (!jsError->getStackTrace()) {
-        // Temporarily clear the thrown value for following operations. Before
-        // we clear it, save the value in tmpHandle.
-        tmpHandle = *runtime.thrownValue_;
-        runtime.clearThrownValue();
-
-        CAPTURE_IP(JSError::recordStackTrace(
-            Handle<JSError>::vmcast(tmpHandle),
-            runtime,
-            false,
-            curCodeBlock,
-            ip));
-
-        // Restore the thrown value.
-        runtime.setThrownValue(*tmpHandle);
-      }
     }
 
     gcScope.flushToSmallCount(KEEP_HANDLES);

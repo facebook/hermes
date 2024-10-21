@@ -25,6 +25,8 @@ callme();
 // CHECK: Hello
 // CHECK-NEXT: Break on 'debugger' statement in callme: {{.*}}:19:3
 // CHECK-NEXT: Exception: SyntaxError: 1:6:';' expected
+// CHECK-NEXT:   0: callme: {{.*}}:19:3
+// CHECK-NEXT:   1: global: {{.*}}:23:7
 // CHECK-NEXT: Thrown value is: { message: 1:6:';' expected }
 // CHECK-NEXT: Next
 // CHECK-NEXT: Exception: Error: I frew up.

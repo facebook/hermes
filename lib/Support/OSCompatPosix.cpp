@@ -63,6 +63,11 @@
 #endif
 #endif // __ANDROID__
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
+#include "llvh/Config/config.h"
 #include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
@@ -819,10 +824,12 @@ bool unset_env(const char *name) {
 void *SigAltStackLeakSuppressor::stackRoot_{nullptr};
 
 SigAltStackLeakSuppressor::~SigAltStackLeakSuppressor() {
+#ifdef HAVE_SIGALTSTACK
   stack_t oldAltStack;
   if (sigaltstack(nullptr, &oldAltStack) == 0) {
     stackRoot_ = oldAltStack.ss_sp;
   }
+#endif
 }
 
 } // namespace oscompat

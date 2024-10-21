@@ -1010,6 +1010,20 @@ static inline SHLegacyValue _sh_fastarray_length(
 #endif
 }
 
+/// \return the parent of the legacy, ordinary object \p object. It must not be
+/// a proxy.
+static inline SHLegacyValue _sh_ljs_load_parent_no_traps(
+    SHRuntime *shr,
+    SHLegacyValue object) {
+  SHJSObject *objectPtr = (SHJSObject *)_sh_ljs_get_pointer(object);
+  assert(!objectPtr->flags.proxyObject && "proxy is not supported");
+  if (objectPtr->parent) {
+    SHCompressedPointer parent = {.raw = objectPtr->parent};
+    return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
+  }
+  return _sh_ljs_null();
+}
+
 static inline SHLegacyValue _sh_typed_load_parent(
     SHRuntime *shr,
     const SHLegacyValue *object) {

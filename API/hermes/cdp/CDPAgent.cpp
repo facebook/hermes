@@ -356,6 +356,17 @@ CDPAgentImpl::DomainAgentsImpl::~DomainAgentsImpl() {
   }
 }
 
+/// Remove the prefix \p prefix from \p str if it exists. \returns true if the
+/// prefix was matched and removed, false otherwise.
+static bool removePrefix(std::string_view &str, std::string_view prefix) {
+  // TODO: Use starts_with when we can use C++20.
+  if (str.size() >= prefix.size() && str.substr(0, prefix.size()) == prefix) {
+    str.remove_prefix(prefix.size());
+    return true;
+  }
+  return false;
+}
+
 void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     std::shared_ptr<message::Request> command) {
   size_t domainLength = command->method.find('.');
@@ -367,102 +378,132 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
                          .toJsonStr());
     return;
   }
-  std::string domain = command->method.substr(0, domainLength);
-
-  // TODO: Do better dispatch
-  if (command->method == "Debugger.enable") {
-    debuggerAgent_->enable(static_cast<m::debugger::EnableRequest &>(*command));
-  } else if (command->method == "Debugger.disable") {
-    debuggerAgent_->disable(
-        static_cast<m::debugger::DisableRequest &>(*command));
-  } else if (command->method == "Debugger.pause") {
-    debuggerAgent_->pause(static_cast<m::debugger::PauseRequest &>(*command));
-  } else if (command->method == "Debugger.resume") {
-    debuggerAgent_->resume(static_cast<m::debugger::ResumeRequest &>(*command));
-  } else if (command->method == "Debugger.stepInto") {
-    debuggerAgent_->stepInto(
-        static_cast<m::debugger::StepIntoRequest &>(*command));
-  } else if (command->method == "Debugger.stepOut") {
-    debuggerAgent_->stepOut(
-        static_cast<m::debugger::StepOutRequest &>(*command));
-  } else if (command->method == "Debugger.stepOver") {
-    debuggerAgent_->stepOver(
-        static_cast<m::debugger::StepOverRequest &>(*command));
-  } else if (command->method == "Debugger.setPauseOnExceptions") {
-    debuggerAgent_->setPauseOnExceptions(
-        static_cast<m::debugger::SetPauseOnExceptionsRequest &>(*command));
-  } else if (command->method == "Debugger.evaluateOnCallFrame") {
-    debuggerAgent_->evaluateOnCallFrame(
-        static_cast<m::debugger::EvaluateOnCallFrameRequest &>(*command));
-  } else if (command->method == "Debugger.setBreakpoint") {
-    debuggerAgent_->setBreakpoint(
-        static_cast<m::debugger::SetBreakpointRequest &>(*command));
-  } else if (command->method == "Debugger.setBreakpointByUrl") {
-    debuggerAgent_->setBreakpointByUrl(
-        static_cast<m::debugger::SetBreakpointByUrlRequest &>(*command));
-  } else if (command->method == "Debugger.removeBreakpoint") {
-    debuggerAgent_->removeBreakpoint(
-        static_cast<m::debugger::RemoveBreakpointRequest &>(*command));
-  } else if (command->method == "Debugger.setBreakpointsActive") {
-    debuggerAgent_->setBreakpointsActive(
-        static_cast<m::debugger::SetBreakpointsActiveRequest &>(*command));
-  } else if (command->method == "Runtime.enable") {
-    runtimeAgent_->enable(static_cast<m::runtime::EnableRequest &>(*command));
-  } else if (command->method == "Runtime.disable") {
-    runtimeAgent_->disable(static_cast<m::runtime::DisableRequest &>(*command));
-  } else if (command->method == "Runtime.getHeapUsage") {
-    runtimeAgent_->getHeapUsage(
-        static_cast<m::runtime::GetHeapUsageRequest &>(*command));
-  } else if (command->method == "Runtime.globalLexicalScopeNames") {
-    runtimeAgent_->globalLexicalScopeNames(
-        static_cast<m::runtime::GlobalLexicalScopeNamesRequest &>(*command));
-  } else if (command->method == "Runtime.compileScript") {
-    runtimeAgent_->compileScript(
-        static_cast<m::runtime::CompileScriptRequest &>(*command));
-  } else if (command->method == "Runtime.getProperties") {
-    runtimeAgent_->getProperties(
-        static_cast<m::runtime::GetPropertiesRequest &>(*command));
-  } else if (command->method == "Runtime.evaluate") {
-    runtimeAgent_->evaluate(
-        static_cast<m::runtime::EvaluateRequest &>(*command));
-  } else if (command->method == "Runtime.callFunctionOn") {
-    runtimeAgent_->callFunctionOn(
-        static_cast<m::runtime::CallFunctionOnRequest &>(*command));
-  } else if (command->method == "Runtime.discardConsoleEntries") {
-    runtimeAgent_->discardConsoleEntries(
-        static_cast<m::runtime::DiscardConsoleEntriesRequest &>(*command));
-  } else if (command->method == "Profiler.start") {
-    profilerAgent_->start(static_cast<m::profiler::StartRequest &>(*command));
-  } else if (command->method == "Profiler.stop") {
-    profilerAgent_->stop(static_cast<m::profiler::StopRequest &>(*command));
-  } else if (command->method == "HeapProfiler.takeHeapSnapshot") {
-    heapProfilerAgent_->takeHeapSnapshot(
-        static_cast<m::heapProfiler::TakeHeapSnapshotRequest &>(*command));
-  } else if (command->method == "HeapProfiler.getObjectByHeapObjectId") {
-    heapProfilerAgent_->getObjectByHeapObjectId(
-        static_cast<m::heapProfiler::GetObjectByHeapObjectIdRequest &>(
-            *command));
-  } else if (command->method == "HeapProfiler.getHeapObjectId") {
-    heapProfilerAgent_->getHeapObjectId(
-        static_cast<m::heapProfiler::GetHeapObjectIdRequest &>(*command));
-  } else if (command->method == "HeapProfiler.collectGarbage") {
-    heapProfilerAgent_->collectGarbage(
-        static_cast<m::heapProfiler::CollectGarbageRequest &>(*command));
-  } else if (command->method == "HeapProfiler.startTrackingHeapObjects") {
-    heapProfilerAgent_->startTrackingHeapObjects(
-        static_cast<m::heapProfiler::StartTrackingHeapObjectsRequest &>(
-            *command));
-  } else if (command->method == "HeapProfiler.stopTrackingHeapObjects") {
-    heapProfilerAgent_->stopTrackingHeapObjects(
-        static_cast<m::heapProfiler::StopTrackingHeapObjectsRequest &>(
-            *command));
-  } else if (command->method == "HeapProfiler.startSampling") {
-    heapProfilerAgent_->startSampling(
-        static_cast<m::heapProfiler::StartSamplingRequest &>(*command));
-  } else if (command->method == "HeapProfiler.stopSampling") {
-    heapProfilerAgent_->stopSampling(
-        static_cast<m::heapProfiler::StopSamplingRequest &>(*command));
+  std::string_view method = command->method;
+  bool handled = true;
+  if (removePrefix(method, "Debugger.")) {
+    if (method == "enable") {
+      debuggerAgent_->enable(
+          static_cast<m::debugger::EnableRequest &>(*command));
+    } else if (method == "disable") {
+      debuggerAgent_->disable(
+          static_cast<m::debugger::DisableRequest &>(*command));
+    } else if (method == "pause") {
+      debuggerAgent_->pause(static_cast<m::debugger::PauseRequest &>(*command));
+    } else if (method == "resume") {
+      debuggerAgent_->resume(
+          static_cast<m::debugger::ResumeRequest &>(*command));
+    } else if (method == "stepInto") {
+      debuggerAgent_->stepInto(
+          static_cast<m::debugger::StepIntoRequest &>(*command));
+    } else if (method == "stepOut") {
+      debuggerAgent_->stepOut(
+          static_cast<m::debugger::StepOutRequest &>(*command));
+    } else if (method == "stepOver") {
+      debuggerAgent_->stepOver(
+          static_cast<m::debugger::StepOverRequest &>(*command));
+    } else if (method == "setBlackboxedRanges") {
+      debuggerAgent_->setBlackboxedRanges(
+          static_cast<m::debugger::SetBlackboxedRangesRequest &>(*command));
+    } else if (method == "setPauseOnExceptions") {
+      debuggerAgent_->setPauseOnExceptions(
+          static_cast<m::debugger::SetPauseOnExceptionsRequest &>(*command));
+    } else if (method == "evaluateOnCallFrame") {
+      debuggerAgent_->evaluateOnCallFrame(
+          static_cast<m::debugger::EvaluateOnCallFrameRequest &>(*command));
+    } else if (method == "setBreakpoint") {
+      debuggerAgent_->setBreakpoint(
+          static_cast<m::debugger::SetBreakpointRequest &>(*command));
+    } else if (method == "setBreakpointByUrl") {
+      debuggerAgent_->setBreakpointByUrl(
+          static_cast<m::debugger::SetBreakpointByUrlRequest &>(*command));
+    } else if (method == "removeBreakpoint") {
+      debuggerAgent_->removeBreakpoint(
+          static_cast<m::debugger::RemoveBreakpointRequest &>(*command));
+    } else if (method == "setBreakpointsActive") {
+      debuggerAgent_->setBreakpointsActive(
+          static_cast<m::debugger::SetBreakpointsActiveRequest &>(*command));
+    } else {
+      handled = false;
+    }
+  } else if (removePrefix(method, "Runtime.")) {
+    if (method == "enable") {
+      runtimeAgent_->enable(static_cast<m::runtime::EnableRequest &>(*command));
+    } else if (method == "disable") {
+      runtimeAgent_->disable(
+          static_cast<m::runtime::DisableRequest &>(*command));
+    } else if (method == "getHeapUsage") {
+      runtimeAgent_->getHeapUsage(
+          static_cast<m::runtime::GetHeapUsageRequest &>(*command));
+    } else if (method == "globalLexicalScopeNames") {
+      runtimeAgent_->globalLexicalScopeNames(
+          static_cast<m::runtime::GlobalLexicalScopeNamesRequest &>(*command));
+    } else if (method == "compileScript") {
+      runtimeAgent_->compileScript(
+          static_cast<m::runtime::CompileScriptRequest &>(*command));
+    } else if (method == "getProperties") {
+      runtimeAgent_->getProperties(
+          static_cast<m::runtime::GetPropertiesRequest &>(*command));
+    } else if (method == "evaluate") {
+      runtimeAgent_->evaluate(
+          static_cast<m::runtime::EvaluateRequest &>(*command));
+    } else if (method == "callFunctionOn") {
+      runtimeAgent_->callFunctionOn(
+          static_cast<m::runtime::CallFunctionOnRequest &>(*command));
+    } else if (method == "discardConsoleEntries") {
+      runtimeAgent_->discardConsoleEntries(
+          static_cast<m::runtime::DiscardConsoleEntriesRequest &>(*command));
+    } else if (method == "releaseObject") {
+      runtimeAgent_->releaseObject(
+          static_cast<m::runtime::ReleaseObjectRequest &>(*command));
+    } else if (method == "releaseObjectGroup") {
+      runtimeAgent_->releaseObjectGroup(
+          static_cast<m::runtime::ReleaseObjectGroupRequest &>(*command));
+    } else {
+      handled = false;
+    }
+  } else if (removePrefix(method, "Profiler.")) {
+    if (method == "start") {
+      profilerAgent_->start(static_cast<m::profiler::StartRequest &>(*command));
+    } else if (method == "stop") {
+      profilerAgent_->stop(static_cast<m::profiler::StopRequest &>(*command));
+    } else {
+      handled = false;
+    }
+  } else if (removePrefix(method, "HeapProfiler.")) {
+    if (method == "takeHeapSnapshot") {
+      heapProfilerAgent_->takeHeapSnapshot(
+          static_cast<m::heapProfiler::TakeHeapSnapshotRequest &>(*command));
+    } else if (method == "getObjectByHeapObjectId") {
+      heapProfilerAgent_->getObjectByHeapObjectId(
+          static_cast<m::heapProfiler::GetObjectByHeapObjectIdRequest &>(
+              *command));
+    } else if (method == "getHeapObjectId") {
+      heapProfilerAgent_->getHeapObjectId(
+          static_cast<m::heapProfiler::GetHeapObjectIdRequest &>(*command));
+    } else if (method == "collectGarbage") {
+      heapProfilerAgent_->collectGarbage(
+          static_cast<m::heapProfiler::CollectGarbageRequest &>(*command));
+    } else if (method == "startTrackingHeapObjects") {
+      heapProfilerAgent_->startTrackingHeapObjects(
+          static_cast<m::heapProfiler::StartTrackingHeapObjectsRequest &>(
+              *command));
+    } else if (method == "stopTrackingHeapObjects") {
+      heapProfilerAgent_->stopTrackingHeapObjects(
+          static_cast<m::heapProfiler::StopTrackingHeapObjectsRequest &>(
+              *command));
+    } else if (method == "startSampling") {
+      heapProfilerAgent_->startSampling(
+          static_cast<m::heapProfiler::StartSamplingRequest &>(*command));
+    } else if (method == "stopSampling") {
+      heapProfilerAgent_->stopSampling(
+          static_cast<m::heapProfiler::StopSamplingRequest &>(*command));
+    } else {
+      handled = false;
+    }
   } else {
+    handled = false;
+  }
+  if (!handled) {
     messageCallback_(message::makeErrorResponse(
                          command->id,
                          message::ErrorCode::MethodNotFound,

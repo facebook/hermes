@@ -74,6 +74,9 @@ struct CapturedState {
   /// Optionally captured value of the eagerly created Arguments object. Used
   /// when arrow functions need to access it.
   Variable *arguments;
+  /// 10.2 ECMAScript Function Objects [[HomeObject]]: This is the object whose
+  /// [[GetPrototypeOf]] provides the object where super property lookups begin.
+  Variable *homeObject = nullptr;
 };
 
 // A context structure (pushed/popped within class declarations) for
@@ -505,8 +508,8 @@ class ESTreeIRGen {
   void doIt(llvh::StringRef topLevelFunctionName);
 
   /// Perform IRGeneration for the whole module.
-  /// \param varScope the variable scope to resolve in, never nullptr.
-  Function *doItInScope(VariableScope *varScope);
+  /// \param evalDataInst must not contain a null varScope.
+  Function *doItInScope(EvalCompilationDataInst *evalDataInst);
 
   /// Perform IR generation for a given CJS module.
   void doCJSModule(
@@ -778,8 +781,9 @@ class ESTreeIRGen {
       Value *object,
       Value *value);
 
-  /// Load a member property from a super.property expression.
-  MemberExpressionResult emitSuperLoad(
+  /// Load a member property from a super.property expression inside a typed
+  /// class method.
+  MemberExpressionResult emitTypedSuperLoad(
       ESTree::SuperNode *superNode,
       ESTree::IdentifierNode *property);
 
@@ -945,12 +949,15 @@ class ESTreeIRGen {
   ///   FunctionContext due to the enqueueCompilation mechanism.
   /// \param functionKind the kind of the function being created.
   ///   ES5Function by default, but may also be ES6Constructor.
+  /// \param homeObject will be set as the homeObject in the CapturedState of
+  /// the function \p FE we are going to generate.
   Value *genFunctionExpression(
       ESTree::FunctionExpressionNode *FE,
       Identifier nameHint,
       ESTree::Node *superClassNode = nullptr,
       Function::DefinitionKind functionKind =
-          Function::DefinitionKind::ES5Function);
+          Function::DefinitionKind::ES5Function,
+      Variable *homeObject = nullptr);
 
   /// Generate IR for ArrowFunctionExpression.
   /// \param parentScope is the VariableScope of the enclosing function, or null
@@ -989,6 +996,8 @@ class ESTreeIRGen {
   /// \param functionKind is the proper kind for this function.
   /// \param ctorClass is the class containing functionNode, if functionNode
   ///  is for a constructor.
+  /// \param homeObject will be set as the homeObject in the CapturedState of
+  /// the function \p FE we are going to generate.
   /// \returns a new Function.
   NormalFunction *genBasicFunction(
       Identifier originalName,
@@ -996,7 +1005,8 @@ class ESTreeIRGen {
       VariableScope *parentScope,
       ESTree::Node *superClassNode = nullptr,
       Function::DefinitionKind functionKind =
-          Function::DefinitionKind::ES5Function);
+          Function::DefinitionKind::ES5Function,
+      Variable *homeObject = nullptr);
 
   /// Generate the IR for two functions: an outer GeneratorFunction and an inner
   /// GeneratorInnerFunction. The outer function runs CreateGenerator on the
@@ -1005,11 +1015,14 @@ class ESTreeIRGen {
   ///   or inferred according to the rules of ES6.
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
+  /// \param homeObject will be set as the homeObject in the CapturedState of
+  /// the function \p FE we are going to generate.
   /// \return the outer Function.
   Function *genGeneratorFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
-      VariableScope *parentScope);
+      VariableScope *parentScope,
+      Variable *homeObject = nullptr);
 
   /// Generate the IR for an async function: it desugars async function to a
   /// generator function wrapped in a call to the JS builtin `spawnAsync` and

@@ -667,6 +667,7 @@ class IRBuilder {
   FastArrayAppendInst *createFastArrayAppendInst(Value *other, Value *array);
   FastArrayLengthInst *createFastArrayLengthInst(Value *array);
 
+  LoadParentNoTrapsInst *createLoadParentNoTrapsInst(Value *object);
   TypedLoadParentInst *createTypedLoadParentInst(Value *object);
   TypedStoreParentInst *createTypedStoreParentInst(
       Value *storedValue,
@@ -707,6 +708,7 @@ class IRBuilder {
       Variable *capturedThis,
       Value *capturedNewTarget,
       Variable *capturedArguments,
+      Variable *homeObject,
       VariableScope *parentVarScope);
 
   EvalCompilationDataInst *createEvalCompilationDataInst(
@@ -714,6 +716,7 @@ class IRBuilder {
       Variable *capturedThis,
       Value *capturedNewTarget,
       Variable *capturedArguments,
+      Variable *homeObject,
       VariableScope *funcVarScope);
 
   /// This is an RAII object that saves and restores the source location of the

@@ -47,11 +47,26 @@ void emit_sh_ljs_get_pointer(
   a.and_(xOut, xIn, kHV_DataMask);
 }
 
+/// Encode a native pointer into a tagged object pointer (SHLegacyValue).
+/// The same register is used for input and output.
 void emit_sh_ljs_object(a64::Assembler &a, const a64::GpX &inOut) {
   static_assert(
       HERMESVALUE_VERSION == 1,
       "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
   a.movk(inOut, (uint16_t)HVTag_Object, kHV_NumDataBits);
+}
+
+/// Encode a native pointer into a tagged object pointer (SHLegacyValue).
+/// Takes an input and output register, which can be the same.
+/// In some sense this supersedes
+void emit_sh_ljs_object2(
+    a64::Assembler &a,
+    const a64::GpX &xOut,
+    const a64::GpX &xIn) {
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
+  a.orr(xOut, xIn, (uint64_t)HVTag_Object << kHV_NumDataBits);
 }
 
 /// Emit code to check whether the input reg is an object, using the specified
@@ -82,6 +97,42 @@ void emit_sh_ljs_is_string(
   static_assert((int16_t)HVTag_Str == (int16_t)(-3) && "HV_TagStr must be -3");
   a.asr(xTempReg, xInputReg, kHV_NumDataBits);
   a.cmn(xTempReg, -HVTag_Str);
+}
+
+/// Emit code to check whether the input reg is empty, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_empty(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      (int16_t)HVETag_Empty == (int16_t)(-14) && "HVETag_Empty must be -14");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
+  a.cmn(xTempReg, -HVETag_Empty);
+}
+
+/// Emit code to check whether the input reg is undefined, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_undefined(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "HVETag_Undefined must be at kHV_NumDataBits - 1");
+  static_assert(
+      (int16_t)HVETag_Undefined == (int16_t)(-12) &&
+      "HVETag_Undefined must be -12");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
+  a.cmn(xTempReg, -HVETag_Undefined);
 }
 
 /// For a register \p inOut that contains a bool (i.e. either 0 or 1), turn it
@@ -215,12 +266,38 @@ static bool isCheapConst(uint64_t k) {
   return count <= 2;
 }
 
-#define EMIT_RUNTIME_CALL(em, type, func) \
-  do {                                    \
-    using _FnT = type;                    \
-    _FnT _fn = func;                      \
-    (void)_fn;                            \
-    (em).callThunk((void *)func, #func);  \
+/// Save the current IP and emit a call to a runtime function. This should be
+/// used in most cases when invoking slow paths and handlers for complex
+/// functionality.
+#define EMIT_RUNTIME_CALL(em, type, func)           \
+  do {                                              \
+    using _FnT = type;                              \
+    _FnT _fn = func;                                \
+    (void)_fn;                                      \
+    (em).callThunkWithSavedIP((void *)func, #func); \
+  } while (0)
+
+/// Call a runtime function without saving the IP. This is intended for special
+/// cases where we want to preserve the currently saved IP or if the IP is not
+/// needed.
+#define EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(em, type, func) \
+  do {                                                     \
+    using _FnT = type;                                     \
+    _FnT _fn = func;                                       \
+    (void)_fn;                                             \
+    (em).callThunk((void *)func, #func);                   \
+  } while (0)
+
+/// Make call without creating a thunk for it or saving the IP. This is useful
+/// for specific functionality where saving the IP is either unnecessary or
+/// incorrect, and where the call target is only going to be invoked at most
+/// once in the function.
+#define EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(em, type, func) \
+  do {                                                               \
+    using _FnT = type;                                               \
+    _FnT _fn = func;                                                 \
+    (void)_fn;                                                       \
+    (em).callWithoutThunk((void *)func, #func);                      \
   } while (0)
 
 Emitter::Emitter(
@@ -230,8 +307,6 @@ Emitter::Emitter(
     PropertyCacheEntry *readPropertyCache,
     PropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
-    unsigned numCount,
-    unsigned npCount,
     const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
       frameRegs_(numFrameRegs),
@@ -253,6 +328,14 @@ Emitter::Emitter(
   roDataLabel_ = a.newNamedLabel("RO_DATA");
   returnLabel_ = a.newNamedLabel("leave");
 
+  // Save read/write property cache addresses.
+  roOfsReadPropertyCachePtr_ =
+      uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
+  roOfsWritePropertyCachePtr_ =
+      uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
+}
+
+void Emitter::enter(uint32_t numCount, uint32_t npCount) {
   unsigned nextVec = kVecSaved.first;
   unsigned nextGp = kGPSaved.first;
 
@@ -291,13 +374,8 @@ Emitter::Emitter(
     frameRegs_[frIndex].globalType = FRType::UnknownNonPtr;
   }
 
-  // Save read/write property cache addresses.
-  roOfsReadPropertyCachePtr_ =
-      uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
-  roOfsWritePropertyCachePtr_ =
-      uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
-
-  frameSetup(numFrameRegs, nextGp - kGPSaved.first, nextVec - kVecSaved.first);
+  frameSetup(
+      frameRegs_.size(), nextGp - kGPSaved.first, nextVec - kVecSaved.first);
 }
 
 void Emitter::comment(const char *fmt, ...) {
@@ -395,6 +473,33 @@ void Emitter::frameSetup(
       vecSaveCount <= kVecSaved.second - kVecSaved.first + 1 &&
       "Too many callee saved Vec regs");
 
+  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
+  if (prohibitInvoke != ProhibitInvoke::None) {
+    // Load the new frame pointer. We leave x0 untouched since it contains the
+    // runtime parameter, which is used below and in throwInvalidInvoke_.
+    a.ldr(a64::x1, a64::Mem(a64::x0, offsetof(Runtime, stackPointer_)));
+    // Load new.target.
+    a.ldur(
+        a64::x1,
+        a64::Mem(
+            a64::x1, StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
+    // Compare new.target against undefined.
+    emit_sh_ljs_is_undefined(a, a64::x1, a64::x1);
+    a.cmn(a64::x1, -HVETag_Undefined);
+
+    if (prohibitInvoke == ProhibitInvoke::Call) {
+      // If regular calls are prohibited, then we jump to throwInvalidInvoke if
+      // new.target is undefined.
+      throwInvalidInvoke_ = a.newNamedLabel("throwInvalidCall");
+      a.b_eq(throwInvalidInvoke_);
+    } else if (prohibitInvoke == ProhibitInvoke::Construct) {
+      // If construct calls are prohibited, then we jump to throwInvalidInvoke
+      // if new.target is not undefined.
+      throwInvalidInvoke_ = a.newNamedLabel("throwInvalidConstruct");
+      a.b_ne(throwInvalidInvoke_);
+    }
+  }
+
   static_assert(
       kGPSaved.first == 22, "Callee saved GP regs must start from x22");
   // Always save x22.
@@ -448,7 +553,9 @@ void Emitter::frameSetup(
   a.mov(xRuntime, a64::x0);
 
   //  _sh_check_native_stack_overflow(shr);
-  EMIT_RUNTIME_CALL(
+  // Do not save the IP because we have not yet set up the stack frame for this
+  // function. If this throws, the exception should appear in the caller.
+  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
       *this, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
 
   // Function<bench>(3 params, 13 registers):
@@ -459,7 +566,9 @@ void Emitter::frameSetup(
   // _sh_enter expects the number of registers to include any extra registers at
   // the start of the frame.
   a.mov(a64::w2, numFrameRegs + hbc::StackFrameLayout::FirstLocal);
-  EMIT_RUNTIME_CALL(
+  // Like _sh_check_native_stack_overflow, we do not save the IP here so that
+  // thrown exceptions appear in the caller.
+  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
       *this, SHLegacyValue * (*)(SHRuntime *, SHLocals *, uint32_t), _sh_enter);
   comment("// xFrame");
   a.mov(xFrame, a64::x0);
@@ -474,7 +583,7 @@ void Emitter::frameSetup(
     a.mov(a64::w0, 1);
     a.adr(a64::x1, roDataLabel_);
     a.add(a64::x1, a64::x1, getDebugFunctionName());
-    EMIT_RUNTIME_CALL(
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
         *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
   }
 }
@@ -487,13 +596,14 @@ void Emitter::leave() {
     a.mov(a64::w0, 0);
     a.adr(a64::x1, roDataLabel_);
     a.add(a64::x1, a64::x1, getDebugFunctionName());
-    EMIT_RUNTIME_CALL(
+    EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
         *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
   }
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, a64::sp);
   a.mov(a64::x2, xFrame);
-  EMIT_RUNTIME_CALL(
+  // _sh_leave cannot throw or observe the IP.
+  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
       *this, void (*)(SHRuntime *, SHLocals *, SHLegacyValue *), _sh_leave);
 
   // The return value has been stashed in x22 by ret(). Move it to the return
@@ -529,6 +639,34 @@ void Emitter::leave() {
 void Emitter::callThunk(void *fn, const char *name) {
   //    comment("// call %s", name);
   a.bl(registerThunk(fn, name));
+}
+
+void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
+  // Save the current IP in the runtime.
+  auto ofs = codeBlock_->getOffsetOf(emittingIP);
+  loadBits64InGp(a64::x16, (uint64_t)codeBlock_->begin(), "Bytecode start");
+  if (a64::Utils::isAddSubImm(ofs)) {
+    a.add(a64::x16, a64::x16, ofs);
+  } else {
+    a.mov(a64::x17, ofs);
+    a.add(a64::x16, a64::x16, a64::x17);
+  }
+  a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+
+  // Call the passed function.
+  callThunk(fn, name);
+
+// Invalidate the current IP to make sure it is set before the next call.
+#ifndef NDEBUG
+  a.mov(a64::x16, Runtime::kInvalidCurrentIP);
+  a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+#endif
+}
+
+void Emitter::callWithoutThunk(void *fn, const char *name) {
+  comment("// call %s", name);
+  loadBits64InGp(a64::x16, (uint64_t)fn, name);
+  a.blr(a64::x16);
 }
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
@@ -627,7 +765,7 @@ HWReg Emitter::_allocTemp(TempRegAlloc &ra, llvh::Optional<HWReg> preferred) {
     return HWReg(*optReg, TAG{});
   // Spill one register.
   unsigned index = pr ? *pr : ra.leastRecentlyUsed();
-  spillTempReg(HWReg(index, TAG{}));
+  _spillTempForFR(HWReg(index, TAG{}));
   ra.free(index);
   // Allocate again. This must succeed.
   return HWReg(*ra.alloc(), TAG{});
@@ -667,7 +805,7 @@ void Emitter::syncAndFreeTempReg(HWReg hwReg) {
       !hwRegs_[hwReg.combinedIndex()].contains.isValid()) {
     return;
   }
-  spillTempReg(hwReg);
+  _spillTempForFR(hwReg);
   freeReg(hwReg);
 }
 
@@ -686,7 +824,7 @@ HWReg Emitter::useReg(HWReg hwReg) {
   return hwReg;
 }
 
-void Emitter::spillTempReg(HWReg toSpill) {
+void Emitter::_spillTempForFR(HWReg toSpill) {
   assert(isTemp(toSpill));
 
   HWRegState &hwState = hwRegs_[toSpill.combinedIndex()];
@@ -717,7 +855,7 @@ void Emitter::spillTempReg(HWReg toSpill) {
     assert(false && "local reg not used by FR");
 }
 
-void Emitter::syncToMem(FR fr) {
+void Emitter::syncToFrame(FR fr) {
   FRState &frState = frameRegs_[fr.index()];
   if (frState.frameUpToDate)
     return;
@@ -1013,6 +1151,22 @@ void Emitter::unreachable() {
   EMIT_RUNTIME_CALL(*this, void (*)(), _sh_unreachable);
 }
 
+void Emitter::profilePoint(uint16_t pointIndex) {
+  comment("// ProfilePoint %u", pointIndex);
+#ifdef HERMESVM_PROFILER_BB
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, pointIndex);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, uint16_t),
+      _interpreter_register_bb_execution);
+#else
+  // No-op if profiling is not enabled.
+#endif
+}
+
 void Emitter::ret(FR frValue) {
   movHWFromFR(HWReg::gpX(22), frValue);
   a.b(returnLabel_);
@@ -1092,6 +1246,7 @@ void Emitter::loadParam(FR frRes, uint32_t paramIndex) {
        .name = "LoadParam",
        .frRes = frRes,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment("// Slow path: %s r%u", sl.name, sl.frRes.index());
          em.a.bind(sl.slowPathLab);
@@ -1178,6 +1333,28 @@ void Emitter::loadConstString(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::loadConstBigInt(
+    FR frRes,
+    RuntimeModule *runtimeModule,
+    uint32_t bigIntID) {
+  comment("// LoadConstBigInt r%u, bigIntID %u", frRes.index(), bigIntID);
+
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadBits64InGp(a64::x1, (uint64_t)runtimeModule, "RuntimeModule");
+  a.mov(a64::w2, bigIntID);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHRuntimeModule *, uint32_t),
+      _sh_ljs_get_bytecode_bigint);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<true>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::toNumber(FR frRes, FR frInput) {
   comment("// %s r%u, r%u", "toNumber", frRes.index(), frInput.index());
   if (isFRKnownNumber(frInput))
@@ -1187,7 +1364,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   hwInput = getOrAllocFRInGpX(frInput, true);
   a.cmp(hwInput.a64GpX(), xDoubleLim);
@@ -1213,6 +1390,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_to_double_rjs,
        .slowCallName = "_sh_ljs_to_double_rjs",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: %s r%u, r%u",
@@ -1222,7 +1400,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});
@@ -1237,7 +1415,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   hwInput = getOrAllocFRInGpX(frInput, true);
   a.cmp(hwInput.a64GpX(), xDoubleLim);
@@ -1263,6 +1441,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_to_numeric_rjs,
        .slowCallName = "_sh_ljs_to_numeric_rjs",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: %s r%u, r%u",
@@ -1272,7 +1451,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -1287,7 +1466,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -1316,6 +1495,7 @@ void Emitter::toInt32(FR frRes, FR frInput) {
        .frRes = frRes,
        .frInput1 = frInput,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -1341,7 +1521,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -1369,6 +1549,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
        .frRes = frRes,
        .frInput1 = frInput,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: AddEmptyString r%u, r%u",
@@ -1400,7 +1581,7 @@ void Emitter::newObject(FR frRes) {
 void Emitter::newObjectWithParent(FR frRes, FR frParent) {
   comment("// NewObjectWithParent r%u, r%u", frRes.index(), frParent.index());
   syncAllFRTempExcept(frRes != frParent ? frRes : FR());
-  syncToMem(frParent);
+  syncToFrame(frParent);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frParent);
@@ -1572,6 +1753,7 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
        .frRes = frRes,
        .frInput1 = frArr,
        .frInput2 = frIdx,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: FastArrayLoad r%u, r%u, r%u",
@@ -1592,8 +1774,8 @@ void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
       frIdx.index(),
       frVal.index());
   syncAllFRTempExcept({});
-  syncToMem(frArr);
-  syncToMem(frVal);
+  syncToFrame(frArr);
+  syncToFrame(frVal);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frVal);
@@ -1608,8 +1790,8 @@ void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
 void Emitter::fastArrayPush(FR frArr, FR frVal) {
   comment("// FastArrayPush r%u, r%u", frArr.index(), frVal.index());
   syncAllFRTempExcept({});
-  syncToMem(frArr);
-  syncToMem(frVal);
+  syncToFrame(frArr);
+  syncToFrame(frVal);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frVal);
@@ -1623,8 +1805,8 @@ void Emitter::fastArrayPush(FR frArr, FR frVal) {
 void Emitter::fastArrayAppend(FR frArr, FR frOther) {
   comment("// FastArrayAppend r%u, r%u", frArr.index(), frOther.index());
   syncAllFRTempExcept({});
-  syncToMem(frArr);
-  syncToMem(frOther);
+  syncToFrame(frArr);
+  syncToFrame(frOther);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frOther);
@@ -1702,7 +1884,7 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
       size);
 
   syncAllFRTempExcept(frRes != frParent ? frRes : FR{});
-  syncToMem(frParent);
+  syncToFrame(frParent);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -1850,7 +2032,7 @@ void Emitter::createClosure(
       frEnv.index(),
       functionID);
   syncAllFRTempExcept(frRes != frEnv ? frRes : FR());
-  syncToMem(frEnv);
+  syncToFrame(frEnv);
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frEnv);
@@ -1868,6 +2050,40 @@ void Emitter::createClosure(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::createGenerator(
+    FR frRes,
+    FR frEnv,
+    RuntimeModule *runtimeModule,
+    uint32_t functionID) {
+  comment(
+      "// CreateGenerator r%u, r%u, %u",
+      frRes.index(),
+      frEnv.index(),
+      functionID);
+  syncAllFRTempExcept(frRes != frEnv ? frRes : FR());
+  syncToFrame(frEnv);
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  loadFrameAddr(a64::x2, frEnv);
+  loadBits64InGp(a64::x3, (uint64_t)runtimeModule, "RuntimeModule");
+  a.mov(a64::w4, functionID);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          const SHLegacyValue *,
+          SHRuntimeModule *,
+          uint32_t),
+      _interpreter_create_generator);
+
+  freeAllFRTempExcept({});
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
   comment("// GetArgumentsLength r%u, r%u", frRes.index(), frLazyReg.index());
 
@@ -1875,7 +2091,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
   asmjit::Label contLab = newContLabel();
 
   syncAllFRTempExcept(frRes != frLazyReg ? frRes : FR());
-  syncToMem(frLazyReg);
+  syncToFrame(frLazyReg);
 
   HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
   HWReg hwTemp = allocTempGpX();
@@ -1911,6 +2127,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_get_arguments_length,
        .slowCallName = "_sh_ljs_get_arguments_length",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: GetArgumentsLength r%u, r%u",
@@ -1920,7 +2137,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
          em.a.mov(a64::x0, xRuntime);
          em.a.mov(a64::x1, xFrame);
          em.loadFrameAddr(a64::x2, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -1939,8 +2156,8 @@ void Emitter::createThis(
       cacheIdx);
 
   syncAllFRTempExcept(frRes != frCallee && frRes != frNewTarget ? frRes : FR());
-  syncToMem(frCallee);
-  syncToMem(frNewTarget);
+  syncToFrame(frCallee);
+  syncToFrame(frNewTarget);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2052,6 +2269,72 @@ void Emitter::getNewTarget(FR frRes) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::iteratorBegin(FR frRes, FR frSource) {
+  comment("// IteratorBegin r%u, r%u", frRes.index(), frSource.index());
+
+  syncAllFRTempExcept(frRes != frSource ? frRes : FR());
+  syncToFrame(frSource);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frSource);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
+      _sh_ljs_iterator_begin_rjs);
+
+  syncFrameOutParam(frSource);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::iteratorNext(FR frRes, FR frIteratorOrIdx, FR frSourceOrNext) {
+  comment(
+      "// IteratorNext r%u, r%u, r%u",
+      frRes.index(),
+      frIteratorOrIdx.index(),
+      frSourceOrNext.index());
+
+  syncAllFRTempExcept(
+      frRes != frIteratorOrIdx && frRes != frSourceOrNext ? frRes : FR());
+  syncToFrame(frIteratorOrIdx);
+  syncToFrame(frSourceOrNext);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frIteratorOrIdx);
+  loadFrameAddr(a64::x2, frSourceOrNext);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, const SHLegacyValue *),
+      _sh_ljs_iterator_next_rjs);
+
+  syncFrameOutParam(frIteratorOrIdx);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::iteratorClose(FR frIteratorOrIdx, bool ignoreExceptions) {
+  comment(
+      "// IteratorClose r%u, %u", frIteratorOrIdx.index(), ignoreExceptions);
+
+  syncAllFRTempExcept({});
+  syncToFrame(frIteratorOrIdx);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frIteratorOrIdx);
+  a.mov(a64::w2, ignoreExceptions);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, const SHLegacyValue *, bool),
+      _sh_ljs_iterator_close_rjs);
+}
+
 void Emitter::throwInst(FR frInput) {
   comment("// Throw r%u", frInput.index());
 
@@ -2061,6 +2344,43 @@ void Emitter::throwInst(FR frInput) {
 
   a.mov(a64::x0, xRuntime);
   EMIT_RUNTIME_CALL(*this, void (*)(SHRuntime *, SHLegacyValue), _sh_throw);
+}
+
+void Emitter::throwIfEmpty(FR frRes, FR frInput) {
+  comment("// ThrowIfEmpty r%u, r%u", frRes.index(), frInput.index());
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+
+  // TODO: Add back the sync/free calls inside try.
+  // Outside a try it's not observable behavior.
+  // syncAllFRTempExcept(frRes != frInput ? frRes : FR());
+  HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+  HWReg hwTemp = allocTempGpX();
+  // freeAllFRTempExcept({});
+  freeReg(hwTemp);
+
+  emit_sh_ljs_is_empty(a, hwTemp.a64GpX(), hwInput.a64GpX());
+  a.b_eq(slowPathLab);
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  movHWFromHW<false>(hwRes, hwInput);
+  frUpdatedWithHW(frRes, hwRes);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .frRes = frRes,
+       .frInput1 = frInput,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: ThrowIfEmpty r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_empty);
+         // Call does not return.
+       }});
 }
 
 void Emitter::createRegExp(
@@ -2089,6 +2409,30 @@ void Emitter::createRegExp(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
+  comment("// LoadParentNoTraps r%u, r%u", frRes.index(), frObj.index());
+
+  HWReg hwObj = getOrAllocFRInGpX(frObj, true);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  HWReg hwTmp = allocTempGpX();
+  freeReg(hwTmp);
+  a64::GpX xTmp = hwTmp.a64GpX();
+  a64::GpX xRes = hwRes.a64GpX();
+  emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
+  // xTmp contains the unencoded pointer value.
+  a.ldr(xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  // Check whether it is nullptr and set flags.
+  a.cmp(xTmp, 0);
+  // xRes contains the encoded pointer.
+  emit_sh_ljs_object2(a, xRes, xTmp);
+  // xTmp contains encoded null.
+  loadBits64InGp(xTmp, _sh_ljs_null().raw, "null");
+  // If the pointer was nullptr, use encoded null, otherwise encoded ptr.
+  a.csel(xRes, xTmp, xRes, asmjit::arm::CondCode::kEQ);
+
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::typedLoadParent(FR frRes, FR frObj) {
   comment("// TypedLoadParent r%u, r%u", frRes.index(), frObj.index());
 
@@ -2106,8 +2450,8 @@ void Emitter::typedStoreParent(FR frStoredValue, FR frObj) {
   comment("// TypedStoreParent r%u, r%u", frStoredValue.index(), frObj.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frStoredValue);
-  syncToMem(frObj);
+  syncToFrame(frStoredValue);
+  syncToFrame(frObj);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2138,16 +2482,16 @@ void Emitter::putByValImpl(
       frValue.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frKey);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
   loadFrameAddr(a64::x3, frValue);
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 }
 
 void Emitter::delByIdImpl(
@@ -2161,13 +2505,13 @@ void Emitter::delByIdImpl(
   comment("// %s r%u, r%u, %u", name, frRes.index(), frTarget.index(), key);
 
   syncAllFRTempExcept(frRes != frTarget ? frRes : FR{});
-  syncToMem(frTarget);
+  syncToFrame(frTarget);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   a.mov(a64::w2, key);
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -2190,14 +2534,14 @@ void Emitter::delByValImpl(
       frKey.index());
 
   syncAllFRTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR{});
-  syncToMem(frTarget);
-  syncToMem(frKey);
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -2347,13 +2691,13 @@ void Emitter::getByIdImpl(
     // Ensure the frSource is in memory for the fast path. Note that we haven't
     // done it before.
     // Note that this is the reason we can't use a regular slow path at the
-    // end of the function. We need syncToMem() to execute in the slow path,
+    // end of the function. We need syncToFrame() to execute in the slow path,
     // but by then the state is gone.
-    syncToMem(frSource);
+    syncToFrame(frSource);
   } else {
     // We arrive here if there is no fast path. Ensure that frSource is in
     // memory.
-    syncToMem(frSource);
+    syncToFrame(frSource);
     // All temporaries will be clobbered.
     freeAllFRTempExcept({});
 
@@ -2379,7 +2723,7 @@ void Emitter::getByIdImpl(
     if (cacheIdx != 0)
       a.add(a64::x3, a64::x3, sizeof(SHPropertyCacheEntry) * cacheIdx);
   }
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
@@ -2491,8 +2835,8 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
       frKey.index());
 
   syncAllFRTempExcept(frRes != frSource && frRes != frKey ? frRes : FR());
-  syncToMem(frSource);
-  syncToMem(frKey);
+  syncToFrame(frSource);
+  syncToFrame(frKey);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2512,7 +2856,7 @@ void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
   comment("// getByIdx r%u, r%u, %u", frRes.index(), frSource.index(), key);
 
   syncAllFRTempExcept(frRes != frSource ? frRes : FR());
-  syncToMem(frSource);
+  syncToFrame(frSource);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2550,8 +2894,8 @@ void Emitter::putByIdImpl(
       symID);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2565,7 +2909,7 @@ void Emitter::putByIdImpl(
     if (cacheIdx != 0)
       a.add(a64::x4, a64::x4, sizeof(SHPropertyCacheEntry) * cacheIdx);
   }
-  callThunk((void *)shImpl, shImplName);
+  callThunkWithSavedIP((void *)shImpl, shImplName);
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
@@ -2579,8 +2923,8 @@ void Emitter::putOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
       "// putOwnByIdx r%u, r%u, %u", frTarget.index(), frValue.index(), key);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2601,9 +2945,9 @@ void Emitter::putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable) {
       frKey.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
-  syncToMem(frKey);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
+  syncToFrame(frKey);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2640,10 +2984,10 @@ void Emitter::putOwnGetterSetterByVal(
       enumerable);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frKey);
-  syncToMem(frGetter);
-  syncToMem(frSetter);
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frGetter);
+  syncToFrame(frSetter);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2678,8 +3022,8 @@ void Emitter::putNewOwnById(
       key);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2776,8 +3120,8 @@ void Emitter::putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx) {
       slotIdx);
 
   syncAllFRTempExcept({});
-  syncToMem(frTarget);
-  syncToMem(frValue);
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2811,8 +3155,8 @@ void Emitter::instanceOf(FR frRes, FR frLeft, FR frRight) {
       frRight.index());
 
   syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2833,8 +3177,8 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
       "// isIn r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
 
   syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -2912,8 +3256,25 @@ asmjit::Label Emitter::registerThunk(void *fn, const char *name) {
 void Emitter::emitSlowPaths() {
   while (!slowPaths_.empty()) {
     SlowPath &sp = slowPaths_.front();
+    emittingIP = sp.emittingIP;
     sp.emit(*this, sp);
     slowPaths_.pop_front();
+  }
+  emittingIP = nullptr;
+
+  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
+  if (prohibitInvoke != ProhibitInvoke::None) {
+    a.bind(throwInvalidInvoke_);
+    // We don't register a thunk since there will only be a single call to this.
+    // Note that we also don't save the IP, because this is being thrown in the
+    // caller's context.
+    // This is thrown at the start of the function, so runtime is already in x0.
+    if (prohibitInvoke == ProhibitInvoke::Call)
+      EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+          *this, void (*)(SHRuntime *), _sh_throw_invalid_call);
+    else
+      EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+          *this, void (*)(SHRuntime *), _sh_throw_invalid_construct);
   }
 }
 
@@ -2964,13 +3325,24 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   loadConstBits64(
       ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
 
-  // Ensure that all the outgoing values are stored into the frame registers for
-  // the call.
-  syncToMem(calleeFrameArg);
-  syncToMem(ntFrameArg);
+#ifndef NDEBUG
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  assert(
+      !frameRegs_[calleeFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
+  assert(
+      !frameRegs_[ntFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
 
-  for (uint32_t i = 0; i < argc; ++i)
-    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  for (uint32_t i = 0; i < argc; ++i) {
+    assert(
+        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
+  }
+#endif
 
   freeAllFRTempExcept({});
 
@@ -3004,7 +3376,7 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
     movFRFromHW(
         calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
   }
-  syncToMem(calleeFrameArg);
+  syncToFrame(calleeFrameArg);
 
   for (uint32_t i = 0; i < args.size(); ++i) {
     auto argLoc = FR{nRegs + hbc::StackFrameLayout::ThisArg - i};
@@ -3016,14 +3388,16 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
       auto argReg = getOrAllocFRInAnyReg(args[i], true);
       movFRFromHW(argLoc, argReg, frameRegs_[args[i].index()].localType);
     }
-    syncToMem(argLoc);
+    assert(
+        !frameRegs_[argLoc.index()].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
   }
 
   // Get a register for the new target.
   FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
   loadConstBits64(
       ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
-  syncToMem(ntFrameArg);
+  syncToFrame(ntFrameArg);
 
   // For now we sync all registers, since we skip writing to the frame in some
   // cases above, but in principle, we could track frRes specially.
@@ -3048,11 +3422,18 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
       frRes.index(),
       getBuiltinMethodName(builtinIndex),
       argc);
+  // CallBuiltin internally sets "this", so we don't sync it to memory.
+#ifndef NDEBUG
   uint32_t nRegs = frameRegs_.size();
 
-  // CallBuiltin internally sets "this", so we don't sync it to memory.
-  for (uint32_t i = 1; i < argc; ++i)
-    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  for (uint32_t i = 0; i < argc; ++i) {
+    assert(
+        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
+  }
+#endif
 
   syncAllFRTempExcept({});
   freeAllFRTempExcept({});
@@ -3107,12 +3488,22 @@ void Emitter::callWithNewTarget(
         ntFrameArg, newTargetReg, frameRegs_[frNewTarget.index()].localType);
   }
 
-  // Sync the set up call stack to the frame memory.
-  for (uint32_t i = 0; i < argc; ++i)
-    syncToMem(FR{nRegs + hbc::StackFrameLayout::ThisArg - i});
+#ifndef NDEBUG
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  for (uint32_t i = 0; i < argc; ++i) {
+    assert(
+        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
+  }
 
-  syncToMem(calleeFrameArg);
-  syncToMem(ntFrameArg);
+  assert(
+      !frameRegs_[calleeFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
+  assert(
+      !frameRegs_[ntFrameArg.index()].globalReg &&
+      "frame regs are not number/non-pointer so can't have global reg");
+#endif
 
   syncAllFRTempExcept({});
   freeAllFRTempExcept(frRes);
@@ -3120,6 +3511,66 @@ void Emitter::callWithNewTarget(
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
   a.mov(a64::w2, argc - 1);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      _sh_ljs_call);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::callWithNewTargetLong(
+    FR frRes,
+    FR frCallee,
+    FR frNewTarget,
+    FR frArgc) {
+  comment(
+      "// CallWithNewTarget r%u, r%u, r%u, r%u",
+      frRes.index(),
+      frCallee.index(),
+      frNewTarget.index(),
+      frArgc.index());
+  uint32_t nRegs = frameRegs_.size();
+
+  auto calleeFrameArg = FR{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
+  // Store the callee to the right location in the frame.
+  if (calleeFrameArg != frCallee) {
+    // Free any temp register before we mov into it so movFRFromHW stores
+    // directly to the frame.
+    freeFRTemp(calleeFrameArg);
+    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
+    movFRFromHW(
+        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
+  }
+
+  FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
+  // Store the new target to the right location in the frame.
+  if (ntFrameArg != frNewTarget) {
+    // Free the register before we mov into it so we store directly to the
+    // frame.
+    freeFRTemp(ntFrameArg);
+    auto newTargetReg = getOrAllocFRInAnyReg(frNewTarget, true);
+    movFRFromHW(
+        ntFrameArg, newTargetReg, frameRegs_[frNewTarget.index()].localType);
+  }
+
+  syncToFrame(calleeFrameArg);
+  syncToFrame(ntFrameArg);
+
+  HWReg hwArgc = getOrAllocFRInVecD(frArgc, true);
+  HWReg hwTemp = allocTempGpX(HWReg::gpX(2));
+  freeReg(hwTemp);
+  a.fcvtzu(hwTemp.a64GpX(), hwArgc.a64VecD());
+
+  syncAllFRTempExcept({});
+  freeAllFRTempExcept(frRes);
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::x1, xFrame);
+  // The bytecode arg count includes "this", but the SH one does not, so
+  // subtract 1.
+  a.sub(a64::w2, hwTemp.a64GpX().w(), 1);
   EMIT_RUNTIME_CALL(
       *this,
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
@@ -3178,7 +3629,7 @@ void Emitter::arithUnop(
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frInput ? frRes : FR());
-    syncToMem(frInput);
+    syncToFrame(frInput);
   }
 
   if (inputIsNum) {
@@ -3214,6 +3665,7 @@ void Emitter::arithUnop(
        .hwRes = hwRes,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: %s r%u, r%u",
@@ -3223,7 +3675,7 @@ void Emitter::arithUnop(
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3258,7 +3710,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   // TODO: As with binary bit ops, it should be possible to only do this in the
   // slow path.
-  syncToMem(frInput);
+  syncToFrame(frInput);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -3292,6 +3744,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
        .frRes = frRes,
        .frInput1 = frInput,
        .hwRes = hwRes,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -3314,7 +3767,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
 void Emitter::typeOf(FR frRes, FR frInput) {
   comment("// TypeOf r%u, r%u", frRes.index(), frInput.index());
   syncAllFRTempExcept(frRes == frInput ? FR() : frRes);
-  syncToMem(frInput);
+  syncToFrame(frInput);
   freeAllFRTempExcept(FR());
 
   a.mov(a64::x0, xRuntime);
@@ -3337,7 +3790,7 @@ void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
       frSize.index());
   syncAllFRTempExcept({});
   // We have to sync frObj to the frame since it is an in/out parameter.
-  syncToMem(frObj);
+  syncToFrame(frObj);
   // No need to sync frIdx and frSize since they are just out parameters.
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
@@ -3376,10 +3829,10 @@ void Emitter::getNextPName(
       frSize.index());
 
   syncAllFRTempExcept({});
-  syncToMem(frProps);
-  syncToMem(frObj);
-  syncToMem(frIdx);
-  syncToMem(frSize);
+  syncToFrame(frProps);
+  syncToFrame(frObj);
+  syncToFrame(frIdx);
+  syncToFrame(frSize);
   freeAllFRTempExcept({});
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frProps);
@@ -3409,8 +3862,8 @@ void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
       "// AddS r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
 
   syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
@@ -3454,8 +3907,8 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
 
   if (!leftIsNum) {
@@ -3496,6 +3949,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
        .hwRes = hwRes,
        .slowCall = (void *)_sh_ljs_mod_rjs,
        .slowCallName = "_sh_ljs_mod_rjs",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -3507,7 +3961,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3552,8 +4006,8 @@ void Emitter::arithBinOp(
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
 
   if (leftIsNum) {
@@ -3597,6 +4051,7 @@ void Emitter::arithBinOp(
        .hwRes = hwRes,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -3608,7 +4063,7 @@ void Emitter::arithBinOp(
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3647,8 +4102,8 @@ void Emitter::bitBinOp(
   // set, since subsequent instructions cannot rely on it. To do this, we would
   // need to preserve information for the slow path to know whether they were
   // already sync'd to memory.
-  syncToMem(frLeft);
-  syncToMem(frRight);
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
 
   asmjit::Label slowPathLab = newSlowPathLabel();
   asmjit::Label contLab = newContLabel();
@@ -3693,6 +4148,7 @@ void Emitter::bitBinOp(
        .hwRes = hwRes,
        .slowCall = (void *)slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// %s r%u, r%u, r%u",
@@ -3704,7 +4160,7 @@ void Emitter::bitBinOp(
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
          em.loadFrameAddr(a64::x2, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3780,15 +4236,8 @@ void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
   a64::GpX xInput = hwInput.a64GpX();
   HWReg hwTmpTag = allocTempGpX();
   a64::GpX xTmpTag = hwTmpTag.a64GpX();
-  static_assert(
-      HERMESVALUE_VERSION == 1,
-      "HVETag_Undefined must be at kHV_NumDataBits - 1");
-  static_assert(
-      (int16_t)HVETag_Undefined == (int16_t)(-12) &&
-      "HVETag_Undefined must be -12");
-  // Compare tag bits, jump to retThisLab if not object.
-  a.asr(xTmpTag, xInput, kHV_NumDataBits - 1);
-  a.cmn(xTmpTag, -HVETag_Undefined);
+
+  emit_sh_ljs_is_undefined(a, xTmpTag, xInput);
   a.b_eq(target);
 
   freeReg(hwTmpTag);
@@ -3830,8 +4279,8 @@ void Emitter::jCond(
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
   // Do this always, since this could be the end of the BB.
   syncAllFRTempExcept(FR());
@@ -3885,6 +4334,7 @@ void Emitter::jCond(
        .passArgsByVal = passArgsByVal,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: j_%s%s Lx, r%u, r%u",
@@ -3901,7 +4351,7 @@ void Emitter::jCond(
            em.loadFrameAddr(a64::x1, sl.frInput1);
            em.loadFrameAddr(a64::x2, sl.frInput2);
          }
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          if (!sl.invert)
            em.a.cbnz(a64::w0, sl.target);
          else
@@ -3939,8 +4389,8 @@ void Emitter::compareImpl(
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
-    syncToMem(frLeft);
-    syncToMem(frRight);
+    syncToFrame(frLeft);
+    syncToFrame(frRight);
   }
 
   if (leftIsNum) {
@@ -3995,6 +4445,7 @@ void Emitter::compareImpl(
        .passArgsByVal = passArgsByVal,
        .slowCall = slowCall,
        .slowCallName = slowCallName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
              "// Slow path: j_%s r%u, r%u, r%u",
@@ -4011,7 +4462,7 @@ void Emitter::compareImpl(
            em.loadFrameAddr(a64::x1, sl.frInput1);
            em.loadFrameAddr(a64::x2, sl.frInput2);
          }
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
 
          // Invert the slow path result if needed.
          if (sl.invert)
@@ -4047,8 +4498,8 @@ void Emitter::getArgumentsPropByValImpl(
   asmjit::Label contLab = newContLabel();
 
   syncAllFRTempExcept(frRes != frIndex && frRes != frLazyReg ? frRes : FR());
-  syncToMem(frIndex);
-  syncToMem(frLazyReg);
+  syncToFrame(frIndex);
+  syncToFrame(frLazyReg);
   HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
   HWReg hwIndex = getOrAllocFRInVecD(frIndex, true);
   HWReg hwTempIndex = allocTempGpX();
@@ -4102,6 +4553,7 @@ void Emitter::getArgumentsPropByValImpl(
        .hwRes = hwRes,
        .slowCall = (void *)shImpl,
        .slowCallName = shImplName,
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
          em.a.bind(sl.slowPathLab);
@@ -4109,7 +4561,7 @@ void Emitter::getArgumentsPropByValImpl(
          em.a.mov(a64::x1, xFrame);
          em.loadFrameAddr(a64::x2, sl.frInput1);
          em.loadFrameAddr(a64::x3, sl.frInput2);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -4122,7 +4574,7 @@ void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
   asmjit::Label contLab = newContLabel();
 
   syncAllFRTempExcept({});
-  syncToMem(frLazyReg);
+  syncToFrame(frLazyReg);
 
   HWReg hwLazyReg = getOrAllocFRInGpX(frLazyReg, true);
   HWReg hwTemp = allocTempGpX();
@@ -4147,13 +4599,14 @@ void Emitter::reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name) {
                           : (void *)_sh_ljs_reify_arguments_loose,
        .slowCallName = strict ? "_sh_ljs_reify_arguments_strict"
                               : "_sh_ljs_reify_arguments_loose",
+       .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment("// Slow path: %s r%u", sl.name, sl.frInput1.index());
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.a.mov(a64::x1, xFrame);
          em.loadFrameAddr(a64::x2, sl.frInput1);
-         em.callThunk(sl.slowCall, sl.slowCallName);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
          // Slow path modifies the frame so we need to sync it if there's a
          // global reg.
          if (sl.hwRes.isValid()) {

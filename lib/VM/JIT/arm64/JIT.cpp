@@ -83,8 +83,6 @@ class JITContext::Compiler {
   };
   /// In case of error, the error reason is stored here.
   Error error_ = Error::NoError;
-  /// The IP of the instruction being emitted.
-  const inst::Inst *emittingIP_{nullptr};
   /// In case of "other" error, the error message is recorded here.
   std::string otherErrorMessage_{};
 
@@ -98,8 +96,6 @@ class JITContext::Compiler {
             codeBlock->writePropertyCache(),
             // TODO: is getFrameSize() the right thing to call?
             codeBlock->getFrameSize(),
-            codeBlock->getFunctionHeader().numberRegCount(),
-            codeBlock->getFunctionHeader().nonPtrRegCount(),
             [this](std::string &&message) {
               otherErrorMessage_ = std::move(message);
               error_ = Error::Other;
@@ -128,11 +124,11 @@ class JITContext::Compiler {
     auto *to = reinterpret_cast<const inst::Inst *>(funcStart_ + endOfs);
 
     while (ip != to) {
-      emittingIP_ = ip;
+      em_.emittingIP = ip;
       ip = dispatch(ip);
       em_.assertPostInstructionInvariants();
     }
-    emittingIP_ = nullptr;
+    em_.emittingIP = nullptr;
   }
 
   /// Compile a single instruction by dispatching to its emitter method.
@@ -200,11 +196,11 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
         : otherErrorMessage_.c_str();
     auto printError = [this, errMsg](llvh::raw_ostream &OS) {
       OS << "jit error: " << errMsg << '\n';
-      if (emittingIP_) {
+      if (em_.emittingIP) {
         OS << "Emitting:\n";
         OS << llvh::format_decimal(
-                  (const char *)emittingIP_ - (const char *)funcStart_, 3)
-           << ": " << inst::decodeInstruction(emittingIP_) << "\n";
+                  (const char *)em_.emittingIP - (const char *)funcStart_, 3)
+           << ": " << inst::decodeInstruction(em_.emittingIP) << "\n";
       }
     };
 
@@ -243,6 +239,12 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
        ++bbIndex) {
     bbLabels_.push_back(em_.newPrefLabel("BB", bbIndex));
   }
+
+  // Any code emitted at the start gets treated as the first instruction.
+  em_.emittingIP = (const inst::Inst *)codeBlock_->begin();
+  em_.enter(
+      codeBlock_->getFunctionHeader().numberRegCount(),
+      codeBlock_->getFunctionHeader().nonPtrRegCount());
 
   for (uint32_t bbIndex = 0, e = basicBlocks_.size() - 1; bbIndex < e;
        ++bbIndex) {
@@ -283,25 +285,20 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
   }
 
 EMIT_UNIMPLEMENTED(GetEnvironment)
-EMIT_UNIMPLEMENTED(LoadConstBigInt)
-EMIT_UNIMPLEMENTED(LoadConstBigIntLongIndex)
-EMIT_UNIMPLEMENTED(CallWithNewTargetLong)
 EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
-EMIT_UNIMPLEMENTED(ThrowIfEmpty)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(ProfilePoint)
-EMIT_UNIMPLEMENTED(CreateGenerator)
-EMIT_UNIMPLEMENTED(CreateGeneratorLongIndex)
-EMIT_UNIMPLEMENTED(IteratorBegin)
-EMIT_UNIMPLEMENTED(IteratorNext)
-EMIT_UNIMPLEMENTED(IteratorClose)
 
 #undef EMIT_UNIMPLEMENTED
 
 inline void JITContext::Compiler::emitUnreachable(
     const inst::UnreachableInst *inst) {
   em_.unreachable();
+}
+
+inline void JITContext::Compiler::emitProfilePoint(
+    const inst::ProfilePointInst *inst) {
+  em_.profilePoint(inst->op1);
 }
 
 inline void JITContext::Compiler::emitLoadParam(
@@ -351,6 +348,17 @@ inline void JITContext::Compiler::emitLoadConstString(
     const inst::LoadConstStringInst *inst) {
   em_.loadConstString(FR(inst->op1), codeBlock_->getRuntimeModule(), inst->op2);
 }
+
+#define EMIT_LOAD_CONST_BIGINT(name)                                           \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.loadConstBigInt(                                                       \
+        FR(inst->op1), codeBlock_->getRuntimeModule(), inst->op2);             \
+  }
+
+EMIT_LOAD_CONST_BIGINT(LoadConstBigInt);
+EMIT_LOAD_CONST_BIGINT(LoadConstBigIntLongIndex);
+
+#undef EMIT_LOAD_CONST_BIGINT
 
 inline void JITContext::Compiler::emitLoadConstStringLongIndex(
     const inst::LoadConstStringLongIndexInst *inst) {
@@ -716,6 +724,10 @@ EMIT_OWN_BY_SLOT_IDX(GetOwnBySlotIdx, getOwnBySlotIdx)
 
 #undef EMIT_OWN_BY_SLOT_IDX
 
+inline void JITContext::Compiler::emitLoadParentNoTraps(
+    const inst::LoadParentNoTrapsInst *inst) {
+  em_.loadParentNoTraps(FR(inst->op1), FR(inst->op2));
+}
 inline void JITContext::Compiler::emitTypedLoadParent(
     const inst::TypedLoadParentInst *inst) {
   em_.typedLoadParent(FR(inst->op1), FR(inst->op2));
@@ -814,6 +826,15 @@ inline void JITContext::Compiler::emitCallWithNewTarget(
       /* argc */ inst->op4);
 }
 
+inline void JITContext::Compiler::emitCallWithNewTargetLong(
+    const inst::CallWithNewTargetLongInst *inst) {
+  em_.callWithNewTargetLong(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* newTarget */ FR(inst->op3),
+      /* argc */ FR(inst->op4));
+}
+
 inline void JITContext::Compiler::emitGetBuiltinClosure(
     const inst::GetBuiltinClosureInst *inst) {
   em_.getBuiltinClosure(
@@ -886,6 +907,20 @@ EMIT_CREATE_CLOSURE(CreateClosure)
 EMIT_CREATE_CLOSURE(CreateClosureLongIndex)
 
 #undef EMIT_CREATE_CLOSURE
+
+#define EMIT_CREATE_GENERATOR(name)                                            \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.createGenerator(                                                       \
+        FR(inst->op1),                                                         \
+        FR(inst->op2),                                                         \
+        codeBlock_->getRuntimeModule(),                                        \
+        inst->op3);                                                            \
+  }
+
+EMIT_CREATE_GENERATOR(CreateGenerator)
+EMIT_CREATE_GENERATOR(CreateGeneratorLongIndex)
+
+#undef EMIT_CREATE_GENERATOR
 
 inline void JITContext::Compiler::emitNewObject(
     const inst::NewObjectInst *inst) {
@@ -961,6 +996,21 @@ inline void JITContext::Compiler::emitGetNextPName(
       FR(inst->op5));
 }
 
+inline void JITContext::Compiler::emitIteratorBegin(
+    const inst::IteratorBeginInst *inst) {
+  em_.iteratorBegin(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitIteratorNext(
+    const inst::IteratorNextInst *inst) {
+  em_.iteratorNext(FR(inst->op1), FR(inst->op2), FR(inst->op3));
+}
+
+inline void JITContext::Compiler::emitIteratorClose(
+    const inst::IteratorCloseInst *inst) {
+  em_.iteratorClose(FR(inst->op1), (bool)inst->op2);
+}
+
 #define EMIT_GET_ARGUMENTS_PROP_BY_VAL(name, op)                               \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
     em_.getArgumentsPropByVal##op(                                             \
@@ -1019,6 +1069,11 @@ inline void JITContext::Compiler::emitDebugger(const inst::DebuggerInst *inst) {
 
 inline void JITContext::Compiler::emitThrow(const inst::ThrowInst *inst) {
   em_.throwInst(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitThrowIfEmpty(
+    const inst::ThrowIfEmptyInst *inst) {
+  em_.throwIfEmpty(FR(inst->op1), FR(inst->op2));
 }
 
 inline void JITContext::Compiler::emitAddS(const inst::AddSInst *inst) {

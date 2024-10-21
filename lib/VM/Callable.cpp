@@ -30,6 +30,7 @@
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/ArrayRef.h"
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace vm {
@@ -48,8 +49,16 @@ _callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
 
   StackFramePtr currentFrame = runtime.getCurrentFrame();
   StackFramePtr newFrame{runtime.getStackPointer()};
-  newFrame.getSavedIPRef() =
-      HermesValue::encodeNativePointer(runtime.getCurrentIP());
+
+  auto *callerIP = runtime.getCurrentIP();
+  // If the caller is a JSFunction, we have to ensure that its IP is saved so we
+  // can use it for stack traces.
+  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(callerIP);
+
+  // If we call into the JIT (either directly or transitively), it may modify
+  // the saved IP. Make sure the IP is restored before we return to the caller.
+  auto restoreIP = llvh::make_scope_exit(
+      [callerIP, &runtime]() { runtime.setCurrentIP(callerIP); });
 
   SHJmpBuf jBuf;
   SHLocals *locals = runtime.shLocals;
@@ -1350,6 +1359,9 @@ void JSFunction::addLocationToSnapshot(
 CallResult<HermesValue> JSFunction::_jittedCall(
     JITCompiledFunctionPtr functionPtr,
     Runtime &runtime) {
+  // We should not need a GCScope here because all calls to _jittedCall
+  // originate either in the interpreter, NativeJSFunctions, or other JIT code.
+  // Deep recursion purely between these 3 should not produce excess handles.
   return _callWrapper<HermesValue>(functionPtr, runtime, [](uint64_t) {});
 }
 
@@ -1358,8 +1370,10 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Runtime &runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
 
-  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled())
+  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
+    GCScope scope{runtime};
     return _callWrapper<PseudoHandle<>>(jitPtr, runtime, [](uint64_t) {});
+  }
 
   CallResult<HermesValue> result = self->_interpret(runtime);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))

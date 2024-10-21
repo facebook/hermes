@@ -279,6 +279,11 @@ DEFINE_OPCODE_1(GetGlobalObject, Reg8)
 /// Arg1 = NewTarget
 DEFINE_OPCODE_1(GetNewTarget, Reg8)
 
+/// Get the parent of a given object. The parent will either be an object or null.
+/// Arg1 = destination register to write the parent.
+/// Arg2 = the object.
+DEFINE_OPCODE_2(LoadParentNoTraps, Reg8, Reg8)
+
 /// Create a new environment, using the current function's enclosing environment
 /// as the parent.
 /// Arg1 is the destination.
@@ -424,9 +429,8 @@ OPERAND_STRING_ID(DelByIdStrictLong, 3)
 /// Get a property by value. Constants string values should instead use GetById.
 /// Arg1 = Arg2[Arg3]
 DEFINE_OPCODE_3(GetByVal, Reg8, Reg8, Reg8)
-/// Get a property by value, for the special case where the property is a numeric
-/// literal that is a uint8_t integer.
-/// Arg1 = Arg2[Arg3]
+/// Get a property by value, for the special case where the property is a
+/// numeric literal that is a uint8_t integer. Arg1 = Arg2[Arg3]
 DEFINE_OPCODE_3(GetByIndex, Reg8, Reg8, UInt8)
 
 /// Set a property by value. Constant string values should instead use GetById
@@ -622,11 +626,12 @@ OPERAND_FUNCTION_ID(CreateClosure, 3)
 OPERAND_FUNCTION_ID(CreateClosureLongIndex, 3)
 
 /// Allocate an empty, uninitialized object to be used as the `this` parameter
-/// in a `new` expression. Some closures are responsible for making their own `this`,
-/// so in these cases this instruction will simply return undefined.
+/// in a `new` expression. Some closures are responsible for making their own
+/// `this`, so in these cases this instruction will simply return undefined.
 /// Arg1 is the destination register.
 /// Arg2 is the constructor closure that will be invoked.
-/// Arg3 is a cache index used to speed up fetching the new target prototype property.
+/// Arg3 is a cache index used to speed up fetching the new target prototype
+/// property.
 DEFINE_OPCODE_3(CreateThisForNew, Reg8, Reg8, UInt8)
 
 /// Choose the result of a constructor: 'this' or a returned object.
@@ -884,7 +889,8 @@ ASSERT_EQUAL_LAYOUT3(Mul, MulN)
 ASSERT_EQUAL_LAYOUT1(ReifyArgumentsLoose, ReifyArgumentsStrict)
 ASSERT_EQUAL_LAYOUT3(GetArgumentsPropByValLoose, GetArgumentsPropByValStrict)
 
-// CallWithNewTarget and CallWithNewTargetLong must agree on the first 2 parameters.
+// CallWithNewTarget and CallWithNewTargetLong must agree on the first 2
+// parameters.
 ASSERT_EQUAL_LAYOUT2(CallWithNewTarget, CallWithNewTargetLong)
 
 #undef DEFINE_JUMP_1

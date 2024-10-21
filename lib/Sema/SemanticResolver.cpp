@@ -45,7 +45,8 @@ bool SemanticResolver::run(ESTree::ProgramNode *rootNode) {
 
 bool SemanticResolver::runLazy(
     ESTree::FunctionLikeNode *rootNode,
-    sema::FunctionInfo *semInfo) {
+    sema::FunctionInfo *semInfo,
+    bool parentHadSuperBinding) {
   semCtx_.assertGlobalFunctionAndScope();
 
   if (sm_.getErrorCount())
@@ -70,6 +71,10 @@ bool SemanticResolver::runLazy(
     }
   });
 
+  canReferenceSuper_ = rootNode->isMethodDefinition ||
+      (llvh::isa<ESTree::ArrowFunctionExpressionNode>(rootNode) &&
+       parentHadSuperBinding);
+
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{
       *this, rootNode, semInfo, FunctionContext::LazyTag{}};
@@ -85,7 +90,8 @@ bool SemanticResolver::runLazy(
 
 bool SemanticResolver::runInScope(
     ESTree::ProgramNode *rootNode,
-    sema::FunctionInfo *semInfo) {
+    sema::FunctionInfo *semInfo,
+    bool parentHadSuperBinding) {
   llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
       globalScope_, semCtx_.getBindingTableGlobalScope());
 
@@ -96,6 +102,8 @@ bool SemanticResolver::runInScope(
     bindingTable_.activateScope({});
   });
   rootNode->strictness = makeStrictness(semInfo->strict);
+
+  canReferenceSuper_ = parentHadSuperBinding;
 
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{*this, rootNode, semInfo, semInfo->strict, {}};
@@ -180,24 +188,25 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
   }
 }
 
-void SemanticResolver::visit(ESTree::FunctionDeclarationNode *funcDecl) {
+void SemanticResolver::visit(
+    ESTree::FunctionDeclarationNode *funcDecl,
+    ESTree::Node *parent) {
   curScope_->hoistedFunctions.push_back(funcDecl);
   visitFunctionLike(
       funcDecl,
       llvh::cast_or_null<ESTree::IdentifierNode>(funcDecl->_id),
       funcDecl->_body,
-      funcDecl->_params);
+      funcDecl->_params,
+      parent);
 }
 void SemanticResolver::visit(
     ESTree::FunctionExpressionNode *funcExpr,
     ESTree::Node *parent) {
-  visitFunctionExpression(
-      funcExpr,
-      funcExpr->_body,
-      funcExpr->_params,
-      llvh::dyn_cast_or_null<MethodDefinitionNode>(parent));
+  visitFunctionExpression(funcExpr, funcExpr->_body, funcExpr->_params, parent);
 }
-void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
+void SemanticResolver::visit(
+    ESTree::ArrowFunctionExpressionNode *arrowFunc,
+    ESTree::Node *parent) {
   // Convert expression functions to a full-body to simplify IRGen.
   if (compile_ && arrowFunc->_expression) {
     auto *retStmt = new (astContext_) ReturnStatementNode(arrowFunc->_body);
@@ -212,7 +221,8 @@ void SemanticResolver::visit(ESTree::ArrowFunctionExpressionNode *arrowFunc) {
     arrowFunc->_body = blockStmt;
     arrowFunc->_expression = false;
   }
-  visitFunctionLike(arrowFunc, nullptr, arrowFunc->_body, arrowFunc->_params);
+  visitFunctionLike(
+      arrowFunc, nullptr, arrowFunc->_body, arrowFunc->_params, parent);
 
   curFunctionInfo()->containsArrowFunctions = true;
   curFunctionInfo()->containsArrowFunctionsUsingArguments =
@@ -409,6 +419,16 @@ void SemanticResolver::visit(
       sm_.error(
           node->getSourceRange(),
           "'delete' of a variable is not allowed in strict mode");
+    }
+    // Unless we are running under compliance tests, report an error on
+    // `delete super.x`.
+    if (!astContext_.getCodeGenerationSettings().test262) {
+      if (auto *mem = llvh::dyn_cast<MemberExpressionNode>(node->_argument);
+          mem && llvh::isa<SuperNode>(mem->_object)) {
+        sm_.error(
+            node->getSourceRange(),
+            "'delete' of super property is not allowed");
+      }
     }
   }
   visitESTreeChildren(*this, node);
@@ -859,16 +879,29 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
 
 void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
   // If computed property, the key expression needs to be resolved.
-  if (node->_computed)
+  if (node->_computed) {
+    // Computed keys cannot reference super.
+    llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, false};
     visitESTreeNode(*this, node->_key, node);
+  }
 
   // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
     // We visit the initializer expression in the context of a synthesized
     // method that performs the initializations.
+    // Field initializers can always reference super.
+    llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, true};
     FunctionContext funcCtx(
         *this, curClassContext_->getOrCreateFieldInitFunctionInfo());
     visitESTreeNode(*this, node->_value, node);
+  }
+}
+
+void SemanticResolver::visit(ESTree::SuperNode *node, ESTree::Node *parent) {
+  // Error if we try to reference super but there is currently no valid binding
+  // to it.
+  if (llvh::isa<MemberExpressionLikeNode>(parent) && !canReferenceSuper_) {
+    sm_.error(parent->getSourceRange(), "super not allowed here");
   }
 }
 
@@ -1096,20 +1129,26 @@ void SemanticResolver::visit(AsExpressionNode *node) {
 }
 
 /// Process a component declaration by creating a new FunctionContext.
-void SemanticResolver::visit(ComponentDeclarationNode *componentDecl) {
+void SemanticResolver::visit(
+    ComponentDeclarationNode *componentDecl,
+    ESTree::Node *parent) {
   visitFunctionLike(
       componentDecl,
       llvh::cast<ESTree::IdentifierNode>(componentDecl->_id),
       componentDecl->_body,
-      componentDecl->_params);
+      componentDecl->_params,
+      parent);
 }
 
-void SemanticResolver::visit(HookDeclarationNode *hookDecl) {
+void SemanticResolver::visit(
+    HookDeclarationNode *hookDecl,
+    ESTree::Node *parent) {
   visitFunctionLike(
       hookDecl,
       llvh::cast<ESTree::IdentifierNode>(hookDecl->_id),
       hookDecl->_body,
-      hookDecl->_params);
+      hookDecl->_params,
+      parent);
 }
 
 #endif
@@ -1139,29 +1178,36 @@ void SemanticResolver::visitFunctionLike(
     ESTree::IdentifierNode *id,
     ESTree::Node *body,
     ESTree::NodeList &params,
-    ESTree::MethodDefinitionNode *method) {
+    ESTree::Node *parent) {
   FunctionContext newFuncCtx{
       *this,
       node,
       curFunctionInfo(),
       curFunctionInfo()->strict,
       curFunctionInfo()->customDirectives};
-  if (method) {
+  if (auto *method =
+          llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parent)) {
     newFuncCtx.isConstructor = method->_kind == kw_.identConstructor;
     if (newFuncCtx.isConstructor) {
       curClassContext_->hasConstructor = true;
     }
   }
 
-  visitFunctionLikeInFunctionContext(node, id, body, params, method);
+  // Arrow functions should inherit their current super binding. All other
+  // functions can only reference super properties if it was defined as a
+  // method.
+  bool newCanRefSuper = llvh::isa<ArrowFunctionExpressionNode>(node)
+      ? canReferenceSuper_
+      : node->isMethodDefinition;
+  llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, newCanRefSuper};
+  visitFunctionLikeInFunctionContext(node, id, body, params);
 }
 
 void SemanticResolver::visitFunctionLikeInFunctionContext(
     ESTree::FunctionLikeNode *node,
     ESTree::IdentifierNode *id,
     ESTree::Node *body,
-    ESTree::NodeList &params,
-    ESTree::MethodDefinitionNode *method) {
+    ESTree::NodeList &params) {
   if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
     sm_.error(node->getSourceRange(), "async generators are unsupported");
   }
@@ -1368,7 +1414,7 @@ void SemanticResolver::visitFunctionExpression(
     ESTree::FunctionExpressionNode *node,
     ESTree::Node *body,
     ESTree::NodeList &params,
-    ESTree::MethodDefinitionNode *method) {
+    ESTree::Node *parent) {
   if (ESTree::IdentifierNode *ident =
           llvh::dyn_cast_or_null<IdentifierNode>(node->_id)) {
     // If there is a name, declare it.
@@ -1377,10 +1423,10 @@ void SemanticResolver::visitFunctionExpression(
         ident->_name, Decl::Kind::FunctionExprName, curScope_);
     semCtx_.setDeclarationDecl(ident, decl);
     bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
-    visitFunctionLike(node, ident, body, params, method);
+    visitFunctionLike(node, ident, body, params, parent);
   } else {
     // Otherwise, no extra scope needed, just move on.
-    visitFunctionLike(node, nullptr, body, params, method);
+    visitFunctionLike(node, nullptr, body, params, parent);
   }
 }
 

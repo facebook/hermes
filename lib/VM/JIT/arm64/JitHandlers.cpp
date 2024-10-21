@@ -38,6 +38,32 @@ SHLegacyValue _sh_ljs_create_bytecode_closure(
       .getHermesValue();
 }
 
+SHLegacyValue _interpreter_create_generator(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    const SHLegacyValue *env,
+    SHRuntimeModule *shRuntimeModule,
+    uint32_t functionID) {
+  Runtime &runtime = getRuntime(shr);
+  StackFramePtr framePtr{toPHV(frame)};
+  auto *runtimeModule = (RuntimeModule *)shRuntimeModule;
+  CallResult<PseudoHandle<JSGeneratorObject>> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = Interpreter::createGenerator_RJS(
+        runtime,
+        runtimeModule,
+        functionID,
+        env ? Handle<Environment>::vmcast(toPHV(env))
+            : Runtime::makeNullHandle<Environment>(),
+        framePtr.getNativeArgs());
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
 SHLegacyValue _sh_ljs_get_bytecode_string(
     SHRuntime *shr,
     SHRuntimeModule *runtimeModule,
@@ -45,6 +71,24 @@ SHLegacyValue _sh_ljs_get_bytecode_string(
   return HermesValue::encodeStringValue(
       ((RuntimeModule *)runtimeModule)
           ->getStringPrimFromStringIDMayAllocate(stringID));
+}
+
+SHLegacyValue _sh_ljs_get_bytecode_bigint(
+    SHRuntime *shr,
+    SHRuntimeModule *runtimeModule,
+    uint32_t bigintID) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    res = BigIntPrimitive::fromBytes(
+        runtime,
+        ((RuntimeModule *)runtimeModule)->getBigIntBytesFromBigIntId(bigintID));
+  }
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return *res;
 }
 
 SHLegacyValue _interpreter_create_object_from_buffer(
@@ -145,6 +189,25 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right) {
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
   return *result;
+}
+
+#ifdef HERMESVM_PROFILER_BB
+void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex) {
+  Runtime &runtime = getRuntime(shr);
+  CodeBlock *codeBlock = runtime.getCurrentFrame().getCalleeCodeBlock(runtime);
+  runtime.getBasicBlockExecutionInfo().executeBlock(codeBlock, pointIndex);
+}
+#endif
+
+void _sh_throw_invalid_construct(SHRuntime *shr) {
+  Runtime &runtime = getRuntime(shr);
+  (void)runtime.raiseTypeError("Function is not a constructor");
+  _sh_throw_current(shr);
+}
+void _sh_throw_invalid_call(SHRuntime *shr) {
+  Runtime &runtime = getRuntime(shr);
+  (void)runtime.raiseTypeError("Class constructor invoked without new");
+  _sh_throw_current(shr);
 }
 
 } // namespace hermes::vm

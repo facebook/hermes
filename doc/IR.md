@@ -984,6 +984,16 @@ Arguments | %other is array from which elements will be copied, %array is the ar
 Semantics | Copy the elements from %other into the end of %array, increasing its length by the number of elements in %other. If accommodating the additional elements causes a reallocation past the maximum allowable allocation size, throw an exception.
 Effects | May write memory or throw.
 
+### LoadParentNoTraps
+
+LoadParentNoTraps | _
+--- | --- |
+Description | Loads the parent for a legacy, ordinary untyped object. The given object cannot be proxy. Returns `null` or an object.
+Example | %0 = LoadParentNoTraps %object
+Arguments | %object must be of type object.
+Semantics | Read the parent.
+Effects | May read memory.
+
 ### TypedLoadParent
 
 TypedLoadParent | _
@@ -1112,8 +1122,8 @@ NOTE: LazyCompilationData relies on the fact that we don't delete Variables duri
 LazyCompilationData | _
 --- |-----------------------------------------------|
 Description | Data needed for lazy compilation, including the VariableScope chain used to access captured variables.
-Example | LazyCompilationData %capturedThis, %capturedNewTarget, %capturedArguments, %parentVS, %parentParentVS, ...
-Arguments | The captured values are used in case the lazy function may have arrow functions as children which need to capture the values as variables. %parentVS the immediately enclosing VariableScope. The remaining operands are successively the ancestors of %parentVS, which are kept as operands to ensure the VariableScopes aren't deleted across lazy compilation calls.
+Example | LazyCompilationData %capturedThis, %capturedNewTarget, %capturedArguments, %capturedHomeObject, %parentVS, %parentParentVS, ...
+Arguments | The captured values are used in case the lazy function may have arrow functions as children which need to capture the values as variables. In the case of %capturedHomeObject, this is needed even for non-arrow functions. %parentVS the immediately enclosing VariableScope. The remaining operands are successively the ancestors of %parentVS, which are kept as operands to ensure the VariableScopes aren't deleted across lazy compilation calls.
 Semantics | Information needed for lazy compilation. Deleted after use.
 Effects | None
 

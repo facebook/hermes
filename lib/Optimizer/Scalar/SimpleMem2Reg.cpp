@@ -212,22 +212,34 @@ bool eliminateStoreOnlyLocations(BasicBlock *BB) {
   return changed;
 }
 
-/// \returns true if \p ASI is used in a try block, or is used by an
-/// instruction other than LoadStackInst/StoreStackInst (like GetPNamesInst).
+/// \returns true if \p ASI is stored to from multiple try blocks, or is used by
+/// an instruction other than LoadStackInst/StoreStackInst (like GetPNamesInst).
 /// In that case it is not subject to SSA conversion.
 bool isUnsafeStackLocation(
     AllocStackInst *ASI,
-    const llvh::DenseMap<BasicBlock *, size_t> &blockTryDepths) {
+    const llvh::DenseMap<BasicBlock *, TryStartInst *> &enclosingTrys) {
+  // Upon reaching the first store, this is set to either the TryStartInst
+  // immediately enclosing that store, or nullptr if no such TryStartInst
+  // exists. This is used to track whether any subsequent stores are in a
+  // different try block than the first one, which would make this location
+  // "unsafe".
+  llvh::Optional<TryStartInst *> storeTry;
+
   // For all users of the stack allocation:
   for (auto *U : ASI->getUsers()) {
     if (llvh::isa<LoadStackInst>(U))
       continue;
 
-    // If the location is stored to from a try block, it cannot be safely
+    // If the location is stored to from multiple try blocks, it cannot be
     // promoted to SSA, since an exception thrown prior to the store may be
-    // caught in the same function, making the store observable.
+    // caught in the same function, making the store observable. Note that this
+    // is not a problem if all stores are in the same try block, because our IR
+    // invariants would guarantee that no loads can exist in the catch or after
+    // the try block.
     if (llvh::isa<StoreStackInst>(U)) {
-      if (blockTryDepths.count(U->getParent()))
+      if (!storeTry)
+        storeTry = enclosingTrys.lookup(U->getParent());
+      else if (*storeTry != enclosingTrys.lookup(U->getParent()))
         return true;
       continue;
     }
@@ -247,7 +259,8 @@ void collectStackAllocations(
     llvh::SmallVectorImpl<AllocStackInst *> &allocas,
     llvh::SmallVectorImpl<AllocStackInst *> &unsafe) {
   // Collect all of the basic blocks that are enclosed by try's.
-  auto [blockTryDepths, maxTryDepth] = getBlockTryDepths(F);
+  auto enclosingTrys = findEnclosingTrysPerBlock(F).getValueOr(
+      llvh::DenseMap<BasicBlock *, TryStartInst *>{});
 
   // For each instruction in the basic block:
   for (auto &BB : *F) {
@@ -257,7 +270,7 @@ void collectStackAllocations(
         continue;
 
       // Check if the stack location is safe for SSA conversion.
-      if (isUnsafeStackLocation(ASI, blockTryDepths))
+      if (isUnsafeStackLocation(ASI, enclosingTrys))
         unsafe.push_back(ASI);
       else
         allocas.push_back(ASI);

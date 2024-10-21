@@ -36,7 +36,7 @@
 // DragonFlyBSD, and OpenBSD have deprecated <malloc.h> for
 // <stdlib.h> instead. Unix.h includes this for us already.
 #if defined(HAVE_MALLOC_H) && !defined(__DragonFly__) && \
-    !defined(__OpenBSD__) 
+    !defined(__OpenBSD__)
 #include <malloc.h>
 #endif
 #if defined(HAVE_MALLCTL)
@@ -50,6 +50,9 @@
 #endif
 #ifdef HAVE_TERMIOS_H
 #  include <termios.h>
+#endif
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -133,7 +136,7 @@ void Process::PreventCoreFiles() {
   setrlimit(RLIMIT_CORE, &rlim);
 #endif
 
-#if defined(HAVE_MACH_MACH_H) && !defined(__GNU__)
+#if defined(HAVE_MACH_MACH_H) && !defined(__GNU__) && !(defined(TARGET_OS_TV) && TARGET_OS_TV)
   // Disable crash reporting on Mac OS X 10.0-10.4
 
   // get information about the original set of exception ports for the task

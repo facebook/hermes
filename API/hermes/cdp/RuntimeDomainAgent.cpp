@@ -593,6 +593,12 @@ void RuntimeDomainAgent::getProperties(
           resp.internalProperties = std::move(internalProps);
         }
       }
+    } else {
+      sendResponseToClient(m::makeErrorResponse(
+          req.id,
+          m::ErrorCode::ServerError,
+          "Could not find an object with the given ID"));
+      return;
     }
   } catch (const jsi::JSError &error) {
     resp.exceptionDetails =
@@ -995,6 +1001,28 @@ void RuntimeDomainAgent::consoleAPICalled(
   }
 
   sendNotificationToClient(note);
+}
+
+void RuntimeDomainAgent::releaseObject(
+    const m::runtime::ReleaseObjectRequest &req) {
+  // Allow this to be used when domain is not enabled to match V8 behavior
+
+  if (objTable_->releaseObject(req.objectId)) {
+    sendResponseToClient(m::makeOkResponse(req.id));
+  } else {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id,
+        m::ErrorCode::ServerError,
+        "Could not find an object with the given ID"));
+  }
+}
+
+void RuntimeDomainAgent::releaseObjectGroup(
+    const m::runtime::ReleaseObjectGroupRequest &req) {
+  // Allow this to be used when domain is not enabled to match V8 behavior.
+
+  objTable_->releaseObjectGroup(req.objectGroup);
+  sendResponseToClient(m::makeOkResponse(req.id));
 }
 
 RuntimeDomainAgent::Helpers::Helpers(jsi::Runtime &runtime)

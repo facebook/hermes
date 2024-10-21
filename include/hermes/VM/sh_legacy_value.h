@@ -286,6 +286,47 @@ static inline void *_sh_ljs_get_native_pointer(SHLegacyValue v) {
   return (void *)(uintptr_t)v.raw;
 }
 
+/// Flags associated with an object.
+typedef struct SHObjectFlags {
+  /// New properties cannot be added.
+  uint32_t noExtend : 1;
+
+  /// \c Object.seal() has been invoked on this object, marking all properties
+  /// as non-configurable. When \c Sealed is set, \c NoExtend is always set too.
+  uint32_t sealed : 1;
+
+  /// \c Object.freeze() has been invoked on this object, marking all properties
+  /// as non-configurable and non-writable. When \c Frozen is set, \c Sealed and
+  /// must \c NoExtend are always set too.
+  uint32_t frozen : 1;
+
+  /// This object has indexed storage. This flag will not change at runtime, it
+  /// is set at construction and its value never changes. It is not a state.
+  uint32_t indexedStorage : 1;
+
+  /// This flag is set to true when \c IndexedStorage is true and
+  /// \c class->hasIndexLikeProperties are false. It allows our fast paths to do
+  /// a simple bit check.
+  uint32_t fastIndexProperties : 1;
+
+  /// This flag indicates this is a special object whose properties are
+  /// managed by C++ code, and not via the standard property storage
+  /// mechanisms.
+  uint32_t hostObject : 1;
+
+  /// this is lazily created object that must be initialized before it can be
+  /// used. Note that lazy objects must have no properties defined on them,
+  uint32_t lazyObject : 1;
+
+  /// This flag indicates this is a proxy exotic Object
+  uint32_t proxyObject : 1;
+
+  /// A non-zero object id value, assigned lazily. It is 0 before it is
+  /// assigned. If an object started out as lazy, the objectID is the lazy
+  /// object index used to identify when it gets initialized.
+  uint32_t objectID : 24;
+} SHObjectFlags;
+
 #ifdef __cplusplus
 }
 #endif

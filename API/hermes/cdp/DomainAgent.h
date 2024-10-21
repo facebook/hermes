@@ -14,7 +14,7 @@
 #include <hermes/cdp/MessageTypes.h>
 #include <hermes/cdp/RemoteObjectsTable.h>
 
-#if defined(__clang__) && (!defined(SWIG)) && \
+#if defined(__clang__) && (!defined(SWIG)) && defined(_LIBCPP_VERSION) && \
     defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS)
 #include <hermes/ThreadSafetyAnalysis.h>
 #else

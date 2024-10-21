@@ -193,6 +193,10 @@ static std::pair<bool, size_t> canBeInlined(Function *F) {
         case ValueKind::CreateArgumentsLooseInstKind:
         case ValueKind::CreateArgumentsStrictInstKind:
 
+        // Don't inline try/catch because we can't JIT it and it forces register
+        // allocation to deopt in the native backend.
+        case ValueKind::TryStartInstKind:
+
         // CreateGenerator cannot be inlined because it implicitly accesses the
         // current closure and arguments.
         case ValueKind::CreateGeneratorInstKind:
@@ -511,6 +515,17 @@ bool Inlining::runOnModule(Module *M) {
   auto *nonFunctionErrorLS =
       builder.getLiteralString("Trying to call a non-function");
 
+  // Find functions with try/catch blocks, to avoid inlining into them.
+  llvh::DenseSet<Function *> functionsWithTryCatch{};
+  for (Function *FC : functionOrder) {
+    for (auto &BB : *FC) {
+      if (llvh::isa<TryStartInst>(BB.getTerminator())) {
+        functionsWithTryCatch.insert(FC);
+        break;
+      }
+    }
+  }
+
   for (Function *FC : functionOrder) {
     LLVM_DEBUG(
         llvh::dbgs() << "Visiting function '" << FC->getInternalNameStr()
@@ -542,6 +557,16 @@ bool Inlining::runOnModule(Module *M) {
         LLVM_DEBUG(
             llvh::dbgs() << "Cannot inline function '"
                          << FC->getInternalNameStr() << "' into itself\n");
+        continue;
+      }
+
+      // Don't inline into a function that has try/catch.
+      // Avoids JIT/native backend deopt.
+      if (functionsWithTryCatch.count(intoFunction)) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Cannot inline function '"
+                         << FC->getInternalNameStr()
+                         << "': contains try/catch\n");
         continue;
       }
 

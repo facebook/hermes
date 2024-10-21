@@ -29,6 +29,10 @@ void runDebugOptimizationPasses(Module &M);
 
 /// Run optimization passes corresponding to -O0
 void runNoOptimizationPasses(Module &M);
+
+/// Run optimization passes for the native backend.
+void runNativeBackendOptimizationPasses(Module &M);
+
 } // namespace hermes
 
 #endif // HERMES_OPTIMIZER_PASSMANAGER_PIPELINE_H

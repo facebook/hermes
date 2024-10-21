@@ -66,6 +66,12 @@ class SemanticResolver
   /// The global scope.
   BindingTableScopePtrTy globalScope_;
 
+  /// Whether this function can currently make super references. When entering a
+  /// function that was defined using method syntax, a super binding exists.
+  /// Arrow functions inherit this flag. The only other super bindings exist in
+  /// class field initializer values and static blocks.
+  bool canReferenceSuper_{false};
+
   /// True if we are preparing the AST to be compiled by Hermes, including
   /// erroring on features which we parse but don't compile and transforming
   /// the AST. False if we just want to validate the AST.
@@ -114,15 +120,25 @@ class SemanticResolver
   /// \param semInfo the original FunctionInfo for the root node,
   ///   which was created on the first pass and will be populated with real
   ///   scopes now.
+  /// \param parentHadSuperBinding is true if the parent of \p rootNode could
+  /// make a reference to super.
   /// \return false on error.
-  bool runLazy(ESTree::FunctionLikeNode *rootNode, sema::FunctionInfo *semInfo);
+  bool runLazy(
+      ESTree::FunctionLikeNode *rootNode,
+      sema::FunctionInfo *semInfo,
+      bool parentHadSuperBinding);
 
   /// Run semantic resolution for a program as if it was executed within an
   /// existing function scope and store the result in \c semCtx_.
   /// \param rootNode the top-level program node to run resolution on.
   /// \param semInfo the original FunctionInfo for the parent of the local eval.
+  /// \param parentHadSuperBinding the context in which rootNode was declared in
+  /// was allowed to make property references to `super`.
   /// \return false on error.
-  bool runInScope(ESTree::ProgramNode *rootNode, sema::FunctionInfo *semInfo);
+  bool runInScope(
+      ESTree::ProgramNode *rootNode,
+      sema::FunctionInfo *semInfo,
+      bool parentHadSuperBinding);
 
   /// Validate and resolve a CommonJS function expression. It will use the
   /// existing global function and global scope, which must have been created
@@ -158,9 +174,11 @@ class SemanticResolver
 
   void visit(ESTree::ProgramNode *node);
 
-  void visit(ESTree::FunctionDeclarationNode *funcDecl);
+  void visit(ESTree::FunctionDeclarationNode *funcDecl, ESTree::Node *parent);
   void visit(ESTree::FunctionExpressionNode *funcExpr, ESTree::Node *parent);
-  void visit(ESTree::ArrowFunctionExpressionNode *arrowFunc);
+  void visit(
+      ESTree::ArrowFunctionExpressionNode *arrowFunc,
+      ESTree::Node *parent);
 
   void visit(ESTree::IdentifierNode *identifier, ESTree::Node *parent);
 
@@ -213,6 +231,8 @@ class SemanticResolver
   void visit(ESTree::ClassPropertyNode *node);
   void visit(ESTree::MethodDefinitionNode *node, ESTree::Node *parent);
 
+  void visit(ESTree::SuperNode *node, ESTree::Node *parent);
+
   void visit(ESTree::CallExpressionNode *node);
 
   void visit(ESTree::SpreadElementNode *node, ESTree::Node *parent);
@@ -236,8 +256,10 @@ class SemanticResolver
   void visit(ESTree::TypeParameterInstantiationNode *node);
   void visit(ESTree::TypeCastExpressionNode *node);
   void visit(ESTree::AsExpressionNode *node);
-  void visit(ESTree::ComponentDeclarationNode *componentDecl);
-  void visit(ESTree::HookDeclarationNode *hookDecl);
+  void visit(
+      ESTree::ComponentDeclarationNode *componentDecl,
+      ESTree::Node *parent);
+  void visit(ESTree::HookDeclarationNode *hookDecl, ESTree::Node *parent);
 #endif
 #if HERMES_PARSE_TS
   void visit(ESTree::TSTypeAliasDeclarationNode *node);
@@ -289,21 +311,20 @@ class SemanticResolver
       ESTree::IdentifierNode *id,
       ESTree::Node *body,
       ESTree::NodeList &params,
-      ESTree::MethodDefinitionNode *method = nullptr);
+      ESTree::Node *parent);
   /// Visit a function-like node with the FunctionContext already created.
   /// Used by visitFunctionLike and by runLazy.
   void visitFunctionLikeInFunctionContext(
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
       ESTree::Node *body,
-      ESTree::NodeList &params,
-      ESTree::MethodDefinitionNode *method = nullptr);
+      ESTree::NodeList &params);
 
   void visitFunctionExpression(
       ESTree::FunctionExpressionNode *node,
       ESTree::Node *body,
       ESTree::NodeList &params,
-      ESTree::MethodDefinitionNode *method);
+      ESTree::Node *parent);
 
   /// Resolve an identifier to a declaration and record the resolution.
   /// Emit a warning for undeclared identifiers in strict mode.

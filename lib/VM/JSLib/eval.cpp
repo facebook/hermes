@@ -32,6 +32,7 @@ CallResult<HermesValue> evalInEnvironment(
     Handle<Environment> environment,
     const CodeBlock *codeBlock,
     Handle<> thisArg,
+    Handle<> newTarget,
     bool singleFunction) {
 #ifdef HERMESVM_LEAN
   return runtime.raiseEvalUnsupported(utf8code);
@@ -119,7 +120,8 @@ CallResult<HermesValue> evalInEnvironment(
       RuntimeModuleFlags{},
       sourceURL,
       environment,
-      thisArg);
+      thisArg,
+      newTarget);
 #endif
 }
 
@@ -146,6 +148,7 @@ CallResult<HermesValue> directEval(
       Runtime::makeNullHandle<Environment>(),
       codeBlock,
       runtime.getGlobal(),
+      Runtime::getUndefinedValue(),
       singleFunction);
 }
 

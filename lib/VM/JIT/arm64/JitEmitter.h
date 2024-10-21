@@ -325,6 +325,9 @@ class Emitter {
     /// The name of the slow path function.
     const char *slowCallName;
 
+    /// Bytecode IP of the instruction that this is a slow path for.
+    const inst::Inst *emittingIP;
+
     /// Callback to actually emit.
     void (*emit)(Emitter &em, SlowPath &sl);
   };
@@ -356,6 +359,13 @@ class Emitter {
   /// in x22.
   asmjit::Label returnLabel_{};
 
+  /// Label to branch to when a function is invoked in a way that conflicts with
+  /// its ProhibitInvoke flags. The label will only be initialized if the
+  /// function restricts how it can be called (e.g. arrow functions and
+  /// generators), in which case the check at entry on the invocation type will
+  /// branch to this label if the invocation is invalid.
+  asmjit::Label throwInvalidInvoke_{};
+
   /// The bytecode codeblock.
   CodeBlock *const codeBlock_;
 
@@ -375,7 +385,11 @@ class Emitter {
  public:
   asmjit::CodeHolder code{};
   a64::Assembler a{};
+  /// The IP of the instruction being emitted.
+  const inst::Inst *emittingIP{nullptr};
 
+  /// Create an Emitter, but do not emit any actual code.
+  /// Use \c enter to set up the stack frame before emitting the actual code.
   explicit Emitter(
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
@@ -383,8 +397,6 @@ class Emitter {
       PropertyCacheEntry *readPropertyCache,
       PropertyCacheEntry *writePropertyCache,
       uint32_t numFrameRegs,
-      uint32_t numCount,
-      uint32_t npCount,
       const std::function<void(std::string &&message)> &longjmpError);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
@@ -396,6 +408,13 @@ class Emitter {
   void assertPostInstructionInvariants();
 #endif
 
+  /// Allocate global registers and set up the stack frame.
+  /// Must be called before emitting any real code.
+  /// \param numCount the first numCount registers are "number" registers.
+  /// \param npCount the first npCount registers after the number registers are
+  ///   non-pointer registers.
+  void enter(uint32_t numCount, uint32_t npCount);
+
   /// Log a comment.
   /// Annotated with printf-style format.
   void comment(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
@@ -406,11 +425,17 @@ class Emitter {
   /// Abort execution.
   void unreachable();
 
+  /// Emit profiling information if profiling is enabled.
+  void profilePoint(uint16_t point);
+
   /// Call a JS function.
   void call(FR frRes, FR frCallee, uint32_t argc);
   void callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args);
   void callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc);
   void callWithNewTarget(FR frRes, FR frCallee, FR frNewTarget, uint32_t argc);
+  /// Note that this technically allows different arguments at runtime because
+  /// argc is a register.
+  void callWithNewTargetLong(FR frRes, FR frCallee, FR frNewTarget, FR frArgc);
 
   /// Get a builtin closure.
   void getBuiltinClosure(FR frRes, uint32_t builtinIndex);
@@ -423,6 +448,8 @@ class Emitter {
   void loadConstBits64(FR frRes, uint64_t val, FRType type, const char *name);
   void
   loadConstString(FR frRes, RuntimeModule *runtimeModule, uint32_t stringID);
+  void
+  loadConstBigInt(FR frRes, RuntimeModule *runtimeModule, uint32_t bigIntID);
   void toNumber(FR frRes, FR frInput);
   void toNumeric(FR frRes, FR frInput);
   void toInt32(FR frRes, FR frInput);
@@ -741,6 +768,11 @@ class Emitter {
       FR frEnv,
       RuntimeModule *runtimeModule,
       uint32_t functionID);
+  void createGenerator(
+      FR frRes,
+      FR frEnv,
+      RuntimeModule *runtimeModule,
+      uint32_t functionID);
 
 #define DECL_GET_ARGUMENTS_PROP_BY_VAL(methodName, commentStr, shFn) \
   void methodName(FR frRes, FR frIndex, FR frLazyReg) {              \
@@ -773,8 +805,13 @@ class Emitter {
   void coerceThisNS(FR frRes, FR frThis);
   void getNewTarget(FR frRes);
 
+  void iteratorBegin(FR frRes, FR frSource);
+  void iteratorNext(FR frRes, FR frIteratorOrIdx, FR frSourceOrNext);
+  void iteratorClose(FR frIteratorOrIdx, bool ignoreExceptions);
+
   void debugger();
   void throwInst(FR frInput);
+  void throwIfEmpty(FR frRes, FR frInput);
 
   void createRegExp(
       FR frRes,
@@ -782,6 +819,7 @@ class Emitter {
       SHSymbolID flagsID,
       uint32_t regexpID);
 
+  void loadParentNoTraps(FR frRes, FR frObj);
   void typedLoadParent(FR frRes, FR frObj);
   void typedStoreParent(FR frStoredValue, FR frObj);
 
@@ -862,12 +900,38 @@ class Emitter {
     comment("    ; alloc: x%u (temp)", res.indexInClass());
     return res;
   }
+  /// Free \p hwReg, which may be any HWReg.
   void freeReg(HWReg hwReg);
+  /// If \p hwReg is a valid temp associated with an FR, sync it to the global
+  /// register if the FR has one, else store it in the frame. Then free the
+  /// temp, making it available to be used again.
+  /// Else, do nothing.
   void syncAndFreeTempReg(HWReg hwReg);
   HWReg useReg(HWReg hwReg);
 
-  void spillTempReg(HWReg toSpill);
-  void syncToMem(FR fr);
+  /// Ensure that an HWReg currently containing an FR is available to be used
+  /// again by "spilling" its value to its canonical location (either the frame
+  /// or a global reg). Conceptually it then frees the HWReg and immediately
+  /// allocates it again, so now it is as if it was just allocated.
+  /// \pre \p toSpill must have a corresponding FR.
+  void _spillTempForFR(HWReg toSpill);
+
+  /// Ensure that \p fr is stored in the frame so that we can take its address
+  /// (e.g. when passing the address of \p fr as a param to a function).
+  ///
+  /// Store any temporary or global register associated with \p fr to the frame
+  /// in memory.
+  void syncToFrame(FR fr);
+
+  /// Ensure all FRs have their values stored in either global registers or the
+  /// frame, not just temporary registers.
+  /// Must run before calls because temporary registers will be clobbered by the
+  /// call.
+  ///
+  /// Sync all temporary registers associated with FRs to either the global
+  /// register or the frame.
+  /// \param exceptFR If specified, do not sync this FR (used for output FRs
+  /// that we aren't going to load from before storing to them anyway).
   void syncAllFRTempExcept(FR exceptFR);
 
   /// Free all temporary registers associated with FRs except \p exceptFR.
@@ -931,8 +995,21 @@ class Emitter {
   /// \param name is an optional name for the thunk.
   asmjit::Label registerThunk(void *fn, const char *name = nullptr);
 
-  /// Register a call as a thunk and emit a call to it.
+  /// Register a call as a thunk and emit a call to it. Note that most calls
+  /// into runtime functions should use \c callThunkWithSavedIP below.
   void callThunk(void *fn, const char *name);
+
+  /// Register a call as a thunk and emit a call to it, saving the bytecode IP
+  /// to Runtime::currentIP before making the call. This should be used for all
+  /// calls that may observe the IP, such as calls that may throw exceptions, or
+  /// perform allocations.
+  void callThunkWithSavedIP(void *fn, const char *name);
+
+  /// Call a function without registering it as a thunk. This should be used for
+  /// functions that will only have a single call site in the emitted function,
+  /// and therefore do not benefit from a thunk. Note that like \c callThunk,
+  /// this does not save the IP.
+  void callWithoutThunk(void *fn, const char *name);
 
   void emitSlowPaths();
   void emitThunks();

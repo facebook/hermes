@@ -3062,8 +3062,8 @@ extern "C" SHLegacyValue _sh_ljs_iterator_begin_rjs(
     }
 
     // Fall back to the general case.
-    CallResult<CheckedIteratorRecord> iterRecord =
-        getCheckedIterator(runtime, srcHandle);
+    CallResult<UncheckedIteratorRecord> iterRecord =
+        getIterator(runtime, srcHandle);
     if (LLVM_UNLIKELY(iterRecord == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     *src = iterRecord->nextMethod.getHermesValue();

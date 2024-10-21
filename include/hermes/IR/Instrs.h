@@ -4029,7 +4029,6 @@ class CreateThisInst : public Instruction {
 
   explicit CreateThisInst(Value *closure, Value *newTarget)
       : Instruction(ValueKind::CreateThisInstKind) {
-    setType(*getInherentTypeImpl());
     pushOperand(closure);
     pushOperand(newTarget);
   }
@@ -4050,9 +4049,6 @@ class CreateThisInst : public Instruction {
   }
   static bool isTyped() {
     return false;
-  }
-  static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createObject();
   }
 
   SideEffect getSideEffectImpl() const {
@@ -4832,6 +4828,55 @@ class TypedLoadParentInst : public Instruction {
   }
 };
 
+class LoadParentNoTrapsInst : public Instruction {
+  LoadParentNoTrapsInst(const LoadParentNoTrapsInst &) = delete;
+  void operator=(const LoadParentNoTrapsInst &) = delete;
+
+ public:
+  enum { ObjectIdx };
+
+  explicit LoadParentNoTrapsInst(Value *object)
+      : Instruction(ValueKind::LoadParentNoTrapsInstKind) {
+    assert(
+        object->getType().isObjectType() &&
+        "object input must be of type object");
+    setType(*getInherentTypeImpl());
+    pushOperand(object);
+  }
+  explicit LoadParentNoTrapsInst(
+      const LoadParentNoTrapsInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    // The parent of an object is either another object or null.
+    return Type::unionTy(Type::createObject(), Type::createNull());
+  }
+
+  Value *getObject() {
+    return getOperand(ObjectIdx);
+  }
+
+  const Value *getObject() const {
+    return getOperand(ObjectIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setReadHeap().setIdempotent();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LoadParentNoTrapsInstKind;
+  }
+};
+
 class TypedStoreParentInst : public Instruction {
   TypedStoreParentInst(const TypedStoreParentInst &) = delete;
   void operator=(const TypedStoreParentInst &) = delete;
@@ -5450,6 +5495,7 @@ class LazyCompilationDataInst : public Instruction {
     CapturedThisIdx,
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
+    HomeObjectIdx,
     ParentVarScopeIdx
   };
 
@@ -5458,6 +5504,7 @@ class LazyCompilationDataInst : public Instruction {
       Value *capturedThis,
       Value *capturedNewTarget,
       Value *capturedArguments,
+      Value *capturedHomeObject,
       VariableScope *parentVarScope)
       : Instruction(ValueKind::LazyCompilationDataInstKind), data_(data) {
     // Store the captured variables as EmptySentinel if they were null.
@@ -5472,6 +5519,7 @@ class LazyCompilationDataInst : public Instruction {
     pushOperand(capturedThis);
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
+    pushOperand(capturedHomeObject);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: LazyCompilationData relies on the fact that we don't delete
@@ -5516,6 +5564,13 @@ class LazyCompilationDataInst : public Instruction {
   Variable *getCapturedArguments() {
     return llvh::dyn_cast<Variable>(getOperand(CapturedArgumentsIdx));
   }
+  /// \return the captured \c homeObject Variable, nullptr if there is none.
+  Variable *getHomeObject() {
+    return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
+  }
+  const Variable *getHomeObject() const {
+    return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
+  }
 
   static bool hasOutput() {
     return false;
@@ -5558,6 +5613,7 @@ class EvalCompilationDataInst : public Instruction {
     CapturedThisIdx,
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
+    HomeObjectIdx,
     FuncVarScopeIdx
   };
 
@@ -5566,6 +5622,7 @@ class EvalCompilationDataInst : public Instruction {
       Value *capturedThis,
       Value *capturedNewTarget,
       Value *capturedArguments,
+      Value *homeObject,
       VariableScope *funcVarScope)
       : Instruction(ValueKind::EvalCompilationDataInstKind), data_(data) {
     assert(
@@ -5578,6 +5635,7 @@ class EvalCompilationDataInst : public Instruction {
     pushOperand(capturedThis);
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
+    pushOperand(homeObject);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: EvalCompilationData relies on the fact that we don't delete
@@ -5621,6 +5679,10 @@ class EvalCompilationDataInst : public Instruction {
   /// \return the captured \c arguments Variable, nullptr if there is none.
   Variable *getCapturedArguments() {
     return llvh::dyn_cast<Variable>(getOperand(CapturedArgumentsIdx));
+  }
+  /// \return the captured \c homeObject Variable, nullptr if there is none.
+  Variable *getHomeObject() {
+    return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
   }
 
   static bool hasOutput() {

@@ -101,7 +101,8 @@ Value *ESTreeIRGen::genFunctionExpression(
     ESTree::FunctionExpressionNode *FE,
     Identifier nameHint,
     ESTree::Node *superClassNode,
-    Function::DefinitionKind functionKind) {
+    Function::DefinitionKind functionKind,
+    Variable *homeObject) {
   if (FE->_async && FE->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
         FE->getSourceRange(), Twine("async generators are unsupported"));
@@ -116,13 +117,22 @@ Value *ESTreeIRGen::genFunctionExpression(
       id ? Identifier::getFromPointer(id->_name) : nameHint;
 
   auto *parentScope = curFunction()->curScope->getVariableScope();
+  auto capturedStateForAsync = curFunction()->capturedState;
+  // Update the captured state of the async function to use the homeObject we
+  // were given.
+  capturedStateForAsync.homeObject = homeObject;
   Function *newFunc = FE->_async
       ? genAsyncFunction(
-            originalNameIden, FE, parentScope, curFunction()->capturedState)
+            originalNameIden, FE, parentScope, capturedStateForAsync)
       : FE->_generator
-      ? genGeneratorFunction(originalNameIden, FE, parentScope)
+      ? genGeneratorFunction(originalNameIden, FE, parentScope, homeObject)
       : genBasicFunction(
-            originalNameIden, FE, parentScope, superClassNode, functionKind);
+            originalNameIden,
+            FE,
+            parentScope,
+            superClassNode,
+            functionKind,
+            homeObject);
 
   Value *closure =
       Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
@@ -228,7 +238,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     ESTree::Node *superClassNode,
-    Function::DefinitionKind functionKind) {
+    Function::DefinitionKind functionKind,
+    Variable *homeObject) {
   assert(functionNode && "Function AST cannot be null");
   assert(
       functionKind != Function::DefinitionKind::GeneratorInnerArrow &&
@@ -269,8 +280,17 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
   }
 
   if (body->isLazyFunctionBody) {
+    // This function could be a method, in which case we need to remember what
+    // the homeObject was going to be.
+    CapturedState lazyState{};
+    lazyState.homeObject = homeObject;
     setupLazyFunction(
-        newFunction, functionNode, body, parentScope, ExtraKey::Normal);
+        newFunction,
+        functionNode,
+        body,
+        parentScope,
+        ExtraKey::Normal,
+        lazyState);
     return newFunction;
   }
 
@@ -282,11 +302,13 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
                       isGeneratorInnerFunction,
                       superClassNode,
                       body,
-                      parentScope] {
+                      parentScope,
+                      homeObject] {
     FunctionContext newFunctionContext{
         this, newFunction, functionNode->getSemInfo()};
     newFunctionContext.superClassNode_ = superClassNode;
     newFunctionContext.typedClassContext = typedClassContext;
+    newFunctionContext.capturedState.homeObject = homeObject;
 
     if (isGeneratorInnerFunction) {
       // StartGeneratorInst
@@ -378,7 +400,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
 Function *ESTreeIRGen::genGeneratorFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
-    VariableScope *parentScope) {
+    VariableScope *parentScope,
+    Variable *homeObject) {
   assert(functionNode && "Function AST cannot be null");
 
   if (Value *compiled =
@@ -402,8 +425,17 @@ Function *ESTreeIRGen::genGeneratorFunction(
 
   auto *body = ESTree::getBlockStatement(functionNode);
   if (body->isLazyFunctionBody) {
+    // This function could be a method, in which case we need to remember what
+    // the homeObject was going to be.
+    CapturedState lazyState{};
+    lazyState.homeObject = homeObject;
     setupLazyFunction(
-        outerFn, functionNode, body, parentScope, ExtraKey::GeneratorOuter);
+        outerFn,
+        functionNode,
+        body,
+        parentScope,
+        ExtraKey::GeneratorOuter,
+        lazyState);
     return outerFn;
   }
 
@@ -412,7 +444,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
                       functionNode,
                       originalName,
                       capturedState = curFunction()->capturedState,
-                      parentScope]() {
+                      parentScope,
+                      homeObject]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
 
     // We pass InitES5CaptureState::No to emitFunctionPrologue because generator
@@ -457,12 +490,15 @@ Function *ESTreeIRGen::genGeneratorFunction(
           capturedState,
           Function::DefinitionKind::GeneratorInnerArrow);
     } else {
+      // Here we pass the homeObject because we want the actual user code to be
+      // able to use the super that the outer generator had access to.
       innerFn = genBasicFunction(
           innerName,
           functionNode,
           parentScope,
           /* superClassNode */ nullptr,
-          Function::DefinitionKind::GeneratorInner);
+          Function::DefinitionKind::GeneratorInner,
+          homeObject);
     }
 
     // Generator functions do not create their own scope, so use the parent's
@@ -527,7 +563,12 @@ Function *ESTreeIRGen::genAsyncFunction(
           capturedState);
     } else {
       setupLazyFunction(
-          asyncFn, functionNode, body, parentScope, ExtraKey::AsyncOuter);
+          asyncFn,
+          functionNode,
+          body,
+          parentScope,
+          ExtraKey::AsyncOuter,
+          capturedState);
     }
     return asyncFn;
   }
@@ -565,7 +606,8 @@ Function *ESTreeIRGen::genAsyncFunction(
     auto *gen = genGeneratorFunction(
         genAnonymousLabelName(originalName.isValid() ? originalName.str() : ""),
         functionNode,
-        curFunction()->curScope->getVariableScope());
+        curFunction()->curScope->getVariableScope(),
+        capturedState.homeObject);
 
     auto *genClosure =
         Builder.createCreateFunctionInst(curFunction()->curScope, gen);
@@ -1175,6 +1217,7 @@ void ESTreeIRGen::setupLazyFunction(
       capturedState.thisVal,
       capturedState.newTarget,
       capturedState.arguments,
+      capturedState.homeObject,
       parentVarScope);
   Builder.createUnreachableInst();
 
@@ -1234,12 +1277,17 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
     Builder.setInsertionPoint(&*entry.begin());
 
     EvalCompilationData data{curFunction()->getSemInfo()};
-
+    // Only persist `this` and `new.target` if we are saving eval data for an
+    // arrow function. Note that the home object should always be persisted,
+    // since elsewhere in IRGen we always look into the captured state to find
+    // the home object (e.g. for arrow and non-arrow)
+    bool isArrow = F->getDefinitionKind() == Function::DefinitionKind::ES6Arrow;
     auto *evalData = Builder.createEvalCompilationDataInst(
         std::move(data),
+        isArrow ? curFunction()->capturedState.thisVal : nullptr,
+        isArrow ? curFunction()->capturedState.newTarget : nullptr,
         nullptr,
-        nullptr,
-        nullptr,
+        curFunction()->capturedState.homeObject,
         curFunction()->curScope->getVariableScope());
     // This is never emitted, it has no location.
     evalData->setLocation({});
