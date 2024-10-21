@@ -31,7 +31,7 @@ OptValue<size_t> CardTable::findNextCardWithStatus(
     size_t fromIndex,
     size_t endIndex) const {
   for (size_t idx = fromIndex; idx < endIndex; idx++)
-    if (cards_[idx].load(std::memory_order_relaxed) == status)
+    if (cards()[idx].load(std::memory_order_relaxed) == status)
       return idx;
 
   return llvh::None;
@@ -66,7 +66,7 @@ void CardTable::cleanOrDirtyRange(
     size_t to,
     CardStatus cleanOrDirty) {
   for (size_t index = from; index < to; index++) {
-    cards_[index].store(cleanOrDirty, std::memory_order_relaxed);
+    cards()[index].store(cleanOrDirty, std::memory_order_relaxed);
   }
 }
 
@@ -87,7 +87,7 @@ void CardTable::updateBoundaries(
       "Precondition: must have crossed boundary.");
   // The object may be large, and may cross multiple cards, but first
   // handle the first card.
-  boundaries_[boundary->index()] =
+  boundaries()[boundary->index()] =
       (boundary->address() - start) >> LogHeapAlign;
   boundary->bump();
 
@@ -100,7 +100,7 @@ void CardTable::updateBoundaries(
   unsigned currentIndexDelta = 1;
   unsigned numWithCurrentExp = 0;
   while (boundary->address() < end) {
-    boundaries_[boundary->index()] = encodeExp(currentExp);
+    boundaries()[boundary->index()] = encodeExp(currentExp);
     numWithCurrentExp++;
     if (numWithCurrentExp == currentIndexDelta) {
       numWithCurrentExp = 0;
@@ -114,14 +114,14 @@ void CardTable::updateBoundaries(
 }
 
 GCCell *CardTable::firstObjForCard(unsigned index) const {
-  int8_t val = boundaries_[index];
+  int8_t val = boundaries()[index];
 
   // If val is negative, it means skip backwards some number of cards.
   // In general, for an object crossing 2^N cards, a query for one of
   // those cards will examine at most N entries in the table.
   while (val < 0) {
     index -= 1 << decodeExp(val);
-    val = boundaries_[index];
+    val = boundaries()[index];
   }
 
   char *boundary = const_cast<char *>(indexToAddress(index));
@@ -141,12 +141,12 @@ protectBoundaryTableWork(void *table, size_t sz, oscompat::ProtectMode mode) {
 
 void CardTable::protectBoundaryTable() {
   protectBoundaryTableWork(
-      &boundaries_[0], getEndIndex(), oscompat::ProtectMode::None);
+      boundaries(), getEndIndex(), oscompat::ProtectMode::None);
 }
 
 void CardTable::unprotectBoundaryTable() {
   protectBoundaryTableWork(
-      &boundaries_[0], getEndIndex(), oscompat::ProtectMode::ReadWrite);
+      boundaries(), getEndIndex(), oscompat::ProtectMode::ReadWrite);
 }
 #endif // HERMES_EXTRA_DEBUG
 
