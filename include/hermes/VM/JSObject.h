@@ -463,7 +463,7 @@ class JSObject : public GCCell {
   /// cycle checking.
   static void
   unsafeSetParentInternal(JSObject *self, Runtime &runtime, JSObject *parent) {
-    self->parent_.set(runtime, parent, runtime.getHeap());
+    self->parent_.set(runtime, parent, runtime.getHeap(), self);
   }
 
   /// Return the value of an internal property slot. Use getDirectSlotValue if
@@ -1640,7 +1640,7 @@ inline ExecutionStatus JSObject::allocatePropStorage(
     return ExecutionStatus::EXCEPTION;
 
   selfHandle->propStorage_.setNonNull(
-      runtime, vmcast<PropStorage>(*res), runtime.getHeap());
+      runtime, vmcast<PropStorage>(*res), runtime.getHeap(), *selfHandle);
   return ExecutionStatus::RETURNED;
 }
 

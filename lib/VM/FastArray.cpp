@@ -104,7 +104,7 @@ CallResult<HermesValue> FastArray::create(Runtime &runtime, size_t capacity) {
     return ExecutionStatus::EXCEPTION;
 
   lv.self->indexedStorage_.setNonNull(
-      runtime, vmcast<ArrayStorageSmall>(*arrRes), runtime.getHeap());
+      runtime, vmcast<ArrayStorageSmall>(*arrRes), runtime.getHeap(), *lv.self);
 
   auto shv = SmallHermesValue::encodeNumberValue(0, runtime);
   lv.self->setLength(runtime, shv);
@@ -122,7 +122,7 @@ FastArray::pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
-  self->indexedStorage_.setNonNull(runtime, *storage, runtime.getHeap());
+  self->indexedStorage_.setNonNull(runtime, *storage, runtime.getHeap(), *self);
   auto newSz = SmallHermesValue::encodeNumberValue(storage->size(), runtime);
   self->setLength(runtime, newSz);
   return ExecutionStatus::RETURNED;
@@ -141,7 +141,7 @@ ExecutionStatus FastArray::appendSlow(
           ArrayStorageSmall::append(storage, runtime, otherStorage) ==
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  self->indexedStorage_.setNonNull(runtime, *storage, runtime.getHeap());
+  self->indexedStorage_.setNonNull(runtime, *storage, runtime.getHeap(), *self);
   auto newSz = SmallHermesValue::encodeNumberValue(storage->size(), runtime);
   self->setLength(runtime, newSz);
   return ExecutionStatus::RETURNED;
