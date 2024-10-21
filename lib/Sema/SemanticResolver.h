@@ -462,10 +462,6 @@ class FunctionContext {
   /// Just a tag for readability when invoking the special constructor.
   struct ExistingGlobalScopeTag {};
 
-  /// Identifiers for function declarations that were promoted to the current
-  /// function scope
-  llvh::SmallDenseSet<ESTree::Node *> promotedFunctionIds{};
-
   /// Create a function context for the existing global scope.
   explicit FunctionContext(
       SemanticResolver &resolver,
@@ -499,14 +495,6 @@ class FunctionContext {
   /// words not a real function.
   bool isGlobalScope() const {
     return this == resolver_.globalFunctionContext_;
-  }
-
-  void markIdentifierAsPromoted(ESTree::Node* identifier) {
-    promotedFunctionIds.insert(identifier);
-  }
-
-  bool isIdentifierPromoted(ESTree::Node* identifier) {
-    return promotedFunctionIds.find(identifier) != promotedFunctionIds.end();
   }
 
   /// \return the optional function name, or nullptr.

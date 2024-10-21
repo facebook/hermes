@@ -1674,7 +1674,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
   Decl *decl = nullptr;
 
   // Whether to reuse the decl (above) for a new binding when it's not nullptr.
-  bool reuseDeclForNewBinding = false;
+  bool createNewDeclAndBinding = false;
 
   // Handle re-declarations, ignoring ambient properties.
   if (prevName.isValid() &&
@@ -1766,9 +1766,10 @@ void SemanticResolver::validateAndDeclareIdentifier(
       if (sameScope) {
         decl = prevName.decl;
       } else if (functionContext()->promotedFuncDecls.count(ident->_name)) {
-        // We've already promoted this function, so add a new binding
-        // and point it to the original Decl.
-        reuseDeclForNewBinding = true;
+        // and point it to a new decl so that scoped functions are still
+        // resolved to their local declaration.
+        // Addresses https://github.com/facebook/hermes/issues/1455
+        createNewDeclAndBinding = true;
         decl = prevName.decl;
       } else {
         decl = nullptr;
@@ -1783,7 +1784,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
     }
   }
 
-  if (functionContext()->isIdentifierPromoted(ident)) {
+  if (createNewDeclAndBinding) {
     decl = semCtx_.newDeclInScope(ident->_name, kind, curScope_);
     bindingTable_.put(ident->_name, Binding{decl, ident});
 
@@ -1805,8 +1806,6 @@ void SemanticResolver::validateAndDeclareIdentifier(
       decl = semCtx_.newGlobal(ident->_name, kind);
     else
       decl = semCtx_.newDeclInScope(ident->_name, kind, curScope_);
-    bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
-  } else if (reuseDeclForNewBinding) {
     bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
   }
 
