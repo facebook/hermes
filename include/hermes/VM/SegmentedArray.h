@@ -161,6 +161,8 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
     using difference_type = ptrdiff_t;
     using pointer = GCHVType *;
     using reference = GCHVType &;
+    // Dereference a value
+    using cell_value_pair = std::pair<reference, GCCell *>;
 
     /// The SegmentedArray which owns this iterator. This iterator should never
     /// be compared against an iterator with a different owner. This is used to
@@ -238,6 +240,24 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
       }
     }
 
+    /// Return the value and the owning cell of that value (either owner_ or the
+    /// extra Segment allocated for the current index_).
+    /// Note: this is a temporary workaround to pass the correct owning object
+    /// pointer to write barrier. Once we support large allocation, we could
+    /// get rid of this (and probably the entire iterator here).
+    cell_value_pair get_cell_value() {
+      assert(
+          index_ < owner_->size(base_) &&
+          "Trying to read from an index outside the size");
+      // Almost all arrays fit entirely in the inline storage.
+      if (LLVM_LIKELY(index_ < kValueToSegmentThreshold)) {
+        return {owner_->inlineStorage()[index_], owner_};
+      } else {
+        auto *segment = owner_->segmentAt(base_, toSegment(index_));
+        return {segment->at(toInterior(index_)), segment};
+      }
+    }
+
     pointer operator->() {
       return &**this;
     }
@@ -288,7 +308,25 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   /// Sets the element located at \p index to \p val.
   template <Inline inl = Inline::No>
   void set(Runtime &runtime, TotalIndex index, HVType val) {
-    atRef<inl>(runtime, index).set(val, runtime.getHeap());
+    assert(index < size(runtime) && "Out-of-bound access");
+    if constexpr (inl == Inline::Yes) {
+      assert(
+          index < kValueToSegmentThreshold &&
+          "Using the inline storage accessor when the index is larger than the "
+          "inline storage");
+      inlineStorage()[index].set(val, runtime.getHeap(), this);
+    }
+    // The caller may not set inl to Inline::Yes when the index is actually in
+    // inline storage.
+    if (index < kValueToSegmentThreshold) {
+      inlineStorage()[index].set(val, runtime.getHeap(), this);
+    } else {
+      auto segmentNumber = toSegment(index);
+      auto *segment = segmentAt(runtime, segmentNumber);
+      auto &elm = segment->at(toInterior(index));
+      // elm lives in segment, which is not the same cell as SegmentedArrayBase.
+      elm.set(val, runtime.getHeap(), segment);
+    }
   }
   template <Inline inl = Inline::No>
   void setNonPtr(Runtime &runtime, TotalIndex index, HVType val) {

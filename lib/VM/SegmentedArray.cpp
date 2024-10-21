@@ -265,7 +265,7 @@ void SegmentedArrayBase<HVType>::allocateSegment(
       "Allocating into a non-empty segment");
   PseudoHandle<Segment> c = Segment::create(runtime);
   self->segmentAtPossiblyUnallocated(segment)->set(
-      HVType::encodeObjectValue(c.get(), runtime), runtime.getHeap());
+      HVType::encodeObjectValue(c.get(), runtime), runtime.getHeap(), *self);
 }
 
 template <typename HVType>
@@ -348,13 +348,15 @@ void SegmentedArrayBase<HVType>::growLeftWithinCapacity(
       self->begin(runtime),
       self->end(runtime) - amount,
       self->end(runtime),
-      runtime.getHeap());
+      runtime.getHeap(),
+      self.get());
   // Fill the beginning with empty values.
   GCHVType::fill(
       self->begin(runtime),
       self->begin(runtime) + amount,
       HVType::encodeEmptyValue(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      self.get());
 }
 
 template <typename HVType>
