@@ -96,4 +96,10 @@ void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex);
 [[noreturn]] void _sh_throw_invalid_construct(SHRuntime *shr);
 [[noreturn]] void _sh_throw_invalid_call(SHRuntime *shr);
 
+/// Call the closure stored in the outgoing registers of the current frame with
+/// the given \p argCount. The caller is responsible for setting up the callee
+/// closure and new.target registers.
+SHLegacyValue
+_jit_dispatch_call(SHRuntime *, SHLegacyValue *frame, uint32_t argCount);
+
 } // namespace hermes::vm

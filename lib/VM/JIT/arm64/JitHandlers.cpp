@@ -210,6 +210,61 @@ void _sh_throw_invalid_call(SHRuntime *shr) {
   _sh_throw_current(shr);
 }
 
+SHLegacyValue
+_jit_dispatch_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
+  Runtime &runtime = getRuntime(shr);
+
+  // TODO: Move this call setup and the fast path into the emitted JIT code.
+  StackFramePtr newFrame(runtime.getStackPointer());
+  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
+  newFrame.getSavedIPRef() =
+      HermesValue::encodeNativePointer(runtime.getCurrentIP());
+  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
+  newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
+
+  auto callTarget = newFrame.getCalleeClosureHandleUnsafe();
+  if (vmisa<JSFunction>(*callTarget)) {
+    JSFunction *jsFunc = vmcast<JSFunction>(*callTarget);
+    if (auto *fnPtr = jsFunc->getCodeBlock()->getJITCompiled())
+      return fnPtr(&runtime);
+    CallResult<HermesValue> result = jsFunc->_interpret(runtime);
+    if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(getSHRuntime(runtime));
+
+    return result.getValue();
+  }
+
+  if (vmisa<NativeJSFunction>(*callTarget)) {
+    return NativeJSFunction::_legacyCall(
+        getSHRuntime(runtime), vmcast<NativeJSFunction>(*callTarget));
+  }
+
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    if (vmisa<NativeFunction>(*callTarget)) {
+      auto *native = vmcast<NativeFunction>(*callTarget);
+      res = NativeFunction::_nativeCall(native, runtime);
+    } else if (vmisa<BoundFunction>(*callTarget)) {
+      auto *bound = vmcast<BoundFunction>(*callTarget);
+      res = BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
+    } else if (vmisa<Callable>(*callTarget)) {
+      auto callable = Handle<Callable>::vmcast(callTarget);
+      res = callable->call(callable, runtime);
+    } else {
+      res = runtime.raiseTypeErrorForValue(
+          Handle<>(callTarget), " is not a function");
+    }
+  }
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(getSHRuntime(runtime));
+  }
+
+  return res->getHermesValue();
+}
+
 } // namespace hermes::vm
 
 #endif // HERMESVM_JIT
