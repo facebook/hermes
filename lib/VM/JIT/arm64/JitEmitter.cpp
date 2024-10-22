@@ -3310,7 +3310,6 @@ void Emitter::emitROData() {
 void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   comment("// Call r%u, r%u, %u", frRes.index(), frCallee.index(), argc);
   uint32_t nRegs = frameRegs_.size();
-  syncAllFRTempExcept(FR());
 
   FR calleeFrameArg{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
 
@@ -3349,6 +3348,7 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   }
 #endif
 
+  syncAllFRTempExcept(FR());
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
