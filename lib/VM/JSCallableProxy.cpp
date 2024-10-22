@@ -64,8 +64,8 @@ void JSCallableProxy::setTargetAndHandler(
     Runtime &runtime,
     Handle<JSObject> target,
     Handle<JSObject> handler) {
-  slots_.target.set(runtime, target.get(), runtime.getHeap());
-  slots_.handler.set(runtime, handler.get(), runtime.getHeap());
+  slots_.target.set(runtime, target.get(), runtime.getHeap(), this);
+  slots_.handler.set(runtime, handler.get(), runtime.getHeap(), this);
 }
 
 CallResult<HermesValue>
