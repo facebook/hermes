@@ -31,8 +31,13 @@ inline PinnedHermesValue &PinnedHermesValue::operator=(PseudoHandle<T> &&hv) {
 
 template <typename HVType>
 template <typename NeedsBarriers>
-GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc) : HVType{hv} {
+GCHermesValueBase<HVType>::GCHermesValueBase(
+    HVType hv,
+    GC &gc,
+    const GCCell *cell)
+    : HVType{hv} {
   assert(!hv.isPointer() || hv.getPointer());
+  (void)cell;
   if (NeedsBarriers::value)
     gc.constructorWriteBarrier(this, hv);
 }
@@ -49,13 +54,15 @@ GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t)
 
 template <typename HVType>
 template <typename NeedsBarriers>
-inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
+inline void
+GCHermesValueBase<HVType>::set(HVType hv, GC &gc, const GCCell *owningObj) {
   if (hv.isPointer()) {
     HERMES_SLOW_ASSERT(
         gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
         "Setting an invalid pointer into a GCHermesValue");
   }
   assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
+  (void)owningObj;
   if (NeedsBarriers::value)
     gc.writeBarrier(this, hv);
   HVType::setNoBarrier(hv);
@@ -81,10 +88,11 @@ inline void GCHermesValueBase<HVType>::fill(
     InputIt start,
     InputIt end,
     HVType fill,
-    GC &gc) {
+    GC &gc,
+    const GCCell *owningObj) {
   if (fill.isPointer()) {
     for (auto cur = start; cur != end; ++cur) {
-      cur->set(fill, gc);
+      cur->set(fill, gc, owningObj);
     }
   } else {
     for (auto cur = start; cur != end; ++cur) {
@@ -100,11 +108,12 @@ inline void GCHermesValueBase<HVType>::uninitialized_fill(
     InputIt start,
     InputIt end,
     HVType fill,
-    GC &gc) {
+    GC &gc,
+    const GCCell *cell) {
   if (fill.isPointer()) {
     for (auto cur = start; cur != end; ++cur) {
       // Use the constructor write barrier. Assume it needs barriers.
-      new (&*cur) GCHermesValueBase<HVType>(fill, gc);
+      new (&*cur) GCHermesValueBase<HVType>(fill, gc, cell);
     }
   } else {
     for (auto cur = start; cur != end; ++cur) {
@@ -121,14 +130,13 @@ inline OutputIt GCHermesValueBase<HVType>::copy(
     InputIt last,
     OutputIt result,
     GC &gc) {
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
   static_assert(
       !std::is_same<InputIt, GCHermesValueBase *>::value ||
           !std::is_same<OutputIt, GCHermesValueBase *>::value,
       "Pointer arguments must invoke pointer overload.");
-#endif
   for (; first != last; ++first, (void)++result) {
-    result->set(*first, gc);
+    auto [hv, owningObj] = first.get_cell_value();
+    result->set(*first, gc, owningObj);
   }
   return result;
 }
@@ -139,42 +147,50 @@ inline OutputIt GCHermesValueBase<HVType>::uninitialized_copy(
     InputIt first,
     InputIt last,
     OutputIt result,
-    GC &gc) {
+    GC &gc,
+    const GCCell *cell) {
   static_assert(
       !std::is_same<InputIt, GCHermesValueBase *>::value ||
           !std::is_same<OutputIt, GCHermesValueBase *>::value,
       "Pointer arguments must invoke pointer overload.");
   for (; first != last; ++first, (void)++result) {
-    new (&*result) GCHermesValueBase<HVType>(*first, gc);
+    new (&*result) GCHermesValueBase<HVType>(*first, gc, cell);
   }
   return result;
 }
 
-// Specializations using memmove can't be used in Hades, because the concurrent
-// write barrier needs strict control over how assignments are done to HV fields
-// which need to be atomically updated.
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
 /// Specialization for raw pointers to do a ranged write barrier.
 template <typename HVType>
 inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::copy(
     GCHermesValueBase<HVType> *first,
     GCHermesValueBase<HVType> *last,
     GCHermesValueBase<HVType> *result,
-    GC &gc) {
+    GC &gc,
+    const GCCell *owningObj) {
+// Specializations using memmove can't be used in Hades, because the concurrent
+// write barrier needs strict control over how assignments are done to HV fields
+// which need to be atomically updated.
+#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
+  gc.writeBarrierRange(result, last - first);
   // We must use "raw" function such as memmove here, rather than a
   // function like std::copy (or copy_backward) that respects
   // constructors and operator=.  For HermesValue, those require the
   // contents not to contain pointers.  The range write barrier
   // before the copies ensure that sufficient barriers are
   // performed.
-  gc.writeBarrierRange(result, last - first);
+  (void)owningObj;
   std::memmove(
       reinterpret_cast<void *>(result),
       first,
       (last - first) * sizeof(GCHermesValueBase<HVType>));
   return result + (last - first);
-}
+#else
+  for (; first != last; ++first, (void)++result) {
+    result->set(*first, gc, owningObj);
+  }
+  return result;
 #endif
+}
 
 /// Specialization for raw pointers to do a ranged write barrier.
 template <typename HVType>
@@ -182,7 +198,8 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
     GCHermesValueBase<HVType> *first,
     GCHermesValueBase<HVType> *last,
     GCHermesValueBase<HVType> *result,
-    GC &gc) {
+    GC &gc,
+    const GCCell *owningObj) {
 #ifndef NDEBUG
   uintptr_t fromFirst = reinterpret_cast<uintptr_t>(first),
             fromLast = reinterpret_cast<uintptr_t>(last);
@@ -194,7 +211,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
       "Uninitialized range cannot overlap with an initialized one.");
 #endif
 
-  gc.constructorWriteBarrierRange(result, last - first);
+  gc.constructorWriteBarrierRange(owningObj, result, last - first);
   // memcpy is fine for an uninitialized copy.
   std::memcpy(
       reinterpret_cast<void *>(result), first, (last - first) * sizeof(HVType));
@@ -207,9 +224,10 @@ inline OutputIt GCHermesValueBase<HVType>::copy_backward(
     InputIt first,
     InputIt last,
     OutputIt result,
-    GC &gc) {
+    GC &gc,
+    const GCCell *owningObj) {
   while (first != last) {
-    (--result)->set(*--last, gc);
+    (--result)->set(*--last, gc, owningObj);
   }
   return result;
 }
