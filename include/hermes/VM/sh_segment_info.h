@@ -12,6 +12,9 @@
 /// contain segment-specific information.
 typedef struct SHSegmentInfo {
   unsigned index;
+  /// The storage size for this segment. We practically don't support segment
+  /// with size larger than UINT32_MAX.
+  unsigned segmentSize;
 } SHSegmentInfo;
 
 #endif
