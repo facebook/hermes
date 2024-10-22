@@ -669,10 +669,16 @@ void Emitter::callWithoutThunk(void *fn, const char *name) {
 }
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
-  // FIXME: check range of frameReg * 8
   auto ofs =
       (frameReg.index() + StackFrameLayout::FirstLocal) * sizeof(SHLegacyValue);
-  a.add(dst, xFrame, ofs);
+  // If the offset fits as an immediate, just emit an add.
+  if (a64::Utils::isAddSubImm(ofs)) {
+    a.add(dst, xFrame, ofs);
+    return;
+  }
+  // We cannot add the offset as an immediate, so move it in first.
+  a.mov(dst, ofs);
+  a.add(dst, dst, xFrame);
 }
 
 template <bool use>
