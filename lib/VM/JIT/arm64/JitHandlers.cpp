@@ -223,7 +223,7 @@ _jit_dispatch_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
   newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
 
-  auto callTarget = newFrame.getCalleeClosureHandleUnsafe();
+  auto *callTarget = &newFrame.getCalleeClosureOrCBRef();
   if (vmisa<JSFunction>(*callTarget)) {
     JSFunction *jsFunc = vmcast<JSFunction>(*callTarget);
     if (auto *fnPtr = jsFunc->getCodeBlock()->getJITCompiled())
