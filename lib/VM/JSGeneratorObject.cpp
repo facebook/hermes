@@ -43,7 +43,7 @@ CallResult<PseudoHandle<JSGeneratorObject>> JSGeneratorObject::create(
       parentHandle,
       runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSGeneratorObject>()));
-  cell->innerFunction_.set(runtime, *innerFunction, runtime.getHeap());
+  cell->innerFunction_.set(runtime, *innerFunction, runtime.getHeap(), cell);
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
