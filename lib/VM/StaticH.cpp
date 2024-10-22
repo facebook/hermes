@@ -441,17 +441,26 @@ extern "C" SHLegacyValue _sh_ljs_call_builtin(
     SHLegacyValue *frame,
     uint32_t argCount,
     uint32_t builtinMethodID) {
-  Runtime &runtime = getRuntime(shr);
-  StackFramePtr newFrame(runtime.getStackPointer());
-  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
-  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
-  newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
-  newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(
-      runtime.getBuiltinCallable(builtinMethodID));
-  return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
+  auto res = [&]() {
+    Runtime &runtime = getRuntime(shr);
+    StackFramePtr newFrame(runtime.getStackPointer());
+    newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
+    newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
+    newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
+
+    auto callee =
+        vmcast<NativeFunction>(runtime.getBuiltinCallable(builtinMethodID));
+    newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(callee);
+
+    GCScopeMarkerRAII marker{runtime};
+    return NativeFunction::_nativeCall(callee, runtime);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return res->getHermesValue();
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_builtin_closure(
