@@ -604,7 +604,7 @@ jobs:
         git checkout 62626e083bd506124aac6c799464d76c2c42851b
     - name: Run test262 with Intl
       run: |-
-        cmake -S hermes -B build -DHERMES_ENABLE_INTL=ON
+        cmake -S hermes -B build -DHERMES_ENABLE_INTL=ON -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2
         cmake --build ./build -j 4
         # Not running Hermes test until more of Intl is built out:
         # toLocaleLowerCase and toLocaleUpperCase are the two main ones.
