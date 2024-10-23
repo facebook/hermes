@@ -752,8 +752,8 @@ jobs:
           name: Run test262 with Intl
           command: |
             cmake -S hermes -B build -DHERMES_ENABLE_INTL=ON
-            cmake --build ./build
+            cmake --build ./build -j 4
             # Not running Hermes test until more of Intl is built out:
             # toLocaleLowerCase and toLocaleUpperCase are the two main ones.
-            # cmake --build ./build --target check-hermes
+            # cmake --build ./build --target check-hermes -j 4
             python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
