@@ -313,8 +313,10 @@ Emitter::Emitter(
       codeBlock_(codeBlock) {
   if (dumpJitCode_ & DumpJitCode::Code)
     logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
-  if (logger_)
+  if (logger_) {
     logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
+    logger_->addFlags(asmjit::FormatFlags::kHexImms);
+  }
 
   errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(
       new OurErrorHandler(expectedError_, longjmpError));
