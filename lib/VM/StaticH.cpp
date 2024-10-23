@@ -1273,8 +1273,8 @@ static HermesValue delById(
       // If an exception is thrown, likely we are trying to convert
       // undefined/null to an object. Passing over the name of the property
       // so that we could emit more meaningful error messages.
-      // CAPTURE_IP(amendPropAccessErrorMsgWithPropName(
-      //     runtime, Handle<>(&O2REG(DelById)), "delete", ID(idVal)));
+      amendPropAccessErrorMsgWithPropName(
+          runtime, Handle<>(target), "delete", key);
       _sh_throw_current(getSHRuntime(runtime));
     }
     {
