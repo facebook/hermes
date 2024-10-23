@@ -751,7 +751,7 @@ jobs:
       - run:
           name: Run test262 with Intl
           command: |
-            cmake -S hermes -B build -DHERMES_ENABLE_INTL=ON -DCMAKE_CXX_FLAGS=-O2  -DCMAKE_C_FLAGS=-O2
+            cmake -S hermes -B build -DHERMES_ENABLE_INTL=ON -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2
             cmake --build ./build -j 4
             # Not running Hermes test until more of Intl is built out:
             # toLocaleLowerCase and toLocaleUpperCase are the two main ones.
