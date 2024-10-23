@@ -1092,8 +1092,6 @@ SKIP_LIST = [
     "test262/test/intl402/BigInt/prototype/toLocaleString/returns-same-results-as-NumberFormat.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/throws-same-exceptions-as-NumberFormat.js",
     "test262/test/intl402/Collator/subclassing.js",
-    "test262/test/intl402/Collator/unicode-ext-value-collation.js",
-    "test262/test/intl402/Collator/ignore-invalid-unicode-ext-values.js",
     "test262/test/intl402/Collator/proto-from-ctor-realm.js",
     "test262/test/intl402/Collator/prototype/resolvedOptions/order.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Lithuanian.js",
@@ -1946,6 +1944,23 @@ SKIP_LIST = [
     ### Failing Flow tests end ###
 ]
 
+# Tests to skip on specific platforms. Keys are sys.platform values.
+PLATFORM_SKIP_LISTS = {
+    "linux": [
+        # Intl features that are not yet supported on Linux.
+        "test262/test/built-ins/String/prototype/toLocaleLowerCase",
+        "test262/test/built-ins/String/prototype/toLocaleUpperCase",
+        "test262/test/intl402/Number/prototype/toLocaleString",
+        "test262/test/intl402/NumberFormat",
+        "test262/test/intl402/String/prototype/toLocaleLowerCase",
+        "test262/test/intl402/String/prototype/toLocaleUpperCase",
+    ],
+    "darwin": [
+        # Intl implementation issues on Apple.
+        "test262/test/intl402/Collator/ignore-invalid-unicode-ext-values.js",
+        "test262/test/intl402/Collator/unicode-ext-value-collation.js",
+    ]
+}
 
 # Tests that we want to skip only when testing lazy compilation.
 LAZY_SKIP_LIST = [

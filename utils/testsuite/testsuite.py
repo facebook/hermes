@@ -29,6 +29,7 @@ try:
         PERMANENT_UNSUPPORTED_FEATURES,
         SKIP_LIST,
         UNSUPPORTED_FEATURES,
+        PLATFORM_SKIP_LISTS,
     )
 except ImportError:
     import esprima_test_runner as esprima
@@ -43,6 +44,7 @@ except ImportError:
         PERMANENT_UNSUPPORTED_FEATURES,
         SKIP_LIST,
         UNSUPPORTED_FEATURES,
+        PLATFORM_SKIP_LISTS,
     )
 
 ## This is a simple script that runs the hermes compiler on
@@ -599,6 +601,9 @@ def runTest(
     baseFileName = path.basename(filename)
     suite = getSuite(filename)
     skiplisted = fileInSkiplist(filename, SKIP_LIST + PERMANENT_SKIP_LIST)
+
+    if sys.platform in PLATFORM_SKIP_LISTS:
+        skiplisted = skiplisted or fileInSkiplist(filename, PLATFORM_SKIP_LISTS[sys.platform])
 
     if lazy:
         skiplisted = skiplisted or fileInSkiplist(filename, LAZY_SKIP_LIST)
