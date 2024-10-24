@@ -587,20 +587,100 @@ void Emitter::frameSetup(
          em.a.b(sl.contLab);
        }});
 
+  comment("// xFrame");
+  a.ldr(xFrame, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
+
   // Function<bench>(3 params, 13 registers):
   //  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 13);
   comment("// _sh_enter");
-  a.mov(a64::x0, xRuntime);
-  a.mov(a64::x1, a64::sp);
-  // _sh_enter expects the number of registers to include any extra registers at
-  // the start of the frame.
-  a.mov(a64::w2, numFrameRegs + hbc::StackFrameLayout::FirstLocal);
-  // Like _sh_check_native_stack_overflow, we do not save the IP here so that
-  // thrown exceptions appear in the caller.
-  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-      *this, SHLegacyValue * (*)(SHRuntime *, SHLocals *, uint32_t), _sh_enter);
-  comment("// xFrame");
-  a.mov(xFrame, a64::x0);
+  asmjit::Label registerOverflowLab = newSlowPathLabel();
+
+  // Compute the remaining available stack space:
+  // runtime.registerStackEnd_ - runtime.stackPointer_
+  a.ldr(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, registerStackEnd_)));
+  a.sub(a64::x0, a64::x0, xFrame);
+  // Check if we need more registers than remain.
+  size_t totalRegsToAlloc = numFrameRegs + hbc::StackFrameLayout::FirstLocal;
+  size_t regAllocSize = totalRegsToAlloc * sizeof(SHLegacyValue);
+  // NOTE: cmp has the same immediate field type as add/sub, so we can use the
+  // same utility function.
+  if (a64::Utils::isAddSubImm(regAllocSize)) {
+    a.cmp(a64::x0, regAllocSize);
+    a.b_lo(registerOverflowLab);
+    a.add(a64::x0, xFrame, regAllocSize);
+  } else {
+    a.mov(a64::x1, regAllocSize);
+    a.cmp(a64::x0, a64::x1);
+    a.b_lo(registerOverflowLab);
+    a.add(a64::x0, xFrame, a64::x1);
+  }
+
+  // Advance the register stack.
+  a.str(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
+  a.str(xFrame, a64::Mem(xRuntime, offsetof(Runtime, currentFrame_)));
+
+  // Fill it with undefined.
+  a.mov(a64::x0, _sh_ljs_undefined().raw);
+  a.dup(a64::v0.d2(), a64::x0);
+  // Initialize the pointer to the current set of registers.
+  a.mov(a64::x0, xFrame);
+  size_t regsToFill = totalRegsToAlloc;
+  // Fill the registers with undefined in groups of 4, then 2, then 1.
+  // If there are more than 32 registers, start with a loop.
+  if (regsToFill > 32) {
+    // We will fill 4 registers on each iteration.
+    unsigned loopBytes = llvh::alignDown(regsToFill, 4) * sizeof(SHLegacyValue);
+    // Initialize the loop limit in x1.
+    if (a64::Utils::isAddSubImm(loopBytes)) {
+      a.add(a64::x1, a64::x0, loopBytes);
+    } else {
+      a.mov(a64::x1, loopBytes);
+      a.add(a64::x1, a64::x0, a64::x1);
+    }
+    asmjit::Label loop = a.newLabel();
+    a.bind(loop);
+    // Loop until we reach the limit.
+    a.stp(a64::v0, a64::v0, a64::Mem(a64::x0).post(32));
+    a.cmp(a64::x0, a64::x1);
+    a.b_lo(loop);
+
+    regsToFill %= 4;
+  } else {
+    // If the number of registers is small, just fill them directly.
+    while (regsToFill >= 4) {
+      a.stp(a64::v0, a64::v0, a64::Mem(a64::x0).post(32));
+      regsToFill -= 4;
+    }
+  }
+  // Fill any excess registers.
+  if (regsToFill >= 2) {
+    a.str(a64::v0, a64::Mem(a64::x0).post(16));
+    regsToFill -= 2;
+  }
+  if (regsToFill > 0) {
+    assert(regsToFill == 1 && "All regs must be filled");
+    a.str(a64::d0, a64::Mem(a64::x0));
+  }
+
+  // locals->prev = runtime.shLocals;
+  a.ldr(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, shLocals)));
+  a.str(a64::x0, a64::Mem(a64::sp, offsetof(SHLocals, prev)));
+  // runtime.shLocals = locals;
+  a.mov(a64::x0, a64::sp);
+  a.str(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, shLocals)));
+
+  // Create the slow path for throwing a register stack overflow.
+  slowPaths_.push_back(
+      {.slowPathLab = registerOverflowLab,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment("// Slow path: _sh_throw_register_stack_overflow");
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         // Do not save the IP because we have not yet set up the stack frame
+         // for this function. The exception should appear in the caller.
+         EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+             em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
+       }});
 
   //  locals.head.count = 0;
   comment("// locals.head.count = 0");

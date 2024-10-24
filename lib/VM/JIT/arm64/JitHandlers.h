@@ -96,6 +96,9 @@ void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex);
 [[noreturn]] void _sh_throw_invalid_construct(SHRuntime *shr);
 [[noreturn]] void _sh_throw_invalid_call(SHRuntime *shr);
 
+/// Throw a register stack overflow exception.
+[[noreturn]] void _sh_throw_register_stack_overflow(SHRuntime *shr);
+
 /// Call the closure stored in the outgoing registers of the current frame with
 /// the given \p argCount. The caller is responsible for setting up the callee
 /// closure and new.target registers.
