@@ -359,13 +359,6 @@ class Emitter {
   /// in x22.
   asmjit::Label returnLabel_{};
 
-  /// Label to branch to when a function is invoked in a way that conflicts with
-  /// its ProhibitInvoke flags. The label will only be initialized if the
-  /// function restricts how it can be called (e.g. arrow functions and
-  /// generators), in which case the check at entry on the invocation type will
-  /// branch to this label if the invocation is invalid.
-  asmjit::Label throwInvalidInvoke_{};
-
   /// The bytecode codeblock.
   CodeBlock *const codeBlock_;
 

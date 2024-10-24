@@ -475,32 +475,6 @@ void Emitter::frameSetup(
       vecSaveCount <= kVecSaved.second - kVecSaved.first + 1 &&
       "Too many callee saved Vec regs");
 
-  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
-  if (prohibitInvoke != ProhibitInvoke::None) {
-    // Load the new frame pointer. We leave x0 untouched since it contains the
-    // runtime parameter, which is used below and in throwInvalidInvoke_.
-    a.ldr(a64::x1, a64::Mem(a64::x0, offsetof(Runtime, stackPointer_)));
-    // Load new.target.
-    a.ldur(
-        a64::x1,
-        a64::Mem(
-            a64::x1, StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
-    // Compare new.target against undefined.
-    emit_sh_ljs_is_undefined(a, a64::x1, a64::x1);
-
-    if (prohibitInvoke == ProhibitInvoke::Call) {
-      // If regular calls are prohibited, then we jump to throwInvalidInvoke if
-      // new.target is undefined.
-      throwInvalidInvoke_ = a.newNamedLabel("throwInvalidCall");
-      a.b_eq(throwInvalidInvoke_);
-    } else if (prohibitInvoke == ProhibitInvoke::Construct) {
-      // If construct calls are prohibited, then we jump to throwInvalidInvoke
-      // if new.target is not undefined.
-      throwInvalidInvoke_ = a.newNamedLabel("throwInvalidConstruct");
-      a.b_ne(throwInvalidInvoke_);
-    }
-  }
-
   static_assert(
       kGPSaved.first == 22, "Callee saved GP regs must start from x22");
   // Always save x22.
@@ -588,6 +562,58 @@ void Emitter::frameSetup(
 
   comment("// xFrame");
   a.ldr(xFrame, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
+
+  // If the function has a prohibitInvoke flag, we need to check if it has been
+  // called correctly.
+  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
+  if (prohibitInvoke != ProhibitInvoke::None) {
+    // Load new.target.
+    a.ldur(
+        a64::x0,
+        a64::Mem(
+            xFrame, StackFrameLayout::NewTarget * (int)sizeof(SHLegacyValue)));
+    // Compare new.target against undefined.
+    emit_sh_ljs_is_undefined(a, a64::x0, a64::x0);
+
+    void (*slowCall)(SHRuntime *);
+    const char *slowCallName;
+    asmjit::Label throwInvalidInvokeLab;
+    if (prohibitInvoke == ProhibitInvoke::Call) {
+      // If regular calls are prohibited, then we jump to throwInvalidInvoke if
+      // new.target is undefined.
+      throwInvalidInvokeLab = a.newNamedLabel("throwInvalidCall");
+      a.b_eq(throwInvalidInvokeLab);
+
+      slowCall = _sh_throw_invalid_call;
+      slowCallName = "_sh_throw_invalid_call";
+    } else {
+      assert(
+          prohibitInvoke == ProhibitInvoke::Construct &&
+          "Unknown prohibitInvoke");
+      // If construct calls are prohibited, then we jump to throwInvalidInvoke
+      // if new.target is not undefined.
+      throwInvalidInvokeLab = a.newNamedLabel("throwInvalidConstruct");
+      a.b_ne(throwInvalidInvokeLab);
+
+      slowCall = _sh_throw_invalid_construct;
+      slowCallName = "_sh_throw_invalid_construct";
+    }
+
+    slowPaths_.push_back(
+        {.slowPathLab = throwInvalidInvokeLab,
+         .slowCall = (void *)slowCall,
+         .slowCallName = slowCallName,
+         .emit = [](Emitter &em, SlowPath &sl) {
+           em.comment("// Slow path: %s", sl.slowCallName);
+           em.a.bind(sl.slowPathLab);
+           em.a.mov(a64::x0, xRuntime);
+           // We don't register a thunk since there will only be a single call
+           // to this. Note that we also don't save the IP, because this is
+           // being thrown in the caller's context.
+           em.callWithoutThunk(sl.slowCall, sl.slowCallName);
+           // Function does not return.
+         }});
+  }
 
   // NOTE: Unlike _sh_enter, we do not push an SHLocals object.
   //  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 13);
@@ -3419,21 +3445,6 @@ void Emitter::emitSlowPaths() {
     slowPaths_.pop_front();
   }
   emittingIP = nullptr;
-
-  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
-  if (prohibitInvoke != ProhibitInvoke::None) {
-    a.bind(throwInvalidInvoke_);
-    // We don't register a thunk since there will only be a single call to this.
-    // Note that we also don't save the IP, because this is being thrown in the
-    // caller's context.
-    // This is thrown at the start of the function, so runtime is already in x0.
-    if (prohibitInvoke == ProhibitInvoke::Call)
-      EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-          *this, void (*)(SHRuntime *), _sh_throw_invalid_call);
-    else
-      EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-          *this, void (*)(SHRuntime *), _sh_throw_invalid_construct);
-  }
 }
 
 void Emitter::emitThunks() {
