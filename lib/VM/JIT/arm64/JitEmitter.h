@@ -131,6 +131,10 @@ class HWReg {
   }
 };
 
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
+    const hermes::vm::arm64::HWReg &hwReg);
+
 /// A frame register can reside simultaneously in one or more of the following
 /// locations:
 /// - The stack frame

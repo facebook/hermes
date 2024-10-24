@@ -26,6 +26,21 @@
 #endif
 
 namespace hermes::vm::arm64 {
+
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
+    const hermes::vm::arm64::HWReg &hwReg) {
+  if (hwReg.isValidGpX()) {
+    os << "x" << (int)hwReg.indexInClass();
+  } else if (hwReg.isValidVecD()) {
+    os << "d" << (int)hwReg.indexInClass();
+  } else {
+    assert(!hwReg.isValid());
+    os << "<invalid>";
+  }
+  return os;
+}
+
 namespace {
 
 // Ensure that HermesValue tags are handled correctly by updating this every
