@@ -2218,41 +2218,98 @@ void Emitter::selectObject(FR frRes, FR frThis, FR frConstructed) {
 
 void Emitter::loadThisNS(FR frRes) {
   comment("// LoadThisNS r%u", frRes.index());
-
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
   syncAllFRTempExcept(frRes);
   freeAllFRTempExcept({});
 
-  a.mov(a64::x0, xRuntime);
-  a.ldur(
-      a64::x1,
-      a64::Mem(
-          xFrame, (int)StackFrameLayout::ThisArg * (int)sizeof(SHLegacyValue)));
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
-      _sh_ljs_coerce_this_ns);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+  HWReg hwTemp = allocTempGpX();
+  freeReg(hwTemp);
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  // Load the ThisArg from the stack.
+  a.ldur(
+      hwRes.a64GpX(),
+      a64::Mem(xFrame, StackFrameLayout::ThisArg * (int)sizeof(SHLegacyValue)));
+  // If it is an object, we are done.
+  emit_sh_ljs_is_object(a, hwTemp.a64GpX(), hwRes.a64GpX());
+  a.b_ne(slowPathLab);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .hwRes = hwRes,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: LoadThisNS r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.a.ldur(
+             a64::x1,
+             a64::Mem(
+                 xFrame,
+                 StackFrameLayout::ThisArg * (int)sizeof(SHLegacyValue)));
+         EMIT_RUNTIME_CALL(
+             em,
+             SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
+             _sh_ljs_coerce_this_ns);
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::coerceThisNS(FR frRes, FR frThis) {
   comment("// CoerceThisNS r%u, r%u", frRes.index(), frThis.index());
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+  HWReg hwThis = getOrAllocFRInGpX(frThis, true);
 
   syncAllFRTempExcept(frRes);
-  freeAllFRTempExcept({});
+  // We don't free frRes so that if it is the same as frThis, the register is
+  // simply persisted and we do not need to perform a move in the fast path.
+  freeAllFRTempExcept(frRes);
 
-  a.mov(a64::x0, xRuntime);
-  movHWFromFR(HWReg::gpX(1), frThis);
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
-      _sh_ljs_coerce_this_ns);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+  HWReg hwTemp = allocTempGpX();
+  freeReg(hwTemp);
+  // If the operand is an object, we are done, otherwise, go to the slow path.
+  emit_sh_ljs_is_object(a, hwTemp.a64GpX(), hwThis.a64GpX());
+  a.b_ne(slowPathLab);
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  movHWFromHW<false>(hwRes, hwThis);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .frInput1 = frThis,
+       .hwRes = hwRes,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: CoerceThis r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em._loadFrame(HWReg(a64::x1), sl.frInput1);
+         EMIT_RUNTIME_CALL(
+             em,
+             SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
+             _sh_ljs_coerce_this_ns);
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::debugger() {
