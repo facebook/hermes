@@ -600,12 +600,18 @@ void Emitter::leave() {
     EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
         *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
   }
-  a.mov(a64::x0, xRuntime);
-  a.mov(a64::x1, a64::sp);
-  a.mov(a64::x2, xFrame);
-  // _sh_leave cannot throw or observe the IP.
-  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-      *this, void (*)(SHRuntime *, SHLocals *, SHLegacyValue *), _sh_leave);
+  // _sh_leave(shr, &locals.head, frame);
+  // runtime.shLocals = locals->prev;
+  a.ldr(a64::x0, a64::Mem(a64::sp, offsetof(SHLocals, prev)));
+  a.str(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, shLocals)));
+  // Restore the previous stack frame.
+  a.str(xFrame, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
+  a.ldr(
+      a64::x0,
+      a64::Mem(
+          xFrame,
+          StackFrameLayout::PreviousFrame * (int)sizeof(SHLegacyValue)));
+  a.str(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::currentFrame));
 
   // The return value has been stashed in x22 by ret(). Move it to the return
   // register.
