@@ -512,19 +512,18 @@ void Emitter::frameSetup(
   gpSaveCount_ = gpSaveCount;
   vecSaveCount_ = vecSaveCount;
 
-  //  0-3: SHLocals
-  //  4: x22
-  //  5: x21
-  //  6: x20
-  //  7: x19
-  //  8: x29 <- new x29 points here
-  //  9: x30
+  //  0: x22
+  //  1: x21
+  //  2: x20
+  //  3: x19
+  //  4: x29 <- new x29 points here
+  //  5: x30
   a.sub(
       a64::sp,
       a64::sp,
-      (4 + ((gpSaveCount + 1) & ~1) + ((vecSaveCount + 1) & ~1) + 2) * 8);
+      (((gpSaveCount + 1) & ~1) + ((vecSaveCount + 1) & ~1) + 2) * 8);
 
-  unsigned stackOfs = 4 * 8;
+  unsigned stackOfs = 0;
   for (unsigned i = 0; i < gpSaveCount; i += 2, stackOfs += 16) {
     if (i + 1 < gpSaveCount)
       a.stp(a64::GpX(19 + i), a64::GpX(20 + i), a64::Mem(a64::sp, stackOfs));
@@ -590,7 +589,7 @@ void Emitter::frameSetup(
   comment("// xFrame");
   a.ldr(xFrame, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
 
-  // Function<bench>(3 params, 13 registers):
+  // NOTE: Unlike _sh_enter, we do not push an SHLocals object.
   //  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 13);
   comment("// _sh_enter");
   asmjit::Label registerOverflowLab = newSlowPathLabel();
@@ -662,13 +661,6 @@ void Emitter::frameSetup(
     a.str(a64::d0, a64::Mem(a64::x0));
   }
 
-  // locals->prev = runtime.shLocals;
-  a.ldr(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, shLocals)));
-  a.str(a64::x0, a64::Mem(a64::sp, offsetof(SHLocals, prev)));
-  // runtime.shLocals = locals;
-  a.mov(a64::x0, a64::sp);
-  a.str(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, shLocals)));
-
   // Create the slow path for throwing a register stack overflow.
   slowPaths_.push_back(
       {.slowPathLab = registerOverflowLab,
@@ -681,11 +673,6 @@ void Emitter::frameSetup(
          EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
              em, void (*)(SHRuntime *), _sh_throw_register_stack_overflow);
        }});
-
-  //  locals.head.count = 0;
-  comment("// locals.head.count = 0");
-  a.mov(a64::w1, 0);
-  a.str(a64::w1, a64::Mem(a64::sp, offsetof(SHLocals, count)));
 
   if (dumpJitCode_ & DumpJitCode::EntryExit) {
     comment("// print entry");
@@ -709,9 +696,6 @@ void Emitter::leave() {
         *this, void (*)(bool, const char *), _sh_print_function_entry_exit);
   }
   // _sh_leave(shr, &locals.head, frame);
-  // runtime.shLocals = locals->prev;
-  a.ldr(a64::x0, a64::Mem(a64::sp, offsetof(SHLocals, prev)));
-  a.str(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, shLocals)));
   // Restore the previous stack frame.
   a.str(xFrame, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
   a.ldr(
@@ -725,7 +709,7 @@ void Emitter::leave() {
   // register.
   a.mov(a64::x0, a64::x22);
 
-  unsigned stackOfs = 4 * 8;
+  unsigned stackOfs = 0;
   for (unsigned i = 0; i < gpSaveCount_; i += 2, stackOfs += 16) {
     if (i + 1 < gpSaveCount_)
       a.ldp(a64::GpX(19 + i), a64::GpX(20 + i), a64::Mem(a64::sp, stackOfs));
@@ -746,7 +730,7 @@ void Emitter::leave() {
   a.add(
       a64::sp,
       a64::sp,
-      (4 + ((gpSaveCount_ + 1) & ~1) + ((vecSaveCount_ + 1) & ~1) + 2) * 8);
+      (((gpSaveCount_ + 1) & ~1) + ((vecSaveCount_ + 1) & ~1) + 2) * 8);
 
   a.ret(a64::x30);
 }
