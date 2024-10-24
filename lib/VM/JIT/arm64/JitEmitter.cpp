@@ -553,11 +553,39 @@ void Emitter::frameSetup(
   comment("// xRuntime");
   a.mov(xRuntime, a64::x0);
 
-  //  _sh_check_native_stack_overflow(shr);
-  // Do not save the IP because we have not yet set up the stack frame for this
-  // function. If this throws, the exception should appear in the caller.
-  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-      *this, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
+#ifndef HERMES_CHECK_NATIVE_STACK
+#error Only native stack checking is supported in the JIT
+#endif
+
+  comment("// _sh_check_native_stack_overflow");
+  asmjit::Label nativeOverflowLab = newSlowPathLabel();
+  asmjit::Label nativeOverflowContLab = newContLabel();
+  // Get the stack bounds from the runtime.
+  a.ldr(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::nativeStackHigh));
+  a.ldr(a64::x1, a64::Mem(xRuntime, RuntimeOffsets::nativeStackSize));
+  // Subtract the frame pointer from nativeStackHigh and compare it against the
+  // size. If the difference is less than the stack size, then we are still
+  // within the current stack bounds.
+  a.sub(a64::x0, a64::x0, a64::x29);
+  a.cmp(a64::x0, a64::x1);
+  // If the frame pointer is within bounds, we are done. Otherwise, we need to
+  // check if the bounds have changed.
+  a.b_hi(nativeOverflowLab);
+  a.bind(nativeOverflowContLab);
+  slowPaths_.push_back(
+      {.slowPathLab = nativeOverflowLab,
+       .contLab = nativeOverflowContLab,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment("// Slow path: _sh_check_native_stack_overflow");
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         // Do not save the IP because we have not yet set up the stack frame
+         // for this function. If this throws, the exception should appear in
+         // the caller.
+         EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+             em, void (*)(SHRuntime *), _sh_check_native_stack_overflow);
+         em.a.b(sl.contLab);
+       }});
 
   // Function<bench>(3 params, 13 registers):
   //  SHLegacyValue *frame = _sh_enter(shr, &locals.head, 13);

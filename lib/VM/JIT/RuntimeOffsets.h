@@ -21,6 +21,12 @@ struct RuntimeOffsets {
   static constexpr uint32_t currentFrame = offsetof(Runtime, currentFrame_);
   static constexpr uint32_t globalObject = offsetof(Runtime, global_);
   static constexpr uint32_t thrownValue = offsetof(Runtime, thrownValue_);
+  static constexpr uint32_t nativeStackHigh =
+      offsetof(Runtime, overflowGuard_) +
+      offsetof(StackOverflowGuard, nativeStackHigh);
+  static constexpr uint32_t nativeStackSize =
+      offsetof(Runtime, overflowGuard_) +
+      offsetof(StackOverflowGuard, nativeStackSize);
 };
 
 #pragma GCC diagnostic pop
