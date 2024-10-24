@@ -359,7 +359,7 @@ void Emitter::enter(uint32_t numCount, uint32_t npCount) {
     frameRegs_[frIndex].globalType = FRType::Number;
   }
   // Non-pointer regs: allocate in gp regs first.
-  for (unsigned frIndex = 0; frIndex < npCount; ++frIndex) {
+  for (unsigned frIndex = numCount; frIndex < npCount + numCount; ++frIndex) {
     HWReg hwReg;
     if (nextGp <= kGPSaved.second) {
       hwReg = HWReg::gpX(nextGp);
