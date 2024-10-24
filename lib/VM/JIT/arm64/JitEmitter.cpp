@@ -4584,8 +4584,7 @@ void Emitter::compareImpl(
   if (slow)
     freeAllFRTempExcept({});
 
-  HWReg hwRes = slow ? getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0))
-                     : getOrAllocFRInGpX(frRes, false);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
 
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
