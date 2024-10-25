@@ -6,6 +6,8 @@
  */
 
 #include "hermes/BCGen/RegAlloc.h"
+
+#include "LivenessRegAllocIRPrinter.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -913,54 +915,23 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
   } // for each block.
 }
 
-struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
-  RegisterAllocator &allocator;
-
-  explicit LivenessRegAllocIRPrinter(
-      RegisterAllocator &RA,
-      llvh::raw_ostream &ost,
-      bool escape = false)
-      : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
-
-  bool printInstructionDestination(Instruction *I) override {
-    const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
-
-    if (!allocator.isAllocated(I)) {
-      os_ << "$???";
-    } else {
-      os_ << "$" << allocator.getRegister(I);
-    }
-
-    if (codeGenOpts.dumpRegisterInterval) {
-      os_ << " ";
-      if (allocator.hasInstructionNumber(I)) {
-        auto idx = allocator.getInstructionNumber(I);
-        Interval &ivl = allocator.getInstructionInterval(I);
-        os_ << "@" << idx << " " << ivl << "\t";
-      } else {
-        os_ << "          \t";
-      }
-    }
-    return true;
-  }
-
-  void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    if (allocator.isAllocated(V)) {
-      os_ << "$" << allocator.getRegister(V);
-    } else {
-      IRPrinter::printValueLabel(I, V, opIndex);
-    }
-  }
-};
-
 void RegisterAllocator::dump() {
-  LivenessRegAllocIRPrinter Printer(*this, llvh::outs());
+  LivenessRegAllocIRPrinter<RegisterAllocator, RegClass> Printer(
+      *this, llvh::outs());
   Printer.visitFunction(*F);
 }
 
 Register RegisterAllocator::getRegister(Value *I) {
   assert(isAllocated(I) && "Instruction is not allocated!");
   return allocated[I];
+}
+
+hermes::OptValue<Register> RegisterAllocator::getOptionalRegister(
+    Value *I) const {
+  if (auto it = allocated.find(I); it != allocated.end())
+    return it->second;
+  else
+    return llvh::None;
 }
 
 void RegisterAllocator::updateRegister(Value *I, Register R) {

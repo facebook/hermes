@@ -480,6 +480,9 @@ class RegisterAllocator {
   /// \return the register allocated for the value \p V.
   Register getRegister(Value *I);
 
+  /// \return the register allocated for the value \p V which may be None.
+  hermes::OptValue<Register> getOptionalRegister(Value *I) const;
+
   /// Marks the value \p as being allocated to \p R.
   void updateRegister(Value *I, Register R);
 

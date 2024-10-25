@@ -457,6 +457,12 @@ static opt<bool> DumpBetweenPasses(
     desc("Print IR after every optimization pass"),
     cat(CompilerCategory));
 
+static opt<bool> Colors(
+    "colors",
+    init(false),
+    desc("Use colors in some dumps"),
+    cat(CompilerCategory));
+
 #ifndef NDEBUG
 
 static opt<bool> LexerOnly(
@@ -1044,6 +1050,7 @@ std::shared_ptr<Context> createContext(
       cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
   codeGenOpts.verifyIRBetweenPasses = cl::VerifyIR;
+  codeGenOpts.colors = cl::Colors;
   codeGenOpts.dumpFunctions.insert(
       cl::DumpFunctions.begin(), cl::DumpFunctions.end());
   codeGenOpts.noDumpFunctions.insert(

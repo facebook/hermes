@@ -7,6 +7,7 @@
 
 #include "SHRegAlloc.h"
 
+#include "../LivenessRegAllocIRPrinter.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Support/PerfSection.h"
@@ -818,89 +819,9 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
   } // for each block.
 }
 
-struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
-  RegisterAllocator &allocator;
-
-  explicit LivenessRegAllocIRPrinter(
-      RegisterAllocator &RA,
-      llvh::raw_ostream &ost,
-      bool escape = false)
-      : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
-
-  bool printInstructionDestination(Instruction *I) override {
-    const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
-
-    auto optReg = allocator.getOptionalRegister(I);
-
-    if (optReg && optReg->getClass() != RegClass::NoOutput) {
-      setColor(Color::Register);
-      os_ << llvh::formatv("{0,-8} ", llvh::formatv("{{{0}}", *optReg));
-      resetColor();
-    } else {
-      os_ << llvh::formatv("{0,-8} ", "");
-    }
-
-    if (codeGenOpts.dumpRegisterInterval) {
-      bool hasInstNumber = allocator.hasInstructionNumber(I);
-      auto idx = hasInstNumber ? allocator.getInstructionNumber(I) : 0;
-
-      if (optReg && optReg->getClass() != RegClass::NoOutput && hasInstNumber) {
-        setColor(Color::Name);
-        os_ << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
-        os_ << ' '
-            << llvh::formatv("{0,-10}", allocator.getInstructionInterval(I));
-        resetColor();
-        return true;
-      } else if (hasInstNumber) {
-        setColor(Color::Name);
-        os_ << llvh::formatv("{0,+3}", llvh::formatv("%{0}", idx));
-        resetColor();
-        os_ << ' ' << llvh::formatv("{0,-10}", "");
-        return true;
-      } else {
-        os_ << llvh::formatv("{0,+3}", "");
-        os_ << ' ' << llvh::formatv("{0,-10}", "");
-        return false;
-      }
-    }
-
-    if (optReg && optReg->getClass() != RegClass::NoOutput) {
-      setColor(Color::Name);
-      os_ << llvh::formatv(
-          "{0,3}", llvh::formatv("%{0}", namer_.getInstNumber(I)));
-      resetColor();
-      return true;
-    } else {
-      os_ << llvh::formatv("{0,3}", "");
-      return false;
-    }
-  }
-
-  void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
-    if (codeGenOpts.dumpRegisterInterval) {
-      if (auto *opInst = llvh::dyn_cast<Instruction>(V)) {
-        setColor(Color::Name);
-        if (allocator.hasInstructionNumber(opInst))
-          os_ << '%' << allocator.getInstructionNumber(opInst);
-        else
-          os_ << "%dead";
-        resetColor();
-        printTypeLabel(opInst);
-        return;
-      }
-    }
-    if (allocator.isAllocated(V)) {
-      setColor(Color::Register);
-      os_ << '{' << allocator.getRegister(V) << "} ";
-      resetColor();
-    }
-    IRPrinter::printValueLabel(I, V, opIndex);
-  }
-};
-
 void RegisterAllocator::dump(llvh::ArrayRef<BasicBlock *> order) {
-  LivenessRegAllocIRPrinter Printer(*this, llvh::outs());
+  LivenessRegAllocIRPrinter<RegisterAllocator, RegClass> Printer(
+      *this, llvh::outs());
   Printer.visitFunction(*F, order);
 }
 
