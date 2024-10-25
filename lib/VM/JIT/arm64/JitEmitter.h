@@ -933,8 +933,14 @@ class Emitter {
 
   /// \return a valid register if the FR is in a hw register, otherwise invalid.
   HWReg _isFRInRegister(FR fr);
-  HWReg getOrAllocFRInVecD(FR fr, bool load);
-  HWReg getOrAllocFRInGpX(FR fr, bool load);
+  HWReg getOrAllocFRInVecD(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
+  HWReg getOrAllocFRInGpX(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
   HWReg getOrAllocFRInAnyReg(
       FR fr,
       bool load,

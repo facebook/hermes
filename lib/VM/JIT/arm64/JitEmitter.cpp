@@ -1135,7 +1135,10 @@ HWReg Emitter::_isFRInRegister(FR fr) {
   return {};
 }
 
-HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
+HWReg Emitter::getOrAllocFRInVecD(
+    FR fr,
+    bool load,
+    llvh::Optional<HWReg> preferred) {
   auto &frState = frameRegs_[fr.index()];
 
   assert(!(load && frState.regIsDirty) && "Local is dirty");
@@ -1164,7 +1167,7 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
   }
 
   // We have neither global nor local VecD, so we must allocate a new tmp reg.
-  HWReg hwVecD = allocTempVecD();
+  HWReg hwVecD = allocTempVecD(preferred);
   _assignAllocatedLocalHWReg(fr, hwVecD);
 
   if (load) {
@@ -1184,7 +1187,10 @@ HWReg Emitter::getOrAllocFRInVecD(FR fr, bool load) {
   return hwVecD;
 }
 
-HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
+HWReg Emitter::getOrAllocFRInGpX(
+    FR fr,
+    bool load,
+    llvh::Optional<HWReg> preferred) {
   auto &frState = frameRegs_[fr.index()];
 
   assert(!(load && frState.regIsDirty) && "Local is dirty");
@@ -1214,7 +1220,7 @@ HWReg Emitter::getOrAllocFRInGpX(FR fr, bool load) {
   }
 
   // We have neither global nor local GpX, so we must allocate a new tmp reg.
-  HWReg hwGpX = allocTempGpX();
+  HWReg hwGpX = allocTempGpX(preferred);
   _assignAllocatedLocalHWReg(fr, hwGpX);
 
   if (load) {
@@ -4599,7 +4605,7 @@ void Emitter::compareImpl(
   if (slow)
     freeAllFRTempExcept({});
 
-  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   a64::GpX xRes = hwRes.a64GpX();
 
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
