@@ -84,12 +84,12 @@ function test1() {
 // CHECK-NEXT:    LoadConstUInt8    r2, 10
 // CHECK-NEXT:    Mov               r6, r5
 // CHECK-NEXT:    Mov               r5, r6
-// CHECK-NEXT:    JNotGreaterN      L4, r5, r2
+// CHECK-NEXT:    JNotLessN         L4, r2, r5
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    SubN              r6, r6, r1
 // CHECK-NEXT:    Mov               r5, r6
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JGreaterN         L5, r5, r2
+// CHECK-NEXT:    JLessN            L5, r2, r5
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    TryGetById        r6, r7, 3, "print"
 // CHECK-NEXT:    LoadConstUndefined r7

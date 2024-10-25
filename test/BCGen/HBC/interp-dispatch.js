@@ -78,24 +78,24 @@ print(bench(4e6, 100))
 // CHECK-NEXT:    SubN              r9, r5, r6
 // CHECK-NEXT:    LoadConstZero     r10
 // CHECK-NEXT:    LoadConstZero     r11
-// CHECK-NEXT:    JNotGreaterEqualN L1, r7, r11
+// CHECK-NEXT:    JNotLessEqualN    L1, r11, r7
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    Mov               r2, r10
 // CHECK-NEXT:    Mov               r4, r7
 // CHECK-NEXT:    Mov               r0, r5
 // CHECK-NEXT:    Mov               r3, r0
 // CHECK-NEXT:    Mov               r1, r9
-// CHECK-NEXT:    JNotGreaterN      L2, r1, r6
+// CHECK-NEXT:    JNotLessN         L2, r6, r1
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    MulN              r0, r0, r1
 // CHECK-NEXT:    SubN              r1, r1, r6
 // CHECK-NEXT:    Mov               r3, r0
-// CHECK-NEXT:    JGreaterN         L3, r1, r6
+// CHECK-NEXT:    JLessN            L3, r6, r1
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    AddN              r10, r2, r3
 // CHECK-NEXT:    SubN              r7, r4, r6
 // CHECK-NEXT:    Mov               r11, r10
-// CHECK-NEXT:    JGreaterEqualN    L4, r7, r8
+// CHECK-NEXT:    JLessEqualN       L4, r8, r7
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    Ret               r11
 

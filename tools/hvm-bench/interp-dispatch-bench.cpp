@@ -126,10 +126,10 @@ L1:
     JCOND(builder.emitJLessEqualN, L(3), 2, 4);
     LABEL(4, builder.emitMul(3, 3, 2));
     builder.emitSubN(2, 2, 4);
-    JCOND(builder.emitJGreaterN, L(4), 2, 4);
+    JCOND(builder.emitJLessN, L(4), 4, 2);
     LABEL(3, builder.emitAddN(1, 1, 3));
     builder.emitSubN(0, 0, 4);
-    JCOND(builder.emitJGreaterEqualN, L(2), 0, 5);
+    JCOND(builder.emitJLessEqualN, L(2), 5, 0);
     LABEL(1, builder.emitAddEmptyString(1, 1));
     builder.emitRet(1);
   };

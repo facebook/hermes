@@ -621,14 +621,6 @@ class Emitter {
       "greater_equal",
       _sh_ljs_greater_equal_rjs,
       b_ge)
-  DECL_JCOND(jGreaterN, true, false, "greater_n", _sh_ljs_greater_rjs, b_gt)
-  DECL_JCOND(
-      jGreaterEqualN,
-      true,
-      false,
-      "greater_equal_n",
-      _sh_ljs_greater_equal_rjs,
-      b_ge)
   DECL_JCOND(jLess, false, false, "less", _sh_ljs_less_rjs, b_mi)
   DECL_JCOND(
       jLessEqual,

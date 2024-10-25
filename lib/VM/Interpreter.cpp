@@ -1379,37 +1379,39 @@ tailCall:
 /// \param operFuncName  function to call for the slow-path comparison.
 /// \param trueDest  ip value if the conditional evaluates to true
 /// \param falseDest  ip value if the conditional evaluates to false
-#define JCOND_IMPL(name, suffix, oper, operFuncName, trueDest, falseDest) \
-  CASE(name##suffix) {                                                    \
-    if (LLVM_LIKELY(                                                      \
-            O2REG(name##suffix).isNumber() &&                             \
-            O3REG(name##suffix).isNumber())) {                            \
-      /* Fast-path. */                                                    \
-      CASE(name##N##suffix) {                                             \
-        if (O2REG(name##N##suffix)                                        \
-                .getNumber() oper O3REG(name##N##suffix)                  \
-                .getNumber()) {                                           \
-          ip = trueDest;                                                  \
-          DISPATCH;                                                       \
-        }                                                                 \
-        ip = falseDest;                                                   \
-        DISPATCH;                                                         \
-      }                                                                   \
-    }                                                                     \
-    CAPTURE_IP(                                                           \
-        boolRes = operFuncName(                                           \
-            runtime,                                                      \
-            Handle<>(&O2REG(name##suffix)),                               \
-            Handle<>(&O3REG(name##suffix))));                             \
-    if (boolRes == ExecutionStatus::EXCEPTION)                            \
-      goto exception;                                                     \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                              \
-    if (boolRes.getValue()) {                                             \
-      ip = trueDest;                                                      \
-      DISPATCH;                                                           \
-    }                                                                     \
-    ip = falseDest;                                                       \
-    DISPATCH;                                                             \
+/// \param NUMBER_CASE a macro to use for the number case.
+#define JCOND_IMPL(                                                     \
+    name, suffix, oper, operFuncName, trueDest, falseDest, NUMBER_CASE) \
+  CASE(name##suffix) {                                                  \
+    if (LLVM_LIKELY(                                                    \
+            O2REG(name##suffix).isNumber() &&                           \
+            O3REG(name##suffix).isNumber())) {                          \
+      /* Fast-path. */                                                  \
+      NUMBER_CASE(name##N##suffix) {                                    \
+        if (O2REG(name##suffix)                                         \
+                .getNumber() oper O3REG(name##suffix)                   \
+                .getNumber()) {                                         \
+          ip = trueDest;                                                \
+          DISPATCH;                                                     \
+        }                                                               \
+        ip = falseDest;                                                 \
+        DISPATCH;                                                       \
+      }                                                                 \
+    }                                                                   \
+    CAPTURE_IP(                                                         \
+        boolRes = operFuncName(                                         \
+            runtime,                                                    \
+            Handle<>(&O2REG(name##suffix)),                             \
+            Handle<>(&O3REG(name##suffix))));                           \
+    if (boolRes == ExecutionStatus::EXCEPTION)                          \
+      goto exception;                                                   \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                            \
+    if (boolRes.getValue()) {                                           \
+      ip = trueDest;                                                    \
+      DISPATCH;                                                         \
+    }                                                                   \
+    ip = falseDest;                                                     \
+    DISPATCH;                                                           \
   }
 
 /// Implement a strict equality conditional jump
@@ -1453,35 +1455,39 @@ tailCall:
   }
 
 /// Implement the long and short forms of a conditional jump, and its negation.
-#define JCOND(name, oper, operFuncName) \
-  JCOND_IMPL(                           \
-      J##name,                          \
-      ,                                 \
-      oper,                             \
-      operFuncName,                     \
-      IPADD(ip->iJ##name.op1),          \
-      NEXTINST(J##name));               \
-  JCOND_IMPL(                           \
-      J##name,                          \
-      Long,                             \
-      oper,                             \
-      operFuncName,                     \
-      IPADD(ip->iJ##name##Long.op1),    \
-      NEXTINST(J##name##Long));         \
-  JCOND_IMPL(                           \
-      JNot##name,                       \
-      ,                                 \
-      oper,                             \
-      operFuncName,                     \
-      NEXTINST(JNot##name),             \
-      IPADD(ip->iJNot##name.op1));      \
-  JCOND_IMPL(                           \
-      JNot##name,                       \
-      Long,                             \
-      oper,                             \
-      operFuncName,                     \
-      NEXTINST(JNot##name##Long),       \
-      IPADD(ip->iJNot##name##Long.op1));
+#define JCOND(name, oper, operFuncName, NUMBER_CASE) \
+  JCOND_IMPL(                                        \
+      J##name,                                       \
+      ,                                              \
+      oper,                                          \
+      operFuncName,                                  \
+      IPADD(ip->iJ##name.op1),                       \
+      NEXTINST(J##name),                             \
+      NUMBER_CASE);                                  \
+  JCOND_IMPL(                                        \
+      J##name,                                       \
+      Long,                                          \
+      oper,                                          \
+      operFuncName,                                  \
+      IPADD(ip->iJ##name##Long.op1),                 \
+      NEXTINST(J##name##Long),                       \
+      NUMBER_CASE);                                  \
+  JCOND_IMPL(                                        \
+      JNot##name,                                    \
+      ,                                              \
+      oper,                                          \
+      operFuncName,                                  \
+      NEXTINST(JNot##name),                          \
+      IPADD(ip->iJNot##name.op1),                    \
+      NUMBER_CASE);                                  \
+  JCOND_IMPL(                                        \
+      JNot##name,                                    \
+      Long,                                          \
+      oper,                                          \
+      operFuncName,                                  \
+      NEXTINST(JNot##name##Long),                    \
+      IPADD(ip->iJNot##name##Long.op1),              \
+      NUMBER_CASE);
 
 /// Load a constant.
 /// \param value is the value to store in the output register.
@@ -3585,10 +3591,13 @@ tailCall:
       CONDOP(LessEq, <=, lessEqualOp_RJS);
       CONDOP(Greater, >, greaterOp_RJS);
       CONDOP(GreaterEq, >=, greaterEqualOp_RJS);
-      JCOND(Less, <, lessOp_RJS);
-      JCOND(LessEqual, <=, lessEqualOp_RJS);
-      JCOND(Greater, >, greaterOp_RJS);
-      JCOND(GreaterEqual, >=, greaterEqualOp_RJS);
+      JCOND(Less, <, lessOp_RJS, CASE);
+      JCOND(LessEqual, <=, lessEqualOp_RJS, CASE);
+
+#define NO_NUMBER_CASE(x)
+      JCOND(Greater, >, greaterOp_RJS, NO_NUMBER_CASE);
+      JCOND(GreaterEqual, >=, greaterEqualOp_RJS, NO_NUMBER_CASE);
+#undef NO_NUMBER_CASE
 
       JCOND_STRICT_EQ_IMPL(
           JStrictEqual, , IPADD(ip->iJStrictEqual.op1), NEXTINST(JStrictEqual));

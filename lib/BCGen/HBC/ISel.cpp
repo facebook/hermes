@@ -1318,16 +1318,16 @@ void HBCISel::generateHBCCompareBranchInst(
       break;
     case ValueKind::CmpBrGreaterThanInstKind: // >
       loc = invert
-          ? (isBothNumber ? BCFGen_->emitJNotGreaterNLong(0, left, right)
+          ? (isBothNumber ? BCFGen_->emitJNotLessNLong(0, right, left)
                           : BCFGen_->emitJNotGreaterLong(0, left, right))
-          : (isBothNumber ? BCFGen_->emitJGreaterNLong(0, left, right)
+          : (isBothNumber ? BCFGen_->emitJLessNLong(0, right, left)
                           : BCFGen_->emitJGreaterLong(0, left, right));
       break;
     case ValueKind::CmpBrGreaterThanOrEqualInstKind: // >=
       loc = invert
-          ? (isBothNumber ? BCFGen_->emitJNotGreaterEqualNLong(0, left, right)
+          ? (isBothNumber ? BCFGen_->emitJNotLessEqualNLong(0, right, left)
                           : BCFGen_->emitJNotGreaterEqualLong(0, left, right))
-          : (isBothNumber ? BCFGen_->emitJGreaterEqualNLong(0, left, right)
+          : (isBothNumber ? BCFGen_->emitJLessEqualNLong(0, right, left)
                           : BCFGen_->emitJGreaterEqualLong(0, left, right));
       break;
 
@@ -1932,12 +1932,12 @@ void HBCISel::generateHBCFCompareBranchInst(
                    : BCFGen_->emitJLessEqualNLong(0, left, right);
       break;
     case ValueKind::HBCFCmpBrGreaterThanInstKind:
-      loc = invert ? BCFGen_->emitJNotGreaterNLong(0, left, right)
-                   : BCFGen_->emitJGreaterNLong(0, left, right);
+      loc = invert ? BCFGen_->emitJNotLessNLong(0, right, left)
+                   : BCFGen_->emitJLessNLong(0, right, left);
       break;
     case ValueKind::HBCFCmpBrGreaterThanOrEqualInstKind:
-      loc = invert ? BCFGen_->emitJNotGreaterEqualNLong(0, left, right)
-                   : BCFGen_->emitJGreaterEqualNLong(0, left, right);
+      loc = invert ? BCFGen_->emitJNotLessEqualNLong(0, right, left)
+                   : BCFGen_->emitJLessEqualNLong(0, right, left);
       break;
     default:
       hermes_fatal("invalid kind for FCompareBranchInst");
