@@ -610,24 +610,15 @@ class ESTreeIRGen {
   // \p superClass is non-null and is a reference to that class.
   // Generates code for the implicit constructor, and emits and
   // returns the instruction to create a closure object for it.
-  CreateFunctionInst *genImplicitConstructor(
+  CreateFunctionInst *genTypedImplicitConstructor(
       const Identifier &consName,
       Value *superClass);
-
-  /// Emit code to allocate the '.prototype' object for the class,
-  /// referred to in the spec as the [[HomeObject]] of the constructor function.
-  /// \param superClass if non-null the superClass of the class.
-  /// \return the object to be populated in the `.prototype` field.
-  Value *emitClassHomeObjectCreation(
-      ESTree::ClassBodyNode *classBody,
-      Value *superClass,
-      flow::ClassType *classType);
 
   /// Emit code to allocate an empty instance of the specified class and return
   /// it.
   /// \param parent the parent object of the newly allocated class, nullptr to
   /// default to the Object prototype.
-  Value *emitClassAllocation(flow::ClassType *classType, Value *parent);
+  Value *emitTypedClassAllocation(flow::ClassType *classType, Value *parent);
 
   /// Return the default init value for the specified type.
   Value *getDefaultInitValue(flow::Type *type);
@@ -769,13 +760,13 @@ class ESTreeIRGen {
       Value *baseValue,
       Value *propValue);
 
-  /// emitMemberStore for the specific case where the member if a class
+  /// emitMemberStore for the specific case where the member is a typed class
   /// field.
   /// \param classType the class containing the field
   /// \param prop the name of the field, assumed to be an IdentifierNode.
   /// \param object to store into
   /// \param value to store.
-  void emitFieldStore(
+  void emitTypedFieldStore(
       flow::ClassType *classType,
       ESTree::Node *prop,
       Value *object,
@@ -1132,10 +1123,10 @@ class ESTreeIRGen {
   /// variable in the scope containing the class declaration, and
   /// associates the variable with the class type in a table within
   /// the ESTreeIRGen object.
-  void emitCreateFieldInitFunction();
+  void emitCreateTypedFieldInitFunction();
 
   /// Emit a call to the field init function for in \p classType.
-  void emitFieldInitCall(flow::ClassType *classType);
+  void emitTypedFieldInitCall(flow::ClassType *classType);
 
   /// Generate a body for a dummy function so that it doesn't crash the
   /// backend when encountered.

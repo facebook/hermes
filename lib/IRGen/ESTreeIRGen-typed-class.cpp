@@ -50,7 +50,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   // Create the implicit field initializer function; store the closure
   // for it in a variable, and save that variable in a table indexed by
   // the ClassDeclarationNode.
-  emitCreateFieldInitFunction();
+  emitCreateTypedFieldInitFunction();
 
   // Emit the explicit constructor, if present.
   Value *consFunction;
@@ -104,7 +104,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
         Function::DefinitionKind::ES6Constructor);
   } else {
     // The constructor is implicit.
-    consFunction = genImplicitConstructor(consName, superClass);
+    consFunction = genTypedImplicitConstructor(consName, superClass);
   }
   emitStore(consFunction, getDeclData(decl), true);
 
@@ -123,7 +123,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     vtable->setType(Type::createObject());
   }
   auto *homeObject =
-      emitClassAllocation(classType->getHomeObjectTypeInfo(), vtable);
+      emitTypedClassAllocation(classType->getHomeObjectTypeInfo(), vtable);
 
   // Store the home object in a variable so that we can reference it later,
   // e.g. when we emit method calls.
@@ -159,7 +159,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       Builder.getLiteralString(kw_.identPrototype->str()));
 }
 
-CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
+CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
     const Identifier &consName,
     Value *superClass) {
   // Create an empty constructor.
@@ -218,7 +218,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
           DoEmitDeclarations::No,
           parentScope);
 
-      emitFieldInitCall(curFunction()->typedClassContext.type);
+      emitTypedFieldInitCall(curFunction()->typedClassContext.type);
 
       emitFunctionEpilogue(Builder.getLiteralUndefined());
     };
@@ -232,7 +232,7 @@ CreateFunctionInst *ESTreeIRGen::genImplicitConstructor(
   return Builder.createCreateFunctionInst(curFunction()->curScope, func);
 }
 
-Value *ESTreeIRGen::emitClassAllocation(
+Value *ESTreeIRGen::emitTypedClassAllocation(
     flow::ClassType *classType,
     Value *parent) {
   // TODO: should create a sealed object, etc.

@@ -529,7 +529,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   Value *res =
       emitCall(call, callee, target, calleeIsAlwaysClosure, thisVal, newTarget);
   if (fieldInitClassType) {
-    emitFieldInitCall(fieldInitClassType);
+    emitTypedFieldInitCall(fieldInitClassType);
   }
   return res;
 }
@@ -1001,7 +1001,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
       thisValue};
 }
 
-void ESTreeIRGen::emitFieldStore(
+void ESTreeIRGen::emitTypedFieldStore(
     flow::ClassType *classType,
     ESTree::Node *prop,
     Value *object,
@@ -1027,7 +1027,7 @@ void ESTreeIRGen::emitMemberStore(
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
-      emitFieldStore(classType, mem->_property, baseValue, storedValue);
+      emitTypedFieldStore(classType, mem->_property, baseValue, storedValue);
       return;
     }
   }
@@ -2492,7 +2492,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     auto *proto = Builder.createUnionNarrowTrustedInst(
         Builder.createLoadFrameInst(RSI, it->second.homeObjectVar),
         Type::createObject());
-    Value *newInst = emitClassAllocation(classType, proto);
+    Value *newInst = emitTypedClassAllocation(classType, proto);
 
     // Call the constructor, if necessary.  There is always a constructor,
     // either explicit or implicit.  We will load an implicit ctor (for
