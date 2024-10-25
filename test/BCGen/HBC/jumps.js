@@ -72,17 +72,17 @@ function foo(a) {
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 0<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 16] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 24] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 26] Ret 1<Reg8>
+// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 24] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 26] Ret 0<Reg8>
 
-// CHECK:Function<foo>(2 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<foo>(2 params, 2 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:[@ 0] LoadParam 1<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] JmpTrueLong 164<Addr32>, 1<Reg8>
 // CHECK-NEXT:[@ 9] JmpTrueLong 153<Addr32>, 1<Reg8>
@@ -103,46 +103,46 @@ function foo(a) {
 // CHECK-NEXT:[@ 63] JmpTrue 24<Addr8>, 1<Reg8>
 // CHECK-NEXT:[@ 66] JmpTrue 16<Addr8>, 1<Reg8>
 // CHECK-NEXT:[@ 69] JmpTrue 8<Addr8>, 1<Reg8>
-// CHECK-NEXT:[@ 72] LoadConstUInt8 1<Reg8>, 9<UInt8>
-// CHECK-NEXT:[@ 75] Ret 1<Reg8>
-// CHECK-NEXT:[@ 77] LoadConstUInt8 1<Reg8>, 3<UInt8>
-// CHECK-NEXT:[@ 80] Ret 1<Reg8>
-// CHECK-NEXT:[@ 82] LoadConstUInt8 1<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 85] Ret 1<Reg8>
-// CHECK-NEXT:[@ 87] LoadConstUInt8 1<Reg8>, 8<UInt8>
-// CHECK-NEXT:[@ 90] Ret 1<Reg8>
-// CHECK-NEXT:[@ 92] LoadConstUInt8 1<Reg8>, 7<UInt8>
-// CHECK-NEXT:[@ 95] Ret 1<Reg8>
-// CHECK-NEXT:[@ 97] LoadConstUInt8 1<Reg8>, 6<UInt8>
-// CHECK-NEXT:[@ 100] Ret 1<Reg8>
-// CHECK-NEXT:[@ 102] LoadConstUInt8 1<Reg8>, 5<UInt8>
-// CHECK-NEXT:[@ 105] Ret 1<Reg8>
-// CHECK-NEXT:[@ 107] LoadConstUInt8 1<Reg8>, 4<UInt8>
-// CHECK-NEXT:[@ 110] Ret 1<Reg8>
-// CHECK-NEXT:[@ 112] LoadConstUInt8 1<Reg8>, 3<UInt8>
-// CHECK-NEXT:[@ 115] Ret 1<Reg8>
-// CHECK-NEXT:[@ 117] LoadConstUInt8 1<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 120] Ret 1<Reg8>
-// CHECK-NEXT:[@ 122] LoadConstUInt8 1<Reg8>, 3<UInt8>
-// CHECK-NEXT:[@ 125] Ret 1<Reg8>
-// CHECK-NEXT:[@ 127] LoadConstUInt8 1<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 130] Ret 1<Reg8>
-// CHECK-NEXT:[@ 132] LoadConstUInt8 1<Reg8>, 8<UInt8>
-// CHECK-NEXT:[@ 135] Ret 1<Reg8>
-// CHECK-NEXT:[@ 137] LoadConstUInt8 1<Reg8>, 7<UInt8>
-// CHECK-NEXT:[@ 140] Ret 1<Reg8>
-// CHECK-NEXT:[@ 142] LoadConstUInt8 1<Reg8>, 6<UInt8>
-// CHECK-NEXT:[@ 145] Ret 1<Reg8>
-// CHECK-NEXT:[@ 147] LoadConstUInt8 1<Reg8>, 5<UInt8>
-// CHECK-NEXT:[@ 150] Ret 1<Reg8>
-// CHECK-NEXT:[@ 152] LoadConstUInt8 1<Reg8>, 4<UInt8>
-// CHECK-NEXT:[@ 155] Ret 1<Reg8>
-// CHECK-NEXT:[@ 157] LoadConstUInt8 1<Reg8>, 3<UInt8>
-// CHECK-NEXT:[@ 160] Ret 1<Reg8>
-// CHECK-NEXT:[@ 162] LoadConstUInt8 1<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 165] Ret 1<Reg8>
-// CHECK-NEXT:[@ 167] LoadConstUInt8 1<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 170] Ret 1<Reg8>
+// CHECK-NEXT:[@ 72] LoadConstUInt8 0<Reg8>, 9<UInt8>
+// CHECK-NEXT:[@ 75] Ret 0<Reg8>
+// CHECK-NEXT:[@ 77] LoadConstUInt8 0<Reg8>, 3<UInt8>
+// CHECK-NEXT:[@ 80] Ret 0<Reg8>
+// CHECK-NEXT:[@ 82] LoadConstUInt8 0<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 85] Ret 0<Reg8>
+// CHECK-NEXT:[@ 87] LoadConstUInt8 0<Reg8>, 8<UInt8>
+// CHECK-NEXT:[@ 90] Ret 0<Reg8>
+// CHECK-NEXT:[@ 92] LoadConstUInt8 0<Reg8>, 7<UInt8>
+// CHECK-NEXT:[@ 95] Ret 0<Reg8>
+// CHECK-NEXT:[@ 97] LoadConstUInt8 0<Reg8>, 6<UInt8>
+// CHECK-NEXT:[@ 100] Ret 0<Reg8>
+// CHECK-NEXT:[@ 102] LoadConstUInt8 0<Reg8>, 5<UInt8>
+// CHECK-NEXT:[@ 105] Ret 0<Reg8>
+// CHECK-NEXT:[@ 107] LoadConstUInt8 0<Reg8>, 4<UInt8>
+// CHECK-NEXT:[@ 110] Ret 0<Reg8>
+// CHECK-NEXT:[@ 112] LoadConstUInt8 0<Reg8>, 3<UInt8>
+// CHECK-NEXT:[@ 115] Ret 0<Reg8>
+// CHECK-NEXT:[@ 117] LoadConstUInt8 0<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 120] Ret 0<Reg8>
+// CHECK-NEXT:[@ 122] LoadConstUInt8 0<Reg8>, 3<UInt8>
+// CHECK-NEXT:[@ 125] Ret 0<Reg8>
+// CHECK-NEXT:[@ 127] LoadConstUInt8 0<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 130] Ret 0<Reg8>
+// CHECK-NEXT:[@ 132] LoadConstUInt8 0<Reg8>, 8<UInt8>
+// CHECK-NEXT:[@ 135] Ret 0<Reg8>
+// CHECK-NEXT:[@ 137] LoadConstUInt8 0<Reg8>, 7<UInt8>
+// CHECK-NEXT:[@ 140] Ret 0<Reg8>
+// CHECK-NEXT:[@ 142] LoadConstUInt8 0<Reg8>, 6<UInt8>
+// CHECK-NEXT:[@ 145] Ret 0<Reg8>
+// CHECK-NEXT:[@ 147] LoadConstUInt8 0<Reg8>, 5<UInt8>
+// CHECK-NEXT:[@ 150] Ret 0<Reg8>
+// CHECK-NEXT:[@ 152] LoadConstUInt8 0<Reg8>, 4<UInt8>
+// CHECK-NEXT:[@ 155] Ret 0<Reg8>
+// CHECK-NEXT:[@ 157] LoadConstUInt8 0<Reg8>, 3<UInt8>
+// CHECK-NEXT:[@ 160] Ret 0<Reg8>
+// CHECK-NEXT:[@ 162] LoadConstUInt8 0<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 165] Ret 0<Reg8>
+// CHECK-NEXT:[@ 167] LoadConstUInt8 0<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 170] Ret 0<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}jumps.js

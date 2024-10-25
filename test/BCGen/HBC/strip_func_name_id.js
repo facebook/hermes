@@ -31,13 +31,13 @@ Math['function-name-stripped'] = 123;
 // CHECK-NEXT:i0[ASCII, 0..3] #1C182460: Math
 // CHECK-NEXT:i1[ASCII, 4..25] #D7615A1F: function-name-stripped
 
-// CHECK:Function<function-name-stripped>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<function-name-stripped>(1 params, 2 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    TryGetById        r0, r1, 1, "Math"
-// CHECK-NEXT:    LoadConstUInt8    r1, 123
-// CHECK-NEXT:    PutByIdStrict     r0, r1, 1, "function-name-str"...
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    TryGetById        r1, r1, 1, "Math"
+// CHECK-NEXT:    LoadConstUInt8    r0, 123
+// CHECK-NEXT:    PutByIdStrict     r1, r0, 1, "function-name-str"...
+// CHECK-NEXT:    Ret               r0
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}strip_func_name_id.js

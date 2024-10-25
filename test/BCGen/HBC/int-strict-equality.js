@@ -161,78 +161,78 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:i3[ASCII, 31..42] #B424DF91: test_int_int
 // CHKBC-NEXT:i4[ASCII, 42..58] #7CF5E44C: test_could_be_int
 
-// CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHKBC:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateTopLevelEnvironment r2, 0
+// CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_int"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_could_be_int"
-// CHKBC-NEXT:    CreateClosure     r0, r2, Function<test_int_int>
-// CHKBC-NEXT:    GetGlobalObject   r1
-// CHKBC-NEXT:    PutByIdLoose      r1, r0, 1, "test_int_int"
-// CHKBC-NEXT:    CreateClosure     r0, r2, Function<test_int_uint>
-// CHKBC-NEXT:    PutByIdLoose      r1, r0, 2, "test_int_uint"
-// CHKBC-NEXT:    CreateClosure     r0, r2, Function<test_uint_uint>
-// CHKBC-NEXT:    PutByIdLoose      r1, r0, 3, "test_uint_uint"
-// CHKBC-NEXT:    CreateClosure     r2, r2, Function<test_could_be_int>
-// CHKBC-NEXT:    PutByIdLoose      r1, r2, 4, "test_could_be_int"
-// CHKBC-NEXT:    LoadConstUndefined r2
-// CHKBC-NEXT:    Ret               r2
-
-// CHKBC:Function<test_int_int>(3 params, 2 registers, 0 numbers, 0 non-pointers):
-// CHKBC-NEXT:    LoadParam         r1, 1
-// CHKBC-NEXT:    ToInt32           r1, r1
-// CHKBC-NEXT:    LoadParam         r0, 2
-// CHKBC-NEXT:    ToInt32           r0, r0
-// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
+// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_int>
+// CHKBC-NEXT:    GetGlobalObject   r3
+// CHKBC-NEXT:    PutByIdLoose      r3, r2, 1, "test_int_int"
+// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_uint>
+// CHKBC-NEXT:    PutByIdLoose      r3, r2, 2, "test_int_uint"
+// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_uint_uint>
+// CHKBC-NEXT:    PutByIdLoose      r3, r2, 3, "test_uint_uint"
+// CHKBC-NEXT:    CreateClosure     r1, r1, Function<test_could_be_int>
+// CHKBC-NEXT:    PutByIdLoose      r3, r1, 4, "test_could_be_int"
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    Ret               r0
-// CHKBC-NEXT:L1:
-// CHKBC-NEXT:    Ret               r1
 
-// CHKBC:Function<test_int_uint>(3 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x001c, lexical 0x0000
-// CHKBC-NEXT:    LoadParam         r2, 1
-// CHKBC-NEXT:    ToInt32           r2, r2
-// CHKBC-NEXT:    LoadParam         r1, 2
-// CHKBC-NEXT:    LoadConstZero     r0
-// CHKBC-NEXT:    URshift           r0, r1, r0
-// CHKBC-NEXT:    JStrictEqual      L1, r2, r0
-// CHKBC-NEXT:    LoadConstUndefined r0
-// CHKBC-NEXT:    Ret               r0
-// CHKBC-NEXT:L1:
-// CHKBC-NEXT:    Ret               r2
-
-// CHKBC:Function<test_uint_uint>(3 params, 3 registers, 1 numbers, 0 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
-// CHKBC-NEXT:    LoadParam         r2, 1
-// CHKBC-NEXT:    LoadConstZero     r0
-// CHKBC-NEXT:    URshift           r2, r2, r0
-// CHKBC-NEXT:    LoadParam         r1, 2
-// CHKBC-NEXT:    URshift           r1, r1, r0
-// CHKBC-NEXT:    JStrictEqual      L1, r2, r1
-// CHKBC-NEXT:    LoadConstUndefined r1
-// CHKBC-NEXT:    Ret               r1
-// CHKBC-NEXT:L1:
-// CHKBC-NEXT:    Ret               r2
-
-// CHKBC:Function<test_could_be_int>(2 params, 12 registers, 1 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x002d, lexical 0x0000
+// CHKBC:Function<test_int_int>(3 params, 4 registers, 2 numbers, 1 non-pointers):
 // CHKBC-NEXT:    LoadParam         r3, 1
-// CHKBC-NEXT:    LoadConstUndefined r1
-// CHKBC-NEXT:    Call1             r2, r3, r1
-// CHKBC-NEXT:    LoadConstUInt8    r0, 100
-// CHKBC-NEXT:    Mul               r0, r2, r0
-// CHKBC-NEXT:    Call1             r3, r3, r1
+// CHKBC-NEXT:    ToInt32           r1, r3
+// CHKBC-NEXT:    LoadParam         r3, 2
+// CHKBC-NEXT:    ToInt32           r0, r3
+// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
 // CHKBC-NEXT:    LoadConstUndefined r2
-// CHKBC-NEXT:    JmpFalse          L1, r3
+// CHKBC-NEXT:    Ret               r2
+// CHKBC-NEXT:L1:
+// CHKBC-NEXT:    Ret               r1
+
+// CHKBC:Function<test_int_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x001c, lexical 0x0000
+// CHKBC-NEXT:    LoadParam         r3, 1
+// CHKBC-NEXT:    ToInt32           r1, r3
+// CHKBC-NEXT:    LoadParam         r3, 2
+// CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    URshift           r0, r3, r0
+// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    Ret               r2
+// CHKBC-NEXT:L1:
+// CHKBC-NEXT:    Ret               r1
+
+// CHKBC:Function<test_uint_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
+// CHKBC-NEXT:    LoadParam         r3, 1
+// CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    URshift           r1, r3, r0
+// CHKBC-NEXT:    LoadParam         r3, 2
+// CHKBC-NEXT:    URshift           r0, r3, r0
+// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    Ret               r2
+// CHKBC-NEXT:L1:
+// CHKBC-NEXT:    Ret               r1
+
+// CHKBC:Function<test_could_be_int>(2 params, 14 registers, 2 numbers, 2 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x002d, lexical 0x0000
+// CHKBC-NEXT:    LoadParam         r4, 1
+// CHKBC-NEXT:    LoadConstUndefined r3
+// CHKBC-NEXT:    Call1             r5, r4, r3
+// CHKBC-NEXT:    LoadConstUInt8    r0, 100
+// CHKBC-NEXT:    Mul               r0, r5, r0
+// CHKBC-NEXT:    Call1             r4, r4, r3
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    JmpFalse          L1, r4
 // CHKBC-NEXT:    ToInt32           r2, r0
 // CHKBC-NEXT:L1:
-// CHKBC-NEXT:    LoadConstZero     r3
-// CHKBC-NEXT:    URshift           r3, r0, r3
-// CHKBC-NEXT:    JStrictEqual      L2, r2, r3
-// CHKBC-NEXT:    Ret               r1
+// CHKBC-NEXT:    LoadConstZero     r1
+// CHKBC-NEXT:    URshift           r1, r0, r1
+// CHKBC-NEXT:    JStrictEqual      L2, r2, r1
+// CHKBC-NEXT:    Ret               r3
 // CHKBC-NEXT:L2:
 // CHKBC-NEXT:    Ret               r0
 

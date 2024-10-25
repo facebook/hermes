@@ -47,50 +47,50 @@ function foo(a) {
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
-// CHECK-NEXT:    CreateClosure     r0, r1, Function<foo>
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "foo"
-// CHECK-NEXT:    LoadConstUndefined r1
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<foo>(2 params, 12 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<foo>(2 params, 12 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r2, 1
+// CHECK-NEXT:    LoadParam         r3, 1
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call1             r3, r2, r3
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r1, r3, r0
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    Catch             r1
+// CHECK-NEXT:    Catch             r2
 // CHECK-NEXT:L8:
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call1             r3, r1, r3
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r1, r2, r0
 // CHECK-NEXT:    Jmp               L4
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    Catch             r0
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call1             r3, r0, r3
+// CHECK-NEXT:    Catch             r1
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r1, r1, r0
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call1             r3, r1, r3
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r1, r2, r0
 // CHECK-NEXT:L2:
-// CHECK-NEXT:    LoadConstUndefined r3
-// CHECK-NEXT:    Call1             r0, r2, r3
-// CHECK-NEXT:    Ret               r3
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Call1             r1, r3, r0
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    Catch             r3
+// CHECK-NEXT:    Catch             r1
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call1             r0, r1, r0
-// CHECK-NEXT:    Throw             r3
+// CHECK-NEXT:    Call1             r2, r2, r0
+// CHECK-NEXT:    Throw             r1
 // CHECK-NEXT:L6:
-// CHECK-NEXT:    Catch             r3
+// CHECK-NEXT:    Catch             r1
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call1             r0, r2, r0
-// CHECK-NEXT:    Throw             r3
+// CHECK-NEXT:    Call1             r3, r3, r0
+// CHECK-NEXT:    Throw             r1
 
 // CHECK:Exception Handlers:
 // CHECK-NEXT:0: start = L8, end = L3, target = L3

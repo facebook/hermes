@@ -13,6 +13,6 @@
 
 // CHECK:function global(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:number) 42: number
-// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:  {n0}      %0 = HBCLoadConstInst (:number) 42: number
+// CHECK-NEXT:                 ReturnInst {n0} %0: number
 // CHECK-NEXT:function_end

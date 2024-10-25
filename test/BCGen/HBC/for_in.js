@@ -41,30 +41,30 @@ test_one(1,2,3)
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..13] #33D4E32D: test_one
 
-// CHECK:Function<global>(1 params, 16 registers, 1 numbers, 1 non-pointers):
+// CHECK:Function<global>(1 params, 17 registers, 3 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] CreateTopLevelEnvironment 4<Reg8>, 0<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 3<Reg8>, 4<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 11] CreateClosure 5<Reg8>, 4<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 16] GetGlobalObject 4<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 4<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 24] GetByIdShort 2<Reg8>, 4<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 29] LoadConstUndefined 1<Reg8>
+// CHECK-NEXT:[@ 18] PutByIdLoose 4<Reg8>, 5<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 24] GetByIdShort 4<Reg8>, 4<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 29] LoadConstUndefined 3<Reg8>
 // CHECK-NEXT:[@ 31] LoadConstUInt8 0<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 34] LoadConstUInt8 3<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 37] LoadConstUInt8 4<Reg8>, 3<UInt8>
-// CHECK-NEXT:[@ 40] Call4 4<Reg8>, 2<Reg8>, 1<Reg8>, 0<Reg8>, 3<Reg8>, 4<Reg8>
+// CHECK-NEXT:[@ 34] LoadConstUInt8 1<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 37] LoadConstUInt8 2<Reg8>, 3<UInt8>
+// CHECK-NEXT:[@ 40] Call4 4<Reg8>, 4<Reg8>, 3<Reg8>, 0<Reg8>, 1<Reg8>, 2<Reg8>
 // CHECK-NEXT:[@ 47] Ret 4<Reg8>
 
-// CHECK:Function<test_one>(3 params, 7 registers, 2 numbers, 0 non-pointers):
+// CHECK:Function<test_one>(3 params, 8 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:[@ 0] LoadParam 4<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] Mov 6<Reg8>, 4<Reg8>
-// CHECK-NEXT:[@ 6] GetPNameList 5<Reg8>, 6<Reg8>, 0<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 11] JmpUndefined 21<Addr8>, 5<Reg8>
-// CHECK-NEXT:[@ 14] GetNextPName 2<Reg8>, 5<Reg8>, 6<Reg8>, 0<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 20] JmpUndefined 12<Addr8>, 2<Reg8>
-// CHECK-NEXT:[@ 23] Mov 3<Reg8>, 2<Reg8>
+// CHECK-NEXT:[@ 3] Mov 7<Reg8>, 4<Reg8>
+// CHECK-NEXT:[@ 6] GetPNameList 6<Reg8>, 7<Reg8>, 0<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 11] JmpUndefined 21<Addr8>, 6<Reg8>
+// CHECK-NEXT:[@ 14] GetNextPName 5<Reg8>, 6<Reg8>, 7<Reg8>, 0<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 20] JmpUndefined 12<Addr8>, 5<Reg8>
+// CHECK-NEXT:[@ 23] Mov 3<Reg8>, 5<Reg8>
 // CHECK-NEXT:[@ 26] GetByVal 3<Reg8>, 4<Reg8>, 3<Reg8>
 // CHECK-NEXT:[@ 30] Jmp -16<Addr8>
 // CHECK-NEXT:[@ 32] LoadConstUndefined 2<Reg8>

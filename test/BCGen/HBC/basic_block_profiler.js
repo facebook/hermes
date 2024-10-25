@@ -45,50 +45,50 @@ try {
 // CHECK-NEXT:i5[ASCII, 27..31] #834F633C: stack
 // CHECK-NEXT:i6[ASCII, 32..36] #A689F65B: print
 
-// CHECK:Function<global>(1 params, 15 registers, 0 numbers, 1 non-pointers):
+// CHECK:Function<global>(1 params, 16 registers, 0 numbers, 2 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    ProfilePoint      9
 // CHECK-NEXT:    DeclareGlobalVar  "condition"
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    LoadConstUndefined r5
-// CHECK-NEXT:    LoadConstFalse    r2
-// CHECK-NEXT:    GetGlobalObject   r4
-// CHECK-NEXT:    PutByIdStrict     r4, r2, 1, "condition"
+// CHECK-NEXT:    LoadConstUndefined r6
+// CHECK-NEXT:    LoadConstFalse    r1
+// CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    PutByIdStrict     r3, r1, 1, "condition"
 // CHECK-NEXT:L8:
 // CHECK-NEXT:    ProfilePoint      6
 // CHECK-NEXT:L6:
 // CHECK-NEXT:    ProfilePoint      4
-// CHECK-NEXT:    TryGetById        r3, r4, 1, "print"
-// CHECK-NEXT:    GetByIdShort      r1, r4, 2, "condition"
+// CHECK-NEXT:    TryGetById        r4, r3, 1, "print"
+// CHECK-NEXT:    GetByIdShort      r5, r3, 2, "condition"
 // CHECK-NEXT:    LoadConstString   r2, "no"
-// CHECK-NEXT:    JmpFalse          L1, r1
+// CHECK-NEXT:    JmpFalse          L1, r5
 // CHECK-NEXT:    ProfilePoint      3
 // CHECK-NEXT:    LoadConstString   r2, "yes"
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    ProfilePoint      2
-// CHECK-NEXT:    Call2             r5, r3, r0, r2
+// CHECK-NEXT:    Call2             r6, r4, r0, r2
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    ProfilePoint      1
-// CHECK-NEXT:    TryGetById        r3, r4, 1, "print"
+// CHECK-NEXT:    TryGetById        r4, r3, 1, "print"
 // CHECK-NEXT:    LoadConstString   r2, "rethrowing"
-// CHECK-NEXT:    Call2             r5, r3, r0, r2
+// CHECK-NEXT:    Call2             r6, r4, r0, r2
 // CHECK-NEXT:    Jmp               L3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    Catch             r2
 // CHECK-NEXT:    ProfilePoint      5
-// CHECK-NEXT:    TryGetById        r1, r4, 1, "print"
-// CHECK-NEXT:    LoadConstString   r3, "rethrowing"
-// CHECK-NEXT:    Call2             r5, r1, r0, r3
+// CHECK-NEXT:    TryGetById        r5, r3, 1, "print"
+// CHECK-NEXT:    LoadConstString   r4, "rethrowing"
+// CHECK-NEXT:    Call2             r6, r5, r0, r4
 // CHECK-NEXT:    Throw             r2
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    Catch             r2
 // CHECK-NEXT:    ProfilePoint      8
-// CHECK-NEXT:    TryGetById        r4, r4, 1, "print"
+// CHECK-NEXT:    TryGetById        r3, r3, 1, "print"
 // CHECK-NEXT:    GetByIdShort      r2, r2, 3, "stack"
-// CHECK-NEXT:    Call2             r5, r4, r0, r2
+// CHECK-NEXT:    Call2             r6, r3, r0, r2
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    ProfilePoint      7
-// CHECK-NEXT:    Ret               r5
+// CHECK-NEXT:    Ret               r6
 
 // CHECK:Exception Handlers:
 // CHECK-NEXT:0: start = L6, end = L7, target = L2

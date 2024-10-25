@@ -360,9 +360,9 @@ function obj7() {
 // BCGEN-NEXT:1[8, 18]
 // BCGEN-NEXT:2[28, 13]
 // BCGEN-NEXT:3[46, 6]
-// BCGEN-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// BCGEN-NEXT:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// BCGEN-NEXT:    CreateTopLevelEnvironment r2, 0
+// BCGEN-NEXT:    CreateTopLevelEnvironment r1, 0
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
@@ -370,43 +370,43 @@ function obj7() {
 // BCGEN-NEXT:    DeclareGlobalVar  "obj5"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj6"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj7"
-// BCGEN-NEXT:    CreateClosure     r0, r2, Function<obj1>
-// BCGEN-NEXT:    GetGlobalObject   r1
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 1, "obj1"
-// BCGEN-NEXT:    CreateClosure     r0, r2, Function<obj2>
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 2, "obj2"
-// BCGEN-NEXT:    CreateClosure     r0, r2, Function<obj3>
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 3, "obj3"
-// BCGEN-NEXT:    CreateClosure     r0, r2, Function<obj4>
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 4, "obj4"
-// BCGEN-NEXT:    CreateClosure     r0, r2, Function<obj5>
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 5, "obj5"
-// BCGEN-NEXT:    CreateClosure     r0, r2, Function<obj6>
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 6, "obj6"
-// BCGEN-NEXT:    CreateClosure     r2, r2, Function<obj7>
-// BCGEN-NEXT:    PutByIdLoose      r1, r2, 7, "obj7"
-// BCGEN-NEXT:    LoadConstUndefined r2
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj1>
+// BCGEN-NEXT:    GetGlobalObject   r3
+// BCGEN-NEXT:    PutByIdLoose      r3, r2, 1, "obj1"
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj2>
+// BCGEN-NEXT:    PutByIdLoose      r3, r2, 2, "obj2"
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj3>
+// BCGEN-NEXT:    PutByIdLoose      r3, r2, 3, "obj3"
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj4>
+// BCGEN-NEXT:    PutByIdLoose      r3, r2, 4, "obj4"
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj5>
+// BCGEN-NEXT:    PutByIdLoose      r3, r2, 5, "obj5"
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj6>
+// BCGEN-NEXT:    PutByIdLoose      r3, r2, 6, "obj6"
+// BCGEN-NEXT:    CreateClosure     r1, r1, Function<obj7>
+// BCGEN-NEXT:    PutByIdLoose      r3, r1, 7, "obj7"
+// BCGEN-NEXT:    LoadConstUndefined r0
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj1>(1 params, 3 registers, 0 numbers, 1 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r2, 0, 0
+// BCGEN-NEXT:    LoadConstUndefined r0
+// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 3
+// BCGEN-NEXT:    GetParentEnvironment r1, 0
+// BCGEN-NEXT:    CreateClosure     r1, r1, Function<f>
+// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r1, 5
 // BCGEN-NEXT:    Ret               r2
 
-// BCGEN:Function<obj1>(1 params, 2 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 0, 0
+// BCGEN:Function<obj2>(1 params, 2 registers, 0 numbers, 1 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 1, 15
 // BCGEN-NEXT:    LoadConstUndefined r0
+// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 0
+// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 1
+// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 2
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 3
-// BCGEN-NEXT:    GetParentEnvironment r0, 0
-// BCGEN-NEXT:    CreateClosure     r0, r0, Function<f>
+// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 4
 // BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 5
 // BCGEN-NEXT:    Ret               r1
-
-// BCGEN:Function<obj2>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r2, 1, 15
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 0
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 1
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 2
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 3
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 4
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 5
-// BCGEN-NEXT:    Ret               r2
 
 // BCGEN:Function<obj3>(1 params, 2 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
@@ -426,23 +426,23 @@ function obj7() {
 // BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 133
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<obj6>(1 params, 3 registers, 0 numbers, 1 non-pointers):
+// BCGEN:Function<obj6>(1 params, 2 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x003c, lexical 0x0000
-// BCGEN-NEXT:    NewObjectWithBuffer r2, 3, 65
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 3, 65
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnByIndex     r2, r0, 1
-// BCGEN-NEXT:    PutOwnByIndex     r2, r0, 3
-// BCGEN-NEXT:    PutOwnByIndex     r2, r0, 2
-// BCGEN-NEXT:    Ret               r2
+// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
+// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 3
+// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 2
+// BCGEN-NEXT:    Ret               r1
 
-// BCGEN:Function<obj7>(1 params, 3 registers, 0 numbers, 1 non-pointers):
+// BCGEN:Function<obj7>(1 params, 2 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x004a, lexical 0x0000
-// BCGEN-NEXT:    NewObjectWithBuffer r2, 3, 66
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 3, 66
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutByIdLoose      r2, r0, 1, "a"
-// BCGEN-NEXT:    PutByIdLoose      r2, r0, 2, "b"
-// BCGEN-NEXT:    PutByIdLoose      r2, r0, 3, "c"
-// BCGEN-NEXT:    Ret               r2
+// BCGEN-NEXT:    PutByIdLoose      r1, r0, 1, "a"
+// BCGEN-NEXT:    PutByIdLoose      r1, r0, 2, "b"
+// BCGEN-NEXT:    PutByIdLoose      r1, r0, 3, "c"
+// BCGEN-NEXT:    Ret               r1
 
 // BCGEN:Function<f>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:    LoadConstUndefined r0

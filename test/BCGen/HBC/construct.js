@@ -39,37 +39,37 @@ function bar() {
 // CHECK-NEXT:i2[ASCII, 9..11] #9290584E: foo
 // CHECK-NEXT:i3[ASCII, 12..12] #0001E7F9: x
 
-// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 2<Reg8>, 0<UInt32>
+// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
 // CHECK-NEXT:[@ 6] DeclareGlobalVar 2<UInt32>
 // CHECK-NEXT:[@ 11] DeclareGlobalVar 1<UInt32>
-// CHECK-NEXT:[@ 16] CreateClosure 0<Reg8>, 2<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 21] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 23] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 2<UInt16>
-// CHECK-NEXT:[@ 29] CreateClosure 2<Reg8>, 2<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 34] PutByIdLoose 1<Reg8>, 2<Reg8>, 2<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 40] LoadConstUndefined 2<Reg8>
-// CHECK-NEXT:[@ 42] Ret 2<Reg8>
+// CHECK-NEXT:[@ 16] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 21] GetGlobalObject 3<Reg8>
+// CHECK-NEXT:[@ 23] PutByIdLoose 3<Reg8>, 2<Reg8>, 1<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 29] CreateClosure 1<Reg8>, 1<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 34] PutByIdLoose 3<Reg8>, 1<Reg8>, 2<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 40] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 42] Ret 0<Reg8>
 
-// CHECK:Function<foo>(2 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<foo>(2 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 0<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] LoadThisNS 1<Reg8>
-// CHECK-NEXT:[@ 5] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 3<UInt16>
-// CHECK-NEXT:[@ 11] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 13] Ret 1<Reg8>
+// CHECK-NEXT:[@ 0] LoadParam 1<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 3] LoadThisNS 2<Reg8>
+// CHECK-NEXT:[@ 5] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 3<UInt16>
+// CHECK-NEXT:[@ 11] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 13] Ret 0<Reg8>
 
-// CHECK:Function<bar>(1 params, 12 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<bar>(1 params, 12 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
-// CHECK-NEXT:[@ 0] GetGlobalObject 2<Reg8>
-// CHECK-NEXT:[@ 2] GetByIdShort 0<Reg8>, 2<Reg8>, 1<UInt8>, 2<UInt8>
-// CHECK-NEXT:[@ 7] CreateThisForNew 1<Reg8>, 0<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 0] GetGlobalObject 1<Reg8>
+// CHECK-NEXT:[@ 2] GetByIdShort 1<Reg8>, 1<Reg8>, 1<UInt8>, 2<UInt8>
+// CHECK-NEXT:[@ 7] CreateThisForNew 2<Reg8>, 1<Reg8>, 2<UInt8>
 // CHECK-NEXT:[@ 11] LoadConstUInt8 3<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 14] Mov 4<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 17] Construct 2<Reg8>, 0<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 21] SelectObject 2<Reg8>, 1<Reg8>, 2<Reg8>
-// CHECK-NEXT:[@ 25] Ret 2<Reg8>
+// CHECK-NEXT:[@ 14] Mov 4<Reg8>, 2<Reg8>
+// CHECK-NEXT:[@ 17] Construct 1<Reg8>, 1<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 21] SelectObject 1<Reg8>, 2<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 25] Ret 1<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}construct.js

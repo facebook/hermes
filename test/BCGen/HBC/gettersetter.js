@@ -43,25 +43,25 @@ var obj = {
 // CHECK-NEXT:s7[ASCII, 21..25]: set b
 // CHECK-NEXT:i8[ASCII, 26..28] #DC53DBCF: obj
 
-// CHECK:Function<global>(1 params, 5 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 6 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r3, 0
+// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
-// CHECK-NEXT:    NewObject         r2
-// CHECK-NEXT:    CreateClosure     r0, r3, Function<get b>
-// CHECK-NEXT:    CreateClosure     r1, r3, Function<set b>
-// CHECK-NEXT:    LoadConstString   r4, "b"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r2, r4, r0, r1, 1
-// CHECK-NEXT:    CreateClosure     r0, r3, Function<get c>
-// CHECK-NEXT:    LoadConstUndefined r4
-// CHECK-NEXT:    LoadConstString   r1, "c"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r2, r1, r0, r4, 1
-// CHECK-NEXT:    CreateClosure     r1, r3, Function<set d>
-// CHECK-NEXT:    LoadConstString   r3, "d"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r2, r3, r4, r1, 1
-// CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "obj"
-// CHECK-NEXT:    Ret               r4
+// CHECK-NEXT:    NewObject         r5
+// CHECK-NEXT:    CreateClosure     r4, r1, Function<get b>
+// CHECK-NEXT:    CreateClosure     r3, r1, Function<set b>
+// CHECK-NEXT:    LoadConstString   r2, "b"
+// CHECK-NEXT:    PutOwnGetterSetterByVal r5, r2, r4, r3, 1
+// CHECK-NEXT:    CreateClosure     r3, r1, Function<get c>
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    LoadConstString   r2, "c"
+// CHECK-NEXT:    PutOwnGetterSetterByVal r5, r2, r3, r0, 1
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<set d>
+// CHECK-NEXT:    LoadConstString   r1, "d"
+// CHECK-NEXT:    PutOwnGetterSetterByVal r5, r1, r0, r2, 1
+// CHECK-NEXT:    GetGlobalObject   r1
+// CHECK-NEXT:    PutByIdLoose      r1, r5, 1, "obj"
+// CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<get b>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:    LoadConstUndefined r0

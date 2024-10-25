@@ -47,32 +47,32 @@ function foo(p) {
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:Object Shape Table:
 // CHECK-NEXT:0[0, 1]
-// CHECK-NEXT:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 3<UInt32>
 // CHECK-NEXT:[@ 5] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 0<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 16] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 3<UInt16>
-// CHECK-NEXT:[@ 24] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 26] Ret 1<Reg8>
+// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 3<UInt16>
+// CHECK-NEXT:[@ 24] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 26] Ret 0<Reg8>
 
-// CHECK:Function<foo>(2 params, 4 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<foo>(2 params, 5 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] NewObjectWithBuffer 3<Reg8>, 0<UInt16>, 0<UInt16>
+// CHECK-NEXT:[@ 0] LoadParam 3<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 3] NewObjectWithBuffer 2<Reg8>, 0<UInt16>, 0<UInt16>
 // CHECK-NEXT:[@ 9] LoadConstUInt8 0<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 12] PutByIdLoose 3<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 18] PutByValLoose 3<Reg8>, 2<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 22] GetByIdShort 0<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 27] PutByIdLoose 3<Reg8>, 0<Reg8>, 2<UInt8>, 2<UInt16>
-// CHECK-NEXT:[@ 33] GetByVal 1<Reg8>, 3<Reg8>, 2<Reg8>
+// CHECK-NEXT:[@ 12] PutByIdLoose 2<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 18] PutByValLoose 2<Reg8>, 3<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 22] GetByIdShort 4<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 27] PutByIdLoose 2<Reg8>, 4<Reg8>, 2<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 33] GetByVal 4<Reg8>, 2<Reg8>, 3<Reg8>
 // CHECK-NEXT:[@ 37] LoadConstUInt8 0<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 40] PutByValLoose 3<Reg8>, 0<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 44] DelByIdLoose 0<Reg8>, 3<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 49] DelByValLoose 3<Reg8>, 3<Reg8>, 2<Reg8>
-// CHECK-NEXT:[@ 53] LoadConstUndefined 3<Reg8>
-// CHECK-NEXT:[@ 55] Ret 3<Reg8>
+// CHECK-NEXT:[@ 40] PutByValLoose 2<Reg8>, 0<Reg8>, 4<Reg8>
+// CHECK-NEXT:[@ 44] DelByIdLoose 1<Reg8>, 2<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 49] DelByValLoose 1<Reg8>, 2<Reg8>, 3<Reg8>
+// CHECK-NEXT:[@ 53] LoadConstUndefined 1<Reg8>
+// CHECK-NEXT:[@ 55] Ret 1<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}objects.js

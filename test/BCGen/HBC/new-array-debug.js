@@ -34,15 +34,15 @@ function foo() {
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 0<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 16] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 24] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 26] Ret 1<Reg8>
+// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 24] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 26] Ret 0<Reg8>
 
 // CHECK:Function<foo>(1 params, 2 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
