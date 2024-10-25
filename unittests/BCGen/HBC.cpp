@@ -206,7 +206,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
     auto *load = llvh::dyn_cast<HBCLoadConstInst>(&inst);
     if (!load)
       continue;
-    EXPECT_LT(RA.getRegister(load).getIndex(), 256u);
+    EXPECT_LT(RA.getRegister(load).getIndexInClass(), 256u);
   }
 }
 
@@ -232,7 +232,7 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   RA.allocate(order);
   RA.allocateParameterCount(256);
-  RA.updateRegister(store, Register(256));
+  RA.updateRegister(store, Register(RegClass::Other, 256));
 
   // Ensure that spilling doesn't insert any additional instructions
   unsigned sizeBefore = BB->size();

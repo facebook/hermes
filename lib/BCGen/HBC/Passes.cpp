@@ -492,8 +492,8 @@ bool InitCallFrame::runOnFunction(Function *F) {
       builder.setInsertionPoint(call);
       changed = true;
 
-      auto reg = RA_.getLastRegister().getIndex() -
-          HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
+      // Index of the argument register in RegClass::Other.
+      auto reg = RA_.lastCallArgRegister().getIndexInClass();
 
       for (int i = 0, e = call->getNumArguments(); i < e; i++, --reg) {
         // If this is a Call instruction, emit explicit Movs to the argument
@@ -506,15 +506,16 @@ bool InitCallFrame::runOnFunction(Function *F) {
         if (llvh::isa<HBCCallNInst>(call) ||
             (i == 0 && llvh::isa<CallBuiltinInst>(call))) {
           auto *imov = builder.createImplicitMovInst(arg);
-          RA_.updateRegister(imov, Register(reg));
+          RA_.updateRegister(imov, Register(RegClass::Other, reg));
         } else {
           auto *mov = builder.createMovInst(arg);
-          RA_.updateRegister(mov, Register(reg));
+          RA_.updateRegister(mov, Register(RegClass::Other, reg));
           call->setArgument(mov, i);
         }
       }
     }
   }
+
   return changed;
 }
 
@@ -575,10 +576,10 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
 
   for (auto &BB : *F) {
     IRBuilder::InstructionDestroyer destroyer;
-    // Maps a register number to the instruction that last modified it.
+    // Maps a register to the instruction that last modified it.
     // Every Instruction is either an HBCLoadConstInst or a Mov whose
     // operand is a HBCLoadConstInst
-    llvh::DenseMap<unsigned, Instruction *> regToInstMap{};
+    llvh::DenseMap<Register, Instruction *> regToInstMap{};
     for (auto &I : BB) {
       HBCLoadConstInst *loadI{nullptr};
       // Value numbering currently only tracks the values of registers that
@@ -590,7 +591,7 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
       }
 
       if (RA_.isAllocated(&I)) {
-        unsigned reg = RA_.getRegister(&I).getIndex();
+        Register reg = RA_.getRegister(&I);
         if (loadI) {
           auto it = regToInstMap.find(reg);
           if (it != regToInstMap.end()) {
@@ -620,8 +621,7 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
       if (I.getSideEffect().getWriteStack()) {
         for (size_t i = 0, e = I.getNumOperands(); i < e; ++i) {
           if (auto *operand = llvh::dyn_cast<AllocStackInst>(I.getOperand(i))) {
-            unsigned reg =
-                RA_.getRegister(cast<Instruction>(operand)).getIndex();
+            Register reg = RA_.getRegister(cast<Instruction>(operand));
             regToInstMap.erase(reg);
           }
         }
@@ -692,10 +692,14 @@ bool SpillRegisters::modifiesOperandRegister(Instruction *I, int op) {
 }
 
 bool SpillRegisters::runOnFunction(Function *F) {
-  if (RA_.getMaxRegisterUsage() < boundary_) {
+  if (RA_.getMaxHVMRegisterUsage() < boundary_) {
     return false;
   }
   reserveLowRegisters(F);
+  assert(
+      RA_.getMaxRegisterUsage(RegClass::Number) == 0 &&
+      RA_.getMaxRegisterUsage(RegClass::NonPtr) == 0 &&
+      "only one register class can be spilled");
 
   IRBuilder builder(F);
   llvh::SmallVector<std::pair<Instruction *, Register>, 2> toSpill;
@@ -713,7 +717,8 @@ bool SpillRegisters::runOnFunction(Function *F) {
       builder.setLocation(inst.getLocation());
 
       auto myRegister = RA_.getRegister(&inst);
-      if (requiresShortOutput(&inst) && !isShort(myRegister)) {
+      if (requiresShortOutput(&inst) &&
+          !isShort(RA_.getHVMRegisterIndex(myRegister))) {
         auto temp = getReserved(tempReg++);
         RA_.updateRegister(&inst, temp);
         toSpill.push_back(
@@ -730,7 +735,8 @@ bool SpillRegisters::runOnFunction(Function *F) {
         }
         auto opRegister = RA_.getRegister(op);
 
-        if (requiresShortOperand(&inst, i) && !isShort(opRegister)) {
+        if (requiresShortOperand(&inst, i) &&
+            !isShort(RA_.getHVMRegisterIndex(opRegister))) {
           // The check for if an instruction modifies an operand depends on the
           // kind of the instruction the operand is. So, we need to compute this
           // value before we replace the operand.

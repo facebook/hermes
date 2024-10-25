@@ -95,7 +95,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     FileAndSourceMapIdCache &debugCache,
     SourceMapGenerator *sourceMapGen,
     DebugInfoGenerator &debugInfoGenerator) {
-  BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxRegisterUsage()};
+  BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxHVMRegisterUsage()};
 
   if (F->isLazy()) {
     // Move the Function out of the main function list.
@@ -116,8 +116,8 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       funcGen.bytecodeSize_,
       F->getExpectedParamCountIncludingThis(),
       funcGen.frameSize_,
-      RA.getNumberRegCount(),
-      RA.getNonPtrRegCount(),
+      RA.getMaxRegisterUsage(RegClass::Number),
+      RA.getMaxRegisterUsage(RegClass::NonPtr),
       nameID,
       funcGen.highestReadCacheIndex_,
       funcGen.highestWriteCacheIndex_};

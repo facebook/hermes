@@ -262,7 +262,7 @@ class HBCISel {
 unsigned HBCISel::encodeValue(Value *value) {
   if (auto *I = llvh::dyn_cast<Instruction>(value)) {
     assert(I->hasOutput() && "Instruction has no output");
-    return RA_.getRegister(I).getIndex();
+    return RA_.getHVMRegisterIndex(RA_.getRegister(I));
   } else if (auto *var = llvh::dyn_cast<Variable>(value)) {
     return var->getIndexInVariableList();
   } else {
@@ -580,8 +580,7 @@ void HBCISel::emitMovIfNeeded(param_t dest, param_t src) {
 
 void HBCISel::verifyCall(BaseCallInst *Inst) {
 #ifndef NDEBUG
-  const auto lastArgReg = RA_.getLastRegister().getIndex() -
-      HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
+  const auto lastArgReg = RA_.lastCallArgRegister();
 
   const bool isBuiltin = llvh::isa<CallBuiltinInst>(Inst);
   const bool isCallN = llvh::isa<HBCCallNInst>(Inst);
@@ -600,13 +599,16 @@ void HBCISel::verifyCall(BaseCallInst *Inst) {
       // the last register, not the count of registers.
       assert(
           llvh::isa<Instruction>(argument) &&
-          RA_.getRegister(argument).getIndex() <= lastArgReg - max);
+          RA_.getHVMRegisterIndex(RA_.getRegister(argument)) <=
+              RA_.getHVMRegisterIndex(lastArgReg) - max &&
+          "Register is misallocated");
     } else {
       // Calls require that the arguments be at the end of the frame, in reverse
       // order.
       assert(
           llvh::isa<Instruction>(argument) &&
-          RA_.getRegister(argument).getIndex() == lastArgReg - i &&
+          RA_.getHVMRegisterIndex(RA_.getRegister(argument)) <=
+              RA_.getHVMRegisterIndex(lastArgReg) - i &&
           "Register is misallocated");
     }
   }

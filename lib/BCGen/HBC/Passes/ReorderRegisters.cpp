@@ -15,40 +15,26 @@
 namespace hermes::hbc {
 
 bool ReorderRegisters::runOnFunction(Function *F) {
-  uint32_t totalRegCount = RA_.getMaxRegisterUsage();
+  uint32_t totalRegCount = RA_.getMaxHVMRegisterUsage();
 
   // If there's no registers, nothing to do.
   // If the function has to spill registers, don't reorder to avoid having to
   // deal with the spill registers.
-  if (totalRegCount == 0 ||
-      !SpillRegisters::isShort(Register(totalRegCount - 1))) {
+  if (totalRegCount == 0 || !SpillRegisters::isShort(totalRegCount - 1)) {
     return false;
   }
 
   /// Store info on how to sort each register.
   struct RegSortData {
     Register reg{};
-    /// Union of all types stored in this register.
-    Type type = Type::createNoType();
     /// Heuristic score for this register, higher scores will be placed first.
     double score = 0.0;
-
-    /// \return the "type class" of this register, used for sorting.
-    /// Higher numbers indicate types that are sorted earlier in the final
-    /// ordering.
-    uint32_t typeClassNumber() const {
-      if (type.isNumberType())
-        return 3;
-      if (type.isNonPtr())
-        return 2;
-      return 1;
-    }
   };
 
   // Figure out the type of each register.
-  llvh::SmallVector<RegSortData, 32> regTypes(totalRegCount, RegSortData{});
-  for (size_t i = 0; i < totalRegCount; ++i) {
-    regTypes[i].reg = Register(i);
+  llvh::SmallVector<RegSortData, 32> regTypes[(size_t)RegClass::_last];
+  for (auto &rt : regTypes) {
+    rt.resize(totalRegCount, RegSortData{});
   }
 
   DominanceInfo dom{F};
@@ -103,70 +89,72 @@ bool ReorderRegisters::runOnFunction(Function *F) {
     double loopScore = std::pow(kLoopMultiplier, (double)nestingDepth);
 
     for (Instruction &I : BB) {
-      if (!RA_.isAllocated(&I))
+      if (!I.hasOutput() || !RA_.isAllocated(&I))
         continue;
-      RegSortData &regTypeData = regTypes[RA_.getRegister(&I).getIndex()];
+      Register reg = RA_.getRegister(&I);
+      RegSortData &regTypeData =
+          regTypes[(size_t)reg.getClass()][RA_.getHVMRegisterIndex(reg)];
       // Update the type of the register.
-      Type *t = &regTypeData.type;
-      *t = Type::unionTy(*t, I.getType());
+      regTypeData.reg = reg;
       // Add to the score for the result.
       regTypeData.score += loopScore;
       // Add to the score for each operand.
       for (unsigned i = 0, e = I.getNumOperands(); i < e; ++i) {
         Instruction *op = llvh::dyn_cast<Instruction>(I.getOperand(i));
         if (op && RA_.isAllocated(op)) {
-          regTypes[RA_.getRegister(op).getIndex()].score = loopScore;
+          auto opReg = RA_.getRegister(op);
+          regTypes[(size_t)opReg.getClass()][RA_.getHVMRegisterIndex(opReg)]
+              .score += loopScore;
         }
       }
     }
   }
 
-  std::sort(
-      regTypes.begin(),
-      regTypes.end(),
-      [](const RegSortData &a, const RegSortData &b) -> bool {
-        // Sort by type, then by score, then by register index.
-        // Place higher numbers earlier.
-        return std::tuple{a.typeClassNumber(), a.score, a.reg.getIndex()} >
-            std::tuple{b.typeClassNumber(), b.score, b.reg.getIndex()};
-      });
+  // Need to skip the NoOutput registers.
+  static_assert((int)RegClass::NoOutput == 0, "NoOutput must be 0");
+
+  for (size_t regClass = 1; regClass < (size_t)RegClass::_last; ++regClass) {
+    auto &rt = regTypes[regClass];
+    std::sort(
+        rt.begin(),
+        rt.end(),
+        [](const RegSortData &a, const RegSortData &b) -> bool {
+          // Sort by score, then by register index.
+          // Place higher numbers earlier.
+          return std::tuple{a.score, a.reg.getIndexInClass()} >
+              std::tuple{b.score, b.reg.getIndexInClass()};
+        });
+  }
 
   // Count the registers by type for the remapping.
   // Index is Register, value is index within its register class.
-  llvh::SmallVector<uint32_t, 32> remapping(totalRegCount, UINT32_MAX);
-  uint32_t numberRegCount = 0;
-  uint32_t nonPtrRegCount = 0;
-  for (size_t i = 0; i < regTypes.size(); ++i) {
-    if (regTypes[i].type.isNumberType())
-      ++numberRegCount;
-    else if (regTypes[i].type.isNonPtr())
-      ++nonPtrRegCount;
-    remapping[regTypes[i].reg.getIndex()] = i;
+  llvh::SmallVector<uint32_t, 32> remapping[(size_t)RegClass::_last];
+  for (size_t regClass = 1; regClass < (size_t)RegClass::_last; ++regClass) {
+    remapping[regClass].resize(totalRegCount, UINT32_MAX);
+    const auto &rt = regTypes[regClass];
+    for (size_t i = 0, e = rt.size(); i < e; ++i) {
+      Register reg = rt[i].reg;
+      if (reg.isValid()) {
+        assert(
+            reg.getClass() == (RegClass)regClass && "Invalid register class");
+        remapping[regClass][reg.getIndexInClass()] = i;
+      }
+    }
   }
 
   // Reassign registers according to the mapping.
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      if (!RA_.isAllocated(&I))
+      if (!I.hasOutput() || !RA_.isAllocated(&I))
         continue;
       auto reg = RA_.getRegister(&I);
-      uint32_t newIdx = remapping[reg.getIndex()];
+      uint32_t newIdx =
+          remapping[(size_t)reg.getClass()][reg.getIndexInClass()];
       assert(newIdx != UINT32_MAX && "Register not remapped");
-      RA_.updateRegister(&I, Register(newIdx));
-#ifndef NDEBUG
-      if (I.hasOutput()) {
-        if (newIdx < numberRegCount) {
-          assert(I.getType().isNumberType() && "Expected number type");
-        } else if (newIdx < numberRegCount + nonPtrRegCount) {
-          assert(I.getType().isNonPtr() && "Expected nonptr type");
-        }
-      }
-#endif
+      RA_.updateRegister(&I, Register(reg.getClass(), newIdx));
     }
   }
 
-  RA_.setNumberRegCount(numberRegCount);
-  RA_.setNonPtrRegCount(nonPtrRegCount);
   return true;
 }
 
