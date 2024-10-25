@@ -28,7 +28,7 @@ namespace vm {
 /// 21.2.3.2.1 Runtime Semantics: RegExpAlloc ( newTarget )
 static CallResult<HermesValue> regExpAlloc(
     Runtime &runtime,
-    PseudoHandle<> /* newTarget */);
+    Handle<Callable> newTarget);
 
 /// 21.2.3.2.2 Runtime Semantics: RegExpInitialize ( obj, pattern, flags )
 static CallResult<Handle<JSRegExp>> regExpInitialize(
@@ -201,15 +201,29 @@ static uint32_t getStringIndex(Handle<StringPrimitive> S, uint32_t e) {
   return e;
 }
 
-/// 21.2.3.2.1 Runtime Semantics: RegExpAlloc ( newTarget )
-// TODO: This is currently a wrapper around JSRegExp::create, and always creates
-// an object with RegExp.prototype as its prototype. After supporting
-// subclassing, this should be updated to allocate an object with its prototype
-// set to newTarget.prototype.
+/// E2024 22.2.3.2 Runtime Semantics: RegExpAlloc ( newTarget )
 static CallResult<HermesValue> regExpAlloc(
     Runtime &runtime,
-    PseudoHandle<> /* newTarget */) {
-  return JSRegExp::create(runtime).getHermesValue();
+    Handle<Callable> newTarget) {
+  if (LLVM_LIKELY(
+          newTarget.getHermesValue().getRaw() ==
+          runtime.regExpConstructor.getHermesValue().getRaw())) {
+    return JSRegExp::create(runtime).getHermesValue();
+  }
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  CallResult<PseudoHandle<JSObject>> thisParentRes =
+      NativeConstructor::parentForNewThis_RJS(
+          runtime,
+          Handle<Callable>::vmcast(newTarget),
+          runtime.regExpPrototype);
+  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.selfParent = std::move(*thisParentRes);
+  return JSRegExp::create(runtime, lv.selfParent).getHermesValue();
 }
 
 /// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags ) 1-4
@@ -254,55 +268,36 @@ static CallResult<Handle<JSRegExp>> regExpInitialize(
 /// ES6.0 21.2.3.2.3 Runtime Semantics: RegExpCreate ( P, F )
 CallResult<Handle<JSRegExp>>
 regExpCreate(Runtime &runtime, Handle<> P, Handle<> F) {
-  auto objRes = regExpAlloc(
-      runtime, createPseudoHandle(runtime.regExpPrototype.getHermesValue()));
+  auto objRes = regExpAlloc(runtime, runtime.regExpConstructor);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return regExpInitialize(runtime, runtime.makeHandle(objRes.getValue()), P, F);
 }
 
-/// ES6 21.2.3.1 RegExp ( pattern, flags )
+/// ES2024 22.2.4.1 RegExp ( pattern, flags )
 /// The internals of \c regExpConstructor. It's extracted to allow internal call
 /// sites such as @@MatchAll to construct a new JSRegExp via handles.
-/// \p isConstructorCall true if a newTarget is not undefined.
-// TODO: right now the NewTarget can only be the RegExp constructor itself,
-// after supporting subclassing, this function should take the NewTarget as a
-// param and compute \p isConstructorCall from the NewTarget.
 static CallResult<Handle<JSObject>> regExpConstructorInternal(
     Runtime &runtime,
     Handle<> pattern,
     Handle<> flags,
-    bool isConstructorCall) {
+    Handle<> NewTarget) {
   // 1. Let patternIsRegExp be IsRegExp(pattern).
-  // 2. ReturnIfAbrupt(patternIsRegExp).
   auto callRes = isRegExp(runtime, pattern);
   if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  Handle<Callable> newTarget = NewTarget->isUndefined()
+      ? runtime.regExpConstructor
+      : Handle<Callable>::vmcast(NewTarget);
   bool patternIsRegExp = callRes.getValue();
-  // 3. If NewTarget is not undefined, let newTarget be NewTarget.
-  // Note: "NewTarget is not undefined" means we are in a constructor call.
-  // TODO: right now the NewTarget can only be the RegExp constructor itself,
-  // after supporting subclassing, NewTarget could be the constructor of the
-  // derived class.
-  auto propRes = JSObject::getNamed_RJS(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::RegExp));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  Handle<> newTarget = runtime.makeHandle(std::move(*propRes));
-  // 4. Else,
-  // This is not a constructor call.
-  if (!isConstructorCall) {
-    // a. Let newTarget be the active function object.
-    // Note: newTarget is the RegExp constructor, which is already set.
+  // 2. If NewTarget is undefined, then
+  if (NewTarget->isUndefined()) {
+    // a. Let newTarget be the active function object. (set above)
     // b. If patternIsRegExp is true and flags is undefined, then
     if (patternIsRegExp && flags->isUndefined()) {
-      // i. Let patternConstructor be Get(pattern, "constructor").
-      // ii. ReturnIfAbrupt(patternConstructor).
+      // i. Let patternConstructor be ? Get(pattern, "constructor").
       auto patternObj = Handle<JSObject>::vmcast(pattern);
       auto patternConstructor = JSObject::getNamed_RJS(
           patternObj,
@@ -311,7 +306,7 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
       if (LLVM_UNLIKELY(patternConstructor == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      // iii. If SameValue(newTarget, patternConstructor) is true, return
+      // ii. If SameValue(newTarget, patternConstructor) is true, return
       // pattern.
       if (isSameValue(newTarget.getHermesValue(), patternConstructor->get())) {
         // Note: unfortunately, even at this point it's still unsafe to assume
@@ -322,9 +317,11 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
     }
   }
 
+  // 3. Else, a. Let newTarget be NewTarget. (set above)
+
   MutableHandle<> P{runtime};
   MutableHandle<> F{runtime};
-  // 5. If Type(pattern) is Object and pattern has a [[RegExpMatcher]] internal
+  // 4. If pattern is an Object and pattern has a [[RegExpMatcher]] internal
   // slot, then
   if (auto patternAsRegExp = Handle<JSRegExp>::dyn_vmcast(pattern)) {
     // a. Let P be the value of pattern’s [[OriginalSource]] internal slot.
@@ -344,20 +341,18 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
       F = flags.getHermesValue();
     }
   } else if (patternIsRegExp) {
-    // 6. Else if patternIsRegExp is true, then
-    //   a. Let P be Get(pattern, "source").
-    //   b. ReturnIfAbrupt(P).
+    // 5. Else if patternIsRegExp is true, then
+    //   a. Let P be ? Get(pattern, "source").
     Handle<JSObject> patternObj = Handle<JSObject>::vmcast(pattern);
-    propRes = JSObject::getNamed_RJS(
+    auto propRes = JSObject::getNamed_RJS(
         patternObj, runtime, Predefined::getSymbolID(Predefined::source));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     P = std::move(propRes.getValue());
-    //   c. If flags is undefined, then
+    //   b. If flags is undefined, then
     if (flags->isUndefined()) {
-      //   i. Let F be Get(pattern, "flags").
-      //   ii. ReturnIfAbrupt(F).
+      //   i. Let F be ? Get(pattern, "flags").
       propRes = JSObject::getNamed_RJS(
           patternObj, runtime, Predefined::getSymbolID(Predefined::flags));
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -365,23 +360,22 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
       }
       F = std::move(propRes.getValue());
     } else {
-      //   d. Else, let F be flags.
+      //   c. Else, let F be flags.
       F = flags.getHermesValue();
     }
   } else {
-    // 7. Else,
+    // 6. Else,
     //   a. Let P be pattern.
     P = pattern.getHermesValue();
     //   b. Let F be flags.
     F = flags.getHermesValue();
   }
-  // 8. Let O be RegExpAlloc(newTarget).
-  // 9. ReturnIfAbrupt(O).
+  // 7. Let O be ? RegExpAlloc(newTarget).
   auto objRes = regExpAlloc(runtime, newTarget);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  // 10. Return RegExpInitialize(O, P, F).
+  // 8. Return ? RegExpInitialize(O, P, F).
   auto regExpRes =
       regExpInitialize(runtime, runtime.makeHandle(objRes.getValue()), P, F);
   if (LLVM_UNLIKELY(regExpRes == ExecutionStatus::EXCEPTION)) {
@@ -397,7 +391,7 @@ regExpConstructor(void *, Runtime &runtime, NativeArgs args) {
   Handle<> pattern = args.getArgHandle(0);
   Handle<> flags = args.getArgHandle(1);
   auto regExpRes = regExpConstructorInternal(
-      runtime, pattern, flags, args.isConstructorCall());
+      runtime, pattern, flags, args.getNewTargetHandle());
   if (LLVM_UNLIKELY(regExpRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -421,7 +415,8 @@ static CallResult<Handle<JSRegExp>> regExpConstructorFastCopy(
     }
     return newRegexp;
   }
-  auto newRegexpRes = regExpConstructorInternal(runtime, pattern, flags, true);
+  auto newRegexpRes = regExpConstructorInternal(
+      runtime, pattern, flags, runtime.regExpConstructor);
   if (LLVM_UNLIKELY(newRegexpRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

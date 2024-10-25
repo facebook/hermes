@@ -1269,6 +1269,12 @@ void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
+  StackFramePtr newFrame{runtime.getStackPointer()};
+  auto newTarget = newFrame.getNewTargetRef();
+  assert(
+      newTarget.isUndefined() ||
+      vmisa<Callable>(newTarget) &&
+          "new.target for a NativeConstructor should either be undefined or a callable");
   return NativeFunction::_callImpl(selfHandle, runtime);
 }
 #endif

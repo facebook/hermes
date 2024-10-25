@@ -392,7 +392,12 @@ print(JSON.stringify(/|/.exec("abc")));
 print("X".match(/(A{9999999999}B|X)*/ ));
 // CHECK-NEXT: X,X
 
-
+(function () {
+  function foo() {}
+  let inst = Reflect.construct(RegExp, [], foo);
+  print(Object.getPrototypeOf(inst) === foo.prototype);
+// CHECK-NEXT: true
+})();
 
 // hasIndices support
 var indicesRegexRes1 = /(a).(c)/d.exec("abcdef")
