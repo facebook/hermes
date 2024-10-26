@@ -93,6 +93,14 @@ class JITContext {
 
   /// Set the flag to force jitting of all functions.
   void setForceJIT(bool force) {}
+
+  /// Set the flag to emit asserts in the JIT'ed code.
+  void setEmitAsserts(bool emitAsserts) {}
+
+  /// \return true if we should emit asserts in the JIT'ed code.
+  bool getEmitAsserts() {
+    return false;
+  }
 };
 
 } // namespace vm

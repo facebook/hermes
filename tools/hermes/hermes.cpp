@@ -112,6 +112,7 @@ static int executeHBCBytecodeFromCL(
   options.forceJIT = flags.ForceJIT;
   options.dumpJITCode = flags.DumpJITCode;
   options.jitCrashOnError = flags.JITCrashOnError;
+  options.jitEmitAsserts = flags.JITEmitAsserts;
   options.stopAfterInit = flags.StopAfterInit;
   options.forceGCBeforeStats = flags.GCBeforeStats;
   options.sampleProfiling = flags.SampleProfiling;

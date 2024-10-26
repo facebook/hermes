@@ -233,6 +233,21 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("crash on any JIT compilation error"),
       llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> JITEmitAsserts{
+      "Xjit-emit-asserts",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+#ifdef NDEBUG
+      llvh::cl::desc(
+          "(default false) Whether assertions in JIT compiled code are enabled"),
+      llvh::cl::init(false),
+#else
+      llvh::cl::desc(
+          "(default true) Whether assertions in JIT compiled code are enabled"),
+      llvh::cl::init(true)
+#endif
+  };
 };
 
 /// All command line runtime options relevant to the VM, including options

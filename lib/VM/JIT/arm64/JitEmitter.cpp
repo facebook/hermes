@@ -318,12 +318,14 @@ static bool isCheapConst(uint64_t k) {
 Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
     unsigned dumpJitCode,
+    bool emitAsserts,
     CodeBlock *codeBlock,
     PropertyCacheEntry *readPropertyCache,
     PropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
     const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
+      emitAsserts_(emitAsserts),
       frameRegs_(numFrameRegs),
       codeBlock_(codeBlock) {
   if (dumpJitCode_ & DumpJitCode::Code)
@@ -796,11 +798,11 @@ void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   // Call the passed function.
   callThunk(fn, name);
 
-// Invalidate the current IP to make sure it is set before the next call.
-#ifndef NDEBUG
-  a.mov(a64::x16, Runtime::kInvalidCurrentIP);
-  a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
-#endif
+  if (emitAsserts_) {
+    // Invalidate the current IP to make sure it is set before the next call.
+    a.mov(a64::x16, Runtime::kInvalidCurrentIP);
+    a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+  }
 }
 
 void Emitter::callWithoutThunk(void *fn, const char *name) {

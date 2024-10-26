@@ -372,6 +372,7 @@ bool executeHBCBytecodeImpl(
   runtime->getJITContext().setForceJIT(options.forceJIT);
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
+  runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);
 
   if (options.timeLimit > 0) {
     runtime->timeLimitMonitor = vm::TimeLimitMonitor::getOrCreate();

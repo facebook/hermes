@@ -78,6 +78,16 @@ class JITContext {
     execThreshold_ = force ? 0 : DEFAULT_EXEC_THRESHOLD;
   }
 
+  /// Set the flag to emit asserts in the JIT'ed code.
+  void setEmitAsserts(bool emitAsserts) {
+    emitAsserts_ = emitAsserts;
+  }
+
+  /// \return true if we should emit asserts in the JIT'ed code.
+  bool getEmitAsserts() {
+    return emitAsserts_;
+  }
+
  private:
   /// Slow path that actually performs the compilation of the specified
   /// CodeBlock.
@@ -93,6 +103,8 @@ class JITContext {
   unsigned dumpJITCode_{0};
   /// whether to fatally crash on JIT compilation errors
   bool crashOnError_{false};
+  /// Whether to emit asserts in the JIT'ed code.
+  bool emitAsserts_{false};
 
   /// Execution threshold before a function is compiled.
   unsigned execThreshold_ = 0;

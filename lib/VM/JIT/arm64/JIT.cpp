@@ -91,6 +91,7 @@ class JITContext::Compiler {
       : jc_(jc),
         em_(jc.impl_->jr,
             jc.getDumpJITCode(),
+            jc.getEmitAsserts(),
             codeBlock,
             codeBlock->propertyCache(),
             codeBlock->writePropertyCache(),

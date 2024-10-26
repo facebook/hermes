@@ -290,6 +290,8 @@ class TempRegAlloc {
 class Emitter {
   /// Level of dumping JIT code. Bit 0 indicates code printing on or off.
   unsigned const dumpJitCode_;
+  /// Whether to emit asserts in the JIT'ed code.
+  bool const emitAsserts_;
 
   std::unique_ptr<asmjit::Logger> logger_{};
   std::unique_ptr<asmjit::ErrorHandler> errorHandler_;
@@ -390,6 +392,7 @@ class Emitter {
   explicit Emitter(
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
+      bool emitAsserts,
       CodeBlock *codeBlock,
       PropertyCacheEntry *readPropertyCache,
       PropertyCacheEntry *writePropertyCache,

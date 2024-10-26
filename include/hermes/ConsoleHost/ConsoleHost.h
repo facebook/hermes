@@ -148,6 +148,9 @@ struct ExecuteOptions {
   /// Fatally crash on any JIT compilation error.
   bool jitCrashOnError{false};
 
+  /// Emit asserts in JIT'ed code
+  bool jitEmitAsserts{false};
+
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 
