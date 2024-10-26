@@ -1396,7 +1396,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// See \c ::setCurrentIP() and \c ::getCurrentIP() .
   const inst::Inst *currentIP_{nullptr};
 
-#ifndef NDEBUG
   /// Sentinel value for \c currentIP_ to indicate that the currently stored
   /// value is invalid and should not be used.
   /// This is used to invalidate \c currentIP inside the interpreter between
@@ -1405,6 +1404,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// ever calls out into a function that may observe the IP without setting it.
   static constexpr uintptr_t kInvalidCurrentIP = 0x1;
 
+#ifndef NDEBUG
   /// The number of alive/active NoRJSScopes. If nonzero, then no JS execution
   /// is allowed
   uint32_t noRJSLevel_{0};
