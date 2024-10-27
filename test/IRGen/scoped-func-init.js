@@ -38,7 +38,7 @@ function foo() {
 // CHKLOOSE-NEXT:       ReturnInst %8: any
 // CHKLOOSE-NEXT:function_end
 
-// CHKLOOSE:scope %VS1 [f: any]
+// CHKLOOSE:scope %VS1 [f: any, f#1: any]
 
 // CHKLOOSE:function foo(): any
 // CHKLOOSE-NEXT:%BB0:
@@ -49,6 +49,7 @@ function foo() {
 // CHKLOOSE-NEXT:       StorePropertyLooseInst %3: any, globalObject: object, "init": string
 // CHKLOOSE-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
 // CHKLOOSE-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.f]: any
+// CHKLOOSE-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.f#1]: any
 // CHKLOOSE-NEXT:       ReturnInst undefined: undefined
 // CHKLOOSE-NEXT:function_end
 
