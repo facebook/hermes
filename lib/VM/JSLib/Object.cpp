@@ -21,13 +21,6 @@
 namespace hermes {
 namespace vm {
 
-/// Initialize a freshly created instance of Object.
-static inline HermesValue objectInitInstance(
-    Handle<JSObject> thisHandle,
-    Runtime &) {
-  return thisHandle.getHermesValue();
-}
-
 //===----------------------------------------------------------------------===//
 /// Object.
 
@@ -283,6 +276,13 @@ Handle<JSObject> createObjectConstructor(Runtime &runtime) {
 /// constructor.
 CallResult<HermesValue>
 objectConstructor(void *, Runtime &runtime, NativeArgs args) {
+  if (!args.getNewTarget().isUndefined()) {
+    assert(
+        args.getThisArg().isObject() &&
+        "'this' must be an object in a constructor call");
+    return args.getThisArg();
+  }
+
   auto arg0 = args.getArgHandle(0);
 
   // If arg0 is supplied and is not null or undefined, call ToObject().
@@ -295,19 +295,9 @@ objectConstructor(void *, Runtime &runtime, NativeArgs args) {
   // The other cases must have been handled above.
   assert(arg0->isUndefined() || arg0->isNull());
 
-  if (args.isConstructorCall()) {
-    assert(
-        args.getThisArg().isObject() &&
-        "'this' must be an object in a constructor call");
-    return objectInitInstance(
-        Handle<JSObject>::vmcast(&args.getThisArg()), runtime);
-  }
-
   // This is a function call that must act as a constructor and create a new
   // object.
-  auto thisHandle = runtime.makeHandle(JSObject::create(runtime));
-
-  return objectInitInstance(thisHandle, runtime);
+  return JSObject::create(runtime).getHermesValue();
 }
 
 CallResult<HermesValue> getPrototypeOf(Runtime &runtime, Handle<JSObject> obj) {
@@ -681,8 +671,7 @@ objectCreate(void *, Runtime &runtime, NativeArgs args) {
         "Object prototype argument must be an Object or null");
   }
 
-  auto newObj = objectInitInstance(
-      runtime.makeHandle(JSObject::create(runtime, obj)), runtime);
+  auto newObj = JSObject::create(runtime, obj).getHermesValue();
   auto arg1 = args.getArgHandle(1);
   if (arg1->isUndefined()) {
     return newObj;
