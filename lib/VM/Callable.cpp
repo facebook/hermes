@@ -47,7 +47,6 @@ _callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
   //       Runtime::StackOverflowKind::NativeStack);
   // }
 
-  StackFramePtr currentFrame = runtime.getCurrentFrame();
   StackFramePtr newFrame{runtime.getStackPointer()};
 
   auto *callerIP = runtime.getCurrentIP();
@@ -58,11 +57,11 @@ _callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
   // If we call into the JIT (either directly or transitively), it may modify
   // the saved IP. Make sure the IP is restored before we return to the caller.
   auto restoreIP = llvh::make_scope_exit(
-      [callerIP, &runtime]() { runtime.setCurrentIP(callerIP); });
+      [&newFrame, &runtime]() { runtime.setCurrentIP(newFrame.getSavedIP()); });
 
   SHJmpBuf jBuf;
   SHLocals *locals = runtime.shLocals;
-  if (_sh_try(getSHRuntime(runtime), &jBuf) == 0) {
+  if (LLVM_LIKELY(_sh_try(getSHRuntime(runtime), &jBuf) == 0)) {
 #ifdef HERMESVM_PROFILER_NATIVECALL
     auto t1 = HERMESVM_RDTSC();
 #endif
@@ -77,11 +76,9 @@ _callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
     else
       return createPseudoHandle(HermesValue::fromRaw(res.raw));
   } else {
+    auto oldFrame = newFrame.getPreviousFramePointer();
     SHLegacyValue exc = _sh_catch(
-        getSHRuntime(runtime),
-        locals,
-        currentFrame.ptr(),
-        newFrame.ptr() - currentFrame.ptr());
+        getSHRuntime(runtime), locals, oldFrame, newFrame.ptr() - oldFrame);
     runtime.setThrownValue(HermesValue::fromRaw(exc.raw));
     return ExecutionStatus::EXCEPTION;
   }
