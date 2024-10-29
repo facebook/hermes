@@ -443,10 +443,9 @@ void DebuggerDomainAgent::removeBreakpoint(
 
 void DebuggerDomainAgent::setBreakpointsActive(
     const m::debugger::SetBreakpointsActiveRequest &req) {
-  if (!enabled_) {
-    sendResponseToClient(m::makeOkResponse(req.id));
-    return;
-  }
+  // We don't check for `enabled_` here because V8 allows
+  // `setBreakpointsActive` to be called while debugger is disabled:
+  // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=562-563;drc=db2ef55b78602346f67f7f015ec6ebb9e554d228
   breakpointsActive_ = req.active;
   sendResponseToClient(m::makeOkResponse(req.id));
 }
