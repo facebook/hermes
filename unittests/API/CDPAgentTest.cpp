@@ -108,6 +108,7 @@ class CDPAgentTest : public ::testing::Test {
   void TearDown() override;
 
   void setupRuntimeTestInfra();
+  void preserveStateAndResetTestEnv(bool saveAgentInRuntimeThread);
 
   void scheduleScript(
       const std::string &script,
@@ -303,6 +304,45 @@ void CDPAgentTest::TearDown() {
   });
 
   runtimeThread_.reset();
+}
+
+void CDPAgentTest::preserveStateAndResetTestEnv(bool saveAgentInRuntimeThread) {
+  State state;
+  if (saveAgentInRuntimeThread) {
+    // Save CDPAgent state on the runtime thread and shut everything down.
+    waitFor<bool>([this, &state](auto promise) {
+      runtimeThread_->add([this, &state, promise]() {
+        state = cdpAgent_->getState();
+        cdpAgent_.reset();
+        cdpDebugAPI_.reset();
+        promise->set_value(true);
+      });
+    });
+  } else {
+    // Save CDPAgent state on non-runtime thread and shut everything down.
+    state = cdpAgent_->getState();
+    cdpAgent_.reset();
+    waitFor<bool>([this](auto promise) {
+      runtimeThread_->add([this, promise]() {
+        cdpDebugAPI_.reset();
+        promise->set_value(true);
+      });
+    });
+  }
+  // Can't destroy runtime_ in the runtimeThread_ due to handleRuntimeTask()
+  // still uses runtime_.
+  runtimeThread_.reset();
+  runtime_.reset();
+
+  // Set everything up again, but with the persisted state this time for
+  // CDPAgent.
+  setupRuntimeTestInfra();
+  cdpAgent_ = CDPAgent::create(
+      kTestExecutionContextId_,
+      *cdpDebugAPI_,
+      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
+      std::bind(&CDPAgentTest::handleResponse, this, _1),
+      std::move(state));
 }
 
 void CDPAgentTest::waitForScheduledScripts() {
@@ -1923,42 +1963,13 @@ TEST_F(CDPAgentTest, DebuggerRestoreState) {
   ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
 
   for (int i = 0; i < 2; i++) {
-    State state;
     if (i == 0) {
       // Save CDPAgent state on non-runtime thread and shut everything down.
-      state = cdpAgent_->getState();
-      cdpAgent_.reset();
-      waitFor<bool>([this](auto promise) {
-        runtimeThread_->add([this, promise]() {
-          cdpDebugAPI_.reset();
-          promise->set_value(true);
-        });
-      });
+      preserveStateAndResetTestEnv(false);
     } else {
       // Save CDPAgent state on the runtime thread and shut everything down.
-      waitFor<bool>([this, &state](auto promise) {
-        runtimeThread_->add([this, &state, promise]() {
-          state = cdpAgent_->getState();
-          cdpAgent_.reset();
-          cdpDebugAPI_.reset();
-          promise->set_value(true);
-        });
-      });
+      preserveStateAndResetTestEnv(true);
     }
-    // Can't destroy runtime_ in the runtimeThread_ due to handleRuntimeTask()
-    // still uses runtime_.
-    runtimeThread_.reset();
-    runtime_.reset();
-
-    // Set everything up again, but with the persisted state this time for
-    // CDPAgent.
-    setupRuntimeTestInfra();
-    cdpAgent_ = CDPAgent::create(
-        kTestExecutionContextId_,
-        *cdpDebugAPI_,
-        std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-        std::bind(&CDPAgentTest::handleResponse, this, _1),
-        std::move(state));
 
     sendAndCheckResponse("Debugger.enable", msgId++);
     scheduleScript(R"(
