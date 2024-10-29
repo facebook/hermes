@@ -45,6 +45,7 @@ public class PlatformNumberFormatterICU implements IPlatformNumberFormatter {
   PlatformNumberFormatterICU() {}
 
   @RequiresApi(api = Build.VERSION_CODES.N)
+  @SuppressWarnings("deprecation")
   private void initialize(
       NumberFormat numberFormat,
       ILocaleObject<?> localeObject,
