@@ -568,7 +568,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.textEncoderPrototype = JSObject::create(runtime).getHermesValue();
 
   // Object constructor.
-  createObjectConstructor(runtime);
+  runtime.objectConstructor = createObjectConstructor(runtime).getHermesValue();
 
   // JSError constructor.
   runtime.errorConstructor = createErrorConstructor(runtime).getHermesValue();

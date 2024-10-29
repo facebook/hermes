@@ -21,13 +21,6 @@
 namespace hermes {
 namespace vm {
 
-/// Initialize a freshly created instance of Object.
-static inline HermesValue objectInitInstance(
-    Handle<JSObject> thisHandle,
-    Runtime &) {
-  return thisHandle.getHermesValue();
-}
-
 //===----------------------------------------------------------------------===//
 /// Object.
 
@@ -279,35 +272,40 @@ Handle<JSObject> createObjectConstructor(Runtime &runtime) {
   return cons;
 }
 
-/// ES5.1 15.2.1.1 and 15.2.2.1. Object() invoked as a function and as a
+/// ES2024 20.1.1.1 Object() invoked as a function and as a
 /// constructor.
 CallResult<HermesValue>
 objectConstructor(void *, Runtime &runtime, NativeArgs args) {
-  auto arg0 = args.getArgHandle(0);
-
-  // If arg0 is supplied and is not null or undefined, call ToObject().
-  {
-    if (!arg0->isUndefined() && !arg0->isNull()) {
-      return toObject(runtime, arg0);
-    }
-  }
-
-  // The other cases must have been handled above.
-  assert(arg0->isUndefined() || arg0->isNull());
-
-  if (args.isConstructorCall()) {
+  auto &newTarget = args.getNewTarget();
+  // 1. If NewTarget is neither undefined nor the active function object, then
+  if (!newTarget.isUndefined() &&
+      newTarget.getRaw() != runtime.objectConstructor.getRaw()) {
+    // a. Return ? OrdinaryCreateFromConstructor(NewTarget,
+    // "%Object.prototype%").
+    // This is a construct call, which means the object we want to create was
+    // actually already created for us in the caller and passed as `this`, so we
+    // can just use that.
     assert(
         args.getThisArg().isObject() &&
         "'this' must be an object in a constructor call");
-    return objectInitInstance(
-        Handle<JSObject>::vmcast(&args.getThisArg()), runtime);
+    return args.getThisArg();
   }
 
-  // This is a function call that must act as a constructor and create a new
-  // object.
-  auto thisHandle = runtime.makeHandle(JSObject::create(runtime));
+  auto value = args.getArgHandle(0);
+  // 2. If value is either undefined or null, return
+  // OrdinaryObjectCreate(%Object.prototype%).
+  if (value->isUndefined() || value->isNull()) {
+    // If this is a construct call directly on Object, then
+    // OrdinaryObjectCreate(%Object.prototype%) is the value of `this`.
+    if (newTarget.getRaw() == runtime.objectConstructor.getRaw()) {
+      return args.getThisArg();
+    }
+    auto thisHandle = runtime.makeHandle(JSObject::create(runtime));
+    return thisHandle.getHermesValue();
+  }
 
-  return objectInitInstance(thisHandle, runtime);
+  // 3. Return ! ToObject(value).
+  return toObject(runtime, value);
 }
 
 CallResult<HermesValue> getPrototypeOf(Runtime &runtime, Handle<JSObject> obj) {
@@ -681,8 +679,7 @@ objectCreate(void *, Runtime &runtime, NativeArgs args) {
         "Object prototype argument must be an Object or null");
   }
 
-  auto newObj = objectInitInstance(
-      runtime.makeHandle(JSObject::create(runtime, obj)), runtime);
+  auto newObj = JSObject::create(runtime, obj).getHermesValue();
   auto arg1 = args.getArgHandle(1);
   if (arg1->isUndefined()) {
     return newObj;

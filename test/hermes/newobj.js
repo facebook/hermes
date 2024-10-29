@@ -49,3 +49,10 @@ print("singleton", new Singleton() === singleton);
 //CHECK-NEXT: singleton true
 print("singleton", new Singleton() === singleton);
 //CHECK-NEXT: singleton true
+
+// A dummy constructor
+function MyClass() {}
+// Create an object with MyClass.prototype as __proto__
+var obj = Reflect.construct(Object, [{}], MyClass);
+print(obj instanceof MyClass);
+//CHECK-NEXT: true

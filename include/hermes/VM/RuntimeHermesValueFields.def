@@ -18,6 +18,7 @@
 #endif
 
 RUNTIME_HV_FIELD_PROTOTYPE(objectPrototype)
+RUNTIME_HV_FIELD_PROTOTYPE(objectConstructor)
 RUNTIME_HV_FIELD_PROTOTYPE(errorConstructor)
 
 /// JSError and JSError.prototype, and constructor and prototype of all native
