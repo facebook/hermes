@@ -261,6 +261,12 @@ void installConsoleBindings(
   vm::DefinePropertyFlags normalDPF =
       vm::DefinePropertyFlags::getNewNonEnumerableFlags();
 
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSObject> console;
+    vm::PinnedValue<> print;
+  } lv;
+  vm::LocalsRAII lraii{runtime, &lv};
+
   auto defineGlobalFunc = [&](vm::SymbolID name,
                               vm::NativeFunctionPtr functionPtr,
                               void *context,
@@ -326,6 +332,27 @@ void installConsoleBindings(
       setTimeout,
       &ctx,
       1);
+
+  lv.console = vm::JSObject::create(runtime);
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      runtime.getGlobal(),
+      runtime,
+      runtime
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("console")))
+          .get(),
+      normalDPF,
+      lv.console));
+  lv.print = runtime.ignoreAllocationFailure(vm::JSObject::getNamed_RJS(
+      runtime.getGlobal(),
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::print)));
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      lv.console,
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::log),
+      normalDPF,
+      lv.print));
 
   initTest262Harness(runtime);
 }
