@@ -258,6 +258,7 @@ void installConsoleBindings(
     ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler,
     const std::string *filename) {
+  vm::GCScopeMarkerRAII marker{runtime};
   vm::DefinePropertyFlags normalDPF =
       vm::DefinePropertyFlags::getNewNonEnumerableFlags();
 
