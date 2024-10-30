@@ -744,10 +744,12 @@ SHERMES_EXPORT void _sh_ljs_iterator_close_rjs(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_direct_eval(SHRuntime *shr, SHLegacyValue *evalText, bool strictCaller);
 
-/// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail.
+/// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail. Note
+/// that we only do this for unsigned integers, because signed mod can produce
+/// -0, which requires special handling.
 /// \return the double representing the result of the JS mod operation on the
 ///   two integers.
-static inline double _sh_mod_int32(int32_t a, int32_t b) {
+static inline double _sh_mod_uint32(uint32_t a, uint32_t b) {
   if (b == 0) {
     // Avoid the divide-by-zero and return NaN directly.
     return nan("");
@@ -756,15 +758,14 @@ static inline double _sh_mod_int32(int32_t a, int32_t b) {
 }
 
 __attribute__((const)) static inline double _sh_mod_double(double a, double b) {
-  // This is technically "undefined behavior", but we do this casting to quickly
-  // check for integers in Conversions.h as well.
-  int32_t aInt = (int32_t)a;
-  int32_t bInt = (int32_t)b;
+  uint32_t aUint, bUint;
+  bool aIsUint = sh_tryfast_f64_to_u32(a, aUint);
+  bool bIsUint = sh_tryfast_f64_to_u32(b, bUint);
 
-  // If both numbers are integers, use the fast path.
+  // If both numbers are unsigned integers, use the fast path.
   // `-0` must be handled specially, so just check `a != 0` for simplicity.
-  if (a != 0 && (double)aInt == a && (double)bInt == b) {
-    return _sh_mod_int32(aInt, bInt);
+  if (a != 0 && aIsUint && bIsUint) {
+    return _sh_mod_uint32(aUint, bUint);
   }
 
   // Actually have to do the double operation.
