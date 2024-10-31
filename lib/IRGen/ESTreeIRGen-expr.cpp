@@ -754,7 +754,7 @@ Value *ESTreeIRGen::emitCall(
         newTarget,
         thisVal,
         args);
-    if (auto *functionType = llvh::dyn_cast<flow::BaseFunctionType>(
+    if (llvh::isa<flow::BaseFunctionType>(
             flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every BaseFunctionType currently is going to be compiled to a
       // NativeJSFunction, so always set this flag.
@@ -811,7 +811,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
           nullptr,
           Builder.getLiteralUndefined()};
     }
-    if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+    if (llvh::isa<flow::ClassType>(
             flowContext_.getNodeTypeOrAny(superNode)->info)) {
       auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
       if (!property || mem->_computed) {
@@ -1052,7 +1052,7 @@ void ESTreeIRGen::emitMemberStore(
 
   // Check if we are storing to a FastArray, and generate the specialised
   // instruction for it.
-  if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
+  if (llvh::isa<flow::ArrayType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (mem->_computed &&
         llvh::isa<flow::NumberType>(

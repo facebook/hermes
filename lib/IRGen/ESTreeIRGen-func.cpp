@@ -188,7 +188,7 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
       functionNode->getSemInfo()->customDirectives,
       functionNode->getSourceRange());
 
-  if (auto *functionType = llvh::dyn_cast<flow::TypedFunctionType>(
+  if (llvh::isa<flow::TypedFunctionType>(
           flowContext_.getNodeTypeOrAny(functionNode)->info)) {
     newFunc->getAttributesRef(Mod).typed = true;
   }
@@ -271,7 +271,7 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
             functionNode->getSourceRange(),
             /* insertBefore */ nullptr));
 
-  if (auto *functionType = llvh::dyn_cast<flow::TypedFunctionType>(
+  if (llvh::isa<flow::TypedFunctionType>(
           flowContext_.getNodeTypeOrAny(functionNode)->info)) {
     newFunction->getAttributesRef(Mod).typed = true;
   }

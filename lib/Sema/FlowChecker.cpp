@@ -1218,7 +1218,7 @@ class FlowChecker::AnnotateScopeDecls {
               "ft: incompatible type for array pattern, expected tuple");
           continue;
         }
-      } else if (auto *obj = llvh::dyn_cast<ESTree::ObjectPatternNode>(node)) {
+      } else if (llvh::isa<ESTree::ObjectPatternNode>(node)) {
         outer.setNodeType(arr, outer.flowContext_.getAny());
         outer.sm_.warning(
             node->getSourceRange(),
@@ -1978,13 +1978,12 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
 
   // The new Decl for the specialization of the function declaration.
   sema::Decl *newDecl = nullptr;
-  if (auto *func =
-          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
+  if (llvh::isa<ESTree::FunctionDeclarationNode>(specialization)) {
     newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
         llvh::cast<ESTree::FunctionDeclarationNode>(specialization)->_id));
   } else if (
-      auto *classDecl =
-          llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
+
+      llvh::isa<ESTree::ClassDeclarationNode>(specialization)) {
     newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
         llvh::cast<ESTree::ClassDeclarationNode>(specialization)->_id));
   }

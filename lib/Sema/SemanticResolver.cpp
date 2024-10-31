@@ -1603,8 +1603,7 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
 
   if (auto *catchClause = llvh::dyn_cast<CatchClauseNode>(node)) {
     extractDeclaredIdentsFromID(catchClause->_param, idents);
-    if (auto *id =
-            llvh::dyn_cast_or_null<IdentifierNode>(catchClause->_param)) {
+    if (llvh::dyn_cast_or_null<IdentifierNode>(catchClause->_param)) {
       // For compatibility with ES5,
       // we need to treat a single catch variable specially, see:
       // B.3.5 VariableStatements in Catch Blocks

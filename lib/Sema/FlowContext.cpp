@@ -528,13 +528,13 @@ int TypedFunctionType::_compareImpl(
 bool TypedFunctionType::_equalsImpl(
     const TypedFunctionType *other,
     CompareState &state) const {
-  if (auto tmp = cmpHelperBool(isAsync(), other->isAsync()))
+  if (cmpHelperBool(isAsync(), other->isAsync()))
     return false;
-  if (auto tmp = cmpHelperBool(isGenerator(), other->isGenerator()))
+  if (cmpHelperBool(isGenerator(), other->isGenerator()))
     return false;
-  if (auto tmp = cmpHelper(thisParam_, other->thisParam_))
+  if (cmpHelper(thisParam_, other->thisParam_))
     return false;
-  if (auto tmp = lexicographicalComparison(
+  if (lexicographicalComparison(
           params_.begin(),
           params_.end(),
           other->params_.begin(),
@@ -544,7 +544,7 @@ bool TypedFunctionType::_equalsImpl(
           })) {
     return false;
   }
-  if (auto tmp = cmpHelper(return_, other->return_))
+  if (cmpHelper(return_, other->return_))
     return false;
   return true;
 }
@@ -597,9 +597,9 @@ int UntypedFunctionType::_compareImpl(
 bool UntypedFunctionType::_equalsImpl(
     const UntypedFunctionType *other,
     CompareState &state) const {
-  if (auto tmp = cmpHelperBool(isAsync(), other->isAsync()))
+  if (cmpHelperBool(isAsync(), other->isAsync()))
     return false;
-  if (auto tmp = cmpHelperBool(isGenerator(), other->isGenerator()))
+  if (cmpHelperBool(isGenerator(), other->isGenerator()))
     return false;
   return true;
 }

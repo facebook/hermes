@@ -1277,8 +1277,7 @@ class FlowChecker::ExprVisitor {
       if (auto *methodCallee =
               llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
         Type *thisArgType = nullptr;
-        if (auto *superNode =
-                llvh::dyn_cast<ESTree::SuperNode>(methodCallee->_object)) {
+        if (llvh::isa<ESTree::SuperNode>(methodCallee->_object)) {
           // 'super' calls implicitly pass the current class as 'this'.
           if (!outer_.curClassContext_->classType) {
             outer_.sm_.error(
@@ -1296,8 +1295,7 @@ class FlowChecker::ExprVisitor {
               methodCallee->getSourceRange(), "ft: 'this' type mismatch");
           return;
         }
-      } else if (
-          auto *superNode = llvh::dyn_cast<ESTree::SuperNode>(node->_callee)) {
+      } else if (llvh::isa<ESTree::SuperNode>(node->_callee)) {
         // 'super' calls implicitly pass the current class as 'this'.
         if (!outer_.curClassContext_->classType) {
           outer_.sm_.error(
