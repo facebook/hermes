@@ -29,7 +29,7 @@ enums=true
 as_const=true
 
 [version]
-^0.251.0
+^0.251.1
 
 [lints]
 untyped-type-import=error
