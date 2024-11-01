@@ -1129,32 +1129,89 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
+/// Fast path for Array.prototype.push() when the array is a normal array.
+/// \pre \p arr is an array with fast index properties and there are no
+///   index-like properties in any parents.
+/// \pre \p The storage for \p arr starts at 0 and ends at its length.
+/// \param arr the array to push onto.
+/// \param len the length of \p arr (before pushing).
+/// \param args the original NativeArgs to push().
+static CallResult<HermesValue> arrayPrototypePushFastPath(
+    Runtime &runtime,
+    Handle<JSArray> arr,
+    uint32_t len,
+    const NativeArgs &args) {
+  uint32_t argCount = args.getArgCount();
+
+  assert(
+      UINT32_MAX - len >= argCount &&
+      "integer overflow checked before calling fast path");
+  uint32_t finalLen = len + argCount;
+
+  // Expand the array to make room for the new items.
+  // Length property will be set at the end.
+  if (LLVM_UNLIKELY(
+          JSArray::setStorageEndIndex(arr, runtime, finalLen) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  for (uint32_t i = 0; i < argCount; ++i) {
+    // Perform potential allocation before dereferencing arr.
+    SmallHermesValue shv =
+        SmallHermesValue::encodeHermesValue(args.getArg(i), runtime);
+    JSArray::unsafeSetExistingElementAt(*arr, runtime, i + len, shv);
+  }
+
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(
+              arr, runtime, finalLen, PropOpFlags().plusThrowOnError()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return HermesValue::encodeTrustedNumberValue(finalLen);
+}
+
 /// ES9.0 22.1.3.18.
 CallResult<HermesValue>
 arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
     PinnedValue<JSObject> O;
+    PinnedValue<JSArray> arr;
     PinnedValue<> len;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
   GCScope gcScope(runtime);
-  // 1. Let O be ? ToObject(this value).
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.O = vmcast<JSObject>(*objRes);
+
+  // 3. Let items be a List whose elements are, in left to right order, the
+  // arguments that were passed to this function invocation.
+  // 4. Let argCount be the number of elements in items.
+  uint32_t argCount = args.getArgCount();
 
   // 2. Let len be ? ToLength(? Get(O, "length")).
-  auto arr = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
-                                   : Runtime::makeNullHandle<JSArray>();
-  if (LLVM_LIKELY(arr)) {
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
+    lv.O = args.vmcastThis<JSObject>();
+    lv.arr = args.vmcastThis<JSArray>();
     // Fast path for getting the length.
-    lv.len = HermesValue::encodeTrustedNumberValue(
-        JSArray::getLength(arr.get(), runtime));
+    uint32_t len = JSArray::getLength(*lv.arr, runtime);
+
+    if (LLVM_LIKELY(len < UINT32_MAX - argCount) &&
+        arrayFastPathCheck(runtime, *lv.arr, *runtime.arrayClass, len)) {
+      return arrayPrototypePushFastPath(runtime, lv.arr, len, args);
+    }
+
+    lv.len = HermesValue::encodeTrustedNumberValue(len);
   } else {
     // Slow path, used when pushing onto non-array objects.
+    // 1. Let O be ? ToObject(this value).
+    auto objRes = toObject(runtime, args.getThisHandle());
+    if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.O = vmcast<JSObject>(*objRes);
+    lv.arr = nullptr;
     auto propRes = JSObject::getNamed_RJS(
         lv.O, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -1167,11 +1224,6 @@ arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
     }
     lv.len = lenRes.getValue();
   }
-
-  // 3. Let items be a List whose elements are, in left to right order, the
-  // arguments that were passed to this function invocation.
-  // 4. Let argCount be the number of elements in items.
-  uint32_t argCount = args.getArgCount();
 
   // 5. If len + argCount > 2**53-1, throw a TypeError exception.
   if (lv.len->getNumber() + (double)argCount > (1ULL << 53) - 1) {
