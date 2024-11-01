@@ -963,6 +963,9 @@ class Emitter {
     return isFRKnownType(fr, FRType::Number);
   }
 
+  /// Get the current bytecode IP in \p xOut.
+  void getBytecodeIP(const a64::GpX &xOut);
+
  private:
   /// Allocate or return the offset in RO DATA of the current function's debug
   /// name, in the format ID(name).

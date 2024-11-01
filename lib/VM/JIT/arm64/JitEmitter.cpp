@@ -785,14 +785,7 @@ void Emitter::callThunk(void *fn, const char *name) {
 
 void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   // Save the current IP in the runtime.
-  auto ofs = codeBlock_->getOffsetOf(emittingIP);
-  loadBits64InGp(a64::x16, (uint64_t)codeBlock_->begin(), "Bytecode start");
-  if (a64::Utils::isAddSubImm(ofs)) {
-    a.add(a64::x16, a64::x16, ofs);
-  } else {
-    a.mov(a64::x17, ofs);
-    a.add(a64::x16, a64::x16, a64::x17);
-  }
+  getBytecodeIP(a64::x16);
   a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
 
   // Call the passed function.
@@ -1299,6 +1292,19 @@ void Emitter::frUpdatedWithHW(FR fr, HWReg hwReg, FRType localType) {
 
 void Emitter::frUpdateType(FR fr, FRType type) {
   frameRegs_[fr.index()].localType = type;
+}
+
+void Emitter::getBytecodeIP(const a64::GpX &xOut) {
+  auto ofs = codeBlock_->getOffsetOf(emittingIP);
+  loadBits64InGp(xOut, (uint64_t)codeBlock_->begin(), "Bytecode start");
+  // The add instruction takes a 12 bit immediate optionally shifted by 12 bits.
+  // So we do the add as up to two 12 bit steps. Note that this means that it
+  // will currently fail on any function that is larger than 16MB.
+  auto low12Bits = ofs & llvh::maskTrailingOnes<uint32_t>(12);
+  assert(a64::Utils::isAddSubImm(low12Bits) && "immediate should be 12 bits");
+  a.add(xOut, xOut, low12Bits);
+  if (auto restBits = ofs - low12Bits)
+    a.add(xOut, xOut, restBits);
 }
 
 void Emitter::unreachable() {
