@@ -99,10 +99,9 @@ void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex);
 /// Throw a register stack overflow exception.
 [[noreturn]] void _sh_throw_register_stack_overflow(SHRuntime *shr);
 
-/// Call the closure stored in the outgoing registers of the current frame with
-/// the given \p argCount. The caller is responsible for setting up the callee
-/// closure and new.target registers.
-SHLegacyValue
-_jit_dispatch_call(SHRuntime *, SHLegacyValue *frame, uint32_t argCount);
+/// Call the closure stored in the outgoing registers of the current frame. The
+/// caller is responsible for setting up the callee closure, arg count, and
+/// new.target registers.
+SHLegacyValue _jit_dispatch_call(SHRuntime *, SHLegacyValue *frame);
 
 } // namespace hermes::vm

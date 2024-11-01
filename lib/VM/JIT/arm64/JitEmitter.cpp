@@ -3516,6 +3516,12 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
   loadConstBits64(
       ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
 
+  FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
+  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  // The bytecode arg count includes "this", but the frame one does not, so
+  // subtract 1.
+  loadConstBits64(argcFrameArg, argc - 1, FRType::OtherNonPtr, "argCount");
+
 #ifndef NDEBUG
   // No need to sync the set up call stack to the frame memory,
   // because it these registers can't have global registers.
@@ -3540,10 +3546,9 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
-  a.mov(a64::w2, argc - 1);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
       _jit_dispatch_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -3591,6 +3596,13 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
       ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
   syncToFrame(ntFrameArg);
 
+  FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
+  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  // The bytecode arg count includes "this", but the frame one does not, so
+  // subtract 1.
+  loadConstBits64(
+      argcFrameArg, args.size() - 1, FRType::OtherNonPtr, "argCount");
+
   // For now we sync all registers, since we skip writing to the frame in some
   // cases above, but in principle, we could track frRes specially.
   syncAllFRTempExcept(FR());
@@ -3598,10 +3610,9 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
-  a.mov(a64::w2, args.size() - 1);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
       _jit_dispatch_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -3682,6 +3693,12 @@ void Emitter::callWithNewTarget(
         ntFrameArg, newTargetReg, frameRegs_[frNewTarget.index()].localType);
   }
 
+  FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
+  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  // The bytecode arg count includes "this", but the frame one does not, so
+  // subtract 1.
+  loadConstBits64(argcFrameArg, argc - 1, FRType::OtherNonPtr, "argCount");
+
 #ifndef NDEBUG
   // No need to sync the set up call stack to the frame memory,
   // because it these registers can't have global registers.
@@ -3704,10 +3721,9 @@ void Emitter::callWithNewTarget(
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
-  a.mov(a64::w2, argc - 1);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
       _jit_dispatch_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -3753,21 +3769,24 @@ void Emitter::callWithNewTargetLong(
   syncToFrame(ntFrameArg);
 
   HWReg hwArgc = getOrAllocFRInVecD(frArgc, true);
-  HWReg hwTemp = allocTempGpX(HWReg::gpX(2));
-  freeReg(hwTemp);
-  a.fcvtzu(hwTemp.a64GpX(), hwArgc.a64VecD());
+  FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
+  HWReg hwArgcArg = getOrAllocFRInGpX(argcFrameArg, false);
+  frUpdatedWithHW(argcFrameArg, hwArgcArg, FRType::OtherNonPtr);
+
+  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  a.fcvtzu(hwArgcArg.a64GpX(), hwArgc.a64VecD());
+  // The bytecode arg count includes "this", but the frame one does not, so
+  // subtract 1.
+  a.sub(hwArgcArg.a64GpX(), hwArgcArg.a64GpX(), 1);
 
   syncAllFRTempExcept({});
   freeAllFRTempExcept(frRes);
 
   a.mov(a64::x0, xRuntime);
   a.mov(a64::x1, xFrame);
-  // The bytecode arg count includes "this", but the SH one does not, so
-  // subtract 1.
-  a.sub(a64::w2, hwTemp.a64GpX().w(), 1);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
       _jit_dispatch_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
