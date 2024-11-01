@@ -510,7 +510,7 @@ jobs:
   test-e2e:
     runs-on: ubuntu-22.04
     env:
-      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
       HERMES_WS_DIR: /home/runner/work/hermes
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
     steps:
@@ -534,7 +534,7 @@ jobs:
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
         api-level: 29
-        ndk: 26.1.10909125
+        ndk: 27.1.12297006
         cmake: 3.22.1
         script: |
           cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
@@ -544,7 +544,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       HERMES_WS_DIR: /home/runner/work/hermes
-      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/26.1.10909125
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
     steps:
     - name: Checkout Hermes
       uses: actions/checkout@v4.1.0
