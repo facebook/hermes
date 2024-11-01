@@ -78,13 +78,13 @@
 /// more bits by relying on the 8-byte alignment of all our allocations and
 /// shifting the values to the right. That is still not needed however.
 ///
-/// Native Pointer Encoding
+/// Native Pointer/Value Encoding
 /// ================
-/// We also have limited support for storing a native pointer in a HermesValue.
-/// When doing so, we do not associate a tag with the native pointer and instead
-/// require that the pointer is a valid non-NaN double bit-for-bit. It is the
-/// caller's responsibility to keep track of where these native pointers are
-/// stored.
+/// We also have limited support for storing a native pointer or 32 bit "native"
+/// uint32 in a HermesValue. When doing so, we do not associate a tag with the
+/// native value and instead require that the value is a valid non-NaN double
+/// bit-for-bit. It is the caller's responsibility to keep track of where these
+/// native values are stored.
 ///
 /// Native pointers cannot be NaN-boxed because on platforms where the ARM
 /// memory tagging extension is enabled, the top byte may also have bits set
@@ -96,6 +96,10 @@
 /// Fortunately, since the native pointers will appear as doubles to anything
 /// other than the code that created them, anything that scans HermesValues
 /// (e.g. the GC or heap snapshots), will simply ignore them.
+///
+/// Unlike native pointers, native uint32 may be NaN-boxed since they can fit in
+/// the low bits of a NaN, but since we always know where they are, it is more
+/// efficient to avoid tagging them.
 
 #ifndef HERMES_SH_LEGACY_VALUE_H
 #define HERMES_SH_LEGACY_VALUE_H
@@ -137,7 +141,7 @@ enum HVTag {
   HVTag_EmptyInvalid = HVTag_First,
   HVTag_UndefinedNull,
   HVTag_BoolSymbol,
-  HVTag_NativeValue,
+  HVTag_Unused,
   /// Pointer tags start here.
   HVTag_FirstPointer,
   HVTag_Str = HVTag_FirstPointer,
@@ -160,8 +164,6 @@ enum HVETag {
   HVETag_Null = HVTag_UndefinedNull * 2 + 1,
   HVETag_Bool = HVTag_BoolSymbol * 2,
   HVETag_Symbol = HVTag_BoolSymbol * 2 + 1,
-  HVETag_Native1 = HVTag_NativeValue * 2,
-  HVETag_Native2 = HVTag_NativeValue * 2 + 1,
   HVETag_Str1 = HVTag_Str * 2,
   HVETag_Str2 = HVTag_Str * 2 + 1,
   HVETag_BigInt1 = HVTag_BigInt * 2,
@@ -221,8 +223,10 @@ static inline SHLegacyValue _sh_ljs_native_pointer(void *p) {
   return (SHLegacyValue){(uintptr_t)p};
 }
 
+/// Encode a 32-bit unsigned integer bit-for-bit as a HermesValue. We know that
+/// the resulting value will always be a valid non-NaN double.
 static inline SHLegacyValue _sh_ljs_native_uint32(uint32_t val) {
-  return _sh_ljs_encode_raw_tag((uint64_t)val, HVTag_NativeValue);
+  return (SHLegacyValue){val};
 }
 
 static inline SHLegacyValue _sh_ljs_bool(bool b) {
@@ -284,6 +288,13 @@ static inline void *_sh_ljs_get_pointer(SHLegacyValue v) {
 }
 static inline void *_sh_ljs_get_native_pointer(SHLegacyValue v) {
   return (void *)(uintptr_t)v.raw;
+}
+
+/// Get a native uint32 value stored in the SHLegacyValue. This must only be
+/// used in instances where the caller knows the type of this value, since
+/// there is no corresponding tag (it just looks like a double).
+static inline uint32_t _sh_ljs_get_native_uint32(SHLegacyValue v) {
+  return v.raw;
 }
 
 /// Flags associated with an object.

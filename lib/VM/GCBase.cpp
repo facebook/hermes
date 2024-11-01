@@ -1833,8 +1833,6 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
         hvType = "Undefined";
       } else if (hv.isEmpty()) {
         hvType = "Empty";
-      } else if (hv.isNativeValue()) {
-        hvType = "NativeValue";
       } else {
         assert(false && "Should be no other hermes values");
       }

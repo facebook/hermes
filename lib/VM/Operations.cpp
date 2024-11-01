@@ -123,9 +123,7 @@ bool isSameValue(HermesValue x, HermesValue y) {
     // If the tags are different, they must be different.
     return false;
   }
-  assert(
-      !x.isEmpty() && !x.isNativeValue() &&
-      "Empty and Native Value cannot be compared");
+  assert(!x.isEmpty() && "Empty cannot be compared");
 
   // Strings require deep comparison.
   if (x.isString()) {
@@ -153,7 +151,6 @@ bool isSameValueZero(HermesValue x, HermesValue y) {
 
 bool isPrimitive(HermesValue val) {
   assert(!val.isEmpty() && "empty value encountered");
-  assert(!val.isNativeValue() && "native value encountered");
   return !val.isObject();
 }
 
@@ -212,7 +209,6 @@ CallResult<HermesValue> ordinaryToPrimitive(
 CallResult<HermesValue>
 toPrimitive_RJS(Runtime &runtime, Handle<> valueHandle, PreferredType hint) {
   assert(!valueHandle->isEmpty() && "empty value is not allowed");
-  assert(!valueHandle->isNativeValue() && "native value is not allowed");
 
   if (!valueHandle->isObject())
     return *valueHandle;
@@ -265,9 +261,6 @@ bool toBoolean(HermesValue value) {
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Undefined:
     case HermesValue::ETag::Null:
       return false;
@@ -349,9 +342,6 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::BigInt1:
     case HermesValue::ETag::BigInt2: {
       const uint8_t kDefaultRadix = 10;
@@ -517,9 +507,6 @@ CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2: {
       auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::NUMBER);
@@ -727,9 +714,6 @@ CallResult<Handle<JSObject>> getPrimitivePrototype(
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2:
       llvm_unreachable("object value");
@@ -762,9 +746,6 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Undefined:
       return runtime.raiseTypeError("Cannot convert undefined value to object");
     case HermesValue::ETag::Null:
@@ -1039,10 +1020,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   while (true) {
     // Combine tags for use in the switch statement. Use NativeValueTag as a
     // placeholder for numbers.
-    assert(
-        !x->isNativeValue() && !x->isEmpty() && "invalid value for comparison");
-    assert(
-        !y->isNativeValue() && !y->isEmpty() && "invalid value for comparison");
+    assert(!x->isEmpty() && !y->isEmpty() && "invalid value for comparison");
 
     // The following macros are used to generate the switch cases using
     // HermesValue::combineETags; an S in the name means it is a single ETag
@@ -1065,9 +1043,9 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   CASE_M_S(typeA, typeB##2)
 
 // NUMBER_TAG is a "virtual" ETag member that is used to tag numbers (which
-// don't have a tag assigned to them). It reuses ETag::Native1 there will
-// never be any native values in this part of the code.
-#define NUMBER_TAG Native1
+// don't have a tag assigned to them). It reuses ETag::Empty there will
+// never be any empty values in this part of the code.
+#define NUMBER_TAG Empty
 
     // Tag numbers as with the "virtual" ETag member NUMBER_TAG, and use default
     // tag values for everything else.

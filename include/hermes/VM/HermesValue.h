@@ -57,7 +57,6 @@ class HermesValue : public HermesValueBase {
     EmptyInvalid = HVTag_EmptyInvalid,
     UndefinedNull = HVTag_UndefinedNull,
     BoolSymbol = HVTag_BoolSymbol,
-    NativeValue = HVTag_NativeValue,
 
     /// Pointer tags start here.
     FirstPointer = HVTag_FirstPointer,
@@ -80,8 +79,6 @@ class HermesValue : public HermesValueBase {
     Null = HVETag_Null,
     Bool = HVETag_Bool,
     Symbol = HVETag_Symbol,
-    Native1 = HVETag_Native1,
-    Native2 = HVETag_Native2,
     Str1 = HVETag_Str1,
     Str2 = HVETag_Str2,
     BigInt1 = HVETag_BigInt1,
@@ -190,11 +187,13 @@ class HermesValue : public HermesValueBase {
     return encodeBigIntValueUnsafe(val);
   }
 
+  /// Encode a 32-bit unsigned integer bit-for-bit as a HermesValue. We know
+  /// that the resulting value will always be a valid non-NaN double.
   inline static HermesValue encodeNativeUInt32(uint32_t val) {
-    HermesValue RV(val, Tag::NativeValue);
+    HermesValue RV(val);
     assert(
-        RV.isNativeValue() && RV.getNativeUInt32() == val &&
-        "native value doesn't fit");
+        RV.isDouble() && RV.getNativeUInt32() == val &&
+        "Native value encoding failed");
     return RV;
   }
 
@@ -306,9 +305,6 @@ class HermesValue : public HermesValueBase {
     return getETag() == ETag::Invalid;
   }
 #endif
-  inline bool isNativeValue() const {
-    return getTag() == Tag::NativeValue;
-  }
   inline bool isSymbol() const {
     return getETag() == ETag::Symbol;
   }
@@ -356,8 +352,11 @@ class HermesValue : public HermesValueBase {
     return llvh::BitsToDouble(this->raw);
   }
 
+  /// Get a native uint32 value stored in the HermesValue. This must only be
+  /// used in instances where the caller knows the type of this value, since
+  /// there is no corresponding tag (it just looks like a double).
   inline uint32_t getNativeUInt32() const {
-    assert(isNativeValue());
+    assert(isDouble() && "Native uint32 must look like a double.");
     return (uint32_t)this->raw;
   }
 

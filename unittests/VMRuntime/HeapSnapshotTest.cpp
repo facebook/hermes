@@ -617,9 +617,9 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       cellKindStr(dummy->getKind()),
       gc.getObjectID(dummy.get()),
       blockSize,
-      // One edge to the second dummy, 4 for primitive singletons, and a WeakRef
+      // One edge to the second dummy, 5 for primitive singletons, and a WeakRef
       // to self.
-      6};
+      7};
   Node undefinedNode{
       HeapSnapshot::NodeType::Object,
       "undefined",
@@ -644,6 +644,12 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       gc.getIDTracker().getNumberID(dummy->hvDouble.getNumber()),
       0,
       0};
+  Node nativeValueNode{
+      HeapSnapshot::NodeType::Number,
+      "",
+      gc.getIDTracker().getNumberID(dummy->hvNative.getNumber()),
+      0,
+      0};
   Node falseNode{
       HeapSnapshot::NodeType::Object,
       "false",
@@ -656,13 +662,15 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       gc.getObjectID(dummy->other),
       blockSize,
       // No edges except for the primitive singletons and the WeakRef to self.
-      5};
+      6};
 
   // Common edges.
   Edge trueEdge =
       Edge(HeapSnapshot::EdgeType::Internal, "HermesBool", trueNode.id);
   Edge numberEdge =
       Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", numberNode.id);
+  Edge nativeValueEdge = Edge(
+      HeapSnapshot::EdgeType::Internal, "HermesNative", nativeValueNode.id);
   Edge undefinedEdge = Edge(
       HeapSnapshot::EdgeType::Internal, "HermesUndefined", undefinedNode.id);
   Edge nullEdge =
@@ -678,6 +686,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               trueEdge,
               numberEdge,
               undefinedEdge,
+              nativeValueEdge,
               nullEdge,
               Edge{HeapSnapshot::EdgeType::Weak, "weak", firstDummy.id}}));
 
@@ -689,6 +698,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               trueEdge,
               numberEdge,
               undefinedEdge,
+              nativeValueEdge,
               nullEdge,
               Edge{HeapSnapshot::EdgeType::Weak, "weak", secondDummy.id}}));
 }
@@ -729,7 +739,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
       "DummyObject",
       dummyID,
       dummy->getAllocatedSize(),
-      5};
+      6};
   EXPECT_EQ(dummyNode, expected);
 }
 
