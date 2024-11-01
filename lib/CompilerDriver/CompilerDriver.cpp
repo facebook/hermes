@@ -42,6 +42,7 @@
 #include "hermes/Support/Warning.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
+#include "hermes/VM/JIT/Config.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/Debug.h"
@@ -2153,6 +2154,9 @@ void printHermesVersion(
 #endif
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
       << "    Unicode RegExp Property Escapes\n"
+#endif
+#if HERMESVM_JIT
+      << "    JIT\n"
 #endif
       << "    Zip file input\n";
   }
