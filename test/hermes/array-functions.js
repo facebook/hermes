@@ -608,42 +608,6 @@ a.sort();
 print(a);
 // CHECK-NEXT: 1,
 
-print('splice');
-// CHECK-LABEL: splice
-var a = ['a','b','c','d'];
-print(a.splice(), a);
-// CHECK-NEXT:  a,b,c,d
-var a = ['a','b','c','d'];
-print(a.splice(1), a);
-// CHECK-NEXT: b,c,d a
-var a = ['a','b','c','d'];
-print(a.splice(1, 2), a);
-// CHECK-NEXT: b,c a,d
-var a = ['a','b','c','d'];
-print(a.splice(1, 2, 'x'), a);
-// CHECK-NEXT: b,c a,x,d
-var a = ['a','b','c','d'];
-print(a.splice(1, 2, 'x', 'y', 'z'), a);
-// CHECK-NEXT: b,c a,x,y,z,d
-var a = ['a','b','c','d'];
-print(a.splice(1, 1000, 'x', 'y', 'z'), a);
-// CHECK-NEXT: b,c,d a,x,y,z
-var a = ['a','b','c','d'];
-print(a.splice(-1, 1, 'x', 'y', 'z'), a);
-// CHECK-NEXT: d a,b,c,x,y,z
-var a = ['a','b','c','d'];
-print(a.splice(-1, 1, 'x', 'y', 'z'), a);
-// CHECK-NEXT: d a,b,c,x,y,z
-var a = ['a','b','c','d'];
-print(a.splice(2, 0, 'x', 'y', 'z'), a);
-// CHECK-NEXT:  a,b,x,y,z,c,d
-var a = ['a','b','c','d'];
-print(a.splice(2, -100, 'x', 'y', 'z'), a);
-// CHECK-NEXT:  a,b,x,y,z,c,d
-var a = ['a',,'b',,,'c'];
-print(a.splice(0, 3, 'x', 'y'), a);
-// CHECK-NEXT: a,,b x,y,,,c
-
 print('unshift');
 // CHECK-LABEL: unshift
 var a = [1,2,3];

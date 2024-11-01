@@ -378,6 +378,11 @@ class JSObject : public GCCell {
   template <typename T>
   static inline T *initDirectPropStorage(Runtime &runtime, T *self);
 
+  /// \return the full ObjectFlags associated with this object.
+  SHObjectFlags getFlags() const {
+    return flags_;
+  }
+
   /// ES9 9.1 O.[[Extensible]] internal slot
   bool isExtensible() const {
     return !flags_.noExtend;
