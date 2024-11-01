@@ -9,6 +9,7 @@ import json
 
 import os
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Optional
 
@@ -44,6 +45,8 @@ class TestRunArgs(object):
     """Whether to test with shermes"""
     opt: bool
     """Whether to enable optimizer"""
+    extra_compile_vm_args: ExtraCompileVMArgs
+    """Extra compiler and VM arguments"""
     timeout: int
     """Timeout (in seconds) for compiling/running each test."""
 
@@ -232,6 +235,7 @@ class Test262Suite(Suite):
             args.shermes,
             args.opt,
             args.timeout,
+            args.extra_compile_vm_args,
         )
         return await compile_and_run(js_sources, compile_run_args)
 
@@ -280,9 +284,8 @@ class MjsunitSuite(Suite):
         disable_handle_san = args.skipped_paths_features.should_skip_cat(
             args.test_file, SkipCategory.HANDLESAN_SKIP_LIST
         )
-        extra_compile_vm_args = ExtraCompileVMArgs(
-            compile_args=["-Xes6-class", "-Xenable-tdz"]
-        )
+        extra_compile_vm_args = deepcopy(args.extra_compile_vm_args)
+        extra_compile_vm_args.compile_args += ["-Xes6-class", "-Xenable-tdz"]
         compile_run_args = CompileRunArgs(
             full_test_name,
             test_case.strict_mode,
