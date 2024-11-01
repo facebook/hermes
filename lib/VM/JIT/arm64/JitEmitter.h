@@ -1014,6 +1014,12 @@ class Emitter {
   void emitROData();
 
  private:
+  /// Set up the call frame and perform the call. The caller should have already
+  /// populated the arg count and new target registers.
+  /// \param frRes is the frame register that will contain the result.
+  /// \param frCallee is a frame register containing the callee.
+  void callImpl(FR frRes, FR frCallee);
+
   void arithUnop(
       bool forceNumber,
       FR frRes,

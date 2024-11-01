@@ -3494,8 +3494,7 @@ void Emitter::emitROData() {
   }
 }
 
-void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
-  comment("// Call r%u, r%u, %u", frRes.index(), frCallee.index(), argc);
+void Emitter::callImpl(FR frRes, FR frCallee) {
   uint32_t nRegs = frameRegs_.size();
 
   FR calleeFrameArg{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
@@ -3511,32 +3510,12 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
         calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
   }
 
-  // Store undefined as the new target.
-  FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
-  loadConstBits64(
-      ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
-
-  FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
-  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
-  // The bytecode arg count includes "this", but the frame one does not, so
-  // subtract 1.
-  loadConstBits64(argcFrameArg, argc - 1, FRType::OtherNonPtr, "argCount");
-
 #ifndef NDEBUG
   // No need to sync the set up call stack to the frame memory,
   // because it these registers can't have global registers.
-  assert(
-      !frameRegs_[calleeFrameArg.index()].globalReg &&
-      "frame regs are not number/non-pointer so can't have global reg");
-  assert(
-      !frameRegs_[ntFrameArg.index()].globalReg &&
-      "frame regs are not number/non-pointer so can't have global reg");
-
-  // No need to sync the set up call stack to the frame memory,
-  // because it these registers can't have global registers.
-  for (uint32_t i = 0; i < argc; ++i) {
+  for (uint32_t i = 0; i < StackFrameLayout::CallerExtraRegistersAtEnd; ++i) {
     assert(
-        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        !frameRegs_[nRegs - i - 1].globalReg &&
         "frame regs are not number/non-pointer so can't have global reg");
   }
 #endif
@@ -3551,8 +3530,36 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
       _jit_dispatch_call);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+}
+
+void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
+  comment("// Call r%u, r%u, %u", frRes.index(), frCallee.index(), argc);
+  uint32_t nRegs = frameRegs_.size();
+
+  // Store undefined as the new target.
+  FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
+  loadConstBits64(
+      ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
+
+  FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
+  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  // The bytecode arg count includes "this", but the frame one does not, so
+  // subtract 1.
+  loadConstBits64(argcFrameArg, argc - 1, FRType::OtherNonPtr, "argCount");
+
+#ifndef NDEBUG
+  // No need to sync the set up call stack to the frame memory,
+  // because it these registers can't have global registers.
+  for (uint32_t i = 0; i < argc; ++i) {
+    assert(
+        !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
+        "frame regs are not number/non-pointer so can't have global reg");
+  }
+#endif
+
+  callImpl(frRes, frCallee);
 }
 
 void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
@@ -3562,18 +3569,6 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
       frRes.index(),
       frCallee.index());
   uint32_t nRegs = frameRegs_.size();
-
-  FR calleeFrameArg{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
-  // Store the callee to the right location in the frame.
-  if (frCallee != calleeFrameArg) {
-    // Free any temp register before we mov into it so movFRFromHW stores
-    // directly to the frame.
-    freeFRTemp(calleeFrameArg);
-    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
-    movFRFromHW(
-        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
-  }
-  syncToFrame(calleeFrameArg);
 
   for (uint32_t i = 0; i < args.size(); ++i) {
     auto argLoc = FR{nRegs + hbc::StackFrameLayout::ThisArg - i};
@@ -3603,20 +3598,7 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
   loadConstBits64(
       argcFrameArg, args.size() - 1, FRType::OtherNonPtr, "argCount");
 
-  // For now we sync all registers, since we skip writing to the frame in some
-  // cases above, but in principle, we could track frRes specially.
-  syncAllFRTempExcept(FR());
-  freeAllFRTempExcept({});
-
-  a.mov(a64::x0, xRuntime);
-  a.mov(a64::x1, xFrame);
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
-      _jit_dispatch_call);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  callImpl(frRes, frCallee);
 }
 
 void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
@@ -3671,17 +3653,6 @@ void Emitter::callWithNewTarget(
       argc);
   uint32_t nRegs = frameRegs_.size();
 
-  auto calleeFrameArg = FR{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
-  // Store the callee to the right location in the frame.
-  if (calleeFrameArg != frCallee) {
-    // Free any temp register before we mov into it so movFRFromHW stores
-    // directly to the frame.
-    freeFRTemp(calleeFrameArg);
-    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
-    movFRFromHW(
-        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
-  }
-
   FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
   // Store the new target to the right location in the frame.
   if (ntFrameArg != frNewTarget) {
@@ -3707,27 +3678,9 @@ void Emitter::callWithNewTarget(
         !frameRegs_[nRegs + hbc::StackFrameLayout::ThisArg - i].globalReg &&
         "frame regs are not number/non-pointer so can't have global reg");
   }
-
-  assert(
-      !frameRegs_[calleeFrameArg.index()].globalReg &&
-      "frame regs are not number/non-pointer so can't have global reg");
-  assert(
-      !frameRegs_[ntFrameArg.index()].globalReg &&
-      "frame regs are not number/non-pointer so can't have global reg");
 #endif
 
-  syncAllFRTempExcept({});
-  freeAllFRTempExcept(frRes);
-
-  a.mov(a64::x0, xRuntime);
-  a.mov(a64::x1, xFrame);
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
-      _jit_dispatch_call);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  callImpl(frRes, frCallee);
 }
 
 void Emitter::callWithNewTargetLong(
@@ -3743,17 +3696,6 @@ void Emitter::callWithNewTargetLong(
       frArgc.index());
   uint32_t nRegs = frameRegs_.size();
 
-  auto calleeFrameArg = FR{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
-  // Store the callee to the right location in the frame.
-  if (calleeFrameArg != frCallee) {
-    // Free any temp register before we mov into it so movFRFromHW stores
-    // directly to the frame.
-    freeFRTemp(calleeFrameArg);
-    auto calleeReg = getOrAllocFRInAnyReg(frCallee, true);
-    movFRFromHW(
-        calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
-  }
-
   FR ntFrameArg{nRegs + hbc::StackFrameLayout::NewTarget};
   // Store the new target to the right location in the frame.
   if (ntFrameArg != frNewTarget) {
@@ -3764,9 +3706,6 @@ void Emitter::callWithNewTargetLong(
     movFRFromHW(
         ntFrameArg, newTargetReg, frameRegs_[frNewTarget.index()].localType);
   }
-
-  syncToFrame(calleeFrameArg);
-  syncToFrame(ntFrameArg);
 
   HWReg hwArgc = getOrAllocFRInVecD(frArgc, true);
   FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
@@ -3779,18 +3718,7 @@ void Emitter::callWithNewTargetLong(
   // subtract 1.
   a.sub(hwArgcArg.a64GpX(), hwArgcArg.a64GpX(), 1);
 
-  syncAllFRTempExcept({});
-  freeAllFRTempExcept(frRes);
-
-  a.mov(a64::x0, xRuntime);
-  a.mov(a64::x1, xFrame);
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
-      _jit_dispatch_call);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  callImpl(frRes, frCallee);
 }
 
 void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
