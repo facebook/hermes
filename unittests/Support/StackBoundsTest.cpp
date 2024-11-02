@@ -32,7 +32,12 @@ bool isStackOverflowingSlowPath() {
   auto [highPtr, size] = oscompat::thread_stack_bounds(nativeStackGap);
   nativeStackHigh = (const char *)highPtr;
   nativeStackSize = size;
+#ifdef __GNUC__
   void *sp = __builtin_frame_address(0);
+#else
+  volatile char *var = 0;
+  void *sp = (void *)&var;
+#endif
   return (uintptr_t)nativeStackHigh - (uintptr_t)sp > nativeStackSize;
 }
 
@@ -40,7 +45,12 @@ bool isStackOverflowingSlowPath() {
 ///   current thread. Updates the stack bounds if the thread which Runtime
 ///   is executing on changes.
 inline bool isOverflowing() {
+#ifdef __GNUC__
   void *sp = __builtin_frame_address(0);
+#else
+  volatile char *var = 0;
+  void *sp = (void *)&var;
+#endif
   // Check for overflow by subtracting the sp from the high pointer.
   // If the sp is outside the valid stack range, the difference will
   // be greater than the known stack size.
@@ -118,6 +128,8 @@ TEST(StackBoundsTest, unboundRecursion_thread) {
 }
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+// Windows/EMSCRIPTEN don't support pthreads well.
+
 void runInThreadWith64KGuard(void *(threadFunc)(void *)) {
   pthread_t thread;
   pthread_attr_t attr;
