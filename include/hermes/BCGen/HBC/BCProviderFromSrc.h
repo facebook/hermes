@@ -36,6 +36,11 @@ struct CompileFlags {
   /// detect the 'use static builtin' directive and set the optimization setting
   /// accordingly.
   llvh::Optional<bool> staticBuiltins;
+
+  /// Maximum number of instructions (in addition to parameter handling)
+  /// that is allowed for inlining of small functions.
+  unsigned inlineMaxSize{1};
+
   bool verifyIR{false};
   /// If set, the compiler emits async break check instructions.  These may be
   /// used for several purposes, for example, to enforce a time limit on

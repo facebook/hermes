@@ -46,15 +46,14 @@ bool compileJS(
     const std::string &str,
     const std::string &sourceURL,
     std::string &bytecode,
-    bool optimize,
-    bool emitAsyncBreakCheck,
+    const CompileJSOptions &compileJSOptions,
     DiagnosticHandler *diagHandler,
-    std::optional<std::string_view> sourceMapBuf,
-    bool debug) {
+    std::optional<std::string_view> sourceMapBuf) {
   hbc::CompileFlags flags{};
-  flags.debug = debug;
+  flags.debug = compileJSOptions.debug;
   flags.format = EmitBundle;
-  flags.emitAsyncBreakCheck = emitAsyncBreakCheck;
+  flags.emitAsyncBreakCheck = compileJSOptions.emitAsyncBreakCheck;
+  flags.inlineMaxSize = compileJSOptions.inlineMaxSize;
 
   std::unique_ptr<hermes::SourceMap> sourceMap{};
   // parse the source map if one was provided
@@ -77,14 +76,14 @@ bool compileJS(
       "global",
       diagHandler ? diagHandlerAdapter : nullptr,
       diagHandler,
-      optimize ? runFullOptimizationPasses : nullptr);
+      compileJSOptions.optimize ? runFullOptimizationPasses : nullptr);
   if (!res.first)
     return false;
 
   llvh::raw_string_ostream bcstream(bytecode);
 
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
-  opts.optimizationEnabled = optimize;
+  opts.optimizationEnabled = compileJSOptions.optimize;
 
   hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
@@ -96,6 +95,23 @@ bool compileJS(
   // Flush to string.
   bcstream.flush();
   return true;
+}
+
+bool compileJS(
+    const std::string &str,
+    const std::string &sourceURL,
+    std::string &bytecode,
+    bool optimize,
+    bool emitAsyncBreakCheck,
+    DiagnosticHandler *diagHandler,
+    std::optional<std::string_view> sourceMapBuf,
+    bool debug) {
+  CompileJSOptions options;
+  options.optimize = optimize;
+  options.emitAsyncBreakCheck = emitAsyncBreakCheck;
+  options.debug = debug;
+  return compileJS(
+      str, sourceURL, bytecode, options, diagHandler, sourceMapBuf);
 }
 
 bool compileJS(const std::string &str, std::string &bytecode, bool optimize) {

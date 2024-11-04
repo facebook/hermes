@@ -104,6 +104,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   optSettings.staticBuiltins = compileFlags.staticBuiltins.hasValue()
       ? compileFlags.staticBuiltins.getValue()
       : false;
+  optSettings.inlineMaxSize = compileFlags.inlineMaxSize;
 
   auto context = std::make_shared<Context>(std::move(codeGenOpts), optSettings);
   std::unique_ptr<SimpleDiagHandlerRAII> outputManager;
