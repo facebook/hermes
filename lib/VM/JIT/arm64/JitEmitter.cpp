@@ -4435,6 +4435,17 @@ void Emitter::jCond(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
+  // Do the comparison before checking for a number. If the result is true, we
+  // know that these cannot be NaN, and therefore must be numbers.
+  a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
+  if (!invert) {
+    fast(a, target);
+  } else {
+    if (!contLab.isValid())
+      contLab = a.newLabel();
+    fast(a, contLab);
+  }
+
   // Since HermesValue is NaN-boxed we know that all non-number values will be
   // NaN. So we can conveniently test for non-number values by checking for
   // NaN (which does not compare equal to itself).
@@ -4448,15 +4459,9 @@ void Emitter::jCond(
     a.b_ne(slowPathLab);
   }
 
-  a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
-  if (!invert) {
-    fast(a, target);
-  } else {
-    if (!contLab.isValid())
-      contLab = a.newLabel();
-    fast(a, contLab);
+  if (invert)
     a.b(target);
-  }
+
   if (contLab.isValid())
     a.bind(contLab);
 
