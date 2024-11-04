@@ -190,17 +190,13 @@ struct HWRegState {
 static constexpr auto xRuntime = a64::x19;
 // x20 is frame
 static constexpr auto xFrame = a64::x20;
-// x0 < xDoubleLim means that it is a double.
-//    cmp   x0, xDoubleLim
-//    b.hs  slowPath
-static constexpr auto xDoubleLim = a64::x21;
 
 /// GP arg registers (inclusive).
 // static constexpr std::pair<uint8_t, uint8_t> kGPArgs(0, 7);
 /// Temporary GP registers (inclusive).
 static constexpr std::pair<uint8_t, uint8_t> kGPTemp(0, 15);
 /// Callee-saved GP registers (inclusive).
-static constexpr std::pair<uint8_t, uint8_t> kGPSaved(22, 28);
+static constexpr std::pair<uint8_t, uint8_t> kGPSaved(21, 28);
 
 /// Vec arg registers (inclusive).
 // static constexpr std::pair<uint8_t, uint8_t> kVecArgs(0, 7);

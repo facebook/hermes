@@ -493,22 +493,30 @@ void Emitter::frameSetup(
       "Too many callee saved Vec regs");
 
   static_assert(
-      kGPSaved.first == 22, "Callee saved GP regs must start from x22");
-  // Always save x22.
+      kGPSaved.first == 21, "Callee saved GP regs must start from x21");
+  // Always save x21 even if it is not needed for an FR because we use it for
+  // the return value.
   if (gpSaveCount == 0)
     gpSaveCount = 1;
-  // We always save x19, x20, x21.
-  gpSaveCount += 3;
+  // We always save x19 and x20 since they are used for xRuntime and xFrame.
+  gpSaveCount += 2;
 
   gpSaveCount_ = gpSaveCount;
   vecSaveCount_ = vecSaveCount;
 
-  //  0: x22
-  //  1: x21
-  //  2: x20
-  //  3: x19
-  //  4: x29 <- new x29 points here
-  //  5: x30
+  // +-------+----- old sp
+  // |  x30  |
+  // +-------+
+  // |  x29  |
+  // +-------+----- new x29
+  // |  ...  |
+  // +-------+
+  // |  x21  |
+  // +-------+
+  // |  x20  |
+  // +-------+
+  // |  x19  |
+  // +-------+---- new sp
   a.sub(
       a64::sp,
       a64::sp,
@@ -532,13 +540,6 @@ void Emitter::frameSetup(
   }
   a.stp(a64::x29, a64::x30, a64::Mem(a64::sp, stackOfs));
   a.add(a64::x29, a64::sp, stackOfs);
-
-  // ((uint64_t)HVTag_First << kHV_NumDataBits)
-  static_assert(
-      HERMESVALUE_VERSION == 1,
-      "HVTag_First must be the first after double limit");
-  comment("// xDoubleLim");
-  a.mov(xDoubleLim, ((uint64_t)HVTag_First << kHV_NumDataBits));
 
   comment("// xRuntime");
   a.mov(xRuntime, a64::x0);
@@ -748,9 +749,9 @@ void Emitter::leave() {
           StackFrameLayout::PreviousFrame * (int)sizeof(SHLegacyValue)));
   a.str(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::currentFrame));
 
-  // The return value has been stashed in x22 by ret(). Move it to the return
+  // The return value has been stashed in x21 by ret(). Move it to the return
   // register.
-  a.mov(a64::x0, a64::x22);
+  a.mov(a64::x0, a64::x21);
 
   unsigned stackOfs = 0;
   for (unsigned i = 0; i < gpSaveCount_; i += 2, stackOfs += 16) {
@@ -1328,7 +1329,7 @@ void Emitter::profilePoint(uint16_t pointIndex) {
 }
 
 void Emitter::ret(FR frValue) {
-  movHWFromFR(HWReg::gpX(22), frValue);
+  movHWFromFR(HWReg::gpX(21), frValue);
   a.b(returnLabel_);
 }
 
