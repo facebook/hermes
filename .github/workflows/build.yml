@@ -1,0 +1,55 @@
+name: facebook/hermes/build
+on:
+  push:
+  pull_request:
+    branches:
+      - static_h
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: 15.4
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Install dependencies
+      run: brew install cmake ninja
+    - name: Build macOS CLI
+      run: |-
+        cmake -S hermes -B build -G Ninja ${RELEASE_FLAGS} -DHERMES_ENABLE_DEBUGGER=False
+        cmake --build ./build --target hermes hvm hbcdump hermesc check-hermes
+        cmake -S hermes -B build_hdb -G Ninja ${RELEASE_FLAGS}
+        cmake --build ./build_hdb --target hdb check-hermes
+      env:
+        RELEASE_FLAGS: "-DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DCMAKE_OSX_ARCHITECTURES=x86_64;arm64 \\ -DBUILD_SHARED_LIBS=OFF -DHERMES_BUILD_SHARED_JSI=OFF"
+    - name: Create CLI tarball
+      run: |-
+        mkdir output staging
+        cp build/bin/hermes build/bin/hvm build/bin/hbcdump \
+          build/bin/hermesc build_hdb/bin/hdb staging
+        tar -C staging -czvf output/${TAR_NAME} .
+        shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
+      env:
+        TAR_NAME: hermes-cli-darwin.tar.gz
+    - uses: actions/upload-artifact@v4.3.1
+      with:
+        name: macos-hermes
+        path: output
+
+  test-linux:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Install dependencies
+      run: |-
+        sudo apt update
+        sudo apt install -y git openssh-client cmake build-essential \
+            libicu-dev zip python3
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Run Hermes regression tests
+      run: |-
+        cmake -S hermes -B build
+        cmake --build build --target check-hermes all -j 4
