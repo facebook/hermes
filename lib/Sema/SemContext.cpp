@@ -123,7 +123,10 @@ Decl *SemContext::cloneDeclIntoScope(Decl *decl, LexicalScope *scope) {
 
 Decl *SemContext::newGlobal(hermes::UniqueString *name, Decl::Kind kind) {
   assert(Decl::isKindGlobal(kind) && "invalid global declaration kind");
-  return newDeclInScope(name, kind, getGlobalScope());
+  // Call root_->newDeclInScope() to ensure that the global declaration is
+  // added to the root scope and doesn't get freed before references to it.
+  // The global scope is stored in the root SemContext.
+  return root_->newDeclInScope(name, kind, getGlobalScope());
 }
 
 Decl *SemContext::funcArgumentsDecl(
