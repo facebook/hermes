@@ -1047,7 +1047,7 @@ CallResult<HermesValue> Runtime::runBytecode(
     assert(builtinsFrozen_ && "Builtins must be frozen by now.");
   }
 
-  if (bytecode->getBytecodeOptions().hasAsync && !hasES6Promise_) {
+  if (!flags.ignoreES6PromiseChecks && bytecode->getBytecodeOptions().hasAsync && !hasES6Promise_) {
     return raiseTypeError(
         "Cannot execute a bytecode having async functions when Promise is disabled.");
   }
@@ -1191,6 +1191,7 @@ Handle<JSObject> Runtime::runInternalJavaScript() {
   RuntimeModuleFlags flags;
   flags.persistent = true;
   flags.hidesEpilogue = true;
+  flags.ignoreES6PromiseChecks = true;
   auto res = runBytecode(
       std::move(bcResult.first),
       flags,
