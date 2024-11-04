@@ -1525,19 +1525,22 @@ void Emitter::toNumber(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   syncToFrame(frInput);
 
-  hwInput = getOrAllocFRInGpX(frInput, true);
-  a.cmp(hwInput.a64GpX(), xDoubleLim);
-  a.b_hs(slowPathLab);
+  hwInput = getOrAllocFRInVecD(frInput, true);
 
-  if (frRes != frInput) {
-    hwRes = getOrAllocFRInVecD(frRes, false);
-    movHWFromHW<false>(hwRes, hwInput);
-  } else {
-    hwRes = hwInput;
-  }
+  // We don't free frRes so that if it is the same as frThis, the register is
+  // simply persisted and we do not need to perform a move in the fast path.
+  freeAllFRTempExcept(frRes);
+  hwRes = getOrAllocFRInVecD(frRes, false);
   frUpdatedWithHW(frRes, hwRes, FRType::Number);
 
-  freeAllFRTempExcept(frRes);
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for NaN
+  // (which does not compare equal to itself).
+  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+  a.fcmp(hwInput.a64VecD(), hwInput.a64VecD());
+  a.b_ne(slowPathLab);
+  movHWFromHW<false>(hwRes, hwInput);
+
   a.bind(contLab);
 
   slowPaths_.push_back(
@@ -1575,19 +1578,22 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
   syncAllFRTempExcept(frRes != frInput ? frRes : FR());
   syncToFrame(frInput);
 
-  hwInput = getOrAllocFRInGpX(frInput, true);
-  a.cmp(hwInput.a64GpX(), xDoubleLim);
-  a.b_hs(slowPathLab);
+  hwInput = getOrAllocFRInVecD(frInput, true);
 
-  if (frRes != frInput) {
-    hwRes = getOrAllocFRInVecD(frRes, false);
-    movHWFromHW<false>(hwRes, hwInput);
-  } else {
-    hwRes = hwInput;
-  }
+  // We don't free frRes so that if it is the same as frThis, the register is
+  // simply persisted and we do not need to perform a move in the fast path.
+  freeAllFRTempExcept(frRes);
+  hwRes = getOrAllocFRInVecD(frRes, false);
   frUpdatedWithHW(frRes, hwRes, FRType::UnknownPtr);
 
-  freeAllFRTempExcept(frRes);
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for NaN
+  // (which does not compare equal to itself).
+  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+  a.fcmp(hwInput.a64VecD(), hwInput.a64VecD());
+  a.b_ne(slowPathLab);
+  movHWFromHW<false>(hwRes, hwInput);
+
   a.bind(contLab);
 
   slowPaths_.push_back(
@@ -3772,20 +3778,19 @@ void Emitter::arithUnop(
     inputIsNum = isFRKnownNumber(frInput);
   }
 
+  hwInput = getOrAllocFRInVecD(frInput, true);
   if (!inputIsNum) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frInput ? frRes : FR());
     syncToFrame(frInput);
-  }
 
-  if (inputIsNum) {
-    hwInput = getOrAllocFRInVecD(frInput, true);
-  } else {
-    hwInput = getOrAllocFRInGpX(frInput, true);
-    a.cmp(hwInput.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
-    hwInput = getOrAllocFRInVecD(frInput, true);
+    // Since HermesValue is NaN-boxed we know that all non-number values will be
+    // NaN. So we can conveniently test for non-number values by checking for
+    // NaN (which does not compare equal to itself).
+    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    a.fcmp(hwInput.a64VecD(), hwInput.a64VecD());
+    a.b_ne(slowPathLab);
   }
 
   hwRes = getOrAllocFRInVecD(frRes, false);
@@ -4056,15 +4061,20 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
     syncToFrame(frRight);
   }
 
+  hwLeft = getOrAllocFRInVecD(frLeft, true);
+  hwRight = getOrAllocFRInVecD(frRight, true);
+
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for
+  // NaN (which does not compare equal to itself).
+  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
   if (!leftIsNum) {
-    hwLeft = getOrAllocFRInGpX(frLeft, true);
-    a.cmp(hwLeft.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
+    a.fcmp(hwLeft.a64VecD(), hwLeft.a64VecD());
+    a.b_ne(slowPathLab);
   }
   if (!rightIsNum) {
-    hwRight = getOrAllocFRInGpX(frRight, true);
-    a.cmp(hwRight.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
+    a.fcmp(hwRight.a64VecD(), hwRight.a64VecD());
+    a.b_ne(slowPathLab);
   }
 
   // Make sure d0, d1 are unused.
@@ -4422,25 +4432,21 @@ void Emitter::jCond(
   // Do this always, since this could be the end of the BB.
   syncAllFRTempExcept(FR());
 
-  if (leftIsNum) {
-    hwLeft = getOrAllocFRInVecD(frLeft, true);
-  } else {
-    hwLeft = getOrAllocFRInGpX(frLeft, true);
-    a.cmp(hwLeft.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
-  }
-  if (rightIsNum) {
-    hwRight = getOrAllocFRInVecD(frRight, true);
-  } else {
-    hwRight = getOrAllocFRInGpX(frRight, true);
-    a.cmp(hwRight.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
-  }
+  hwLeft = getOrAllocFRInVecD(frLeft, true);
+  hwRight = getOrAllocFRInVecD(frRight, true);
 
-  if (!leftIsNum)
-    hwLeft = getOrAllocFRInVecD(frLeft, true);
-  if (!rightIsNum)
-    hwRight = getOrAllocFRInVecD(frRight, true);
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for
+  // NaN (which does not compare equal to itself).
+  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+  if (!leftIsNum) {
+    a.fcmp(hwLeft.a64VecD(), hwLeft.a64VecD());
+    a.b_ne(slowPathLab);
+  }
+  if (!rightIsNum) {
+    a.fcmp(hwRight.a64VecD(), hwRight.a64VecD());
+    a.b_ne(slowPathLab);
+  }
 
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
   if (!invert) {
@@ -4522,35 +4528,29 @@ void Emitter::compareImpl(
   rightIsNum = isFRKnownNumber(frRight);
   slow = !(rightIsNum && leftIsNum);
 
+  hwLeft = getOrAllocFRInVecD(frLeft, true);
+  hwRight = getOrAllocFRInVecD(frRight, true);
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
     syncToFrame(frLeft);
     syncToFrame(frRight);
-  }
-
-  if (leftIsNum) {
-    hwLeft = getOrAllocFRInVecD(frLeft, true);
-  } else {
-    hwLeft = getOrAllocFRInGpX(frLeft, true);
-    a.cmp(hwLeft.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
-  }
-  if (rightIsNum) {
-    hwRight = getOrAllocFRInVecD(frRight, true);
-  } else {
-    hwRight = getOrAllocFRInGpX(frRight, true);
-    a.cmp(hwRight.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
-  }
-
-  if (!leftIsNum)
-    hwLeft = getOrAllocFRInVecD(frLeft, true);
-  if (!rightIsNum)
-    hwRight = getOrAllocFRInVecD(frRight, true);
-  if (slow)
     freeAllFRTempExcept({});
+  }
+
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for
+  // NaN (which does not compare equal to itself).
+  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+  if (!leftIsNum) {
+    a.fcmp(hwLeft.a64VecD(), hwLeft.a64VecD());
+    a.b_ne(slowPathLab);
+  }
+  if (!rightIsNum) {
+    a.fcmp(hwRight.a64VecD(), hwRight.a64VecD());
+    a.b_ne(slowPathLab);
+  }
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   a64::GpX xRes = hwRes.a64GpX();
