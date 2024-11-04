@@ -4147,43 +4147,35 @@ void Emitter::arithBinOp(
     slow = !(rightIsNum && leftIsNum);
   }
 
+  hwLeft = getOrAllocFRInVecD(frLeft, true);
+  hwRight = getOrAllocFRInVecD(frRight, true);
+
   if (slow) {
     slowPathLab = newSlowPathLabel();
     contLab = newContLabel();
     syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
     syncToFrame(frLeft);
     syncToFrame(frRight);
+    freeAllFRTempExcept({});
   }
-
-  if (leftIsNum) {
-    hwLeft = getOrAllocFRInVecD(frLeft, true);
-  } else {
-    hwLeft = getOrAllocFRInGpX(frLeft, true);
-    a.cmp(hwLeft.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
-  }
-  if (rightIsNum) {
-    hwRight = getOrAllocFRInVecD(frRight, true);
-  } else {
-    hwRight = getOrAllocFRInGpX(frRight, true);
-    a.cmp(hwRight.a64GpX(), xDoubleLim);
-    a.b_hs(slowPathLab);
-  }
-
-  if (!leftIsNum)
-    hwLeft = getOrAllocFRInVecD(frLeft, true);
-  if (!rightIsNum)
-    hwRight = getOrAllocFRInVecD(frRight, true);
 
   hwRes = getOrAllocFRInVecD(frRes, false);
+  // Instead of testing each input for whether it is a number, speculatively do
+  // the fast path, and then just do a single check for whether the result is a
+  // NaN. If it is, we will go to the slow path.
   fast(a, hwRes.a64VecD(), hwLeft.a64VecD(), hwRight.a64VecD());
 
   frUpdatedWithHW(frRes, hwRes, !slow ? FRType::Number : FRType::UnknownPtr);
 
+  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+  if (slow) {
+    a.fcmp(hwRes.a64VecD(), hwRes.a64VecD());
+    a.b_ne(slowPathLab);
+  }
+
   if (!slow)
     return;
 
-  freeAllFRTempExcept(frRes);
   a.bind(contLab);
 
   slowPaths_.push_back(
