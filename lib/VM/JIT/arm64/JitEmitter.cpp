@@ -4065,17 +4065,14 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
-  // Since HermesValue is NaN-boxed we know that all non-number values will be
-  // NaN. So we can conveniently test for non-number values by checking for
-  // NaN (which does not compare equal to itself).
-  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
-  if (!leftIsNum) {
-    a.fcmp(hwLeft.a64VecD(), hwLeft.a64VecD());
-    a.b_ne(slowPathLab);
-  }
-  if (!rightIsNum) {
-    a.fcmp(hwRight.a64VecD(), hwRight.a64VecD());
-    a.b_ne(slowPathLab);
+  if (slow) {
+    // Since HermesValue is NaN-boxed we know that all non-number values will be
+    // NaN. So we can conveniently test for non-number values by checking for
+    // NaN. We can do that with the VS condition code, which is set if either
+    // operand to fcmp is NaN.
+    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
+    a.b_vs(slowPathLab);
   }
 
   // Make sure d0, d1 are unused.
@@ -4171,18 +4168,19 @@ void Emitter::arithBinOp(
   }
 
   hwRes = getOrAllocFRInVecD(frRes, false);
-  // Instead of testing each input for whether it is a number, speculatively do
-  // the fast path, and then just do a single check for whether the result is a
-  // NaN. If it is, we will go to the slow path.
-  fast(a, hwRes.a64VecD(), hwLeft.a64VecD(), hwRight.a64VecD());
-
   frUpdatedWithHW(frRes, hwRes, !slow ? FRType::Number : FRType::UnknownPtr);
 
-  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
   if (slow) {
-    a.fcmp(hwRes.a64VecD(), hwRes.a64VecD());
-    a.b_ne(slowPathLab);
+    // Since HermesValue is NaN-boxed we know that all non-number values will be
+    // NaN. So we can conveniently test for non-number values by checking for
+    // NaN. We can do that with the VS condition code, which is set if either
+    // operand to fcmp is NaN.
+    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
+    a.b_vs(slowPathLab);
   }
+
+  fast(a, hwRes.a64VecD(), hwLeft.a64VecD(), hwRight.a64VecD());
 
   if (!slow)
     return;
@@ -4447,17 +4445,13 @@ void Emitter::jCond(
     fast(a, contLab);
   }
 
-  // Since HermesValue is NaN-boxed we know that all non-number values will be
-  // NaN. So we can conveniently test for non-number values by checking for
-  // NaN (which does not compare equal to itself).
-  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
-  if (!leftIsNum) {
-    a.fcmp(hwLeft.a64VecD(), hwLeft.a64VecD());
-    a.b_ne(slowPathLab);
-  }
-  if (!rightIsNum) {
-    a.fcmp(hwRight.a64VecD(), hwRight.a64VecD());
-    a.b_ne(slowPathLab);
+  if (slow) {
+    // Since HermesValue is NaN-boxed we know that all non-number values will be
+    // NaN. So we can conveniently test for non-number values by checking for
+    // NaN. We can do that with the VS condition code, which is set if either
+    // operand to fcmp is NaN.
+    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    a.b_vs(slowPathLab);
   }
 
   if (invert)
@@ -4545,23 +4539,20 @@ void Emitter::compareImpl(
     freeAllFRTempExcept({});
   }
 
-  // Since HermesValue is NaN-boxed we know that all non-number values will be
-  // NaN. So we can conveniently test for non-number values by checking for
-  // NaN (which does not compare equal to itself).
-  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
-  if (!leftIsNum) {
-    a.fcmp(hwLeft.a64VecD(), hwLeft.a64VecD());
-    a.b_ne(slowPathLab);
-  }
-  if (!rightIsNum) {
-    a.fcmp(hwRight.a64VecD(), hwRight.a64VecD());
-    a.b_ne(slowPathLab);
-  }
-
   HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   a64::GpX xRes = hwRes.a64GpX();
 
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
+
+  if (slow) {
+    // Since HermesValue is NaN-boxed we know that all non-number values will be
+    // NaN. So we can conveniently test for non-number values by checking for
+    // NaN. We can do that with the VS condition code, which is set if either
+    // operand to fcmp is NaN.
+    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    a.b_vs(slowPathLab);
+  }
+
   // Store the result of the comparison in the lowest bit of tmpCmpRes.
   // asmjit will convert CondCode to the correct encoding for use in the opcode.
   a.cset(xRes, condCode);
