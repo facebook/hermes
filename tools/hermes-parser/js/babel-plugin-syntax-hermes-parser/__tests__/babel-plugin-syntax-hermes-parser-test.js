@@ -16,22 +16,44 @@ import {transformSync} from '@babel/core';
 import hermesParserPlugin from '../src';
 import * as HermesParser from 'hermes-parser';
 
-const MODULE_PREAMBLE = '"use strict";\n\n';
+const MODULE_PREAMBLE = '// @flow\n\n"use strict";\n\n';
+const NON_FLOW_MODULE_PREAMBLE = '"use strict";\n\n';
 
 describe('babel-plugin-syntax-hermes-parser', () => {
-  test('test basic parsing', () => {
-    const parseSpy = jest.spyOn(HermesParser, 'parse');
-    const code = MODULE_PREAMBLE + 'const a = 1;';
+  const parseSpy = jest.spyOn(HermesParser, 'parse');
+
+  afterEach(() => {
+    parseSpy.mockClear();
+  });
+
+  test('should parse Flow files', () => {
+    const code = MODULE_PREAMBLE + 'const a: number = 1;';
     const output = transformSync(code, {
       plugins: [hermesParserPlugin],
     });
-    expect(output.code).toBe(code);
+    expect(output.code).toMatchInlineSnapshot(`
+      ""use strict";
+
+      const a = 1;"
+    `);
     expect(parseSpy).toBeCalledTimes(1);
   });
 
-  test('test skip TS', () => {
-    const parseSpy = jest.spyOn(HermesParser, 'parse');
-    const code = MODULE_PREAMBLE + 'const a: string = 1;';
+  test('should parse files without @flow annotation', () => {
+    const code = NON_FLOW_MODULE_PREAMBLE + 'const a: number = 1;';
+    const output = transformSync(code, {
+      plugins: [hermesParserPlugin],
+    });
+    expect(output.code).toMatchInlineSnapshot(`
+      ""use strict";
+
+      const a = 1;"
+    `);
+    expect(parseSpy).toBeCalledTimes(1);
+  });
+
+  test('should skip TypeScript files', () => {
+    const code = NON_FLOW_MODULE_PREAMBLE + 'const a: number = 1;';
     const output = transformSync(code, {
       plugins: [hermesParserPlugin],
       filename: 'foo.ts',
@@ -44,8 +66,7 @@ describe('babel-plugin-syntax-hermes-parser', () => {
     expect(parseSpy).toBeCalledTimes(0);
   });
 
-  test('test component syntax parsing', () => {
-    const parseSpy = jest.spyOn(HermesParser, 'parse');
+  test('should parse component syntax when enabled', () => {
     const code = MODULE_PREAMBLE + 'component Foo() {}';
     const output = transformSync(code, {
       plugins: [hermesParserPlugin],
@@ -59,5 +80,29 @@ describe('babel-plugin-syntax-hermes-parser', () => {
       function Foo() {}"
     `);
     expect(parseSpy).toBeCalledTimes(1);
+  });
+
+  describe("with parseLangTypes = 'flow'", () => {
+    test('should parse Flow files', () => {
+      const code = MODULE_PREAMBLE + 'const a: number = 1;';
+      const output = transformSync(code, {
+        plugins: [hermesParserPlugin],
+      });
+      expect(output.code).toMatchInlineSnapshot(`
+      ""use strict";
+
+      const a = 1;"
+    `);
+      expect(parseSpy).toBeCalledTimes(1);
+    });
+
+    test('should skip files without @flow annotation ', () => {
+      const code = NON_FLOW_MODULE_PREAMBLE + 'class Foo {}';
+      const output = transformSync(code, {
+        plugins: [[hermesParserPlugin, {parseLangTypes: 'flow'}]],
+      });
+      expect(output.code).toBe(code);
+      expect(parseSpy).toBeCalledTimes(0);
+    });
   });
 });
