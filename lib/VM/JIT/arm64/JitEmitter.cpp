@@ -4397,7 +4397,7 @@ void Emitter::jCond(
     FR frLeft,
     FR frRight,
     const char *name,
-    void(fast)(a64::Assembler &a, const asmjit::Label &target),
+    a64::CondCode condCode,
     void *slowCall,
     const char *slowCallName) {
   comment(
@@ -4438,11 +4438,11 @@ void Emitter::jCond(
   // know that these cannot be NaN, and therefore must be numbers.
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
   if (!invert) {
-    fast(a, target);
+    a.b(condCode, target);
   } else {
     if (!contLab.isValid())
       contLab = a.newLabel();
-    fast(a, contLab);
+    a.b(condCode, contLab);
   }
 
   if (slow) {

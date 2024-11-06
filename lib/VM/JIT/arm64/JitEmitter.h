@@ -594,50 +594,48 @@ class Emitter {
       true)
 #undef DECL_COMPARE
 
-#define DECL_JCOND(                                                     \
-    methodName, forceNum, passArgsByVal, commentStr, slowCall, a64inst) \
-  void methodName(                                                      \
-      bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {  \
-    jCond(                                                              \
-        forceNum,                                                       \
-        invert,                                                         \
-        passArgsByVal,                                                  \
-        target,                                                         \
-        rLeft,                                                          \
-        rRight,                                                         \
-        commentStr,                                                     \
-        [](a64::Assembler &as, const asmjit::Label &target) {           \
-          as.a64inst(target);                                           \
-        },                                                              \
-        (void *)slowCall,                                               \
-        #slowCall);                                                     \
+#define DECL_JCOND(                                                      \
+    methodName, forceNum, passArgsByVal, commentStr, slowCall, condCode) \
+  void methodName(                                                       \
+      bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {   \
+    jCond(                                                               \
+        forceNum,                                                        \
+        invert,                                                          \
+        passArgsByVal,                                                   \
+        target,                                                          \
+        rLeft,                                                           \
+        rRight,                                                          \
+        commentStr,                                                      \
+        a64::CondCode::condCode,                                         \
+        (void *)slowCall,                                                \
+        #slowCall);                                                      \
   }
-  DECL_JCOND(jGreater, false, false, "greater", _sh_ljs_greater_rjs, b_gt)
+  DECL_JCOND(jGreater, false, false, "greater", _sh_ljs_greater_rjs, kGT)
   DECL_JCOND(
       jGreaterEqual,
       false,
       false,
       "greater_equal",
       _sh_ljs_greater_equal_rjs,
-      b_ge)
-  DECL_JCOND(jLess, false, false, "less", _sh_ljs_less_rjs, b_mi)
+      kGE)
+  DECL_JCOND(jLess, false, false, "less", _sh_ljs_less_rjs, kMI)
   DECL_JCOND(
       jLessEqual,
       false,
       false,
       "less_equal",
       _sh_ljs_less_equal_rjs,
-      b_ls)
-  DECL_JCOND(jLessN, true, false, "less_n", _sh_ljs_less_rjs, b_mi)
+      kLS)
+  DECL_JCOND(jLessN, true, false, "less_n", _sh_ljs_less_rjs, kMI)
   DECL_JCOND(
       jLessEqualN,
       true,
       false,
       "less_equal_n",
       _sh_ljs_less_equal_rjs,
-      b_ls)
-  DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, b_eq)
-  DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, b_eq)
+      kLS)
+  DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, kEQ)
+  DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, kEQ)
 #undef DECL_JCOND
 
   void switchImm(
@@ -1081,7 +1079,7 @@ class Emitter {
       FR frLeft,
       FR frRight,
       const char *name,
-      void(fast)(a64::Assembler &a, const asmjit::Label &target),
+      a64::CondCode condCode,
       void *slowCall,
       const char *slowCallName);
 
