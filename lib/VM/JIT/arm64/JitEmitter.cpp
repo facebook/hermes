@@ -4434,16 +4434,14 @@ void Emitter::jCond(
   hwLeft = getOrAllocFRInVecD(frLeft, true);
   hwRight = getOrAllocFRInVecD(frRight, true);
 
-  // Do the comparison before checking for a number. If the result is true, we
-  // know that these cannot be NaN, and therefore must be numbers.
   a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
-  if (!invert) {
+
+  // If the condition is not inverted, then it can only produce true if both
+  // operands are numbers. Since we use NaN boxing, we know that all non-number
+  // values will be NaN and therefore produce false. So if the result is true,
+  // we can take the jump without checking for numbers.
+  if (!invert)
     a.b(condCode, target);
-  } else {
-    if (!contLab.isValid())
-      contLab = a.newLabel();
-    a.b(condCode, contLab);
-  }
 
   if (slow) {
     // Since HermesValue is NaN-boxed we know that all non-number values will be
@@ -4454,14 +4452,16 @@ void Emitter::jCond(
     a.b_vs(slowPathLab);
   }
 
+  // If the condition is inverted, it will produce true if one of the operands
+  // is a NaN, so we can only check it after the slow path check, since it would
+  // incorrectly be taken for non-numbers.
   if (invert)
-    a.b(target);
-
-  if (contLab.isValid())
-    a.bind(contLab);
+    a.b(a64::negateCond(condCode), target);
 
   if (!slow)
     return;
+
+  a.bind(contLab);
 
   // Do this always, since this is the end of the BB.
   freeAllFRTempExcept(FR());
