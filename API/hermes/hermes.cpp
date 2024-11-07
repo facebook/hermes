@@ -927,7 +927,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return value_;
     }
 
-    void invalidate() override {
+    void invalidate() noexcept override {
 #ifdef ASSERT_ON_DANGLING_VM_REFS
       assert(
           ((1u << 31) & refCount_) == 0 &&
@@ -936,7 +936,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       dec();
     }
 
-    void inc() {
+    void inc() noexcept {
       // It is always safe to use relaxed operations for incrementing the
       // reference count, because the only operation that may occur concurrently
       // with it is decrementing the reference count, and we do not need to
@@ -947,7 +947,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       (void)oldCount;
     }
 
-    void dec() {
+    void dec() noexcept {
       // It is safe to use relaxed operations here because decrementing the
       // reference count is the only access that may be performed without proper
       // synchronisation. As a result, the only ordering we need to enforce when
