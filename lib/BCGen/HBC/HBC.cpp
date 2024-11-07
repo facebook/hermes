@@ -15,8 +15,9 @@
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
-#include "llvh/Support/Threading.h"
 #include "llvh/Support/raw_ostream.h"
+
+#include <future>
 
 #define DEBUG_TYPE "hbc-backend"
 
@@ -65,6 +66,21 @@ std::unique_ptr<BytecodeModule> generateBytecodeModuleForEval(
 }
 
 namespace {
+
+/// Execute a function in a SerialExecutor, blocking until the function
+/// completes.
+/// \param executor the executor to use.
+/// \param f the function to execute.
+/// \param data the data to pass to the function.
+static void executeBlockingInSerialExecutor(
+    SerialExecutor &executor,
+    void (*f)(void *),
+    void *data) {
+  std::packaged_task<void()> task([f, data]() { f(data); });
+  auto future = task.get_future();
+  executor.add([&task]() { task(); });
+  future.wait();
+}
 
 /// Data for the compileLazyFunctionWorker.
 class LazyCompilationThreadData {
@@ -344,12 +360,9 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
 
   // Run on a thread to prevent stack overflow if this is run from deep inside
   // JS execution.
-
-  // Use an 8MB stack, which is the default size on mac and linux.
-  constexpr unsigned kStackSize = 1 << 23;
-
   LazyCompilationThreadData data{provider, funcID};
-  llvh::llvm_execute_on_thread(compileLazyFunctionWorker, &data, kStackSize);
+  executeBlockingInSerialExecutor(
+      provider->getSerialExecutor(), compileLazyFunctionWorker, &data);
 
   if (data.success) {
     return std::make_pair(true, llvh::StringRef{});
@@ -412,12 +425,10 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
     const CompileFlags &compileFlags) {
   // Run on a thread to prevent stack overflow if this is run from deep inside
   // JS execution.
-
-  // Use an 8MB stack, which is the default size on mac and linux.
-  constexpr unsigned kStackSize = 1 << 23;
-
   EvalThreadData data{std::move(src), provider, enclosingFuncID, compileFlags};
-  llvh::llvm_execute_on_thread(compileEvalWorker, &data, kStackSize);
+  executeBlockingInSerialExecutor(
+      provider->getSerialExecutor(), compileEvalWorker, &data);
+
   return data.success
       ? std::make_pair(std::move(data.result), "")
       : std::make_pair(std::unique_ptr<BCProviderFromSrc>{}, data.error);
