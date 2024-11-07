@@ -27,6 +27,7 @@ try:
         LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
         PERMANENT_UNSUPPORTED_FEATURES,
+        PLATFORM_SKIP_LISTS,
         SKIP_LIST,
         UNSUPPORTED_FEATURES,
     )
@@ -41,6 +42,7 @@ except ImportError:
         LAZY_SKIP_LIST,
         PERMANENT_SKIP_LIST,
         PERMANENT_UNSUPPORTED_FEATURES,
+        PLATFORM_SKIP_LISTS,
         SKIP_LIST,
         UNSUPPORTED_FEATURES,
     )
@@ -599,6 +601,11 @@ def runTest(
     baseFileName = path.basename(filename)
     suite = getSuite(filename)
     skiplisted = fileInSkiplist(filename, SKIP_LIST + PERMANENT_SKIP_LIST)
+
+    if sys.platform in PLATFORM_SKIP_LISTS:
+        skiplisted = skiplisted or fileInSkiplist(
+            filename, PLATFORM_SKIP_LISTS[sys.platform]
+        )
 
     if lazy:
         skiplisted = skiplisted or fileInSkiplist(filename, LAZY_SKIP_LIST)
