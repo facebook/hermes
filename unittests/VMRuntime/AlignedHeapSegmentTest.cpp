@@ -115,7 +115,8 @@ TEST_F(AlignedHeapSegmentTest, AdviseUnused) {
 
   // We can't use the storage of s here since it contains guard pages and also
   // s.start() may not align to actual page boundary.
-  void *storage = provider_->newStorage().get();
+  void *storage =
+      provider_->newStorage(AlignedHeapSegment::storageSize()).get();
   char *start = reinterpret_cast<char *>(storage);
   char *end = start + AlignedHeapSegment::storageSize();
 
@@ -139,7 +140,7 @@ TEST_F(AlignedHeapSegmentTest, AdviseUnused) {
   EXPECT_EQ(*initial + TOTAL_PAGES, *touched);
   EXPECT_EQ(*touched - FREED_PAGES, *marked);
 
-  provider_->deleteStorage(storage);
+  provider_->deleteStorage(storage, AlignedHeapSegment::storageSize());
 #endif
 }
 
