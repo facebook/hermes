@@ -51,7 +51,7 @@ GCCell *HadesGC::OldGen::finishAlloc(GCCell *cell, uint32_t sz) {
   // Track the number of allocated bytes in a segment.
   incrementAllocatedBytes(sz);
   // Write a mark bit so this entry doesn't get free'd by the sweeper.
-  AlignedHeapSegment::setCellMarkBit(cell);
+  AlignedHeapSegmentBase::setCellMarkBit(cell);
   // Could overwrite the VTable, but the allocator will write a new one in
   // anyway.
   return cell;
@@ -408,7 +408,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   LLVM_NODISCARD GCCell *acceptHeap(GCCell *ptr, void *heapLoc) {
     if (shouldForward(ptr)) {
       assert(
-          AlignedHeapSegment::getCellMarkBit(ptr) &&
+          AlignedHeapSegmentBase::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
       return forwardCell<GCCell *>(ptr);
     }
@@ -426,7 +426,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     if (shouldForward(cptr)) {
       GCCell *ptr = cptr.getNonNull(pointerBase_);
       assert(
-          AlignedHeapSegment::getCellMarkBit(ptr) &&
+          AlignedHeapSegmentBase::getCellMarkBit(ptr) &&
           "Should only evacuate marked objects.");
       return forwardCell<CompressedPointer>(ptr);
     }
@@ -442,7 +442,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   template <typename T>
   LLVM_NODISCARD T forwardCell(GCCell *const cell) {
     assert(
-        AlignedHeapSegment::getCellMarkBit(cell) &&
+        AlignedHeapSegmentBase::getCellMarkBit(cell) &&
         "Cannot forward unmarked object");
     if (cell->hasMarkedForwardingPointer()) {
       // Get the forwarding pointer from the header of the object.
@@ -459,7 +459,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     HERMES_SLOW_ASSERT(
         gc.inOldGen(newCell) && "Evacuated cell not in the old gen");
     assert(
-        AlignedHeapSegment::getCellMarkBit(newCell) &&
+        AlignedHeapSegmentBase::getCellMarkBit(newCell) &&
         "Cell must be marked when it is allocated into the old gen");
     // Copy the contents of the existing cell over before modifying it.
     std::memcpy(newCell, cell, cellSize);
@@ -547,7 +547,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       CopyListCell *const cell =
           static_cast<CopyListCell *>(copyListHead_.getNonNull(pointerBase_));
       assert(
-          AlignedHeapSegment::getCellMarkBit(cell) &&
+          AlignedHeapSegmentBase::getCellMarkBit(cell) &&
           "Discovered unmarked object");
       copyListHead_ = cell->next_;
       return cell;
@@ -649,7 +649,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
       AlignedHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
           heapLoc);
     }
-    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegmentBase::getCellMarkBit(cell)) {
       // Points to an already marked object, do nothing.
       return;
     }
@@ -661,7 +661,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
 
   void acceptRoot(GCCell *cell) {
     assert(cell->isValid() && "Encountered an invalid cell");
-    if (!AlignedHeapSegment::getCellMarkBit(cell))
+    if (!AlignedHeapSegmentBase::getCellMarkBit(cell))
       push(cell);
   }
 
@@ -794,7 +794,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
           "Shouldn't ever traverse a YG object in this loop");
       HERMES_SLOW_ASSERT(
           gc.dbgContains(cell) && "Non-heap cell found in global worklist");
-      if (!AlignedHeapSegment::getCellMarkBit(cell)) {
+      if (!AlignedHeapSegmentBase::getCellMarkBit(cell)) {
         // Cell has not yet been marked.
         push(cell);
       }
@@ -807,7 +807,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
       localWorklist_.pop();
       assert(cell->isValid() && "Invalid cell in marking");
       assert(
-          AlignedHeapSegment::getCellMarkBit(cell) &&
+          AlignedHeapSegmentBase::getCellMarkBit(cell) &&
           "Discovered unmarked object");
       assert(
           !gc.inYoungGen(cell) &&
@@ -881,12 +881,12 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
 
   void push(GCCell *cell) {
     assert(
-        !AlignedHeapSegment::getCellMarkBit(cell) &&
+        !AlignedHeapSegmentBase::getCellMarkBit(cell) &&
         "A marked object should never be pushed onto a worklist");
     assert(
         !gc.inYoungGen(cell) &&
         "Shouldn't ever push a YG object onto the worklist");
-    AlignedHeapSegment::setCellMarkBit(cell);
+    AlignedHeapSegmentBase::setCellMarkBit(cell);
     // There could be a race here: however, the mutator will never change a
     // cell's kind after initialization. The GC thread might to a free cell, but
     // only during sweeping, not concurrently with this operation. Therefore
@@ -957,7 +957,7 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     }
     GCCell *const cell = wr.getNoBarrierUnsafe(gc_.getPointerBase());
     HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
-    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegmentBase::getCellMarkBit(cell)) {
       // If the cell is marked, no need to do any writes.
       return;
     }
@@ -1054,7 +1054,7 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   int32_t segmentSweptBytes = 0;
   for (GCCell *cell : segments_[sweepIterator_.segNumber].cells()) {
     assert(cell->isValid() && "Invalid cell in sweeping");
-    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegmentBase::getCellMarkBit(cell)) {
       // Cannot concurrently trim storage. Technically just checking
       // backgroundThread would suffice, but the kConcurrentGC lets us compile
       // away this check in incremental mode.
@@ -1080,7 +1080,7 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
         // Just create a FillerCell, the next iteration will free it.
         constructCell<FillerCell>(newCell, trimmableBytes);
         assert(
-            !AlignedHeapSegment::getCellMarkBit(newCell) &&
+            !AlignedHeapSegmentBase::getCellMarkBit(newCell) &&
             "Trimmed space cannot be marked");
         AlignedHeapSegment::setCellHead(newCell, trimmableBytes);
 #ifndef NDEBUG
@@ -1769,12 +1769,12 @@ void HadesGC::markWeakMapEntrySlots() {
         return;
       GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
       // If the owner structure isn't reachable, no need to mark the values.
-      if (!AlignedHeapSegment::getCellMarkBit(ownerMapCell))
+      if (!AlignedHeapSegmentBase::getCellMarkBit(ownerMapCell))
         return;
       GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
       // The WeakRef object must be marked for the mapped value to
       // be marked (unless there are other strong refs to the value).
-      if (!AlignedHeapSegment::getCellMarkBit(cell))
+      if (!AlignedHeapSegmentBase::getCellMarkBit(cell))
         return;
       oldGenMarker_->accept(slot.mappedValue);
     });
@@ -1790,8 +1790,8 @@ void HadesGC::markWeakMapEntrySlots() {
     }
     GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
     GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
-    if (!AlignedHeapSegment::getCellMarkBit(cell) ||
-        !AlignedHeapSegment::getCellMarkBit(ownerMapCell)) {
+    if (!AlignedHeapSegmentBase::getCellMarkBit(cell) ||
+        !AlignedHeapSegmentBase::getCellMarkBit(ownerMapCell)) {
       slot.mappedValue = HermesValue::encodeEmptyValue();
     }
   });
@@ -2094,7 +2094,7 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
     // compaction, there might be some objects that are dead, and could
     // potentially have garbage in them. There's no need to check the
     // pointers of those objects.
-    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+    if (AlignedHeapSegmentBase::getCellMarkBit(cell)) {
       callback(cell);
     }
   };
@@ -2230,7 +2230,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
     // free list.
     addSegment(std::move(seg.get()));
     GCCell *newObj = static_cast<GCCell *>(res.ptr);
-    AlignedHeapSegment::setCellMarkBit(newObj);
+    AlignedHeapSegmentBase::setCellMarkBit(newObj);
     return newObj;
   }
 
@@ -2730,7 +2730,7 @@ void HadesGC::scanDirtyCardsForSegment(
     // expensive.
 
     // Mark the first object with respect to the dirty card boundaries.
-    if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+    if (visitUnmarked || AlignedHeapSegmentBase::getCellMarkBit(obj))
       markCellWithinRange(acceptor, obj, begin, end);
 
     obj = obj->nextCell();
@@ -2742,7 +2742,7 @@ void HadesGC::scanDirtyCardsForSegment(
       // object where next is within the card.
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
-        if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+        if (visitUnmarked || AlignedHeapSegmentBase::getCellMarkBit(obj))
           markCell(acceptor, obj);
         obj = next;
       }
@@ -2752,7 +2752,7 @@ void HadesGC::scanDirtyCardsForSegment(
       assert(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
-      if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+      if (visitUnmarked || AlignedHeapSegmentBase::getCellMarkBit(obj))
         markCellWithinRange(acceptor, obj, begin, end);
     }
 

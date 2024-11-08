@@ -22,6 +22,17 @@
 namespace hermes {
 namespace vm {
 
+#ifndef NDEBUG
+/// Set the given range [start, end) to a dead value.
+static void clearRange(char *start, char *end) {
+#if LLVM_ADDRESS_SANITIZER_BUILD
+  __asan_poison_memory_region(start, end - start);
+#else
+  std::memset(start, kInvalidHeapValue, end - start);
+#endif
+}
+#endif
+
 void AlignedHeapSegment::Contents::protectGuardPage(
     oscompat::ProtectMode mode) {
   char *begin = &paddedGuardPage_[kGuardPagePadding];
@@ -45,11 +56,12 @@ llvh::ErrorOr<AlignedHeapSegment> AlignedHeapSegment::create(
   if (!result) {
     return result.getError();
   }
+  assert(*result && "Heap segment storage allocation failure");
   return AlignedHeapSegment{provider, *result};
 }
 
 AlignedHeapSegment::AlignedHeapSegment(StorageProvider *provider, void *lowLim)
-    : lowLim_(static_cast<char *>(lowLim)), provider_(provider) {
+    : AlignedHeapSegmentBase(lowLim), provider_(provider) {
   assert(
       storageStart(lowLim_) == lowLim_ &&
       "The lower limit of this storage must be aligned");
@@ -58,13 +70,9 @@ AlignedHeapSegment::AlignedHeapSegment(StorageProvider *provider, void *lowLim)
   assert(
       reinterpret_cast<uintptr_t>(hiLim()) % oscompat::page_size() == 0 &&
       "The higher limit must be page aligned");
-  if (*this) {
-    new (contents()) Contents();
-    contents()->protectGuardPage(oscompat::ProtectMode::None);
 #ifndef NDEBUG
-    clear();
+  clear();
 #endif
-  }
 }
 
 void swap(AlignedHeapSegment &a, AlignedHeapSegment &b) {
@@ -120,7 +128,7 @@ void AlignedHeapSegment::setLevel(char *lvl) {
   assert(dbgContainsLevel(lvl));
   if (lvl < level_) {
 #ifndef NDEBUG
-    clear(lvl, level_);
+    clearRange(lvl, level_);
 #else
     if (MU == AdviseUnused::Yes) {
       const size_t PS = oscompat::page_size();
@@ -172,15 +180,7 @@ bool AlignedHeapSegment::validPointer(const void *p) const {
 }
 
 void AlignedHeapSegment::clear() {
-  clear(start(), end());
-}
-
-/* static */ void AlignedHeapSegment::clear(char *start, char *end) {
-#if LLVM_ADDRESS_SANITIZER_BUILD
-  __asan_poison_memory_region(start, end - start);
-#else
-  std::memset(start, kInvalidHeapValue, end - start);
-#endif
+  clearRange(start(), end());
 }
 
 /* static */ void AlignedHeapSegment::checkUnwritten(char *start, char *end) {
