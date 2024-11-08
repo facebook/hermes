@@ -164,6 +164,26 @@ class AlignedHeapSegmentBase {
     return lowLim_;
   }
 
+  /// Read storage size from SHSegmentInfo.
+  size_t storageSize() const {
+    auto *segmentInfo = reinterpret_cast<const SHSegmentInfo *>(lowLim_);
+    return (size_t)segmentInfo->shiftedSegmentSize
+        << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+  }
+
+  /// The largest size the allocation region of an aligned heap segment could
+  /// be.
+  size_t maxSize() const {
+    return storageSize() - kOffsetOfAllocRegion;
+  }
+
+  /// Returns the address that is the upper bound of the segment.
+  /// This is only used in debugging code and computing memory footprint, so
+  /// just read the segment size from SHSegmentInfo.
+  char *hiLim() const {
+    return lowLim_ + storageSize();
+  }
+
   /// Returns the address at which the first allocation in this segment would
   /// occur.
   /// Disable UB sanitization because 'this' may be null during the tests.
@@ -285,7 +305,9 @@ class AlignedHeapSegment : public AlignedHeapSegmentBase {
   /// Mask for isolating the storage being pointed into by a pointer.
   static constexpr size_t kHighMask{~kLowMask};
 
-  /// Returns the storage size, in bytes, of an \c AlignedHeapSegment.
+  /// Returns the storage size, in bytes, of an \c AlignedHeapSegment. This is a
+  /// static override of AlignedHeapSegmentBase::storageSize, which reads the
+  /// size from SHSegmentInfo.
   static constexpr size_t storageSize() {
     return kSize;
   }
@@ -379,7 +401,8 @@ class AlignedHeapSegment : public AlignedHeapSegmentBase {
   static inline void setCellHead(const GCCell *start, const size_t sz);
 
   /// The largest size the allocation region of an aligned heap segment could
-  /// be.
+  /// be. This is a static override of AlignedHeapSegmentBase::maxSize(), which
+  /// reads the storage size from SHSegmentInfo.
   inline static constexpr size_t maxSize();
 
   /// The size of the allocation region in this aligned heap segment.
@@ -390,11 +413,6 @@ class AlignedHeapSegment : public AlignedHeapSegmentBase {
 
   /// The number of bytes in the segment that are available for allocation.
   inline size_t available() const;
-
-  /// Returns the address that is the upper bound of the segment.
-  char *hiLim() const {
-    return lowLim() + storageSize();
-  }
 
   /// Returns the first address after the region in which allocations can occur,
   /// taking external memory credits into a account (they decrease the effective
@@ -545,7 +563,7 @@ void AlignedHeapSegment::setCellHead(const GCCell *cellStart, const size_t sz) {
 }
 
 /* static */ constexpr size_t AlignedHeapSegment::maxSize() {
-  return storageSize() - offsetof(Contents, allocRegion_);
+  return storageSize() - kOffsetOfAllocRegion;
 }
 
 size_t AlignedHeapSegment::size() const {
