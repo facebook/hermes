@@ -23,6 +23,7 @@ set(SupportSources
   SerialExecutorTest.cpp
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
+  StackBoundsTest.cpp
   StatsAccumulatorTest.cpp
   StringSetVectorTest.cpp
   UnicodeTest.cpp
