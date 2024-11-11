@@ -95,9 +95,12 @@ CallResult<HermesValue> JSCallSite::getFileName(
     if (location) {
       auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
 
+      auto filenameTable = debugInfo->getFilenameTable();
+      assert(location->filenameId < filenameTable.size() && "Filename ID out of bounds");
+
       std::string utf8Storage;
       llvh::StringRef fileName = hbc::getStringFromEntry(
-          debugInfo->getFilenameTable()[location->filenameId],
+          filenameTable[location->filenameId],
           debugInfo->getFilenameStorage(),
           utf8Storage);
       return StringPrimitive::createEfficient(runtime, makeUTF8Ref(fileName));
