@@ -71,9 +71,15 @@ llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
 }
 
 /// \return the register class of the instruction \p I.
-static RegClass getRegClass(Instruction *inst) {
+RegClass RegisterAllocator::getRegClass(Instruction *inst) {
   if (!inst->hasOutput())
     return RegClass::NoOutput;
+  // Treat all registers when there's a try as a pointer.
+  // We need the JIT to store them in the stack frame so that stores persist
+  // after longjmp back to handle exceptions, and the setjmp will be at the
+  // start of the function.
+  if (hasTry_)
+    return RegClass::Other;
   Type t = inst->getType();
   if (t.isNumberType())
     return RegClass::Number;
@@ -175,6 +181,15 @@ Register RegisterFile::tailAllocateConsecutive(RegClass regClass, unsigned n) {
       dbgs() << "-- Allocated tail consecutive registers of length " << n
              << ", starting at " << Register(regClass, firstClear) << "\n");
   return Register(regClass, firstClear);
+}
+
+RegisterAllocator::RegisterAllocator(Function *func) : F(func) {
+  for (auto &BB : *F) {
+    if (llvh::isa<TryStartInst>(BB.getTerminator())) {
+      hasTry_ = true;
+      break;
+    }
+  }
 }
 
 /// \returns true if the PHI node has an external user (that requires a

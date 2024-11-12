@@ -103,6 +103,15 @@ Register RegisterFile::tailAllocateConsecutive(RegClass regClass, unsigned n) {
   return Register(regClass, firstClear);
 }
 
+RegisterAllocator::RegisterAllocator(Function *func) : F(func) {
+  for (auto &BB : *F) {
+    if (llvh::isa<TryStartInst>(BB.getTerminator())) {
+      hasTry_ = true;
+      break;
+    }
+  }
+}
+
 /// \returns true if the PHI node has an external user (that requires a
 /// register read) and a local writer.
 static bool phiReadWrite(PhiInst *P) {
@@ -506,6 +515,11 @@ bool isBlockLocal(Instruction *inst) {
 RegClass RegisterAllocator::getRegClass(Instruction *inst) {
   if (!inst->hasOutput())
     return RegClass::NoOutput;
+  // Treat all registers when there's a try as a pointer.
+  // We need them to be in SHLocals so that stores persist after longjmp back to
+  // handle exceptions, and the setjmp will be at the start of the function.
+  if (hasTry_)
+    return RegClass::LocalPtr;
   return inst->getType().isNonPtr() ? RegClass::LocalNonPtr
                                     : RegClass::LocalPtr;
 }

@@ -43,14 +43,14 @@ print(e);
 // RA-NEXT:                 StoreFrameInst {r1} %0: environment, {r2} %7: any, [%VS0.e]: any
 // RA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %0: environment, %local(): functionCode
 // RA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %4: object, "local": string
-// RA-NEXT:  {r2}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
+// RA-NEXT:  {r3}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
 // RA-NEXT:  {r1}     %12 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "local": string
-// RA-NEXT:  {np0}    %13 = HBCLoadConstInst (:undefined) undefined: undefined
-// RA-NEXT:  {r1}     %14 = HBCCallNInst (:any) {r1} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %13: undefined
-// RA-NEXT:  {r1}     %15 = HBCCallNInst (:any) {r2} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %13: undefined, {r1} %14: any
+// RA-NEXT:  {r2}     %13 = HBCLoadConstInst (:undefined) undefined: undefined
+// RA-NEXT:  {r1}     %14 = HBCCallNInst (:any) {r1} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined
+// RA-NEXT:  {r1}     %15 = HBCCallNInst (:any) {r3} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r1} %14: any
 // RA-NEXT:  {r1}     %16 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
 // RA-NEXT:  {r0}     %17 = LoadPropertyInst (:any) {r0} %4: object, "e": string
-// RA-NEXT:  {r0}     %18 = HBCCallNInst (:any) {r1} %16: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %13: undefined, {r0} %17: any
+// RA-NEXT:  {r0}     %18 = HBCCallNInst (:any) {r1} %16: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r0} %17: any
 // RA-NEXT:                 ReturnInst {r0} %18: any
 // RA-NEXT:%BB2:
 // RA-NEXT:  {r2}     %20 = HBCLoadConstInst (:string) "local": string

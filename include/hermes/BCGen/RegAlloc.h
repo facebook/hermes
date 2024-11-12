@@ -414,6 +414,9 @@ class RegisterAllocator {
 
   Function *F;
 
+  /// Whether there are any try/catch statements in the function.
+  bool hasTry_ = false;
+
  public:
   using RegisterType = Register;
 
@@ -423,7 +426,7 @@ class RegisterAllocator {
   /// \returns the computed live interval for the instruction \p I.
   Interval &getInstructionInterval(Instruction *I);
 
-  explicit RegisterAllocator(Function *func) : F(func) {}
+  explicit RegisterAllocator(Function *func);
 
   virtual ~RegisterAllocator() = default;
 
@@ -501,6 +504,10 @@ class RegisterAllocator {
   /// register files. Used when spilling to allow us to have low HVM register
   /// indices by clearing out anything before Other.
   void convertTypeSpecificRegsToOther();
+
+ private:
+  /// \return the RegClass in which \p inst should be allocated.
+  RegClass getRegClass(Instruction *inst);
 };
 
 } // namespace hermes
