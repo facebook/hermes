@@ -329,11 +329,24 @@ extern "C" SHLegacyValue _sh_catch(
     uint32_t stackSize) {
   Runtime &runtime = getRuntime(shr);
   runtime.shCurJmpBuf = runtime.shCurJmpBuf->prev;
+  _sh_catch_no_pop(shr, locals, frame, stackSize);
+  return _sh_get_clear_thrown_value(shr);
+}
+
+extern "C" void _sh_catch_no_pop(
+    SHRuntime *shr,
+    SHLocals *locals,
+    SHLegacyValue *frame,
+    uint32_t stackSize) {
+  Runtime &runtime = getRuntime(shr);
 
   runtime.shLocals = locals;
   runtime.popToSavedStackPointer(toPHV(frame + stackSize));
   runtime.setCurrentFrame(StackFramePtr(toPHV(frame)));
+}
 
+extern "C" SHLegacyValue _sh_get_clear_thrown_value(SHRuntime *shr) {
+  Runtime &runtime = getRuntime(shr);
   SHLegacyValue res = runtime.getThrownValue();
   runtime.clearThrownValue();
   return res;

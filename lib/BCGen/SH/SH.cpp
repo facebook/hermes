@@ -475,6 +475,7 @@ class InstrGen {
  public:
   /// \p os is the output stream
   /// \p ra is the pre-ran register allocator for the current function
+  /// \p tryIDs is a map from TryStartInst to a unique ID for the try/catch.
   InstrGen(
       llvh::raw_ostream &os,
       sh::SHRegisterAllocator &ra,
@@ -482,7 +483,7 @@ class InstrGen {
       Function &F,
       ModuleGen &moduleGen,
       uint32_t &nextCacheIdx,
-      const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths)
+      const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs)
       : os_(os),
         ra_(ra),
         bbMap_(bbMap),
@@ -490,7 +491,10 @@ class InstrGen {
         nativeContext_(F.getContext().getNativeContext()),
         moduleGen_(moduleGen),
         nextCacheIdx_(nextCacheIdx),
-        bbTryDepths_(bbTryDepths) {}
+        tryIDs_(tryIDs) {
+    if (!tryIDs_.empty())
+      enclosingTrys_ = *findEnclosingTrysPerBlock(&F_);
+  }
 
   /// Converts Instruction \p I into valid C code and outputs it through the
   /// ostream.
@@ -531,9 +535,14 @@ class InstrGen {
   /// Starts out at 0 and increments every time a cache index is used
   uint32_t &nextCacheIdx_;
 
-  /// A map from basic blocks to their number of enclosing try statements
-  /// (if non-zero).
-  const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths_;
+  /// Map from TryStart to an ID for the try/catch.
+  /// Set the tryState to the ID when entering the try, restore it when leaving.
+  const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs_;
+
+  /// Map from BasicBlock to the TryStartInst that encloses it, nullptr if none.
+  /// If empty, there's no try in the entire function.
+  /// If there is any try in the function, this will have an entry for every BB.
+  llvh::DenseMap<BasicBlock *, TryStartInst *> enclosingTrys_{};
 
   void unimplemented(Instruction &inst) {
     std::string err{"Unimplemented "};
@@ -1553,11 +1562,13 @@ class InstrGen {
     hermes_fatal("CreateArgumentsStrictInst should have been lowered.");
   }
   void generateCatchInst(CatchInst &inst) {
+    // Restore the tryState to the state of the Try enclosing this block.
+    TryStartInst *enclosing = enclosingTrys_.at(inst.getParent());
+    uint32_t stateToRestore = enclosing ? tryIDs_.at(enclosing) : 0;
+    os_ << "  tryState = " << stateToRestore << ";\n";
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_catch(shr, (SHLocals*)&locals, frame, "
-        << (ra_.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
-        << ");\n";
+    os_ << " = _sh_get_clear_thrown_value(shr);\n";
   }
   void generateDebuggerInst(DebuggerInst &inst) {
     hermes_fatal("DebuggerInst should have been deleted.");
@@ -1592,11 +1603,13 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
-    os_ << "  _sh_end_try(shr, &jmpBuf"
-        << bbTryDepths_.lookup(inst.getBranchDest()) << ");\n";
+    // Restore the tryState to the state of the Try enclosing the catch.
+    TryStartInst *enclosing = enclosingTrys_.at(inst.getBranchDest());
+    uint32_t stateToRestore = enclosing ? tryIDs_.at(enclosing) : 0;
+    os_ << "  tryState = " << stateToRestore << ";\n";
     os_ << "  goto ";
     generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);
-    os_ << ";";
+    os_ << ";\n";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
     os_.indent(2);
@@ -1661,6 +1674,9 @@ class InstrGen {
     os_ << ";";
   }
   void generateReturnInst(ReturnInst &inst) {
+    if (!tryIDs_.empty()) {
+      os_ << "  _sh_end_try(shr, &jmpBuf);\n";
+    }
     os_ << "  _sh_leave(shr, &locals.head, frame);\n  return ";
     generateValue(*inst.getValue());
     os_ << ";\n";
@@ -1739,12 +1755,10 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateTryStartInst(TryStartInst &inst) {
-    os_ << "  if(_sh_try(shr, &jmpBuf" << bbTryDepths_.lookup(inst.getParent())
-        << ") == 0) goto ";
-    generateBasicBlockLabel(inst.getTryBody(), os_, bbMap_);
-    os_ << ";\n";
+    uint32_t stateToEnter = tryIDs_.at(&inst);
+    os_.indent(2) << "tryState = " << stateToEnter << ";\n";
     os_ << "  goto ";
-    generateBasicBlockLabel(inst.getCatchTarget(), os_, bbMap_);
+    generateBasicBlockLabel(inst.getTryBody(), os_, bbMap_);
     os_ << ";\n";
   }
   void generateHBCCompareBranchInst(HBCCompareBranchInst &inst) {
@@ -2406,9 +2420,18 @@ void generateFunction(
 
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;
+  // Map from TryStart to an ID for that try/catch.
+  llvh::DenseMap<TryStartInst *, uint32_t> tryIDs{};
+  // Start counting at 1 because 0 is reserved for blocks without a try.
+  uint32_t tryIDCounter = 1;
+
   for (auto &B : order) {
     bbMap[B] = bbCounter;
     bbCounter++;
+    if (auto *tryStart = llvh::dyn_cast<TryStartInst>(B->getTerminator())) {
+      tryIDs.try_emplace(tryStart, tryIDCounter);
+      ++tryIDCounter;
+    }
   }
 
   auto &srcMgr = F.getContext().getSourceErrorManager();
@@ -2416,10 +2439,7 @@ void generateFunction(
   srcMgr.dumpCoords(OS, F.getSourceRange().Start);
   OS << '\n';
 
-  // Compute the try nesting depth of each basic block.
-  auto [bbTryDepths, maxTryDepth] = getBlockTryDepths(&F);
-
-  InstrGen instrGen(OS, RA, bbMap, F, moduleGen, nextCacheIdx, bbTryDepths);
+  InstrGen instrGen(OS, RA, bbMap, F, moduleGen, nextCacheIdx, tryIDs);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
@@ -2495,9 +2515,22 @@ void generateFunction(
     OS << "  SHLegacyValue np" << i << " = _sh_ljs_undefined();\n";
   }
 
-  // Initialize SHJmpBufs for the maximum possible try nesting depth.
-  for (size_t i = 0; i < maxTryDepth; ++i)
-    OS << "  SHJmpBuf jmpBuf" << i << ";\n";
+  // Initialize SHJmpBuf and emit the setjmp for the function-level try.
+  // Every caught exception will jump to this _sh_try and be handled in the
+  // switch statement under L_catch.
+  // NOTE: We don't mark SHJmpBuf as volatile here because the jmp_buf will not
+  // be stored in registers in practice, and setjmp doesn't take a volatile
+  // parameter.
+  // Set up tryState to 0 to indicate that we are not in a try block.
+  // It's updated to the enclosing try's ID when we enter a try block,
+  // and restored in Catch or TryEnd.
+  if (!tryIDs.empty()) {
+    OS << R"(
+  SHJmpBuf jmpBuf;
+  volatile uint32_t tryState = 0;
+  if (__builtin_expect(_sh_try(shr, &jmpBuf), 0) != 0) goto L_catch;
+)";
+  }
 
   if (emitNativeTraces) {
     // Setup the frame to reference this SHLocals.
@@ -2572,6 +2605,37 @@ void generateFunction(
       instrGen.generate(I);
     }
   }
+
+  if (!tryIDs.empty()) {
+    OS << R"(
+L_catch:
+  if (tryState == 0) {
+    _sh_end_try(shr, &jmpBuf);
+    _sh_throw_current(shr);
+  }
+  )";
+    OS << "_sh_catch_no_pop(shr, (SHLocals*)&locals, frame, "
+       << (RA.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
+       << ");\n";
+
+    OS << R"(
+  switch (tryState) {
+    default:
+      abort();
+)";
+
+    // For each of the try blocks, generate a case statement that will jump to
+    // the catch block for that try.
+    for (const auto &[tryStart, id] : tryIDs) {
+      OS << "    case " << id << ":\n";
+      OS << "      goto ";
+      generateBasicBlockLabel(tryStart->getCatchTarget(), OS, bbMap);
+      OS << ";\n";
+    }
+
+    OS << "  }\n";
+  }
+
   OS.disableLineDirectives();
   OS << "}\n";
 }

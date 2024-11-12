@@ -349,6 +349,21 @@ SHERMES_EXPORT SHLegacyValue _sh_catch(
     SHLocals *locals,
     SHLegacyValue *frame,
     uint32_t stackSize);
+/// Like _sh_catch, but doesn't update shCurJmpBuf because that's handled at the
+/// function-level by running _sh_end_try before returning or throwing out of
+/// the function, and does not clear/return the thrown value.
+///
+/// \param frame the value that should be set to the current frame
+///     (Runtime::currentFrame_).
+/// \param stackSize <tt>frame + stackSize</tt> will be the new value of the
+///     register stack pointer.
+SHERMES_EXPORT void _sh_catch_no_pop(
+    SHRuntime *shr,
+    SHLocals *locals,
+    SHLegacyValue *frame,
+    uint32_t stackSize);
+/// Clear the thrown value and return it.
+SHERMES_EXPORT SHLegacyValue _sh_get_clear_thrown_value(SHRuntime *shr);
 SHERMES_EXPORT void _sh_throw_current(SHRuntime *shr) __attribute__((noreturn));
 SHERMES_EXPORT void _sh_throw(SHRuntime *shr, SHLegacyValue value)
     __attribute__((noreturn));
