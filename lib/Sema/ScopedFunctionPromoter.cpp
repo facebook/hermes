@@ -143,7 +143,7 @@ void ScopedFunctionPromoter::visitScope(Node *node) {
 }
 
 void ScopedFunctionPromoter::processParameters(FunctionLikeNode *funcNode) {
-  for (Decl *decl : funcNode->getSemInfo()->getFunctionScope()->decls) {
+  for (Decl *decl : funcNode->getSemInfo()->getParameterScope()->decls) {
     if (decl->kind == Decl::Kind::Parameter) {
       UniqueString *name = decl->name.getUnderlyingPointer();
       if (funcNames_.count(name)) {

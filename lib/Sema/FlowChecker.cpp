@@ -901,7 +901,7 @@ void FlowChecker::visitFunctionLike(
   }
 
   if (!resolveScopeTypesAndAnnotate(
-          node, node->getSemInfo()->getFunctionScope()))
+          node, node->getSemInfo()->getFunctionBodyScope()))
     return;
   visitESTreeNode(*this, body, node);
   checkImplicitReturnType(node);

@@ -283,9 +283,12 @@ class SemanticResolver
    public:
     /// Create a binding scope and push a semantic scope.
     /// \param scopeNode is the AST node with which to associate the scope.
+    /// \param isFunctionBodyScope whether this is the scope for the function
+    ///   body of the current FunctionInfo.
     explicit ScopeRAII(
         SemanticResolver &resolver,
-        ESTree::ScopeDecorationBase *scopeDecoration = nullptr);
+        ESTree::ScopeDecorationBase *scopeDecoration = nullptr,
+        bool isFunctionBodyScope = false);
 
     /// Pops the created scope if it was pushed.
     ~ScopeRAII();
@@ -306,6 +309,13 @@ class SemanticResolver
   inline FunctionInfo *curFunctionInfo();
   inline const FunctionInfo *curFunctionInfo() const;
 
+  /// Declare 'arguments' for use in either the function or the parameters.
+  void declareArguments() {
+    Decl *argsDecl =
+        semCtx_.funcArgumentsDecl(curFunctionInfo(), kw_.identArguments);
+    bindingTable_.try_emplace(kw_.identArguments, Binding{argsDecl, nullptr});
+  }
+
   void visitFunctionLike(
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
@@ -319,6 +329,16 @@ class SemanticResolver
       ESTree::IdentifierNode *id,
       ESTree::Node *body,
       ESTree::NodeList &params);
+
+  /// Visit the rest of the function body having visited the params already.
+  /// NOTE: Used by visitFunctionLikeInFunctionContext to allow ScopeRAII to be
+  /// conditionally declared in a more readable way.
+  void visitFunctionBodyAfterParamsVisited(
+      ESTree::FunctionLikeNode *node,
+      ESTree::IdentifierNode *id,
+      ESTree::Node *body,
+      ESTree::BlockStatementNode *blockBody,
+      bool hasParameterNamedArguments);
 
   void visitFunctionExpression(
       ESTree::FunctionExpressionNode *node,

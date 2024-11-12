@@ -224,6 +224,15 @@ class FunctionInfo {
   /// It is declared only if it is used.
   /// Should be populated by calling \c SemContext::funcArgumentsDecl.
   hermes::OptValue<Decl *> argumentsDecl{llvh::None};
+  /// Index of the function scope in the scopes vector.
+  /// The index isn't constant in the case of parameter expressions which
+  /// introduce new scopes (e.g. for function expression names), so this has to
+  /// be stored separately.
+  /// Stored as an index to make cloning FunctionInfo easier (we don't have to
+  /// make old->new scope associations in ESTreeClone or write any extra logic,
+  /// just copy the index).
+  /// UINT32_MAX is used until this field is set.
+  uint32_t functionBodyScopeIdx = UINT32_MAX;
   /// True if the function is strict mode.
   bool strict;
   /// Custom directives found in this function.
@@ -232,6 +241,10 @@ class FunctionInfo {
   bool const arrow;
   /// False if the parameter list contains any patterns.
   bool simpleParameterList = true;
+  /// True if the parameter list contains any expressions.
+  /// If there are expressions, then the first scope in the scopes_ list will be
+  /// the parameter scope, and the second scope will be the function scope.
+  bool hasParameterExpressions = false;
 
   /// Whether this function references "arguments" identifier.
   bool usesArguments = false;
@@ -293,8 +306,19 @@ class FunctionInfo {
       FunctionInfo *parentFunction,
       LexicalScope *parentScope);
 
-  /// \return the top-level lexical scope of the function.
-  LexicalScope *getFunctionScope() const {
+  /// \pre the functionScopeIdx field has been set.
+  /// \return the top-level lexical scope of the function body.
+  LexicalScope *getFunctionBodyScope() const {
+    assert(functionBodyScopeIdx < scopes.size() && "functionScopeIdx not set");
+    return scopes[functionBodyScopeIdx];
+  }
+
+  /// \return the lexical scope which contains the parameter declarations,
+  /// which may be the same as the function scope itself.
+  /// The scope is guaranteed to contain all Parameter Decls, though it may
+  /// contain other Decls as well.
+  LexicalScope *getParameterScope() const {
+    assert(!scopes.empty() && "no parameter scope added yet");
     return scopes[0];
   }
 };

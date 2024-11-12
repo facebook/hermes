@@ -203,13 +203,6 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/arrow-function/scope-paramsbody-var-open.js",
-        "test262/test/language/expressions/object/scope-setter-paramsbody-var-open.js"
-      ],
-      "comment": "Failed in lazy mode, remove them once fix gets landed."
-    },
-    {
-      "paths": [
         "mjsunit/es6/math-cbrt.js"
       ],
       "comment": "The native ::cbrt() function gives different results with different compilers."

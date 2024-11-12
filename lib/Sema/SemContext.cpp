@@ -20,10 +20,12 @@ FunctionInfo::FunctionInfo(
     LexicalScope *parentScope)
     : parentFunction(parentFunction),
       parentScope(parentScope),
+      functionBodyScopeIdx(function->functionBodyScopeIdx),
       strict(function->strict),
       customDirectives(function->customDirectives),
       arrow(function->arrow),
       simpleParameterList(function->simpleParameterList),
+      hasParameterExpressions(function->hasParameterExpressions),
       usesArguments(function->usesArguments),
       containsArrowFunctions(function->containsArrowFunctions),
       containsArrowFunctionsUsingArguments(

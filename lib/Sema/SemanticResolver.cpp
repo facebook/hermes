@@ -108,7 +108,7 @@ bool SemanticResolver::runInScope(
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{*this, rootNode, semInfo, semInfo->strict, {}};
   {
-    ScopeRAII programScope{*this, rootNode};
+    ScopeRAII programScope{*this, rootNode, /* functionScope */ true};
     if (sm_.getErrorCount())
       return false;
     // Promote hoisted functions.
@@ -168,9 +168,7 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
         directives.sourceVisibility;
 
   {
-    ScopeRAII programScope{*this, node};
-    newFuncCtx.bindingTableScopeDepth =
-        programScope.getBindingScope().getDepth();
+    ScopeRAII programScope{*this, node, /* functionScope */ true};
     llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
         globalScope_, programScope.getBindingScope().ptr());
     semCtx_.setBindingTableGlobalScope(globalScope_);
@@ -294,7 +292,7 @@ void SemanticResolver::visit(ESTree::VariableDeclarationNode *node) {
   // Only perform this check for nested scopes, because the var will have
   // been hoisted into a different scope.
   if (node->_kind == kw_.identVar &&
-      curScope_ != curScope_->parentFunction->getFunctionScope()) {
+      curScope_ != curScope_->parentFunction->getFunctionBodyScope()) {
     llvh::SmallVector<ESTree::IdentifierNode *, 2> idents;
     extractIdentsFromDecl(node, idents);
     // Check every identifier declared as a 'var'.
@@ -317,7 +315,7 @@ void SemanticResolver::visit(ESTree::VariableDeclarationNode *node) {
           prevDepth != functionContext()->bindingTableScopeDepth;
 
       if (prevName->decl->scope ==
-              prevName->decl->scope->parentFunction->getFunctionScope() &&
+              prevName->decl->scope->parentFunction->getFunctionBodyScope() &&
           !prevIsLexicalBindingOfPromotedFunc) {
         // If the previous declaration is in the function scope, the error would
         // have been reported when validating declarations in the function
@@ -1247,20 +1245,6 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     return;
   }
 
-  // Create the function scope.
-  // Note that we are not associating the new scope with an AST node. It should
-  // be accessed from FunctionInfo::getFunctionScope().
-  ScopeRAII scope{*this};
-
-  functionContext()->bindingTableScopeDepth =
-      scope.getBindingScope().getDepth();
-
-  if (astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
-    // Store the current scope, for compiling children of this function in
-    // 'eval'.
-    node->getSemInfo()->bindingTableScope = bindingTable_.getCurrentScope();
-  }
-
   // Set to false if the parameter list contains binding patterns.
   bool simpleParameterList = true;
   bool hasParameterExpressions = false;
@@ -1271,6 +1255,7 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     hasParameterExpressions |= extractDeclaredIdentsFromID(&param, paramIds);
   }
   curFunctionInfo()->simpleParameterList = simpleParameterList;
+  curFunctionInfo()->hasParameterExpressions = hasParameterExpressions;
 
   if (!simpleParameterList && directives.useStrictNode) {
     sm_.error(
@@ -1285,45 +1270,37 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
   // Do we have a parameter named "arguments".
   bool hasParameterNamedArguments = false;
 
-  // Declare the parameters
-  for (IdentifierNode *paramId : paramIds) {
-    if (LLVM_UNLIKELY(paramId->_name == kw_.identArguments))
-      hasParameterNamedArguments = true;
+  /// Declare the parameters.
+  auto declareParams =
+      [this, &paramIds, &uniqueParams, &hasParameterNamedArguments]() -> void {
+    for (IdentifierNode *paramId : paramIds) {
+      if (LLVM_UNLIKELY(paramId->_name == kw_.identArguments))
+        hasParameterNamedArguments = true;
 
-    validateDeclarationName(Decl::Kind::Parameter, paramId);
+      validateDeclarationName(Decl::Kind::Parameter, paramId);
 
-    Decl *paramDecl = semCtx_.newDeclInScope(
-        paramId->_name, Decl::Kind::Parameter, curScope_);
-    semCtx_.setBothDecl(paramId, paramDecl);
-    Binding *prevName = bindingTable_.find(paramId->_name);
-    if (prevName && prevName->decl->scope == curScope_) {
-      // Check for parameter re-declaration.
-      if (uniqueParams) {
-        sm_.error(
-            paramId->getSourceRange(),
-            "cannot declare two parameters with the same name '" +
-                paramId->_name->str() + "'");
+      Decl *paramDecl = semCtx_.newDeclInScope(
+          paramId->_name, Decl::Kind::Parameter, curScope_);
+      semCtx_.setBothDecl(paramId, paramDecl);
+      Binding *prevName = bindingTable_.find(paramId->_name);
+      if (prevName && prevName->decl->scope == curScope_) {
+        // Check for parameter re-declaration.
+        if (uniqueParams) {
+          sm_.error(
+              paramId->getSourceRange(),
+              "cannot declare two parameters with the same name '" +
+                  paramId->_name->str() + "'");
+        }
+
+        // Update the name binding to point to the latest declaration.
+        prevName->decl = paramDecl;
+        prevName->ident = paramId;
+      } else {
+        // Just add the new parameter.
+        bindingTable_.try_emplace(paramId->_name, Binding{paramDecl, paramId});
       }
-
-      // Update the name binding to point to the latest declaration.
-      prevName->decl = paramDecl;
-      prevName->ident = paramId;
-    } else {
-      // Just add the new parameter.
-      bindingTable_.try_emplace(paramId->_name, Binding{paramDecl, paramId});
     }
-  }
-
-  /// Declare a pseudo-variable "arguments".
-  auto declareArguments = [this]() {
-    Decl *argsDecl =
-        semCtx_.funcArgumentsDecl(curFunctionInfo(), kw_.identArguments);
-    bindingTable_.try_emplace(kw_.identArguments, Binding{argsDecl, nullptr});
   };
-
-  // Do not visit the identifier node, because that would try to resolve it
-  // in an incorrect scope!
-  // visitESTreeNode(*this, getIdentifier(node), node);
 
   /// Visits the parameters in the current scope.
   auto visitParams = [this, node]() -> void {
@@ -1350,19 +1327,67 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     visitESTreeNodeList(*this, getParams(node), node);
   };
 
+  // Do not visit the identifier node, because that would try to resolve it
+  // in an incorrect scope!
+  // visitESTreeNode(*this, getIdentifier(node), node);
+
   // Visit the parameters before we have hoisted the body declarations.
-  // Determine whether we need to declare "arguments" temporarily, while
-  // processing the parameter init expressions, in case they refer to it.
-  if (!llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
-      !hasParameterNamedArguments && hasParameterExpressions) {
-    // If we declared the arguments object temporarily, unbind it after visiting
-    // the params, so it doesn't clash with potential declarations in the
-    // function body.
-    ScopeRAII temporaryArgumentsScope{*this};
-    declareArguments();
-    visitParams();
+  // If there's a parameter named arguments, then the parameter init expressions
+  // would refer to that declaration.
+  // Note that we are not associating the function body's scope with an AST
+  // node. It should be accessed from FunctionInfo::getFunctionScope().
+  if (hasParameterExpressions) {
+    // Declare parameters in a separate scope, so that capturing functions in
+    // the params don't capture the function's scope.
+    ScopeRAII paramScope{*this};
+    declareParams();
+
+    // Determine whether we need to declare "arguments", while
+    // processing the parameter init expressions, in case they refer to it.
+    if (!llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
+        !hasParameterNamedArguments) {
+      // Declare 'arguments' temporarily while visiting the parameters,
+      // and remove it prior to visiting the body, which will perform its own
+      // check for conflicting bindings of 'arguments'.
+      ScopeRAII temporaryArgumentsScope{*this};
+      declareArguments();
+      visitParams();
+    } else {
+      visitParams();
+    }
+
+    // Create the function scope.
+    // Note that we are not associating the new scope with an AST node. It
+    // should be accessed from FunctionInfo::getFunctionScope().
+    ScopeRAII scope{
+        *this, /* scopeDecoration */ nullptr, /* functionBodyScope */ true};
+    visitFunctionBodyAfterParamsVisited(
+        node, id, body, blockBody, hasParameterNamedArguments);
   } else {
+    // No parameter expressions, emit parameters and body in the same scope.
+    ScopeRAII scope{
+        *this, /* scopeDecoration */ nullptr, /* functionBodyScope */ true};
+    declareParams();
     visitParams();
+    visitFunctionBodyAfterParamsVisited(
+        node, id, body, blockBody, hasParameterNamedArguments);
+  }
+}
+
+void SemanticResolver::visitFunctionBodyAfterParamsVisited(
+    ESTree::FunctionLikeNode *node,
+    ESTree::IdentifierNode *id,
+    ESTree::Node *body,
+    ESTree::BlockStatementNode *blockBody,
+    bool hasParameterNamedArguments) {
+  // Do not visit the identifier node, because that would try to resolve it
+  // in an incorrect scope!
+  // visitESTreeNode(*this, getIdentifier(node), node);
+
+  if (astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+    // Store the current scope, for compiling children of this function in
+    // 'eval'.
+    node->getSemInfo()->bindingTableScope = bindingTable_.getCurrentScope();
   }
 
   llvh::SaveAndRestore<bool> oldForbidAwait{
@@ -1396,7 +1421,7 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
 
   // Check for local eval and run the unresolver pass in non-strict mode.
   // TODO: enable this when non-strict direct eval is supported.
-  LexicalScope *lexScope = curFunctionInfo()->getFunctionScope();
+  LexicalScope *lexScope = curFunctionInfo()->getFunctionBodyScope();
   if (false && lexScope->localEval && !curFunctionInfo()->strict) {
     uint32_t depth = lexScope->depth;
     Unresolver::run(semCtx_, depth, node);
@@ -1567,7 +1592,7 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
 
   if (auto *funcDecl = llvh::dyn_cast<FunctionDeclarationNode>(node)) {
     extractDeclaredIdentsFromID(funcDecl->_id, idents);
-    if (curScope_ == curFunctionInfo()->getFunctionScope()) {
+    if (curScope_ == curFunctionInfo()->getFunctionBodyScope()) {
       // It is possible to still have ScopedFunctions in the global function,
       // for example if we have
       // ```
@@ -1726,6 +1751,8 @@ void SemanticResolver::validateAndDeclareIdentifier(
       prevName.decl->kind != Decl::Kind::UndeclaredGlobalProperty) {
     const Decl::Kind prevKind = prevName.decl->kind;
     const bool sameScope = prevName.decl->scope == curScope_;
+    const bool topLevel =
+        curScope_->parentFunction->getFunctionBodyScope() == curScope_;
 
     // Check whether the redeclaration is invalid.
     // Note that since "var" declarations have been hoisted to the function
@@ -1769,7 +1796,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
     // var|scopedFunction|let, let
     //          -> invalid if the same scope
     // parameter, let
-    //          -> invalid if let is top-level (same scope as parameter)
+    //          -> invalid if let is top-level
 
     assert(
         !(prevKind == Decl::Kind::ScopedFunction && kind == Decl::Kind::Var) &&
@@ -1785,9 +1812,8 @@ void SemanticResolver::validateAndDeclareIdentifier(
          !(!curFunctionInfo()->strict &&
            prevKind == Decl::Kind::ScopedFunction &&
            kind == Decl::Kind::ScopedFunction)) ||
-        // Parameters are in the same scope as the top-level of the function.
         (prevKind == Decl::Kind::Parameter && Decl::isKindLetLike(kind) &&
-         sameScope)) {
+         topLevel)) {
       sm_.error(
           ident->getSourceRange(),
           llvh::Twine("Identifier '") + ident->_name->str() +
@@ -2093,7 +2119,8 @@ void SemanticResolver::processAmbientDecls() {
 
 SemanticResolver::ScopeRAII::ScopeRAII(
     SemanticResolver &resolver,
-    ESTree::ScopeDecorationBase *scopeNode)
+    ESTree::ScopeDecorationBase *scopeNode,
+    bool isFunctionBodyScope)
     : resolver_(resolver),
       oldScope_(resolver_.curScope_),
       bindingScope_(resolver_.bindingTable_) {
@@ -2104,6 +2131,13 @@ SemanticResolver::ScopeRAII::ScopeRAII(
   // Optionally associate the scope with the node.
   if (scopeNode)
     scopeNode->setScope(scope);
+
+  if (isFunctionBodyScope) {
+    resolver_.curFunctionInfo()->functionBodyScopeIdx =
+        resolver_.curFunctionInfo()->scopes.size() - 1;
+    resolver_.functionContext()->bindingTableScopeDepth =
+        getBindingScope().getDepth();
+  }
 }
 SemanticResolver::ScopeRAII::~ScopeRAII() {
   resolver_.curScope_ = oldScope_;
