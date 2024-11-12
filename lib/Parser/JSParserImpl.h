@@ -215,11 +215,6 @@ class JSParserImpl {
   /// so we can recover directive nodes back in the lazyParse pass.
   llvh::SmallVector<UniqueString *, 1> seenDirectives_{};
 
-  /// Whether we're currently parsing formal parameters of a function.
-  /// Saved/restored by parseFormalParameters.
-  /// Used to control lazy compilation, which is disabled in parameters.
-  bool isFormalParams_ = false;
-
   /// Whether the current function is an arrow function.
   /// Only set/restored by SaveFunctionState when entering/exiting a new
   /// function.
