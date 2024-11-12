@@ -378,8 +378,11 @@ struct ExceptionHandlerTableHeader {
 /// We need HBCExceptionHandlerInfo other than using ExceptionHandlerInfo
 /// directly because we don't need depth in HBC.
 struct HBCExceptionHandlerInfo {
+  /// Start offset of the try, inclusive.
   uint32_t start;
+  /// End offset of the try, exclusive.
   uint32_t end;
+  /// Handler offset.
   uint32_t target;
 };
 

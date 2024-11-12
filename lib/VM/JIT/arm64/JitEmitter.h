@@ -361,6 +361,10 @@ class Emitter {
   /// in x22.
   asmjit::Label returnLabel_{};
 
+  /// Label to branch to when catching an exception with setjmp.
+  /// Invalid if there's no try/catch in the function.
+  asmjit::Label catchTableLabel_{};
+
   /// The bytecode codeblock.
   CodeBlock *const codeBlock_;
 
@@ -396,7 +400,10 @@ class Emitter {
       const std::function<void(std::string &&message)> &longjmpError);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
-  JITCompiledFunctionPtr addToRuntime(asmjit::JitRuntime &jr);
+  /// \param exceptionHandlers the labels for the exception handler table.
+  JITCompiledFunctionPtr addToRuntime(
+      asmjit::JitRuntime &jr,
+      llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
 
 #ifdef NDEBUG
   void assertPostInstructionInvariants() {}
@@ -435,6 +442,8 @@ class Emitter {
 
   /// Get a builtin closure.
   void getBuiltinClosure(FR frRes, uint32_t builtinIndex);
+
+  void catchInst(FR frRes);
 
   /// Save the return value in x22.
   void ret(FR frValue);
@@ -965,6 +974,40 @@ class Emitter {
   /// name, in the format ID(name).
   int32_t getDebugFunctionName();
 
+  /// \return the stack size subtracted/added to sp when entering/leaving the
+  /// function. Includes the two words at the top of the stack for x29 and x30.
+  uint32_t getStackSize() const {
+    return ((((gpSaveCount_ + 1) & ~1) + ((vecSaveCount_ + 1) & ~1) + 2) * 8) +
+        getSavedRegsOffset();
+  }
+
+  /// \return the offset of the saved registers in the stack frame.
+  uint32_t getSavedRegsOffset() const {
+    // If there's exceptions, allocate space for SHJmpBuf and saved SHLocals in
+    // the stack.
+    return catchTableLabel_.isValid() ? llvh::alignTo(sizeof(SHJmpBuf) + 8, 16)
+                                      : 0;
+  }
+
+  /// \return the offset of the SHJmpBuf in the stack frame.
+  uint32_t getJmpBufOffset() const {
+    assert(catchTableLabel_.isValid() && "no SHJmpBuf on stack");
+    return 0;
+  }
+
+  /// \return the offset of the saved SHLocals pointer in the stack frame.
+  uint32_t getSavedSHLocalsOffset() const {
+    assert(catchTableLabel_.isValid() && "no saved SHLocals * on stack");
+    return sizeof(SHJmpBuf);
+  }
+
+  /// \return true if \c emittingIP is in a try (i.e. exceptions can be observed
+  ///   in this function).
+  bool isInTry() const {
+    return codeBlock_->findCatchTargetOffset(
+               codeBlock_->getOffsetOf(emittingIP)) != -1;
+  }
+
   void frameSetup(
       unsigned numFrameRegs,
       unsigned gpSaveCount,
@@ -1006,6 +1049,11 @@ class Emitter {
   /// this does not save the IP.
   void callWithoutThunk(void *fn, const char *name);
 
+  /// Emit the code that runs when this function is longjmped to.
+  /// Performs the catch table lookup and jumps to the appropriate catch block,
+  /// and if no catch block is found, pops the SHJmpBuf and rethrows the
+  /// exception.
+  void emitCatchTable(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
   void emitSlowPaths();
   void emitThunks();
   void emitROData();

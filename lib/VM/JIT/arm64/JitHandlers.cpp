@@ -12,6 +12,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/JSError.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -212,6 +213,54 @@ void _sh_throw_invalid_call(SHRuntime *shr) {
 void _sh_throw_register_stack_overflow(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
   (void)runtime.raiseStackOverflow(Runtime::StackOverflowKind::JSRegisterStack);
+  _sh_throw_current(shr);
+}
+
+void *_jit_find_catch_target(
+    SHRuntime *shr,
+    SHCodeBlock *shCodeBlock,
+    SHLegacyValue *frame,
+    SHJmpBuf *jmpBuf,
+    SHLocals *savedLocals,
+    int32_t *addressTable) {
+  Runtime &runtime = getRuntime(shr);
+  CodeBlock *codeBlock = (CodeBlock *)shCodeBlock;
+  if (isUncatchableError(runtime.getThrownValue())) {
+    _sh_end_try(shr, jmpBuf);
+    _sh_throw_current(shr);
+  }
+  // Find the IP. Either the exception was thrown from the current JS frame,
+  // in which case it's in the Runtime currentIP slot, or it was thrown by a
+  // callee, in which case it's in the register stack's SavedIP slot.
+  const inst::Inst *ip;
+  if (frame == runtime.getCurrentFrame().ptr()) {
+    ip = runtime.getCurrentIP();
+  } else {
+    // Not the same frame. Load from the SavedIP StackFrameLayout slot.
+    // This is valid because the register stack hasn't been reset by
+    // _sh_catch_no_pop yet.
+    uint32_t nextFrameOffset =
+        (codeBlock->getFrameSize() +
+         StackFrameLayout::CalleeExtraRegistersAtStart);
+    StackFramePtr nextFrame{toPHV(frame) + nextFrameOffset};
+    ip = nextFrame.getSavedIP();
+  }
+  // Look up the offset in the exception table.
+  auto offset = codeBlock->getOffsetOf(ip);
+  auto excTable =
+      codeBlock->getRuntimeModule()->getBytecode()->getExceptionTable(
+          codeBlock->getFunctionID());
+  for (unsigned i = 0, e = excTable.size(); i < e; ++i) {
+    if (excTable[i].start <= offset && offset < excTable[i].end) {
+      _sh_catch_no_pop(
+          shr,
+          savedLocals,
+          frame,
+          codeBlock->getFrameSize() + hbc::StackFrameLayout::FirstLocal);
+      return (void *)((char *)addressTable + addressTable[i]);
+    }
+  }
+  _sh_end_try(shr, jmpBuf);
   _sh_throw_current(shr);
 }
 

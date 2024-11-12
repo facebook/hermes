@@ -11,6 +11,7 @@
 
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/RuntimeModule.h"
 
 #include "llvh/Support/Debug.h"
 
@@ -92,6 +93,15 @@ void discoverBasicBlocks(
 
   // Add the end of the bytecode
   addLabel(ip);
+
+  auto excTable =
+      codeBlock->getRuntimeModule()->getBytecode()->getExceptionTable(
+          codeBlock->getFunctionID());
+
+  // Add labels for the handler of each try block.
+  for (const auto &tryRegion : excTable) {
+    addLabel(begin + tryRegion.target);
+  }
 
   // Sort all labels into a sequence of basic blocks.
   basicBlocks.clear();

@@ -91,6 +91,20 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right);
 void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex);
 #endif
 
+/// Only valid to call from the longjmp catch handler in the JIT,
+/// prior to running the Catch instruction itself.
+/// At this point the C++ stack has been restored, but the Runtime register
+/// stack has not.
+///
+/// \return a pointer to the instruction to branch to.
+void *_jit_find_catch_target(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *frame,
+    SHJmpBuf *jmpBuf,
+    SHLocals *savedLocals,
+    int32_t *addressTable);
+
 /// Throw an exception that the current function was incorrectly called as a
 /// constructor/non-constructor.
 [[noreturn]] void _sh_throw_invalid_construct(SHRuntime *shr);

@@ -252,8 +252,17 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
     compileBB(bbIndex);
   }
 
+  auto excTable =
+      codeBlock_->getRuntimeModule()->getBytecode()->getExceptionTable(
+          codeBlock_->getFunctionID());
+  llvh::SmallVector<const asmjit::Label *, 4> handlers{};
+  handlers.reserve(excTable.size());
+  for (const auto &entry : excTable) {
+    handlers.push_back(&bbLabels_.at(ofsToBBIndex_.at(entry.target)));
+  }
+
   em_.leave();
-  codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr));
+  codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr, handlers));
 
   LLVM_DEBUG(
       llvh::outs() << "\n Bytecode:";
@@ -286,7 +295,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
   }
 
 EMIT_UNIMPLEMENTED(GetEnvironment)
-EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 
@@ -737,6 +745,10 @@ inline void JITContext::Compiler::emitTypedStoreParent(
 
 inline void JITContext::Compiler::emitRet(const inst::RetInst *inst) {
   em_.ret(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitCatch(const inst::CatchInst *inst) {
+  em_.catchInst(FR(inst->op1));
 }
 
 inline void JITContext::Compiler::emitGetGlobalObject(
