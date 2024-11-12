@@ -17,14 +17,15 @@ try {} catch (e) { let x; }
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:            Decl %d.1 'e' ES5Catch
-// CHECK-NEXT:            Decl %d.2 'x' Let
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:                Decl %d.2 'x' Let
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    TryStatement
 // CHECK-NEXT:        BlockStatement Scope %s.2
 // CHECK-NEXT:        CatchClause Scope %s.3
 // CHECK-NEXT:            Id 'e' [D:E:%d.1 'e']
-// CHECK-NEXT:            BlockStatement
+// CHECK-NEXT:            BlockStatement Scope %s.4
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
 // CHECK-NEXT:                        Id 'x' [D:E:%d.2 'x']

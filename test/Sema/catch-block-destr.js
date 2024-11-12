@@ -16,9 +16,10 @@ try {} catch ([a, b]) { let x; }
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:            Decl %d.1 'a' Let
-// CHECK-NEXT:            Decl %d.2 'b' Let
-// CHECK-NEXT:            Decl %d.3 'x' Let
+// CHECK-NEXT:            Decl %d.1 'a' Catch
+// CHECK-NEXT:            Decl %d.2 'b' Catch
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:                Decl %d.3 'x' Let
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    TryStatement
@@ -27,7 +28,7 @@ try {} catch ([a, b]) { let x; }
 // CHECK-NEXT:            ArrayPattern
 // CHECK-NEXT:                Id 'a' [D:E:%d.1 'a']
 // CHECK-NEXT:                Id 'b' [D:E:%d.2 'b']
-// CHECK-NEXT:            BlockStatement
+// CHECK-NEXT:            BlockStatement Scope %s.4
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
 // CHECK-NEXT:                        Id 'x' [D:E:%d.3 'x']

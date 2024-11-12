@@ -492,9 +492,10 @@ class FunctionContext {
   /// All declarations in the function.
   std::unique_ptr<DeclCollector> decls;
 
-  /// The set of names that have been promoted to function scope by
-  /// promoteScopedFunctionDecls in this function.
-  llvh::DenseSet<UniqueString *> promotedFuncDecls{};
+  /// The map of names that have been promoted to function scope by
+  /// promoteScopedFunctionDecls in this function, mapped to their Var
+  /// declaration in function scope.
+  llvh::DenseMap<UniqueString *, Decl *> promotedFuncDecls{};
 
   /// The depth of the function's scope in the binding table.
   /// Populated when ScopeRAII is created within the function.

@@ -879,9 +879,7 @@ void FlowChecker::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope(*this);
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
     return;
-  visitESTreeNode(*this, node->_param, node);
-  // Process body's declarations, skip visiting it, visit its children.
-  visitESTreeChildren(*this, node->_body);
+  visitESTreeChildren(*this, node);
 }
 
 void FlowChecker::visitFunctionLike(

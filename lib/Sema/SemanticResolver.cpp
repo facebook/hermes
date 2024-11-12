@@ -440,8 +440,7 @@ void SemanticResolver::visit(
   // Some nodes with attached BlockStatement have already dealt with the scope.
   if (llvh::isa<FunctionDeclarationNode>(parent) ||
       llvh::isa<FunctionExpressionNode>(parent) ||
-      llvh::isa<ArrowFunctionExpressionNode>(parent) ||
-      llvh::isa<CatchClauseNode>(parent)) {
+      llvh::isa<ArrowFunctionExpressionNode>(parent)) {
     return visitESTreeChildren(*this, node);
   }
 
@@ -747,16 +746,10 @@ void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
 
 void SemanticResolver::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope{*this, node};
-  // Process body's declarations, skip visiting the block, visit its children.
+  // Process catch clause's declarations (not the ones in the body).
   processCollectedDeclarations(node);
-  // Visit the catch param, in case there is destructuring.
-  visitESTreeNode(*this, node->_param, node);
-  // The scope declarations are associated with the CatchClauseNode in the
-  // DeclCollector.
-  visitESTreeChildren(*this, node->_body);
-  assert(
-      !functionContext()->decls->getScopeDeclsForNode(node->_body) &&
-      "CatchClause body block shouldn't have any decls associated");
+  // Visit the body, which will make a new scope.
+  visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(RegExpLiteralNode *regexp) {
@@ -1563,7 +1556,8 @@ void SemanticResolver::processPromotedFuncDecls(
   for (FunctionDeclarationNode *funcDecl : promotedFuncDecls) {
     auto *ident = llvh::cast<IdentifierNode>(funcDecl->_id);
     validateAndDeclareIdentifier(kind, ident);
-    functionContext()->promotedFuncDecls.insert(ident->_name);
+    functionContext()->promotedFuncDecls.try_emplace(
+        ident->_name, semCtx_.getDeclarationDecl(ident));
   }
 }
 
@@ -1635,7 +1629,7 @@ Decl::Kind SemanticResolver::extractIdentsFromDecl(
       // https://www.ecma-international.org/ecma-262/10.0/index.html#sec-variablestatements-in-catch-blocks
       return Decl::Kind::ES5Catch;
     } else {
-      return Decl::Kind::Let;
+      return Decl::Kind::Catch;
     }
   }
 
@@ -1753,6 +1747,7 @@ void SemanticResolver::validateAndDeclareIdentifier(
     const bool sameScope = prevName.decl->scope == curScope_;
     const bool topLevel =
         curScope_->parentFunction->getFunctionBodyScope() == curScope_;
+    const bool prevInPrevScope = prevName.decl->scope == curScope_->parentScope;
 
     // Check whether the redeclaration is invalid.
     // Note that since "var" declarations have been hoisted to the function
@@ -1770,6 +1765,19 @@ void SemanticResolver::validateAndDeclareIdentifier(
     // * It is a Syntax Error if any element of the BoundNames of
     //   FormalParameters also occurs in the LexicallyDeclaredNames of
     //   FunctionBody.
+    //
+    // Catch (non-ES5) clause variables must not conflict with the lexically
+    // scoped names or var-declared names in their block:
+    // * It is a Syntax Error if BoundNames of CatchParameter contains any
+    //   duplicate elements.
+    // * It is a Syntax Error if any element of the BoundNames of CatchParameter
+    //   also occurs in the LexicallyDeclaredNames of Block.
+    //   NOTE: It's possible that a function in the body of the catch has been
+    //   promoted to a Var at function scope, so it has to be accounted for.
+    // * It is a Syntax Error if any element of the BoundNames of CatchParameter
+    //   also occurs in the VarDeclaredNames of Block unless CatchParameter is
+    //   CatchParameter : BindingIdentifier.
+    //   visit(VariableDeclarationNode *) will handle this final case.
     //
     // Case by case explanations for our representation:
     //
@@ -1813,7 +1821,13 @@ void SemanticResolver::validateAndDeclareIdentifier(
            prevKind == Decl::Kind::ScopedFunction &&
            kind == Decl::Kind::ScopedFunction)) ||
         (prevKind == Decl::Kind::Parameter && Decl::isKindLetLike(kind) &&
-         topLevel)) {
+         topLevel) ||
+        // LexicallyDeclaredNames of CatchBlock are only in the block scope
+        // itself, so check prevInPrevScope (it's like checking topLevel for
+        // parameters).
+        // This is an error regardless of if it's an ES5 or ES6 catch.
+        ((prevKind == Decl::Kind::Catch || prevKind == Decl::Kind::ES5Catch) &&
+         Decl::isKindLetLike(kind) && prevInPrevScope)) {
       sm_.error(
           ident->getSourceRange(),
           llvh::Twine("Identifier '") + ident->_name->str() +
@@ -1832,15 +1846,32 @@ void SemanticResolver::validateAndDeclareIdentifier(
     // Var, ScopedFunc -> if non-param non-strict or same scope, then use prev,
     //                    else declare new
     else if (
-        Decl::isKindVarLike(prevKind) &&
-        Decl::isKindVarLikeOrScopedFunction(kind)) {
+        Decl::isKindVarLike(prevKind) && kind == Decl::Kind::ScopedFunction) {
+      decl = nullptr;
       if (sameScope) {
         decl = prevName.decl;
-      } else if (functionContext()->promotedFuncDecls.count(ident->_name)) {
+      } else {
+        auto it = functionContext()->promotedFuncDecls.find(ident->_name);
+        if (it != functionContext()->promotedFuncDecls.end()) {
+          // We've already promoted this function, so add a new binding
+          // and point it to the original Decl.
+          reuseDeclForNewBinding = true;
+          decl = it->second;
+        }
+      }
+    }
+    // ES5Catch, ScopedFunc ->
+    //   if promoted, use promoted function, else declare new
+    //   ES5Catch doesn't prevent promotion, so we have to check it specially.
+    else if (
+        prevKind == Decl::Kind::ES5Catch &&
+        kind == Decl::Kind::ScopedFunction) {
+      auto it = functionContext()->promotedFuncDecls.find(ident->_name);
+      if (it != functionContext()->promotedFuncDecls.end()) {
         // We've already promoted this function, so add a new binding
         // and point it to the original Decl.
         reuseDeclForNewBinding = true;
-        decl = prevName.decl;
+        decl = it->second;
       } else {
         decl = nullptr;
       }

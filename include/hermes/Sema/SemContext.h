@@ -59,6 +59,9 @@ class Decl {
     Const,
     Class,
     Import,
+    /// A catch variable bound with let-like rules (non-ES5).
+    /// ES14.0 B.3.4 handles ES5-style catch bindings differently.
+    Catch,
     /// Function declaration visible only in its lexical scope.
     ScopedFunction,
     /// A single catch variable declared like this "catch (e)", see
@@ -105,7 +108,7 @@ class Decl {
     return kind >= Kind::Var;
   }
   static bool isKindVarLikeOrScopedFunction(Kind kind) {
-    return kind >= Kind::ScopedFunction;
+    return isKindVarLike(kind) || kind == Kind::ScopedFunction;
   }
   /// \return true if this kind of declaration is lexically scoped (and cannot
   /// be re-declared).
