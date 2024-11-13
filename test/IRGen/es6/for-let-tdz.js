@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
-// RUN: %hermesc -Xenable-tdz -Xcustom-opt=simplestackpromotion -dump-ir %s > /dev/null
+// RUN: %hermesc -Xes6-block-scoping -Xenable-tdz -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -Xes6-block-scoping -Xenable-tdz -Xcustom-opt=simplestackpromotion -dump-ir %s > /dev/null
 
 // Verify code generation for a scoped for-loop.
 // Verify IRGen logic for simplifying a scoped for-loop.
@@ -255,7 +255,9 @@ function foo_var() {
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS4 [?anon_0_this: any, ?anon_1_new.target: undefined|object, i: any|empty, i#1: any]
+// CHECK:scope %VS4 [?anon_0_this: any, ?anon_1_new.target: undefined|object, i: any|empty]
+
+// CHECK:scope %VS5 [i: any|empty]
 
 // CHECK:function foo_testnc_updatenc(): any
 // CHECK-NEXT:%BB0:
@@ -273,124 +275,113 @@ function foo_var() {
 // CHECK-NEXT:  %11 = UnaryIncInst (:number|bigint) %10: any
 // CHECK-NEXT:        StoreFrameInst %3: environment, %11: number|bigint, [%VS4.i]: any|empty
 // CHECK-NEXT:  %13 = BinaryLessThanInst (:boolean) %11: number|bigint, 10: number
-// CHECK-NEXT:        CondBranchInst %13: boolean, %BB1, %BB5
+// CHECK-NEXT:        CondBranchInst %13: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:        BranchInst %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %16 = LoadFrameInst (:any|empty) %3: environment, [%VS4.i]: any|empty
-// CHECK-NEXT:  %17 = UnionNarrowTrustedInst (:any) %16: any|empty
-// CHECK-NEXT:        StoreFrameInst %3: environment, %17: any, [%VS4.i#1]: any
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %20 = LoadPropertyInst (:any) globalObject: object, "arr": string
-// CHECK-NEXT:  %21 = LoadPropertyInst (:any) %20: any, "push": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %3: environment, %" 7#"(): functionCode
-// CHECK-NEXT:  %23 = CallInst (:any) %21: any, empty: any, false: boolean, empty: any, undefined: undefined, %20: any, %22: object
-// CHECK-NEXT:  %24 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %25 = LoadFrameInst (:any) %3: environment, [%VS4.i#1]: any
-// CHECK-NEXT:  %26 = CallInst (:any) %24: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %25: any
+// CHECK-NEXT:  %15 = CreateScopeInst (:environment) %VS5: any, %3: environment
+// CHECK-NEXT:        StoreFrameInst %15: environment, empty: empty, [%VS5.i]: any|empty
+// CHECK-NEXT:  %17 = LoadFrameInst (:any|empty) %3: environment, [%VS4.i]: any|empty
+// CHECK-NEXT:        StoreFrameInst %15: environment, %17: any|empty, [%VS5.i]: any|empty
+// CHECK-NEXT:  %19 = LoadPropertyInst (:any) globalObject: object, "arr": string
+// CHECK-NEXT:  %20 = LoadPropertyInst (:any) %19: any, "push": string
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %15: environment, %" 7#"(): functionCode
+// CHECK-NEXT:  %22 = CallInst (:any) %20: any, empty: any, false: boolean, empty: any, undefined: undefined, %19: any, %21: object
+// CHECK-NEXT:  %23 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %24 = LoadFrameInst (:any|empty) %15: environment, [%VS5.i]: any|empty
+// CHECK-NEXT:  %25 = UnionNarrowTrustedInst (:any) %24: any|empty
+// CHECK-NEXT:  %26 = CallInst (:any) %23: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %25: any
 // CHECK-NEXT:        BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %28 = LoadFrameInst (:any) %3: environment, [%VS4.i#1]: any
-// CHECK-NEXT:        StoreFrameInst %3: environment, %28: any, [%VS4.i]: any|empty
-// CHECK-NEXT:  %30 = LoadFrameInst (:any|empty) %3: environment, [%VS4.i]: any|empty
-// CHECK-NEXT:  %31 = UnionNarrowTrustedInst (:any) %30: any|empty
-// CHECK-NEXT:  %32 = BinaryAddInst (:any) %31: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, %32: any, [%VS4.i]: any|empty
-// CHECK-NEXT:  %34 = LoadFrameInst (:any|empty) %3: environment, [%VS4.i]: any|empty
-// CHECK-NEXT:  %35 = UnionNarrowTrustedInst (:any) %34: any|empty
-// CHECK-NEXT:  %36 = UnaryIncInst (:number|bigint) %35: any
-// CHECK-NEXT:        StoreFrameInst %3: environment, %36: number|bigint, [%VS4.i]: any|empty
-// CHECK-NEXT:  %38 = BinaryLessThanInst (:boolean) %36: number|bigint, 10: number
-// CHECK-NEXT:        CondBranchInst %38: boolean, %BB2, %BB5
-// CHECK-NEXT:%BB5:
+// CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %29 = LoadFrameInst (:any|empty) %3: environment, [%VS4.i]: any|empty
+// CHECK-NEXT:  %30 = UnionNarrowTrustedInst (:any) %29: any|empty
+// CHECK-NEXT:  %31 = UnaryIncInst (:number|bigint) %30: any
+// CHECK-NEXT:        StoreFrameInst %3: environment, %31: number|bigint, [%VS4.i]: any|empty
+// CHECK-NEXT:  %33 = BinaryLessThanInst (:boolean) %31: number|bigint, 10: number
+// CHECK-NEXT:        CondBranchInst %33: boolean, %BB1, %BB2
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %35 = LoadFrameInst (:any|empty) %15: environment, [%VS5.i]: any|empty
+// CHECK-NEXT:        StoreFrameInst %3: environment, %35: any|empty, [%VS4.i]: any|empty
+// CHECK-NEXT:  %37 = LoadFrameInst (:any|empty) %3: environment, [%VS4.i]: any|empty
+// CHECK-NEXT:  %38 = UnionNarrowTrustedInst (:any) %37: any|empty
+// CHECK-NEXT:  %39 = BinaryAddInst (:any) %38: any, 2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, %39: any, [%VS4.i]: any|empty
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS5 [i: any|empty]
+// CHECK:scope %VS6 [i: any|empty]
 
 // CHECK:function foo_allnc(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS5.i]: any|empty
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS5.i]: any|empty
-// CHECK-NEXT:  %4 = LoadFrameInst (:any|empty) %1: environment, [%VS5.i]: any|empty
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS6.i]: any|empty
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS6.i]: any|empty
+// CHECK-NEXT:  %4 = LoadFrameInst (:any|empty) %1: environment, [%VS6.i]: any|empty
 // CHECK-NEXT:  %5 = UnionNarrowTrustedInst (:any) %4: any|empty
 // CHECK-NEXT:  %6 = UnaryIncInst (:number|bigint) %5: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: number|bigint, [%VS5.i]: any|empty
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: number|bigint, [%VS6.i]: any|empty
 // CHECK-NEXT:  %8 = BinaryLessThanInst (:boolean) %6: number|bigint, 10: number
 // CHECK-NEXT:       CondBranchInst %8: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %11 = LoadFrameInst (:any|empty) %1: environment, [%VS5.i]: any|empty
+// CHECK-NEXT:  %11 = LoadFrameInst (:any|empty) %1: environment, [%VS6.i]: any|empty
 // CHECK-NEXT:  %12 = UnionNarrowTrustedInst (:any) %11: any|empty
 // CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = LoadFrameInst (:any|empty) %1: environment, [%VS5.i]: any|empty
+// CHECK-NEXT:  %16 = LoadFrameInst (:any|empty) %1: environment, [%VS6.i]: any|empty
 // CHECK-NEXT:  %17 = UnionNarrowTrustedInst (:any) %16: any|empty
 // CHECK-NEXT:  %18 = UnaryIncInst (:number|bigint) %17: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %18: number|bigint, [%VS5.i]: any|empty
+// CHECK-NEXT:        StoreFrameInst %1: environment, %18: number|bigint, [%VS6.i]: any|empty
 // CHECK-NEXT:  %20 = BinaryLessThanInst (:boolean) %18: number|bigint, 10: number
 // CHECK-NEXT:        CondBranchInst %20: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %22 = LoadFrameInst (:any|empty) %1: environment, [%VS5.i]: any|empty
+// CHECK-NEXT:  %22 = LoadFrameInst (:any|empty) %1: environment, [%VS6.i]: any|empty
 // CHECK-NEXT:  %23 = UnionNarrowTrustedInst (:any) %22: any|empty
 // CHECK-NEXT:  %24 = BinaryAddInst (:any) %23: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %24: any, [%VS5.i]: any|empty
+// CHECK-NEXT:        StoreFrameInst %1: environment, %24: any, [%VS6.i]: any|empty
 // CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS6 [i: any]
+// CHECK:scope %VS7 [i: any]
 
 // CHECK:function foo_var(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS6.i]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS6.i]: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS7.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS7.i]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
 // CHECK-NEXT:  %5 = UnaryIncInst (:number|bigint) %4: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %5: number|bigint, [%VS6.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: number|bigint, [%VS7.i]: any
 // CHECK-NEXT:  %7 = BinaryLessThanInst (:boolean) %5: number|bigint, 10: number
 // CHECK-NEXT:       CondBranchInst %7: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
 // CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %10: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
 // CHECK-NEXT:  %15 = UnaryIncInst (:number|bigint) %14: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %15: number|bigint, [%VS6.i]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %15: number|bigint, [%VS7.i]: any
 // CHECK-NEXT:  %17 = BinaryLessThanInst (:boolean) %15: number|bigint, 10: number
 // CHECK-NEXT:        CondBranchInst %17: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS7.i]: any
 // CHECK-NEXT:  %20 = BinaryAddInst (:any) %19: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %20: any, [%VS6.i]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %20: any, [%VS7.i]: any
 // CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:function_end
-
-// CHECK:scope %VS7 []
-
-// CHECK:arrow ""(): any
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
-// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS1.i]: any|empty
-// CHECK-NEXT:  %3 = ThrowIfInst (:any) %2: any|empty, type(empty)
-// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS8 []
 
-// CHECK:arrow " 1#"(): any
+// CHECK:arrow ""(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
@@ -401,7 +392,7 @@ function foo_var() {
 
 // CHECK:scope %VS9 []
 
-// CHECK:arrow " 2#"(): any
+// CHECK:arrow " 1#"(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS9: any, %0: environment
@@ -412,18 +403,18 @@ function foo_var() {
 
 // CHECK:scope %VS10 []
 
-// CHECK:arrow " 3#"(): any
+// CHECK:arrow " 2#"(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS10: any, %0: environment
-// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS2.i]: any|empty
+// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS1.i]: any|empty
 // CHECK-NEXT:  %3 = ThrowIfInst (:any) %2: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS11 []
 
-// CHECK:arrow " 4#"(): any
+// CHECK:arrow " 3#"(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS11: any, %0: environment
@@ -434,18 +425,18 @@ function foo_var() {
 
 // CHECK:scope %VS12 []
 
-// CHECK:arrow " 5#"(): any
+// CHECK:arrow " 4#"(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS12: any, %0: environment
-// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS3.i]: any|empty
+// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS2.i]: any|empty
 // CHECK-NEXT:  %3 = ThrowIfInst (:any) %2: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS13 []
 
-// CHECK:arrow " 6#"(): any
+// CHECK:arrow " 5#"(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS13: any, %0: environment
@@ -456,11 +447,22 @@ function foo_var() {
 
 // CHECK:scope %VS14 []
 
+// CHECK:arrow " 6#"(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS14: any, %0: environment
+// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS3.i]: any|empty
+// CHECK-NEXT:  %3 = ThrowIfInst (:any) %2: any|empty, type(empty)
+// CHECK-NEXT:       ReturnInst %3: any
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS15 []
+
 // CHECK:arrow " 7#"(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS14: any, %0: environment
-// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS4.i]: any|empty
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS5: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS15: any, %0: environment
+// CHECK-NEXT:  %2 = LoadFrameInst (:any|empty) %0: environment, [%VS5.i]: any|empty
 // CHECK-NEXT:  %3 = ThrowIfInst (:any) %2: any|empty, type(empty)
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end

@@ -396,17 +396,18 @@ bool ESTreeIRGen::treeDoesNotCapture(ESTree::Node *tree) {
 void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   // IS this a "scoped" for loop?
   // TODO: check if any of the declared variables are captured.
-  if (loop->_init) {
+  bool enableBlockScoping = Mod->getContext().getEnableES6BlockScoping();
+  if (enableBlockScoping && loop->_init) {
     if (auto *VD =
             llvh::dyn_cast<ESTree::VariableDeclarationNode>(loop->_init)) {
       if (VD->_kind != kw_.identVar) {
         bool testExprCaptures = !treeDoesNotCapture(loop->_test);
         bool updateExprCaptures = !treeDoesNotCapture(loop->_update);
+        bool initExprCaptures = !treeDoesNotCapture(loop->_init);
 
-        // Invoke the scoped loop generation only if something is potentially
-        // captured in the loop.
-        if (testExprCaptures || updateExprCaptures ||
-            !treeDoesNotCapture(loop->_body)) {
+        // Invoke the scoped loop generation only if the init, test, or update
+        // capture.
+        if (testExprCaptures || updateExprCaptures || initExprCaptures) {
           genScopedForLoop(loop, testExprCaptures, updateExprCaptures);
           return;
         }
@@ -414,18 +415,85 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
     }
   }
 
+  bool createInnerScopes =
+      enableBlockScoping && !treeDoesNotCapture(loop->_body);
+
   // Create the basic blocks that make the while structure.
   Function *function = Builder.getInsertionBlock()->getParent();
   BasicBlock *bodyBlock = Builder.createBasicBlock(function);
   BasicBlock *exitBlock = Builder.createBasicBlock(function);
   BasicBlock *postTestBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
+  BasicBlock *startingBlock = Builder.getInsertionBlock();
 
   // Initialize the goto labels.
   curFunction()->initLabel(loop, exitBlock, updateBlock);
 
+  // A mapping between an outer variable and its inner version in the loop body
+  // scope. This is only used if we create an inner scope.
+  struct VarMapping {
+    sema::Decl *decl;
+    Variable *outerVar;
+    Variable *innerVar;
+    VarMapping(sema::Decl *decl, Variable *outerVar, Variable *innerVar)
+        : decl(decl), outerVar(outerVar), innerVar(innerVar) {}
+  };
+  llvh::SmallVector<VarMapping, 2> vars{};
+
+  // Record the enclosing scope, in case we create an inner scope.
+  auto *outerScope = curFunction()->curScope;
+  // Keep track of the scope to use when emitting the body, which is just the
+  // enclosing scope if no additional scope is created.
+  auto *bodyScope = outerScope;
+
+  // If we are creating an inner scope, emit the variables directly in the body.
+  if (createInnerScopes) {
+    // Generate a scope for the body.
+    Builder.setInsertionBlock(bodyBlock);
+    auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
+    bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
+    curFunction()->curScope = bodyScope;
+  }
+
   // Declarations created by the init statement.
   emitScopeDeclarations(loop->getScope());
+
+  // If we are creating an inner scope, create a copy of each variable in the
+  // outer scope. The inner scope is used only during the body of the loop,
+  // while the outer vars hold the value between iterations, and during the
+  // init, test, and update.
+  if (createInnerScopes) {
+    // Restore the starting scope and block for emitting the outer vars.
+    curFunction()->curScope = outerScope;
+    Builder.setInsertionBlock(startingBlock);
+
+    for (auto *decl : loop->getScope()->decls) {
+      assert(
+          !decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
+      Variable *innerVar = llvh::cast<Variable>(getDeclData(decl));
+      // Create a copy of the variable.
+      Variable *outerVar = Builder.createVariable(
+          outerScope->getVariableScope(),
+          decl->name,
+          innerVar->getType(),
+          /* hidden */ false);
+
+      // Mirror the TDZ and const-ness of the inner var.
+      outerVar->setIsConst(innerVar->getIsConst());
+      outerVar->setObeysTDZ(innerVar->getObeysTDZ());
+      // Make sure the outer var is initialized.
+      Builder.createStoreFrameInst(
+          outerScope,
+          outerVar->getObeysTDZ() ? (Value *)Builder.getLiteralEmpty()
+                                  : Builder.getLiteralUndefined(),
+          outerVar);
+      vars.emplace_back(decl, outerVar, innerVar);
+
+      // Set the decl data to the outer var since we will evaluate the init
+      // statement next.
+      setDeclData(decl, outerVar);
+    }
+  }
 
   // Generate IR for the loop initialization.
   // The init field can be a variable declaration or any expression.
@@ -446,6 +514,15 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
 
   // Generate the update sequence of 'for' loops.
   Builder.setInsertionBlock(updateBlock);
+
+  // Before performing the update, write the inner vars back to the outer. Note
+  // that we have to do this in the update block rather than at the end of the
+  // body so it runs even if there is a "continue".
+  for (const auto &var : vars) {
+    Value *val = Builder.createLoadFrameInst(bodyScope, var.innerVar);
+    Builder.createStoreFrameInst(outerScope, val, var.outerVar);
+  }
+
   if (loop->_update)
     genExpression(loop->_update);
 
@@ -466,8 +543,23 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   // different statement count.
   // TODO: Determine if they should each also incrementStatementCount.
   Builder.setInsertionBlock(bodyBlock);
+  curFunction()->curScope = bodyScope;
+  for (const auto &var : vars) {
+    // Copy the outer var into the inner one. We can load directly from the
+    // outer var since it is never empty in the body, but we have to use
+    // emitStore for the inner var so it gets inserted in initializedTDZVars.
+    Value *val = Builder.createLoadFrameInst(outerScope, var.outerVar);
+    emitStore(val, var.innerVar, /* declInit */ true);
+
+    // Set the decl data to the inner var for the body.
+    setDeclData(var.decl, var.innerVar);
+  }
+
   genStatement(loop->_body);
   Builder.createBranchInst(updateBlock);
+
+  // Restore the outer scope before returning.
+  curFunction()->curScope = outerScope;
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
