@@ -31,11 +31,11 @@ catch (e) { assert(e.message.includes('minimumSignificantDigits value is invalid
 
 resolvedOptions = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', minimumSignificantDigits: 1 }).resolvedOptions();
 assert(resolvedOptions.minimumSignificantDigits === 1);
-assert(resolvedOptions.maximumSignificantDigits === undefined);
+assert(resolvedOptions.maximumSignificantDigits === 21);
 
 resolvedOptions = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', minimumSignificantDigits: 21 }).resolvedOptions();
 assert(resolvedOptions.minimumSignificantDigits === 21);
-assert(resolvedOptions.maximumSignificantDigits === undefined);
+assert(resolvedOptions.maximumSignificantDigits === 21);
 
 //
 // Validate maximumSignificantDigits logic
@@ -47,11 +47,11 @@ try { new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', maximu
 catch (e) { assert(e.message.includes('maximumSignificantDigits value is invalid.')) }
 
 resolvedOptions = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', maximumSignificantDigits: 1 }).resolvedOptions();
-assert(resolvedOptions.minimumSignificantDigits === undefined);
+assert(resolvedOptions.minimumSignificantDigits === 1);
 assert(resolvedOptions.maximumSignificantDigits === 1);
 
 resolvedOptions = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', maximumSignificantDigits: 21 }).resolvedOptions();
-assert(resolvedOptions.minimumSignificantDigits === undefined);
+assert(resolvedOptions.minimumSignificantDigits === 1);
 assert(resolvedOptions.maximumSignificantDigits === 21);
 
 //
