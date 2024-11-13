@@ -621,8 +621,12 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
 
   auto *outerScope = curFunction()->curScope;
 
-  // TODO: Create an actual init scope.
-  auto *initScope = curFunction()->curScope;
+  // Create an inner scope for the loop.
+  auto *loopVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
+
+  // Create the scope for the init statement.
+  auto *initScope = Builder.createCreateScopeInst(loopVarScope, outerScope);
+  curFunction()->curScope = initScope;
 
   // Declarations created by the init statement.
   emitScopeDeclarations(loop->getScope());
@@ -655,8 +659,10 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // The loop starts here.
   Builder.setInsertionBlock(loopBlock);
   Builder.setLocation(loop->_body->getDebugLoc());
-  // TODO: create a scope for the loop body.
-  auto *bodyScope = curFunction()->curScope;
+
+  // Create a scope for the loop body.
+  auto *bodyScope = Builder.createCreateScopeInst(loopVarScope, outerScope);
+  curFunction()->curScope = bodyScope;
 
   // Restore the vars from the stack locations.
   for (const auto &var : vars) {

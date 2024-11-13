@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -exec -Xenable-tdz -O0 %s | %FileCheck --match-full-lines %s
-// RUN: %shermes -exec -Xenable-tdz -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec -Xenable-tdz -Xes6-block-scoping -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec -Xenable-tdz -Xes6-block-scoping -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xenable-tdz -Xes6-block-scoping -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xenable-tdz -Xes6-block-scoping -O %s | %FileCheck --match-full-lines %s
 
 // Verify code generation for a scoped for-loop.
 // Verify IRGen logic for simplifying a scoped for-loop.
@@ -52,6 +54,13 @@ function foo_allnc() {
     }
 }
 
+// The init statement captures.
+function foo_init_capture(){
+    for (let i = 0, x = ()=>i; i < 3; ++i){
+        print(x());
+    }
+}
+
 // The var case, which produces the best possible code.
 function foo_var() {
     for(var i = 0; ++i < 10; i += 2) {
@@ -59,20 +68,19 @@ function foo_var() {
     }
 }
 
-
 function test(foo) {
     print(foo.name + ':');
     arr = [];
     foo();
     print("length", arr.length);
-    // TOOD: when loop capturing scope is fixed
-    // for(let f in arr) print(f());
+    for(let f of arr) print(f());
 };
 test(foo_full);
 test(foo_testnc);
 test(foo_updatenc);
 test(foo_testnc_updatenc);
 test(foo_allnc);
+test(foo_init_capture);
 test(foo_var);
 
 //CHECK:      foo_full:
@@ -80,25 +88,56 @@ test(foo_var);
 //CHECK-NEXT: 4
 //CHECK-NEXT: 7
 //CHECK-NEXT: length 10
+//CHECK-NEXT: 1
+//CHECK-NEXT: 1
+//CHECK-NEXT: 4
+//CHECK-NEXT: 4
+//CHECK-NEXT: 4
+//CHECK-NEXT: 7
+//CHECK-NEXT: 7
+//CHECK-NEXT: 7
+//CHECK-NEXT: 10
+//CHECK-NEXT: 10
 //CHECK-NEXT: foo_testnc:
 //CHECK-NEXT: 1
 //CHECK-NEXT: 4
 //CHECK-NEXT: 7
 //CHECK-NEXT: length 6
+//CHECK-NEXT: 1
+//CHECK-NEXT: 4
+//CHECK-NEXT: 4
+//CHECK-NEXT: 7
+//CHECK-NEXT: 7
+//CHECK-NEXT: 10
 //CHECK-NEXT: foo_updatenc:
 //CHECK-NEXT: 1
 //CHECK-NEXT: 4
 //CHECK-NEXT: 7
 //CHECK-NEXT: length 7
+//CHECK-NEXT: 1
+//CHECK-NEXT: 1
+//CHECK-NEXT: 4
+//CHECK-NEXT: 4
+//CHECK-NEXT: 7
+//CHECK-NEXT: 7
+//CHECK-NEXT: 10
 //CHECK-NEXT: foo_testnc_updatenc:
 //CHECK-NEXT: 1
 //CHECK-NEXT: 4
 //CHECK-NEXT: 7
 //CHECK-NEXT: length 3
+//CHECK-NEXT: 1
+//CHECK-NEXT: 4
+//CHECK-NEXT: 7
 //CHECK-NEXT: foo_allnc:
 //CHECK-NEXT: 1
 //CHECK-NEXT: 4
 //CHECK-NEXT: 7
+//CHECK-NEXT: length 0
+//CHECK-NEXT: foo_init_capture:
+//CHECK-NEXT: 0
+//CHECK-NEXT: 0
+//CHECK-NEXT: 0
 //CHECK-NEXT: length 0
 //CHECK-NEXT: foo_var:
 //CHECK-NEXT: 1
