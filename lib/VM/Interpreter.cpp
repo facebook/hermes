@@ -37,6 +37,7 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/Format.h"
 #include "llvh/Support/raw_ostream.h"
@@ -914,34 +915,6 @@ template <bool SingleStep, bool EnableCrashTrace>
 CallResult<HermesValue> Interpreter::interpretFunction(
     Runtime &runtime,
     InterpreterState &state) {
-  // The interpreter is re-entrant and also saves/restores its IP via the
-  // runtime whenever a call out is made (see the CAPTURE_IP_* macros). As such,
-  // failure to preserve the IP across calls to interpreterFunction() disrupt
-  // interpreter calls further up the C++ callstack. The RAII utility class
-  // below makes sure we always do this correctly.
-  //
-  // TODO: The IPs stored in the C++ callstack via this holder will generally be
-  // the same as in the JS stack frames via the Saved IP field. We can probably
-  // get rid of one of these redundant stores. Doing this isn't completely
-  // trivial as there are currently cases where we re-enter the interpreter
-  // without calling Runtime::saveCallerIPInStackFrame(), and there are features
-  // (I think mostly the debugger + stack traces) which implicitly rely on
-  // this behavior. At least their tests break if this behavior is not
-  // preserved.
-  struct IPSaver {
-    IPSaver(Runtime &runtime)
-        : ip_(runtime.getCurrentIP()), runtime_(runtime) {}
-
-    ~IPSaver() {
-      runtime_.setCurrentIP(ip_);
-    }
-
-   private:
-    const Inst *ip_;
-    Runtime &runtime_;
-  };
-  IPSaver ipSaver(runtime);
-
 #ifndef HERMES_ENABLE_DEBUGGER
   static_assert(!SingleStep, "can't use single-step mode without the debugger");
 #endif
@@ -1052,6 +1025,20 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     frameRegs = &newFrame.getFirstLocalRef();
     ip = (Inst const *)curCodeBlock->begin();
   }
+
+  // The interpreter is re-entrant and also saves/restores its IP via the
+  // runtime whenever a call out is made (see the CAPTURE_IP_* macros). As such,
+  // failure to preserve the IP across calls to interpreterFunction() disrupt
+  // interpreter calls further up the C++ callstack. The scope exit below makes
+  // sure we always do this correctly.
+  auto ipSaver = llvh::make_scope_exit([&runtime] {
+    if (!SingleStep) {
+      // Note that we read relative to the stack pointer, because we will
+      // restore the stack before this runs.
+      runtime.setCurrentIP(
+          StackFramePtr(runtime.getStackPointer()).getSavedIP());
+    }
+  });
 
   GCScope gcScope(runtime);
   // Avoid allocating a handle dynamically by reusing this one.
