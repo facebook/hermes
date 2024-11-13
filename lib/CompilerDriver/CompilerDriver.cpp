@@ -325,6 +325,13 @@ opt<bool> ES6Class(
     Hidden,
     cat(CompilerCategory));
 
+opt<bool> ES6BlockScoping(
+    "Xes6-block-scoping",
+    init(false),
+    desc("Enable support for ES6 block scoping"),
+    Hidden,
+    cat(CompilerCategory));
+
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
@@ -1089,6 +1096,7 @@ std::shared_ptr<Context> createContext(
   context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
   context->setEnableEval(cl::EnableEval);
   context->setConvertES6Classes(cl::ES6Class);
+  context->setEnableES6BlockScoping(cl::ES6BlockScoping);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());

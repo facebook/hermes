@@ -232,6 +232,11 @@ class Context {
   /// Whether to convert ES6 classes to ES5 functions
   bool convertES6Classes_{false};
 
+  /// Whether to enable support for ES6 block scoping.
+  /// TODO: This is intended to provide a temporary way to configure block
+  ///       scoping until we have debugger support for it.
+  bool enableES6BlockScoping_{false};
+
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
 
@@ -415,6 +420,14 @@ class Context {
 #else
     return false;
 #endif
+  }
+
+  void setEnableES6BlockScoping(bool enableES6BlockScoping) {
+    enableES6BlockScoping_ = enableES6BlockScoping;
+  }
+
+  bool getEnableES6BlockScoping() const {
+    return enableES6BlockScoping_;
   }
 
   /// \return true if either TS or Flow is being parsed.

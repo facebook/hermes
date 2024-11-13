@@ -129,6 +129,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
   context->setConvertES6Classes(compileFlags.enableES6Classes);
+  context->setEnableES6BlockScoping(compileFlags.enableES6BlockScoping);
   context->setPreemptiveFunctionCompilationThreshold(
       compileFlags.preemptiveFunctionCompilationThreshold);
   context->setPreemptiveFileCompilationThreshold(
