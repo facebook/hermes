@@ -773,6 +773,10 @@ bool Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
       !llvh::isa<AllocStackInst>(Inst.getValue()),
       "Storing the address of stack location");
   AssertIWithMsg(
+      Inst,
+      Inst.getValue()->getType().isSubsetOf(Inst.getPtr()->getType()),
+      "Value type mismatch");
+  AssertIWithMsg(
       Inst, !Inst.hasUsers(), "Store Instructions must not have users");
   return true;
 }
@@ -783,6 +787,10 @@ bool Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
   auto *scope = Inst.getScope();
   AssertIWithMsg(
       Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
+  AssertIWithMsg(
+      Inst,
+      Inst.getValue()->getType().isSubsetOf(Inst.getVariable()->getType()),
+      "Value type mismatch");
   if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
     AssertIWithMsg(
         Inst,
