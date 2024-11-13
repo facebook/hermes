@@ -14,7 +14,12 @@ from .preprocess import StrictMode
 from .progress import TestCaseResult, TestResultCode
 from .typing_defs import OptExpectedFailure, PathT
 
-COMPILE_ARGS = ["-test262", "-fno-static-builtins"]
+COMPILE_ARGS = [
+    "-test262",
+    "-fno-static-builtins",
+    "-Xes6-block-scoping",
+    "-Xenable-tdz",
+]
 ES6_ARGS = ["-Xes6-promise", "-Xes6-proxy"]
 EXTRA_RUN_ARGS = ["-Xhermes-internal-test-methods"]
 USE_MICROTASK_FLAG = ["-Xmicrotask-queue"]
