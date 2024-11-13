@@ -58,7 +58,7 @@ assert(resolvedOptions.maximumSignificantDigits === 21);
 // Validate when both are set
 //
 try { new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', minimumSignificantDigits: 5, maximumSignificantDigits: 2 }) }
-catch (e) { assert(e.message.includes('minimumSignificantDigits is greater than maximumSignificantDigits')) }
+catch (e) { assert(e.message.includes('maximumSignificantDigits value is invalid.')) }
 
 resolvedOptions = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD', minimumSignificantDigits: 3, maximumSignificantDigits: 5 }).resolvedOptions();
 assert(resolvedOptions.minimumSignificantDigits === 3);
