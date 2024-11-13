@@ -340,7 +340,22 @@ void ESTreeIRGen::genDoWhileLoop(ESTree::DoWhileStatementNode *loop) {
   Builder.createBranchInst(bodyBlock);
   // Generate the body.
   Builder.setInsertionBlock(bodyBlock);
+
+  // Save the outer scope in case we create an inner scope.
+  auto *outerScope = curFunction()->curScope;
+
+  if (Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(loop->_body)) {
+    auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
+    auto *bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
+    curFunction()->curScope = bodyScope;
+  }
+
   genStatement(loop->_body);
+
+  // Restore the outer scope.
+  curFunction()->curScope = outerScope;
+
   // After executing the content of the body, jump to the post test block.
   Builder.createBranchInst(postTestBlock);
   Builder.setInsertionBlock(postTestBlock);
