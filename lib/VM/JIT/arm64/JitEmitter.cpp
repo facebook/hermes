@@ -3629,6 +3629,37 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
         calleeFrameArg, calleeReg, frameRegs_[frCallee.index()].localType);
   }
 
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "Native pointers must be encoded without modification");
+
+  FR previousFrameArg{nRegs + hbc::StackFrameLayout::PreviousFrame};
+  // Free any existing temp so we store directly.
+  freeFRTemp(previousFrameArg);
+  movFRFromHW(previousFrameArg, HWReg(xFrame), FRType::OtherNonPtr);
+
+  FR savedIPArg{nRegs + hbc::StackFrameLayout::SavedIP};
+  // Since we need a register to compute the IP in anyway, it is convenient to
+  // just use any existing one for the SavedIP slot, and let the syncAllFRTemp
+  // below write it to memory.
+  auto savedIPReg = getOrAllocFRInGpX(savedIPArg, false);
+
+  // Save the current IP in both the SavedIP slot and the runtime.
+  getBytecodeIP(savedIPReg.a64GpX());
+  frUpdatedWithHW(savedIPArg, savedIPReg, FRType::OtherNonPtr);
+  a.str(savedIPReg.a64GpX(), a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+
+  FR savedCodeBlockArg = FR{nRegs + hbc::StackFrameLayout::SavedCodeBlock};
+  // TODO: We should be able to directly store xzr.
+  auto savedCodeBlockReg = getOrAllocFRInGpX(savedCodeBlockArg, false);
+  frUpdatedWithHW(savedCodeBlockArg, savedCodeBlockReg, FRType::OtherNonPtr);
+  a.mov(savedCodeBlockReg.a64GpX(), 0);
+
+  FR shLocalsArg{nRegs + hbc::StackFrameLayout::SHLocals};
+  // Free any existing temp so we store directly.
+  freeFRTemp(shLocalsArg);
+  movFRFromHW(shLocalsArg, savedCodeBlockReg, FRType::OtherNonPtr);
+
 #ifndef NDEBUG
   // No need to sync the set up call stack to the frame memory,
   // because it these registers can't have global registers.
@@ -3643,8 +3674,10 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
-  a.mov(a64::x1, xFrame);
-  EMIT_RUNTIME_CALL(
+  loadFrameAddr(
+      a64::x1,
+      FR(frameRegs_.size() + hbc::StackFrameLayout::CalleeClosureOrCB));
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
       *this,
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
       _jit_dispatch_call);

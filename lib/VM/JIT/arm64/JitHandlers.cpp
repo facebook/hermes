@@ -264,18 +264,12 @@ void *_jit_find_catch_target(
   _sh_throw_current(shr);
 }
 
-SHLegacyValue _jit_dispatch_call(SHRuntime *shr, SHLegacyValue *frame) {
+SHLegacyValue _jit_dispatch_call(
+    SHRuntime *shr,
+    SHLegacyValue *callTargetSHLV) {
   Runtime &runtime = getRuntime(shr);
 
-  // TODO: Move this call setup and the fast path into the emitted JIT code.
-  StackFramePtr newFrame(runtime.getStackPointer());
-  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
-  newFrame.getSavedIPRef() =
-      HermesValue::encodeNativePointer(runtime.getCurrentIP());
-  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
-
-  auto *callTarget = &newFrame.getCalleeClosureOrCBRef();
+  auto *callTarget = toPHV(callTargetSHLV);
   if (vmisa<JSFunction>(*callTarget)) {
     JSFunction *jsFunc = vmcast<JSFunction>(*callTarget);
     if (auto *fnPtr = jsFunc->getCodeBlock()->getJITCompiled())
