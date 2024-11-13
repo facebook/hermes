@@ -568,6 +568,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
 void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // A scoped for-loop has "interesting" semantics. The declared variables live
   // in a new scope for every iteration (so they can be captured). Additionally:
+  // - the init statement executes in its own scope.
   // - the test condition executes in the current iteration's scope.
   // - the update condition executes in the next iteration's scope.
   //
@@ -576,19 +577,22 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // expression in the beginning of the second iteration. But that would explode
   // the code size. So we use a flag.
   //
-  //      let/const oldVars = loop->init()
+  //      Scope s = createScope
+  //        declare loopVars in s
+  //        loop->init(loopVars)
+  //        stackLocs = s
   //      var first = true;
   // loopBlock:
   //      Scope s = createScope
-  //        declare newVars in s
-  //        newVars = oldVars
+  //        declare loopVars in s
+  //        loopVars = stackLocs
   //        if !first
-  //            loop->update(newVars)
-  //        if !loop->test(newVars)
+  //            loop->update(loopVars)
+  //        if !loop->test(loopVars)
   //            goto exitBlock
-  //        loop->body(newVars)
+  //        loop->body(loopVars)
   //  updateBlock:
-  //        oldVars(ignoring constness) = newVars
+  //        stackLocs = loopVars
   //        first = false
   //      end s
   //      goto loopBlock
@@ -601,19 +605,24 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   BasicBlock *bodyBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
   BasicBlock *exitBlock = Builder.createBasicBlock(function);
-  // A mapping between an "old" variable and its "new" version in the loop body
-  // scope.
+  // A mapping between a variable and the stack location used to hold its value
+  // between iterations.
   struct VarMapping {
     sema::Decl *decl;
-    Variable *oldVar;
-    Variable *newVar;
-    VarMapping(sema::Decl *decl, Variable *oldVar, Variable *newVar)
-        : decl(decl), oldVar(oldVar), newVar(newVar) {}
+    Variable *var;
+    AllocStackInst *stackLoc;
+    VarMapping(sema::Decl *decl, Variable *var, AllocStackInst *stackLoc)
+        : decl(decl), var(var), stackLoc(stackLoc) {}
   };
   llvh::SmallVector<VarMapping, 2> vars{};
 
   // Initialize the goto labels.
   curFunction()->initLabel(loop, exitBlock, updateBlock);
+
+  auto *outerScope = curFunction()->curScope;
+
+  // TODO: Create an actual init scope.
+  auto *initScope = curFunction()->curScope;
 
   // Declarations created by the init statement.
   emitScopeDeclarations(loop->getScope());
@@ -625,6 +634,18 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   genStatement(loop->_init);
 
   Builder.setLocation(loop->_init->getDebugLoc());
+
+  // Create and initialize a copy of each loop variable on the stack
+  for (auto *decl : loop->getScope()->decls) {
+    assert(!decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
+    Variable *loopVar = llvh::cast<Variable>(getDeclData(decl));
+    auto *stackLoc =
+        Builder.createAllocStackInst(decl->name, loopVar->getType());
+    Builder.createStoreStackInst(
+        Builder.createLoadFrameInst(initScope, loopVar), stackLoc);
+    vars.emplace_back(decl, loopVar, stackLoc);
+  }
+
   // Create the "first" flag and set it to true.
   AllocStackInst *firstStack = Builder.createAllocStackInst(
       genAnonymousLabelName("first"), Type::createBoolean());
@@ -634,8 +655,14 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // The loop starts here.
   Builder.setInsertionBlock(loopBlock);
   Builder.setLocation(loop->_body->getDebugLoc());
-  // TODO: create a scope.
-  auto *curScope = curFunction()->curScope;
+  // TODO: create a scope for the loop body.
+  auto *bodyScope = curFunction()->curScope;
+
+  // Restore the vars from the stack locations.
+  for (const auto &var : vars) {
+    Builder.createStoreFrameInst(
+        bodyScope, Builder.createLoadStackInst(var.stackLoc), var.var);
+  }
 
   // Declare the new variables in the new scope and copy the declared variables
   // into the new ones. Change the decls to resolve to the "new" variables, so
@@ -643,34 +670,6 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   assert(
       loop->getScope() && !loop->getScope()->decls.empty() &&
       "for-loop scope can't be empty if there is a scoped init");
-
-  IRBuilder::ScopedLocationChange slc(
-      Builder,
-      loop->_init ? loop->_init->getDebugLoc() : loop->_body->getDebugLoc());
-  for (auto *decl : loop->getScope()->decls) {
-    assert(!decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
-    Variable *oldVar = llvh::cast<Variable>(getDeclData(decl));
-    // Create a copy of the variable. Note that it doesn't need TDZ, since we
-    // are initializing it here.
-    Variable *newVar = Builder.createVariable(
-        curFunction()->curScope->getVariableScope(),
-        decl->name,
-        Type::subtractTy(oldVar->getType(), Type::createEmpty()),
-        /* hidden */ false);
-
-    vars.emplace_back(decl, oldVar, newVar);
-
-    // Note that we are using a direct load/store, which doesn't check TDZ. If
-    // our thinking is correct, all variables declared in the for(;;) must have
-    // been initialized.
-    Value *val = Builder.createLoadFrameInst(curScope, oldVar);
-    if (val->getType().canBeEmpty())
-      val = Builder.createUnionNarrowTrustedInst(val, newVar->getType());
-    Builder.createStoreFrameInst(curScope, val, newVar);
-
-    // Update the declaration to resolve to the new variable.
-    setDeclData(decl, newVar);
-  }
 
   // if first...
   Builder.createCondBranchInst(
@@ -700,14 +699,10 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   Builder.createBranchInst(updateBlock);
 
   Builder.setInsertionBlock(updateBlock);
-  // Copy the new vars back into the old ones.
-  for (const auto &mapping : vars) {
-    Builder.createStoreFrameInst(
-        curScope,
-        Builder.createLoadFrameInst(curScope, mapping.newVar),
-        mapping.oldVar);
-    // Update the declaration to resolve to the old variable.
-    setDeclData(mapping.decl, mapping.oldVar);
+  // Copy the updated values into their stack locations.
+  for (const auto &var : vars) {
+    Builder.createStoreStackInst(
+        Builder.createLoadFrameInst(bodyScope, var.var), var.stackLoc);
   }
 
   // Set "first" to false.
@@ -715,6 +710,9 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
 
   // Loop.
   Builder.createBranchInst(loopBlock);
+
+  // Restore the outer scope before returning.
+  curFunction()->curScope = outerScope;
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
