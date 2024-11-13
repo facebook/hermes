@@ -1202,6 +1202,18 @@ Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
       targetVarScope, startVarScope, startScope);
 }
 
+VariableScope *FunctionContext::getOrCreateInnerVariableScope(
+    ESTree::Node *node) {
+  auto [it, inserted] = innerScopes_.try_emplace(node, nullptr);
+  if (inserted)
+    it->second =
+        irGen_->Builder.createVariableScope(curScope->getVariableScope());
+  assert(
+      it->second->getParentScope() == curScope->getVariableScope() &&
+      "Inner scope created from multiple contexts");
+  return it->second;
+}
+
 void ESTreeIRGen::drainCompilationQueue() {
   while (!compilationQueue_.empty()) {
     compilationQueue_.front()();

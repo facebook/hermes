@@ -111,6 +111,13 @@ class FunctionContext {
   /// \c semInfo_.
   llvh::SmallVector<GotoLabel, 2> labels_;
 
+  /// A map from an AST node to the VariableScope associated with it. This is
+  /// used to ensure that if the node is emitted multiple times (due to
+  /// unrolling or finally blocks), we don't create multiple scopes. Note that
+  /// this is not needed for the function scope, since that is only emitted
+  /// once.
+  llvh::DenseMap<ESTree::Node *, VariableScope *> innerScopes_;
+
  public:
   /// This is the actual function associated with this context.
   Function *const function;
@@ -226,6 +233,10 @@ class FunctionContext {
     label.continueTarget = continueTarget;
     label.surroundingTry = surroundingTry;
   }
+
+  /// Get the VariableScope associated with the given \p node, or create one if
+  /// it does not exist. \c curScope is used as the parent scope.
+  VariableScope *getOrCreateInnerVariableScope(ESTree::Node *node);
 
   /// Access an already initialized label.
   const GotoLabel &label(ESTree::LabelDecorationBase *LDB) {
