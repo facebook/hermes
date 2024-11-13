@@ -220,38 +220,45 @@ function foo_var() {
 // CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [%VS3.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, empty: empty, [%VS3.i]: any|empty
 // CHECK-NEXT:       StoreFrameInst %3: environment, 0: number, [%VS3.i]: any|empty
-// CHECK-NEXT:       BranchInst %BB1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = LoadFrameInst (:any|empty) %3: environment, [%VS3.i]: any|empty
-// CHECK-NEXT:  %11 = UnionNarrowTrustedInst (:any) %10: any|empty
-// CHECK-NEXT:        StoreFrameInst %3: environment, %11: any, [%VS3.i#1]: any
-// CHECK-NEXT:  %13 = LoadPropertyInst (:any) globalObject: object, "arr": string
-// CHECK-NEXT:  %14 = LoadPropertyInst (:any) %13: any, "push": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %3: environment, %" 5#"(): functionCode
-// CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, %13: any, %15: object
-// CHECK-NEXT:  %17 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
-// CHECK-NEXT:  %18 = UnaryIncInst (:number|bigint) %17: any
-// CHECK-NEXT:        StoreFrameInst %3: environment, %18: number|bigint, [%VS3.i#1]: any
-// CHECK-NEXT:  %20 = BinaryLessThanInst (:boolean) %18: number|bigint, 10: number
-// CHECK-NEXT:        CondBranchInst %20: boolean, %BB2, %BB4
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %22 = LoadPropertyInst (:any) globalObject: object, "arr": string
-// CHECK-NEXT:  %23 = LoadPropertyInst (:any) %22: any, "push": string
-// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %3: environment, %" 6#"(): functionCode
-// CHECK-NEXT:  %25 = CallInst (:any) %23: any, empty: any, false: boolean, empty: any, undefined: undefined, %22: any, %24: object
-// CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %27 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
-// CHECK-NEXT:  %28 = CallInst (:any) %26: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %27: any
-// CHECK-NEXT:        BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %30 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
-// CHECK-NEXT:        StoreFrameInst %3: environment, %30: any, [%VS3.i]: any|empty
-// CHECK-NEXT:  %32 = LoadFrameInst (:any|empty) %3: environment, [%VS3.i]: any|empty
-// CHECK-NEXT:  %33 = UnionNarrowTrustedInst (:any) %32: any|empty
-// CHECK-NEXT:  %34 = BinaryAddInst (:any) %33: any, 2: number
-// CHECK-NEXT:        StoreFrameInst %3: environment, %34: any, [%VS3.i]: any|empty
+// CHECK-NEXT:  %9 = AllocStackInst (:boolean) $?anon_2_first: any
+// CHECK-NEXT:        StoreStackInst true: boolean, %9: boolean
 // CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %12 = LoadFrameInst (:any|empty) %3: environment, [%VS3.i]: any|empty
+// CHECK-NEXT:  %13 = UnionNarrowTrustedInst (:any) %12: any|empty
+// CHECK-NEXT:        StoreFrameInst %3: environment, %13: any, [%VS3.i#1]: any
+// CHECK-NEXT:  %15 = LoadStackInst (:boolean) %9: boolean
+// CHECK-NEXT:        CondBranchInst %15: boolean, %BB2, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %17 = LoadPropertyInst (:any) globalObject: object, "arr": string
+// CHECK-NEXT:  %18 = LoadPropertyInst (:any) %17: any, "push": string
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %3: environment, %" 5#"(): functionCode
+// CHECK-NEXT:  %20 = CallInst (:any) %18: any, empty: any, false: boolean, empty: any, undefined: undefined, %17: any, %19: object
+// CHECK-NEXT:  %21 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
+// CHECK-NEXT:  %22 = UnaryIncInst (:number|bigint) %21: any
+// CHECK-NEXT:        StoreFrameInst %3: environment, %22: number|bigint, [%VS3.i#1]: any
+// CHECK-NEXT:  %24 = BinaryLessThanInst (:boolean) %22: number|bigint, 10: number
+// CHECK-NEXT:        CondBranchInst %24: boolean, %BB4, %BB6
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %26 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
+// CHECK-NEXT:  %27 = BinaryAddInst (:any) %26: any, 2: number
+// CHECK-NEXT:        StoreFrameInst %3: environment, %27: any, [%VS3.i#1]: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %30 = LoadPropertyInst (:any) globalObject: object, "arr": string
+// CHECK-NEXT:  %31 = LoadPropertyInst (:any) %30: any, "push": string
+// CHECK-NEXT:  %32 = CreateFunctionInst (:object) %3: environment, %" 6#"(): functionCode
+// CHECK-NEXT:  %33 = CallInst (:any) %31: any, empty: any, false: boolean, empty: any, undefined: undefined, %30: any, %32: object
+// CHECK-NEXT:  %34 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %35 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
+// CHECK-NEXT:  %36 = CallInst (:any) %34: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %35: any
+// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %38 = LoadFrameInst (:any) %3: environment, [%VS3.i#1]: any
+// CHECK-NEXT:        StoreFrameInst %3: environment, %38: any, [%VS3.i]: any|empty
+// CHECK-NEXT:        StoreStackInst false: boolean, %9: boolean
+// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:%BB6:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

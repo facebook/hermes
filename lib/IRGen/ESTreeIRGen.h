@@ -578,17 +578,9 @@ class ESTreeIRGen {
   bool treeDoesNotCapture(ESTree::Node *tree);
   /// Compile a for-loop.
   void genForLoop(ESTree::ForStatementNode *loop);
-  /// Compile a for-loop with let/const declaration.
-  ///
-  /// \param loop the loop
-  /// \param testExprCaptures the test expression possibly captures variables.
-  ///     True also implies tha the test expression is non-null.
-  /// \param updateExprCaptures the update expression possibly captures
-  ///     variables. True also implies tha the test expression is non-null.
-  void genScopedForLoop(
-      ESTree::ForStatementNode *loop,
-      bool testExprCaptures,
-      bool updateExprCaptures);
+  /// General case for compiling a for loop which may have captures in the
+  /// init/test/update expressions.
+  void genScopedForLoop(ESTree::ForStatementNode *loop);
 
   void genSwitchStatement(ESTree::SwitchStatementNode *switchStmt);
 

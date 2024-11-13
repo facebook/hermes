@@ -408,7 +408,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
         // Invoke the scoped loop generation only if the init, test, or update
         // capture.
         if (testExprCaptures || updateExprCaptures || initExprCaptures) {
-          genScopedForLoop(loop, testExprCaptures, updateExprCaptures);
+          genScopedForLoop(loop);
           return;
         }
       }
@@ -565,10 +565,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   Builder.setInsertionBlock(exitBlock);
 }
 
-void ESTreeIRGen::genScopedForLoop(
-    ESTree::ForStatementNode *loop,
-    bool testExprCaptures,
-    bool updateExprCaptures) {
+void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // A scoped for-loop has "interesting" semantics. The declared variables live
   // in a new scope for every iteration (so they can be captured). Additionally:
   // - the test condition executes in the current iteration's scope.
@@ -596,59 +593,11 @@ void ESTreeIRGen::genScopedForLoop(
   //      end s
   //      goto loopBlock
 
-  // Clearly, this structure is awful for optimization, so we try to improve it.
-  //
-  // OPTIMIZATION1:
-  // If the update expression doesn't capture anything, it can be emitted in the
-  // current iteration scope instead of the next one.
-  //      let/const oldVars = loop->init()
-  // loopBlock:
-  //      Scope s = createScope
-  //        declare newVars in s
-  //        newVars = oldVars
-  //        if !loop->test(newVars)
-  //            goto exitBlock
-  //        loop->body(newVars)
-  //  updateBlock:
-  //        oldVars(ignoring constness) = newVars
-  //      end s
-  //      loop->update(oldVars)
-  //      goto loopBlock
-  //
-  // OPTIMIZATION2:
-  // If both the test and update expression doesn't capture anything:
-  //      let/const oldVars = loop->init()
-  //      if !loop->test(oldVars)
-  //        goto exitBlock
-  // loopBlock:
-  //      Scope s = createScope
-  //        declare newVars in s
-  //        newVars = oldVars
-  //        loop->body(newVars)
-  //  updateBlock:
-  //        oldVars(ignoring constness) = newVars
-  //      end s
-  //      loop->update(oldVars)
-  //      if loop->test(oldVars)
-  //          goto loopBlock
-  //      goto loopBlock
-  // exitBlock:
-
-  bool testOrUpdateCapture = testExprCaptures | updateExprCaptures;
-
   // Create the basic blocks that make the while structure.
   Function *function = Builder.getInsertionBlock()->getParent();
-  BasicBlock *dontExitBlock = nullptr;
-  if (!testOrUpdateCapture && loop->_test) {
-    dontExitBlock = Builder.createBasicBlock(function);
-  }
   BasicBlock *loopBlock = Builder.createBasicBlock(function);
-  BasicBlock *firstIterBlock = nullptr;
-  BasicBlock *notFirstIterBlock = nullptr;
-  if (updateExprCaptures) {
-    firstIterBlock = Builder.createBasicBlock(function);
-    notFirstIterBlock = Builder.createBasicBlock(function);
-  }
+  BasicBlock *firstIterBlock = Builder.createBasicBlock(function);
+  BasicBlock *notFirstIterBlock = Builder.createBasicBlock(function);
   BasicBlock *bodyBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
   BasicBlock *exitBlock = Builder.createBasicBlock(function);
@@ -675,20 +624,11 @@ void ESTreeIRGen::genScopedForLoop(
       "A scoped for-loop must have an init declaration");
   genStatement(loop->_init);
 
-  if (!testOrUpdateCapture && loop->_test) {
-    // Branch out of the loop if the condition is false.
-    genExpressionBranch(loop->_test, dontExitBlock, exitBlock, nullptr);
-    Builder.setInsertionBlock(dontExitBlock);
-  }
-
   Builder.setLocation(loop->_init->getDebugLoc());
   // Create the "first" flag and set it to true.
-  AllocStackInst *firstStack = nullptr;
-  if (updateExprCaptures) {
-    firstStack = Builder.createAllocStackInst(
-        genAnonymousLabelName("first"), Type::createBoolean());
-    Builder.createStoreStackInst(Builder.getLiteralBool(true), firstStack);
-  }
+  AllocStackInst *firstStack = Builder.createAllocStackInst(
+      genAnonymousLabelName("first"), Type::createBoolean());
+  Builder.createStoreStackInst(Builder.getLiteralBool(true), firstStack);
   Builder.createBranchInst(loopBlock);
 
   // The loop starts here.
@@ -732,24 +672,24 @@ void ESTreeIRGen::genScopedForLoop(
     setDeclData(decl, newVar);
   }
 
-  if (updateExprCaptures) {
-    // if first...
-    Builder.createCondBranchInst(
-        Builder.createLoadStackInst(firstStack),
-        firstIterBlock,
-        notFirstIterBlock);
+  // if first...
+  Builder.createCondBranchInst(
+      Builder.createLoadStackInst(firstStack),
+      firstIterBlock,
+      notFirstIterBlock);
 
-    // emit the update.
+  // emit the update.
+  Builder.setInsertionBlock(notFirstIterBlock);
+  if (loop->_update) {
     Builder.setLocation(loop->_update->getDebugLoc());
-    Builder.setInsertionBlock(notFirstIterBlock);
     genExpression(loop->_update);
-
-    Builder.createBranchInst(firstIterBlock);
-    Builder.setInsertionBlock(firstIterBlock);
   }
 
+  Builder.createBranchInst(firstIterBlock);
+  Builder.setInsertionBlock(firstIterBlock);
+
   // Branch out of the loop if the condition is false.
-  if (testOrUpdateCapture && loop->_test)
+  if (loop->_test)
     genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
@@ -771,20 +711,10 @@ void ESTreeIRGen::genScopedForLoop(
   }
 
   // Set "first" to false.
-  if (updateExprCaptures)
-    Builder.createStoreStackInst(Builder.getLiteralBool(false), firstStack);
-
-  if (!updateExprCaptures && loop->_update) {
-    genExpression(loop->_update);
-  }
+  Builder.createStoreStackInst(Builder.getLiteralBool(false), firstStack);
 
   // Loop.
-  if (!testOrUpdateCapture && loop->_test) {
-    FunctionContext::AllowRecompileRAII allowRecompile(*curFunction());
-    genExpressionBranch(loop->_test, loopBlock, exitBlock, nullptr);
-  } else {
-    Builder.createBranchInst(loopBlock);
-  }
+  Builder.createBranchInst(loopBlock);
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
