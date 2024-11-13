@@ -300,8 +300,7 @@ objectConstructor(void *, Runtime &runtime, NativeArgs args) {
     if (newTarget.getRaw() == runtime.objectConstructor.getRaw()) {
       return args.getThisArg();
     }
-    auto thisHandle = runtime.makeHandle(JSObject::create(runtime));
-    return thisHandle.getHermesValue();
+    return JSObject::create(runtime).getHermesValue();
   }
 
   // 3. Return ! ToObject(value).
