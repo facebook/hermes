@@ -1,3 +1,8 @@
+## 0.25.1
+
+### `babel-plugin-syntax-hermes-parser`
+* Add `parseLangTypes` option to enable skipping plugin for non-Flow files
+
 ## 0.25.0
 
 ### `flow-api-translator`
