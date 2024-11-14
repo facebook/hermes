@@ -882,6 +882,21 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
     return genForOfFastArrayStatement(forOfStmt, type);
   }
 
+  auto *outerScope = curFunction()->curScope;
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(forOfStmt);
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *initScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
+    curFunction()->curScope = initScope;
+  }
+
   emitScopeDeclarations(forOfStmt->getScope());
 
   auto *function = Builder.getInsertionBlock()->getParent();
@@ -906,6 +921,13 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 
   Builder.setInsertionBlock(bodyBlock);
+
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope->getVariableScope(), outerScope);
+    curFunction()->curScope = innerScope;
+  }
 
   emitTryCatchScaffolding(
       getNextBlock,
@@ -948,12 +970,32 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
         Builder.createThrowInst(catchReg);
       });
 
+  // Restore the outer scope for subsequent code.
+  curFunction()->curScope = outerScope;
+
   Builder.setInsertionBlock(exitBlock);
 }
 
 void ESTreeIRGen::genForOfFastArrayStatement(
     ESTree::ForOfStatementNode *forOfStmt,
     flow::ArrayType *type) {
+  auto *outerScope = curFunction()->curScope;
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      (!treeDoesNotCapture(forOfStmt->_body) ||
+       !treeDoesNotCapture(forOfStmt->_left) ||
+       !treeDoesNotCapture(forOfStmt->_right));
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
+    curFunction()->curScope = innerScope;
+  }
+
   emitScopeDeclarations(forOfStmt->getScope());
 
   auto *function = Builder.getInsertionBlock()->getParent();
@@ -984,6 +1026,14 @@ void ESTreeIRGen::genForOfFastArrayStatement(
   Builder.createCondBranchInst(cond, bodyBlock, exitBlock);
 
   Builder.setInsertionBlock(bodyBlock);
+
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope->getVariableScope(), outerScope);
+    curFunction()->curScope = innerScope;
+  }
+
   // Load the element from the array.
   auto *nextValue = Builder.createFastArrayLoadInst(
       exprValue,
@@ -1013,6 +1063,9 @@ void ESTreeIRGen::genForOfFastArrayStatement(
       loadStack2,
       Builder.createFastArrayLengthInst(exprValue));
   Builder.createCondBranchInst(cond2, bodyBlock, exitBlock);
+
+  // Restore the outer scope for subsequent code.
+  curFunction()->curScope = outerScope;
 
   Builder.setInsertionBlock(exitBlock);
 }
