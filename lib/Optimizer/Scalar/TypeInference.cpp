@@ -626,6 +626,9 @@ class TypeInferenceImpl {
   Type inferTypeOfInst(TypeOfInst *inst) {
     return *inst->getInherentType();
   }
+  Type inferTypeOfIsInst(TypeOfIsInst *inst) {
+    return *inst->getInherentType();
+  }
   Type inferThrowIfInst(ThrowIfInst *inst) {
     Type type = inst->getCheckedValue()->getType();
     assert(!type.isNoType() && "input to throwIfEmpty cannot be NoType");
@@ -692,6 +695,9 @@ class TypeInferenceImpl {
     return Type::createNoType();
   }
   Type inferHBCCompareBranchInst(HBCCompareBranchInst *inst) {
+    return Type::createNoType();
+  }
+  Type inferHBCCmpBrTypeOfIsInst(HBCCmpBrTypeOfIsInst *inst) {
     return Type::createNoType();
   }
   Type inferSwitchImmInst(SwitchImmInst *inst) {

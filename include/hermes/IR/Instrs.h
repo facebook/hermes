@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/IR/IR.h"
 
 #include "llvh/ADT/SmallVector.h"
@@ -2466,6 +2467,51 @@ class TypeOfInst : public Instruction {
   }
 };
 
+class TypeOfIsInst : public Instruction {
+ private:
+  TypeOfIsInst(const TypeOfIsInst &) = delete;
+  void operator=(const TypeOfIsInst &) = delete;
+
+ public:
+  enum { ArgumentIdx, TypesIdx };
+
+  explicit TypeOfIsInst(Value *op, LiteralTypeOfIsTypes *types)
+      : Instruction(ValueKind::TypeOfIsInstKind) {
+    setType(*getInherentTypeImpl());
+    pushOperand(op);
+    pushOperand(types);
+  }
+  explicit TypeOfIsInst(
+      const TypeOfIsInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getArgument() const {
+    return getOperand(ArgumentIdx);
+  }
+  LiteralTypeOfIsTypes *getTypes() const {
+    return llvh::cast<LiteralTypeOfIsTypes>(getOperand(TypesIdx));
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createBoolean();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::TypeOfIsInstKind;
+  }
+};
+
 class BinaryOperatorInst : public Instruction {
  public:
   // A list of textual representation of the operators above.
@@ -3471,6 +3517,75 @@ class SwitchImmInst : public TerminatorInst {
   }
   BasicBlock *getSuccessorImpl(unsigned idx) const;
   void setSuccessorImpl(unsigned idx, BasicBlock *B);
+};
+
+class HBCCmpBrTypeOfIsInst : public TerminatorInst {
+  HBCCmpBrTypeOfIsInst(const HBCCmpBrTypeOfIsInst &) = delete;
+  void operator=(const HBCCmpBrTypeOfIsInst &) = delete;
+
+ public:
+  enum { ArgumentIdx, TypesIdx, TrueBlockIdx, FalseBlockIdx };
+
+  explicit HBCCmpBrTypeOfIsInst(
+      Value *op,
+      LiteralTypeOfIsTypes *types,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock)
+      : TerminatorInst(ValueKind::HBCCmpBrTypeOfIsInstKind) {
+    setType(Type::createNoType());
+    pushOperand(op);
+    pushOperand(types);
+    pushOperand(trueBlock);
+    pushOperand(falseBlock);
+  }
+
+  Value *getArgument() const {
+    return getOperand(ArgumentIdx);
+  }
+  LiteralTypeOfIsTypes *getTypes() const {
+    return llvh::cast<LiteralTypeOfIsTypes>(getOperand(TypesIdx));
+  }
+
+  BasicBlock *getTrueDest() const {
+    return cast<BasicBlock>(getOperand(TrueBlockIdx));
+  }
+  BasicBlock *getFalseDest() const {
+    return cast<BasicBlock>(getOperand(FalseBlockIdx));
+  }
+  explicit HBCCmpBrTypeOfIsInst(
+      const HBCCmpBrTypeOfIsInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect::createExecute();
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 2;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    if (idx == 0)
+      return getTrueDest();
+    if (idx == 1)
+      return getFalseDest();
+    llvm_unreachable("HBCCmpBrTypeOfIsInstKind only have 2 successors!");
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    assert(idx <= 1 && "HBCCmpBrTypeOfIsInstKind only have 2 successors!");
+    setOperand(B, idx + TrueBlockIdx);
+  }
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCCmpBrTypeOfIsInstKind;
+  }
 };
 
 class SaveAndYieldInst : public TerminatorInst {

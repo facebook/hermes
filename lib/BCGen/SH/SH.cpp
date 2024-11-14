@@ -762,6 +762,13 @@ class InstrGen {
     generateRegisterPtr(*inst.getArgument());
     os_ << ");\n";
   }
+  void generateTypeOfIsInst(TypeOfIsInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_bool(_sh_ljs_typeof_is(";
+    generateValue(*inst.getArgument());
+    os_ << ", " << inst.getTypes()->getData().getRaw() << "));\n";
+  }
   void generateUnaryOperatorInst(UnaryOperatorInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -1762,6 +1769,9 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateHBCCompareBranchInst(HBCCompareBranchInst &inst) {
+    unimplemented(inst);
+  }
+  void generateHBCCmpBrTypeOfIsInst(HBCCmpBrTypeOfIsInst &inst) {
     unimplemented(inst);
   }
   void generateSwitchImmInst(SwitchImmInst &inst) {

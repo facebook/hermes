@@ -518,6 +518,18 @@ EMIT_JMP_NO_COND(Jmp)
 
 #undef EMIT_JMP_NO_COND
 
+inline void JITContext::Compiler::emitJmpTypeOfIs(
+    const inst::JmpTypeOfIsInst *inst) {
+  em_.jmpTypeOfIs(
+      bbLabelFromInst(inst, inst->op1),
+      FR(inst->op2),
+      TypeOfIsTypes(inst->op3));
+}
+
+inline void JITContext::Compiler::emitTypeOfIs(const inst::TypeOfIsInst *inst) {
+  em_.typeOfIs(FR(inst->op1), FR(inst->op2), TypeOfIsTypes(inst->op3));
+}
+
 inline void JITContext::Compiler::emitSwitchImm(
     const inst::SwitchImmInst *inst) {
   uint32_t min = inst->op4;

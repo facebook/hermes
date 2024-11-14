@@ -647,6 +647,11 @@ class Emitter {
   DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, kEQ)
 #undef DECL_JCOND
 
+  void
+  jmpTypeOfIs(const asmjit::Label &target, FR frInput, TypeOfIsTypes types);
+
+  void typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types);
+
   void switchImm(
       FR frInput,
       const asmjit::Label &defaultLabel,

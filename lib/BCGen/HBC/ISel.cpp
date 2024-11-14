@@ -295,8 +295,10 @@ void HBCISel::resolveRelocations() {
         case Relocation::LongJumpType: {
           int targetLoc = basicBlockMap_[cast<BasicBlock>(pointer)].first;
           int jumpOffset = targetLoc - loc;
-          if (-128 <= jumpOffset && jumpOffset < 128) {
-            // The jump offset can fit into one byte.
+          if (-128 <= jumpOffset && jumpOffset < 128 &&
+              BCFGen_->hasShortJumpVariant(loc)) {
+            // The jump offset can fit into one byte, and there's a shorter
+            // variant of the jump.
             totalShift += 3;
             BCFGen_->shrinkJump(loc + 1);
             BCFGen_->updateJumpTarget(loc + 1, jumpOffset, 1);
@@ -635,6 +637,13 @@ void HBCISel::generateTypeOfInst(TypeOfInst *Inst, hermes::BasicBlock *) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getArgument());
   BCFGen_->emitTypeOf(dst, src);
+}
+
+void HBCISel::generateTypeOfIsInst(TypeOfIsInst *Inst, hermes::BasicBlock *) {
+  auto dst = encodeValue(Inst);
+  auto src = encodeValue(Inst->getArgument());
+  TypeOfIsTypes types = Inst->getTypes()->getData();
+  BCFGen_->emitTypeOfIs(dst, src, types.getRaw());
 }
 
 void HBCISel::generateUnaryOperatorInst(
@@ -1385,6 +1394,24 @@ void HBCISel::generateGetPNamesInst(GetPNamesInst *Inst, BasicBlock *next) {
   if (next != onSomeBlock) {
     auto loc = BCFGen_->emitJmpLong(0);
     registerLongJump(loc, onSomeBlock);
+  }
+}
+void HBCISel::generateHBCCmpBrTypeOfIsInst(
+    HBCCmpBrTypeOfIsInst *Inst,
+    BasicBlock *next) {
+  auto arg = encodeValue(Inst->getArgument());
+  TypeOfIsTypes types = Inst->getTypes()->getData();
+  BasicBlock *trueBlock = Inst->getTrueDest();
+  BasicBlock *falseBlock = Inst->getFalseDest();
+  if (next == trueBlock) {
+    // If the next block is the true block, invert the condition so we can
+    // fall through (only a single instruction should be necessary).
+    types = types.invert();
+    std::swap(trueBlock, falseBlock);
+  }
+  registerLongJump(BCFGen_->emitJmpTypeOfIs(0, arg, types.getRaw()), trueBlock);
+  if (next != falseBlock) {
+    registerLongJump(BCFGen_->emitJmpLong(0), falseBlock);
   }
 }
 void HBCISel::generateGetNextPNameInst(

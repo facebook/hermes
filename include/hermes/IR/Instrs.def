@@ -44,6 +44,7 @@ DEF_TAG(UnaryDecInst, UnaryOperatorInst)
 END_VALUE(UnaryOperatorInst)
 
 DEF_VALUE(TypeOfInst, Instruction)
+DEF_VALUE(TypeOfIsInst, Instruction)
 DEF_VALUE(AddEmptyStringInst, Instruction)
 DEF_VALUE(AsNumberInst, Instruction)
 DEF_VALUE(AsNumericInst, Instruction)
@@ -189,6 +190,8 @@ END_VALUE(HBCFCompareBranchInst)
 
 TERMINATOR(SwitchImmInst, TerminatorInst)
 TERMINATOR(SaveAndYieldInst, TerminatorInst)
+
+TERMINATOR(HBCCmpBrTypeOfIsInst, TerminatorInst)
 MARK_LAST(TerminatorInst)
 
 MARK_FIRST(BaseCallInst, Instruction)

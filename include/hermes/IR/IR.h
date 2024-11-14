@@ -13,6 +13,7 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/AST/NativeContext.h"
+#include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
 
@@ -1230,6 +1231,10 @@ class LiteralWrapper : public Literal, public llvh::FoldingSetNode {
 
 using LiteralIRType =
     LiteralWrapper<Type, ValueKind::LiteralIRTypeKind, Type::createNull>;
+using LiteralTypeOfIsTypes = LiteralWrapper<
+    TypeOfIsTypes,
+    ValueKind::LiteralTypeOfIsTypesKind,
+    Type::createNull>;
 using LiteralNativeSignature =
     LiteralWrapper<NativeSignature *, ValueKind::LiteralNativeSignatureKind>;
 using LiteralNativeExtern = LiteralWrapper<
@@ -2285,6 +2290,7 @@ class Module : public Value {
   ValueOFS<LiteralString> literalStrings_{};
   ValueOFS<GlobalObjectProperty> globalProperties_{};
   ValueOFS<LiteralIRType> literalIRTypes_{};
+  ValueOFS<LiteralTypeOfIsTypes> literalTypeOfIsTypes_{};
   ValueOFS<LiteralNativeSignature> nativeSignatures_{};
   ValueOFS<LiteralNativeExtern> nativeExterns_{};
 
@@ -2429,6 +2435,9 @@ class Module : public Value {
 
   /// Create a new literal representing an IR type.
   LiteralIRType *getLiteralIRType(Type value);
+
+  /// Create a new literal representing TypeOfIsTypes.
+  LiteralTypeOfIsTypes *getLiteralTypeOfIsTypes(TypeOfIsTypes value);
 
   /// Create a new LiteralNativeSignature.
   LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *data);

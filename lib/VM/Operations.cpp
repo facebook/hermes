@@ -7,6 +7,7 @@
 
 #include "hermes/VM/Operations.h"
 
+#include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/BigIntPrimitive.h"
@@ -92,6 +93,37 @@ HermesValue typeOf(Runtime &runtime, Handle<> valueHandle) {
       assert(valueHandle->isNumber() && "Invalid type.");
       return HermesValue::encodeStringValue(
           runtime.getPredefinedString(Predefined::number));
+  }
+}
+
+bool matchTypeOfIs(HermesValue arg, TypeOfIsTypes types) {
+  switch (arg.getETag()) {
+    case HermesValue::ETag::Undefined:
+      return types.hasUndefined();
+    case HermesValue::ETag::Null:
+      return types.hasNull();
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
+      return types.hasString();
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return types.hasBigint();
+    case HermesValue::ETag::Bool:
+      return types.hasBoolean();
+    case HermesValue::ETag::Symbol:
+      return types.hasSymbol();
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2: {
+      CellKind kind = static_cast<GCCell *>(arg.getObject())->getKind();
+      // Check the CellKind to avoid having to include Callable.h here.
+      if (CellKind::CallableKind_first <= kind &&
+          kind <= CellKind::CallableKind_last)
+        return types.hasFunction();
+      else
+        return types.hasObject();
+    }
+    default:
+      return types.hasNumber();
   }
 }
 
@@ -2965,6 +2997,12 @@ extern "C" bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b) {
 
 extern "C" SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v) {
   return typeOf(getRuntime(shr), Handle<>::vmcast(toPHV(v)));
+}
+
+extern "C" bool _sh_ljs_typeof_is(SHLegacyValue val, uint16_t typesRaw) {
+  hermes::TypeOfIsTypes types(typesRaw);
+  HermesValue hv = HermesValue::fromRaw(val.raw);
+  return matchTypeOfIs(hv, types);
 }
 
 extern "C" SHLegacyValue _sh_ljs_add_empty_string_rjs(

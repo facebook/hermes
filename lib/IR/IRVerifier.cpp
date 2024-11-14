@@ -745,6 +745,14 @@ bool Verifier::visitTypeOfInst(const TypeOfInst &) {
   return true;
 }
 
+bool Verifier::visitTypeOfIsInst(const TypeOfIsInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<LiteralTypeOfIsTypes>(Inst.getOperand(TypeOfIsInst::TypesIdx)),
+      "TypeOfIsInst::Types must be a TypeOfIs literal");
+  return true;
+}
+
 bool Verifier::visitUnaryOperatorInst(const UnaryOperatorInst &Inst) {
   // Nothing to verify at this point.
   return true;
@@ -1347,6 +1355,14 @@ bool Verifier::visitLoadParamInst(hermes::LoadParamInst const &Inst) {
 }
 bool Verifier::visitHBCCompareBranchInst(const HBCCompareBranchInst &Inst) {
   return visitCondBranchLikeInst(Inst) && visitBinaryOperatorLikeInst(Inst);
+}
+bool Verifier::visitHBCCmpBrTypeOfIsInst(const HBCCmpBrTypeOfIsInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<LiteralTypeOfIsTypes>(
+          Inst.getOperand(HBCCmpBrTypeOfIsInst::TypesIdx)),
+      "HBCCmpBrTypeOfIsInst::Types must be a TypeOfIs literal");
+  return visitCondBranchLikeInst(Inst);
 }
 
 bool Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {

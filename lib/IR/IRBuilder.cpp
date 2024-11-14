@@ -770,6 +770,14 @@ TypeOfInst *IRBuilder::createTypeOfInst(Value *input) {
   return inst;
 }
 
+TypeOfIsInst *IRBuilder::createTypeOfIsInst(
+    Value *input,
+    LiteralTypeOfIsTypes *types) {
+  auto *inst = new TypeOfIsInst(input, types);
+  insert(inst);
+  return inst;
+}
+
 UnaryOperatorInst *
 IRBuilder::createUnaryOperatorInst(Value *value, ValueKind kind, Type type) {
   auto UOI = new UnaryOperatorInst(kind, value, type);
@@ -1074,6 +1082,16 @@ HBCCompareBranchInst *IRBuilder::createHBCCompareBranchInst(
     BasicBlock *falseBlock) {
   auto *inst =
       new HBCCompareBranchInst(kind, left, right, trueBlock, falseBlock);
+  insert(inst);
+  return inst;
+}
+
+HBCCmpBrTypeOfIsInst *IRBuilder::createHBCCmpBrTypeOfIsInst(
+    Value *arg,
+    LiteralTypeOfIsTypes *types,
+    BasicBlock *trueBlock,
+    BasicBlock *falseBlock) {
+  auto *inst = new HBCCmpBrTypeOfIsInst(arg, types, trueBlock, falseBlock);
   insert(inst);
   return inst;
 }

@@ -191,6 +191,10 @@ class IRBuilder {
     return M->getLiteralIRType(type);
   }
 
+  LiteralTypeOfIsTypes *getLiteralTypeOfIsTypes(TypeOfIsTypes types) {
+    return M->getLiteralTypeOfIsTypes(types);
+  }
+
   /// Return the GlobalObject value.
   GlobalObject *getGlobalObject();
 
@@ -499,6 +503,7 @@ class IRBuilder {
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
   TypeOfInst *createTypeOfInst(Value *input);
+  TypeOfIsInst *createTypeOfIsInst(Value *input, LiteralTypeOfIsTypes *types);
 
   UnaryOperatorInst *createUnaryOperatorInst(
       Value *value,
@@ -628,6 +633,11 @@ class IRBuilder {
       Value *left,
       Value *right,
       ValueKind kind,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock);
+  HBCCmpBrTypeOfIsInst *createHBCCmpBrTypeOfIsInst(
+      Value *arg,
+      LiteralTypeOfIsTypes *types,
       BasicBlock *trueBlock,
       BasicBlock *falseBlock);
 

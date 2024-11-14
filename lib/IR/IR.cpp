@@ -948,6 +948,10 @@ LiteralIRType *Module::getLiteralIRType(Type value) {
   return literalIRTypes_.getOrEmplace(value).first;
 }
 
+LiteralTypeOfIsTypes *Module::getLiteralTypeOfIsTypes(TypeOfIsTypes value) {
+  return literalTypeOfIsTypes_.getOrEmplace(value).first;
+}
+
 LiteralNativeSignature *Module::getLiteralNativeSignature(
     NativeSignature *data) {
   return nativeSignatures_.getOrEmplace(data).first;

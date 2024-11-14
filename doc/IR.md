@@ -309,6 +309,16 @@ Arguments | %x and %y are the operands of the binary operation, %BB1 is the 'Tru
 Semantics | Performs a numeric comparison on the two doubles. If the condition is evaluated as 'True' the program jumps to the 'True' block. Otherwise the program jumps to the 'False' block.
 Effects | Does not read or write to memory.
 
+### HBCCmpBrTypeOfIsInst
+
+HBCCmpBrTypeOfIsInst | _
+--- | --- |
+Description | Compare the type of a value against known types and branch.
+Example |  %0 = HBCCmpBrTypeOfIsInst %val, %types, %trueBlock, %falseBlock
+Arguments | %val is the argument to the typeof comparison, %types is a TypeOfIsTypes (see Typeof.h), %trueBlock and %falseBlock are the targets
+Semantics | Branch to true if the type of %val matches the bit in %types, false otherwise.
+Effects | Does not read or write memory.
+
 ### GetParentScopeInst
 
 GetParentScopeInst | _
@@ -575,6 +585,16 @@ Description | The JS `typeof` operator
 Example |  %0 = TypeOfInst %val
 Arguments | %val is the value whose type we want to obtain.
 Semantics | Obtains a string representing the type of the operand.
+Effects | Does not read or write to memory.
+
+### TypeOfIsInst
+
+TypeOfIsInst | _
+--- | --- |
+Description | Compare the type of a value against known types
+Example |  %0 = TypeOfIsInst %val, %types
+Arguments | %val is the value whose type we want to compare, %types is the TypeOfIsTypes (see Typeof.h) to compare against.
+Semantics | Returns true if the type of %val matches the bit in the TypeOfIsTypes, false otherwise.
 Effects | Does not read or write to memory.
 
 ### CreateArgumentsInst

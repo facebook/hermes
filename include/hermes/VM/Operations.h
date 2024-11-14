@@ -207,6 +207,9 @@ CallResult<Handle<SymbolID>> valueToSymbolID(
 /// `typeof` operator.
 HermesValue typeOf(Runtime &runtime, Handle<> valueHandle);
 
+/// \return true if the type of \p arg corresponds to the flag in \p types.
+bool matchTypeOfIs(HermesValue arg, TypeOfIsTypes types);
+
 /// Convert a string to an array index following ES5.1 15.4.
 /// A property name P (in the form of a String value) is an array index if and
 /// only if ToString(ToUint32(P)) is equal to P and ToUint32(P) is not equal to

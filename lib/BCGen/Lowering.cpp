@@ -483,6 +483,20 @@ bool LowerCondBranch::runOnFunction(Function *F) {
       if (!fcompare->hasUsers())
         destroyer.add(fcompare);
       changed = true;
+    } else if (auto *typeOfIs = llvh::dyn_cast<TypeOfIsInst>(cond)) {
+      builder.setInsertionPoint(cbInst);
+      builder.setLocation(cbInst->getLocation());
+      auto *cmpBranch = builder.createHBCCmpBrTypeOfIsInst(
+          typeOfIs->getArgument(),
+          typeOfIs->getTypes(),
+          cbInst->getTrueDest(),
+          cbInst->getFalseDest());
+
+      cbInst->replaceAllUsesWith(cmpBranch);
+      destroyer.add(cbInst);
+      if (!typeOfIs->hasUsers())
+        destroyer.add(typeOfIs);
+      changed = true;
     } else {
       continue;
     }

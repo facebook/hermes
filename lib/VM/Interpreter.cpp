@@ -3279,6 +3279,14 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(TypeOfIs) {
+        TypeOfIsTypes types(ip->iTypeOfIs.op3);
+        O1REG(TypeOfIs) =
+            HermesValue::encodeBoolValue(matchTypeOfIs(O2REG(TypeOfIs), types));
+        ip = NEXTINST(TypeOfIs);
+        DISPATCH;
+      }
+
       CASE(PutNewOwnByIdShort) {
         nextIP = NEXTINST(PutNewOwnByIdShort);
         idVal = ip->iPutNewOwnByIdShort.op3;
@@ -3614,6 +3622,16 @@ tailCall:
           Long,
           NEXTINST(JNotEqualLong),
           IPADD(ip->iJNotEqualLong.op1));
+
+      CASE(JmpTypeOfIs) {
+        TypeOfIsTypes types(ip->iJmpTypeOfIs.op3);
+        if (matchTypeOfIs(O2REG(JmpTypeOfIs), types)) {
+          ip = IPADD(ip->iJmpTypeOfIs.op1);
+        } else {
+          ip = NEXTINST(JmpTypeOfIs);
+        }
+        DISPATCH;
+      }
 
       CASE_OUTOFLINE(PutOwnByVal);
       CASE_OUTOFLINE(PutOwnGetterSetterByVal);

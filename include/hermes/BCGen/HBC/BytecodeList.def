@@ -239,6 +239,9 @@ DEFINE_OPCODE_3(InstanceOf, Reg8, Reg8, Reg8)
 /// Arg1 = Arg2 in Arg3 (JS relational 'in')
 DEFINE_OPCODE_3(IsIn, Reg8, Reg8, Reg8)
 
+/// Arg1 = typeof Arg2 is in Arg3 (TypeOfIsTypes, see Typeof.h)
+DEFINE_OPCODE_3(TypeOfIs, Reg8, Reg8, UInt16)
+
 /// Get an environment (scope) from N levels up relative to the current
 /// function's enclosing environment. 0 retrieves the environment from the
 /// closure, 1 retrieves its parent, etc.
@@ -836,6 +839,12 @@ DEFINE_JUMP_2(JmpTrue)
 DEFINE_JUMP_2(JmpFalse)
 /// Jump if the value is undefined.
 DEFINE_JUMP_2(JmpUndefined)
+
+/// Jump if the type matches the TypeOfIsTypes in Arg3.
+/// Arg1 is the target.
+/// Arg2 is the value to test.
+/// Arg3 is the TypeOfIsTypes (see Typeof.h).
+DEFINE_OPCODE_3(JmpTypeOfIs, Addr32, Reg8, UInt16)
 
 /// Conditional branches to Arg1 based on Arg2 and Arg3.
 /// The *N branches assume numbers and are illegal for other types.

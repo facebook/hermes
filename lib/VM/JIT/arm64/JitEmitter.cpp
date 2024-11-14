@@ -3035,6 +3035,50 @@ void Emitter::getByIdImpl(
     a.bind(contLab);
 }
 
+void Emitter::jmpTypeOfIs(
+    const asmjit::Label &target,
+    FR frInput,
+    TypeOfIsTypes types) {
+  comment("// jTypeOfIs r%u, %u", frInput.index(), types.getRaw());
+
+  // Do this always because it's the end of a basic block.
+  // The freeAllFRTempExcept calls are within fast paths because we may want to
+  // use FR temps to syncToFrame(frInput) in the call path, and we know at JIT
+  // time whether we'll emit the call path.
+  syncAllFRTempExcept({});
+  // Attempt to use a temporary if we can.
+  syncAndFreeTempReg(HWReg::gpX(0));
+  movHWFromFR(HWReg::gpX(0), frInput);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::w1, types.getRaw());
+  EMIT_RUNTIME_CALL(
+      *this, bool (*)(SHLegacyValue, uint16_t), _sh_ljs_typeof_is);
+
+  a.cbnz(a64::w0, target);
+}
+
+void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types) {
+  comment(
+      "// typeOfIs r%u, r%u, %u",
+      frRes.index(),
+      frInput.index(),
+      types.getRaw());
+
+  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
+  syncAndFreeTempReg(HWReg::gpX(0));
+  movHWFromFR(HWReg::gpX(0), frInput);
+  freeAllFRTempExcept({});
+  a.mov(a64::w1, types.getRaw());
+  EMIT_RUNTIME_CALL(
+      *this, bool (*)(SHLegacyValue, uint16_t), _sh_ljs_typeof_is);
+  emit_sh_ljs_bool(a, a64::x0);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::switchImm(
     FR frInput,
     const asmjit::Label &defaultLabel,

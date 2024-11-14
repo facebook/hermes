@@ -681,6 +681,7 @@ SHERMES_EXPORT SHLegacyValue
 _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v);
+SHERMES_EXPORT bool _sh_ljs_typeof_is(SHLegacyValue val, uint16_t types);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object(SHRuntime *shr);
 SHERMES_EXPORT SHLegacyValue
