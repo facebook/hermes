@@ -164,6 +164,20 @@ void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
   a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
 }
 
+/// For a register containing a pointer to a GCCell, retrieve its CellKind (a
+/// single byte) and store it in \p wOut.
+/// \p wOut and \p xIn may refer to the same register.
+void emit_gccell_get_kind(
+    a64::Assembler &a,
+    const a64::GpW &wOut,
+    const a64::GpX &xIn) {
+  a.ldrb(
+      wOut,
+      a64::Mem(
+          xIn,
+          offsetof(SHGCCell, kindAndSize) + RuntimeOffsets::kindAndSizeKind));
+}
+
 /// For a register \p dInput, which contains a double, check whether it is a
 /// valid signed 64-bit integer.
 /// CPU flags are updated. b_eq on success.
@@ -3670,20 +3684,65 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   }
 #endif
 
+  auto hwCallee = getOrAllocFRInGpX(frCallee, true);
+  auto hwTemp = allocTempGpX();
+  auto xTemp = hwTemp.a64GpX();
   syncAllFRTempExcept(FR());
   freeAllFRTempExcept({});
-
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(
-      a64::x1,
-      FR(frameRegs_.size() + hbc::StackFrameLayout::CalleeClosureOrCB));
-  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
-      _jit_dispatch_call);
+  freeReg(hwTemp);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
+
+  auto slowPathLab = newSlowPathLabel();
+  auto contLab = newContLabel();
+
+  // Check if the callee is a JSFunction we have already JITted.
+  emit_sh_ljs_is_object(a, xTemp, hwCallee.a64GpX());
+  a.b_ne(slowPathLab);
+
+  // We can now use any temp registers we want, because everything has been
+  // sync'd and we are done with hwCallee.
+  emit_sh_ljs_get_pointer(a, a64::x0, hwCallee.a64GpX());
+  emit_gccell_get_kind(a, a64::w1, a64::x0);
+
+  // Check if it is a JSFunction.
+  a.cmp(a64::w1, CellKind::JSFunctionKind);
+  a.b_ne(slowPathLab);
+
+  // Check if the JSFunction has already been JIT compiled.
+  a.ldr(a64::x1, a64::Mem(a64::x0, RuntimeOffsets::jsFunctionCodeBlock));
+  a.ldr(a64::x1, a64::Mem(a64::x1, RuntimeOffsets::codeBlockJitPtr));
+  a.cbz(a64::x1, slowPathLab);
+
+  // We have a JIT compiled function, call it.
+  a.mov(a64::x0, xRuntime);
+  a.blr(a64::x1);
+  a.bind(contLab);
+  // NOTE: this does the move for both the slow and fast paths.
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .frInput1 = frCallee,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: CallImpl r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(
+             a64::x1,
+             FR(em.frameRegs_.size() +
+                hbc::StackFrameLayout::CalleeClosureOrCB));
+         EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+             em,
+             SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
+             _jit_dispatch_call);
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {

@@ -272,8 +272,9 @@ SHLegacyValue _jit_dispatch_call(
   auto *callTarget = toPHV(callTargetSHLV);
   if (vmisa<JSFunction>(*callTarget)) {
     JSFunction *jsFunc = vmcast<JSFunction>(*callTarget);
-    if (auto *fnPtr = jsFunc->getCodeBlock()->getJITCompiled())
-      return fnPtr(&runtime);
+    assert(
+        !jsFunc->getCodeBlock()->getJITCompiled() &&
+        "Calls to JITted code should go directly.");
     CallResult<HermesValue> result = jsFunc->_interpret(runtime);
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
       _sh_throw_current(getSHRuntime(runtime));

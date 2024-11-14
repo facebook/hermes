@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_JIT_X86_64_RUNTIMEOFFSETS_H
 #define HERMES_VM_JIT_X86_64_RUNTIMEOFFSETS_H
 
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -28,6 +29,12 @@ struct RuntimeOffsets {
   static constexpr uint32_t nativeStackSize =
       offsetof(Runtime, overflowGuard_) +
       offsetof(StackOverflowGuard, nativeStackSize);
+
+  static constexpr uint32_t codeBlockJitPtr = offsetof(CodeBlock, JITCompiled_);
+  static constexpr uint32_t jsFunctionCodeBlock =
+      offsetof(JSFunction, codeBlock_);
+  /// Can't use offsetof here because KindAndSize uses bitfields.
+  static constexpr uint32_t kindAndSizeKind = KindAndSize::kNumSizeBits / 8;
 };
 
 #pragma GCC diagnostic pop

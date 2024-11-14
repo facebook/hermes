@@ -1000,6 +1000,7 @@ class NativeConstructor final : public NativeFunction {
 class JSFunction : public Callable {
   using Super = Callable;
   friend void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend struct RuntimeOffsets;
 
   /// CodeBlock to execute when called.
   CodeBlock *codeBlock_;

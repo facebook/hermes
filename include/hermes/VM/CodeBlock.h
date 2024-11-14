@@ -37,6 +37,8 @@ typedef HermesValue (*JITCompiledFunctionPtr)(Runtime *runtime);
 class CodeBlock final
     : private llvh::TrailingObjects<CodeBlock, PropertyCacheEntry> {
   friend TrailingObjects;
+  friend struct RuntimeOffsets;
+
   /// Points to the runtime module with the information required for this code
   /// block.
   RuntimeModule *const runtimeModule_;
