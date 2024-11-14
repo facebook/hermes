@@ -114,6 +114,21 @@ void emit_sh_ljs_is_string(
   a.cmn(xTempReg, -HVTag_Str);
 }
 
+/// Emit code to check whether the input reg is a bigint, using the specified
+/// temp register. The input reg is not
+/// modified unless it is the same as the temp, which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_bigint(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      (int16_t)HVTag_BigInt == (int16_t)(-2) && "HVTag_BigInt must be -2");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits);
+  a.cmn(xTempReg, -HVTag_BigInt);
+}
+
 /// Emit code to check whether the input reg is empty, using the specified
 /// temp register.
 /// The input reg is not modified unless it is the same as the temp,
@@ -128,6 +143,38 @@ void emit_sh_ljs_is_empty(
       (int16_t)HVETag_Empty == (int16_t)(-14) && "HVETag_Empty must be -14");
   a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
   a.cmn(xTempReg, -HVETag_Empty);
+}
+
+/// Emit code to check whether the input reg is null, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_null(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      (int16_t)HVETag_Null == (int16_t)(-11) && "HVETag_Null must be -11");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
+  a.cmn(xTempReg, -HVETag_Null);
+}
+
+/// Emit code to check whether the input reg is bool, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_bool(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      (int16_t)HVETag_Bool == (int16_t)(-10) && "HVETag_Bool must be -10");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
+  a.cmn(xTempReg, -HVETag_Bool);
 }
 
 /// Emit code to check whether the input reg is undefined, using the specified
@@ -150,6 +197,24 @@ void emit_sh_ljs_is_undefined(
   a.cmn(xTempReg, -HVETag_Undefined);
 }
 
+/// Emit code to check whether the input reg is Symbol, using the specified
+/// temp register.
+/// The input reg is not modified unless it is the same as the temp,
+/// which is allowed.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_is_symbol(
+    a64::Assembler &a,
+    const a64::GpX &xTempReg,
+    const a64::GpX &xInputReg) {
+  // Get the tag bits by right shifting.
+  static_assert(
+      HERMESVALUE_VERSION == 1, "HVETag_Symbol must be at kHV_NumDataBits - 1");
+  static_assert(
+      (int16_t)HVETag_Symbol == (int16_t)(-9) && "HVETag_Symbol must be -9");
+  a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
+  a.cmn(xTempReg, -HVETag_Symbol);
+}
+
 /// For a register \p inOut that contains a bool (i.e. either 0 or 1), turn it
 /// into a HermesValue boolean by adding the corresponding tag.
 void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
@@ -162,6 +227,23 @@ void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
       "Boolean tag must be 16 bits.");
   // Add the bool tag.
   a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
+}
+
+/// For a register \p out, emit a bool HermesValue with the corrsponding \p val.
+void emit_sh_ljs_const_bool(a64::Assembler &a, const a64::GpX xOut, bool val) {
+  static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
+  // We know that the ETag for bool as a 0 in its lowest bit, and is therefore a
+  // shifted 16 bit value. We can exploit this to use movk to set the tag.
+  static_assert(HERMESVALUE_VERSION == 1);
+  static_assert(
+      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
+      "Boolean tag must be 16 bits.");
+  if (val) {
+    a.mov(xOut, 1);
+    a.movk(xOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
+  } else {
+    a.movz(xOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
+  }
 }
 
 /// For a register containing a pointer to a GCCell, retrieve its CellKind (a
@@ -3038,45 +3120,354 @@ void Emitter::getByIdImpl(
 void Emitter::jmpTypeOfIs(
     const asmjit::Label &target,
     FR frInput,
-    TypeOfIsTypes types) {
-  comment("// jTypeOfIs r%u, %u", frInput.index(), types.getRaw());
+    TypeOfIsTypes origTypes) {
+  comment("// jTypeOfIs r%u, %u", frInput.index(), origTypes.getRaw());
+
+  TypeOfIsTypes invertedTypes = origTypes.invert();
 
   // Do this always because it's the end of a basic block.
   // The freeAllFRTempExcept calls are within fast paths because we may want to
   // use FR temps to syncToFrame(frInput) in the call path, and we know at JIT
   // time whether we'll emit the call path.
   syncAllFRTempExcept({});
-  // Attempt to use a temporary if we can.
-  syncAndFreeTempReg(HWReg::gpX(0));
-  movHWFromFR(HWReg::gpX(0), frInput);
+
+  HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+  HWReg hwTemp = allocTempGpX();
+  freeReg(hwTemp);
   freeAllFRTempExcept({});
 
-  a.mov(a64::w1, types.getRaw());
-  EMIT_RUNTIME_CALL(
-      *this, bool (*)(SHLegacyValue, uint16_t), _sh_ljs_typeof_is);
+  auto xInput = hwInput.a64GpX();
+  auto xTemp = hwTemp.a64GpX();
+  auto wTemp = xTemp.w();
 
-  a.cbnz(a64::w0, target);
+  // Try and see if inverting will result in fewer checks.
+  // If so, flip it and set invert=true.
+  bool invert = false;
+  TypeOfIsTypes typesToCheck = origTypes;
+  if (invertedTypes.count() < origTypes.count()) {
+    invert = true;
+    typesToCheck = invertedTypes;
+  }
+
+  // doneLab goes at the end of the instruction if there's multiple bits to
+  // check, allowing short-circuiting the remaining checks if one of the
+  // TypeOfIsTypes bits matches the kind of the input.
+  // Use numRemainingTypes to track how many bits are left to check.
+  asmjit::Label doneLab = a.newLabel();
+  size_t numRemainingTypes = typesToCheck.count();
+
+  // Checks are done as follows:
+  // * If not inverted, just go to the target if the tag matches the bit,
+  //   else fallthrough to the next case (if any).
+  // * If inverted and there's multiple bits remaining,
+  //   if the tag matches the bit, short circuit to doneLab and we've
+  //   finished executing the instruction (no need to check the other bits).
+  // * If inverted and there's only one bit remaining,
+  //   then if the tag does NOT match the bit, go to the target
+  //   immediately.
+  //
+  // In this way, single-bit checks (both inverted and not) are fast,
+  // and multiple-bit checks are correct.
+  // It's possible more complexity can optimize this further if needed, but this
+  // is not a bad start.
+
+  /// Emit the simple check for a match.
+  /// If we're not inverted, branch to the target based on cond.
+  /// If we're inverted:
+  ///   If there's bits remaining to check, branch to doneLab if the tag matches
+  ///   because we can short circuit the rest of the checks.
+  ///   If there's no bits remaining to check, branch to the target if the tag
+  ///   does NOT match the bit.
+  /// \param cond the condition code, which if true, indicates a tag match.
+  auto emitCondCheck = [this, invert, &numRemainingTypes, &target, &doneLab](
+                           a64::CondCode cond) {
+    if (!invert)
+      a.b(cond, target);
+    else if (numRemainingTypes > 0)
+      a.b(cond, doneLab);
+    else
+      a.b(a64::negateCond(cond), target);
+  };
+
+  if (typesToCheck.hasUndefined()) {
+    --numRemainingTypes;
+    emit_sh_ljs_is_undefined(a, xTemp, xInput);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasSymbol()) {
+    --numRemainingTypes;
+    emit_sh_ljs_is_symbol(a, xTemp, xInput);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasString()) {
+    --numRemainingTypes;
+    emit_sh_ljs_is_string(a, xTemp, xInput);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasBoolean()) {
+    --numRemainingTypes;
+    emit_sh_ljs_is_bool(a, xTemp, xInput);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasNull()) {
+    --numRemainingTypes;
+    emit_sh_ljs_is_null(a, xTemp, xInput);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasBigint()) {
+    --numRemainingTypes;
+    emit_sh_ljs_is_bigint(a, xTemp, xInput);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasNumber()) {
+    --numRemainingTypes;
+    static_assert(
+        HERMESVALUE_VERSION == 1,
+        "HVTag_First must be the first after double limit");
+    loadBits64InGp(
+        xTemp, ((uint64_t)HVTag_First << kHV_NumDataBits), "doubleLim");
+    a.cmp(xInput, xTemp);
+    emitCondCheck(a64::CondCode::kLO);
+  }
+  // TODO: Special-case if both hasObject() and hasFunction() are set,
+  // because we no longer would need to check the CellKind.
+  if (typesToCheck.hasObject()) {
+    --numRemainingTypes;
+    asmjit::Label objectDoneLab = a.newLabel();
+    emit_sh_ljs_is_object(a, xTemp, xInput);
+    if (!invert)
+      a.b_ne(objectDoneLab);
+    else if (numRemainingTypes > 0)
+      a.b_ne(objectDoneLab);
+    else
+      a.b_ne(target);
+    emit_sh_ljs_get_pointer(a, hwTemp.a64GpX(), hwInput.a64GpX());
+    emit_gccell_get_kind(a, wTemp, xTemp);
+    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
+    a.cmp(
+        wTemp,
+        (uint32_t)CellKind::CallableKind_last -
+            (uint32_t)CellKind::CallableKind_first);
+    emitCondCheck(a64::CondCode::kHI);
+    a.bind(objectDoneLab);
+  }
+  if (typesToCheck.hasFunction()) {
+    --numRemainingTypes;
+    asmjit::Label functionDoneLab = a.newLabel();
+    emit_sh_ljs_is_object(a, xTemp, xInput);
+    if (!invert)
+      a.b_ne(functionDoneLab);
+    else if (numRemainingTypes > 0)
+      a.b_ne(functionDoneLab);
+    else
+      a.b_ne(target);
+    emit_sh_ljs_get_pointer(a, xTemp, xInput);
+    emit_gccell_get_kind(a, wTemp, xTemp);
+    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
+    a.cmp(
+        wTemp,
+        (uint32_t)CellKind::CallableKind_last -
+            (uint32_t)CellKind::CallableKind_first);
+    emitCondCheck(a64::CondCode::kLS);
+    a.bind(functionDoneLab);
+  }
+
+  assert(numRemainingTypes == 0 && "missed a type");
+
+  // Put doneLab after, so we skip the branch if we directly branch to doneLab
+  // from above.
+  a.bind(doneLab);
 }
 
-void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types) {
+void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
   comment(
       "// typeOfIs r%u, r%u, %u",
       frRes.index(),
       frInput.index(),
-      types.getRaw());
+      origTypes.getRaw());
 
-  syncAllFRTempExcept(frRes != frInput ? frRes : FR());
-  syncAndFreeTempReg(HWReg::gpX(0));
-  movHWFromFR(HWReg::gpX(0), frInput);
-  freeAllFRTempExcept({});
-  a.mov(a64::w1, types.getRaw());
-  EMIT_RUNTIME_CALL(
-      *this, bool (*)(SHLegacyValue, uint16_t), _sh_ljs_typeof_is);
-  emit_sh_ljs_bool(a, a64::x0);
-
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  // Store the input in hwInputTemp for the duration of the instruction.
+  // Needed because it's possible frRes == frInput, and we want to write to
+  // frRes at the top of the instruction.
+  HWReg hwInputTemp;
+  if (frRes == frInput) {
+    hwInputTemp = allocTempGpX();
+    movHWFromFR(hwInputTemp, frInput);
+  } else {
+    hwInputTemp = getOrAllocFRInGpX(frInput, true);
+  }
+  HWReg hwTemp = allocTempGpX();
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   frUpdatedWithHW(frRes, hwRes);
+  freeReg(hwTemp);
+  if (frRes == frInput) {
+    freeReg(hwInputTemp);
+  }
+
+  auto xInputTemp = hwInputTemp.a64GpX();
+  auto xTemp = hwTemp.a64GpX();
+  auto wTemp = xTemp.w();
+  auto xRes = hwRes.a64GpX();
+
+  TypeOfIsTypes invertedTypes = origTypes.invert();
+
+  // Try and see if inverting will result in fewer checks.
+  // If so, flip it and set invert=true.
+  bool invert = false;
+  TypeOfIsTypes typesToCheck = origTypes;
+  if (invertedTypes.count() < origTypes.count()) {
+    invert = true;
+    typesToCheck = invertedTypes;
+  }
+
+  // trueLab/falseLab go at the end of the instruction if there's multiple
+  // bits to check, allowing short-circuiting the remaining checks if one of the
+  // TypeOfIsTypes bits matches the kind of the input.
+  // If there's only one bit to check, we don't put extra code the end - none of
+  // the other cases will be emitted.
+  asmjit::Label trueLab{};
+  asmjit::Label falseLab{};
+  if (typesToCheck.count() > 1) {
+    trueLab = a.newLabel();
+    falseLab = a.newLabel();
+  }
+
+  // First, set xRes to HermesValue(false).
+  // Incrementing it will set it to true.
+  //
+  // Checks are done as follows:
+  // * If there are multiple bits set, then trueLab is valid,
+  //   so if the tag matches the bit, branch to either trueLab or falseLab.
+  //   If the tag doesn't match, then fall through to the next check.
+  // * If there's only one bit set, then trueLab is NOT valid,
+  //   so emit cinc with the appropriate condition code and we're done.
+  //
+  // If we aren't inverted and we fall through all the checks, then nothing
+  // matched, and we shouldn't increment.
+  //
+  // In this way, single-bit checks (both inverted and not) are fast,
+  // and multiple-bit checks are correct, but may have an extra branch
+  // (because it's simpler). It's possible more complexity can optimize this
+  // further if needed, but this is not a bad start.
+
+  /// Emit the simple check for a match.
+  /// If there's multiple bits to check, this will branch based on \p cond
+  /// to either trueLab or falseLab if the tag matches.
+  /// If there's only one bit to check, this will emit a cinc with the
+  /// appropriate condition code (and we're done).
+  /// \param cond the condition code, which if true, indicates a tag match.
+  auto emitCondCheck =
+      [this, invert, &xRes, &trueLab, &falseLab](a64::CondCode cond) {
+        if (trueLab.isValid())
+          a.b(cond, !invert ? trueLab : falseLab);
+        else
+          a.cinc(xRes, xRes, !invert ? cond : a64::negateCond(cond));
+      };
+
+  // Put false in xRes, and use cinc to set it to true when the check passes.
+  static_assert(
+      HERMESVALUE_VERSION == 1,
+      "bool must be a tag with a low bit that indicates the bool value");
+  emit_sh_ljs_const_bool(a, xRes, false);
+
+  if (typesToCheck.hasUndefined()) {
+    emit_sh_ljs_is_undefined(a, xTemp, xInputTemp);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasSymbol()) {
+    emit_sh_ljs_is_symbol(a, xTemp, xInputTemp);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasString()) {
+    emit_sh_ljs_is_string(a, xTemp, xInputTemp);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasBoolean()) {
+    emit_sh_ljs_is_bool(a, xTemp, xInputTemp);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasBigint()) {
+    emit_sh_ljs_is_bigint(a, xTemp, xInputTemp);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasNull()) {
+    emit_sh_ljs_is_null(a, xTemp, xInputTemp);
+    emitCondCheck(a64::CondCode::kEQ);
+  }
+  if (typesToCheck.hasNumber()) {
+    static_assert(
+        HERMESVALUE_VERSION == 1,
+        "HVTag_First must be the first after double limit");
+    loadBits64InGp(
+        xTemp, ((uint64_t)HVTag_First << kHV_NumDataBits), "doubleLim");
+    a.cmp(xInputTemp, xTemp);
+    emitCondCheck(a64::CondCode::kLO);
+  }
+  if (typesToCheck.hasObject()) {
+    asmjit::Label objectDoneLab = a.newLabel();
+    emit_sh_ljs_is_object(a, xTemp, xInputTemp);
+    if (trueLab.isValid()) {
+      // If the tag did NOT match, we can't run anything else in this case.
+      // We must branch, b_ne.
+      // Regardless of whether we're inverted, there might be more types to
+      // check, so we can't go directly to trueLab or falseLab.
+      a.b_ne(objectDoneLab);
+    } else {
+      // No more tags to check. Decide the result here and go to the end.
+      if (invert)
+        a.cinc(xRes, xRes, a64::CondCode::kNE);
+      a.b_ne(objectDoneLab);
+    }
+    emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
+    emit_gccell_get_kind(a, wTemp, xTemp);
+    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
+    a.cmp(
+        wTemp,
+        (uint32_t)CellKind::CallableKind_last -
+            (uint32_t)CellKind::CallableKind_first);
+    emitCondCheck(a64::CondCode::kHI);
+    a.bind(objectDoneLab);
+  }
+  if (typesToCheck.hasFunction()) {
+    asmjit::Label functionDoneLab = a.newLabel();
+    emit_sh_ljs_is_object(a, xTemp, xInputTemp);
+    if (trueLab.isValid()) {
+      // If the tag did NOT match, we can't run anything else in this case.
+      // We must branch, b_ne.
+      // Regardless of whether we're inverted, there might be more types to
+      // check, so we can't go directly to trueLab or falseLab.
+      a.b_ne(functionDoneLab);
+    } else {
+      // No more tags to check. Decide the result here and go to the end.
+      if (invert)
+        a.cinc(xRes, xRes, a64::CondCode::kNE);
+      a.b_ne(functionDoneLab);
+    }
+    emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
+    emit_gccell_get_kind(a, wTemp, xTemp);
+    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
+    a.cmp(
+        wTemp,
+        (uint32_t)CellKind::CallableKind_last -
+            (uint32_t)CellKind::CallableKind_first);
+    emitCondCheck(a64::CondCode::kLS);
+    a.bind(functionDoneLab);
+  }
+
+  if (trueLab.isValid()) {
+    // If we aren't inverted and we fall through all the checks, then nothing
+    // matched, and we shouldn't increment.
+    if (!invert)
+      a.b(falseLab);
+
+    a.bind(trueLab);
+
+    // Set the result to true.
+    a.add(xRes, xRes, 1);
+
+    // Put after trueLab, jump here if you don't want to set the result to true.
+    a.bind(falseLab);
+  }
 }
 
 void Emitter::switchImm(
