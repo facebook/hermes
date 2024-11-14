@@ -740,6 +740,21 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
 }
 
 void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
+  auto *outerScope = curFunction()->curScope;
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(ForInStmt);
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *initScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(ForInStmt), outerScope);
+    curFunction()->curScope = initScope;
+  }
+
   emitScopeDeclarations(ForInStmt->getScope());
 
   // The state of the enumerator. Notice that the instruction writes to the
@@ -835,6 +850,13 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   // variable.
   auto propertyStringRepr = Builder.createLoadStackInst(propertyStorage);
 
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope->getVariableScope(), outerScope);
+    curFunction()->curScope = innerScope;
+  }
+
   // The left hand side of For-In statements can be any lhs expression
   // ("PutValue"). Example:
   //  1. for (x.y in [1,2,3])
@@ -847,6 +869,9 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   genStatement(ForInStmt->_body);
 
   Builder.createBranchInst(getNextBlock);
+
+  // Restore the outer scope for subsequent code.
+  curFunction()->curScope = outerScope;
 
   Builder.setInsertionBlock(exitBlock);
 }
