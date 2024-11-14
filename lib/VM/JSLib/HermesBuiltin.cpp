@@ -671,6 +671,43 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
   return res->getHermesValue();
 }
 
+/// \code
+///   HermesBuiltin.applyArguments = function(fn, thisVal) {}
+/// /endcode
+/// Faster version of Function.prototype.apply which copies the arguments
+/// from the caller to the callee.
+CallResult<HermesValue>
+hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
+  // Copy 'arguments' from the caller's stack, then call the callee.
+
+  Handle<Callable> fn = args.dyncastArg<Callable>(0);
+  if (LLVM_UNLIKELY(!fn)) {
+    return runtime.raiseTypeErrorForValue(
+        args.getArgHandle(0), " is not a function");
+  }
+
+  // Obtain the caller's stack frame.
+  auto frames = runtime.getStackFrames();
+  auto it = frames.begin();
+  ++it;
+  // Check for the extremely unlikely case where there is no caller frame.
+  if (LLVM_UNLIKELY(it == frames.end()))
+    return HermesValue::encodeUndefinedValue();
+
+  uint32_t argCount = it->getArgCount();
+
+  ScopedNativeCallFrame newFrame{runtime, argCount, *fn, false, args.getArg(1)};
+  if (LLVM_UNLIKELY(newFrame.overflowed())) {
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+
+  for (uint32_t i = 0; i < argCount; ++i) {
+    newFrame->getArgRef(i) = it->getArgRef(i);
+  }
+
+  return Callable::call(fn, runtime).toCallResultHermesValue();
+}
+
 /// HermesBuiltin.exportAll(exports, source) will copy exported named
 /// properties from `source` to `exports`, defining them on `exports` as
 /// non-configurable.
@@ -836,6 +873,11 @@ void createHermesBuiltins(
       hermesBuiltinArraySpread,
       2);
   defineInternMethod(B::HermesBuiltin_apply, P::apply, hermesBuiltinApply, 2);
+  defineInternMethod(
+      B::HermesBuiltin_applyArguments,
+      P::apply,
+      hermesBuiltinApplyArguments,
+      2);
   defineInternMethod(
       B::HermesBuiltin_exportAll, P::exportAll, hermesBuiltinExportAll);
   defineInternMethod(
