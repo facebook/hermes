@@ -211,6 +211,17 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         continue;
       }
 
+      if (auto *TOI = llvh::dyn_cast<TypeOfIsInst>(closureUser)) {
+        assert(TOI->getArgument() == closureInst && "unexpected operand");
+        // If we know the operand is always a closure, typeofis can be
+        // simplified to the result of the check.
+        if (isAlwaysClosure)
+          TOI->replaceAllUsesWith(
+              builder.getLiteralBool(TOI->getTypes()->getData().hasFunction()));
+        // typeof does not leak the closure.
+        continue;
+      }
+
       // UnionNarrowTrustedInst is a cast, the result is the same as its input.
       // That means we can add it to the worklist to follow it.
       if (llvh::isa<UnionNarrowTrustedInst>(closureUser)) {

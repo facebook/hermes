@@ -308,6 +308,47 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
+  /// Simplify an equality/inequality comparison between a typeof and a string.
+  /// \param str the string to compare the typeof result with.
+  /// \param typeofInst the typeof instruction to run.
+  /// \param invert whether to check for inequality instead of equality.
+  /// \return a TypeOfIsInst that replaces the strict equality/inequality.
+  Value *
+  simplifyTypeOfCheck(LiteralString *str, TypeOfInst *typeofInst, bool invert) {
+    TypeOfIsTypes types;
+    llvh::StringRef strRef = str->getValue().str();
+    if (strRef == "undefined") {
+      types = TypeOfIsTypes{}.withUndefined(true);
+    } else if (strRef == "object") {
+      // TypeOfIs supports null and object separately.
+      // typeof null is "object", so we have to put both.
+      types = TypeOfIsTypes{}.withNull(true).withObject(true);
+    } else if (strRef == "string") {
+      types = TypeOfIsTypes{}.withString(true);
+    } else if (strRef == "symbol") {
+      types = TypeOfIsTypes{}.withSymbol(true);
+    } else if (strRef == "boolean") {
+      types = TypeOfIsTypes{}.withBoolean(true);
+    } else if (strRef == "number") {
+      types = TypeOfIsTypes{}.withNumber(true);
+    } else if (strRef == "bigint") {
+      types = TypeOfIsTypes{}.withBigint(true);
+    } else if (strRef == "function") {
+      types = TypeOfIsTypes{}.withFunction(true);
+    } else {
+      // All other strings are not going to be returned by typeof.
+      // true if the operator is !==, false if it is ===.
+      return builder_.getLiteralBool(invert);
+    }
+
+    if (invert) {
+      types = types.invert();
+    }
+
+    return builder_.createTypeOfIsInst(
+        typeofInst->getArgument(), builder_.getLiteralTypeOfIsTypes(types));
+  }
+
   Value *simplifyBinOp(BinaryOperatorInst *binary) {
     Value *lhs = binary->getLeftHandSide();
     Value *rhs = binary->getRightHandSide();
@@ -458,6 +499,27 @@ class InstSimplifyImpl {
 
       default:
         break;
+    }
+
+    // If the typeof is one side of an (in)equality and the other side is a
+    // string literal, we can use TypeOfIs directly.
+    bool isEquality = kind == ValueKind::BinaryEqualInstKind ||
+        kind == ValueKind::BinaryStrictlyEqualInstKind;
+    bool isInequality = kind == ValueKind::BinaryNotEqualInstKind ||
+        kind == ValueKind::BinaryStrictlyNotEqualInstKind;
+    if (isEquality || isInequality) {
+      if (llvh::isa<TypeOfInst>(lhs) && llvh::isa<LiteralString>(rhs)) {
+        return simplifyTypeOfCheck(
+            llvh::cast<LiteralString>(rhs),
+            llvh::cast<TypeOfInst>(lhs),
+            isInequality);
+      }
+      if (llvh::isa<TypeOfInst>(rhs) && llvh::isa<LiteralString>(lhs)) {
+        return simplifyTypeOfCheck(
+            llvh::cast<LiteralString>(lhs),
+            llvh::cast<TypeOfInst>(rhs),
+            isInequality);
+      }
     }
 
     if (Instruction *typed = simplifyTypedBinaryExpression(binary))
