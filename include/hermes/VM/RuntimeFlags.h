@@ -214,6 +214,7 @@ struct VMOnlyRuntimeFlags {
   llvh::cl::opt<bool> ForceJIT{
       "Xforce-jit",
       llvh::cl::Hidden,
+      llvh::cl::ZeroOrMore,
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("force JIT compilation of every function"),
       llvh::cl::init(false)};
