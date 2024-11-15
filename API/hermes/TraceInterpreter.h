@@ -65,6 +65,9 @@ class TraceInterpreter final {
     /// guaranteeing there's no garbage in heap size numbers.
     bool forceGCBeforeStats{false};
 
+    /// If true, use the Hermes VM JIT during execution.
+    bool enableJIT{false};
+
     /// If true, remove the requirement that the input bytecode was compiled
     /// from the same source used to record the trace. There must only be one
     /// input bytecode file in this case. If its observable behavior deviates

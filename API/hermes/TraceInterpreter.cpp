@@ -361,6 +361,8 @@ TraceInterpreter::getSourceHashToBundleMap(
         *options.shouldTrackIO && isBytecode && codeIsMmapped);
   }
 
+  rtConfigBuilder.withEnableJIT(options.enableJIT);
+
   // If (and only if) an out trace is requested, turn on tracing in the VM
   // as well.
   if (options.traceEnabled) {
