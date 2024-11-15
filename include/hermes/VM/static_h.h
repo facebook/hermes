@@ -325,7 +325,20 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_this(
     SHLegacyValue *newTarget,
     SHPropertyCacheEntry *propCacheEntry);
 
-#define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _setjmp((jbuf)->buf))
+#ifndef _WINDOWS
+// Use _setjmp and _longjmp outside Windows, to avoid saving and restoring the
+// signal mask, which is costly and may interfere with signal mask manipulation
+// by non-Hermes code.
+#define _sh_setjmp _setjmp
+#define _sh_longjmp _longjmp
+#else
+// Windows does not provide _setjmp and _longjmp, so use setjmp and longjmp
+// instead.
+#define _sh_setjmp setjmp
+#define _sh_longjmp longjmp
+#endif
+
+#define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _sh_setjmp((jbuf)->buf))
 
 /// Push the given \p buf onto the exception handler stack.
 static inline void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
