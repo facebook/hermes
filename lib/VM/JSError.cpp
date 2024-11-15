@@ -755,8 +755,8 @@ void JSError::appendBytecodeFrame(
             location->filenameId);
     convertUTF8WithSurrogatesToUTF16(
         std::back_inserter(stack),
-        &*utf8Filename.begin(),
-        &*utf8Filename.end());
+        utf8Filename.data(),
+        utf8Filename.data() + utf8Filename.size());
   } else {
     auto sourceURL = runtimeModule->getSourceURL();
     stack.append(sourceURL.empty() ? "unknown" : sourceURL);
