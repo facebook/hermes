@@ -3320,55 +3320,50 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     typesToCheck = invertedTypes;
   }
 
-  // trueLab/falseLab go at the end of the instruction if there's multiple
+  // matchLab goes directly to the end of the instruction if there are multiple
   // bits to check, allowing short-circuiting the remaining checks if one of the
   // TypeOfIsTypes bits matches the kind of the input.
   // If there's only one bit to check, we don't put extra code the end - none of
   // the other cases will be emitted.
-  asmjit::Label trueLab{};
-  asmjit::Label falseLab{};
-  if (typesToCheck.count() > 1) {
-    trueLab = a.newLabel();
-    falseLab = a.newLabel();
-  }
+  asmjit::Label matchLab{};
+  if (typesToCheck.count() > 1)
+    matchLab = a.newLabel();
 
-  // First, set xRes to HermesValue(false).
-  // Incrementing it will set it to true.
+  // First, initialize xRes as follows:
+  // * If there are multiple bits set, initialize it to the value we would
+  //   produce on a match. This is false if inverted and true otherwise.
+  // * If there's only one bit set, initialize it to false so it can be easily
+  //   toggled with cinc. Incrementing it will set it to true.
   //
   // Checks are done as follows:
-  // * If there are multiple bits set, then trueLab is valid,
-  //   so if the tag matches the bit, branch to either trueLab or falseLab.
+  // * If there are multiple bits set, then matchLab is valid,
+  //   so if the tag matches the bit, branch to matchLab.
   //   If the tag doesn't match, then fall through to the next check.
-  // * If there's only one bit set, then trueLab is NOT valid,
+  // * If there's only one bit set, then matchLab is NOT valid,
   //   so emit cinc with the appropriate condition code and we're done.
   //
-  // If we aren't inverted and we fall through all the checks, then nothing
-  // matched, and we shouldn't increment.
-  //
   // In this way, single-bit checks (both inverted and not) are fast,
-  // and multiple-bit checks are correct, but may have an extra branch
-  // (because it's simpler). It's possible more complexity can optimize this
-  // further if needed, but this is not a bad start.
+  // and multiple-bit checks are correct.
 
   /// Emit the simple check for a match.
   /// If there's multiple bits to check, this will branch based on \p cond
-  /// to either trueLab or falseLab if the tag matches.
+  /// to matchLab if the tag matches.
   /// If there's only one bit to check, this will emit a cinc with the
   /// appropriate condition code (and we're done).
   /// \param cond the condition code, which if true, indicates a tag match.
-  auto emitCondCheck =
-      [this, invert, &xRes, &trueLab, &falseLab](a64::CondCode cond) {
-        if (trueLab.isValid())
-          a.b(cond, !invert ? trueLab : falseLab);
-        else
-          a.cinc(xRes, xRes, !invert ? cond : a64::negateCond(cond));
-      };
+  auto emitCondCheck = [this, invert, &xRes, &matchLab](a64::CondCode cond) {
+    if (matchLab.isValid())
+      a.b(cond, matchLab);
+    else
+      a.cinc(xRes, xRes, !invert ? cond : a64::negateCond(cond));
+  };
 
-  // Put false in xRes, and use cinc to set it to true when the check passes.
   static_assert(
       HERMESVALUE_VERSION == 1,
       "bool must be a tag with a low bit that indicates the bool value");
-  emit_sh_ljs_const_bool(a, xRes, false);
+  // As described above, initialize it to false if it is inverted or there is
+  // only a single case.
+  emit_sh_ljs_const_bool(a, xRes, matchLab.isValid() && !invert);
 
   if (typesToCheck.hasUndefined()) {
     emit_sh_ljs_is_undefined(a, xTemp, xInputTemp);
@@ -3406,11 +3401,9 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
   if (typesToCheck.hasObject()) {
     asmjit::Label objectDoneLab = a.newLabel();
     emit_sh_ljs_is_object(a, xTemp, xInputTemp);
-    if (trueLab.isValid()) {
+    if (matchLab.isValid()) {
       // If the tag did NOT match, we can't run anything else in this case.
-      // We must branch, b_ne.
-      // Regardless of whether we're inverted, there might be more types to
-      // check, so we can't go directly to trueLab or falseLab.
+      // We must branch, b_ne and proceed to try matching any other cases.
       a.b_ne(objectDoneLab);
     } else {
       // No more tags to check. Decide the result here and go to the end.
@@ -3431,11 +3424,9 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
   if (typesToCheck.hasFunction()) {
     asmjit::Label functionDoneLab = a.newLabel();
     emit_sh_ljs_is_object(a, xTemp, xInputTemp);
-    if (trueLab.isValid()) {
+    if (matchLab.isValid()) {
       // If the tag did NOT match, we can't run anything else in this case.
-      // We must branch, b_ne.
-      // Regardless of whether we're inverted, there might be more types to
-      // check, so we can't go directly to trueLab or falseLab.
+      // We must branch, b_ne and proceed to try matching any other cases.
       a.b_ne(functionDoneLab);
     } else {
       // No more tags to check. Decide the result here and go to the end.
@@ -3454,19 +3445,12 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     a.bind(functionDoneLab);
   }
 
-  if (trueLab.isValid()) {
-    // If we aren't inverted and we fall through all the checks, then nothing
-    // matched, and we shouldn't increment.
-    if (!invert)
-      a.b(falseLab);
-
-    a.bind(trueLab);
-
-    // Set the result to true.
-    a.add(xRes, xRes, 1);
-
-    // Put after trueLab, jump here if you don't want to set the result to true.
-    a.bind(falseLab);
+  if (matchLab.isValid()) {
+    // We failed to match, so flip the result
+    a.eor(xRes, xRes, 1);
+    // We initialize xRes to the "match value", so there is nothing to do on a
+    // match.
+    a.bind(matchLab);
   }
 }
 
