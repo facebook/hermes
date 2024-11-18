@@ -446,7 +446,7 @@ ExecutionStatus JSError::recordStackTrace(
   if (!skipTopFrame) {
     if (frames.begin() == frames.end()) {
       stack->emplace_back(BytecodeStackTraceInfo(nullptr, 0));
-    } else if (auto *codeBlock = frames.begin()->getCalleeCodeBlock(runtime)) {
+    } else if (auto *codeBlock = frames.begin()->getCalleeCodeBlock()) {
       stack->emplace_back(BytecodeStackTraceInfo(
           codeBlock, codeBlock->getOffsetOf(runtime.getCurrentIP())));
       if (LLVM_UNLIKELY(addDomain(codeBlock) == ExecutionStatus::EXCEPTION)) {
@@ -477,7 +477,7 @@ ExecutionStatus JSError::recordStackTrace(
       // frame because it is always available, whereas the SavedCodeBlock is
       // unavailable if the interpreter makes a call indirectly (e.g. through a
       // getter/setter) or in BoundFunction calls.
-      codeBlock = prev->getCalleeCodeBlock(runtime);
+      codeBlock = prev->getCalleeCodeBlock();
       locals = prev->getSHLocals();
     }
     if (codeBlock && savedIP) {

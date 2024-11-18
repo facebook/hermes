@@ -80,7 +80,7 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
   auto it = frames.begin();
   if (LLVM_UNLIKELY(++it == frames.end()))
     return runtime.raiseTypeError("Cannot be called directly");
-  auto callerCB = it->getCalleeCodeBlock(runtime);
+  auto callerCB = it->getCalleeCodeBlock();
   if (LLVM_UNLIKELY(!callerCB)) {
     return runtime.raiseTypeError("Cannot be called from native code");
   }

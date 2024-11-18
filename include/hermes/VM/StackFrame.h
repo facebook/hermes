@@ -190,7 +190,7 @@ class StackFramePtrT {
   /// \return the callee's CodeBlock, i.e. the CodeBlock that is executing in
   ///   this frame. It could be nullptr if calleeClosure is a Callable but not
   ///   a JSFunction.
-  QualifiedCB *getCalleeCodeBlock(Runtime &runtime) const;
+  inline QualifiedCB *getCalleeCodeBlock() const;
 
   /// \return true if this is a constructor being invoked by \c new.
   bool isConstructorCall() const {

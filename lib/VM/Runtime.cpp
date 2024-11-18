@@ -2000,7 +2000,7 @@ void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
     if (auto *closure = dyn_vmcast<Callable>(sf.getCalleeClosureOrCBRef())) {
       OS << cellKindStr(closure->getKind()) << " ";
     }
-    if (auto *cb = sf.getCalleeCodeBlock(*this)) {
+    if (auto *cb = sf.getCalleeCodeBlock()) {
       OS << formatSymbolID(cb->getNameMayAllocate()) << " ";
     }
     dumpStackFrame(sf, OS, next);
@@ -2115,7 +2115,7 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   std::string res;
   // Note that the order of iteration is youngest (leaf) frame to oldest.
   for (auto frame : getStackFrames()) {
-    auto codeBlock = frame->getCalleeCodeBlock(*this);
+    auto codeBlock = frame->getCalleeCodeBlock();
     if (codeBlock) {
       res += codeBlock->getNameString();
       // Default to the function entrypoint, this
@@ -2181,7 +2181,7 @@ Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) {
   const CodeBlock *codeBlock = nullptr;
   for (auto frameIt = callFrames.begin(); frameIt != callFrames.end();
        ++frameIt) {
-    codeBlock = frameIt->getCalleeCodeBlock(*this);
+    codeBlock = frameIt->getCalleeCodeBlock();
     if (codeBlock) {
       break;
     } else {

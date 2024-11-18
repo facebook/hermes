@@ -195,7 +195,7 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right) {
 #ifdef HERMESVM_PROFILER_BB
 void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex) {
   Runtime &runtime = getRuntime(shr);
-  CodeBlock *codeBlock = runtime.getCurrentFrame().getCalleeCodeBlock(runtime);
+  CodeBlock *codeBlock = runtime.getCurrentFrame().getCalleeCodeBlock();
   runtime.getBasicBlockExecutionInfo().executeBlock(codeBlock, pointIndex);
 }
 #endif
