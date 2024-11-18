@@ -271,42 +271,35 @@ Handle<NativeConstructor> createObjectConstructor(Runtime &runtime) {
   return cons;
 }
 
-/// ES5.1 15.2.1.1 and 15.2.2.1. Object() invoked as a function and as a
-/// constructor.
+/// ES2024 20.1.1.1 Object constructor.
 CallResult<HermesValue>
 objectConstructor(void *, Runtime &runtime, NativeArgs args) {
-  auto arg0 = args.getArgHandle(0);
-
-  // If arg0 is supplied and is not null or undefined, call ToObject().
-  {
-    if (!arg0->isUndefined() && !arg0->isNull()) {
-      return toObject(runtime, arg0);
+  auto &newTarget = args.getNewTarget();
+  // 1. If NewTarget is neither undefined nor the active function object, then
+  if (!newTarget.isUndefined() &&
+      newTarget.getRaw() !=
+          runtime.objectConstructor.getHermesValue().getRaw()) {
+    // a. Return ? OrdinaryCreateFromConstructor(NewTarget,
+    // "%Object.prototype%").
+    auto res = ordinaryCreateFromConstructor_RJS(
+        runtime,
+        Handle<Callable>::vmcast(&args.getNewTarget()),
+        runtime.objectPrototype);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
     }
+    return res->getHermesValue();
   }
 
-  // The other cases must have been handled above.
-  assert(arg0->isUndefined() || arg0->isNull());
+  auto value = args.getArgHandle(0);
+  // 2. If value is either undefined or null, return
+  // OrdinaryObjectCreate(%Object.prototype%).
+  if (value->isUndefined() || value->isNull()) {
+    return JSObject::create(runtime).getHermesValue();
+  }
 
-  if (LLVM_LIKELY(
-          !args.isConstructorCall() ||
-          (args.getNewTarget().getRaw() ==
-           runtime.objectConstructor.getHermesValue().getRaw()))) {
-    return JSObject::create(runtime, runtime.objectPrototype).getHermesValue();
-  }
-  struct : public Locals {
-    PinnedValue<JSObject> selfParent;
-  } lv;
-  LocalsRAII lraii(runtime, &lv);
-  CallResult<PseudoHandle<JSObject>> thisParentRes =
-      NativeConstructor::parentForNewThis_RJS(
-          runtime,
-          Handle<Callable>::vmcast(&args.getNewTarget()),
-          runtime.objectPrototype);
-  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.selfParent = std::move(*thisParentRes);
-  return JSObject::create(runtime, lv.selfParent).getHermesValue();
+  // 3. Return ! ToObject(value).
+  return toObject(runtime, value);
 }
 
 CallResult<HermesValue> getPrototypeOf(Runtime &runtime, Handle<JSObject> obj) {
