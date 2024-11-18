@@ -994,6 +994,11 @@ CallResult<HermesValue> Interpreter::interpretFunction(
       return JSFunction::_jittedCall(jitPtr, runtime);
     }
 
+    // If the interpreter was invoked indirectly from another JS function, the
+    // caller's IP may not have been saved to the stack frame. Ensure that it is
+    // correctly recorded.
+    runtime.saveCallerIPInStackFrame();
+
     // Check for invalid invocation. This is done before setting up the stack so
     // the exception appears to come from the call site.
     auto newFrame = StackFramePtr(runtime.getStackPointer());
@@ -1017,10 +1022,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
     // Advance the frame pointer.
     runtime.setCurrentFrame(newFrame);
-    // If the interpreter was invoked indirectly from another JS function, the
-    // caller's IP may not have been saved to the stack frame. Ensure that it is
-    // correctly recorded.
-    runtime.saveCallerIPInStackFrame();
     // Point frameRegs to the first register in the new frame.
     frameRegs = &newFrame.getFirstLocalRef();
     ip = (Inst const *)curCodeBlock->begin();

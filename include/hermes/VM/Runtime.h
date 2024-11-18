@@ -1243,12 +1243,13 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   llvh::MutableArrayRef<PinnedHermesValue> registerStackAllocation_;
   PinnedHermesValue *registerStackStart_;
   PinnedHermesValue *registerStackEnd_;
+  /// Past-the-end pointer for the current frame. This points to the first
+  /// uninitialized element at the end of the stack.
   PinnedHermesValue *stackPointer_;
   /// Manages data to be used in the case of a crash.
   std::shared_ptr<CrashManager> crashMgr_;
-  /// Points to the last register in the callers frame. The current frame (the
-  /// callee frame) starts in the next register and continues up to and
-  /// including \c stackPointer_.
+  /// Points to the first register in the current frame. The current frame
+  /// continues up to \c stackPointer (exclusive).
   StackFramePtr currentFrame_{nullptr};
 
   /// Used to guard against stack overflow. Either uses real stack checking or
@@ -1455,18 +1456,20 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 #endif
 
   /// Save the return address in the caller in the stack frame.
-  /// This needs to be called at the beginning of a function call, after the
-  /// stack frame is set up.
+  /// This needs to be called at the beginning of a function call, before the
+  /// stack frame is set up. \c stackPointer_ should be at the end of the caller
+  /// frame, pointing to the first register of the callee frame that is about to
+  /// be set up.
   void saveCallerIPInStackFrame() {
+    StackFramePtr newFrame(stackPointer_);
 #ifndef NDEBUG
     assert(
-        (!currentFrame_.getSavedIP() ||
+        (!newFrame.getSavedIP() ||
          ((uintptr_t)currentIP_ != kInvalidCurrentIP &&
-          currentFrame_.getSavedIP() == currentIP_)) &&
+          newFrame.getSavedIP() == currentIP_)) &&
         "The ip should either be null or already have the expected value");
 #endif
-    currentFrame_.getSavedIPRef() =
-        HermesValue::encodeNativePointer(getCurrentIP());
+    newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(getCurrentIP());
   }
 
  private:

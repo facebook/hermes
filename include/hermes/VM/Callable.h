@@ -710,8 +710,8 @@ class NativeFunction : public Callable {
           Runtime::StackOverflowKind::NativeStack);
     }
 
-    auto newFrame = runtime.setCurrentFrameToTopOfStack();
     runtime.saveCallerIPInStackFrame();
+    auto newFrame = runtime.setCurrentFrameToTopOfStack();
     // Allocate the "reserved" registers in the new frame.
     if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
             StackFrameLayout::CalleeExtraRegistersAtStart,
