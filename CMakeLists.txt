@@ -92,6 +92,12 @@ set(HERMES_IS_ANDROID OFF CACHE BOOL
 set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
   "Building for a mobile device")
 
+set(OVERRIDE_HERMES_MOBILE_BUILD OFF CACHE BOOL
+  "Workaround for Android builds that uses ES types defined conditionally")
+if (OVERRIDE_HERMES_MOBILE_BUILD)
+  set(HERMES_IS_MOBILE_BUILD OFF)
+endif()
+
 set(HERMESVM_GCKIND HADES
   CACHE STRING
   "HermesVM GC type: MALLOC, HADES or RUNTIME")
@@ -557,9 +563,6 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   if (HERMES_MSVC_MP)
     add_definitions( /MP )
   endif()
-  # MSVC does not have strict aliasing so there is no need to support it.
-  # Similar to GCC/Clang above, disable strict signed integer overflow.
-  append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
@@ -705,7 +708,13 @@ if(HERMES_IS_ANDROID)
   find_package(fbjni REQUIRED CONFIG)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  # MSCV requires c++20
+  set(CMAKE_CXX_STANDARD 20)
+else()
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
