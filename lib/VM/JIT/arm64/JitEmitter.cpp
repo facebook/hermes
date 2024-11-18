@@ -4144,8 +4144,13 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   emit_gccell_get_kind(a, a64::w1, a64::x0);
 
   // Check if it is a JSFunction.
-  a.cmp(a64::w1, CellKind::JSFunctionKind);
-  a.b_ne(slowPathLab);
+  emit_cellkind_in_range(
+      a,
+      a64::w1,
+      a64::w1,
+      CellKind::CodeBlockFunctionKind_first,
+      CellKind::CodeBlockFunctionKind_last);
+  a.b_hi(slowPathLab);
 
   // Check if the JSFunction has already been JIT compiled.
   a.ldr(a64::x1, a64::Mem(a64::x0, RuntimeOffsets::jsFunctionCodeBlock));
