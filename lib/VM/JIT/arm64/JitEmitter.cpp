@@ -260,6 +260,21 @@ void emit_gccell_get_kind(
           offsetof(SHGCCell, kindAndSize) + RuntimeOffsets::kindAndSizeKind));
 }
 
+/// For a register \p wIn that contains a CellKind, check whether it falls
+/// within the kind range [first, last].
+/// The \p wInput is not modified unless it is the same as \p wTemp, which is
+/// allowed.
+/// CPU flags are updated as result. b_ls on success, or b_hi on failure.
+void emit_cellkind_in_range(
+    a64::Assembler &a,
+    const a64::GpW &wTemp,
+    const a64::GpW &wInput,
+    CellKind first,
+    CellKind last) {
+  a.sub(wTemp, wInput, first);
+  a.cmp(wTemp, (uint32_t)last - (uint32_t)first);
+}
+
 /// For a register \p dInput, which contains a double, check whether it is a
 /// valid signed 64-bit integer.
 /// CPU flags are updated. b_eq on success.
@@ -3243,11 +3258,12 @@ void Emitter::jmpTypeOfIs(
       a.b_ne(target);
     emit_sh_ljs_get_pointer(a, hwTemp.a64GpX(), hwInput.a64GpX());
     emit_gccell_get_kind(a, wTemp, xTemp);
-    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
-    a.cmp(
+    emit_cellkind_in_range(
+        a,
         wTemp,
-        (uint32_t)CellKind::CallableKind_last -
-            (uint32_t)CellKind::CallableKind_first);
+        wTemp,
+        CellKind::CallableKind_first,
+        CellKind::CallableKind_last);
     emitCondCheck(a64::CondCode::kHI);
     a.bind(objectDoneLab);
   }
@@ -3263,11 +3279,12 @@ void Emitter::jmpTypeOfIs(
       a.b_ne(target);
     emit_sh_ljs_get_pointer(a, xTemp, xInput);
     emit_gccell_get_kind(a, wTemp, xTemp);
-    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
-    a.cmp(
+    emit_cellkind_in_range(
+        a,
         wTemp,
-        (uint32_t)CellKind::CallableKind_last -
-            (uint32_t)CellKind::CallableKind_first);
+        wTemp,
+        CellKind::CallableKind_first,
+        CellKind::CallableKind_last);
     emitCondCheck(a64::CondCode::kLS);
     a.bind(functionDoneLab);
   }
@@ -3413,11 +3430,12 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
     emit_gccell_get_kind(a, wTemp, xTemp);
-    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
-    a.cmp(
+    emit_cellkind_in_range(
+        a,
         wTemp,
-        (uint32_t)CellKind::CallableKind_last -
-            (uint32_t)CellKind::CallableKind_first);
+        wTemp,
+        CellKind::CallableKind_first,
+        CellKind::CallableKind_last);
     emitCondCheck(a64::CondCode::kHI);
     a.bind(objectDoneLab);
   }
@@ -3436,11 +3454,12 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
     emit_gccell_get_kind(a, wTemp, xTemp);
-    a.sub(wTemp, wTemp, CellKind::CallableKind_first);
-    a.cmp(
+    emit_cellkind_in_range(
+        a,
         wTemp,
-        (uint32_t)CellKind::CallableKind_last -
-            (uint32_t)CellKind::CallableKind_first);
+        wTemp,
+        CellKind::CallableKind_first,
+        CellKind::CallableKind_last);
     emitCondCheck(a64::CondCode::kLS);
     a.bind(functionDoneLab);
   }
