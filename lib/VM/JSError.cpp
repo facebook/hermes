@@ -480,6 +480,9 @@ ExecutionStatus JSError::recordStackTrace(
       codeBlock = prev->getCalleeCodeBlock();
       locals = prev->getSHLocals();
     }
+    // Assert that if the caller is a JSFunction, the IP was saved. But to be
+    // defensive, we still check it below.
+    assert(!codeBlock || savedIP);
     if (codeBlock && savedIP) {
       stack->emplace_back(
           BytecodeStackTraceInfo(codeBlock, codeBlock->getOffsetOf(savedIP)));

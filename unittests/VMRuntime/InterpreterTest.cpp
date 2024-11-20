@@ -204,7 +204,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
     ScopedNativeCallFrame frame(
         runtime,
         0,
-        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeNativePointer(codeBlock),
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(frame.overflowed());
@@ -380,7 +380,7 @@ L1:
       ScopedNativeCallFrame newFrame(
           runtime,
           1,
-          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeNativePointer(codeBlock),
           HermesValue::encodeUndefinedValue(),
           HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());

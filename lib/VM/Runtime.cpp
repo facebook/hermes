@@ -798,6 +798,14 @@ void Runtime::removeRuntimeModule(RuntimeModule *rm) {
 }
 
 #ifndef NDEBUG
+void Runtime::assertTopCodeBlockContainsIP(const inst::Inst *ip) const {
+  // Check that if the topmost function is currently a JSFunction, then the IP
+  // is in that function.
+  if (currentFrame_ != StackFramePtr(registerStackStart_))
+    if (auto *codeBlock = currentFrame_.getCalleeCodeBlock())
+      assert(codeBlock->contains(ip) && "IP not in CodeBlock");
+}
+
 void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Do array capacity histogram.
   // Map from array size to number of arrays that are that size.

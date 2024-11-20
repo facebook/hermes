@@ -1418,6 +1418,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   uint32_t noRJSLevel_{0};
 
   friend class NoRJSScope;
+
+  /// If the function currently at the top of the stack is a JSFunction, assert
+  /// that the given IP falls within it.
+  void assertTopCodeBlockContainsIP(const inst::Inst *ip) const;
 #endif
 
  public:
@@ -1428,6 +1432,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// return to the interpreter at a different IP. This allows things external
   /// to the interpreter loop to affect the flow of bytecode execution.
   inline void setCurrentIP(const inst::Inst *ip) {
+#ifdef HERMES_SLOW_DEBUG
+    assertTopCodeBlockContainsIP(ip);
+#endif
     currentIP_ = ip;
   }
 
@@ -1439,6 +1446,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     assert(
         (uintptr_t)currentIP_ != kInvalidCurrentIP &&
         "Current IP unknown - this probably means a CAPTURE_IP_* is missing in the interpreter.");
+#ifdef HERMES_SLOW_DEBUG
+    assertTopCodeBlockContainsIP(currentIP_);
+#endif
     return currentIP_;
   }
 
