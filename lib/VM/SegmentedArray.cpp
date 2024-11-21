@@ -17,6 +17,7 @@ template <typename HVType>
 const VTable SegmentedArrayBase<HVType>::Segment::vt(
     getCellKind(),
     cellSize<SegmentedArrayBase::Segment>(),
+    false,
     nullptr,
     nullptr,
     nullptr
@@ -76,6 +77,7 @@ template <typename HVType>
 const VTable SegmentedArrayBase<HVType>::vt(
     getCellKind(),
     /*variableSize*/ 0,
+    false,
     nullptr,
     nullptr,
     _trimSizeCallback

@@ -20,6 +20,7 @@ const ObjectVTable JSArrayBuffer::vt{
     VTable(
         CellKind::JSArrayBufferKind,
         cellSize<JSArrayBuffer>(),
+        false,
         _finalizeImpl,
         _mallocSizeImpl,
         nullptr
