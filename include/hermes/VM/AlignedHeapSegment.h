@@ -88,6 +88,10 @@ class AlignedHeapSegment {
     friend class FixedSizeHeapSegment;
     friend class AlignedHeapSegment;
 
+    /// Pass segment size to CardTable constructor to allocate its data
+    /// separately if \p sz > kSegmentUnitSize.
+    Contents(size_t segmentSize) : cardTable_(segmentSize) {}
+
     /// Note that because of the Contents object, the first few bytes of the
     /// card table are unused, we instead use them to store a small
     /// SHSegmentInfo struct.
@@ -174,6 +178,14 @@ class AlignedHeapSegment {
 
   /// Get the size of this segment.
   size_t storageSize() const {
+#ifdef HERMES_SLOW_DEBUG
+    auto *segmentInfo = reinterpret_cast<const SHSegmentInfo *>(lowLim_);
+    auto sz = (size_t)segmentInfo->shiftedSegmentSize
+        << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+    assert(
+        sz == segmentSize_ &&
+        "segmentSize_ in FixedSizeHeapSegment must always be equal to the size stored in SHSegmentInfo");
+#endif
     return segmentSize_;
   }
 
@@ -243,7 +255,7 @@ class AlignedHeapSegment {
   /// Construct Contents() at the address of \p lowLim.
   AlignedHeapSegment(void *lowLim, size_t segmentSize)
       : lowLim_(reinterpret_cast<char *>(lowLim)), segmentSize_(segmentSize) {
-    new (contents()) Contents();
+    new (contents()) Contents(segmentSize);
     contents()->protectGuardPage(oscompat::ProtectMode::None);
   }
 

@@ -22,10 +22,14 @@ namespace hermes {
 namespace vm {
 
 /// The card table optimizes young gen collections by restricting the amount of
-/// heap belonging to the old gen that must be scanned.  The card table expects
-/// to be constructed inside an FixedSizeHeapSegment's storage, at some position
-/// before the allocation region, and covers the extent of that storage's
-/// memory.
+/// heap belonging to the old gen that must be scanned. The card table expects
+/// to be constructed at the beginning of a segment's storage, and covers the
+/// extent of that storage's memory. There are two cases:
+/// 1. For FixedSizeHeapSegment, the inline CardStatus array and Boundary array
+/// in the card table is large enough.
+/// 2. For JumboHeapSegment, the two arrays are allocated separately.
+/// In either case, the pointers to the CardStatus array and Boundary array are
+/// stored in \c cards and \c boundaries field of SHSegmentInfo.
 ///
 /// Also supports the following query:  Given a card in the heap that intersects
 /// with the used portion of its segment, find its "crossing object" -- the
@@ -58,14 +62,19 @@ class CardTable {
     const char *address_{nullptr};
   };
 
+  enum class CardStatus : char { Clean = 0, Dirty = 1 };
+
   /// The size (and base-two log of the size) of cards used in the card table.
   static constexpr size_t kLogCardSize = 9; // ==> 512-byte cards.
   static constexpr size_t kCardSize = 1 << kLogCardSize; // ==> 512-byte cards.
-  static constexpr size_t kSegmentSize = 1 << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+  /// Maximum size of segment that can have inline cards and boundaries array.
+  static constexpr size_t kSegmentUnitSize = 1
+      << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
 
   /// The size of the maximum inline card table. CardStatus array and boundary
   /// array for larger segment has larger size and is stored separately.
-  static constexpr size_t kInlineCardTableSize = kSegmentSize >> kLogCardSize;
+  static constexpr size_t kInlineCardTableSize =
+      kSegmentUnitSize >> kLogCardSize;
 
   /// For convenience, this is a conversion factor to determine how many bytes
   /// in the heap correspond to a single byte in the card table. This is
@@ -95,16 +104,37 @@ class CardTable {
       sizeof(SHSegmentInfo),
       (2 * kInlineCardTableSize) >> kLogCardSize);
 
-  CardTable() {
-    // Preserve the segment size.
+  CardTable(size_t segmentSize) {
+    assert(
+        segmentSize && segmentSize % kSegmentUnitSize == 0 &&
+        "segmentSize must be a multiple of kSegmentUnitSize");
+
     segmentInfo_.shiftedSegmentSize =
-        kSegmentSize >> HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+        segmentSize >> HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+    if (segmentSize == kSegmentUnitSize) {
+      // Just use the inline storage.
+      setCards(inlineCardStatusArray_);
+      setBoundaries(inlineBoundaryArray_);
+    } else {
+      size_t cardTableSize = segmentSize >> kLogCardSize;
+      // CardStatus is clean by default, so must zero-initialize it.
+      setCards(new AtomicIfConcurrentGC<CardStatus>[cardTableSize] {});
+      setBoundaries(new int8_t[cardTableSize]);
+    }
   }
   /// CardTable is not copyable or movable: It must be constructed in-place.
   CardTable(const CardTable &) = delete;
   CardTable(CardTable &&) = delete;
   CardTable &operator=(const CardTable &) = delete;
   CardTable &operator=(CardTable &&) = delete;
+
+  ~CardTable() {
+    // If CardStatus/Boundary array is allocated separately, free them.
+    if (cards() != inlineCardStatusArray_) {
+      delete[] cards();
+      delete[] boundaries();
+    }
+  }
 
   /// Returns the card table index corresponding to a byte at the given address.
   /// \pre \p addr must be within the bounds of the segment owning this card
@@ -118,8 +148,7 @@ class CardTable {
   /// of how this is used.
   inline size_t addressToIndex(const void *addr) const LLVM_NO_SANITIZE("null");
 
-  /// Returns the address corresponding to the given card table
-  /// index.
+  /// Returns the address corresponding to the given card table index.
   ///
   /// \pre \p index is bounded:
   ///
@@ -128,7 +157,15 @@ class CardTable {
 
   /// Make the card table entry for the given address dirty.
   /// \pre \p addr is required to be an address covered by the card table.
+  /// This only works for memory in normal objects (i.e., do not support large
+  /// allocation) and is more efficient than the version for large objects.
   inline void dirtyCardForAddress(const void *addr);
+
+  /// Make the card table entry for the given address dirty.
+  /// \pre \p addr is required to be an address covered by the card table.
+  /// This reads the cards array pointer from SHSegmentInfo, so works for normal
+  /// and large objects.
+  inline void dirtyCardForAddressInLargeObj(const void *addr);
 
   /// Make the card table entries for cards that intersect the given address
   /// range dirty.  The range is a closed interval [low, high].
@@ -138,18 +175,27 @@ class CardTable {
 
   /// Returns whether the card table entry for the given address is dirty.
   /// \pre \p addr is required to be an address covered by the card table.
+  /// This only works for memory in normal objects (i.e., do not support large
+  /// allocation) and is more efficient than the version for large objects.
   inline bool isCardForAddressDirty(const void *addr) const;
 
   /// Returns whether the card table entry for the given index is dirty.
   /// \pre \p index is required to be a valid card table index.
+  /// This only works for memory in normal objects (i.e., do not support large
+  /// allocation) and is more efficient than the version for large objects.
   inline bool isCardForIndexDirty(const size_t index) const;
+
+  /// Version of isCardForAddressDirty()/isCardForIndexDirty that works for
+  /// normal and large objects.
+  inline bool isCardForAddressDirtyInLargeObj(const void *addr) const;
+  inline bool isCardForIndexDirtyInLargeObj(const size_t index) const;
 
   /// If there is a dirty card at or after \p fromIndex, at an index less than
   /// \p endIndex, returns the index of the dirty card, else returns none.
   inline OptValue<size_t> findNextDirtyCard(size_t fromIndex, size_t endIndex)
       const;
 
-  /// If there is a card card at or after \p fromIndex, at an index less than
+  /// If there is a card at or after \p fromIndex, at an index less than
   /// \p endIndex, returns the index of the clean card, else returns none.
   inline OptValue<size_t> findNextCleanCard(size_t fromIndex, size_t endIndex)
       const;
@@ -207,7 +253,7 @@ class CardTable {
   /// for the given \p index.
   /// TODO(T48709128): remove this when the problem is diagnosed.
   int8_t cardObjectTableValue(unsigned index) const {
-    return boundaries_[index];
+    return boundaries()[index];
   }
 
   /// These methods protect and unprotect, respectively, the memory
@@ -240,7 +286,21 @@ class CardTable {
   }
 #endif
 
-  enum class CardStatus : char { Clean = 0, Dirty = 1 };
+  void setCards(AtomicIfConcurrentGC<CardStatus> *cards) {
+    segmentInfo_.cards = cards;
+  }
+
+  AtomicIfConcurrentGC<CardStatus> *cards() const {
+    return static_cast<AtomicIfConcurrentGC<CardStatus> *>(segmentInfo_.cards);
+  }
+
+  void setBoundaries(int8_t *boundaries) {
+    segmentInfo_.boundaries = boundaries;
+  }
+
+  int8_t *boundaries() const {
+    return segmentInfo_.boundaries;
+  }
 
   /// \return The lowest address whose card can be dirtied in this array. i.e.
   ///     The smallest address such that
@@ -278,16 +338,24 @@ class CardTable {
   union {
     /// The bytes occupied by segmentInfo_ are guaranteed to be not override by
     /// writes to cards_ array. See static assertions in AlignedHeapSegment.
+    /// Pointers to the underlying CardStatus array and boundary array are
+    /// stored in it. Note that we could also store the boundary array in a
+    /// union along with inlineBoundaryArray_, since that array has unused
+    /// prefix bytes as well. It will save 8 bytes here. But it makes the size
+    /// check more complex as we need to ensure that the segment size is large
+    /// enough so that inlineBoundaryArray_ has enough unused prefix bytes to
+    /// store the pointer.
     SHSegmentInfo segmentInfo_;
     /// This needs to be atomic so that the background thread in Hades can
     /// safely dirty cards when compacting.
-    std::array<AtomicIfConcurrentGC<CardStatus>, kInlineCardTableSize> cards_{};
+    AtomicIfConcurrentGC<CardStatus>
+        inlineCardStatusArray_[kInlineCardTableSize]{};
   };
 
   /// See the comment at kHeapBytesPerCardByte above to see why this is
   /// necessary.
   static_assert(
-      sizeof(cards_[0]) == 1,
+      sizeof(inlineCardStatusArray_[0]) == 1,
       "Validate assumption that card table entries are one byte");
 
   /// Each card has a corresponding signed byte in the boundaries_ table.  A
@@ -300,7 +368,7 @@ class CardTable {
   /// time:  If we allocate a large object that crosses many cards, the first
   /// crossed cards gets a non-negative value, and each subsequent one uses the
   /// maximum exponent that stays within the card range for the object.
-  int8_t boundaries_[kInlineCardTableSize];
+  int8_t inlineBoundaryArray_[kInlineCardTableSize];
 };
 
 /// Implementations of inlines.
@@ -339,7 +407,16 @@ inline const char *CardTable::indexToAddress(size_t index) const {
 }
 
 inline void CardTable::dirtyCardForAddress(const void *addr) {
-  cards_[addressToIndex(addr)].store(
+  // Make sure that this is not called on a large segment.
+  assert(
+      inlineCardStatusArray_ == cards() &&
+      "CardStatus array for this CardTable is allocated separately");
+  inlineCardStatusArray_[addressToIndex(addr)].store(
+      CardStatus::Dirty, std::memory_order_relaxed);
+}
+
+inline void CardTable::dirtyCardForAddressInLargeObj(const void *addr) {
+  cards()[addressToIndex(addr)].store(
       CardStatus::Dirty, std::memory_order_relaxed);
 }
 
@@ -349,7 +426,21 @@ inline bool CardTable::isCardForAddressDirty(const void *addr) const {
 
 inline bool CardTable::isCardForIndexDirty(size_t index) const {
   assert(index < getEndIndex() && "index is required to be in range.");
-  return cards_[index].load(std::memory_order_relaxed) == CardStatus::Dirty;
+  // Make sure that this is not called on a large segment.
+  assert(
+      inlineCardStatusArray_ == cards() &&
+      "CardStatus array for this CardTable is allocated separately");
+  return inlineCardStatusArray_[index].load(std::memory_order_relaxed) ==
+      CardStatus::Dirty;
+}
+
+inline bool CardTable::isCardForAddressDirtyInLargeObj(const void *addr) const {
+  return isCardForIndexDirtyInLargeObj(addressToIndex(addr));
+}
+
+inline bool CardTable::isCardForIndexDirtyInLargeObj(size_t index) const {
+  assert(index < getEndIndex() && "index is required to be in range.");
+  return cards()[index].load(std::memory_order_relaxed) == CardStatus::Dirty;
 }
 
 inline OptValue<size_t> CardTable::findNextDirtyCard(
@@ -373,9 +464,9 @@ inline CardTable::Boundary CardTable::nextBoundary(const char *level) const {
 }
 
 inline const char *CardTable::base() const {
-  // As we know the card table is laid out inline before the allocation region
-  // of its aligned heap segment, we can use its own this pointer as the base
-  // address.
+  // As we know the card table is laid out inline at the beginning of the
+  // segment storage, which is before the allocation region, we can use its own
+  // this pointer as the base address.
   return reinterpret_cast<const char *>(this);
 }
 

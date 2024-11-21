@@ -414,8 +414,8 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     if (CompactionEnabled && gc.compactee_.contains(ptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
-          heapLoc);
+      FixedSizeHeapSegment::cardTableCovering(heapLoc)
+          ->dirtyCardForAddressInLargeObj(heapLoc);
     }
     return ptr;
   }
@@ -432,8 +432,8 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     if (CompactionEnabled && gc.compactee_.contains(cptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
-          heapLoc);
+      FixedSizeHeapSegment::cardTableCovering(heapLoc)
+          ->dirtyCardForAddressInLargeObj(heapLoc);
     }
     return cptr;
   }
@@ -645,8 +645,8 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
-          heapLoc);
+      FixedSizeHeapSegment::cardTableCovering(heapLoc)
+          ->dirtyCardForAddressInLargeObj(heapLoc);
     }
     if (AlignedHeapSegment::getCellMarkBit(cell)) {
       // Points to an already marked object, do nothing.
@@ -2704,8 +2704,8 @@ void HadesGC::scanDirtyCardsForSegment(
     const auto iEnd = oiEnd ? *oiEnd : to;
 
     assert(
-        (iEnd == to || !cardTable.isCardForIndexDirty(iEnd)) &&
-        cardTable.isCardForIndexDirty(iEnd - 1) &&
+        (iEnd == to || !cardTable.isCardForIndexDirtyInLargeObj(iEnd)) &&
+        cardTable.isCardForIndexDirtyInLargeObj(iEnd - 1) &&
         "end should either be the end of the card table, or the first "
         "non-dirty card after a sequence of dirty cards");
     assert(iBegin < iEnd && "Indices must be apart by at least one");
@@ -3098,7 +3098,7 @@ void HadesGC::verifyCardTable() {
       if (!gc.inYoungGen(locPtr) &&
           (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
         assert(FixedSizeHeapSegment::cardTableCovering(locPtr)
-                   ->isCardForAddressDirty(locPtr));
+                   ->isCardForAddressDirtyInLargeObj(locPtr));
       }
     }
 
