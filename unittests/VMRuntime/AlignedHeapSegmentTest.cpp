@@ -37,18 +37,18 @@ static char *alignPointer(char *p, size_t align) {
 struct AlignedHeapSegmentTest : public ::testing::Test {
   AlignedHeapSegmentTest()
       : provider_(StorageProvider::mmapProvider()),
-        s(std::move(AlignedHeapSegment::create(provider_.get()).get())) {}
+        s(std::move(FixedSizeHeapSegment::create(provider_.get()).get())) {}
 
   ~AlignedHeapSegmentTest() = default;
 
   std::unique_ptr<StorageProvider> provider_;
-  AlignedHeapSegment s;
+  FixedSizeHeapSegment s;
 };
 
 #ifndef NDEBUG
 TEST_F(AlignedHeapSegmentTest, FailedAllocation) {
   LimitedStorageProvider limitedProvider{StorageProvider::mmapProvider(), 0};
-  auto result = AlignedHeapSegment::create(&limitedProvider);
+  auto result = FixedSizeHeapSegment::create(&limitedProvider);
   EXPECT_FALSE(result);
 }
 #endif // !NDEBUG
@@ -57,48 +57,48 @@ TEST_F(AlignedHeapSegmentTest, Start) {
   char *lo = s.lowLim();
   char *hi = s.hiLim();
 
-  EXPECT_EQ(lo, AlignedHeapSegment::storageStart(lo));
+  EXPECT_EQ(lo, FixedSizeHeapSegment::storageStart(lo));
   EXPECT_EQ(
       lo,
-      AlignedHeapSegment::storageStart(
-          lo + AlignedHeapSegment::storageSize() / 2));
-  EXPECT_EQ(lo, AlignedHeapSegment::storageStart(hi - 1));
+      FixedSizeHeapSegment::storageStart(
+          lo + FixedSizeHeapSegment::storageSize() / 2));
+  EXPECT_EQ(lo, FixedSizeHeapSegment::storageStart(hi - 1));
 
   // `hi` is the first address in the storage following \c storage (if
   // such a storage existed).
-  EXPECT_EQ(hi, AlignedHeapSegment::storageStart(hi));
+  EXPECT_EQ(hi, FixedSizeHeapSegment::storageStart(hi));
 }
 
 TEST_F(AlignedHeapSegmentTest, End) {
   char *lo = s.lowLim();
   char *hi = s.hiLim();
 
-  EXPECT_EQ(hi, AlignedHeapSegment::storageEnd(lo));
+  EXPECT_EQ(hi, FixedSizeHeapSegment::storageEnd(lo));
   EXPECT_EQ(
       hi,
-      AlignedHeapSegment::storageEnd(
-          lo + AlignedHeapSegment::storageSize() / 2));
-  EXPECT_EQ(hi, AlignedHeapSegment::storageEnd(hi - 1));
+      FixedSizeHeapSegment::storageEnd(
+          lo + FixedSizeHeapSegment::storageSize() / 2));
+  EXPECT_EQ(hi, FixedSizeHeapSegment::storageEnd(hi - 1));
 
   // `hi` is the first address in the storage following \c storage (if
   // such a storage existed).
   EXPECT_EQ(
-      hi + AlignedHeapSegment::storageSize(),
-      AlignedHeapSegment::storageEnd(hi));
+      hi + FixedSizeHeapSegment::storageSize(),
+      FixedSizeHeapSegment::storageEnd(hi));
 }
 
 TEST_F(AlignedHeapSegmentTest, Offset) {
   char *lo = s.lowLim();
   char *hi = s.hiLim();
-  const size_t size = AlignedHeapSegment::storageSize();
+  const size_t size = FixedSizeHeapSegment::storageSize();
 
-  EXPECT_EQ(0, AlignedHeapSegment::offset(lo));
-  EXPECT_EQ(size / 2, AlignedHeapSegment::offset(lo + size / 2));
-  EXPECT_EQ(size - 1, AlignedHeapSegment::offset(hi - 1));
+  EXPECT_EQ(0, FixedSizeHeapSegment::offset(lo));
+  EXPECT_EQ(size / 2, FixedSizeHeapSegment::offset(lo + size / 2));
+  EXPECT_EQ(size - 1, FixedSizeHeapSegment::offset(hi - 1));
 
   // `hi` is the first address in the storage following \c storage (if
   // such a storage existed).
-  EXPECT_EQ(0, AlignedHeapSegment::offset(hi));
+  EXPECT_EQ(0, FixedSizeHeapSegment::offset(hi));
 }
 
 TEST_F(AlignedHeapSegmentTest, AdviseUnused) {
@@ -108,16 +108,16 @@ TEST_F(AlignedHeapSegmentTest, AdviseUnused) {
 #if !defined(_WINDOWS) && !defined(HERMESVM_ALLOW_HUGE_PAGES)
   const size_t PG_SIZE = oscompat::page_size();
 
-  ASSERT_EQ(0, AlignedHeapSegment::storageSize() % PG_SIZE);
+  ASSERT_EQ(0, FixedSizeHeapSegment::storageSize() % PG_SIZE);
 
-  const size_t TOTAL_PAGES = AlignedHeapSegment::storageSize() / PG_SIZE;
+  const size_t TOTAL_PAGES = FixedSizeHeapSegment::storageSize() / PG_SIZE;
   const size_t FREED_PAGES = TOTAL_PAGES / 2;
 
   // We can't use the storage of s here since it contains guard pages and also
   // s.start() may not align to actual page boundary.
   void *storage = provider_->newStorage().get();
   char *start = reinterpret_cast<char *>(storage);
-  char *end = start + AlignedHeapSegment::storageSize();
+  char *end = start + FixedSizeHeapSegment::storageSize();
 
   // On some platforms, the mapping containing [start, end) can be larger than
   // [start, end) itself, and the extra space may already contribute to the
@@ -151,15 +151,15 @@ TEST_F(AlignedHeapSegmentTest, Containment) {
   EXPECT_FALSE(s.contains(s.hiLim()));
 
   // Interior
-  EXPECT_TRUE(s.contains(s.lowLim() + AlignedHeapSegment::storageSize() / 2));
+  EXPECT_TRUE(s.contains(s.lowLim() + FixedSizeHeapSegment::storageSize() / 2));
 }
 
 TEST_F(AlignedHeapSegmentTest, Alignment) {
   /**
-   * This test alternates between allocating an AlignedHeapSegment, and an
+   * This test alternates between allocating an FixedSizeHeapSegment, and an
    * anonymous "spacer" mapping such that the i-th spacer has size:
    *
-   *     AlignedHeapSegment::storageSize() + i MB
+   *     FixedSizeHeapSegment::storageSize() + i MB
    *
    * In the worst case the anonymous mappings are perfectly interleaved with the
    * aligned storage, and we must be intentional about aligning the storage
@@ -175,7 +175,7 @@ TEST_F(AlignedHeapSegmentTest, Alignment) {
    * - A box's width includes its left boundary and excludes its right boundary.
    * - A / boundary indicates 1MB belongs to the previous box and 1MB to the
    *   next.
-   * - Boxes labeled with `A` are AlignedHeapSegment.
+   * - Boxes labeled with `A` are FixedSizeHeapSegment.
    * - Boxes labeled with `S` are spacers.
    * - Boxes with no label are unmapped.
    *
@@ -183,16 +183,16 @@ TEST_F(AlignedHeapSegmentTest, Alignment) {
    * allocation pattern we (might) get from allocating in a tight loop.
    */
 
-  std::vector<AlignedHeapSegment> segments;
+  std::vector<FixedSizeHeapSegment> segments;
   std::vector<void *> spacers;
 
   const size_t MB = 1 << 20;
-  const size_t SIZE = AlignedHeapSegment::storageSize();
+  const size_t SIZE = FixedSizeHeapSegment::storageSize();
 
   for (size_t space = SIZE + MB; space < 2 * SIZE; space += MB) {
     segments.emplace_back(
-        std::move(AlignedHeapSegment::create(provider_.get()).get()));
-    AlignedHeapSegment &seg = segments.back();
+        std::move(FixedSizeHeapSegment::create(provider_.get()).get()));
+    FixedSizeHeapSegment &seg = segments.back();
 
     EXPECT_EQ(seg.lowLim(), alignPointer(seg.lowLim(), SIZE));
 
@@ -200,7 +200,7 @@ TEST_F(AlignedHeapSegmentTest, Alignment) {
   }
 
   { // When \c storages goes out of scope, it will correctly destruct the \c
-    // AlignedHeapSegment instances it holds. \c spacers, on the other hand,
+    // FixedSizeHeapSegment instances it holds. \c spacers, on the other hand,
     // holds only raw pointers, so we must clean them up manually:
     size_t space = SIZE + MB;
     for (void *spacer : spacers) {
@@ -252,7 +252,7 @@ TEST_F(AlignedHeapSegmentTest, AllocTest) {
 }
 
 TEST_F(AlignedHeapSegmentTest, FullSize) {
-  EXPECT_EQ(s.size(), AlignedHeapSegment::maxSize());
+  EXPECT_EQ(s.size(), FixedSizeHeapSegment::maxSize());
   EXPECT_EQ(s.size(), s.available());
   EXPECT_EQ(s.size(), s.hiLim() - s.start());
 
@@ -279,7 +279,7 @@ using AlignedHeapSegmentDeathTest = AlignedHeapSegmentTest;
 
 // Allocating into a null segment causes an assertion failure on !NDEBUG builds.
 TEST_F(AlignedHeapSegmentDeathTest, NullAlloc) {
-  AlignedHeapSegment s;
+  FixedSizeHeapSegment s;
   constexpr uint32_t SIZE = heapAlignSize(sizeof(GCCell));
   EXPECT_DEATH_IF_SUPPORTED({ s.alloc(SIZE); }, "null segment");
 }

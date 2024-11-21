@@ -33,7 +33,7 @@ struct CardObjectBoundaryNCTest : public ::testing::Test {
   }
 
   std::unique_ptr<StorageProvider> provider;
-  AlignedHeapSegment segment;
+  FixedSizeHeapSegment segment;
   CardTable::Boundary boundary;
 
   size_t segStartIndex;
@@ -41,7 +41,7 @@ struct CardObjectBoundaryNCTest : public ::testing::Test {
 
 CardObjectBoundaryNCTest::CardObjectBoundaryNCTest()
     : provider(StorageProvider::mmapProvider()),
-      segment(std::move(AlignedHeapSegment::create(provider.get()).get())),
+      segment(std::move(FixedSizeHeapSegment::create(provider.get()).get())),
       boundary(segment.cardTable().nextBoundary(segment.start())),
       segStartIndex(boundary.index()) {}
 

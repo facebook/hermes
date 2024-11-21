@@ -57,12 +57,12 @@ namespace {
 
 bool isAligned(void *p) {
   return (reinterpret_cast<uintptr_t>(p) &
-          (AlignedHeapSegment::storageSize() - 1)) == 0;
+          (FixedSizeHeapSegment::storageSize() - 1)) == 0;
 }
 
 char *alignAlloc(void *p) {
   return reinterpret_cast<char *>(llvh::alignTo(
-      reinterpret_cast<uintptr_t>(p), AlignedHeapSegment::storageSize()));
+      reinterpret_cast<uintptr_t>(p), FixedSizeHeapSegment::storageSize()));
 }
 
 void *getMmapHint() {
@@ -85,9 +85,9 @@ class VMAllocateStorageProvider final : public StorageProvider {
 class ContiguousVAStorageProvider final : public StorageProvider {
  public:
   ContiguousVAStorageProvider(size_t size)
-      : size_(llvh::alignTo<AlignedHeapSegment::storageSize()>(size)) {
+      : size_(llvh::alignTo<FixedSizeHeapSegment::storageSize()>(size)) {
     auto result = oscompat::vm_reserve_aligned(
-        size_, AlignedHeapSegment::storageSize(), getMmapHint());
+        size_, FixedSizeHeapSegment::storageSize(), getMmapHint());
     if (!result)
       hermes_fatal("Contiguous storage allocation failed.", result.getError());
     level_ = start_ = static_cast<char *>(*result);
@@ -104,13 +104,14 @@ class ContiguousVAStorageProvider final : public StorageProvider {
       freelist_.pop_back();
     } else if (level_ < start_ + size_) {
       storage =
-          std::exchange(level_, level_ + AlignedHeapSegment::storageSize());
+          std::exchange(level_, level_ + FixedSizeHeapSegment::storageSize());
     } else {
       return make_error_code(OOMError::MaxStorageReached);
     }
-    auto res = oscompat::vm_commit(storage, AlignedHeapSegment::storageSize());
+    auto res =
+        oscompat::vm_commit(storage, FixedSizeHeapSegment::storageSize());
     if (res) {
-      oscompat::vm_name(storage, AlignedHeapSegment::storageSize(), name);
+      oscompat::vm_name(storage, FixedSizeHeapSegment::storageSize(), name);
     }
     return res;
   }
@@ -118,12 +119,12 @@ class ContiguousVAStorageProvider final : public StorageProvider {
   void deleteStorageImpl(void *storage) override {
     assert(
         !llvh::alignmentAdjustment(
-            storage, AlignedHeapSegment::storageSize()) &&
+            storage, FixedSizeHeapSegment::storageSize()) &&
         "Storage not aligned");
     assert(storage >= start_ && storage < level_ && "Storage not in region");
     oscompat::vm_name(
-        storage, AlignedHeapSegment::storageSize(), kFreeRegionName);
-    oscompat::vm_uncommit(storage, AlignedHeapSegment::storageSize());
+        storage, FixedSizeHeapSegment::storageSize(), kFreeRegionName);
+    oscompat::vm_uncommit(storage, FixedSizeHeapSegment::storageSize());
     freelist_.push_back(storage);
   }
 
@@ -149,11 +150,11 @@ class MallocStorageProvider final : public StorageProvider {
 
 llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
     const char *name) {
-  assert(AlignedHeapSegment::storageSize() % oscompat::page_size() == 0);
+  assert(FixedSizeHeapSegment::storageSize() % oscompat::page_size() == 0);
   // Allocate the space, hoping it will be the correct alignment.
   auto result = oscompat::vm_allocate_aligned(
-      AlignedHeapSegment::storageSize(),
-      AlignedHeapSegment::storageSize(),
+      FixedSizeHeapSegment::storageSize(),
+      FixedSizeHeapSegment::storageSize(),
       getMmapHint());
   if (!result) {
     return result;
@@ -162,11 +163,11 @@ llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
   assert(isAligned(mem));
   (void)&isAligned;
 #ifdef HERMESVM_ALLOW_HUGE_PAGES
-  oscompat::vm_hugepage(mem, AlignedHeapSegment::storageSize());
+  oscompat::vm_hugepage(mem, FixedSizeHeapSegment::storageSize());
 #endif
 
   // Name the memory region on platforms that support naming.
-  oscompat::vm_name(mem, AlignedHeapSegment::storageSize(), name);
+  oscompat::vm_name(mem, FixedSizeHeapSegment::storageSize(), name);
   return mem;
 }
 
@@ -174,13 +175,13 @@ void VMAllocateStorageProvider::deleteStorageImpl(void *storage) {
   if (!storage) {
     return;
   }
-  oscompat::vm_free_aligned(storage, AlignedHeapSegment::storageSize());
+  oscompat::vm_free_aligned(storage, FixedSizeHeapSegment::storageSize());
 }
 
 llvh::ErrorOr<void *> MallocStorageProvider::newStorageImpl(const char *name) {
   // name is unused, can't name malloc memory.
   (void)name;
-  void *mem = checkedMalloc2(AlignedHeapSegment::storageSize(), 2u);
+  void *mem = checkedMalloc2(FixedSizeHeapSegment::storageSize(), 2u);
   void *lowLim = alignAlloc(mem);
   assert(isAligned(lowLim) && "New storage should be aligned");
   lowLimToAllocHandle_[lowLim] = mem;

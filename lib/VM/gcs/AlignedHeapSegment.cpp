@@ -22,6 +22,17 @@
 namespace hermes {
 namespace vm {
 
+#ifndef NDEBUG
+/// Set the given range [start, end) to a dead value.
+static void clearRange(char *start, char *end) {
+#if LLVM_ADDRESS_SANITIZER_BUILD
+  __asan_poison_memory_region(start, end - start);
+#else
+  std::memset(start, kInvalidHeapValue, end - start);
+#endif
+}
+#endif
+
 void AlignedHeapSegment::Contents::protectGuardPage(
     oscompat::ProtectMode mode) {
   char *begin = &paddedGuardPage_[kGuardPagePadding];
@@ -33,23 +44,21 @@ void AlignedHeapSegment::Contents::protectGuardPage(
   }
 }
 
-llvh::ErrorOr<AlignedHeapSegment> AlignedHeapSegment::create(
-    StorageProvider *provider) {
-  return create(provider, nullptr);
-}
-
-llvh::ErrorOr<AlignedHeapSegment> AlignedHeapSegment::create(
+llvh::ErrorOr<FixedSizeHeapSegment> FixedSizeHeapSegment::create(
     StorageProvider *provider,
     const char *name) {
   auto result = provider->newStorage(name);
   if (!result) {
     return result.getError();
   }
-  return AlignedHeapSegment{provider, *result};
+  assert(*result && "Heap segment storage allocation failure");
+  return FixedSizeHeapSegment{provider, *result};
 }
 
-AlignedHeapSegment::AlignedHeapSegment(StorageProvider *provider, void *lowLim)
-    : lowLim_(static_cast<char *>(lowLim)), provider_(provider) {
+FixedSizeHeapSegment::FixedSizeHeapSegment(
+    StorageProvider *provider,
+    void *lowLim)
+    : AlignedHeapSegment(lowLim), provider_(provider) {
   assert(
       storageStart(lowLim_) == lowLim_ &&
       "The lower limit of this storage must be aligned");
@@ -58,16 +67,12 @@ AlignedHeapSegment::AlignedHeapSegment(StorageProvider *provider, void *lowLim)
   assert(
       reinterpret_cast<uintptr_t>(hiLim()) % oscompat::page_size() == 0 &&
       "The higher limit must be page aligned");
-  if (*this) {
-    new (contents()) Contents();
-    contents()->protectGuardPage(oscompat::ProtectMode::None);
 #ifndef NDEBUG
-    clear();
+  clear();
 #endif
-  }
 }
 
-void swap(AlignedHeapSegment &a, AlignedHeapSegment &b) {
+void swap(FixedSizeHeapSegment &a, FixedSizeHeapSegment &b) {
   // Field lowLim_ and provider_ need to be swapped to make sure the storage of
   // a is not deleted when b is destroyed.
   std::swap(a.lowLim_, b.lowLim_);
@@ -76,17 +81,18 @@ void swap(AlignedHeapSegment &a, AlignedHeapSegment &b) {
   std::swap(a.effectiveEnd_, b.effectiveEnd_);
 }
 
-AlignedHeapSegment::AlignedHeapSegment(AlignedHeapSegment &&other)
-    : AlignedHeapSegment() {
+FixedSizeHeapSegment::FixedSizeHeapSegment(FixedSizeHeapSegment &&other)
+    : FixedSizeHeapSegment() {
   swap(*this, other);
 }
 
-AlignedHeapSegment &AlignedHeapSegment::operator=(AlignedHeapSegment &&other) {
+FixedSizeHeapSegment &FixedSizeHeapSegment::operator=(
+    FixedSizeHeapSegment &&other) {
   swap(*this, other);
   return *this;
 }
 
-AlignedHeapSegment::~AlignedHeapSegment() {
+FixedSizeHeapSegment::~FixedSizeHeapSegment() {
   if (lowLim() == nullptr) {
     return;
   }
@@ -99,7 +105,7 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   }
 }
 
-void AlignedHeapSegment::markUnused(char *start, char *end) {
+void FixedSizeHeapSegment::markUnused(char *start, char *end) {
   assert(
       !llvh::alignmentAdjustment(start, oscompat::page_size()) &&
       !llvh::alignmentAdjustment(end, oscompat::page_size()));
@@ -116,11 +122,11 @@ void AlignedHeapSegment::markUnused(char *start, char *end) {
 }
 
 template <AdviseUnused MU>
-void AlignedHeapSegment::setLevel(char *lvl) {
+void FixedSizeHeapSegment::setLevel(char *lvl) {
   assert(dbgContainsLevel(lvl));
   if (lvl < level_) {
 #ifndef NDEBUG
-    clear(lvl, level_);
+    clearRange(lvl, level_);
 #else
     if (MU == AdviseUnused::Yes) {
       const size_t PS = oscompat::page_size();
@@ -137,19 +143,19 @@ void AlignedHeapSegment::setLevel(char *lvl) {
 }
 
 /// Explicit template instantiations for setLevel
-template void AlignedHeapSegment::setLevel<AdviseUnused::Yes>(char *lvl);
-template void AlignedHeapSegment::setLevel<AdviseUnused::No>(char *lvl);
+template void FixedSizeHeapSegment::setLevel<AdviseUnused::Yes>(char *lvl);
+template void FixedSizeHeapSegment::setLevel<AdviseUnused::No>(char *lvl);
 
 template <AdviseUnused MU>
-void AlignedHeapSegment::resetLevel() {
+void FixedSizeHeapSegment::resetLevel() {
   setLevel<MU>(start());
 }
 
 /// Explicit template instantiations for resetLevel
-template void AlignedHeapSegment::resetLevel<AdviseUnused::Yes>();
-template void AlignedHeapSegment::resetLevel<AdviseUnused::No>();
+template void FixedSizeHeapSegment::resetLevel<AdviseUnused::Yes>();
+template void FixedSizeHeapSegment::resetLevel<AdviseUnused::No>();
 
-void AlignedHeapSegment::setEffectiveEnd(char *effectiveEnd) {
+void FixedSizeHeapSegment::setEffectiveEnd(char *effectiveEnd) {
   assert(
       start() <= effectiveEnd && effectiveEnd <= end() &&
       "Must be valid end for segment.");
@@ -157,33 +163,25 @@ void AlignedHeapSegment::setEffectiveEnd(char *effectiveEnd) {
   effectiveEnd_ = effectiveEnd;
 }
 
-void AlignedHeapSegment::clearExternalMemoryCharge() {
+void FixedSizeHeapSegment::clearExternalMemoryCharge() {
   setEffectiveEnd(end());
 }
 
 #ifndef NDEBUG
-bool AlignedHeapSegment::dbgContainsLevel(const void *lvl) const {
+bool FixedSizeHeapSegment::dbgContainsLevel(const void *lvl) const {
   return contains(lvl) || lvl == hiLim();
 }
 
-bool AlignedHeapSegment::validPointer(const void *p) const {
+bool FixedSizeHeapSegment::validPointer(const void *p) const {
   return start() <= p && p < level() &&
       static_cast<const GCCell *>(p)->isValid();
 }
 
-void AlignedHeapSegment::clear() {
-  clear(start(), end());
+void FixedSizeHeapSegment::clear() {
+  clearRange(start(), end());
 }
 
-/* static */ void AlignedHeapSegment::clear(char *start, char *end) {
-#if LLVM_ADDRESS_SANITIZER_BUILD
-  __asan_poison_memory_region(start, end - start);
-#else
-  std::memset(start, kInvalidHeapValue, end - start);
-#endif
-}
-
-/* static */ void AlignedHeapSegment::checkUnwritten(char *start, char *end) {
+/* static */ void FixedSizeHeapSegment::checkUnwritten(char *start, char *end) {
 #if !LLVM_ADDRESS_SANITIZER_BUILD && defined(HERMES_SLOW_DEBUG)
   // Check that the space was not written into.
   std::for_each(
