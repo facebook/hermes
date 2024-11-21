@@ -172,6 +172,22 @@ class AlignedHeapSegment {
     return lowLim_;
   }
 
+  /// Get the size of this segment.
+  size_t storageSize() const {
+    return segmentSize_;
+  }
+
+  /// The largest size the allocation region of an aligned heap segment could
+  /// be.
+  size_t maxSize() const {
+    return storageSize() - kOffsetOfAllocRegion;
+  }
+
+  /// Returns the address that is the upper bound of the segment.
+  char *hiLim() const {
+    return lowLim() + storageSize();
+  }
+
   /// Returns the address at which the first allocation in this segment would
   /// occur.
   /// Disable UB sanitization because 'this' may be null during the tests.
@@ -225,7 +241,8 @@ class AlignedHeapSegment {
   AlignedHeapSegment() = default;
 
   /// Construct Contents() at the address of \p lowLim.
-  AlignedHeapSegment(void *lowLim) : lowLim_(reinterpret_cast<char *>(lowLim)) {
+  AlignedHeapSegment(void *lowLim, size_t segmentSize)
+      : lowLim_(reinterpret_cast<char *>(lowLim)), segmentSize_(segmentSize) {
     new (contents()) Contents();
     contents()->protectGuardPage(oscompat::ProtectMode::None);
   }
@@ -248,6 +265,9 @@ class AlignedHeapSegment {
   /// The current address in this segment to allocate new object. This must be
   /// positioned after lowLim_ to be correctly initialized.
   char *level_{start()};
+
+  /// The size of this segment.
+  size_t segmentSize_;
 
  private:
   /// Return the starting address for aligned region of size kSegmentUnitSize
@@ -292,7 +312,9 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   /// Mask for isolating the storage being pointed into by a pointer.
   static constexpr size_t kHighMask{~kLowMask};
 
-  /// Returns the storage size, in bytes, of an \c FixedSizeHeapSegment.
+  /// Returns the storage size, in bytes, of an \c FixedSizeHeapSegment. This is
+  /// a static override of AlignedHeapSegment::storageSize(), since here the
+  /// segment size is a constant.
   static constexpr size_t storageSize() {
     return kSize;
   }
@@ -386,7 +408,7 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   static inline void setCellHead(const GCCell *start, const size_t sz);
 
   /// The largest size the allocation region of an aligned heap segment could
-  /// be.
+  /// be. This is a static override of AlignedHeapSegment::maxSize().
   inline static constexpr size_t maxSize();
 
   /// The size of the allocation region in this aligned heap segment.
@@ -397,11 +419,6 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
 
   /// The number of bytes in the segment that are available for allocation.
   inline size_t available() const;
-
-  /// Returns the address that is the upper bound of the segment.
-  char *hiLim() const {
-    return lowLim() + storageSize();
-  }
 
   /// Returns the first address after the region in which allocations can occur,
   /// taking external memory credits into a account (they decrease the effective
@@ -555,7 +572,7 @@ void FixedSizeHeapSegment::setCellHead(
 }
 
 /* static */ constexpr size_t FixedSizeHeapSegment::maxSize() {
-  return storageSize() - offsetof(Contents, allocRegion_);
+  return storageSize() - kOffsetOfAllocRegion;
 }
 
 size_t FixedSizeHeapSegment::size() const {

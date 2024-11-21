@@ -58,7 +58,7 @@ llvh::ErrorOr<FixedSizeHeapSegment> FixedSizeHeapSegment::create(
 FixedSizeHeapSegment::FixedSizeHeapSegment(
     StorageProvider *provider,
     void *lowLim)
-    : AlignedHeapSegment(lowLim), provider_(provider) {
+    : AlignedHeapSegment(lowLim, kSize), provider_(provider) {
   assert(
       storageStart(lowLim_) == lowLim_ &&
       "The lower limit of this storage must be aligned");
@@ -78,6 +78,7 @@ void swap(FixedSizeHeapSegment &a, FixedSizeHeapSegment &b) {
   std::swap(a.lowLim_, b.lowLim_);
   std::swap(a.provider_, b.provider_);
   std::swap(a.level_, b.level_);
+  std::swap(a.segmentSize_, b.segmentSize_);
   std::swap(a.effectiveEnd_, b.effectiveEnd_);
 }
 
