@@ -201,16 +201,19 @@ pub enum NodeKind {
     TypeParameterInstantiation,
     TypeCastExpression,
     AsExpression,
+    AsConstExpression,
     InferredPredicate,
     DeclaredPredicate,
     EnumDeclaration,
     EnumStringBody,
     EnumNumberBody,
+    EnumBigIntBody,
     EnumBooleanBody,
     EnumSymbolBody,
     EnumDefaultedMember,
     EnumStringMember,
     EnumNumberMember,
+    EnumBigIntMember,
     EnumBooleanMember,
     ComponentParameter,
     _FlowLast,
@@ -655,6 +658,7 @@ extern "C" {
     pub fn hermes_get_QualifiedTypeofIdentifier_id(node: NodePtr) -> NodePtr;
     // TupleTypeAnnotation
     pub fn hermes_get_TupleTypeAnnotation_types(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_TupleTypeAnnotation_inexact(node: NodePtr) -> bool;
     // TupleTypeSpreadElement
     pub fn hermes_get_TupleTypeSpreadElement_label(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_TupleTypeSpreadElement_typeAnnotation(node: NodePtr) -> NodePtr;
@@ -689,7 +693,7 @@ extern "C" {
     // TypePredicate
     pub fn hermes_get_TypePredicate_parameterName(node: NodePtr) -> NodePtr;
     pub fn hermes_get_TypePredicate_typeAnnotation(node: NodePtr) -> NodePtrOpt;
-    pub fn hermes_get_TypePredicate_asserts(node: NodePtr) -> bool;
+    pub fn hermes_get_TypePredicate_kind(node: NodePtr) -> NodeStringOpt;
     // InterfaceTypeAnnotation
     pub fn hermes_get_InterfaceTypeAnnotation_extends(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_InterfaceTypeAnnotation_body(node: NodePtr) -> NodePtrOpt;
@@ -825,6 +829,8 @@ extern "C" {
     // AsExpression
     pub fn hermes_get_AsExpression_expression(node: NodePtr) -> NodePtr;
     pub fn hermes_get_AsExpression_typeAnnotation(node: NodePtr) -> NodePtr;
+    // AsConstExpression
+    pub fn hermes_get_AsConstExpression_expression(node: NodePtr) -> NodePtr;
     // DeclaredPredicate
     pub fn hermes_get_DeclaredPredicate_value(node: NodePtr) -> NodePtr;
     // EnumDeclaration
@@ -838,6 +844,10 @@ extern "C" {
     pub fn hermes_get_EnumNumberBody_members(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_EnumNumberBody_explicitType(node: NodePtr) -> bool;
     pub fn hermes_get_EnumNumberBody_hasUnknownMembers(node: NodePtr) -> bool;
+    // EnumBigIntBody
+    pub fn hermes_get_EnumBigIntBody_members(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_EnumBigIntBody_explicitType(node: NodePtr) -> bool;
+    pub fn hermes_get_EnumBigIntBody_hasUnknownMembers(node: NodePtr) -> bool;
     // EnumBooleanBody
     pub fn hermes_get_EnumBooleanBody_members(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_EnumBooleanBody_explicitType(node: NodePtr) -> bool;
@@ -853,6 +863,9 @@ extern "C" {
     // EnumNumberMember
     pub fn hermes_get_EnumNumberMember_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_EnumNumberMember_init(node: NodePtr) -> NodePtr;
+    // EnumBigIntMember
+    pub fn hermes_get_EnumBigIntMember_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_EnumBigIntMember_init(node: NodePtr) -> NodePtr;
     // EnumBooleanMember
     pub fn hermes_get_EnumBooleanMember_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_EnumBooleanMember_init(node: NodePtr) -> NodePtr;
