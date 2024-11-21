@@ -23,6 +23,13 @@ class HVMRegisterAllocator : public RegisterAllocator {
   unsigned max_parameter_count_ = 0;
   unsigned spill_count_ = 0;
 
+  /// The maximum depth of how many loops are nested in this function.
+  /// Higher numbers will result in more eager JITing of this function.
+  /// Default is 0, which means there's no loops that we've encountered.
+  /// Populated by ReorderRegisters, so if that doesn't run (optimizations
+  /// disabled), we'll assume all functions have no loops.
+  uint32_t maxLoopDepth_ = 0;
+
  protected:
   void handleInstruction(Instruction *I) override;
   void allocateCallInst(BaseCallInst *I);
@@ -96,6 +103,15 @@ class HVMRegisterAllocator : public RegisterAllocator {
       case RegClass::_last:
         hermes_fatal("register has no corresponding HVM index");
     }
+  }
+
+  /// \return the max loop depth.
+  uint32_t getMaxLoopDepth() const {
+    return maxLoopDepth_;
+  }
+  /// Set the max loop depth.
+  void setMaxLoopDepth(uint32_t depth) {
+    maxLoopDepth_ = depth;
   }
 };
 

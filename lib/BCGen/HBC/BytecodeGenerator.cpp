@@ -112,9 +112,19 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   assert(
       funcGen.complete_ && "ISel did not complete BytecodeFunctionGenerator");
 
+  // Get the number of bits needed to encode the loop depth.
+  // Avoid overflowing the FunctionHeader just for loop depth.
+#define DECLARE_BITFIELD(api_type, store_type, name, bits) \
+  [[maybe_unused]] constexpr uint32_t name##Width = bits;
+  FUNC_HEADER_FIELDS(DECLARE_BITFIELD)
+#undef DECLARE_BITFIELD
+
   FunctionHeader header{
       funcGen.bytecodeSize_,
       F->getExpectedParamCountIncludingThis(),
+      std::min(
+          RA.getMaxLoopDepth(),
+          llvh::maskTrailingOnes<uint32_t>(loopDepthWidth)),
       funcGen.frameSize_,
       RA.getMaxRegisterUsage(RegClass::Number),
       RA.getMaxRegisterUsage(RegClass::NonPtr),

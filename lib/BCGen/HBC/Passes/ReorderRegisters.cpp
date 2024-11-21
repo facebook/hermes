@@ -81,11 +81,14 @@ bool ReorderRegisters::runOnFunction(Function *F) {
   // Multiplier for loop depth, applied every nested loop.
   static constexpr double kLoopMultiplier = 10.0;
 
+  uint32_t maxNestingDepth = 0;
+
   // Record the types of each register.
   // Calculate scores for each of the registers based on loop depth, and add to
   // the score every time a register is used as an operand or as the result.
   for (BasicBlock &BB : *F) {
     uint32_t nestingDepth = getLoopNestingDepth(&BB);
+    maxNestingDepth = std::max(maxNestingDepth, nestingDepth);
     double loopScore = std::pow(kLoopMultiplier, (double)nestingDepth);
 
     for (Instruction &I : BB) {
@@ -154,6 +157,9 @@ bool ReorderRegisters::runOnFunction(Function *F) {
       RA_.updateRegister(&I, Register(reg.getClass(), newIdx));
     }
   }
+
+  // Set the loop score to the max nesting depth.
+  RA_.setMaxLoopDepth(maxNestingDepth);
 
   return true;
 }

@@ -257,7 +257,8 @@ static_assert(
 #define FUNC_HEADER_FIELDS(V)                    \
   /* first word */                               \
   V(uint32_t, uint32_t, offset, 25)              \
-  V(uint32_t, uint32_t, paramCount, 7)           \
+  V(uint32_t, uint32_t, paramCount, 5)           \
+  V(uint32_t, uint32_t, loopDepth, 2)            \
   /* second word */                              \
   V(uint32_t, uint32_t, bytecodeSizeInBytes, 14) \
   V(uint32_t, uint32_t, functionName, 8)         \
@@ -283,6 +284,7 @@ struct FunctionHeader {
   FunctionHeader(
       uint32_t size,
       uint32_t paramCount,
+      uint32_t loopDepth,
       uint32_t frameSize,
       uint32_t numberRegCount,
       uint32_t nonPtrRegCount,
@@ -291,6 +293,7 @@ struct FunctionHeader {
       uint8_t hiWCacheIndex)
       : offset(0),
         paramCount(paramCount),
+        loopDepth(loopDepth),
         bytecodeSizeInBytes(size),
         functionName(functionNameID),
         numberRegCount(numberRegCount),
