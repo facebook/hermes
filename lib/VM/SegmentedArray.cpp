@@ -294,7 +294,8 @@ ExecutionStatus SegmentedArrayBase<HVType>::growRight(
       self->inlineStorage(),
       self->inlineStorage() + numSlotsUsed,
       newSegmentedArray->inlineStorage(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      newSegmentedArray.get());
   // Set the size of the new array to be the same as the old array's size.
   newSegmentedArray->numSlotsUsed_.store(
       numSlotsUsed, std::memory_order_release);

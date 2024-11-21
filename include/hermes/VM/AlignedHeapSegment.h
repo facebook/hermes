@@ -283,6 +283,16 @@ class AlignedHeapSegment {
     return (cp - base) >> LogHeapAlign;
   }
 
+#ifndef NDEBUG
+  /// Get the storage end of segment that \p cell resides in.
+  static char *storageEnd(const GCCell *cell) {
+    auto *start = alignedStorageStart(cell);
+    auto *segmentInfo = reinterpret_cast<const SHSegmentInfo *>(start);
+    return start +
+        (segmentInfo->shiftedSegmentSize << HERMESVM_LOG_HEAP_SEGMENT_SIZE);
+  }
+#endif
+
  protected:
   AlignedHeapSegment() = default;
 

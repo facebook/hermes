@@ -216,27 +216,30 @@ class HadesGC final : public GCBase {
 
   template <typename HVType>
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCHermesValueBase<HVType> *start,
       uint32_t numHVs) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(start)))
-      constructorWriteBarrierRangeSlow(start, numHVs);
+      constructorWriteBarrierRangeSlow(owningObj, start, numHVs);
   }
   template <typename HVType>
   void constructorWriteBarrierRangeSlow(
+      const GCCell *owningObj,
       const GCHermesValueBase<HVType> *start,
       uint32_t numHVs) {
     assert(
-        FixedSizeHeapSegment::containedInSame(start, start + numHVs) &&
+        reinterpret_cast<const char *>(start + numHVs) <
+            AlignedHeapSegment::storageEnd(owningObj) &&
         "Range must start and end within a heap segment.");
 
-    // Most constructors should be running in the YG, so in the common case, we
-    // can avoid doing anything for the whole range. If the range is in the OG,
-    // then just dirty all the cards corresponding to it, and we can scan them
-    // for pointers later. This is less precise but makes the write barrier
-    // faster.
+    // Most constructors should be running in the YG, so in the common case,
+    // we can avoid doing anything for the whole range. If the range is in
+    // the OG, then just dirty all the cards corresponding to it, and we can
+    // scan them for pointers later. This is less precise but makes the
+    // write barrier faster.
 
-    FixedSizeHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
+    AlignedHeapSegment::cardTableCovering(owningObj)->dirtyCardsForAddressRange(
         start, start + numHVs);
   }
 

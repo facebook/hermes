@@ -1162,6 +1162,7 @@ class GCBase {
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
   template <typename HVType>
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCHermesValueBase<HVType> *start,
       uint32_t numHVs);
   template <typename HVType>
