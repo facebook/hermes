@@ -398,6 +398,7 @@ bool executeHBCBytecodeImpl(
 
   // TODO: surely this should use RuntimeConfig?
   runtime->getJITContext().setForceJIT(options.forceJIT);
+  runtime->getJITContext().setDefaultExecThreshold(options.jitThreshold);
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
   runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);

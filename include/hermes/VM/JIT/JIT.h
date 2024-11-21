@@ -94,6 +94,12 @@ class JITContext {
   /// Set the flag to force jitting of all functions.
   void setForceJIT(bool force) {}
 
+  /// Set the default threshold for function execution count before a function
+  /// is compiled. On a per-function basis, the count may be altered based on
+  /// internal heuristics.
+  /// Can be overridden by setForceJIT(true).
+  void setDefaultExecThreshold(uint32_t threshold) {}
+
   /// Set the flag to emit asserts in the JIT'ed code.
   void setEmitAsserts(bool emitAsserts) {}
 

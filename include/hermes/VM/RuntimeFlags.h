@@ -219,6 +219,13 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::desc("force JIT compilation of every function"),
       llvh::cl::init(false)};
 
+  llvh::cl::opt<uint32_t> JITThreshold{
+      "Xjit-threshold",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("default minimum number of invocations to JIT compile"),
+      llvh::cl::init(1 << 5)};
+
   /// To get the value of this CLI option, use the method below.
   llvh::cl::opt<unsigned> DumpJITCode{
       "Xdump-jitcode",
