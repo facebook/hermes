@@ -58,6 +58,8 @@ class LowerBuiltinCallsContext {
 
   /// Identifier of "apply".
   const Identifier applyID;
+  /// Identifier of "call".
+  const Identifier callID;
 
  private:
   /// Map from a builtin object to an integer "object index".
@@ -73,7 +75,8 @@ class LowerBuiltinCallsContext {
 
 LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab)
     : hermesInternalID(strTab.getIdentifier("HermesInternal")),
-      applyID(strTab.getIdentifier("apply")) {
+      applyID(strTab.getIdentifier("apply")),
+      callID(strTab.getIdentifier("call")) {
   // First insert all objects.
   int objIndex = 0;
 #define NORMAL_OBJECT(object)
@@ -91,6 +94,7 @@ LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab)
 #include "hermes/FrontEndDefs/Builtins.def"
 
   calleeNamesToTryOptimize_.insert(applyID);
+  calleeNamesToTryOptimize_.insert(callID);
 }
 
 hermes::OptValue<BuiltinMethod::Enum>
@@ -192,10 +196,55 @@ static bool tryOptimizeKnownCallable(
     BaseLoadPropertyInst *loadProp,
     LiteralString *propLit) {
   assert(callInst && loadProp && propLit && "no nullptrs");
-  // TODO: Optimize call().
 
   auto &builtins = LowerBuiltinCallsContext::get(F->getParent());
   IRBuilder::InstructionDestroyer destroyer;
+
+  if (propLit->getValue() == builtins.callID) {
+    // Add a fast path for "call" by splitting the basic block and trying to
+    // simply call the function if it's known to be Function.prototype.call.
+    BasicBlock *oldBB = callInst->getParent();
+    BasicBlock *newBB = splitBasicBlock(oldBB, callInst->getIterator());
+
+    BasicBlock *fastBB = builder.createBasicBlock(F);
+    BasicBlock *slowBB = builder.createBasicBlock(F);
+
+    builder.setInsertionBlock(oldBB);
+    builder.createBranchIfBuiltinInst(
+        BuiltinMethod::HermesBuiltin_functionPrototypeCall,
+        callInst->getCallee(),
+        fastBB,
+        slowBB);
+
+    builder.setInsertionBlock(fastBB);
+    llvh::SmallVector<Value *, 8> args{};
+    // f.call(this, arg1, arg2, ...)
+    //              ^ start here
+    // CallInst.getArgument(0) is the "this" value.
+    for (unsigned i = 2, e = callInst->getNumArguments(); i < e; ++i) {
+      args.push_back(callInst->getArgument(i));
+    }
+    auto *fastCall = builder.createCallInst(
+        callInst->getThis(),
+        /* newTarget */ builder.getLiteralUndefined(),
+        /* thisValue */ callInst->getNumArguments() > 1
+            ? callInst->getArgument(1)
+            : builder.getLiteralUndefined(),
+        args);
+    builder.createBranchInst(newBB);
+
+    builder.setInsertionBlock(slowBB);
+    auto *branchToNew = builder.createBranchInst(newBB);
+    callInst->moveBefore(branchToNew);
+
+    builder.setInsertionPoint(&*newBB->begin());
+    auto *phi = builder.createPhiInst();
+    callInst->replaceAllUsesWith(phi);
+    phi->addEntry(fastCall, fastBB);
+    phi->addEntry(callInst, slowBB);
+
+    return true;
+  }
 
   if (propLit->getValue() == builtins.applyID &&
       callInst->getNumArguments() == 3 &&
