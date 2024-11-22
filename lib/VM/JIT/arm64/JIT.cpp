@@ -297,10 +297,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(JmpBuiltinIs)
-EMIT_UNIMPLEMENTED(JmpBuiltinIsLong)
-EMIT_UNIMPLEMENTED(JmpBuiltinIsNot)
-EMIT_UNIMPLEMENTED(JmpBuiltinIsNotLong)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -533,6 +529,22 @@ inline void JITContext::Compiler::emitJmpTypeOfIs(
 inline void JITContext::Compiler::emitTypeOfIs(const inst::TypeOfIsInst *inst) {
   em_.typeOfIs(FR(inst->op1), FR(inst->op2), TypeOfIsTypes(inst->op3));
 }
+
+#define EMIT_JMP_BUILTIN_IS(name, invert)                                      \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.jmpBuiltinIs(                                                          \
+        invert,                                                                \
+        bbLabelFromInst(inst, inst->op1),                                      \
+        /* builtinIdx */ inst->op2,                                            \
+        FR(inst->op3));                                                        \
+  }
+
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIs, false)
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIsLong, false)
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIsNot, true)
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIsNotLong, true)
+
+#undef EMIT_JMP_BUILTIN_IS
 
 inline void JITContext::Compiler::emitSwitchImm(
     const inst::SwitchImmInst *inst) {

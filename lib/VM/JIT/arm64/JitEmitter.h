@@ -553,6 +553,11 @@ class Emitter {
   void jmpTrueFalse(bool onTrue, const asmjit::Label &target, FR frInput);
   void jmpUndefined(const asmjit::Label &target, FR frInput);
   void jmp(const asmjit::Label &target);
+  void jmpBuiltinIs(
+      bool invert,
+      const asmjit::Label &target,
+      uint8_t builtinIndex,
+      FR frInput);
 
   void booleanNot(FR frRes, FR frInput);
   void bitNot(FR frRes, FR frInput);

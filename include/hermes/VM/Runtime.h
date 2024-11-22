@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_RUNTIME_H
 #define HERMES_VM_RUNTIME_H
 
+#include "hermes/ADT/TransparentOwningPtr.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/RuntimeConfig.h"
@@ -1280,8 +1281,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// cycles while doing string conversions.
   std::vector<JSObject *> stringCycleCheckVisited_{};
 
-  /// Pointers to callable implementations of builtins.
-  std::vector<Callable *> builtins_{BuiltinMethod::_count};
+  /// Array of BuiltinMethod::_count length to callable implementations of
+  /// builtins.
+  ///
+  /// Allocated with calloc, will be free() by the destructor.
+  TransparentOwningPtr<Callable *, llvh::FreeDeleter> builtins_{};
 
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};

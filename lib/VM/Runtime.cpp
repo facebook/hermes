@@ -298,6 +298,8 @@ Runtime::Runtime(
       overflowGuard_(StackOverflowGuard::depthCounterGuard(
           Runtime::MAX_NATIVE_CALL_FRAME_DEPTH)),
 #endif
+      builtins_(static_cast<Callable **>(
+          checkedCalloc(BuiltinMethod::_count, sizeof(Callable *)))),
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
       codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(*this)),
@@ -593,8 +595,8 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Builtins);
     acceptor.beginRootSection(RootAcceptor::Section::Builtins);
-    for (Callable *&f : builtins_)
-      acceptor.acceptPtr(f);
+    for (size_t i = 0; i < BuiltinMethod::_count; ++i)
+      acceptor.acceptPtr(builtins_[i]);
     acceptor.endRootSection();
   }
 
@@ -1744,10 +1746,6 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
 
 void Runtime::initNativeBuiltins() {
   GCScopeMarkerRAII gcScope{*this};
-
-  assert(
-      builtins_.size() == BuiltinMethod::_count &&
-      "builtins_ resized at initialization time");
 
   (void)forEachPublicNativeBuiltin([this](
                                        unsigned methodIndex,

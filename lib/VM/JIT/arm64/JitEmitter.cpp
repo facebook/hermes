@@ -5030,6 +5030,49 @@ void Emitter::jmpUndefined(const asmjit::Label &target, FR frInput) {
   freeReg(hwTmpTag);
 }
 
+void Emitter::jmpBuiltinIs(
+    bool invert,
+    const asmjit::Label &target,
+    uint8_t builtinIndex,
+    FR frInput) {
+  comment(
+      "// JmpBuiltinIs%s r%u, %u",
+      invert ? "Not" : "",
+      frInput.index(),
+      builtinIndex);
+
+  // Do this always, since this could be the end of the BB.
+  syncAllFRTempExcept({});
+  HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+  HWReg hwBuiltin = allocTempGpX();
+  freeReg(hwBuiltin);
+  freeAllFRTempExcept({});
+
+  // Load builtin pointer.
+  static_assert(
+      std::is_same_v<
+          TransparentOwningPtr<Callable *, llvh::FreeDeleter>,
+          decltype(Runtime::builtins_)>,
+      "builtins_ is a list of Callable *");
+  static_assert(
+      offsetof(TransparentOwningPtr<Callable *>, ptr) == 0,
+      "TransparentOwningPtr must be transparent");
+  a.ldr(hwBuiltin.a64GpX(), a64::Mem(xRuntime, RuntimeOffsets::builtins));
+  a.ldr(
+      hwBuiltin.a64GpX(),
+      a64::Mem(hwBuiltin.a64GpX(), builtinIndex * sizeof(Callable *)));
+
+  // Encode an object HermesValue.
+  emit_sh_ljs_object(a, hwBuiltin.a64GpX());
+
+  // Compare the builtin pointer with the input, branch.
+  a.cmp(hwBuiltin.a64GpX(), hwInput.a64GpX());
+  if (!invert)
+    a.b_eq(target);
+  else
+    a.b_ne(target);
+}
+
 void Emitter::jCond(
     bool forceNumber,
     bool invert,
