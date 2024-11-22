@@ -13,6 +13,7 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/AST/NativeContext.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
@@ -1229,6 +1230,10 @@ class LiteralWrapper : public Literal, public llvh::FoldingSetNode {
   }
 };
 
+using LiteralBuiltinIdx = LiteralWrapper<
+    BuiltinMethod::Enum,
+    ValueKind::LiteralBuiltinIdxKind,
+    Type::createNumber>;
 using LiteralIRType =
     LiteralWrapper<Type, ValueKind::LiteralIRTypeKind, Type::createNull>;
 using LiteralTypeOfIsTypes = LiteralWrapper<
@@ -2299,6 +2304,7 @@ class Module : public Value {
   ValueOFS<LiteralBigInt> literalBigInts_{};
   ValueOFS<LiteralString> literalStrings_{};
   ValueOFS<GlobalObjectProperty> globalProperties_{};
+  ValueOFS<LiteralBuiltinIdx> literalBuiltinIdxs_{};
   ValueOFS<LiteralIRType> literalIRTypes_{};
   ValueOFS<LiteralTypeOfIsTypes> literalTypeOfIsTypes_{};
   ValueOFS<LiteralNativeSignature> nativeSignatures_{};
@@ -2452,6 +2458,9 @@ class Module : public Value {
 
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
+
+  /// Create a new literal representing an IR type.
+  LiteralBuiltinIdx *getLiteralBuiltinIdx(BuiltinMethod::Enum builtinIdx);
 
   /// Create a new literal representing an IR type.
   LiteralIRType *getLiteralIRType(Type value);

@@ -187,6 +187,10 @@ class IRBuilder {
   /// Create a new literal null.
   LiteralNull *getLiteralNull();
 
+  LiteralBuiltinIdx *getLiteralBuiltinIdx(BuiltinMethod::Enum builtinIdx) {
+    return M->getLiteralBuiltinIdx(builtinIdx);
+  }
+
   LiteralIRType *getLiteralIRType(Type type) {
     return M->getLiteralIRType(type);
   }

@@ -944,6 +944,11 @@ GlobalObjectProperty *Module::addGlobalProperty(
   return res;
 }
 
+LiteralBuiltinIdx *Module::getLiteralBuiltinIdx(
+    BuiltinMethod::Enum builtinIdx) {
+  return literalBuiltinIdxs_.getOrEmplace(builtinIdx).first;
+}
+
 LiteralIRType *Module::getLiteralIRType(Type value) {
   return literalIRTypes_.getOrEmplace(value).first;
 }

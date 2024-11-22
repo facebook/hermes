@@ -1216,7 +1216,7 @@ class CallBuiltinInst : public BaseCallInst {
  public:
   enum { ThisIdx = BaseCallInst::_LastIdx };
   explicit CallBuiltinInst(
-      LiteralNumber *callee,
+      LiteralBuiltinIdx *callee,
       EmptySentinel *target,
       LiteralBool *calleeIsAlwaysClosure,
       EmptySentinel *env,
@@ -1232,8 +1232,7 @@ class CallBuiltinInst : public BaseCallInst {
             /* thisValue */ undefined,
             args) {
     assert(
-        callee->getValue() == (int)callee->getValue() &&
-        callee->getValue() < (double)BuiltinMethod::_count &&
+        (uint32_t)callee->getData() < (uint32_t)BuiltinMethod::_count &&
         "invalid builtin call");
   }
   explicit CallBuiltinInst(
@@ -1242,7 +1241,7 @@ class CallBuiltinInst : public BaseCallInst {
       : BaseCallInst(src, operands) {}
 
   BuiltinMethod::Enum getBuiltinIndex() const {
-    return (BuiltinMethod::Enum)cast<LiteralNumber>(getCallee())->asInt32();
+    return cast<LiteralBuiltinIdx>(getCallee())->getData();
   }
 
   static bool classof(const Value *V) {
@@ -1257,10 +1256,10 @@ class GetBuiltinClosureInst : public Instruction {
  public:
   enum { BuiltinIndexIdx };
 
-  explicit GetBuiltinClosureInst(LiteralNumber *builtinIndex)
+  explicit GetBuiltinClosureInst(LiteralBuiltinIdx *builtinIndex)
       : Instruction(ValueKind::GetBuiltinClosureInstKind) {
     assert(
-        builtinIndex->asUInt32() < BuiltinMethod::_count &&
+        (uint32_t)builtinIndex->getData() < BuiltinMethod::_count &&
         "invalid builtin call");
     pushOperand(builtinIndex);
     setType(*getInherentTypeImpl());
@@ -1286,8 +1285,7 @@ class GetBuiltinClosureInst : public Instruction {
   }
 
   BuiltinMethod::Enum getBuiltinIndex() const {
-    return static_cast<BuiltinMethod::Enum>(
-        cast<LiteralNumber>(getOperand(BuiltinIndexIdx))->asInt32());
+    return cast<LiteralBuiltinIdx>(getOperand(BuiltinIndexIdx))->getData();
   }
 
   static bool classof(const Value *V) {

@@ -1035,7 +1035,7 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
     BuiltinMethod::Enum builtinIndex,
     ArrayRef<Value *> arguments) {
   auto *inst = new CallBuiltinInst(
-      getLiteralNumber(builtinIndex),
+      getLiteralBuiltinIdx(builtinIndex),
       getEmptySentinel(),
       getLiteralBool(false),
       getEmptySentinel(),
@@ -1047,7 +1047,7 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
 
 GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
     BuiltinMethod::Enum builtinIndex) {
-  auto *inst = new GetBuiltinClosureInst(getLiteralNumber(builtinIndex));
+  auto *inst = new GetBuiltinClosureInst(getLiteralBuiltinIdx(builtinIndex));
   insert(inst);
   return inst;
 }
