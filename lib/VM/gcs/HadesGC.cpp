@@ -412,6 +412,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       return forwardCell<GCCell *>(ptr);
     }
     if (CompactionEnabled && gc.compactee_.contains(ptr)) {
+      assert(currentCell_ && "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
       FixedSizeHeapSegment::cardTableCovering(heapLoc)
@@ -430,6 +431,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       return forwardCell<CompressedPointer>(ptr);
     }
     if (CompactionEnabled && gc.compactee_.contains(cptr)) {
+      assert(currentCell_ && "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
       FixedSizeHeapSegment::cardTableCovering(heapLoc)
@@ -553,6 +555,12 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
+  /// Set the current cell being visited.
+  void startCell(const GCCell *cell) {
+    if (CompactionEnabled)
+      currentCell_ = cell;
+  }
+
  private:
   HadesGC &gc;
   PointerBase &pointerBase_;
@@ -560,6 +568,10 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   AssignableCompressedPointer copyListHead_;
   const bool isTrackingIDs_;
   uint64_t evacuatedBytes_{0};
+
+  /// Current GCCell being visited. For heap locations that could be from a
+  /// large object, we need this pointer to get the correct card table.
+  const GCCell *currentCell_{nullptr};
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
@@ -642,6 +654,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
   void acceptHeap(GCCell *cell, const void *heapLoc) {
     assert(cell && "Cannot pass null pointer to acceptHeap");
     assert(!gc.inYoungGen(heapLoc) && "YG slot found in OG marking");
+    assert(currentCell_ && "There must be a cell being visited");
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
@@ -815,6 +828,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
           gc.dbgContains(cell) && "Non-heap object discovered during marking");
       const auto sz = cell->getAllocatedSize();
       numMarkedBytes += sz;
+      startCell(cell);
       gc.markCell(*this, cell);
     }
     markedBytes_ += numMarkedBytes;
@@ -842,9 +856,18 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     return markedSymbols_;
   }
 
+  /// Set the current cell being visited.
+  void startCell(const GCCell *cell) {
+    currentCell_ = cell;
+  }
+
  private:
   HadesGC &gc;
   PointerBase &pointerBase_;
+
+  /// Current GCCell being visited. For heap locations that could be from a
+  /// large object, we need this pointer to get the correct card table.
+  const GCCell *currentCell_{nullptr};
 
   /// A worklist local to the marking thread, that is only pushed onto by the
   /// marking thread. If this is empty, the global worklist must be consulted
@@ -2388,6 +2411,7 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
     // object is only there for the forwarding pointer.
     GCCell *const cell =
         copyCell->getMarkedForwardingPointer().getNonNull(getPointerBase());
+    acceptor.startCell(cell);
     markCell(acceptor, cell);
   }
 
@@ -2729,8 +2753,10 @@ void HadesGC::scanDirtyCardsForSegment(
     // expensive.
 
     // Mark the first object with respect to the dirty card boundaries.
-    if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+    if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj)) {
+      acceptor.startCell(obj);
       markCellWithinRange(acceptor, obj, begin, end);
+    }
 
     obj = obj->nextCell();
     // If there are additional objects in this card, scan them.
@@ -2741,8 +2767,10 @@ void HadesGC::scanDirtyCardsForSegment(
       // object where next is within the card.
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
-        if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+        if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj)) {
+          acceptor.startCell(obj);
           markCell(acceptor, obj);
+        }
         obj = next;
       }
 
@@ -2751,8 +2779,10 @@ void HadesGC::scanDirtyCardsForSegment(
       assert(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
-      if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+      if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj)) {
+        acceptor.startCell(obj);
         markCellWithinRange(acceptor, obj, begin, end);
+      }
     }
 
     from = iEnd;
@@ -3088,6 +3118,7 @@ void HadesGC::verifyCardTable() {
   assert(inGC() && "Must be in GC to call verifyCardTable");
   struct VerifyCardDirtyAcceptor final : public SlotAcceptor {
     HadesGC &gc;
+    const GCCell *currentCell{nullptr};
 
     explicit VerifyCardDirtyAcceptor(HadesGC &gc) : gc(gc) {}
 
@@ -3118,7 +3149,10 @@ void HadesGC::verifyCardTable() {
     void accept(const GCSymbolID &hv) override {}
   };
   VerifyCardDirtyAcceptor acceptor{*this};
-  forAllObjs([this, &acceptor](GCCell *cell) { markCell(acceptor, cell); });
+  forAllObjs([this, &acceptor](GCCell *cell) {
+    acceptor.currentCell = cell;
+    markCell(acceptor, cell);
+  });
 
   for (const FixedSizeHeapSegment &seg : oldGen_) {
     seg.cardTable().verifyBoundaries(seg.start(), seg.level());
