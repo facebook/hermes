@@ -17,6 +17,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
@@ -44,20 +45,25 @@ Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime) {
       nullptr,
       functionPrototypeToString,
       0);
-  defineMethod(
-      runtime,
-      functionPrototype,
-      Predefined::getSymbolID(Predefined::apply),
-      nullptr,
-      functionPrototypeApply,
-      2);
-  defineMethod(
-      runtime,
-      functionPrototype,
-      Predefined::getSymbolID(Predefined::call),
-      nullptr,
-      functionPrototypeCall,
-      1);
+  runtime.registerBuiltin(
+      BuiltinMethod::HermesBuiltin_functionPrototypeApply,
+      defineMethod(
+          runtime,
+          functionPrototype,
+          Predefined::getSymbolID(Predefined::apply),
+          nullptr,
+          functionPrototypeApply,
+          2));
+
+  runtime.registerBuiltin(
+      BuiltinMethod::HermesBuiltin_functionPrototypeCall,
+      defineMethod(
+          runtime,
+          functionPrototype,
+          Predefined::getSymbolID(Predefined::call),
+          nullptr,
+          functionPrototypeCall,
+          1));
   defineMethod(
       runtime,
       functionPrototype,

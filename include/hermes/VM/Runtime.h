@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_RUNTIME_H
 #define HERMES_VM_RUNTIME_H
 
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
@@ -408,6 +409,12 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Unfortunately we can't use the enum here, since we don't want to include
   /// the builtins header header.
   inline Callable *getBuiltinCallable(unsigned builtinMethodID);
+
+  /// Store \p builtin in the builtins array.
+  /// \pre builtinIndex must not have already been registered.
+  inline void registerBuiltin(
+      BuiltinMethod::Enum builtinIndex,
+      Callable *builtin);
 
   /// ES6-ES11 8.4.1 EnqueueJob ( queueName, job, arguments )
   /// See \c jobQueue_ for how the Jobs and Job Queues are set up in Hermes.
@@ -1092,9 +1099,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Populate JS builtins into the builtins table, after verifying they do
   /// exist from the result of running internal bytecode.
-  void initJSBuiltins(
-      llvh::MutableArrayRef<Callable *> builtins,
-      Handle<JSObject> jsBuiltins);
+  void initJSBuiltins(Handle<JSObject> jsBuiltins);
 
   /// Walk all the builtin methods, assert that they are not overridden. If they
   /// are, throw an exception. This will be called at most once, before freezing
@@ -1276,7 +1281,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   std::vector<JSObject *> stringCycleCheckVisited_{};
 
   /// Pointers to callable implementations of builtins.
-  std::vector<Callable *> builtins_{};
+  std::vector<Callable *> builtins_{BuiltinMethod::_count};
 
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};

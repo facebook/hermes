@@ -150,6 +150,9 @@ PRIVATE_BUILTIN(exportAll)
 PRIVATE_BUILTIN(exponentiationOperator)
 PRIVATE_BUILTIN(initRegexNamedGroups)
 
+PRIVATE_BUILTIN(functionPrototypeApply)
+PRIVATE_BUILTIN(functionPrototypeCall)
+
 JS_BUILTIN(spawnAsync)
 MARK_FIRST_JS_BUILTIN(spawnAsync)
 

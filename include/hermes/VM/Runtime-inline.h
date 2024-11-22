@@ -21,6 +21,13 @@ inline Callable *Runtime::getBuiltinCallable(unsigned builtinMethodID) {
   return builtins_[builtinMethodID];
 }
 
+void Runtime::registerBuiltin(
+    BuiltinMethod::Enum builtinIndex,
+    Callable *builtin) {
+  assert(builtins_[(size_t)builtinIndex] == nullptr && "Builtin already set");
+  builtins_[(size_t)builtinIndex] = builtin;
+}
+
 inline void Runtime::enqueueJob(Callable *job) {
   jobQueue_.push_back(job);
 }

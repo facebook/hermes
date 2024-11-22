@@ -427,7 +427,7 @@ Runtime::Runtime(
   codeCoverageProfiler_->restore();
 
   // Populate JS builtins returned from internal bytecode to the builtins table.
-  initJSBuiltins(builtins_, jsBuiltinsObj);
+  initJSBuiltins(jsBuiltinsObj);
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (runtimeConfig.getEnableSampleProfiling())
@@ -1745,7 +1745,9 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
 void Runtime::initNativeBuiltins() {
   GCScopeMarkerRAII gcScope{*this};
 
-  builtins_.resize(BuiltinMethod::_count);
+  assert(
+      builtins_.size() == BuiltinMethod::_count &&
+      "builtins_ resized at initialization time");
 
   (void)forEachPublicNativeBuiltin([this](
                                        unsigned methodIndex,
@@ -1760,12 +1762,13 @@ void Runtime::initNativeBuiltins() {
     assert(
         vmisa<NativeFunction>(cr->get()) &&
         "getNamed() of builtin method must be a NativeFunction");
-    builtins_[methodIndex] = vmcast<NativeFunction>(cr->get());
+    registerBuiltin(
+        (BuiltinMethod::Enum)methodIndex, vmcast<NativeFunction>(cr->get()));
     return ExecutionStatus::RETURNED;
   });
 
   // Now add the private native builtins.
-  createHermesBuiltins(*this, builtins_);
+  createHermesBuiltins(*this);
 #ifndef NDEBUG
   // Make sure native builtins are all defined.
   for (unsigned i = 0; i < BuiltinMethod::_firstJS; ++i) {
@@ -1789,9 +1792,7 @@ static const struct JSBuiltin {
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 
-void Runtime::initJSBuiltins(
-    llvh::MutableArrayRef<Callable *> builtins,
-    Handle<JSObject> jsBuiltinsObj) {
+void Runtime::initJSBuiltins(Handle<JSObject> jsBuiltinsObj) {
   for (const JSBuiltin &jsBuiltin : jsBuiltins) {
     auto symID = jsBuiltin.symID;
     auto builtinIndex = jsBuiltin.builtinIndex;
@@ -1802,7 +1803,7 @@ void Runtime::initJSBuiltins(
     assert(getRes == ExecutionStatus::RETURNED && "Failed to get JS builtin.");
     Callable *jsFunc = vmcast<Callable>(getRes->getHermesValue());
 
-    builtins[builtinIndex] = jsFunc;
+    registerBuiltin((BuiltinMethod::Enum)builtinIndex, jsFunc);
   }
 }
 

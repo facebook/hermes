@@ -808,9 +808,7 @@ CallResult<HermesValue> hermesBuiltinInitRegexNamedGroups(
   return HermesValue::encodeUndefinedValue();
 }
 
-void createHermesBuiltins(
-    Runtime &runtime,
-    llvh::MutableArrayRef<Callable *> builtins) {
+void createHermesBuiltins(Runtime &runtime) {
   auto defineInternMethod = [&](BuiltinMethod::Enum builtinIndex,
                                 Predefined::Str symID,
                                 NativeFunctionPtr func,
@@ -824,8 +822,7 @@ void createHermesBuiltins(
         count,
         Runtime::makeNullHandle<JSObject>());
 
-    assert(builtins[builtinIndex] == nullptr && "builtin already defined");
-    builtins[builtinIndex] = *method;
+    runtime.registerBuiltin(builtinIndex, *method);
   };
 
   // HermesBuiltin function properties
