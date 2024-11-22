@@ -49,6 +49,18 @@ public class HermesIntlAndroidTest {
   }
 
   @Test
+  public void testNumberFormatSignificantDigitsFromAsset() throws IOException {
+    AssetManager assets =
+        InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets();
+    InputStream is = assets.open("number-format-significant-digits.js");
+    String script =
+        new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
+    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      rt.evaluateJavaScript(script);
+    }
+  }
+
+  @Test
   public void testDateTimeFormat() {
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
       rt.evaluateJavaScript(
