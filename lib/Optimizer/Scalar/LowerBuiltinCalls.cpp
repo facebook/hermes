@@ -93,11 +93,86 @@ LowerBuiltinCallsContext::findBuiltinMethod(
   return methIt->second;
 }
 
+/// Attempt to lower the \p callInst to a static builtin call.
+/// Look for an instruction sequence of the kind:
+///    (Call
+///        (LoadProperty
+///            (LoadProperty globalObject, "ObjectName")
+///            Prop)
+///        ...)
+/// where \c ObjectName.Prop is a pre-defined builtin.
+/// Note: we only want to check for call. Not for construct.
+/// \param callInst the call instruction to lower.
+/// \param loadProp the load property instruction that loads the builtin method.
+/// \param propLit the string literal that is the property name.
+/// \return whether a static builtin call was lowered.
+static bool tryLowerStaticBuiltin(
+    IRBuilder &builder,
+    Function *F,
+    CallInst *callInst,
+    BaseLoadPropertyInst *loadProp,
+    LiteralString *propLit) {
+  auto &builtins = LowerBuiltinCallsContext::get(F->getParent());
+
+  auto *loadGlobalProp =
+      llvh::dyn_cast<BaseLoadPropertyInst>(loadProp->getObject());
+  if (!loadGlobalProp)
+    return false;
+  if (!llvh::isa<GlobalObject>(loadGlobalProp->getObject()))
+    return false;
+  LiteralString *objLit =
+      llvh::dyn_cast<LiteralString>(loadGlobalProp->getProperty());
+  if (!objLit)
+    return false;
+
+  // Uncomment this to get a dump of all global calls detected during
+  // compilation.
+  // llvh::outs() << "global call: " << objLit->getValue() << "."
+  //             << propLit->getValue() << "\n";
+
+  auto builtinIndex =
+      builtins.findBuiltinMethod(objLit->getValue(), propLit->getValue());
+  if (!builtinIndex)
+    return false;
+
+  LLVM_DEBUG(
+      llvh::dbgs() << "Found builtin [" << (int)*builtinIndex << "] "
+                   << getBuiltinMethodName(*builtinIndex) << "()\n");
+
+  // Always lower HermesInternal.xxx() calls, but only lower the rest if
+  // -fstatic-builtins is enabled.
+  if (objLit->getValue() != builtins.getHermesInternalID() &&
+      !F->getContext().getOptimizationSettings().staticBuiltins) {
+    return false;
+  }
+
+  builder.setInsertionPoint(callInst);
+  builder.setLocation(callInst->getLocation());
+
+  llvh::SmallVector<Value *, 8> args{};
+  unsigned numArgsExcludingThis = callInst->getNumArguments() - 1;
+  args.reserve(numArgsExcludingThis);
+  for (unsigned i = 0; i < numArgsExcludingThis; ++i)
+    args.push_back(callInst->getArgument(i + 1));
+
+  auto *callBuiltin = builder.createCallBuiltinInst(*builtinIndex, args);
+  callInst->replaceAllUsesWith(callBuiltin);
+  callInst->eraseFromParent();
+
+  // The property access instructions are not normally optimizable since
+  // they have side effects, but in this case it is safe to remove them.
+  if (!loadProp->hasUsers())
+    loadProp->eraseFromParent();
+  if (!loadGlobalProp->hasUsers())
+    loadGlobalProp->eraseFromParent();
+
+  ++NumLowered;
+  return true;
+}
+
 static bool run(Function *F) {
   IRBuilder builder{F};
   bool changed = false;
-
-  auto &builtins = LowerBuiltinCallsContext::get(F->getParent());
 
   for (auto &BB : *F) {
     for (auto it = BB.begin(), e = BB.end(); it != e;) {
@@ -105,14 +180,6 @@ static bool run(Function *F) {
       // can delete the instruction if we want to.
       auto *inst = &*it++;
 
-      // Look for an instruction sequence of the kind:
-      //    (Call
-      //        (LoadProperty
-      //            (LoadProperty globalObject, "objectLiteral")
-      //            Prop)
-      //        ...)
-      // where \c Object.Prop is a pre-defined builtin.
-      // Note: we only want to check for call. Not for construct.
       if (inst->getKind() != ValueKind::CallInstKind)
         continue;
       auto *callInst = cast<CallInst>(inst);
@@ -123,60 +190,8 @@ static bool run(Function *F) {
       auto propLit = llvh::dyn_cast<LiteralString>(loadProp->getProperty());
       if (!propLit)
         continue;
-      auto *loadGlobalProp =
-          llvh::dyn_cast<BaseLoadPropertyInst>(loadProp->getObject());
-      if (!loadGlobalProp)
-        continue;
-      if (!llvh::isa<GlobalObject>(loadGlobalProp->getObject()))
-        continue;
-      LiteralString *objLit =
-          llvh::dyn_cast<LiteralString>(loadGlobalProp->getProperty());
-      if (!objLit)
-        continue;
 
-      // Uncomment this to get a dump of all global calls detected during
-      // compilation.
-      // llvh::outs() << "global call: " << objLit->getValue() << "."
-      //             << propLit->getValue() << "\n";
-
-      auto builtinIndex =
-          builtins.findBuiltinMethod(objLit->getValue(), propLit->getValue());
-      if (!builtinIndex)
-        continue;
-
-      LLVM_DEBUG(
-          llvh::dbgs() << "Found builtin [" << (int)*builtinIndex << "] "
-                       << getBuiltinMethodName(*builtinIndex) << "()\n");
-
-      // Always lower HermesInternal.xxx() calls, but only lower the rest if
-      // -fstatic-builtins is enabled.
-      if (objLit->getValue() != builtins.getHermesInternalID() &&
-          !F->getContext().getOptimizationSettings().staticBuiltins) {
-        continue;
-      }
-
-      changed = true;
-      builder.setInsertionPoint(callInst);
-      builder.setLocation(callInst->getLocation());
-
-      llvh::SmallVector<Value *, 8> args{};
-      unsigned numArgsExcludingThis = callInst->getNumArguments() - 1;
-      args.reserve(numArgsExcludingThis);
-      for (unsigned i = 0; i < numArgsExcludingThis; ++i)
-        args.push_back(callInst->getArgument(i + 1));
-
-      auto *callBuiltin = builder.createCallBuiltinInst(*builtinIndex, args);
-      callInst->replaceAllUsesWith(callBuiltin);
-      callInst->eraseFromParent();
-
-      // The property access instructions are not normally optimizable since
-      // they have side effects, but in this case it is safe to remove them.
-      if (!loadProp->hasUsers())
-        loadProp->eraseFromParent();
-      if (!loadGlobalProp->hasUsers())
-        loadGlobalProp->eraseFromParent();
-
-      ++NumLowered;
+      changed |= tryLowerStaticBuiltin(builder, F, callInst, loadProp, propLit);
     }
   }
 
