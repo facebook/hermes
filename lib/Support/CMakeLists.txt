@@ -29,6 +29,7 @@ add_hermes_library(hermesSupport
         PerfSection.cpp
         SemaphorePosix.cpp
         SerialExecutor.cpp
+        StackExecutor.cpp
         SHA1.cpp
         SNPrintfBuf.cpp
         SourceErrorManager.cpp
