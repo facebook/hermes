@@ -7,7 +7,6 @@ add_hermes_library(hermesBackend
   RegAlloc.cpp
   BackendContext.cpp
   Lowering.cpp
-  LowerBuiltinCalls.cpp
   LowerScopes.cpp
   Exceptions.cpp
   SerializedLiteralGenerator.cpp

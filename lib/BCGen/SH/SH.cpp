@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LiteralBufferBuilder.h"
-#include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
@@ -2336,7 +2335,7 @@ bool lowerModuleIR(Module *M, bool optimize) {
   // HermesInternal.
   PM.addPass(sh::createPeepholeLowering());
   // LowerBuiltinCalls needs to run before the rest of the lowering.
-  PM.addPass(new LowerBuiltinCalls());
+  PM.addPass(createLowerBuiltinCalls());
   PM.addPass(new LowerNumericProperties());
   PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new hbc::LowerArgumentsArray());

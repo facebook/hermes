@@ -6,11 +6,10 @@
  */
 
 #define DEBUG_TYPE "builtins"
-#include "hermes/BCGen/LowerBuiltinCalls.h"
 
-#include "hermes/BCGen/BackendContext.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IRBuilder.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/StringTable.h"
 
@@ -19,19 +18,23 @@
 
 STATISTIC(NumLowered, "Number of builtin calls lowered");
 
+/// Detect calls to builtin methods like `Object.keys()` and replace them with
+/// CallBuiltinInst.
+
 namespace hermes {
 
 class LowerBuiltinCallsContext {
  public:
   LowerBuiltinCallsContext(StringTable &strTab);
 
-  static LowerBuiltinCallsContext &get(Context &ctx) {
-    auto &BEC = BackendContext::get(ctx);
-    if (!BEC.lowerBuiltinCallsContext)
-      BEC.lowerBuiltinCallsContext =
-          std::make_shared<LowerBuiltinCallsContext>(ctx.getStringTable());
+  static LowerBuiltinCallsContext &get(Module *M) {
+    auto &optContext = M->getOptimizationContext();
+    if (!optContext.lowerBuiltinCallsContext)
+      optContext.lowerBuiltinCallsContext =
+          std::make_shared<LowerBuiltinCallsContext>(
+              M->getContext().getStringTable());
 
-    return *BEC.lowerBuiltinCallsContext;
+    return *optContext.lowerBuiltinCallsContext;
   }
 
   /// Look for a builtin method \c object.method.
@@ -94,7 +97,7 @@ static bool run(Function *F) {
   IRBuilder builder{F};
   bool changed = false;
 
-  auto &builtins = LowerBuiltinCallsContext::get(F->getContext());
+  auto &builtins = LowerBuiltinCallsContext::get(F->getParent());
 
   for (auto &BB : *F) {
     for (auto it = BB.begin(), e = BB.end(); it != e;) {
@@ -180,8 +183,17 @@ static bool run(Function *F) {
   return changed;
 }
 
-bool LowerBuiltinCalls::runOnFunction(Function *F) {
-  return run(F);
+Pass *createLowerBuiltinCalls() {
+  class ThisPass : public FunctionPass {
+   public:
+    explicit ThisPass() : FunctionPass("LowerBuiltinCalls") {}
+    ~ThisPass() override = default;
+
+    bool runOnFunction(Function *F) override {
+      return run(F);
+    }
+  };
+  return new ThisPass();
 }
 
 } // namespace hermes

@@ -2222,6 +2222,16 @@ struct ilist_alloc_traits<::hermes::VariableScope> {
 
 namespace hermes {
 
+class LowerBuiltinCallsContext;
+
+/// Shared state between optimization passes.
+class OptimizationContext {
+ public:
+  /// Used by LowerBuiltinCalls to cache information about identifiers and
+  /// builtin IDs.
+  std::shared_ptr<LowerBuiltinCallsContext> lowerBuiltinCallsContext = nullptr;
+};
+
 class Module : public Value {
   Module(const Module &) = delete;
   void operator=(const Module &) = delete;
@@ -2344,6 +2354,9 @@ class Module : public Value {
   /// Set to true when generator functions have been lowered.
   bool areGeneratorsLowered_{false};
 
+  /// Extra data to be shared between optimization passes.
+  OptimizationContext optContext_{};
+
  public:
   explicit Module(std::shared_ptr<Context> ctx)
       : Value(ValueKind::ModuleKind), Ctx(std::move(ctx)) {}
@@ -2409,6 +2422,13 @@ class Module : public Value {
   }
   const VariableScopeListType &getVariableScopes() const {
     return variableScopes_;
+  }
+
+  OptimizationContext &getOptimizationContext() {
+    return optContext_;
+  }
+  const OptimizationContext &getOptimizationContext() const {
+    return optContext_;
   }
 
   /// Assign index to all Variables in all VariableScopes.
