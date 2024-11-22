@@ -275,6 +275,9 @@ class CardTable {
   ///
   /// \pre start is card-aligned.
   void verifyBoundaries(char *start, char *level) const;
+
+  /// Find the object that owns the memory at \p loc.
+  GCCell *findObjectContaining(const void *loc) const;
 #endif // HERMES_SLOW_DEBUG
 
  private:
