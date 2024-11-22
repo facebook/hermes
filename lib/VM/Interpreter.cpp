@@ -2809,6 +2809,50 @@ tailCall:
           ip = NEXTINST(JmpUndefinedLong);
         DISPATCH;
       }
+      CASE(JmpBuiltinIs) {
+        if (O3REG(JmpBuiltinIs).getRaw() ==
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIs.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIs.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIs);
+        }
+        DISPATCH;
+      }
+      CASE(JmpBuiltinIsLong) {
+        if (O3REG(JmpBuiltinIsLong).getRaw() ==
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIsLong.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIsLong.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIsLong);
+        }
+        DISPATCH;
+      }
+      CASE(JmpBuiltinIsNot) {
+        if (O3REG(JmpBuiltinIsNot).getRaw() !=
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIsNot.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIsNot.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIsNot);
+        }
+        DISPATCH;
+      }
+      CASE(JmpBuiltinIsNotLong) {
+        if (O3REG(JmpBuiltinIsNotLong).getRaw() !=
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIsNotLong.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIsNotLong.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIsNotLong);
+        }
+        DISPATCH;
+      }
       INCDECOP(Inc)
       INCDECOP(Dec)
       CASE(AddN) {

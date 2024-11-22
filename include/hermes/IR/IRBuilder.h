@@ -389,6 +389,12 @@ class IRBuilder {
 
   TryEndInst *createTryEndInst(BasicBlock *catchBlock, BasicBlock *branchBlock);
 
+  BranchIfBuiltinInst *createBranchIfBuiltinInst(
+      BuiltinMethod::Enum builtinIndex,
+      Value *argument,
+      BasicBlock *catchBlock,
+      BasicBlock *branchBlock);
+
   DeletePropertyInst *createDeletePropertyInst(Value *object, Value *property);
   DeletePropertyLooseInst *createDeletePropertyLooseInst(
       Value *object,

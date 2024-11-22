@@ -300,6 +300,17 @@ TryEndInst *IRBuilder::createTryEndInst(
   return I;
 }
 
+BranchIfBuiltinInst *IRBuilder::createBranchIfBuiltinInst(
+    BuiltinMethod::Enum builtinIndex,
+    Value *argument,
+    BasicBlock *catchBlock,
+    BasicBlock *branchBlock) {
+  auto *I = new BranchIfBuiltinInst(
+      getLiteralBuiltinIdx(builtinIndex), argument, catchBlock, branchBlock);
+  insert(I);
+  return I;
+}
+
 AllocStackInst *IRBuilder::createAllocStackInst(
     const llvh::Twine &varName,
     Type type) {

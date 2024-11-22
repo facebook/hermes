@@ -147,6 +147,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex == CallBuiltinInst::NewTargetIdx ||
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
+  if (llvh::isa<BranchIfBuiltinInst>(Inst) &&
+      opIndex == BranchIfBuiltinInst::BuiltinIdx)
+    return true;
 
   // CallInst's NewTarget should only be a literal if it's undefined.
   if (auto *CI = llvh::dyn_cast<CallInst>(Inst);

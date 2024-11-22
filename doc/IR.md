@@ -697,6 +697,16 @@ Arguments | The active catch block and the destination block to branch to.
 Semantics | This is a nop, used only for tracking the end of try blocks.
 Effects | Technically this instruction itself does not touch memory, however we mark it as may write to prevent optimizations going pass this instruction.
 
+### BranchIfBuiltinInst
+
+BranchIfBuiltinInst | _
+--- | --- |
+Description | Check if a value is the same as a known builtin value.
+Example | %0 = BranchIfBuiltin %builtinNumber, %arg, %trueDest, %falseDest
+Arguments | The builtin number, the value to check, and the blocks to branch to.
+Semantics | Branch to %trueDest if %arg is the same pointer as the builtin with %builtinNumber, else branch to %falseDest.
+Effects | None
+
 ### PhiInst
 
 PhiInst | _

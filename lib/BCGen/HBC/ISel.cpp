@@ -1205,6 +1205,31 @@ void HBCISel::generateTryEndInst(TryEndInst *Inst, BasicBlock *next) {
   auto loc = BCFGen_->emitJmpLong(0);
   registerLongJump(loc, dst);
 }
+void HBCISel::generateBranchIfBuiltinInst(
+    BranchIfBuiltinInst *Inst,
+    BasicBlock *next) {
+  uint8_t builtinIndex = Inst->getBuiltinIndex();
+  auto argument = encodeValue(Inst->getArgument());
+
+  BasicBlock *trueBlock = Inst->getTrueBlock();
+  BasicBlock *falseBlock = Inst->getFalseBlock();
+
+  offset_t loc;
+  if (next == trueBlock) {
+    loc = BCFGen_->emitJmpBuiltinIsNotLong(0, builtinIndex, argument);
+    registerLongJump(loc, falseBlock);
+    return;
+  }
+
+  loc = BCFGen_->emitJmpBuiltinIsLong(0, builtinIndex, argument);
+  registerLongJump(loc, trueBlock);
+
+  if (next == falseBlock)
+    return;
+
+  loc = BCFGen_->emitJmpLong(0);
+  registerLongJump(loc, falseBlock);
+}
 void HBCISel::generateBranchInst(BranchInst *Inst, BasicBlock *next) {
   auto *dst = Inst->getBranchDest();
   if (dst == next)

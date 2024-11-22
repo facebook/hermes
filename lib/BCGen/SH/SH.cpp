@@ -1617,6 +1617,17 @@ class InstrGen {
     generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);
     os_ << ";\n";
   }
+  void generateBranchIfBuiltinInst(BranchIfBuiltinInst &inst) {
+    os_ << "  if (_sh_ljs_get_builtin_closure(shr, "
+        << (uint32_t)inst.getBuiltinIndex() << ").raw == ";
+    generateValue(*inst.getArgument());
+    os_ << ".raw) goto ";
+    generateBasicBlockLabel(inst.getTrueBlock(), os_, bbMap_);
+    os_ << ";\n";
+    os_ << "else goto ";
+    generateBasicBlockLabel(inst.getFalseBlock(), os_, bbMap_);
+    os_ << ";\n";
+  }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
     os_.indent(2);
     generateRegister(inst);

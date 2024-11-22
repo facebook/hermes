@@ -297,6 +297,10 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
+EMIT_UNIMPLEMENTED(JmpBuiltinIs)
+EMIT_UNIMPLEMENTED(JmpBuiltinIsLong)
+EMIT_UNIMPLEMENTED(JmpBuiltinIsNot)
+EMIT_UNIMPLEMENTED(JmpBuiltinIsNotLong)
 
 #undef EMIT_UNIMPLEMENTED
 

@@ -775,6 +775,10 @@ bool Verifier::visitTryEndInst(const TryEndInst &Inst) {
   return true;
 }
 
+bool Verifier::visitBranchIfBuiltinInst(const BranchIfBuiltinInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
   AssertIWithMsg(
       Inst,

@@ -59,6 +59,19 @@ using namespace hermes::hbc;
       name(labels[L] - jmps[line]); \
   } while (0);
 
+/// Emit an jump builtin to label. Use it like this:
+/// \begincode
+///   JMP(builder.emitJmpBuiltinIs, L(2), builtinIdx, reg);
+/// \endcode
+#define JMP_BUILTINIS(name, L, idx, reg)      \
+  do {                                        \
+    int line = __LINE__;                      \
+    if (pass == 0)                            \
+      jmps[line] = name(0, idx, reg);         \
+    else                                      \
+      name(labels[L] - jmps[line], idx, reg); \
+  } while (0);
+
 /// Make labels more noticeable in the source by always using this macro to
 /// refer to them.
 #define L(x) x
@@ -394,6 +407,85 @@ L1:
     ASSERT_EQ(ExecutionStatus::RETURNED, status.getStatus());
     ASSERT_EQ(120.0, status.getValue().getDouble());
   }
+}
+
+TEST_F(InterpreterTest, TestJmpBuiltinIs) {
+  auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
+
+  StringID functionID = 1;
+  StringID callID = 2;
+
+  std::map<int, int> labels{};
+  std::map<int, int> jmps{};
+  const unsigned FRAME_SIZE = 16;
+  SimpleBytecodeBuilder builder;
+
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
+    builder.emitGetGlobalObject(0);
+    builder.emitGetById(0, 0, 0, functionID);
+    builder.emitGetById(0, 0, 0, callID);
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIs,
+        L(1),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeCall,
+        0);
+    builder.emitUnreachable();
+    // Use LoadConstUndefined for convenience because JMP_BUILTINIS isn't an
+    // expression so it's hard to put it directly into LABEL.
+    LABEL(L(1), builder.emitLoadConstUndefined(1));
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIsNot,
+        L(2),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeApply,
+        0);
+    builder.emitUnreachable();
+    LABEL(L(2), builder.emitLoadConstUndefined(1));
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIsLong,
+        L(3),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeCall,
+        0);
+    builder.emitUnreachable();
+    LABEL(L(3), builder.emitLoadConstUndefined(1));
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIsNotLong,
+        L(4),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeApply,
+        0);
+    builder.emitUnreachable();
+    LABEL(L(4), builder.emitLoadConstUndefined(0));
+    builder.emitRet(1);
+  };
+  // Pass 0 - resolve labels.
+  {
+    BytecodeInstructionGenerator instGen;
+    emit(instGen, 0);
+  }
+
+  // Pass 1 - build the actual code.
+  SimpleBytecodeBuilder BMG;
+  BytecodeInstructionGenerator instGen;
+  emit(instGen, 1);
+  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 255, 255);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
+
+  ASSERT_EQ(
+      detail::mapStringMayAllocate(*runtimeModule, "Function"), functionID);
+  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "call"), callID);
+
+  CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
+  {
+    ScopedNativeCallFrame frame(
+        runtime,
+        0,
+        HermesValue::encodeNativePointer(codeBlock),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue());
+    ASSERT_FALSE(frame.overflowed());
+    status = runtime.interpretFunction(codeBlock);
+  }
+
+  ASSERT_TRUE(status.getValue().isUndefined());
 }
 
 TEST_F(InterpreterFunctionTest, GetByIdSlowPathChecksForExceptions) {

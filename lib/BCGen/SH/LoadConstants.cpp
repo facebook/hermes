@@ -117,6 +117,9 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
        opIndex == CallBuiltinInst::NewTargetIdx ||
        opIndex == CallBuiltinInst::ThisIdx))
     return true;
+  if (llvh::isa<BranchIfBuiltinInst>(Inst) &&
+      opIndex == BranchIfBuiltinInst::BuiltinIdx)
+    return true;
 
   /// GetBuiltinClosureInst's builtin index is always literal.
   if (llvh::isa<GetBuiltinClosureInst>(Inst) &&

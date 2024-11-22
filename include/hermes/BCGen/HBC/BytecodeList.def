@@ -871,6 +871,13 @@ DEFINE_JUMP_3(JNotEqual)
 DEFINE_JUMP_3(JStrictEqual)
 DEFINE_JUMP_3(JStrictNotEqual)
 
+DEFINE_OPCODE_3(JmpBuiltinIs, Addr8, UInt8, Reg8)
+DEFINE_OPCODE_3(JmpBuiltinIsLong, Addr32, UInt8, Reg8)
+DEFINE_JUMP_LONG_VARIANT(JmpBuiltinIs, JmpBuiltinIsLong)
+DEFINE_OPCODE_3(JmpBuiltinIsNot, Addr8, UInt8, Reg8)
+DEFINE_OPCODE_3(JmpBuiltinIsNotLong, Addr32, UInt8, Reg8)
+DEFINE_JUMP_LONG_VARIANT(JmpBuiltinIsNot, JmpBuiltinIsNotLong)
+
 // Implementations can rely on the following pairs of instructions having the
 // same number and type of operands.
 ASSERT_EQUAL_LAYOUT3(Call, Construct)

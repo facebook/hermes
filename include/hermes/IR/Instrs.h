@@ -3069,6 +3069,70 @@ class TryEndInst : public TerminatorInst {
   }
 };
 
+class BranchIfBuiltinInst : public TerminatorInst {
+  BranchIfBuiltinInst(const BranchIfBuiltinInst &) = delete;
+  void operator=(const BranchIfBuiltinInst &) = delete;
+
+ public:
+  enum { BuiltinIdx, ArgumentIdx, TrueBlockIdx, FalseBlockIdx };
+
+  explicit BranchIfBuiltinInst(
+      LiteralBuiltinIdx *builtin,
+      Value *argument,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock)
+      : TerminatorInst(ValueKind::BranchIfBuiltinInstKind) {
+    setType(Type::createNoType());
+    pushOperand(builtin);
+    pushOperand(argument);
+    pushOperand(trueBlock);
+    pushOperand(falseBlock);
+  }
+  explicit BranchIfBuiltinInst(
+      const BranchIfBuiltinInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  BuiltinMethod::Enum getBuiltinIndex() const {
+    return cast<LiteralBuiltinIdx>(getOperand(BuiltinIdx))->getData();
+  }
+  Value *getArgument() {
+    return getOperand(ArgumentIdx);
+  }
+  BasicBlock *getTrueBlock() const {
+    return cast<BasicBlock>(getOperand(TrueBlockIdx));
+  }
+  BasicBlock *getFalseBlock() const {
+    return cast<BasicBlock>(getOperand(FalseBlockIdx));
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::BranchIfBuiltinInstKind;
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 2;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    return cast<BasicBlock>(getOperand(TrueBlockIdx + idx));
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    setOperand(B, TrueBlockIdx + idx);
+  }
+};
+
 class PhiInst : public Instruction {
   PhiInst(const PhiInst &) = delete;
   void operator=(const PhiInst &) = delete;

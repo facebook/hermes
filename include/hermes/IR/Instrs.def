@@ -164,6 +164,7 @@ TERMINATOR(GetPNamesInst, TerminatorInst)
 TERMINATOR(GetNextPNameInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
 TERMINATOR(TryEndInst, TerminatorInst)
+TERMINATOR(BranchIfBuiltinInst, TerminatorInst)
 TERMINATOR(UnreachableInst, TerminatorInst)
 
 BEGIN_TERMINATOR(HBCCompareBranchInst, TerminatorInst)

@@ -620,6 +620,9 @@ class TypeInferenceImpl {
   Type inferTryEndInst(TryEndInst *inst) {
     return Type::createNoType();
   }
+  Type inferBranchIfBuiltinInst(BranchIfBuiltinInst *inst) {
+    return Type::createNoType();
+  }
   Type inferGetNewTargetInst(GetNewTargetInst *inst) {
     return inst->getOperand(GetNewTargetInst::GetNewTargetParamIdx)->getType();
   }
