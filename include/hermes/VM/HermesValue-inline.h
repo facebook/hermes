@@ -62,6 +62,22 @@ inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
 }
 
 template <typename HVType>
+template <typename NeedsBarriers>
+inline void
+GCHermesValueBase<HVType>::set(HVType hv, GC &gc, const GCCell *owningObj) {
+  if (hv.isPointer()) {
+    HERMES_SLOW_ASSERT(
+        gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
+        "Setting an invalid pointer into a GCHermesValue");
+  }
+  assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
+  if constexpr (NeedsBarriers::value) {
+    gc.writeBarrierForLargeObj(owningObj, this, hv);
+  }
+  HVType::setNoBarrier(hv);
+}
+
+template <typename HVType>
 void GCHermesValueBase<HVType>::setNonPtr(HVType hv, GC &gc) {
   assert(!hv.isPointer());
   gc.snapshotWriteBarrier(this);

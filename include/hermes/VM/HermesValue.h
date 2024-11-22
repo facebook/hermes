@@ -530,10 +530,18 @@ class GCHermesValueBase final : public HVType {
   GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t);
   GCHermesValueBase(const HVType &) = delete;
 
-  /// The HermesValue \p hv may be an object pointer.  Assign the
-  /// value, and perform any necessary write barriers.
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers. This must not be used if it lives in
+  /// an object that supports large allocation.
   template <typename NeedsBarriers = std::true_type>
   inline void set(HVType hv, GC &gc);
+
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers. \p owningObj is the object that
+  /// contains this GCHermesValueBase, and it may support large allocation.
+  /// for which the object pointer is needed by writer barriers.
+  template <typename NeedsBarriers = std::true_type>
+  inline void set(HVType hv, GC &gc, const GCCell *owningObj);
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
