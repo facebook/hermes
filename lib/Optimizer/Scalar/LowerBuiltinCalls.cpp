@@ -20,6 +20,9 @@ STATISTIC(NumLowered, "Number of builtin calls lowered");
 
 /// Detect calls to builtin methods like `Object.keys()` and replace them with
 /// CallBuiltinInst.
+///
+/// LowerBuiltinCallsOptimized will also add fast paths for certain known
+/// callees.
 
 namespace hermes {
 
@@ -42,25 +45,30 @@ class LowerBuiltinCallsContext {
       Identifier objectName,
       Identifier methodName);
 
-  Identifier getHermesInternalID() const {
-    return hermesInternalID_;
+  /// \return whether this is a callee name we should try and emit a fast path
+  /// for.
+  bool shouldTryOptimizeCalleeName(Identifier name) {
+    return calleeNamesToTryOptimize_.count(name);
   }
 
- private:
+ public:
   /// Identifier of "HermesInternal".
-  Identifier hermesInternalID_;
+  const Identifier hermesInternalID;
 
+ private:
   /// Map from a builtin object to an integer "object index".
   llvh::DenseMap<Identifier, int> objects_;
 
   /// Map from "object index":identifier to a "method index".
   /// We are avoiding allocating a DenseMap per object.
   llvh::DenseMap<std::pair<int, Identifier>, BuiltinMethod::Enum> methods_;
+
+  /// Set of callee names that we should try to optimize.
+  llvh::DenseSet<Identifier> calleeNamesToTryOptimize_{};
 };
 
-LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab) {
-  hermesInternalID_ = strTab.getIdentifier("HermesInternal");
-
+LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab)
+    : hermesInternalID(strTab.getIdentifier("HermesInternal")) {
   // First insert all objects.
   int objIndex = 0;
 #define NORMAL_OBJECT(object)
@@ -141,7 +149,7 @@ static bool tryLowerStaticBuiltin(
 
   // Always lower HermesInternal.xxx() calls, but only lower the rest if
   // -fstatic-builtins is enabled.
-  if (objLit->getValue() != builtins.getHermesInternalID() &&
+  if (objLit->getValue() != builtins.hermesInternalID &&
       !F->getContext().getOptimizationSettings().staticBuiltins) {
     return false;
   }
@@ -170,9 +178,29 @@ static bool tryLowerStaticBuiltin(
   return true;
 }
 
-static bool run(Function *F) {
+static bool tryOptimizeKnownCallable(
+    IRBuilder &builder,
+    Function *F,
+    CallInst *callInst,
+    BaseLoadPropertyInst *loadProp,
+    LiteralString *propLit) {
+  assert(callInst && loadProp && propLit && "no nullptrs");
+  // TODO: Optimize call().
+  // TODO: Optimize apply(arguments).
+  return false;
+}
+
+static bool run(Function *F, bool optimize) {
   IRBuilder builder{F};
   bool changed = false;
+
+  // Use a worklist for optimizing calls into fast paths to avoid modifying the
+  // BB and Inst lists while iterating them.
+  // Contains CallInst for which the callee is LoadPropertyInst with a literal
+  // name belonging to calleeNamesToTryOptimize_.
+  llvh::SmallVector<CallInst *, 8> callsToOptimize{};
+
+  auto &builtins = LowerBuiltinCallsContext::get(F->getParent());
 
   for (auto &BB : *F) {
     for (auto it = BB.begin(), e = BB.end(); it != e;) {
@@ -191,8 +219,25 @@ static bool run(Function *F) {
       if (!propLit)
         continue;
 
-      changed |= tryLowerStaticBuiltin(builder, F, callInst, loadProp, propLit);
+      if (tryLowerStaticBuiltin(builder, F, callInst, loadProp, propLit)) {
+        changed = true;
+        continue;
+      }
+      if (optimize &&
+          builtins.shouldTryOptimizeCalleeName(propLit->getValue())) {
+        // Add to the worklist for later processing. We can't process it now
+        // because we don't want to alter the BasicBlock list.
+        callsToOptimize.push_back(callInst);
+      }
     }
+  }
+
+  // Optimize calls to known callables.
+  for (auto *callInst : callsToOptimize) {
+    auto *loadProp = llvh::cast<BaseLoadPropertyInst>(callInst->getCallee());
+    auto *propLit = llvh::cast<LiteralString>(loadProp->getProperty());
+    changed |=
+        tryOptimizeKnownCallable(builder, F, callInst, loadProp, propLit);
   }
 
   return changed;
@@ -205,7 +250,20 @@ Pass *createLowerBuiltinCalls() {
     ~ThisPass() override = default;
 
     bool runOnFunction(Function *F) override {
-      return run(F);
+      return run(F, false);
+    }
+  };
+  return new ThisPass();
+}
+
+Pass *createLowerBuiltinCallsOptimized() {
+  class ThisPass : public FunctionPass {
+   public:
+    explicit ThisPass() : FunctionPass("LowerBuiltinCallsOptimized") {}
+    ~ThisPass() override = default;
+
+    bool runOnFunction(Function *F) override {
+      return run(F, true);
     }
   };
   return new ThisPass();

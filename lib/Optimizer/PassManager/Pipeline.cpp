@@ -57,7 +57,9 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // need to be eliminated now, or the "require" parameter cannot be promoted.
   PM.addDCE();
 
-  PM.addLowerBuiltinCalls();
+  // Only run LowerBuiltinCallsOptimized once to avoid emitting
+  // multiple fast paths for the same call.
+  PM.addLowerBuiltinCallsOptimized();
   PM.addSimplifyCFG();
   PM.addSimpleStackPromotion();
   PM.addFrameLoadStoreOpts();

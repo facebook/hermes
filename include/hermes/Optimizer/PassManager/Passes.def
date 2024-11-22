@@ -45,5 +45,6 @@ PASS(Auditor, "auditor", "Auditor")
 PASS(TDZDedup, "tdzdedup", "TDZ Deduplication")
 PASS(StripDebugInsts, "stripdebug", "Strip debug instructions")
 PASS(LowerBuiltinCalls, "lowerbuiltincalls", "Lower builtin calls")
+PASS(LowerBuiltinCallsOptimized, "lowerbuiltincallsoptimized", "Lower builtin calls (with optimizations)")
 
 #undef PASS
