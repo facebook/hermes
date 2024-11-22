@@ -19,6 +19,7 @@ TraceInterpreter; you could submit this if you like as a benchmark.
 However, it is typically better to submit the original, to keep the times in
 case they're ever needed.
 """
+
 import argparse
 import json
 import struct

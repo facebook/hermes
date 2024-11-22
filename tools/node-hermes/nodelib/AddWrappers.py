@@ -33,7 +33,6 @@ def main():
     args = parser.parse_args()
 
     with io.open(args.files[0], "w", encoding="utf-8") as o:
-
         o.write("({")
         for arg in args.files[1:]:
             arg = path.abspath(arg)
