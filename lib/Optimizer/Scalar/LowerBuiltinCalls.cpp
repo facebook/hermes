@@ -10,6 +10,7 @@
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/StringTable.h"
 
@@ -55,6 +56,9 @@ class LowerBuiltinCallsContext {
   /// Identifier of "HermesInternal".
   const Identifier hermesInternalID;
 
+  /// Identifier of "apply".
+  const Identifier applyID;
+
  private:
   /// Map from a builtin object to an integer "object index".
   llvh::DenseMap<Identifier, int> objects_;
@@ -68,7 +72,8 @@ class LowerBuiltinCallsContext {
 };
 
 LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab)
-    : hermesInternalID(strTab.getIdentifier("HermesInternal")) {
+    : hermesInternalID(strTab.getIdentifier("HermesInternal")),
+      applyID(strTab.getIdentifier("apply")) {
   // First insert all objects.
   int objIndex = 0;
 #define NORMAL_OBJECT(object)
@@ -84,6 +89,8 @@ LowerBuiltinCallsContext::LowerBuiltinCallsContext(StringTable &strTab)
       objects_[strTab.getIdentifier(#object)], strTab.getIdentifier(#name))] = \
       BuiltinMethod::object##_##name;
 #include "hermes/FrontEndDefs/Builtins.def"
+
+  calleeNamesToTryOptimize_.insert(applyID);
 }
 
 hermes::OptValue<BuiltinMethod::Enum>
@@ -186,7 +193,48 @@ static bool tryOptimizeKnownCallable(
     LiteralString *propLit) {
   assert(callInst && loadProp && propLit && "no nullptrs");
   // TODO: Optimize call().
-  // TODO: Optimize apply(arguments).
+
+  auto &builtins = LowerBuiltinCallsContext::get(F->getParent());
+  IRBuilder::InstructionDestroyer destroyer;
+
+  if (propLit->getValue() == builtins.applyID &&
+      callInst->getNumArguments() == 3 &&
+      llvh::isa<CreateArgumentsInst>(callInst->getArgument(2))) {
+    // Add a fast path for "apply(thisVal, arguments)"
+    // by splitting the basic block and trying to do a "fast apply" by copying
+    // the arguments directly via HermesBuiltin_applyArguments.
+    BasicBlock *oldBB = callInst->getParent();
+    BasicBlock *newBB = splitBasicBlock(oldBB, callInst->getIterator());
+
+    BasicBlock *slowBB = builder.createBasicBlock(F);
+    BasicBlock *fastBB = builder.createBasicBlock(F);
+
+    builder.setInsertionBlock(oldBB);
+    builder.createBranchIfBuiltinInst(
+        BuiltinMethod::HermesBuiltin_functionPrototypeApply,
+        callInst->getCallee(),
+        fastBB,
+        slowBB);
+
+    builder.setInsertionBlock(fastBB);
+    auto *fastCall = builder.createCallBuiltinInst(
+        BuiltinMethod::HermesBuiltin_applyArguments,
+        {callInst->getThis(), callInst->getArgument(1)});
+    builder.createBranchInst(newBB);
+
+    builder.setInsertionBlock(slowBB);
+    auto *branchToNew = builder.createBranchInst(newBB);
+    callInst->moveBefore(branchToNew);
+
+    builder.setInsertionPoint(&*newBB->begin());
+    auto *phi = builder.createPhiInst();
+    callInst->replaceAllUsesWith(phi);
+    phi->addEntry(fastCall, fastBB);
+    phi->addEntry(callInst, slowBB);
+
+    return true;
+  }
+
   return false;
 }
 
