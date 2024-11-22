@@ -83,9 +83,7 @@ testServiceGetterTypes(Intl.DateTimeFormat, 'format');
 testServiceMethodTypes(Intl.DateTimeFormat, 'formatToParts');
 testServiceMethodTypes(Intl.DateTimeFormat, 'resolvedOptions');
 assert(typeof Intl.DateTimeFormat().format() === 'string');
-if(Intl.DateTimeFormat.prototype.formatToParts) {
-  testParts(Intl.DateTimeFormat().formatToParts());
-}
+testParts(Intl.DateTimeFormat().formatToParts());
 
 testServiceTypes(Intl.NumberFormat);
 testServiceGetterTypes(Intl.NumberFormat, 'format');
