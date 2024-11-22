@@ -213,24 +213,28 @@ class HadesGC final : public GCBase {
   }
 
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCHermesValue *start,
       uint32_t numHVs) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(start)))
-      constructorWriteBarrierRangeSlow(start, numHVs);
+      constructorWriteBarrierRangeSlow(owningObj, start, numHVs);
   }
   void constructorWriteBarrierRangeSlow(
+      const GCCell *owningObj,
       const GCHermesValue *start,
       uint32_t numHVs);
 
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCSmallHermesValue *start,
       uint32_t numHVs) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(start)))
-      constructorWriteBarrierRangeSlow(start, numHVs);
+      constructorWriteBarrierRangeSlow(owningObj, start, numHVs);
   }
   void constructorWriteBarrierRangeSlow(
+      const GCCell *owningObj,
       const GCSmallHermesValue *start,
       uint32_t numHVs);
 

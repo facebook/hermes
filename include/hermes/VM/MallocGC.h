@@ -241,8 +241,14 @@ class MallocGC final : public GCBase {
   void constructorWriteBarrier(const GCPointerBase *, const GCCell *) {}
   void writeBarrierRange(const GCHermesValue *, uint32_t) {}
   void writeBarrierRange(const GCSmallHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void constructorWriteBarrierRange(
+      const GCCell *,
+      const GCHermesValue *,
+      uint32_t) {}
+  void constructorWriteBarrierRange(
+      const GCCell *,
+      const GCSmallHermesValue *,
+      uint32_t) {}
   void snapshotWriteBarrier(const GCHermesValue *) {}
   void snapshotWriteBarrier(const GCSmallHermesValue *) {}
   void snapshotWriteBarrier(const GCPointerBase *) {}
