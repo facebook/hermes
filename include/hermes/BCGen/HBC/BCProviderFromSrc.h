@@ -10,7 +10,7 @@
 
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/Support/SerialExecutor.h"
+#include "hermes/Support/StackExecutor.h"
 
 #include "llvh/ADT/Optional.h"
 
@@ -109,7 +109,8 @@ class BCProviderFromSrc final : public BCProviderBase {
       std::chrono::milliseconds(1000);
 
   /// The executor used to run the compiler.
-  SerialExecutor serialExecutor_{kExecutorStackSize, kExecutorTimeout};
+  std::shared_ptr<StackExecutor> stackExecutor_ =
+      newStackExecutor(kExecutorStackSize, kExecutorTimeout);
 
   /// The BytecodeModule that provides the bytecode data.
   /// Placed below CompilationData to ensure its destruction before the
@@ -256,8 +257,8 @@ class BCProviderFromSrc final : public BCProviderBase {
     sourceHash_ = hash;
   };
 
-  SerialExecutor &getSerialExecutor() {
-    return serialExecutor_;
+  StackExecutor &getStackExecutor() {
+    return *stackExecutor_;
   }
 
   static bool classof(const BCProviderBase *provider) {
