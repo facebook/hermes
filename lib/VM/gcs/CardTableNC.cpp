@@ -20,12 +20,6 @@
 namespace hermes {
 namespace vm {
 
-#ifndef NDEBUG
-/* static */ void *CardTable::storageEnd(const void *ptr) {
-  return FixedSizeHeapSegment::storageEnd(ptr);
-}
-#endif
-
 void CardTable::dirtyCardsForAddressRange(const void *low, const void *high) {
   // If high is in the middle of some card, ensure that we dirty that card.
   high = reinterpret_cast<const char *>(high) + kCardSize - 1;
@@ -44,19 +38,19 @@ OptValue<size_t> CardTable::findNextCardWithStatus(
 }
 
 void CardTable::clear() {
-  cleanRange(kFirstUsedIndex, kValidIndices);
+  cleanRange(kFirstUsedIndex, getEndIndex());
 }
 
 void CardTable::updateAfterCompaction(const void *newLevel) {
   const char *newLevelPtr = static_cast<const char *>(newLevel);
   size_t firstCleanCardIndex = addressToIndex(newLevelPtr + kCardSize - 1);
   assert(
-      firstCleanCardIndex <= kValidIndices &&
+      firstCleanCardIndex <= getEndIndex() &&
       firstCleanCardIndex >= kFirstUsedIndex && "Invalid index.");
   // Dirty the occupied cards (below the level), and clean the cards above the
   // level.
   dirtyRange(kFirstUsedIndex, firstCleanCardIndex);
-  cleanRange(firstCleanCardIndex, kValidIndices);
+  cleanRange(firstCleanCardIndex, getEndIndex());
 }
 
 void CardTable::cleanRange(size_t from, size_t to) {
@@ -147,12 +141,12 @@ protectBoundaryTableWork(void *table, size_t sz, oscompat::ProtectMode mode) {
 
 void CardTable::protectBoundaryTable() {
   protectBoundaryTableWork(
-      &boundaries_[0], kValidIndices, oscompat::ProtectMode::None);
+      &boundaries_[0], getEndIndex(), oscompat::ProtectMode::None);
 }
 
 void CardTable::unprotectBoundaryTable() {
   protectBoundaryTableWork(
-      &boundaries_[0], kValidIndices, oscompat::ProtectMode::ReadWrite);
+      &boundaries_[0], getEndIndex(), oscompat::ProtectMode::ReadWrite);
 }
 #endif // HERMES_EXTRA_DEBUG
 
@@ -160,7 +154,7 @@ void CardTable::unprotectBoundaryTable() {
 void CardTable::verifyBoundaries(char *start, char *level) const {
   // Start should be card-aligned.
   assert(isCardAligned(start));
-  for (unsigned index = addressToIndex(start); index < kValidIndices; index++) {
+  for (unsigned index = addressToIndex(start); index < getEndIndex(); index++) {
     const char *boundary = indexToAddress(index);
     if (level <= boundary) {
       break;
