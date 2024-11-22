@@ -51,6 +51,11 @@ class GCPointerBase : public CompressedPointer {
   /// writer barriers.
   inline void
   set(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
+  inline void set(
+      PointerBase &base,
+      CompressedPointer ptr,
+      GC &gc,
+      const GCCell *owningObj);
   inline void
   setNonNull(PointerBase &base, GCCell *ptr, GC &gc, const GCCell *owningObj);
 
@@ -122,9 +127,20 @@ class GCPointer : public GCPointerBase {
     GCPointerBase::setNonNull(base, ptr, gc, owningObj);
   }
 
-  /// Convenience overload of GCPointer::set for other GCPointers.
+  /// Convenience overload of GCPointer::set for other GCPointers. This must not
+  /// be used if it lives in an object that supports large allocation.
   void set(PointerBase &base, const GCPointer<T> &ptr, GC &gc) {
     GCPointerBase::set(base, ptr, gc);
+  }
+
+  /// Convenience overload of GCPointer::set for other GCPointers. \p owningObj
+  /// is used by the writer barriers.
+  void set(
+      PointerBase &base,
+      const GCPointer<T> &ptr,
+      GC &gc,
+      const GCCell *owningObj) {
+    GCPointerBase::set(base, ptr, gc, owningObj);
   }
 };
 
