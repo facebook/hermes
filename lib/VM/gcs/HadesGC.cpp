@@ -80,7 +80,7 @@ void HadesGC::OldGen::addCellToFreelist(
       sz >= sizeof(FreelistCell) &&
       "Cannot construct a FreelistCell into an allocation in the OG");
   FreelistCell *newFreeCell = constructCell<FreelistCell>(addr, sz);
-  FixedSizeHeapSegment::setCellHead(static_cast<GCCell *>(addr), sz);
+  AlignedHeapSegment::setCellHead(static_cast<GCCell *>(addr), sz);
   addCellToFreelist(newFreeCell, segBucket);
 }
 
@@ -124,8 +124,9 @@ void HadesGC::OldGen::addCellToFreelistFromSweep(
   size_t newCellSize = freeRangeEnd - freeRangeStart;
   // While coalescing, sweeping may generate new cells, so make sure the cell
   // head is updated.
-  FixedSizeHeapSegment::setCellHead(
-      reinterpret_cast<GCCell *>(freeRangeStart), newCellSize);
+  if (setHead)
+    AlignedHeapSegment::setCellHead(
+        reinterpret_cast<GCCell *>(freeRangeStart), newCellSize);
   auto *newCell = constructCell<FreelistCell>(freeRangeStart, newCellSize);
   // Get the size bucket for the cell being added;
   const uint32_t bucket = getFreelistBucket(newCellSize);
@@ -217,7 +218,7 @@ GCCell *HadesGC::OldGen::FreelistCell::carve(uint32_t sz) {
   char *newCellAddress = reinterpret_cast<char *>(this) + finalSize;
   GCCell *const newCell = reinterpret_cast<GCCell *>(newCellAddress);
   setSizeFromGC(finalSize);
-  FixedSizeHeapSegment::setCellHead(newCell, sz);
+  AlignedHeapSegment::setCellHead(newCell, sz);
   return newCell;
 }
 
@@ -415,7 +416,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       assert(currentCell_ && "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)
+      AlignedHeapSegment::cardTableCovering(currentCell_)
           ->dirtyCardForAddressInLargeObj(heapLoc);
     }
     return ptr;
@@ -434,7 +435,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       assert(currentCell_ && "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)
+      AlignedHeapSegment::cardTableCovering(currentCell_)
           ->dirtyCardForAddressInLargeObj(heapLoc);
     }
     return cptr;
@@ -658,7 +659,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)
+      AlignedHeapSegment::cardTableCovering(currentCell_)
           ->dirtyCardForAddressInLargeObj(heapLoc);
     }
     if (AlignedHeapSegment::getCellMarkBit(cell)) {
@@ -1104,7 +1105,7 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
         assert(
             !AlignedHeapSegment::getCellMarkBit(newCell) &&
             "Trimmed space cannot be marked");
-        FixedSizeHeapSegment::setCellHead(newCell, trimmableBytes);
+        AlignedHeapSegment::setCellHead(newCell, trimmableBytes);
 #ifndef NDEBUG
         sweepIterator_.trimmedBytes += trimmableBytes;
 #endif
@@ -2247,7 +2248,7 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
         "A newly created segment should always be able to allocate");
     // Set the cell head for any successful alloc, so that write barriers can
     // move from dirty cards to the head of the object.
-    FixedSizeHeapSegment::setCellHead(static_cast<GCCell *>(res.ptr), sz);
+    AlignedHeapSegment::setCellHead(static_cast<GCCell *>(res.ptr), sz);
     // Add the segment to segments_ and add the remainder of the segment to the
     // free list.
     addSegment(std::move(seg.get()));
@@ -2636,7 +2637,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
   // going into OG. This could be done at allocation time, but at a cost
   // to YG alloc times for a case that might not come up.
   forAllObjsInSegment(youngGen_, [](GCCell *cell) {
-    FixedSizeHeapSegment::setCellHead(cell, cell->getAllocatedSize());
+    AlignedHeapSegment::setCellHead(cell, cell->getAllocatedSize());
   });
   // It is important that this operation is just a move of pointers to
   // segments. The addresses have to stay the same or else it would
@@ -3128,7 +3129,7 @@ void HadesGC::verifyCardTable() {
           gc.compactee_.evacContains(valuePtr);
       if (!gc.inYoungGen(locPtr) &&
           (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
-        assert(FixedSizeHeapSegment::cardTableCovering(locPtr)
+        assert(AlignedHeapSegment::cardTableCovering(currentCell)
                    ->isCardForAddressDirtyInLargeObj(locPtr));
       }
     }

@@ -218,6 +218,40 @@ class AlignedHeapSegment {
     return contents()->cardTable_;
   }
 
+  /// Given a \p cell lives in the memory region of some valid segment \c s,
+  /// returns a pointer to the CardTable covering the segment containing the
+  /// cell. Note that this takes a GCCell pointer in order to correctly get
+  /// the segment starting address for JumboHeapSegment.
+  ///
+  /// \pre There exists a currently alive heap in which \p cell is allocated.
+  static CardTable *cardTableCovering(const GCCell *cell) {
+    return &contents(alignedStorageStart(cell))->cardTable_;
+  }
+
+  /// Find the head of the first cell that extends into the card at index
+  /// \p cardIdx.
+  /// \return A cell such that
+  /// cell <= indexToAddress(cardIdx) < cell->nextCell().
+  GCCell *getFirstCellHead(size_t cardIdx) {
+    CardTable &cards = cardTable();
+    GCCell *cell = cards.firstObjForCard(cardIdx);
+    assert(cell->isValid() && "Object head doesn't point to a valid object");
+    return cell;
+  }
+
+  /// Record the head of this cell so it can be found by the card scanner.
+  static void setCellHead(const GCCell *cellStart, const size_t sz) {
+    const char *start = reinterpret_cast<const char *>(cellStart);
+    const char *end = start + sz;
+    CardTable *cards = cardTableCovering(cellStart);
+    auto boundary = cards->nextBoundary(start);
+    // If this object crosses a card boundary, then update boundaries
+    // appropriately.
+    if (boundary.address() < end) {
+      cards->updateBoundaries(&boundary, start, end);
+    }
+  }
+
   /// Return a reference to the mark bit array covering the memory region
   /// managed by this segment.
   Contents::MarkBitArray &markBitArray() const {
@@ -410,15 +444,6 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   /// \pre There exists a currently alive heap that claims to contain \c ptr.
   inline static CardTable *cardTableCovering(const void *ptr);
 
-  /// Find the head of the first cell that extends into the card at index
-  /// \p cardIdx.
-  /// \return A cell such that
-  /// cell <= indexToAddress(cardIdx) < cell->nextCell().
-  inline GCCell *getFirstCellHead(size_t cardIdx);
-
-  /// Record the head of this cell so it can be found by the card scanner.
-  static inline void setCellHead(const GCCell *start, const size_t sz);
-
   /// The largest size the allocation region of an aligned heap segment could
   /// be. This is a static override of AlignedHeapSegment::maxSize().
   inline static constexpr size_t maxSize();
@@ -554,28 +579,6 @@ AllocResult FixedSizeHeapSegment::alloc(uint32_t size) {
 
   auto *cell = reinterpret_cast<GCCell *>(cellPtr);
   return {cell, true};
-}
-
-GCCell *FixedSizeHeapSegment::getFirstCellHead(size_t cardIdx) {
-  CardTable &cards = cardTable();
-  GCCell *cell = cards.firstObjForCard(cardIdx);
-  assert(cell->isValid() && "Object head doesn't point to a valid object");
-  return cell;
-}
-
-/* static */
-void FixedSizeHeapSegment::setCellHead(
-    const GCCell *cellStart,
-    const size_t sz) {
-  const char *start = reinterpret_cast<const char *>(cellStart);
-  const char *end = start + sz;
-  CardTable *cards = cardTableCovering(start);
-  auto boundary = cards->nextBoundary(start);
-  // If this object crosses a card boundary, then update boundaries
-  // appropriately.
-  if (boundary.address() < end) {
-    cards->updateBoundaries(&boundary, start, end);
-  }
 }
 
 /* static */ CardTable *FixedSizeHeapSegment::cardTableCovering(
