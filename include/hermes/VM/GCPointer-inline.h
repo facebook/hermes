@@ -59,6 +59,31 @@ GCPointerBase::set(PointerBase &base, CompressedPointer ptr, GC &gc) {
   setNoBarrier(ptr);
 }
 
+inline void GCPointerBase::set(
+    PointerBase &base,
+    GCCell *ptr,
+    GC &gc,
+    const GCCell *owningObj) {
+  assert(
+      (!ptr || gc.validPointer(ptr)) &&
+      "Cannot set a GCPointer to an invalid pointer");
+  // Write barrier must happen before the write.
+  gc.writeBarrierForLargeObj(owningObj, this, ptr);
+  setNoBarrier(CompressedPointer::encode(ptr, base));
+}
+
+inline void GCPointerBase::setNonNull(
+    PointerBase &base,
+    GCCell *ptr,
+    GC &gc,
+    const GCCell *owningObj) {
+  assert(
+      gc.validPointer(ptr) && "Cannot set a GCPointer to an invalid pointer");
+  // Write barrier must happen before the write.
+  gc.writeBarrierForLargeObj(owningObj, this, ptr);
+  setNoBarrier(CompressedPointer::encodeNonNull(ptr, base));
+}
+
 inline void GCPointerBase::setNull(GC &gc) {
   gc.snapshotWriteBarrier(this);
   setNoBarrier(CompressedPointer(nullptr));
