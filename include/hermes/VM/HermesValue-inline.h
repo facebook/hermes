@@ -39,6 +39,18 @@ GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc) : HVType{hv} {
 
 template <typename HVType>
 template <typename NeedsBarriers>
+GCHermesValueBase<HVType>::GCHermesValueBase(
+    HVType hv,
+    GC &gc,
+    const GCCell *owningObj)
+    : HVType{hv} {
+  assert(!hv.isPointer() || hv.getPointer());
+  if (NeedsBarriers::value)
+    gc.constructorWriteBarrierForLargeObj(owningObj, this, hv);
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
 GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t)
     : HVType{hv} {
   assert(!hv.isPointer());
