@@ -38,7 +38,7 @@ struct CardTableNCTest : public ::testing::Test {
   std::unique_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
   FixedSizeHeapSegment seg{
       std::move(FixedSizeHeapSegment::create(provider.get()).get())};
-  CardTable *table{new (seg.lowLim()) CardTable()};
+  CardTable *table{new (seg.lowLim()) CardTable(FixedSizeHeapSegment::kSize)};
 
   // Addresses in the aligned storage to interact with during the tests.
   std::vector<char *> addrs;
@@ -52,7 +52,7 @@ void CardTableNCTest::dirtyRangeTest(
   table->dirtyCardsForAddressRange(dirtyStart, dirtyEnd);
 
   for (char *p = expectedStart; p < expectedEnd; p += CardTable::kCardSize) {
-    EXPECT_TRUE(table->isCardForAddressDirty(p));
+    EXPECT_TRUE(table->isCardForAddressDirtyInLargeObj(p));
   }
 }
 
@@ -116,18 +116,19 @@ TEST_F(CardTableNCTest, DirtyAddress) {
   for (char *addr : addrs) {
     size_t ind = table->addressToIndex(addr);
 
-    EXPECT_FALSE(ind > 0 && table->isCardForIndexDirty(ind - 1))
+    EXPECT_FALSE(ind > 0 && table->isCardForIndexDirtyInLargeObj(ind - 1))
         << "initial " << ind << " - 1";
-    EXPECT_FALSE(table->isCardForIndexDirty(ind)) << "initial " << ind;
-    EXPECT_FALSE(ind < lastIx && table->isCardForIndexDirty(ind + 1))
+    EXPECT_FALSE(table->isCardForIndexDirtyInLargeObj(ind))
+        << "initial " << ind;
+    EXPECT_FALSE(ind < lastIx && table->isCardForIndexDirtyInLargeObj(ind + 1))
         << "initial " << ind << " + 1";
 
-    table->dirtyCardForAddress(addr);
+    table->dirtyCardForAddressInLargeObj(addr);
 
-    EXPECT_FALSE(ind > 0 && table->isCardForIndexDirty(ind - 1))
+    EXPECT_FALSE(ind > 0 && table->isCardForIndexDirtyInLargeObj(ind - 1))
         << "dirty " << ind << " - 1";
-    EXPECT_TRUE(table->isCardForIndexDirty(ind)) << "dirty " << ind;
-    EXPECT_FALSE(ind < lastIx && table->isCardForIndexDirty(ind + 1))
+    EXPECT_TRUE(table->isCardForIndexDirtyInLargeObj(ind)) << "dirty " << ind;
+    EXPECT_FALSE(ind < lastIx && table->isCardForIndexDirtyInLargeObj(ind + 1))
         << "dirty " << ind << " + 1";
 
     table->clear();
@@ -188,26 +189,26 @@ TEST_F(CardTableNCTest, DirtyAddressRangeLarge) {
 
 TEST_F(CardTableNCTest, Initial) {
   for (char *addr : addrs) {
-    EXPECT_FALSE(table->isCardForAddressDirty(addr));
+    EXPECT_FALSE(table->isCardForAddressDirtyInLargeObj(addr));
   }
 }
 
 TEST_F(CardTableNCTest, Clear) {
   for (char *addr : addrs) {
-    ASSERT_FALSE(table->isCardForAddressDirty(addr));
+    ASSERT_FALSE(table->isCardForAddressDirtyInLargeObj(addr));
   }
 
   for (char *addr : addrs) {
-    table->dirtyCardForAddress(addr);
+    table->dirtyCardForAddressInLargeObj(addr);
   }
 
   for (char *addr : addrs) {
-    ASSERT_TRUE(table->isCardForAddressDirty(addr));
+    ASSERT_TRUE(table->isCardForAddressDirtyInLargeObj(addr));
   }
 
   table->clear();
   for (char *addr : addrs) {
-    EXPECT_FALSE(table->isCardForAddressDirty(addr));
+    EXPECT_FALSE(table->isCardForAddressDirtyInLargeObj(addr));
   }
 }
 
@@ -215,7 +216,7 @@ TEST_F(CardTableNCTest, NextDirtyCardImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
   size_t ind = table->addressToIndex(addr);
 
-  table->dirtyCardForAddress(addr);
+  table->dirtyCardForAddressInLargeObj(addr);
   auto dirty = table->findNextDirtyCard(ind, table->getEndIndex());
 
   ASSERT_TRUE(dirty);
@@ -229,7 +230,7 @@ TEST_F(CardTableNCTest, NextDirtyCard) {
 
   size_t from = CardTable::kFirstUsedIndex;
   for (char *addr : addrs) {
-    table->dirtyCardForAddress(addr);
+    table->dirtyCardForAddressInLargeObj(addr);
 
     auto ind = table->addressToIndex(addr);
     EXPECT_FALSE(table->findNextDirtyCard(from, ind));

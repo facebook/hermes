@@ -17,6 +17,12 @@ typedef struct SHSegmentInfo {
   // SEGMENT_SIZEs after a right shift. A two-byte integer is large enough to 
   // hold the size of a 4GB segment.
   unsigned short shiftedSegmentSize;
+  /// Pointer that points to the CardStatus array for this segment.
+  /// Erase the actual type AtomicIfConcurrent<CardStatus> here to avoid using
+  /// C++ type and forward declaring nested type.
+  void *cards;
+  /// Pointer that points to the boundary array for this segment.
+  int8_t *boundaries;
 } SHSegmentInfo;
 
 #endif
