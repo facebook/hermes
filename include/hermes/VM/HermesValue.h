@@ -520,9 +520,15 @@ template <typename HVType>
 class GCHermesValueBase final : public HVType {
  public:
   GCHermesValueBase() : HVType(HVType::encodeUndefinedValue()) {}
-  /// Initialize a GCHermesValue from another HV. Performs a write barrier.
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier. This
+  /// must not be used if it lives in an object that supports large allocation.
   template <typename NeedsBarriers = std::true_type>
   GCHermesValueBase(HVType hv, GC &gc);
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier using
+  /// \p owningObj, which owns this GCHermesValue and may support large
+  /// allocation.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueBase(HVType hv, GC &gc, const GCCell *owningObj);
   /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
   /// barrier, depending on the GC.
   /// NOTE: The last parameter is unused, but acts as an overload selector.
