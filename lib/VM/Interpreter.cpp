@@ -1260,24 +1260,24 @@ tailCall:
     DISPATCH;                                                            \
   }
 
-#define INCDECOP(name)                                      \
-  CASE(name) {                                              \
-    if (LLVM_LIKELY(O2REG(name).isNumber())) {              \
-      O1REG(name) = HermesValue::encodeTrustedNumberValue(  \
-          do##name(O2REG(name).getNumber()));               \
-      ip = NEXTINST(name);                                  \
-      DISPATCH;                                             \
-    }                                                       \
-    CAPTURE_IP(                                             \
-        res = doIncDecOperSlowPath_RJS<do##name>(           \
-            runtime, Handle<>(&O2REG(name))));              \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) { \
-      goto exception;                                       \
-    }                                                       \
-    O1REG(name) = *res;                                     \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                \
-    ip = NEXTINST(name);                                    \
-    DISPATCH;                                               \
+#define INCDECOP(name)                                         \
+  CASE(name) {                                                 \
+    if (LLVM_LIKELY(_sh_ljs_is_non_nan_number(O2REG(name)))) { \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(     \
+          do##name(O2REG(name).getNumber()));                  \
+      ip = NEXTINST(name);                                     \
+      DISPATCH;                                                \
+    }                                                          \
+    CAPTURE_IP(                                                \
+        res = doIncDecOperSlowPath_RJS<do##name>(              \
+            runtime, Handle<>(&O2REG(name))));                 \
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {    \
+      goto exception;                                          \
+    }                                                          \
+    O1REG(name) = *res;                                        \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                   \
+    ip = NEXTINST(name);                                       \
+    DISPATCH;                                                  \
   }
 
 /// Implement a shift instruction with a fast path where both
@@ -3247,7 +3247,7 @@ tailCall:
         DISPATCH;
       }
       CASE(Negate) {
-        if (LLVM_LIKELY(O2REG(Negate).isNumber())) {
+        if (LLVM_LIKELY(_sh_ljs_is_non_nan_number(O2REG(Negate)))) {
           O1REG(Negate) =
               HermesValue::encodeTrustedNumberValue(-O2REG(Negate).getNumber());
           ip = NEXTINST(Negate);

@@ -297,6 +297,18 @@ static inline uint32_t _sh_ljs_get_native_uint32(SHLegacyValue v) {
   return v.raw;
 }
 
+/// Test whether the value is a non-NaN number. Since we use
+/// NaN-boxing, this just checks if the parameter is NaN, which can have
+/// some performance advantages over _sh_ljs_is_double():
+///  1. Checking for NaN is typically a single instruction.
+///  2. The operation is done in a floating point register, which may avoid
+///     some moves if other users of the value are floating point operations.
+static inline bool _sh_ljs_is_non_nan_number(SHLegacyValue v) {
+  double d = v.f64;
+  // NaN is the only double value that does not compare equal to itself.
+  return d == d;
+}
+
 /// Flags associated with an object.
 typedef union {
   struct {
