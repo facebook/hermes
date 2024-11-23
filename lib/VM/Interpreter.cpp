@@ -2729,11 +2729,18 @@ tailCall:
       }
 
       CASE(ToInt32) {
-        CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(ToInt32))));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-          goto exception;
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(ToInt32) = res.getValue();
+        int32_t argInt;
+        if (LLVM_LIKELY(
+                _sh_ljs_tryfast_truncate_to_int32(O2REG(ToInt32), &argInt))) {
+          /* Fast-path. */
+          O1REG(ToInt32) = HermesValue::encodeTrustedNumberValue(argInt);
+        } else {
+          CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(ToInt32))));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+            goto exception;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          O1REG(ToInt32) = res.getValue();
+        }
         ip = NEXTINST(ToInt32);
         DISPATCH;
       }
