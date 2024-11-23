@@ -864,7 +864,7 @@ void Emitter::frameSetup(
     a.add(a64::x0, a64::sp, jmpBufOffset + offsetof(SHJmpBuf, buf));
     // setjmp can't throw and it'll be called once, so don't use a thunk.
     EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
-        *this, int (*)(jmp_buf), _setjmp);
+        *this, int (*)(jmp_buf), _sh_setjmp);
     // If this a catch, go to the catch table to jump to either a handler BB or
     // rethrow.
     a.cbnz(a64::x0, catchTableLabel_);

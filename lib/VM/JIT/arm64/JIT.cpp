@@ -100,7 +100,7 @@ class JITContext::Compiler {
             [this](std::string &&message) {
               otherErrorMessage_ = std::move(message);
               error_ = Error::Other;
-              _longjmp(errorJmpBuf_, 1);
+              _sh_longjmp(errorJmpBuf_, 1);
             }),
         codeBlock_(codeBlock),
         funcStart_((const char *)codeBlock->begin()) {}
@@ -187,7 +187,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
 }
 
 JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
-  if (_setjmp(errorJmpBuf_) == 0) {
+  if (_sh_setjmp(errorJmpBuf_) == 0) {
     return compileCodeBlockImpl();
   } else {
     // We arrive here on error.
@@ -291,7 +291,7 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 #define EMIT_UNIMPLEMENTED(name)                                               \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
     error_ = Error::UnsupportedInst;                                           \
-    _longjmp(errorJmpBuf_, 1);                                                 \
+    _sh_longjmp(errorJmpBuf_, 1);                                              \
   }
 
 EMIT_UNIMPLEMENTED(GetEnvironment)
