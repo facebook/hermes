@@ -1283,53 +1283,56 @@ tailCall:
 /// Implement a shift instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-#define SHIFTOP(name)                                                          \
-  CASE(name) {                                                                 \
-    if (LLVM_LIKELY(                                                           \
-            O2REG(name).isNumber() &&                                          \
-            O3REG(name).isNumber())) { /* Fast-path. */                        \
-      auto lnum = hermes::truncateToInt32(O2REG(name).getNumber());            \
-      uint32_t rnum = hermes::truncateToInt32(O3REG(name).getNumber()) & 0x1f; \
-      O1REG(name) =                                                            \
-          HermesValue::encodeTrustedNumberValue(do##name(lnum, rnum));         \
-      ip = NEXTINST(name);                                                     \
-      DISPATCH;                                                                \
-    }                                                                          \
-    CAPTURE_IP(                                                                \
-        res = doShiftOperSlowPath_RJS<do##name>(                               \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));         \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                    \
-      goto exception;                                                          \
-    }                                                                          \
-    O1REG(name) = *res;                                                        \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                                   \
-    ip = NEXTINST(name);                                                       \
-    DISPATCH;                                                                  \
+#define SHIFTOP(name)                                                        \
+  CASE(name) {                                                               \
+    int32_t lhsInt, rhsInt;                                                  \
+    if (LLVM_LIKELY(                                                         \
+            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&       \
+            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {      \
+      /* Fast-path. */                                                       \
+      uint32_t shiftAmt = rhsInt & 0x1f;                                     \
+      O1REG(name) =                                                          \
+          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, shiftAmt)); \
+      ip = NEXTINST(name);                                                   \
+      DISPATCH;                                                              \
+    }                                                                        \
+    CAPTURE_IP(                                                              \
+        res = doShiftOperSlowPath_RJS<do##name>(                             \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));       \
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                  \
+      goto exception;                                                        \
+    }                                                                        \
+    O1REG(name) = *res;                                                      \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                 \
+    ip = NEXTINST(name);                                                     \
+    DISPATCH;                                                                \
   }
 
 /// Implement a binary bitwise instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-#define BITWISEBINOP(name)                                               \
-  CASE(name) {                                                           \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
-      /* Fast-path. */                                                   \
-      O1REG(name) = HermesValue::encodeTrustedNumberValue(do##name(      \
-          hermes::truncateToInt32(O2REG(name).getNumber()),              \
-          hermes::truncateToInt32(O3REG(name).getNumber())));            \
-      ip = NEXTINST(name);                                               \
-      DISPATCH;                                                          \
-    }                                                                    \
-    CAPTURE_IP(                                                          \
-        res = doBitOperSlowPath_RJS<do##name>(                           \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {              \
-      goto exception;                                                    \
-    }                                                                    \
-    O1REG(name) = *res;                                                  \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
-    ip = NEXTINST(name);                                                 \
-    DISPATCH;                                                            \
+#define BITWISEBINOP(name)                                                 \
+  CASE(name) {                                                             \
+    int32_t lhsInt, rhsInt;                                                \
+    if (LLVM_LIKELY(                                                       \
+            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&     \
+            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {    \
+      /* Fast-path. */                                                     \
+      O1REG(name) =                                                        \
+          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, rhsInt)); \
+      ip = NEXTINST(name);                                                 \
+      DISPATCH;                                                            \
+    }                                                                      \
+    CAPTURE_IP(                                                            \
+        res = doBitOperSlowPath_RJS<do##name>(                             \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));     \
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                \
+      goto exception;                                                      \
+    }                                                                      \
+    O1REG(name) = *res;                                                    \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                               \
+    ip = NEXTINST(name);                                                   \
+    DISPATCH;                                                              \
   }
 
 /// Implement a comparison instruction.
@@ -2897,9 +2900,11 @@ tailCall:
       }
 
       CASE(BitNot) {
-        if (LLVM_LIKELY(O2REG(BitNot).isNumber())) { /* Fast-path. */
-          O1REG(BitNot) = HermesValue::encodeTrustedNumberValue(
-              ~hermes::truncateToInt32(O2REG(BitNot).getNumber()));
+        int32_t argInt;
+        if (LLVM_LIKELY(
+                _sh_ljs_tryfast_truncate_to_int32(O2REG(BitNot), &argInt))) {
+          /* Fast-path. */
+          O1REG(BitNot) = HermesValue::encodeTrustedNumberValue(~argInt);
           ip = NEXTINST(BitNot);
           DISPATCH;
         }

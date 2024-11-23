@@ -109,6 +109,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "hermes/Support/sh_tryfast_fp_cvt.h"
 #include "hermes/VM/sh_config.h"
 
 #ifdef __cplusplus
@@ -307,6 +308,34 @@ static inline bool _sh_ljs_is_non_nan_number(SHLegacyValue v) {
   double d = v.f64;
   // NaN is the only double value that does not compare equal to itself.
   return d == d;
+}
+
+/// If the value is a number that can be efficiently truncated to a 32 bit
+/// number, return true and store the result in \p res. Otherwise, return
+/// false and leave \p res in an unspecified state.
+static inline bool _sh_ljs_tryfast_truncate_to_int32(
+    SHLegacyValue v,
+    int32_t *res) {
+// If we are compiling with ARM v8.3 or above, there is a special instruction
+// to do the conversion.
+#ifdef __ARM_FEATURE_JCVT
+  if (!_sh_ljs_is_non_nan_number(v))
+    return false;
+  *res = __builtin_arm_jcvt(v.f64);
+  return true;
+#endif
+
+  // Since we use NaN-boxing for non-number values, we know that any
+  // non-number values will fail the attempted conversion to int32. So we can
+  // simply attempt the conversion without checking for numbers.
+  if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
+    int64_t fast = _sh_tryfast_f64_to_i64_cvt(v.f64);
+    *res = (int32_t)fast;
+    return (double)fast == v.f64;
+  } else {
+    *res = _sh_tryfast_f64_to_i32_cvt(v.f64);
+    return (double)*res == v.f64;
+  }
 }
 
 /// Flags associated with an object.
