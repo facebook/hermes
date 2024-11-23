@@ -338,6 +338,28 @@ static inline bool _sh_ljs_tryfast_truncate_to_int32(
   }
 }
 
+/// Test whether the given HermesValues are both non-NaN number values.
+/// Since we use NaN-boxing, this just checks if either parameter is NaN, which
+/// can have some performance advantages over _sh_ljs_is_double():
+///  1. This can typically be done with a single comparison if the
+///     architecture provides a condition code that is set if either
+///     operand to a comparison is NaN (e.g. VS on ARM).
+///  2. The operation is done in a floating point register, which may avoid
+///     some moves if other users of the value are floating point operations.
+static inline bool _sh_ljs_are_both_non_nan_numbers(
+    SHLegacyValue a,
+    SHLegacyValue b) {
+  // We do not use isunordered() here because it may produce a call on some
+  // compilers (e.g. MSVC). Instead, we use a builtin when it is available, or
+  // fall back to checking each operand for NaN if it is not.
+#ifdef __has_builtin
+#if __has_builtin(__builtin_isunordered)
+  return !__builtin_isunordered(a.f64, b.f64);
+#endif
+#endif
+  return _sh_ljs_is_non_nan_number(a) && _sh_ljs_is_non_nan_number(b);
+}
+
 /// Flags associated with an object.
 typedef union {
   struct {

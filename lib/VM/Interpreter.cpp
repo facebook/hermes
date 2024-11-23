@@ -1238,26 +1238,27 @@ tailCall:
 /// operands are numbers.
 /// \param name the name of the instruction. The fast path case will have a
 ///     "n" appended to the name.
-#define BINOP(name)                                                      \
-  CASE(name) {                                                           \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
-      /* Fast-path. */                                                   \
-      CASE(name##N) {                                                    \
-        O1REG(name) = HermesValue::encodeTrustedNumberValue(             \
-            do##name(O2REG(name).getNumber(), O3REG(name).getNumber())); \
-        ip = NEXTINST(name);                                             \
-        DISPATCH;                                                        \
-      }                                                                  \
-    }                                                                    \
-    CAPTURE_IP(                                                          \
-        res = doOperSlowPath_RJS<do##name>(                              \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
-    if (res == ExecutionStatus::EXCEPTION)                               \
-      goto exception;                                                    \
-    O1REG(name) = *res;                                                  \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
-    ip = NEXTINST(name);                                                 \
-    DISPATCH;                                                            \
+#define BINOP(name)                                                        \
+  CASE(name) {                                                             \
+    if (LLVM_LIKELY(                                                       \
+            _sh_ljs_are_both_non_nan_numbers(O2REG(name), O3REG(name)))) { \
+      /* Fast-path. */                                                     \
+      CASE(name##N) {                                                      \
+        O1REG(name) = HermesValue::encodeTrustedNumberValue(               \
+            do##name(O2REG(name).getNumber(), O3REG(name).getNumber()));   \
+        ip = NEXTINST(name);                                               \
+        DISPATCH;                                                          \
+      }                                                                    \
+    }                                                                      \
+    CAPTURE_IP(                                                            \
+        res = doOperSlowPath_RJS<do##name>(                                \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));     \
+    if (res == ExecutionStatus::EXCEPTION)                                 \
+      goto exception;                                                      \
+    O1REG(name) = *res;                                                    \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                               \
+    ip = NEXTINST(name);                                                   \
+    DISPATCH;                                                              \
   }
 
 #define INCDECOP(name)                                         \
@@ -1340,24 +1341,25 @@ tailCall:
 /// \param oper the C++ operator to use to actually perform the fast arithmetic
 ///     comparison.
 /// \param operFuncName  function to call for the slow-path comparison.
-#define CONDOP(name, oper, operFuncName)                                 \
-  CASE(name) {                                                           \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
-      /* Fast-path. */                                                   \
-      O1REG(name) = HermesValue::encodeBoolValue(                        \
-          O2REG(name).getNumber() oper O3REG(name).getNumber());         \
-      ip = NEXTINST(name);                                               \
-      DISPATCH;                                                          \
-    }                                                                    \
-    CAPTURE_IP(                                                          \
-        boolRes = operFuncName(                                          \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
-    if (boolRes == ExecutionStatus::EXCEPTION)                           \
-      goto exception;                                                    \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
-    O1REG(name) = HermesValue::encodeBoolValue(boolRes.getValue());      \
-    ip = NEXTINST(name);                                                 \
-    DISPATCH;                                                            \
+#define CONDOP(name, oper, operFuncName)                                   \
+  CASE(name) {                                                             \
+    if (LLVM_LIKELY(                                                       \
+            _sh_ljs_are_both_non_nan_numbers(O2REG(name), O3REG(name)))) { \
+      /* Fast-path. */                                                     \
+      O1REG(name) = HermesValue::encodeBoolValue(                          \
+          O2REG(name).getNumber() oper O3REG(name).getNumber());           \
+      ip = NEXTINST(name);                                                 \
+      DISPATCH;                                                            \
+    }                                                                      \
+    CAPTURE_IP(                                                            \
+        boolRes = operFuncName(                                            \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));     \
+    if (boolRes == ExecutionStatus::EXCEPTION)                             \
+      goto exception;                                                      \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                               \
+    O1REG(name) = HermesValue::encodeBoolValue(boolRes.getValue());        \
+    ip = NEXTINST(name);                                                   \
+    DISPATCH;                                                              \
   }
 
 /// Implement a comparison conditional jump with a fast path where both
@@ -1374,9 +1376,8 @@ tailCall:
 #define JCOND_IMPL(                                                     \
     name, suffix, oper, operFuncName, trueDest, falseDest, NUMBER_CASE) \
   CASE(name##suffix) {                                                  \
-    if (LLVM_LIKELY(                                                    \
-            O2REG(name##suffix).isNumber() &&                           \
-            O3REG(name##suffix).isNumber())) {                          \
+    if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(                   \
+            O2REG(name##suffix), O3REG(name##suffix)))) {               \
       /* Fast-path. */                                                  \
       NUMBER_CASE(name##N##suffix) {                                    \
         if (O2REG(name##suffix)                                         \
@@ -2872,9 +2873,8 @@ tailCall:
         DISPATCH;
       }
       CASE(Add) {
-        if (LLVM_LIKELY(
-                O2REG(Add).isNumber() &&
-                O3REG(Add).isNumber())) { /* Fast-path. */
+        if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(
+                O2REG(Add), O3REG(Add)))) { /* Fast-path. */
           O1REG(Add) = HermesValue::encodeTrustedNumberValue(
               O2REG(Add).getNumber() + O3REG(Add).getNumber());
           ip = NEXTINST(Add);
@@ -3280,7 +3280,8 @@ tailCall:
         DISPATCH;
       }
       CASE(Mod) {
-        if (LLVM_LIKELY(O2REG(Mod).isNumber() && O3REG(Mod).isNumber())) {
+        if (LLVM_LIKELY(
+                _sh_ljs_are_both_non_nan_numbers(O2REG(Mod), O3REG(Mod)))) {
           /* Fast-path. */
           O1REG(Mod) = HermesValue::encodeTrustedNumberValue(
               doMod(O2REG(Mod).getNumber(), O3REG(Mod).getNumber()));
