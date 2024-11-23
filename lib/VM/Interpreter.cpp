@@ -1250,90 +1250,86 @@ tailCall:
         DISPATCH;                                                          \
       }                                                                    \
     }                                                                      \
-    CAPTURE_IP(                                                            \
-        res = doOperSlowPath_RJS<do##name>(                                \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));     \
-    if (res == ExecutionStatus::EXCEPTION)                                 \
+    CAPTURE_IP_ASSIGN(                                                     \
+        ExecutionStatus status,                                            \
+        doOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name));   \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))               \
       goto exception;                                                      \
-    O1REG(name) = *res;                                                    \
     gcScope.flushToSmallCount(KEEP_HANDLES);                               \
     ip = NEXTINST(name);                                                   \
     DISPATCH;                                                              \
   }
 
-#define INCDECOP(name)                                         \
-  CASE(name) {                                                 \
-    if (LLVM_LIKELY(_sh_ljs_is_non_nan_number(O2REG(name)))) { \
-      O1REG(name) = HermesValue::encodeTrustedNumberValue(     \
-          do##name(O2REG(name).getNumber()));                  \
-      ip = NEXTINST(name);                                     \
-      DISPATCH;                                                \
-    }                                                          \
-    CAPTURE_IP(                                                \
-        res = doIncDecOperSlowPath_RJS<do##name>(              \
-            runtime, Handle<>(&O2REG(name))));                 \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {    \
-      goto exception;                                          \
-    }                                                          \
-    O1REG(name) = *res;                                        \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                   \
-    ip = NEXTINST(name);                                       \
-    DISPATCH;                                                  \
+#define INCDECOP(name)                                                         \
+  CASE(name) {                                                                 \
+    if (LLVM_LIKELY(_sh_ljs_is_non_nan_number(O2REG(name)))) {                 \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(                     \
+          do##name(O2REG(name).getNumber()));                                  \
+      ip = NEXTINST(name);                                                     \
+      DISPATCH;                                                                \
+    }                                                                          \
+    CAPTURE_IP_ASSIGN(                                                         \
+        ExecutionStatus status,                                                \
+        doIncDecOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name)); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {                 \
+      goto exception;                                                          \
+    }                                                                          \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                   \
+    ip = NEXTINST(name);                                                       \
+    DISPATCH;                                                                  \
   }
 
 /// Implement a shift instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-#define SHIFTOP(name)                                                        \
-  CASE(name) {                                                               \
-    int32_t lhsInt, rhsInt;                                                  \
-    if (LLVM_LIKELY(                                                         \
-            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&       \
-            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {      \
-      /* Fast-path. */                                                       \
-      uint32_t shiftAmt = rhsInt & 0x1f;                                     \
-      O1REG(name) =                                                          \
-          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, shiftAmt)); \
-      ip = NEXTINST(name);                                                   \
-      DISPATCH;                                                              \
-    }                                                                        \
-    CAPTURE_IP(                                                              \
-        res = doShiftOperSlowPath_RJS<do##name>(                             \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));       \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                  \
-      goto exception;                                                        \
-    }                                                                        \
-    O1REG(name) = *res;                                                      \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                                 \
-    ip = NEXTINST(name);                                                     \
-    DISPATCH;                                                                \
+#define SHIFTOP(name)                                                         \
+  CASE(name) {                                                                \
+    int32_t lhsInt, rhsInt;                                                   \
+    if (LLVM_LIKELY(                                                          \
+            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&        \
+            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {       \
+      /* Fast - path. */                                                      \
+      uint32_t shiftAmt = rhsInt & 0x1f;                                      \
+      O1REG(name) =                                                           \
+          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, shiftAmt));  \
+      ip = NEXTINST(name);                                                    \
+      DISPATCH;                                                               \
+    }                                                                         \
+    CAPTURE_IP_ASSIGN(                                                        \
+        ExecutionStatus status,                                               \
+        doShiftOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name)); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {                \
+      goto exception;                                                         \
+    }                                                                         \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                  \
+    ip = NEXTINST(name);                                                      \
+    DISPATCH;                                                                 \
   }
 
 /// Implement a binary bitwise instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-#define BITWISEBINOP(name)                                                 \
-  CASE(name) {                                                             \
-    int32_t lhsInt, rhsInt;                                                \
-    if (LLVM_LIKELY(                                                       \
-            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&     \
-            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {    \
-      /* Fast-path. */                                                     \
-      O1REG(name) =                                                        \
-          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, rhsInt)); \
-      ip = NEXTINST(name);                                                 \
-      DISPATCH;                                                            \
-    }                                                                      \
-    CAPTURE_IP(                                                            \
-        res = doBitOperSlowPath_RJS<do##name>(                             \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));     \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                \
-      goto exception;                                                      \
-    }                                                                      \
-    O1REG(name) = *res;                                                    \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                               \
-    ip = NEXTINST(name);                                                   \
-    DISPATCH;                                                              \
+#define BITWISEBINOP(name)                                                  \
+  CASE(name) {                                                              \
+    int32_t lhsInt, rhsInt;                                                 \
+    if (LLVM_LIKELY(                                                        \
+            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&      \
+            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {     \
+      /* Fast-path. */                                                      \
+      O1REG(name) =                                                         \
+          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, rhsInt));  \
+      ip = NEXTINST(name);                                                  \
+      DISPATCH;                                                             \
+    }                                                                       \
+    CAPTURE_IP_ASSIGN(                                                      \
+        ExecutionStatus status,                                             \
+        doBitOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name)); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {              \
+      goto exception;                                                       \
+    }                                                                       \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                \
+    ip = NEXTINST(name);                                                    \
+    DISPATCH;                                                               \
   }
 
 /// Implement a comparison instruction.
@@ -2915,12 +2911,12 @@ tailCall:
           ip = NEXTINST(BitNot);
           DISPATCH;
         }
-        CAPTURE_IP(
-            res = doBitNotSlowPath_RJS(runtime, Handle<>(&O2REG(BitNot))));
-        if (res == ExecutionStatus::EXCEPTION) {
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            doBitNotSlowPath_RJS(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(BitNot) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(BitNot);
         DISPATCH;
@@ -3265,11 +3261,11 @@ tailCall:
           ip = NEXTINST(Negate);
           DISPATCH;
         }
-        CAPTURE_IP(
-            res = doNegateSlowPath_RJS(runtime, Handle<>(&O2REG(Negate))));
-        if (res == ExecutionStatus::EXCEPTION)
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            doNegateSlowPath_RJS(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
           goto exception;
-        O1REG(Negate) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(Negate);
         DISPATCH;
@@ -3288,13 +3284,12 @@ tailCall:
           ip = NEXTINST(Mod);
           DISPATCH;
         }
-        CAPTURE_IP(
-            res = doOperSlowPath_RJS<doMod>(
-                runtime, Handle<>(&O2REG(Mod)), Handle<>(&O3REG(Mod))));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            doOperSlowPath_RJS<doMod>(runtime, frameRegs, &ip->iMod));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(Mod) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(Mod);
         DISPATCH;

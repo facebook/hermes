@@ -520,9 +520,13 @@ constexpr auto &BigIntOper<doDec> = BigIntPrimitive::dec;
 
 } // namespace
 
-template <auto Oper>
-CallResult<HermesValue>
-doOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+template <auto Oper, typename InstType>
+ExecutionStatus doOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  Handle<> lhs(&REG(inst->op2));
+  Handle<> rhs(&REG(inst->op3));
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -538,27 +542,46 @@ doOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeTrustedNumberValue(Oper(left, res->getDouble()));
+    REG(inst->op1) =
+        HermesValue::encodeTrustedNumberValue(Oper(left, res->getDouble()));
+    return ExecutionStatus::RETURNED;
   }
-  return doBigIntBinOp(
+  res = doBigIntBinOp(
       runtime, BigIntOper<Oper>, runtime.makeHandle(res->getBigInt()), rhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doDiv>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doDiv>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::DivInst *inst);
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doMod>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doMod>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::ModInst *inst);
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doMul>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doMul>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::MulInst *inst);
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doSub>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doSub>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::SubInst *inst);
 
-template <auto Oper>
-CallResult<HermesValue>
-doBitOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+template <auto Oper, typename InstType>
+ExecutionStatus doBitOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  Handle<> lhs(&REG(inst->op2));
+  Handle<> rhs(&REG(inst->op3));
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -570,25 +593,40 @@ doBitOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
       return ExecutionStatus::EXCEPTION;
     }
     const int32_t left = res->getNumberAs<int32_t>();
-    res = toInt32_RJS(runtime, std::move(rhs));
+    res = toInt32_RJS(runtime, rhs);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeTrustedNumberValue(
+    REG(inst->op1) = HermesValue::encodeTrustedNumberValue(
         Oper(left, res->getNumberAs<int32_t>()));
+    return ExecutionStatus::RETURNED;
   }
-  return doBigIntBinOp(
-      runtime, BigIntOper<Oper>, runtime.makeHandle(res->getBigInt()), rhs);
+  res = doBigIntBinOp(
+      runtime,
+      BigIntOper<Oper>,
+      runtime.makeHandle(res->getBigInt()),
+      Handle<>(rhs));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue>
-doBitOperSlowPath_RJS<doBitAnd>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doBitOperSlowPath_RJS<doBitAnd>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::BitAndInst *ip);
 
-template CallResult<HermesValue>
-doBitOperSlowPath_RJS<doBitOr>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doBitOperSlowPath_RJS<doBitOr>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::BitOrInst *ip);
 
-template CallResult<HermesValue>
-doBitOperSlowPath_RJS<doBitXor>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doBitOperSlowPath_RJS<doBitXor>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::BitXorInst *ip);
 
 namespace {
 /// ToIntegral maps the \param Oper shift operation (on Number) to the function
@@ -608,9 +646,13 @@ template <>
 inline constexpr auto &ToIntegral<doURshift> = toUInt32_RJS;
 } // namespace
 
-template <auto Oper>
-CallResult<HermesValue>
-doShiftOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+template <auto Oper, typename InstType>
+ExecutionStatus doShiftOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  Handle<> lhs(&REG(inst->op2));
+  Handle<> rhs(&REG(inst->op3));
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, std::move(lhs), PreferredType::NUMBER);
 
@@ -629,32 +671,43 @@ doShiftOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
       return ExecutionStatus::EXCEPTION;
     }
     auto rnum = static_cast<uint32_t>(res->getNumber()) & 0x1f;
-    return HermesValue::encodeTrustedNumberValue((*Oper)(lnum, rnum));
+    REG(inst->op1) = HermesValue::encodeTrustedNumberValue((*Oper)(lnum, rnum));
+    return ExecutionStatus::RETURNED;
   }
-  return doBigIntBinOp(
+  res = doBigIntBinOp(
       runtime,
       BigIntOper<Oper>,
       runtime.makeHandle(res->getBigInt()),
       std::move(rhs));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue>
-doShiftOperSlowPath_RJS<doLShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
-
-template CallResult<HermesValue>
-doShiftOperSlowPath_RJS<doRShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
-
-template CallResult<HermesValue> doShiftOperSlowPath_RJS<doURshift>(
+template ExecutionStatus doShiftOperSlowPath_RJS<doLShift>(
     Runtime &runtime,
-    Handle<> lhs,
-    Handle<> rhs);
+    PinnedHermesValue *frameRegs,
+    const inst::LShiftInst *inst);
 
-template <auto Oper>
-CallResult<HermesValue> doIncDecOperSlowPath_RJS(
+template ExecutionStatus doShiftOperSlowPath_RJS<doRShift>(
     Runtime &runtime,
-    Handle<> src) {
-  CallResult<HermesValue> res =
-      toPrimitive_RJS(runtime, std::move(src), PreferredType::NUMBER);
+    PinnedHermesValue *frameRegs,
+    const inst::RShiftInst *inst);
+
+template ExecutionStatus doShiftOperSlowPath_RJS<doURshift>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::URshiftInst *inst);
+
+template <auto Oper, typename InstType>
+ExecutionStatus doIncDecOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  CallResult<HermesValue> res = toPrimitive_RJS(
+      runtime, Handle<>(&REG(inst->op2)), PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -664,49 +717,76 @@ CallResult<HermesValue> doIncDecOperSlowPath_RJS(
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeTrustedNumberValue(Oper(res->getNumber()));
+    REG(inst->op1) =
+        HermesValue::encodeTrustedNumberValue(Oper(res->getNumber()));
+    return ExecutionStatus::RETURNED;
   }
 
-  return BigIntOper<Oper>(runtime, runtime.makeHandle(res->getBigInt()));
+  res = BigIntOper<Oper>(runtime, runtime.makeHandle(res->getBigInt()));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue> doIncDecOperSlowPath_RJS<doInc>(
+template ExecutionStatus doIncDecOperSlowPath_RJS<doInc>(
     Runtime &runtime,
-    Handle<> src);
+    PinnedHermesValue *frameRegs,
+    const inst::IncInst *inst);
 
-template CallResult<HermesValue> doIncDecOperSlowPath_RJS<doDec>(
+template ExecutionStatus doIncDecOperSlowPath_RJS<doDec>(
     Runtime &runtime,
-    Handle<> src);
+    PinnedHermesValue *frameRegs,
+    const inst::DecInst *inst);
 
-CallResult<HermesValue> doBitNotSlowPath_RJS(Runtime &runtime, Handle<> src) {
+ExecutionStatus doBitNotSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
   // Try converting src to a numeric.
-  auto numRes = toNumeric_RJS(runtime, src);
+  auto numRes = toNumeric_RJS(runtime, Handle<>(&O2REG(BitNot)));
   if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   // Test for BigInt since it is cheaper than testing for number. If it is a
   // number, truncate it and perform bitwise not.
-  if (LLVM_LIKELY(!numRes->isBigInt()))
-    return HermesValue::encodeTrustedNumberValue(
+  if (LLVM_LIKELY(!numRes->isBigInt())) {
+    O1REG(BitNot) = HermesValue::encodeTrustedNumberValue(
         ~hermes::truncateToInt32(numRes->getNumber()));
+    return ExecutionStatus::RETURNED;
+  }
 
   // The result is a BigInt, perform a BigInt bitwise not.
   auto bigint = runtime.makeHandle(numRes->getBigInt());
-  return BigIntPrimitive::unaryNOT(runtime, bigint);
+  auto res = BigIntPrimitive::unaryNOT(runtime, bigint);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(BitNot) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-CallResult<HermesValue> doNegateSlowPath_RJS(Runtime &runtime, Handle<> src) {
+ExecutionStatus doNegateSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
   // Try converting src to a numeric.
-  auto numRes = toNumeric_RJS(runtime, src);
+  auto numRes = toNumeric_RJS(runtime, Handle<>(&O2REG(Negate)));
   if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   // Test for BigInt since it is cheaper than testing for number. If it is a
   // number, negate it and return.
-  if (LLVM_LIKELY(!numRes->isBigInt()))
-    return HermesValue::encodeTrustedNumberValue(-numRes->getNumber());
+  if (LLVM_LIKELY(!numRes->isBigInt())) {
+    O1REG(Negate) = HermesValue::encodeTrustedNumberValue(-numRes->getNumber());
+    return ExecutionStatus::RETURNED;
+  }
 
   // The result is a BigInt, perform a BigInt unary minus.
   auto bigint = runtime.makeHandle(numRes->getBigInt());
-  return BigIntPrimitive::unaryMinus(runtime, bigint);
+  auto res = BigIntPrimitive::unaryMinus(runtime, bigint);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(Negate) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
 } // namespace vm
