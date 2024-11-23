@@ -32,6 +32,24 @@ GCPointerBase::GCPointerBase(
   }
 }
 
+template <typename NeedsBarriers>
+GCPointerBase::GCPointerBase(
+    PointerBase &base,
+    GCCell *ptr,
+    GC &gc,
+    const GCCell *owningObj,
+    NeedsBarriers)
+    : CompressedPointer(CompressedPointer::encode(ptr, base)) {
+  assert(
+      (!ptr || gc.validPointer(ptr)) &&
+      "Cannot construct a GCPointer from an invalid pointer");
+  if constexpr (NeedsBarriers::value) {
+    gc.constructorWriteBarrierForLargeObj(owningObj, this, ptr);
+  } else {
+    assert(!gc.needsWriteBarrier(this, ptr));
+  }
+}
+
 inline void GCPointerBase::set(PointerBase &base, GCCell *ptr, GC &gc) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&

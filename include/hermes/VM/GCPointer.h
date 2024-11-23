@@ -27,6 +27,14 @@ class GCPointerBase : public CompressedPointer {
   template <typename NeedsBarriers>
   inline GCPointerBase(PointerBase &base, GCCell *ptr, GC &gc, NeedsBarriers);
 
+  template <typename NeedsBarriers>
+  inline GCPointerBase(
+      PointerBase &base,
+      GCCell *ptr,
+      GC &gc,
+      const GCCell *owningObj,
+      NeedsBarriers);
+
  public:
   // These classes are used as arguments to GCPointer constructors, to
   // indicate whether write barriers are necessary in initializing the
@@ -81,12 +89,26 @@ class GCPointer : public GCPointerBase {
   template <typename NeedsBarriers>
   GCPointer(PointerBase &base, T *ptr, GC &gc, NeedsBarriers needsBarriers)
       : GCPointerBase(base, ptr, gc, needsBarriers) {}
+  /// Pass the owning object pointer to perform barriers when the object
+  /// supports large allocation.
+  template <typename NeedsBarriers>
+  GCPointer(
+      PointerBase &base,
+      T *ptr,
+      GC &gc,
+      const GCCell *owningObj,
+      NeedsBarriers needsBarriers)
+      : GCPointerBase(base, ptr, gc, owningObj, needsBarriers) {}
 
   /// Same as the constructor above, with the default for
   /// NeedsBarriers as "YesBarriers".  (We can't use default template
   /// arguments with the idiom used above.)
-  inline GCPointer(PointerBase &base, T *ptr, GC &gc)
+  GCPointer(PointerBase &base, T *ptr, GC &gc)
       : GCPointer<T>(base, ptr, gc, YesBarriers()) {}
+  /// Pass the owning object pointer to perform barriers when the object
+  /// supports large allocation.
+  GCPointer(PointerBase &base, T *ptr, GC &gc, const GCCell *owningObj)
+      : GCPointer<T>(base, ptr, gc, owningObj, YesBarriers()) {}
 
   /// We are not allowed to copy-construct or assign GCPointers.
   GCPointer(const GCPointerBase &) = delete;
