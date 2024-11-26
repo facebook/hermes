@@ -14,6 +14,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/StackExecutor.h"
 #include "hermes/Support/StackOverflowGuard.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
@@ -881,6 +882,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   }
 #endif
 
+  /// \return the stored StackExecutor.
+  StackExecutor &getStackExecutor() {
+    return *stackExecutor_;
+  }
+
   /// \return the newly allocated script ID, incrementing the internal counter.
   facebook::hermes::debugger::ScriptID allocateScriptId() {
     return nextScriptId_++;
@@ -1351,6 +1357,18 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   Debugger debugger_{*this};
 #endif
+
+  /// Use an 8MB stack, which is the default size on mac and linux.
+  static constexpr size_t kExecutorStackSize = 1 << 23;
+
+  /// Idle for 1 second before letting the executor thread be cleaned up,
+  /// after which further tasks will start a new thread.
+  static constexpr std::chrono::milliseconds kExecutorTimeout =
+      std::chrono::milliseconds(1000);
+
+  /// The executor used to run the compiler.
+  std::shared_ptr<StackExecutor> stackExecutor_ =
+      newStackExecutor(kExecutorStackSize, kExecutorTimeout);
 
   /// Holds references to persistent BC providers for the lifetime of the
   /// Runtime. This is needed because the identifier table may contain pointers

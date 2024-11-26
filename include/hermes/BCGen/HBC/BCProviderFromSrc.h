@@ -10,7 +10,6 @@
 
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/Support/StackExecutor.h"
 
 #include "llvh/ADT/Optional.h"
 
@@ -99,18 +98,6 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// Data needed for compiling more code that uses the same
   /// variables/information.
   CompilationData compilationData_;
-
-  /// Use an 8MB stack, which is the default size on mac and linux.
-  static constexpr size_t kExecutorStackSize = 1 << 23;
-
-  /// Idle for 1 second before letting the executor thread be cleaned up,
-  /// after which further tasks will start a new thread.
-  static constexpr std::chrono::milliseconds kExecutorTimeout =
-      std::chrono::milliseconds(1000);
-
-  /// The executor used to run the compiler.
-  std::shared_ptr<StackExecutor> stackExecutor_ =
-      newStackExecutor(kExecutorStackSize, kExecutorTimeout);
 
   /// The BytecodeModule that provides the bytecode data.
   /// Placed below CompilationData to ensure its destruction before the
@@ -256,10 +243,6 @@ class BCProviderFromSrc final : public BCProviderBase {
   void setSourceHash(const SHA1 &hash) {
     sourceHash_ = hash;
   };
-
-  StackExecutor &getStackExecutor() {
-    return *stackExecutor_;
-  }
 
   static bool classof(const BCProviderBase *provider) {
     return provider->getKind() == BCProviderKind::BCProviderFromSrc;

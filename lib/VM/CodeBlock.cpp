@@ -215,7 +215,13 @@ ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");
   auto *provider = runtimeModule_->getBytecode();
 
-  auto [success, errMsg] = hbc::compileLazyFunction(provider, functionID_);
+  bool success;
+  llvh::StringRef errMsg;
+  executeInStack(
+      runtime.getStackExecutor(), [&success, &errMsg, &provider, this]() {
+        std::tie(success, errMsg) =
+            hbc::compileLazyFunction(provider, functionID_);
+      });
   if (!success) {
     // Raise a SyntaxError to be consistent with eval().
     return runtime.raiseSyntaxError(llvh::StringRef{errMsg});

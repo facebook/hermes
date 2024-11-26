@@ -81,12 +81,18 @@ CallResult<HermesValue> evalInEnvironment(
             "Code compiled without support for direct eval");
       }
       // Local eval.
-      auto [newBCProviderFromSrc, error] = hbc::compileEvalModule(
-          std::move(buffer),
-          llvh::cast<hbc::BCProviderFromSrc>(
-              codeBlock->getRuntimeModule()->getBytecode()),
-          codeBlock->getFunctionID(),
-          compileFlags);
+      std::unique_ptr<hbc::BCProviderFromSrc> newBCProviderFromSrc;
+      std::string error;
+      executeInStack(
+          runtime.getStackExecutor(),
+          [&newBCProviderFromSrc, &error, &buffer, codeBlock, compileFlags]() {
+            std::tie(newBCProviderFromSrc, error) = hbc::compileEvalModule(
+                std::move(buffer),
+                llvh::cast<hbc::BCProviderFromSrc>(
+                    codeBlock->getRuntimeModule()->getBytecode()),
+                codeBlock->getFunctionID(),
+                compileFlags);
+          });
       if (!newBCProviderFromSrc) {
         return runtime.raiseSyntaxError(llvh::StringRef(error));
       }
@@ -95,15 +101,21 @@ CallResult<HermesValue> evalInEnvironment(
       // Global eval.
       // Creates a new AST Context and compiles everything independently:
       // new SemContext, new IR Module, everything.
-      auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-          std::move(buffer),
-          "eval",
-          nullptr,
-          compileFlags,
-          "eval",
-          {},
-          nullptr,
-          runOptimizationPasses);
+      std::pair<std::unique_ptr<hbc::BCProviderFromSrc>, std::string>
+          bytecode_err;
+      executeInStack(
+          runtime.getStackExecutor(),
+          [&bytecode_err, &buffer, compileFlags, &runOptimizationPasses]() {
+            bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+                std::move(buffer),
+                "eval",
+                nullptr,
+                compileFlags,
+                "eval",
+                {},
+                nullptr,
+                runOptimizationPasses);
+          });
       if (!bytecode_err.first) {
         return runtime.raiseSyntaxError(TwineChar16(bytecode_err.second));
       }

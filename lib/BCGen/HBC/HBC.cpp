@@ -342,10 +342,9 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
     return {false, *errMsgOpt};
   }
 
-  // Run in a new stack to prevent stack overflow when deep inside JS execution.
+  // Use this callback-style API to reduce conflicts with stable for now.
   LazyCompilationThreadData data{provider, funcID};
-  executeInStack(
-      provider->getStackExecutor(), &data, compileLazyFunctionWorker);
+  compileLazyFunctionWorker(&data);
 
   if (data.success) {
     return std::make_pair(true, llvh::StringRef{});
@@ -406,9 +405,9 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
     hbc::BCProviderFromSrc *provider,
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags) {
-  // Run in a new stack to prevent stack overflow when deep inside JS execution.
+  // Use this callback-style API to reduce conflicts with stable for now.
   EvalThreadData data{std::move(src), provider, enclosingFuncID, compileFlags};
-  executeInStack(provider->getStackExecutor(), &data, compileEvalWorker);
+  compileEvalWorker(&data);
 
   return data.success
       ? std::make_pair(std::move(data.result), "")
