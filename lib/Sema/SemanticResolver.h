@@ -47,6 +47,13 @@ class SemanticResolver
   /// be inserted in the global scope.
   const DeclarationFileListTy &ambientDecls_;
 
+  /// A set of names that are restricted in the global scope.
+  /// https://262.ecma-international.org/14.0/#sec-hasrestrictedglobalproperty
+  /// ES14.0 9.1.1.4.14 HasRestrictedGlobalProperty:
+  ///   Any global properties that are defined to be non-configurable
+  ///   are restricted.
+  llvh::SmallDenseSet<UniqueString *, 4> restrictedGlobalProperties_{};
+
   /// If not null, store all instances of DeclCollector here, for use by other
   /// passes.
   DeclCollectorMapTy *const saveDecls_;

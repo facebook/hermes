@@ -34,7 +34,14 @@ SemanticResolver::SemanticResolver(
       ambientDecls_(ambientDecls),
       saveDecls_(saveDecls),
       bindingTable_(semCtx.getBindingTable()),
-      compile_(compile) {}
+      compile_(compile) {
+  // ES14.0 19.1 Value properties of the global object
+  // https://262.ecma-international.org/14.0/#sec-value-properties-of-the-global-object
+  // These are the only non-configurable properties.
+  restrictedGlobalProperties_.insert(kw_.identNaN);
+  restrictedGlobalProperties_.insert(kw_.identUndefined);
+  restrictedGlobalProperties_.insert(kw_.identInfinity);
+}
 
 bool SemanticResolver::run(ESTree::ProgramNode *rootNode) {
   if (sm_.getErrorCount())
@@ -1883,6 +1890,27 @@ void SemanticResolver::validateAndDeclareIdentifier(
         kind == Decl::Kind::ScopedFunction) {
       decl = nullptr;
     }
+  }
+
+  // Special case: this is a lexically-scoped declaration in global scope
+  // which is a restricted global.
+  // ES14.0 16.1.7 GlobalDeclarationInstantiation
+  // For each element name of lexNames, do
+  //  a. If env.HasVarDeclaration(name) is true,
+  //    throw a SyntaxError exception.
+  //  b. If env.HasLexicalDeclaration(name) is true,
+  //    throw a SyntaxError exception.
+  //  c. Let hasRestrictedGlobal be ? env.HasRestrictedGlobalProperty(name).
+  //  d. If hasRestrictedGlobal is true,
+  //    throw a SyntaxError exception.
+  //  (a-b) are handled by the checks above, so just do (c-d) here.
+  if (curScope_ == semCtx_.getGlobalScope() && Decl::isKindLetLike(kind) &&
+      restrictedGlobalProperties_.count(ident->_name)) {
+    sm_.error(
+        ident->getSourceRange(),
+        llvh::Twine(
+            "Can't create duplicate variable that shadows a global property: '") +
+            ident->_name->str() + "'");
   }
 
   // Create new decl.
