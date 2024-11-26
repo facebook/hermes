@@ -1949,19 +1949,21 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
   };
 
   // Create specialization if it doesn't exist.
-  // TODO: Determine if the actual clone can be deferred to avoid potential
-  // stack overflow by cloning from deep in the AST.
   if (doClone) {
     LLVM_DEBUG(
         llvh::dbgs() << "Creating specialization for: " << oldDecl->name.str()
                      << "\n");
-    specialization = cloneNode(
-        astContext_,
-        semContext_,
-        declCollectorMap_,
-        generic.originalNode,
-        scope->parentFunction,
-        scope);
+    // Avoid stack overflow in the clone by executing in a separate stack.
+    executeInStack(
+        *stackExecutor_, [this, &generic, scope, &specialization]() -> void {
+          specialization = cloneNode(
+              astContext_,
+              semContext_,
+              declCollectorMap_,
+              generic.originalNode,
+              scope->parentFunction,
+              scope);
+        });
     if (!specialization) {
       sm_.error(
           typeArgsNode->getSourceRange(),

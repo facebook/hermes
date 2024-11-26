@@ -16,6 +16,7 @@
 #include "hermes/Sema/FlowContext.h"
 #include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
+#include "hermes/Support/StackExecutor.h"
 
 namespace hermes {
 namespace flow {
@@ -72,6 +73,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   /// Keywords we will be checking for.
   sema::Keywords &kw_;
+
+  /// Use an 8MB stack, which is the default size on mac and linux.
+  static constexpr size_t kExecutorStackSize = 1 << 23;
+
+  /// The executor used for cloning generics.
+  std::shared_ptr<StackExecutor> stackExecutor_ =
+      newStackExecutor(kExecutorStackSize);
 
   struct TypeDecl {
     /// nullptr is used to indicate a generic declaration.
