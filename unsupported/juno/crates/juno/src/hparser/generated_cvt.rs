@@ -1465,9 +1465,11 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
         }
         NodeKind::TupleTypeAnnotation => {
           let types = cvt_node_list(cvt, gc, hermes_get_TupleTypeAnnotation_types(n));
+          let inexact = hermes_get_TupleTypeAnnotation_inexact(n);
           let mut template = ast::template::TupleTypeAnnotation {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   types,
+                  inexact,
           };
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TupleTypeAnnotation::build_template(gc, template)
@@ -1587,12 +1589,12 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
         NodeKind::TypePredicate => {
           let parameter_name = cvt_node_ptr(cvt, gc, hermes_get_TypePredicate_parameterName(n));
           let type_annotation = cvt_node_ptr_opt(cvt, gc, hermes_get_TypePredicate_typeAnnotation(n));
-          let asserts = hermes_get_TypePredicate_asserts(n);
+          let kind = cvt.cvt_string_opt(gc, hermes_get_TypePredicate_kind(n));
           let mut template = ast::template::TypePredicate {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   parameter_name,
                   type_annotation,
-                  asserts,
+                  kind,
           };
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::TypePredicate::build_template(gc, template)
@@ -2037,6 +2039,15 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::AsExpression::build_template(gc, template)
         }
+        NodeKind::AsConstExpression => {
+          let expression = cvt_node_ptr(cvt, gc, hermes_get_AsConstExpression_expression(n));
+          let mut template = ast::template::AsConstExpression {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  expression,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::AsConstExpression::build_template(gc, template)
+        }
         NodeKind::InferredPredicate => {
           let mut template = ast::template::InferredPredicate {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
@@ -2089,6 +2100,19 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           };
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumNumberBody::build_template(gc, template)
+        }
+        NodeKind::EnumBigIntBody => {
+          let members = cvt_node_list(cvt, gc, hermes_get_EnumBigIntBody_members(n));
+          let explicit_type = hermes_get_EnumBigIntBody_explicitType(n);
+          let has_unknown_members = hermes_get_EnumBigIntBody_hasUnknownMembers(n);
+          let mut template = ast::template::EnumBigIntBody {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  members,
+                  explicit_type,
+                  has_unknown_members,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::EnumBigIntBody::build_template(gc, template)
         }
         NodeKind::EnumBooleanBody => {
           let members = cvt_node_list(cvt, gc, hermes_get_EnumBooleanBody_members(n));
@@ -2144,6 +2168,17 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           };
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::EnumNumberMember::build_template(gc, template)
+        }
+        NodeKind::EnumBigIntMember => {
+          let id = cvt_node_ptr(cvt, gc, hermes_get_EnumBigIntMember_id(n));
+          let init = cvt_node_ptr(cvt, gc, hermes_get_EnumBigIntMember_init(n));
+          let mut template = ast::template::EnumBigIntMember {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  init,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::EnumBigIntMember::build_template(gc, template)
         }
         NodeKind::EnumBooleanMember => {
           let id = cvt_node_ptr(cvt, gc, hermes_get_EnumBooleanMember_id(n));
