@@ -167,55 +167,81 @@ target_link_libraries(hermesvmlean_a PUBLIC
 add_library(hermesvm SHARED dummy.cpp)
 add_library(hermesvmlean SHARED dummy.cpp)
 
-# Do not build a framework for the test suite.
-if(HERMES_BUILD_APPLE_FRAMEWORK)
-  if(APPLE)
-    set_target_properties(hermesvm PROPERTIES
-      FRAMEWORK TRUE
-      VERSION ${PROJECT_VERSION}
-      SOVERSION ${PROJECT_VERSION}
-      FRAMEWORK_VERSION ${PROJECT_VERSION_MAJOR}
-      MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
-      MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
-      MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${HERMES_APPLE_TARGET_PLATFORM}
+if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
+  set_target_properties(hermesvm PROPERTIES
+    FRAMEWORK TRUE
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION}
+    FRAMEWORK_VERSION ${PROJECT_VERSION_MAJOR}
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
+    MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${HERMES_APPLE_TARGET_PLATFORM}
+  )
+  # Install headers into `Headers` while keeping required directory structure
+  set_source_files_properties(${api_headers} PROPERTIES
+    MACOSX_PACKAGE_LOCATION Headers
+  )
+  set_source_files_properties(${api_public_headers} PROPERTIES
+    MACOSX_PACKAGE_LOCATION Headers/Public
+  )
+  if(HERMES_ENABLE_BITCODE)
+    target_compile_options(hermesvm PUBLIC "-fembed-bitcode")
+    target_link_options(hermesvm PUBLIC "-fembed-bitcode")
+  endif()
+  # Define the deployment target in the frameworks metadata
+  if(HERMES_APPLE_TARGET_PLATFORM MATCHES "iphone")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
     )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "appletv")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Resources/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "macos")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Resources/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "xr")
+    if(CMAKE_VERSION VERSION_LESS 3.28.4)
+      message("VisionOS Simulator requires CMake version >= 3.28.4")
+    endif()
 
     add_custom_command(TARGET hermesvm POST_BUILD
       COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
     )
+  endif()
+endif()
 
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
-      FILES_MATCHING PATTERN "*.h"
-      PATTERN "synthtest" EXCLUDE)
+# Create debug symbols (dSYM) bundle for Apple platform dylibs/frameworks
+# Largely inspired by https://github.com/llvm/llvm-project/blob/6701993027f8af172d7ba697884459261b00e3c6/llvm/cmake/modules/AddLLVM.cmake#L1934-L1986
+if(HERMES_BUILD_APPLE_DSYM)
+  if(CMAKE_CXX_FLAGS MATCHES "-flto")
+    set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/hermesvm-lto.o)
+    set_property(TARGET hermesvm APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
   endif()
 
-  # Create debug symbols (dSYM) bundle for Apple platform dylibs/frameworks
-  # Largely inspired by https://github.com/llvm/llvm-project/blob/6701993027f8af172d7ba697884459261b00e3c6/llvm/cmake/modules/AddLLVM.cmake#L1934-L1986
-  if(HERMES_BUILD_APPLE_DSYM)
-    if(CMAKE_CXX_FLAGS MATCHES "-flto")
-      set(lto_object ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/hermesvm-lto.o)
-      set_property(TARGET hermesvm APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-object_path_lto,${lto_object}")
-    endif()
+  get_target_property(DSYM_PATH hermesvm LOCATION)
+  if(HERMES_BUILD_APPLE_FRAMEWORK)
+    get_filename_component(DSYM_PATH ${DSYM_PATH} DIRECTORY)
+  endif()
+  set(DSYM_PATH "${DSYM_PATH}.dSYM")
 
-    get_target_property(DSYM_PATH hermesvm LOCATION)
-    if(HERMES_BUILD_APPLE_FRAMEWORK)
-      get_filename_component(DSYM_PATH ${DSYM_PATH} DIRECTORY)
-    endif()
-    set(DSYM_PATH "${DSYM_PATH}.dSYM")
+  if(NOT CMAKE_DSYMUTIL)
+    set(CMAKE_DSYMUTIL xcrun dsymutil)
+  endif()
+  add_custom_command(TARGET hermesvm POST_BUILD
+    COMMAND ${CMAKE_DSYMUTIL} $<TARGET_FILE:hermesvm> --out ${DSYM_PATH}
+    BYPRODUCTS ${DSYM_PATH}
+  )
 
-    if(NOT CMAKE_DSYMUTIL)
-      set(CMAKE_DSYMUTIL xcrun dsymutil)
-    endif()
-    add_custom_command(TARGET hermesvm POST_BUILD
-      COMMAND ${CMAKE_DSYMUTIL} $<TARGET_FILE:hermesvm> --out ${DSYM_PATH}
-      BYPRODUCTS ${DSYM_PATH}
-    )
-
-    if(HERMES_BUILD_APPLE_FRAMEWORK)
-      install(DIRECTORY ${DSYM_PATH} DESTINATION Library/Frameworks/${HERMES_APPLE_TARGET_PLATFORM})
-    else()
-      install(DIRECTORY ${DSYM_PATH} DESTINATION lib)
-    endif()
+  if(HERMES_BUILD_APPLE_FRAMEWORK)
+    install(DIRECTORY ${DSYM_PATH} DESTINATION Library/Frameworks/${HERMES_APPLE_TARGET_PLATFORM})
+  else()
+    install(DIRECTORY ${DSYM_PATH} DESTINATION lib)
   endif()
 endif()
 
