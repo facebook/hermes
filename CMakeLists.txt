@@ -92,12 +92,6 @@ set(HERMES_IS_ANDROID OFF CACHE BOOL
 set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
   "Building for a mobile device")
 
-set(OVERRIDE_HERMES_MOBILE_BUILD OFF CACHE BOOL
-  "Workaround for Android builds that uses ES types defined conditionally")
-if (OVERRIDE_HERMES_MOBILE_BUILD)
-  set(HERMES_IS_MOBILE_BUILD OFF)
-endif()
-
 set(HERMESVM_GCKIND HADES
   CACHE STRING
   "HermesVM GC type: MALLOC, HADES or RUNTIME")
@@ -709,7 +703,7 @@ if(HERMES_IS_ANDROID)
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-  # MSCV requires c++20
+  # MSVC requires c++20
   set(CMAKE_CXX_STANDARD 20)
 else()
   set(CMAKE_CXX_STANDARD 17)

@@ -30,10 +30,10 @@ Pod::Spec.new do |spec|
   spec.source_files        = "destroot/include/**/*.h"
   spec.header_mappings_dir = "destroot/include"
 
-  spec.ios.vendored_frameworks = "destroot/Library/Frameworks/universal/hermes.xcframework"
-  spec.visionos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermes.xcframework"
-  spec.tvos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermes.xcframework"
-  spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermes.framework"
+  spec.ios.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
+  spec.visionos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
+  spec.tvos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
+  spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermesvm.framework"
 
   spec.xcconfig            = { "CLANG_CXX_LANGUAGE_STANDARD" => "c++17", "CLANG_CXX_LIBRARY" => "compiler-default", "GCC_PREPROCESSOR_DEFINITIONS" => "HERMES_ENABLE_DEBUGGER=1" }
 

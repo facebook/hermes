@@ -168,10 +168,8 @@ add_library(hermesvm SHARED dummy.cpp)
 add_library(hermesvmlean SHARED dummy.cpp)
 
 # Do not build a framework for the test suite.
-if(NOT HERMES_ENABLE_TEST_SUITE)
+if(HERMES_BUILD_APPLE_FRAMEWORK)
   if(APPLE)
-    set_target_properties(hermesvm PROPERTIES OUTPUT_NAME hermes)
-
     set_target_properties(hermesvm PROPERTIES
       FRAMEWORK TRUE
       VERSION ${PROJECT_VERSION}
@@ -184,13 +182,6 @@ if(NOT HERMES_ENABLE_TEST_SUITE)
 
     add_custom_command(TARGET hermesvm POST_BUILD
       COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
-    )
-
-    install(TARGETS hermesvm
-      RUNTIME DESTINATION bin
-      LIBRARY DESTINATION lib
-      ARCHIVE DESTINATION lib
-      FRAMEWORK DESTINATION Library/Frameworks/${HERMES_APPLE_TARGET_PLATFORM}
     )
 
     install(DIRECTORY "${PROJECT_SOURCE_DIR}/API/hermes" DESTINATION include
