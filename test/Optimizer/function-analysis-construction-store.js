@@ -35,7 +35,8 @@ function main() {
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
 // CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: object, empty: any
 // CHECK-NEXT:  %3 = CallInst (:undefined) %1: object, %f(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
-// CHECK-NEXT:       ReturnInst %2: undefined|object
+// CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: undefined|object, undefined: undefined
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined [allCallsitesKnownInStrictMode]

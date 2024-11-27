@@ -89,5 +89,6 @@ function ctor_load_store_test() {
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.use_this]: object
 // CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: object, empty: any
 // CHECK-NEXT:  %3 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %2: undefined|object, 12: number
-// CHECK-NEXT:       ReturnInst %2: undefined|object
+// CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: undefined|object, undefined: undefined
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end

@@ -61,5 +61,6 @@ function outer() {
 // CHECK-NEXT:       StorePropertyStrictInst %1: any, %5: undefined|object, "x": string
 // CHECK-NEXT:       StorePropertyStrictInst %2: any, %5: undefined|object, "y": string
 // CHECK-NEXT:       StorePropertyStrictInst %3: any, %5: undefined|object, "z": string
-// CHECK-NEXT:       ReturnInst %5: undefined|object
+// CHECK-NEXT:  %9 = GetConstructedObjectInst (:object) %5: undefined|object, undefined: undefined
+// CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end

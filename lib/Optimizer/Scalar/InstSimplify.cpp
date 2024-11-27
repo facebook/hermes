@@ -655,7 +655,13 @@ class InstSimplifyImpl {
     auto opTy = GCOI->getConstructorReturnValue()->getType();
     if (opTy.isObjectType())
       return GCOI->getConstructorReturnValue();
-    if (!opTy.canBeObject())
+    // Ideally, all we would need to check is that opTy cannot be an object.
+    // However, there might be cases where we have inferred the return type of
+    // ConstructorReturnValue, and have not yet inferred that ThisValue is an
+    // object. In that case, it would be invalid to replace
+    // GetConstructedObject, which is of type object, with ThisValue, which is
+    // not of type object.
+    if (!opTy.canBeObject() && GCOI->getThisValue()->getType().isObjectType())
       return GCOI->getThisValue();
     return nullptr;
   }
