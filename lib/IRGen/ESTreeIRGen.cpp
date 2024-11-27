@@ -54,7 +54,8 @@ Value *LReference::emitLoad() {
               llvh::cast<ESTree::MemberExpressionNode>(ast_), base_, property_)
           .result;
     case Kind::VarOrGlobal:
-      return irgen_->emitLoad(base_, false);
+      return irgen_->withAwareEmitLoad(
+          base_, ast_, ESTreeIRGen::ConditionalChainType::MEMBER_EXPRESSION);
     case Kind::Destructuring:
       assert(false && "destructuring cannot be loaded");
       return builder.getLiteralUndefined();
@@ -76,7 +77,7 @@ void LReference::emitStore(Value *value) {
           base_,
           property_);
     case Kind::VarOrGlobal:
-      irgen_->emitStore(value, base_, declInit_);
+      irgen_->withAwareEmitStore(value, base_, declInit_, ast_);
       return;
     case Kind::Error:
       return;
@@ -414,7 +415,7 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
         LReference::Kind::VarOrGlobal,
         this,
         declInit,
-        nullptr,
+        iden,
         var,
         nullptr,
         sourceLoc);

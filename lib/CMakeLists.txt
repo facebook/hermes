@@ -43,6 +43,7 @@ add_hermes_library(hermesFrontend
   IRGen/ESTreeIRGen-func.cpp
   IRGen/ESTreeIRGen-except.cpp
   IRGen/ESTreeIRGen-typed-class.cpp
+  IRGen/ESTreeIRGen-with.cpp
   IR/IR.cpp
   IR/CFG.cpp
   IR/IRBuilder.cpp
