@@ -703,7 +703,7 @@ if(HERMES_IS_ANDROID)
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-  # MSVC requires c++20
+  # MSVC requires c++20, because of the use of designated initializers in the codebase.
   set(CMAKE_CXX_STANDARD 20)
 else()
   set(CMAKE_CXX_STANDARD 17)
