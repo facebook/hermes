@@ -36,8 +36,8 @@ struct CardTableNCTest : public ::testing::Test {
 
  protected:
   std::unique_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
-  AlignedHeapSegment seg{
-      std::move(AlignedHeapSegment::create(provider.get()).get())};
+  FixedSizeHeapSegment seg{
+      std::move(FixedSizeHeapSegment::create(provider.get()).get())};
   CardTable *table{new (seg.lowLim()) CardTable()};
 
   // Addresses in the aligned storage to interact with during the tests.
