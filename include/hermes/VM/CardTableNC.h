@@ -77,21 +77,24 @@ class CardTable {
   /// guaranteed by a static_assert below.
   static constexpr size_t kHeapBytesPerCardByte = kCardSize;
 
-  /// A prefix of every segment is occupied by auxilary data
-  /// structures.  The card table is the first such data structure.
-  /// The card table maps to the segment.  Only the suffix of the card
-  /// table that maps to the suffix of entire segment that is used for
-  /// allocation is ever used; the prefix that maps to the card table
-  /// itself is not used.  (Nor is the portion that of the card table
-  /// that maps to the other auxiliary data structure, the mark bit
-  /// array, but we don't attempt to calculate that here.)
-  /// It is useful to know the size of this unused region of
-  /// the card table, so it can be used for other purposes.
-  /// Note that the total size of the card table is 2 times
-  /// kCardTableSize, since the CardTable contains two byte arrays of
-  /// that size (cards_ and _boundaries_).
+  /// A prefix of every segment is occupied by auxiliary data structures. The
+  /// card table is the first such data structure. The card table maps to the
+  /// segment. Only the suffix of the card table that maps to the suffix of
+  /// entire segment that is used for allocation is ever used; the prefix that
+  /// maps to the card table itself is not used, nor is the portion of the card
+  /// table that maps to the other auxiliary data structure: the mark bit array
+  /// and guard pages. This small space can be used for other purpose, such as
+  /// storing the SHSegmentInfo (we assert in AlignedHeapSegment that its
+  /// size won't exceed this unused space). The actual first used index should
+  /// take into account all these structures. Here we only calculate for
+  /// CardTable and size of SHSegmentInfo. It's only used as starting index for
+  /// clearing/dirtying range of bits.
+  /// Note that the total size of the card table is 2 times kCardTableSize,
+  /// since the CardTable contains two byte arrays of that size (cards_ and
+  /// boundaries_). And this index must be larger than the size of SHSegmentInfo
+  /// to avoid corrupting it when clearing/dirtying bits.
   static constexpr size_t kFirstUsedIndex =
-      (2 * kCardTableSize) >> kLogCardSize;
+      std::max(sizeof(SHSegmentInfo), (2 * kCardTableSize) >> kLogCardSize);
 
   CardTable() = default;
   /// CardTable is not copyable or movable: It must be constructed in-place.
@@ -255,9 +258,14 @@ class CardTable {
 
   void cleanOrDirtyRange(size_t from, size_t to, CardStatus cleanOrDirty);
 
-  /// This needs to be atomic so that the background thread in Hades can safely
-  /// dirty cards when compacting.
-  std::array<AtomicIfConcurrentGC<CardStatus>, kCardTableSize> cards_{};
+  union {
+    /// The bytes occupied by segmentInfo_ are guaranteed not to be overridden
+    /// by writes to cards_ array. See static assertions in AlignedHeapSegment.
+    SHSegmentInfo segmentInfo_;
+    /// This needs to be atomic so that the background thread in Hades can
+    /// safely dirty cards when compacting.
+    std::array<AtomicIfConcurrentGC<CardStatus>, kCardTableSize> cards_{};
+  };
 
   /// See the comment at kHeapBytesPerCardByte above to see why this is
   /// necessary.
