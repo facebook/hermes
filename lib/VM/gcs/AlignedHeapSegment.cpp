@@ -69,7 +69,7 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   __asan_unpoison_memory_region(start(), hiLim() - start());
 
   if (provider_) {
-    provider_->deleteStorage(lowLim_);
+    provider_->deleteStorage(lowLim_, kSegmentUnitSize);
   }
 }
 
@@ -93,7 +93,7 @@ AlignedHeapSegment &AlignedHeapSegment::operator=(AlignedHeapSegment &&other) {
 llvh::ErrorOr<FixedSizeHeapSegment> FixedSizeHeapSegment::create(
     StorageProvider *provider,
     const char *name) {
-  auto result = provider->newStorage(name);
+  auto result = provider->newStorage(storageSize(), name);
   if (!result) {
     return result.getError();
   }
