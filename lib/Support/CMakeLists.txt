@@ -30,6 +30,7 @@ add_hermes_library(hermesSupport
         SemaphorePosix.cpp
         SerialExecutor.cpp
         StackExecutor.cpp
+        StackOverflowGuard.cpp
         SHA1.cpp
         SNPrintfBuf.cpp
         SourceErrorManager.cpp
