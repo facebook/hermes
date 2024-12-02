@@ -14,10 +14,10 @@ namespace hermes {
 namespace vm {
 
 llvh::ErrorOr<void *> LimitedStorageProvider::newStorageImpl(const char *name) {
-  if (limit_ < AlignedHeapSegment::storageSize()) {
+  if (limit_ < FixedSizeHeapSegment::storageSize()) {
     return make_error_code(OOMError::TestVMLimitReached);
   }
-  limit_ -= AlignedHeapSegment::storageSize();
+  limit_ -= FixedSizeHeapSegment::storageSize();
   return delegate_->newStorage(name);
 }
 
@@ -26,7 +26,7 @@ void LimitedStorageProvider::deleteStorageImpl(void *storage) {
     return;
   }
   delegate_->deleteStorage(storage);
-  limit_ += AlignedHeapSegment::storageSize();
+  limit_ += FixedSizeHeapSegment::storageSize();
 }
 
 } // namespace vm

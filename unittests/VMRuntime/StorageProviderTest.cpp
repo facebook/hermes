@@ -50,7 +50,7 @@ static std::unique_ptr<StorageProvider> GetStorageProvider(
       return StorageProvider::mmapProvider();
     case ContiguousVAProvider:
       return StorageProvider::contiguousVAProvider(
-          AlignedHeapSegment::storageSize());
+          FixedSizeHeapSegment::storageSize());
     default:
       return nullptr;
   }
@@ -107,7 +107,7 @@ TEST(StorageProviderTest, LimitedStorageProviderEnforce) {
   constexpr size_t LIM = 2;
   LimitedStorageProvider provider{
       StorageProvider::mmapProvider(),
-      AlignedHeapSegment::storageSize() * LIM,
+      FixedSizeHeapSegment::storageSize() * LIM,
   };
   void *live[LIM];
   for (size_t i = 0; i < LIM; ++i) {
@@ -128,7 +128,7 @@ TEST(StorageProviderTest, LimitedStorageProviderTrackDelete) {
   constexpr size_t LIM = 2;
   LimitedStorageProvider provider{
       StorageProvider::mmapProvider(),
-      AlignedHeapSegment::storageSize() * LIM,
+      FixedSizeHeapSegment::storageSize() * LIM,
   };
 
   // If the storage gets deleted, we should be able to re-allocate it, even if
@@ -145,7 +145,7 @@ TEST(StorageProviderTest, LimitedStorageProviderDeleteNull) {
   constexpr size_t LIM = 2;
   LimitedStorageProvider provider{
       StorageProvider::mmapProvider(),
-      AlignedHeapSegment::storageSize() * LIM,
+      FixedSizeHeapSegment::storageSize() * LIM,
   };
 
   void *live[LIM];
@@ -174,7 +174,7 @@ TEST(StorageProviderTest, StorageProviderAllocsCount) {
   auto provider =
       std::unique_ptr<LimitedStorageProvider>{new LimitedStorageProvider{
           StorageProvider::mmapProvider(),
-          AlignedHeapSegment::storageSize() * LIM}};
+          FixedSizeHeapSegment::storageSize() * LIM}};
 
   constexpr size_t FAILS = 3;
   void *storages[LIM];
@@ -261,16 +261,16 @@ TEST(StorageProviderTest, SucceedsAfterReducing) {
   }
   {
     // Test using the aligned storage alignment
-    SetVALimit limit{50 * AlignedHeapSegment::storageSize()};
+    SetVALimit limit{50 * FixedSizeHeapSegment::storageSize()};
     auto result = vmAllocateAllowLess(
-        100 * AlignedHeapSegment::storageSize(),
-        30 * AlignedHeapSegment::storageSize(),
-        AlignedHeapSegment::storageSize());
+        100 * FixedSizeHeapSegment::storageSize(),
+        30 * FixedSizeHeapSegment::storageSize(),
+        FixedSizeHeapSegment::storageSize());
     ASSERT_TRUE(result);
     auto memAndSize = result.get();
     EXPECT_TRUE(memAndSize.first != nullptr);
-    EXPECT_GE(memAndSize.second, 30 * AlignedHeapSegment::storageSize());
-    EXPECT_LE(memAndSize.second, 50 * AlignedHeapSegment::storageSize());
+    EXPECT_GE(memAndSize.second, 30 * FixedSizeHeapSegment::storageSize());
+    EXPECT_LE(memAndSize.second, 50 * FixedSizeHeapSegment::storageSize());
   }
 }
 
