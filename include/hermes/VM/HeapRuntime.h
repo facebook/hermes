@@ -22,7 +22,7 @@ class HeapRuntime {
  public:
   ~HeapRuntime() {
     runtime_->~RT();
-    sp_->deleteStorage(runtime_);
+    sp_->deleteStorage(runtime_, kHeapRuntimeStorageSize);
   }
 
   /// Allocate a segment and create an aliased shared_ptr that points to the
@@ -36,17 +36,16 @@ class HeapRuntime {
 
  private:
   HeapRuntime(std::shared_ptr<StorageProvider> sp) : sp_{std::move(sp)} {
-    auto ptrOrError = sp_->newStorage("hermes-rt");
+    auto ptrOrError = sp_->newStorage(kHeapRuntimeStorageSize, "hermes-rt");
     if (!ptrOrError)
       hermes_fatal("Cannot initialize Runtime storage.", ptrOrError.getError());
-    static_assert(
-        sizeof(RT) < FixedSizeHeapSegment::storageSize(),
-        "Segments too small.");
+    static_assert(sizeof(RT) < kHeapRuntimeStorageSize, "Segments too small.");
     runtime_ = static_cast<RT *>(*ptrOrError);
   }
 
   std::shared_ptr<StorageProvider> sp_;
   RT *runtime_;
+  static constexpr size_t kHeapRuntimeStorageSize = FixedSizeHeapSegment::kSize;
 };
 } // namespace vm
 } // namespace hermes

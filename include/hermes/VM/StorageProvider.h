@@ -37,21 +37,17 @@ class StorageProvider {
 
   /// @}
 
-  /// Create a new segment memory space.
-  llvh::ErrorOr<void *> newStorage() {
-    return newStorage(nullptr);
-  }
-  /// Create a new segment memory space and give this memory the name \p name.
-  /// \return A pointer to a block of memory that has
-  /// FixedSizeHeapSegment::storageSize() bytes, and is aligned on
-  /// FixedSizeHeapSegment::storageSize().
-  llvh::ErrorOr<void *> newStorage(const char *name);
+  /// \return A pointer to a block of memory that has \p sz bytes, and is
+  /// aligned on AlignedHeapSegment::kSegmentUnitSize. Note that \p sz must
+  /// be non-zero and equals to a multiple of
+  /// AlignedHeapSegment::kSegmentUnitSize.
+  llvh::ErrorOr<void *> newStorage(size_t sz, const char *name = nullptr);
 
   /// Delete the given segment's memory space, and make it available for re-use.
-  /// \post Nothing in the range [storage, storage +
-  /// FixedSizeHeapSegment::storageSize()) is valid memory to be read or
-  /// written.
-  void deleteStorage(void *storage);
+  /// Note that \p sz must be the same as used to allocating \p storage.
+  /// \post Nothing in the range [storage, storage + sz) is valid memory to be
+  /// read or written.
+  void deleteStorage(void *storage, size_t sz);
 
   /// The number of storages this provider has allocated in its lifetime.
   size_t numSucceededAllocs() const;
@@ -68,8 +64,12 @@ class StorageProvider {
   size_t numLiveAllocs() const;
 
  protected:
-  virtual llvh::ErrorOr<void *> newStorageImpl(const char *name) = 0;
-  virtual void deleteStorageImpl(void *storage) = 0;
+  /// \pre \p sz is non-zero and equal to a multiple of
+  /// AlignedHeapSegment::kSegmentUnitSize.
+  virtual llvh::ErrorOr<void *> newStorageImpl(size_t sz, const char *name) = 0;
+  /// \pre \p sz is non-zero and equal to a multiple of
+  /// AlignedHeapSegment::kSegmentUnitSize.
+  virtual void deleteStorageImpl(void *storage, size_t sz) = 0;
 
  private:
   size_t numSucceededAllocs_{0};
