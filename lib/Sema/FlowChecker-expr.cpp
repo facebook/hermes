@@ -1894,10 +1894,17 @@ class FlowChecker::ExprVisitor {
       auto [argTypeNarrow, cf] = tryNarrowType(argType, expectedType);
 
       if (!cf.canFlow) {
-        outer_.sm_.error(
-            arg->getSourceRange(),
-            "ft: " + calleeName + " parameter '" + param.first.str() +
-                "' type mismatch");
+        if (param.first.isValid()) {
+          outer_.sm_.error(
+              arg->getSourceRange(),
+              "ft: " + calleeName + " parameter '" + param.first.str() +
+                  "' type mismatch");
+        } else {
+          outer_.sm_.error(
+              arg->getSourceRange(),
+              "ft: " + calleeName + " parameter #" + llvh::Twine(argIndex + 1) +
+                  " type mismatch");
+        }
         return false;
       }
       // If a cast is needed, replace the argument with the cast.
