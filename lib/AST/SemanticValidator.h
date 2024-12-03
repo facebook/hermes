@@ -89,6 +89,12 @@ class SemanticValidator {
   /// The current function context.
   FunctionContext *funcCtx_{};
 
+  /// True if we are forbidding await expressions.
+  bool forbidAwaitExpression_{false};
+
+  /// True if we are forbidding 'arguments' identifier.
+  bool forbidArguments_{false};
+
   /// True if we are validating a formal parameter list.
   bool isFormalParams_{false};
 
@@ -207,6 +213,7 @@ class SemanticValidator {
   void visit(ClassDeclarationNode *node);
   void visit(PrivateNameNode *node);
   void visit(ClassPrivatePropertyNode *node);
+  void visit(ClassPropertyNode *node);
 
   void visit(ImportDeclarationNode *importDecl);
   void visit(ImportDefaultSpecifierNode *importDecl);
