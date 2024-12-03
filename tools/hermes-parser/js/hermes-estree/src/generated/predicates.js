@@ -172,6 +172,7 @@ import type {
   ReturnStatement,
   SequenceExpression,
   SpreadElement,
+  StaticBlock,
   StringLiteralTypeAnnotation,
   StringTypeAnnotation,
   Super,
@@ -912,6 +913,11 @@ export function isSequenceExpression(node /*: ESNode | Token */) /*: implies nod
 
 export function isSpreadElement(node /*: ESNode | Token */) /*: implies node is SpreadElement */ {
   return node.type === 'SpreadElement';
+}
+    
+
+export function isStaticBlock(node /*: ESNode | Token */) /*: implies node is StaticBlock */ {
+  return node.type === 'StaticBlock';
 }
     
 

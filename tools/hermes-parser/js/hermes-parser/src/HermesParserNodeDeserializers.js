@@ -176,6 +176,13 @@ function deserializeBlockStatement() {
     body: this.deserializeNodeList(),
   };
 }
+function deserializeStaticBlock() {
+  return {
+    type: 'StaticBlock',
+    loc: this.addEmptyLoc(),
+    body: this.deserializeNodeList(),
+  };
+}
 function deserializeBreakStatement() {
   return {
     type: 'BreakStatement',
@@ -1975,6 +1982,7 @@ module.exports = [
   deserializeDebuggerStatement,
   deserializeEmptyStatement,
   deserializeBlockStatement,
+  deserializeStaticBlock,
   deserializeBreakStatement,
   deserializeContinueStatement,
   deserializeThrowStatement,

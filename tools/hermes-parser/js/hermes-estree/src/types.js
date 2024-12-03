@@ -232,6 +232,7 @@ export type AFunction =
 
 export type Statement =
   | BlockStatement
+  | StaticBlock
   | BreakStatement
   | ClassDeclaration
   | ComponentDeclaration
@@ -281,7 +282,11 @@ export type StatementParentSingle =
   | ForInStatement
   | ForOfStatement;
 // nodes that can be the parent of a statement that store the statements in an array
-export type StatementParentArray = SwitchCase | Program | BlockStatement;
+export type StatementParentArray =
+  | SwitchCase
+  | Program
+  | BlockStatement
+  | StaticBlock;
 export type StatementParent = StatementParentSingle | StatementParentArray;
 
 export interface EmptyStatement extends BaseNode {
@@ -290,6 +295,11 @@ export interface EmptyStatement extends BaseNode {
 
 export interface BlockStatement extends BaseNode {
   +type: 'BlockStatement';
+  +body: $ReadOnlyArray<Statement>;
+}
+
+export interface StaticBlock extends BaseNode {
+  +type: 'StaticBlock';
   +body: $ReadOnlyArray<Statement>;
 }
 
@@ -910,7 +920,7 @@ export type ClassPropertyNameNonComputed =
   | Identifier
   | StringLiteral;
 
-export type ClassMember = PropertyDefinition | MethodDefinition;
+export type ClassMember = PropertyDefinition | MethodDefinition | StaticBlock;
 export type ClassMemberWithNonComputedName =
   | PropertyDefinitionWithNonComputedName
   | MethodDefinitionConstructor
