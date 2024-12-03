@@ -1445,7 +1445,6 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
     case ESTree::NodeKind::NullableTypeAnnotation:
       return parseNullableTypeAnnotation(
           llvh::cast<ESTree::NullableTypeAnnotationNode>(node));
-    // TODO: function, etc.
     case ESTree::NodeKind::ArrayTypeAnnotation:
       return parseArrayTypeAnnotation(
           llvh::cast<ESTree::ArrayTypeAnnotationNode>(node));
@@ -2028,8 +2027,6 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
 
       if (auto *func =
               llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
-        // TODO: Determine if the actual function typecheck can be deferred to
-        // avoid potential stack overflow by cloning from deep in the AST.
         typecheckGenericFunctionSpecialization(
             func, typeArgsNode, typeArgTypes, oldDecl, newDecl);
       } else if (
