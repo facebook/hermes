@@ -683,6 +683,16 @@ void SemanticValidator::visit(ClassPropertyNode *node) {
   }
 }
 
+void SemanticValidator::visit(StaticBlockNode *node) {
+  if (compile_)
+    sm_.error(node->getSourceRange(), "class static blocks are not supported");
+  // ES14.0 15.7.1
+  // It is a Syntax Error if ClassStaticBlockStatementList Contains await is
+  // true.
+  llvh::SaveAndRestore<bool> oldForbidAwait{forbidAwaitExpression_, true};
+  visitESTreeChildren(*this, node);
+}
+
 void SemanticValidator::visit(ImportDeclarationNode *importDecl) {
   // Like variable declarations, imported names must be hoisted.
   if (!astContext_.getTransformCJSModules()) {

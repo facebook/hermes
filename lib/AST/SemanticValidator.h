@@ -214,6 +214,7 @@ class SemanticValidator {
   void visit(PrivateNameNode *node);
   void visit(ClassPrivatePropertyNode *node);
   void visit(ClassPropertyNode *node);
+  void visit(StaticBlockNode *node);
 
   void visit(ImportDeclarationNode *importDecl);
   void visit(ImportDefaultSpecifierNode *importDecl);

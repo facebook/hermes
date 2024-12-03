@@ -34,6 +34,7 @@ pub enum NodeKind {
     DebuggerStatement,
     EmptyStatement,
     BlockStatement,
+    StaticBlock,
     BreakStatement,
     ContinueStatement,
     ThrowStatement,
@@ -338,6 +339,8 @@ extern "C" {
     pub fn hermes_get_ForStatement_body(node: NodePtr) -> NodePtr;
     // BlockStatement
     pub fn hermes_get_BlockStatement_body(node: NodePtr) -> NodeListRef;
+    // StaticBlock
+    pub fn hermes_get_StaticBlock_body(node: NodePtr) -> NodeListRef;
     // BreakStatement
     pub fn hermes_get_BreakStatement_label(node: NodePtr) -> NodePtrOpt;
     // ContinueStatement
