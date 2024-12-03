@@ -889,6 +889,11 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
     // method that performs the initializations.
     // Field initializers can always reference super.
     llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, true};
+    llvh::SaveAndRestore<bool> oldForbidAwait{forbidAwaitExpression_, true};
+    // ES14.0 15.7.1
+    // It is a Syntax Error if Initializer is present and ContainsArguments of
+    // Initializer is true.
+    llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
     FunctionContext funcCtx(
         *this, curClassContext_->getOrCreateFieldInitFunctionInfo());
     visitESTreeNode(*this, node->_value, node);
@@ -1018,10 +1023,8 @@ void SemanticResolver::visit(ESTree::YieldExpressionNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::AwaitExpressionNode *awaitExpr) {
-  if (functionContext()->isGlobalScope() ||
-      (functionContext()->node && !ESTree::isAsync(functionContext()->node))) {
+  if (forbidAwaitExpression_)
     sm_.error(awaitExpr->getSourceRange(), "'await' not in an async function");
-  }
 
   if (functionContext()->isFormalParams) {
     // ES14.0 15.8.1
@@ -1331,6 +1334,16 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
   // in an incorrect scope!
   // visitESTreeNode(*this, getIdentifier(node), node);
 
+  // 'await' forbidden outside async functions.
+  llvh::SaveAndRestore<bool> oldForbidAwait{
+      forbidAwaitExpression_, !ESTree::isAsync(node)};
+  // Forbidden-ness of 'arguments' passes through arrow functions because they
+  // use the same 'arguments'.
+  llvh::SaveAndRestore<bool> oldForbidArguments{
+      forbidArguments_,
+      llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) ? forbidArguments_
+                                                           : false};
+
   // Visit the parameters before we have hoisted the body declarations.
   // If there's a parameter named arguments, then the parameter init expressions
   // would refer to that declaration.
@@ -1461,8 +1474,11 @@ Decl *SemanticResolver::resolveIdentifier(
   Decl *decl = checkIdentifierResolved(identifier);
 
   // Is this the "arguments" object?
-  if (decl && decl->special == Decl::Special::Arguments)
+  if (decl && decl->special == Decl::Special::Arguments) {
+    if (forbidArguments_)
+      sm_.error(identifier->getSourceRange(), "invalid use of 'arguments'");
     curFunctionInfo()->usesArguments = true;
+  }
 
   if (LLVM_UNLIKELY(identifier->_name == kw_.identAwait) &&
       forbidAwaitAsIdentifier_) {

@@ -92,6 +92,12 @@ class SemanticResolver
   /// SemanticResolver.
   bool forbidAwaitAsIdentifier_ = false;
 
+  /// True if we are forbidding await expressions.
+  bool forbidAwaitExpression_{false};
+
+  /// True if we are forbidding 'arguments' identifier.
+  bool forbidArguments_{false};
+
  public:
   /// This constant enables the more expensive path in RecursiveVisitorDispatch,
   /// enabling us to mutate NodeList.

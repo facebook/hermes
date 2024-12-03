@@ -4991,6 +4991,12 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (checkAndEat(TokenKind::equal)) {
       // ClassElementName Initializer[opt]
       //                  ^
+      // NOTE: This is technically non-compliant, but having yield/await in the
+      // field initializer doesn't make sense.
+      // See https://github.com/tc39/ecma262/issues/3333
+      // Do [~Yield, +Await, ~Return] as suggested and error in resolution.
+      llvh::SaveAndRestore<bool> saveParamYield{paramYield_, false};
+      llvh::SaveAndRestore<bool> saveParamAwait{paramAwait_, true};
       auto optValue = parseAssignmentExpression();
       if (!optValue)
         return None;
