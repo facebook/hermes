@@ -153,6 +153,7 @@ import type {
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
   SpreadElement as SpreadElementType,
+  StaticBlock as StaticBlockType,
   StringLiteralTypeAnnotation as StringLiteralTypeAnnotationType,
   StringTypeAnnotation as StringTypeAnnotationType,
   Super as SuperType,
@@ -980,6 +981,10 @@ export type SequenceExpressionProps = {
 
 export type SpreadElementProps = {
   +argument: MaybeDetachedNode<SpreadElementType['argument']>,
+};
+
+export type StaticBlockProps = {
+  +body: $ReadOnlyArray<MaybeDetachedNode<StaticBlockType['body'][number]>>,
 };
 
 export type StringLiteralTypeAnnotationProps = {
@@ -3052,6 +3057,18 @@ export function SpreadElement(props: {
   const node = detachedProps<SpreadElementType>((props.parent: $FlowFixMe), {
     type: 'SpreadElement',
     argument: asDetachedNodeForCodeGen(props.argument),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function StaticBlock(props: {
+  ...StaticBlockProps,
+  +parent?: ESNode,
+}): DetachedNode<StaticBlockType> {
+  const node = detachedProps<StaticBlockType>((props.parent: $FlowFixMe), {
+    type: 'StaticBlock',
+    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;

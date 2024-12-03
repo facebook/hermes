@@ -564,6 +564,9 @@ export const HERMES_AST_VISITOR_KEYS = {
   SpreadElement: {
     argument: 'Node',
   },
+  StaticBlock: {
+    body: 'NodeList',
+  },
   StringLiteral: {},
   StringLiteralTypeAnnotation: {},
   StringTypeAnnotation: {},

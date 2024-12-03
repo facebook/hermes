@@ -151,7 +151,7 @@ test('Semantic validation', () => {
     new SyntaxError(
       `'return' not in a function (1:0)
 return 1;
-^~~~~~~~~`,
+^~~~~~`,
     ),
   );
 
@@ -179,7 +179,7 @@ test('Allow return outside function', () => {
     new SyntaxError(
       `'return' not in a function (1:0)
 return 1
-^~~~~~~~`,
+^~~~~~`,
     ),
   );
 

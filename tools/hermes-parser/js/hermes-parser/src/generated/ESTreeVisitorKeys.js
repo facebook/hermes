@@ -233,6 +233,7 @@ module.exports = {
   ReturnStatement: ['argument'],
   SequenceExpression: ['expressions'],
   SpreadElement: ['argument'],
+  StaticBlock: ['body'],
   StringLiteralTypeAnnotation: [],
   StringTypeAnnotation: [],
   Super: [],
