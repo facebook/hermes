@@ -680,6 +680,10 @@ Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
     case TokenKind::rw_break:
       _RET(parseBreakStatement());
     case TokenKind::rw_return:
+      if (!param.has(ParamReturn) && !context_.allowReturnOutsideFunction()) {
+        // Illegal location for a return statement, but we can keep parsing.
+        error(tok_->getSourceRange(), "'return' not in a function");
+      }
       _RET(parseReturnStatement());
     case TokenKind::rw_with:
       _RET(parseWithStatement(param.get(ParamReturn)));
@@ -4911,6 +4915,42 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     }
   } else if (checkAndEat(TokenKind::star)) {
     special = SpecialKind::Generator;
+  } else if (isStatic && checkAndEat(TokenKind::l_brace)) {
+    // This is a static block.
+    // ES14.0 15.7
+    // ClassStaticBlock :
+    //   static { ClassStaticBlockBody }
+    //          ^
+    SMLoc braceLoc = tok_->getStartLoc();
+    ESTree::NodeList body;
+
+    {
+      // ClassStaticBlockStatementList :
+      //   StatementList[~Yield, +Await, ~Return]opt
+      //   ^
+      llvh::SaveAndRestore oldParamYield{paramYield_, false};
+      llvh::SaveAndRestore oldParamAwait{paramAwait_, true};
+      if (!parseStatementList(
+              Param{},
+              TokenKind::r_brace,
+              /* parseDirectives */ false,
+              AllowImportExport::No,
+              body)) {
+        return None;
+      }
+    }
+    if (!eat(
+            TokenKind::r_brace,
+            JSLexer::GrammarContext::AllowRegExp,
+            "at end of static block",
+            "static block starts here",
+            braceLoc))
+      return None;
+
+    return setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::StaticBlockNode(std::move(body)));
   } else if (isStatic && staticIsPropertyName()) {
     // This is the name of the property/method.
     // We've already parsed 'static', but it must be used as the

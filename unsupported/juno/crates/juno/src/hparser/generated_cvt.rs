@@ -238,6 +238,15 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::BlockStatement::build_template(gc, template)
         }
+        NodeKind::StaticBlock => {
+          let body = cvt_node_list(cvt, gc, hermes_get_StaticBlock_body(n));
+          let mut template = ast::template::StaticBlock {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  body,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::StaticBlock::build_template(gc, template)
+        }
         NodeKind::BreakStatement => {
           let label = cvt_node_ptr_opt(cvt, gc, hermes_get_BreakStatement_label(n));
           let mut template = ast::template::BreakStatement {

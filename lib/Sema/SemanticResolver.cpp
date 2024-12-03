@@ -900,6 +900,16 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
   }
 }
 
+void SemanticResolver::visit(StaticBlockNode *node) {
+  if (compile_)
+    sm_.error(node->getSourceRange(), "class static blocks are not supported");
+  // ES14.0 15.7.1
+  // It is a Syntax Error if ClassStaticBlockStatementList Contains await is
+  // true.
+  llvh::SaveAndRestore<bool> oldForbidAwait{forbidAwaitExpression_, true};
+  visitESTreeChildren(*this, node);
+}
+
 void SemanticResolver::visit(ESTree::SuperNode *node, ESTree::Node *parent) {
   // Error if we try to reference super but there is currently no valid binding
   // to it.

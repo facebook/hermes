@@ -242,6 +242,7 @@ class SemanticResolver
   void visit(ESTree::PrivateNameNode *node);
   void visit(ESTree::ClassPrivatePropertyNode *node);
   void visit(ESTree::ClassPropertyNode *node);
+  void visit(ESTree::StaticBlockNode *node);
   void visit(ESTree::MethodDefinitionNode *node, ESTree::Node *parent);
 
   void visit(ESTree::SuperNode *node, ESTree::Node *parent);

@@ -786,6 +786,10 @@ ESTree::NodePtr parseJS(
     mode = parser::LazyParse;
   }
 
+  bool shouldWrapInIIFE = cl::Typed && !cl::Script;
+  if (shouldWrapInIIFE)
+    context->setAllowReturnOutsideFunction(true);
+
   Optional<ESTree::ProgramNode *> parsedJs;
 
   {
@@ -843,7 +847,7 @@ ESTree::NodePtr parseJS(
   }
 
   // If we are executing in typed mode and not script, then wrap the program.
-  if (cl::Typed && !cl::Script) {
+  if (shouldWrapInIIFE) {
     parsedAST = wrapInIIFE(context, llvh::cast<ESTree::ProgramNode>(parsedAST));
     // In case this API decides it can fail in the future, check for a
     // nullptr.
