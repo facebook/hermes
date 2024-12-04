@@ -67,10 +67,24 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
       return true;
 
   // Check if the closure is passed as the new.target argument, and the function
-  // actually uses it.
-  // TODO: Allow certain instructions to use new.target.
-  if (C == CI->getNewTarget() && F->getNewTargetParam()->hasUsers())
-    return true;
+  // actually uses it in a way that can escape.
+  if (C == CI->getNewTarget()) {
+    // If NewTargetParam has no users, the closure can't escape through it.
+    // Check all the users to see if there's any that might let it escape.
+    for (auto *newTargetUser : F->getNewTargetParam()->getUsers()) {
+      auto *getNewTarget = llvh::dyn_cast<GetNewTargetInst>(newTargetUser);
+      if (!getNewTarget) {
+        // Unknown user of NewTargetParam.
+        return true;
+      }
+      for (auto *getNewTargetUser : getNewTarget->getUsers()) {
+        // Certain instructions are known not to leak new.target even if they
+        // use it.
+        if (!llvh::isa<CacheNewObjectInst>(getNewTargetUser))
+          return true;
+      }
+    }
+  }
 
   return false;
 }
