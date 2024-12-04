@@ -1654,6 +1654,15 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   return arr;
 }
 
+extern "C" SHLegacyValue _sh_ljs_cache_new_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *thisArg,
+    SHLegacyValue *newTarget,
+    uint32_t shapeTableIndex) {
+  return *thisArg;
+}
+
 extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
 

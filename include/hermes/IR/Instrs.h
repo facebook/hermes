@@ -4653,6 +4653,7 @@ class CacheNewObjectInst : public Instruction {
       Value *newTarget,
       llvh::ArrayRef<LiteralString *> keys)
       : Instruction(ValueKind::CacheNewObjectInstKind) {
+    assert(!keys.empty() && "keys must be non-empty");
     setType(Type::createNoType());
     pushOperand(thisParameter);
     pushOperand(newTarget);

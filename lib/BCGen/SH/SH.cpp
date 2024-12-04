@@ -1657,13 +1657,16 @@ class InstrGen {
   }
   void generateCacheNewObjectInst(CacheNewObjectInst &inst) {
     // TODO: Implement this properly when we have a proper cache.
-    // For now, just emit a mov.
-    sh::Register dstReg = ra_.getRegister(&inst);
+    // For now, emit the call with just the shape table index.
+    auto buffIdx = moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst)
+                       .shapeTableIdx;
     os_.indent(2);
-    generateRegister(dstReg);
-    os_ << " = ";
-    generateValue(*inst.getThis());
-    os_ << ";\n";
+    os_ << "_sh_ljs_cache_new_object(shr, shUnit, ";
+    generateRegisterPtr(*inst.getThis());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getNewTarget());
+    os_ << ", ";
+    os_ << buffIdx << ");\n";
   }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);

@@ -99,6 +99,7 @@ class Builder {
   /// Serialization handlers for different instructions.
   void serializeLiteralFor(AllocArrayInst *AAI);
   void serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB);
+  void serializeLiteralFor(CacheNewObjectInst *cacheNew);
 
   /// Serialize the the input literals \p elements into the UniquedStringVector
   /// \p dest.
@@ -144,6 +145,10 @@ class Builder {
       const HBCAllocObjectFromBufferInst *,
       std::pair<size_t, size_t>>>
       objInst_{};
+
+  /// Each element records the instruction whose literal was serialized at the
+  /// corresponding indices in \c objKeys_.
+  std::vector<std::pair<CacheNewObjectInst *, size_t>> cacheNewObjectInst_{};
 };
 
 LiteralBufferBuilder::Result Builder::generate() {
@@ -203,6 +208,24 @@ LiteralBufferBuilder::Result Builder::generate() {
         LiteralOffset{shapeID, valView[valIndexInSet].getOffset()};
   }
 
+  for (size_t i = 0, e = cacheNewObjectInst_.size(); i != e; ++i) {
+    const auto [Inst, idx] = cacheNewObjectInst_[i];
+    const uint32_t len = Inst->getNumKeys();
+    assert(
+        literalOffsetMap.count(Inst) == 0 &&
+        "instruction literal can't be serialized twice");
+    uint32_t keyIndexInSet = objKeys_.indexInSet(idx);
+    uint32_t keyBufferOffset = keyView[keyIndexInSet].getOffset();
+    const auto [iter, success] =
+        coordToIdx.insert({{keyBufferOffset, len}, coordToIdx.size()});
+    uint32_t shapeID = iter->second;
+    if (success) {
+      // This is a new entry, add it to the shape table.
+      objShapeTable.push_back({keyBufferOffset, len});
+    }
+    literalOffsetMap[Inst] = LiteralOffset{shapeID, UINT32_MAX};
+  }
+
   return {
       std::move(valStorage).acquireStringTableAndStorage().second,
       std::move(keyStorage).acquireStringTableAndStorage().second,
@@ -222,6 +245,8 @@ void Builder::traverse() {
         } else if (
             auto *AOFB = llvh::dyn_cast<HBCAllocObjectFromBufferInst>(&I)) {
           serializeLiteralFor(AOFB);
+        } else if (auto *cacheNew = llvh::dyn_cast<CacheNewObjectInst>(&I)) {
+          serializeLiteralFor(cacheNew);
         }
       }
     }
@@ -269,6 +294,21 @@ void Builder::serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB) {
   serializeInto(objKeys_, objKeys, true);
   serializeInto(values_, objVals, false);
 }
+
+void Builder::serializeLiteralFor(CacheNewObjectInst *cacheNew) {
+  unsigned e = cacheNew->getNumKeys();
+  assert(e > 0 && "CacheNewObjectInst should have at least one key");
+
+  llvh::SmallVector<Literal *, 8> objKeys;
+  for (unsigned ind = 0; ind != e; ++ind) {
+    Literal *key = cacheNew->getKey(ind);
+    objKeys.push_back(key);
+  }
+
+  cacheNewObjectInst_.push_back({cacheNew, objKeys_.size()});
+  serializeInto(objKeys_, objKeys, true);
+}
+
 } // namespace
 
 Result generate(

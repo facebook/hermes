@@ -722,6 +722,18 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array_with_buffer(
     uint32_t numLiterals,
     uint32_t bufferIndex);
 
+/// \p thisArg is "this" parameter to the function.
+/// \p newTarget is the new.target value in the function.
+/// \p shapeTableIndex is the index into the shape table where the serialized
+///   keys for this operation are stored.
+/// \return \p thisArg.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_cache_new_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *thisArg,
+    SHLegacyValue *newTarget,
+    uint32_t shapeTableIndex);
+
 /// \return a newly created fast array with the given \p capacity.
 SHERMES_EXPORT SHLegacyValue
 _sh_new_fastarray(SHRuntime *shr, uint32_t capacity);

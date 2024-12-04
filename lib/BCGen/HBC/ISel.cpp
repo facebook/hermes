@@ -1866,7 +1866,11 @@ void HBCISel::generateIteratorCloseInst(
 void HBCISel::generateCacheNewObjectInst(
     hermes::CacheNewObjectInst *Inst,
     hermes::BasicBlock *next) {
-  // TODO: Implement this properly when we have a proper cache.
+  auto thisReg = encodeValue(Inst->getThis());
+
+  auto bufIndex =
+      BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
+  BCFGen_->emitCacheNewObject(thisReg, bufIndex.shapeTableIdx);
 }
 
 void HBCISel::generateSwitchImmInst(

@@ -3202,6 +3202,12 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(CacheNewObject) {
+        // TODO: Implement this properly.
+        ip = NEXTINST(CacheNewObject);
+        DISPATCH;
+      }
+
       CASE(CreateThisForNew) {
         CAPTURE_IP(
             res = createThisImpl(
