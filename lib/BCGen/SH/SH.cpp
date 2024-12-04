@@ -1655,6 +1655,16 @@ class InstrGen {
     os_ << ", " << boolStr(inst.getIgnoreInnerException());
     os_ << ");\n";
   }
+  void generateCacheNewObjectInst(CacheNewObjectInst &inst) {
+    // TODO: Implement this properly when we have a proper cache.
+    // For now, just emit a mov.
+    sh::Register dstReg = ra_.getRegister(&inst);
+    os_.indent(2);
+    generateRegister(dstReg);
+    os_ << " = ";
+    generateValue(*inst.getThis());
+    os_ << ";\n";
+  }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);
     os_ << "_sh_unreachable();\n";

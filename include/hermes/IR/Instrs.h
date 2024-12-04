@@ -4641,6 +4641,73 @@ class IteratorCloseInst : public Instruction {
   }
 };
 
+class CacheNewObjectInst : public Instruction {
+  CacheNewObjectInst(const CacheNewObjectInst &) = delete;
+  void operator=(const CacheNewObjectInst &) = delete;
+
+ public:
+  enum { ThisIdx, NewTargetIdx, FirstKeyIdx };
+
+  explicit CacheNewObjectInst(
+      Value *thisParameter,
+      Value *newTarget,
+      llvh::ArrayRef<LiteralString *> keys)
+      : Instruction(ValueKind::CacheNewObjectInstKind) {
+    setType(Type::createNoType());
+    pushOperand(thisParameter);
+    pushOperand(newTarget);
+    for (Literal *key : keys) {
+      pushOperand(key);
+    }
+  }
+  explicit CacheNewObjectInst(
+      const CacheNewObjectInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+
+  /// \return the this parameter modified by this instruction.
+  Value *getThis() {
+    return getOperand(ThisIdx);
+  }
+
+  /// \return the new.target value used by this instruction.
+  Value *getNewTarget() {
+    return getOperand(NewTargetIdx);
+  }
+
+  static bool isTyped() {
+    return false;
+  }
+
+  /// \return the number of keys in the object to cache.
+  unsigned getNumKeys() const {
+    return getNumOperands() - FirstKeyIdx;
+  }
+
+  /// \return the \p index key name.
+  LiteralString *getKey(unsigned index) const {
+    return llvh::cast<LiteralString>(getOperand(FirstKeyIdx + index));
+  }
+
+  SideEffect getSideEffectImpl() const {
+    // This instruction is only run for its side effects.
+    // It has no output, it just modifies the hidden class of the 'this' object.
+    return SideEffect{}.setWriteHeap();
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CacheNewObjectInstKind;
+  }
+};
+
 /// A bytecode version of llvm_unreachable, for use in stubs and similar.
 class UnreachableInst : public TerminatorInst {
   UnreachableInst(const UnreachableInst &) = delete;

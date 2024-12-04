@@ -1863,6 +1863,12 @@ void HBCISel::generateIteratorCloseInst(
   BCFGen_->emitIteratorClose(iter, ignoreInnerException);
 }
 
+void HBCISel::generateCacheNewObjectInst(
+    hermes::CacheNewObjectInst *Inst,
+    hermes::BasicBlock *next) {
+  // TODO: Implement this properly when we have a proper cache.
+}
+
 void HBCISel::generateSwitchImmInst(
     hermes::SwitchImmInst *Inst,
     hermes::BasicBlock *next) {

@@ -1651,6 +1651,10 @@ bool Verifier::visitEvalCompilationDataInst(
   return true;
 }
 
+bool Verifier::visitCacheNewObjectInst(const CacheNewObjectInst &Inst) {
+  return true;
+}
+
 } // namespace
 
 #endif

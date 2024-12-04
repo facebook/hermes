@@ -661,6 +661,11 @@ class IRBuilder {
       Value *iterator,
       bool ignoreInnerException);
 
+  CacheNewObjectInst *createCacheNewObjectInst(
+      Value *thisParameter,
+      Value *newTarget,
+      llvh::ArrayRef<LiteralString *> keys);
+
   UnreachableInst *createUnreachableInst();
 
   PrLoadInst *createPrLoadInst(
