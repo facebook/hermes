@@ -15,57 +15,35 @@
 const mapPrototypeGet: any = Map.prototype.get;
 const mapPrototypeSet: any = Map.prototype.set;
 
-function arrayPrototypeMap_Widget(arr: Widget[], cb: any): any {
+function arrayPrototypeMap<T, U>(arr: T[], cb: T => U): U[] {
   'inline';
   var length: number = arr.length;
-  var result: Widget[] = [];
+  var result: U[] = [];
   for (var i: number = 0; i < length; ++i) {
-    var elem: Widget = arr[i];
+    var elem: T = arr[i];
     result.push(cb(elem));
   }
   return result;
 }
 
-function arrayPrototypeMap_Component(arr: Component[], cb: any): any {
+function arrayPrototypeMapWithIndex<T, U>(arr: T[], cb: (T, number) => U): U[] {
   'inline';
   var length: number = arr.length;
-  var result: Component[] = [];
+  var result: U[] = [];
   for (var i: number = 0; i < length; ++i) {
-    var elem: Component = arr[i];
-    result.push(cb(elem));
-  }
-  return result;
-}
-
-function arrayPrototypeMap_VirtualEntity(arr: VirtualEntity[], cb: any): any {
-  'inline';
-  var length: number = arr.length;
-  var result: VirtualEntity[] = [];
-  for (var i: number = 0; i < length; ++i) {
-    var elem: VirtualEntity = arr[i];
-    result.push(cb(elem));
-  }
-  return result;
-}
-
-function arrayPrototypeMap_StringWithIndexToWidget(arr: string[], cb: any): any {
-  'inline';
-  var length: number = arr.length;
-  var result: Widget[] = [];
-  for (var i: number = 0; i < length; ++i) {
-    var elem: string = arr[i];
+    var elem: T = arr[i];
     result.push(cb(elem, i));
   }
   return result;
 }
 
-function arrayPrototypeFilter_number(arr: number[], cb: any): number[] {
+function arrayPrototypeFilter<T>(arr: T[], cb: T => any): T[] {
   'inline';
-  var result: number[] = [];
+  var result: T[] = [];
   var resultlength: number = 0;
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
-    var elem: number = arr[i];
+    var elem: T = arr[i];
     if (cb(elem)) {
       result.push(elem);
     }
@@ -73,36 +51,11 @@ function arrayPrototypeFilter_number(arr: number[], cb: any): number[] {
   return result;
 }
 
-function arrayPrototypeFilter_Component(arr: Component[], cb: any): Component[] {
-  'inline';
-  var result: Component[] = [];
-  var resultlength: number = 0;
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: Component = arr[i];
-    if (cb(elem)) {
-      result.push(elem);
-    }
-  }
-  return result;
-}
-
-function arrayPrototypeIncludes_number(arr: number[], x: number): bool {
+function arrayPrototypeIncludes<T>(arr: T[], x: T): bool {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
-    var elem: number = arr[i];
-    if (elem === x)
-      return true;
-  }
-  return false;
-}
-
-function arrayPrototypeIncludes_Component(arr: Component[], x: Component): bool {
-  'inline';
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: Component = arr[i];
+    var elem: T = arr[i];
     if (elem === x)
       return true;
   }
@@ -114,46 +67,19 @@ function arrayPrototypeIncludes_Component(arr: Component[], x: Component): bool 
 // to avoid unnecessary conversions to 'any.
 // Note that Flow's type definitions have the callbacks return 'mixed'.
 
-function arrayPrototypeForEach_number(arr: number[], cb: number => any): void {
+function arrayPrototypeForEach<T>(arr: T[], cb: T => any): void {
   'inline';
   var length: number = arr.length;
   for (var i: number = 0; i < length; ++i) {
-    var elem: number = arr[i];
+    var elem: T = arr[i];
     cb(elem);
   }
 }
 
-function arrayPrototypeForEach_RenderNode(arr: RenderNode[], cb: RenderNode => any): void {
-  'inline';
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: RenderNode = arr[i];
-    cb(elem);
-  }
-}
-
-function arrayPrototypeForEach_VirtualEntity(arr: VirtualEntity[], cb: VirtualEntity => any): void {
-  'inline';
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: VirtualEntity = arr[i];
-    cb(elem);
-  }
-}
-
-function arrayPrototypeForEach_Component(arr: Component[], cb: Component => any): void {
-  'inline';
-  var length: number = arr.length;
-  for (var i: number = 0; i < length; ++i) {
-    var elem: Component = arr[i];
-    cb(elem);
-  }
-}
-
-function arrayPrototypeConcat_VirtualEntity(
-  arr1: VirtualEntity[],
-  arr2: VirtualEntity[],
-): VirtualEntity[] {
+function arrayPrototypeConcat<T>(
+  arr1: T[],
+  arr2: T[],
+): T[] {
   return [...arr1, ...arr2];
 }
 
@@ -236,9 +162,9 @@ class Container extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: Component = new NumberComponent(13);
-    const children: RenderNode[] = arrayPrototypeMap_Widget(
+    const children: RenderNode[] = arrayPrototypeMap<Widget, RenderNode>(
       this.children,
-      child => RenderNode_createForChild(ctx, child),
+      (child: Widget): RenderNode => RenderNode_createForChild(ctx, child),
     );
     return RenderNode_create(ctx, [component], children);
   }
@@ -302,11 +228,12 @@ function reconcileChildren(
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
   const oldChildrenByKey: any = new Map();
-  arrayPrototypeForEach_RenderNode(oldChildren, (child: RenderNode) => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
+  arrayPrototypeForEach<RenderNode>(oldChildren, (child: RenderNode) => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
 
-  arrayPrototypeForEach_RenderNode(newChildren, (child: RenderNode) => {
+  arrayPrototypeForEach<RenderNode>(newChildren, (child: RenderNode) => {
     const newKey = child.key;
-    const oldChild = $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
+    const oldChild: RenderNode | void =
+      $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
     if (oldChild !== undefined) {
       outChildren.push(reconcileRenderNode(child, oldChild));
     } else {
@@ -321,7 +248,7 @@ function mapEntitiesToComponents(
   entities: VirtualEntity[],
 ): any {
   const map: any = new Map();
-  arrayPrototypeForEach_VirtualEntity(entities, (entity: VirtualEntity) => {
+  arrayPrototypeForEach<VirtualEntity>(entities, (entity: VirtualEntity) => {
     const key: number = entity.key;
     const value: Component[] = entity.value;
     if ($SHBuiltin.call(mapPrototypeGet, map, key) == undefined) {
@@ -346,28 +273,29 @@ function diffTrees(
   const createdComponents: ComponentPair[] = [];
   const deletedComponents: ComponentPair[] = [];
 
-  const oldEntityIds: number[] = arrayPrototypeMap_VirtualEntity(
+  const oldEntityIds: number[] = arrayPrototypeMap<VirtualEntity, number>(
     oldEntities,
-    (entity: VirtualEntity) => entity.key,
+    (entity: VirtualEntity): number => entity.key,
   );
-  const newEntityIds: number[] = arrayPrototypeMap_VirtualEntity(
+  const newEntityIds: number[] = arrayPrototypeMap<VirtualEntity, number>(
     newEntities,
-    (entity: VirtualEntity) => entity.key
+    (entity: VirtualEntity): number => entity.key
   );
 
-  const createdEntities: number[] = arrayPrototypeFilter_number(newEntityIds,
-    (entityId: number) => !arrayPrototypeIncludes_number(oldEntityIds, entityId),
+  const createdEntities: number[] = arrayPrototypeFilter<number>(newEntityIds,
+    (entityId: number) => !arrayPrototypeIncludes<number>(oldEntityIds, entityId),
   );
-  const deletedEntities: number[] = arrayPrototypeFilter_number(oldEntityIds,
-    (entityId: number) => !arrayPrototypeIncludes_number(newEntityIds, entityId),
+  const deletedEntities: number[] = arrayPrototypeFilter<number>(oldEntityIds,
+    (entityId: number) => !arrayPrototypeIncludes<number>(newEntityIds, entityId),
   );
 
   const oldComponents: any = mapEntitiesToComponents(oldEntities);
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
-  arrayPrototypeForEach_number(createdEntities, (entityId: number) => {
-    const components: Component[] = arrayPrototypeMap_Component($SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]),
-      (it: Component) => new ComponentPair(entityId, it),
+  arrayPrototypeForEach<number>(createdEntities, (entityId: number) => {
+    const components: ComponentPair[] = arrayPrototypeMap<Component, ComponentPair>(
+      $SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]),
+      (it: Component): ComponentPair => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
   });
@@ -380,20 +308,20 @@ function diffTrees(
     const oldComponentsForKey: Component[] = $SHBuiltin.call(mapPrototypeGet, oldComponents, key) || ([]: Component[]);
     const newComponentsForKey: Component[] = value;
 
-    const deleted: Component[] = arrayPrototypeFilter_Component(
+    const deleted: Component[] = arrayPrototypeFilter<Component>(
       oldComponentsForKey,
-      (it: Component) => !arrayPrototypeIncludes_Component(newComponentsForKey, it),
+      (it: Component) => !arrayPrototypeIncludes<Component>(newComponentsForKey, it),
     );
-    const created: Component[] = arrayPrototypeFilter_Component(
+    const created: Component[] = arrayPrototypeFilter<Component>(
       newComponentsForKey,
-      (it: Component) => !arrayPrototypeIncludes_Component(oldComponentsForKey, it),
+      (it: Component) => !arrayPrototypeIncludes<Component>(oldComponentsForKey, it),
     );
 
-    arrayPrototypeForEach_Component(
+    arrayPrototypeForEach<Component>(
       deleted,
       (it: Component) => deletedComponents.push(new ComponentPair(key, it)),
     );
-    arrayPrototypeForEach_Component(
+    arrayPrototypeForEach<Component>(
       created,
       (it: Component) => createdComponents.push(new ComponentPair(key, it)),
     );
@@ -521,11 +449,11 @@ class RenderNode {
 
   reduce(): VirtualEntity[] {
     const childrenEntities: VirtualEntity[] = [];
-    arrayPrototypeForEach_RenderNode(
+    arrayPrototypeForEach<RenderNode>(
       this.children,
       (child: RenderNode) => childrenEntities.push(...child.reduce()),
     );
-    return arrayPrototypeConcat_VirtualEntity(
+    return arrayPrototypeConcat<VirtualEntity>(
       [new VirtualEntity(this.id, this.components)],
       childrenEntities,
     );
@@ -580,15 +508,18 @@ class TestApp extends ComposedWidget {
     if (sizes.length != models.length) {
       throw new Error('sizes and models must have same length');
     }
-    return arrayPrototypeMap_StringWithIndexToWidget(models, (modelPath: string, index: number) => {
-      const buttonSize = sizes[index];
-      const widget = new ButtonAndModel(new RenderData(
-        modelPath,
-        buttonSize,
-      ));
-      widget.key = `${modelPath}_${buttonSize}`;
-      return widget;
-    });
+    return arrayPrototypeMapWithIndex<string, Widget>(
+      models,
+      (modelPath: string, index: number): Widget => {
+        const buttonSize = sizes[index];
+        const widget = new ButtonAndModel(new RenderData(
+          modelPath,
+          buttonSize,
+        ));
+        widget.key = `${modelPath}_${buttonSize}`;
+        return widget;
+      }
+    );
   }
 
   getChildren(): Widget[] {
