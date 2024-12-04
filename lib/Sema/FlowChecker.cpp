@@ -1854,7 +1854,7 @@ ESTree::Node *FlowChecker::implicitCheckedCast(
 
 bool FlowChecker::validateAndBindTypeParameters(
     ESTree::TypeParameterDeclarationNode *params,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    SMRange errorRange,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::LexicalScope *scope) {
   size_t i = 0;
@@ -1890,7 +1890,7 @@ bool FlowChecker::validateAndBindTypeParameters(
   // Check that there aren't too many (or too few) type arguments provided.
   if (tooFewTypeArgs || i != typeArgTypes.size()) {
     sm_.error(
-        typeArgsNode->getSourceRange(),
+        errorRange,
         llvh::Twine("type argument mismatch, expected ") +
             llvh::Twine(params->_params.size()) + ", found " +
             llvh::Twine(typeArgTypes.size()));
@@ -1912,12 +1912,12 @@ sema::Decl *FlowChecker::specializeGeneric(
   }
 
   return specializeGenericWithParsedTypes(
-      oldDecl, typeArgsNode, typeArgTypes, scope);
+      oldDecl, typeArgsNode->getSourceRange(), typeArgTypes, scope);
 }
 
 sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
     sema::Decl *oldDecl,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    SMRange errorRange,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::LexicalScope *scope) {
   // Extract info from types.
@@ -1965,8 +1965,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
         });
     if (!specialization) {
       sm_.error(
-          typeArgsNode->getSourceRange(),
-          "failed to create specialization for generic function");
+          errorRange, "failed to create specialization for generic function");
       return nullptr;
     }
     auto &nodeList = getNodeList(generic.parent);
@@ -2019,7 +2018,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
 
       ScopeRAII paramScope{*this};
       bool populated = validateAndBindTypeParameters(
-          typeParamsNode, typeArgsNode, typeArgTypes, oldDecl->scope);
+          typeParamsNode, errorRange, typeArgTypes, oldDecl->scope);
       if (!populated) {
         LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
         return nullptr;
@@ -2028,12 +2027,12 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
       if (auto *func =
               llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
         typecheckGenericFunctionSpecialization(
-            func, typeArgsNode, typeArgTypes, oldDecl, newDecl);
+            func, typeArgTypes, oldDecl, newDecl);
       } else if (
           auto *classDecl =
               llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
         typecheckGenericClassSpecialization(
-            classDecl, typeArgsNode, typeArgTypes, oldDecl, newDecl);
+            classDecl, typeArgTypes, oldDecl, newDecl);
       }
     }
 
@@ -2062,7 +2061,6 @@ void FlowChecker::resolveCallToGenericFunctionSpecialization(
 
 void FlowChecker::typecheckGenericFunctionSpecialization(
     ESTree::FunctionDeclarationNode *specialization,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::Decl *oldDecl,
     sema::Decl *newDecl) {
@@ -2088,7 +2086,6 @@ void FlowChecker::typecheckGenericFunctionSpecialization(
 
 void FlowChecker::typecheckGenericClassSpecialization(
     ESTree::ClassDeclarationNode *specialization,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::Decl *oldDecl,
     sema::Decl *newDecl) {

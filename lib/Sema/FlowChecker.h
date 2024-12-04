@@ -592,7 +592,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Ensure that there are the correct number of type arguments and that they
   /// are valid to pass.
   /// \param params the type parameter declaration.
-  /// \param typeArgsNode the type arguments to pass.
+  /// \param errorRange used for reporting errors when binding fails.
   /// \param typeArgTypes the actual Types to instantiate the arguments with.
   /// \param scope the lexical scope to associate with each TypeDecl.
   /// \pre the binding table's scope is set to the new scope in which to place
@@ -601,7 +601,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \return true on success, false on failure and report an error.
   LLVM_NODISCARD bool validateAndBindTypeParameters(
       ESTree::TypeParameterDeclarationNode *params,
-      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      SMRange errorRange,
       llvh::ArrayRef<Type *> typeArgTypes,
       sema::LexicalScope *scope);
 
@@ -621,13 +621,14 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// If necessary, specialize and typecheck the specialization of a generic
   /// function.
   /// \param node the call expression passing the type arguments
+  /// \param errorRange used for reporting errors when binding fails.
   /// \param callee the name of the generic being called
   /// \param oldDecl the original Decl for the non-specialized generic function
   /// \return the new Decl for the specialization of the function,
   ///   nullptr on error.
   sema::Decl *specializeGenericWithParsedTypes(
       sema::Decl *oldDecl,
-      ESTree::TypeParameterInstantiationNode *typeArgsNode,
+      SMRange errorRange,
       llvh::ArrayRef<Type *> typeArgTypes,
       sema::LexicalScope *scope);
 
@@ -649,7 +650,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param newDecl the new Decl for the specialization of the function.
   void typecheckGenericFunctionSpecialization(
       ESTree::FunctionDeclarationNode *specialization,
-      ESTree::TypeParameterInstantiationNode *typeArgsNode,
       llvh::ArrayRef<Type *> typeArgTypes,
       sema::Decl *oldDecl,
       sema::Decl *newDecl);
@@ -664,7 +664,6 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param newDecl the new Decl for the specialization of the function.
   void typecheckGenericClassSpecialization(
       ESTree::ClassDeclarationNode *specialization,
-      ESTree::TypeParameterInstantiationNode *typeArgsNode,
       llvh::ArrayRef<Type *> typeArgTypes,
       sema::Decl *oldDecl,
       sema::Decl *newDecl);
