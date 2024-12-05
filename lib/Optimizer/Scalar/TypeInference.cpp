@@ -1158,11 +1158,19 @@ bool TypeInferenceImpl::runOnFunctionsAndVars(
       dbgs() << "\nStart Type Inference on " << functions.size()
              << " functions and " << vars.size() << "vars.\n");
 
+  // Post-order traversal of blocks for each function.
+  // Reverse when iterating, so that we visit the blocks in reverse post-order.
+  // Precomputed to avoid recomputing it in the inner loop.
+  llvh::DenseMap<Function *, std::vector<BasicBlock *>> funcPostOrders{};
+
   // Begin by clearing the existing types and storing pre-pass types.
   // This prevents us from relying on the previous inference pass's type info,
   // which can be too loose (if things have been simplified, etc.).
-  for (Function *F : functions)
+  // Also precompute the post-order traversal for each function.
+  for (Function *F : functions) {
     clearTypesInFunction(F);
+    funcPostOrders.try_emplace(F, postOrderAnalysis(F));
+  }
 
   for (Variable *V : vars) {
     prePassTypes_.try_emplace(V, V->getType());
@@ -1194,8 +1202,9 @@ bool TypeInferenceImpl::runOnFunctionsAndVars(
     // Infer types of instructions.
     bool inferredInst = false;
     for (Function *F : functions) {
-      for (auto &bbit : *F) {
-        for (auto &it : bbit) {
+      llvh::ArrayRef<BasicBlock *> postOrder = funcPostOrders[F];
+      for (auto *bbit : llvh::reverse(postOrder)) {
+        for (auto &it : *bbit) {
           Instruction *I = &it;
           inferredInst |= inferInstruction(I);
         }
