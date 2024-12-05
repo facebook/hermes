@@ -232,7 +232,6 @@ export type AFunction =
 
 export type Statement =
   | BlockStatement
-  | StaticBlock
   | BreakStatement
   | ClassDeclaration
   | ComponentDeclaration
@@ -263,6 +262,7 @@ export type Statement =
   | LabeledStatement
   | OpaqueType
   | ReturnStatement
+  | StaticBlock
   | SwitchStatement
   | ThrowStatement
   | TryStatement
