@@ -23,7 +23,7 @@ To build a local debug version of the Hermes CLI tools the following steps shoul
 mkdir hermes_workingdir
 cd hermes_workingdir
 git clone https://github.com/facebook/hermes.git
-cmake -S hermes -B build -G Ninja
+cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build ./build
 ```
 
