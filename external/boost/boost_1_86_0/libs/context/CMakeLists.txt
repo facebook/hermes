@@ -10,6 +10,20 @@ list(APPEND CMAKE_MODULE_PATH ${boost_context_SOURCE_DIR}/cmake)
 
 # Build features
 
+# If we are targeting Apple, CMAKE_OSX_ARCHITECTURES may be set, but we already
+# know which assembly sources we need. The files themselves will include
+# the correct version based on the target CPU preprocessor define.
+# This allows `clang -arch x86_64 -arch arm64 src/asm/make_apple.S` to work.
+if(APPLE)
+    set(ASM_SOURCES
+            src/asm/make_apple.S
+            src/asm/jump_apple.S
+            src/asm/ontop_apple.S
+    )
+else()
+    set(ASM_SOURCES "")
+endif()
+
 ## Binary format
 
 if(WIN32)
@@ -156,11 +170,13 @@ endif()
 
 set(_asm_suffix ${BOOST_CONTEXT_ARCHITECTURE}_${BOOST_CONTEXT_ABI}_${BOOST_CONTEXT_BINARY_FORMAT}_${BOOST_CONTEXT_ASSEMBLER}${BOOST_CONTEXT_ASM_SUFFIX})
 
-set(ASM_SOURCES
-  src/asm/make_${_asm_suffix}
-  src/asm/jump_${_asm_suffix}
-  src/asm/ontop_${_asm_suffix}
-)
+if (ASM_SOURCES STREQUAL "")
+  set(ASM_SOURCES
+    src/asm/make_${_asm_suffix}
+    src/asm/jump_${_asm_suffix}
+    src/asm/ontop_${_asm_suffix}
+  )
+endif()
 
 unset(_asm_suffix)
 
@@ -194,25 +210,25 @@ else()
   )
 endif()
 
-add_library(boost_context
+add_hermes_library(boost_context
   ${IMPL_SOURCES}
   ${STACK_TRAITS_SOURCES}
 )
 
-add_library(Boost::context ALIAS boost_context)
+#add_library(Boost::context ALIAS boost_context)
 
-target_include_directories(boost_context PUBLIC include)
+#target_include_directories(boost_context PUBLIC include)
 
-target_link_libraries(boost_context
-  PUBLIC
-    Boost::assert
-    Boost::config
-    Boost::core
-    Boost::mp11
-    Boost::pool
-    Boost::predef
-    Boost::smart_ptr
-)
+#target_link_libraries(boost_context
+#  PUBLIC
+#    Boost::assert
+#    Boost::config
+#    Boost::core
+#    Boost::mp11
+#    Boost::pool
+#    Boost::predef
+#    Boost::smart_ptr
+#)
 
 # ATTENTION. Some assemblers are picky to get --defsym,KEY=VALUE pairs where '=' is non-optional!
 # Be sure all defines have the '=' character. Overkill solution: always put '=' throughout this module.

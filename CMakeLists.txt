@@ -308,6 +308,9 @@ set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
 # 2: JIT is enabled
 set(HERMESVM_ALLOW_JIT 0 CACHE STRING "JIT mode: 0 (off), 1 (auto) or 2 (force on)")
 
+set(HERMES_ALLOW_BOOST_CONTEXT 1 CACHE STRING
+   "Use Boost.Context fibers: 0 (off), 1 (auto) or 2 (force on)")
+
 # Used in the compiler, for various compilation statistics.
 set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
   "Enable gathering, printing of Statistics.")
@@ -534,6 +537,28 @@ endif()
 if (HERMESVM_ALLOW_JIT)
   add_definitions(-DHERMESVM_ALLOW_JIT=${HERMESVM_ALLOW_JIT})
 endif ()
+
+if (HERMES_ALLOW_BOOST_CONTEXT EQUAL 0)
+    set(HERMES_USE_BOOST_CONTEXT 0)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 2)
+    set(HERMES_USE_BOOST_CONTEXT 1)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 1)
+    if (HERMES_ENABLE_ADDRESS_SANITIZER)
+        set(HERMES_USE_BOOST_CONTEXT 0)
+    else()
+        set(HERMES_USE_BOOST_CONTEXT 1)
+    endif()
+else ()
+    message(FATAL_ERROR "Invalid HERMES_ALLOW_BOOST_CONTEXT value ${HERMES_ALLOW_BOOST_CONTEXT}")
+endif ()
+# Use BOOST_CONTEXT_LIB to rever to boost_context as a dependency, regardless of
+# whether it is enabled.
+if (HERMES_USE_BOOST_CONTEXT)
+    set(BOOST_CONTEXT_LIB boost_context)
+else()
+    set(BOOST_CONTEXT_LIB )
+endif()
+add_definitions(-DHERMES_USE_BOOST_CONTEXT=${HERMES_USE_BOOST_CONTEXT})
 
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
