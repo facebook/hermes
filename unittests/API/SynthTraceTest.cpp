@@ -1296,6 +1296,7 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
 
     tracing::TraceInterpreter::ExecuteOptions options;
     options.useTraceConfig = true;
+    options.verificationEnabled = true;
     auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
         llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
         std::move(sources), // codeBufs
@@ -1602,6 +1603,10 @@ TEST_F(SynthTraceReplayTest, PropNameIDUtf8) {
     auto &rt = *traceRt;
     jsi::PropNameID name = jsi::PropNameID::forAscii(rt, ascii);
     std::string ret = name.utf8(rt);
+
+    std::string utf8 = "hi👍";
+    jsi::String utf8prop = jsi::String::createFromUtf8(rt, ascii);
+    utf8prop.utf8(rt);
   }
   replay();
 }
@@ -1614,6 +1619,10 @@ TEST_F(SynthTraceReplayTest, StringUtf8) {
     auto &rt = *traceRt;
     jsi::String name = jsi::String::createFromAscii(rt, ascii);
     std::string ret = name.utf8(rt);
+
+    std::string utf8 = "hi👍";
+    jsi::String utf8String = jsi::String::createFromUtf8(rt, ascii);
+    utf8String.utf8(rt);
   }
   replay();
 }

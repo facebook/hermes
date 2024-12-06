@@ -383,4 +383,15 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   EXPECT_EQ(
       "undefined:", record.getProperty(*rt, "retval").asString(*rt).utf8(*rt));
 }
+
+TEST_F(SynthTraceSerializationTest, Utf8Record) {
+  EXPECT_EQ(
+      R"({"type":"Utf8Record","time":0,"objID":"string:123","retval":"hi\u00f0\u009f\u0091\u008b"})",
+      to_string(SynthTrace::Utf8Record(
+          dummyTime, SynthTrace::encodeString(123), "hi👋")));
+  EXPECT_EQ(
+      R"({"type":"Utf8Record","time":0,"objID":"string:111","retval":"\u00f0"})",
+      to_string(SynthTrace::Utf8Record(
+          dummyTime, SynthTrace::encodeString(111), "\xf0")));
+}
 } // namespace

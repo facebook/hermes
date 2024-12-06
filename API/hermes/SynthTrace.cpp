@@ -362,7 +362,13 @@ void SynthTrace::CreateStringRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("encoding", encodingName(ascii_));
-  json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
+  // For UTF-8 Strings, copy the content to a char16 array and emit each byte as
+  // a code unit. This allows us to reconstruct the exact string byte-for-byte
+  // during replay.
+  std::vector<char16_t> char16Vector(
+      (const unsigned char *)chars_.data(),
+      (const unsigned char *)chars_.data() + chars_.size());
+  json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
 }
 
 void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
@@ -373,7 +379,13 @@ void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
     json.emitKeyValue("value", encode(traceValue_));
   else {
     json.emitKeyValue("encoding", encodingName(valueType_ == ASCII));
-    json.emitKeyValue("chars", llvh::StringRef(chars_.data(), chars_.size()));
+    // For UTF-8 Strings, copy the content to a char16 array and emit each byte
+    // as a code unit. This allows us to reconstruct the exact string
+    // byte-for-byte during replay.
+    std::vector<char16_t> char16Vector(
+        (const unsigned char *)chars_.data(),
+        (const unsigned char *)chars_.data() + chars_.size());
+    json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
   }
 }
 
@@ -540,7 +552,13 @@ void SynthTrace::SetExternalMemoryPressureRecord::toJSONInternal(
 void SynthTrace::Utf8Record::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", encode(objID_));
-  json.emitKeyValue("retval", retVal_);
+  // For UTF-8 Strings, copy the content to a char16 array and emit each byte as
+  // a code unit. This allows us to reconstruct the exact string byte-for-byte
+  // during replay.
+  std::vector<char16_t> char16Vector(
+      (const unsigned char *)retVal_.data(),
+      (const unsigned char *)retVal_.data() + retVal_.size());
+  json.emitKeyValue("retval", llvh::ArrayRef(char16Vector));
 }
 
 void SynthTrace::GlobalRecord::toJSONInternal(JSONEmitter &json) const {
