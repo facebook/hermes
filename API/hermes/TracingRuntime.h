@@ -66,6 +66,9 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       override;
   std::string utf8(const jsi::String &) override;
 
+  std::u16string utf16(const jsi::PropNameID &) override;
+  std::u16string utf16(const jsi::String &) override;
+
   std::string symbolToString(const jsi::Symbol &) override;
 
   jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;

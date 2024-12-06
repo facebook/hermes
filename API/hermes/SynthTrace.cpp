@@ -553,6 +553,12 @@ void SynthTrace::Utf8Record::toJSONInternal(JSONEmitter &json) const {
   json.emitKeyValue("retval", llvh::ArrayRef(char16Vector));
 }
 
+void SynthTrace::Utf16Record::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", encode(objID_));
+  json.emitKeyValue("retval", llvh::ArrayRef(retVal_.data(), retVal_.size()));
+}
+
 void SynthTrace::GlobalRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);

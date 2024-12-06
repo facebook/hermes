@@ -275,4 +275,54 @@ TEST_F(SynthTraceParserTest, ParseUtf8Record) {
   ASSERT_EQ(record2.retVal_, "nice👍");
 }
 
+TEST_F(SynthTraceParserTest, ParseUtf16Record) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "Utf16Record",
+      "time": 1234,
+      "objID": "string:1110",
+      "retval": "hi"
+    },
+    {
+      "type": "Utf16Record",
+      "time": 1234,
+      "objID": "string:1111",
+      "retval": "\ud83d"
+    },
+    {
+      "type": "Utf16Record",
+      "time": 1234,
+      "objID": "string:1112",
+      "retval": "nice\ud83d\udc4d"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 =
+      dynamic_cast<const SynthTrace::Utf16Record &>(*trace.records().at(0));
+  ASSERT_EQ(record0.retVal_, u"hi");
+
+  // We should be able to parse a lone surrogate
+  auto record1 =
+      dynamic_cast<const SynthTrace::Utf16Record &>(*trace.records().at(1));
+  ASSERT_EQ(record1.retVal_, u"\xd83d");
+
+  auto record2 =
+      dynamic_cast<const SynthTrace::Utf16Record &>(*trace.records().at(2));
+  ASSERT_EQ(record2.retVal_, u"nice👍");
+}
+
 } // namespace

@@ -32,6 +32,17 @@
     }                                                                     \
   } while (0)
 
+#define TRACE_EXPECT_EQ_UTF16(expected, actual)                       \
+  do {                                                                \
+    if (options_.verificationEnabled && (expected) != (actual)) {     \
+      std::cerr << "Expected UTF16 value does not match actual value" \
+                << std::endl;                                         \
+      std::cerr << "Synth Trace Verification failed at record "       \
+                << nextExecIndex_ - 1 << std::endl;                   \
+      abort();                                                        \
+    }                                                                 \
+  } while (0)
+
 #define TRACE_EXPECT_TRUE(actual) TRACE_EXPECT_EQ(true, actual)
 
 using namespace hermes::parser;
@@ -1080,6 +1091,21 @@ void TraceInterpreter::executeRecords() {
           } else if (record.objID_.isSymbol()) {
             jsi::Value val = getJSIValueForUse(record.objID_.getUID());
             TRACE_EXPECT_EQ(record.retVal_, val.asSymbol(rt_).toString(rt_));
+          }
+          break;
+        }
+        case RecordType::Utf16: {
+          const auto &record =
+              static_cast<const SynthTrace::Utf16Record &>(*rec);
+
+          if (record.objID_.isString()) {
+            const auto &val = getJSIValueForUse(record.objID_.getUID());
+            auto utf16 = val.getString(rt_).utf16(rt_);
+            TRACE_EXPECT_EQ_UTF16(record.retVal_, utf16);
+          } else if (record.objID_.isPropNameID()) {
+            auto propNameID = getPropNameIDForUse(record.objID_.getUID());
+            auto utf16 = propNameID.utf16(rt_);
+            TRACE_EXPECT_EQ_UTF16(record.retVal_, utf16);
           }
           break;
         }

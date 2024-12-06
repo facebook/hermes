@@ -22,6 +22,16 @@ using namespace ::hermes::parser;
 
 namespace {
 
+/// Converts the data in the JSONString \p str into a u16string
+std::u16string jsonStringToU16String(
+    const ::hermes::parser::JSONString &jsonStr) {
+  auto strRef = jsonStr.str();
+  std::u16string ret;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(ret), strRef.begin(), strRef.end());
+  return ret;
+}
+
 /// Converts the data in the JSONString \p str into a u8string. Each code unit
 /// encoded in the JSONString is expected to represent each byte of the UTF-8
 /// String.
@@ -540,6 +550,14 @@ SynthTrace getTrace(
             timeFromStart,
             SynthTrace::decode(objId->str()),
             jsonStringToU8String(*retval));
+        break;
+      }
+      case RecordType::Utf16: {
+        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
+        trace.emplace_back<SynthTrace::Utf16Record>(
+            timeFromStart,
+            SynthTrace::decode(objId->str()),
+            jsonStringToU16String(*retval));
         break;
       }
       case RecordType::Global: {
