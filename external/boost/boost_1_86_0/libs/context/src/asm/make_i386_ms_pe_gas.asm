@@ -32,10 +32,10 @@
 .def	@feat.00;	.scl	3;	.type	0;	.endef
 .set    @feat.00,   1
 
-.globl	_make_fcontext
-.def	_make_fcontext;	.scl	2;	.type	32;	.endef
-_make_fcontext:
-    /* first arg of make_fcontext() == top of context-stack */
+.globl	_hoost_make_fcontext
+.def	_hoost_make_fcontext;	.scl	2;	.type	32;	.endef
+_hoost_make_fcontext:
+    /* first arg of hoost_make_fcontext() == top of context-stack */
     movl  0x04(%esp), %eax
 
     /* reserve space for first argument of context-function */
@@ -56,11 +56,11 @@ _make_fcontext:
     /* save x87 control-word */
     fnstcw  0x4(%eax)
 
-    /* first arg of make_fcontext() == top of context-stack */
+    /* first arg of hoost_make_fcontext() == top of context-stack */
     movl  0x4(%esp), %ecx
     /* save top address of context stack as 'base' */
     movl  %ecx, 0x14(%eax)
-    /* second arg of make_fcontext() == size of context-stack */
+    /* second arg of hoost_make_fcontext() == size of context-stack */
     movl  0x8(%esp), %edx
     /* negate stack size for LEA instruction (== substraction) */
     negl  %edx
@@ -74,7 +74,7 @@ _make_fcontext:
 	xorl  %ecx, %ecx
     movl  %ecx, 0x8(%eax)
 
-    /* third arg of make_fcontext() == address of context-function */
+    /* third arg of hoost_make_fcontext() == address of context-function */
     /* stored in EBX */
     movl  0xc(%esp), %ecx
     movl  %ecx, 0x24(%eax)
@@ -82,7 +82,7 @@ _make_fcontext:
     /* compute abs address of label trampoline */
     movl  $trampoline, %ecx
     /* save address of trampoline as return-address for context-function */
-    /* will be entered after calling jump_fcontext() first time */
+    /* will be entered after calling hoost_jump_fcontext() first time */
     movl  %ecx, 0x2c(%eax)
 
     /* compute abs address of label finish */
@@ -150,4 +150,4 @@ finish:
 .def	__exit;	.scl	2;	.type	32;	.endef  /* standard C library function */
 
 .section .drectve
-.ascii " -export:\"make_fcontext\""
+.ascii " -export:\"hoost_make_fcontext\""

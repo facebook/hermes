@@ -52,12 +52,12 @@
 
 .file "ontop_ppc32_sysv_elf_gas.S"
 .text
-.globl ontop_fcontext
+.globl hoost_ontop_fcontext
 .align 2
-.type ontop_fcontext,@function
-ontop_fcontext:
-    # Linux: ontop_fcontext( hidden transfer_t * R3, R4, R5, R6)
-    # Other: transfer_t R3:R4 = jump_fcontext( R3, R4, R5)
+.type hoost_ontop_fcontext,@function
+hoost_ontop_fcontext:
+    # Linux: hoost_ontop_fcontext( hidden transfer_t * R3, R4, R5, R6)
+    # Other: transfer_t R3:R4 = hoost_jump_fcontext( R3, R4, R5)
 
     mflr  %r0  # return address from LR
     mffs  %f0  # FPSCR
@@ -186,8 +186,8 @@ ontop_fcontext:
     # see tail_ppc32_sysv_elf_gas.cpp
     # Linux: fcontext_ontop_tail( hidden transfer_t * R3, R4, R5, R6, R7)
     # Other: transfer_t R3:R4 = fcontext_ontop_tail( R3, R4, R5, R6)
-    b ontop_fcontext_tail
-.size ontop_fcontext, .-ontop_fcontext
+    b hoost_ontop_fcontext_tail
+.size hoost_ontop_fcontext, .-hoost_ontop_fcontext
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits

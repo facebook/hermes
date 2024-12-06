@@ -40,10 +40,10 @@
 
 .file "jump_loongarch64_sysv_elf_gas.S"
 .text
-.globl jump_fcontext
+.globl hoost_jump_fcontext
 .align 2
-.type jump_fcontext,@function
-jump_fcontext:
+.type hoost_jump_fcontext,@function
+hoost_jump_fcontext:
     # reserve space on stack
     addi.d  $sp, $sp, -160
 
@@ -115,7 +115,7 @@ jump_fcontext:
 
     # jump to context
     jr  $a2
-.size jump_fcontext, .-jump_fcontext
+.size hoost_jump_fcontext, .-hoost_jump_fcontext
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits

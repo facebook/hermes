@@ -26,10 +26,10 @@
 
 .file "ontop_i386_sysv_elf_gas.S"
 .text
-.globl ontop_fcontext
+.globl hoost_ontop_fcontext
 .align 2
-.type ontop_fcontext,@function
-ontop_fcontext:
+.type hoost_ontop_fcontext,@function
+hoost_ontop_fcontext:
     leal  -0x1c(%esp), %esp  /* prepare stack */
 
 #if !defined(BOOST_USE_TSX)
@@ -50,19 +50,19 @@ ontop_fcontext:
     /* store ESP (pointing to context-data) in ECX */
     movl  %esp, %ecx
 
-    /* first arg of ontop_fcontext() == fcontext to jump to */
+    /* first arg of hoost_ontop_fcontext() == fcontext to jump to */
     movl  0x24(%esp), %eax
 
     /* pass parent fcontext_t */
     movl  %ecx, 0x24(%eax)
 
-    /* second arg of ontop_fcontext() == data to be transferred */
+    /* second arg of hoost_ontop_fcontext() == data to be transferred */
     movl  0x28(%esp), %ecx
 
     /* pass data */
     movl %ecx, 0x28(%eax)
 
-    /* third arg of ontop_fcontext() == ontop-function */
+    /* third arg of hoost_ontop_fcontext() == ontop-function */
     movl  0x2c(%esp), %ecx
 
     /* restore ESP (pointing to context-data) from EAX */
@@ -94,7 +94,7 @@ ontop_fcontext:
 
     /* jump to context */
     jmp *%ecx
-.size ontop_fcontext,.-ontop_fcontext
+.size hoost_ontop_fcontext,.-hoost_ontop_fcontext
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits

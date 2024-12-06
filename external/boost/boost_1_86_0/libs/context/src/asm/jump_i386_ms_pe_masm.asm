@@ -24,7 +24,7 @@
 .model flat, c
 .code
 
-jump_fcontext PROC BOOST_CONTEXT_EXPORT
+hoost_jump_fcontext PROC BOOST_CONTEXT_EXPORT
     ; prepare stack
     lea  esp, [esp-02ch]
 
@@ -55,17 +55,17 @@ ENDIF
     mov  eax, [edx]
     mov  [esp+018h], eax
 
-    mov  [esp+01ch], edi  ; save EDI 
-    mov  [esp+020h], esi  ; save ESI 
-    mov  [esp+024h], ebx  ; save EBX 
-    mov  [esp+028h], ebp  ; save EBP 
+    mov  [esp+01ch], edi  ; save EDI
+    mov  [esp+020h], esi  ; save ESI
+    mov  [esp+024h], ebx  ; save EBX
+    mov  [esp+028h], ebp  ; save EBP
 
     ; store ESP (pointing to context-data) in EAX
     mov  eax, esp
 
-    ; firstarg of jump_fcontext() == fcontext to jump to
+    ; firstarg of hoost_jump_fcontext() == fcontext to jump to
     mov  ecx, [esp+030h]
-    
+
     ; restore ESP (pointing to context-data) from ECX
     mov  esp, ecx
 
@@ -98,10 +98,10 @@ ENDIF
 
     mov  ecx, [esp+02ch]  ; restore EIP
 
-    mov  edi, [esp+01ch]  ; restore EDI 
-    mov  esi, [esp+020h]  ; restore ESI 
-    mov  ebx, [esp+024h]  ; restore EBX 
-    mov  ebp, [esp+028h]  ; restore EBP 
+    mov  edi, [esp+01ch]  ; restore EDI
+    mov  esi, [esp+020h]  ; restore ESI
+    mov  ebx, [esp+024h]  ; restore EBX
+    mov  ebp, [esp+028h]  ; restore EBP
 
     ; prepare stack
     lea  esp, [esp+030h]
@@ -112,5 +112,5 @@ ENDIF
 
     ; jump to context
     jmp ecx
-jump_fcontext ENDP
+hoost_jump_fcontext ENDP
 END

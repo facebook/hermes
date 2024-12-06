@@ -40,17 +40,17 @@
 
 .file "make_loongarch64_sysv_elf_gas.S"
 .text
-.globl make_fcontext
+.globl hoost_make_fcontext
 .align 2
-.type make_fcontext,@function
-make_fcontext:
+.type hoost_make_fcontext,@function
+hoost_make_fcontext:
     # shift address in A0 to lower 16 byte boundary
     bstrins.d $a0, $zero, 3, 0
 
     # reserve space for context-data on context-stack
     addi.d  $a0, $a0, -160
 
-    # third arg of make_fcontext() == address of context-function
+    # third arg of hoost_make_fcontext() == address of context-function
     st.d  $a2, $a0, 152
 
     # save address of finish as return-address for context-function
@@ -67,6 +67,6 @@ finish:
     # call _exit(0)
     b  %plt(_exit)
 
-.size make_fcontext, .-make_fcontext
+.size hoost_make_fcontext, .-hoost_make_fcontext
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits

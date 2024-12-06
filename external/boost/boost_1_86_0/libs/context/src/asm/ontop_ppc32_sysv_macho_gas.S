@@ -68,15 +68,15 @@
  *  -------------------------------------------------  *
  *  | 256 |                                         |  *
  *  -------------------------------------------------  *
- *  | DATA|                                         |  * 
+ *  | DATA|                                         |  *
  *  -------------------------------------------------  *
  *                                                     *
  *******************************************************/
 
 .text
-.globl _ontop_fcontext
+.globl _hoost_ontop_fcontext
 .align 2
-_ontop_fcontext:
+_hoost_ontop_fcontext:
     ; reserve space on stack
     subi  r1, r1, 244
 
@@ -190,7 +190,7 @@ _ontop_fcontext:
     ; adjust stack
     addi  r1, r1, 244
 
-    ; Need to pass ontop_fcontext_tail(
+    ; Need to pass hoost_ontop_fcontext_tail(
     ;   hidden R3,
     ;   R4 = ignore,
     ;   R5 = data,
@@ -198,4 +198,4 @@ _ontop_fcontext:
     ;   R7 = fcontext_t
     ; )
     ; All of these registers are correctly set at this point
-    b _ontop_fcontext_tail
+    b _hoost_ontop_fcontext_tail

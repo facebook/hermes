@@ -28,13 +28,13 @@ struct transfer_t {
 };
 
 extern "C" BOOST_CONTEXT_DECL
-transfer_t BOOST_CONTEXT_CALLDECL jump_fcontext( fcontext_t const to, void * vp);
+transfer_t BOOST_CONTEXT_CALLDECL hoost_jump_fcontext( fcontext_t const to, void * vp);
 extern "C" BOOST_CONTEXT_DECL
-fcontext_t BOOST_CONTEXT_CALLDECL make_fcontext( void * sp, std::size_t size, void (* fn)( transfer_t) );
+fcontext_t BOOST_CONTEXT_CALLDECL hoost_make_fcontext( void * sp, std::size_t size, void (* fn)( transfer_t) );
 
 // based on an idea of Giovanni Derreta
 extern "C" BOOST_CONTEXT_DECL
-transfer_t BOOST_CONTEXT_CALLDECL ontop_fcontext( fcontext_t const to, void * vp, transfer_t (* fn)( transfer_t) );
+transfer_t BOOST_CONTEXT_CALLDECL hoost_ontop_fcontext( fcontext_t const to, void * vp, transfer_t (* fn)( transfer_t) );
 
 }}}
 
@@ -43,4 +43,3 @@ transfer_t BOOST_CONTEXT_CALLDECL ontop_fcontext( fcontext_t const to, void * vp
 #endif
 
 #endif // BOOST_CONTEXT_DETAIL_FCONTEXT_H
-

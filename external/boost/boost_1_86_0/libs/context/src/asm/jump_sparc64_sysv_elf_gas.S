@@ -13,7 +13,7 @@
  *	void	*	data;
  * };
  *
- * transfer_t jump_fcontext(fcontext_t const to, void *vp);
+ * transfer_t hoost_jump_fcontext(fcontext_t const to, void *vp);
  */
 #define CC64FSZ 176
 #define BIAS 2047
@@ -23,9 +23,9 @@
 .file "jump_sparc64_sysv_elf_gas.S"
 .text
 .align  4
-.global jump_fcontext
-.type   jump_fcontext, %function
-jump_fcontext:
+.global hoost_jump_fcontext
+.type   hoost_jump_fcontext, %function
+hoost_jump_fcontext:
 	# prepare stack
 	save	%sp, -CC64FSZ, %sp
 
@@ -46,6 +46,6 @@ jump_fcontext:
 	 restore %o0, %g0, %o0
 	# restore old %sp (pointing to old context-data) in %o0
 	# *data stored in %o1 was not modified
-.size	jump_fcontext,.-jump_fcontext
+.size	hoost_jump_fcontext,.-hoost_jump_fcontext
 # Mark that we don't need executable stack.
 .section .note.GNU-stack,"",%progbits

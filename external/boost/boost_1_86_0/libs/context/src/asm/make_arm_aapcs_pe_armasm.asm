@@ -27,11 +27,11 @@
 
     AREA |.text|, CODE
     ALIGN 4
-    EXPORT make_fcontext
+    EXPORT hoost_make_fcontext
     IMPORT _exit
 
-make_fcontext PROC
-    ; first arg of make_fcontext() == top of context-stack
+hoost_make_fcontext PROC
+    ; first arg of hoost_make_fcontext() == top of context-stack
     ; save top of context-stack (base) A4
     mov  a4, a1
 
@@ -43,7 +43,7 @@ make_fcontext PROC
 
     ; save top address of context_stack as 'base'
     str  a4, [a1, #0x8]
-    ; second arg of make_fcontext() == size of context-stack
+    ; second arg of hoost_make_fcontext() == size of context-stack
     ; compute bottom address of context-stack (limit)
     sub  a4, a4, a2
     ; save bottom address of context-stack as 'limit'
@@ -51,7 +51,7 @@ make_fcontext PROC
     ; save bottom address of context-stack as 'dealloction stack'
     str  a4, [a1, #0x0]
 
-    ; third arg of make_fcontext() == address of context-function
+    ; third arg of hoost_make_fcontext() == address of context-function
     str  a3, [a1, #0x34]
 
     ; compute address of returned transfer_t

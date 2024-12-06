@@ -70,13 +70,13 @@
     .toc
     .csect .text[PR], 5
     .align 2
-    .globl  ontop_fcontext[DS]
-    .globl .ontop_fcontext
-    .csect  ontop_fcontext[DS], 3
-ontop_fcontext:
-    .llong .ontop_fcontext[PR], TOC[tc0], 0
+    .globl  hoost_ontop_fcontext[DS]
+    .globl .hoost_ontop_fcontext
+    .csect  hoost_ontop_fcontext[DS], 3
+hoost_ontop_fcontext:
+    .llong .hoost_ontop_fcontext[PR], TOC[tc0], 0
     .csect .text[PR], 5
-.ontop_fcontext:
+.hoost_ontop_fcontext:
     # reserve space on stack
     subi  1, 1, 184
 

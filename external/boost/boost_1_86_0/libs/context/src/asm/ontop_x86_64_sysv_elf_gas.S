@@ -39,10 +39,10 @@
 # endif
 .file "ontop_x86_64_sysv_elf_gas.S"
 .text
-.globl ontop_fcontext
-.type ontop_fcontext,@function
+.globl hoost_ontop_fcontext
+.type hoost_ontop_fcontext,@function
 .align 16
-ontop_fcontext:
+hoost_ontop_fcontext:
     _CET_ENDBR
     /* preserve ontop-function in R8 */
     movq  %rdx, %r8
@@ -132,7 +132,7 @@ ontop_fcontext:
 
     /* indirect jump to context */
     jmp  *%r8
-.size ontop_fcontext,.-ontop_fcontext
+.size hoost_ontop_fcontext,.-hoost_ontop_fcontext
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits

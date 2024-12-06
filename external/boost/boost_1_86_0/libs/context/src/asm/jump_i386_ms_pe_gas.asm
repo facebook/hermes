@@ -32,9 +32,9 @@
 .def	@feat.00;	.scl	3;	.type	0;	.endef
 .set    @feat.00,   1
 
-.globl	_jump_fcontext
-.def	_jump_fcontext;	.scl	2;	.type	32;	.endef
-_jump_fcontext:
+.globl	_hoost_jump_fcontext
+.def	_hoost_jump_fcontext;	.scl	2;	.type	32;	.endef
+_hoost_jump_fcontext:
     /* prepare stack */
     leal  -0x2c(%esp), %esp
 
@@ -71,9 +71,9 @@ _jump_fcontext:
     /* store ESP (pointing to context-data) in EAX */
     movl  %esp, %eax
 
-    /* firstarg of jump_fcontext() == fcontext to jump to */
+    /* firstarg of hoost_jump_fcontext() == fcontext to jump to */
     movl  0x30(%esp), %ecx
-    
+
     /* restore ESP (pointing to context-data) from ECX */
     movl  %ecx, %esp
 
@@ -120,4 +120,4 @@ _jump_fcontext:
     jmp *%ecx
 
 .section .drectve
-.ascii " -export:\"jump_fcontext\""
+.ascii " -export:\"hoost_jump_fcontext\""

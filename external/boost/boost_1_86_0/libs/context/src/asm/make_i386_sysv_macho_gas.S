@@ -25,10 +25,10 @@
  ****************************************************************************************/
 
 .text
-.globl _make_fcontext
+.globl _hoost_make_fcontext
 .align 2
-_make_fcontext:
-    /* first arg of make_fcontext() == top of context-stack */
+_hoost_make_fcontext:
+    /* first arg of hoost_make_fcontext() == top of context-stack */
     movl  0x4(%esp), %eax
 
     /* reserve space for first argument of context-function
@@ -41,7 +41,7 @@ _make_fcontext:
     /* reserve space for context-data on context-stack, and align the stack */
     leal  -0x34(%eax), %eax
 
-    /* third arg of make_fcontext() == address of context-function */
+    /* third arg of hoost_make_fcontext() == address of context-function */
     /* stored in EBX */
     movl  0xc(%esp), %ecx
     movl  %ecx, 0x10(%eax)
@@ -58,7 +58,7 @@ _make_fcontext:
     /* compute abs address of label trampoline */
     addl  $trampoline-1b, %ecx
     /* save address of trampoline as return address */
-    /* will be entered after calling jump_fcontext() first time */
+    /* will be entered after calling hoost_jump_fcontext() first time */
     movl  %ecx, 0x18(%eax)
 
     /* compute abs address of label finish */
@@ -69,7 +69,7 @@ _make_fcontext:
     addl  $finish-2b, %ecx
     /* save address of finish as return-address for context-function */
     /* will be entered after context-function returns */
-    movl  %ecx, 0x14(%eax) 
+    movl  %ecx, 0x14(%eax)
 
     ret /* return pointer to context-data */
 

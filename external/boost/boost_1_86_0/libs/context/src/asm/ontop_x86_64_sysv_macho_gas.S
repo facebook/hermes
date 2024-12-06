@@ -25,9 +25,9 @@
  ****************************************************************************************/
 
 .text
-.globl _ontop_fcontext
+.globl _hoost_ontop_fcontext
 .align 8
-_ontop_fcontext:
+_hoost_ontop_fcontext:
     /* preserve ontop-function in R8 */
     movq  %rdx, %r8
 
