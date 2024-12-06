@@ -12,3 +12,4 @@ bz2.
    dependencies, remove library alias, support `CMAKE_OSX_ARCHITECTURES`
 7. Rename the `boost` namespace to `hoost` using a preprocessor define.
 8. Rename the `xxx_fcontext()` globals to have a `hoost_` prefix.
+9. Change the include path from `boost/` to `hoost/`.

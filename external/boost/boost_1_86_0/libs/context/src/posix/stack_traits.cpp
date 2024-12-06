@@ -4,7 +4,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include "boost/context/stack_traits.hpp"
+#include "hoost/context/stack_traits.hpp"
 
 extern "C" {
 #include <signal.h>
@@ -18,8 +18,8 @@ extern "C" {
 #include <algorithm>
 #include <cmath>
 
-#include <boost/assert.hpp>
-#include <boost/config.hpp>
+#include <hoost/assert.hpp>
+#include <hoost/config.hpp>
 
 #if !defined (SIGSTKSZ)
 # define SIGSTKSZ (32768) // 32kb minimum allowable stack

@@ -4,7 +4,7 @@
 //    (See accompanying file LICENSE_1_0.txt or copy at
 //          http://www.boost.org/LICENSE_1_0.txt)
 
-#include "boost/context/stack_traits.hpp"
+#include "hoost/context/stack_traits.hpp"
 
 extern "C" {
 #include <windows.h>
@@ -18,10 +18,10 @@ extern "C" {
 #include <cstring>
 #include <stdexcept>
 
-#include <boost/assert.hpp>
-#include <boost/context/detail/config.hpp>
+#include <hoost/assert.hpp>
+#include <hoost/context/detail/config.hpp>
 
-#include <boost/context/stack_context.hpp>
+#include <hoost/context/stack_context.hpp>
 
 // x86_64
 // test x86_64 before i386 because icc might

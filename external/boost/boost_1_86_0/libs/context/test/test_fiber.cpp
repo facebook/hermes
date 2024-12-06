@@ -19,15 +19,15 @@
 #include <utility>
 #include <vector>
 
-#include <boost/array.hpp>
-#include <boost/assert.hpp>
-#include <boost/core/lightweight_test.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/utility.hpp>
-#include <boost/variant.hpp>
+#include <hoost/array.hpp>
+#include <hoost/assert.hpp>
+#include <hoost/core/lightweight_test.hpp>
+#include <hoost/lexical_cast.hpp>
+#include <hoost/utility.hpp>
+#include <hoost/variant.hpp>
 
-#include <boost/context/fiber.hpp>
-#include <boost/context/detail/config.hpp>
+#include <hoost/context/fiber.hpp>
+#include <hoost/context/detail/config.hpp>
 
 #ifdef BOOST_WINDOWS
 #include <windows.h>

@@ -15,13 +15,13 @@
 #include <string>
 #include <utility>
 
-#include <boost/array.hpp>
-#include <boost/assert.hpp>
-#include <boost/core/lightweight_test.hpp>
-#include <boost/utility.hpp>
+#include <hoost/array.hpp>
+#include <hoost/assert.hpp>
+#include <hoost/core/lightweight_test.hpp>
+#include <hoost/utility.hpp>
 
-#include <boost/context/detail/config.hpp>
-#include <boost/context/detail/fcontext.hpp>
+#include <hoost/context/detail/config.hpp>
+#include <hoost/context/detail/fcontext.hpp>
 
 #if defined(BOOST_CONTEXT_USE_MAP_STACK)
 extern "C" {
