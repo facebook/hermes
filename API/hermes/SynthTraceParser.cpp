@@ -22,6 +22,17 @@ using namespace ::hermes::parser;
 
 namespace {
 
+/// Converts the data in the JSONString \p str into a u8string. Each code unit
+/// encoded in the JSONString is expected to represent each byte of the UTF-8
+/// String.
+std::string jsonStringToU8String(const ::hermes::parser::JSONString &jsonStr) {
+  auto strRef = jsonStr.str();
+  std::string ret;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(ret), strRef.begin(), strRef.end());
+  return ret;
+}
+
 ::hermes::SHA1 parseHashStrAsNumber(llvh::StringRef hashStr) {
   ::hermes::SHA1 sourceHash{};
   // Each byte is 2 characters.
@@ -42,8 +53,7 @@ JSONObject *parseJSON(
     std::unique_ptr<llvh::MemoryBuffer> stream) {
   JSONFactory factory(alloc);
   ::hermes::SourceErrorManager sm;
-  // Convert surrogates, since JSI deals in UTF-8.
-  JSONParser parser(factory, std::move(stream), sm, /*convertSurrogates*/ true);
+  JSONParser parser(factory, std::move(stream), sm);
   auto rootObj = parser.parse();
   if (!rootObj) {
     // The source error manager will print to stderr.
@@ -333,11 +343,12 @@ SynthTrace getTrace(
               str->str().data(),
               str->str().size());
         } else {
+          auto utf8Str = jsonStringToU8String(*str);
           trace.emplace_back<SynthTrace::CreateStringRecord>(
               timeFromStart,
               objID->getValue(),
-              reinterpret_cast<const uint8_t *>(str->str().data()),
-              str->str().size());
+              reinterpret_cast<const uint8_t *>(utf8Str.data()),
+              utf8Str.size());
         }
         break;
       }
@@ -363,11 +374,12 @@ SynthTrace getTrace(
                 str->str().data(),
                 str->str().size());
           } else {
+            auto utf8Str = jsonStringToU8String(*str);
             trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
                 timeFromStart,
                 id->getValue(),
-                reinterpret_cast<const uint8_t *>(str->str().data()),
-                str->str().size());
+                reinterpret_cast<const uint8_t *>(utf8Str.data()),
+                utf8Str.size());
           }
         }
         break;
@@ -525,7 +537,9 @@ SynthTrace getTrace(
       case RecordType::Utf8: {
         auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
         trace.emplace_back<SynthTrace::Utf8Record>(
-            timeFromStart, SynthTrace::decode(objId->str()), retval->c_str());
+            timeFromStart,
+            SynthTrace::decode(objId->str()),
+            jsonStringToU8String(*retval));
         break;
       }
       case RecordType::Global: {

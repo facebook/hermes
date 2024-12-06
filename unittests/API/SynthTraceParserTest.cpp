@@ -25,7 +25,7 @@ struct SynthTraceParserTest : public ::testing::Test {
 TEST_F(SynthTraceParserTest, ParseHeader) {
   const char *src = R"(
 {
-  "version": 4,
+  "version": 5,
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
@@ -74,7 +74,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
 TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
   const char *src = R"(
 {
-  "version": 4,
+  "version": 5,
   "globalObjID": 258,
   "runtimeConfig": {},
   "trace": []
@@ -109,7 +109,7 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
 TEST_F(SynthTraceParserTest, ParsePropID) {
   const char *src = R"(
 {
-  "version": 4,
+  "version": 5,
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
@@ -223,6 +223,56 @@ TEST_F(SynthTraceParserTest, BigIntToStringRecord) {
 }
   )";
   parseSynthTrace(bufFromStr(src));
+}
+
+TEST_F(SynthTraceParserTest, ParseUtf8Record) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "Utf8Record",
+      "time": 1234,
+      "objID": "string:1110",
+      "retval": "hi"
+    },
+    {
+      "type": "Utf8Record",
+      "time": 1234,
+      "objID": "string:1112",
+      "retval": "\u00ed\u00a0\u00bd"
+    },
+    {
+      "type": "Utf8Record",
+      "time": 1234,
+      "objID": "string:1113",
+      "retval": "nice\u00f0\u009f\u0091\u008d"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 =
+      dynamic_cast<const SynthTrace::Utf8Record &>(*trace.records().at(0));
+  ASSERT_EQ(record0.retVal_, "hi");
+
+  // This is testing that SynthTraceParser is able to parse invalid UTF-8
+  auto record1 =
+      dynamic_cast<const SynthTrace::Utf8Record &>(*trace.records().at(1));
+  ASSERT_EQ(record1.retVal_, "\xed\xa0\xbd");
+
+  auto record2 =
+      dynamic_cast<const SynthTrace::Utf8Record &>(*trace.records().at(2));
+  ASSERT_EQ(record2.retVal_, "nice👍");
 }
 
 } // namespace

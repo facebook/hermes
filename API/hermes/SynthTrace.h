@@ -317,7 +317,7 @@ class SynthTrace {
 
   /// The version of the Synth Benchmark
   constexpr static uint32_t synthVersion() {
-    return 4;
+    return 5;
   }
 
   static const char *nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru);
