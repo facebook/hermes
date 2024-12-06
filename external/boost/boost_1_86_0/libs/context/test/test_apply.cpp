@@ -12,11 +12,11 @@
 #include <tuple>
 #include <utility>
 
-#include <boost/assert.hpp>
-#include <boost/core/lightweight_test.hpp>
+#include <hoost/assert.hpp>
+#include <hoost/core/lightweight_test.hpp>
 
-#include <boost/context/detail/apply.hpp>
-#include <boost/context/detail/config.hpp>
+#include <hoost/context/detail/apply.hpp>
+#include <hoost/context/detail/config.hpp>
 
 #define BOOST_CHECK_EQUAL(a, b) BOOST_TEST_EQ(a, b)
 

@@ -15,9 +15,9 @@ import toolset ;
 import ../../config/checks/config : requires ;
 using flags ;
 
-project boost/context/test
+project hoost/context/test
     : requirements
-      <library>/boost/context//boost_context
+      <library>/hoost/context//boost_context
       <target-os>linux,<toolset>gcc,<segmented-stacks>on:<cxxflags>-fsplit-stack
       <target-os>linux,<toolset>gcc,<segmented-stacks>on:<cxxflags>-DBOOST_USE_SEGMENTED_STACKS
       <toolset>clang,<segmented-stacks>on:<cxxflags>-fsplit-stack

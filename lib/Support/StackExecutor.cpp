@@ -11,8 +11,8 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
-#include <boost/context/fiber.hpp>
-#include <boost/context/protected_fixedsize_stack.hpp>
+#include <hoost/context/fiber.hpp>
+#include <hoost/context/protected_fixedsize_stack.hpp>
 
 #include <cassert>
 
