@@ -325,4 +325,45 @@ TEST_F(SynthTraceParserTest, ParseUtf16Record) {
   ASSERT_EQ(record2.retVal_, u"nice👍");
 }
 
+TEST_F(SynthTraceParserTest, ParseGetStringDataRecord) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "GetStringDataRecord",
+      "time": 1234,
+      "objID": "string:1110",
+      "strData": "\nhello\ud83d\udc4b\\"
+    },
+    {
+      "type": "GetStringDataRecord",
+      "time": 1234,
+      "objID": "propNameID:1111",
+      "strData": "\ud83d"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 = dynamic_cast<const SynthTrace::GetStringDataRecord &>(
+      *trace.records().at(0));
+  ASSERT_EQ(record0.strData_, u"\nhello👋\\");
+  ASSERT_EQ(record0.objID_, SynthTrace::encodeString(1110));
+
+  auto record1 = dynamic_cast<const SynthTrace::GetStringDataRecord &>(
+      *trace.records().at(1));
+  ASSERT_EQ(record1.strData_, u"\xd83d");
+  ASSERT_EQ(record1.objID_, SynthTrace::encodePropNameID(1111));
+}
+
 } // namespace

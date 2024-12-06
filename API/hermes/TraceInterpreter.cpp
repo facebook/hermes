@@ -1109,6 +1109,29 @@ void TraceInterpreter::executeRecords() {
           }
           break;
         }
+        case RecordType::GetStringData: {
+          const auto &record =
+              static_cast<const SynthTrace::GetStringDataRecord &>(*rec);
+          std::u16string strData;
+          auto cb = [&strData](bool ascii, const void *data, size_t num) {
+            if (ascii) {
+              strData.append((const char *)data, (const char *)data + num);
+            } else {
+              strData.append((const char16_t *)data, num);
+            }
+          };
+          if (record.objID_.isString()) {
+            const auto &val = getJSIValueForUse(record.objID_.getUID());
+            auto str = val.getString(rt_);
+            str.getStringData(rt_, cb);
+            TRACE_EXPECT_EQ_UTF16(record.strData_, strData);
+          } else if (record.objID_.isPropNameID()) {
+            auto prop = getPropNameIDForUse(record.objID_.getUID());
+            prop.getPropNameIdData(rt_, cb);
+            TRACE_EXPECT_EQ_UTF16(record.strData_, strData);
+          }
+          break;
+        }
         case RecordType::Global: {
           const auto &record =
               static_cast<const SynthTrace::GlobalRecord &>(*rec);

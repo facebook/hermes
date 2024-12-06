@@ -613,6 +613,66 @@ std::u16string TracingRuntime::utf16(const jsi::PropNameID &name) {
   return res;
 }
 
+void TracingRuntime::getStringData(
+    const jsi::String &str,
+    void *ctx,
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) {
+  struct Context {
+    void *ctx;
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num);
+    std::u16string buffer;
+  } context = {ctx, cb, u""};
+
+  RD::getStringData(
+      str, &context, [](void *ctx, bool ascii, const void *data, size_t num) {
+        // Save the string content passed into the callback
+        auto *context = (Context *)ctx;
+        if (ascii) {
+          context->buffer.append((const char *)data, (const char *)data + num);
+        } else {
+          context->buffer.append((const char16_t *)data, num);
+        }
+
+        // Invoke the original callback provided by the user
+        context->cb(context->ctx, ascii, data, num);
+      });
+
+  trace_.emplace_back<SynthTrace::GetStringDataRecord>(
+      getTimeSinceStart(),
+      SynthTrace::encodeString(useObjectID(str)),
+      std::move(context.buffer));
+}
+
+void TracingRuntime::getPropNameIdData(
+    const jsi::PropNameID &sym,
+    void *ctx,
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) {
+  struct Context {
+    void *ctx;
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num);
+    std::u16string buffer;
+  } context = {ctx, cb, u""};
+
+  RD::getPropNameIdData(
+      sym, &context, [](void *ctx, bool ascii, const void *data, size_t num) {
+        // Save the string content passed into the callback
+        auto *context = (Context *)ctx;
+        if (ascii) {
+          context->buffer.append((const char *)data, (const char *)data + num);
+        } else {
+          context->buffer.append((const char16_t *)data, num);
+        }
+
+        // Invoke the original callback provided by the user
+        context->cb(context->ctx, ascii, data, num);
+      });
+
+  trace_.emplace_back<SynthTrace::GetStringDataRecord>(
+      getTimeSinceStart(),
+      SynthTrace::encodePropNameID(useObjectID(sym)),
+      std::move(context.buffer));
+}
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
   jsi::PropNameID res = RD::createPropNameIDFromString(str);
