@@ -703,33 +703,6 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
   return createPseudoHandle(HermesValue::encodeObjectValue(*arr));
 }
 
-PseudoHandle<JSRegExp> Interpreter::createRegExp(
-    Runtime &runtime,
-    CodeBlock *curCodeBlock,
-    SymbolID patternID,
-    SymbolID flagsID,
-    uint32_t regexpID) {
-  GCScopeMarkerRAII marker{runtime};
-
-  struct : public Locals {
-    PinnedValue<JSRegExp> re;
-    PinnedValue<StringPrimitive> pattern;
-    PinnedValue<StringPrimitive> flags;
-  } lv;
-  LocalsRAII lraii{runtime, &lv};
-
-  // Create the RegExp object.
-  lv.re = JSRegExp::create(runtime);
-  // Initialize the regexp.
-  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
-  lv.pattern = runtime.getStringPrimFromSymbolID(patternID);
-  lv.flags = runtime.getStringPrimFromSymbolID(flagsID);
-  auto bytecode = runtimeModule->getRegExpBytecodeFromRegExpID(regexpID);
-  JSRegExp::initialize(lv.re, runtime, lv.pattern, lv.flags, bytecode);
-
-  return createPseudoHandle(*lv.re);
-}
-
 #ifndef NDEBUG
 
 llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, DumpHermesValue dhv) {
@@ -3542,17 +3515,7 @@ tailCall:
         DISPATCH;
       }
       CASE(CreateRegExp) {
-        CAPTURE_IP_ASSIGN(
-            O1REG(CreateRegExp),
-            Interpreter::createRegExp(
-                runtime,
-                curCodeBlock,
-                curCodeBlock->getRuntimeModule()
-                    ->getSymbolIDFromStringIDMayAllocate(ip->iCreateRegExp.op2),
-                curCodeBlock->getRuntimeModule()
-                    ->getSymbolIDFromStringIDMayAllocate(ip->iCreateRegExp.op3),
-                ip->iCreateRegExp.op4)
-                .getHermesValue());
+        CAPTURE_IP(caseCreateRegExp(runtime, frameRegs, curCodeBlock, ip));
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CreateRegExp);
         DISPATCH;

@@ -269,6 +269,50 @@ ExecutionStatus Interpreter::caseGetPNameList(
   return ExecutionStatus::RETURNED;
 }
 
+PseudoHandle<JSRegExp> Interpreter::createRegExp(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    SymbolID patternID,
+    SymbolID flagsID,
+    uint32_t regexpID) {
+  GCScopeMarkerRAII marker{runtime};
+
+  struct : public Locals {
+    PinnedValue<JSRegExp> re;
+    PinnedValue<StringPrimitive> pattern;
+    PinnedValue<StringPrimitive> flags;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  // Create the RegExp object.
+  lv.re = JSRegExp::create(runtime);
+  // Initialize the regexp.
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+  lv.pattern = runtime.getStringPrimFromSymbolID(patternID);
+  lv.flags = runtime.getStringPrimFromSymbolID(flagsID);
+  auto bytecode = runtimeModule->getRegExpBytecodeFromRegExpID(regexpID);
+  JSRegExp::initialize(lv.re, runtime, lv.pattern, lv.flags, bytecode);
+
+  return createPseudoHandle(*lv.re);
+}
+
+void Interpreter::caseCreateRegExp(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    CodeBlock *curCodeBlock,
+    const inst::Inst *ip) {
+  O1REG(CreateRegExp) =
+      Interpreter::createRegExp(
+          runtime,
+          curCodeBlock,
+          curCodeBlock->getRuntimeModule()->getSymbolIDFromStringIDMayAllocate(
+              ip->iCreateRegExp.op2),
+          curCodeBlock->getRuntimeModule()->getSymbolIDFromStringIDMayAllocate(
+              ip->iCreateRegExp.op3),
+          ip->iCreateRegExp.op4)
+          .getHermesValue();
+}
+
 CallResult<HermesValue> Interpreter::createThisImpl(
     Runtime &runtime,
     PinnedHermesValue *callee,

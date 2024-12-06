@@ -243,6 +243,15 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const Inst *ip);
 
+  /// Interpreter implementation for creating a RegExp object. Unlike the other
+  /// out-of-line cases, this takes a CodeBlock* and does not return an
+  /// ExecutionStatus.
+  static void caseCreateRegExp(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      const inst::Inst *ip);
+
   /// \return the `this` to be used for a construct call on \p callee, with \p
   /// newTarget as the new.target. We need to take special care when \p callee
   /// is a NativeConstructor, ES6 function, or JSCallableProxy. In these cases,
