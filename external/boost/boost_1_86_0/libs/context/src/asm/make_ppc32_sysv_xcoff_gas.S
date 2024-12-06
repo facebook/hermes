@@ -58,17 +58,17 @@
     .toc
     .csect .text[PR]
     .align 2
-    .globl  make_fcontext[DS]
-    .globl .make_fcontext
-    .csect  make_fcontext[DS]
-make_fcontext:
-    .long .make_fcontext[PR], TOC[tc0], 0
+    .globl  hoost_make_fcontext[DS]
+    .globl .hoost_make_fcontext
+    .csect  hoost_make_fcontext[DS]
+hoost_make_fcontext:
+    .long .hoost_make_fcontext[PR], TOC[tc0], 0
     .csect .text[PR], 5
-.make_fcontext:
+.hoost_make_fcontext:
     # save return address into R6
     mflr  6
 
-    # first arg of make_fcontext() == top address of context-function
+    # first arg of hoost_make_fcontext() == top address of context-function
     # shift address in R3 to lower 16 byte boundary
     clrrwi  3, 3, 4
 
@@ -76,7 +76,7 @@ make_fcontext:
     # including 32 byte of linkage + parameter area (R1 % 16 == 0)
     subi  3, 3, 288
 
-    # third arg of make_fcontext() == address of context-function descriptor
+    # third arg of hoost_make_fcontext() == address of context-function descriptor
     lwz   4, 0(5)
     stw  4, 240(3)
     # save TOC of context-function

@@ -6,7 +6,7 @@
 */
 
 /*
- * transfer_t ontop_fcontext(fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t));
+ * transfer_t hoost_ontop_fcontext(fcontext_t const to, void *vp, transfer_t (*fn)(transfer_t));
  */
 #define CC64FSZ 176
 #define BIAS 2047
@@ -16,9 +16,9 @@
 .file "ontop_sparc64_sysv_elf_gas.S"
 .text
 .align  4
-.global ontop_fcontext
-.type   ontop_fcontext, %function
-ontop_fcontext:
+.global hoost_ontop_fcontext
+.type   hoost_ontop_fcontext, %function
+hoost_ontop_fcontext:
 	# prepare stack
 	save	%sp, -CC64FSZ, %sp
 
@@ -35,7 +35,7 @@ ontop_fcontext:
 	ldx [%sp + BIAS + SP], %fp
 	ldx [%sp + BIAS + I7], %i7
 
-	# ontop_fcontext requires to directly call a function on top of the
+	# hoost_ontop_fcontext requires to directly call a function on top of the
 	# current frame so restore register window before doing the jump
 	# to the context function which then is in %o2. Do not clobber
 	# %o7 in the jump so that (*fn)() returns to that address.
@@ -45,6 +45,6 @@ ontop_fcontext:
 
 	jmpl %o2, %g0
 	 nop
-.size	jump_fcontext,.-jump_fcontext
+.size	hoost_jump_fcontext,.-hoost_jump_fcontext
 # Mark that we don't need executable stack.
 .section .note.GNU-stack,"",%progbits

@@ -45,8 +45,8 @@
 
 .text
 .align  8
-.global ontop_fcontext
-.type   ontop_fcontext, @function
+.global hoost_ontop_fcontext
+.type   hoost_ontop_fcontext, @function
 
 #define ARG_OFFSET         0
 #define GR_OFFSET          16
@@ -65,7 +65,7 @@ struct transfer_t {
    void    *   data;
 };
 
-transfer_t ontop_fcontext( fcontext_t const to,
+transfer_t hoost_ontop_fcontext( fcontext_t const to,
 			   void * vp,
 			   transfer_t (* fn)( transfer_t) );
 
@@ -75,12 +75,12 @@ r3 - Target context
 r4 - Data pointer
 r5 - Function to be executed
 
-This implementation assumes that ontop_fcontext will never be called with target contexts
-created via make_fcontext.
+This implementation assumes that hoost_ontop_fcontext will never be called with target contexts
+created via hoost_make_fcontext.
 
 */
 
-ontop_fcontext:
+hoost_ontop_fcontext:
 	/* Reserve stack space to store the current context.  */
 	aghi	%r15,-CONTEXT_SIZE
 
@@ -141,5 +141,5 @@ ontop_fcontext:
 
 	br	%r5
 
-.size   ontop_fcontext,.-ontop_fcontext
+.size   hoost_ontop_fcontext,.-hoost_ontop_fcontext
 .section .note.GNU-stack,"",%progbits

@@ -39,9 +39,9 @@
  *******************************************************/
 
 .text
-.globl _ontop_fcontext
+.globl _hoost_ontop_fcontext
 .align 2
-_ontop_fcontext:
+_hoost_ontop_fcontext:
     @ save LR as PC
     push {lr}
     @ save hidden,V1-V8,LR

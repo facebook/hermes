@@ -131,6 +131,9 @@
 // to ensure the correct libraries are selected at link time.
 // #define BOOST_LIB_BUILDID amd64
 
+// Rename boost to hoost to avoid conflicts
+#define boost hoost
+
 #if !defined(__EXCEPTIONS) && !defined(_CPPUNWIND)
 #define HOOST_EXCEPTIONS_DISABLED
 #endif

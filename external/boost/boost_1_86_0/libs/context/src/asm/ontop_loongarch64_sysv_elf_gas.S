@@ -40,10 +40,10 @@
 
 .file "ontop_loongarch64_sysv_elf_gas.S"
 .text
-.globl ontop_fcontext
+.globl hoost_ontop_fcontext
 .align 2
-.type ontop_fcontext,@function
-ontop_fcontext:
+.type hoost_ontop_fcontext,@function
+hoost_ontop_fcontext:
     # reserve space on stack
     addi.d  $sp, $sp, -160
 
@@ -112,7 +112,7 @@ ontop_fcontext:
 
     # jump to context
     jr  $a2
-.size ontop_fcontext, .-ontop_fcontext
+.size hoost_ontop_fcontext, .-hoost_ontop_fcontext
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits

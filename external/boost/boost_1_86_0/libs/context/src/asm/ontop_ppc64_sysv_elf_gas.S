@@ -67,33 +67,33 @@
  *******************************************************/
 
 .file "ontop_ppc64_sysv_elf_gas.S"
-.globl ontop_fcontext
+.globl hoost_ontop_fcontext
 #if _CALL_ELF == 2
 	.text
 	.align 2
-ontop_fcontext:
-        addis   %r2, %r12, .TOC.-ontop_fcontext@ha
-        addi    %r2, %r2, .TOC.-ontop_fcontext@l
-        .localentry ontop_fcontext, . - ontop_fcontext
+hoost_ontop_fcontext:
+        addis   %r2, %r12, .TOC.-hoost_ontop_fcontext@ha
+        addi    %r2, %r2, .TOC.-hoost_ontop_fcontext@l
+        .localentry hoost_ontop_fcontext, . - hoost_ontop_fcontext
 #else
 	.section ".opd","aw"
 	.align 3
-ontop_fcontext:
+hoost_ontop_fcontext:
 # ifdef _CALL_LINUX
-        .quad   .L.ontop_fcontext,.TOC.@tocbase,0
-        .type   ontop_fcontext,@function
+        .quad   .L.hoost_ontop_fcontext,.TOC.@tocbase,0
+        .type   hoost_ontop_fcontext,@function
         .text
         .align 2
-.L.ontop_fcontext:
+.L.hoost_ontop_fcontext:
 # else
-        .hidden .ontop_fcontext
-        .globl  .ontop_fcontext
-        .quad   .ontop_fcontext,.TOC.@tocbase,0
-        .size   ontop_fcontext,24
-        .type   .ontop_fcontext,@function
+        .hidden .hoost_ontop_fcontext
+        .globl  .hoost_ontop_fcontext
+        .quad   .hoost_ontop_fcontext,.TOC.@tocbase,0
+        .size   hoost_ontop_fcontext,24
+        .type   .hoost_ontop_fcontext,@function
         .text
         .align 2
-.ontop_fcontext:
+.hoost_ontop_fcontext:
 # endif
 #endif
     # reserve space on stack
@@ -209,7 +209,7 @@ return_to_ctx:
     bctr
 
 #if _CALL_ELF == 2
-	.size ontop_fcontext, .-ontop_fcontext
+	.size hoost_ontop_fcontext, .-hoost_ontop_fcontext
 #else
 use_entry_arg:
     # compute return-value struct address
@@ -233,9 +233,9 @@ use_entry_arg:
 
     b  return_to_ctx
 # ifdef _CALL_LINUX
-	.size .ontop_fcontext, .-.L.ontop_fcontext
+	.size .hoost_ontop_fcontext, .-.L.hoost_ontop_fcontext
 # else
-	.size .ontop_fcontext, .-.ontop_fcontext
+	.size .hoost_ontop_fcontext, .-.hoost_ontop_fcontext
 # endif
 #endif
 

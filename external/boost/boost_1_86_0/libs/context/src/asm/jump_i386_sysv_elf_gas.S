@@ -30,10 +30,10 @@
 
 .file "jump_i386_sysv_elf_gas.S"
 .text
-.globl jump_fcontext
+.globl hoost_jump_fcontext
 .align 2
-.type jump_fcontext,@function
-jump_fcontext:
+.type hoost_jump_fcontext,@function
+hoost_jump_fcontext:
     leal  -0x1c(%esp), %esp  /* prepare stack */
 
 #if !defined(BOOST_USE_TSX)
@@ -54,10 +54,10 @@ jump_fcontext:
     /* store ESP (pointing to context-data) in ECX */
     movl  %esp, %ecx
 
-    /* first arg of jump_fcontext() == fcontext to jump to */
+    /* first arg of hoost_jump_fcontext() == fcontext to jump to */
     movl  0x24(%esp), %eax
 
-    /* second arg of jump_fcontext() == data to be transferred */
+    /* second arg of hoost_jump_fcontext() == data to be transferred */
     movl  0x28(%esp), %edx
 
     /* restore ESP (pointing to context-data) from EAX */
@@ -91,7 +91,7 @@ jump_fcontext:
 
     /* jump to context */
     jmp *%ecx
-.size jump_fcontext,.-jump_fcontext
+.size hoost_jump_fcontext,.-hoost_jump_fcontext
 
 /* Mark that we don't need executable stack.  */
 .section .note.GNU-stack,"",%progbits

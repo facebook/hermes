@@ -6,7 +6,7 @@
 */
 
 /*
- * fcontext_t *make_fcontext(void *sp, size_t size, void (*fn)(transfer_t));
+ * fcontext_t *hoost_make_fcontext(void *sp, size_t size, void (*fn)(transfer_t));
  */
 #define CC64FSZ 176
 #define BIAS 2047
@@ -17,9 +17,9 @@
 .file "make_sparc64_sysv_elf_gas.S"
 .text
 .align  4
-.global make_fcontext
-.type   make_fcontext, %function
-make_fcontext:
+.global hoost_make_fcontext
+.type   hoost_make_fcontext, %function
+hoost_make_fcontext:
 	save	%sp, -CC64FSZ, %sp
 
 	# shift address in %i0 (allocated stack) to lower 16 byte boundary
@@ -27,10 +27,10 @@ make_fcontext:
 
 	# reserve space for two frames on the stack
 	# the first frame is for the call the second one holds the data
-	# for jump_fcontext
+	# for hoost_jump_fcontext
 	sub	%i0, 2 * CC64FSZ, %i0
 
-	# third argument of make_fcontext() is the context-function to call
+	# third argument of hoost_make_fcontext() is the context-function to call
 	# store it in the first stack frame, also clear %fp there to indicate
 	# the end of the stack.
 	stx	%i2, [%i0 + CC64FSZ + I7]
@@ -63,6 +63,6 @@ trampoline:
 	call	_exit
 	 clr	%o0
 	unimp
-.size	make_fcontext,.-make_fcontext
+.size	hoost_make_fcontext,.-hoost_make_fcontext
 # Mark that we don't need executable stack.
 .section .note.GNU-stack,"",%progbits

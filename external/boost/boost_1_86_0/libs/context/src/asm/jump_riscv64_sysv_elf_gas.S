@@ -60,9 +60,9 @@
 .file "jump_riscv64_sysv_elf_gas.S"
 .text
 .align  1
-.global jump_fcontext
-.type   jump_fcontext, %function
-jump_fcontext:
+.global hoost_jump_fcontext
+.type   hoost_jump_fcontext, %function
+hoost_jump_fcontext:
     # prepare stack for GP + FPU
     addi  sp, sp, -0xd0
 
@@ -145,6 +145,6 @@ jump_fcontext:
     addi  sp, sp, 0xd0
 
     jr a2
-.size   jump_fcontext,.-jump_fcontext
+.size   hoost_jump_fcontext,.-hoost_jump_fcontext
 # Mark that we don't need executable stack.
 .section .note.GNU-stack,"",%progbits

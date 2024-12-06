@@ -52,17 +52,17 @@
  *******************************************************/
 
 .text
-.globl _make_fcontext
+.globl _hoost_make_fcontext
 .balign 16
 
-_make_fcontext:
+_hoost_make_fcontext:
     ; shift address in x0 (allocated stack) to lower 16 byte boundary
     and x0, x0, ~0xF
 
     ; reserve space for context-data on context-stack
     sub  x0, x0, #0xb0
 
-    ; third arg of make_fcontext() == address of context-function
+    ; third arg of hoost_make_fcontext() == address of context-function
     ; store address as a PC to jump in
     str  x2, [x0, #0xa0]
 
@@ -79,5 +79,3 @@ finish:
     mov  x0, #0
     ; exit application
     bl  __exit
-
-

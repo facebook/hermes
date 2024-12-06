@@ -84,7 +84,7 @@
 
 .code
 
-ontop_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
+hoost_ontop_fcontext PROC BOOST_CONTEXT_EXPORT FRAME
     .endprolog
 
     ; prepare stack
@@ -197,11 +197,11 @@ ENDIF
 
     ; transport_t as 1.arg of context-function
     ; RCX contains address of returned (hidden) transfer_t
-    mov rcx,  rax  
+    mov rcx,  rax
     ; RDX contains address of passed transfer_t
     mov rdx,  rax
 
     ; indirect jump to context
     jmp  r9
-ontop_fcontext ENDP
+hoost_ontop_fcontext ENDP
 END

@@ -25,9 +25,9 @@
  ****************************************************************************************/
 
 .text
-.globl _jump_fcontext
+.globl _hoost_jump_fcontext
 .align 2
-_jump_fcontext:
+_hoost_jump_fcontext:
     leal  -0x18(%esp), %esp  /* prepare stack */
 
 #if !defined(BOOST_USE_TSX)
@@ -43,10 +43,10 @@ _jump_fcontext:
     /* store ESP (pointing to context-data) in ECX */
     movl  %esp, %ecx
 
-    /* first arg of jump_fcontext() == fcontext to jump to */
+    /* first arg of hoost_jump_fcontext() == fcontext to jump to */
     movl  0x1c(%esp), %eax
 
-    /* second arg of jump_fcontext() == data to be transferred */
+    /* second arg of hoost_jump_fcontext() == data to be transferred */
     movl  0x20(%esp), %edx
 
     /* restore ESP (pointing to context-data) from EAX */
@@ -54,8 +54,8 @@ _jump_fcontext:
 
     /* return parent fcontext_t */
     movl  %ecx, %eax
-    /* returned data is stored in EDX */ 
- 
+    /* returned data is stored in EDX */
+
     movl  0x18(%esp), %ecx  /* restore EIP */
 
 #if !defined(BOOST_USE_TSX)

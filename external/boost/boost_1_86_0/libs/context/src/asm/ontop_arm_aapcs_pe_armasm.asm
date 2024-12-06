@@ -26,9 +26,9 @@
 
     AREA |.text|, CODE
     ALIGN 4
-    EXPORT ontop_fcontext
+    EXPORT hoost_ontop_fcontext
 
-ontop_fcontext PROC
+hoost_ontop_fcontext PROC
     ; save LR as PC
     push {lr}
     ; save hidden,V1-V8,LR

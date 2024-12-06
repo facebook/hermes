@@ -68,15 +68,15 @@
  *  -------------------------------------------------  *
  *  | 256 |                                         |  *
  *  -------------------------------------------------  *
- *  | DATA|                                         |  * 
+ *  | DATA|                                         |  *
  *  -------------------------------------------------  *
  *                                                     *
  *******************************************************/
 
 .text
-.globl _jump_fcontext
+.globl _hoost_jump_fcontext
 .align 2
-_jump_fcontext:
+_hoost_jump_fcontext:
     ; reserve space on stack
     subi  r1, r1, 244
 
@@ -193,7 +193,7 @@ _jump_fcontext:
     ; adjust stack
     addi  r1, r1, 244
 
-    ; return transfer_t 
+    ; return transfer_t
     stw  r6, 0(r3)
     stw  r5, 4(r3)
 

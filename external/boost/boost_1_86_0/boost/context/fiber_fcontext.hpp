@@ -97,7 +97,7 @@ void fiber_entry( transfer_t t) noexcept {
     try {
 #endif
         // jump back to `create_context()`
-        t = jump_fcontext( t.fctx, nullptr);
+        t = hoost_jump_fcontext( t.fctx, nullptr);
         // start executing
         t.fctx = rec->run( t.fctx);
 #ifndef HOOST_EXCEPTIONS_DISABLED
@@ -107,7 +107,7 @@ void fiber_entry( transfer_t t) noexcept {
 #endif
     BOOST_ASSERT( nullptr != t.fctx);
     // destroy context-stack of `this`context on next context
-    ontop_fcontext( t.fctx, rec, fiber_exit< Rec >);
+    hoost_ontop_fcontext( t.fctx, rec, fiber_exit< Rec >);
     BOOST_ASSERT_MSG( false, "context already terminated");
 }
 
@@ -200,7 +200,7 @@ fcontext_t create_fiber1( StackAlloc && salloc, Fn && fn) {
     void *ss_base = (void *)syscall(__NR_map_shadow_stack, 0, ss_size, SHADOW_STACK_SET_TOKEN);
     BOOST_ASSERT(ss_base != -1);
     unsigned long ss_sp = (unsigned long)ss_base + ss_size;
-    /* pass the shadow stack pointer to make_fcontext
+    /* pass the shadow stack pointer to hoost_make_fcontext
 	 i.e., link the new shadow stack with the new fcontext
 	 TODO should be a better way? */
     *((unsigned long*)(reinterpret_cast< uintptr_t >( stack_top)- 8)) = ss_sp;
@@ -208,10 +208,10 @@ fcontext_t create_fiber1( StackAlloc && salloc, Fn && fn) {
     *((unsigned long*)(reinterpret_cast< uintptr_t >( storage)- 8)) = (unsigned long) ss_base;
     *((unsigned long*)(reinterpret_cast< uintptr_t >( storage)- 16)) = ss_size;
 #endif
-    const fcontext_t fctx = make_fcontext( stack_top, size, & fiber_entry< Record >);
+    const fcontext_t fctx = hoost_make_fcontext( stack_top, size, & fiber_entry< Record >);
     BOOST_ASSERT( nullptr != fctx);
     // transfer control structure to context-stack
-    return jump_fcontext( fctx, record).fctx;
+    return hoost_jump_fcontext( fctx, record).fctx;
 }
 
 template< typename Record, typename StackAlloc, typename Fn >
@@ -241,7 +241,7 @@ fcontext_t create_fiber2( preallocated palloc, StackAlloc && salloc, Fn && fn) {
     void *ss_base = (void *)syscall(__NR_map_shadow_stack, 0, ss_size, SHADOW_STACK_SET_TOKEN);
     BOOST_ASSERT(ss_base != -1);
     unsigned long ss_sp = (unsigned long)ss_base + ss_size;
-    /* pass the shadow stack pointer to make_fcontext
+    /* pass the shadow stack pointer to hoost_make_fcontext
 	 i.e., link the new shadow stack with the new fcontext
 	 TODO should be a better way? */
     *((unsigned long*)(reinterpret_cast< uintptr_t >( stack_top)- 8)) = ss_sp;
@@ -249,10 +249,10 @@ fcontext_t create_fiber2( preallocated palloc, StackAlloc && salloc, Fn && fn) {
     *((unsigned long*)(reinterpret_cast< uintptr_t >( storage)- 8)) = (unsigned long) ss_base;
     *((unsigned long*)(reinterpret_cast< uintptr_t >( storage)- 16)) = ss_size;
 #endif
-    const fcontext_t fctx = make_fcontext( stack_top, size, & fiber_entry< Record >);
+    const fcontext_t fctx = hoost_make_fcontext( stack_top, size, & fiber_entry< Record >);
     BOOST_ASSERT( nullptr != fctx);
     // transfer control structure to context-stack
-    return jump_fcontext( fctx, record).fctx;
+    return hoost_jump_fcontext( fctx, record).fctx;
 }
 
 }
@@ -302,7 +302,7 @@ public:
 
     ~fiber() {
         if ( BOOST_UNLIKELY( nullptr != fctx_) ) {
-            detail::ontop_fcontext(
+            detail::hoost_ontop_fcontext(
 #if defined(BOOST_NO_CXX14_STD_EXCHANGE)
                     detail::exchange( fctx_, nullptr),
 #else
@@ -330,7 +330,7 @@ public:
 
     fiber resume() && {
         BOOST_ASSERT( nullptr != fctx_);
-        return { detail::jump_fcontext(
+        return { detail::hoost_jump_fcontext(
 #if defined(BOOST_NO_CXX14_STD_EXCHANGE)
                     detail::exchange( fctx_, nullptr),
 #else
@@ -343,7 +343,7 @@ public:
     fiber resume_with( Fn && fn) && {
         BOOST_ASSERT( nullptr != fctx_);
         auto p = std::forward< Fn >( fn);
-        return { detail::ontop_fcontext(
+        return { detail::hoost_ontop_fcontext(
 #if defined(BOOST_NO_CXX14_STD_EXCHANGE)
                     detail::exchange( fctx_, nullptr),
 #else
