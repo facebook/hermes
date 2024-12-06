@@ -163,6 +163,44 @@ TEST_F(SynthTraceTest, StringUtf16) {
       *records[1]);
 }
 
+TEST_F(SynthTraceTest, GetStringData) {
+  const std::string ascii = "foo";
+  const std::string emoji = "hello👋";
+
+  auto cb = [](bool ascii, const void *data, size_t num) {};
+
+  const jsi::String asciiStr = jsi::String::createFromAscii(*rt, ascii);
+  const SynthTrace::ObjectID asciiId = rt->useObjectID(asciiStr);
+  asciiStr.getStringData(*rt, cb);
+
+  const jsi::String emojiStr = jsi::String::createFromUtf8(*rt, emoji);
+  const SynthTrace::ObjectID emojiId = rt->useObjectID(emojiStr);
+  emojiStr.getStringData(*rt, cb);
+
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(4, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateStringRecord(
+          records[0]->time_, asciiId, ascii.c_str(), ascii.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::GetStringDataRecord(
+          records[1]->time_, SynthTrace::encodeString(asciiId), u"foo"),
+      *records[1]);
+
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateStringRecord(
+          records[2]->time_,
+          emojiId,
+          (const uint8_t *)emoji.data(),
+          emoji.size()),
+      *records[2]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::GetStringDataRecord(
+          records[3]->time_, SynthTrace::encodeString(emojiId), u"hello👋"),
+      *records[3]);
+}
+
 TEST_F(SynthTraceTest, SymbolToString) {
   const jsi::Value symbol = rt->global()
                                 .getPropertyAsFunction(*rt, "eval")
@@ -1443,6 +1481,44 @@ TEST_F(SynthTraceReplayTest, UTF16Replay) {
 
   // Since we have verification enabled, replay will check that the .utf16()
   // calls were correctly recorded.
+  replay();
+}
+
+TEST_F(SynthTraceReplayTest, GetStringDataReplay) {
+  {
+    auto &rt = *traceRt;
+    auto cb = [](bool ascii, const void *data, size_t num) {};
+    jsi::String emoji = eval(rt, "'\\ud83d\\udc4d'").getString(rt);
+    emoji.getStringData(rt, cb);
+
+    jsi::String loneHighSurrogate = eval(rt, "'\\ud83d'").getString(rt);
+    loneHighSurrogate.getStringData(rt, cb);
+
+    jsi::String ascii = eval(rt, "'hello'").getString(rt);
+    ascii.getStringData(rt, cb);
+  }
+
+  replay();
+}
+
+TEST_F(SynthTraceReplayTest, GetPropNameIdDataReplay) {
+  {
+    auto &rt = *traceRt;
+    auto cb = [](bool ascii, const void *data, size_t num) {};
+    jsi::String emoji = eval(rt, "'\\ud83d\\udc4d'").getString(rt);
+    auto emojiProp = jsi::PropNameID::forString(rt, emoji);
+    emojiProp.getPropNameIdData(rt, cb);
+
+    jsi::String loneHighSurrogate = eval(rt, "'\\ud83d'").getString(rt);
+    auto loneHighSurrogateProp =
+        jsi::PropNameID::forString(rt, loneHighSurrogate);
+    loneHighSurrogateProp.getPropNameIdData(rt, cb);
+
+    jsi::String ascii = eval(rt, "'hello'").getString(rt);
+    auto asciiProp = jsi::PropNameID::forString(rt, ascii);
+    asciiProp.getPropNameIdData(rt, cb);
+  }
+
   replay();
 }
 

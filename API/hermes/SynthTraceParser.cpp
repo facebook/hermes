@@ -560,6 +560,15 @@ SynthTrace getTrace(
             jsonStringToU16String(*retval));
         break;
       }
+      case RecordType::GetStringData: {
+        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
+        auto *strData = llvh::dyn_cast_or_null<JSONString>(obj->get("strData"));
+        trace.emplace_back<SynthTrace::GetStringDataRecord>(
+            timeFromStart,
+            SynthTrace::decode(objId->str()),
+            jsonStringToU16String(*strData));
+        break;
+      }
       case RecordType::Global: {
         trace.emplace_back<SynthTrace::GlobalRecord>(
             timeFromStart, objID->getValue());
