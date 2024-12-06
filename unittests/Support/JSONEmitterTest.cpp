@@ -209,4 +209,31 @@ TEST(JSONEmitterTest, EmitGroupsOfForwardSlashes) {
   const char *expected = R"#({"url":"http:\/\/www.example.com"})#";
   EXPECT_EQ(OS.str(), expected);
 }
+
+TEST(JSONEmitterTest, EmitUTF8) {
+  std::string storage;
+  llvh::raw_string_ostream OS(storage);
+  JSONEmitter json(OS);
+
+  json.openDict();
+  json.emitKeyValue("str", "hi👋");
+  json.closeDict();
+
+  const char *expected = R"#({"str":"hi\ud83d\udc4b"})#";
+  EXPECT_EQ(OS.str(), expected);
+}
+
+TEST(JSONEmitterTest, EmitUTF16) {
+  std::string storage;
+  llvh::raw_string_ostream OS(storage);
+  JSONEmitter json(OS);
+
+  std::u16string str = u"hi👋";
+  json.openDict();
+  json.emitKeyValue("str", llvh::ArrayRef(str.data(), str.size()));
+  json.closeDict();
+
+  const char *expected = R"#({"str":"hi\ud83d\udc4b"})#";
+  EXPECT_EQ(OS.str(), expected);
+}
 }; // anonymous namespace

@@ -79,6 +79,9 @@ class JSONEmitter {
   void emitValue(const char *val) {
     emitValue(llvh::StringRef(val));
   }
+  /// Emit a string \p val. Any ascii characters will be emitted as is. Any
+  /// non-ascii characters will be emitted as the escaped 16-bit code unit.
+  void emitValue(llvh::ArrayRef<char16_t> val);
 
   /// Emit a null as value.
   void emitNullValue();
