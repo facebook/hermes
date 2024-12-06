@@ -394,4 +394,15 @@ TEST_F(SynthTraceSerializationTest, Utf8Record) {
       to_string(SynthTrace::Utf8Record(
           dummyTime, SynthTrace::encodeString(111), "\xf0")));
 }
+
+TEST_F(SynthTraceSerializationTest, Utf16Record) {
+  EXPECT_EQ(
+      R"({"type":"Utf16Record","time":0,"objID":"string:123","retval":"hi\ud83d\udc4b"})",
+      to_string(SynthTrace::Utf16Record(
+          dummyTime, SynthTrace::encodeString(123), u"hi👋")));
+  EXPECT_EQ(
+      R"({"type":"Utf16Record","time":0,"objID":"string:111","retval":"\ud83d"})",
+      to_string(SynthTrace::Utf16Record(
+          dummyTime, SynthTrace::encodeString(111), u"\xd83d")));
+}
 } // namespace

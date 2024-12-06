@@ -597,6 +597,22 @@ std::string TracingRuntime::symbolToString(const jsi::Symbol &sym) {
   return res;
 }
 
+std::u16string TracingRuntime::utf16(const jsi::String &str) {
+  std::u16string res = RD::utf16(str);
+  trace_.emplace_back<SynthTrace::Utf16Record>(
+      getTimeSinceStart(), SynthTrace::encodeString(useObjectID(str)), res);
+  return res;
+}
+
+std::u16string TracingRuntime::utf16(const jsi::PropNameID &name) {
+  std::u16string res = RD::utf16(name);
+  trace_.emplace_back<SynthTrace::Utf16Record>(
+      getTimeSinceStart(),
+      SynthTrace::encodePropNameID(useObjectID(name)),
+      res);
+  return res;
+}
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
   jsi::PropNameID res = RD::createPropNameIDFromString(str);

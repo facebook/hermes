@@ -208,6 +208,7 @@ class SynthTrace {
   RECORD(BigIntToString)                 \
   RECORD(SetExternalMemoryPressure)      \
   RECORD(Utf8)                           \
+  RECORD(Utf16)                          \
   RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
@@ -1270,6 +1271,34 @@ class SynthTrace {
         TimeSinceStart time,
         const TraceValue objID,
         std::string retval)
+        : Record(time), objID_(objID), retVal_(std::move(retval)) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> vec;
+      pushIfTrackedValue(objID_, vec);
+      return vec;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  /// A Utf16Record is an event where a PropNameID or String was converted to
+  /// UTF-16.
+  struct Utf16Record final : public Record {
+    static constexpr RecordType type{RecordType::Utf16};
+    /// PropNameID, String passed to utf16() as an argument
+    const TraceValue objID_;
+    /// Returned string from utf16().
+    const std::u16string retVal_;
+
+    explicit Utf16Record(
+        TimeSinceStart time,
+        const TraceValue objID,
+        std::u16string retval)
         : Record(time), objID_(objID), retVal_(std::move(retval)) {}
 
     RecordType getType() const override {

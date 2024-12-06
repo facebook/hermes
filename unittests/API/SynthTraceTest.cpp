@@ -106,6 +106,25 @@ TEST_F(SynthTraceTest, PropNameIDUtf8) {
       *records[1]);
 }
 
+TEST_F(SynthTraceTest, PropNameIDUtf16) {
+  const std::string utf8 = "hello👍\n";
+  const jsi::PropNameID name = jsi::PropNameID::forUtf8(*rt, utf8);
+  name.utf16(*rt);
+
+  const SynthTrace::ObjectID objId = rt->useObjectID(name);
+
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreatePropNameIDRecord(
+          records[0]->time_, objId, (const uint8_t *)utf8.c_str(), utf8.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::Utf16Record(
+          records[1]->time_, SynthTrace::encodePropNameID(objId), u"hello👍\n"),
+      *records[1]);
+}
+
 TEST_F(SynthTraceTest, StringUtf8) {
   const std::string ascii = "foo";
   const jsi::String name = jsi::String::createFromAscii(*rt, ascii);
@@ -122,6 +141,25 @@ TEST_F(SynthTraceTest, StringUtf8) {
   EXPECT_EQ_RECORD(
       SynthTrace::Utf8Record(
           records[1]->time_, SynthTrace::encodeString(objId), utf8RetVal),
+      *records[1]);
+}
+
+TEST_F(SynthTraceTest, StringUtf16) {
+  const std::string utf8 = "hello👍\n";
+
+  const jsi::String str = jsi::String::createFromUtf8(*rt, utf8);
+  str.utf16(*rt);
+
+  const SynthTrace::ObjectID objId = rt->useObjectID(str);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateStringRecord(
+          records[0]->time_, objId, (const uint8_t *)utf8.data(), utf8.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::Utf16Record(
+          records[1]->time_, SynthTrace::encodeString(objId), u"hello👍\n"),
       *records[1]);
 }
 
@@ -1385,6 +1423,27 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
             .asNumber(),
         5);
   }
+}
+
+TEST_F(SynthTraceReplayTest, UTF16Replay) {
+  {
+    auto &rt = *traceRt;
+    jsi::String emoji = eval(rt, "'\\ud83d\\udc4d'").getString(rt);
+    rt.global().setProperty(rt, "emoji", emoji);
+    emoji.utf16(rt);
+
+    jsi::String loneHighSurrogate = eval(rt, "'\\ud83d'").getString(rt);
+    rt.global().setProperty(rt, "loneHighSurrogate", loneHighSurrogate);
+    loneHighSurrogate.utf16(rt);
+
+    jsi::String ascii = eval(rt, "'hello'").getString(rt);
+    rt.global().setProperty(rt, "hello", ascii);
+    ascii.utf16(rt);
+  }
+
+  // Since we have verification enabled, replay will check that the .utf16()
+  // calls were correctly recorded.
+  replay();
 }
 
 TEST_F(SynthTraceRuntimeTest, WarmUpAndRepeatReplay) {
