@@ -42,6 +42,11 @@ if (POLICY CMP0026)
   cmake_policy(SET CMP0026 OLD)
 endif()
 
+# Require a build type
+if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL ""))
+    message(FATAL_ERROR "Please set CMAKE_BUILD_TYPE")
+endif()
+
 # Has to be set before `project` as per documentation
 # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
 set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
@@ -335,11 +340,6 @@ endif()
 
 if (HERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
   add_definitions(-DHERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
-endif()
-
-# Enable debug mode by default
-if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 if (HERMES_STATIC_LINK)

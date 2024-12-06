@@ -33,7 +33,7 @@ Create a base directory to work in, e.g. `~/workspace`, and cd into it.
 After `cd`ing, follow the steps below to generate the Hermes build system:
 
     git clone https://github.com/facebook/hermes.git
-    cmake -S hermes -B build -G Ninja
+    cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 
 The build system has now been generated in the `build` directory. To perform the build:
 
@@ -100,7 +100,7 @@ simply run:
  The `-HERMES_ENABLE_ADDRESS_SANITIZER=ON` flag will create a ASan build:
 
     git clone https://github.com/facebook/hermes.git
-    cmake -S hermes -B asan_build -G Ninja -D HERMES_ENABLE_ADDRESS_SANITIZER=ON
+    cmake -S hermes -B asan_build -G Ninja -D HERMES_ENABLE_ADDRESS_SANITIZER=ON -DCMAKE_BUILD_TYPE=Debug
     cmake --build ./asan_build
 
 You can verify the build by looking for `asan` symbols in the `hermes` binary:

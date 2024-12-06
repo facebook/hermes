@@ -51,5 +51,5 @@ jobs:
         path: hermes
     - name: Run Hermes regression tests
       run: |-
-        cmake -S hermes -B build
+        cmake -S hermes -B build -DCMAKE_BUILD_TYPE=Debug
         cmake --build build --target check-hermes all -j 4

@@ -38,6 +38,7 @@ jobs:
             # Tests can take a long time to run, since we don't need to attach a debugger
             # a Debug build with with -O2 lets us avoid timeouts and get results sooner.
             cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON \
+              -DCMAKE_BUILD_TYPE=Debug \
               -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 \
               -DHERMESVM_SANITIZE_HANDLES=<< parameters.sanitize >> \
               -DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=<< parameters.sanitize >> \
@@ -67,6 +68,6 @@ jobs:
       - run:
           name: Run Hermes regression tests
           command: |
-            cmake -S hermes -B build
+            cmake -S hermes -B build -DCMAKE_BUILD_TYPE=Debug
             cmake --build build -j 2
             cmake --build build --target check-hermes -j 4
