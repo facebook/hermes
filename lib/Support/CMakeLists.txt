@@ -22,6 +22,7 @@ add_hermes_library(hermesSupport
         ErrorHandling.cpp
         JSONEmitter.cpp
         MD5.cpp
+        OSCompatCommon.cpp
         OSCompatEmscripten.cpp
         OSCompatPosix.cpp
         OSCompatWindows.cpp
