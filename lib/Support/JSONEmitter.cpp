@@ -190,6 +190,47 @@ void JSONEmitter::primitiveEmitString(llvh::StringRef str) {
   OS << '"';
 }
 
+void JSONEmitter::emitValue(llvh::ArrayRef<char16_t> val) {
+  willEmitValue();
+  OS << '"';
+  for (char16_t curr : val) {
+    if (curr > 0x7F) {
+      OS << "\\u";
+      llvh::write_hex(OS, curr, llvh::HexPrintStyle::Lower, 4);
+      continue;
+    }
+    if (curr >= 0x20) {
+      if (curr == '\"' || curr == '\\' || curr == '/') {
+        // escape quotation mark, slash, forward slash by adding a '\'.
+        OS << '\\';
+      }
+      OS << (char)curr;
+      continue;
+    }
+    switch (curr) {
+      case '\b':
+        OS << "\\b";
+        break;
+      case '\f':
+        OS << "\\f";
+        break;
+      case '\n':
+        OS << "\\n";
+        break;
+      case '\r':
+        OS << "\\r";
+        break;
+      case '\t':
+        OS << "\\t";
+        break;
+      default:
+        OS << "\\u";
+        llvh::write_hex(OS, curr, llvh::HexPrintStyle::Lower, 4);
+    }
+  }
+  OS << '"';
+}
+
 void JSONEmitter::endJSONL() {
   assert(states_.empty() && "Previous object was not terminated.");
   OS << "\n";
