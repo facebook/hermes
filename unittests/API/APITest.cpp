@@ -1278,6 +1278,82 @@ TEST_P(HermesRuntimeTest, UTF16Test) {
   EXPECT_EQ(loneLowSurrogate.utf16(*rt), std::u16string(u"\xdc4d"));
 }
 
+TEST_P(HermesRuntimeTest, GetStringDataTest) {
+  std::u16string buf;
+  auto cb = [&buf](bool ascii, const void *data, size_t num) {
+    // this callback copies the string content, but removes every 'o' character
+    if (ascii) {
+      const char *begin = (const char *)data;
+      const char *end = (const char *)data + num;
+      while (begin < end) {
+        char curr = begin[0];
+        if (curr != 'o') {
+          buf.push_back((char16_t)curr);
+        }
+        begin++;
+      }
+    } else {
+      const char16_t *begin = (const char16_t *)data;
+      const char16_t *end = (const char16_t *)data + num;
+      while (begin < end) {
+        char16_t curr = begin[0];
+        if (curr != 'o') {
+          buf.push_back(curr);
+        }
+        begin++;
+      }
+    }
+  };
+
+  String asciiString = String::createFromUtf8(*rt, "foobar");
+  asciiString.getStringData(*rt, cb);
+  EXPECT_EQ(buf, u"fbar");
+  buf.clear();
+
+  String utf16Str = String::createFromUtf8(*rt, "👍foobar你好");
+  utf16Str.getStringData(*rt, cb);
+  EXPECT_EQ(buf, u"👍fbar你好");
+  buf.clear();
+}
+
+TEST_P(HermesRuntimeTest, GetPropNameIdDataTest) {
+  std::u16string buf;
+  auto cb = [&buf](bool ascii, const void *data, size_t num) {
+    // this callback copies the string content, but removes every 'o' character
+    if (ascii) {
+      const char *begin = (const char *)data;
+      const char *end = (const char *)data + num;
+      while (begin < end) {
+        char curr = begin[0];
+        if (curr != 'o') {
+          buf.push_back((char16_t)curr);
+        }
+        begin++;
+      }
+    } else {
+      const char16_t *begin = (const char16_t *)data;
+      const char16_t *end = (const char16_t *)data + num;
+      while (begin < end) {
+        char16_t curr = begin[0];
+        if (curr != 'o') {
+          buf.push_back(curr);
+        }
+        begin++;
+      }
+    }
+  };
+
+  PropNameID ascii = PropNameID::forAscii(*rt, "foobar");
+  ascii.getPropNameIdData(*rt, cb);
+  EXPECT_EQ(buf, u"fbar");
+  buf.clear();
+
+  PropNameID utf16 = PropNameID::forUtf8(*rt, "👍foobar你好");
+  utf16.getPropNameIdData(*rt, cb);
+  EXPECT_EQ(buf, u"👍fbar你好");
+  buf.clear();
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
