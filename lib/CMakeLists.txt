@@ -93,6 +93,7 @@ add_subdirectory(Sema)
 add_library(hermescompiler STATIC)
 target_link_libraries(hermescompiler PUBLIC
   LLVHSupport_obj
+  ${BOOST_CONTEXT_LIB}
   dtoa_obj
   hermesADT_obj
   hermesAST2JS_obj
@@ -118,6 +119,7 @@ target_link_libraries(hermescompiler PUBLIC
 add_library(hermesvm_a STATIC)
 target_link_libraries(hermesvm_a PUBLIC
   LLVHSupport_obj
+  ${BOOST_CONTEXT_LIB}
   dtoa_obj
   hermesapi_obj
   hermesADT_obj
@@ -147,6 +149,7 @@ target_link_libraries(hermesvm_a PUBLIC
 add_library(hermesvmlean_a STATIC)
 target_link_libraries(hermesvmlean_a PUBLIC
   LLVHSupport_obj
+  ${BOOST_CONTEXT_LIB}
   dtoa_obj
   hermesapiLean_obj
   hermesADT_obj
