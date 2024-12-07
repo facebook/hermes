@@ -121,7 +121,10 @@ pub enum NodeKind {
     MatchUnaryPattern,
     MatchIdentifierPattern,
     MatchBindingPattern,
+    MatchObjectPattern,
     _MatchPatternLast,
+    MatchObjectPatternProperty,
+    MatchRestPattern,
     _JSXFirst,
     JSXIdentifier,
     JSXMemberExpression,
@@ -605,6 +608,15 @@ extern "C" {
     // MatchBindingPattern
     pub fn hermes_get_MatchBindingPattern_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_MatchBindingPattern_kind(node: NodePtr) -> NodeLabel;
+    // MatchObjectPattern
+    pub fn hermes_get_MatchObjectPattern_properties(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_MatchObjectPattern_rest(node: NodePtr) -> NodePtrOpt;
+    // MatchObjectPatternProperty
+    pub fn hermes_get_MatchObjectPatternProperty_key(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_MatchObjectPatternProperty_pattern(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_MatchObjectPatternProperty_shorthand(node: NodePtr) -> bool;
+    // MatchRestPattern
+    pub fn hermes_get_MatchRestPattern_argument(node: NodePtr) -> NodePtrOpt;
     // JSXIdentifier
     pub fn hermes_get_JSXIdentifier_name(node: NodePtr) -> NodeLabel;
     // JSXMemberExpression

@@ -1151,6 +1151,39 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MatchBindingPattern::build_template(gc, template)
         }
+        NodeKind::MatchObjectPattern => {
+          let properties = cvt_node_list(cvt, gc, hermes_get_MatchObjectPattern_properties(n));
+          let rest = cvt_node_ptr_opt(cvt, gc, hermes_get_MatchObjectPattern_rest(n));
+          let mut template = ast::template::MatchObjectPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  properties,
+                  rest,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchObjectPattern::build_template(gc, template)
+        }
+        NodeKind::MatchObjectPatternProperty => {
+          let key = cvt_node_ptr(cvt, gc, hermes_get_MatchObjectPatternProperty_key(n));
+          let pattern = cvt_node_ptr(cvt, gc, hermes_get_MatchObjectPatternProperty_pattern(n));
+          let shorthand = hermes_get_MatchObjectPatternProperty_shorthand(n);
+          let mut template = ast::template::MatchObjectPatternProperty {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  key,
+                  pattern,
+                  shorthand,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchObjectPatternProperty::build_template(gc, template)
+        }
+        NodeKind::MatchRestPattern => {
+          let argument = cvt_node_ptr_opt(cvt, gc, hermes_get_MatchRestPattern_argument(n));
+          let mut template = ast::template::MatchRestPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchRestPattern::build_template(gc, template)
+        }
         NodeKind::JSXIdentifier => {
           let name = cvt.cvt_label(gc, hermes_get_JSXIdentifier_name(n));
           let mut template = ast::template::JSXIdentifier {

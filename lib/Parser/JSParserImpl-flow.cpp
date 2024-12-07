@@ -1144,6 +1144,9 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchPatternFlow() {
       return optPattern.getValue();
     }
 
+    case TokenKind::l_brace:
+      return parseMatchObjectPatternFlow();
+
     default:
       error(tok_->getStartLoc(), "invalid match pattern");
       return None;
@@ -1181,6 +1184,137 @@ JSParserImpl::parseMatchBindingPatternFlow() {
       getPrevTokenEndLoc(),
       new (context_)
           ESTree::MatchBindingPatternNode(optIdent.getValue(), kind));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchRestPatternFlow() {
+  assert(check(TokenKind::dotdotdot));
+  SMLoc restStartLoc = advance().Start;
+  ESTree::Node *arg = nullptr;
+  if (checkN(TokenKind::rw_const, TokenKind::rw_var, letIdent_)) {
+    auto optArg = parseMatchBindingPatternFlow();
+    if (!optArg)
+      return None;
+    arg = optArg.getValue();
+  }
+  return setLocation(
+      restStartLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::MatchRestPatternNode(arg));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
+  assert(check(TokenKind::l_brace));
+  auto startLoc = advance().Start;
+  ESTree::NodeList properties{};
+  ESTree::Node *rest = nullptr;
+
+  while (!check(TokenKind::r_brace)) {
+    if (check(TokenKind::dotdotdot)) {
+      auto optRest = parseMatchRestPatternFlow();
+      if (!optRest) {
+        return None;
+      }
+      rest = optRest.getValue();
+      break;
+    }
+
+    ESTree::Node *prop = nullptr;
+    auto propStartLoc = tok_->getStartLoc();
+    if (checkN(TokenKind::rw_const, TokenKind::rw_var, letIdent_)) {
+      // Shorthand syntax: e.g. `const x` is shorthand for `x: const x`
+      auto optBindingPattern = parseMatchBindingPatternFlow();
+      if (!optBindingPattern)
+        return None;
+      auto bindingPattern = optBindingPattern.getValue();
+      prop = setLocation(
+          propStartLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::MatchObjectPatternPropertyNode(
+              bindingPattern->_id, bindingPattern, true));
+    } else {
+      // Normal property
+      ESTree::Node *key = nullptr;
+      // Property key parsing
+      switch (tok_->getKind()) {
+        case TokenKind::identifier: {
+          key = setLocation(
+              tok_,
+              tok_,
+              new (context_) ESTree::IdentifierNode(
+                  tok_->getIdentifier(), nullptr, false));
+          advance(JSLexer::AllowDiv);
+          break;
+        }
+        case TokenKind::string_literal: {
+          key = setLocation(
+              tok_,
+              tok_,
+              new (context_)
+                  ESTree::StringLiteralNode(tok_->getStringLiteral()));
+          advance(JSLexer::AllowDiv);
+          break;
+        }
+        case TokenKind::numeric_literal: {
+          key = setLocation(
+              tok_,
+              tok_,
+              new (context_)
+                  ESTree::NumericLiteralNode(tok_->getNumericLiteral()));
+          advance(JSLexer::AllowDiv);
+          break;
+        }
+        case TokenKind::bigint_literal: {
+          key = setLocation(
+              tok_,
+              tok_,
+              new (context_)
+                  ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
+          advance(JSLexer::AllowDiv);
+          break;
+        }
+        default: {
+          errorExpected(
+              {TokenKind::identifier,
+               TokenKind::string_literal,
+               TokenKind::numeric_literal,
+               TokenKind::bigint_literal},
+              "in match object pattern property key",
+              "start of match object pattern property key",
+              propStartLoc);
+          return None;
+        }
+      }
+      if (!eat(
+              TokenKind::colon,
+              JSLexer::AllowRegExp,
+              "in match object pattern property",
+              "start of match object pattern property",
+              propStartLoc))
+        return None;
+      auto optPattern = parseMatchPatternFlow();
+      prop = setLocation(
+          propStartLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::MatchObjectPatternPropertyNode(
+              key, optPattern.getValue(), false));
+    }
+    properties.push_back(*prop);
+    if (!checkAndEat(TokenKind::comma))
+      break;
+  }
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::AllowDiv,
+          "at end of object match pattern",
+          "location of '{'",
+          startLoc))
+    return None;
+
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::MatchObjectPatternNode(std::move(properties), rest));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
