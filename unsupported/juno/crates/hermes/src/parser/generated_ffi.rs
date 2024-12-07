@@ -122,6 +122,7 @@ pub enum NodeKind {
     MatchIdentifierPattern,
     MatchBindingPattern,
     MatchObjectPattern,
+    MatchArrayPattern,
     _MatchPatternLast,
     MatchObjectPatternProperty,
     MatchRestPattern,
@@ -611,6 +612,9 @@ extern "C" {
     // MatchObjectPattern
     pub fn hermes_get_MatchObjectPattern_properties(node: NodePtr) -> NodeListRef;
     pub fn hermes_get_MatchObjectPattern_rest(node: NodePtr) -> NodePtrOpt;
+    // MatchArrayPattern
+    pub fn hermes_get_MatchArrayPattern_elements(node: NodePtr) -> NodeListRef;
+    pub fn hermes_get_MatchArrayPattern_rest(node: NodePtr) -> NodePtrOpt;
     // MatchObjectPatternProperty
     pub fn hermes_get_MatchObjectPatternProperty_key(node: NodePtr) -> NodePtr;
     pub fn hermes_get_MatchObjectPatternProperty_pattern(node: NodePtr) -> NodePtr;

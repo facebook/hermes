@@ -1162,6 +1162,17 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MatchObjectPattern::build_template(gc, template)
         }
+        NodeKind::MatchArrayPattern => {
+          let elements = cvt_node_list(cvt, gc, hermes_get_MatchArrayPattern_elements(n));
+          let rest = cvt_node_ptr_opt(cvt, gc, hermes_get_MatchArrayPattern_rest(n));
+          let mut template = ast::template::MatchArrayPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  elements,
+                  rest,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchArrayPattern::build_template(gc, template)
+        }
         NodeKind::MatchObjectPatternProperty => {
           let key = cvt_node_ptr(cvt, gc, hermes_get_MatchObjectPatternProperty_key(n));
           let pattern = cvt_node_ptr(cvt, gc, hermes_get_MatchObjectPatternProperty_pattern(n));

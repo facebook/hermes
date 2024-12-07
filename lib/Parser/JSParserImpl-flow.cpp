@@ -1147,6 +1147,9 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchPatternFlow() {
     case TokenKind::l_brace:
       return parseMatchObjectPatternFlow();
 
+    case TokenKind::l_square:
+      return parseMatchArrayPatternFlow();
+
     default:
       error(tok_->getStartLoc(), "invalid match pattern");
       return None;
@@ -1315,6 +1318,43 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
       getPrevTokenEndLoc(),
       new (context_)
           ESTree::MatchObjectPatternNode(std::move(properties), rest));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchArrayPatternFlow() {
+  assert(check(TokenKind::l_square));
+  auto startLoc = advance().Start;
+  ESTree::NodeList elements{};
+  ESTree::Node *rest = nullptr;
+
+  while (!check(TokenKind::r_square)) {
+    if (check(TokenKind::dotdotdot)) {
+      auto optRest = parseMatchRestPatternFlow();
+      if (!optRest) {
+        return None;
+      }
+      rest = optRest.getValue();
+      break;
+    }
+
+    auto optPattern = parseMatchPatternFlow();
+    if (!optPattern)
+      return None;
+    elements.push_back(*optPattern.getValue());
+    if (!checkAndEat(TokenKind::comma))
+      break;
+  }
+  if (!eat(
+          TokenKind::r_square,
+          JSLexer::AllowDiv,
+          "at end of array match pattern",
+          "location of '['",
+          startLoc))
+    return None;
+
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::MatchArrayPatternNode(std::move(elements), rest));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
@@ -2013,7 +2053,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(SMLoc start) {
             ESTree::DeclareExportDeclarationNode(*optEnum, {}, nullptr, false));
   }
 
-  if (check(TokenKind::rw_var, TokenKind::rw_const) || check(letIdent_)) {
+  if (checkN(TokenKind::rw_var, TokenKind::rw_const, letIdent_)) {
     ESTree::NodeLabel kind = tok_->getResWordOrIdentifier();
     SMLoc varStart = advance(JSLexer::GrammarContext::Type).Start;
     auto optIdent = parseBindingIdentifier(Param{});

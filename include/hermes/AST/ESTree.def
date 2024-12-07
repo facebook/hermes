@@ -699,6 +699,11 @@ ESTREE_NODE_2_ARGS(
   NodeList, properties, false, // [ MatchObjectPatternProperty ]
   NodePtr, rest, true // MatchRestPattern | null
 )
+ESTREE_NODE_2_ARGS(
+  MatchArrayPattern, MatchPattern,
+  NodeList, elements, false, // [ MatchPattern ]
+  NodePtr, rest, true // MatchRestPattern | null
+)
 
 ESTREE_LAST(MatchPattern)
 
