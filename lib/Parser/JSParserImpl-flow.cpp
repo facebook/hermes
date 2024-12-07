@@ -1117,14 +1117,89 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchSubpatternFlow() {
           return None;
         return pat.getValue();
       }
+      SMLoc start_loc = tok_->getStartLoc();
       auto *ident = setLocation(
           tok_,
           tok_,
           new (context_)
               ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
-      auto *pat = setLocation(
+      ESTree::Node *pat = setLocation(
           tok_, tok_, new (context_) ESTree::MatchIdentifierPatternNode(ident));
       advance(JSLexer::AllowDiv);
+
+      while (check(TokenKind::period, TokenKind::l_square)) {
+        if (checkAndEat(TokenKind::period)) {
+          if (!need(
+                  TokenKind::identifier,
+                  "in match member pattern",
+                  nullptr,
+                  {}))
+            return None;
+          auto *property = setLocation(
+              tok_,
+              tok_,
+              new (context_) ESTree::IdentifierNode(
+                  tok_->getIdentifier(), nullptr, false));
+          advance(JSLexer::AllowDiv);
+          pat = setLocation(
+              start_loc,
+              getPrevTokenEndLoc(),
+              new (context_) ESTree::MatchMemberPatternNode(pat, property));
+        } else {
+          SMLoc computedStartLoc = advance().Start; // Eat `[`
+          ESTree::Node *property = nullptr;
+          switch (tok_->getKind()) {
+            case TokenKind::numeric_literal: {
+              property = setLocation(
+                  tok_,
+                  tok_,
+                  new (context_)
+                      ESTree::NumericLiteralNode(tok_->getNumericLiteral()));
+              advance(JSLexer::AllowDiv);
+              break;
+            }
+            case TokenKind::bigint_literal: {
+              property = setLocation(
+                  tok_,
+                  tok_,
+                  new (context_)
+                      ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
+              advance(JSLexer::AllowDiv);
+              break;
+            }
+            case TokenKind::string_literal: {
+              property = setLocation(
+                  tok_,
+                  tok_,
+                  new (context_)
+                      ESTree::StringLiteralNode(tok_->getStringLiteral()));
+              advance(JSLexer::AllowDiv);
+              break;
+            }
+            default: {
+              errorExpected(
+                  {TokenKind::numeric_literal,
+                   TokenKind::bigint_literal,
+                   TokenKind::string_literal},
+                  "in match member pattern computed property",
+                  "start of computed property",
+                  computedStartLoc);
+              return None;
+            }
+          }
+          if (!eat(
+                  TokenKind::r_square,
+                  JSLexer::AllowDiv,
+                  "at end of computed member property",
+                  "location of '['",
+                  computedStartLoc))
+            return None;
+          pat = setLocation(
+              start_loc,
+              getPrevTokenEndLoc(),
+              new (context_) ESTree::MatchMemberPatternNode(pat, property));
+        }
+      }
       return pat;
     }
 
