@@ -305,6 +305,8 @@ class JSParserImpl {
   UniqueString *rendersIdent_;
   UniqueString *rendersMaybeOperator_;
   UniqueString *rendersStarOperator_;
+
+  UniqueString *matchIdent_;
 #endif
 
 #if HERMES_PARSE_TS
@@ -1189,6 +1191,28 @@ class JSParserImpl {
       ESTree::NodeList &paramList);
   Optional<ESTree::Node *> parseComponentTypeRestParameterFlow(Param param);
   Optional<ESTree::Node *> parseComponentTypeParameterFlow(Param param);
+
+  /// Checks if we are *maybe* at the start of a Flow match expression or
+  /// statement: `match` [no LineTerminator here]  `(`
+  bool checkMaybeFlowMatch() {
+    if (!check(matchIdent_))
+      return false;
+    return checkMaybeFlowMatchSlowPath();
+  }
+  bool checkMaybeFlowMatchSlowPath();
+  /// Validate and process an argument list into a sequence expression for
+  /// use as the argument to a match statement or expression.
+  ESTree::Node *reparseArgumentsAsMatchArgumentFlow(
+      SMRange range,
+      ESTree::NodeList &&argList);
+  /// Attempt to parse a 'match' statement. Rollback if not successful.
+  /// \pre `checkMaybeFlowMatch()` is true, meaning the current token and
+  /// following token are: `match` [no LineTerminator here]  `(`
+  /// \return nullptr if there was no error but attempting to parse the match
+  /// statement is not possible as `match` followed by Arguments, `match (...)`,
+  /// was not followed by a curly brace: [no LineTerminator here]  `{`.
+  /// None on error.
+  Optional<ESTree::Node *> tryParseMatchStatementFlow(Param param);
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);

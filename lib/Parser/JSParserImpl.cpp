@@ -124,6 +124,9 @@ void JSParserImpl::initializeIdentifiers() {
   rendersMaybeOperator_ = lexer_.getIdentifier("renders?");
   rendersStarOperator_ = lexer_.getIdentifier("renders*");
   hookIdent_ = lexer_.getIdentifier("hook");
+
+  // Flow match expressions and statements
+  matchIdent_ = lexer_.getIdentifier("match");
 #endif
 
 #if HERMES_PARSE_TS
@@ -695,6 +698,16 @@ Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
       _RET(parseDebuggerStatement());
 
     default:
+#if HERMES_PARSE_FLOW
+      if (context_.getParseFlow() && context_.getParseFlowMatch() &&
+          LLVM_UNLIKELY(checkMaybeFlowMatch())) {
+        auto optMatch = tryParseMatchStatementFlow(param.get(ParamReturn));
+        if (!optMatch)
+          return None;
+        if (*optMatch)
+          return *optMatch;
+      }
+#endif
       _RET(parseExpressionOrLabelledStatement(param.get(ParamReturn)));
   }
 

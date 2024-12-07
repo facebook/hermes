@@ -24,6 +24,7 @@ pub enum NodeKind {
     HookDeclaration,
     _FunctionLikeLast,
     _StatementFirst,
+    MatchStatement,
     _LoopStatementFirst,
     WhileStatement,
     DoWhileStatement,
@@ -111,6 +112,7 @@ pub enum NodeKind {
     RestElement,
     AssignmentPattern,
     _PatternLast,
+    MatchStatementCase,
     _JSXFirst,
     JSXIdentifier,
     JSXMemberExpression,
@@ -317,6 +319,9 @@ extern "C" {
     pub fn hermes_get_HookDeclaration_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_HookDeclaration_typeParameters(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_HookDeclaration_returnType(node: NodePtr) -> NodePtrOpt;
+    // MatchStatement
+    pub fn hermes_get_MatchStatement_argument(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_MatchStatement_cases(node: NodePtr) -> NodeListRef;
     // WhileStatement
     pub fn hermes_get_WhileStatement_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_WhileStatement_test(node: NodePtr) -> NodePtr;
@@ -570,6 +575,10 @@ extern "C" {
     // AssignmentPattern
     pub fn hermes_get_AssignmentPattern_left(node: NodePtr) -> NodePtr;
     pub fn hermes_get_AssignmentPattern_right(node: NodePtr) -> NodePtr;
+    // MatchStatementCase
+    pub fn hermes_get_MatchStatementCase_pattern(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_MatchStatementCase_body(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_MatchStatementCase_guard(node: NodePtr) -> NodePtrOpt;
     // JSXIdentifier
     pub fn hermes_get_JSXIdentifier_name(node: NodePtr) -> NodeLabel;
     // JSXMemberExpression

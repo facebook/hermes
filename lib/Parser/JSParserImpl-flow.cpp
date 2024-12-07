@@ -783,6 +783,130 @@ Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(SMLoc start) {
           *optId, std::move(paramList), body, typeParams, returnType));
 }
 
+bool JSParserImpl::checkMaybeFlowMatchSlowPath() {
+  assert(check(matchIdent_));
+  OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+  return optNext.hasValue() && *optNext == TokenKind::l_paren;
+}
+
+ESTree::Node *JSParserImpl::reparseArgumentsAsMatchArgumentFlow(
+    SMRange range,
+    ESTree::NodeList &&argList) {
+  if (argList.empty()) {
+    error(range, "'match' argument must not be empty");
+  }
+  for (const ESTree::Node &arg : argList) {
+    if (isa<ESTree::SpreadElementNode>(arg)) {
+      error(
+          arg.getSourceRange(),
+          "'match' argument cannot contain spread elements");
+    }
+  }
+  if (argList.size() == 1) {
+    auto expr = &argList.front();
+    argList.clear();
+    return expr;
+  }
+  return setLocation(
+      range,
+      range,
+      new (context_) ESTree::SequenceExpressionNode(std::move(argList)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::tryParseMatchStatementFlow(Param param) {
+  SMLoc startLoc;
+  SMLoc argsStartLoc;
+  SMLoc argsEndLoc;
+  ESTree::NodeList argList;
+  {
+    // This save point is required because Flow supports both match statements
+    // and match expressions, and we do not reserve `match` as a keyword. If
+    // either of those points change in the future, this could be removed - see
+    // blame for discussion.
+    // We don't need to suppress errors as the only place that could error
+    // in this section is `parseArguments`, and it would equivalently error
+    // if this was parsed as an expression.
+    JSLexer::SavePoint savePoint{&lexer_};
+
+    // Checked already by `checkMaybeFlowMatch`
+    assert(check(matchIdent_));
+    startLoc = advance().Start;
+    // Checked already by `checkMaybeFlowMatch`
+    assert(!lexer_.isNewLineBeforeCurrentToken());
+
+    argsStartLoc = tok_->getStartLoc();
+    if (!parseArguments(argList, argsEndLoc))
+      return None;
+
+    if (lexer_.isNewLineBeforeCurrentToken() || !check(TokenKind::l_brace)) {
+      // This is not a match statement.
+      savePoint.restore();
+      return nullptr;
+    }
+  }
+  // We are unambiguously parsing a match statement now.
+
+  auto arg = reparseArgumentsAsMatchArgumentFlow(
+      SMRange{argsStartLoc, argsEndLoc}, std::move(argList));
+
+  assert(check(TokenKind::l_brace));
+  SMLoc lbraceLoc = advance().Start;
+
+  ESTree::NodeList cases;
+
+  while (!check(TokenKind::r_brace)) {
+    SMLoc caseStartLoc = tok_->getStartLoc();
+
+    auto optPattern = parseExpression(); // TODO:match: parse match patterns
+    if (!optPattern)
+      return None;
+
+    ESTree::Node *guard = nullptr;
+    if (checkAndEat(TokenKind::rw_if)) {
+      auto optGuard = parseExpression(ParamIn, CoverTypedParameters::No);
+      if (!optGuard)
+        return None;
+      guard = optGuard.getValue();
+    }
+
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::AllowRegExp,
+            "after match pattern",
+            "location of pattern",
+            caseStartLoc))
+      return None;
+
+    auto optBody = parseBlock(param.get(ParamReturn));
+    if (!optBody)
+      return None;
+
+    cases.push_back(*setLocation(
+        caseStartLoc,
+        *optBody,
+        new (context_) ESTree::MatchStatementCaseNode(
+            optPattern.getValue(), optBody.getValue(), guard)));
+
+    if (check(TokenKind::comma, TokenKind::semi)) {
+      advance();
+    }
+  }
+
+  SMLoc endLoc = tok_->getEndLoc();
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::AllowRegExp,
+          "at end of 'match' statement",
+          "location of '{'",
+          lbraceLoc))
+    return None;
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_) ESTree::MatchStatementNode(arg, std::move(cases)));
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
     SMLoc start,
     TypeAliasKind kind) {
