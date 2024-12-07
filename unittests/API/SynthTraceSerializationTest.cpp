@@ -396,23 +396,31 @@ TEST_F(SynthTraceSerializationTest, Utf8Record) {
 }
 
 TEST_F(SynthTraceSerializationTest, Utf16Record) {
+  auto serialized =
+      R"({"type":"Utf16Record","time":0,"objID":"string:123","retval":"hi\ud83d\udc4b"})";
   EXPECT_EQ(
-      R"({"type":"Utf16Record","time":0,"objID":"string:123","retval":"hi\ud83d\udc4b"})",
+      serialized,
       to_string(SynthTrace::Utf16Record(
           dummyTime, SynthTrace::encodeString(123), u"hi👋")));
+  serialized =
+      R"({"type":"Utf16Record","time":0,"objID":"string:111","retval":"\ud83d"})";
   EXPECT_EQ(
-      R"({"type":"Utf16Record","time":0,"objID":"string:111","retval":"\ud83d"})",
+      serialized,
       to_string(SynthTrace::Utf16Record(
           dummyTime, SynthTrace::encodeString(111), u"\xd83d")));
 }
 
 TEST_F(SynthTraceSerializationTest, GetStringDataRecord) {
+  auto serialized =
+      R"({"type":"GetStringDataRecord","time":0,"objID":"string:123","strData":"\nhello\ud83d\udc4b\\"})";
   EXPECT_EQ(
-      R"({"type":"GetStringDataRecord","time":0,"objID":"string:123","strData":"\nhello\ud83d\udc4b\\"})",
+      serialized,
       to_string(SynthTrace::GetStringDataRecord(
           dummyTime, SynthTrace::encodeString(123), u"\nhello👋\\")));
+  serialized =
+      R"({"type":"GetStringDataRecord","time":0,"objID":"propNameID:111","strData":"\ud83d"})";
   EXPECT_EQ(
-      R"({"type":"GetStringDataRecord","time":0,"objID":"propNameID:111","strData":"\ud83d"})",
+      serialized,
       to_string(SynthTrace::GetStringDataRecord(
           dummyTime, SynthTrace::encodePropNameID(111), u"\xd83d")));
 }
