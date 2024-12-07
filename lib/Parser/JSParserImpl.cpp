@@ -719,7 +719,8 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     bool paramAwait,
     JSLexer::GrammarContext grammarContext,
     bool parseDirectives) {
-  if (pass_ == LazyParse && !eagerly) {
+  // TODO: enable lazy compilation inside with statements
+  if (pass_ == LazyParse && !eagerly && !insideWithStatement) {
     auto startLoc = tok_->getStartLoc();
     assert(
         preParsed_->functionInfo.count(startLoc) == 1 &&
@@ -2035,6 +2036,8 @@ Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement(
           startLoc))
     return None;
 
+  auto oldInsideWithStatement = insideWithStatement;
+  insideWithStatement = true;
   auto optExpr = parseExpression();
   if (!optExpr)
     return None;
@@ -2050,6 +2053,8 @@ Optional<ESTree::WithStatementNode *> JSParserImpl::parseWithStatement(
   auto optBody = parseStatement(param.get(ParamReturn));
   if (!optBody)
     return None;
+
+  insideWithStatement = oldInsideWithStatement;
 
   return setLocation(
       startLoc,

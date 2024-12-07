@@ -219,6 +219,10 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return genClassDeclaration(classDecl);
   }
 
+  if (auto *withDecl = llvh::dyn_cast<ESTree::WithStatementNode>(stmt)) {
+    return genWithStatement(withDecl);
+  }
+
   Builder.getModule()->getContext().getSourceErrorManager().error(
       stmt->getSourceRange(), Twine("invalid statement encountered."));
 }

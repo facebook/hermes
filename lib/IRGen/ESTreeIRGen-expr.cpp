@@ -522,7 +522,10 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     // Must call the field init function immediately after.
     fieldInitClassType = curFunction()->typedClassContext.type;
   } else {
-    thisVal = Builder.getLiteralUndefined();
+    thisVal = withAwareEmitLoad(
+        nullptr,
+        call->_callee,
+        ConditionalChainType::OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE);
     callee = genExpression(call->_callee);
   }
 
@@ -588,7 +591,10 @@ Value *ESTreeIRGen::genOptionalCallExpr(
     thisVal = Builder.getLiteralUndefined();
     callee = genOptionalCallExpr(oce, shortCircuitBB);
   } else {
-    thisVal = Builder.getLiteralUndefined();
+    thisVal = withAwareEmitLoad(
+        nullptr,
+        call->_callee,
+        ConditionalChainType::OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE);
     callee = genExpression(getCallee(call));
   }
 
@@ -2068,15 +2074,32 @@ Value *ESTreeIRGen::genUnaryExpression(ESTree::UnaryExpressionNode *U) {
       Identifier name = getNameFieldFromID(iden);
       auto *var = resolveIdentifier(iden);
 
-      if (llvh::isa<GlobalObjectProperty>(var)) {
-        // If the variable doesn't exist or if it is global, we must generate
-        // a delete global property instruction.
-        return Builder.createDeletePropertyInst(
-            Builder.getGlobalObject(), Builder.getLiteralString(name));
+      if (withScopes_.empty()) {
+        if (llvh::isa<GlobalObjectProperty>(var)) {
+          // If the variable doesn't exist or if it is global, we must generate
+          // a delete global property instruction.
+          return Builder.createDeletePropertyInst(
+              Builder.getGlobalObject(), Builder.getLiteralString(name));
+        } else {
+          // Otherwise it is a local variable which can't be deleted and we just
+          // return false.
+          return Builder.getLiteralBool(false);
+        }
       } else {
-        // Otherwise it is a local variable which can't be deleted and we just
-        // return false.
-        return Builder.getLiteralBool(false);
+        auto withObj = withAwareEmitLoad(
+            var,
+            iden,
+            llvh::isa<GlobalObjectProperty>(var)
+                ? ConditionalChainType::OBJECT_ONLY_WITH_GLOBAL_ALTERNATE
+                : ConditionalChainType::OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE);
+
+        return genConditionalExpr(
+            [&]() -> Value * { return withObj; },
+            [&]() -> Value * {
+              return Builder.createDeletePropertyInst(
+                  withObj, Builder.getLiteralString(name));
+            },
+            [&]() -> Value * { return Builder.getLiteralBool(false); });
       }
     }
 
@@ -2337,6 +2360,36 @@ Value *ESTreeIRGen::genLogicalAssignmentExpr(
   return Builder.createPhiInst(std::move(values), std::move(blocks));
 }
 
+Value *ESTreeIRGen::genConditionalExpr(
+    const std::function<Value *()> &conditionGenerator,
+    const std::function<Value *()> &consequentGenerator,
+    const std::function<Value *()> &alternateGenerator) {
+  auto parentFunc = Builder.getInsertionBlock()->getParent();
+
+  PhiInst::ValueListType values;
+  PhiInst::BasicBlockListType blocks;
+
+  auto alternateBlock = Builder.createBasicBlock(parentFunc);
+  auto consequentBlock = Builder.createBasicBlock(parentFunc);
+  auto continueBlock = Builder.createBasicBlock(parentFunc);
+
+  Builder.createCondBranchInst(
+      conditionGenerator(), consequentBlock, alternateBlock);
+
+  Builder.setInsertionBlock(consequentBlock);
+  values.push_back(consequentGenerator());
+  blocks.push_back(Builder.getInsertionBlock());
+  Builder.createBranchInst(continueBlock);
+
+  Builder.setInsertionBlock(alternateBlock);
+  values.push_back(alternateGenerator());
+  blocks.push_back(Builder.getInsertionBlock());
+  Builder.createBranchInst(continueBlock);
+
+  Builder.setInsertionBlock(continueBlock);
+  return Builder.createPhiInst(values, blocks);
+}
+
 Value *ESTreeIRGen::genConditionalExpr(ESTree::ConditionalExpressionNode *C) {
   auto parentFunc = Builder.getInsertionBlock()->getParent();
 
@@ -2389,7 +2442,7 @@ Value *ESTreeIRGen::genIdentifierExpression(
 
   // For uses of undefined/Infinity/NaN as the global property, we make an
   // optimization to always return the constant directly.
-  if (llvh::isa<GlobalObjectProperty>(Var)) {
+  if (llvh::isa<GlobalObjectProperty>(Var) && withScopes_.empty()) {
     if (StrName.getUnderlyingPointer() == kw_.identUndefined) {
       return Builder.getLiteralUndefined();
     }
@@ -2406,7 +2459,7 @@ Value *ESTreeIRGen::genIdentifierExpression(
                    << curFunction()->function->getInternalNameStr() << "\"\n");
 
   // Typeof <variable> does not throw.
-  return emitLoad(Var, afterTypeOf);
+  return withAwareEmitLoad(Var, Iden, {}, afterTypeOf);
 }
 
 Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {

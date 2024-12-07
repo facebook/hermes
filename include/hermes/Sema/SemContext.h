@@ -479,6 +479,17 @@ class SemContext {
     return root_->bindingTable_;
   }
 
+  uint32_t getWithLexicalDepth(ESTree::WithStatementNode * node) const {
+    if(auto it = withDepths.find(node); it != withDepths.end())
+      return it->second;
+    assert(false && "with statement must have been processed before attempting to get the depth");
+    return 0;
+  }
+
+  void setWithLexicalDepth(ESTree::WithStatementNode * node, uint32_t depth) {
+    withDepths[node] = depth;
+  }
+
  private:
   /// The parent SemContext of this SemContext.
   /// If null, this SemContext has no parent.
@@ -517,6 +528,8 @@ class SemContext {
   /// "expression decl" are both set and are not the same value.
   llvh::DenseMap<ESTree::IdentifierNode *, Decl *>
       sideIdentifierDeclarationDecl_{};
+
+  llvh::DenseMap<ESTree::WithStatementNode *, uint32_t> withDepths{};
 };
 
 class SemContextDumper {

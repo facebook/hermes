@@ -426,6 +426,20 @@ class ESTreeIRGen {
   /// "outer" and "inner" generator function.
   using CompiledMapKey = llvh::PointerIntPair<ESTree::Node *, 2>;
 
+
+  struct WithScopeInfo {
+
+    /// Lexical depth of the 'with' body
+    uint32_t depth;
+
+    /// Variable holding the 'with' statement object
+    Variable *object;
+  };
+
+  /// Vector holding information about all encountered 'with' statements.
+  using WithScopes = std::vector<WithScopeInfo>;
+  WithScopes withScopes_{};
+
   /// An "additional key" when mapping from an AST node to a compiled Value,
   /// used to distinguish between different values that may be associated with
   /// the same node.
@@ -827,6 +841,11 @@ class ESTreeIRGen {
   Value *genLogicalExpression(ESTree::LogicalExpressionNode *logical);
   Value *genThisExpression();
 
+  Value *genConditionalExpr(
+      const std::function<Value *()> &conditionGenerator,
+      const std::function<Value *()> &consequentGenerator,
+      const std::function<Value *()> &alternateGenerator);
+
   /// A helper function to unify the largely same IRGen logic of \c genYieldExpr
   /// and \c genAwaitExpr.
   /// \param value the value operand of the will-generate SaveAndYieldInst.
@@ -1035,6 +1054,10 @@ class ESTreeIRGen {
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       const CapturedState &capturedState);
+
+  /// Generate IR for a with statement block.
+  /// \param with is the ESTree with statement node.
+  void genWithStatement(ESTree::WithStatementNode *with);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -1380,6 +1403,46 @@ class ESTreeIRGen {
   /// \return the instruction performing the store.
   Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
 
+  enum ConditionalChainType {
+    // Multiple options to create the conditional chain:
+    MEMBER_EXPRESSION, // (a.var ? a.var : var)
+    OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE, // (a.var ? a : undefined)
+    OBJECT_ONLY_WITH_GLOBAL_ALTERNATE // (a.var ? a : global)
+  };
+
+  /// Emit an instruction to load a value considering 'with' statements.
+  /// This function extends the regular load operation by incorporating logic
+  /// that handles 'with' statements in the source code, allowing for conditional
+  /// chaining based on the scope information.
+  /// \param ptr the location from which to load, possibly subject to 'with' scopes.
+  /// \param node the AST node associated with the identifier in the load operation.
+  /// \param conditionalChainType specifies the type of conditional chain to use
+  ///     when resolving property accesses within 'with' contexts.
+  /// \param inhibitThrow  if true, do not throw when loading from missing
+  ///     global properties.
+  /// \return  the instruction performing the load, possibly adjusted for 'with' context resolution.
+  Value *withAwareEmitLoad(
+      Value *ptr,
+      ESTree::Node *node,
+      ConditionalChainType conditionalChainType,
+      bool inhibitThrow = false);
+
+  /// Emit an instruction to store a value considering 'with' statements.
+  /// This function extends the regular store operation by incorporating logic
+  /// that handles 'with' statements in the source code, allowing for conditional
+  /// chaining based on the scope information.
+  /// \param storedValue value to store
+  /// \param ptr the location to store into, adjusted for 'with' context if necessary.
+  /// \param declInit_ whether this is a declaration initializer, so the TDZ
+  /// check should be skipped.
+  /// \param node the AST node associated with the identifier in the store operation.
+  /// \return the stored value, possibly modified to respect 'with' context rules.
+  Value *withAwareEmitStore(
+      Value *storedValue,
+      Value *ptr,
+      bool declInit_,
+      ESTree::Node *node);
+
  private:
   /// Search for the specified AST node in \c compiledEntities_ and return the
   /// associated IR value, or nullptr if not found.
@@ -1409,7 +1472,10 @@ class ESTreeIRGen {
     CompiledMapKey key(node, (unsigned)extraKey);
     assert(compiledEntities_.count(key) == 0 && "Overwriting compiled entity");
     compiledEntities_[key] = value;
-    compilationQueue_.emplace_back(f);
+    compilationQueue_.emplace_back([this, f = std::forward<F>(f), withScopesCopy = withScopes_]() mutable {
+      this->withScopes_ = std::move(withScopesCopy);
+      f();
+    });
   }
 
   /// Run all tasks in the compilation queue until it is empty.
@@ -1434,6 +1500,24 @@ class ESTreeIRGen {
     assert(decl->customData);
     return static_cast<Value *>(decl->customData);
   }
+
+  Value *emitLoadOrStoreWithStatementImpl(
+      Value *value, // value to store, nullptr if reading
+      Value *ptr,   // ptr used to read/store the value
+      bool declInit_,
+      ESTree::IdentifierNode *id,
+      ConditionalChainType conditionalChainType,
+      bool inhibitThrow = false);
+
+  Value *createConditionalChainImpl(
+      std::vector<WithScopeInfo>::iterator begin,
+      std::vector<WithScopeInfo>::iterator end,
+      Value *ptr,
+      Value *value,
+      bool declInit_,
+      std::string_view name,
+      ConditionalChainType conditionalChainType,
+      bool inhibitThrow);
 };
 
 template <typename EB, typename EF, typename EH>

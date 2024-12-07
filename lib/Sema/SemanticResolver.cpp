@@ -696,17 +696,8 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::WithStatementNode *node) {
-  if (compile_)
-    sm_.error(node->getStartLoc(), "with statement is not supported");
-
+  semCtx_.setWithLexicalDepth(node, curScope_->depth+1);
   visitESTreeChildren(*this, node);
-
-  uint32_t depth = curScope_->depth;
-  // Run the Unresolver to avoid resolving to variables past the depth of the
-  // `with`.
-  // Pass `depth + 1` because variables declared in this scope also cannot be
-  // trusted.
-  Unresolver::run(semCtx_, depth + 1, node->_body);
 }
 
 void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
