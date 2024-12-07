@@ -23,6 +23,7 @@ import type {FunctionExpressionNameScope} from './FunctionExpressionNameScope';
 import type {FunctionScope} from './FunctionScope';
 import type {HookScope} from './HookScope';
 import type {GlobalScope} from './GlobalScope';
+import type {MatchCaseScope} from './MatchCaseScope';
 import type {ModuleScope} from './ModuleScope';
 import type {SwitchScope} from './SwitchScope';
 import type {TypeScope} from './TypeScope';
@@ -42,6 +43,7 @@ type Scope =
   | FunctionScope
   | HookScope
   | GlobalScope
+  | MatchCaseScope
   | ModuleScope
   | SwitchScope
   | TypeScope

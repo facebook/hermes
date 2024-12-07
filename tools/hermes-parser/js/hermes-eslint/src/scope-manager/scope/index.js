@@ -22,6 +22,7 @@ export * from './FunctionExpressionNameScope';
 export * from './FunctionScope';
 export * from './HookScope';
 export * from './GlobalScope';
+export * from './MatchCaseScope';
 export * from './ModuleScope';
 export * from './Scope';
 export * from './ScopeType';
