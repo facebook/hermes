@@ -903,6 +903,11 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseNewExpressionOrOptionalExpression(
       IsConstructorCall isConstructorCall);
   Optional<ESTree::Node *> parseLeftHandSideExpression();
+  /// Parse the remainder of a LHS expression after parsing a "new or optional
+  /// expression". Includes parsing the type args and call args.
+  Optional<ESTree::Node *> parseLeftHandSideExpressionTail(
+      SMLoc startLoc,
+      ESTree::Node *expr);
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();
 
@@ -1213,6 +1218,12 @@ class JSParserImpl {
   /// was not followed by a curly brace: [no LineTerminator here]  `{`.
   /// None on error.
   Optional<ESTree::Node *> tryParseMatchStatementFlow(Param param);
+  /// Parse either a 'match' expression, or a call to an identifier
+  /// of the name 'match'.
+  Optional<ESTree::Node *> parseMatchCallOrMatchExpressionFlow();
+  Optional<ESTree::Node *> parseMatchExpressionFlow(
+      SMLoc start,
+      ESTree::Node *argument);
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);

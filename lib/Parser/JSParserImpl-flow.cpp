@@ -907,6 +907,102 @@ Optional<ESTree::Node *> JSParserImpl::tryParseMatchStatementFlow(Param param) {
       new (context_) ESTree::MatchStatementNode(arg, std::move(cases)));
 }
 
+Optional<ESTree::Node *> JSParserImpl::parseMatchCallOrMatchExpressionFlow() {
+  SMLoc startLoc = tok_->getStartLoc();
+  ESTree::Node *matchIdentNode = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+  advance();
+
+  auto parenLoc = tok_->getStartLoc();
+  ESTree::NodeList argList;
+  SMLoc endLoc;
+
+  if (!parseArguments(argList, endLoc))
+    return None;
+
+  if (!lexer_.isNewLineBeforeCurrentToken() && check(TokenKind::l_brace)) {
+    auto arg = reparseArgumentsAsMatchArgumentFlow(
+        SMRange{parenLoc, endLoc}, std::move(argList));
+    return parseMatchExpressionFlow(startLoc, arg);
+  }
+
+  auto callNode = setLocation(
+      startLoc,
+      endLoc,
+      parenLoc,
+      new (context_) ESTree::CallExpressionNode(
+          matchIdentNode, nullptr, std::move(argList)));
+  auto optExpr = parseOptionalExpressionExceptNew_tail(
+      IsConstructorCall::No, startLoc, callNode);
+  if (!optExpr) {
+    return None;
+  }
+  return parseLeftHandSideExpressionTail(startLoc, optExpr.getValue());
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
+    SMLoc startLoc,
+    ESTree::Node *argument) {
+  assert(check(TokenKind::l_brace));
+  SMLoc lbraceLoc = advance().Start;
+
+  ESTree::NodeList cases;
+
+  while (!check(TokenKind::r_brace)) {
+    SMLoc caseStartLoc = tok_->getStartLoc();
+
+    auto optPattern = parseExpression(); // TODO:match: parse match patterns
+    if (!optPattern)
+      return None;
+
+    ESTree::Node *guard = nullptr;
+    if (checkAndEat(TokenKind::rw_if)) {
+      auto optGuard = parseExpression(ParamIn, CoverTypedParameters::No);
+      if (!optGuard)
+        return None;
+      guard = optGuard.getValue();
+    }
+
+    if (!eat(
+            TokenKind::colon,
+            JSLexer::AllowRegExp,
+            "after match pattern",
+            "location of pattern",
+            caseStartLoc))
+      return None;
+
+    auto optBody = parseAssignmentExpression();
+    if (!optBody)
+      return None;
+
+    cases.push_back(*setLocation(
+        caseStartLoc,
+        *optBody,
+        new (context_) ESTree::MatchExpressionCaseNode(
+            optPattern.getValue(), optBody.getValue(), guard)));
+
+    if (!(checkAndEat(TokenKind::comma) || checkAndEat(TokenKind::semi)))
+      break;
+  }
+
+  SMLoc endLoc = tok_->getEndLoc();
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::AllowRegExp,
+          "at end of 'match' expression",
+          "location of '{'",
+          lbraceLoc))
+    return None;
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_) ESTree::MatchExpressionNode(argument, std::move(cases)));
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
     SMLoc start,
     TypeAliasKind kind) {
