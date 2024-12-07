@@ -348,6 +348,7 @@ class JSXDecoration {};
 class FlowDecoration {};
 class TSDecoration {};
 class PatternDecoration {};
+class MatchPatternDecoration {};
 class CoverDecoration {};
 
 class CallExpressionLikeDecoration {};

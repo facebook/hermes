@@ -127,6 +127,7 @@ void JSParserImpl::initializeIdentifiers() {
 
   // Flow match expressions and statements
   matchIdent_ = lexer_.getIdentifier("match");
+  underscoreIdent_ = lexer_.getIdentifier("_");
 #endif
 
 #if HERMES_PARSE_TS

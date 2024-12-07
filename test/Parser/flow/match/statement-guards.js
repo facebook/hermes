@@ -28,9 +28,12 @@ match (a) {
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "type": "MatchStatementCase",
 // CHECK-NEXT:          "pattern": {
-// CHECK-NEXT:            "type": "NumericLiteral",
-// CHECK-NEXT:            "value": 1,
-// CHECK-NEXT:            "raw": "1"
+// CHECK-NEXT:            "type": "MatchLiteralPattern",
+// CHECK-NEXT:            "literal": {
+// CHECK-NEXT:              "type": "NumericLiteral",
+// CHECK-NEXT:              "value": 1,
+// CHECK-NEXT:              "raw": "1"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "body": {
 // CHECK-NEXT:            "type": "BlockStatement",
@@ -68,8 +71,11 @@ match (a) {
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "type": "MatchStatementCase",
 // CHECK-NEXT:          "pattern": {
-// CHECK-NEXT:            "type": "StringLiteral",
-// CHECK-NEXT:            "value": "foo"
+// CHECK-NEXT:            "type": "MatchLiteralPattern",
+// CHECK-NEXT:            "literal": {
+// CHECK-NEXT:              "type": "StringLiteral",
+// CHECK-NEXT:              "value": "foo"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "body": {
 // CHECK-NEXT:            "type": "BlockStatement",
@@ -112,9 +118,12 @@ match (a) {
 // CHECK-NEXT:        {
 // CHECK-NEXT:          "type": "MatchStatementCase",
 // CHECK-NEXT:          "pattern": {
-// CHECK-NEXT:            "type": "NumericLiteral",
-// CHECK-NEXT:            "value": 2,
-// CHECK-NEXT:            "raw": "2"
+// CHECK-NEXT:            "type": "MatchLiteralPattern",
+// CHECK-NEXT:            "literal": {
+// CHECK-NEXT:              "type": "NumericLiteral",
+// CHECK-NEXT:              "value": 2,
+// CHECK-NEXT:              "raw": "2"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "body": {
 // CHECK-NEXT:            "type": "BlockStatement",

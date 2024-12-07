@@ -32,9 +32,12 @@ const e = match (a) {
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
 // CHECK-NEXT:                "pattern": {
-// CHECK-NEXT:                  "type": "NumericLiteral",
-// CHECK-NEXT:                  "value": 1,
-// CHECK-NEXT:                  "raw": "1"
+// CHECK-NEXT:                  "type": "MatchLiteralPattern",
+// CHECK-NEXT:                  "literal": {
+// CHECK-NEXT:                    "type": "NumericLiteral",
+// CHECK-NEXT:                    "value": 1,
+// CHECK-NEXT:                    "raw": "1"
+// CHECK-NEXT:                  }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "body": {
 // CHECK-NEXT:                  "type": "BooleanLiteral",
