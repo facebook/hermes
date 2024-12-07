@@ -225,6 +225,10 @@ class Context {
   /// If true, allow parsing component syntax when also using Flow syntax.
   bool parseFlowComponentSyntax_{false};
 
+  /// If true, allow parsing match statements and expressions when
+  /// also using Flow syntax.
+  bool parseFlowMatch_{false};
+
   /// Whether to parse Flow type syntax.
   ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
@@ -412,6 +416,13 @@ class Context {
   }
   bool getParseFlowComponentSyntax() const {
     return parseFlowComponentSyntax_;
+  }
+
+  void setParseFlowMatch(bool parseFlowMatch) {
+    parseFlowMatch_ = parseFlowMatch;
+  }
+  bool getParseFlowMatch() const {
+    return parseFlowMatch_;
   }
 
   void setParseTS(bool parseTS) {

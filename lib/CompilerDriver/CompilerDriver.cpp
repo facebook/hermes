@@ -516,6 +516,13 @@ static opt<bool> ParseFlowComponentSyntax(
     init(false),
     Hidden,
     cat(CompilerCategory));
+
+static opt<bool> ParseFlowMatch(
+    "Xparse-flow-match",
+    desc("Parse Flow match statements and expressions"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
 #endif
 
 #if HERMES_PARSE_TS
@@ -1210,6 +1217,7 @@ std::shared_ptr<Context> createContext(
     context->setParseFlow(ParseFlowSetting::ALL);
   }
   context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
+  context->setParseFlowMatch(cl::ParseFlowMatch);
 #endif
 
 #if HERMES_PARSE_TS
