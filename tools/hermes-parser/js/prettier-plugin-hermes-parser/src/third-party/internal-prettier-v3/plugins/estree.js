@@ -5542,7 +5542,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return parent.type === "ArrayTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType");
       case "ComponentTypeAnnotation":
       case "FunctionTypeAnnotation": {
-        if (node.type === "ComponentTypeAnnotation" && node.rendersType == null) {
+        if (node.type === "ComponentTypeAnnotation" && (node.rendersType === null || node.rendersType === void 0)) {
           return false;
         }
         if (path.match(
