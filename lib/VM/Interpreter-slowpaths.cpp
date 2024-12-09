@@ -313,6 +313,45 @@ void Interpreter::caseCreateRegExp(
           .getHermesValue();
 }
 
+ExecutionStatus Interpreter::caseDelByVal(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  const PropOpFlags defaultPropOpFlags =
+      DEFAULT_PROP_OP_FLAGS(ip->iDelByVal.op4 != 0);
+  if (LLVM_LIKELY(O2REG(DelByVal).isObject())) {
+    auto status = JSObject::deleteComputed(
+        Handle<JSObject>::vmcast(&O2REG(DelByVal)),
+        runtime,
+        Handle<>(&O3REG(DelByVal)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
+  } else {
+    // This is the "slow path".
+    auto res = toObject(runtime, Handle<>(&O2REG(DelByVal)));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    struct : Locals {
+      PinnedValue<> obj;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+
+    lv.obj = res.getValue();
+    auto status = JSObject::deleteComputed(
+        Handle<JSObject>::vmcast(&lv.obj),
+        runtime,
+        Handle<>(&O3REG(DelByVal)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
+  }
+  return ExecutionStatus::RETURNED;
+}
+
 CallResult<HermesValue> Interpreter::createThisImpl(
     Runtime &runtime,
     PinnedHermesValue *callee,

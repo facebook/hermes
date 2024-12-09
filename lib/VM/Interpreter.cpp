@@ -3405,45 +3405,8 @@ tailCall:
       DISPATCH;
     }
 
-      CASE(DelByVal) {
-        const PropOpFlags defaultPropOpFlags =
-            DEFAULT_PROP_OP_FLAGS(ip->iDelByVal.op4 != 0);
-        if (LLVM_LIKELY(O2REG(DelByVal).isObject())) {
-          CAPTURE_IP_ASSIGN(
-              auto status,
-              JSObject::deleteComputed(
-                  Handle<JSObject>::vmcast(&O2REG(DelByVal)),
-                  runtime,
-                  Handle<>(&O3REG(DelByVal)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
-        } else {
-          // This is the "slow path".
-          CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelByVal))));
-          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-          tmpHandle = res.getValue();
-          CAPTURE_IP_ASSIGN(
-              auto status,
-              JSObject::deleteComputed(
-                  Handle<JSObject>::vmcast(tmpHandle),
-                  runtime,
-                  Handle<>(&O3REG(DelByVal)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        tmpHandle.clear();
-        ip = NEXTINST(DelByVal);
-        DISPATCH;
-      }
+      CASE_OUTOFLINE(DelByVal);
+
       CASE(CreateRegExp) {
         CAPTURE_IP(caseCreateRegExp(runtime, frameRegs, curCodeBlock, ip));
         gcScope.flushToSmallCount(KEEP_HANDLES);

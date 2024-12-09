@@ -243,6 +243,11 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const Inst *ip);
 
+  static ExecutionStatus caseDelByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
   /// Interpreter implementation for creating a RegExp object. Unlike the other
   /// out-of-line cases, this takes a CodeBlock* and does not return an
   /// ExecutionStatus.
