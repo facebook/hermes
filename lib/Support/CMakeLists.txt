@@ -21,6 +21,7 @@ add_hermes_library(hermesSupport
         ErrorHandling.cpp
         InternalIdentifierMaker.cpp
         JSONEmitter.cpp
+        OSCompatCommon.cpp
         OSCompatEmscripten.cpp
         OSCompatPosix.cpp
         OSCompatWindows.cpp

@@ -204,6 +204,17 @@ uint64_t global_thread_id();
 ///   stack bounds.
 std::pair<const void *, size_t> thread_stack_bounds(unsigned gap = 0);
 
+namespace detail {
+/// Non-caching platform-specific implementation of thread_stack_bounds.
+/// This is an internal implementation detail.
+/// \return (higher stack bound, size) of the current thread.
+///   The stack overflows when an address is no longer within
+///   the bounds [high - size, high).
+///   Will return (nullptr, 0) if the platform doesn't support checking the
+///   stack bounds.
+std::pair<const void *, size_t> thread_stack_bounds_impl();
+} // namespace detail
+
 /// Set the thread name for the current thread. This can be viewed in various
 /// debuggers and profilers.
 /// NOTE: Is a no-op on some platforms.

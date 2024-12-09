@@ -612,9 +612,11 @@ uint64_t global_thread_id() {
 #error "Thread ID not supported on this platform"
 #endif
 
+namespace detail {
+
 #if defined(__APPLE__) && defined(__MACH__)
 
-std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
+std::pair<const void *, size_t> thread_stack_bounds_impl() {
   pthread_t tid = pthread_self();
   void *origin = pthread_get_stackaddr_np(tid);
   rlim_t size = 0;
@@ -630,12 +632,12 @@ std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
     size = pthread_get_stacksize_np(tid);
   }
 
-  return {origin, gap < size ? size - gap : 0};
+  return {origin, size};
 }
 
 #else
 
-std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
+std::pair<const void *, size_t> thread_stack_bounds_impl() {
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_getattr_np(pthread_self(), &attr);
@@ -664,11 +666,12 @@ std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
   pthread_attr_destroy(&attr);
 
   // origin is now the lowest addressable byte.
-  unsigned adjustedSize = gap < size ? size - gap : 0;
-  return {(char *)origin + size, adjustedSize};
+  return {(char *)origin + size, size};
 }
 
 #endif
+
+} // namespace detail
 
 void set_thread_name(const char *name) {
   // Set the thread name for TSAN. It doesn't share the same name mapping as the

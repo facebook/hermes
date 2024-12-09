@@ -216,12 +216,16 @@ uint64_t global_thread_id() {
   return 0;
 }
 
-std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
+namespace detail {
+
+std::pair<const void *, size_t> thread_stack_bounds_impl(unsigned gap) {
   uintptr_t high = emscripten_stack_get_base();
   uintptr_t low = emscripten_stack_get_end();
   size_t sz = high - low - gap;
   return {(void *)high, sz};
 }
+
+} // namespace detail
 
 void set_thread_name(const char *name) {
   // Intentionally does nothing
