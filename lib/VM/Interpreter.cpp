@@ -2229,18 +2229,16 @@ tailCall:
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumGetByIdCacheHits;
-          CAPTURE_IP(
-              O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
-                                   obj, runtime, cacheEntry->slot)
-                                   .unboxToHV(runtime));
+          O1REG(GetById) =
+              JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
+                  .unboxToHV(runtime);
           ip = nextIP;
           DISPATCH;
         }
         auto id = ID(idVal);
         NamedPropertyDescriptor desc;
-        CAPTURE_IP_ASSIGN(
-            OptValue<bool> fastPathResult,
-            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc));
+        OptValue<bool> fastPathResult =
+            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
         if (LLVM_LIKELY(
                 fastPathResult.hasValue() && fastPathResult.getValue()) &&
             !desc.flags.accessor) {
@@ -2266,10 +2264,8 @@ tailCall:
           assert(
               !obj->isProxyObject() &&
               "tryGetOwnNamedDescriptorFast returned true on Proxy");
-          CAPTURE_IP(
-              O1REG(GetById) =
-                  JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
-                      .unboxToHV(runtime));
+          O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
+                               .unboxToHV(runtime);
           ip = nextIP;
           DISPATCH;
         }
@@ -2279,7 +2275,7 @@ tailCall:
         // not-found.
         if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
             LLVM_LIKELY(!obj->isProxyObject())) {
-          CAPTURE_IP_ASSIGN(JSObject * parent, obj->getParent(runtime));
+          JSObject *parent = obj->getParent(runtime);
           // TODO: This isLazy check is because a lazy object is reported as
           // having no properties and therefore cannot contain the property.
           // This check does not belong here, it should be merged into
@@ -2288,10 +2284,9 @@ tailCall:
               LLVM_LIKELY(!obj->isLazy())) {
             ++NumGetByIdProtoHits;
             // We've already checked that this isn't a Proxy.
-            CAPTURE_IP(
-                O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
-                                     parent, runtime, cacheEntry->slot)
-                                     .unboxToHV(runtime));
+            O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
+                                 parent, runtime, cacheEntry->slot)
+                                 .unboxToHV(runtime);
             ip = nextIP;
             DISPATCH;
           }
@@ -2430,16 +2425,15 @@ tailCall:
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumPutByIdCacheHits;
-          CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(
-              obj, runtime, cacheEntry->slot, shv));
+          JSObject::setNamedSlotValueUnsafe(
+              obj, runtime, cacheEntry->slot, shv);
           ip = nextIP;
           DISPATCH;
         }
         auto id = ID(idVal);
         NamedPropertyDescriptor desc;
-        CAPTURE_IP_ASSIGN(
-            OptValue<bool> hasOwnProp,
-            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc));
+        OptValue<bool> hasOwnProp =
+            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
         if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
             !desc.flags.accessor && desc.flags.writable &&
             !desc.flags.internalSetter) {
@@ -2463,8 +2457,7 @@ tailCall:
           }
 
           // This must be valid because an own property was already found.
-          CAPTURE_IP(
-              JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv));
+          JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv);
           ip = nextIP;
           DISPATCH;
         }
@@ -3380,8 +3373,8 @@ tailCall:
       CAPTURE_IP_ASSIGN(
           SmallHermesValue shv,
           SmallHermesValue::encodeHermesValue(O2REG(PutOwnBySlotIdx), runtime));
-      CAPTURE_IP(JSObject::setNamedSlotValueUnsafe(
-          vmcast<JSObject>(O1REG(PutOwnBySlotIdx)), runtime, idVal, shv));
+      JSObject::setNamedSlotValueUnsafe(
+          vmcast<JSObject>(O1REG(PutOwnBySlotIdx)), runtime, idVal, shv);
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
