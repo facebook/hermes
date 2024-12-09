@@ -59,20 +59,21 @@ function foo(p) {
 
 // CHECK:Function<foo>(2 params, 5 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 3<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 0] LoadParam 4<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] NewObjectWithBuffer 2<Reg8>, 0<UInt16>, 0<UInt16>
 // CHECK-NEXT:[@ 9] LoadConstUInt8 0<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 12] PutByIdLoose 2<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 18] PutByValLoose 2<Reg8>, 3<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 22] GetByIdShort 4<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 27] PutByIdLoose 2<Reg8>, 4<Reg8>, 2<UInt8>, 2<UInt16>
-// CHECK-NEXT:[@ 33] GetByVal 4<Reg8>, 2<Reg8>, 3<Reg8>
+// CHECK-NEXT:[@ 18] PutByValLoose 2<Reg8>, 4<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 22] GetByIdShort 3<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 27] PutByIdLoose 2<Reg8>, 3<Reg8>, 2<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 33] GetByVal 3<Reg8>, 2<Reg8>, 4<Reg8>
 // CHECK-NEXT:[@ 37] LoadConstUInt8 0<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 40] PutByValLoose 2<Reg8>, 0<Reg8>, 4<Reg8>
-// CHECK-NEXT:[@ 44] DelByIdLoose 1<Reg8>, 2<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 49] DelByValLoose 1<Reg8>, 2<Reg8>, 3<Reg8>
-// CHECK-NEXT:[@ 53] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 55] Ret 1<Reg8>
+// CHECK-NEXT:[@ 40] PutByValLoose 2<Reg8>, 0<Reg8>, 3<Reg8>
+// CHECK-NEXT:[@ 44] LoadConstString 3<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 48] DelByValLoose 1<Reg8>, 2<Reg8>, 3<Reg8>
+// CHECK-NEXT:[@ 52] DelByValLoose 1<Reg8>, 2<Reg8>, 4<Reg8>
+// CHECK-NEXT:[@ 56] LoadConstUndefined 1<Reg8>
+// CHECK-NEXT:[@ 58] Ret 1<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}objects.js
@@ -91,6 +92,6 @@ function foo(p) {
 // CHECK-NEXT:    bc 27: line 14 col 12
 // CHECK-NEXT:    bc 33: line 15 col 17
 // CHECK-NEXT:    bc 40: line 15 col 12
-// CHECK-NEXT:    bc 44: line 16 col 3
-// CHECK-NEXT:    bc 49: line 17 col 3
+// CHECK-NEXT:    bc 48: line 16 col 3
+// CHECK-NEXT:    bc 52: line 17 col 3
 // CHECK-NEXT:  0x0026  end of debug source table

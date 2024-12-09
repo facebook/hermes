@@ -2894,30 +2894,6 @@ void Emitter::putByValImpl(
   callThunkWithSavedIP((void *)shImpl, shImplName);
 }
 
-void Emitter::delByIdImpl(
-    FR frRes,
-    FR frTarget,
-    SHSymbolID key,
-    const char *name,
-    SHLegacyValue (
-        *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key),
-    const char *shImplName) {
-  comment("// %s r%u, r%u, %u", name, frRes.index(), frTarget.index(), key);
-
-  syncAllFRTempExcept(frRes != frTarget ? frRes : FR{});
-  syncToFrame(frTarget);
-  freeAllFRTempExcept({});
-
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frTarget);
-  a.mov(a64::w2, key);
-  callThunkWithSavedIP((void *)shImpl, shImplName);
-
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
-}
-
 void Emitter::delByValImpl(
     FR frRes,
     FR frTarget,

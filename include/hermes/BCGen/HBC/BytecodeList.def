@@ -423,17 +423,6 @@ DEFINE_OPCODE_3(PutOwnByIndexL, Reg8, Reg8, UInt32)
 /// Arg1[Arg3] = Arg2;
 DEFINE_OPCODE_4(PutOwnByVal, Reg8, Reg8, Reg8, UInt8)
 
-/// Delete a property by string table index.
-/// Arg1 = delete Arg2[stringtable[Arg3]]
-DEFINE_OPCODE_3(DelByIdLoose, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(DelByIdStrict, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(DelByIdLooseLong, Reg8, Reg8, UInt32)
-DEFINE_OPCODE_3(DelByIdStrictLong, Reg8, Reg8, UInt32)
-OPERAND_STRING_ID(DelByIdLoose, 3)
-OPERAND_STRING_ID(DelByIdStrict, 3)
-OPERAND_STRING_ID(DelByIdLooseLong, 3)
-OPERAND_STRING_ID(DelByIdStrictLong, 3)
-
 /// Get a property by value. Constants string values should instead use GetById.
 /// Arg1 = Arg2[Arg3]
 DEFINE_OPCODE_3(GetByVal, Reg8, Reg8, Reg8)
@@ -896,9 +885,6 @@ ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdLooseLong)
 ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdStrictLong)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnById, PutNewOwnNEById)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnByIdLong, PutNewOwnNEByIdLong)
-ASSERT_EQUAL_LAYOUT2(DelByIdLoose, DelByIdStrict)
-ASSERT_EQUAL_LAYOUT2(DelByIdLoose, DelByIdLooseLong)
-ASSERT_EQUAL_LAYOUT2(DelByIdLoose, DelByIdStrictLong)
 ASSERT_EQUAL_LAYOUT2(DelByValLoose, DelByValStrict)
 ASSERT_EQUAL_LAYOUT3(Add, AddN)
 ASSERT_EQUAL_LAYOUT3(Sub, SubN)

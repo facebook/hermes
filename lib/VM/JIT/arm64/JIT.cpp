@@ -678,18 +678,6 @@ EMIT_BY_VAL(PutByValStrict, putByValStrict)
 
 #undef EMIT_BY_VAL
 
-#define EMIT_DEL_BY_ID(name, op)                                               \
-  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
-    em_.delById##op(FR(inst->op1), FR(inst->op2), ID(inst->op3));              \
-  }
-
-EMIT_DEL_BY_ID(DelByIdLoose, Loose)
-EMIT_DEL_BY_ID(DelByIdLooseLong, Loose)
-EMIT_DEL_BY_ID(DelByIdStrict, Strict)
-EMIT_DEL_BY_ID(DelByIdStrictLong, Strict)
-
-#undef EMIT_DEL_BY_ID
-
 #define EMIT_DEL_BY_VAL(name, op)                                              \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
     em_.delByVal##op(FR(inst->op1), FR(inst->op2), FR(inst->op3));             \

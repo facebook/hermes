@@ -983,15 +983,6 @@ void HBCISel::generateDeletePropertyLooseInst(
   auto resultReg = encodeValue(Inst);
   auto prop = Inst->getProperty();
 
-  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
-    auto id = BCFGen_->getIdentifierID(Lit);
-    if (id <= UINT16_MAX)
-      BCFGen_->emitDelByIdLoose(resultReg, objReg, id);
-    else
-      BCFGen_->emitDelByIdLooseLong(resultReg, objReg, id);
-    return;
-  }
-
   auto propReg = encodeValue(prop);
   BCFGen_->emitDelByValLoose(resultReg, objReg, propReg);
 }
@@ -1001,15 +992,6 @@ void HBCISel::generateDeletePropertyStrictInst(
   auto objReg = encodeValue(Inst->getObject());
   auto resultReg = encodeValue(Inst);
   auto prop = Inst->getProperty();
-
-  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
-    auto id = BCFGen_->getIdentifierID(Lit);
-    if (id <= UINT16_MAX)
-      BCFGen_->emitDelByIdStrict(resultReg, objReg, id);
-    else
-      BCFGen_->emitDelByIdStrictLong(resultReg, objReg, id);
-    return;
-  }
 
   auto propReg = encodeValue(prop);
   BCFGen_->emitDelByValStrict(resultReg, objReg, propReg);

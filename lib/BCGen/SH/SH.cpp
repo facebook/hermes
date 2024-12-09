@@ -1284,18 +1284,6 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
     auto prop = inst.getProperty();
-    if (auto *propStr = llvh::dyn_cast<LiteralString>(prop)) {
-      if (strictMode)
-        os_ << "_sh_ljs_del_by_id_strict(";
-      else
-        os_ << "_sh_ljs_del_by_id_loose(";
-
-      os_ << "shr, ";
-      generateRegisterPtr(*inst.getObject());
-      os_ << ", ";
-      genStringConst(propStr) << ");\n";
-      return;
-    }
 
     if (strictMode)
       os_ << "_sh_ljs_del_by_val_strict(";

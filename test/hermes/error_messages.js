@@ -35,7 +35,7 @@ try {
 } catch (e) {
   print(e);
 }
-// CHECK: TypeError: Cannot delete property 'length' of null
+// CHECK: TypeError: Cannot convert null value to object
 
 (function strict() {
   'use strict';

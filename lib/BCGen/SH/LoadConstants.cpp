@@ -91,13 +91,6 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     }
   }
 
-  // If DeletePropertyInst's property ID is a LiteralString, we will keep it
-  // untouched and emit try_put_by_id eventually.
-  if (llvh::isa<DeletePropertyInst>(Inst) &&
-      opIndex == DeletePropertyInst::PropertyIdx &&
-      llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
-    return true;
-
   // StoreGetterSetterInst's isEnumerable is a boolean constant.
   if (llvh::isa<StoreGetterSetterInst>(Inst) &&
       opIndex == StoreGetterSetterInst::IsEnumerableIdx)
