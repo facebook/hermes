@@ -22,8 +22,8 @@ In the Hermes bytecode format, the string table is split into the following cons
  3. Small String Table.  The primary index into the string table.  When a bytecode instruction refers to a string by its index, it uses the offset into this data structure.  Represents the string with three pieces of information:
   - Whether it is UTF16 or not.
   - Its offset into the character storage.
-  - Its length.
- Each entry is packed in 32 bits: 1 bit for the UTF16 flag, 23 bits for the offset and 8 for the length.  If the length or the offset do not fit in the available space, the entry spills into the overflow table (the next section).  In this case the small entry's length is 255 and its offset field is interpreted as the offset into the overflow table.
+  - Its length.  
+   Each entry is packed in 32 bits: 1 bit for the UTF16 flag, 23 bits for the offset and 8 for the length.  If the length or the offset do not fit in the available space, the entry spills into the overflow table (the next section).  In this case the small entry's length is 255 and its offset field is interpreted as the offset into the overflow table.
  4. Overflow String Table.  Contains the offset and length information (32 bits for each) for strings that could not fit into a small entry.
  5. ASCII String Storage.  A contiguous sequence of ASCII character data.  Character data for individual strings can potentially overlap.
  6. UTF16 String Storage.  As above, but for UTF16 strings.
