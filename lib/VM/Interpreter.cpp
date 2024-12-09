@@ -3405,26 +3405,24 @@ tailCall:
       DISPATCH;
     }
 
-      CASE(DelByValLoose)
-      CASE(DelByValStrict) {
+      CASE(DelByVal) {
         const PropOpFlags defaultPropOpFlags =
-            DEFAULT_PROP_OP_FLAGS(ip->opCode == OpCode::DelByValStrict);
-        if (LLVM_LIKELY(O2REG(DelByValLoose).isObject())) {
+            DEFAULT_PROP_OP_FLAGS(ip->iDelByVal.op4 != 0);
+        if (LLVM_LIKELY(O2REG(DelByVal).isObject())) {
           CAPTURE_IP_ASSIGN(
               auto status,
               JSObject::deleteComputed(
-                  Handle<JSObject>::vmcast(&O2REG(DelByValLoose)),
+                  Handle<JSObject>::vmcast(&O2REG(DelByVal)),
                   runtime,
-                  Handle<>(&O3REG(DelByValLoose)),
+                  Handle<>(&O3REG(DelByVal)),
                   defaultPropOpFlags));
           if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
-          O1REG(DelByValLoose) =
-              HermesValue::encodeBoolValue(status.getValue());
+          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
         } else {
           // This is the "slow path".
-          CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelByValLoose))));
+          CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelByVal))));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
@@ -3434,17 +3432,16 @@ tailCall:
               JSObject::deleteComputed(
                   Handle<JSObject>::vmcast(tmpHandle),
                   runtime,
-                  Handle<>(&O3REG(DelByValLoose)),
+                  Handle<>(&O3REG(DelByVal)),
                   defaultPropOpFlags));
           if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
             goto exception;
           }
-          O1REG(DelByValLoose) =
-              HermesValue::encodeBoolValue(status.getValue());
+          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
         tmpHandle.clear();
-        ip = NEXTINST(DelByValLoose);
+        ip = NEXTINST(DelByVal);
         DISPATCH;
       }
       CASE(CreateRegExp) {

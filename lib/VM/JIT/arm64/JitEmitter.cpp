@@ -2894,20 +2894,13 @@ void Emitter::putByValImpl(
   callThunkWithSavedIP((void *)shImpl, shImplName);
 }
 
-void Emitter::delByValImpl(
-    FR frRes,
-    FR frTarget,
-    FR frKey,
-    const char *name,
-    SHLegacyValue (
-        *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHLegacyValue *key),
-    const char *shImplName) {
+void Emitter::delByVal(FR frRes, FR frTarget, FR frKey, bool strict) {
   comment(
-      "// %s r%u, r%u, r%u",
-      name,
+      "// DelByVal r%u, r%u, r%u, %d",
       frRes.index(),
       frTarget.index(),
-      frKey.index());
+      frKey.index(),
+      strict);
 
   syncAllFRTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR{});
   syncToFrame(frTarget);
@@ -2917,7 +2910,17 @@ void Emitter::delByValImpl(
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frTarget);
   loadFrameAddr(a64::x2, frKey);
-  callThunkWithSavedIP((void *)shImpl, shImplName);
+  if (strict) {
+    EMIT_RUNTIME_CALL(
+        *this,
+        SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+        _sh_ljs_del_by_val_strict);
+  } else {
+    EMIT_RUNTIME_CALL(
+        *this,
+        SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+        _sh_ljs_del_by_val_loose);
+  }
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));

@@ -678,15 +678,9 @@ EMIT_BY_VAL(PutByValStrict, putByValStrict)
 
 #undef EMIT_BY_VAL
 
-#define EMIT_DEL_BY_VAL(name, op)                                              \
-  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
-    em_.delByVal##op(FR(inst->op1), FR(inst->op2), FR(inst->op3));             \
-  }
-
-EMIT_DEL_BY_VAL(DelByValLoose, Loose)
-EMIT_DEL_BY_VAL(DelByValStrict, Strict)
-
-#undef EMIT_DEL_BY_VAL
+inline void JITContext::Compiler::emitDelByVal(const inst::DelByValInst *inst) {
+  em_.delByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4);
+}
 
 inline void JITContext::Compiler::emitGetByIndex(
     const inst::GetByIndexInst *inst) {

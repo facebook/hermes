@@ -439,8 +439,8 @@ DEFINE_OPCODE_3(PutByValStrict, Reg8, Reg8, Reg8)
 
 /// Delete a property by value (when the value is not known at compile time).
 /// Arg1 = delete Arg2[Arg3]
-DEFINE_OPCODE_3(DelByValLoose, Reg8, Reg8, Reg8)
-DEFINE_OPCODE_3(DelByValStrict, Reg8, Reg8, Reg8)
+/// Arg4 : Integer value set to 1 for strict mode semantics, 0 for loose.
+DEFINE_OPCODE_4(DelByVal, Reg8, Reg8, Reg8, UInt8)
 
 /// Add a getter and a setter for a property by value.
 /// Object.defineProperty(Arg1, Arg2, { get: Arg3, set: Arg4 }).
@@ -885,7 +885,6 @@ ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdLooseLong)
 ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdStrictLong)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnById, PutNewOwnNEById)
 ASSERT_EQUAL_LAYOUT3(PutNewOwnByIdLong, PutNewOwnNEByIdLong)
-ASSERT_EQUAL_LAYOUT2(DelByValLoose, DelByValStrict)
 ASSERT_EQUAL_LAYOUT3(Add, AddN)
 ASSERT_EQUAL_LAYOUT3(Sub, SubN)
 ASSERT_EQUAL_LAYOUT3(Mul, MulN)

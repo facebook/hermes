@@ -984,7 +984,7 @@ void HBCISel::generateDeletePropertyLooseInst(
   auto prop = Inst->getProperty();
 
   auto propReg = encodeValue(prop);
-  BCFGen_->emitDelByValLoose(resultReg, objReg, propReg);
+  BCFGen_->emitDelByVal(resultReg, objReg, propReg, /* strict */ 0);
 }
 void HBCISel::generateDeletePropertyStrictInst(
     DeletePropertyStrictInst *Inst,
@@ -994,7 +994,7 @@ void HBCISel::generateDeletePropertyStrictInst(
   auto prop = Inst->getProperty();
 
   auto propReg = encodeValue(prop);
-  BCFGen_->emitDelByValStrict(resultReg, objReg, propReg);
+  BCFGen_->emitDelByVal(resultReg, objReg, propReg, /* strict */ 1);
 }
 void HBCISel::generateLoadPropertyInst(
     LoadPropertyInst *Inst,

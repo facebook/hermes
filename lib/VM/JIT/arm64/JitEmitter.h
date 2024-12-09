@@ -717,13 +717,7 @@ class Emitter {
   void getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx);
   void putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx);
 
-#define DECL_DEL_BY_VAL(methodName, commentStr, shFn)              \
-  void methodName(FR frRes, FR frTarget, FR frKey) {               \
-    delByValImpl(frRes, frTarget, frKey, commentStr, shFn, #shFn); \
-  }
-
-  DECL_DEL_BY_VAL(delByValLoose, "delByValLoose", _sh_ljs_del_by_val_loose);
-  DECL_DEL_BY_VAL(delByValStrict, "delByValStrict", _sh_ljs_del_by_val_strict);
+  void delByVal(FR frRes, FR frTarget, FR frKey, bool strict);
 
   void instanceOf(FR frRes, FR frLeft, FR frRight);
   void isIn(FR frRes, FR frLeft, FR frRight);
@@ -1143,15 +1137,6 @@ class Emitter {
           SHLegacyValue *target,
           SHLegacyValue *key,
           SHLegacyValue *value),
-      const char *shImplName);
-
-  void delByValImpl(
-      FR frRes,
-      FR frTarget,
-      FR frKey,
-      const char *name,
-      SHLegacyValue (
-          *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHLegacyValue *key),
       const char *shImplName);
 
   void getByIdImpl(

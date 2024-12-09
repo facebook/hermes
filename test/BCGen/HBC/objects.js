@@ -70,10 +70,10 @@ function foo(p) {
 // CHECK-NEXT:[@ 37] LoadConstUInt8 0<Reg8>, 2<UInt8>
 // CHECK-NEXT:[@ 40] PutByValLoose 2<Reg8>, 0<Reg8>, 3<Reg8>
 // CHECK-NEXT:[@ 44] LoadConstString 3<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 48] DelByValLoose 1<Reg8>, 2<Reg8>, 3<Reg8>
-// CHECK-NEXT:[@ 52] DelByValLoose 1<Reg8>, 2<Reg8>, 4<Reg8>
-// CHECK-NEXT:[@ 56] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 58] Ret 1<Reg8>
+// CHECK-NEXT:[@ 48] DelByVal 1<Reg8>, 2<Reg8>, 3<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 53] DelByVal 1<Reg8>, 2<Reg8>, 4<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 58] LoadConstUndefined 1<Reg8>
+// CHECK-NEXT:[@ 60] Ret 1<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}objects.js
@@ -93,5 +93,5 @@ function foo(p) {
 // CHECK-NEXT:    bc 33: line 15 col 17
 // CHECK-NEXT:    bc 40: line 15 col 12
 // CHECK-NEXT:    bc 48: line 16 col 3
-// CHECK-NEXT:    bc 52: line 17 col 3
+// CHECK-NEXT:    bc 53: line 17 col 3
 // CHECK-NEXT:  0x0026  end of debug source table
