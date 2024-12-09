@@ -27,6 +27,7 @@ component_syntax=true
 enums=true
 
 as_const=true
+experimental.natural_inference.exports.primitive_const=true
 
 [version]
 ^0.255.0
