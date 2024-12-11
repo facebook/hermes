@@ -1104,7 +1104,7 @@ Function *ESTreeIRGen::genFieldInitFunction() {
   ESTree::ClassDeclarationNode *classNode = typedClassContext.node;
   sema::FunctionInfo *initFuncInfo =
       ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode)
-          ->fieldInitFunctionInfo;
+          ->instanceElementsInitFunctionInfo;
   if (initFuncInfo == nullptr) {
     return nullptr;
   }

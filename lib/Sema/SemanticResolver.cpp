@@ -901,7 +901,7 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
   // Create the these initializers even if no value initializer is present.
   FunctionInfo *functionInfo = node->_static
       ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
-      : curClassContext_->getOrCreateFieldInitFunctionInfo();
+      : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo();
   // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
     // We visit the initializer expression in the context of a synthesized
@@ -2374,9 +2374,9 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
   classDecoration->implicitCtorFunctionInfo = implicitCtor;
 }
 
-FunctionInfo *ClassContext::getOrCreateFieldInitFunctionInfo() {
+FunctionInfo *ClassContext::getOrCreateInstanceElementsInitFunctionInfo() {
   auto *classDecoration = getDecoration<ClassLikeDecoration>(classNode_);
-  if (classDecoration->fieldInitFunctionInfo == nullptr) {
+  if (classDecoration->instanceElementsInitFunctionInfo == nullptr) {
     FunctionInfo *fieldInitFunc = resolver_.semCtx_.newFunction(
         FuncIsArrow::No,
         FunctionInfo::ConstructorKind::None,
@@ -2387,9 +2387,9 @@ FunctionInfo *ClassContext::getOrCreateFieldInitFunctionInfo() {
     // This is callled for the side effect of associating the new scope with
     // fieldInitFunc.  We don't need the value now, but we will later.
     (void)resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);
-    classDecoration->fieldInitFunctionInfo = fieldInitFunc;
+    classDecoration->instanceElementsInitFunctionInfo = fieldInitFunc;
   }
-  return classDecoration->fieldInitFunctionInfo;
+  return classDecoration->instanceElementsInitFunctionInfo;
 }
 
 FunctionInfo *ClassContext::getOrCreateStaticElementsInitFunctionInfo() {

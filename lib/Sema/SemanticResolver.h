@@ -584,11 +584,10 @@ class ClassContext {
   /// below.
   void createImplicitConstructorFunctionInfo();
 
-  /// The caller asserts that the class of the current context
-  /// has field initializers.  On first call for a \p classDecoration, creates a
-  /// FunctionInfo for an implicit function to do the field initializations.
-  /// On subsequent calls, return that FunctionInfo.
-  FunctionInfo *getOrCreateFieldInitFunctionInfo();
+  /// On first call, creates a FunctionInfo for an implicit function to do the
+  /// instance elements initializations. On subsequent calls, return that
+  /// FunctionInfo.
+  FunctionInfo *getOrCreateInstanceElementsInitFunctionInfo();
 
   /// Get or create a synthetic function information for the static elements
   /// initializer of a class.

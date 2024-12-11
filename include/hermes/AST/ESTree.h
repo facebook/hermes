@@ -396,10 +396,10 @@ class ClassLikeDecoration : public ScopeDecorationBase {
   // that constructor.
   sema::FunctionInfo *implicitCtorFunctionInfo{};
 
-  // If non-null, the decorated class has field initializers, and
+  // If non-null, the decorated class needs instance elements initialized, and
   // this is the FunctionInfo for the synthetic Function in which those
   // initializations are done.
-  sema::FunctionInfo *fieldInitFunctionInfo{};
+  sema::FunctionInfo *instanceElementsInitFunctionInfo{};
 
   // If non-null, the decorated class has static field initializers, and this is
   // the FunctionInfo for the synthetic Function in which those static
