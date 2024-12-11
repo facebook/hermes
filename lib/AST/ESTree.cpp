@@ -250,5 +250,17 @@ IdentifierNode *getClassID(ClassLikeNode *node) {
   llvm_unreachable("invalid ClassLikeNode");
 }
 
+ClassBodyNode *getClassBody(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return cast<ClassBodyNode>(cast<ClassExpressionNode>(node)->_body);
+    case NodeKind::ClassDeclaration:
+      return cast<ClassBodyNode>(cast<ClassDeclarationNode>(node)->_body);
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
 } // namespace ESTree
 } // namespace hermes

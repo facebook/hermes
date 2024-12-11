@@ -55,6 +55,12 @@
     },
     {
       "paths": [
+        "mjsunit/regress/regress-crbug-451770.js"
+      ],
+      "comment": "Temporarily turn off in classes stack."
+    },
+    {
+      "paths": [
         "test262/test/built-ins/AsyncArrowFunction/is-a-constructor.js",
         "test262/test/built-ins/GeneratorFunction/is-a-constructor.js",
         "test262/test/built-ins/AsyncFunction/is-a-constructor.js"

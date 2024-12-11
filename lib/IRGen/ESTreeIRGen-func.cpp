@@ -370,12 +370,9 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     }
 
     if (functionKind == Function::DefinitionKind::ES6Constructor) {
-      assert(
-          typedClassContext.node && typedClassContext.type &&
-          "Class should be set for constructor function.");
       // If we're compiling a constructor with no superclass, emit the
       // field inits at the start.
-      if (typedClassContext.node->_superClass == nullptr) {
+      if (superClassNode == nullptr && curFunction()->hasTypedClassContext()) {
         emitTypedFieldInitCall(typedClassContext.type);
       }
     }

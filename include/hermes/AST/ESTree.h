@@ -1244,6 +1244,9 @@ Node *getSuperClass(ClassLikeNode *node);
 /// \return the IdentifierNode of \p node. Can be null.
 IdentifierNode *getClassID(ClassLikeNode *node);
 
+/// \return the body node of \p node.
+ClassBodyNode *getClassBody(ClassLikeNode *node);
+
 /// Allow using \p NodeKind in \p llvh::DenseMaps.
 struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {
   static inline NodeKind getEmptyKey() {

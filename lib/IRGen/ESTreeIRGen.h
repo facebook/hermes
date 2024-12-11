@@ -215,6 +215,14 @@ class FunctionContext {
     return semInfo_;
   }
 
+  /// \return true if there is an active typed class context held in this
+  /// function context.
+  bool hasTypedClassContext() const {
+    // The class node is always set when a typed class is encountered, so we
+    // can reliably only test this field.
+    return typedClassContext.node;
+  }
+
   /// Generate a unique string that represents a temporary value. The string
   /// \p hint appears in the name.
   Identifier genAnonymousLabelName(llvh::StringRef const hint);
@@ -616,6 +624,22 @@ class ESTreeIRGen {
   CreateFunctionInst *genTypedImplicitConstructor(
       const Identifier &consName,
       Value *superClass);
+
+  /// Generate IR for a legacy class declaration. This just forwards into
+  /// genLegacyClassLike.
+  void genLegacyClassDeclaration(ESTree::ClassDeclarationNode *node);
+
+  /// Generate IR for a legacy class expression. This just forwards into
+  /// genLegacyClassLike.
+  Value *genLegacyClassExpression(
+      ESTree::ClassExpressionNode *node,
+      Identifier nameHint);
+
+  /// Generate IR for legacy classes or declarations. This iterates through the
+  /// entire class body and processes each class element.
+  CreateClassInst *genLegacyClassLike(
+      ESTree::ClassLikeNode *classNode,
+      Identifier nameHint);
 
   /// Emit code to allocate an empty instance of the specified class and return
   /// it.

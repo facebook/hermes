@@ -205,6 +205,10 @@ Value *ESTreeIRGen::_genExpressionImpl(
     return genAwaitExpr(A);
   }
 
+  if (auto *classExpr = llvh::dyn_cast<ESTree::ClassExpressionNode>(expr)) {
+    return genLegacyClassExpression(classExpr, nameHint);
+  }
+
   if (auto *ICK = llvh::dyn_cast<ESTree::ImplicitCheckedCastNode>(expr)) {
     // FIXME: emit something.
     return Builder.createCheckedTypeCastInst(

@@ -24,11 +24,9 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       llvh::dyn_cast_or_null<flow::ClassConstructorType>(
           declType ? declType->info : nullptr);
 
-  // If the class is not annotated with a type, it is legacy, and we don't
-  // support that yet.
+  // If the class is not annotated with a type, it is legacy.
   if (!consType) {
-    Mod->getContext().getSourceErrorManager().error(
-        node->getStartLoc(), "Legacy JS classes not supported (yet)");
+    genLegacyClassDeclaration(node);
     return;
   }
 
