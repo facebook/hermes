@@ -2838,6 +2838,35 @@ void Emitter::throwIfEmpty(FR frRes, FR frInput) {
        }});
 }
 
+void Emitter::throwIfThisInitialized(FR frInput) {
+  comment("// ThrowIfThisInitialized r%u", frInput.index());
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+
+  // TODO: Add back the sync/free calls inside try.
+  // Outside a try it's not observable behavior.
+  HWReg hwInput = getOrAllocFRInGpX(frInput, true);
+  HWReg hwTemp = allocTempGpX();
+  freeReg(hwTemp);
+
+  emit_sh_ljs_is_empty(a, hwTemp.a64GpX(), hwInput.a64GpX());
+  a.b_ne(slowPathLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .frInput1 = frInput,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: ThrowIfThisInitialized r%u", sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         EMIT_RUNTIME_CALL(
+             em, void (*)(SHRuntime *), _sh_throw_this_already_initialized);
+         // Call does not return.
+       }});
+}
+
 void Emitter::createRegExp(
     FR frRes,
     SHSymbolID patternID,

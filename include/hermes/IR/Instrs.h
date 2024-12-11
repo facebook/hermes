@@ -3503,6 +3503,48 @@ class ThrowIfInst : public Instruction {
   }
 };
 
+class ThrowIfThisInitializedInst : public Instruction {
+  ThrowIfThisInitializedInst(const ThrowIfThisInitializedInst &) = delete;
+  void operator=(const ThrowIfThisInitializedInst &) = delete;
+
+ public:
+  enum { DerivedClassCheckedThisIdx };
+
+  explicit ThrowIfThisInitializedInst(Value *derivedClassCheckedThis)
+      : Instruction(ValueKind::ThrowIfThisInitializedInstKind) {
+    pushOperand(derivedClassCheckedThis);
+    setType(Type::createNoType());
+  }
+  explicit ThrowIfThisInitializedInst(
+      const ThrowIfThisInitializedInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getDerivedClassCheckedThis() const {
+    return getOperand(DerivedClassCheckedThisIdx);
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setThrow();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ThrowIfThisInitializedInstKind;
+  }
+};
+
 class HBCResolveParentEnvironmentInst : public BaseScopeInst {
   HBCResolveParentEnvironmentInst(const HBCResolveParentEnvironmentInst &) =
       delete;

@@ -601,6 +601,10 @@ DEFINE_OPCODE_1(Throw, Reg8)
 /// Arg2 is the value to check
 DEFINE_OPCODE_2(ThrowIfEmpty, Reg8, Reg8)
 
+/// If Arg1 is not Empty, throw ReferenceError.
+/// Arg1 is the checked this of a derived constructor.
+DEFINE_OPCODE_1(ThrowIfThisInitialized, Reg8)
+
 /// Implementation dependent debugger action.
 DEFINE_OPCODE_0(Debugger)
 

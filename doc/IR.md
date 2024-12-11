@@ -778,6 +778,16 @@ Arguments | %value is the value to check. %rejectedTypesUnion is a union of type
 Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with *empty* until they are initialized.
 Effects | Potentially throws an exception. Has no other side effects.
 
+### ThrowIfThisInitializedInst
+
+ThrowIfThisInitializedInst | _
+--- | --- |
+Description | Check whether the value of `this` in a derived class constructor is already initialized. If so, throw.
+Example |  %_ = ThrowIfThisInitializedInst %thisVal
+Arguments | %thisVal is the value to check.
+Semantics | This is used to guard against double-initialization of `this`, which happens by invoking `super()` multiple times.
+Effects | Potentially throws an exception. Has no other side effects.
+
 ### CoerceThisNS
 
 CoerceThisNS | _

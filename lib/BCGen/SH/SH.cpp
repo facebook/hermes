@@ -2174,6 +2174,12 @@ class InstrGen {
         ra_.getRegister(inst.getCheckedValue()),
         "_sh_throw_empty(shr)");
   }
+  void generateThrowIfThisInitializedInst(ThrowIfThisInitializedInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_ljs_throw_if_this_initialized(shr, ";
+    generateRegister(*inst.getDerivedClassCheckedThis());
+    os_ << ");\n";
+  }
   void generateLIRDeadValueInst(LIRDeadValueInst &inst) {
     os_.indent(2);
     os_ << "__builtin_unreachable();\n";

@@ -770,6 +770,13 @@ ThrowIfInst *IRBuilder::createThrowIfInst(
   return inst;
 }
 
+ThrowIfThisInitializedInst *IRBuilder::createThrowIfThisInitializedInst(
+    Value *subclassCheckedThis) {
+  auto *inst = new ThrowIfThisInitializedInst(subclassCheckedThis);
+  insert(inst);
+  return inst;
+}
+
 HBCGetGlobalObjectInst *IRBuilder::createHBCGetGlobalObjectInst() {
   auto inst = new HBCGetGlobalObjectInst();
   insert(inst);

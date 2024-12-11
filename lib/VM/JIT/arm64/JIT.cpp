@@ -1113,6 +1113,11 @@ inline void JITContext::Compiler::emitThrowIfEmpty(
   em_.throwIfEmpty(FR(inst->op1), FR(inst->op2));
 }
 
+inline void JITContext::Compiler::emitThrowIfThisInitialized(
+    const inst::ThrowIfThisInitializedInst *inst) {
+  em_.throwIfThisInitialized(FR(inst->op1));
+}
+
 inline void JITContext::Compiler::emitAddS(const inst::AddSInst *inst) {
   em_.addS(FR(inst->op1), FR(inst->op2), FR(inst->op3));
 }

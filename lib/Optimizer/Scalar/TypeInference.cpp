@@ -647,6 +647,9 @@ class TypeInferenceImpl {
 
     return Type::subtractTy(type, Type::createEmpty());
   }
+  Type inferThrowIfThisInitializedInst(ThrowIfThisInitializedInst *inst) {
+    return Type::createNoType();
+  }
   Type inferIteratorBeginInst(IteratorBeginInst *inst) {
     return Type::createAnyType();
   }

@@ -514,6 +514,9 @@ class IRBuilder {
 
   ThrowIfInst *createThrowIfInst(Value *checkedValue, Type invalidTypes);
 
+  ThrowIfThisInitializedInst *createThrowIfThisInitializedInst(
+      Value *subclassCheckedThis);
+
   HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);

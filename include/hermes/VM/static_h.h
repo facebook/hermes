@@ -389,9 +389,27 @@ SHERMES_EXPORT void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message)
 SHERMES_EXPORT void _sh_throw_type_error_ascii(
     SHRuntime *shr,
     const char *message) __attribute__((noreturn));
+SHERMES_EXPORT void _sh_throw_reference_error_ascii(
+    SHRuntime *shr,
+    const char *message) __attribute__((noreturn));
 
 /// Throw a ReferenceError for accessing uninitialized variable.
 SHERMES_EXPORT void _sh_throw_empty(SHRuntime *shr) __attribute__((noreturn));
+
+/// Throws a ReferenceError for double-initialization of `this`.
+__attribute__((noreturn)) static inline void _sh_throw_this_already_initialized(
+    SHRuntime *shr) {
+  _sh_throw_reference_error_ascii(shr, "Cannot call super constructor twice");
+}
+
+/// Throw a ReferenceError if the given derived class constructor's checked this
+/// is already initialized.
+static inline void _sh_ljs_throw_if_this_initialized(
+    SHRuntime *shr,
+    SHLegacyValue checkedThis) {
+  if (!_sh_ljs_is_empty(checkedThis))
+    _sh_throw_this_already_initialized(shr);
+}
 
 /// Performs a function call. The new frame is at the top of the stack.
 /// Arguments, this, and callee must be populated.

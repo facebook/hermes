@@ -383,6 +383,14 @@ extern "C" void _sh_throw_type_error_ascii(
   _sh_throw_current(shr);
 }
 
+extern "C" void _sh_throw_reference_error_ascii(
+    SHRuntime *shr,
+    const char *message) {
+  Runtime &runtime = getRuntime(shr);
+  (void)runtime.raiseReferenceError(message);
+  _sh_throw_current(shr);
+}
+
 extern "C" void _sh_throw_empty(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
   (void)runtime.raiseReferenceError("accessing an uninitialized variable");

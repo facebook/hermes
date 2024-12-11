@@ -1236,6 +1236,12 @@ void HBCISel::generateThrowIfInst(
   BCFGen_->emitThrowIfEmpty(
       encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
 }
+void HBCISel::generateThrowIfThisInitializedInst(
+    hermes::ThrowIfThisInitializedInst *Inst,
+    hermes::BasicBlock *next) {
+  BCFGen_->emitThrowIfThisInitialized(
+      encodeValue(Inst->getDerivedClassCheckedThis()));
+}
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
 }

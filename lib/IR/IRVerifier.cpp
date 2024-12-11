@@ -1516,6 +1516,11 @@ bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
   return true;
 }
 
+bool Verifier::visitThrowIfThisInitializedInst(
+    const ThrowIfThisInitializedInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitPrLoadInst(const PrLoadInst &Inst) {
   return true;
 }

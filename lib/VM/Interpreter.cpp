@@ -1862,6 +1862,18 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(ThrowIfThisInitialized) {
+        if (LLVM_UNLIKELY(!O1REG(ThrowIfThisInitialized).isEmpty())) {
+          SLOW_DEBUG(
+              dbgs() << "Throwing Error for already initialized subclass this");
+          CAPTURE_IP(runtime.raiseReferenceError(
+              "Cannot call super constructor twice"));
+          goto exception;
+        }
+        ip = NEXTINST(ThrowIfThisInitialized);
+        DISPATCH;
+      }
+
       CASE(Debugger) {
         SLOW_DEBUG(dbgs() << "debugger statement executed\n");
 #ifdef HERMES_ENABLE_DEBUGGER
