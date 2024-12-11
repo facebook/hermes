@@ -9,6 +9,7 @@
 
 #include "hermes/IR/IRUtils.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringSet.h"
 #include "llvh/Support/Debug.h"
@@ -322,6 +323,19 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
       lazyDataInst->getCapturedNewTarget(),
       lazyDataInst->getCapturedArguments(),
       homeObj};
+
+  // If there was class context, restore it.
+  if (lazyDataInst->getClsConstructor()) {
+    curFunction()->legacyClassContext = std::make_shared<LegacyClassContext>(
+        lazyDataInst->getClsConstructor(),
+        lazyDataInst->getClsInstaneElemInitFunc());
+  }
+
+  auto freeClsCtx = llvh::make_scope_exit([this]() {
+    if (curFunction()->legacyClassContext)
+      curFunction()->legacyClassContext.reset();
+  });
+
   Function *compiledFunc;
   if (auto *arrow = llvh::dyn_cast<ESTree::ArrowFunctionExpressionNode>(Root)) {
     if (arrow->_async) {
@@ -370,6 +384,9 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
   // because we store the error message in BytecodeFunction and reuse it,
   // ensuring we never use the information in lazyFunc ever again.
 
+  // Free the allocated legacy class context.
+  if (curFunction()->legacyClassContext)
+    curFunction()->legacyClassContext.reset();
   return compiledFunc;
 }
 

@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -lazy %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O0 -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 // RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 

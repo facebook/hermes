@@ -5866,6 +5866,8 @@ class LazyCompilationDataInst : public Instruction {
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
     HomeObjectIdx,
+    ClsConstructorIdx,
+    ClsInstanceElemInitFuncIdx,
     ParentVarScopeIdx
   };
 
@@ -5875,6 +5877,8 @@ class LazyCompilationDataInst : public Instruction {
       Value *capturedNewTarget,
       Value *capturedArguments,
       Value *capturedHomeObject,
+      Value *clsConstructor,
+      Value *clsInstanceElemInitFunc,
       VariableScope *parentVarScope)
       : Instruction(ValueKind::LazyCompilationDataInstKind), data_(data) {
     // Store the captured variables as EmptySentinel if they were null.
@@ -5890,6 +5894,8 @@ class LazyCompilationDataInst : public Instruction {
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
     pushOperand(capturedHomeObject);
+    pushOperand(clsConstructor);
+    pushOperand(clsInstanceElemInitFunc);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: LazyCompilationData relies on the fact that we don't delete
@@ -5940,6 +5946,20 @@ class LazyCompilationDataInst : public Instruction {
   }
   const Variable *getHomeObject() const {
     return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
+  }
+  /// \return the class context constructor Variable, nullptr if there is none.
+  Variable *getClsConstructor() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsConstructorIdx));
+  }
+  /// \return the class context instance elements initializer Variable, nullptr
+  /// if there is none.
+  Variable *getClsInstaneElemInitFunc() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsInstanceElemInitFuncIdx));
+  }
+
+  // Derived constructor `this` (operand at ClsConstructorIdx) can be empty.
+  bool acceptsEmptyTypeImpl() const {
+    return true;
   }
 
   static bool hasOutput() {

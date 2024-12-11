@@ -745,6 +745,8 @@ class IRBuilder {
       Value *capturedNewTarget,
       Variable *capturedArguments,
       Variable *homeObject,
+      Variable *classCtxConstructor,
+      Variable *classCtxInitFuncVar,
       VariableScope *parentVarScope);
 
   EvalCompilationDataInst *createEvalCompilationDataInst(

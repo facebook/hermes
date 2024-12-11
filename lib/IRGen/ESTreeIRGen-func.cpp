@@ -1286,6 +1286,12 @@ void ESTreeIRGen::setupLazyFunction(
   Builder.createJSThisParam(F);
   BasicBlock *bb = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(bb);
+  Variable *constructor = nullptr;
+  Variable *initFuncVar = nullptr;
+  if (curFunction()->hasLegacyClassContext()) {
+    constructor = curFunction()->legacyClassContext->constructor;
+    initFuncVar = curFunction()->legacyClassContext->instElemInitFuncVar;
+  }
 
   LazyCompilationData data{
       bodyBlock->bufferId,
@@ -1295,20 +1301,14 @@ void ESTreeIRGen::setupLazyFunction(
       bodyBlock->paramYield,
       bodyBlock->paramAwait};
 
-  // TODO: support lazy compilation of the constructor of a class.
-  if (semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind !=
-      sema::FunctionInfo::ConstructorKind::None) {
-    Builder.getModule()->getContext().getSourceErrorManager().error(
-        F->getSourceRange(),
-        "lazy functions inside class constructor unsupported");
-    return;
-  }
   Builder.createLazyCompilationDataInst(
       std::move(data),
       capturedState.thisVal,
       capturedState.newTarget,
       capturedState.arguments,
       capturedState.homeObject,
+      constructor,
+      initFuncVar,
       parentVarScope);
   Builder.createUnreachableInst();
 

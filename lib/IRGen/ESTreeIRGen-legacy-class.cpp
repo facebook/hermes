@@ -113,7 +113,8 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
         curScope->getVariableScope(),
         superClassNode,
         Function::DefinitionKind::ES6Constructor,
-        clsPrototypeVar);
+        clsPrototypeVar,
+        consMethodNode);
   }
   AllocStackInst *clsPrototypeOutput = Builder.createAllocStackInst(
       genAnonymousLabelName("clsPrototype"), Type::createObject());

@@ -1349,6 +1349,8 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
     Value *capturedNewTarget,
     Variable *capturedArguments,
     Variable *homeObject,
+    Variable *classCtxConstructor,
+    Variable *classCtxInitFuncVar,
     VariableScope *parentVarScope) {
   auto *inst = new LazyCompilationDataInst(
       std::move(data),
@@ -1357,6 +1359,10 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
       homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
+      classCtxConstructor ? static_cast<Value *>(classCtxConstructor)
+                          : getEmptySentinel(),
+      classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
+                          : getEmptySentinel(),
       parentVarScope);
   insert(inst);
   return inst;
