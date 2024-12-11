@@ -133,7 +133,8 @@ ExecutionStatus Interpreter::casePutOwnByVal(
              ip->iPutOwnByVal.op4
                  ? DefinePropertyFlags::getDefaultNewPropertyFlags()
                  : DefinePropertyFlags::getNewNonEnumerableFlags(),
-             Handle<>(&O2REG(PutOwnByVal)))
+             Handle<>(&O2REG(PutOwnByVal)),
+             PropOpFlags().plusThrowOnError())
       .getStatus();
 }
 

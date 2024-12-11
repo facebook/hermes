@@ -521,10 +521,10 @@ Effects | May read and write memory or throw.
 
 StoreOwnPropertyInst | _
 --- | --- |
-Description | Stores a value to an *own property* of JavaScript object.
-Example |   %4 = StoreOwnPropertyInst %value, %object, %property, %enumerable : boolean
-Arguments | %value is the value to be stored. %object is the object where the field with name %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
-Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
+Description | Define an *own property* of JavaScript object. Will throw if the property write was not successful (e.g. trying to store to a non-writable property.)
+Example |   %4 = StoreOwnPropertyInst %value, %object : object, %property, %enumerable : boolean
+Arguments | %value is the value to be stored. %object *must* be of an object type; it's the object where the field with name %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
+Semantics | Implements ES15 7.3.8 DefinePropertyOrThrow. The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
 ### StoreNewOwnPropertyInst

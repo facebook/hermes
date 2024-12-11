@@ -2644,7 +2644,8 @@ tailCall:
           runtime,
           tmpHandle,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          Handle<>(&O2REG(PutOwnByIndex))));
+          Handle<>(&O2REG(PutOwnByIndex)),
+          PropOpFlags().plusThrowOnError()));
       gcScope.flushToSmallCount(KEEP_HANDLES);
       tmpHandle.clear();
       ip = nextIP;

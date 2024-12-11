@@ -1173,7 +1173,8 @@ extern "C" void _sh_ljs_put_own_by_val(
         runtime,
         Handle<>(toPHV(key)),
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        Handle<>(toPHV(value)));
+        Handle<>(toPHV(value)),
+        PropOpFlags().plusThrowOnError());
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -1192,7 +1193,8 @@ extern "C" void _sh_ljs_put_own_ne_by_val(
         runtime,
         Handle<>(toPHV(key)),
         DefinePropertyFlags::getNewNonEnumerableFlags(),
-        Handle<>(toPHV(value)));
+        Handle<>(toPHV(value)),
+        PropOpFlags().plusThrowOnError());
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -1213,7 +1215,8 @@ extern "C" void _sh_ljs_put_own_by_index(
         runtime,
         indexHandle,
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        Handle<>(toPHV(value)));
+        Handle<>(toPHV(value)),
+        PropOpFlags().plusThrowOnError());
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
