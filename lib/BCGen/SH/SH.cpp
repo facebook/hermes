@@ -2068,6 +2068,8 @@ class InstrGen {
         return "_sh_ljs_is_double";
       case Type::BigInt:
         return "_sh_ljs_is_bigint";
+      case Type::Symbol:
+        return "_sh_ljs_is_symbol";
       case Type::Environment:
         hermes_fatal("cannot check for environment type");
       case Type::FunctionCode:

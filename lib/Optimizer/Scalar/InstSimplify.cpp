@@ -201,6 +201,9 @@ class InstSimplifyImpl {
     if (t.isStringType()) {
       return builder_.getLiteralString("string");
     }
+    if (t.isSymbolType()) {
+      return builder_.getLiteralString("symbol");
+    }
     // Type is either multiple things or object. We cannot distinguish object
     // from closure yet, so give up.
     return nullptr;

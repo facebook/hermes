@@ -69,6 +69,8 @@ class Type {
     String,
     Number,
     BigInt,
+    // ES2024 4.4.32 Symbol type (not the symbol object)
+    Symbol,
     Environment,
     /// Function code (IR Function value), not a closure.
     FunctionCode,
@@ -92,6 +94,7 @@ class Type {
         "string",
         "number",
         "bigint",
+        "symbol",
         "environment",
         "functionCode",
         "object"};
@@ -115,7 +118,7 @@ class Type {
 
   static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
-      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean);
+      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean) | BIT_TO_VAL(Symbol);
 
   static constexpr uint16_t NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
@@ -169,6 +172,9 @@ class Type {
   }
   static constexpr Type createString() {
     return Type(BIT_TO_VAL(String));
+  }
+  static constexpr Type createSymbol() {
+    return Type(BIT_TO_VAL(Symbol));
   }
   static constexpr Type createObject() {
     return Type(BIT_TO_VAL(Object));
@@ -239,6 +245,9 @@ class Type {
   constexpr bool isBigIntType() const {
     return IS_VAL(BigInt);
   }
+  constexpr bool isSymbolType() const {
+    return IS_VAL(Symbol);
+  }
   constexpr bool isEnvironmentType() const {
     return IS_VAL(Environment);
   }
@@ -303,6 +312,11 @@ class Type {
   /// \returns true if this type can represent a bigint value.
   constexpr bool canBeBigInt() const {
     return canBeType(Type::createBigInt());
+  }
+
+  /// \returns true if this type can represent a symbol value.
+  constexpr bool canBeSymbol() const {
+    return canBeType(Type::createSymbol());
   }
 
   /// \returns true if this type can represent a number value.

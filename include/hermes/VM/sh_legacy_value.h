@@ -260,6 +260,9 @@ static inline bool _sh_ljs_is_empty(SHLegacyValue v) {
 static inline bool _sh_ljs_is_bool(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Bool;
 }
+static inline bool _sh_ljs_is_symbol(SHLegacyValue v) {
+  return _sh_ljs_get_etag(v) == HVETag_Symbol;
+}
 static inline bool _sh_ljs_is_object(SHLegacyValue v) {
   return _sh_ljs_get_tag(v) == HVTag_Object;
 }
