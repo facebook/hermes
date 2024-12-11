@@ -1049,20 +1049,26 @@ class ESTreeIRGen {
   ///   ES5Function by default, but may also be ES6Constructor.
   /// \param homeObject will be set as the homeObject in the CapturedState of
   /// the function \p FE we are going to generate.
+  /// \param parentNode can optionally be set to the parent AST node of the
+  ///  function node.
   Value *genFunctionExpression(
       ESTree::FunctionExpressionNode *FE,
       Identifier nameHint,
       ESTree::Node *superClassNode = nullptr,
       Function::DefinitionKind functionKind =
           Function::DefinitionKind::ES5Function,
-      Variable *homeObject = nullptr);
+      Variable *homeObject = nullptr,
+      ESTree::Node *parentNode = nullptr);
 
   /// Generate IR for ArrowFunctionExpression.
   /// \param parentScope is the VariableScope of the enclosing function, or null
   ///   if there isn't one.
+  /// \param parentNode can optionally be set to the parent AST node of the
+  ///  function node.
   Value *genArrowFunctionExpression(
       ESTree::ArrowFunctionExpressionNode *AF,
-      Identifier nameHint);
+      Identifier nameHint,
+      ESTree::Node *parentNode = nullptr);
 
   /// Generate IR for a function which inherits the current captured state
   /// (this, arguments etc.), which may be lazy.
@@ -1071,13 +1077,16 @@ class ESTreeIRGen {
   /// \param functionNode is the ESTree arrow function node.
   /// \param parentScope is the VariableScope of the enclosing function, or null
   ///   if there isn't one.
+  /// \param parentNode can optionally be set to the parent AST node of the
+  ///  function node.
   /// \param capturedState the relevant captured state.
   NormalFunction *genCapturingFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
       const CapturedState &capturedState,
-      Function::DefinitionKind functionKind);
+      Function::DefinitionKind functionKind,
+      ESTree::Node *parentNode = nullptr);
 
   /// Generate IR for a function (function declaration or expression) that is
   /// not a generator, async, or arrow function.  Constructors are "basic",
@@ -1096,6 +1105,8 @@ class ESTreeIRGen {
   ///  is for a constructor.
   /// \param homeObject will be set as the homeObject in the CapturedState of
   /// the function \p FE we are going to generate.
+  /// \param parentNode can optionally be set to the parent AST node of the
+  ///  function node.
   /// \returns a new Function.
   NormalFunction *genBasicFunction(
       Identifier originalName,
@@ -1104,7 +1115,8 @@ class ESTreeIRGen {
       ESTree::Node *superClassNode = nullptr,
       Function::DefinitionKind functionKind =
           Function::DefinitionKind::ES5Function,
-      Variable *homeObject = nullptr);
+      Variable *homeObject = nullptr,
+      ESTree::Node *parentNode = nullptr);
 
   /// Generate the IR for two functions: an outer GeneratorFunction and an inner
   /// GeneratorInnerFunction. The outer function runs CreateGenerator on the
@@ -1115,12 +1127,15 @@ class ESTreeIRGen {
   ///   object method).
   /// \param homeObject will be set as the homeObject in the CapturedState of
   /// the function \p FE we are going to generate.
+  /// \param parentNode can optionally be set to the parent AST node of the
+  ///  function node.
   /// \return the outer Function.
   Function *genGeneratorFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
-      Variable *homeObject = nullptr);
+      Variable *homeObject = nullptr,
+      ESTree::Node *parentNode = nullptr);
 
   /// Generate the IR for an async function: it desugars async function to a
   /// generator function wrapped in a call to the JS builtin `spawnAsync` and
@@ -1133,12 +1148,15 @@ class ESTreeIRGen {
   /// \param functionNode is the ESTree function node (declaration, expression,
   ///   object method).
   /// \param capturedState the relevant captured state.
+  /// \param parentNode can optionally be set to the parent AST node of the
+  ///  function node.
   /// \return the async Function.
   Function *genAsyncFunction(
       Identifier originalName,
       ESTree::FunctionLikeNode *functionNode,
       VariableScope *parentScope,
-      const CapturedState &capturedState);
+      const CapturedState &capturedState,
+      ESTree::Node *parentNode = nullptr);
 
   /// In the beginning of an ES5 function, initialize the special captured
   /// variables needed by arrow functions, constructors and methods.
@@ -1240,9 +1258,12 @@ class ESTreeIRGen {
   static void genDummyFunction(Function *dummy);
 
   /// Add a LazyCompilationDataInst stub to \p F.
+  /// \param parentNode can optionally be set to the parent AST node of the
+  ///  function node.
   void setupLazyFunction(
       Function *F,
       ESTree::FunctionLikeNode *functionNode,
+      ESTree::Node *parentNode,
       ESTree::BlockStatementNode *bodyBlock,
       VariableScope *parentVarScope,
       ExtraKey extraKey,

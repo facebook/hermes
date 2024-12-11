@@ -170,7 +170,8 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
           nameHint,
           superClassNode,
           Function::DefinitionKind::ES6Method,
-          homeObject);
+          homeObject,
+          method);
       if (isStatic) {
         addMethod(createClass, method->_kind->str(), key, funcValue);
       } else {

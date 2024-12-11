@@ -99,7 +99,8 @@ Value *ESTreeIRGen::genFunctionExpression(
     Identifier nameHint,
     ESTree::Node *superClassNode,
     Function::DefinitionKind functionKind,
-    Variable *homeObject) {
+    Variable *homeObject,
+    ESTree::Node *parentNode) {
   if (FE->_async && FE->_generator) {
     Builder.getModule()->getContext().getSourceErrorManager().error(
         FE->getSourceRange(), Twine("async generators are unsupported"));
@@ -118,18 +119,23 @@ Value *ESTreeIRGen::genFunctionExpression(
   // Update the captured state of the async function to use the homeObject we
   // were given.
   capturedStateForAsync.homeObject = homeObject;
-  Function *newFunc = FE->_async
-      ? genAsyncFunction(
-            originalNameIden, FE, parentScope, capturedStateForAsync)
+  Function *newFunc = FE->_async ? genAsyncFunction(
+                                       originalNameIden,
+                                       FE,
+                                       parentScope,
+                                       capturedStateForAsync,
+                                       parentNode)
       : FE->_generator
-      ? genGeneratorFunction(originalNameIden, FE, parentScope, homeObject)
+      ? genGeneratorFunction(
+            originalNameIden, FE, parentScope, homeObject, parentNode)
       : genBasicFunction(
             originalNameIden,
             FE,
             parentScope,
             superClassNode,
             functionKind,
-            homeObject);
+            homeObject,
+            parentNode);
 
   Value *closure =
       Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
@@ -142,7 +148,8 @@ Value *ESTreeIRGen::genFunctionExpression(
 
 Value *ESTreeIRGen::genArrowFunctionExpression(
     ESTree::ArrowFunctionExpressionNode *AF,
-    Identifier nameHint) {
+    Identifier nameHint,
+    ESTree::Node *parentNode) {
   // Check if already compiled.
   if (Value *compiled = findCompiledEntity(AF)) {
     return Builder.createCreateFunctionInst(
@@ -180,7 +187,8 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
     const CapturedState &capturedState,
-    Function::DefinitionKind functionKind) {
+    Function::DefinitionKind functionKind,
+    ESTree::Node *parentNode) {
   auto *newFunc = Builder.createFunction(
       originalName,
       functionKind,
@@ -198,6 +206,7 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
     setupLazyFunction(
         newFunc,
         functionNode,
+        parentNode,
         body,
         parentScope,
         ExtraKey::Normal,
@@ -242,7 +251,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     VariableScope *parentScope,
     ESTree::Node *superClassNode,
     Function::DefinitionKind functionKind,
-    Variable *homeObject) {
+    Variable *homeObject,
+    ESTree::Node *parentNode) {
   assert(functionNode && "Function AST cannot be null");
   assert(
       functionKind != Function::DefinitionKind::GeneratorInnerArrow &&
@@ -290,6 +300,7 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     setupLazyFunction(
         newFunction,
         functionNode,
+        parentNode,
         body,
         parentScope,
         ExtraKey::Normal,
@@ -425,7 +436,8 @@ Function *ESTreeIRGen::genGeneratorFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
-    Variable *homeObject) {
+    Variable *homeObject,
+    ESTree::Node *parentNode) {
   assert(functionNode && "Function AST cannot be null");
 
   if (Value *compiled =
@@ -456,6 +468,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
     setupLazyFunction(
         outerFn,
         functionNode,
+        parentNode,
         body,
         parentScope,
         ExtraKey::GeneratorOuter,
@@ -553,7 +566,8 @@ Function *ESTreeIRGen::genAsyncFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
     VariableScope *parentScope,
-    const CapturedState &capturedState) {
+    const CapturedState &capturedState,
+    ESTree::Node *parentNode) {
   assert(functionNode && "Function AST cannot be null");
 
   if (auto *compiled = findCompiledEntity(functionNode, ExtraKey::AsyncOuter))
@@ -581,6 +595,7 @@ Function *ESTreeIRGen::genAsyncFunction(
       setupLazyFunction(
           asyncFn,
           functionNode,
+          parentNode,
           body,
           parentScope,
           ExtraKey::AsyncOuter,
@@ -589,6 +604,7 @@ Function *ESTreeIRGen::genAsyncFunction(
       setupLazyFunction(
           asyncFn,
           functionNode,
+          parentNode,
           body,
           parentScope,
           ExtraKey::AsyncOuter,
@@ -1218,7 +1234,11 @@ void ESTreeIRGen::genDummyFunction(Function *dummy) {
 }
 
 /// \return the NodeKind of the FunctionLikeNode (used for lazy parsing).
-static ESTree::NodeKind getLazyFunctionKind(ESTree::FunctionLikeNode *node) {
+/// \param parentNode can optionally be set to the parent AST node of the
+///  function node.
+static ESTree::NodeKind getLazyFunctionKind(
+    ESTree::FunctionLikeNode *node,
+    ESTree::Node *parentNode) {
   if (node->isMethodDefinition) {
     // This is not a regular function expression but getter/setter.
     // If we want to reparse it later, we have to start from an
@@ -1231,6 +1251,7 @@ static ESTree::NodeKind getLazyFunctionKind(ESTree::FunctionLikeNode *node) {
 void ESTreeIRGen::setupLazyFunction(
     Function *F,
     ESTree::FunctionLikeNode *functionNode,
+    ESTree::Node *parentNode,
     ESTree::BlockStatementNode *bodyBlock,
     VariableScope *parentVarScope,
     ExtraKey extraKey,
@@ -1251,7 +1272,7 @@ void ESTreeIRGen::setupLazyFunction(
   LazyCompilationData data{
       bodyBlock->bufferId,
       functionNode->getSemInfo(),
-      getLazyFunctionKind(functionNode),
+      getLazyFunctionKind(functionNode, parentNode),
       ESTree::isStrict(functionNode->strictness),
       bodyBlock->paramYield,
       bodyBlock->paramAwait};
