@@ -115,7 +115,8 @@ bool SemanticResolver::runInScope(
   canReferenceSuper_ = parentHadSuperBinding;
 
   // Run the resolver on the function body.
-  FunctionContext newFuncCtx{*this, rootNode, semInfo, semInfo->strict, {}};
+  FunctionContext newFuncCtx{
+      *this, rootNode, semInfo, semInfo->strict, semInfo->constructorKind, {}};
   {
     ScopeRAII programScope{*this, rootNode, /* functionScope */ true};
     if (sm_.getErrorCount())
@@ -163,6 +164,7 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
       node,
       nullptr,
       astContext_.isStrictMode(),
+      FunctionInfo::ConstructorKind::None,
       CustomDirectives{
           .sourceVisibility = SourceVisibility::Default,
           .alwaysInline = false}};
@@ -996,14 +998,11 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
   }
 
   if (llvh::isa<SuperNode>(node->_callee)) {
-    if (!functionContext()->nearestNonArrow()->isConstructor) {
-      sm_.error(
-          node->getSourceRange(), "super() call only allowed in constructor");
-    }
-    if (!(curClassContext_ && curClassContext_->isDerivedClass())) {
+    if (semCtx_.nearestNonArrow(functionContext()->semInfo)->constructorKind !=
+        FunctionInfo::ConstructorKind::Derived) {
       sm_.error(
           node->getSourceRange(),
-          "super() call only allowed in subclass constructor");
+          "super() call only allowed in derived class constructor");
     }
   }
 
@@ -1203,19 +1202,24 @@ void SemanticResolver::visitFunctionLike(
     ESTree::Node *body,
     ESTree::NodeList &params,
     ESTree::Node *parent) {
+  FunctionInfo::ConstructorKind consKind = FunctionInfo::ConstructorKind::None;
+  if (auto *method =
+          llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parent);
+      method && method->_kind == kw_.identConstructor) {
+    curClassContext_->hasConstructor = true;
+    if (curClassContext_->isDerivedClass()) {
+      consKind = FunctionInfo::ConstructorKind::Derived;
+    } else {
+      consKind = FunctionInfo::ConstructorKind::Base;
+    }
+  }
   FunctionContext newFuncCtx{
       *this,
       node,
       curFunctionInfo(),
       curFunctionInfo()->strict,
+      consKind,
       curFunctionInfo()->customDirectives};
-  if (auto *method =
-          llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parent)) {
-    newFuncCtx.isConstructor = method->_kind == kw_.identConstructor;
-    if (newFuncCtx.isConstructor) {
-      curClassContext_->hasConstructor = true;
-    }
-  }
 
   // Arrow functions should inherit their current super binding. All other
   // functions can only reference super properties if it was defined as a
@@ -2260,11 +2264,13 @@ FunctionContext::FunctionContext(
     ESTree::FunctionLikeNode *node,
     FunctionInfo *parentSemInfo,
     bool strict,
+    FunctionInfo::ConstructorKind consKind,
     CustomDirectives customDirectives)
     : resolver_(resolver),
       prevContext_(resolver.curFunctionContext_),
       semInfo(resolver.semCtx_.newFunction(
           SemContext::nodeIsArrow(node),
+          consKind,
           parentSemInfo,
           resolver.curScope_,
           strict,
@@ -2336,15 +2342,6 @@ UniqueString *FunctionContext::getFunctionName() const {
   return nullptr;
 }
 
-const FunctionContext *FunctionContext::nearestNonArrow() const {
-  const FunctionContext *cur = this;
-  while (cur->semInfo->arrow) {
-    cur = cur->prevContext_;
-  }
-  assert(cur && "All contexts should have a non-arrow ancestor.");
-  return cur;
-}
-
 ClassContext::ClassContext(SemanticResolver &resolver, ClassLikeNode *classNode)
     : resolver_(resolver),
       prevContext_(resolver.curClassContext_),
@@ -2361,6 +2358,9 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
   assert(classDecoration->implicitCtorFunctionInfo == nullptr);
   FunctionInfo *implicitCtor = resolver_.semCtx_.newFunction(
       FuncIsArrow::No,
+      resolver_.curClassContext_->isDerivedClass()
+          ? FunctionInfo::ConstructorKind::Derived
+          : FunctionInfo::ConstructorKind::Base,
       resolver_.curFunctionInfo(),
       resolver_.curScope_,
       /*strict*/ true,
@@ -2376,6 +2376,7 @@ FunctionInfo *ClassContext::getOrCreateFieldInitFunctionInfo() {
   if (classDecoration->fieldInitFunctionInfo == nullptr) {
     FunctionInfo *fieldInitFunc = resolver_.semCtx_.newFunction(
         FuncIsArrow::No,
+        FunctionInfo::ConstructorKind::None,
         resolver_.curFunctionInfo(),
         resolver_.curScope_,
         /*strict*/ true,

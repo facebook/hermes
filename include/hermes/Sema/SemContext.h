@@ -248,6 +248,10 @@ class FunctionInfo {
   CustomDirectives customDirectives{};
   /// True if this function is an arrow function.
   bool const arrow;
+  /// The possible kinds of constructors.
+  enum class ConstructorKind { None, Base, Derived };
+  /// The kind of constructor this function is.
+  ConstructorKind constructorKind;
   /// False if the parameter list contains any patterns.
   bool simpleParameterList = true;
   /// True if the parameter list contains any expressions.
@@ -294,6 +298,7 @@ class FunctionInfo {
   /// an arrow function.
   FunctionInfo(
       FuncIsArrow isArrowFunctionExpression,
+      ConstructorKind consKind,
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
       bool strict,
@@ -302,7 +307,8 @@ class FunctionInfo {
         parentScope(parentScope),
         strict(strict),
         customDirectives(customDirectives),
-        arrow(isArrowFunctionExpression == FuncIsArrow::Yes) {}
+        arrow(isArrowFunctionExpression == FuncIsArrow::Yes),
+        constructorKind(consKind) {}
 
   /// Partial cloning constructor.
   /// Called only from ESTreeClone via prepareClonedFunction.
@@ -369,6 +375,7 @@ class SemContext {
   /// \return a new function.
   FunctionInfo *newFunction(
       FuncIsArrow isArrow,
+      FunctionInfo::ConstructorKind consKind,
       FunctionInfo *parentFunction,
       LexicalScope *parentScope,
       bool strict,
@@ -420,6 +427,10 @@ class SemContext {
   LexicalScope *getGlobalScope() {
     return &root_->scopes_.front();
   }
+
+  /// Returns the nearest non-arrow (non-proper) ancestor of the current
+  /// FunctionInfo that is not for an arrow function. This will always exist.
+  FunctionInfo *nearestNonArrow(FunctionInfo *info);
 
   /// Set the binding table global scope.
   void setBindingTableGlobalScope(

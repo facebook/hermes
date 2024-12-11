@@ -494,9 +494,6 @@ class FunctionContext {
   /// The AST node of the function.
   ESTree::FunctionLikeNode *const node;
 
-  /// Whether this function is a class constructor.
-  bool isConstructor{false};
-
   /// The currently active labels in the function.
   llvh::DenseMap<ESTree::NodeLabel, Label> labelMap;
 
@@ -535,6 +532,7 @@ class FunctionContext {
       ESTree::FunctionLikeNode *node,
       FunctionInfo *parentSemInfo,
       bool strict,
+      FunctionInfo::ConstructorKind consKind,
       CustomDirectives customDirectives);
 
   explicit FunctionContext(
@@ -561,11 +559,6 @@ class FunctionContext {
 
   /// \return the optional function name, or nullptr.
   UniqueString *getFunctionName() const;
-
-  /// Returns the nearest non-arrow (non-proper) ancestor of the current
-  /// FunctionContext that is not for an arrow function.  This will always
-  /// exist.
-  const FunctionContext *nearestNonArrow() const;
 };
 
 inline FunctionInfo *SemanticResolver::curFunctionInfo() {
