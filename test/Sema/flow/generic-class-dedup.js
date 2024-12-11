@@ -47,10 +47,12 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:            Decl %d.5 'C' Class : %class_constructor.6
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.6 'x' Parameter
 // CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.8 'x' Parameter : %union.2
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 

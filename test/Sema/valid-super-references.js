@@ -118,10 +118,12 @@ var obj = {
 // CHECK-NEXT:            Scope %s.21
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.22
-// CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.23
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.24
+// CHECK-NEXT:            Scope %s.23
+// CHECK-NEXT:            Func strict
+// CHECK-NEXT:                Scope %s.24
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.25
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    VariableDeclaration

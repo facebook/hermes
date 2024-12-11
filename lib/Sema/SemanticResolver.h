@@ -590,6 +590,10 @@ class ClassContext {
   /// On subsequent calls, return that FunctionInfo.
   FunctionInfo *getOrCreateFieldInitFunctionInfo();
 
+  /// Get or create a synthetic function information for the static elements
+  /// initializer of a class.
+  FunctionInfo *getOrCreateStaticElementsInitFunctionInfo();
+
   /// \return true if the current class of this context is a derived class.
   bool isDerivedClass() const {
     // It's a derived class if it has a super class node.

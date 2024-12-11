@@ -898,6 +898,10 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
     visitESTreeNode(*this, node->_key, node);
   }
 
+  // Create the these initializers even if no value initializer is present.
+  FunctionInfo *functionInfo = node->_static
+      ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
+      : curClassContext_->getOrCreateFieldInitFunctionInfo();
   // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
     // We visit the initializer expression in the context of a synthesized
@@ -909,8 +913,7 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
     // It is a Syntax Error if Initializer is present and ContainsArguments of
     // Initializer is true.
     llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
-    FunctionContext funcCtx(
-        *this, curClassContext_->getOrCreateFieldInitFunctionInfo());
+    FunctionContext funcCtx(*this, functionInfo);
     visitESTreeNode(*this, node->_value, node);
   }
 }
@@ -2387,6 +2390,24 @@ FunctionInfo *ClassContext::getOrCreateFieldInitFunctionInfo() {
     classDecoration->fieldInitFunctionInfo = fieldInitFunc;
   }
   return classDecoration->fieldInitFunctionInfo;
+}
+
+FunctionInfo *ClassContext::getOrCreateStaticElementsInitFunctionInfo() {
+  auto *classDecoration = getDecoration<ClassLikeDecoration>(classNode_);
+  if (classDecoration->staticElementsInitFunctionInfo == nullptr) {
+    FunctionInfo *staticFieldInitFunc = resolver_.semCtx_.newFunction(
+        FuncIsArrow::No,
+        FunctionInfo::ConstructorKind::None,
+        resolver_.curFunctionInfo(),
+        resolver_.curScope_,
+        /*strict*/ true,
+        CustomDirectives{});
+    // This is callled for the side effect of associating the new scope with
+    // staticFieldInitFunc.  We don't need the value now, but we will later.
+    (void)resolver_.semCtx_.newScope(staticFieldInitFunc, resolver_.curScope_);
+    classDecoration->staticElementsInitFunctionInfo = staticFieldInitFunc;
+  }
+  return classDecoration->staticElementsInitFunctionInfo;
 }
 
 ClassContext::~ClassContext() {

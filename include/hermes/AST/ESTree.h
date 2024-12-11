@@ -400,6 +400,11 @@ class ClassLikeDecoration : public ScopeDecorationBase {
   // this is the FunctionInfo for the synthetic Function in which those
   // initializations are done.
   sema::FunctionInfo *fieldInitFunctionInfo{};
+
+  // If non-null, the decorated class has static field initializers, and this is
+  // the FunctionInfo for the synthetic Function in which those static
+  // initializations are done.
+  sema::FunctionInfo *staticElementsInitFunctionInfo{};
 };
 
 /// Identifiers keep track of which variable they have been resolved to,

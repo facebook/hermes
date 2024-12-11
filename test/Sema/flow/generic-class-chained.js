@@ -66,21 +66,23 @@ class C<T> {
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.8 'c' Let
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
 // CHECK-NEXT:                Decl %d.11 'c' Let : %class.9
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:            Scope %s.10
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1

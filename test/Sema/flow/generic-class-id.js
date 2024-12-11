@@ -61,14 +61,16 @@ const s: string = i2.val;
 // CHECK-NEXT:            Decl %d.9 'ID' Class : %class_constructor.9
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.10 'val' Parameter
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.12 'val' Parameter : number
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.14 'val' Parameter : string
 // CHECK-NEXT:                Decl %d.15 'arguments' Var Arguments
 

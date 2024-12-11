@@ -33,9 +33,17 @@ print(p1.x, p2.x);
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %Point(): functionCode
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 3: number
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any, "x": string, 0: number, "y": string, 0: number
+// CHECK-NEXT:       TypedStoreParentInst %2: object, %4: object
+// CHECK-NEXT:  %6 = CallInst (:undefined) %1: object, %Point(): functionCode, true: boolean, empty: any, %1: object, %4: object, 1: number, 2: number
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any, "x": string, 0: number, "y": string, 0: number
+// CHECK-NEXT:       TypedStoreParentInst %2: object, %7: object
+// CHECK-NEXT:  %9 = CallInst (:undefined) %1: object, %Point(): functionCode, true: boolean, empty: any, %1: object, %7: object, 3: number, 4: number
+// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %11 = PrLoadInst (:number) %4: object, 0: number, "x": string
+// CHECK-NEXT:  %12 = PrLoadInst (:number) %7: object, 0: number, "x": string
+// CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: number, %12: number
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:constructor Point(x: number, y: number): undefined [typed]
