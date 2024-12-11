@@ -84,6 +84,9 @@ class SemanticResolver
   /// the AST. False if we just want to validate the AST.
   bool compile_;
 
+  /// True if we are preparing the AST for typed JS.
+  bool typed_;
+
   /// 'await' isn't allowed to be an identifier anywhere in the parameters
   /// of an async arrow function, including the parameters of nested arrow
   /// functions in the parameter initializers.
@@ -108,12 +111,14 @@ class SemanticResolver
   ///     instances for reuse by later passes.
   /// \param compile whether this resolution is intended to compile or just
   ///   parsing.
+  /// \param typed whether this resolution is for typed code.
   explicit SemanticResolver(
       Context &astContext,
       sema::SemContext &semCtx,
       const DeclarationFileListTy &ambientDecls,
       DeclCollectorMapTy *saveDecls,
-      bool compile);
+      bool compile,
+      bool typed = false);
 
   explicit SemanticResolver(
       Context &astContext,
@@ -239,6 +244,7 @@ class SemanticResolver
 
   void visit(ESTree::ClassDeclarationNode *node);
   void visit(ESTree::ClassExpressionNode *node);
+  void visitClassAsExpr(ESTree::ClassLikeNode *node);
   void visit(ESTree::PrivateNameNode *node);
   void visit(ESTree::ClassPrivatePropertyNode *node);
   void visit(ESTree::ClassPropertyNode *node);

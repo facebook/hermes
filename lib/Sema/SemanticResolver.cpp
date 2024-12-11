@@ -25,7 +25,8 @@ SemanticResolver::SemanticResolver(
     sema::SemContext &semCtx,
     const DeclarationFileListTy &ambientDecls,
     DeclCollectorMapTy *saveDecls,
-    bool compile)
+    bool compile,
+    bool typed)
     : astContext_(astContext),
       sm_(astContext.getSourceErrorManager()),
       bufferMessages_{&sm_},
@@ -34,7 +35,8 @@ SemanticResolver::SemanticResolver(
       ambientDecls_(ambientDecls),
       saveDecls_(saveDecls),
       bindingTable_(semCtx.getBindingTable()),
-      compile_(compile) {
+      compile_(compile),
+      typed_(typed) {
   // ES14.0 19.1 Value properties of the global object
   // https://262.ecma-international.org/14.0/#sec-value-properties-of-the-global-object
   // These are the only non-configurable properties.
@@ -824,27 +826,38 @@ void SemanticResolver::visit(ESTree::ImportDeclarationNode *importDecl) {
 }
 
 void SemanticResolver::visit(ESTree::ClassDeclarationNode *node) {
-  // Classes must be in strict mode.
-  llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
-  ClassContext classCtx(*this, node);
-  visitESTreeChildren(*this, node);
-  curClassContext_->createImplicitConstructorFunctionInfo();
+  if (typed_) {
+    // Classes must be in strict mode.
+    llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
+    ClassContext classCtx(*this, node);
+    visitESTreeChildren(*this, node);
+    curClassContext_->createImplicitConstructorFunctionInfo();
+  } else {
+    // In untyped mode, create an additional scope & variable for the class
+    // body, which obeys const variable rules.
+    visitClassAsExpr(node);
+  }
 }
 
 void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
+  visitClassAsExpr(node);
+}
+
+void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
-
   ClassContext classCtx(*this, node);
-
-  if (ESTree::IdentifierNode *ident =
-          llvh::dyn_cast_or_null<IdentifierNode>(node->_id)) {
-    // If there is a name, declare it.
+  if (ESTree::IdentifierNode *ident = getClassID(node)) {
     ScopeRAII scope{*this, node};
+    // If there is a name, declare it.
     if (validateDeclarationName(Decl::Kind::ClassExprName, ident)) {
       Decl *decl = semCtx_.newDeclInScope(
           ident->_name, Decl::Kind::ClassExprName, curScope_);
-      semCtx_.setDeclarationDecl(ident, decl);
+      // We declare this as an expression decl so that in the case of class
+      // declarations, we can associate two different decls with a single
+      // identifier node. The class body will see this inner ClassExprName decl,
+      // which obeys const variable rules.
+      semCtx_.setExpressionDecl(ident, decl);
       bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
     }
     visitESTreeChildren(*this, node);

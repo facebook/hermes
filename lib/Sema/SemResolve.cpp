@@ -171,7 +171,8 @@ bool resolveAST(
       semCtx,
       ambientDecls,
       flowContext ? &declCollectorMap : nullptr,
-      true};
+      true,
+      flowContext != nullptr};
   if (!resolver.run(root))
     return false;
 

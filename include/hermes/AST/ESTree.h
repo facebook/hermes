@@ -389,9 +389,7 @@ class CoverDecoration {};
 class CallExpressionLikeDecoration {};
 class MemberExpressionLikeDecoration {};
 
-class ClassExpressionDecoration : public ScopeDecorationBase {};
-
-class ClassLikeDecoration {
+class ClassLikeDecoration : public ScopeDecorationBase {
  public:
   // If non-null, the decorated class has in implicit contructor,
   // and this is the FunctionInfo for the synthetic Function for
@@ -550,10 +548,6 @@ struct DecoratorTrait<IdentifierNode> {
 template <>
 struct DecoratorTrait<ProgramNode> {
   using Type = ProgramDecoration;
-};
-template <>
-struct DecoratorTrait<ClassExpressionNode> {
-  using Type = ClassExpressionDecoration;
 };
 template <>
 struct DecoratorTrait<ClassLikeNode> {
@@ -1246,6 +1240,9 @@ bool isAsync(FunctionLikeNode *node);
 
 /// \return the super class node of \p node.
 Node *getSuperClass(ClassLikeNode *node);
+
+/// \return the IdentifierNode of \p node. Can be null.
+IdentifierNode *getClassID(ClassLikeNode *node);
 
 /// Allow using \p NodeKind in \p llvh::DenseMaps.
 struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {

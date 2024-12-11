@@ -40,16 +40,20 @@ function f(i) {
 // CHECK-NEXT:            Decl %d.6 'a0' Var
 // CHECK-NEXT:            Decl %d.7 'a1' Var
 // CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
+// CHECK-NEXT:                Decl %d.9 'A0' ClassExprName
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.10 'A1' ClassExprName
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    FunctionDeclaration
@@ -63,8 +67,8 @@ function f(i) {
 // CHECK-NEXT:                        BinOp +
 // CHECK-NEXT:                        NumericLiteral
 // CHECK-NEXT:                    Id 'j' [D:E:%d.3 'j']
-// CHECK-NEXT:            ClassDeclaration
-// CHECK-NEXT:                Id 'A0' [D:E:%d.4 'A0']
+// CHECK-NEXT:            ClassDeclaration Scope %s.3
+// CHECK-NEXT:                Id 'A0' [D:%d.4 E:%d.9 'A0']
 // CHECK-NEXT:                ClassBody
 // CHECK-NEXT:                    ClassProperty
 // CHECK-NEXT:                        Id 'x'
@@ -73,8 +77,8 @@ function f(i) {
 // CHECK-NEXT:                        Id 'constructor'
 // CHECK-NEXT:                        FunctionExpression
 // CHECK-NEXT:                            BlockStatement
-// CHECK-NEXT:            ClassDeclaration
-// CHECK-NEXT:                Id 'A1' [D:E:%d.5 'A1']
+// CHECK-NEXT:            ClassDeclaration Scope %s.4
+// CHECK-NEXT:                Id 'A1' [D:%d.5 E:%d.10 'A1']
 // CHECK-NEXT:                ClassBody
 // CHECK-NEXT:                    ClassProperty
 // CHECK-NEXT:                        Id 'x'
