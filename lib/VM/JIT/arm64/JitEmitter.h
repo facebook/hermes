@@ -759,6 +759,9 @@ class Emitter {
       FR frEnv,
       RuntimeModule *runtimeModule,
       uint32_t functionID);
+  void createBaseClass(FR frRes, FR frPrototypeOut, FR frEnv);
+  void
+  createDerivedClass(FR frRes, FR frPrototypeOut, FR frEnv, FR frSuperClass);
   void createGenerator(
       FR frRes,
       FR frEnv,

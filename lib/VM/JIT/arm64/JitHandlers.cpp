@@ -143,6 +143,16 @@ SHLegacyValue _interpreter_create_regexp(
       .getHermesValue();
 }
 
+void _interpreter_create_class(SHRuntime *shr, SHLegacyValue *frameRegs) {
+  Runtime &runtime = getRuntime(shr);
+  if (LLVM_UNLIKELY(
+          Interpreter::caseCreateClass(
+              runtime, (PinnedHermesValue *)frameRegs) ==
+          ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+}
+
 /// Implementation of createFunctionEnvironment that takes the closure to get
 /// the parentEnvironment from.
 /// The native backend doesn't use createFunctionEnvironment.

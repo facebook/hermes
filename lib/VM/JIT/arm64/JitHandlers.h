@@ -70,6 +70,9 @@ SHLegacyValue _interpreter_create_regexp(
     uint32_t flags,
     uint32_t regexpID);
 
+/// Wrapper around Interpreter::caseCreateClass
+void _interpreter_create_class(SHRuntime *shr, SHLegacyValue *frameRegs);
+
 /// Implementation of createFunctionEnvironment that takes the closure to get
 /// the parentEnvironment from.
 /// The native backend doesn't use createFunctionEnvironment.

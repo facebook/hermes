@@ -298,10 +298,6 @@ EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 EMIT_UNIMPLEMENTED(CacheNewObject)
-EMIT_UNIMPLEMENTED(CreateBaseClass)
-EMIT_UNIMPLEMENTED(CreateBaseClassLongIndex)
-EMIT_UNIMPLEMENTED(CreateDerivedClass)
-EMIT_UNIMPLEMENTED(CreateDerivedClassLongIndex)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -931,6 +927,23 @@ EMIT_CREATE_CLOSURE(CreateClosure)
 EMIT_CREATE_CLOSURE(CreateClosureLongIndex)
 
 #undef EMIT_CREATE_CLOSURE
+
+#define EMIT_CREATE_BASE_CLASS(name)                                           \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.createBaseClass(FR(inst->op1), FR(inst->op2), FR(inst->op3));          \
+  }
+EMIT_CREATE_BASE_CLASS(CreateBaseClass)
+EMIT_CREATE_BASE_CLASS(CreateBaseClassLongIndex)
+#undef EMIT_CREATE_BASE_CLASS
+
+#define EMIT_CREATE_DERIVED_CLASS(name)                                        \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.createDerivedClass(                                                    \
+        FR(inst->op1), FR(inst->op2), FR(inst->op3), FR(inst->op4));           \
+  }
+EMIT_CREATE_DERIVED_CLASS(CreateDerivedClass)
+EMIT_CREATE_DERIVED_CLASS(CreateDerivedClassLongIndex)
+#undef EMIT_CREATE_DERIVED_CLASS
 
 #define EMIT_CREATE_GENERATOR(name)                                            \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \

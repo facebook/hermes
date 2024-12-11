@@ -2387,6 +2387,61 @@ void Emitter::createClosure(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::createBaseClass(FR frRes, FR frPrototypeOut, FR frEnv) {
+  comment(
+      "// CreateBaseClass r%u, r%u, r%u",
+      frRes.index(),
+      frPrototypeOut.index(),
+      frEnv.index());
+  // TODO: we should also not be syncing frPrototypeOut when possible.
+  syncAllFRTempExcept(frRes != frEnv ? frRes : FR());
+  syncToFrame(frEnv);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  // The interpreter expects that the frameRegs it receives starts on the first
+  // local register.
+  auto ofs = hbc::StackFrameLayout::FirstLocal * sizeof(SHLegacyValue);
+  a.add(a64::x1, xFrame, ofs);
+  EMIT_RUNTIME_CALL(
+      *this, void (*)(SHRuntime *, SHLegacyValue *), _interpreter_create_class);
+
+  // Ensure that the out params have their frame location marked as up-to-date,
+  // and any global register is updated.
+  syncFrameOutParam(frRes);
+  syncFrameOutParam(frPrototypeOut);
+}
+
+void Emitter::createDerivedClass(
+    FR frRes,
+    FR frPrototypeOut,
+    FR frEnv,
+    FR frSuperClass) {
+  comment(
+      "// CreateDerivedClass r%u, r%u, r%u r%u",
+      frRes.index(),
+      frPrototypeOut.index(),
+      frEnv.index(),
+      frSuperClass.index());
+  // TODO: we should also not be syncing frPrototypeOut when possible.
+  syncAllFRTempExcept(frRes != frEnv && frRes != frSuperClass ? frRes : FR());
+  syncToFrame(frEnv);
+  syncToFrame(frSuperClass);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  // The interpreter expects that the frameRegs it receives starts on the first
+  // local register.
+  auto ofs = hbc::StackFrameLayout::FirstLocal * sizeof(SHLegacyValue);
+  a.add(a64::x1, xFrame, ofs);
+  EMIT_RUNTIME_CALL(
+      *this, void (*)(SHRuntime *, SHLegacyValue *), _interpreter_create_class);
+
+  // Ensure that the updated frame location is sync'd back.
+  syncFrameOutParam(frRes);
+  syncFrameOutParam(frPrototypeOut);
+}
+
 void Emitter::createGenerator(
     FR frRes,
     FR frEnv,
