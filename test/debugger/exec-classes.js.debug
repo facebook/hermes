@@ -1,0 +1,4 @@
+exec super.baseInstMethod()
+continue
+exec super.baseStaticMethod()
+continue
