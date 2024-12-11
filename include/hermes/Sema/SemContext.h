@@ -278,6 +278,9 @@ class FunctionInfo {
   /// anyway.
   bool mayReachImplicitReturn = true;
 
+  /// True if this function came from a program node.
+  bool isProgramNode = false;
+
   /// Lazy compilation: the parent binding table scope of this function.
   /// Eager/eval compilation: the binding table scope of this function.
   /// In both cases, we're storing the parent of the code we want to eventually

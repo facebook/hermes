@@ -6004,6 +6004,8 @@ class EvalCompilationDataInst : public Instruction {
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
     HomeObjectIdx,
+    ClsConstructorIdx,
+    ClsInstElemInitFuncIdx,
     FuncVarScopeIdx
   };
 
@@ -6013,6 +6015,8 @@ class EvalCompilationDataInst : public Instruction {
       Value *capturedNewTarget,
       Value *capturedArguments,
       Value *homeObject,
+      Value *classCtxConstructor,
+      Value *classCtxInitFuncVar,
       VariableScope *funcVarScope)
       : Instruction(ValueKind::EvalCompilationDataInstKind), data_(data) {
     assert(
@@ -6026,6 +6030,8 @@ class EvalCompilationDataInst : public Instruction {
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
     pushOperand(homeObject);
+    pushOperand(classCtxConstructor);
+    pushOperand(classCtxInitFuncVar);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: EvalCompilationData relies on the fact that we don't delete
@@ -6073,6 +6079,15 @@ class EvalCompilationDataInst : public Instruction {
   /// \return the captured \c homeObject Variable, nullptr if there is none.
   Variable *getHomeObject() {
     return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
+  }
+  /// \return the class context constructor Variable, nullptr if there is none.
+  Variable *getClsConstructor() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsConstructorIdx));
+  }
+  /// \return the class context instance elements initializer Variable, nullptr
+  /// if there is none.
+  Variable *getClsInstElemInitFunc() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsInstElemInitFuncIdx));
   }
 
   static bool hasOutput() {

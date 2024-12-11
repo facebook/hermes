@@ -1374,6 +1374,8 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
     Value *capturedNewTarget,
     Variable *capturedArguments,
     Variable *homeObject,
+    Variable *classCtxConstructor,
+    Variable *classCtxInitFuncVar,
     VariableScope *funcVarScope) {
   auto *inst = new EvalCompilationDataInst(
       std::move(data),
@@ -1382,6 +1384,10 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
       homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
+      classCtxConstructor ? static_cast<Value *>(classCtxConstructor)
+                          : getEmptySentinel(),
+      classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
+                          : getEmptySentinel(),
       funcVarScope);
   insert(inst);
   return inst;

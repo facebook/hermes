@@ -1245,6 +1245,14 @@ HermesValue Debugger::evalInFrame(
 
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
 
+  // If we are debugging inside of a derived class constuctor, we make an arrow
+  // function for the eval expression. It would be invalid to call that arrow
+  // function with a non-undefined new.target.
+  Handle<> newTarget =
+      vmisa<JSDerivedClass>(*frameInfo->frame->getCalleeClosureHandleUnsafe())
+      ? Runtime::getUndefinedValue()
+      : Handle<>(&frameInfo->frame->getNewTargetRef());
+
   // Interpreting code requires that the `thrownValue_` is empty.
   // Save it temporarily so we can restore it after the evalInEnvironment.
   Handle<> savedThrownValue = runtime_.makeHandle(runtime_.getThrownValue());
@@ -1257,7 +1265,7 @@ HermesValue Debugger::evalInFrame(
       env,
       cb,
       Handle<>(&frameInfo->frame->getThisArgRef()),
-      Handle<>(&frameInfo->frame->getNewTargetRef()),
+      newTarget,
       singleFunction);
 
   // Check if an exception was thrown.

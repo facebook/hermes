@@ -69,7 +69,11 @@ FuncIsArrow SemContext::nodeIsArrow(ESTree::Node *node) {
 
 FunctionInfo *SemContext::nearestNonArrow(FunctionInfo *info) {
   FunctionInfo *cur = info;
-  while (cur->arrow) {
+  auto *global = getGlobalFunction();
+  // Top-level root program nodes that are not the global function are debugger
+  // eval functions. We don't want to consider these when trying to find the
+  // nearest non-arrow.
+  while (cur->arrow || (cur->isProgramNode && cur != global)) {
     cur = cur->parentFunction;
   }
   assert(cur && "All FunctionInfo should have a non-arrow ancestor.");

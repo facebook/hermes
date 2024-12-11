@@ -688,7 +688,12 @@ Function *ESTreeIRGen::genAsyncFunction(
 
 void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   // Capture "this", "new.target" and "arguments" if there are inner arrows.
-  if (!curFunction()->getSemInfo()->containsArrowFunctions)
+  // Also capture state in derived class constructors, so we can handle `this`
+  // correctly in debugger evals.
+  if (!(curFunction()->getSemInfo()->containsArrowFunctions ||
+        ((Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) &&
+         curFunction()->getSemInfo()->constructorKind ==
+             sema::FunctionInfo::ConstructorKind::Derived)))
     return;
 
   auto *scope = curFunction()->curScope->getVariableScope();
@@ -1359,7 +1364,7 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
   // and add the function's VariableScope to the data so we can compile REPL
   // commands from the debugger.
   // Skip generators here, debugging generators is not supported yet.
-  if (Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL &&
+  if ((Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) &&
       !llvh::isa<GeneratorFunction>(F) &&
       F->getDefinitionKind() != Function::DefinitionKind::GeneratorInner) {
     BasicBlock &entry = *F->begin();
@@ -1376,14 +1381,21 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
     bool isNestedInDerivedCons =
         semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
         sema::FunctionInfo::ConstructorKind::Derived;
-    // TODO: support debugger eval `this` in a derived class constructor.
-    bool shouldCaptureState = isArrow && !isNestedInDerivedCons;
+    bool shouldCaptureState = isArrow || isNestedInDerivedCons;
+    Variable *clsConstructor = nullptr;
+    Variable *clsInitFunc = nullptr;
+    if (curFunction()->hasLegacyClassContext()) {
+      clsConstructor = curFunction()->legacyClassContext->constructor;
+      clsInitFunc = curFunction()->legacyClassContext->instElemInitFuncVar;
+    }
     auto *evalData = Builder.createEvalCompilationDataInst(
         std::move(data),
         shouldCaptureState ? curFunction()->capturedState.thisVal : nullptr,
         shouldCaptureState ? curFunction()->capturedState.newTarget : nullptr,
         nullptr,
         curFunction()->capturedState.homeObject,
+        clsConstructor,
+        clsInitFunc,
         curFunction()->curScope->getVariableScope());
     // This is never emitted, it has no location.
     evalData->setLocation({});

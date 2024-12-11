@@ -2,3 +2,16 @@ exec super.baseInstMethod()
 continue
 exec super.baseStaticMethod()
 continue
+exec this.p1
+continue
+exec this.p1
+exec this.p2
+continue
+exec this.p1
+continue
+exec this.p1
+exec this.p2
+continue
+exec super(p1)
+exec super(p1)
+continue

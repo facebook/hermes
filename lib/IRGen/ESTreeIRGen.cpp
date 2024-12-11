@@ -249,6 +249,13 @@ Function *ESTreeIRGen::doItInScope(EvalCompilationDataInst *evalDataInst) {
   curFunction()->capturedState.thisVal = evalDataInst->getCapturedThis();
   curFunction()->capturedState.homeObject = evalDataInst->getHomeObject();
 
+  // If there was class context, restore it.
+  if (evalDataInst->getClsConstructor()) {
+    curFunction()->legacyClassContext = std::make_shared<LegacyClassContext>(
+        evalDataInst->getClsConstructor(),
+        evalDataInst->getClsInstElemInitFunc());
+  }
+
   emitFunctionPrologue(
       Program,
       Builder.createBasicBlock(newFunc),

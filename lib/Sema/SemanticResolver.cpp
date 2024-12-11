@@ -116,7 +116,13 @@ bool SemanticResolver::runInScope(
 
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{
-      *this, rootNode, semInfo, semInfo->strict, semInfo->constructorKind, {}};
+      *this,
+      rootNode,
+      semInfo,
+      semInfo->strict,
+      FunctionInfo::ConstructorKind::None,
+      {}};
+  curFunctionInfo()->isProgramNode = true;
   {
     ScopeRAII programScope{*this, rootNode, /* functionScope */ true};
     if (sm_.getErrorCount())
@@ -177,6 +183,7 @@ void SemanticResolver::visit(ESTree::ProgramNode *node) {
       curFunctionInfo()->customDirectives.sourceVisibility)
     curFunctionInfo()->customDirectives.sourceVisibility =
         directives.sourceVisibility;
+  curFunctionInfo()->isProgramNode = true;
 
   {
     ScopeRAII programScope{*this, node, /* functionScope */ true};
