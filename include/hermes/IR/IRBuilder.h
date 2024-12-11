@@ -296,6 +296,12 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
+  CreateClassInst *createCreateClassInst(
+      BaseScopeInst *scope,
+      Function *code,
+      Value *superClass,
+      AllocStackInst *homeObjectOutput);
+
   CreateFunctionInst *createCreateFunctionInst(
       Instruction *scope,
       Function *code);

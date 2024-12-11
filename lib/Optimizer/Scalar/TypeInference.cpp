@@ -670,6 +670,10 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
 
+  Type inferCreateClassInst(CreateClassInst *inst) {
+    return *inst->getInherentType();
+  }
+
   Type inferTerminatorInst(TerminatorInst *inst) {
     hermes_fatal("This is not a concrete instruction");
   }

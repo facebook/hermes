@@ -379,6 +379,16 @@ Arguments | %function is the function that represents the code of the generated 
 Semantics | The instruction creates a new closure that may access the lexical scope of the current function
 Effects | Does not read or write to memory.
 
+### CreateClassInst
+
+CreateClassInst | _
+--- | --- |
+Description | Constructs a new class into the current scope from its constructor code representation.
+Example | %0 = CreateClassInst %scope, %function, %superClass, %homeObjectOutput
+Arguments | %function is the function that represents the code of the constructor. %scope is the surrounding environment. %superClass is the class to inherit from; in base classes this is an empty sentinel value. %homeObjectOutput is an out parameter which will contain the home object (.prototype) of the class.
+Semantics | The instruction creates a new class that may access the lexical scope of the current function, and an inherit from a given super class. (ES2023 15.7.14) This results in the creation of 2 objects: the class function object itself, and the "home" object. The home object is where methods are put. The home object can be found on the .prototype of the class, and the class can be found on the .constructor of the home object.
+Effects | May execute JS and write to stack memory.
+
 ### BinaryOperatorInst
 
 BinaryOperatorInst | _

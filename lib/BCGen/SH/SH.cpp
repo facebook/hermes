@@ -1686,6 +1686,29 @@ class InstrGen {
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
         << "]" << ", shUnit);\n";
   }
+  void generateCreateClassInst(CreateClassInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    bool isBaseClass = llvh::isa<EmptySentinel>(inst.getSuperClass());
+    os_ << " = _sh_ljs_create_class(shr,";
+    generateRegisterPtr(*inst.getScope());
+    os_ << ", ";
+    moduleGen_.nativeFunctionTable.generateFunctionLabel(
+        inst.getFunctionCode(), os_);
+    os_ << ", ";
+    os_ << "&s_function_info_table["
+        << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
+        << "]";
+    os_ << ", (SHUnit *)shUnit, ";
+    generateRegisterPtr(*inst.getHomeObjectOutput());
+    os_ << ", ";
+    if (isBaseClass) {
+      os_ << "NULL";
+    } else {
+      generateRegisterPtr(*inst.getSuperClass());
+    }
+    os_ << ");\n";
+  }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";
     generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);

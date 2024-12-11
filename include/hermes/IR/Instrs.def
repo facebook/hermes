@@ -148,6 +148,7 @@ MARK_FIRST(BaseCreateLexicalChildInst, Instruction)
 
 MARK_FIRST(BaseCreateCallableInst, BaseCreateLexicalChildInst)
 DEF_VALUE(CreateFunctionInst, BaseCreateCallableInst)
+DEF_VALUE(CreateClassInst, Instruction)
 MARK_LAST(BaseCreateCallableInst)
 
 DEF_VALUE(CreateGeneratorInst, BaseCreateLexicalChildInst)

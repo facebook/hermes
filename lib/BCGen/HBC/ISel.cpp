@@ -1855,6 +1855,29 @@ void HBCISel::generateCacheNewObjectInst(
   BCFGen_->emitCacheNewObject(thisReg, bufIndex.shapeTableIdx);
 }
 
+void HBCISel::generateCreateClassInst(CreateClassInst *Inst, BasicBlock *next) {
+  auto classOut = encodeValue(Inst);
+  auto homeObjOut = encodeValue(Inst->getHomeObjectOutput());
+  auto env = encodeValue(Inst->getScope());
+  auto code = BCFGen_->getFunctionID(Inst->getFunctionCode());
+  bool isBaseClass = llvh::isa<EmptySentinel>(Inst->getSuperClass());
+  if (isBaseClass) {
+    if (LLVM_LIKELY(code <= UINT16_MAX)) {
+      BCFGen_->emitCreateBaseClass(classOut, homeObjOut, env, code);
+    } else {
+      BCFGen_->emitCreateBaseClassLongIndex(classOut, homeObjOut, env, code);
+    }
+  } else {
+    auto super = encodeValue(Inst->getSuperClass());
+    if (LLVM_LIKELY(code <= UINT16_MAX)) {
+      BCFGen_->emitCreateDerivedClass(classOut, homeObjOut, env, super, code);
+    } else {
+      BCFGen_->emitCreateDerivedClassLongIndex(
+          classOut, homeObjOut, env, super, code);
+    }
+  }
+}
+
 void HBCISel::generateSwitchImmInst(
     hermes::SwitchImmInst *Inst,
     hermes::BasicBlock *next) {

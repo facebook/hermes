@@ -349,6 +349,16 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
+CreateClassInst *IRBuilder::createCreateClassInst(
+    BaseScopeInst *scope,
+    Function *code,
+    Value *superClass,
+    AllocStackInst *homeObjectOutput) {
+  auto CC = new CreateClassInst(scope, code, superClass, homeObjectOutput);
+  insert(CC);
+  return CC;
+}
+
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(
     Instruction *scope,
     Function *code) {

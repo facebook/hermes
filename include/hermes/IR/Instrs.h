@@ -978,6 +978,58 @@ class CreateFunctionInst : public BaseCreateCallableInst {
   }
 };
 
+class CreateClassInst : public BaseCreateCallableInst {
+  CreateClassInst(const CreateClassInst &) = delete;
+  void operator=(const CreateClassInst &) = delete;
+
+ public:
+  enum { SuperClassIdx = BaseCreateCallableInst::LAST_IDX, HomeObjectOutIdx };
+  explicit CreateClassInst(
+      BaseScopeInst *scope,
+      Function *code,
+      Value *superClass,
+      AllocStackInst *homeObjectOutput)
+      : BaseCreateCallableInst(ValueKind::CreateClassInstKind, scope, code) {
+    assert(
+        (llvh::isa<NormalFunction>(code)) &&
+        "Only NormalFunction supported by CreateClassInst");
+    setType(*getInherentTypeImpl());
+    pushOperand(superClass);
+    pushOperand(homeObjectOutput);
+  }
+  explicit CreateClassInst(
+      const CreateClassInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseCreateCallableInst(src, operands) {}
+
+  Value *getHomeObjectOutput() {
+    return getOperand(HomeObjectOutIdx);
+  }
+
+  Value *getSuperClass() {
+    return getOperand(SuperClassIdx);
+  }
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
+  SideEffect getSideEffectImpl() const {
+    // When creating a derived class, we look up the .prototype of the super
+    // class we are deriving from. This property look up can potentially trigger
+    // JS.
+    return SideEffect::createExecute().setWriteStack();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CreateClassInstKind;
+  }
+};
+
 class BaseCallInst : public Instruction {
   BaseCallInst(const BaseCallInst &) = delete;
   void operator=(const BaseCallInst &) = delete;

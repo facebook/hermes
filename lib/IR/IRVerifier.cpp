@@ -570,6 +570,7 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
               llvh::isa<BaseCreateLexicalChildInst>(Inst) ||
               llvh::isa<LoadStackInst>(Inst) ||
               llvh::isa<StoreStackInst>(Inst) || llvh::isa<PhiInst>(Inst) ||
+              llvh::isa<CreateClassInst>(Inst) ||
               llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst),
           "Environments can only be an operand to certain instructions.");
     }
@@ -899,6 +900,11 @@ bool Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
       Inst,
       llvh::isa<LiteralUndefined>(Inst.getNewTarget()),
       "CallNInst NewTarget must be undefined");
+  return true;
+}
+
+bool Verifier::visitCreateClassInst(const CreateClassInst &Inst) {
+  // Nothing to verify.
   return true;
 }
 
