@@ -672,7 +672,7 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// \code
-///   HermesBuiltin.applyArguments = function(fn, thisVal) {}
+///   HermesBuiltin.applyArguments = function(fn, thisVal, newTarget) {}
 /// /endcode
 /// Faster version of Function.prototype.apply which copies the arguments
 /// from the caller to the callee.
@@ -686,6 +686,15 @@ hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
         args.getArgHandle(0), " is not a function");
   }
 
+  Handle<> newTarget = args.getArgHandle(2);
+  bool isConstructCall = !newTarget->isUndefined();
+  assert(
+      newTarget->isUndefined() ||
+      isConstructor(runtime, *newTarget) &&
+          "new.target can only be undefined or a constructor.");
+
+  Handle<> thisHandle = args.getArgHandle(1);
+
   // Obtain the caller's stack frame.
   auto frames = runtime.getStackFrames();
   auto it = frames.begin();
@@ -696,7 +705,12 @@ hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
 
   uint32_t argCount = it->getArgCount();
 
-  ScopedNativeCallFrame newFrame{runtime, argCount, *fn, false, args.getArg(1)};
+  ScopedNativeCallFrame newFrame{
+      runtime,
+      argCount,
+      HermesValue::encodeObjectValue(*fn),
+      *newTarget,
+      *thisHandle};
   if (LLVM_UNLIKELY(newFrame.overflowed())) {
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
@@ -705,7 +719,12 @@ hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
     newFrame->getArgRef(i) = it->getArgRef(i);
   }
 
-  return Callable::call(fn, runtime).toCallResultHermesValue();
+  if (isConstructCall) {
+    return Callable::construct(fn, runtime, thisHandle)
+        .toCallResultHermesValue();
+  } else {
+    return Callable::call(fn, runtime).toCallResultHermesValue();
+  }
 }
 
 /// HermesBuiltin.exportAll(exports, source) will copy exported named
