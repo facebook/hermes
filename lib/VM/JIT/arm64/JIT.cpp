@@ -298,7 +298,6 @@ EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 EMIT_UNIMPLEMENTED(CacheNewObject)
-EMIT_UNIMPLEMENTED(CreateThisForSuper)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -1079,6 +1078,12 @@ inline void JITContext::Compiler::emitCreateThisForNew(
     const inst::CreateThisForNewInst *inst) {
   auto cacheIdx = inst->op3;
   em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitCreateThisForSuper(
+    const inst::CreateThisForSuperInst *inst) {
+  auto cacheIdx = inst->op4;
+  em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op3), cacheIdx);
 }
 
 inline void JITContext::Compiler::emitSelectObject(
