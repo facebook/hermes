@@ -1012,7 +1012,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
       // Callables that make their own this should be given undefined in a
       // construct call.
       return HermesValue::encodeUndefinedValue();
-    } else if (cellKind >= CellKind::CallableKind_first) {
+    } else if (cellKind >= CellKind::CallableUnknownMakesThisKind_first) {
       correctNewTarget = vmcast<Callable>(*toPHV(newTarget));
       while (auto *bound = dyn_vmcast<BoundFunction>(calleeFunc)) {
         calleeFunc = bound->getTarget(runtime);
@@ -1025,7 +1025,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
       cellKind = calleeFunc->getKind();
       // Repeat the checks, now against the target.
       if (cellKind >= CellKind::CallableExpectsThisKind_first) {
-        correctNewTarget = vmcast<Callable>(calleeFunc);
+        // Do nothing, correctNewTarget is already set up correctly.
       } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
         return HermesValue::encodeUndefinedValue();
       } else {
