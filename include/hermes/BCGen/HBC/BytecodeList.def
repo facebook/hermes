@@ -613,6 +613,23 @@ DEFINE_OPCODE_0(AsyncBreakCheck)
 /// all the overflowed profile points have index zero.
 DEFINE_OPCODE_1(ProfilePoint, UInt16)
 
+/// Create a base class.
+/// Arg1 is the output register for the the closure.
+/// Arg2 is the output register for the home object.
+/// Arg3 is the current environment.
+/// Arg4 is index in the function table.
+DEFINE_OPCODE_4(CreateBaseClass, Reg8, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_4(CreateBaseClassLongIndex, Reg8, Reg8, Reg8, UInt32)
+
+/// Create a derived class.
+/// Arg1 is the output register for the the closure.
+/// Arg2 is the output register for the home object.
+/// Arg3 is the current environment.
+/// Arg4 is the superClass.
+/// Arg5 is index in the function table.
+DEFINE_OPCODE_5(CreateDerivedClass, Reg8, Reg8, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_5(CreateDerivedClassLongIndex, Reg8, Reg8, Reg8, Reg8, UInt32)
+
 /// Create a closure.
 /// Arg1 is the register in which to store the closure.
 /// Arg2 is the current environment.

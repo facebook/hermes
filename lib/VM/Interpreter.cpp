@@ -1955,6 +1955,32 @@ tailCall:
         // dispatch.
       }
 
+      CASE(CreateBaseClass) {
+        nextIP = NEXTINST(CreateBaseClass);
+        goto createClass;
+      }
+      CASE(CreateBaseClassLongIndex) {
+        nextIP = NEXTINST(CreateBaseClassLongIndex);
+        goto createClass;
+      }
+      CASE(CreateDerivedClassLongIndex) {
+        nextIP = NEXTINST(CreateDerivedClassLongIndex);
+        goto createClass;
+      }
+      CASE(CreateDerivedClass) {
+        nextIP = NEXTINST(CreateDerivedClass);
+        goto createClass;
+      }
+    createClass: {
+      CAPTURE_IP_ASSIGN(auto res, caseCreateClass(runtime, frameRegs));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        goto exception;
+      }
+      gcScope.flushToSmallCount(KEEP_HANDLES);
+      ip = nextIP;
+      DISPATCH;
+    }
+
       CASE(CreateClosure) {
         idVal = ip->iCreateClosure.op3;
         nextIP = NEXTINST(CreateClosure);

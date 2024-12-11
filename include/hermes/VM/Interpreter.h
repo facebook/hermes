@@ -269,6 +269,11 @@ class Interpreter {
       uint8_t cacheIdx,
       CodeBlock *curCodeBlock);
 
+  /// Create a class, as per ES2023 15.7.14.
+  static ExecutionStatus caseCreateClass(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs);
+
   /// Evaluate callBuiltin and store the result in the register stack. it must
   /// must be invoked with CallBuiltin or CallBuiltinLong. \p op3 contains the
   /// value of operand3, which is the only difference in encoding between the

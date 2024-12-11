@@ -580,6 +580,46 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
   return *genObjRes;
 }
 
+extern "C" SHLegacyValue _sh_ljs_create_class(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit,
+    SHLegacyValue *homeObjectOut,
+    SHLegacyValue *superClass) {
+  assert(!_sh_ljs_is_null(*env) && "create class cannot have null environment");
+  Runtime &runtime = getRuntime(shr);
+  GCScopeMarkerRAII marker{runtime};
+  auto classRes = createClass(
+      runtime,
+      superClass ? Handle{toPHV(superClass)} : Runtime::getEmptyValue(),
+      [&runtime, env, func, funcInfo, unit, superClass](
+          Handle<JSObject> ctorParent) {
+        // Derived classes get their own special CellKind.
+        return superClass ? *NativeJSDerivedClass::create(
+                                runtime,
+                                ctorParent,
+                                Handle<Environment>::vmcast(toPHV(env)),
+                                func,
+                                funcInfo,
+                                unit,
+                                0)
+                          : *NativeJSFunction::create(
+                                runtime,
+                                ctorParent,
+                                Handle<Environment>::vmcast(toPHV(env)),
+                                func,
+                                funcInfo,
+                                unit,
+                                0);
+      });
+  if (classRes == ExecutionStatus::EXCEPTION)
+    _sh_throw_current(shr);
+  *homeObjectOut = HermesValue::encodeObjectValue(std::get<1>(*classRes));
+  return HermesValue::encodeObjectValue(std::get<0>(*classRes));
+}
+
 extern "C" SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,

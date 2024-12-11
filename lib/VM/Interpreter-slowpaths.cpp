@@ -13,6 +13,7 @@
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime-inline.h"
+#include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -20,6 +21,78 @@
 
 namespace hermes {
 namespace vm {
+
+ExecutionStatus Interpreter::caseCreateClass(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs) {
+  const Inst *ip = runtime.getCurrentIP();
+  GCScopeMarkerRAII mark{runtime};
+  /// Obtain the function index and value of the super class based on the IP.
+  auto funcIdxAndSuper = [ip, frameRegs]() -> std::pair<uint32_t, Handle<>> {
+    // We use toRValue here because the accesses into the ip fields will not
+    // always be byte aligned. By default, the std::pair we construct would take
+    // a reference to the integer field we are trying to read off of the ip. In
+    // the process, the "packed" attribute is lost and it would throw an error
+    // in sanitization mode when trying to read. Don't allow it to take a
+    // reference by converting it to an rvalue.
+    switch (ip->opCode) {
+      case inst::OpCode::CreateBaseClass:
+        return {toRValue(ip->iCreateBaseClass.op4), Runtime::getEmptyValue()};
+      case inst::OpCode::CreateBaseClassLongIndex:
+        return {
+            toRValue(ip->iCreateBaseClassLongIndex.op4),
+            Runtime::getEmptyValue()};
+      case inst::OpCode::CreateDerivedClass:
+        return {
+            toRValue(ip->iCreateDerivedClass.op5),
+            Handle<>{&O4REG(CreateDerivedClass)}};
+      case inst::OpCode::CreateDerivedClassLongIndex:
+        return {
+            toRValue(ip->iCreateDerivedClassLongIndex.op5),
+            Handle<>{&O4REG(CreateDerivedClassLongIndex)}};
+      default:
+        llvm_unreachable("called caseCreateClass on a non-CreateClass opcode");
+    }
+  }();
+
+  auto classRes = createClass(
+      runtime,
+      funcIdxAndSuper.second,
+      [&runtime,
+       frameRegs,
+       ip,
+       funcIdx = funcIdxAndSuper.first,
+       super = funcIdxAndSuper.second](Handle<JSObject> ctorParent) {
+        CodeBlock *curCodeBlock =
+            runtime.getCurrentFrame().getCalleeCodeBlock();
+        auto *runtimeModule = curCodeBlock->getRuntimeModule();
+        auto envHandle = Handle<Environment>::vmcast(&O3REG(CreateBaseClass));
+        // Derived classes get their own special CellKind.
+        return super->isEmpty()
+            ? JSFunction::create(
+                  runtime,
+                  runtimeModule->getDomain(runtime),
+                  ctorParent,
+                  envHandle,
+                  runtimeModule->getCodeBlockMayAllocate(funcIdx))
+                  .get()
+            : JSDerivedClass::create(
+                  runtime,
+                  runtimeModule->getDomain(runtime),
+                  ctorParent,
+                  envHandle,
+                  runtimeModule->getCodeBlockMayAllocate(funcIdx))
+                  .get();
+      });
+  if (LLVM_UNLIKELY(classRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  O2REG(CreateBaseClass) = HermesValue::encodeObjectValue(classRes->second);
+  // Write the result last in case it is the same register as the prototype.
+  O1REG(CreateBaseClass) = HermesValue::encodeObjectValue(classRes->first);
+  return ExecutionStatus::RETURNED;
+}
 
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime &runtime,
