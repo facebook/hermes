@@ -4712,6 +4712,24 @@ void Emitter::getNextPName(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::toPropertyKey(FR frRes, FR frVal) {
+  comment("// ToPropertyKey r%u, r%u", frRes.index(), frVal.index());
+  syncAllFRTempExcept(frRes != frVal ? frRes : FR());
+  syncToFrame(frVal);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frVal);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+      _sh_ljs_to_property_key);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
   comment(
       "// AddS r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());

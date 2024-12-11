@@ -2707,6 +2707,21 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(ToPropertyKey) {
+        {
+          CAPTURE_IP_ASSIGN(
+              auto res,
+              toPropertyKey(runtime, Handle<>(&O2REG(ToPropertyKey))));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+          O1REG(ToPropertyKey) = res->getHermesValue();
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+        }
+        ip = NEXTINST(ToPropertyKey);
+        DISPATCH;
+      }
+
       CASE(ToNumber) {
         if (LLVM_LIKELY(O2REG(ToNumber).isNumber())) {
           O1REG(ToNumber) = O2REG(ToNumber);

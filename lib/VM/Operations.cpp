@@ -2502,6 +2502,21 @@ ExecutionStatus setTemplateObjectProps(
 
 using namespace hermes::vm;
 
+extern "C" SHLegacyValue _sh_ljs_to_property_key(
+    SHRuntime *shr,
+    const SHLegacyValue *val) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> ret{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    ret =
+        toPropertyKey(runtime, Handle<>(toPHV(val))).toCallResultHermesValue();
+  }
+  if (LLVM_UNLIKELY(ret == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *ret;
+}
+
 extern "C" double _sh_ljs_to_double_rjs(
     SHRuntime *shr,
     const SHLegacyValue *n) {

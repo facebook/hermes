@@ -631,6 +631,9 @@ _sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_create_bigint(SHRuntime *shr, const uint8_t *value, uint32_t size);
 
+SHERMES_EXPORT SHLegacyValue
+_sh_ljs_to_property_key(SHRuntime *shr, const SHLegacyValue *val);
+
 SHERMES_EXPORT double _sh_ljs_to_double_rjs(
     SHRuntime *shr,
     const SHLegacyValue *n);

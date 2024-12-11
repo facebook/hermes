@@ -757,6 +757,10 @@ DEFINE_OPCODE_2(GetArgumentsLength, Reg8, Reg8)
 DEFINE_OPCODE_1(ReifyArgumentsStrict, Reg8)
 DEFINE_OPCODE_1(ReifyArgumentsLoose, Reg8)
 
+/// Convert a value to a property key, used to evaluate a ComputedPropertyName.
+/// Arg1 = ToPropertyKey(Arg2)
+DEFINE_OPCODE_2(ToPropertyKey, Reg8, Reg8)
+
 /// Create a regular expression.
 /// Arg1 is the result.
 /// Arg2 is the string index of the pattern.

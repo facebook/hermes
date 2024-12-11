@@ -1033,6 +1033,11 @@ inline void JITContext::Compiler::emitGetNextPName(
       FR(inst->op5));
 }
 
+inline void JITContext::Compiler::emitToPropertyKey(
+    const inst::ToPropertyKeyInst *inst) {
+  em_.toPropertyKey(FR(inst->op1), FR(inst->op2));
+}
+
 inline void JITContext::Compiler::emitIteratorBegin(
     const inst::IteratorBeginInst *inst) {
   em_.iteratorBegin(FR(inst->op1), FR(inst->op2));

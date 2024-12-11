@@ -566,6 +566,8 @@ class Emitter {
   void getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize);
   void getNextPName(FR frRes, FR frProps, FR frObj, FR frIdx, FR frSize);
 
+  void toPropertyKey(FR frRes, FR frVal);
+
 #define DECL_COMPARE(                                                   \
     methodName, commentStr, slowCall, condCode, invSlow, passArgsByVal) \
   void methodName(FR rRes, FR rLeft, FR rRight) {                       \
