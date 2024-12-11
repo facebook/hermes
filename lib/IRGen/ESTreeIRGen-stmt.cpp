@@ -1084,6 +1084,13 @@ void ESTreeIRGen::genReturnStatement(ESTree::ReturnStatementNode *RetStmt) {
 
   genFinallyBeforeControlChange(
       curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
+
+  if (curFunction()->hasLegacyClassContext() &&
+      curFunction()->getSemInfo()->constructorKind ==
+          sema::FunctionInfo::ConstructorKind::Derived) {
+    Value = genLegacyDerivedConstructorRet(RetStmt, Value);
+  }
+
   Builder.createReturnInst(Value);
 
   // Code that comes after 'return' is dead code. Let's create a new un-linked

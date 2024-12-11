@@ -1064,6 +1064,11 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
   Builder.setLocation(SourceErrorManager::convertEndToLocation(
       Builder.getFunction()->getSourceRange()));
   if (returnValue) {
+    if (curFunction()->hasLegacyClassContext() &&
+        curFunction()->getSemInfo()->constructorKind ==
+            sema::FunctionInfo::ConstructorKind::Derived) {
+      returnValue = genLegacyDerivedConstructorRet(nullptr, returnValue);
+    }
     Builder.createReturnInst(returnValue);
   } else {
     Builder.createUnreachableInst();

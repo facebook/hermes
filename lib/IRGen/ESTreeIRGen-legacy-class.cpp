@@ -163,5 +163,85 @@ Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
   return initializedThisVal;
 }
 
+Value *ESTreeIRGen::genLegacyDerivedConstructorRet(
+    ESTree::ReturnStatementNode *node,
+    Value *returnValue) {
+  // Easy optimization- if we are returning `this`, then we already do the
+  // required checks when generating the IR for the `this` expression.
+  if (node && node->_argument &&
+      llvh::isa<ESTree::ThisExpressionNode>(node->_argument)) {
+    return returnValue;
+  }
+  assert(
+      (curFunction()->getSemInfo()->constructorKind ==
+       sema::FunctionInfo::ConstructorKind::Derived) &&
+      curFunction()->capturedState.thisVal &&
+      "captured state not properly set.");
+  auto *checkedThis = curFunction()->capturedState.thisVal;
+  auto *baseConstructorScope =
+      emitResolveScopeInstIfNeeded(checkedThis->getParent());
+
+  // Easy optimization- we will often be returning a literal undefined because
+  // of implicit returns. Returning undefined is functionally equivalent to
+  // returning `this`.
+  if (llvh::isa<LiteralUndefined>(returnValue)) {
+    return Builder.createThrowIfInst(
+        Builder.createLoadFrameInst(baseConstructorScope, checkedThis),
+        Type::createEmpty());
+  }
+
+  // Every return statement in a derived class constructor must be either an
+  // object or undefined. If it's undefined, then convert that to the checked
+  // this. Conceptually then, we generate IR like the following:
+  //
+  //   if (returnValue is object || returnValue is function) {
+  //     return returnValue;
+  //   } else if (returnValue === undefined) {
+  //     return checkedThis();
+  //   } else {
+  //     throw new TypeError();
+  //   }
+
+  auto *curBB = Builder.getInsertionBlock();
+  auto *returnBB = Builder.createBasicBlock(curFunction()->function);
+  auto *checkIfUndefBB = Builder.createBasicBlock(curFunction()->function);
+  auto *throwInvalidRetBB = Builder.createBasicBlock(curFunction()->function);
+  auto *loadCheckedThisBB = Builder.createBasicBlock(curFunction()->function);
+  auto *canUseRetVal = Builder.createTypeOfIsInst(
+      returnValue,
+      Builder.getLiteralTypeOfIsTypes(
+          TypeOfIsTypes{}.withFunction(true).withObject(true)));
+
+  // 10.a. If result.[[Value]] is an Object, return result.[[Value]].
+  Builder.createCondBranchInst(canUseRetVal, returnBB, checkIfUndefBB);
+
+  // 10.c. If result.[[Value]] is not undefined, throw a TypeError exception.
+  Builder.setInsertionBlock(checkIfUndefBB);
+  Builder.createCondBranchInst(
+      Builder.createBinaryOperatorInst(
+          returnValue,
+          Builder.getLiteralUndefined(),
+          ValueKind::BinaryStrictlyEqualInstKind),
+      loadCheckedThisBB,
+      throwInvalidRetBB);
+
+  // 12. Let thisBinding be ? constructorEnv.GetThisBinding().
+  // 13. Assert: thisBinding is an Object.
+  // 14. Return thisBinding.
+  Builder.setInsertionBlock(loadCheckedThisBB);
+  auto *checkedThisVal = Builder.createThrowIfInst(
+      Builder.createLoadFrameInst(baseConstructorScope, checkedThis),
+      Type::createEmpty());
+  Builder.createBranchInst(returnBB);
+
+  Builder.setInsertionBlock(throwInvalidRetBB);
+  Builder.createThrowTypeErrorInst(Builder.getLiteralString(
+      "Derived constructors may only return an object or undefined."));
+
+  Builder.setInsertionBlock(returnBB);
+  return Builder.createPhiInst(
+      {returnValue, checkedThisVal}, {curBB, loadCheckedThisBB});
+}
+
 } // namespace irgen
 } // namespace hermes

@@ -674,6 +674,14 @@ class ESTreeIRGen {
   /// Generate IR for `this` in a derived legacy class constructor.
   Value *genLegacyDerivedThis();
 
+  /// Generate IR for a `return` statement in a derived legacy class
+  /// constructor. This makes sure that \p returnValue is undefined or an
+  /// object, and performs the checks on `this` when required.
+  /// This corresponds mostly closely with ES15 10.2.2 [[Construct]].
+  Value *genLegacyDerivedConstructorRet(
+      ESTree::ReturnStatementNode *node,
+      Value *returnValue);
+
   /// Emit code to allocate an empty instance of the specified class and return
   /// it.
   /// \param parent the parent object of the newly allocated class, nullptr to
