@@ -439,6 +439,16 @@ class TypeInferenceImpl {
   Type inferAddEmptyStringInst(AddEmptyStringInst *inst) {
     return *inst->getInherentType();
   }
+  Type inferToPropertyKeyInst(ToPropertyKeyInst *inst) {
+    Type t = inst->getSingleOperand()->getType();
+    if (t.isSymbolType()) {
+      return Type::createSymbol();
+    }
+    if (t.isPrimitive() && !t.canBeSymbol()) {
+      return Type::createString();
+    }
+    return Type::unionTy(Type::createString(), Type::createSymbol());
+  }
   Type inferAsNumberInst(AsNumberInst *inst) {
     return *inst->getInherentType();
   }

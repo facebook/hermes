@@ -655,6 +655,10 @@ bool Verifier::visitHBCResolveParentEnvironmentInst(
   return true;
 }
 
+bool Verifier::visitToPropertyKeyInst(const ToPropertyKeyInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitAsNumberInst(const AsNumberInst &Inst) {
   AssertIWithMsg(
       Inst,

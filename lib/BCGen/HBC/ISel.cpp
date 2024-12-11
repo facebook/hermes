@@ -552,6 +552,14 @@ void HBCISel::generateAddEmptyStringInst(
   BCFGen_->emitAddEmptyString(dst, src);
 }
 
+void HBCISel::generateToPropertyKeyInst(
+    ToPropertyKeyInst *Inst,
+    BasicBlock *next) {
+  auto dst = encodeValue(Inst);
+  auto src = encodeValue(Inst->getSingleOperand());
+  BCFGen_->emitToPropertyKey(dst, src);
+}
+
 void HBCISel::generateAsNumberInst(AsNumberInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getSingleOperand());

@@ -288,6 +288,8 @@ class IRBuilder {
 
   AllocStackInst *createAllocStackInst(Identifier varName, Type type);
 
+  ToPropertyKeyInst *createToPropertyKeyInst(Value *val);
+
   AsNumberInst *createAsNumberInst(Value *val);
 
   AsNumericInst *createAsNumericInst(Value *val);

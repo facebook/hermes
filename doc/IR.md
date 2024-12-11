@@ -248,6 +248,16 @@ Arguments | %value is the value to be stored. %address is the reference to stack
 Semantics | The the instruction saves a value to memory. The address must be a valid stack allocation.
 Effects | Writes to memory.
 
+### ToPropertyKeyInst
+
+ToPropertyKeyInst | _
+--- | --- |
+Description | Converts a JavaScript value into a property key.
+Example |  %1 = ToPropertyKeyInst %input
+Arguments | The value to cast.
+Semantics | Implements ES15 7.1.19 ToPropertyKey ( argument ).
+Effects | May execute.
+
 ### AsNumberInst
 
 AsNumberInst | _

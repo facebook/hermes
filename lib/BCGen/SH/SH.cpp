@@ -704,6 +704,14 @@ class InstrGen {
     generateRegisterPtr(*inst.getSingleOperand());
     os_ << ");\n";
   }
+  void generateToPropertyKeyInst(ToPropertyKeyInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_to_property_key(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << ");\n";
+  }
   void generateAsNumberInst(AsNumberInst &inst) {
     os_.indent(2);
     generateRegister(inst);

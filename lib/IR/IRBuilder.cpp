@@ -325,6 +325,12 @@ AllocStackInst *IRBuilder::createAllocStackInst(Identifier varName, Type type) {
   return AHI;
 }
 
+ToPropertyKeyInst *IRBuilder::createToPropertyKeyInst(Value *val) {
+  auto *ANI = new ToPropertyKeyInst(val);
+  insert(ANI);
+  return ANI;
+}
+
 AsNumberInst *IRBuilder::createAsNumberInst(Value *val) {
   auto *ANI = new AsNumberInst(val);
   insert(ANI);

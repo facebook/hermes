@@ -215,6 +215,37 @@ class AddEmptyStringInst : public SingleOperandInst {
   }
 };
 
+class ToPropertyKeyInst : public SingleOperandInst {
+  ToPropertyKeyInst(const ToPropertyKeyInst &) = delete;
+  void operator=(const ToPropertyKeyInst &) = delete;
+
+ public:
+  explicit ToPropertyKeyInst(Value *value)
+      : SingleOperandInst(ValueKind::ToPropertyKeyInstKind, value) {
+    setType(Type::unionTy(Type::createString(), Type::createSymbol()));
+  }
+  explicit ToPropertyKeyInst(
+      const ToPropertyKeyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect::createExecute();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ToPropertyKeyInstKind;
+  }
+};
+
 class AsNumberInst : public SingleOperandInst {
   AsNumberInst(const AsNumberInst &) = delete;
   void operator=(const AsNumberInst &) = delete;
