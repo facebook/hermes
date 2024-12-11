@@ -838,6 +838,10 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
       }
       return emitTypedSuperLoad(superNode, property);
     }
+    // Generate `this` value first. This handles the case where we are in a
+    // derived constructor but no call to `super` has been made. We must throw
+    // an error before we do the property load.
+    Value *thisValue = genThisExpression();
     auto *homeObjectVar = curFunction()->capturedState.homeObject;
     assert(homeObjectVar && "homeObjectVar not populated");
     auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
@@ -846,7 +850,6 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
     Value *superObj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
     Value *propVal = Builder.createLoadPropertyInst(
         superObj, genMemberExpressionProperty(mem));
-    Value *thisValue = genThisExpression();
     return MemberExpressionResult{propVal, nullptr, thisValue};
   }
 

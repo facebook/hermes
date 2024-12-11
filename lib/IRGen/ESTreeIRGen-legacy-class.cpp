@@ -102,6 +102,66 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   CreateClassInst *createClass = Builder.createCreateClassInst(
       curScope, consCode, superCls, clsPrototypeOutput);
   auto *clsPrototype = Builder.createLoadStackInst(clsPrototypeOutput);
+
+  /// Add a method to a given object \p O. In practice, O should either be the
+  /// class itself or the class prototype.
+  auto addMethod =
+      [this](Value *O, llvh::StringRef kind, Value *key, Value *closure) {
+        if (kind == "get") {
+          Builder.createStoreGetterSetterInst(
+              closure,
+              Builder.getLiteralUndefined(),
+              O,
+              key,
+              IRBuilder::PropEnumerable::No);
+        } else if (kind == "set") {
+          Builder.createStoreGetterSetterInst(
+              Builder.getLiteralUndefined(),
+              closure,
+              O,
+              key,
+              IRBuilder::PropEnumerable::No);
+        } else {
+          assert(kind == "method" && "unhandled method definition");
+          Builder.createStoreOwnPropertyInst(
+              closure, O, key, IRBuilder::PropEnumerable::No);
+        }
+      };
+  // Space used to convert property keys to strings.
+  llvh::SmallVector<char, 32> buffer;
+  for (auto &classElement : classBody->_body) {
+    if (auto *method =
+            llvh::dyn_cast<ESTree::MethodDefinitionNode>(&classElement)) {
+      if (method->_kind == kw_.identConstructor) {
+        continue;
+      }
+      Value *key;
+      Identifier nameHint{};
+      if (method->_computed) {
+        key = Builder.createToPropertyKeyInst(genExpression(method->_key));
+      } else {
+        nameHint = Mod->getContext().getIdentifier(
+            propertyKeyAsString(buffer, method->_key));
+        key = Builder.getLiteralString(nameHint);
+      }
+      auto isStatic = method->_static;
+      auto *homeObject = isStatic ? classVar : clsPrototypeVar;
+      auto *funcValue = genFunctionExpression(
+          llvh::cast<ESTree::FunctionExpressionNode>(method->_value),
+          nameHint,
+          superClassNode,
+          Function::DefinitionKind::ES6Method,
+          homeObject);
+      if (isStatic) {
+        addMethod(createClass, method->_kind->str(), key, funcValue);
+      } else {
+        addMethod(clsPrototype, method->_kind->str(), key, funcValue);
+      }
+    }
+  }
+
+  // Make the class name binding available after we've generated all computed
+  // keys.
   if (id)
     emitStore(createClass, resolveIdentifier(id), true);
 
