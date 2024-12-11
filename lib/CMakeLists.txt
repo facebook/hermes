@@ -177,17 +177,6 @@ if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
     MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${HERMES_APPLE_TARGET_PLATFORM}
   )
-  # Install headers into `Headers` while keeping required directory structure
-  set_source_files_properties(${api_headers} PROPERTIES
-    MACOSX_PACKAGE_LOCATION Headers
-  )
-  set_source_files_properties(${api_public_headers} PROPERTIES
-    MACOSX_PACKAGE_LOCATION Headers/Public
-  )
-  if(HERMES_ENABLE_BITCODE)
-    target_compile_options(hermesvm PUBLIC "-fembed-bitcode")
-    target_link_options(hermesvm PUBLIC "-fembed-bitcode")
-  endif()
   # Define the deployment target in the frameworks metadata
   if(HERMES_APPLE_TARGET_PLATFORM MATCHES "iphone")
     add_custom_command(TARGET hermesvm POST_BUILD
