@@ -1226,39 +1226,6 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
   return result;
 }
 
-/// Convert a property key node to its JavaScript string representation.
-static llvh::StringRef propertyKeyAsString(
-    llvh::SmallVectorImpl<char> &storage,
-    ESTree::Node *Key) {
-  // Handle String Literals.
-  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
-  if (auto *Lit = llvh::dyn_cast<ESTree::StringLiteralNode>(Key)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
-    return Lit->_value->str();
-  }
-
-  // Handle identifiers as if they are String Literals.
-  if (auto *Iden = llvh::dyn_cast<ESTree::IdentifierNode>(Key)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
-    return Iden->_name->str();
-  }
-
-  // Handle Number Literals.
-  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
-  if (auto *Lit = llvh::dyn_cast<ESTree::NumericLiteralNode>(Key)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
-    storage.resize(NUMBER_TO_STRING_BUF_SIZE);
-    auto len = numberToString(Lit->_value, storage.data(), storage.size());
-    return llvh::StringRef(storage.begin(), len);
-  }
-
-  llvm_unreachable("Don't know this kind of property key");
-  return llvh::StringRef();
-}
-
 Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   LLVM_DEBUG(llvh::dbgs() << "Initializing a new object\n");
 

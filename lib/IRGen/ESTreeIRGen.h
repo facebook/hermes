@@ -542,6 +542,11 @@ class ESTreeIRGen {
     return genAnonymousLabelName(hint.isValid() ? hint.str() : "anonymous");
   }
 
+  /// Convert a property key node to its JavaScript string representation.
+  static llvh::StringRef propertyKeyAsString(
+      llvh::SmallVectorImpl<char> &storage,
+      ESTree::Node *Key);
+
  public:
   explicit ESTreeIRGen(
       Module *M,
