@@ -391,6 +391,9 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
               curFunction()->curScope,
               Builder.getLiteralEmpty(),
               newFunctionContext.capturedState.thisVal);
+        } else {
+          // We generate this call after calling super for derived classes.
+          emitLegacyInstanceElementsInitCall();
         }
       } else {
         assert(

@@ -97,7 +97,16 @@ struct LegacyClassContext {
   /// Variable containing the class constructor of the enclosing class of the
   /// method/constructor being generated, nullptr if none available.
   Variable *constructor;
-  explicit LegacyClassContext(Variable *cons) : constructor(cons) {}
+
+  /// Variable containing the instance elements initializer closure.
+  Variable *instElemInitFuncVar;
+
+  /// Map from a ClassPropertyNode with a computed key to that key's value.
+  llvh::DenseMap<ESTree::ClassPropertyNode *, Variable *>
+      classComputedFieldKeys{};
+
+  explicit LegacyClassContext(Variable *cons, Variable *funcVar)
+      : constructor(cons), instElemInitFuncVar(funcVar) {}
 };
 
 /// Holds per-function state, specifically label tables. Should be constructed
@@ -472,6 +481,7 @@ class ESTreeIRGen {
     // These apply for class-like nodes.
     ImplicitClassConstructor = 0,
     ImplicitFieldInitializer = 1,
+    ImplicitStaticElementsInitializer = 2,
   };
 
   /// Map from an AST node to a "compiled entity", which is usually a Function.
@@ -686,6 +696,23 @@ class ESTreeIRGen {
   Value *genLegacyDerivedConstructorRet(
       ESTree::ReturnStatementNode *node,
       Value *returnValue);
+
+  /// Generate function code for a function that initializes all instance
+  /// elements in a legacy class.
+  NormalFunction *genLegacyInstanceElementsInit(
+      ESTree::ClassLikeNode *legacyClassNode,
+      Variable *homeObjectVar,
+      const Identifier &consName);
+
+  /// Emit IR to invoke the instance elements initializer function for a legacy
+  /// class.
+  void emitLegacyInstanceElementsInitCall();
+
+  /// Generate function code for a function that initializes all static elements
+  /// in a legacy class.
+  NormalFunction *genStaticElementsInitFunction(
+      ESTree::ClassLikeNode *legacyClassNode,
+      const Identifier &consName);
 
   /// Generate the function code for the implicit constructor of a legacy class.
   /// \param superClassNode is non-null for constructors of a derived class.

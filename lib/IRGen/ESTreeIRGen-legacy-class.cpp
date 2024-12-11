@@ -67,10 +67,28 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       curFunction()->legacyClassContext;
   // Push a new class context.
   curFunction()->legacyClassContext =
-      std::make_shared<LegacyClassContext>(classVar);
+      std::make_shared<LegacyClassContext>(classVar, nullptr);
   // Pop it when we are done generating IR for this class node.
   auto popCtx = llvh::make_scope_exit(
       [this, savedClsCtx] { curFunction()->legacyClassContext = savedClsCtx; });
+
+  // Create the instance elements initializer.
+  Function *instElemInitFunc =
+      genLegacyInstanceElementsInit(classNode, clsPrototypeVar, className);
+  if (instElemInitFunc) {
+    CreateFunctionInst *createInstElemInitFunc =
+        Builder.createCreateFunctionInst(
+            curFunction()->curScope, instElemInitFunc);
+    Variable *instElemInitFuncVar = Builder.createVariable(
+        curFunction()->curScope->getVariableScope(),
+        (llvh::Twine("<instElemInitFunc:") + className.str() + ">"),
+        Type::createObject(),
+        /* hidden */ true);
+    Builder.createStoreFrameInst(
+        curFunction()->curScope, createInstElemInitFunc, instElemInitFuncVar);
+    curFunction()->legacyClassContext->instElemInitFuncVar =
+        instElemInitFuncVar;
+  }
 
   // Function code for the constructor.
   NormalFunction *consCode;
@@ -129,6 +147,7 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       };
   // Space used to convert property keys to strings.
   llvh::SmallVector<char, 32> buffer;
+  size_t computedKeyIdx = 0;
   for (auto &classElement : classBody->_body) {
     if (auto *method =
             llvh::dyn_cast<ESTree::MethodDefinitionNode>(&classElement)) {
@@ -157,6 +176,22 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       } else {
         addMethod(clsPrototype, method->_kind->str(), key, funcValue);
       }
+    } else if (
+        auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&classElement)) {
+      if (prop->_computed) {
+        Variable *fieldKeyVar = Builder.createVariable(
+            curVarScope,
+            Builder.createIdentifier(
+                className.str() + "_computed_key_" + Twine(computedKeyIdx++)),
+            Type::createAnyType(),
+            /* hidden */ true);
+        curFunction()->legacyClassContext->classComputedFieldKeys[prop] =
+            fieldKeyVar;
+        Builder.createStoreFrameInst(
+            curScope,
+            Builder.createToPropertyKeyInst(genExpression(prop->_key)),
+            fieldKeyVar);
+      }
     }
   }
 
@@ -164,10 +199,23 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   // keys.
   if (id)
     emitStore(createClass, resolveIdentifier(id), true);
-
   // Initialize the class context variables.
   Builder.createStoreFrameInst(curScope, createClass, classVar);
   Builder.createStoreFrameInst(curScope, clsPrototype, clsPrototypeVar);
+
+  if (Function *staticElementsCode =
+          genStaticElementsInitFunction(classNode, className)) {
+    CreateFunctionInst *staticElementsFunc = Builder.createCreateFunctionInst(
+        curFunction()->curScope, staticElementsCode);
+    Builder.createCallInst(
+        staticElementsFunc,
+        staticElementsCode,
+        /* calleeIsAlwaysClosure */ Builder.getLiteralBool(true),
+        /* env */ curFunction()->curScope,
+        /*newTarget*/ Builder.getLiteralUndefined(),
+        createClass,
+        /*args*/ {});
+  }
 
   return createClass;
 }
@@ -233,6 +281,8 @@ Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
   initializedThisVal->setType(Type::createObject());
   Builder.createStoreFrameInst(
       checkedThisScope, initializedThisVal, checkedThis);
+  // After a successful call to super, run the field initializer function.
+  emitLegacyInstanceElementsInitCall();
   return initializedThisVal;
 }
 
@@ -382,11 +432,13 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
           curFunction()->curScope,
           initializedThisVal,
           newFunctionContext.capturedState.thisVal);
+      emitLegacyInstanceElementsInitCall();
       // Returning undefined in a derived constructor is coerced into returning
       // the `thisVal` we just set.
       emitFunctionEpilogue(Builder.getLiteralUndefined());
       consFunc->setReturnType(Type::createObject());
     } else {
+      emitLegacyInstanceElementsInitCall();
       emitFunctionEpilogue(Builder.getLiteralUndefined());
       consFunc->setReturnType(Type::createUndefined());
     }
@@ -394,6 +446,190 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
   enqueueCompilation(
       classNode, ExtraKey::ImplicitClassConstructor, consFunc, compileFunc);
   return consFunc;
+}
+
+NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
+    ESTree::ClassLikeNode *legacyClassNode,
+    const Identifier &consName) {
+  sema::FunctionInfo *staticElementsFuncInfo =
+      ESTree::getDecoration<ESTree::ClassLikeDecoration>(legacyClassNode)
+          ->staticElementsInitFunctionInfo;
+  if (staticElementsFuncInfo == nullptr) {
+    return nullptr;
+  }
+
+  auto *staticElementsFunc = Builder.createFunction(
+      (llvh::Twine("<static_elements_initializer:") + consName.str() + ">")
+          .str(),
+      Function::DefinitionKind::ES5Function,
+      true /*strictMode*/);
+
+  auto compileFunc = [this,
+                      staticElementsFunc,
+                      staticElementsFuncInfo,
+                      legacyClassNode = legacyClassNode,
+                      typedClassContext = curFunction()->typedClassContext,
+                      legacyClassContext = curFunction()->legacyClassContext,
+                      parentScope =
+                          curFunction()->curScope->getVariableScope()] {
+    FunctionContext newFunctionContext{
+        this, staticElementsFunc, staticElementsFuncInfo};
+    newFunctionContext.typedClassContext = typedClassContext;
+    newFunctionContext.legacyClassContext = legacyClassContext;
+    newFunctionContext.capturedState.homeObject =
+        legacyClassContext->constructor;
+
+    auto *prologueBB = Builder.createBasicBlock(staticElementsFunc);
+    Builder.setInsertionBlock(prologueBB);
+
+    emitFunctionPrologue(
+        nullptr,
+        prologueBB,
+        InitES5CaptureState::Yes,
+        DoEmitDeclarations::No,
+        parentScope);
+    auto &LC = curFunction()->legacyClassContext;
+    auto *constructorScope =
+        emitResolveScopeInstIfNeeded(LC->constructor->getParent());
+    auto *classVal =
+        Builder.createLoadFrameInst(constructorScope, LC->constructor);
+
+    auto *classBody = ESTree::getClassBody(legacyClassNode);
+    llvh::SmallVector<char, 32> buffer;
+
+    // Emit a store to the constructor object for each static property on the
+    // class.
+    for (ESTree::Node &it : classBody->_body) {
+      if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&it)) {
+        if (!prop->_static)
+          continue;
+        Value *propKey;
+        if (prop->_computed) {
+          // use .at, since there should always be an entry for this node.
+          Variable *fieldKeyVar = LC->classComputedFieldKeys.at(prop);
+          auto *scope = emitResolveScopeInstIfNeeded(fieldKeyVar->getParent());
+          propKey = Builder.createLoadFrameInst(scope, fieldKeyVar);
+        } else {
+          propKey =
+              Builder.getLiteralString(propertyKeyAsString(buffer, prop->_key));
+        }
+        Value *propValue = prop->_value ? genExpression(prop->_value)
+                                        : Builder.getLiteralUndefined();
+        Builder.createStoreOwnPropertyInst(
+            propValue, classVal, propKey, IRBuilder::PropEnumerable::Yes);
+      }
+    }
+
+    emitFunctionEpilogue(Builder.getLiteralUndefined());
+    staticElementsFunc->setReturnType(Type::createUndefined());
+  };
+  enqueueCompilation(
+      legacyClassNode,
+      ExtraKey::ImplicitStaticElementsInitializer,
+      staticElementsFunc,
+      compileFunc);
+  return staticElementsFunc;
+}
+
+NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
+    ESTree::ClassLikeNode *legacyClassNode,
+    Variable *homeObjectVar,
+    const Identifier &consName) {
+  sema::FunctionInfo *initFuncInfo =
+      ESTree::getDecoration<ESTree::ClassLikeDecoration>(legacyClassNode)
+          ->instanceElementsInitFunctionInfo;
+  if (initFuncInfo == nullptr) {
+    return nullptr;
+  }
+
+  auto *initFunc = Builder.createFunction(
+      (llvh::Twine("<instance_members_initializer:") + consName.str() + ">")
+          .str(),
+      Function::DefinitionKind::ES5Function,
+      true /*strictMode*/);
+
+  auto compileFunc = [this,
+                      initFunc,
+                      initFuncInfo,
+                      legacyClassNode = legacyClassNode,
+                      typedClassContext = curFunction()->typedClassContext,
+                      legacyClassContext = curFunction()->legacyClassContext,
+                      parentScope = curFunction()->curScope->getVariableScope(),
+                      homeObjectVar] {
+    FunctionContext newFunctionContext{this, initFunc, initFuncInfo};
+    newFunctionContext.typedClassContext = typedClassContext;
+    newFunctionContext.legacyClassContext = legacyClassContext;
+    newFunctionContext.capturedState.homeObject = homeObjectVar;
+
+    auto *prologueBB = Builder.createBasicBlock(initFunc);
+    Builder.setInsertionBlock(prologueBB);
+
+    emitFunctionPrologue(
+        nullptr,
+        prologueBB,
+        InitES5CaptureState::Yes,
+        DoEmitDeclarations::No,
+        parentScope);
+    auto &LC = curFunction()->legacyClassContext;
+
+    auto *thisParam = curFunction()->jsParams[0];
+    auto *classBody = ESTree::getClassBody(legacyClassNode);
+    llvh::SmallVector<char, 32> buffer;
+    // Emit a store to the constructor object for each instance property on the
+    // class.
+    for (ESTree::Node &it : classBody->_body) {
+      if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&it)) {
+        if (prop->_static)
+          continue;
+        Value *propKey;
+        if (prop->_computed) {
+          Variable *fieldKeyVar = LC->classComputedFieldKeys.at(prop);
+          auto *scope = emitResolveScopeInstIfNeeded(fieldKeyVar->getParent());
+          propKey = Builder.createLoadFrameInst(scope, fieldKeyVar);
+        } else {
+          propKey =
+              Builder.getLiteralString(propertyKeyAsString(buffer, prop->_key));
+        }
+        Value *propValue = prop->_value ? genExpression(prop->_value)
+                                        : Builder.getLiteralUndefined();
+        Builder.createStoreOwnPropertyInst(
+            propValue, thisParam, propKey, IRBuilder::PropEnumerable::Yes);
+      }
+    }
+
+    emitFunctionEpilogue(Builder.getLiteralUndefined());
+    initFunc->setReturnType(Type::createUndefined());
+  };
+  enqueueCompilation(
+      legacyClassNode,
+      ExtraKey::ImplicitFieldInitializer,
+      initFunc,
+      compileFunc);
+  return initFunc;
+}
+
+void ESTreeIRGen::emitLegacyInstanceElementsInitCall() {
+  assert(
+      curFunction()->legacyClassContext != nullptr && "no class context found");
+  const auto &LC = curFunction()->legacyClassContext;
+  auto *instElemInitFuncVar = LC->instElemInitFuncVar;
+  // It's valid for a class to have no instance elements initialzer. In this
+  // case, do nothing.
+  if (!instElemInitFuncVar)
+    return;
+  auto *scope = emitResolveScopeInstIfNeeded(instElemInitFuncVar->getParent());
+  Value *funcVal = Builder.createLoadFrameInst(scope, instElemInitFuncVar);
+  funcVal->setType(Type::createObject());
+  Builder
+      .createCallInst(
+          funcVal,
+          /* target */ Builder.getEmptySentinel(),
+          /* calleeIsAlwaysClosure */ Builder.getLiteralBool(true),
+          /* env */ Builder.getEmptySentinel(),
+          /* newTarget */ Builder.getLiteralUndefined(),
+          genThisExpression(),
+          /* args */ {})
+      ->setType(Type::createUndefined());
 }
 
 } // namespace irgen
