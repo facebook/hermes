@@ -774,8 +774,14 @@ Value *ESTreeIRGen::emitCall(
   // Otherwise, there exists a spread argument, so the number of arguments
   // is variable.
   // Generate IR for this by creating an array and populating it with the
-  // arguments, then calling HermesInternal.apply.
+  // arguments.
   auto *args = genArrayFromElements(getArguments(call));
+  // If there is a new.target that should be set, use the correct builtin
+  if (!llvh::isa<LiteralUndefined>(newTarget)) {
+    return genBuiltinCall(
+        BuiltinMethod::HermesBuiltin_applyWithNewTarget,
+        {callee, args, thisVal, newTarget});
+  }
   return genBuiltinCall(
       BuiltinMethod::HermesBuiltin_apply, {callee, args, thisVal});
 }

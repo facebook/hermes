@@ -147,17 +147,26 @@ Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
       Builder.createLoadFrameInst(constructorScope, LC->constructor));
   // Derived classes don't take in a `this`, so construct it here.
   auto *thisParam = Builder.createCreateThisInst(callee, newTarget);
-  Value *res = emitCall(
+  auto *superRes = emitCall(
       call, callee, Builder.getEmptySentinel(), false, thisParam, newTarget);
   auto *checkedThis = curFunction()->capturedState.thisVal;
   auto *checkedThisScope =
       emitResolveScopeInstIfNeeded(checkedThis->getParent());
   Builder.createThrowIfThisInitializedInst(
       Builder.createLoadFrameInst(checkedThisScope, checkedThis));
-  // Correctly pick between the provided `this` and the return value of the
-  // super call.
-  auto *initializedThisVal = Builder.createGetConstructedObjectInst(
-      thisParam, llvh::cast<CallInst>(res));
+  Value *initializedThisVal = nullptr;
+  if (auto *CI = llvh::dyn_cast<CallInst>(superRes)) {
+    // Correctly pick between the provided `this` and the return value of the
+    // super call.
+    initializedThisVal = Builder.createGetConstructedObjectInst(thisParam, CI);
+  } else {
+    // If it's not a simple call instruction, then the logic of
+    // GetConstructedObject is already being replicated in the way the call was
+    // emitted.
+    initializedThisVal = superRes;
+  }
+  // A construct call always returns object.
+  initializedThisVal->setType(Type::createObject());
   Builder.createStoreFrameInst(
       checkedThisScope, initializedThisVal, checkedThis);
   return initializedThisVal;

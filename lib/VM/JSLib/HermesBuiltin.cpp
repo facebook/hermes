@@ -727,6 +727,56 @@ hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
   }
 }
 
+/// \code
+///   HermesBuiltin.applyWithNewTarget = function(fn, argArray, thisVal,
+///   newTarget) {}
+/// /endcode
+/// Perform a construct call on fn, with newTarget being set as the new.target.
+/// This is only used in cases where the new.target is *not* implicitly set to
+/// fn, as in the case of a new call. Thus, a direct `super` call may result in
+/// this function being invoked.
+/// `argArray` must be a JSArray with no getters.
+CallResult<HermesValue>
+hermesBuiltinApplyWithNewTarget(void *, Runtime &runtime, NativeArgs args) {
+  assert(
+      args.getArgCount() == 4 &&
+      "builtinApplyWithNewTarget expected 4 arguments");
+  GCScopeMarkerRAII marker{runtime};
+
+  Handle<Callable> fn = args.dyncastArg<Callable>(0);
+  if (LLVM_UNLIKELY(!fn)) {
+    return runtime.raiseTypeErrorForValue(
+        args.getArgHandle(0), " is not a function");
+  }
+
+  Handle<JSArray> argArray = args.dyncastArg<JSArray>(1);
+  if (LLVM_UNLIKELY(!argArray)) {
+    return runtime.raiseTypeError("args must be an array");
+  }
+
+  uint32_t len = JSArray::getLength(*argArray, runtime);
+  auto thisVal = args.getArgHandle(2);
+  auto newTarget = args.getArgHandle(3);
+
+  ScopedNativeCallFrame newFrame{
+      runtime, len, HermesValue::encodeObjectValue(*fn), *newTarget, *thisVal};
+  if (LLVM_UNLIKELY(newFrame.overflowed()))
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+
+  for (uint32_t i = 0; i < len; ++i) {
+    assert(!argArray->at(runtime, i).isEmpty() && "arg array must be dense");
+    HermesValue arg = argArray->at(runtime, i).unboxToHV(runtime);
+    newFrame->getArgRef(i) = LLVM_UNLIKELY(arg.isEmpty())
+        ? HermesValue::encodeUndefinedValue()
+        : arg;
+  }
+  auto res = Callable::construct(fn, runtime, thisVal);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
+}
+
 /// HermesBuiltin.exportAll(exports, source) will copy exported named
 /// properties from `source` to `exports`, defining them on `exports` as
 /// non-configurable.
@@ -894,6 +944,11 @@ void createHermesBuiltins(Runtime &runtime) {
       P::apply,
       hermesBuiltinApplyArguments,
       2);
+  defineInternMethod(
+      B::HermesBuiltin_applyWithNewTarget,
+      P::applyWithNewTarget,
+      hermesBuiltinApplyWithNewTarget,
+      4);
   defineInternMethod(
       B::HermesBuiltin_exportAll, P::exportAll, hermesBuiltinExportAll);
   defineInternMethod(

@@ -140,6 +140,7 @@ STR(caller, "caller")
 STR(arguments, "arguments")
 STR(call, "call")
 STR(apply, "apply")
+STR(applyWithNewTarget, "applyWithNewTarget")
 STR(bind, "bind")
 STR(gc, "gc")
 

@@ -276,3 +276,62 @@ class A {
   }
 })();
 
+// Test we can spread values into a super call.
+(function () {
+  class Base {
+    constructor(a, b, c) {
+      this.a = a;
+      this.b = b;
+      this.c = c;
+    }
+  }
+  class C1 extends Base {
+    constructor(a, b, c) {
+      let arr = [a, b, c];
+      super(...arr);
+    }
+  }
+  class C2 extends Base {
+    constructor() {
+      super(...arguments);
+    }
+  }
+  let instance = new C1(1, 2, 3);
+  print(instance.a);
+// CHECK-NEXT: 1
+  print(instance.b);
+// CHECK-NEXT: 2
+  print(instance.c);
+// CHECK-NEXT: 3
+
+  instance = new C2(1, 2, 3);
+  print(instance.a);
+// CHECK-NEXT: 1
+  print(instance.b);
+// CHECK-NEXT: 2
+  print(instance.c);
+// CHECK-NEXT: 3
+})();
+
+// Ensure new.target is correctly propagated through a super() with spread args.
+(function () {
+  class Base {
+    constructor() {
+      print("Base", new.target.name);
+    }
+  }
+  class C1 extends Base {
+    constructor() {
+      print("C1", new.target.name);
+      super(...arguments);
+    }
+  }
+  new C1();
+// CHECK-NEXT: C1 C1
+// CHECK-NEXT: Base C1
+
+  function foo() {}
+  Reflect.construct(C1, [], foo);
+// CHECK-NEXT: C1 foo
+// CHECK-NEXT: Base foo
+})();
