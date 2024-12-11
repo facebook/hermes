@@ -9,6 +9,7 @@
 #include "hermes/AST/ESTree.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Support/StringTable.h"
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace irgen {
@@ -47,6 +48,30 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   Value *superCls = superClassNode ? genExpression(superClassNode)
                                    : Builder.getEmptySentinel();
 
+  auto *curScope = curFunction()->curScope;
+  auto *curVarScope = curScope->getVariableScope();
+  // Holds the .prototype of the class.
+  Variable *clsPrototypeVar = Builder.createVariable(
+      curScope->getVariableScope(),
+      Builder.createIdentifier("?" + className.str() + ".prototype"),
+      Type::createObject(),
+      true);
+  // Holds the class
+  Variable *classVar = Builder.createVariable(
+      curVarScope,
+      Builder.createIdentifier("?" + className.str()),
+      Type::createObject(),
+      true);
+
+  std::shared_ptr<LegacyClassContext> savedClsCtx =
+      curFunction()->legacyClassContext;
+  // Push a new class context.
+  curFunction()->legacyClassContext =
+      std::make_shared<LegacyClassContext>(classVar);
+  // Pop it when we are done generating IR for this class node.
+  auto popCtx = llvh::make_scope_exit(
+      [this, savedClsCtx] { curFunction()->legacyClassContext = savedClsCtx; });
+
   ESTree::MethodDefinitionNode *consMethodNode = nullptr;
   for (auto &classElement : classBody->_body) {
     if (auto *method =
@@ -61,8 +86,6 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
         classNode->getSourceRange(), "Error: missing constructor");
   }
 
-  auto *curScope = curFunction()->curScope;
-
   // Prepare arguments for and emit CreateClassInst.
   NormalFunction *consFunction = genBasicFunction(
       className,
@@ -74,10 +97,71 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       genAnonymousLabelName("clsPrototype"), Type::createObject());
   CreateClassInst *createClass = Builder.createCreateClassInst(
       curScope, consFunction, superCls, clsPrototypeOutput);
+  auto *clsPrototype = Builder.createLoadStackInst(clsPrototypeOutput);
   if (id)
     emitStore(createClass, resolveIdentifier(id), true);
 
+  // Initialize the class context variables.
+  Builder.createStoreFrameInst(curScope, createClass, classVar);
+  Builder.createStoreFrameInst(curScope, clsPrototype, clsPrototypeVar);
+
   return createClass;
 }
+
+Value *ESTreeIRGen::genLegacyDerivedThis() {
+  assert(
+      curFunction()->hasLegacyClassContext() &&
+      "no legacy class context found.");
+  assert(
+      (semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
+       sema::FunctionInfo::ConstructorKind::Derived) &&
+      curFunction()->capturedState.thisVal &&
+      "captured state not properly set.");
+  auto *checkedThis = curFunction()->capturedState.thisVal;
+  auto *baseConstructorScope =
+      emitResolveScopeInstIfNeeded(checkedThis->getParent());
+  return Builder.createThrowIfInst(
+      Builder.createLoadFrameInst(baseConstructorScope, checkedThis),
+      Type::createEmpty());
+}
+
+Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
+  assert(
+      curFunction()->hasLegacyClassContext() &&
+      "no legacy class context found.");
+  auto &LC = curFunction()->legacyClassContext;
+  assert(LC->constructor && "class context not properly set.");
+  assert(
+      (semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
+       sema::FunctionInfo::ConstructorKind::Derived) &&
+      curFunction()->capturedState.thisVal &&
+      "captured state not properly set.");
+  assert(
+      llvh::isa<ESTree::SuperNode>(getCallee(call)) &&
+      "super is not being invoked");
+  auto *newTarget = genNewTarget();
+  auto *constructorScope =
+      emitResolveScopeInstIfNeeded(LC->constructor->getParent());
+  // We want to invoke the parent of the class we are generating.
+  auto *callee = Builder.createLoadParentNoTrapsInst(
+      Builder.createLoadFrameInst(constructorScope, LC->constructor));
+  // Derived classes don't take in a `this`, so construct it here.
+  auto *thisParam = Builder.createCreateThisInst(callee, newTarget);
+  Value *res = emitCall(
+      call, callee, Builder.getEmptySentinel(), false, thisParam, newTarget);
+  auto *checkedThis = curFunction()->capturedState.thisVal;
+  auto *checkedThisScope =
+      emitResolveScopeInstIfNeeded(checkedThis->getParent());
+  Builder.createThrowIfThisInitializedInst(
+      Builder.createLoadFrameInst(checkedThisScope, checkedThis));
+  // Correctly pick between the provided `this` and the return value of the
+  // super call.
+  auto *initializedThisVal = Builder.createGetConstructedObjectInst(
+      thisParam, llvh::cast<CallInst>(res));
+  Builder.createStoreFrameInst(
+      checkedThisScope, initializedThisVal, checkedThis);
+  return initializedThisVal;
+}
+
 } // namespace irgen
 } // namespace hermes

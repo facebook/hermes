@@ -205,9 +205,15 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
     return newFunc;
   }
 
-  auto compileFunc = [this, newFunc, functionNode, capturedState, parentScope] {
+  auto compileFunc = [this,
+                      newFunc,
+                      functionNode,
+                      legacyClsCtx = curFunction()->legacyClassContext,
+                      capturedState,
+                      parentScope] {
     FunctionContext newFunctionContext{
         this, newFunc, functionNode->getSemInfo()};
+    newFunctionContext.legacyClassContext = legacyClsCtx;
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
     curFunction()->capturedState = capturedState;
@@ -296,6 +302,7 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
                       newFunction,
                       functionNode,
                       typedClassContext = curFunction()->typedClassContext,
+                      legacyClassContext = curFunction()->legacyClassContext,
                       isGeneratorInnerFunction,
                       superClassNode,
                       body,
@@ -306,6 +313,7 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     newFunctionContext.superClassNode_ = superClassNode;
     newFunctionContext.typedClassContext = typedClassContext;
     newFunctionContext.capturedState.homeObject = homeObject;
+    newFunctionContext.legacyClassContext = legacyClassContext;
 
     if (isGeneratorInnerFunction) {
       // StartGeneratorInst
@@ -370,10 +378,29 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     }
 
     if (functionKind == Function::DefinitionKind::ES6Constructor) {
-      // If we're compiling a constructor with no superclass, emit the
-      // field inits at the start.
-      if (superClassNode == nullptr && curFunction()->hasTypedClassContext()) {
-        emitTypedFieldInitCall(typedClassContext.type);
+      if (curFunction()->hasLegacyClassContext()) {
+        if (curFunction()->getSemInfo()->constructorKind ==
+            sema::FunctionInfo::ConstructorKind::Derived) {
+          // Initialize the 'checked this' in derived class constructors.
+          newFunctionContext.capturedState.thisVal = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              Builder.createIdentifier("?CHECKED_this"),
+              Type::unionTy(Type::createObject(), Type::createEmpty()),
+              true);
+          Builder.createStoreFrameInst(
+              curFunction()->curScope,
+              Builder.getLiteralEmpty(),
+              newFunctionContext.capturedState.thisVal);
+        }
+      } else {
+        assert(
+            curFunction()->hasTypedClassContext() &&
+            "ES6Constructor has no valid class context");
+        // If we're compiling a typed constructor with no superclass, emit the
+        // field inits at the start.
+        if (superClassNode == nullptr) {
+          emitTypedFieldInitCall(typedClassContext.type);
+        }
       }
     }
 
@@ -632,14 +659,21 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
 
   auto *scope = curFunction()->curScope->getVariableScope();
 
-  // "this".
-  auto *th = Builder.createVariable(
-      scope,
-      genAnonymousLabelName("this"),
-      Type::createAnyType(),
-      /* hidden */ true);
-  curFunction()->capturedState.thisVal = th;
-  emitStore(curFunction()->jsParams[0], th, true);
+  // `this` is managed separately in the case of a legacy derived class
+  // constructor.
+  if (!(curFunction()->function->getDefinitionKind() ==
+            Function::DefinitionKind::ES6Constructor &&
+        curFunction()->hasLegacyClassContext() &&
+        semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
+            sema::FunctionInfo::ConstructorKind::Derived)) {
+    auto *th = Builder.createVariable(
+        scope,
+        genAnonymousLabelName("this"),
+        Type::createAnyType(),
+        /* hidden */ true);
+    curFunction()->capturedState.thisVal = th;
+    emitStore(curFunction()->jsParams[0], th, true);
+  }
 
   Value *newTarget = genNewTarget();
   // "new.target".
@@ -1214,6 +1248,14 @@ void ESTreeIRGen::setupLazyFunction(
       bodyBlock->paramYield,
       bodyBlock->paramAwait};
 
+  // TODO: support lazy compilation of the constructor of a class.
+  if (semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind !=
+      sema::FunctionInfo::ConstructorKind::None) {
+    Builder.getModule()->getContext().getSourceErrorManager().error(
+        F->getSourceRange(),
+        "lazy functions inside class constructor unsupported");
+    return;
+  }
   Builder.createLazyCompilationDataInst(
       std::move(data),
       capturedState.thisVal,
@@ -1284,10 +1326,15 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
     // since elsewhere in IRGen we always look into the captured state to find
     // the home object (e.g. for arrow and non-arrow)
     bool isArrow = F->getDefinitionKind() == Function::DefinitionKind::ES6Arrow;
+    bool isNestedInDerivedCons =
+        semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
+        sema::FunctionInfo::ConstructorKind::Derived;
+    // TODO: support debugger eval `this` in a derived class constructor.
+    bool shouldCaptureState = isArrow && !isNestedInDerivedCons;
     auto *evalData = Builder.createEvalCompilationDataInst(
         std::move(data),
-        isArrow ? curFunction()->capturedState.thisVal : nullptr,
-        isArrow ? curFunction()->capturedState.newTarget : nullptr,
+        shouldCaptureState ? curFunction()->capturedState.thisVal : nullptr,
+        shouldCaptureState ? curFunction()->capturedState.newTarget : nullptr,
         nullptr,
         curFunction()->capturedState.homeObject,
         curFunction()->curScope->getVariableScope());

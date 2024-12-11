@@ -506,6 +506,9 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     thisVal = memResult.base;
     callee = memResult.result;
   } else if (llvh::isa<ESTree::SuperNode>(call->_callee)) {
+    if (curFunction()->hasLegacyClassContext()) {
+      return genLegacyDirectSuper(call);
+    }
     if (curFunction()->calledSuperConstructor_) {
       // Found another super() call than the one that actually initializes the
       // base class.
@@ -2620,6 +2623,13 @@ Value *ESTreeIRGen::genLogicalExpression(
 }
 
 Value *ESTreeIRGen::genThisExpression() {
+  // Accessing `this` in derived legacy class constructors must be guarded.
+  if (curFunction()->hasLegacyClassContext()) {
+    if (semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
+        sema::FunctionInfo::ConstructorKind::Derived) {
+      return genLegacyDerivedThis();
+    }
+  }
   // Generators may be used as arrows in async arrow functions, in which case
   // they should load from the captured this.
   auto funcDefKind = curFunction()->function->getDefinitionKind();

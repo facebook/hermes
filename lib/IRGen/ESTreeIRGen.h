@@ -62,9 +62,11 @@ struct GotoLabel {
 /// functions, such as arrow functions.
 struct CapturedState {
   /// Parents of arrow functions need to capture their "this" parameter so the
-  /// arrow function can use it. Normal functions and constructors store their
-  /// "this" in a variable and record it here, if they contain at least one
-  /// arrow function. Arrow functions always copy their parent's value.
+  /// arrow function can use it. Normal functions and base class constructors
+  /// store their "this" in a variable and record it here, if they contain at
+  /// least one arrow function. Derived class constructors maintain a 'checked
+  /// this' which is only initialized after a completed call to super(). Arrow
+  /// functions always copy their parent's value.
   Variable *thisVal;
   /// Captured value of new target. In ES5 functions and ES6 constructors it is
   /// a Variable with the result of GetNewTargetInst executed at the start of
@@ -88,6 +90,14 @@ struct TypedClassContext {
 
   /// The type of the innermost typed class we are compiliing.
   flow::ClassType *type = nullptr;
+};
+
+/// Holds class state.
+struct LegacyClassContext {
+  /// Variable containing the class constructor of the enclosing class of the
+  /// method/constructor being generated, nullptr if none available.
+  Variable *constructor;
+  explicit LegacyClassContext(Variable *cons) : constructor(cons) {}
 };
 
 /// Holds per-function state, specifically label tables. Should be constructed
@@ -197,6 +207,17 @@ class FunctionContext {
   /// Information about the current enclosing typed class.
   TypedClassContext typedClassContext{};
 
+  /// Information about the current enclosing legacy class. We make this a
+  /// shared_ptr so that we don't copy it by value when we need to enqueue
+  /// contained methods for compilation. It is initialized to nullptr here, and
+  /// is only set to some heap allocated value at the beginning of generating IR
+  /// for a class node. As we generate the IR for the methods of the class, the
+  /// shared_ptr is handed out to all of them when enqueuing them for
+  /// compilation. Thus, the memory can only be freed once we exit the IR
+  /// generation for the top-level class node, and once we finish generating IR
+  /// for all of the functions contained within the class node.
+  std::shared_ptr<LegacyClassContext> legacyClassContext{nullptr};
+
   /// Initialize a new function context, while preserving the previous one.
   /// \param irGen the associated ESTreeIRGen object.
   /// \param function the newly created Function IR node.
@@ -221,6 +242,12 @@ class FunctionContext {
     // The class node is always set when a typed class is encountered, so we
     // can reliably only test this field.
     return typedClassContext.node;
+  }
+
+  /// \return true if there is an active legacy class context held in this
+  /// function context.
+  bool hasLegacyClassContext() const {
+    return legacyClassContext != nullptr;
   }
 
   /// Generate a unique string that represents a temporary value. The string
@@ -640,6 +667,12 @@ class ESTreeIRGen {
   CreateClassInst *genLegacyClassLike(
       ESTree::ClassLikeNode *classNode,
       Identifier nameHint);
+
+  /// Generate IR for a direct call to super.
+  Value *genLegacyDirectSuper(ESTree::CallExpressionNode *call);
+
+  /// Generate IR for `this` in a derived legacy class constructor.
+  Value *genLegacyDerivedThis();
 
   /// Emit code to allocate an empty instance of the specified class and return
   /// it.
