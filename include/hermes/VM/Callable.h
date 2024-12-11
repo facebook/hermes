@@ -481,7 +481,13 @@ class NativeJSFunction : public Callable {
     return CellKind::NativeJSFunctionKind;
   }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::NativeJSFunctionKind;
+    switch (cell->getKind()) {
+      case CellKind::NativeJSFunctionKind:
+      case CellKind::NativeJSDerivedClassKind:
+        return true;
+      default:
+        return false;
+    }
   }
 
   NativeJSFunctionPtr getFunctionPtr() const {
@@ -638,6 +644,48 @@ class NativeJSFunction : public Callable {
         offsetof(NativeJSFunction, functionPtr_) ==
         offsetof(SHNativeJSFunction, functionPtr));
   }
+};
+
+/// This is a specific kind of NativeJSFunction: a derived class. Derived means
+/// that the class was declared with the "extends" keyword.
+class NativeJSDerivedClass : public NativeJSFunction {
+  static constexpr auto kHasFinalizer = HasFinalizer::No;
+
+ public:
+  NativeJSDerivedClass(
+      Runtime &runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<Environment> environment,
+      NativeJSFunctionPtr functionPtr,
+      const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit)
+      : NativeJSFunction(
+            runtime,
+            parent,
+            clazz,
+            environment,
+            functionPtr,
+            funcInfo,
+            unit) {}
+  static const CallableVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::NativeJSDerivedClassKind;
+  }
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::NativeJSDerivedClassKind;
+  }
+
+  /// Create an instance of NativeJSDerivedClass.
+  static Handle<NativeJSDerivedClass> create(
+      Runtime &runtime,
+      Handle<JSObject> parentHandle,
+      Handle<Environment> parentEnvHandle,
+      NativeJSFunctionPtr functionPtr,
+      const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit,
+      unsigned additionalSlotCount = 0);
 };
 
 /// A pointer to native function.
@@ -1117,6 +1165,37 @@ class JSFunction : public Callable {
   _snapshotAddLocationsImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
 #endif
+};
+
+/// This is a specific kind of JSFunction: a derived class. Derived means that
+/// the class was declared with the "extends" keyword.
+class JSDerivedClass : public JSFunction {
+  static constexpr auto kHasFinalizer = HasFinalizer::No;
+
+ public:
+  JSDerivedClass(
+      Runtime &runtime,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<Environment> environment,
+      CodeBlock *codeBlock)
+      : JSFunction(runtime, domain, parent, clazz, environment, codeBlock) {}
+  static const CallableVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSDerivedClassKind;
+  }
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::JSDerivedClassKind;
+  }
+  /// Create an instance of JSDerivedClass.
+  static PseudoHandle<JSDerivedClass> create(
+      Runtime &runtime,
+      Handle<Domain> domain,
+      Handle<JSObject> parentHandle,
+      Handle<Environment> envHandle,
+      CodeBlock *codeBlock);
 };
 
 } // namespace vm
