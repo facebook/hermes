@@ -182,6 +182,21 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
   return Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
 }
 
+/// Get the function range for \p functionNode, with its parent \p parentNode.
+/// This is done to support lazy compilation. When restarting the compilation,
+/// we need to start parsing at the identifier for the function of the class
+/// method. By default, the source location for the function expression node
+/// starts at the first, left parenthesis.
+/// \param parentNode may be null.
+static SMRange getFunctionRange(
+    ESTree::FunctionLikeNode *functionNode,
+    ESTree::Node *parentNode) {
+  if (llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parentNode)) {
+    return parentNode->getSourceRange();
+  }
+  return functionNode->getSourceRange();
+}
+
 NormalFunction *ESTreeIRGen::genCapturingFunction(
     Identifier originalName,
     ESTree::FunctionLikeNode *functionNode,
@@ -194,7 +209,7 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
       functionKind,
       ESTree::isStrict(functionNode->strictness),
       functionNode->getSemInfo()->customDirectives,
-      functionNode->getSourceRange());
+      getFunctionRange(functionNode, parentNode));
 
   if (llvh::isa<flow::TypedFunctionType>(
           flowContext_.getNodeTypeOrAny(functionNode)->info)) {
@@ -277,14 +292,14 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
             CustomDirectives{
                 .sourceVisibility = SourceVisibility::HideSource,
                 .alwaysInline = false},
-            functionNode->getSourceRange(),
+            getFunctionRange(functionNode, parentNode),
             /* insertBefore */ nullptr)
       : (Builder.createFunction(
             originalName,
             functionKind,
             ESTree::isStrict(functionNode->strictness),
             functionNode->getSemInfo()->customDirectives,
-            functionNode->getSourceRange(),
+            getFunctionRange(functionNode, parentNode),
             /* insertBefore */ nullptr));
 
   if (llvh::isa<flow::TypedFunctionType>(
@@ -456,7 +471,7 @@ Function *ESTreeIRGen::genGeneratorFunction(
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
       functionNode->getSemInfo()->customDirectives,
-      functionNode->getSourceRange(),
+      getFunctionRange(functionNode, parentNode),
       /* insertBefore */ nullptr);
 
   auto *body = ESTree::getBlockStatement(functionNode);
@@ -584,7 +599,7 @@ Function *ESTreeIRGen::genAsyncFunction(
       Function::DefinitionKind::ES5Function,
       ESTree::isStrict(functionNode->strictness),
       functionNode->getSemInfo()->customDirectives,
-      functionNode->getSourceRange(),
+      getFunctionRange(functionNode, parentNode),
       /* insertBefore */ nullptr);
 
   bool isAsyncArrow =
@@ -1239,6 +1254,9 @@ void ESTreeIRGen::genDummyFunction(Function *dummy) {
 static ESTree::NodeKind getLazyFunctionKind(
     ESTree::FunctionLikeNode *node,
     ESTree::Node *parentNode) {
+  if (llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parentNode)) {
+    return ESTree::NodeKind::MethodDefinition;
+  }
   if (node->isMethodDefinition) {
     // This is not a regular function expression but getter/setter.
     // If we want to reparse it later, we have to start from an

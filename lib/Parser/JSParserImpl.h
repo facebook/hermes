@@ -975,8 +975,12 @@ class JSParserImpl {
   /// \param body is the output list of class element nodes.
   /// \param[in/out] constructor is the constructor node that has been parsed
   ///  already, or nullptr if there's none.
+  /// \param eagerly force non-lazy parsing.
   /// \return false if there was an error.
-  bool parseClassBodyImpl(ESTree::NodeList &body, ESTree::Node *&constructor);
+  bool parseClassBodyImpl(
+      ESTree::NodeList &body,
+      ESTree::Node *&constructor,
+      bool eagerly);
 
   Optional<ESTree::Node *> parseClassElement(
       bool isStatic,

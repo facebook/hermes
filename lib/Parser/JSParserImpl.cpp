@@ -4679,7 +4679,7 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
   ESTree::Node *constructor = nullptr;
   ESTree::NodeList body{};
   while (!check(TokenKind::r_brace)) {
-    auto optElem = parseClassBodyImpl(body, constructor);
+    auto optElem = parseClassBodyImpl(body, constructor, false);
     if (!optElem)
       return None;
   }
@@ -4700,7 +4700,8 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
 
 bool JSParserImpl::parseClassBodyImpl(
     ESTree::NodeList &body,
-    ESTree::Node *&constructor) {
+    ESTree::Node *&constructor,
+    bool eagerly) {
   bool isStatic = false;
   SMRange startRange = tok_->getSourceRange();
 
@@ -4772,7 +4773,7 @@ bool JSParserImpl::parseClassBodyImpl(
     default: {
       // ClassElement
       auto optElem = parseClassElement(
-          isStatic, startRange, declare, readonly, accessibility);
+          isStatic, startRange, declare, readonly, accessibility, eagerly);
       if (!optElem)
         return false;
       if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
@@ -7107,6 +7108,22 @@ Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
         assert(false && "Expected a getter/setter function");
         return None;
       }
+    }
+
+    case ESTree::NodeKind::MethodDefinition: {
+      ESTree::Node *constructor = nullptr;
+      ESTree::NodeList body{};
+      bool success = parseClassBodyImpl(body, constructor, true);
+      (void)success;
+      assert(
+          success && body.size() == 1 &&
+          "Unexpected parseClassBodyImpl result");
+      auto *node = &*body.begin();
+      if (auto *prop = dyn_cast<ESTree::MethodDefinitionNode>(node)) {
+        return prop->_value;
+      }
+      assert(false && "Expected MethodDefinitionNode");
+      return None;
     }
 
     default:
