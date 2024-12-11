@@ -682,6 +682,13 @@ class ESTreeIRGen {
       ESTree::ReturnStatementNode *node,
       Value *returnValue);
 
+  /// Generate the function code for the implicit constructor of a legacy class.
+  /// \param superClassNode is non-null for constructors of a derived class.
+  NormalFunction *genLegacyImplicitConstructor(
+      ESTree::ClassLikeNode *classNode,
+      const Identifier &className,
+      ESTree::Node *superClassNode);
+
   /// Emit code to allocate an empty instance of the specified class and return
   /// it.
   /// \param parent the parent object of the newly allocated class, nullptr to

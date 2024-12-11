@@ -72,31 +72,35 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   auto popCtx = llvh::make_scope_exit(
       [this, savedClsCtx] { curFunction()->legacyClassContext = savedClsCtx; });
 
-  ESTree::MethodDefinitionNode *consMethodNode = nullptr;
-  for (auto &classElement : classBody->_body) {
-    if (auto *method =
-            llvh::dyn_cast<ESTree::MethodDefinitionNode>(&classElement);
-        method && method->_kind == kw_.identConstructor) {
-      consMethodNode = method;
+  // Function code for the constructor.
+  NormalFunction *consCode;
+  if (ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode)
+          ->implicitCtorFunctionInfo) {
+    consCode =
+        genLegacyImplicitConstructor(classNode, className, superClassNode);
+  } else {
+    ESTree::MethodDefinitionNode *consMethodNode = nullptr;
+    for (auto &classElement : classBody->_body) {
+      if (auto *method =
+              llvh::dyn_cast<ESTree::MethodDefinitionNode>(&classElement);
+          method && method->_kind == kw_.identConstructor) {
+        consMethodNode = method;
+        break;
+      }
     }
+    assert(consMethodNode && "no explicit or implicit constructor found");
+    consCode = genBasicFunction(
+        className,
+        llvh::cast<ESTree::FunctionExpressionNode>(consMethodNode->_value),
+        curScope->getVariableScope(),
+        superClassNode,
+        Function::DefinitionKind::ES6Constructor,
+        clsPrototypeVar);
   }
-  if (!consMethodNode) {
-    assert(false && "Missing constructor");
-    Mod->getContext().getSourceErrorManager().error(
-        classNode->getSourceRange(), "Error: missing constructor");
-  }
-
-  // Prepare arguments for and emit CreateClassInst.
-  NormalFunction *consFunction = genBasicFunction(
-      className,
-      llvh::cast<ESTree::FunctionExpressionNode>(consMethodNode->_value),
-      curScope->getVariableScope(),
-      superClassNode,
-      Function::DefinitionKind::ES6Constructor);
   AllocStackInst *clsPrototypeOutput = Builder.createAllocStackInst(
       genAnonymousLabelName("clsPrototype"), Type::createObject());
   CreateClassInst *createClass = Builder.createCreateClassInst(
-      curScope, consFunction, superCls, clsPrototypeOutput);
+      curScope, consCode, superCls, clsPrototypeOutput);
   auto *clsPrototype = Builder.createLoadStackInst(clsPrototypeOutput);
   if (id)
     emitStore(createClass, resolveIdentifier(id), true);
@@ -250,6 +254,86 @@ Value *ESTreeIRGen::genLegacyDerivedConstructorRet(
   Builder.setInsertionBlock(returnBB);
   return Builder.createPhiInst(
       {returnValue, checkedThisVal}, {curBB, loadCheckedThisBB});
+}
+
+NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
+    ESTree::ClassLikeNode *classNode,
+    const Identifier &className,
+    ESTree::Node *superClassNode) {
+  const auto &LC = curFunction()->legacyClassContext;
+  assert(LC->constructor && "class context not properly set");
+
+  // Retrieve the FunctionInfo for the implicit constructor, which must exist.
+  sema::FunctionInfo *funcInfo =
+      ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode)
+          ->implicitCtorFunctionInfo;
+  assert(
+      funcInfo &&
+      "Semantic resolver failed to decorate class with implicit ctor");
+
+  auto *consFunc = Builder.createFunction(
+      className,
+      Function::DefinitionKind::ES6Constructor,
+      /* strictMode */ true,
+      funcInfo->customDirectives);
+
+  auto compileFunc = [this,
+                      consFunc,
+                      funcInfo,
+                      LC,
+                      superClassNode,
+                      isDerived = funcInfo->constructorKind ==
+                          sema::FunctionInfo::ConstructorKind::Derived,
+                      parentScope =
+                          curFunction()->curScope->getVariableScope()] {
+    FunctionContext newFunctionContext{this, consFunc, funcInfo};
+    newFunctionContext.superClassNode_ = superClassNode;
+    newFunctionContext.legacyClassContext = LC;
+
+    auto *entryBB = Builder.createBasicBlock(consFunc);
+    emitFunctionPrologue(
+        nullptr,
+        entryBB,
+        InitES5CaptureState::No,
+        DoEmitDeclarations::No,
+        parentScope);
+    // Default subclass constructors must call super.
+    if (isDerived) {
+      // All derived constructors must have a captured state `this`.
+      curFunction()->capturedState.thisVal = Builder.createVariable(
+          curFunction()->curScope->getVariableScope(),
+          Builder.createIdentifier("?CHECKED_this"),
+          Type::createObject(),
+          true);
+      auto *baseConstructorScope =
+          emitResolveScopeInstIfNeeded(LC->constructor->getParent());
+      auto *callee = Builder.createLoadParentNoTrapsInst(
+          Builder.createLoadFrameInst(baseConstructorScope, LC->constructor));
+      auto newTarget = Builder.createGetNewTargetInst(
+          curFunction()->function->getNewTargetParam());
+      auto *createdThis = Builder.createCreateThisInst(callee, newTarget);
+      // Emit IR equivalent to super(...arguments)
+      auto *initializedThisVal = genBuiltinCall(
+          BuiltinMethod::HermesBuiltin_applyArguments,
+          {callee, createdThis, newTarget});
+      // Construct call always returns object.
+      initializedThisVal->setType(Type::createObject());
+      Builder.createStoreFrameInst(
+          curFunction()->curScope,
+          initializedThisVal,
+          newFunctionContext.capturedState.thisVal);
+      // Returning undefined in a derived constructor is coerced into returning
+      // the `thisVal` we just set.
+      emitFunctionEpilogue(Builder.getLiteralUndefined());
+      consFunc->setReturnType(Type::createObject());
+    } else {
+      emitFunctionEpilogue(Builder.getLiteralUndefined());
+      consFunc->setReturnType(Type::createUndefined());
+    }
+  };
+  enqueueCompilation(
+      classNode, ExtraKey::ImplicitClassConstructor, consFunc, compileFunc);
+  return consFunc;
 }
 
 } // namespace irgen

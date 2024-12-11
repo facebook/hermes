@@ -335,3 +335,28 @@ class A {
 // CHECK-NEXT: C1 foo
 // CHECK-NEXT: Base foo
 })();
+
+// Test default constructor.
+(function () {
+  class Base {
+    constructor(a, b, c) {
+      print(new.target.name);
+      this.a = a;
+      this.b = b;
+      this.c = c;
+    }
+  }
+  class C1 extends Base {}
+  let instance = new C1(1, 2, 3);
+// CHECK-NEXT: C1
+  print(instance.a);
+// CHECK-NEXT: 1
+  print(instance.b);
+// CHECK-NEXT: 2
+  print(instance.c);
+// CHECK-NEXT: 3
+
+  function foo() {}
+  Reflect.construct(C1, [], foo);
+// CHECK-NEXT: foo
+})();
