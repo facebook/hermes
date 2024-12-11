@@ -2035,7 +2035,7 @@ bool SemanticResolver::isLValue(ESTree::Node *node) {
 
     // Unless we are running under compliance tests, report an error on
     // reassignment to const.
-    if (decl->kind == Decl::Kind::Const)
+    if (Decl::isKindNotReassignable(decl->kind))
       if (!astContext_.getCodeGenerationSettings().test262)
         return false;
 

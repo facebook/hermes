@@ -755,6 +755,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
   if (!scope)
     return;
 
+  bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
   for (sema::Decl *decl : scope->decls) {
     Variable *var = nullptr;
     bool init = false;
@@ -769,7 +770,6 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
             "customData can be bound only if recompiling AST");
 
         if (!decl->customData) {
-          bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
           var = Builder.createVariable(
               curFunction()->curScope->getVariableScope(),
               decl->name,
@@ -798,7 +798,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
       case sema::Decl::Kind::ES5Catch:
       case sema::Decl::Kind::FunctionExprName:
       case sema::Decl::Kind::ClassExprName:
-      case sema::Decl::Kind::ScopedFunction:
+      case sema::Decl::Kind::ScopedFunction: {
         // NOTE: we are overwriting the decl's customData, even if it is already
         // set. Ordinarily we shouldn't be evaluating the same declarations
         // twice, except when we are compiling the body of a "finally" handler.
@@ -807,23 +807,30 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
              (decl->customData == nullptr)) &&
             "customData can be bound only if recompiling AST");
 
+        auto isClsExpr = decl->kind == sema::Decl::Kind::ClassExprName;
         if (!decl->customData) {
           var = Builder.createVariable(
               curFunction()->curScope->getVariableScope(),
               decl->name,
-              Type::createAnyType(),
+              (isClsExpr && tdz)
+                  ? Type::unionTy(Type::createAnyType(), Type::createEmpty())
+                  : Type::createAnyType(),
               // FunctionExprName isn't supposed to show up in the list when
               // debugging.
               /* hidden */ decl->kind == sema::Decl::Kind::FunctionExprName);
-          var->setIsConst(decl->kind == sema::Decl::Kind::Import);
+          var->setIsConst(sema::Decl::isKindNotReassignable(decl->kind));
+          if (isClsExpr) {
+            var->setObeysTDZ(tdz);
+          }
           setDeclData(decl, var);
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
         }
-        // Var declarations must be initialized to undefined at the beginning
-        // of the scope.
-        init = decl->kind == sema::Decl::Kind::Var;
+        // Var declarations and class expression names must be initialized to
+        // undefined at the beginning of the scope.
+        init = (decl->kind == sema::Decl::Kind::Var || isClsExpr);
         break;
+      }
 
       case sema::Decl::Kind::Parameter:
         // Skip parameters, they are handled separately.

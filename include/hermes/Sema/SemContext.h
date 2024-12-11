@@ -120,6 +120,12 @@ class Decl {
     return kind >= Kind::GlobalProperty;
   }
 
+  /// \return true if this declaration kind cannot be reassigned.
+  static bool isKindNotReassignable(Kind kind) {
+    return kind == Kind::Const || kind == Kind::ClassExprName ||
+        kind == Kind::Import;
+  }
+
   /// Identifier that is declared.
   Identifier const name;
   /// What kind of declaration it is.
