@@ -971,6 +971,13 @@ class JSParserImpl {
 
   Optional<ESTree::ClassBodyNode *> parseClassBody(SMLoc startLoc);
 
+  /// Inner loop of parsing the class body.
+  /// \param body is the output list of class element nodes.
+  /// \param[in/out] constructor is the constructor node that has been parsed
+  ///  already, or nullptr if there's none.
+  /// \return false if there was an error.
+  bool parseClassBodyImpl(ESTree::NodeList &body, ESTree::Node *&constructor);
+
   Optional<ESTree::Node *> parseClassElement(
       bool isStatic,
       SMRange startRange,

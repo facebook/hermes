@@ -4677,114 +4677,11 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
   // It is a Syntax Error if PrototypePropertyNameList of ClassElementList
   // contains more than one occurrence of  "constructor".
   ESTree::Node *constructor = nullptr;
-
   ESTree::NodeList body{};
   while (!check(TokenKind::r_brace)) {
-    bool isStatic = false;
-    SMRange startRange = tok_->getSourceRange();
-
-    bool declare = false;
-    bool readonly = false;
-    ESTree::NodeLabel accessibility = nullptr;
-
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(declareIdent_)) {
-      // Check for "declare" class properties.
-      auto optNext = lexer_.lookahead1(llvh::None);
-      if (optNext.hasValue() &&
-          (*optNext == TokenKind::rw_static ||
-           *optNext == TokenKind::identifier || *optNext == TokenKind::plus ||
-           *optNext == TokenKind::minus)) {
-        declare = true;
-        advance();
-      }
-    }
-#endif
-
-#if HERMES_PARSE_TS
-    if (context_.getParseTS()) {
-      // In TS, modifiers may appear in this order: accessibility - static -
-      // readonly. And all of them can be used as identifier.
-      if (checkN(
-              TokenKind::rw_private,
-              TokenKind::rw_protected,
-              TokenKind::rw_public)) {
-        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
-          accessibility = tok_->getResWordIdentifier();
-          advance();
-        }
-      }
-
-      if (check(TokenKind::rw_static)) {
-        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
-          isStatic = true;
-          advance();
-        }
-      }
-
-      if (check(readonlyIdent_)) {
-        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
-          readonly = true;
-          advance();
-        }
-      }
-    }
-#endif
-
-    switch (tok_->getKind()) {
-      case TokenKind::semi:
-        advance();
-        break;
-
-      case TokenKind::rw_static:
-        if (context_.getParseTS() && (readonly || isStatic)) {
-          // Don't advance() when `readonly` or `static` is already seen,
-          // so the current one can be regarded as an identifier.
-          // `static` modifier cannot come after `readonly` in TS.
-        } else {
-          // static MethodDefinition
-          // static FieldDefinition
-          isStatic = true;
-          advance();
-        }
-        LLVM_FALLTHROUGH;
-      default: {
-        // ClassElement
-        auto optElem = parseClassElement(
-            isStatic, startRange, declare, readonly, accessibility);
-        if (!optElem)
-          return None;
-        if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
-          if (method->_kind == constructorIdent_) {
-            if (constructor) {
-              // Cannot have duplicate constructors, but report the error
-              // and move on to parse the rest of the class.
-              error(
-                  method->getSourceRange(), "duplicate constructors in class");
-              sm_.note(
-                  constructor->getSourceRange(),
-                  "first constructor definition",
-                  Subsystem::Parser);
-            } else {
-              constructor = method;
-            }
-          }
-        } else if (auto *prop = dyn_cast<ESTree::ClassPropertyNode>(*optElem)) {
-          if (auto *propId = dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
-            if (propId->_name == constructorIdent_) {
-              error(prop->getSourceRange(), "invalid class property name");
-            }
-          } else if (
-              auto *propStr = dyn_cast<ESTree::StringLiteralNode>(prop->_key)) {
-            if (propStr->_value == constructorIdent_) {
-              error(prop->getSourceRange(), "invalid class property name");
-            }
-          }
-        }
-
-        body.push_back(**optElem);
-      }
-    }
+    auto optElem = parseClassBodyImpl(body, constructor);
+    if (!optElem)
+      return None;
   }
 
   if (!need(
@@ -4799,6 +4696,116 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
       braceLoc,
       advance().End,
       new (context_) ESTree::ClassBodyNode(std::move(body)));
+}
+
+bool JSParserImpl::parseClassBodyImpl(
+    ESTree::NodeList &body,
+    ESTree::Node *&constructor) {
+  bool isStatic = false;
+  SMRange startRange = tok_->getSourceRange();
+
+  bool declare = false;
+  bool readonly = false;
+  ESTree::NodeLabel accessibility = nullptr;
+
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(declareIdent_)) {
+    // Check for "declare" class properties.
+    auto optNext = lexer_.lookahead1(llvh::None);
+    if (optNext.hasValue() &&
+        (*optNext == TokenKind::rw_static ||
+         *optNext == TokenKind::identifier || *optNext == TokenKind::plus ||
+         *optNext == TokenKind::minus)) {
+      declare = true;
+      advance();
+    }
+  }
+#endif
+
+#if HERMES_PARSE_TS
+  if (context_.getParseTS()) {
+    // In TS, modifiers may appear in this order: accessibility - static -
+    // readonly. And all of them can be used as identifier.
+    if (checkN(
+            TokenKind::rw_private,
+            TokenKind::rw_protected,
+            TokenKind::rw_public)) {
+      if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+        accessibility = tok_->getResWordIdentifier();
+        advance();
+      }
+    }
+
+    if (check(TokenKind::rw_static)) {
+      if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+        isStatic = true;
+        advance();
+      }
+    }
+
+    if (check(readonlyIdent_)) {
+      if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+        readonly = true;
+        advance();
+      }
+    }
+  }
+#endif
+
+  switch (tok_->getKind()) {
+    case TokenKind::semi:
+      advance();
+      break;
+
+    case TokenKind::rw_static:
+      if (context_.getParseTS() && (readonly || isStatic)) {
+        // Don't advance() when `readonly` or `static` is already seen,
+        // so the current one can be regarded as an identifier.
+        // `static` modifier cannot come after `readonly` in TS.
+      } else {
+        // static MethodDefinition
+        // static FieldDefinition
+        isStatic = true;
+        advance();
+      }
+      LLVM_FALLTHROUGH;
+    default: {
+      // ClassElement
+      auto optElem = parseClassElement(
+          isStatic, startRange, declare, readonly, accessibility);
+      if (!optElem)
+        return false;
+      if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
+        if (method->_kind == constructorIdent_) {
+          if (constructor) {
+            // Cannot have duplicate constructors, but report the error
+            // and move on to parse the rest of the class.
+            error(method->getSourceRange(), "duplicate constructors in class");
+            sm_.note(
+                constructor->getSourceRange(),
+                "first constructor definition",
+                Subsystem::Parser);
+          } else {
+            constructor = method;
+          }
+        }
+      } else if (auto *prop = dyn_cast<ESTree::ClassPropertyNode>(*optElem)) {
+        if (auto *propId = dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
+          if (propId->_name == constructorIdent_) {
+            error(prop->getSourceRange(), "invalid class property name");
+          }
+        } else if (
+            auto *propStr = dyn_cast<ESTree::StringLiteralNode>(prop->_key)) {
+          if (propStr->_value == constructorIdent_) {
+            error(prop->getSourceRange(), "invalid class property name");
+          }
+        }
+      }
+
+      body.push_back(**optElem);
+    }
+  }
+  return true;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseClassElement(
