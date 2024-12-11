@@ -1042,11 +1042,19 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
     SHPropertyCacheEntry *propCacheEntry) {
   Runtime &runtime = getRuntime(shr);
   auto *calleePHV = toPHV(callee);
+  auto *newTargetPHV = toPHV(newTarget);
   {
-    if (LLVM_UNLIKELY(!calleePHV->isObject())) {
+    // TODO(T168592126) standardize on where we perform function call
+    // validation for the native backend.
+    if (LLVM_UNLIKELY(!vmisa<Callable>(*calleePHV))) {
       (void)runtime.raiseTypeErrorForValue(
           Handle<>(calleePHV), " cannot be used as a constructor.");
-      goto invalidCallee;
+      goto throwCurrent;
+    }
+    if (LLVM_UNLIKELY(!vmisa<Callable>(*newTargetPHV))) {
+      (void)runtime.raiseTypeErrorForValue(
+          Handle<>(newTargetPHV), " invalid new.target.");
+      goto throwCurrent;
     }
 
     auto *calleeFunc = vmcast<JSObject>(*calleePHV);
@@ -1082,13 +1090,13 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
         // NativeFunction as a constructor.
         (void)runtime.raiseTypeError(
             "This function cannot be used as a constructor.");
-        goto invalidCallee;
+        goto throwCurrent;
       }
     } else {
       // Not a Callable.
       (void)runtime.raiseTypeErrorForValue(
           Handle<>(calleePHV), " cannot be used as a constructor.");
-      goto invalidCallee;
+      goto throwCurrent;
     }
 
     // We shouldn't need to check that new.target is a constructor explicitly.
@@ -1124,7 +1132,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
                    : runtime.objectPrototype)
         .getHermesValue();
   }
-invalidCallee:
+throwCurrent:
   _sh_throw_current(shr);
 }
 
