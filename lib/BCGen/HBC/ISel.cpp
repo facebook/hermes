@@ -1797,13 +1797,19 @@ void HBCISel::generateHBCReifyArgumentsStrictInst(
   BCFGen_->emitReifyArgumentsStrict(reg);
 }
 void HBCISel::generateCreateThisInst(CreateThisInst *Inst, BasicBlock *next) {
-  assert(
-      llvh::isa<EmptySentinel>(Inst->getNewTarget()) &&
-      "CreateThis currently only supported for `new`");
   auto output = encodeValue(Inst);
   auto closure = encodeValue(Inst->getClosure());
-  BCFGen_->emitCreateThisForNew(
-      output, closure, acquirePropertyReadCacheIndex(prototypeIdent_));
+  if (llvh::isa<EmptySentinel>(Inst->getNewTarget())) {
+    BCFGen_->emitCreateThisForNew(
+        output, closure, acquirePropertyReadCacheIndex(prototypeIdent_));
+  } else {
+    auto newTarget = encodeValue(Inst->getNewTarget());
+    BCFGen_->emitCreateThisForSuper(
+        output,
+        closure,
+        newTarget,
+        acquirePropertyReadCacheIndex(prototypeIdent_));
+  }
 }
 void HBCISel::generateGetConstructedObjectInst(
     GetConstructedObjectInst *Inst,

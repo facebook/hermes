@@ -652,6 +652,14 @@ OPERAND_FUNCTION_ID(CreateClosureLongIndex, 3)
 /// property.
 DEFINE_OPCODE_3(CreateThisForNew, Reg8, Reg8, UInt8)
 
+/// Allocate an empty, uninitialized object to be used as the `this` parameter
+/// in a `new` expression.
+/// Arg1 is the destination register.
+/// Arg2 is the constructor closure that will be invoked.
+/// Arg3 is the new.target.
+/// Arg4 is a cache index used to speed up fetching the new target prototype property.
+DEFINE_OPCODE_4(CreateThisForSuper, Reg8, Reg8, Reg8, UInt8)
+
 /// Choose the result of a constructor: 'this' or a returned object.
 /// Arg1 is the result.
 /// Arg2 is the 'this' object used for the constructor.

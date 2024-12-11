@@ -1940,15 +1940,16 @@ class InstrGen {
         << hbc::StackFrameLayout::ThisArg << "]);\n";
   }
   void generateCreateThisInst(CreateThisInst &inst) {
-    assert(
-        llvh::isa<EmptySentinel>(inst.getNewTarget()) &&
-        "CreateThis currently only supported for `new`");
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_create_this(shr, &";
     generateRegister(*inst.getClosure());
     os_ << ", &";
-    generateRegister(*inst.getClosure());
+    if (llvh::isa<EmptySentinel>(inst.getNewTarget())) {
+      generateRegister(*inst.getClosure());
+    } else {
+      generateRegister(*inst.getNewTarget());
+    }
     os_ << ", ";
     Module *M = F_.getParent();
     auto *protoStr =

@@ -3212,6 +3212,24 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(CreateThisForSuper) {
+        CAPTURE_IP_ASSIGN(
+            res,
+            createThisImpl(
+                runtime,
+                &O2REG(CreateThisForSuper),
+                &O3REG(CreateThisForSuper),
+                ip->iCreateThisForSuper.op4,
+                curCodeBlock));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        O1REG(CreateThisForSuper) = *res;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(CreateThisForSuper);
+        DISPATCH;
+      }
+
       CASE(CreateThisForNew) {
         CAPTURE_IP(
             res = createThisImpl(
