@@ -102,6 +102,10 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       const jsi::PropNameID &name,
       const jsi::Value &value) override;
 
+  void setPrototypeOf(const jsi::Object &object, const jsi::Value &prototype)
+      override;
+  jsi::Value getPrototypeOf(const jsi::Object &object) override;
+
   jsi::Array getPropertyNames(const jsi::Object &o) override;
 
   jsi::WeakObject createWeakObject(const jsi::Object &o) override;
