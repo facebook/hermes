@@ -1354,6 +1354,26 @@ TEST_P(HermesRuntimeTest, GetPropNameIdDataTest) {
   buf.clear();
 }
 
+TEST_P(HermesRuntimeTest, SetPrototypeOf) {
+  Object prototypeObj(*rt);
+  prototypeObj.setProperty(*rt, "someProperty", 123);
+  Value prototype(*rt, prototypeObj);
+
+  Object child(*rt);
+  child.setPrototype(*rt, prototype);
+  EXPECT_EQ(child.getProperty(*rt, "someProperty").getNumber(), 123);
+
+  auto getPrototypeRes = child.getPrototype(*rt).asObject(*rt);
+  EXPECT_EQ(getPrototypeRes.getProperty(*rt, "someProperty").getNumber(), 123);
+
+  // Tests null value as prototype
+  child.setPrototype(*rt, Value::null());
+  EXPECT_TRUE(child.getPrototype(*rt).isNull());
+
+  // Throw when prototype is neither an Object nor null
+  EXPECT_THROW(child.setPrototype(*rt, Value(1)), JSError);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
