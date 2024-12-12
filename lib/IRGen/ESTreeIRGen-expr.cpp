@@ -461,8 +461,9 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     return emitNativeCall(call, natFuncType);
   }
 
-  // Check for a direct call to eval().
+  // Check for "special calls" -- calls with known special function names.
   if (auto *identNode = llvh::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
+    // Check for a direct call to eval().
     if (identNode->_name == kw_.identEval)
       return genCallEvalExpr(call);
   }
@@ -661,6 +662,18 @@ Value *ESTreeIRGen::genSHBuiltin(
     return Builder.createFastArrayLengthInst(array);
   }
 
+  if (builtin->_name == kw_.identModuleFactory) {
+    return genSHBuiltinModuleFactory(call);
+  }
+  if (builtin->_name == kw_.identExport) {
+    // We generate no code for $SHBuiltin.export; that's only used as
+    // metadata, and processed by semantic resolution.
+    return Builder.getLiteralUndefined();
+  }
+  if (builtin->_name == kw_.identImport) {
+    return genSHBuiltinImport(call);
+  }
+
   Mod->getContext().getSourceErrorManager().error(
       call->getSourceRange(), "unknown SH builtin call");
   return Builder.getLiteralUndefined();
@@ -731,6 +744,45 @@ Value *ESTreeIRGen::genSHBuiltinExternC(ESTree::CallExpressionNode *call) {
       "extern_c signature mismatch with the expression type");
 
   return Builder.getLiteralNativeExtern(nativeExtern);
+}
+
+Value *ESTreeIRGen::genSHBuiltinModuleFactory(
+    ESTree::CallExpressionNode *call) {
+  ESTree::NodeList &args = ESTree::getArguments(call);
+  assert(
+      call->_arguments.size() == 2 && "Ensured by checks in SemanticResolver.");
+
+  auto argsIter = args.begin();
+
+  ESTree::Node *modIdArg = &(*argsIter);
+  // Success of cast ensured by checks in SemanticResolver.
+  const auto *modIdNumLit = llvh::cast<ESTree::NumericLiteralNode>(modIdArg);
+  unsigned exportModId = static_cast<unsigned>(modIdNumLit->_value);
+  (void)exportModId;
+  assert(
+      static_cast<double>(exportModId) == modIdNumLit->_value &&
+      "Ensured by checks in SemanticResolver.");
+
+  ++argsIter;
+  ESTree::Node *modFactoryFuncArg = &(*argsIter);
+
+  // Now evaluate the function argument as the factory function of the
+  // current module.
+  return genExpression(modFactoryFuncArg);
+}
+
+Value *ESTreeIRGen::genSHBuiltinImport(ESTree::CallExpressionNode *call) {
+  ESTree::NodeList &args = getArguments(call);
+  assert(
+      call->_arguments.size() == 3 && "Ensured by checks in SemanticResolver.");
+  auto argsIter = args.begin();
+  ++argsIter;
+  ++argsIter;
+
+  ESTree::Node *importExp = &(*argsIter);
+
+  // For now, we just reduce this to the import expression.
+  return genExpression(importExp);
 }
 
 Value *ESTreeIRGen::emitCall(

@@ -366,6 +366,11 @@ class SemanticResolver
       ESTree::NodeList &params,
       ESTree::Node *parent);
 
+  /// Visit calls to module-related $SHBuiltin functions.
+  void visitModuleFactory(ESTree::CallExpressionNode *node);
+  void visitModuleExport(ESTree::CallExpressionNode *node);
+  void visitModuleImport(ESTree::CallExpressionNode *node);
+
   /// Resolve an identifier to a declaration and record the resolution.
   /// Emit a warning for undeclared identifiers in strict mode.
   /// Record an undeclared global property if no declaration is found.

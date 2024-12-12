@@ -11,14 +11,29 @@
 #include "ScopedFunctionPromoter.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Sema/SemContext.h"
+#include "hermes/Support/sh_tryfast_fp_cvt.h"
 
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/SaveAndRestore.h"
+
+#include <string>
 
 using namespace hermes::ESTree;
 
 namespace hermes {
 namespace sema {
+
+namespace {
+
+/// Return a std::string for the given unique string member of $SHBuiltin.
+std::string stringForSHBuiltinError(
+    const Keywords &kw,
+    UniqueString *builtinName) {
+  return std::string(kw.identSHBuiltin->str()) + "." +
+      std::string(builtinName->str());
+}
+
+} // namespace
 
 SemanticResolver::SemanticResolver(
     Context &astContext,
@@ -1012,6 +1027,25 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
           shBuiltin->copyLocationFrom(methodCallee->_object);
           methodCallee->_object = shBuiltin;
         }
+        if (auto *propIdent =
+                llvh::cast<ESTree::IdentifierNode>(methodCallee->_property)) {
+          if (propIdent->_name == kw_.identModuleFactory) {
+            // This visits its children explicitly (with a module context
+            // set), so we return after it.
+            visitModuleFactory(node);
+            return;
+          } else if (propIdent->_name == kw_.identExport) {
+            // In this case, we must visit the children first, to ensure that
+            // the exported name is resolved before we call visitModuleExport.
+            // Therefore, we return explicitly after, so we don't visit the
+            // children again below.
+            visitESTreeChildren(*this, node);
+            visitModuleExport(node);
+            return;
+          } else if (propIdent->_name == kw_.identImport) {
+            visitModuleImport(node);
+          }
+        }
       }
     }
   }
@@ -1026,6 +1060,146 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
   }
 
   visitESTreeChildren(*this, node);
+}
+
+namespace {
+
+/// Asserts that \p call is a call of whose callee is a member expression,
+/// reading the \p expected property from $SHBuiltin.  If this is not true,
+/// uses \p msg as the assertion message.
+void assertSHBuiltinCallAssumption(
+    ESTree::CallExpressionNode *call,
+    UniqueString *expected,
+    const char *msg) {
+#ifndef NDEBUG
+  auto *methodCallee =
+      llvh::dyn_cast<ESTree::MemberExpressionNode>(call->_callee);
+  assert(methodCallee && msg);
+  auto *ident = llvh::dyn_cast<ESTree::SHBuiltinNode>(methodCallee->_object);
+  assert(ident && msg);
+  auto *propIdent = llvh::cast<ESTree::IdentifierNode>(methodCallee->_property);
+  assert(propIdent && msg);
+  assert(propIdent->_name == expected && msg);
+#endif
+}
+
+} // namespace
+
+void SemanticResolver::visitModuleFactory(ESTree::CallExpressionNode *call) {
+  assertSHBuiltinCallAssumption(
+      call,
+      kw_.identModuleFactory,
+      "Precondition: call is to $SHBuiltin.moduleFactory");
+  if (call->_arguments.size() != 2) {
+    sm_.error(
+        call->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identModuleFactory) +
+            " requires exactly two arguments.");
+    return;
+  }
+
+  auto argsIter = call->_arguments.begin();
+
+  auto *modIdArg = &(*argsIter);
+  auto *modIdNumLit = llvh::dyn_cast<ESTree::NumericLiteralNode>(modIdArg);
+  unsigned exportModId;
+  if (!modIdNumLit ||
+      !sh_tryfast_f64_to_u32(modIdNumLit->_value, exportModId)) {
+    sm_.error(
+        modIdArg->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identModuleFactory) +
+            " requires first arg to be unsigned int numeric literal.");
+    return;
+  }
+
+  visitESTreeChildren(*this, call);
+}
+
+void SemanticResolver::visitModuleExport(ESTree::CallExpressionNode *call) {
+  assertSHBuiltinCallAssumption(
+      call, kw_.identExport, "Precondition: call is to $SHBuiltin.export");
+  if (call->_arguments.size() != 2) {
+    sm_.error(
+        call->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identExport) +
+            " requires exactly two arguments.");
+    return;
+  }
+
+  auto argsIter = call->_arguments.begin();
+
+  auto *exportPropNameArg = &(*argsIter);
+  const auto *exportPropStrLit =
+      llvh::dyn_cast<ESTree::StringLiteralNode>(exportPropNameArg);
+  if (!exportPropStrLit) {
+    sm_.error(
+        exportPropNameArg->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identExport) +
+            " requires first argument to be a string literal.");
+    return;
+  }
+  UniqueString *exportPropName = exportPropStrLit->_value;
+
+  argsIter++;
+
+  auto *exportArg = &(*argsIter);
+  // The export may be either an identifier, or a call to $SHBuiltin.import
+  // (an "import-of-export").  SO we'll allow a call here.
+  if (auto *exportPropId = llvh::dyn_cast<ESTree::IdentifierNode>(exportArg)) {
+    Decl *exportPropDecl = semCtx_.getExpressionDecl(exportPropId);
+    if (exportPropDecl == nullptr) {
+      sm_.error(
+          exportArg->getSourceRange(),
+          Twine("Export ") + exportPropName->str() + " is not declared.");
+      return;
+    }
+  } else if (!llvh::isa<ESTree::CallExpressionNode>(exportArg)) {
+    sm_.error(
+        exportArg->getSourceRange(),
+        Twine("Export ") + exportPropName->str() +
+            " is neither an identifier nor a call.");
+    return;
+  }
+}
+
+void SemanticResolver::visitModuleImport(ESTree::CallExpressionNode *call) {
+  assertSHBuiltinCallAssumption(
+      call, kw_.identImport, "Precondition: call is to $SHBuiltin.import");
+  if (call->_arguments.size() < 2 || call->_arguments.size() > 3) {
+    sm_.error(
+        call->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identImport) +
+            " requires either two or three arguments.");
+    return;
+  }
+
+  auto argsIter = call->_arguments.begin();
+
+  ESTree::Node *importModIdArg = &(*argsIter);
+  unsigned importModId;
+  const auto *importModIdNumLit =
+      llvh::dyn_cast<ESTree::NumericLiteralNode>(importModIdArg);
+  // Value must be a non-negative integer.
+  if (!importModIdNumLit ||
+      !sh_tryfast_f64_to_u32(importModIdNumLit->_value, importModId)) {
+    sm_.error(
+        importModIdArg->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identImport) +
+            " requires first arg to be unsigned int numeric literal.");
+    return;
+  }
+  argsIter++;
+
+  auto *importPropNameArg = &(*argsIter);
+  const auto *importPropStrLit =
+      llvh::dyn_cast<ESTree::StringLiteralNode>(importPropNameArg);
+  if (!importPropStrLit) {
+    sm_.error(
+        importPropNameArg->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identImport) +
+            " requires second argument to be a string literal.");
+    return;
+  }
 }
 
 void SemanticResolver::visit(ESTree::SpreadElementNode *node, Node *parent) {

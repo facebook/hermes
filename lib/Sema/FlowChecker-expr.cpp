@@ -1345,6 +1345,18 @@ class FlowChecker::ExprVisitor {
       checkSHBuiltinExternC(call);
       return;
     }
+    if (builtin->_name == outer_.kw_.identModuleFactory) {
+      checkSHBuiltinModuleFactory(call);
+      return;
+    }
+    if (builtin->_name == outer_.kw_.identExport) {
+      checkSHBuiltinExport(call);
+      return;
+    }
+    if (builtin->_name == outer_.kw_.identImport) {
+      checkSHBuiltinImport(call);
+      return;
+    }
 
     outer_.sm_.error(call->getSourceRange(), "unknown SH builtin call");
   }
@@ -1588,6 +1600,40 @@ class FlowChecker::ExprVisitor {
         funcInfo->getReturnType(), funcInfo->getParams(), signature);
 
     outer_.setNodeType(call, outer_.flowContext_.createType(nativeFuncInfo));
+  }
+
+  void checkSHBuiltinModuleFactory(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    assert(
+        call->_arguments.size() == 2 &&
+        "Ensured by checks in SemanticResolver.");
+    auto argsIter = call->_arguments.begin();
+    // Skip to the second argument.
+    argsIter++;
+
+    auto *modFactoryFunctionArg = &(*argsIter);
+    // The type of the call is the type of the second (function) argument.
+    outer_.setNodeType(call, outer_.getNodeTypeOrAny(modFactoryFunctionArg));
+  }
+
+  void checkSHBuiltinExport(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    // The type of the call is void.
+    outer_.setNodeType(call, outer_.flowContext_.getVoid());
+  }
+
+  void checkSHBuiltinImport(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    assert(
+        call->_arguments.size() == 3 &&
+        "Ensured by checks in SemanticResolver.");
+    auto argsIter = call->_arguments.begin();
+    argsIter++;
+    argsIter++;
+
+    auto *importExp = &(*argsIter);
+    // The type of the call is the type of the third argument.
+    outer_.setNodeType(call, outer_.getNodeTypeOrAny(importExp));
   }
 
   /// Extract the options from the options object literal. On error print an

@@ -821,6 +821,15 @@ class ESTreeIRGen {
   /// Import an external C function.
   Value *genSHBuiltinExternC(ESTree::CallExpressionNode *call);
 
+  /// $SHBuiltin.moduleFactory(modId, factoryFunction)
+  /// Process \p factoryFunction as a module initialization function,
+  /// for the module with id \p modId.
+  Value *genSHBuiltinModuleFactory(ESTree::CallExpressionNode *call);
+
+  /// $SHBuiltin.export(modId, importNameStr, importExp)
+  /// For now, this just evaluates to the third argument of \p call.
+  Value *genSHBuiltinImport(ESTree::CallExpressionNode *call);
+
   /// Emits the actual call for \p call, and is used as a helper function for
   /// genCallExpr and genOptionalCallExpr.
   /// \param newTarget the new.target, undefined if not a constructor call.
