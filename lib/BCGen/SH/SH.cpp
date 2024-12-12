@@ -1882,7 +1882,7 @@ class InstrGen {
 
       os_.indent(2);
       generateRegister(inst);
-      os_ << " = _sh_ljs_callRequire(shr, shUnit, ";
+      os_ << " = _sh_ljs_callRequire(shr, &shUnit->moduleExports, ";
       generateRegisterPtr(*inst.getCallee());
       os_ << ", " << modId << ");\n";
     } else {

@@ -6,6 +6,7 @@
  */
 
 #include "hermes/BCGen/SerializedLiteralParser.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/Interpreter.h"
@@ -15,6 +16,7 @@
 #include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/ModuleExportsCache-inline.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
@@ -459,11 +461,18 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
 
 extern "C" SHLegacyValue _sh_ljs_callRequire(
     SHRuntime *shr,
-    void *cacheData,
+    SHArrayStorage **exportCache,
     SHLegacyValue *requireFunc,
     uint32_t modIndex) {
+  // Check the cache.
+  SHLegacyValue res = module_export_cache::get(
+      reinterpret_cast<ArrayStorage *>(*exportCache), modIndex);
+  if (!_sh_ljs_is_empty(res)) {
+    return res;
+  }
+
   Runtime &runtime = getRuntime(shr);
-  auto res = [&]() -> CallResult<SHLegacyValue> {
+  auto slowRes = [&]() -> CallResult<SHLegacyValue> {
     struct : public Locals {
       PinnedValue<> modExport;
       PinnedValue<Callable> reqFuncPV;
@@ -490,13 +499,20 @@ extern "C" SHLegacyValue _sh_ljs_callRequire(
       return ExecutionStatus::EXCEPTION;
 
     lv.modExport = modExport->get();
-    // TODO: add the module caching here.
+
+    // Populate the cache.
+    module_export_cache::set(
+        getRuntime(shr),
+        reinterpret_cast<ArrayStorage *&>(*exportCache),
+        modIndex,
+        *lv.modExport);
+
     // Whether or not the caching above succeeded, return the module export.
     return lv.modExport.get();
   }();
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+  if (LLVM_UNLIKELY(slowRes == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
-  return *res;
+  return *slowRes;
 }
 
 extern "C" SHLegacyValue _sh_ljs_call_builtin(

@@ -45,6 +45,7 @@ set(source_files
   LimitedStorageProvider.cpp
   DecoratedObject.cpp
   HostModel.cpp
+  ModuleExportsCache.cpp
   NativeState.cpp
   Operations.cpp
   PredefinedStringIDs.cpp

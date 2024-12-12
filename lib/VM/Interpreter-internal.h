@@ -158,6 +158,12 @@ ExecutionStatus doNegateSlowPath_RJS(
     PinnedHermesValue *frameRegs,
     const Inst *ip);
 
+ExecutionStatus doCallRequireSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    RuntimeModule *runtimeModule);
+
 } // namespace vm
 } // namespace hermes
 #endif // HERMES_VM_INTERPRETER_INTERNAL_H

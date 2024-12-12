@@ -98,4 +98,12 @@ typedef struct SHArrayStorageSmall {
   SHGCSmallHermesValue storage[0];
 } SHArrayStorageSmall;
 
+/// Struct mirroring the layout of ArrayStorage.
+typedef struct SHArrayStorage {
+  SHGCCell base;
+
+  uint32_t size;
+  SHLegacyValue storage[0];
+} SHArrayStorage;
+
 #endif

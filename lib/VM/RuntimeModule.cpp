@@ -9,9 +9,11 @@
 
 #include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/Support/PerfSection.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/HiddenClass.h"
+#include "hermes/VM/ModuleExportsCache.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
@@ -316,6 +318,8 @@ void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
       }
     }
   }
+
+  acceptor.acceptPtr(moduleExports_);
 }
 
 void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
@@ -355,6 +359,14 @@ size_t RuntimeModule::additionalMemorySize() const {
   return stringIDMap_.capacity() * sizeof(SymbolID) +
       objectLiteralHiddenClasses_.size() * sizeof(WeakRoot<HiddenClass>) +
       templateMap_.getMemorySize();
+}
+
+/// Set the module export for module \p modIndex to \p modExport.
+void RuntimeModule::setModuleExport(
+    Runtime &runtime,
+    uint32_t modIndex,
+    HermesValue modExport) {
+  module_export_cache::set(runtime, moduleExports_, modIndex, modExport);
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

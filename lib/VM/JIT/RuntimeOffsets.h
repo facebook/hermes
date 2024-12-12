@@ -10,6 +10,7 @@
 
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/RuntimeModule.h"
 
 namespace hermes {
 namespace vm {
@@ -34,6 +35,10 @@ struct RuntimeOffsets {
   static constexpr uint32_t codeBlockJitPtr = offsetof(CodeBlock, JITCompiled_);
   static constexpr uint32_t jsFunctionCodeBlock =
       offsetof(JSFunction, codeBlock_);
+
+  static constexpr uint32_t runtimeModuleModuleCache =
+      offsetof(RuntimeModule, moduleExports_);
+
   /// Can't use offsetof here because KindAndSize uses bitfields.
   static constexpr uint32_t kindAndSizeKind = KindAndSize::kNumSizeBits / 8;
 };

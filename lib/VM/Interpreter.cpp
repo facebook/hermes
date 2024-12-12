@@ -1624,19 +1624,6 @@ tailCall:
         goto doCall;
       }
 
-      CASE(CallRequire) {
-        uint32_t modIndex = ip->iCallRequire.op3;
-        callArgCount = 2;
-        nextIP = NEXTINST(CallRequire);
-        StackFramePtr fr{runtime.stackPointer_};
-        // this.
-        fr.getArgRefUnsafe(-1) = HermesValue::encodeUndefinedValue();
-        // mod index
-        fr.getArgRefUnsafe(0) = HermesValue::encodeTrustedNumberValue(modIndex);
-        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
-        goto doCall;
-      }
-
     doCall: {
 #ifdef HERMES_ENABLE_DEBUGGER
       // Check for an async debugger request.
@@ -1734,6 +1721,26 @@ tailCall:
       ip = nextIP;
       DISPATCH;
     }
+
+      CASE(CallRequire) {
+        uint32_t modIndex = ip->iCallRequire.op3;
+        RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+        HermesValue modExport = runtimeModule->getModuleExport(modIndex);
+        if (LLVM_LIKELY(!modExport.isEmpty())) {
+          // This is a cache hit.  Return the result obtained from the
+          // cache.
+          O1REG(CallRequire) = modExport;
+        } else {
+          CAPTURE_IP_ASSIGN(
+              ExecutionStatus res,
+              doCallRequireSlowPath_RJS(runtime, frameRegs, ip, runtimeModule));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+            goto exception;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+        }
+        ip = NEXTINST(CallRequire);
+        DISPATCH;
+      }
 
       CASE(GetBuiltinClosure) {
         uint8_t methodIndex = ip->iCallBuiltin.op2;

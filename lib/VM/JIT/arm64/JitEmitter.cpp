@@ -4450,16 +4450,18 @@ void Emitter::callRequire(FR frRes, FR frRequireFunc, uint32_t modIndex) {
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
-  // We've reserved this argument in _sh_ljs_callRequire, but it's currently
-  // unused.  Pass 0; a later diff will both use the argument in
-  // _sh_ljs_callRequire and pass the right value here./
-  a.mov(a64::x1, 0);
+  loadBits64InGp(
+      a64::x1,
+      (uint64_t)codeBlock_->getRuntimeModule() +
+          RuntimeOffsets::runtimeModuleModuleCache,
+      "cacheData");
   loadFrameAddr(a64::x2, frRequireFunc);
   a.mov(a64::w3, modIndex);
 
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, void *, SHLegacyValue *, uint32_t),
+      SHLegacyValue(*)(
+          SHRuntime *, SHArrayStorage **, SHLegacyValue *, uint32_t),
       _sh_ljs_callRequire);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);

@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "vm"
 #include "JSLib/JSLibInternal.h"
 #include "hermes/VM/BigIntPrimitive.h"
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSCallableProxy.h"
@@ -943,6 +944,41 @@ ExecutionStatus doNegateSlowPath_RJS(
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   O1REG(Negate) = *res;
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus doCallRequireSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    RuntimeModule *runtimeModule) {
+  uint32_t modIndex = ip->iCallRequire.op3;
+
+  struct : public Locals {
+    PinnedValue<> modExport;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  // The value should be a Callable, or else we raise an error (as
+  // Interpreter::handleCallSlowPath does).
+  const auto requireFunc = Handle<>(&O2REG(CallRequire));
+  auto requireFuncCallable = Handle<Callable>::dyn_vmcast(requireFunc);
+  if (LLVM_UNLIKELY(!requireFuncCallable)) {
+    return runtime.raiseTypeErrorForValue(requireFunc, " is not a function");
+  }
+
+  CallResult<PseudoHandle<>> modExport = Callable::executeCall1(
+      requireFuncCallable,
+      runtime,
+      HandleRootOwner::getUndefinedValue(),
+      HermesValue::encodeTrustedNumberValue(modIndex));
+  if (LLVM_UNLIKELY(modExport == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  lv.modExport = modExport->get();
+  runtimeModule->setModuleExport(runtime, modIndex, modExport->get());
+  // Whether or not the caching above succeeded, write the module export
+  // to the return register.
+  O1REG(CallRequire) = lv.modExport.get();
   return ExecutionStatus::RETURNED;
 }
 

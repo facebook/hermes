@@ -127,6 +127,11 @@ typedef struct SHUnit {
   /// barrier is needed to safely read out the value.
   SHCompressedPointer *object_literal_class_cache;
 
+  /// The module exports cache: a map from non-negative integer module indexes
+  /// to the export of the module.  An empty value indicates that the module has
+  /// not yet been initialized.
+  SHArrayStorage *moduleExports;
+
   /// List of source locations.
   const SHSrcLoc *source_locations;
   /// Size of source locations array.
@@ -434,7 +439,7 @@ _sh_ljs_get_builtin_closure(SHRuntime *shr, uint32_t builtinMethodID);
 /// later diff to provide caching.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_callRequire(
     SHRuntime *shr,
-    void *cacheData,
+    SHArrayStorage **exportCache,
     SHLegacyValue *requireFunc,
     uint32_t modIndex);
 
