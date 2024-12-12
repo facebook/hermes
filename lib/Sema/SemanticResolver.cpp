@@ -905,10 +905,6 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
     visitESTreeNode(*this, node->_key, node);
   }
 
-  // Create the these initializers even if no value initializer is present.
-  FunctionInfo *functionInfo = node->_static
-      ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
-      : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo();
   // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
     // We visit the initializer expression in the context of a synthesized
@@ -920,8 +916,21 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
     // It is a Syntax Error if Initializer is present and ContainsArguments of
     // Initializer is true.
     llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
-    FunctionContext funcCtx(*this, functionInfo);
+    FunctionContext funcCtx(
+        *this,
+        node->_static
+            ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
+            : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo());
     visitESTreeNode(*this, node->_value, node);
+  } else if (!typed_) {
+    // Create the these initializers even if no value initializer is present, in
+    // untyped mode. Typed classes don't need these initializers since we know
+    // the exact shape and construct it up front.
+    if (node->_static) {
+      curClassContext_->getOrCreateStaticElementsInitFunctionInfo();
+    } else {
+      curClassContext_->getOrCreateInstanceElementsInitFunctionInfo();
+    }
   }
 }
 

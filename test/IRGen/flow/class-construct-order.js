@@ -21,7 +21,7 @@ class C {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 [exports: any, foo: any, C: any, <fieldInitFuncVar:C>: object, ?C.prototype: object]
+// CHECK:scope %VS0 [exports: any, foo: any, C: any, ?C.prototype: object]
 
 // CHECK:scope %VS1 [x: any]
 

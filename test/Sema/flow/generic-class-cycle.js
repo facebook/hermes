@@ -61,18 +61,14 @@ class BBB<T> {
 // CHECK-NEXT:            Decl %d.5 'BBB' Class : %class_constructor.10
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.7 'root' Parameter
 // CHECK-NEXT:                Decl %d.8 'val' Parameter
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.10 'root' Parameter : %class.2
 // CHECK-NEXT:                Decl %d.11 'val' Parameter : number
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments

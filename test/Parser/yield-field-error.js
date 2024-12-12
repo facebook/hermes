@@ -18,3 +18,4 @@ function* foo() {
 // CHECK:{{.*}}yield-field-error.js:12:9: error: invalid expression
 // CHECK-NEXT:    x = yield;
 // CHECK-NEXT:        ^
+// CHECK-NEXT:Emitted 1 errors. exiting.

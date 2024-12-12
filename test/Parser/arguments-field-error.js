@@ -18,3 +18,4 @@ function* foo() {
 // CHECK:{{.*}}arguments-field-error.js:12:15: error: invalid use of 'arguments'
 // CHECK-NEXT:    x = () => arguments;
 // CHECK-NEXT:              ^~~~~~~~~
+// CHECK-NEXT:Emitted 1 errors. exiting.

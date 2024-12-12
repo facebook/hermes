@@ -68,8 +68,6 @@ var d: A<string>;
 // CHECK-NEXT:            Decl %d.8 'Cls' Class : %class_constructor.16
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
