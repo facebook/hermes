@@ -8,8 +8,6 @@
 // RUN: %shermes -Werror --typed --dump-sema %s | %FileCheckOrRegen %s --match-full-lines
 
 // This should get reasonable flow types for
-//   * The $SHBuiltin.moduleFactory member expression:
-//        (number, untyped_function) => untyped_function
 //   * The call to $SHBuiltin.moduleFactory:
 //        type of args[1].
 //
@@ -30,12 +28,12 @@
     $SHBuiltin.moduleFactory(0, function(global, require, s: string): number {
         return 7 + (s as any).length;
     });
-    $SHBuiltin.moduleFactory(1, function(): number {
+    $SHBuiltin.moduleFactory(1, function(global, require): number {
         var n: number = 100;
         $SHBuiltin.export('n', n);
         return 0;
     });
-    $SHBuiltin.moduleFactory(2, function(): number {
+    $SHBuiltin.moduleFactory(2, function(global, require): number {
         var n2: number = ($SHBuiltin.import(1, 'n', "abc") as any).length + 2;
         return 0;
     });
@@ -45,7 +43,7 @@
 
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%function.2 = function(global: any, require: any, s: string): number
-// CHECK-NEXT:%function.3 = function(): number
+// CHECK-NEXT:%function.3 = function(global: any, require: any): number
 // CHECK-NEXT:%object.4 = object({
 // CHECK-NEXT:})
 
@@ -125,12 +123,16 @@
 // CHECK-NEXT:                    Decl %d.65 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.5
-// CHECK-NEXT:                    Decl %d.66 'n' Var : number
-// CHECK-NEXT:                    Decl %d.67 'arguments' Var Arguments
+// CHECK-NEXT:                    Decl %d.66 'global' Parameter : any
+// CHECK-NEXT:                    Decl %d.67 'require' Parameter : any
+// CHECK-NEXT:                    Decl %d.68 'n' Var : number
+// CHECK-NEXT:                    Decl %d.69 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.6
-// CHECK-NEXT:                    Decl %d.68 'n2' Var : number
-// CHECK-NEXT:                    Decl %d.69 'arguments' Var Arguments
+// CHECK-NEXT:                    Decl %d.70 'global' Parameter : any
+// CHECK-NEXT:                    Decl %d.71 'require' Parameter : any
+// CHECK-NEXT:                    Decl %d.72 'n2' Var : number
+// CHECK-NEXT:                    Decl %d.73 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -169,18 +171,20 @@
 // CHECK-NEXT:                                            Id 'moduleFactory'
 // CHECK-NEXT:                                        NumericLiteral : number
 // CHECK-NEXT:                                        FunctionExpression : %function.3
+// CHECK-NEXT:                                            Id 'global' [D:E:%d.66 'global']
+// CHECK-NEXT:                                            Id 'require' [D:E:%d.67 'require']
 // CHECK-NEXT:                                            BlockStatement
 // CHECK-NEXT:                                                VariableDeclaration
 // CHECK-NEXT:                                                    VariableDeclarator
 // CHECK-NEXT:                                                        NumericLiteral : number
-// CHECK-NEXT:                                                        Id 'n' [D:E:%d.66 'n']
+// CHECK-NEXT:                                                        Id 'n' [D:E:%d.68 'n']
 // CHECK-NEXT:                                                ExpressionStatement
 // CHECK-NEXT:                                                    CallExpression : void
 // CHECK-NEXT:                                                        MemberExpression : any
 // CHECK-NEXT:                                                            SHBuiltin
 // CHECK-NEXT:                                                            Id 'export'
 // CHECK-NEXT:                                                        StringLiteral : string
-// CHECK-NEXT:                                                        Id 'n' [D:E:%d.66 'n'] : number
+// CHECK-NEXT:                                                        Id 'n' [D:E:%d.68 'n'] : number
 // CHECK-NEXT:                                                ReturnStatement
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:                                ExpressionStatement
@@ -190,6 +194,8 @@
 // CHECK-NEXT:                                            Id 'moduleFactory'
 // CHECK-NEXT:                                        NumericLiteral : number
 // CHECK-NEXT:                                        FunctionExpression : %function.3
+// CHECK-NEXT:                                            Id 'global' [D:E:%d.70 'global']
+// CHECK-NEXT:                                            Id 'require' [D:E:%d.71 'require']
 // CHECK-NEXT:                                            BlockStatement
 // CHECK-NEXT:                                                VariableDeclaration
 // CHECK-NEXT:                                                    VariableDeclarator
@@ -208,7 +214,7 @@
 // CHECK-NEXT:                                                                    Id 'length'
 // CHECK-NEXT:                                                                BinOp +
 // CHECK-NEXT:                                                                NumericLiteral : number
-// CHECK-NEXT:                                                        Id 'n2' [D:E:%d.68 'n2']
+// CHECK-NEXT:                                                        Id 'n2' [D:E:%d.72 'n2']
 // CHECK-NEXT:                                                ReturnStatement
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:            ObjectExpression : %object.4

@@ -70,6 +70,9 @@ struct OptimizationSettings {
   /// Attempt to resolve CommonJS require() calls at compile time.
   bool staticRequire{false};
 
+  /// If true, optimize Metro require calls into bytecodes.
+  bool metroRequireOpt{false};
+
   /// Whether to use old Mem2Reg pass instead of SimpleMem2Reg. This may produce
   /// better code for irreducible CFGs.
   bool useLegacyMem2Reg{false};
@@ -481,6 +484,14 @@ class Context {
 
   bool getStaticBuiltinOptimization() const {
     return optimizationSettings_.staticBuiltins;
+  }
+
+  void setMetroRequireOpt(bool metroRequireOpt) {
+    optimizationSettings_.metroRequireOpt = metroRequireOpt;
+  }
+
+  bool getMetroRequireOpt() const {
+    return optimizationSettings_.metroRequireOpt;
   }
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {

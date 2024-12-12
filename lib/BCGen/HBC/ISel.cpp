@@ -1479,6 +1479,17 @@ void HBCISel::generateTryStartInst(TryStartInst *Inst, BasicBlock *next) {
   registerLongJump(loc, destination);
 }
 void HBCISel::generateCallInst(CallInst *Inst, BasicBlock *next) {
+  // Handle Metro require calls specially.
+  if (Inst->getAttributes(Inst->getModule()).isMetroRequire) {
+    auto *litNum = llvh::cast<LiteralNumber>(Inst->getArgument(1));
+    assert(
+        litNum->isUInt32Representible() &&
+        "Or should not have been optimized.");
+    BCFGen_->emitCallRequire(
+        encodeValue(Inst), encodeValue(Inst->getCallee()), litNum->asUInt32());
+    return;
+  }
+
   auto output = encodeValue(Inst);
   auto function = encodeValue(Inst->getCallee());
   bool newTargetIsUndefined = llvh::isa<LiteralUndefined>(Inst->getNewTarget());

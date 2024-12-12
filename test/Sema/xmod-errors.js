@@ -57,3 +57,26 @@ function testModuleImportErrors() {
   var x2 = $SHBuiltin.import(400, 'x', x);
   // ^^^This one is legal.
 }
+
+// To enable the Metro require optimization, we need to be able to identify the
+// require argument to factory functions.  This has to match the actual usage
+// in the Metro require transform.  There, 'require' is the second (explict)
+// argument.  So we ensure that factory functions have at least two explicit args.
+function testFactoryFunctionArgs() {
+  $SHBuiltin.moduleFactory(2000, function() {
+    // CHECK: {{.*}}:[[@LINE-1]]:34: error: A module factory function must have at least two arguments.
+    var y = 'abc';
+    $SHBuiltin.export('y', y);
+  });
+  $SHBuiltin.moduleFactory(2001, function(global) {
+    // CHECK: {{.*}}:[[@LINE-1]]:34: error: A module factory function must have at least two arguments.
+    var z = 'xyz';
+    $SHBuiltin.export('z', z);
+  });
+  // This one is OK.
+  $SHBuiltin.moduleFactory(2001, function(global, require) {
+    var z = 'xyz';
+    $SHBuiltin.export('z', z);
+  });
+}
+

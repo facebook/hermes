@@ -77,6 +77,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addDCE();
   addMem2Reg();
   PM.addFunctionAnalysis();
+  PM.addMetroRequire();
   PM.addInlining();
   PM.addDCE();
   // SimpleStackPromotion doesn't remove unused functions, so run it after DCE

@@ -1624,6 +1624,19 @@ tailCall:
         goto doCall;
       }
 
+      CASE(CallRequire) {
+        uint32_t modIndex = ip->iCallRequire.op3;
+        callArgCount = 2;
+        nextIP = NEXTINST(CallRequire);
+        StackFramePtr fr{runtime.stackPointer_};
+        // this.
+        fr.getArgRefUnsafe(-1) = HermesValue::encodeUndefinedValue();
+        // mod index
+        fr.getArgRefUnsafe(0) = HermesValue::encodeTrustedNumberValue(modIndex);
+        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
+        goto doCall;
+      }
+
     doCall: {
 #ifdef HERMES_ENABLE_DEBUGGER
       // Check for an async debugger request.

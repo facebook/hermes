@@ -1873,6 +1873,18 @@ class InstrGen {
         generateValue(*inst.getCallee());
         os_ << "))->functionPtr(shr);\n";
       }
+    } else if (inst.getAttributes(inst.getModule()).isMetroRequire) {
+      auto *litNum = llvh::cast<LiteralNumber>(inst.getArgument(1));
+      assert(
+          litNum->isUInt32Representible() &&
+          "Or should not have been optimized.");
+      uint32_t modId = litNum->asUInt32();
+
+      os_.indent(2);
+      generateRegister(inst);
+      os_ << " = _sh_ljs_callRequire(shr, shUnit, ";
+      generateRegisterPtr(*inst.getCallee());
+      os_ << ", " << modId << ");\n";
     } else {
       os_.indent(2);
       generateRegister(inst);
@@ -1880,6 +1892,7 @@ class InstrGen {
           << ");\n";
     }
   }
+
   void generateGetBuiltinClosureInst(GetBuiltinClosureInst &inst) {
     os_.indent(2);
     generateRegister(inst);

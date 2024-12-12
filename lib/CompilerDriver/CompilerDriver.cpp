@@ -332,6 +332,13 @@ opt<bool> ES6BlockScoping(
     Hidden,
     cat(CompilerCategory));
 
+opt<bool> MetroRequireOpt(
+    "Xmetro-require",
+    init(true),
+    desc("Optimize Metro require calls."),
+    Hidden,
+    cat(CompilerCategory));
+
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
@@ -1101,6 +1108,7 @@ std::shared_ptr<Context> createContext(
   context->setEnableEval(cl::EnableEval);
   context->setConvertES6Classes(cl::ES6Class);
   context->setEnableES6BlockScoping(cl::ES6BlockScoping);
+  context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());

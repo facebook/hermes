@@ -440,6 +440,9 @@ class Emitter {
   /// argc is a register.
   void callWithNewTargetLong(FR frRes, FR frCallee, FR frNewTarget, FR frArgc);
 
+  /// Special bytecode for calling Metro require.
+  void callRequire(FR frRes, FR frRequireFunc, uint32_t modIndex);
+
   /// Get a builtin closure.
   void getBuiltinClosure(FR frRes, uint32_t builtinIndex);
 

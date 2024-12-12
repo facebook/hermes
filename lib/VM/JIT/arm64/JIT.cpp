@@ -855,6 +855,14 @@ inline void JITContext::Compiler::emitCallWithNewTargetLong(
       /* argc */ FR(inst->op4));
 }
 
+inline void JITContext::Compiler::emitCallRequire(
+    const inst::CallRequireInst *inst) {
+  em_.callRequire(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* modIndex */ inst->op3);
+}
+
 inline void JITContext::Compiler::emitGetBuiltinClosure(
     const inst::GetBuiltinClosureInst *inst) {
   em_.getBuiltinClosure(

@@ -446,6 +446,9 @@ void Function::eraseFromParentNoDestroy() {
     begin()->eraseFromParent();
   }
   getParent()->getFunctionList().remove(getIterator());
+  // Also remove from any Module data structures that contain function
+  // references.
+  getParent()->jsModuleFactoryFunctions().erase(this);
 }
 
 void Function::eraseFromCompiledFunctionsNoDestroy() {

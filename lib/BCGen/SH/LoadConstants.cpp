@@ -183,6 +183,13 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (const auto *callInst = llvh::dyn_cast<BaseCallInst>(Inst)) {
+    if (callInst->getAttributes(Inst->getModule()).isMetroRequire &&
+        opIndex == callInst->getThisIdx() + 1) {
+      return true;
+    }
+  }
+
   return false;
 }
 

@@ -52,6 +52,7 @@ PASS(TypeInference, "typeinference", "Type inference")
 PASS(FunctionAnalysis, "functionanalysis", "Function analysis")
 PASS(Inlining, "inlining", "Inlining")
 PASS(ResolveStaticRequire, "staticrequire", "Resolve static require")
+PASS(MetroRequire, "metrorequire", "Optimize Metro require calls")
 PASS(
     HoistStartGenerator,
     "hoiststartgenerator",

@@ -2012,6 +2012,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return customDirectives_.noInline;
   }
 
+  /// Set the function to be noInline.  Useful for certain cases, to
+  /// preserve information useful for optimizations that would be erased
+  /// by inlining.
+  void setNoInline() {
+    customDirectives_.noInline = true;
+  }
+
   OptValue<uint32_t> getStatementCount() const {
     return statementCount_;
   }
@@ -2358,6 +2365,9 @@ class Module : public Value {
   /// If empty, this has not been generated yet.
   CJSModuleUseGraph cjsModuleUseGraph_{};
 
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> jsModuleFactoryFunctions_;
+
   struct HashRawStrings {
     std::size_t operator()(const RawStringList &rawStrings) const {
       return llvh::hash_combine_range(rawStrings.begin(), rawStrings.end());
@@ -2572,6 +2582,14 @@ class Module : public Value {
   /// Set to true if all CJS modules in this Module have been resolved.
   void setCJSModulesResolved(bool cjsModulesResolved) {
     cjsModulesResolved_ = cjsModulesResolved;
+  }
+
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> &jsModuleFactoryFunctions() {
+    return jsModuleFactoryFunctions_;
+  }
+  const llvh::DenseSet<Function *> &jsModuleFactoryFunctions() const {
+    return jsModuleFactoryFunctions_;
   }
 
   /// \return the set of functions which are used by the modules in the segment

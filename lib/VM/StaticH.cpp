@@ -457,6 +457,48 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
 
+extern "C" SHLegacyValue _sh_ljs_callRequire(
+    SHRuntime *shr,
+    void *cacheData,
+    SHLegacyValue *requireFunc,
+    uint32_t modIndex) {
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&]() -> CallResult<SHLegacyValue> {
+    struct : public Locals {
+      PinnedValue<> modExport;
+      PinnedValue<Callable> reqFuncPV;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+
+    // The value should be a Callable, or else we raise an error (as
+    // Interpreter::handleCallSlowPath does).
+    auto *reqPHV = toPHV(requireFunc);
+    Callable *reqFuncCallable = dyn_vmcast_or_null<Callable>(*reqPHV);
+    if (!reqFuncCallable) {
+      (void)runtime.raiseTypeErrorForValue(
+          Handle<>(reqPHV), " is not a function");
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    lv.reqFuncPV = reqFuncCallable;
+    CallResult<PseudoHandle<>> modExport = Callable::executeCall1(
+        lv.reqFuncPV,
+        runtime,
+        HandleRootOwner::getUndefinedValue(),
+        HermesValue::encodeTrustedNumberValue(modIndex));
+    if (LLVM_UNLIKELY(modExport == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    lv.modExport = modExport->get();
+    // TODO: add the module caching here.
+    // Whether or not the caching above succeeded, return the module export.
+    return lv.modExport.get();
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
 extern "C" SHLegacyValue _sh_ljs_call_builtin(
     SHRuntime *shr,
     SHLegacyValue *frame,

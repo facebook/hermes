@@ -56,11 +56,15 @@ static bool lowerCalls(Function *F, SHRegisterAllocator &RA) {
 
       RegIndex reg = maxArgsRegs + hbc::StackFrameLayout::ThisArg;
 
+      bool isRequireCall =
+          call->getAttributes(call->getModule()).isMetroRequire;
+
       for (unsigned i = 0, e = call->getNumArguments(); i < e; ++i, --reg) {
         // If this is a Call instruction, emit explicit Movs to the argument
         // registers.
         Value *arg = call->getArgument(i);
-        if (i == 0 && llvh::isa<CallBuiltinInst>(call)) {
+        if ((i == 0 && llvh::isa<CallBuiltinInst>(call)) ||
+            (i == 1 && isRequireCall)) {
           // If this is argument 0 of CallBuiltinInst, emit ImplicitMov to
           // encode that the "this" register is implicitly set to undefined.
           auto *imov = builder.createImplicitMovInst(arg);

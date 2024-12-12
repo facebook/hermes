@@ -1112,6 +1112,24 @@ void SemanticResolver::visitModuleFactory(ESTree::CallExpressionNode *call) {
     return;
   }
 
+  argsIter++;
+  auto *modFactoryFuncArg = &(*argsIter);
+  auto *modFactoryFunc =
+      llvh::dyn_cast<ESTree::FunctionExpressionNode>(modFactoryFuncArg);
+  if (!modFactoryFunc) {
+    sm_.error(
+        modFactoryFuncArg->getSourceRange(),
+        stringForSHBuiltinError(kw_, kw_.identModuleFactory) +
+            " requires second arg to be a function expression.");
+    return;
+  }
+  if (modFactoryFunc->_params.size() < 2) {
+    sm_.error(
+        modFactoryFuncArg->getSourceRange(),
+        "A module factory function must have at least two arguments.");
+    return;
+  }
+
   visitESTreeChildren(*this, call);
 }
 

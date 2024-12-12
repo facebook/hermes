@@ -235,6 +235,13 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (const auto *callInst = llvh::dyn_cast<BaseCallInst>(Inst)) {
+    if (callInst->getAttributes(Inst->getModule()).isMetroRequire &&
+        opIndex == callInst->getThisIdx() + 1) {
+      return true;
+    }
+  }
+
   // For properties that uint8_t literals, there's a GetByIndex variant
   // that encodes the property as an immediate.
   if (auto *loadPropInst = llvh::dyn_cast_or_null<LoadPropertyInst>(Inst)) {
@@ -497,6 +504,10 @@ bool InitCallFrame::runOnFunction(Function *F) {
       // This also matches constructors.
       if (!call)
         continue;
+
+      bool isRequireCall =
+          call->getAttributes(call->getModule()).isMetroRequire;
+
       builder.setInsertionPoint(call);
       changed = true;
 
@@ -508,11 +519,17 @@ bool InitCallFrame::runOnFunction(Function *F) {
         // registers. If this is a CallN instruction, emit ImplicitMovs
         // instead, to express that these registers get written to by the CallN,
         // even though they are not the destination.
-        // Lastly, if this is argument 0 of CallBuiltinInst emit ImplicitMov to
+        // If this is argument 0 of CallBuiltinInst emit ImplicitMov to
         // encode that the "this" register is implicitly set to undefined.
+        // Lastly, if this is argument 1 of Call that has been identified
+        // as a call to the Metro Require function, it will become an immediate
+        // in the resulting CallRequire bytecode.  But we still need to emit an
+        // implicit move, and reserve the argument register, since we will be
+        // making the call on cache misses.
         Value *arg = call->getArgument(i);
         if (llvh::isa<HBCCallNInst>(call) ||
-            (i == 0 && llvh::isa<CallBuiltinInst>(call))) {
+            (i == 0 && llvh::isa<CallBuiltinInst>(call)) ||
+            (i == 1 && isRequireCall)) {
           auto *imov = builder.createImplicitMovInst(arg);
           RA_.updateRegister(imov, Register(RegClass::Other, reg));
         } else {
@@ -698,11 +715,11 @@ bool SpillRegisters::modifiesOperandRegister(Instruction *I, int op) {
   return I->getSideEffect().getWriteStack() &&
       llvh::isa<AllocStackInst>(I->getOperand(op));
 }
-
 bool SpillRegisters::runOnFunction(Function *F) {
   if (RA_.getMaxHVMRegisterUsage() < boundary_) {
     return false;
   }
+
   reserveLowRegisters(F);
   assert(
       RA_.getMaxRegisterUsage(RegClass::Number) == 0 &&

@@ -768,7 +768,23 @@ Value *ESTreeIRGen::genSHBuiltinModuleFactory(
 
   // Now evaluate the function argument as the factory function of the
   // current module.
-  return genExpression(modFactoryFuncArg);
+  Value *res = genExpression(modFactoryFuncArg);
+  // The cast below should be justified by a check in SemanticResolver;
+  // module factory functions are required to be function expressions.
+  Function *calledFunc = llvh::cast<CreateFunctionInst>(res)->getFunctionCode();
+  // We make all JS module factory functions noInline: we need to be able to
+  // analyze them, following the use chains of their arguments to identify
+  // require calls (calls to the specified require argument).  If allowed
+  // the module factory functions to be inlined, this would not be possible.
+  // These functions are executed at most once, so the performance impact
+  // of inhibiting this optimization should be negligible.
+  calledFunc->setNoInline();
+  // Remember the factory functions.  Unless we're doing lazy compilation,
+  // in which case the optimization that needs them will never run.
+  if (!Mod->getContext().isLazyCompilation()) {
+    Mod->jsModuleFactoryFunctions().insert(calledFunc);
+  }
+  return res;
 }
 
 Value *ESTreeIRGen::genSHBuiltinImport(ESTree::CallExpressionNode *call) {

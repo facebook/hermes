@@ -332,6 +332,13 @@ cl::opt<bool> ES6BlockScoping{
     llvh::cl::init(false),
     llvh::cl::cat(CompilerCategory)};
 
+cl::opt<bool> MetroRequireOpt(
+    "Xmetro-require",
+    llvh::cl::init(true),
+    llvh::cl::desc("Optimize Metro require calls."),
+    llvh::cl::Hidden,
+    llvh::cl::cat(CompilerCategory));
+
 cl::opt<bool> Typed(
     "typed",
     cl::desc("Enable typed mode"),
@@ -623,8 +630,8 @@ std::shared_ptr<Context> createContext() {
   // parsing.
   optimizationOpts.staticBuiltins =
       cli::StaticBuiltins == StaticBuiltinSetting::ForceOn;
-  // optimizationOpts.staticRequire = cl::StaticRequire;
-  //
+
+  optimizationOpts.metroRequireOpt = cli::MetroRequireOpt;
 
   optimizationOpts.useLegacyMem2Reg = cli::LegacyMem2Reg;
 

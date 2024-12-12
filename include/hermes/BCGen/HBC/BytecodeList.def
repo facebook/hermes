@@ -539,6 +539,13 @@ DEFINE_RET_TARGET(Call4)
 DEFINE_OPCODE_4(CallWithNewTargetLong, Reg8, Reg8, Reg8, Reg8)
 DEFINE_RET_TARGET(CallWithNewTargetLong)
 
+/// A Metro require call.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the closure to invoke.
+/// Arg3 is the module index argument, as an immediate.
+DEFINE_OPCODE_3(CallRequire, Reg8, Reg8, UInt32)
+DEFINE_RET_TARGET(CallRequire)
+
 // Enforce the order.
 ASSERT_MONOTONE_INCREASING(
     Call,
@@ -548,7 +555,8 @@ ASSERT_MONOTONE_INCREASING(
     Call2,
     Call3,
     Call4,
-    CallWithNewTargetLong)
+    CallWithNewTargetLong,
+    CallRequire)
 
 /// Call a builtin function.
 /// Note this is NOT marked as a Ret target, because the callee is native

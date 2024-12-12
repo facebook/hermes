@@ -427,6 +427,17 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_call_builtin(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_builtin_closure(SHRuntime *shr, uint32_t builtinMethodID);
 
+/// Semantically equivalent to calling \p requireFunc with the argument
+/// \p modIndex.  Assumes that \p requireFunc is the metro require function,
+/// and may cache the result for a given \p modIndex.
+/// The \p cacheData argument is currently unused, but will be used in a
+/// later diff to provide caching.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_callRequire(
+    SHRuntime *shr,
+    void *cacheData,
+    SHLegacyValue *requireFunc,
+    uint32_t modIndex);
+
 /// Create a new environment with the specified \p size and \p parentEnv (which
 /// may be null if this is a top level environment).
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_environment(

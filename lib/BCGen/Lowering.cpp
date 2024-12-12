@@ -290,11 +290,18 @@ static llvh::SmallVector<Value *, 4> getArgumentsWithoutThis(CallInst *CI) {
 
 bool LowerCalls::runOnFunction(Function *F) {
   IRBuilder::InstructionDestroyer destroyer;
+  const Module *mod = F->getParent();
   IRBuilder builder(F);
   bool changed = false;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
       if (auto *CI = llvh::dyn_cast<CallInst>(&I)) {
+        if (CI->getAttributes(mod).isMetroRequire) {
+          // We'll convert calls with this attribute to a specific
+          // bytecode later.
+          continue;
+        }
+
         unsigned argCount = CI->getNumArguments();
         if (argCount > UINT8_MAX) {
           builder.setLocation(CI->getLocation());
