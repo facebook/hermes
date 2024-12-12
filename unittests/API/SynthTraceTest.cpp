@@ -1450,6 +1450,15 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
     auto obj = jsi::Object(rt);
     obj.setProperty(rt, "bar", 5);
     rt.global().setProperty(rt, "foo", obj);
+
+    jsi::Object prototypeObj(rt);
+    prototypeObj.setProperty(rt, "someProperty", 123);
+    jsi::Value prototype(rt, prototypeObj);
+    jsi::Object child1 = jsi::Object::create(rt, prototype);
+    rt.global().setProperty(rt, "child1", child1);
+
+    jsi::Object child2 = jsi::Object::create(rt, jsi::Value::null());
+    rt.global().setProperty(rt, "child2", child2);
   }
   replay();
   {
@@ -1460,6 +1469,12 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
             .getProperty(rt, "bar")
             .asNumber(),
         5);
+
+    auto child1 = rt.global().getProperty(rt, "child1").asObject(rt);
+    EXPECT_EQ(child1.getProperty(rt, "someProperty").asNumber(), 123);
+
+    auto child2 = rt.global().getProperty(rt, "child2").asObject(rt);
+    EXPECT_TRUE(child2.getPrototype(rt).isNull());
   }
 }
 

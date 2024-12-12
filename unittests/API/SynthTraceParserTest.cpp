@@ -425,4 +425,47 @@ TEST_F(SynthTraceParserTest, ParseSetAndGetPrototypeRecord) {
   ASSERT_EQ(record3.objID_, 2);
 }
 
+TEST_F(SynthTraceParserTest, ParseCreateObjectWithPrototypeRecord) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "CreateObjectWithPrototypeRecord",
+      "time": 1234,
+      "objID": 1,
+      "prototype": "null:"
+    },
+    {
+      "type": "CreateObjectWithPrototypeRecord",
+      "time": 12345,
+      "objID": 2,
+      "prototype": "object:1"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 =
+      dynamic_cast<const SynthTrace::CreateObjectWithPrototypeRecord &>(
+          *trace.records().at(0));
+  ASSERT_EQ(record0.objID_, 1);
+  ASSERT_EQ(record0.prototype_, SynthTrace::encodeNull());
+
+  auto record1 =
+      dynamic_cast<const SynthTrace::CreateObjectWithPrototypeRecord &>(
+          *trace.records().at(1));
+  ASSERT_EQ(record1.objID_, 2);
+  ASSERT_EQ(record1.prototype_, SynthTrace::encodeObject(1));
+}
+
 } // namespace

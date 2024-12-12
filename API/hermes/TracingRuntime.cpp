@@ -390,6 +390,14 @@ jsi::Object TracingRuntime::createObject() {
   return obj;
 }
 
+jsi::Object TracingRuntime::createObjectWithPrototype(
+    const jsi::Value &prototype) {
+  auto obj = RD::createObjectWithPrototype(prototype);
+  trace_.emplace_back<SynthTrace::CreateObjectWithPrototypeRecord>(
+      getTimeSinceStart(), defObjectID(obj), useTraceValue(prototype));
+  return obj;
+}
+
 jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
   class TracingHostObject : public jsi::DecoratedHostObject {
    public:

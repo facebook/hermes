@@ -324,6 +324,13 @@ void SynthTrace::CreateObjectRecord::toJSONInternal(JSONEmitter &json) const {
   json.emitKeyValue("objID", objID_);
 }
 
+void SynthTrace::CreateObjectWithPrototypeRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("prototype", encode(prototype_));
+}
+
 static std::string createBigIntMethodToString(
     SynthTrace::CreateBigIntRecord::Method m) {
   switch (m) {

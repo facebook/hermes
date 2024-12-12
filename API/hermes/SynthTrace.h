@@ -180,6 +180,7 @@ class SynthTrace {
   RECORD(EndExecJS)                      \
   RECORD(Marker)                         \
   RECORD(CreateObject)                   \
+  RECORD(CreateObjectWithPrototype)      \
   RECORD(CreateString)                   \
   RECORD(CreatePropNameID)               \
   RECORD(CreateHostObject)               \
@@ -657,6 +658,31 @@ class SynthTrace {
       std::vector<ObjectID> vec;
       pushIfTrackedValue(traceValue_, vec);
       return vec;
+    }
+  };
+
+  struct CreateObjectWithPrototypeRecord : public Record {
+    static constexpr RecordType type{RecordType::CreateObjectWithPrototype};
+    const ObjectID objID_;
+    /// The prototype being assigned
+    const TraceValue prototype_;
+
+    CreateObjectWithPrototypeRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        TraceValue prototype)
+        : Record(time), objID_(objID), prototype_(prototype) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses{objID_};
+      pushIfTrackedValue(prototype_, uses);
+      return uses;
     }
   };
 
