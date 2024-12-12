@@ -30,7 +30,7 @@ as_const=true
 experimental.natural_inference.exports.primitive_const=true
 
 [version]
-^0.255.0
+^0.256.0
 
 [lints]
 untyped-type-import=error
