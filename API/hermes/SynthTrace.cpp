@@ -418,6 +418,17 @@ void SynthTrace::SetPropertyRecord::toJSONInternal(JSONEmitter &json) const {
   json.emitKeyValue("value", encode(value_));
 }
 
+void SynthTrace::SetPrototypeRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("value", encode(value_));
+}
+
+void SynthTrace::GetPrototypeRecord::toJSONInternal(JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+}
+
 void SynthTrace::HasPropertyRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);

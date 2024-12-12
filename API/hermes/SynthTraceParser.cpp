@@ -569,6 +569,17 @@ SynthTrace getTrace(
             jsonStringToU16String(*strData));
         break;
       }
+      case RecordType::SetPrototype: {
+        trace.emplace_back<SynthTrace::SetPrototypeRecord>(
+            timeFromStart,
+            objID->getValue(),
+            SynthTrace::decode(propValue->c_str()));
+        break;
+      }
+      case RecordType::GetPrototype:
+        trace.emplace_back<SynthTrace::GetPrototypeRecord>(
+            timeFromStart, objID->getValue());
+        break;
       case RecordType::Global: {
         trace.emplace_back<SynthTrace::GlobalRecord>(
             timeFromStart, objID->getValue());

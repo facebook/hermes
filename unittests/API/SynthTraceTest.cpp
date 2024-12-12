@@ -1680,6 +1680,50 @@ TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
   }
 }
 
+TEST_F(SynthTraceReplayTest, SetPrototypeReplay) {
+  {
+    auto &rt = *traceRt;
+    jsi::Object prototypeObj(rt);
+    prototypeObj.setProperty(rt, "someProperty", 123);
+    jsi::Value prototype(rt, prototypeObj);
+
+    jsi::Object child1(rt);
+    child1.setPrototype(rt, prototype);
+    rt.global().setProperty(rt, "child1", child1);
+
+    auto prototype1 = child1.getPrototype(rt);
+    rt.global().setProperty(rt, "prototype1", prototype1);
+
+    jsi::Object child2(rt);
+    child2.setPrototype(rt, jsi::Value::null());
+    rt.global().setProperty(rt, "child2", child2);
+
+    auto prototype2 = child2.getPrototype(rt);
+    rt.global().setProperty(rt, "prototype2", prototype2);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto child1 = rt.global().getProperty(rt, "child1").getObject(rt);
+    EXPECT_EQ(child1.getProperty(rt, "someProperty").asNumber(), 123);
+    EXPECT_EQ(
+        child1.getPrototype(rt)
+            .getObject(rt)
+            .getProperty(rt, "someProperty")
+            .getNumber(),
+        123);
+
+    auto prototype1 = rt.global().getProperty(rt, "prototype1").getObject(rt);
+    EXPECT_EQ(prototype1.getProperty(rt, "someProperty").asNumber(), 123);
+
+    auto child2 = rt.global().getProperty(rt, "child2").getObject(rt);
+    EXPECT_TRUE(child2.getPrototype(rt).isNull());
+
+    auto prototype2 = rt.global().getProperty(rt, "prototype2");
+    EXPECT_TRUE(prototype2.isNull());
+  }
+}
+
 TEST_F(SynthTraceReplayTest, BigIntCreate) {
   {
     auto &rt = *traceRt;

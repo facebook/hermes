@@ -424,4 +424,22 @@ TEST_F(SynthTraceSerializationTest, GetStringDataRecord) {
       to_string(SynthTrace::GetStringDataRecord(
           dummyTime, SynthTrace::encodePropNameID(111), u"\xd83d")));
 }
+
+TEST_F(SynthTraceSerializationTest, SetPrototypeTest) {
+  EXPECT_EQ(
+      R"({"type":"SetPrototypeRecord","time":0,"objID":1,"value":"null:"})",
+      to_string(SynthTrace::SetPrototypeRecord(
+          dummyTime, 1, SynthTrace::encodeNull())));
+  EXPECT_EQ(
+      R"({"type":"SetPrototypeRecord","time":0,"objID":2,"value":"object:1"})",
+      to_string(SynthTrace::SetPrototypeRecord(
+          dummyTime, 2, SynthTrace::encodeObject(1))));
+}
+
+TEST_F(SynthTraceSerializationTest, GetPrototypeTest) {
+  EXPECT_EQ(
+      R"({"type":"GetPrototypeRecord","time":0,"objID":1})",
+      to_string(SynthTrace::GetPrototypeRecord(dummyTime, 1)));
+}
+
 } // namespace

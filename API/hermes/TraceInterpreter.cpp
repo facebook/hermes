@@ -927,6 +927,21 @@ void TraceInterpreter::executeRecords() {
           }
           break;
         }
+        case RecordType::SetPrototype: {
+          const auto &record =
+              static_cast<const SynthTrace::SetPrototypeRecord &>(*rec);
+          auto obj = getJSIValueForUse(record.objID_).getObject(rt_);
+          obj.setPrototype(rt_, traceValueToJSIValue(record.value_));
+          break;
+        }
+        case RecordType::GetPrototype: {
+          const auto &record =
+              static_cast<const SynthTrace::GetPrototypeRecord &>(*rec);
+          auto obj = getJSIValueForUse(record.objID_).getObject(rt_);
+          auto prototype = obj.getPrototype(rt_);
+          retval = std::move(prototype);
+          break;
+        }
         case RecordType::HasProperty: {
           const auto &hpr =
               static_cast<const SynthTrace::HasPropertyRecord &>(*rec);

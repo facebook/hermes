@@ -729,6 +729,16 @@ jsi::Value TracingRuntime::getProperty(
   return value;
 }
 
+jsi::Value TracingRuntime::getPrototypeOf(const jsi::Object &object) {
+  trace_.emplace_back<SynthTrace::GetPrototypeRecord>(
+      getTimeSinceStart(), useObjectID(object));
+
+  auto prototype = RD::getPrototypeOf(object);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(prototype));
+  return prototype;
+}
+
 bool TracingRuntime::hasProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
@@ -787,6 +797,14 @@ void TracingRuntime::setPropertyValue(
 #endif
       useTraceValue(value));
   RD::setPropertyValue(obj, name, value);
+}
+
+void TracingRuntime::setPrototypeOf(
+    const jsi::Object &object,
+    const jsi::Value &prototype) {
+  trace_.emplace_back<SynthTrace::SetPrototypeRecord>(
+      getTimeSinceStart(), useObjectID(object), useTraceValue(prototype));
+  RD::setPrototypeOf(object, prototype);
 }
 
 jsi::Array TracingRuntime::getPropertyNames(const jsi::Object &o) {
