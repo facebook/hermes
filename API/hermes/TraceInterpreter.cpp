@@ -781,6 +781,16 @@ void TraceInterpreter::executeRecords() {
           addToObjectMap(cor.objID_, Object(rt_), currentExecIndex);
           break;
         }
+        case RecordType::CreateObjectWithPrototype: {
+          const auto &record =
+              static_cast<const SynthTrace::CreateObjectWithPrototypeRecord &>(
+                  *rec);
+          addToObjectMap(
+              record.objID_,
+              Object::create(rt_, traceValueToJSIValue(record.prototype_)),
+              currentExecIndex);
+          break;
+        }
         case RecordType::CreateBigInt: {
           const auto &cbr =
               static_cast<const SynthTrace::CreateBigIntRecord &>(*rec);

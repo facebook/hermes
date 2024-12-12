@@ -297,6 +297,15 @@ SynthTrace getTrace(
         trace.emplace_back<SynthTrace::CreateObjectRecord>(
             timeFromStart, objID->getValue());
         break;
+      case RecordType::CreateObjectWithPrototype: {
+        auto *prototype =
+            llvh::dyn_cast_or_null<JSONString>(obj->get("prototype"));
+        trace.emplace_back<SynthTrace::CreateObjectWithPrototypeRecord>(
+            timeFromStart,
+            objID->getValue(),
+            SynthTrace::decode(prototype->c_str()));
+        break;
+      }
       case RecordType::QueueMicrotask: {
         auto callbackID =
             getNumberAs<SynthTrace::ObjectID>(obj->get("callbackID"));

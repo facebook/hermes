@@ -47,6 +47,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::Object global() override;
 
   jsi::Object createObject() override;
+  jsi::Object createObjectWithPrototype(const jsi::Value &prototype) override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
 
   // Note that the NativeState methods do not need to be traced since they
