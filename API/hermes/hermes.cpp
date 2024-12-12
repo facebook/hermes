@@ -646,6 +646,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
   std::shared_ptr<jsi::HostObject> getHostObject(const jsi::Object &) override;
+  jsi::Object createObjectWithPrototype(const jsi::Value &prototype) override;
   jsi::HostFunctionType &getHostFunction(const jsi::Function &) override;
   bool hasNativeState(const jsi::Object &) override;
   std::shared_ptr<jsi::NativeState> getNativeState(
@@ -1928,6 +1929,19 @@ jsi::Object HermesRuntimeImpl::createObject(
       runtime_, std::make_unique<JsiProxy>(*this, ho));
   checkStatus(objRes.getStatus());
   return add<jsi::Object>(*objRes);
+}
+
+jsi::Object HermesRuntimeImpl::createObjectWithPrototype(
+    const jsi::Value &prototype) {
+  if (!prototype.isObject() && !prototype.isNull()) {
+    throw jsi::JSError(
+        *this, "Object prototype argument must be an Object or null");
+  }
+
+  auto object = vm::JSObject::create(
+      runtime_,
+      vm::Handle<vm::JSObject>::dyn_vmcast(vmHandleFromValue(prototype)));
+  return add<jsi::Object>(object.getHermesValue());
 }
 
 std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(

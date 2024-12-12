@@ -1374,6 +1374,22 @@ TEST_P(HermesRuntimeTest, SetPrototypeOf) {
   EXPECT_THROW(child.setPrototype(*rt, Value(1)), JSError);
 }
 
+TEST_P(HermesRuntimeTest, CreateObjectWithPrototype) {
+  Object prototypeObj(*rt);
+  prototypeObj.setProperty(*rt, "someProperty", 123);
+  Value prototype(*rt, prototypeObj);
+
+  Object child = Object::create(*rt, prototype);
+  EXPECT_EQ(child.getProperty(*rt, "someProperty").getNumber(), 123);
+
+  // Tests null value as prototype
+  child = Object::create(*rt, Value::null());
+  EXPECT_TRUE(child.getPrototype(*rt).isNull());
+
+  // Throw when prototype is neither an Object nor null
+  EXPECT_THROW(Object::create(*rt, Value(1)), JSError);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
