@@ -142,6 +142,23 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
       moduleFactoryFunction->getJSDynamicParams().size() > kRequireIndex &&
       "Metro module functions missing parameters");
 
+  // A phi is the 'require' function iff all it's input values are.
+  // But we will discover this only over time, as the different arguments
+  // to the phi are considered.  This maps phi instructions that have at
+  // least one argument known to be 'require' to the set of their entry
+  // indices known to be require.  When all entries are confirmed to be
+  // require we treat the phi as a 'require.'
+  llvh::DenseMap<PhiInst *, llvh::SmallBitVector> phis;
+
+  // If a 'require' value is stored to the stack, we can consider that stack
+  // location to be 'require' if all stores store 'require'.  This maps
+  // stack locations (results of AllocStackInst) to the set of
+  // StoreStackLocations known to store 'require'.  We check at the end
+  // whether all stores were 'require'; if so, we consider loads from that
+  // stack location to be require.
+  llvh::DenseMap<AllocStackInst *, llvh::DenseSet<StoreStackInst *>>
+      requireStoreStacks;
+
   // Visited instructions.
   llvh::SmallDenseSet<Instruction *> visited{};
 
@@ -149,10 +166,40 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
   llvh::SmallVector<Usage, 8> workList{};
 
   // Add all unvisited users of a value to the work list.
-  auto addUsers = [&visited, &workList](Value *value) {
-    for (Instruction *I : value->getUsers())
-      if (visited.insert(I).second)
+  auto addUsers = [&visited, &workList, &phis](Value *value) {
+    for (Instruction *I : value->getUsers()) {
+      // We handle phi instructions specially: if a user is a phi,
+      // we keep track of how many of the phi's inputs have been found
+      // to be require values.  When they all are, we add the phi
+      // to the workList (and the main loop will add the phi's users).
+      if (auto *phi = llvh::dyn_cast<PhiInst>(I)) {
+        unsigned i = 0;
+        for (; i < phi->getNumEntries(); i++) {
+          if (phi->getEntry(i).first == value) {
+            break;
+          }
+        }
+        assert(i < phi->getNumEntries() && "should have found the index.");
+        // Ensure that there's an entry for phi with the right number of
+        // bits.
+        auto [it, inserted] =
+            phis.try_emplace(phi, phi->getNumEntries(), false);
+        llvh::SmallBitVector &requireEntries = it->second;
+        if (!inserted) {
+          requireEntries.resize(phi->getNumEntries());
+        }
+        requireEntries.set(i);
+        if (requireEntries.find_first_unset() >= 0) {
+          // We've haven't (yet) found all the phi arguments
+          // to be requires.  Only add it to workList (below) when
+          // we have.
+          continue;
+        }
+      }
+      if (visited.insert(I).second) {
         workList.emplace_back(value, I);
+      }
+    }
   };
 
   // Add all usages of the "require" parameter to the worklist, which then may
@@ -212,20 +259,11 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
 
       resolveRequireCall(moduleFactoryFunction, llvh::cast<CallInst>(call));
     } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(U.I)) {
-      // Storing "require" into a stack location.
+      // Storing "require" into a stack location.  Record that this location
+      // has a store of 'require'; later we'll see if all stores store
+      // 'require'.
+      requireStoreStacks[SS->getPtr()].insert(SS);
 
-      if (!isStoreOnceStackLocation(cast<AllocStackInst>(SS->getPtr()))) {
-        EM_.warning(
-            Warning::UnresolvedStaticRequire,
-            SS->getLocation(),
-            "In function '" +
-                SS->getFunction()->getOriginalOrInferredName().str() +
-                "', 'require' stored into local cannot be resolved.");
-        canResolve_ = false;
-        continue;
-      }
-
-      addUsers(SS->getPtr());
     } else if (auto *LS = llvh::dyn_cast<LoadStackInst>(U.I)) {
       // Loading "require" from a stack location.
 
@@ -237,11 +275,13 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
         EM_.warning(
             Warning::UnresolvedStaticRequire,
             SF->getLocation(),
-            "'require' is copied to a variable which cannot be analyzed");
+            "In function '" +
+                SF->getFunction()->getOriginalOrInferredName().str() +
+                "', 'require' is copied to a variable which " +
+                "cannot be analyzed");
         canResolve_ = false;
         continue;
       }
-
       addUsers(SF->getVariable());
     } else if (auto *LF = llvh::dyn_cast<LoadFrameInst>(U.I)) {
       // Loading "require" from a frame variable.
@@ -255,17 +295,67 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
         EM_.warning(
             Warning::UnresolvedStaticRequire,
             U.I->getLocation(),
-            "'require' is used as a property key and cannot be analyzed");
+            "In function '" +
+                SF->getFunction()->getOriginalOrInferredName().str() +
+                "', 'require' is used as a property key and " +
+                "cannot be analyzed");
       }
       // Loading values from require is allowed.
       // In particular, require.context is used to load new segments.
+
+    } else if (auto *phi = llvh::dyn_cast<PhiInst>(U.I)) {
+      // If a phi has been placed on the worklist, it's known that
+      // all its inputs are require.  Add the phi's users.
+      addUsers(phi);
+
     } else {
       canResolve_ = false;
       EM_.warning(
           Warning::UnresolvedStaticRequire,
           U.I->getLocation(),
-          "In function '" + U.I->getFunction()->getInternalNameStr() +
+          "In function '" +
+              U.I->getFunction()->getOriginalOrInferredName().str() +
               "', 'require' escapes or is modified");
+    }
+
+    if (workList.empty()) {
+      // See if we've determined that some stack locations contain only
+      // 'require'.
+      for (auto &[stackLoc, requireStores] : requireStoreStacks) {
+        llvh::SmallVector<LoadStackInst *, 4> uses;
+        unsigned numStores = 0;
+        bool allLoadsOrStores = true;
+        for (auto *stackLocUser : stackLoc->getUsers()) {
+          if (auto *loadStack = llvh::dyn_cast<LoadStackInst>(stackLocUser)) {
+            uses.push_back(loadStack);
+          } else if (auto *def = llvh::dyn_cast<StoreStackInst>(stackLocUser)) {
+            numStores++;
+          } else {
+            allLoadsOrStores = false;
+            break;
+          }
+        }
+        if (allLoadsOrStores && numStores == requireStores.size()) {
+          // All uses are loads or stores, and the stores are all stores of
+          // 'require'.  So all loads from this location yield 'require'.  Add
+          // all uses of those loads to the worklist.
+          for (auto *loadStack : uses) {
+            addUsers(loadStack);
+          }
+        } else {
+          // Emit error messages.
+          for (auto *stackLocUser : stackLoc->getUsers()) {
+            if (auto *def = llvh::dyn_cast<StoreStackInst>(stackLocUser)) {
+              EM_.warning(
+                  Warning::UnresolvedStaticRequire,
+                  def->getLocation(),
+                  "In function '" +
+                      U.I->getFunction()->getOriginalOrInferredName().str() +
+                      "', 'require' stored into local cannot be resolved");
+            }
+          }
+        }
+      }
     }
   }
 }
