@@ -99,7 +99,7 @@ DEFINE_OPCODE_1(NewObject, Reg8)
 DEFINE_OPCODE_2(NewObjectWithParent, Reg8, Reg8)
 
 /// Create an array from a static list of values, as for var=[1,2,3].
-/// Any non-constant elements can be set afterwards with PutOwnByIndex.
+/// Any non-constant elements can be set afterwards with DefineOwnByIndex.
 /// Arg1 is the destination.
 /// Arg2 is a preallocation size hint.
 /// Arg3 is the number of static elements.
@@ -411,8 +411,8 @@ ASSERT_MONOTONE_INCREASING(
 /// enumerable. This is used (potentially in conjunction with
 /// NewArrayWithBuffer) for arr=[foo,bar] initializations.
 /// Arg1[Arg3] = Arg2;
-DEFINE_OPCODE_3(PutOwnByIndex, Reg8, Reg8, UInt8)
-DEFINE_OPCODE_3(PutOwnByIndexL, Reg8, Reg8, UInt32)
+DEFINE_OPCODE_3(DefineOwnByIndex, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(DefineOwnByIndexL, Reg8, Reg8, UInt32)
 
 /// Set an own property identified by value.
 /// Arg1 is the destination object.
@@ -421,7 +421,7 @@ DEFINE_OPCODE_3(PutOwnByIndexL, Reg8, Reg8, UInt32)
 /// Arg4 : bool -> enumerable. If true, the property is created as enumerable,
 ///        non-enumerable otherwise.
 /// Arg1[Arg3] = Arg2;
-DEFINE_OPCODE_4(PutOwnByVal, Reg8, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_4(DefineOwnByVal, Reg8, Reg8, Reg8, UInt8)
 
 /// Get a property by value. Constants string values should instead use GetById.
 /// Arg1 = Arg2[Arg3]
@@ -449,7 +449,7 @@ DEFINE_OPCODE_4(DelByVal, Reg8, Reg8, Reg8, UInt8)
 /// Arg3 is the getter closure or undefined
 /// Arg4 is the setter closure or undefined
 /// Arg5 : boolean - if true, the property will be enumerable.
-DEFINE_OPCODE_5(PutOwnGetterSetterByVal, Reg8, Reg8, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_5(DefineOwnGetterSetterByVal, Reg8, Reg8, Reg8, Reg8, UInt8)
 
 /// Get the list of properties from an object to implement for..in loop.
 /// Returns Arg1, which is the register that holds array of properties.

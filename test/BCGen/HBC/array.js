@@ -37,9 +37,9 @@ var z = [{}];
 //CHECK-NEXT:     DeclareGlobalVar  "z"
 //CHECK-NEXT:     NewArrayWithBuffer r3, 6, 4, 0
 //CHECK-NEXT:     LoadConstUndefined r2
-//CHECK-NEXT:     PutOwnByIndex     r3, r2, 4
+//CHECK-NEXT:     DefineOwnByIndex     r3, r2, 4
 //CHECK-NEXT:     LoadConstNull     r1
-//CHECK-NEXT:     PutOwnByIndex     r3, r1, 5
+//CHECK-NEXT:     DefineOwnByIndex     r3, r1, 5
 //CHECK-NEXT:     GetGlobalObject   r5
 //CHECK-NEXT:     PutByIdLoose      r5, r3, 1, "x"
 //CHECK-NEXT:     NewArrayWithBuffer r3, 5, 3, 11
@@ -48,6 +48,6 @@ var z = [{}];
 //CHECK-NEXT:     PutByIdLoose      r5, r3, 3, "y"
 //CHECK-NEXT:     NewArray          r3, 1
 //CHECK-NEXT:     NewObject         r4
-//CHECK-NEXT:     PutOwnByIndex     r3, r4, 0
+//CHECK-NEXT:     DefineOwnByIndex     r3, r4, 0
 //CHECK-NEXT:     PutByIdLoose      r5, r3, 4, "z"
 //CHECK-NEXT:     Ret               r2

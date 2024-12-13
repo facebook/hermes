@@ -687,24 +687,25 @@ inline void JITContext::Compiler::emitGetByIndex(
   em_.getByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
 }
 
-inline void JITContext::Compiler::emitPutOwnByIndex(
-    const inst::PutOwnByIndexInst *inst) {
-  em_.putOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+inline void JITContext::Compiler::emitDefineOwnByIndex(
+    const inst::DefineOwnByIndexInst *inst) {
+  em_.defineOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
 }
 
-inline void JITContext::Compiler::emitPutOwnByIndexL(
-    const inst::PutOwnByIndexLInst *inst) {
-  em_.putOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+inline void JITContext::Compiler::emitDefineOwnByIndexL(
+    const inst::DefineOwnByIndexLInst *inst) {
+  em_.defineOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
 }
 
-inline void JITContext::Compiler::emitPutOwnByVal(
-    const inst::PutOwnByValInst *inst) {
-  em_.putOwnByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), (bool)inst->op4);
+inline void JITContext::Compiler::emitDefineOwnByVal(
+    const inst::DefineOwnByValInst *inst) {
+  em_.defineOwnByVal(
+      FR(inst->op1), FR(inst->op2), FR(inst->op3), (bool)inst->op4);
 }
 
-inline void JITContext::Compiler::emitPutOwnGetterSetterByVal(
-    const inst::PutOwnGetterSetterByValInst *inst) {
-  em_.putOwnGetterSetterByVal(
+inline void JITContext::Compiler::emitDefineOwnGetterSetterByVal(
+    const inst::DefineOwnGetterSetterByValInst *inst) {
+  em_.defineOwnGetterSetterByVal(
       FR(inst->op1),
       FR(inst->op2),
       FR(inst->op3),

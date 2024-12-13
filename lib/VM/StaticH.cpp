@@ -1353,7 +1353,7 @@ extern "C" void _sh_ljs_put_own_getter_setter_by_val(
     }
     assert(
         (dpFlags.setSetter || dpFlags.setGetter) &&
-        "No accessor set in PutOwnGetterSetterByVal");
+        "No accessor set in DefineOwnGetterSetterByVal");
 
     auto res =
         PropertyAccessor::create(runtime, getterCallable, setterCallable);

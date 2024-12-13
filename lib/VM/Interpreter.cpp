@@ -2648,23 +2648,23 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(PutOwnByIndexL) {
-        nextIP = NEXTINST(PutOwnByIndexL);
-        idVal = ip->iPutOwnByIndexL.op3;
-        goto putOwnByIndex;
+      CASE(DefineOwnByIndexL) {
+        nextIP = NEXTINST(DefineOwnByIndexL);
+        idVal = ip->iDefineOwnByIndexL.op3;
+        goto DefineOwnByIndex;
       }
-      CASE(PutOwnByIndex) {
-        nextIP = NEXTINST(PutOwnByIndex);
-        idVal = ip->iPutOwnByIndex.op3;
+      CASE(DefineOwnByIndex) {
+        nextIP = NEXTINST(DefineOwnByIndex);
+        idVal = ip->iDefineOwnByIndex.op3;
       }
-    putOwnByIndex: {
+    DefineOwnByIndex: {
       tmpHandle = HermesValue::encodeTrustedNumberValue(idVal);
       CAPTURE_IP(JSObject::defineOwnComputedPrimitive(
-          Handle<JSObject>::vmcast(&O1REG(PutOwnByIndex)),
+          Handle<JSObject>::vmcast(&O1REG(DefineOwnByIndex)),
           runtime,
           tmpHandle,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          Handle<>(&O2REG(PutOwnByIndex)),
+          Handle<>(&O2REG(DefineOwnByIndex)),
           PropOpFlags().plusThrowOnError()));
       gcScope.flushToSmallCount(KEEP_HANDLES);
       tmpHandle.clear();
@@ -3641,8 +3641,8 @@ tailCall:
         DISPATCH;
       }
 
-      CASE_OUTOFLINE(PutOwnByVal);
-      CASE_OUTOFLINE(PutOwnGetterSetterByVal);
+      CASE_OUTOFLINE(DefineOwnByVal);
+      CASE_OUTOFLINE(DefineOwnGetterSetterByVal);
       CASE_OUTOFLINE(DirectEval);
 
       CASE_OUTOFLINE(IteratorBegin);

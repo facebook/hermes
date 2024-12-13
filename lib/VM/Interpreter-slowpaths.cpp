@@ -123,23 +123,23 @@ ExecutionStatus Interpreter::caseDirectEval(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus Interpreter::casePutOwnByVal(
+ExecutionStatus Interpreter::caseDefineOwnByVal(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
   return JSObject::defineOwnComputed(
-             Handle<JSObject>::vmcast(&O1REG(PutOwnByVal)),
+             Handle<JSObject>::vmcast(&O1REG(DefineOwnByVal)),
              runtime,
-             Handle<>(&O3REG(PutOwnByVal)),
-             ip->iPutOwnByVal.op4
+             Handle<>(&O3REG(DefineOwnByVal)),
+             ip->iDefineOwnByVal.op4
                  ? DefinePropertyFlags::getDefaultNewPropertyFlags()
                  : DefinePropertyFlags::getNewNonEnumerableFlags(),
-             Handle<>(&O2REG(PutOwnByVal)),
+             Handle<>(&O2REG(DefineOwnByVal)),
              PropOpFlags().plusThrowOnError())
       .getStatus();
 }
 
-ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
+ExecutionStatus Interpreter::caseDefineOwnGetterSetterByVal(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const inst::Inst *ip) {
@@ -147,29 +147,29 @@ ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
   dpFlags.setConfigurable = 1;
   dpFlags.configurable = 1;
   dpFlags.setEnumerable = 1;
-  dpFlags.enumerable = ip->iPutOwnGetterSetterByVal.op5;
+  dpFlags.enumerable = ip->iDefineOwnGetterSetterByVal.op5;
 
   MutableHandle<Callable> getter(runtime);
   MutableHandle<Callable> setter(runtime);
-  if (LLVM_LIKELY(!O3REG(PutOwnGetterSetterByVal).isUndefined())) {
+  if (LLVM_LIKELY(!O3REG(DefineOwnGetterSetterByVal).isUndefined())) {
     dpFlags.setGetter = 1;
-    getter = vmcast<Callable>(O3REG(PutOwnGetterSetterByVal));
+    getter = vmcast<Callable>(O3REG(DefineOwnGetterSetterByVal));
   }
-  if (LLVM_LIKELY(!O4REG(PutOwnGetterSetterByVal).isUndefined())) {
+  if (LLVM_LIKELY(!O4REG(DefineOwnGetterSetterByVal).isUndefined())) {
     dpFlags.setSetter = 1;
-    setter = vmcast<Callable>(O4REG(PutOwnGetterSetterByVal));
+    setter = vmcast<Callable>(O4REG(DefineOwnGetterSetterByVal));
   }
   assert(
       (dpFlags.setSetter || dpFlags.setGetter) &&
-      "No accessor set in PutOwnGetterSetterByVal");
+      "No accessor set in DefineOwnGetterSetterByVal");
 
   auto accessor = runtime.makeHandle<PropertyAccessor>(
       PropertyAccessor::create(runtime, getter, setter));
 
   return JSObject::defineOwnComputed(
-             Handle<JSObject>::vmcast(&O1REG(PutOwnGetterSetterByVal)),
+             Handle<JSObject>::vmcast(&O1REG(DefineOwnGetterSetterByVal)),
              runtime,
-             Handle<>(&O2REG(PutOwnGetterSetterByVal)),
+             Handle<>(&O2REG(DefineOwnGetterSetterByVal)),
              dpFlags,
              accessor)
       .getStatus();

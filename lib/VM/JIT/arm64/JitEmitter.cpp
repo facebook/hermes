@@ -3722,7 +3722,7 @@ asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
   return a.newNamedLabel(buf);
 }
 
-void Emitter::putOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
+void Emitter::defineOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
   comment(
       "// putOwnByIdx r%u, r%u, %u", frTarget.index(), frValue.index(), key);
 
@@ -3741,9 +3741,13 @@ void Emitter::putOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
       _sh_ljs_put_own_by_index);
 }
 
-void Emitter::putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable) {
+void Emitter::defineOwnByVal(
+    FR frTarget,
+    FR frValue,
+    FR frKey,
+    bool enumerable) {
   comment(
-      "// PutOwnByVal r%u, r%u, r%u",
+      "// DefineOwnByVal r%u, r%u, r%u",
       frTarget.index(),
       frValue.index(),
       frKey.index());
@@ -3773,14 +3777,14 @@ void Emitter::putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable) {
   }
 }
 
-void Emitter::putOwnGetterSetterByVal(
+void Emitter::defineOwnGetterSetterByVal(
     FR frTarget,
     FR frKey,
     FR frGetter,
     FR frSetter,
     bool enumerable) {
   comment(
-      "// PutOwnGetterSetterByVal r%u, r%u, r%u, r%u, %d",
+      "// DefineOwnGetterSetterByVal r%u, r%u, r%u, r%u, %d",
       frTarget.index(),
       frKey.index(),
       frGetter.index(),

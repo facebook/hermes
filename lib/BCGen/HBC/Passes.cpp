@@ -94,7 +94,7 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
 
       // If the propery is a LiteralNumber, the property is enumerable, and it
       // is a valid array index, it is coming from an array initialization and
-      // we will emit it as PutByIndex.
+      // we will emit it as DefineOwnByIndex.
       if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst->getOperand(opIndex))) {
         if (SOP->getIsEnumerable() && LN->convertToArrayIndex().hasValue())
           return true;

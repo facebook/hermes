@@ -412,14 +412,14 @@ function obj7() {
 // BCGEN-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
 // BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 83
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
+// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 1
 // BCGEN-NEXT:    Ret               r1
 
 // BCGEN:Function<obj4>(1 params, 2 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0035, lexical 0x0000
 // BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 83
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
+// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 1
 // BCGEN-NEXT:    Ret               r1
 
 // BCGEN:Function<obj5>(1 params, 1 registers, 0 numbers, 0 non-pointers):
@@ -430,9 +430,9 @@ function obj7() {
 // BCGEN-NEXT:Offset in debug table: source 0x003c, lexical 0x0000
 // BCGEN-NEXT:    NewObjectWithBuffer r1, 3, 65
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 1
-// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 3
-// BCGEN-NEXT:    PutOwnByIndex     r1, r0, 2
+// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 1
+// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 3
+// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 2
 // BCGEN-NEXT:    Ret               r1
 
 // BCGEN:Function<obj7>(1 params, 2 registers, 0 numbers, 1 non-pointers):

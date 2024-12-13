@@ -219,12 +219,12 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
-  static ExecutionStatus casePutOwnByVal(
+  static ExecutionStatus caseDefineOwnByVal(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
-  static ExecutionStatus casePutOwnGetterSetterByVal(
+  static ExecutionStatus caseDefineOwnGetterSetterByVal(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);

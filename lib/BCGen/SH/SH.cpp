@@ -1209,7 +1209,7 @@ class InstrGen {
 
     // If the property is a LiteralNumber, the property is enumerable, and it is
     // a valid array index, it is coming from an array initialization and we
-    // will emit it as PutByIndex.
+    // will emit it as DefineOwnByIndex.
     auto *numProp = llvh::dyn_cast<LiteralNumber>(prop);
     if (numProp && isEnumerable) {
       if (auto arrayIndex = numProp->convertToArrayIndex()) {

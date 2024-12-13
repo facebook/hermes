@@ -708,9 +708,9 @@ class Emitter {
       "tryPutByIdStrict",
       _sh_ljs_try_put_by_id_strict_rjs);
 
-  void putOwnByIndex(FR frTarget, FR frValue, uint32_t key);
-  void putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable);
-  void putOwnGetterSetterByVal(
+  void defineOwnByIndex(FR frTarget, FR frValue, uint32_t key);
+  void defineOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable);
+  void defineOwnGetterSetterByVal(
       FR frTarget,
       FR frKey,
       FR frGetter,

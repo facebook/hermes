@@ -51,14 +51,14 @@ var obj = {
 // CHECK-NEXT:    CreateClosure     r4, r1, Function<get b>
 // CHECK-NEXT:    CreateClosure     r3, r1, Function<set b>
 // CHECK-NEXT:    LoadConstString   r2, "b"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r5, r2, r4, r3, 1
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r2, r4, r3, 1
 // CHECK-NEXT:    CreateClosure     r3, r1, Function<get c>
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    LoadConstString   r2, "c"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r5, r2, r3, r0, 1
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r2, r3, r0, 1
 // CHECK-NEXT:    CreateClosure     r2, r1, Function<set d>
 // CHECK-NEXT:    LoadConstString   r1, "d"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r5, r1, r0, r2, 1
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r1, r0, r2, 1
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    PutByIdLoose      r1, r5, 1, "obj"
 // CHECK-NEXT:    Ret               r0

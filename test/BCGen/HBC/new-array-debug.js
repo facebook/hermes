@@ -48,11 +48,11 @@ function foo() {
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
 // CHECK-NEXT:[@ 0] NewArray 1<Reg8>, 3<UInt16>
 // CHECK-NEXT:[@ 4] NewArray 0<Reg8>, 0<UInt16>
-// CHECK-NEXT:[@ 8] PutOwnByIndex 1<Reg8>, 0<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 8] DefineOwnByIndex 1<Reg8>, 0<Reg8>, 0<UInt8>
 // CHECK-NEXT:[@ 12] NewArray 0<Reg8>, 0<UInt16>
-// CHECK-NEXT:[@ 16] PutOwnByIndex 1<Reg8>, 0<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 16] DefineOwnByIndex 1<Reg8>, 0<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 20] NewArray 0<Reg8>, 0<UInt16>
-// CHECK-NEXT:[@ 24] PutOwnByIndex 1<Reg8>, 0<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 24] DefineOwnByIndex 1<Reg8>, 0<Reg8>, 2<UInt8>
 // CHECK-NEXT:[@ 28] Ret 1<Reg8>
 
 // CHECK:Debug filename table:

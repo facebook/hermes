@@ -911,15 +911,15 @@ void HBCISel::generateDefineOwnPropertyInst(
 
   // If the property is a LiteralNumber, the property is enumerable, and it is a
   // valid array index, it is coming from an array initialization and we will
-  // emit it as PutByIndex.
+  // emit it as DefineOwnByIndex.
   auto *numProp = llvh::dyn_cast<LiteralNumber>(prop);
   if (numProp && isEnumerable) {
     if (auto arrayIndex = numProp->convertToArrayIndex()) {
       uint32_t index = arrayIndex.getValue();
       if (index <= UINT8_MAX) {
-        BCFGen_->emitPutOwnByIndex(objReg, valueReg, index);
+        BCFGen_->emitDefineOwnByIndex(objReg, valueReg, index);
       } else {
-        BCFGen_->emitPutOwnByIndexL(objReg, valueReg, index);
+        BCFGen_->emitDefineOwnByIndexL(objReg, valueReg, index);
       }
 
       return;
@@ -928,7 +928,8 @@ void HBCISel::generateDefineOwnPropertyInst(
 
   // It is a register operand.
   auto propReg = encodeValue(Inst->getProperty());
-  BCFGen_->emitPutOwnByVal(objReg, valueReg, propReg, Inst->getIsEnumerable());
+  BCFGen_->emitDefineOwnByVal(
+      objReg, valueReg, propReg, Inst->getIsEnumerable());
 }
 
 void HBCISel::generateDefineNewOwnPropertyInst(
@@ -945,9 +946,9 @@ void HBCISel::generateDefineNewOwnPropertyInst(
         "No way to generate non-enumerable indexed DefineNewOwnPropertyInst.");
     uint32_t index = *numProp->convertToArrayIndex();
     if (index <= UINT8_MAX) {
-      BCFGen_->emitPutOwnByIndex(objReg, valueReg, index);
+      BCFGen_->emitDefineOwnByIndex(objReg, valueReg, index);
     } else {
-      BCFGen_->emitPutOwnByIndexL(objReg, valueReg, index);
+      BCFGen_->emitDefineOwnByIndexL(objReg, valueReg, index);
     }
     return;
   }
@@ -977,7 +978,7 @@ void HBCISel::generateDefineOwnGetterSetterInst(
     BasicBlock *next) {
   auto objReg = encodeValue(Inst->getObject());
   auto ident = encodeValue(Inst->getProperty());
-  BCFGen_->emitPutOwnGetterSetterByVal(
+  BCFGen_->emitDefineOwnGetterSetterByVal(
       objReg,
       ident,
       encodeValue(Inst->getStoredGetter()),
