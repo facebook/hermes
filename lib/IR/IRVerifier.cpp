@@ -974,23 +974,23 @@ bool Verifier::visitBaseDefineOwnPropertyInst(
 bool Verifier::visitDefineOwnPropertyInst(const DefineOwnPropertyInst &Inst) {
   return visitBaseDefineOwnPropertyInst(Inst);
 }
-bool Verifier::visitStoreNewOwnPropertyInst(
-    const StoreNewOwnPropertyInst &Inst) {
+bool Verifier::visitDefineNewOwnPropertyInst(
+    const DefineNewOwnPropertyInst &Inst) {
   ReturnIfNot(visitBaseDefineOwnPropertyInst(Inst));
   AssertIWithMsg(
       Inst,
       Inst.getObject()->getType().isObjectType(),
-      "StoreNewOwnPropertyInst::Object must be known to be an object");
+      "DefineNewOwnPropertyInst::Object must be known to be an object");
   if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getProperty())) {
     AssertIWithMsg(
         Inst,
         LN->convertToArrayIndex().hasValue(),
-        "StoreNewOwnPropertyInst::Property can only be an index-like number");
+        "DefineNewOwnPropertyInst::Property can only be an index-like number");
   } else {
     AssertIWithMsg(
         Inst,
         llvh::isa<LiteralString>(Inst.getProperty()),
-        "StoreNewOwnPropertyInst::Property must be a string or number literal");
+        "DefineNewOwnPropertyInst::Property must be a string or number literal");
   }
   return true;
 }

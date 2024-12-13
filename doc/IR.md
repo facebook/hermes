@@ -527,12 +527,12 @@ Arguments | %value is the value to be stored. %object *must* be of an object typ
 Semantics | Implements ES15 7.3.8 DefinePropertyOrThrow. The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
-### StoreNewOwnPropertyInst
+### DefineNewOwnPropertyInst
 
-StoreNewOwnPropertyInst | _
+DefineNewOwnPropertyInst | _
 --- | --- |
 Description | Create a new *own property* in what is known to be a JavaScript object.
-Example |   `%4 = StoreNewOwnPropertyInst %value, %object, %property, %enumerable : boolean`
+Example |   `%4 = DefineNewOwnPropertyInst %value, %object, %property, %enumerable : boolean`
 Arguments | *%value* is the value to be stored. *%object*, which must be an object, is where the field with name *%property* will be created. *%property* must be a string or index-like number literal, otherwise it is impossible to guarantee that it is new. *%enumerable* determines whether the new property will be created as enumerable or not.
 Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.

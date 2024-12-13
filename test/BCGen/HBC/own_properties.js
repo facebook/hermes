@@ -7,7 +7,7 @@
 
 // RUN: %hermes -O0 -target=HBC -dump-lir %s | %FileCheckOrRegen --match-full-lines %s
 
-// Test that StoreNewOwnPropertyInst is lowered to DefineOwnPropertyInst when
+// Test that DefineNewOwnPropertyInst is lowered to DefineOwnPropertyInst when
 // the property name is a valid array index.
 // We use a computed key to avoid emitting AllocObjectLiteral.
 
@@ -41,13 +41,13 @@ function foo() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %3 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:       StoreNewOwnPropertyInst %3: number, %2: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineNewOwnPropertyInst %3: number, %2: object, "a": string, true: boolean
 // CHECK-NEXT:  %5 = HBCLoadConstInst (:number) 2: number
-// CHECK-NEXT:       StoreNewOwnPropertyInst %5: number, %2: object, 10: number, true: boolean
+// CHECK-NEXT:       DefineNewOwnPropertyInst %5: number, %2: object, 10: number, true: boolean
 // CHECK-NEXT:  %7 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:       StoreNewOwnPropertyInst %7: number, %2: object, 11: number, true: boolean
+// CHECK-NEXT:       DefineNewOwnPropertyInst %7: number, %2: object, 11: number, true: boolean
 // CHECK-NEXT:  %9 = HBCLoadConstInst (:number) 4: number
-// CHECK-NEXT:        StoreNewOwnPropertyInst %9: number, %2: object, "999999999999999999999999": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst %9: number, %2: object, "999999999999999999999999": string, true: boolean
 // CHECK-NEXT:  %11 = HBCLoadConstInst (:number) 5: number
 // CHECK-NEXT:        DefineOwnPropertyInst %11: number, %2: object, 42: number, true: boolean
 // CHECK-NEXT:        ReturnInst %2: object

@@ -46,7 +46,7 @@ PASS(
 PASS(
     ObjectMergeNewStores,
     "objectmergenewstores",
-    "Merge StoreNewOwnPropertyInsts into AllocObjectLiteral")
+    "Merge DefineNewOwnPropertyInsts into AllocObjectLiteral")
 PASS(SimplifyCFG, "simplifycfg", "Simplify CFG")
 PASS(TypeInference, "typeinference", "Type inference")
 PASS(FunctionAnalysis, "functionanalysis", "Function analysis")

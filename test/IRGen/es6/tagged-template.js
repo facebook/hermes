@@ -190,7 +190,7 @@ function helloWorld() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS7.obj]: any
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:       StoreNewOwnPropertyInst %4: any, %3: object, "func": string, true: boolean
+// CHECK-NEXT:       DefineNewOwnPropertyInst %4: any, %3: object, "func": string, true: boolean
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS7.obj]: any
 // CHECK-NEXT:  %7 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS7.obj]: any

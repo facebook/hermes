@@ -622,12 +622,12 @@ DefineOwnPropertyInst *IRBuilder::createDefineOwnPropertyInst(
   insert(SPI);
   return SPI;
 }
-StoreNewOwnPropertyInst *IRBuilder::createStoreNewOwnPropertyInst(
+DefineNewOwnPropertyInst *IRBuilder::createDefineNewOwnPropertyInst(
     Value *storedValue,
     Value *object,
     Literal *property,
     PropEnumerable isEnumerable) {
-  auto *inst = new StoreNewOwnPropertyInst(
+  auto *inst = new DefineNewOwnPropertyInst(
       storedValue,
       object,
       property,

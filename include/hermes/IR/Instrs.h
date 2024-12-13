@@ -1741,18 +1741,18 @@ class DefineOwnPropertyInst : public BaseDefineOwnPropertyInst {
   }
 };
 
-class StoreNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
-  StoreNewOwnPropertyInst(const StoreNewOwnPropertyInst &) = delete;
-  void operator=(const StoreNewOwnPropertyInst &) = delete;
+class DefineNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
+  DefineNewOwnPropertyInst(const DefineNewOwnPropertyInst &) = delete;
+  void operator=(const DefineNewOwnPropertyInst &) = delete;
 
  public:
-  explicit StoreNewOwnPropertyInst(
+  explicit DefineNewOwnPropertyInst(
       Value *storedValue,
       Value *object,
       Literal *property,
       LiteralBool *isEnumerable)
       : BaseDefineOwnPropertyInst(
-            ValueKind::StoreNewOwnPropertyInstKind,
+            ValueKind::DefineNewOwnPropertyInstKind,
             storedValue,
             object,
             property,
@@ -1766,14 +1766,14 @@ class StoreNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
         "object operand must be known to be an object");
   }
 
-  explicit StoreNewOwnPropertyInst(
-      const StoreNewOwnPropertyInst *src,
+  explicit DefineNewOwnPropertyInst(
+      const DefineNewOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : BaseDefineOwnPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::StoreNewOwnPropertyInstKind;
+    return kind == ValueKind::DefineNewOwnPropertyInstKind;
   }
 };
 

@@ -1464,7 +1464,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
   // haveSeenComputedProp tracks whether we have processed a computed property.
   // Once we do, for all future properties, we can no longer generate
-  // StoreNewOwnPropertyInst because the computed property could have already
+  // DefineNewOwnPropertyInst because the computed property could have already
   // defined any property.
   bool haveSeenComputedProp = false;
 
@@ -1564,7 +1564,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
               Key,
               IRBuilder::PropEnumerable::Yes);
         } else {
-          Builder.createStoreNewOwnPropertyInst(
+          Builder.createDefineNewOwnPropertyInst(
               Builder.getLiteralNull(),
               Obj,
               Key,
@@ -1629,7 +1629,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         Builder.createDefineOwnPropertyInst(
             value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       } else {
-        Builder.createStoreNewOwnPropertyInst(
+        Builder.createDefineNewOwnPropertyInst(
             value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       }
       propValue->state = PropertyValue::IRGenerated;
@@ -1690,7 +1690,7 @@ Value *ESTreeIRGen::genTypedObjectExpr(
         "Missing stored value in typechecked object literal");
     // Use a literal if possible, otherwise use the default init value.
     // Avoid putting non-literals here because we want to emit PrStore
-    // instead of StoreNewOwnPropertyInst.
+    // instead of DefineNewOwnPropertyInst.
     Value *initValue = nullptr;
     if (llvh::isa<Literal>(it->second.first)) {
       initValue = it->second.first;

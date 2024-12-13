@@ -41,11 +41,11 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<SwitchInst>(Inst) && opIndex > 0)
     return true;
 
-  // DefineOwnPropertyInst and StoreNewOwnPropertyInst.
+  // DefineOwnPropertyInst and DefineNewOwnPropertyInst.
   if (auto *SOP = llvh::dyn_cast<BaseDefineOwnPropertyInst>(Inst)) {
     if (opIndex == DefineOwnPropertyInst::PropertyIdx) {
-      if (llvh::isa<StoreNewOwnPropertyInst>(Inst)) {
-        // In StoreNewOwnPropertyInst the property name must be a literal.
+      if (llvh::isa<DefineNewOwnPropertyInst>(Inst)) {
+        // In DefineNewOwnPropertyInst the property name must be a literal.
         return true;
       }
 

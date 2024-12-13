@@ -1238,7 +1238,7 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
-  void generateStoreNewOwnPropertyInst(StoreNewOwnPropertyInst &inst) {
+  void generateDefineNewOwnPropertyInst(DefineNewOwnPropertyInst &inst) {
     os_.indent(2);
     auto prop = inst.getProperty();
     bool isEnumerable = inst.getIsEnumerable();
@@ -1246,7 +1246,7 @@ class InstrGen {
     if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
       assert(
           isEnumerable &&
-          "No way to generate non-enumerable indexed StoreNewOwnPropertyInst.");
+          "No way to generate non-enumerable indexed DefineNewOwnPropertyInst.");
       uint32_t index = *numProp->convertToArrayIndex();
       os_ << "_sh_ljs_put_own_by_index(";
       os_ << "shr, ";

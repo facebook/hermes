@@ -931,8 +931,8 @@ void HBCISel::generateDefineOwnPropertyInst(
   BCFGen_->emitPutOwnByVal(objReg, valueReg, propReg, Inst->getIsEnumerable());
 }
 
-void HBCISel::generateStoreNewOwnPropertyInst(
-    StoreNewOwnPropertyInst *Inst,
+void HBCISel::generateDefineNewOwnPropertyInst(
+    DefineNewOwnPropertyInst *Inst,
     BasicBlock *next) {
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
@@ -942,7 +942,7 @@ void HBCISel::generateStoreNewOwnPropertyInst(
   if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
     assert(
         isEnumerable &&
-        "No way to generate non-enumerable indexed StoreNewOwnPropertyInst.");
+        "No way to generate non-enumerable indexed DefineNewOwnPropertyInst.");
     uint32_t index = *numProp->convertToArrayIndex();
     if (index <= UINT8_MAX) {
       BCFGen_->emitPutOwnByIndex(objReg, valueReg, index);
