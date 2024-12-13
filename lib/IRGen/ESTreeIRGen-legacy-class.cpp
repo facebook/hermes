@@ -127,14 +127,14 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   auto addMethod =
       [this](Value *O, llvh::StringRef kind, Value *key, Value *closure) {
         if (kind == "get") {
-          Builder.createStoreGetterSetterInst(
+          Builder.createDefineOwnGetterSetterInst(
               closure,
               Builder.getLiteralUndefined(),
               O,
               key,
               IRBuilder::PropEnumerable::No);
         } else if (kind == "set") {
-          Builder.createStoreGetterSetterInst(
+          Builder.createDefineOwnGetterSetterInst(
               Builder.getLiteralUndefined(),
               closure,
               O,

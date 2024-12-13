@@ -1777,9 +1777,9 @@ class StoreNewOwnPropertyInst : public BaseStoreOwnPropertyInst {
   }
 };
 
-class StoreGetterSetterInst : public Instruction {
-  StoreGetterSetterInst(const StoreGetterSetterInst &) = delete;
-  void operator=(const StoreGetterSetterInst &) = delete;
+class DefineOwnGetterSetterInst : public Instruction {
+  DefineOwnGetterSetterInst(const DefineOwnGetterSetterInst &) = delete;
+  void operator=(const DefineOwnGetterSetterInst &) = delete;
 
  public:
   enum {
@@ -1806,13 +1806,13 @@ class StoreGetterSetterInst : public Instruction {
     return cast<LiteralBool>(getOperand(IsEnumerableIdx))->getValue();
   }
 
-  explicit StoreGetterSetterInst(
+  explicit DefineOwnGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
       Value *object,
       Value *property,
       LiteralBool *isEnumerable)
-      : Instruction(ValueKind::StoreGetterSetterInstKind) {
+      : Instruction(ValueKind::DefineOwnGetterSetterInstKind) {
     setType(Type::createNoType());
     pushOperand(storedGetter);
     pushOperand(storedSetter);
@@ -1820,8 +1820,8 @@ class StoreGetterSetterInst : public Instruction {
     pushOperand(property);
     pushOperand(isEnumerable);
   }
-  explicit StoreGetterSetterInst(
-      const StoreGetterSetterInst *src,
+  explicit DefineOwnGetterSetterInst(
+      const DefineOwnGetterSetterInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -1838,7 +1838,7 @@ class StoreGetterSetterInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::StoreGetterSetterInstKind;
+    return kind == ValueKind::DefineOwnGetterSetterInstKind;
   }
 };
 

@@ -452,7 +452,7 @@ class IRBuilder {
       Literal *property,
       PropEnumerable isEnumerable);
 
-  StoreGetterSetterInst *createStoreGetterSetterInst(
+  DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
       Value *object,

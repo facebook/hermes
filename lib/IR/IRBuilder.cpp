@@ -636,13 +636,13 @@ StoreNewOwnPropertyInst *IRBuilder::createStoreNewOwnPropertyInst(
   return inst;
 }
 
-StoreGetterSetterInst *IRBuilder::createStoreGetterSetterInst(
+DefineOwnGetterSetterInst *IRBuilder::createDefineOwnGetterSetterInst(
     Value *storedGetter,
     Value *storedSetter,
     Value *object,
     Value *property,
     PropEnumerable isEnumerable) {
-  auto *SGSI = new StoreGetterSetterInst(
+  auto *SGSI = new DefineOwnGetterSetterInst(
       storedGetter,
       storedSetter,
       object,

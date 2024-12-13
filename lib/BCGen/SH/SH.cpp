@@ -1271,7 +1271,7 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
-  void generateStoreGetterSetterInst(StoreGetterSetterInst &inst) {
+  void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
     os_.indent(2);
     os_ << "_sh_ljs_put_own_getter_setter_by_val(";
     os_ << "shr, ";

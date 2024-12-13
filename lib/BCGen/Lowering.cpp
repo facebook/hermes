@@ -265,9 +265,9 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvh::isa<DeletePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, DeletePropertyInst::PropertyIdx);
-      } else if (llvh::isa<StoreGetterSetterInst>(&Inst)) {
+      } else if (llvh::isa<DefineOwnGetterSetterInst>(&Inst)) {
         changed |= stringToNumericProperty(
-            builder, Inst, StoreGetterSetterInst::PropertyIdx);
+            builder, Inst, DefineOwnGetterSetterInst::PropertyIdx);
       } else if (llvh::isa<AllocObjectLiteralInst>(&Inst)) {
         auto allocInst = cast<AllocObjectLiteralInst>(&Inst);
         for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {

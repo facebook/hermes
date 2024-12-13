@@ -1502,14 +1502,14 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
                 capturedObj)
           : genExpression(prop->_value, Identifier{});
       if (prop->_kind->str() == "get") {
-        Builder.createStoreGetterSetterInst(
+        Builder.createDefineOwnGetterSetterInst(
             value,
             Builder.getLiteralUndefined(),
             Obj,
             key,
             IRBuilder::PropEnumerable::Yes);
       } else if (prop->_kind->str() == "set") {
-        Builder.createStoreGetterSetterInst(
+        Builder.createDefineOwnGetterSetterInst(
             Builder.getLiteralUndefined(),
             value,
             Obj,
@@ -1599,7 +1599,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Builder.createIdentifier("set " + keyStr.str()));
       }
 
-      Builder.createStoreGetterSetterInst(
+      Builder.createDefineOwnGetterSetterInst(
           getter, setter, Obj, Key, IRBuilder::PropEnumerable::Yes);
 
       propValue->state = PropertyValue::IRGenerated;

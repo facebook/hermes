@@ -288,7 +288,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"get c"(): functionCode
-// CHECK-NEXT:       StoreGetterSetterInst %7: object, undefined: undefined, %4: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %4: object, "c": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end

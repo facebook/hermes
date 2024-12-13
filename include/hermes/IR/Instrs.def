@@ -112,7 +112,7 @@ DEF_VALUE(StoreOwnPropertyInst, BaseStoreOwnPropertyInst)
 DEF_VALUE(StoreNewOwnPropertyInst, BaseStoreOwnPropertyInst)
 MARK_LAST(BaseStoreOwnPropertyInst)
 
-DEF_VALUE(StoreGetterSetterInst, Instruction)
+DEF_VALUE(DefineOwnGetterSetterInst, Instruction)
 
 MARK_FIRST(DeletePropertyInst, Instruction)
 DEF_VALUE(DeletePropertyLooseInst, DeletePropertyInst)

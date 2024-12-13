@@ -972,8 +972,8 @@ void HBCISel::generateStoreNewOwnPropertyInst(
   }
 }
 
-void HBCISel::generateStoreGetterSetterInst(
-    StoreGetterSetterInst *Inst,
+void HBCISel::generateDefineOwnGetterSetterInst(
+    DefineOwnGetterSetterInst *Inst,
     BasicBlock *next) {
   auto objReg = encodeValue(Inst->getObject());
   auto ident = encodeValue(Inst->getProperty());

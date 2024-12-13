@@ -31,10 +31,10 @@ var x = {
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %4: object, "1": string, true: boolean
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %"get a"(): functionCode
-// CHECK-NEXT:       StoreGetterSetterInst %6: object, undefined: undefined, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnGetterSetterInst %6: object, undefined: undefined, %4: object, "a": string, true: boolean
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %"get 1"(): functionCode
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %"set 1"(): functionCode
-// CHECK-NEXT:        StoreGetterSetterInst %8: object, %9: object, %4: object, "1": string, true: boolean
+// CHECK-NEXT:        DefineOwnGetterSetterInst %8: object, %9: object, %4: object, "1": string, true: boolean
 // CHECK-NEXT:        StoreNewOwnPropertyInst null: null, %4: object, "b": string, true: boolean
 // CHECK-NEXT:        StoreOwnPropertyInst 12: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:        StorePropertyLooseInst %4: object, globalObject: object, "x": string

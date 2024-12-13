@@ -91,9 +91,9 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     }
   }
 
-  // StoreGetterSetterInst's isEnumerable is a boolean constant.
-  if (llvh::isa<StoreGetterSetterInst>(Inst) &&
-      opIndex == StoreGetterSetterInst::IsEnumerableIdx)
+  // DefineOwnGetterSetterInst's isEnumerable is a boolean constant.
+  if (llvh::isa<DefineOwnGetterSetterInst>(Inst) &&
+      opIndex == DefineOwnGetterSetterInst::IsEnumerableIdx)
     return true;
 
   // Both pattern and flags operands of the CreateRegExpInst

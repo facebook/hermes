@@ -537,12 +537,12 @@ Arguments | *%value* is the value to be stored. *%object*, which must be an obje
 Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
-### StoreGetterSetterInst
+### DefineOwnGetterSetterInst
 
-StoreGetterSetterInst | _
+DefineOwnGetterSetterInst | _
 --- | --- |
 Description | Associates a pair of getter and setter with an *own* field in a JavaScript object, replacing the previous value.
-Example |   %4 = StoreGetterSetterInst %getter, %setter, %object, %property, %enumerable
+Example |   %4 = DefineOwnGetterSetterInst %getter, %setter, %object, %property, %enumerable
 Arguments | %getter is a getter accessor, or undefined. %setter is a setter accessor, or undefined. %object is the object where the field %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
 Semantics | The instruction follows the rules of JavaScript property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. It replaces both accessors even if one or both of the parameters are undefined.
 Effects | May read and write memory.

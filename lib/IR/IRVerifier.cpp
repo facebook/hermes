@@ -995,11 +995,12 @@ bool Verifier::visitStoreNewOwnPropertyInst(
   return true;
 }
 
-bool Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
+bool Verifier::visitDefineOwnGetterSetterInst(
+    const DefineOwnGetterSetterInst &Inst) {
   AssertIWithMsg(
       Inst,
       llvh::isa<LiteralBool>(
-          Inst.getOperand(StoreGetterSetterInst::IsEnumerableIdx)),
+          Inst.getOperand(DefineOwnGetterSetterInst::IsEnumerableIdx)),
       "StoreGetterSetterInsr::IsEnumerable must be a boolean constant");
   return true;
 }

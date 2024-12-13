@@ -30,9 +30,9 @@
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreOwnPropertyInst 3: number, %3: object, "x": string, true: boolean
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:       StoreGetterSetterInst %5: object, undefined: undefined, %3: object, "y": string, true: boolean
+// CHECK-NEXT:       DefineOwnGetterSetterInst %5: object, undefined: undefined, %3: object, "y": string, true: boolean
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %" 1#"(): functionCode
-// CHECK-NEXT:       StoreGetterSetterInst undefined: undefined, %7: object, %3: object, "y": string, true: boolean
+// CHECK-NEXT:       DefineOwnGetterSetterInst undefined: undefined, %7: object, %3: object, "y": string, true: boolean
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %" 2#"(): functionCode
 // CHECK-NEXT:        StoreOwnPropertyInst %9: object, %3: object, "z": string, true: boolean
 // CHECK-NEXT:        StoreStackInst %3: object, %1: any
