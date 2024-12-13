@@ -1202,7 +1202,7 @@ class InstrGen {
     generateTryStoreGlobalPropertyInstImpl(inst, true);
   }
 
-  void generateStoreOwnPropertyInst(StoreOwnPropertyInst &inst) {
+  void generateDefineOwnPropertyInst(DefineOwnPropertyInst &inst) {
     os_.indent(2);
     auto prop = inst.getProperty();
     bool isEnumerable = inst.getIsEnumerable();

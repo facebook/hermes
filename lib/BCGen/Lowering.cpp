@@ -188,7 +188,7 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
         // So, if we have encountered a numeric property, we cannot store
         // directly into a slot.
         if (isNumericKey) {
-          builder.createStoreOwnPropertyInst(
+          builder.createDefineOwnPropertyInst(
               propVal, allocInst, propKey, IRBuilder::PropEnumerable::Yes);
         } else {
           // For non-numeric keys, StorePropertyInst is more efficient because
@@ -259,9 +259,9 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvh::isa<StorePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StorePropertyInst::PropertyIdx);
-      } else if (llvh::isa<BaseStoreOwnPropertyInst>(&Inst)) {
+      } else if (llvh::isa<BaseDefineOwnPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
-            builder, Inst, StoreOwnPropertyInst::PropertyIdx);
+            builder, Inst, DefineOwnPropertyInst::PropertyIdx);
       } else if (llvh::isa<DeletePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, DeletePropertyInst::PropertyIdx);
@@ -371,7 +371,7 @@ bool LimitAllocArray::runOnFunction(Function *F) {
               inst->getOperand(i)->getKind() == ValueKind::LiteralUndefinedKind;
           if (seenUnserializable) {
             e--;
-            builder.createStoreOwnPropertyInst(
+            builder.createDefineOwnPropertyInst(
                 inst->getOperand(i),
                 inst,
                 builder.getLiteralNumber(ind),
@@ -393,7 +393,7 @@ bool LimitAllocArray::runOnFunction(Function *F) {
       // 0 to totalElems.
       for (unsigned i = inst->getElementCount() - 1; i >= maxSize_; i--) {
         int operandOffset = AllocArrayInst::ElementStartIdx + i;
-        builder.createStoreOwnPropertyInst(
+        builder.createDefineOwnPropertyInst(
             inst->getOperand(operandOffset),
             inst,
             builder.getLiteralNumber(i),

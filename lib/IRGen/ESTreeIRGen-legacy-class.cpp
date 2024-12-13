@@ -142,7 +142,7 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
               IRBuilder::PropEnumerable::No);
         } else {
           assert(kind == "method" && "unhandled method definition");
-          Builder.createStoreOwnPropertyInst(
+          Builder.createDefineOwnPropertyInst(
               closure, O, key, IRBuilder::PropEnumerable::No);
         }
       };
@@ -517,7 +517,7 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
         }
         Value *propValue = prop->_value ? genExpression(prop->_value)
                                         : Builder.getLiteralUndefined();
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             propValue, classVal, propKey, IRBuilder::PropEnumerable::Yes);
       }
     }
@@ -594,7 +594,7 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
         }
         Value *propValue = prop->_value ? genExpression(prop->_value)
                                         : Builder.getLiteralUndefined();
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             propValue, thisParam, propKey, IRBuilder::PropEnumerable::Yes);
       }
     }

@@ -517,12 +517,12 @@ Arguments | %value is the value to be stored. %object is the global object, wher
 Semantics | Similar to StorePropertyInst, but throw if the field doesn't exist.
 Effects | May read and write memory or throw.
 
-### StoreOwnPropertyInst
+### DefineOwnPropertyInst
 
-StoreOwnPropertyInst | _
+DefineOwnPropertyInst | _
 --- | --- |
 Description | Define an *own property* of JavaScript object. Will throw if the property write was not successful (e.g. trying to store to a non-writable property.)
-Example |   %4 = StoreOwnPropertyInst %value, %object : object, %property, %enumerable : boolean
+Example |   %4 = DefineOwnPropertyInst %value, %object : object, %property, %enumerable : boolean
 Arguments | %value is the value to be stored. %object *must* be of an object type; it's the object where the field with name %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
 Semantics | Implements ES15 7.3.8 DefinePropertyOrThrow. The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.

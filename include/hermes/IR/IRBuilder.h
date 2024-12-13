@@ -441,7 +441,7 @@ class IRBuilder {
       Value *storedValue,
       LiteralString *property);
 
-  StoreOwnPropertyInst *createStoreOwnPropertyInst(
+  DefineOwnPropertyInst *createDefineOwnPropertyInst(
       Value *storedValue,
       Value *object,
       Value *property,

@@ -107,10 +107,10 @@ DEF_VALUE(TryStoreGlobalPropertyStrictInst, TryStoreGlobalPropertyInst)
 MARK_LAST(TryStoreGlobalPropertyInst)
 MARK_LAST(BaseStorePropertyInst)
 
-MARK_FIRST(BaseStoreOwnPropertyInst, Instruction)
-DEF_VALUE(StoreOwnPropertyInst, BaseStoreOwnPropertyInst)
-DEF_VALUE(StoreNewOwnPropertyInst, BaseStoreOwnPropertyInst)
-MARK_LAST(BaseStoreOwnPropertyInst)
+MARK_FIRST(BaseDefineOwnPropertyInst, Instruction)
+DEF_VALUE(DefineOwnPropertyInst, BaseDefineOwnPropertyInst)
+DEF_VALUE(StoreNewOwnPropertyInst, BaseDefineOwnPropertyInst)
+MARK_LAST(BaseDefineOwnPropertyInst)
 
 DEF_VALUE(DefineOwnGetterSetterInst, Instruction)
 

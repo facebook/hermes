@@ -170,7 +170,7 @@ function obj7() {
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
@@ -178,7 +178,7 @@ function obj7() {
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
@@ -192,9 +192,9 @@ function obj7() {
 // IRGEN-NEXT:%BB0:
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, null: null, "a": string, 1: number, 3: number, null: null, "b": string, 2: number, 2: number, null: null, "c": string, 3: number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
-// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 3: number, true: boolean
-// IRGEN-NEXT:       StoreOwnPropertyInst %1: undefined, %0: object, 2: number, true: boolean
+// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 3: number, true: boolean
+// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 2: number, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 

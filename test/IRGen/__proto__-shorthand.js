@@ -93,7 +93,7 @@ function protoShorthandMix2(func) {
 // CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS2.__proto__]: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS2.__proto__]: any
-// CHECK-NEXT:        StoreOwnPropertyInst %9: any, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %9: any, %6: object, "__proto__": string, true: boolean
 // CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 

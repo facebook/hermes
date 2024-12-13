@@ -901,8 +901,8 @@ void HBCISel::generateTryStoreGlobalPropertyStrictInst(
         objReg, valueReg, acquirePropertyWriteCacheIndex(Lit->getValue()), id);
 }
 
-void HBCISel::generateStoreOwnPropertyInst(
-    StoreOwnPropertyInst *Inst,
+void HBCISel::generateDefineOwnPropertyInst(
+    DefineOwnPropertyInst *Inst,
     BasicBlock *next) {
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());

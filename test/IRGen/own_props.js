@@ -21,7 +21,7 @@
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %3: object, "10": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %3: object, "11": string, true: boolean
-// CHECK-NEXT:       StoreOwnPropertyInst 3: number, %3: object, "10": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 3: number, %3: object, "10": string, true: boolean
 // CHECK-NEXT:       StoreStackInst %3: object, %1: any
 // CHECK-NEXT:  %8 = LoadStackInst (:any) %1: any
 // CHECK-NEXT:       ReturnInst %8: any

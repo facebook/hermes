@@ -41,9 +41,9 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<SwitchInst>(Inst) && opIndex > 0)
     return true;
 
-  // StoreOwnPropertyInst and StoreNewOwnPropertyInst.
-  if (auto *SOP = llvh::dyn_cast<BaseStoreOwnPropertyInst>(Inst)) {
-    if (opIndex == StoreOwnPropertyInst::PropertyIdx) {
+  // DefineOwnPropertyInst and StoreNewOwnPropertyInst.
+  if (auto *SOP = llvh::dyn_cast<BaseDefineOwnPropertyInst>(Inst)) {
+    if (opIndex == DefineOwnPropertyInst::PropertyIdx) {
       if (llvh::isa<StoreNewOwnPropertyInst>(Inst)) {
         // In StoreNewOwnPropertyInst the property name must be a literal.
         return true;
@@ -58,8 +58,8 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       }
     }
 
-    // StoreOwnPropertyInst's isEnumerable is a boolean constant.
-    if (opIndex == StoreOwnPropertyInst::IsEnumerableIdx)
+    // DefineOwnPropertyInst's isEnumerable is a boolean constant.
+    if (opIndex == DefineOwnPropertyInst::IsEnumerableIdx)
       return true;
 
     return false;

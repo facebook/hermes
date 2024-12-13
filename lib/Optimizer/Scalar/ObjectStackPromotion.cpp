@@ -108,7 +108,7 @@ bool tryPromoteObject(
       continue;
     }
 
-    if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(U)) {
+    if (auto *SOP = llvh::dyn_cast<DefineOwnPropertyInst>(U)) {
       if (SOP->getStoredValue() == alloc)
         return false;
       if (!isInLayout(SOP->getProperty()))
@@ -204,7 +204,7 @@ bool tryPromoteObject(
       continue;
     }
 
-    if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(U)) {
+    if (auto *SOP = llvh::dyn_cast<DefineOwnPropertyInst>(U)) {
       auto *replace = builder.createStoreStackInst(
           SOP->getStoredValue(),
           stackLocOfPropKey(llvh::cast<Literal>(SOP->getProperty())));

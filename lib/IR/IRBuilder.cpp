@@ -609,12 +609,12 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
   return createTryStoreGlobalPropertyInst(storedValue, property->getName());
 }
 
-StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
+DefineOwnPropertyInst *IRBuilder::createDefineOwnPropertyInst(
     Value *storedValue,
     Value *object,
     Value *property,
     PropEnumerable isEnumerable) {
-  auto SPI = new StoreOwnPropertyInst(
+  auto SPI = new DefineOwnPropertyInst(
       storedValue,
       object,
       property,

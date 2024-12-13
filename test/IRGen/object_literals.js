@@ -174,7 +174,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
-// CHECK-NEXT:       StoreOwnPropertyInst 4: number, %4: object, "d": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 4: number, %4: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
@@ -235,7 +235,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
-// CHECK-NEXT:       StoreOwnPropertyInst 4: number, %4: object, "test": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 4: number, %4: object, "test": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
@@ -255,7 +255,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS9.obj]: any
 // CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %9: object, %10: any
-// CHECK-NEXT:        StoreOwnPropertyInst 42: number, %9: object, "c": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 42: number, %9: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
@@ -272,7 +272,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreNewOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %4: object, "c": string, true: boolean
 // CHECK-NEXT:       StoreNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
-// CHECK-NEXT:       StoreOwnPropertyInst 10086: number, %4: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 10086: number, %4: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 

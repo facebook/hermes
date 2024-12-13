@@ -92,7 +92,7 @@ bool mergeStoresToObjectLiteral(
       builder.setInsertionPoint(I);
       // Patch in the correct value to the object.
       if (hasSeenNumericKey) {
-        builder.createStoreOwnPropertyInst(
+        builder.createDefineOwnPropertyInst(
             propVal, allocInst, propKey, IRBuilder::PropEnumerable::Yes);
       } else {
         builder.createPrStoreInst(

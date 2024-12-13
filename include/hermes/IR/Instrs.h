@@ -1657,12 +1657,12 @@ class TryStoreGlobalPropertyStrictInst : public TryStoreGlobalPropertyInst {
   }
 };
 
-class BaseStoreOwnPropertyInst : public Instruction {
-  BaseStoreOwnPropertyInst(const BaseStoreOwnPropertyInst &) = delete;
-  void operator=(const BaseStoreOwnPropertyInst &) = delete;
+class BaseDefineOwnPropertyInst : public Instruction {
+  BaseDefineOwnPropertyInst(const BaseDefineOwnPropertyInst &) = delete;
+  void operator=(const BaseDefineOwnPropertyInst &) = delete;
 
  protected:
-  explicit BaseStoreOwnPropertyInst(
+  explicit BaseDefineOwnPropertyInst(
       ValueKind kind,
       Value *storedValue,
       Value *object,
@@ -1692,8 +1692,8 @@ class BaseStoreOwnPropertyInst : public Instruction {
     return cast<LiteralBool>(getOperand(IsEnumerableIdx))->getValue();
   }
 
-  explicit BaseStoreOwnPropertyInst(
-      const BaseStoreOwnPropertyInst *src,
+  explicit BaseDefineOwnPropertyInst(
+      const BaseDefineOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -1709,39 +1709,39 @@ class BaseStoreOwnPropertyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseStoreOwnPropertyInst);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseDefineOwnPropertyInst);
   }
 };
 
-class StoreOwnPropertyInst : public BaseStoreOwnPropertyInst {
-  StoreOwnPropertyInst(const StoreOwnPropertyInst &) = delete;
-  void operator=(const StoreOwnPropertyInst &) = delete;
+class DefineOwnPropertyInst : public BaseDefineOwnPropertyInst {
+  DefineOwnPropertyInst(const DefineOwnPropertyInst &) = delete;
+  void operator=(const DefineOwnPropertyInst &) = delete;
 
  public:
-  explicit StoreOwnPropertyInst(
+  explicit DefineOwnPropertyInst(
       Value *storedValue,
       Value *object,
       Value *property,
       LiteralBool *isEnumerable)
-      : BaseStoreOwnPropertyInst(
-            ValueKind::StoreOwnPropertyInstKind,
+      : BaseDefineOwnPropertyInst(
+            ValueKind::DefineOwnPropertyInstKind,
             storedValue,
             object,
             property,
             isEnumerable) {}
 
-  explicit StoreOwnPropertyInst(
-      const StoreOwnPropertyInst *src,
+  explicit DefineOwnPropertyInst(
+      const DefineOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : BaseStoreOwnPropertyInst(src, operands) {}
+      : BaseDefineOwnPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::StoreOwnPropertyInstKind;
+    return kind == ValueKind::DefineOwnPropertyInstKind;
   }
 };
 
-class StoreNewOwnPropertyInst : public BaseStoreOwnPropertyInst {
+class StoreNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
   StoreNewOwnPropertyInst(const StoreNewOwnPropertyInst &) = delete;
   void operator=(const StoreNewOwnPropertyInst &) = delete;
 
@@ -1751,7 +1751,7 @@ class StoreNewOwnPropertyInst : public BaseStoreOwnPropertyInst {
       Value *object,
       Literal *property,
       LiteralBool *isEnumerable)
-      : BaseStoreOwnPropertyInst(
+      : BaseDefineOwnPropertyInst(
             ValueKind::StoreNewOwnPropertyInstKind,
             storedValue,
             object,
@@ -1769,7 +1769,7 @@ class StoreNewOwnPropertyInst : public BaseStoreOwnPropertyInst {
   explicit StoreNewOwnPropertyInst(
       const StoreNewOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : BaseStoreOwnPropertyInst(src, operands) {}
+      : BaseDefineOwnPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();

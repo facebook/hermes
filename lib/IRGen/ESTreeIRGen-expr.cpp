@@ -357,7 +357,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
       if (consecutive) {
         elements.push_back(value);
       } else {
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             value,
             allocArrayInst,
             variableLength ? cast<Value>(Builder.createLoadStackInst(nextIndex))
@@ -1516,7 +1516,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             key,
             IRBuilder::PropEnumerable::Yes);
       } else {
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             value, Obj, key, IRBuilder::PropEnumerable::Yes);
       }
       haveSeenComputedProp = true;
@@ -1558,7 +1558,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         // This value is going to be overwritten, but insert a placeholder in
         // order to maintain insertion order.
         if (haveSeenComputedProp) {
-          Builder.createStoreOwnPropertyInst(
+          Builder.createDefineOwnPropertyInst(
               Builder.getLiteralNull(),
               Obj,
               Key,
@@ -1626,7 +1626,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
           "IR can only be generated once");
       if (haveSeenComputedProp ||
           propValue->state == PropertyValue::Placeholder) {
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       } else {
         Builder.createStoreNewOwnPropertyInst(

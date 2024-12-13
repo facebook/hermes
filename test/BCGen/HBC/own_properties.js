@@ -7,7 +7,7 @@
 
 // RUN: %hermes -O0 -target=HBC -dump-lir %s | %FileCheckOrRegen --match-full-lines %s
 
-// Test that StoreNewOwnPropertyInst is lowered to StoreOwnPropertyInst when
+// Test that StoreNewOwnPropertyInst is lowered to DefineOwnPropertyInst when
 // the property name is a valid array index.
 // We use a computed key to avoid emitting AllocObjectLiteral.
 
@@ -49,6 +49,6 @@ function foo() {
 // CHECK-NEXT:  %9 = HBCLoadConstInst (:number) 4: number
 // CHECK-NEXT:        StoreNewOwnPropertyInst %9: number, %2: object, "999999999999999999999999": string, true: boolean
 // CHECK-NEXT:  %11 = HBCLoadConstInst (:number) 5: number
-// CHECK-NEXT:        StoreOwnPropertyInst %11: number, %2: object, 42: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %11: number, %2: object, 42: number, true: boolean
 // CHECK-NEXT:        ReturnInst %2: object
 // CHECK-NEXT:function_end

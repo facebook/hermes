@@ -36,7 +36,7 @@ var x = {
 // CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %"set 1"(): functionCode
 // CHECK-NEXT:        DefineOwnGetterSetterInst %8: object, %9: object, %4: object, "1": string, true: boolean
 // CHECK-NEXT:        StoreNewOwnPropertyInst null: null, %4: object, "b": string, true: boolean
-// CHECK-NEXT:        StoreOwnPropertyInst 12: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 12: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:        StorePropertyLooseInst %4: object, globalObject: object, "x": string
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %2: any
 // CHECK-NEXT:        ReturnInst %14: any

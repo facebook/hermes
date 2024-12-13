@@ -81,8 +81,8 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS1.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
-// CHECK-NEXT:       StoreOwnPropertyInst null: null, %6: object, "__proto__": string, true: boolean
-// CHECK-NEXT:       StoreOwnPropertyInst 42: number, %6: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst null: null, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 42: number, %6: object, "a": string, true: boolean
 // CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
