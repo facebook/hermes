@@ -477,7 +477,7 @@ eval("returnit()");
 )#",
       R"#(
 returnit test.js:4:20
-eval JavaScript:1:9
+eval :1:9
 global test.js:6:5
 global test.js:2:1
 (root) :0:0

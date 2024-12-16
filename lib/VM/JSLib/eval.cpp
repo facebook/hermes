@@ -73,7 +73,7 @@ CallResult<HermesValue> evalInEnvironment(
 
     auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
         std::move(buffer),
-        "JavaScript",
+        "",
         nullptr,
         compileFlags,
         scopeChain,

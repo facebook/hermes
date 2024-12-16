@@ -48,7 +48,7 @@ try {
 }
 //CHECK-LABEL: Error: EvalTest
 //CHECK-NEXT:    at throwit ({{.*}}stacktrace.js:43:37)
-//CHECK-NEXT:    at eval (JavaScript:1:8)
+//CHECK-NEXT:    at eval (:1:8)
 //CHECK-NEXT:    at global ({{.*}}stacktrace.js:45:7)
 
 function runAndPrint(f) {

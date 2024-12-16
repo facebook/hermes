@@ -269,7 +269,7 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   // additional native call frame.
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level4");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 2);
   ASSERT_EQ(frame.location.line, 3);
   frame = stackTrace.callFrameForIndex(frameIndex++);
@@ -283,7 +283,7 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   // native call frame.
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level3");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 2);
   ASSERT_EQ(frame.location.line, 7);
   frame = stackTrace.callFrameForIndex(frameIndex++);
@@ -300,19 +300,19 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   // "level1" frame.
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level2");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 2);
   ASSERT_EQ(frame.location.line, 11);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level1");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 2);
   ASSERT_EQ(frame.location.line, 16);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "global");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 2);
   ASSERT_EQ(frame.location.line, 19);
 
@@ -349,25 +349,25 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   // call frame.
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level3");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 3);
   ASSERT_EQ(frame.location.line, 3);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level2");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 3);
   ASSERT_EQ(frame.location.line, 7);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level1");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 3);
   ASSERT_EQ(frame.location.line, 11);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "global");
-  ASSERT_EQ(frame.location.fileName, "JavaScript");
+  ASSERT_EQ(frame.location.fileName, "");
   ASSERT_EQ(frame.location.fileId, 3);
   ASSERT_EQ(frame.location.line, 14);
 
@@ -397,7 +397,7 @@ TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
   EXPECT_EQ(scripts.size(), 1);
   EXPECT_EQ(scripts[0].line, 1);
   EXPECT_EQ(scripts[0].column, 1);
-  EXPECT_EQ(scripts[0].fileName, "JavaScript");
+  EXPECT_EQ(scripts[0].fileName, "");
 
   bool foundJavaScript = false;
   bool foundTestJs = false;
@@ -409,7 +409,7 @@ TEST_F(DebuggerAPITest, GetLoadedScriptsTest) {
   scripts = runtime->getDebugger().getLoadedScripts();
   EXPECT_EQ(scripts.size(), 2);
   for (auto script : scripts) {
-    if (script.fileName == "JavaScript") {
+    if (script.fileName == "") {
       EXPECT_EQ(script.line, 1);
       EXPECT_EQ(script.column, 1);
       foundJavaScript = true;
