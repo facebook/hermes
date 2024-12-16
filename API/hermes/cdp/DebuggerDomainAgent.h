@@ -126,7 +126,8 @@ class DebuggerDomainAgent : public DomainAgent {
 
   /// Handles Debugger.setBlackboxedRanges request
   void setBlackboxedRanges(const m::debugger::SetBlackboxedRangesRequest &req);
-
+  /// Handles Debugger.setBlackboxPatterns request
+  void setBlackboxPatterns(const m::debugger::SetBlackboxPatternsRequest &req);
   /// Handles Debugger.setPauseOnExceptions
   void setPauseOnExceptions(
       const m::debugger::SetPauseOnExceptionsRequest &req);
@@ -175,6 +176,14 @@ class DebuggerDomainAgent : public DomainAgent {
   std::optional<HermesBreakpointLocation> applyBreakpoint(
       CDPBreakpoint &breakpoint,
       debugger::ScriptID scriptID);
+
+  /// Optionally, holds a compiled regex pattern that is used to test if
+  /// script urls should be blackboxed.
+  /// See isLocationBlackboxed below for more details. Same as V8:
+  /// https://source.chromium.org/chromium/chromium/src/+/fef5d519bab86dbd712d76bfca5be90a6e03459c:v8/src/inspector/v8-debugger-agent-impl.cc;l=993-996
+  /// Matching using the compiled regex should be done with
+  /// ::hermes::regex::searchWithBytecode.
+  std::optional<std::vector<uint8_t>> compiledBlackboxPatternRegex_;
 
   /// A vector of 1-based positions per script id indicating where blackbox
   /// state changes using [from inclusive, to exclusive) pairs.
@@ -227,6 +236,7 @@ class DebuggerDomainAgent : public DomainAgent {
   ///   ... ]
   bool isLocationBlackboxed(
       debugger::ScriptID scriptID,
+      std::string scriptName,
       int lineNumber,
       int columnNumber);
   /// Checks whether the location of the top frame of the call stack is

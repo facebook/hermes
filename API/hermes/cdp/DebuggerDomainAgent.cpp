@@ -7,6 +7,10 @@
 
 #include "DebuggerDomainAgent.h"
 
+#include <hermes/Regex/Executor.h>
+#include <hermes/Regex/Regex.h>
+#include <hermes/Regex/RegexTraits.h>
+#include <hermes/Support/UTF8.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
 
 namespace facebook {
@@ -311,6 +315,49 @@ static inline bool blackboxRangeComparator(
   return a.second < b.second;
 }
 
+void DebuggerDomainAgent::setBlackboxPatterns(
+    const m::debugger::SetBlackboxPatternsRequest &req) {
+  if (req.patterns.empty()) {
+    compiledBlackboxPatternRegex_ = std::nullopt;
+    sendResponseToClient(m::makeOkResponse(req.id));
+    return;
+  }
+
+  std::string combinedPattern = u8"(";
+  for (auto &pattern : req.patterns) {
+    combinedPattern.append(pattern + u8"|");
+  }
+  combinedPattern.back() = u8')';
+
+  // We expect req.patterns to be encoded as UTF-8 in accordance with RFC-8259
+  // See comment in CDPAgent::handleCommand
+  std::vector<char16_t> combinedPatternUTF16;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(combinedPatternUTF16),
+      combinedPattern.data(),
+      combinedPattern.data() + combinedPattern.size());
+
+  ::hermes::regex::Regex<::hermes::regex::UTF16RegexTraits> blackboxPatternRegex{
+      combinedPatternUTF16,
+      // Use empty regex flags (not ignore case, not multiline). See
+      // https://source.chromium.org/chromium/chromium/src/+/41d42cec13ea567f461d98dfb04d641e30d6bb5b:v8/src/inspector/v8-debugger-agent-impl.cc;l=1726-1727;
+      {}};
+
+  // We expect the client to handle the regex validation on patterns before
+  // sending it to us.
+  // If it's not valid, we respond with an error allowing the client to handle
+  // that situation.
+  if (!blackboxPatternRegex.valid()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidParams, "Invalid regex pattern"));
+    return;
+  }
+
+  compiledBlackboxPatternRegex_ = blackboxPatternRegex.compile();
+
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
 void DebuggerDomainAgent::setBlackboxedRanges(
     const m::debugger::SetBlackboxedRangesRequest &req) {
   auto scriptID = std::stoull(req.scriptId);
@@ -341,8 +388,33 @@ void DebuggerDomainAgent::setBlackboxedRanges(
 
 bool DebuggerDomainAgent::isLocationBlackboxed(
     ScriptID scriptID,
+    std::string scriptName,
     int lineNumber,
     int columnNumber) {
+  if (compiledBlackboxPatternRegex_.has_value()) {
+    // We expect scriptName to be encoded as UTF-8 in accordance with RFC-8259
+    // See comment in CDPAgent::handleCommand
+    std::vector<char16_t> scriptNameUTF16;
+    ::hermes::convertUTF8WithSurrogatesToUTF16(
+        std::back_inserter(scriptNameUTF16),
+        scriptName.data(),
+        scriptName.data() + scriptName.size());
+
+    uint32_t searchStart = 0;
+    std::vector<::hermes::regex::CapturedRange> captures{};
+    ::hermes::regex::MatchRuntimeResult matchResult =
+        ::hermes::regex::searchWithBytecode(
+            *compiledBlackboxPatternRegex_,
+            scriptNameUTF16.data(),
+            searchStart,
+            scriptNameUTF16.size(),
+            &captures,
+            ::hermes::regex::constants::MatchFlagType::matchDefault);
+    if (matchResult == ::hermes::regex::MatchRuntimeResult::Match) {
+      return true;
+    }
+  }
+
   if (blackboxedRanges_.count(scriptID) == 0) {
     return false;
   }
@@ -392,7 +464,7 @@ bool DebuggerDomainAgent::isTopFrameLocationBlackboxed() {
       }
     }
   }
-  return isLocationBlackboxed(loc.fileId, loc.line, loc.column);
+  return isLocationBlackboxed(loc.fileId, loc.fileName, loc.line, loc.column);
 }
 
 void DebuggerDomainAgent::setPauseOnExceptions(
