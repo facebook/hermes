@@ -203,6 +203,12 @@ export type ESNode =
   | EnumSymbolBody
   | DeclaredNode
   | ObjectTypeInternalSlot
+  // Match
+  | MatchPattern
+  | MatchRestPattern
+  | MatchObjectPatternProperty
+  | MatchExpressionCase
+  | MatchStatementCase
   // JSX
   | JSXNode;
 
@@ -269,7 +275,8 @@ export type Statement =
   | TypeAlias
   | VariableDeclaration
   | WhileStatement
-  | WithStatement;
+  | WithStatement
+  | MatchStatement;
 
 // nodes that can be the direct parent of a statement
 export type StatementParentSingle =
@@ -478,6 +485,7 @@ export type Expression =
   | TypeCastExpression
   | AsExpression
   | AsConstExpression
+  | MatchExpression
   | JSXFragment
   | JSXElement;
 
@@ -1999,6 +2007,106 @@ export interface JSXText extends BaseNode {
 export interface JSXSpreadChild extends BaseNode {
   +type: 'JSXSpreadChild';
   +expression: Expression;
+}
+
+/************************************
+ * Match expressions and statements *
+ ************************************/
+
+export interface MatchExpression extends BaseNode {
+  +type: 'MatchExpression';
+  +argument: Expression;
+  +cases: $ReadOnlyArray<MatchExpressionCase>;
+}
+export interface MatchExpressionCase extends BaseNode {
+  +type: 'MatchExpressionCase';
+  +pattern: MatchPattern;
+  +body: Expression;
+  +guard: Expression | null;
+}
+
+export interface MatchStatement extends BaseNode {
+  +type: 'MatchStatement';
+  +argument: Expression;
+  +cases: $ReadOnlyArray<MatchStatementCase>;
+}
+export interface MatchStatementCase extends BaseNode {
+  +type: 'MatchStatementCase';
+  +pattern: MatchPattern;
+  +body: BlockStatement;
+  +guard: Expression | null;
+}
+
+/******************
+ * Match patterns *
+ ******************/
+
+export type MatchPattern =
+  | MatchOrPattern
+  | MatchAsPattern
+  | MatchWildcardPattern
+  | MatchLiteralPattern
+  | MatchUnaryPattern
+  | MatchIdentifierPattern
+  | MatchMemberPattern
+  | MatchBindingPattern
+  | MatchObjectPattern
+  | MatchArrayPattern;
+
+export interface MatchOrPattern extends BaseNode {
+  +type: 'MatchOrPattern';
+  +patterns: $ReadOnlyArray<MatchPattern>;
+}
+export interface MatchAsPattern extends BaseNode {
+  +type: 'MatchAsPattern';
+  +pattern: MatchPattern;
+  +target: Identifier | MatchBindingPattern;
+}
+export interface MatchWildcardPattern extends BaseNode {
+  +type: 'MatchWildcardPattern';
+}
+export interface MatchLiteralPattern extends BaseNode {
+  +type: 'MatchLiteralPattern';
+  +literal: Literal;
+}
+export interface MatchUnaryPattern extends BaseNode {
+  +type: 'MatchUnaryPattern';
+  +argument: Literal;
+  +operator: '-' | '+';
+}
+export interface MatchIdentifierPattern extends BaseNode {
+  +type: 'MatchIdentifierPattern';
+  +id: Identifier;
+}
+export interface MatchMemberPattern extends BaseNode {
+  +type: 'MatchMemberPattern';
+  +base: MatchIdentifierPattern | MatchMemberPattern;
+  +property: Identifier | StringLiteral | NumericLiteral | BigIntLiteral;
+}
+export interface MatchBindingPattern extends BaseNode {
+  +type: 'MatchBindingPattern';
+  +id: Identifier;
+  +kind: 'let' | 'const' | 'var';
+}
+export interface MatchObjectPattern extends BaseNode {
+  +type: 'MatchObjectPattern';
+  +properties: $ReadOnlyArray<MatchObjectPatternProperty>;
+  +rest: MatchRestPattern | null;
+}
+export interface MatchObjectPatternProperty extends BaseNode {
+  +type: 'MatchObjectPatternProperty';
+  +key: Identifier | StringLiteral | NumericLiteral | BigIntLiteral;
+  +pattern: MatchPattern;
+  +shorthand: boolean;
+}
+export interface MatchArrayPattern extends BaseNode {
+  +type: 'MatchArrayPattern';
+  +elements: $ReadOnlyArray<MatchPattern>;
+  +rest: MatchRestPattern | null;
+}
+export interface MatchRestPattern extends BaseNode {
+  +type: 'MatchRestPattern';
+  +argument: MatchBindingPattern | null;
 }
 
 /******************************************************
