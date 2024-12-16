@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<7e121aac8a1883c75ff45194ba469176>>
+// @generated SignedSource<<1284c402aedd087ebdf70e9e76596f1c>>
 
 #pragma once
 
@@ -35,6 +35,7 @@ struct RemoveBreakpointRequest;
 struct ResumeRequest;
 struct ResumedNotification;
 struct Scope;
+using ScriptLanguage = std::string;
 struct ScriptParsedNotification;
 struct ScriptPosition;
 struct SetBlackboxPatternsRequest;
@@ -1196,6 +1197,7 @@ struct debugger::ScriptParsedNotification : public Notification {
   std::optional<bool> hasSourceURL;
   std::optional<bool> isModule;
   std::optional<long long> length;
+  std::optional<debugger::ScriptLanguage> scriptLanguage;
 };
 
 struct heapProfiler::AddHeapSnapshotChunkNotification : public Notification {
