@@ -696,8 +696,25 @@ ESTREE_NODE_2_ARGS(
   NodePtr, id, false, // Identifier
   NodeLabel, kind, false // "let" | "const"
 )
+ESTREE_NODE_2_ARGS(
+  MatchObjectPattern, MatchPattern,
+  NodeList, properties, false, // [ MatchObjectPatternProperty ]
+  NodePtr, rest, true // MatchRestPattern | null
+)
 
 ESTREE_LAST(MatchPattern)
+
+// Match pattern auxiliary nodes
+ESTREE_NODE_3_ARGS(
+  MatchObjectPatternProperty, Base,
+  NodePtr, key, false, // Identifier | Literal
+  NodePtr, pattern, false, // MatchPattern
+  NodeBoolean, shorthand, false // boolean
+)
+ESTREE_NODE_1_ARGS(
+  MatchRestPattern, Base,
+  NodePtr, argument, true // MatchBindingPattern | null
+)
 
 #endif
 
