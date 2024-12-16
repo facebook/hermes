@@ -61,6 +61,11 @@ type AnalyzeOptions = $ReadOnly<{
    * Defaults to `true`.
    */
   enableExperimentalComponentSyntax?: boolean,
+
+  /**
+   * Support experimental Flow match syntax
+   */
+  enableExperimentalFlowMatchSyntax?: boolean,
 }>;
 type PartialAnalyzeOptions = $ReadOnly<Partial<AnalyzeOptions>>;
 

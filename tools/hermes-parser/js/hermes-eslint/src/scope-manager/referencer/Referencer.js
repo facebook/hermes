@@ -60,6 +60,12 @@ import type {
   JSXOpeningElement,
   JSXTagNameExpression,
   LabeledStatement,
+  MatchAsPattern,
+  MatchBindingPattern,
+  MatchExpressionCase,
+  MatchMemberPattern,
+  MatchObjectPatternProperty,
+  MatchStatementCase,
   MemberExpression,
   MetaProperty,
   NewExpression,
@@ -939,6 +945,61 @@ class Referencer extends Visitor {
   TypeCastExpression(node: TypeCastExpression): void {
     this.visit(node.expression);
     this.visitType(node.typeAnnotation);
+  }
+
+  //
+  // Match
+  //
+
+  MatchExpressionCase(node: MatchExpressionCase): void {
+    this.scopeManager.nestMatchCaseScope(node);
+    this.visitChildren(node);
+    this.close(node);
+  }
+
+  MatchStatementCase(node: MatchStatementCase): void {
+    this.scopeManager.nestMatchCaseScope(node);
+    this.visitChildren(node);
+    this.close(node);
+  }
+
+  MatchBindingPattern(node: MatchBindingPattern): void {
+    const {id, kind} = node;
+    const variableTargetScope =
+      kind === 'var' ? this.currentScope().variableScope : this.currentScope();
+
+    variableTargetScope.defineIdentifier(
+      id,
+      new VariableDefinition(id, node, node),
+    );
+  }
+
+  MatchMemberPattern(node: MatchMemberPattern): void {
+    this.visit(node.base);
+    // Skip `node.property`
+  }
+
+  MatchObjectPatternProperty(node: MatchObjectPatternProperty): void {
+    this.visit(node.pattern);
+    // Skip `node.key`
+  }
+
+  MatchAsPattern(node: MatchAsPattern): void {
+    const {pattern, target} = node;
+    this.visit(pattern);
+    switch (target.type) {
+      case 'Identifier': {
+        this.currentScope().defineIdentifier(
+          target,
+          new VariableDefinition(target, node, node),
+        );
+        break;
+      }
+      case 'MatchBindingPattern': {
+        this.visit(target);
+        break;
+      }
+    }
   }
 }
 
