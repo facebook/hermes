@@ -48,7 +48,7 @@ set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 
 if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(CMAKE_OSX_SYSROOT "macosx")
-  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
   set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   set(CMAKE_HAVE_THREADS_LIBRARY 1)
@@ -279,9 +279,6 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
 set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
-set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
-  "Whether to build a DWARF debugging symbols bundle")
-
 set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 
 set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
@@ -319,10 +316,6 @@ if(HERMES_CHECK_NATIVE_STACK)
     )
   endif()
   add_definitions(-DHERMES_CHECK_NATIVE_STACK)
-endif()
-
-if(HERMES_BUILD_APPLE_DSYM)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
