@@ -54,6 +54,7 @@ function initHermesParserWASM() {
     'number',
     'number',
     'number',
+    'number',
   ]);
 
   hermesParseResult_free = HermesParserWASM.cwrap(
@@ -124,6 +125,7 @@ export function parse(source: string, options: ParserOptions): HermesNode {
       sourceBuffer.length + 1,
       options.flow === 'detect',
       options.enableExperimentalComponentSyntax,
+      options.enableExperimentalFlowMatchSyntax,
       options.tokens,
       options.allowReturnOutsideFunction,
     );
