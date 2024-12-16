@@ -177,6 +177,11 @@ class DebuggerDomainAgent : public DomainAgent {
       CDPBreakpoint &breakpoint,
       debugger::ScriptID scriptID);
 
+  /// Holds a boolean that determines if scripts without a script url
+  /// (e.g. anonymous scripts) should be blackboxed.
+  /// Same as V8:
+  /// https://source.chromium.org/chromium/chromium/src/+/fef5d519bab86dbd712d76bfca5be90a6e03459c:v8/src/inspector/v8-debugger-agent-impl.cc;l=997-999
+  bool blackboxAnonymousScripts_ = false;
   /// Optionally, holds a compiled regex pattern that is used to test if
   /// script urls should be blackboxed.
   /// See isLocationBlackboxed below for more details. Same as V8:

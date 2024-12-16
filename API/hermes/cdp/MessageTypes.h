@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<8c4708c816bd7ab749ff48ba06986659>>
+// @generated SignedSource<<7e121aac8a1883c75ff45194ba469176>>
 
 #pragma once
 
@@ -664,6 +664,7 @@ struct debugger::SetBlackboxPatternsRequest : public Request {
   void accept(RequestHandler &handler) const override;
 
   std::vector<std::string> patterns;
+  std::optional<bool> skipAnonymous;
 };
 
 struct debugger::SetBlackboxedRangesRequest : public Request {
