@@ -1272,6 +1272,7 @@ class JSParserImpl {
   Optional<ESTree::MatchBindingPatternNode *> parseMatchBindingPatternFlow();
   Optional<ESTree::Node *> parseMatchRestPatternFlow();
   Optional<ESTree::Node *> parseMatchObjectPatternFlow();
+  Optional<ESTree::Node *> parseMatchArrayPatternFlow();
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);
