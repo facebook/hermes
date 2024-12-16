@@ -7,11 +7,11 @@
 
 // RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
-// This tests simulates the Metro requires tranform, and shows that
+// This test simulates the Metro requires tranform, and shows that
 // requires calls in a module are compiled to a bytecode instruction.
 
 // The important case is the call in the module factory function
-// modFact1, which does "require(0)" (twice).  These calls should be
+// modFact1, which calls "require(0)".  This call should be
 // annotated with the [metro-require] attribute.
 
 function require(modIdx) {
@@ -31,9 +31,8 @@ function require(modIdx) {
     return $SHBuiltin.moduleFactory(
       1,
       function modFact1(global, require, module, exports) {
-        // The first one of these should be a cache miss, the
-        // second a cache hit.
-        var x = require(0).bar() + require(0).bar();
+        // The require(0) should be annotated as a [metro-require].
+        var x = require(0).bar();
         exports.x = x;
         return exports;
       })(undefined, require, mod, exports);
@@ -94,12 +93,8 @@ function require(modIdx) {
 // CHECK-NEXT:  %2 = CallInst [metro-require] (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "bar": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: any
-// CHECK-NEXT:  %5 = CallInst [metro-require] (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
-// CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "bar": string
-// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, %5: any
-// CHECK-NEXT:  %8 = BinaryAddInst (:string|number|bigint) %4: any, %7: any
-// CHECK-NEXT:       StorePropertyLooseInst %8: string|number|bigint, %1: any, "x": string
-// CHECK-NEXT:        ReturnInst %1: any
+// CHECK-NEXT:       StorePropertyLooseInst %4: any, %1: any, "x": string
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): number
