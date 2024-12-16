@@ -659,6 +659,19 @@ ESTREE_NODE_3_ARGS(
     NodePtr, guard, true // Expression | null
 )
 
+// Match expression
+ESTREE_NODE_2_ARGS(
+    MatchExpression, Base,
+    NodePtr, argument, false, // Expression
+    NodeList, cases, false // [ MatchExpressionCase ]
+)
+ESTREE_NODE_3_ARGS(
+    MatchExpressionCase, Base,
+    NodePtr, pattern, false, // MatchPattern
+    NodePtr, body, false, // Expression
+    NodePtr, guard, true // Expression | null
+)
+
 #endif
 
 // ================================================

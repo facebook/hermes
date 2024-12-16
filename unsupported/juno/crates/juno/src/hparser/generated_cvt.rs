@@ -1080,6 +1080,30 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MatchStatementCase::build_template(gc, template)
         }
+        NodeKind::MatchExpression => {
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_MatchExpression_argument(n));
+          let cases = cvt_node_list(cvt, gc, hermes_get_MatchExpression_cases(n));
+          let mut template = ast::template::MatchExpression {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+                  cases,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchExpression::build_template(gc, template)
+        }
+        NodeKind::MatchExpressionCase => {
+          let pattern = cvt_node_ptr(cvt, gc, hermes_get_MatchExpressionCase_pattern(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_MatchExpressionCase_body(n));
+          let guard = cvt_node_ptr_opt(cvt, gc, hermes_get_MatchExpressionCase_guard(n));
+          let mut template = ast::template::MatchExpressionCase {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  pattern,
+                  body,
+                  guard,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchExpressionCase::build_template(gc, template)
+        }
         NodeKind::JSXIdentifier => {
           let name = cvt.cvt_label(gc, hermes_get_JSXIdentifier_name(n));
           let mut template = ast::template::JSXIdentifier {

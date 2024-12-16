@@ -2364,6 +2364,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
         // assume that the function uses 'arguments'.
         mayContainArrowFunctionsUsingArguments_ = true;
       }
+#if HERMES_PARSE_FLOW
+      if (context_.getParseFlow() && context_.getParseFlowMatch() &&
+          checkMaybeFlowMatch()) {
+        return parseMatchCallOrMatchExpressionFlow();
+      }
+#endif
       auto *res = setLocation(
           tok_,
           tok_,
@@ -3836,8 +3842,13 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
   if (!optExpr)
     return None;
-  auto *expr = optExpr.getValue();
 
+  return parseLeftHandSideExpressionTail(startLoc, optExpr.getValue());
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpressionTail(
+    SMLoc startLoc,
+    ESTree::Node *expr) {
   bool optional = checkAndEat(TokenKind::questiondot);
   bool seenOptionalChain = optional ||
       (expr->getParens() == 0 &&
