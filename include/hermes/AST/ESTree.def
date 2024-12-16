@@ -103,6 +103,16 @@ ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)
 
+#if HERMES_PARSE_FLOW
+
+ESTREE_NODE_2_ARGS(
+    MatchStatement, Statement,
+    NodePtr, argument, false, // Expression
+    NodeList, cases, false // [ MatchStatementCase ]
+)
+
+#endif
+
 ESTREE_FIRST(LoopStatement, Statement)
 ESTREE_NODE_2_ARGS(
     WhileStatement,
@@ -634,6 +644,23 @@ ESTREE_NODE_2_ARGS(
     NodePtr, right, false)         // Expression
 
 ESTREE_LAST(Pattern)
+
+// ================================================
+
+// Flow match =====================================
+
+#if HERMES_PARSE_FLOW
+
+// Match statement
+ESTREE_NODE_3_ARGS(
+    MatchStatementCase, Base,
+    NodePtr, pattern, false, // MatchPattern
+    NodePtr, body, false, // BlockStatement
+    NodePtr, guard, true // Expression | null
+)
+
+#endif
+
 // ================================================
 
 // JSX ============================================

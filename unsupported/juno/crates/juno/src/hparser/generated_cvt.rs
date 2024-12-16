@@ -150,6 +150,17 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::HookDeclaration::build_template(gc, template)
         }
+        NodeKind::MatchStatement => {
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_MatchStatement_argument(n));
+          let cases = cvt_node_list(cvt, gc, hermes_get_MatchStatement_cases(n));
+          let mut template = ast::template::MatchStatement {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+                  cases,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchStatement::build_template(gc, template)
+        }
         NodeKind::WhileStatement => {
           let body = cvt_node_ptr(cvt, gc, hermes_get_WhileStatement_body(n));
           let test = cvt_node_ptr(cvt, gc, hermes_get_WhileStatement_test(n));
@@ -1055,6 +1066,19 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           };
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::AssignmentPattern::build_template(gc, template)
+        }
+        NodeKind::MatchStatementCase => {
+          let pattern = cvt_node_ptr(cvt, gc, hermes_get_MatchStatementCase_pattern(n));
+          let body = cvt_node_ptr(cvt, gc, hermes_get_MatchStatementCase_body(n));
+          let guard = cvt_node_ptr_opt(cvt, gc, hermes_get_MatchStatementCase_guard(n));
+          let mut template = ast::template::MatchStatementCase {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  pattern,
+                  body,
+                  guard,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchStatementCase::build_template(gc, template)
         }
         NodeKind::JSXIdentifier => {
           let name = cvt.cvt_label(gc, hermes_get_JSXIdentifier_name(n));
