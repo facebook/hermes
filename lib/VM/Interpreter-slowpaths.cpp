@@ -954,11 +954,6 @@ ExecutionStatus doCallRequireSlowPath_RJS(
     RuntimeModule *runtimeModule) {
   uint32_t modIndex = ip->iCallRequire.op3;
 
-  struct : public Locals {
-    PinnedValue<> modExport;
-  } lv;
-  LocalsRAII lraii{runtime, &lv};
-
   // The value should be a Callable, or else we raise an error (as
   // Interpreter::handleCallSlowPath does).
   const auto requireFunc = Handle<>(&O2REG(CallRequire));
@@ -974,11 +969,11 @@ ExecutionStatus doCallRequireSlowPath_RJS(
       HermesValue::encodeTrustedNumberValue(modIndex));
   if (LLVM_UNLIKELY(modExport == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  lv.modExport = modExport->get();
-  runtimeModule->setModuleExport(runtime, modIndex, modExport->get());
+  O1REG(CallRequire) = modExport->get();
+  runtimeModule->setModuleExport(
+      runtime, modIndex, Handle<>(&O1REG(CallRequire)));
   // Whether or not the caching above succeeded, write the module export
   // to the return register.
-  O1REG(CallRequire) = lv.modExport.get();
   return ExecutionStatus::RETURNED;
 }
 

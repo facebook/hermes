@@ -397,8 +397,7 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// This may fail if \p modIndex is outside current capacity
   /// of the cache, and attempts to reallocate it fail.  If that occurs,
   /// the array size will remain unchanged.
-  void
-  setModuleExport(Runtime &runtime, uint32_t modIndex, HermesValue modExport);
+  void setModuleExport(Runtime &runtime, uint32_t modIndex, Handle<> modExport);
 
  private:
   /// Import the string table from the supplied module.

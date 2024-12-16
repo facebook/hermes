@@ -365,7 +365,7 @@ size_t RuntimeModule::additionalMemorySize() const {
 void RuntimeModule::setModuleExport(
     Runtime &runtime,
     uint32_t modIndex,
-    HermesValue modExport) {
+    Handle<> modExport) {
   module_export_cache::set(runtime, moduleExports_, modIndex, modExport);
 }
 

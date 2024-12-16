@@ -23,14 +23,15 @@ namespace hermes::vm {
 namespace module_export_cache {
 
 /// Attempts to set the module export for module \p modIndex to \p modExport.
-/// This may fail if \p modIndex is outside current capacity
-/// of the cache, and attempts to reallocate it fail.  If that occurs,
-/// the array size will remain unchanged.
+/// If if \p modIndex is outside current capacity of \p exports,
+/// attempts to reallocate \p exports to hold \p modIndex.  If that
+/// succeeds, \p exports is updated to point to the new ArrayStorage.
+/// If the reallocation fails, the array size will remain unchanged.
 void set(
     Runtime &runtime,
     ArrayStorageBase<HermesValue> *&exports,
     uint32_t modIndex,
-    HermesValue modExport);
+    Handle<> modExport);
 
 /// Returns the module export for module \p modIndex.  This will be
 /// empty if that module has not yet been initialized.

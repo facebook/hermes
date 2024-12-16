@@ -505,7 +505,7 @@ extern "C" SHLegacyValue _sh_ljs_callRequire(
         getRuntime(shr),
         reinterpret_cast<ArrayStorage *&>(*exportCache),
         modIndex,
-        *lv.modExport);
+        lv.modExport);
 
     // Whether or not the caching above succeeded, return the module export.
     return lv.modExport.get();

@@ -15,9 +15,10 @@ namespace hermes::vm {
 
 namespace {
 
-/// Attempts to ensure that moduleExports_ covers the index \p modIndex.
+/// Attempts to ensure that \p exports covers the index \p modIndex.
 /// If successful:
-///   Grows the array by at least a factor of 2 when it grows.
+///   Grows the array by at least a factor of 2 when it grows
+///   If grows, writes the new array pointer back to \p exports.
 ///   Fills new elements with the empty HermesValue.
 ///   Returns true.
 /// If unsuccessful:
@@ -56,7 +57,7 @@ bool ensureModuleExportCovered(
     PinnedValue<ArrayStorage> modExports;
   } lv;
   LocalsRAII lraii{runtime, &lv};
-  lv.modExports = reinterpret_cast<ArrayStorage *>(exports);
+  lv.modExports = exports;
   MutableHandle<ArrayStorage> modExportsHandle(lv.modExports);
   // If the new size is greater than the capacity, resize will attempt to
   // double the capacity, preventing frequent re-allocations.
@@ -78,9 +79,9 @@ void module_export_cache::set(
     Runtime &runtime,
     ArrayStorage *&exports,
     uint32_t modIndex,
-    HermesValue modExport) {
+    Handle<> modExport) {
   if (LLVM_LIKELY(ensureModuleExportCovered(runtime, exports, modIndex))) {
-    exports->set(modIndex, modExport, runtime.getHeap());
+    exports->set(modIndex, *modExport, runtime.getHeap());
   }
 }
 
