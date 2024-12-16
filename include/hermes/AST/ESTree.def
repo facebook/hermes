@@ -672,6 +672,33 @@ ESTREE_NODE_3_ARGS(
     NodePtr, guard, true // Expression | null
 )
 
+// Match patterns
+ESTREE_FIRST(MatchPattern, Base)
+
+ESTREE_NODE_0_ARGS(
+  MatchWildcardPattern, MatchPattern
+)
+ESTREE_NODE_1_ARGS(
+  MatchLiteralPattern, MatchPattern,
+  NodePtr, literal, false // Literal
+)
+ESTREE_NODE_2_ARGS(
+  MatchUnaryPattern, MatchPattern,
+  NodePtr, argument, false, // Literal
+  NodeLabel, operator, false // "-" | "+"
+)
+ESTREE_NODE_1_ARGS(
+  MatchIdentifierPattern, MatchPattern,
+  NodePtr, id, false // Identifier
+)
+ESTREE_NODE_2_ARGS(
+  MatchBindingPattern, MatchPattern,
+  NodePtr, id, false, // Identifier
+  NodeLabel, kind, false // "let" | "const"
+)
+
+ESTREE_LAST(MatchPattern)
+
 #endif
 
 // ================================================

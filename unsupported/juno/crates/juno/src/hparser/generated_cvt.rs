@@ -1104,6 +1104,53 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MatchExpressionCase::build_template(gc, template)
         }
+        NodeKind::MatchWildcardPattern => {
+          let mut template = ast::template::MatchWildcardPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchWildcardPattern::build_template(gc, template)
+        }
+        NodeKind::MatchLiteralPattern => {
+          let literal = cvt_node_ptr(cvt, gc, hermes_get_MatchLiteralPattern_literal(n));
+          let mut template = ast::template::MatchLiteralPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  literal,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchLiteralPattern::build_template(gc, template)
+        }
+        NodeKind::MatchUnaryPattern => {
+          let argument = cvt_node_ptr(cvt, gc, hermes_get_MatchUnaryPattern_argument(n));
+          let operator = cvt.cvt_label(gc, hermes_get_MatchUnaryPattern_operator(n));
+          let mut template = ast::template::MatchUnaryPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  argument,
+                  operator,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchUnaryPattern::build_template(gc, template)
+        }
+        NodeKind::MatchIdentifierPattern => {
+          let id = cvt_node_ptr(cvt, gc, hermes_get_MatchIdentifierPattern_id(n));
+          let mut template = ast::template::MatchIdentifierPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchIdentifierPattern::build_template(gc, template)
+        }
+        NodeKind::MatchBindingPattern => {
+          let id = cvt_node_ptr(cvt, gc, hermes_get_MatchBindingPattern_id(n));
+          let kind = cvt.cvt_label(gc, hermes_get_MatchBindingPattern_kind(n));
+          let mut template = ast::template::MatchBindingPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  id,
+                  kind,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchBindingPattern::build_template(gc, template)
+        }
         NodeKind::JSXIdentifier => {
           let name = cvt.cvt_label(gc, hermes_get_JSXIdentifier_name(n));
           let mut template = ast::template::JSXIdentifier {

@@ -115,6 +115,13 @@ pub enum NodeKind {
     MatchStatementCase,
     MatchExpression,
     MatchExpressionCase,
+    _MatchPatternFirst,
+    MatchWildcardPattern,
+    MatchLiteralPattern,
+    MatchUnaryPattern,
+    MatchIdentifierPattern,
+    MatchBindingPattern,
+    _MatchPatternLast,
     _JSXFirst,
     JSXIdentifier,
     JSXMemberExpression,
@@ -588,6 +595,16 @@ extern "C" {
     pub fn hermes_get_MatchExpressionCase_pattern(node: NodePtr) -> NodePtr;
     pub fn hermes_get_MatchExpressionCase_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_MatchExpressionCase_guard(node: NodePtr) -> NodePtrOpt;
+    // MatchLiteralPattern
+    pub fn hermes_get_MatchLiteralPattern_literal(node: NodePtr) -> NodePtr;
+    // MatchUnaryPattern
+    pub fn hermes_get_MatchUnaryPattern_argument(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_MatchUnaryPattern_operator(node: NodePtr) -> NodeLabel;
+    // MatchIdentifierPattern
+    pub fn hermes_get_MatchIdentifierPattern_id(node: NodePtr) -> NodePtr;
+    // MatchBindingPattern
+    pub fn hermes_get_MatchBindingPattern_id(node: NodePtr) -> NodePtr;
+    pub fn hermes_get_MatchBindingPattern_kind(node: NodePtr) -> NodeLabel;
     // JSXIdentifier
     pub fn hermes_get_JSXIdentifier_name(node: NodePtr) -> NodeLabel;
     // JSXMemberExpression

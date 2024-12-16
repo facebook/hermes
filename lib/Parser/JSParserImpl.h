@@ -334,6 +334,7 @@ class JSParserImpl {
   UniqueString *rendersStarOperator_;
 
   UniqueString *matchIdent_;
+  UniqueString *underscoreIdent_;
 #endif
 
 #if HERMES_PARSE_TS
@@ -1266,6 +1267,9 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseMatchExpressionFlow(
       SMLoc start,
       ESTree::Node *argument);
+  Optional<ESTree::Node *> parseMatchPatternFlow();
+  Optional<ESTree::IdentifierNode *> parseMatchBindingIdentifierFlow();
+  Optional<ESTree::MatchBindingPatternNode *> parseMatchBindingPatternFlow();
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);

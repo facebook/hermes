@@ -857,7 +857,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseMatchStatementFlow(Param param) {
   while (!check(TokenKind::r_brace)) {
     SMLoc caseStartLoc = tok_->getStartLoc();
 
-    auto optPattern = parseExpression(); // TODO:match: parse match patterns
+    auto optPattern = parseMatchPatternFlow();
     if (!optPattern)
       return None;
 
@@ -954,7 +954,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
   while (!check(TokenKind::r_brace)) {
     SMLoc caseStartLoc = tok_->getStartLoc();
 
-    auto optPattern = parseExpression(); // TODO:match: parse match patterns
+    auto optPattern = parseMatchPatternFlow();
     if (!optPattern)
       return None;
 
@@ -1001,6 +1001,186 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
       startLoc,
       endLoc,
       new (context_) ESTree::MatchExpressionNode(argument, std::move(cases)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchPatternFlow() {
+  switch (tok_->getKind()) {
+    case TokenKind::rw_null: {
+      auto *lit =
+          setLocation(tok_, tok_, new (context_) ESTree::NullLiteralNode());
+      auto *pat = setLocation(
+          tok_, tok_, new (context_) ESTree::MatchLiteralPatternNode(lit));
+      advance(JSLexer::AllowDiv);
+      return pat;
+    }
+
+    case TokenKind::rw_true:
+    case TokenKind::rw_false: {
+      auto *lit = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::BooleanLiteralNode(
+              tok_->getKind() == TokenKind::rw_true));
+      auto *pat = setLocation(
+          tok_, tok_, new (context_) ESTree::MatchLiteralPatternNode(lit));
+      advance(JSLexer::AllowDiv);
+      return pat;
+    }
+
+    case TokenKind::numeric_literal: {
+      auto *lit = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::NumericLiteralNode(tok_->getNumericLiteral()));
+      auto *pat = setLocation(
+          tok_, tok_, new (context_) ESTree::MatchLiteralPatternNode(lit));
+      advance(JSLexer::AllowDiv);
+      return pat;
+    }
+
+    case TokenKind::bigint_literal: {
+      auto *lit = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
+      auto *pat = setLocation(
+          tok_, tok_, new (context_) ESTree::MatchLiteralPatternNode(lit));
+      advance(JSLexer::AllowDiv);
+      return pat;
+    }
+
+    case TokenKind::string_literal: {
+      auto *lit = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
+      auto *pat = setLocation(
+          tok_, tok_, new (context_) ESTree::MatchLiteralPatternNode(lit));
+      advance(JSLexer::AllowDiv);
+      return pat;
+    }
+
+    case TokenKind::identifier: {
+      if (check(underscoreIdent_)) {
+        auto *pat = setLocation(
+            tok_, tok_, new (context_) ESTree::MatchWildcardPatternNode());
+        advance(JSLexer::AllowDiv);
+        return pat;
+      }
+      if (check(letIdent_)) {
+        auto pat = parseMatchBindingPatternFlow();
+        if (!pat)
+          return None;
+        return pat.getValue();
+      }
+      auto *ident = setLocation(
+          tok_,
+          tok_,
+          new (context_)
+              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+      auto *pat = setLocation(
+          tok_, tok_, new (context_) ESTree::MatchIdentifierPatternNode(ident));
+      advance(JSLexer::AllowDiv);
+      return pat;
+    }
+
+    case TokenKind::plus:
+    case TokenKind::minus: {
+      UniqueString *op = getTokenIdent(tok_->getKind());
+      SMLoc startLoc = advance().Start;
+
+      ESTree::Node *argument;
+      switch (tok_->getKind()) {
+        case TokenKind::numeric_literal: {
+          argument = setLocation(
+              tok_,
+              tok_,
+              new (context_)
+                  ESTree::NumericLiteralNode(tok_->getNumericLiteral()));
+          advance(JSLexer::AllowDiv);
+          break;
+        }
+        case TokenKind::bigint_literal: {
+          argument = setLocation(
+              tok_,
+              tok_,
+              new (context_)
+                  ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
+          advance(JSLexer::AllowDiv);
+          break;
+        }
+        default:
+          error(tok_->getStartLoc(), "invalid match unary pattern argument");
+          return None;
+      }
+      return setLocation(
+          startLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::MatchUnaryPatternNode(argument, op));
+    }
+
+    case TokenKind::rw_const:
+    case TokenKind::rw_var: {
+      auto pat = parseMatchBindingPatternFlow();
+      if (!pat)
+        return None;
+      return pat.getValue();
+    }
+
+    case TokenKind::l_paren: {
+      SMLoc startLoc = advance().Start;
+      auto optPattern = parseMatchPatternFlow();
+      if (!optPattern)
+        return None;
+
+      if (!eat(
+              TokenKind::r_paren,
+              JSLexer::AllowDiv,
+              "at end of a match pattern group",
+              "location of '('",
+              startLoc))
+        return None;
+
+      return optPattern.getValue();
+    }
+
+    default:
+      error(tok_->getStartLoc(), "invalid match pattern");
+      return None;
+  }
+}
+
+Optional<ESTree::IdentifierNode *>
+JSParserImpl::parseMatchBindingIdentifierFlow() {
+  UniqueString *id = tok_->getResWordOrIdentifier();
+  TokenKind kind = tok_->getKind();
+  if (!validateBindingIdentifier(Param{}, tok_->getSourceRange(), id, kind))
+    return None;
+  advance();
+  return setLocation(
+      tok_, tok_, new (context_) ESTree::IdentifierNode(id, nullptr, false));
+}
+
+Optional<ESTree::MatchBindingPatternNode *>
+JSParserImpl::parseMatchBindingPatternFlow() {
+  assert(checkN(TokenKind::rw_const, TokenKind::rw_var, letIdent_));
+  auto kind = tok_->getResWordOrIdentifier();
+  SMLoc startLoc = advance().Start;
+  if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+    errorExpected(
+        TokenKind::identifier,
+        "in match binding pattern",
+        "start of binding pattern",
+        startLoc);
+  }
+  auto optIdent = parseMatchBindingIdentifierFlow();
+  if (!optIdent)
+    return None;
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::MatchBindingPatternNode(optIdent.getValue(), kind));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
