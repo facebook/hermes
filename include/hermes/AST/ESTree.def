@@ -706,6 +706,15 @@ ESTREE_NODE_2_ARGS(
   NodeList, elements, false, // [ MatchPattern ]
   NodePtr, rest, true // MatchRestPattern | null
 )
+ESTREE_NODE_1_ARGS(
+  MatchOrPattern, MatchPattern,
+  NodeList, patterns, false // [ MatchPattern ]
+)
+ESTREE_NODE_2_ARGS(
+  MatchAsPattern, MatchPattern,
+  NodePtr, pattern, false, // MatchPattern
+  NodePtr, target, false // Identifier | MatchBindingPattern
+)
 
 ESTREE_LAST(MatchPattern)
 

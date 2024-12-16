@@ -1004,6 +1004,50 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMatchPatternFlow() {
+  SMLoc startLoc = tok_->getStartLoc();
+  auto optFirstPattern = parseMatchSubpatternFlow();
+  if (!optFirstPattern)
+    return None;
+  ESTree::Node *pattern = optFirstPattern.getValue();
+  if (check(TokenKind::pipe)) {
+    ESTree::NodeList patterns{};
+    patterns.push_back(*optFirstPattern.getValue());
+    while (checkAndEat(TokenKind::pipe)) {
+      auto optPattern = parseMatchSubpatternFlow();
+      if (!optPattern)
+        return None;
+      patterns.push_back(*optPattern.getValue());
+    }
+    pattern = setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::MatchOrPatternNode(std::move(patterns)));
+  }
+  if (checkAndEat(asIdent_)) {
+    ESTree::Node *target = nullptr;
+    if (checkN(TokenKind::rw_const, TokenKind::rw_var, letIdent_)) {
+      auto optTarget = parseMatchBindingPatternFlow();
+      if (!optTarget)
+        return None;
+      target = optTarget.getValue();
+    } else if (check(TokenKind::identifier) || tok_->isResWord()) {
+      auto optTarget = parseMatchBindingIdentifierFlow();
+      if (!optTarget)
+        return None;
+      target = optTarget.getValue();
+    } else {
+      error(tok_->getSourceRange(), "expected identifier or binding pattern");
+      return None;
+    }
+    pattern = setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::MatchAsPatternNode(pattern, target));
+  }
+  return pattern;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchSubpatternFlow() {
   switch (tok_->getKind()) {
     case TokenKind::rw_null: {
       auto *lit =

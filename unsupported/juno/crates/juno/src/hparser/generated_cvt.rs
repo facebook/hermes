@@ -1173,6 +1173,26 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::MatchArrayPattern::build_template(gc, template)
         }
+        NodeKind::MatchOrPattern => {
+          let patterns = cvt_node_list(cvt, gc, hermes_get_MatchOrPattern_patterns(n));
+          let mut template = ast::template::MatchOrPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  patterns,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchOrPattern::build_template(gc, template)
+        }
+        NodeKind::MatchAsPattern => {
+          let pattern = cvt_node_ptr(cvt, gc, hermes_get_MatchAsPattern_pattern(n));
+          let target = cvt_node_ptr(cvt, gc, hermes_get_MatchAsPattern_target(n));
+          let mut template = ast::template::MatchAsPattern {
+              metadata: ast::TemplateMetadata {range, ..Default::default()},
+                  pattern,
+                  target,
+          };
+          template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
+          ast::builder::MatchAsPattern::build_template(gc, template)
+        }
         NodeKind::MatchObjectPatternProperty => {
           let key = cvt_node_ptr(cvt, gc, hermes_get_MatchObjectPatternProperty_key(n));
           let pattern = cvt_node_ptr(cvt, gc, hermes_get_MatchObjectPatternProperty_pattern(n));

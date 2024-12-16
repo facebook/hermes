@@ -1268,6 +1268,7 @@ class JSParserImpl {
       SMLoc start,
       ESTree::Node *argument);
   Optional<ESTree::Node *> parseMatchPatternFlow();
+  Optional<ESTree::Node *> parseMatchSubpatternFlow();
   Optional<ESTree::IdentifierNode *> parseMatchBindingIdentifierFlow();
   Optional<ESTree::MatchBindingPatternNode *> parseMatchBindingPatternFlow();
   Optional<ESTree::Node *> parseMatchRestPatternFlow();
