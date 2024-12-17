@@ -161,6 +161,10 @@ class CDPAgentTest : public ::testing::Test {
       int id,
       const std::function<void(::hermes::JSONEmitter &)> &setParameters = {},
       CDPAgent *altAgent = nullptr);
+  void sendSetBlackboxedRangesAndCheckResponse(
+      int msgId,
+      std::string scriptID,
+      std::vector<std::pair<int, int>> positions);
   void sendParameterlessRequest(const std::string &method, int id);
   void sendAndCheckResponse(const std::string &method, int id);
   void sendEvalRequest(
@@ -482,6 +486,28 @@ void CDPAgentTest::sendRequest(
   } else {
     cdpAgent_->handleCommand(command);
   }
+}
+
+void CDPAgentTest::sendSetBlackboxedRangesAndCheckResponse(
+    int msgId,
+    std::string scriptID,
+    std::vector<std::pair<int, int>> positions) {
+  sendRequest(
+      "Debugger.setBlackboxedRanges",
+      msgId,
+      [scriptID, positions](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKey("positions");
+        json.openArray();
+        for (const auto &[lineNumber, columnNumber] : positions) {
+          json.openDict();
+          json.emitKeyValue("lineNumber", lineNumber);
+          json.emitKeyValue("columnNumber", columnNumber);
+          json.closeDict();
+        }
+        json.closeArray();
+      });
+  ensureOkResponse(waitForMessage(), msgId);
 }
 
 void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
@@ -971,6 +997,89 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   ensureNotification(waitForMessage("Debugger.resumed"), "Debugger.resumed");
 }
 
+TEST_F(CDPAgentTest, DebuggerSkipExplicitPauseInBlackboxedRanges) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(         // line 0
+    debugger;                // line 1
+    while (!shouldStop()) {  // line 2
+      var i = 10;            // line 3
+    }                        // line 4
+    debugger;                // line 5  - this ensures that explicit pause is not resumed by encountering a debugger statement
+    var j = 5;               // line 6  - setting a breakpoint here ensures that explicit pause is not resumed/pauses by an inactive breakpoint
+    try {                    // line 7
+      throw new Error('hi'); // line 8  - this ensures that explicit pause is not resumed by a thrown exception
+    } catch(e) {}            // line 9
+    var k = 6;               // line 10 - not blackboxed - should pause here
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] stop on debugger
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // [2] make the while loop, debugger, and cached exception lines blackboxed
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {{2, 0}, {10, 0}});
+
+  // [3] set a breakpoint on line 6, and disable breakpoints
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 6);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{6}});
+  sendRequest(
+      "Debugger.setBreakpointsActive", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("active", false);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // [4] set pause on caught exceptions
+  sendRequest(
+      "Debugger.setPauseOnExceptions", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("state", "all");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // [5] resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [6] register async debug client and trigger a pause
+  DebuggerEventCallbackID eventCallbackID;
+  AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
+  waitFor<bool>(
+      [this, &asyncDebuggerAPI, &eventCallbackID, &msgId](auto promise) {
+        eventCallbackID = asyncDebuggerAPI.addDebuggerEventCallback_TS(
+            [promise](
+                HermesRuntime & /*runtime*/,
+                AsyncDebuggerAPI & /*asyncDebugger*/,
+                DebuggerEventType event) {
+              if (event == DebuggerEventType::ExplicitPause) {
+                promise->set_value(true);
+              }
+            });
+        sendAndCheckResponse("Debugger.pause", msgId++);
+      },
+      "wait on explicit pause");
+
+  // [7] allow stepping out of the blackboxed while loop which would
+  // immediately trigger the requested pause on the next statement
+  // since that statement is not blackboxed
+  stopFlag_.store(true);
+  ensurePaused(waitForMessage(), "other", {{"global", 10, 1}});
+
+  // [8] resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
 TEST_F(CDPAgentTest, DebuggerCallFrameThisType) {
   int msgId = 1;
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1088,7 +1197,7 @@ TEST_F(CDPAgentTest, DebuggerAsyncPauseWhileRunning) {
   }
 }
 
-TEST_F(CDPAgentTest, DebuggerTestDebuggerStatement) {
+TEST_F(CDPAgentTest, DebuggerDebuggerStatement) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1105,6 +1214,43 @@ TEST_F(CDPAgentTest, DebuggerTestDebuggerStatement) {
   ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, DebuggerSkipDebuggerStatementInBlackboxedRange) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // debugger; statement won't work unless Debugger domain is enabled
+  scheduleScript(R"(//     (line 0)
+    var a = 1 + 2;
+    debugger;       // [1] (line 2) hit debugger statement, blackbox debugger statement #3 on line 6, resume
+    var b = a / 2;
+    debugger;       // [2] (line 4) hit debugger statement, resume
+    var c = b * 2;
+    debugger;       // [3] (line 6) don't hit debugger statement as it's blackboxed
+    var d = c - 2;
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] (line 2) hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // [1] (line 2) set blackboxed ranges to ignore line 6 that contains the next
+  //              debugger statement
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {{6, 0}, {7, 0}});
+
+  // [2] resume and expect stopping at the second debugger statement on line 4
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "other", {{"global", 4, 1}});
+
+  // [3] resume and expect to not be stopping at the third debugger statement on
+  //     line 6 as it's blackboxed and ending the script's execution
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
 }
 
 TEST_F(CDPAgentTest, DebuggerFiltersNativeFrames) {
@@ -1216,7 +1362,7 @@ TEST_F(CDPAgentTest, DebuggerStepOverThrow) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentTest, DebuggerStepIn) {
+TEST_F(CDPAgentTest, DebuggerStepInto) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -1240,16 +1386,355 @@ TEST_F(CDPAgentTest, DebuggerStepIn) {
   ensurePaused(waitForMessage(), "other", {{"global", 6, 1}});
   sendAndCheckResponse("Debugger.stepOver", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 7, 1}});
 
   // [2] (line 7): step in
-  ensurePaused(waitForMessage(), "step", {{"global", 7, 1}});
   sendAndCheckResponse("Debugger.stepInto", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"addOne", 2, 2}, {"global", 7, 1}});
 
   // [3] (line 2): resume
-  ensurePaused(waitForMessage(), "step", {{"addOne", 2, 2}, {"global", 7, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
+TEST_F(CDPAgentTest, DebuggerStepIntoBlackboxedRange) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(             // line 0
+    function addOneInner2(val) { // line 1  |
+      const val2 = val + 3;      // line 2  |
+      const val3 = val2 - 1;     // line 3  |
+      return val3 - 1;           // line 4  |
+    }                            // line 5  |
+
+    function addOneInner1(val) { // line 7  |
+      const val2 = val + 2;      // line 8  |
+      const val3 = val2 - 2;     // line 9  |
+      return addOneInner2(val3); // line 10 |
+    }                            // line 11 |
+
+    function addOne(val) {       // line 13 |
+      const val2 = val + 1;      // line 14 |
+      const val3 = val2 - 1;     // line 15 |
+      return addOneInner1(val);  // line 16 |
+    }                            // line 17 |
+
+    var a = 1 + 2;
+    debugger;                    // line 20 | [1] hit debugger statement, step over
+    var b = addOne(a);           // line 21 | [2] set blackboxed ranges, step in, verify addOne is skipped staying on the same line, step into to next line
+    var c = addOne(b);           // line 22 | [3] set blackboxed ranges that only blackboxes addOne. step into should enter addOneInner skipping addOne
+    var d = addOne(c);           // line 23 | [4] clear set blackboxed ranges and step into addOne and addOneInner
+    var e = addOne(d);           // line 24 |
+    var f = e * e;
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] -line 20- hit debugger statement, step over to the next line
+  ensurePaused(waitForMessage(), "other", {{"global", 20, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 21, 1}});
+
+  // [2] -line 21- blackbox addOne, addOneInner1, and addOneInner2
+  //               step in, verify skipping both staying on same line
+  sendSetBlackboxedRangesAndCheckResponse(
+      msgId++,
+      scriptID,
+      // start -> first position is not blackboxed
+      // first -> second position is blackboxed
+      {{1, 0}, {18, 0}});
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 21, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 22, 1}});
+
+  // [3] -line 22- ignore "addOne" and "addOneInner1" but not "addOneInner2"
+  //               stepInto "addOne" should step into "addOneInner2"
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {{7, 0}, {18, 0}});
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(
+      waitForMessage(),
+      "step",
+      {{"addOneInner2", 2, 2},
+       {"addOneInner1", 10, 2},
+       {"addOne", 16, 2},
+       {"global", 22, 1}});
+  // [3] -line 2- allow stepping inside a non-blackboxed function-
+  //              step over should move to next line
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(
+      waitForMessage(),
+      "step",
+      {{"addOneInner2", 3, 2},
+       {"addOneInner1", 10, 2},
+       {"addOne", 16, 2},
+       {"global", 22, 1}});
+
+  // [4] -line 3- step out when in "addOneInner2" steps out back to line 22,
+  //              skipping "addOneInner1" and "addOne"
+  sendAndCheckResponse("Debugger.stepOut", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 22, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 23, 1}});
+
+  // [5] -line 21- remove all ignore ranges
+  //               allowing stepping into addOne again
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {});
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(
+      waitForMessage(), "step", {{"addOne", 14, 2}, {"global", 23, 1}});
+
+  // resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerStepOverInsideBlackboxedRange) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(            // line 0
+    function addOne(val) {      // line 1 - blackbox start
+      var x = val + 3;          // line 2  | [3] step over
+      var y = x - 1;            // line 3  | [4] set addOne to be in blackboxed range, step over- it should step out now
+      var z = y - 1;            // line 4
+      return z;                 // line 5
+    }                           // line 6
+                                // line 7 - blackbox end
+    debugger;                   // line 8  | [1] hit debugger statement, step over
+    var a = addOne(4);          // line 9  | [2] step into addOne
+    var b = 1 + a;              // line 10
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] -line 8- hit debugger statement, step over to the next line
+  ensurePaused(waitForMessage(), "other", {{"global", 8, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 9, 1}});
+
+  // [2] -line 9- stepInto addOne
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"addOne", 2, 2}, {"global", 9, 1}});
+
+  // [3] -line 3- stepOver moves to next line
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"addOne", 3, 2}, {"global", 9, 1}});
+
+  // [4] -line 4- set addOne to be in blackboxed range, step over- it should
+  //              step out now back to line 9
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {{1, 0}, {7, 0}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 9, 1}});
+
+  // resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerStepOutToBlackboxedRange) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(                // line 0
+    function addOneInner2(val) {     // line 1
+      var x = val + 3;               // line 2 | [4] step out - should get back to line 17
+      var y = x - 2;                 // line 3
+      return y;                      // line 4
+    }                                // line 5
+                                     // line 6 - blackbox start
+    function addOneInner1(val) {     // line 7
+      var a = addOneInner2(val - 1); // line 8
+      return addOneInner2(a);        // line 9
+    }
+
+    function addOne(val) {           // line 12
+      return addOneInner1(val);      // line 13
+    }
+                                     // line 15 - blackbox end
+    debugger;                        // line 16 | [1] hit debugger statement, step over
+    var a = addOne(4);               // line 17 | [2] blackbox addOne, step into- should skip addOne and addOneInner1 and enter addOneInner2
+    var b = 1 + a;                   // line 18
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] -line 16- hit debugger statement, step over to the next line
+  ensurePaused(waitForMessage(), "other", {{"global", 16, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 17, 1}});
+
+  // [2] -line 17- blackbox addOne, addOneInner1, step into-
+  //               should skip addOne and addOneInner1 and move to addOneInner2
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {{6, 0}, {15, 0}});
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(
+      waitForMessage(),
+      "step",
+      {{"addOneInner2", 2, 2},
+       {"addOneInner1", 8, 2},
+       {"addOne", 13, 2},
+       {"global", 17, 1}});
+
+  // [4] -line 2- stepOut should step out all the way to line 17
+  //              it *should not* step back into addOneInner2,
+  //              and skip addOneInner1 and addOne when stepping out
+  sendAndCheckResponse("Debugger.stepOut", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 17, 1}});
+
+  // resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerStepIntoSkipBlackboxedRangesLastRange) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(            // line 0
+    debugger;                   // line 1
+    var i = addOne(1);          // line 2
+    var j = addOne(2);          // line 3
+                                // line 4
+    function addOne(a) {        // line 5
+      return a + 1;             // line 6
+    }                           // line 7
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] -line 1- hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // [2] -line 1- set blackboxed ranges
+  sendSetBlackboxedRangesAndCheckResponse(
+      msgId++,
+      scriptID,
+      // start -> first position is not blackboxed
+      // first position -> end is blackboxed
+      {{5, 0}});
+
+  // [3] -line 1- stepOver moves to line 2
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 2, 1}});
+
+  // [4] -line 2- stepInto addOne skips the function because it's blackboxed
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 2, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 3, 1}});
+
+  // [5] -line 3- set the last position till the end to be not blackboxed
+  sendSetBlackboxedRangesAndCheckResponse(
+      msgId++,
+      scriptID,
+      // start -> first position is not blackboxed
+      // first position -> second is blackboxed
+      // second position -> end is blackboxed
+      {{5, 0}, {5, 0}});
+
+  // [6] -line 3- stepInto addOne will step into the function
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"addOne", 6, 2}, {"global", 3, 1}});
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 3, 1}});
+
+  // [7] resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerManualBreakpointsInBlackboxedRanges) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;   // line 1 -                   [1] stop here, blackbox the script, resume should move to line 4
+    var a = 1   // line 2 - (skipped)
+    debugger;   // line 3 - (skipped)
+    var b = 2   // line 4 - manual breakpoint [2] stop here, stepOver should move to line 6
+    var c = 3   // line 5 - (skipped)
+    var d = 4   // line 6 - manual breakpoint [3] stop here, stepOver should skip next lines and resume execution
+    var e = 5   // line 7
+    var f = 6   // line 8
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] -line 1- hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+  // [1] -line 1- blackbox the whole script
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {{0, 0}});
+  // [1] -line 1- set a manual breakpoint on lines 4, 6
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 4);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(
+      waitForMessage("setBreakpointByUrl"), msgId++, {{4}});
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 6);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(
+      waitForMessage("setBreakpointByUrl"), msgId++, {{6}});
+
+  // [2] -line 1- resume should skip the debugger statement and stop on the
+  //              first manual breakpoint (line 4) despite the blackboxed range
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "other", {{"global", 4, 1}});
+
+  // [3] -line 4- stepOver should move to the next manual breakpoint on line 6
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  // "step over" in blackboxed ranges resolves to a "step out".
+  // "step out", in line with V8, stops on the next manual breakpoint within the
+  // function instead of actually stepping out of the function.
+  // TODO(T209244279) On V8, the execution reason in this case is "ambiguous",
+  // with an extra field "data" containing all the pause reasons,
+  // in our case it would have been "step" and "other".
+  ensurePaused(waitForMessage(), "other", {{"global", 6, 1}});
+
+  // [4] -line 6- stepOver should skip next lines and resume execution
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
 }
 
 TEST_F(CDPAgentTest, DebuggerStepOut) {
@@ -1339,6 +1824,52 @@ TEST_F(CDPAgentTest, DebuggerSetPauseOnExceptionsAll) {
   // Send resume event and check that Hermes has thrown an exception.
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+  EXPECT_EQ(thrownExceptions_.size(), 1);
+  EXPECT_EQ(thrownExceptions_.back(), "Uncaught exception");
+}
+
+TEST_F(CDPAgentTest, DebuggerSetPauseOnExceptionsDontPauseOnBlackboxedRanges) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger; // [1] (line 1) initial pause, set throw on exceptions to 'All'
+
+    try {
+      var a = 123;
+      throw new Error('Caught error'); // [2] line 5, pause on exception
+    } catch (err) {
+      // Do nothing.
+    }
+
+    throw new Error('Uncaught exception'); // [3] line 10, pause on exception
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] (line 1) initial pause, set throw on exceptions to 'All'
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+  sendRequest(
+      "Debugger.setPauseOnExceptions", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("state", "all");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // [1] (line 1) blackbox the whole file after the first caracter of the file
+  sendSetBlackboxedRangesAndCheckResponse(
+      msgId++,
+      scriptID,
+      // start -> 0,0 is not blackboxed
+      // the rest of the script is blackboxed
+      {{0, 0}});
+
+  // Resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Don't pause on no exceptions, and just finish execution
   waitForScheduledScripts();
   EXPECT_EQ(thrownExceptions_.size(), 1);
   EXPECT_EQ(thrownExceptions_.back(), "Uncaught exception");

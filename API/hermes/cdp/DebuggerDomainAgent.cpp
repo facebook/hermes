@@ -78,7 +78,13 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
       break;
     case DebuggerEventType::Exception:
-      setPaused(PausedNotificationReason::kException);
+      if (isTopFrameLocationBlackboxed()) {
+        asyncDebugger_.resumeFromPaused(
+            explicitPausePending_ ? AsyncDebugCommand::StepInto
+                                  : AsyncDebugCommand::Continue);
+      } else {
+        setPaused(PausedNotificationReason::kException);
+      }
       break;
     case DebuggerEventType::Resumed:
       if (paused_) {
@@ -89,17 +95,53 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       if (breakpointsActive_) {
         setPaused(PausedNotificationReason::kOther);
       } else {
-        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
+        asyncDebugger_.resumeFromPaused(
+            explicitPausePending_ ? AsyncDebugCommand::StepInto
+                                  : AsyncDebugCommand::Continue);
       }
       break;
     case DebuggerEventType::DebuggerStatement:
-      setPaused(PausedNotificationReason::kOther);
+      if (isTopFrameLocationBlackboxed()) {
+        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
+      } else {
+        setPaused(PausedNotificationReason::kOther);
+      }
       break;
     case DebuggerEventType::StepFinish:
-      setPaused(PausedNotificationReason::kStep);
+      if (isTopFrameLocationBlackboxed()) {
+        // If we land on a blackboxed frame via a user command that is either
+        // "step over" or "step out" we step out of the blackboxed frame.
+        // In all the other cases (explicit pause / step into / unknown command)
+        // we execute a step into (that usually results in subsequent step
+        // intos) to stop on the next non-blackboxed line.
+        // If the blackboxed function calls any functions in a non-blackboxed
+        // range, it would eventually stop on first such a function.
+        // If the blackboxed function doesn't call any non-blackboxed functions,
+        // it would keep on stepping into until it exits the blackboxed function
+        // itself, effectively acting like a step out.
+        auto nextStep = lastUserStepRequest_.has_value() &&
+                (*lastUserStepRequest_ == LastUserStepRequest::StepOver ||
+                 *lastUserStepRequest_ == LastUserStepRequest::StepOut)
+            ? AsyncDebugCommand::StepOut
+            : AsyncDebugCommand::StepInto;
+
+        asyncDebugger_.resumeFromPaused(nextStep);
+      } else {
+        PausedNotificationReason pauseReason = explicitPausePending_
+            ? PausedNotificationReason::kOther
+            : PausedNotificationReason::kStep;
+        setPaused(pauseReason);
+      }
       break;
     case DebuggerEventType::ExplicitPause:
-      setPaused(PausedNotificationReason::kOther);
+      if (isTopFrameLocationBlackboxed()) {
+        // an explicit pause should eventually stop execution on the next
+        // non-blackboxed line, so we can just continue to step into here
+        // until we hit a non-blackboxed line
+        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepInto);
+      } else {
+        setPaused(PausedNotificationReason::kOther);
+      }
       break;
     default:
       assert(false && "unknown DebuggerEventType");
@@ -110,6 +152,7 @@ void DebuggerDomainAgent::handleDebuggerEvent(
 void DebuggerDomainAgent::setPaused(
     PausedNotificationReason pausedNotificationReason) {
   paused_ = true;
+  explicitPausePending_ = false;
   sendPausedNotificationToClient(pausedNotificationReason);
 }
 
@@ -212,6 +255,8 @@ void DebuggerDomainAgent::pause(const m::debugger::PauseRequest &req) {
     return;
   }
 
+  explicitPausePending_ = true;
+
   runtime_.getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
@@ -230,6 +275,8 @@ void DebuggerDomainAgent::stepInto(const m::debugger::StepIntoRequest &req) {
     return;
   }
 
+  lastUserStepRequest_ = LastUserStepRequest::StepInto;
+
   asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepInto);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
@@ -238,6 +285,8 @@ void DebuggerDomainAgent::stepOut(const m::debugger::StepOutRequest &req) {
   if (!checkDebuggerPaused(req)) {
     return;
   }
+
+  lastUserStepRequest_ = LastUserStepRequest::StepOut;
 
   asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOut);
   sendResponseToClient(m::makeOkResponse(req.id));
@@ -248,16 +297,102 @@ void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
     return;
   }
 
+  lastUserStepRequest_ = LastUserStepRequest::StepOver;
+
   asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOver);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
+static inline bool blackboxRangeComparator(
+    const std::pair<int, int> &a,
+    const std::pair<int, int> &b) {
+  if (a.first != b.first)
+    return a.first < b.first;
+  return a.second < b.second;
+}
+
 void DebuggerDomainAgent::setBlackboxedRanges(
     const m::debugger::SetBlackboxedRangesRequest &req) {
-  sendResponseToClient(m::makeErrorResponse(
-      req.id,
-      m::ErrorCode::MethodNotFound,
-      "setBlackboxedRanges is not implemented yet"));
+  auto scriptID = std::stoull(req.scriptId);
+
+  if (req.positions.empty()) {
+    blackboxedRanges_.erase(scriptID);
+    sendResponseToClient(m::makeOkResponse(req.id));
+    return;
+  }
+
+  auto blackboxedRanges = std::vector<std::pair<int, int>>();
+  for (auto &position : req.positions) {
+    blackboxedRanges.push_back(std::pair<int, int>(
+        /* cdp line and column numbers are 0 based */
+        position.lineNumber + 1,
+        position.columnNumber + 1));
+  }
+
+  assert(std::is_sorted(
+      blackboxedRanges.begin(),
+      blackboxedRanges.end(),
+      blackboxRangeComparator));
+
+  blackboxedRanges_[scriptID] = std::move(blackboxedRanges);
+
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+bool DebuggerDomainAgent::isLocationBlackboxed(
+    ScriptID scriptID,
+    int lineNumber,
+    int columnNumber) {
+  if (blackboxedRanges_.count(scriptID) == 0) {
+    return false;
+  }
+
+  auto const &positions = blackboxedRanges_.at(scriptID);
+
+  auto locationPosition = std::lower_bound(
+      positions.begin(),
+      positions.end(),
+      std::make_pair(lineNumber, columnNumber),
+      blackboxRangeComparator);
+
+  // Since locationPosition is the first position that is *_NOT BEFORE_* the
+  // passed location, for a location that falls within a blackboxed range, that
+  // position's index would be odd. See the comment for blackboxedRanges_
+  // For example, for blackboxedRanges_ [[1,1],[4,4]], the location [2,2]
+  // would be correctly blackboxed because locationPosition would hold [4,4]
+  // which is on index 1
+  return std::distance(positions.begin(), locationPosition) % 2 == 1;
+}
+
+bool DebuggerDomainAgent::isTopFrameLocationBlackboxed() {
+  auto stackTrace = runtime_.getDebugger().getProgramState().getStackTrace();
+  if (stackTrace.callFrameCount() < 1) {
+    return false;
+  }
+  debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
+  if (breakpointsActive_) {
+    for (auto &[id, cdpBreakpoint] : cdpBreakpoints_) {
+      auto breakpointLoc =
+          runtime_.getDebugger().getBreakpointInfo(id).resolvedLocation;
+
+      auto locationHasManualBreakpoint =
+          (loc.fileId == breakpointLoc.fileId &&
+           loc.line - 1 == breakpointLoc.line &&
+           loc.column - 1 == breakpointLoc.column);
+      // Locations with manual breakpoints are not considered blackboxed.
+      // For example, if a user steps inside a blackboxed function, if any of
+      // the next lines in that function have a manual breakpoint, we should
+      // respect them and stop on them rather than stepping over them. The same
+      // logic applies to explicit pauses. While they trigger stepping into
+      // until out of blackboxed ranges, or until the program continues
+      // execution if one of these steps lands on a line with a manual
+      // breakpoint, we should stop on it.
+      if (locationHasManualBreakpoint) {
+        return false;
+      }
+    }
+  }
+  return isLocationBlackboxed(loc.fileId, loc.line, loc.column);
 }
 
 void DebuggerDomainAgent::setPauseOnExceptions(
