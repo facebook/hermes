@@ -78,40 +78,45 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
       break;
     case DebuggerEventType::Exception:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kException);
+      setPaused(PausedNotificationReason::kException);
       break;
     case DebuggerEventType::Resumed:
       if (paused_) {
-        paused_ = false;
-        objTable_->releaseObjectGroup(BacktraceObjectGroup);
-        sendNotificationToClient(m::debugger::ResumedNotification{});
+        setUnpaused();
       }
       break;
     case DebuggerEventType::Breakpoint:
       if (breakpointsActive_) {
-        paused_ = true;
-        sendPausedNotificationToClient(PausedNotificationReason::kOther);
+        setPaused(PausedNotificationReason::kOther);
       } else {
         asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
       }
       break;
     case DebuggerEventType::DebuggerStatement:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kOther);
+      setPaused(PausedNotificationReason::kOther);
       break;
     case DebuggerEventType::StepFinish:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kStep);
+      setPaused(PausedNotificationReason::kStep);
       break;
     case DebuggerEventType::ExplicitPause:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kOther);
+      setPaused(PausedNotificationReason::kOther);
       break;
     default:
       assert(false && "unknown DebuggerEventType");
       asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
   }
+}
+
+void DebuggerDomainAgent::setPaused(
+    PausedNotificationReason pausedNotificationReason) {
+  paused_ = true;
+  sendPausedNotificationToClient(pausedNotificationReason);
+}
+
+void DebuggerDomainAgent::setUnpaused() {
+  paused_ = false;
+  objTable_->releaseObjectGroup(BacktraceObjectGroup);
+  sendNotificationToClient(m::debugger::ResumedNotification{});
 }
 
 void DebuggerDomainAgent::enable() {
@@ -167,8 +172,7 @@ void DebuggerDomainAgent::enable() {
   // Check to see if debugger is currently paused. There could be multiple debug
   // clients and the program could have already been paused.
   if (asyncDebugger_.isWaitingForCommand()) {
-    paused_ = true;
-    sendPausedNotificationToClient(PausedNotificationReason::kOther);
+    setPaused(PausedNotificationReason::kOther);
   }
 }
 

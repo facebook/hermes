@@ -204,7 +204,14 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Whether to consider the debugger as currently paused. There are some
   /// debugger events such as ScriptLoaded where we don't consider the debugger
   /// to be paused.
+  /// Should only be set using setPaused and setUnpaused.
   bool paused_;
+
+  /// Called when the runtime is paused.
+  void setPaused(PausedNotificationReason pausedNotificationReason);
+
+  /// Called when the runtime is resumed.
+  void setUnpaused();
 };
 
 } // namespace cdp
