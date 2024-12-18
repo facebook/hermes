@@ -1037,7 +1037,7 @@ class CreateClassInst : public BaseCreateCallableInst {
     return getOperand(HomeObjectOutIdx);
   }
 
-  Value *getSuperClass() {
+  Value *getSuperClass() const {
     return getOperand(SuperClassIdx);
   }
 
@@ -1046,10 +1046,14 @@ class CreateClassInst : public BaseCreateCallableInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    // When creating a derived class, we look up the .prototype of the super
-    // class we are deriving from. This property look up can potentially trigger
-    // JS.
-    return SideEffect::createExecute().setWriteStack();
+    if (llvh::isa<EmptySentinel>(getSuperClass())) {
+      // When creating a derived class, we look up the .prototype of the super
+      // class we are deriving from. This property look up can potentially
+      // trigger JS.
+      return SideEffect::createExecute().setWriteStack();
+    } else {
+      return SideEffect{}.setReadHeap().setWriteStack();
+    }
   }
 
   static bool hasOutput() {
