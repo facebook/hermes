@@ -1332,7 +1332,13 @@ CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
       newTarget.isUndefined() ||
       vmisa<Callable>(newTarget) &&
           "new.target for a NativeConstructor should either be undefined or a callable");
-  return NativeFunction::_callImpl(selfHandle, runtime);
+  auto res = NativeFunction::_callImpl(selfHandle, runtime);
+  if (LLVM_LIKELY(res != ExecutionStatus::EXCEPTION)) {
+    assert(
+        (newTarget.isUndefined() || vmisa<JSObject>(res->getHermesValue())) &&
+        "NativeConstructor needs to return an object when called as constructor.");
+  }
+  return res;
 }
 #endif
 
