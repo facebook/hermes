@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<e0a836847da36fc0e86ce97f17f76caa>>
+// @generated SignedSource<<310395f971015ee3431e0c8490405e5c>>
 
 #include "MessageTypes.h"
 
@@ -910,13 +910,15 @@ debugger::SetBlackboxPatternsRequest::tryMake(const JSONObject *obj) {
   }
   auto *params = *convertResult;
   TRY_ASSIGN(req->patterns, params, "patterns");
+  TRY_ASSIGN(req->skipAnonymous, params, "skipAnonymous");
   return req;
 }
 
 JSONValue *debugger::SetBlackboxPatternsRequest::toJsonVal(
     JSONFactory &factory) const {
-  llvh::SmallVector<JSONFactory::Prop, 1> paramsProps;
+  llvh::SmallVector<JSONFactory::Prop, 2> paramsProps;
   put(paramsProps, "patterns", patterns, factory);
+  put(paramsProps, "skipAnonymous", skipAnonymous, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "id", id, factory);

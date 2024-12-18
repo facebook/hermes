@@ -1340,7 +1340,87 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatterns) {
   //              stays ignored
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
 
+TEST_F(CDPAgentTest, DebuggerSkipAnonymousScriptsExplicit) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  sendRequest(
+      "Debugger.setBlackboxPatterns", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKey("patterns");
+        json.openArray();
+        json.closeArray();
+        json.emitKeyValue("skipAnonymous", true);
+      });
+  ensureOkResponse(waitForMessage("setBlackboxPatterns"), msgId++);
+
+  auto emptyScriptNameMakingItAnonymous = "";
+
+  scheduleScript(
+      R"(//     (line 0)
+    var a = 1 + 2;
+    debugger;       // [1] (line 2) don't hit debugger statement since it is in a blackboxed script now
+    var b = a / 2;
+    debugger;       // [2] (line 4) don't hit debugger statement since it is in a blackboxed script now
+    var c = b - 2;
+  )",
+      emptyScriptNameMakingItAnonymous);
+
+  expectNotification("Debugger.scriptParsed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerSkipAnonymousScriptsEval) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(
+      R"(               //     (line 0)
+    var a = 1 + 2;
+    eval(`              //     (line 2 globally, line 0 in eval)
+      function aa() {
+        debugger;       // [1] (line 4 globally, line 2 in eval) hit debugger statement, setBlackboxPatterns with skipAnonymous, resume
+      };
+      aa();             // [1] (line 5 globally, line 4 in eval)
+    `);
+    eval(`
+      function aa() {
+        debugger;       // [2] (line 9 globally, line 2 in eval) don't hit debugger statement since evals are blackboxed now
+      };
+      aa();
+    `);
+  )");
+
+  expectNotification("Debugger.scriptParsed"); // global script parsed
+  expectNotification("Debugger.scriptParsed"); // eval script parsed
+
+  // [1] (line 2) hit debugger statement in eval
+  ensurePaused(
+      waitForMessage(),
+      "other",
+      {// line 2, and line 4 are relative to evaluated string
+       {"aa", 2, 2},
+       {"eval", 4, 1},
+       {"global", 2, 1}});
+  sendRequest(
+      "Debugger.setBlackboxPatterns", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKey("patterns");
+        json.openArray();
+        json.closeArray();
+        json.emitKeyValue("skipAnonymous", true);
+      });
+  ensureOkResponse(waitForMessage("setBlackboxPatterns"), msgId++);
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  expectNotification("Debugger.scriptParsed"); // second eval script parsed
+
+  // [3] (line 9) don't hit debugger statement since evals are blackboxed now
   waitForScheduledScripts();
 }
 
@@ -1431,6 +1511,40 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
   waitForScheduledScripts();
+}
+
+TEST_F(
+    CDPAgentTest,
+    DebuggerSkipAnonymousScriptsRuntimeEvaluateWithDebuggerStatement) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // setBlackboxPatterns with skipAnonymous = true
+  sendRequest(
+      "Debugger.setBlackboxPatterns", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKey("patterns");
+        json.openArray();
+        json.closeArray();
+        json.emitKeyValue("skipAnonymous", true);
+      });
+  ensureOkResponse(waitForMessage("setBlackboxPatterns"), msgId++);
+
+  // evaluate an expression containing a debugger statement
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"(
+      function aa() {
+        debugger;       // (line 2)
+        return 12;
+      };
+      aa();             // (line 5)
+    )");
+  });
+  expectNotification("Debugger.scriptParsed");
+
+  // expect the eval to resolve without hitting the debugger statement
+  expectResponse(std::nullopt, msgId++);
 }
 
 TEST_F(CDPAgentTest, DebuggerFiltersNativeFrames) {
@@ -3603,6 +3717,34 @@ TEST_F(CDPAgentTest, RuntimeEvaluateNested) {
   EXPECT_EQ(
       jsonScope_.getString(resp1, {"result", "result", "type"}), "number");
   EXPECT_EQ(jsonScope_.getNumber(resp1, {"result", "result", "value"}), 4);
+}
+
+TEST_F(CDPAgentTest, RuntimeEvaluateWithDebuggerStatement) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // evaluate an expression containing a debugger statement
+  int evalMsgId = msgId++;
+  sendRequest("Runtime.evaluate", evalMsgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue("expression", R"(
+      function aa() {
+        debugger;       // (line 2)
+        return 12;
+      };
+      aa();             // (line 5)
+    )");
+  });
+  expectNotification("Debugger.scriptParsed");
+
+  // stopped at the debugger -> resume
+  ensurePaused(waitForMessage(), "other", {{"aa", 2, 2}, {"global", 5, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // evaluation finished
+  expectResponse(std::nullopt, evalMsgId);
 }
 
 TEST_F(CDPAgentTest, RuntimeCallFunctionOnObject) {

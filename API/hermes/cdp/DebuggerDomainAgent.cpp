@@ -317,6 +317,8 @@ static inline bool blackboxRangeComparator(
 
 void DebuggerDomainAgent::setBlackboxPatterns(
     const m::debugger::SetBlackboxPatternsRequest &req) {
+  blackboxAnonymousScripts_ = req.skipAnonymous.value_or(false);
+
   if (req.patterns.empty()) {
     compiledBlackboxPatternRegex_ = std::nullopt;
     sendResponseToClient(m::makeOkResponse(req.id));
@@ -391,6 +393,10 @@ bool DebuggerDomainAgent::isLocationBlackboxed(
     std::string scriptName,
     int lineNumber,
     int columnNumber) {
+  if (blackboxAnonymousScripts_ && scriptName.empty()) {
+    return true;
+  }
+
   if (compiledBlackboxPatternRegex_.has_value()) {
     // We expect scriptName to be encoded as UTF-8 in accordance with RFC-8259
     // See comment in CDPAgent::handleCommand
