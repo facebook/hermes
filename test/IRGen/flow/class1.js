@@ -56,7 +56,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:       ReturnInst %8: number
 // CHECK-NEXT:function_end
 
-// CHECK:constructor Vec2D(x: number, y: number): undefined [typed]
+// CHECK:base constructor Vec2D(x: number, y: number): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %y: number

@@ -112,7 +112,8 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
         llvh::cast<ESTree::FunctionExpressionNode>(consMethodNode->_value),
         curScope->getVariableScope(),
         superClassNode,
-        Function::DefinitionKind::ES6Constructor,
+        superClassNode ? Function::DefinitionKind::ES6DerivedConstructor
+                       : Function::DefinitionKind::ES6BaseConstructor,
         clsPrototypeVar,
         consMethodNode);
   }
@@ -385,7 +386,9 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
 
   auto *consFunc = Builder.createFunction(
       className,
-      Function::DefinitionKind::ES6Constructor,
+      funcInfo->constructorKind == sema::FunctionInfo::ConstructorKind::Derived
+          ? Function::DefinitionKind::ES6DerivedConstructor
+          : Function::DefinitionKind::ES6BaseConstructor,
       /* strictMode */ true,
       funcInfo->customDirectives);
 

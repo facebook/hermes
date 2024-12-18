@@ -99,7 +99,8 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
         llvh::cast<ESTree::FunctionExpressionNode>(consMethod->_value),
         consName,
         node->_superClass,
-        Function::DefinitionKind::ES6Constructor);
+        node->_superClass ? Function::DefinitionKind::ES6DerivedConstructor
+                          : Function::DefinitionKind::ES6BaseConstructor);
   } else {
     // The constructor is implicit.
     consFunction = genTypedImplicitConstructor(consName, superClass);

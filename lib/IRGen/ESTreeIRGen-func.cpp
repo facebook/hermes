@@ -403,33 +403,33 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
           parentScope);
     }
 
-    if (functionKind == Function::DefinitionKind::ES6Constructor) {
-      if (curFunction()->hasLegacyClassContext()) {
-        if (curFunction()->getSemInfo()->constructorKind ==
-            sema::FunctionInfo::ConstructorKind::Derived) {
-          // Initialize the 'checked this' in derived class constructors.
-          newFunctionContext.capturedState.thisVal = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
-              Builder.createIdentifier("?CHECKED_this"),
-              Type::unionTy(Type::createObject(), Type::createEmpty()),
-              true);
-          Builder.createStoreFrameInst(
-              curFunction()->curScope,
-              Builder.getLiteralEmpty(),
-              newFunctionContext.capturedState.thisVal);
-        } else {
-          // We generate this call after calling super for derived classes.
-          emitLegacyInstanceElementsInitCall();
-        }
-      } else {
+    if (curFunction()->hasLegacyClassContext()) {
+      if (functionKind == Function::DefinitionKind::ES6BaseConstructor) {
+        // We only need to generate this here for base classes. It's not
+        // required for derived because they generate this call after calling
+        // super().
+        emitLegacyInstanceElementsInitCall();
+      } else if (
+          functionKind == Function::DefinitionKind::ES6DerivedConstructor) {
+        // Initialize the 'checked this' in derived class constructors.
+        newFunctionContext.capturedState.thisVal = Builder.createVariable(
+            curFunction()->curScope->getVariableScope(),
+            Builder.createIdentifier("?CHECKED_this"),
+            Type::unionTy(Type::createObject(), Type::createEmpty()),
+            true);
+        Builder.createStoreFrameInst(
+            curFunction()->curScope,
+            Builder.getLiteralEmpty(),
+            newFunctionContext.capturedState.thisVal);
+      }
+    } else {
+      if (functionKind == Function::DefinitionKind::ES6BaseConstructor) {
         assert(
             curFunction()->hasTypedClassContext() &&
             "ES6Constructor has no valid class context");
-        // If we're compiling a typed constructor with no superclass, emit the
-        // field inits at the start.
-        if (superClassNode == nullptr) {
-          emitTypedFieldInitCall(typedClassContext.type);
-        }
+        // If we're compiling a typed base class constructor, emit the field
+        // inits at the start.
+        emitTypedFieldInitCall(typedClassContext.type);
       }
     }
 
@@ -701,10 +701,8 @@ void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
   // `this` is managed separately in the case of a legacy derived class
   // constructor.
   if (!(curFunction()->function->getDefinitionKind() ==
-            Function::DefinitionKind::ES6Constructor &&
-        curFunction()->hasLegacyClassContext() &&
-        semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
-            sema::FunctionInfo::ConstructorKind::Derived)) {
+            Function::DefinitionKind::ES6DerivedConstructor &&
+        curFunction()->hasLegacyClassContext())) {
     auto *th = Builder.createVariable(
         scope,
         genAnonymousLabelName("this"),

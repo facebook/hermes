@@ -73,7 +73,7 @@ new D();
 
 // CHECK:scope %VS2 []
 
-// CHECK:constructor C(): any [typed]
+// CHECK:base constructor C(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
@@ -82,7 +82,7 @@ new D();
 
 // CHECK:scope %VS3 []
 
-// CHECK:constructor D(): any [typed]
+// CHECK:derived constructor D(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

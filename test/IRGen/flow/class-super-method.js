@@ -79,7 +79,7 @@ class B extends A {
 
 // CHECK:scope %VS2 [x: any]
 
-// CHECK:constructor A(x: number): any [typed]
+// CHECK:base constructor A(x: number): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -107,7 +107,7 @@ class B extends A {
 
 // CHECK:scope %VS4 [x: any]
 
-// CHECK:constructor B(x: number): any [typed]
+// CHECK:derived constructor B(x: number): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

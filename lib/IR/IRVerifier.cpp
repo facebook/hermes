@@ -1481,7 +1481,8 @@ bool Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
   AssertIWithMsg(
       Inst,
       definitionKind == Function::DefinitionKind::ES5Function ||
-          definitionKind == Function::DefinitionKind::ES6Constructor ||
+          definitionKind == Function::DefinitionKind::ES6BaseConstructor ||
+          definitionKind == Function::DefinitionKind::ES6DerivedConstructor ||
           definitionKind == Function::DefinitionKind::ES6Method,
       "GetNewTargetInst can only be used in ES6 constructors, ES5 functions, and ES6 methods");
   AssertIWithMsg(

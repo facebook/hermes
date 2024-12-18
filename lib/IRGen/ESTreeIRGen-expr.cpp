@@ -2476,7 +2476,8 @@ Value *ESTreeIRGen::genNewTarget() {
 
   switch (curFunction()->function->getDefinitionKind()) {
     case Function::DefinitionKind::ES5Function:
-    case Function::DefinitionKind::ES6Constructor:
+    case Function::DefinitionKind::ES6BaseConstructor:
+    case Function::DefinitionKind::ES6DerivedConstructor:
       value = Builder.createGetNewTargetInst(
           curFunction()->function->getNewTargetParam());
       break;

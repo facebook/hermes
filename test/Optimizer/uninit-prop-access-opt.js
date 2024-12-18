@@ -85,14 +85,14 @@ print(f());
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:constructor O(): undefined [typed]
+// CHECK:base constructor O(): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:       PrStoreInst 7: number, %0: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:constructor Foo(): undefined [typed]
+// CHECK:base constructor Foo(): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

@@ -1773,7 +1773,8 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   enum class DefinitionKind {
     ES5Function,
-    ES6Constructor,
+    ES6BaseConstructor,
+    ES6DerivedConstructor,
     ES6Arrow,
     ES6Method,
     // This corresponds to the synthetic function we create in IRGen, which is
