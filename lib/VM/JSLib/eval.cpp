@@ -108,7 +108,7 @@ CallResult<HermesValue> evalInEnvironment(
           [&bytecode_err, &buffer, compileFlags, &runOptimizationPasses]() {
             bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
                 std::move(buffer),
-                "eval",
+                "",
                 nullptr,
                 compileFlags,
                 "eval",
