@@ -785,6 +785,12 @@ void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
     *this = std::move(rhs);
     return;
   }
+  // Ensure 2-byte alignment.
+  // The rhs has been constructed assuming that it starts at a 2-byte aligned
+  // offset, so we need to keep that invariant.
+  if (storage_.size() % sizeof(char16_t)) {
+    storage_.push_back('\0');
+  }
   // Offset incoming string entries by the size of our storage, and append the
   // incoming storage. Don't bother to offset if the string is empty; this
   // ensures that the empty string doesn't get pushed to strange places.
