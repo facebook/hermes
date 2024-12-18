@@ -343,6 +343,7 @@ class EsprimaTestRunner:
             extra_args.append("-Xparse-component-syntax")
             extra_args.append("-parse-jsx")
             extra_args.append("-Xinclude-empty-ast-nodes")
+            extra_args.append("-Xparse-flow-match")
         elif "JSX" in filename:
             extra_args.append("-parse-jsx")
         extra_args.append("-dump-transformed-ast" if transformed else "-dump-ast")
