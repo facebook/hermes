@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<310395f971015ee3431e0c8490405e5c>>
+// @generated SignedSource<<b6f23d499b731c057a44576d724cde32>>
 
 #include "MessageTypes.h"
 
@@ -2786,12 +2786,13 @@ debugger::ScriptParsedNotification::tryMake(const JSONObject *obj) {
   TRY_ASSIGN(notif->hasSourceURL, params, "hasSourceURL");
   TRY_ASSIGN(notif->isModule, params, "isModule");
   TRY_ASSIGN(notif->length, params, "length");
+  TRY_ASSIGN(notif->scriptLanguage, params, "scriptLanguage");
   return notif;
 }
 
 JSONValue *debugger::ScriptParsedNotification::toJsonVal(
     JSONFactory &factory) const {
-  llvh::SmallVector<JSONFactory::Prop, 13> paramsProps;
+  llvh::SmallVector<JSONFactory::Prop, 14> paramsProps;
   put(paramsProps, "scriptId", scriptId, factory);
   put(paramsProps, "url", url, factory);
   put(paramsProps, "startLine", startLine, factory);
@@ -2806,6 +2807,7 @@ JSONValue *debugger::ScriptParsedNotification::toJsonVal(
   put(paramsProps, "hasSourceURL", hasSourceURL, factory);
   put(paramsProps, "isModule", isModule, factory);
   put(paramsProps, "length", length, factory);
+  put(paramsProps, "scriptLanguage", scriptLanguage, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "method", method, factory);

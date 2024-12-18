@@ -733,6 +733,9 @@ void DebuggerDomainAgent::sendScriptParsedNotificationToClient(
   note.scriptId = std::to_string(srcLoc.fileId);
   note.url = srcLoc.fileName;
   note.executionContextId = executionContextID_;
+  // Either JavaScript or WebAssembly. See:
+  // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=1875-1882
+  note.scriptLanguage = "JavaScript";
   std::string sourceMappingUrl =
       runtime_.getDebugger().getSourceMappingUrl(srcLoc.fileId);
   if (!sourceMappingUrl.empty()) {
