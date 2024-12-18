@@ -139,6 +139,11 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Module *M = F->getParent();
   IRBuilder builder(M);
 
+  // The only kind of function which does not expect a made `this` parameter in
+  // a construct call is a derived class constructor.
+  bool funcExpectsThisInConstruct =
+      F->getDefinitionKind() != Function::DefinitionKind::ES6DerivedConstructor;
+
   /// Define an element in the worklist below.
   struct UserInfo {
     /// An instruction that is known to have either the value of the closure, or
@@ -169,6 +174,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   // For example, if the same function is stored to two vars we need
   // to avoid going back and forth between the corresponding loads.
   llvh::SmallPtrSet<Instruction *, 2> visited{};
+
+  IRBuilder::InstructionDestroyer destroyer{};
 
   worklist.push_back({create, true, create->getScope()});
   while (!worklist.empty()) {
@@ -202,6 +209,17 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         assert(
             CTI->getClosure() == closureInst &&
             "Closure must be closure argument to CreateThisInst");
+        if (isAlwaysClosure) {
+          if (funcExpectsThisInConstruct) {
+            CTI->setType(Type::createObject());
+          } else {
+            // If a function does not expect any `this`, then we can just remove
+            // the `CreateThis` altogether since it was just going to return
+            // undefined.
+            CTI->replaceAllUsesWith(builder.getLiteralUndefined());
+            destroyer.add(CTI);
+          }
+        }
         // CreateThis leaks the closure because the created object can still
         // access the function via its parent's `.constructor` prototype.
         F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;

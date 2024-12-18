@@ -61,8 +61,8 @@ function outer2(){
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.foo]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
-// CHECK-NEXT:  %5 = CreateThisInst (:undefined|object) %4: object, empty: any
-// CHECK-NEXT:  %6 = CallInst (:object) %4: object, %bar(): functionCode, true: boolean, %1: environment, undefined: undefined, %5: undefined|object
+// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
+// CHECK-NEXT:  %6 = CallInst (:object) %4: object, %bar(): functionCode, true: boolean, %1: environment, undefined: undefined, %5: object
 // CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
@@ -76,6 +76,6 @@ function outer2(){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.foo]: object
-// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: object, empty: any
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end

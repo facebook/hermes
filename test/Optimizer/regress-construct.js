@@ -58,11 +58,10 @@ function main() {
 // CHECK-NEXT:       CondBranchInst %1: null|object, %BB2, %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %0: environment, [%VS1.y]: object
-// CHECK-NEXT:  %4 = CreateThisInst (:undefined|object) %3: object, empty: any
-// CHECK-NEXT:  %5 = GetConstructedObjectInst (:object) %4: undefined|object, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst %0: environment, %5: object, [%VS1.x]: null|object
+// CHECK-NEXT:  %4 = CreateThisInst (:object) %3: object, empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %4: object, [%VS1.x]: null|object
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = PhiInst (:null|object) %1: null|object, %BB0, %5: object, %BB1
-// CHECK-NEXT:       ReturnInst %8: null|object
+// CHECK-NEXT:  %7 = PhiInst (:null|object) %1: null|object, %BB0, %4: object, %BB1
+// CHECK-NEXT:       ReturnInst %7: null|object
 // CHECK-NEXT:function_end
