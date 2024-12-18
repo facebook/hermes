@@ -165,6 +165,10 @@ class CDPAgentTest : public ::testing::Test {
       int msgId,
       std::string scriptID,
       std::vector<std::pair<int, int>> positions);
+  void sendSetBlackboxPatternsAndCheckResponse(
+      int msgId,
+      std::vector<std::string> patterns,
+      bool expectOK = true);
   void sendParameterlessRequest(const std::string &method, int id);
   void sendAndCheckResponse(const std::string &method, int id);
   void sendEvalRequest(
@@ -507,7 +511,29 @@ void CDPAgentTest::sendSetBlackboxedRangesAndCheckResponse(
         }
         json.closeArray();
       });
-  ensureOkResponse(waitForMessage(), msgId);
+  ensureOkResponse(waitForMessage("setBlackboxedRanges"), msgId);
+}
+
+void CDPAgentTest::sendSetBlackboxPatternsAndCheckResponse(
+    int msgId,
+    std::vector<std::string> patterns,
+    bool expectOK) {
+  sendRequest(
+      "Debugger.setBlackboxPatterns",
+      msgId,
+      [patterns](::hermes::JSONEmitter &json) {
+        json.emitKey("patterns");
+        json.openArray();
+        for (const auto &pattern : patterns) {
+          json.emitValue(pattern);
+        }
+        json.closeArray();
+      });
+  if (expectOK) {
+    ensureOkResponse(waitForMessage("setBlackboxPatterns"), msgId);
+  } else {
+    ensureErrorResponse(waitForMessage("setBlackboxPatterns"), msgId);
+  }
 }
 
 void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
@@ -1228,7 +1254,7 @@ TEST_F(CDPAgentTest, DebuggerSkipDebuggerStatementInBlackboxedRange) {
     var b = a / 2;
     debugger;       // [2] (line 4) hit debugger statement, resume
     var c = b * 2;
-    debugger;       // [3] (line 6) don't hit debugger statement as it's blackboxed
+    debugger;       // [3] (line 6) don't hit debugger statement since it is in a blackboxed range now
     var d = c - 2;
   )");
   auto note = expectNotification("Debugger.scriptParsed");
@@ -1248,6 +1274,160 @@ TEST_F(CDPAgentTest, DebuggerSkipDebuggerStatementInBlackboxedRange) {
 
   // [3] resume and expect to not be stopping at the third debugger statement on
   //     line 6 as it's blackboxed and ending the script's execution
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatterns) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Testing UTF8 >1 bytes caracters-
+  // main - one byte per letter
+  // Ø - two bytes (U+00D8 - 11000011 10011000 aka \xc3\x98)
+  // ಚ - three bytes (U+0C9A - 11100000 10110010 10011010 aka \xe0\xb2\x9a)
+  // 😁 - four bytes (U+1F601 - 11110000 10011111 10011000 10000001 aka
+  // \xf0\x9f\x98\x81)
+  std::string utf8FileName("main\xc3\x98\xe0\xb2\x9a\xf0\x9f\x98\x81");
+
+  // debugger; statement won't work unless Debugger domain is enabled
+  scheduleScript(
+      R"(           //     (line 0)
+    var a = 1 + 2;
+    debugger;       // [1] (line 2) hit debugger statement, blackbox file patterns that don't match utf8FileName, resume
+    var b = a / 2;
+    debugger;       // [2] (line 4) hit debugger statement since the script is not ignored, blackbox the utf8FileName pattern, resume
+    var c = b * 2;
+    debugger;       // [3] (line 6) don't hit debugger statement since it is in a blackboxed script now
+    var d = c - 2;  //     (line 7) <manual breakpoint> do hit the manual breakpoint (these are never ignored), ignore utf8FileName along with other patterns, resume
+    debugger;       // [4] (line 8) don't hit debugger statement since it is still in a blackboxed script
+    var e = d + 5;
+  )",
+      utf8FileName);
+
+  expectNotification("Debugger.scriptParsed");
+
+  // [1] (line 2) hit debugger statement, blackbox file patterns that doesn't
+  //              match utf8FileName, resume
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {"aa", "bb"});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [2] (line 4) hit debugger statement, set manual breakpoint on line 7
+  //              blackbox patterns that DOES match utf8FileName
+  ensurePaused(waitForMessage(), "other", {{"global", 4, 1}});
+  sendRequest(
+      "Debugger.setBreakpointByUrl",
+      msgId,
+      [utf8FileName](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", utf8FileName);
+        json.emitKeyValue("lineNumber", 7);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{7}});
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {utf8FileName});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // [3] (line 7) don't hit debugger statement since it is in a blackboxed
+  //              script now, but hit the manual breakpoint on line 7
+  ensurePaused(waitForMessage(), "other", {{"global", 7, 1}});
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {"aa", utf8FileName, "bb"});
+  // [4] (line 7) resume, skip the debugger statement on line 8 since the script
+  //              stays ignored
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  // Characters and their UTF8 byte string:
+  // Ø - two bytes (U+00D8 - 11000011 10011000 aka \xc3\x98)
+  // ಚ - three bytes (U+0C9A - 11100000 10110010 10011010 aka \xe0\xb2\x9a)
+  // 😁 - four bytes (U+1F601 - 11110000 10011111 10011000 10000001 aka
+  // \xf0\x9f\x98\x81)
+  std::string utf8FileName(
+      "/node_modules/somelibrary/lib/main\xc3\x98\xe0\xb2\x9a\xf0\x9f\x98\x81.js");
+  std::string script = R"(  // (line 0)
+  var a = 1;
+    debugger;       // (line 2) hit debugger statement if script is not blackboxed
+    var b = a - 5;
+  )";
+
+  // For the patterns shipped with chrome dev tools by default:
+  // `/node_modules/|/bower_components/`-
+  // should ignore scripts in node_modules. This means the debugger statement on
+  // line 5 will be skipped
+  sendSetBlackboxPatternsAndCheckResponse(
+      msgId++, {R"(/node_modules/|/bower_components/)"});
+  scheduleScript(script, utf8FileName);
+  expectNotification("Debugger.scriptParsed");
+  // the debugger statement is not triggered in between
+  waitForScheduledScripts();
+
+  // For empty patterns, should not blackbox the script
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {});
+  scheduleScript(script, utf8FileName);
+  expectNotification("Debugger.scriptParsed");
+  // ensure paused on the breakpoint on line 2
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+
+  // For an irrelevant extra pattern "aa" besides the default,
+  // should ignore the script
+  sendSetBlackboxPatternsAndCheckResponse(
+      msgId++, {R"(/node_modules/|/bower_components/)", R"(aa)"});
+  scheduleScript(script, utf8FileName);
+  expectNotification("Debugger.scriptParsed");
+  // the debugger statement is not triggered in between
+  waitForScheduledScripts();
+
+  // passing a regex "(/somelibrary/lib/|aa)" and an irrelevant pattern
+  // should ignore the script
+  sendSetBlackboxPatternsAndCheckResponse(
+      msgId++, {R"((/somelibrary/lib/|aa))", R"(bb)"});
+  scheduleScript(script, utf8FileName);
+  expectNotification("Debugger.scriptParsed");
+  // the debugger statement is not triggered in between
+  waitForScheduledScripts();
+
+  // passing a regex with an escaped slash "\/": "/somelibrary\/lib/"
+  // should ignore the script
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {R"(/somelibrary\/lib/)"});
+  scheduleScript(script, utf8FileName);
+  expectNotification("Debugger.scriptParsed");
+  // the debugger statement is not triggered in between
+  waitForScheduledScripts();
+
+  // passing a regex with a twice escaped slash "\\/": "/somelibrary\\/lib/"
+  // results in the backslash escape, rendering the escaped path incorrect
+  // and should NOT ignore the script
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {R"(/somelibrary\\/lib/)"});
+  scheduleScript(script, utf8FileName);
+  expectNotification("Debugger.scriptParsed");
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+
+  // passing a faulty regex ")"
+  // should result in an error response from cdp
+  // the ignored patterns would not change leaving the script NOT ignored
+  sendSetBlackboxPatternsAndCheckResponse(
+      msgId++, {R"())"}, false /* expectOK */);
+  scheduleScript(script, utf8FileName);
+  expectNotification("Debugger.scriptParsed");
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
   waitForScheduledScripts();
