@@ -1606,6 +1606,7 @@ export interface TypeParameterDeclaration extends BaseNode {
 export interface TypeParameter extends BaseNode {
   +type: 'TypeParameter';
   +name: string;
+  +const: boolean;
   +bound: null | TypeAnnotation;
   +variance: null | Variance;
   +default: null | TypeAnnotationType;

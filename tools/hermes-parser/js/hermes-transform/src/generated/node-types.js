@@ -1192,6 +1192,7 @@ export type TypeOperatorProps = {
 
 export type TypeParameterProps = {
   +name: TypeParameterType['name'],
+  +const: TypeParameterType['const'],
   +bound?: ?MaybeDetachedNode<TypeParameterType['bound']>,
   +variance?: ?MaybeDetachedNode<TypeParameterType['variance']>,
   +default?: ?MaybeDetachedNode<TypeParameterType['default']>,
@@ -3685,6 +3686,7 @@ export function TypeParameter(props: {
   const node = detachedProps<TypeParameterType>((props.parent: $FlowFixMe), {
     type: 'TypeParameter',
     name: props.name,
+    const: props.const,
     bound: asDetachedNodeForCodeGen(props.bound),
     variance: asDetachedNodeForCodeGen(props.variance),
     default: asDetachedNodeForCodeGen(props.default),

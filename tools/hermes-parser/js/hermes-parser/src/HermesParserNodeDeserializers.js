@@ -1574,6 +1574,7 @@ function deserializeTypeParameter() {
     type: 'TypeParameter',
     loc: this.addEmptyLoc(),
     name: this.deserializeString(),
+    const: this.deserializeBoolean(),
     bound: this.deserializeNode(),
     variance: this.deserializeNode(),
     default: this.deserializeNode(),
