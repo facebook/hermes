@@ -1109,14 +1109,16 @@ ESTREE_NODE_1_ARGS(
 ESTREE_NODE_1_ARGS(
     TypeParameterDeclaration, Flow,
     NodeList, params, false)
-ESTREE_NODE_5_ARGS(
+ESTREE_NODE_6_ARGS(
     TypeParameter, Flow,
     NodeLabel, name, false,
+    NodeBoolean, const, false,
     NodePtr, bound, true,
     NodePtr, variance, true,
     NodePtr, default, true,
     NodeBoolean, usesExtendsBound, false)
 ESTREE_IGNORE_IF_EMPTY(TypeParameter, usesExtendsBound)
+ESTREE_IGNORE_IF_EMPTY(TypeParameter, const)
 ESTREE_NODE_1_ARGS(
     TypeParameterInstantiation, Flow,
     NodeList, params, false)

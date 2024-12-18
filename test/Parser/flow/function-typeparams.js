@@ -100,6 +100,81 @@ function foo<T>(x: number): number {}
 // CHECK-NEXT:         "async": false
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(function<const T>(): void {});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "FunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": []
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "typeParameters": {
+// CHECK-NEXT:           "type": "TypeParameterDeclaration",
+// CHECK-NEXT:           "params": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "TypeParameter",
+// CHECK-NEXT:               "name": "T",
+// CHECK-NEXT:               "const": true,
+// CHECK-NEXT:               "bound": null,
+// CHECK-NEXT:               "variance": null,
+// CHECK-NEXT:               "default": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "VoidTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "generator": false,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+(function<const +T>(): void {});
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "FunctionExpression",
+// CHECK-NEXT:         "id": null,
+// CHECK-NEXT:         "params": [],
+// CHECK-NEXT:         "body": {
+// CHECK-NEXT:           "type": "BlockStatement",
+// CHECK-NEXT:           "body": []
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "typeParameters": {
+// CHECK-NEXT:           "type": "TypeParameterDeclaration",
+// CHECK-NEXT:           "params": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "TypeParameter",
+// CHECK-NEXT:               "name": "T",
+// CHECK-NEXT:               "const": true,
+// CHECK-NEXT:               "bound": null,
+// CHECK-NEXT:               "variance": {
+// CHECK-NEXT:                 "type": "Variance",
+// CHECK-NEXT:                 "kind": "plus"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "default": null
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "returnType": {
+// CHECK-NEXT:           "type": "TypeAnnotation",
+// CHECK-NEXT:           "typeAnnotation": {
+// CHECK-NEXT:             "type": "VoidTypeAnnotation"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "generator": false,
+// CHECK-NEXT:         "async": false
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

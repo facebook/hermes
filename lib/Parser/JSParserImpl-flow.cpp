@@ -2894,7 +2894,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
                 start,
                 getPrevTokenEndLoc(),
                 new (context_) ESTree::TypeParameterNode(
-                    name, bound, nullptr, nullptr, true))));
+                    name, false, bound, nullptr, nullptr, true))));
       }
 
       {
@@ -3938,8 +3938,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeMappedTypePropertyFlow(
   ESTree::Node *keyTparam = setLocation(
       left,
       left,
-      new (context_)
-          ESTree::TypeParameterNode(id, nullptr, nullptr, nullptr, false));
+      new (context_) ESTree::TypeParameterNode(
+          id, false, nullptr, nullptr, nullptr, false));
 
   auto optSourceType = parseTypeAnnotationFlow();
   if (!optSourceType)
@@ -4098,7 +4098,12 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamsFlow() {
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
   SMLoc start = tok_->getStartLoc();
+  bool isConst = false;
   ESTree::Node *variance = nullptr;
+  if (check(TokenKind::rw_const)) {
+    isConst = true;
+    advance(JSLexer::GrammarContext::Type);
+  }
 
   if (check(TokenKind::plus, TokenKind::minus)) {
     variance = setLocation(
@@ -4149,7 +4154,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
       start,
       getPrevTokenEndLoc(),
       new (context_) ESTree::TypeParameterNode(
-          name, bound, variance, initializer, usesExtendsBound));
+          name, isConst, bound, variance, initializer, usesExtendsBound));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow() {
