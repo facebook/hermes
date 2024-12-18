@@ -17,3 +17,7 @@ add_hermes_library(hermesBackend
 
 add_subdirectory(HBC)
 add_subdirectory(SH)
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
+  add_subdirectory(facebook)
+endif()
