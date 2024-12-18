@@ -46,9 +46,9 @@ function main() {
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
-// CHECK:function y(): undefined [allCallsitesKnownInStrictMode,unreachable]
+// CHECK:function y(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       UnreachableInst
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function value(): null|object

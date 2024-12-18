@@ -42,7 +42,7 @@ return new simple(1, 2);
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:function simple(x: any, y: any): undefined [allCallsitesKnownInStrictMode]
+// CHECK:function simple(x: any, y: any): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any

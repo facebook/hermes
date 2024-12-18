@@ -36,11 +36,6 @@ Value *isStoreOnceVariable(Variable *V);
 /// whole lifetime of the variable is constant.
 Value *isStoreOnceStackLocation(AllocStackInst *AS);
 
-/// \return True if \p V is an instruction that may be used in a constructor
-/// invocation of the \p closure. In the absence of other instructions that
-/// manipulate the closure, these instructions cannot leak the closure.
-bool isConstructionSetup(Value *V, Value *closure);
-
 /// \return a list of known callsites of \p F based on its users.
 /// It is possible that \p F has additional unknown callsites, call
 /// \c F->allCallsitesKnown() to check that.

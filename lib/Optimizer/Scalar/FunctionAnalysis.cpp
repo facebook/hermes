@@ -198,9 +198,13 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         continue;
       }
 
-      // Construction setup instructions can't leak the closure on their own,
-      // but don't contribute to the call graph.
-      if (isConstructionSetup(closureUser, closureInst)) {
+      if (auto *CTI = llvh::dyn_cast<CreateThisInst>(closureUser)) {
+        assert(
+            CTI->getClosure() == closureInst &&
+            "Closure must be closure argument to CreateThisInst");
+        // CreateThis leaks the closure because the created object can still
+        // access the function via its parent's `.constructor` prototype.
+        F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         continue;
       }
 

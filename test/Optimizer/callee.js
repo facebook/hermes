@@ -81,7 +81,7 @@ function load_store_multiple_test() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"foo 1#"(): functionCode
 // CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: object, empty: any
-// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %"foo 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 12: number
+// CHECK-NEXT:  %3 = CallInst (:any) %1: object, %"foo 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %2: undefined|object, 12: number
 // CHECK-NEXT:  %4 = GetConstructedObjectInst (:object) %2: undefined|object, 12: number
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
@@ -117,9 +117,10 @@ function load_store_multiple_test() {
 // CHECK-NEXT:       ReturnInst 12: number
 // CHECK-NEXT:function_end
 
-// CHECK:function "foo 1#"(k: number): number [allCallsitesKnownInStrictMode]
+// CHECK:function "foo 1#"(k: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       ReturnInst 12: number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %k: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end
 
 // CHECK:function ping(): number [allCallsitesKnownInStrictMode]
