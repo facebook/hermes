@@ -344,6 +344,52 @@ ExecutionStatus Interpreter::caseGetPNameList(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus Interpreter::caseGetNextPName(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  GCScopeMarkerRAII marker{runtime};
+  assert(
+      vmisa<BigStorage>(O2REG(GetNextPName)) &&
+      "GetNextPName's second op must be BigStorage");
+  auto obj = Handle<JSObject>::vmcast(&O3REG(GetNextPName));
+  auto arr = Handle<BigStorage>::vmcast(&O2REG(GetNextPName));
+  uint32_t idx = O4REG(GetNextPName).getNumber();
+  uint32_t size = O5REG(GetNextPName).getNumber();
+  MutableHandle<> tmpHandle{runtime};
+  MutableHandle<JSObject> propObj{runtime};
+  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  // Loop until we find a property which is present.
+  while (idx < size) {
+    tmpHandle = arr->at(runtime, idx);
+    ComputedPropertyDescriptor desc;
+    ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
+        obj, runtime, tmpHandle, propObj, tmpPropNameStorage, desc);
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_LIKELY(propObj))
+      break;
+    ++idx;
+  }
+  if (idx < size) {
+    // We must return the property as a string
+    if (tmpHandle->isNumber()) {
+      auto status = toString_RJS(runtime, tmpHandle);
+      assert(
+          status == ExecutionStatus::RETURNED &&
+          "toString on number cannot fail");
+      tmpHandle = status->getHermesValue();
+    }
+    O4REG(GetNextPName) = HermesValue::encodeTrustedNumberValue(idx + 1);
+    // Write the result last in case it is the same register as O4REG.
+    O1REG(GetNextPName) = tmpHandle.get();
+  } else {
+    O1REG(GetNextPName) = HermesValue::encodeUndefinedValue();
+  }
+  return ExecutionStatus::RETURNED;
+}
+
 PseudoHandle<JSRegExp> Interpreter::createRegExp(
     Runtime &runtime,
     CodeBlock *curCodeBlock,

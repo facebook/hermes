@@ -242,6 +242,10 @@ class Interpreter {
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const Inst *ip);
+  static ExecutionStatus caseGetNextPName(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
 
   static ExecutionStatus caseDelByVal(
       Runtime &runtime,
