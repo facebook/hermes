@@ -2223,13 +2223,24 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
 
   auto ret = createArray(length);
   for (size_t i = 0; i < length; ++i) {
-    vm::HermesValue name = arr->at(runtime_, beginIndex + i);
-    if (name.isString()) {
-      ret.setValueAtIndex(*this, i, valueFromHermesValue(name));
-    } else if (name.isNumber()) {
+    vm::PseudoHandle<> name =
+        vm::createPseudoHandle(arr->at(runtime_, beginIndex + i));
+    if (name->isString()) {
+      ret.setValueAtIndex(
+          *this, i, valueFromHermesValue(name.getHermesValue()));
+    } else if (name->isSymbol()) {
+      // May allocate. 'name' must not be used afterwards.
+      vm::StringPrimitive *str =
+          runtime_.getStringPrimFromSymbolID(name->getSymbol());
+      name.invalidate();
+      ret.setValueAtIndex(
+          *this,
+          i,
+          valueFromHermesValue(vm::HermesValue::encodeStringValue(str)));
+    } else if (name->isNumber()) {
       std::string s;
       llvh::raw_string_ostream os(s);
-      os << static_cast<size_t>(name.getNumber());
+      os << static_cast<size_t>(name->getNumber());
       ret.setValueAtIndex(
           *this, i, jsi::String::createFromAscii(*this, os.str()));
     } else {

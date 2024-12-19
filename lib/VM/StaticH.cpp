@@ -1823,11 +1823,22 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     // Loop until we find a property which is present.
     while (idx < size) {
       lv.tmp = arr->at(runtime, idx);
-      ComputedPropertyDescriptor desc;
-      ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
-          obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
-      if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
+      if (lv.tmp->isSymbol()) {
+        // NOTE: This call is safe because we immediately discard desc,
+        // so it can't outlive the SymbolID.
+        NamedPropertyDescriptor desc;
+        propObj = JSObject::getNamedDescriptorUnsafe(
+            obj, runtime, lv.tmp->getSymbol(), desc);
+      } else {
+        assert(
+            (lv.tmp->isNumber() || lv.tmp->isString()) &&
+            "GetNextPName must be symbol, string, number");
+        ComputedPropertyDescriptor desc;
+        ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
+            obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
       }
       if (LLVM_LIKELY(propObj))
         break;
@@ -1841,6 +1852,23 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
             status == ExecutionStatus::RETURNED &&
             "toString on number cannot fail");
         lv.tmp = status->getHermesValue();
+      } else if (lv.tmp->isSymbol()) {
+        // for-in enumeration only returns numbers and strings.
+        // In most cases (i.e. non-Proxy), we keep the symbol around instead
+        // and convert here, so that the above getNamedDescriptor call is
+        // faster. Proxy has a filter so that it only returns Strings here. So
+        // we don't have to check isUniqued and can convert to string
+        // unconditionally.
+        assert(
+            lv.tmp->getSymbol().isUniqued() &&
+            "Symbol primitives (non-uniqued) can't be used in for-in, "
+            "not even by Proxy");
+        lv.tmp = HermesValue::encodeStringValue(
+            runtime.getStringPrimFromSymbolID(lv.tmp->getSymbol()));
+      } else {
+        assert(
+            lv.tmp->isString() &&
+            "GetNextPName must be symbol, string, number");
       }
       *indexVal = HermesValue::encodeTrustedNumberValue(idx + 1);
       return lv.tmp.get();

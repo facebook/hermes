@@ -662,13 +662,18 @@ HermesABIArrayOrError get_object_property_names(
 
   // Convert each property name to a string and store it in the result array.
   for (size_t i = 0; i < length; ++i) {
-    vm::HermesValue name = props->at(runtime, beginIndex + i);
+    vm::PseudoHandle<> name =
+        vm::createPseudoHandle(props->at(runtime, beginIndex + i));
     vm::StringPrimitive *asString;
-    if (name.isString()) {
-      asString = name.getString();
+    if (name->isString()) {
+      asString = name->getString();
+    } else if (name->isSymbol()) {
+      // May allocate. 'name' must not be used afterwards.
+      asString = runtime.getStringPrimFromSymbolID(name->getSymbol());
+      name.invalidate();
     } else {
-      assert(name.isNumber());
-      nameHnd = name;
+      assert(name->isNumber());
+      nameHnd = name.getHermesValue();
       auto asStrRes = vm::toString_RJS(runtime, nameHnd);
       if (asStrRes == vm::ExecutionStatus::EXCEPTION)
         return abi::createArrayOrError(HermesABIErrorCodeJSError);

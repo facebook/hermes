@@ -140,6 +140,11 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 /// include non-enumerable keys, too.  The keys included will only be of the
 /// types specified by the above flags.
 ///
+/// \name KeepSymbols
+/// Normally, when returning a list of keys, Symbols are converted to
+/// Strings, but if this flag is set, even uniqued Symbols are returned as
+/// Symbols.
+///
 /// Either or both of IncludeSymbols and IncludeNonSymbols may be
 /// specified.  If neither is specified, this may cause an assertion
 /// failure if assertions are enabled.
@@ -147,7 +152,8 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 #define HERMES_VM__LIST_OwnKeysFlags(FLAG) \
   FLAG(IncludeSymbols)                     \
   FLAG(IncludeNonSymbols)                  \
-  FLAG(IncludeNonEnumerable)
+  FLAG(IncludeNonEnumerable)               \
+  FLAG(KeepSymbols)
 
 HERMES_VM__DECLARE_FLAGS_CLASS(OwnKeysFlags, HERMES_VM__LIST_OwnKeysFlags);
 
@@ -1556,6 +1562,10 @@ void JSObject::staticAsserts() {
 /// \return an array that contains all enumerable properties of obj (including
 /// those of its prototype etc.) at the indices [beginIndex, endIndex) (any
 /// other part of the array is implementation-defined).
+/// The elements of the array will be one of the following:
+/// * a SymbolID (uniqued) representing a string key
+/// * a StringPrimitive of a string property
+/// * a Number which corresponds to an array index
 /// \param[out] beginIndex beginning of the range of indices storing names
 /// \param[out] endIndex end (exclusive) of the range of indices storing names
 CallResult<Handle<BigStorage>> getForInPropertyNames(
