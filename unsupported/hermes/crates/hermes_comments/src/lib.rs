@@ -13,10 +13,11 @@ use hermes_estree::SourceRange;
 use hermes_estree::Visitor;
 use hermes_parser::Comment;
 
+pub type AttachedComments<'a> = Vec<(&'a str, SourceRange, Node<'a>, SourceRange)>;
 struct CommentAttachmentVisitor<'a> {
     comments: &'a [Comment],
     idx: usize,
-    attached_comments: Vec<(&'a str, SourceRange, Node<'a>, SourceRange)>,
+    attached_comments: AttachedComments<'a>,
 }
 
 impl<'a> Visitor<'a> for CommentAttachmentVisitor<'a> {
@@ -51,7 +52,6 @@ impl<'a> Visitor<'a> for CommentAttachmentVisitor<'a> {
                 node.as_node_enum(),
                 node.range(),
             ));
-            return true;
         }
         false
     }
@@ -66,7 +66,7 @@ impl<'a> CommentAttachmentVisitor<'a> {
         }
     }
 
-    fn result(self) -> Vec<(&'a str, SourceRange, Node<'a>, SourceRange)> {
+    fn result(self) -> AttachedComments<'a> {
         self.attached_comments
     }
 }
@@ -76,7 +76,7 @@ impl<'a> CommentAttachmentVisitor<'a> {
 pub fn find_nodes_after_comments<'a>(
     program: &'a Program,
     comments: &'a [Comment],
-) -> Vec<(&'a str, SourceRange, Node<'a>, SourceRange)> {
+) -> AttachedComments<'a> {
     let mut comment_attachment_visitor = CommentAttachmentVisitor::new(comments);
     comment_attachment_visitor.visit_program(program);
     comment_attachment_visitor.result()
