@@ -315,27 +315,36 @@ ExecutionStatus Interpreter::caseGetPNameList(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
-  if (O2REG(GetPNameList).isUndefined() || O2REG(GetPNameList).isNull()) {
+  if (LLVM_UNLIKELY(O2REG(GetPNameList).isUndefined()) ||
+      LLVM_UNLIKELY(O2REG(GetPNameList).isNull())) {
     // Set the iterator to be undefined value.
     O1REG(GetPNameList) = HermesValue::encodeUndefinedValue();
     return ExecutionStatus::RETURNED;
   }
 
-  // Convert to object and store it back to the register.
-  auto res = toObject(runtime, Handle<>(&O2REG(GetPNameList)));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(!vmisa<JSObject>(O2REG(GetPNameList)))) {
+    // Convert to object and store it back to the register.
+    auto res = toObject(runtime, Handle<>(&O2REG(GetPNameList)));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    O2REG(GetPNameList) = res.getValue();
   }
-  O2REG(GetPNameList) = res.getValue();
 
-  auto obj = runtime.makeMutableHandle(vmcast<JSObject>(res.getValue()));
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.obj = vmcast<JSObject>(O2REG(GetPNameList));
   uint32_t beginIndex;
   uint32_t endIndex;
+  MutableHandle<JSObject> obj{lv.obj};
   auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
-  if (cr == ExecutionStatus::EXCEPTION) {
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arr = *cr;
+  Handle<BigStorage> arr = *cr;
   O3REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(beginIndex);
   O4REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(endIndex);
   // Write the result last in case it is the same register as one of the in/out
@@ -348,7 +357,13 @@ ExecutionStatus Interpreter::caseGetNextPName(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
-  GCScopeMarkerRAII marker{runtime};
+  struct : public Locals {
+    PinnedValue<> tmp;
+    PinnedValue<JSObject> propObj;
+    PinnedValue<SymbolID> tmpPropNameStorage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   assert(
       vmisa<BigStorage>(O2REG(GetNextPName)) &&
       "GetNextPName's second op must be BigStorage");
@@ -356,15 +371,14 @@ ExecutionStatus Interpreter::caseGetNextPName(
   auto arr = Handle<BigStorage>::vmcast(&O2REG(GetNextPName));
   uint32_t idx = O4REG(GetNextPName).getNumber();
   uint32_t size = O5REG(GetNextPName).getNumber();
-  MutableHandle<> tmpHandle{runtime};
-  MutableHandle<JSObject> propObj{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  MutableHandle<JSObject> propObj{lv.propObj};
+  MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
   // Loop until we find a property which is present.
   while (idx < size) {
-    tmpHandle = arr->at(runtime, idx);
+    lv.tmp = arr->at(runtime, idx);
     ComputedPropertyDescriptor desc;
     ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
-        obj, runtime, tmpHandle, propObj, tmpPropNameStorage, desc);
+        obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
     if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -374,16 +388,16 @@ ExecutionStatus Interpreter::caseGetNextPName(
   }
   if (idx < size) {
     // We must return the property as a string
-    if (tmpHandle->isNumber()) {
-      auto status = toString_RJS(runtime, tmpHandle);
+    if (lv.tmp->isNumber()) {
+      auto status = toString_RJS(runtime, lv.tmp);
       assert(
           status == ExecutionStatus::RETURNED &&
           "toString on number cannot fail");
-      tmpHandle = status->getHermesValue();
+      lv.tmp = status->getHermesValue();
     }
     O4REG(GetNextPName) = HermesValue::encodeTrustedNumberValue(idx + 1);
     // Write the result last in case it is the same register as O4REG.
-    O1REG(GetNextPName) = tmpHandle.get();
+    O1REG(GetNextPName) = lv.tmp.get();
   } else {
     O1REG(GetNextPName) = HermesValue::encodeUndefinedValue();
   }

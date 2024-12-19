@@ -1761,17 +1761,24 @@ extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
 
   auto cr = [&runtime, base, index, size]() -> CallResult<HermesValue> {
     GCScopeMarkerRAII marker{runtime};
-    Handle baseHandle{toPHV(base)};
-    // Convert to object and store it back to the register.
-    auto res = toObject(runtime, baseHandle);
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
+    if (LLVM_UNLIKELY(!vmisa<JSObject>(*toPHV(base)))) {
+      Handle<> baseHandle{toPHV(base)};
+      // Convert to object and store it back to the register.
+      auto res = toObject(runtime, baseHandle);
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      *base = res.getValue();
     }
-    *base = res.getValue();
 
-    auto obj = runtime.makeMutableHandle(vmcast<JSObject>(res.getValue()));
+    struct : public Locals {
+      PinnedValue<JSObject> obj;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+    lv.obj = vmcast<JSObject>(*toPHV(base));
     uint32_t beginIndex;
     uint32_t endIndex;
+    MutableHandle<JSObject> obj{lv.obj};
     auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
     if (cr == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1802,18 +1809,23 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
   Handle obj = Handle<JSObject>::vmcast(toPHV(base));
   auto result =
       [&runtime, arr, obj, indexVal, sizeVal]() -> CallResult<HermesValue> {
+    struct : public Locals {
+      PinnedValue<> tmp;
+      PinnedValue<JSObject> propObj;
+      PinnedValue<SymbolID> tmpPropNameStorage;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
     GCScopeMarkerRAII marker{runtime};
     uint32_t idx = toPHV(indexVal)->getNumber();
     uint32_t size = toPHV(sizeVal)->getNumber();
-    MutableHandle<> tmpHandle{runtime};
-    MutableHandle<JSObject> propObj{runtime};
-    MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+    MutableHandle<JSObject> propObj{lv.propObj};
+    MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
     // Loop until we find a property which is present.
     while (idx < size) {
-      tmpHandle = arr->at(runtime, idx);
+      lv.tmp = arr->at(runtime, idx);
       ComputedPropertyDescriptor desc;
       ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
-          obj, runtime, tmpHandle, propObj, tmpPropNameStorage, desc);
+          obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
       if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1823,15 +1835,15 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     }
     if (idx < size) {
       // We must return the property as a string
-      if (tmpHandle->isNumber()) {
-        auto status = toString_RJS(runtime, tmpHandle);
+      if (lv.tmp->isNumber()) {
+        auto status = toString_RJS(runtime, lv.tmp);
         assert(
             status == ExecutionStatus::RETURNED &&
             "toString on number cannot fail");
-        tmpHandle = status->getHermesValue();
+        lv.tmp = status->getHermesValue();
       }
       *indexVal = HermesValue::encodeTrustedNumberValue(idx + 1);
-      return tmpHandle.get();
+      return lv.tmp.get();
     } else {
       return HermesValue::encodeUndefinedValue();
     }
