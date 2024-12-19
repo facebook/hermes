@@ -87,7 +87,7 @@ static constexpr uint32_t kMaxSupportedNumRegisters =
 /// The minimum stack gap allowed from RuntimeConfig.
 static constexpr uint32_t kMinSupportedNativeStackGap =
 #if LLVM_ADDRESS_SANITIZER_BUILD
-    512 * 1024;
+    256 * 1024;
 #else
     64 * 1024;
 #endif

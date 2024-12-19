@@ -1626,7 +1626,7 @@ class ScopedNativeDepthReducer {
   // This is empirically good enough.
   static constexpr int kReducedNativeStackGap =
 #if LLVM_ADDRESS_SANITIZER_BUILD
-      256 * 1024;
+      128 * 1024;
 #else
       32 * 1024;
 #endif
