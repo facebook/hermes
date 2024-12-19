@@ -3077,15 +3077,18 @@ CallResult<uint32_t> appendAllPropertyKeys(
   MutableHandle<JSObject> head(runtime, obj.get());
   // Keep track of the unique props we have seen so far. The props may be
   // strings (SymbolIDs) or index names.
-  llvh::SmallSet<SymbolID::RawType, 4> dedupNames;
-  llvh::SmallSet<double, 4> dedupIdxNames;
+  llvh::SmallDenseSet<SymbolID::RawType, 8> dedupNames;
+  llvh::SmallDenseSet<uint32_t, 8> dedupIdxNames;
   // Add the current value of prop and/or propIdHandle to correct set(s).
   // Always called after property is added to \c arr, so the symbols in
   // dedupNames stay alive.
   auto addToDedup = [&dedupIdxNames, &dedupNames, &tmpString, &runtime](
                         Handle<> prop, Handle<SymbolID> propIdHandle) {
     if (prop->isNumber()) {
-      double d = prop->getNumber();
+      assert(
+          doubleToArrayIndex(prop->getNumber()) &&
+          "getOwnPropertyKeys should only return numbers for indices");
+      uint32_t d = prop->getNumberAs<uint32_t>();
       dedupIdxNames.insert(d);
     } else {
       SymbolID sym = propIdHandle.get();
