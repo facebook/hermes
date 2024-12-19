@@ -3066,15 +3066,20 @@ CallResult<uint32_t> appendAllPropertyKeys(
     MutableHandle<BigStorage> &arr,
     uint32_t beginIndex,
     OwnKeysFlags okFlags) {
+  struct : public Locals {
+    PinnedValue<> prop;
+    PinnedValue<StringPrimitive> tmpString;
+    PinnedValue<SymbolID> propId;
+    PinnedValue<JSObject> head;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   uint32_t size = beginIndex;
   // We know that duplicate property names can only exist between objects in
   // the prototype chain. Hence there should not be duplicated properties
   // before we start to look at any prototype.
   bool needDedup = false;
-  MutableHandle<> prop(runtime);
-  MutableHandle<StringPrimitive> tmpString{runtime};
-  MutableHandle<SymbolID> propIdHandle{runtime};
-  MutableHandle<JSObject> head(runtime, obj.get());
+  lv.head = obj;
   // Keep track of the unique props we have seen so far. The props may be
   // strings (SymbolIDs) or index names.
   llvh::SmallDenseSet<SymbolID::RawType, 8> dedupNames;
@@ -3082,7 +3087,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
   // Add the current value of prop and/or propIdHandle to correct set(s).
   // Always called after property is added to \c arr, so the symbols in
   // dedupNames stay alive.
-  auto addToDedup = [&dedupIdxNames, &dedupNames, &tmpString, &runtime](
+  auto addToDedup = [&lv, &dedupIdxNames, &dedupNames, &runtime](
                         Handle<> prop, Handle<SymbolID> propIdHandle) {
     if (prop->isNumber()) {
       assert(
@@ -3097,14 +3102,14 @@ CallResult<uint32_t> appendAllPropertyKeys(
       // string types. This is because 3 should be treated as a duplicate of
       // '3'. Therefore, we attempt to convert this string to a number, and
       // insert the resulting value in the duplicate set.
-      tmpString = runtime.getStringPrimFromSymbolID(*propIdHandle);
-      OptValue<uint32_t> strToIdx = toArrayIndex(runtime, tmpString);
+      lv.tmpString = runtime.getStringPrimFromSymbolID(*propIdHandle);
+      OptValue<uint32_t> strToIdx = toArrayIndex(runtime, lv.tmpString);
       if (LLVM_UNLIKELY(strToIdx)) {
         dedupIdxNames.insert(*strToIdx);
       }
     }
   }; // end of lambda expression
-  while (head.get()) {
+  while (lv.head.get()) {
     GCScope gcScope(runtime);
 
     // enumerableProps will contain all enumerable own properties from obj.
@@ -3113,7 +3118,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
     // trap ordering is specified but ES9 13.7.5.15 says "The mechanics and
     // order of enumerating the properties is not specified", which is
     // unusual.
-    auto cr = JSObject::getOwnPropertyKeys(head, runtime, okFlags);
+    auto cr = JSObject::getOwnPropertyKeys(lv.head, runtime, okFlags);
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3121,74 +3126,74 @@ CallResult<uint32_t> appendAllPropertyKeys(
     auto marker = gcScope.createMarker();
     for (unsigned i = 0, e = enumerableProps->getEndIndex(); i < e; ++i) {
       gcScope.flushToMarker(marker);
-      prop = enumerableProps->at(runtime, i).unboxToHV(runtime);
+      lv.prop = enumerableProps->at(runtime, i).unboxToHV(runtime);
       assert(
-          (prop->isNumber() || prop->isString() || prop->isSymbol()) &&
+          (lv.prop->isNumber() || lv.prop->isString() || lv.prop->isSymbol()) &&
           "property name is not a string or number");
-      if (prop->isSymbol()) {
-        propIdHandle = prop->getSymbol();
-      } else if (prop->isString()) {
+      if (lv.prop->isSymbol()) {
+        lv.propId = lv.prop->getSymbol();
+      } else if (lv.prop->isString()) {
         CallResult<Handle<SymbolID>> symRes =
             runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
                 runtime,
-                runtime.makeHandle<StringPrimitive>(prop->getString()));
+                runtime.makeHandle<StringPrimitive>(lv.prop->getString()));
         if (LLVM_UNLIKELY(symRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        propIdHandle = *symRes;
+        lv.propId = *symRes;
       }
       if (!needDedup) {
         // If no dedup is needed, add it directly.
         if (LLVM_UNLIKELY(
-                BigStorage::push_back(arr, runtime, prop) ==
+                BigStorage::push_back(arr, runtime, lv.prop) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        addToDedup(prop, propIdHandle);
+        addToDedup(lv.prop, lv.propId);
         ++size;
         continue;
       }
       // Otherwise check the existing sets for matches.
       bool dupFound;
-      if (prop->isNumber()) {
-        dupFound = dedupIdxNames.count(prop->getNumber());
+      if (lv.prop->isNumber()) {
+        dupFound = dedupIdxNames.count(lv.prop->getNumber());
       } else {
         assert(
-            prop->isString() ||
-            prop->isSymbol() &&
+            lv.prop->isString() ||
+            lv.prop->isSymbol() &&
                 "getOwnPropertyKeys only returns symbol, string, or number");
-        dupFound = dedupNames.count(propIdHandle.get().unsafeGetRaw());
+        dupFound = dedupNames.count(lv.propId.get().unsafeGetRaw());
 
-        tmpString = prop->isString()
-            ? prop->getString()
-            : runtime.getStringPrimFromSymbolID(*propIdHandle);
+        lv.tmpString = lv.prop->isString()
+            ? lv.prop->getString()
+            : runtime.getStringPrimFromSymbolID(*lv.propId);
 
         // If we still haven't found a duplicate and there have been previous
         // index names, then attempt to convert this string prop to an index and
         // check that number value for duplicates.
         if (LLVM_UNLIKELY(!dupFound && !dedupIdxNames.empty())) {
-          OptValue<uint32_t> propNum = toArrayIndex(runtime, tmpString);
+          OptValue<uint32_t> propNum = toArrayIndex(runtime, lv.tmpString);
           if (LLVM_UNLIKELY(propNum))
             dupFound = dedupIdxNames.count(*propNum);
         }
       }
       if (LLVM_LIKELY(!dupFound)) {
         if (LLVM_UNLIKELY(
-                BigStorage::push_back(arr, runtime, prop) ==
+                BigStorage::push_back(arr, runtime, lv.prop) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        addToDedup(prop, propIdHandle);
+        addToDedup(lv.prop, lv.propId);
         ++size;
       }
     }
     // Continue to follow the prototype chain.
     CallResult<PseudoHandle<JSObject>> parentRes =
-        JSObject::getPrototypeOf(head, runtime);
+        JSObject::getPrototypeOf(createPseudoHandle(*lv.head), runtime);
     if (LLVM_UNLIKELY(parentRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    head = parentRes->get();
+    lv.head = parentRes->get();
     needDedup = true;
   }
   return size;
