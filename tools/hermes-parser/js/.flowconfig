@@ -29,7 +29,7 @@ enums=true
 experimental.natural_inference.exports.primitive_const=true
 
 [version]
-^0.256.0
+^0.257.0
 
 [lints]
 untyped-type-import=error
