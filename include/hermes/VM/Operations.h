@@ -279,6 +279,12 @@ inline char16_t letterToLower(char16_t c) {
 /// \returns the double that results, and NaN on failure.
 double parseIntWithRadix(const StringView str, int radix);
 
+/// ES5.1 9.8.1
+/// Convert \p m to its string value following the JS spec.
+CallResult<PseudoHandle<StringPrimitive>> numberToStringPrimitive(
+    Runtime &runtime,
+    double m);
+
 /// Takes a finite double \p number and a base \p radix (between 2 and 36
 /// inclusive), and returns the string that results from converting \p number
 /// into a string in base \p radix.

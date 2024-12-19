@@ -1847,11 +1847,11 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     if (idx < size) {
       // We must return the property as a string
       if (lv.tmp->isNumber()) {
-        auto status = toString_RJS(runtime, lv.tmp);
-        assert(
-            status == ExecutionStatus::RETURNED &&
-            "toString on number cannot fail");
-        lv.tmp = status->getHermesValue();
+        auto strRes = numberToStringPrimitive(runtime, lv.tmp->getNumber());
+        if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lv.tmp = strRes->getHermesValue();
       } else if (lv.tmp->isSymbol()) {
         // for-in enumeration only returns numbers and strings.
         // In most cases (i.e. non-Proxy), we keep the symbol around instead

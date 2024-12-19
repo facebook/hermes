@@ -316,7 +316,7 @@ bool toBoolean(HermesValue value) {
 }
 
 /// ES5.1 9.8.1
-static CallResult<PseudoHandle<StringPrimitive>> numberToString(
+CallResult<PseudoHandle<StringPrimitive>> numberToStringPrimitive(
     Runtime &runtime,
     double m) {
   char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
@@ -411,7 +411,7 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     case HermesValue::ETag::Symbol:
       return runtime.raiseTypeError("Cannot convert Symbol to string");
     default:
-      return numberToString(runtime, value.getNumber());
+      return numberToStringPrimitive(runtime, value.getNumber());
   }
 
   return createPseudoHandle(result);
