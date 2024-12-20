@@ -74,6 +74,23 @@ describe('Match expression', () => {
     `);
   });
 
+  test('sequence expressions: always with parens', async () => {
+    expect(
+      format(`
+       const e = match (x, y) {
+         1: (x, y),
+         2 if (x, y): 0,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "const e = match ((x, y)) {
+        1: (x, y),
+        2 if (x, y): 0,
+      };
+      "
+    `);
+  });
+
   test('patterns: core', async () => {
     expect(
       format(`
