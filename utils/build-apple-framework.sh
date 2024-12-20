@@ -53,13 +53,8 @@ function build_host_hermesc {
 
 # Utility function to configure an Apple framework
 function configure_apple_framework {
-  local build_cli_tools enable_bitcode
+  local build_cli_tools
 
-  if [[ $1 == appletvos || $1 == iphoneos || $1 == catalyst || $1 == visionos ]]; then
-    enable_bitcode="true"
-  else
-    enable_bitcode="false"
-  fi
   if [[ $1 == macosx ]]; then
     build_cli_tools="true"
   else
@@ -75,9 +70,9 @@ function configure_apple_framework {
     -DHERMES_ENABLE_LIBFUZZER:BOOLEAN=false \
     -DHERMES_ENABLE_FUZZILLI:BOOLEAN=false \
     -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false \
-    -DHERMES_ENABLE_BITCODE:BOOLEAN="$enable_bitcode" \
     -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true \
-    -DHERMES_BUILD_APPLE_DSYM:BOOLEAN=true \
+    -DCMAKE_CXX_FLAGS="-gdwarf" \
+    -DCMAKE_C_FLAGS="-gdwarf" \
     -DHERMES_ENABLE_TOOLS:BOOLEAN="$build_cli_tools" \
     -DIMPORT_HERMESC:PATH="$PWD/build_host_hermesc/ImportHermesc.cmake" \
     -DCMAKE_INSTALL_PREFIX:PATH=../destroot \

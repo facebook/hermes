@@ -20,7 +20,7 @@ namespace hbc {
 namespace {
 
 class BytecodeSerializer {
-  friend void visitBytecodeSegmentsInOrder<BytecodeSerializer>(
+  friend void hermes::hbc::visitBytecodeSegmentsInOrder<BytecodeSerializer>(
       BytecodeSerializer &);
 
   /// Output Stream

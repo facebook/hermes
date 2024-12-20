@@ -53,8 +53,8 @@ set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 
 if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(CMAKE_OSX_SYSROOT "macosx")
-  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
-  set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   set(CMAKE_HAVE_THREADS_LIBRARY 1)
   set(CMAKE_USE_WIN32_THREADS_INIT 0)
@@ -202,10 +202,6 @@ set(HERMES_ENABLE_FUZZILLI OFF CACHE BOOL
 set(HERMES_ENABLE_TOOLS ON CACHE BOOL
   "Enable CLI tools")
 
-# Enable bitcode
-set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
-  "Include bitcode with the framework")
-
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
@@ -285,11 +281,8 @@ set(HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES ON CACHE BOOL
 set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
   "Enable the test suite")
 
-set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
+set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
-
-set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
-  "Whether to build a DWARF debugging symbols bundle")
 
 set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 
@@ -331,10 +324,6 @@ if(HERMES_CHECK_NATIVE_STACK)
     )
   endif()
   add_definitions(-DHERMES_CHECK_NATIVE_STACK)
-endif()
-
-if(HERMES_BUILD_APPLE_DSYM)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
@@ -584,7 +573,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   endif()
   # MSVC does not have strict aliasing so there is no need to support it.
   # Similar to GCC/Clang above, disable strict signed integer overflow.
-  append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  # TODO: Investigate disabling strict signed integer overflow for MSVC
+  # append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
@@ -730,7 +720,13 @@ if(HERMES_IS_ANDROID)
   find_package(fbjni REQUIRED CONFIG)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  # MSVC requires c++20, because of the use of designated initializers in the codebase.
+  set(CMAKE_CXX_STANDARD 20)
+else()
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
