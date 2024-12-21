@@ -494,11 +494,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSObject>::vmcast(&phv(obj));
   }
 
-  static ::hermes::vm::Handle<::hermes::vm::JSArray> arrayHandle(
-      const jsi::Array &arr) {
-    return ::hermes::vm::Handle<::hermes::vm::JSArray>::vmcast(&phv(arr));
-  }
-
   static ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer> arrayBufferHandle(
       const jsi::ArrayBuffer &arr) {
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
@@ -2192,7 +2187,12 @@ void HermesRuntimeImpl::setPropertyValue(
 }
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {
-  return vm::vmisa<vm::JSArray>(phv(obj));
+  if (vm::vmisa<vm::JSArray>(phv(obj))) {
+    return true;
+  }
+  auto cr = vm::isArray(runtime_, vm::vmcast<vm::JSObject>(phv(obj)));
+  const_cast<HermesRuntimeImpl *>(this)->checkStatus(cr.getStatus());
+  return *cr;
 }
 
 bool HermesRuntimeImpl::isArrayBuffer(const jsi::Object &obj) const {
@@ -2291,7 +2291,26 @@ jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
 }
 
 size_t HermesRuntimeImpl::size(const jsi::Array &arr) {
-  return vm::JSArray::getLength(*arrayHandle(arr), runtime_);
+  if (LLVM_LIKELY(vm::vmisa<vm::JSArray>(phv(arr)))) {
+    return vm::JSArray::getLength(vm::vmcast<vm::JSArray>(phv(arr)), runtime_);
+  }
+
+  vm::GCScope gcScope(runtime_);
+  struct : vm::Locals {
+    vm::PinnedValue<> lenProp;
+  } lv;
+  vm::LocalsRAII lraii{runtime_, &lv};
+  auto cr = vm::JSObject::getNamed_RJS(
+      handle(arr),
+      runtime_,
+      vm::Predefined::getSymbolID(vm::Predefined::length));
+  checkStatus(cr.getStatus());
+
+  lv.lenProp = std::move(*cr);
+  auto lenRes = toLength(runtime_, lv.lenProp);
+  checkStatus(lenRes.getStatus());
+
+  return lenRes->getNumber();
 }
 
 size_t HermesRuntimeImpl::size(const jsi::ArrayBuffer &arr) {
@@ -2316,7 +2335,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
   }
 
   auto res = vm::JSObject::getComputed_RJS(
-      arrayHandle(arr),
+      handle(arr),
       runtime_,
       runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)));
   checkStatus(res.getStatus());
@@ -2335,7 +2354,7 @@ void HermesRuntimeImpl::setValueAtIndexImpl(
   }
 
   auto res = vm::JSObject::putComputed_RJS(
-      arrayHandle(arr),
+      handle(arr),
       runtime_,
       runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)),
       vmHandleFromValue(value));
