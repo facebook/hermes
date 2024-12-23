@@ -80,6 +80,27 @@ void executeInStack(StackExecutor &exec, void *arg, void (*func)(void *arg)) {
 
 } // namespace hermes
 
+#elif defined(__wasm__) && !defined(__EMSCRIPTEN_THREADS__)
+namespace hermes {
+
+#pragma message("Warning: StackExecutor is no-op in Wasm without threads!")
+
+class StackExecutor {
+ public:
+};
+
+std::shared_ptr<StackExecutor> newStackExecutor(
+    size_t stackSize,
+    std::chrono::milliseconds) {
+  return std::make_shared<StackExecutor>();
+}
+
+void executeInStack(StackExecutor &exec, void *arg, void (*func)(void *arg)) {
+  func(arg);
+}
+
+} // namespace hermes
+
 #else
 
 #include "hermes/Support/SerialExecutor.h"
