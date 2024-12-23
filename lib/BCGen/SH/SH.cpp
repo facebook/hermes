@@ -2858,7 +2858,7 @@ static SHNativeFuncInfo s_function_info_table[];
        << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n;"
        << "  SHCompressedPointer object_literal_class_cache["
        << moduleGen.literalBuffers.objShapeTable.size() << "];\n};\n"
-       << "SHUnit *CREATE_THIS_UNIT(SHRuntime *shr) {\n"
+       << "SHUnit *CREATE_THIS_UNIT(void) {\n"
        << "  struct UnitData *unit_data = calloc(sizeof(struct UnitData), 1);\n"
        << "  *unit_data = (struct UnitData){.unit = {.index = &unit_index,"
        << ".num_symbols =" << moduleGen.stringTable.size()

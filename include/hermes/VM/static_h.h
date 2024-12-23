@@ -60,7 +60,7 @@ typedef struct SHNativeFuncInfo {
 
 /// Type of a function that allocates and returns a new SHUnit ready to be used
 /// with a runtime.
-typedef SHUnit *(*SHUnitCreator)();
+typedef SHUnit *(*SHUnitCreator)(void);
 
 /// SHUnit describes a compilation unit.
 ///
