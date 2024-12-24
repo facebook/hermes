@@ -44,7 +44,7 @@ file_name=$(basename "$input")   # Remove path
 file_name="${file_name%.*}"      # Remove extension
 
 echo "Using shermes to compile $input... to ${file_name}.c"
-"$shermes" -emit-c "$input"
+"$shermes" -Xenable-tdz -emit-c "$input"
 
 echo "Using emcc to compile ${file_name}.c to ${file_name}.o"
 emcc "${file_name}.c" -c \
