@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_GCCONCURRENCY_H
 #define HERMES_VM_GCCONCURRENCY_H
 
+#include "hermes/Support/FakeThreads.h"
+
 #include <atomic>
 #include <cassert>
 #include <condition_variable>
@@ -31,62 +33,6 @@ static constexpr bool kConcurrentGC =
     ;
 
 namespace impl {
-
-/// FakeAtomic has the same API as std::atomic, but ignores the memory order
-/// argument and always accesses data non-atomically.
-/// Used when the GC doesn't require atomicity.
-/// In the JS VM, there is currently only one mutator thread and at most one GC
-/// thread. The GC thread will not do any modifications to these atomics, and
-/// will only read them. Therefore it is typically safe for the mutator to use
-/// relaxed reads. Writes will typically require std::memory_order_release or
-/// stricter to make sure the GC sees the writes which occur before the atomic
-/// write.
-/// NOTE: This differs from std::atomic where it doesn't have default memory
-/// orders, since we want all atomic operations to be very explicit with their
-/// requirements. Also don't define operator T for the same reason.
-template <typename T>
-class FakeAtomic final {
- public:
-  constexpr FakeAtomic() : data_{} {}
-  constexpr FakeAtomic(T desired) : data_{desired} {}
-
-  T load(std::memory_order order) const {
-    (void)order;
-    return data_;
-  }
-
-  void store(T desired, std::memory_order order) {
-    (void)order;
-    data_ = desired;
-  }
-
-  T fetch_add(T arg, std::memory_order order) {
-    (void)order;
-    const T oldData = data_;
-    data_ += arg;
-    return oldData;
-  }
-
-  T exchange(T arg, std::memory_order order) {
-    (void)order;
-    const T oldData = data_;
-    data_ = arg;
-    return oldData;
-  }
-
-  T fetch_sub(T arg, std::memory_order order) {
-    (void)order;
-    const T oldData = data_;
-    data_ -= arg;
-    return oldData;
-  }
-
-  /// Use store explicitly instead.
-  FakeAtomic &operator=(const FakeAtomic &) = delete;
-
- private:
-  T data_;
-};
 
 /// A DebugMutex wraps a std::recursive_mutex and also tracks which thread
 /// currently has the mutex locked. Only available in debug modes.
@@ -135,34 +81,19 @@ class DebugMutex {
   uint32_t depth_{0};
 };
 
-/// A FakeMutex has the same API as a std::mutex but does nothing.
-/// It pretends to always be locked for convenience of asserts that need to work
-/// in both concurrent code and non-concurrent code.
-class FakeMutex {
- public:
-  explicit FakeMutex() = default;
-
-  operator bool() const {
-    return true;
-  }
-
-  uint32_t depth() const {
-    return 1;
-  }
-
-  void lock() {}
-  bool try_lock() {
-    return true;
-  }
-  void unlock() {}
-};
-
 } // namespace impl
 
 // Only these typedefs should be used by the rest of the VM.
+
+// In the JS VM, there is currently only one mutator thread and at most one GC
+// thread. The GC thread will not do any modifications to these atomics, and
+// will only read them. Therefore it is typically safe for the mutator to use
+// relaxed reads. Writes will typically require std::memory_order_release or
+// stricter to make sure the GC sees the writes which occur before the atomic
+// write.
 template <typename T>
 using AtomicIfConcurrentGC = typename std::
-    conditional<kConcurrentGC, std::atomic<T>, impl::FakeAtomic<T>>::type;
+    conditional<kConcurrentGC, std::atomic<T>, FakeAtomic<T>>::type;
 
 using Mutex = std::conditional<
     kConcurrentGC,
@@ -172,7 +103,7 @@ using Mutex = std::conditional<
     std::recursive_mutex
 #endif
     ,
-    impl::FakeMutex>::type;
+    FakeMutex>::type;
 
 } // namespace vm
 } // namespace hermes

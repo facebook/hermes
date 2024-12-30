@@ -96,3 +96,6 @@ bool Process::AreCoreFilesPrevented() { return coreFilesPrevented; }
 #ifdef _WIN32
 #include "Windows/Process.inc"
 #endif
+#ifdef __wasi__
+#include "Wasi/Process.inc"
+#endif

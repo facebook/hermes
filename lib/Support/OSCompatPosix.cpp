@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
+#if !defined(_WINDOWS) && !defined(__wasm__)
 
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"

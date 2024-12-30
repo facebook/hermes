@@ -1113,6 +1113,9 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
 #if defined(_WIN32)
 #include "Windows/Path.inc"
 #endif
+#ifdef __wasi__
+#include "Wasi/Path.inc"
+#endif
 
 namespace llvh {
 namespace sys {

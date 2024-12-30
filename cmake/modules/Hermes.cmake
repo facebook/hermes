@@ -57,6 +57,8 @@ else (WIN32)
     else ()
       set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
     endif ()
+  elseif (WASI)
+    # Do nothing for WASI. It will be detected at compile time.
   else (FUCHSIA OR UNIX)
     MESSAGE(SEND_ERROR "Unable to determine platform")
   endif (FUCHSIA OR UNIX)
