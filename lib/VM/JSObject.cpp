@@ -17,7 +17,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
 
-#include "llvh/ADT/SmallSet.h"
+#include "llvh/ADT/DenseSet.h"
 
 namespace hermes {
 namespace vm {
@@ -396,7 +396,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   size_t hostObjectSymbolCount = 0;
 
   // If current object is a host object we need to deduplicate its properties
-  llvh::SmallSet<SymbolID::RawType, 16> dedupSet;
+  llvh::SmallDenseSet<SymbolID::RawType, 16> dedupSet;
 
   // Output index.
   uint32_t index = 0;

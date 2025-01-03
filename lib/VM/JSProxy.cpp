@@ -14,7 +14,7 @@
 #include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/PropertyAccessor.h"
 
-#include "llvh/ADT/SmallSet.h"
+#include "llvh/ADT/SetVector.h"
 
 namespace hermes {
 namespace vm {
@@ -1455,7 +1455,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 13. Assert: targetKeys contains no duplicate entries.
   // 14. Let targetConfigurableKeys be a new empty List.
   // 15. Let targetNonconfigurableKeys be a new empty List.
-  llvh::SmallSet<uint32_t, 8> nonConfigurable;
+  llvh::SmallSetVector<uint32_t, 8> nonConfigurable;
   MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 16. For each element key of targetKeys, do
   GCScopeMarkerRAII marker{runtime};
