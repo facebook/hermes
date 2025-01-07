@@ -501,6 +501,27 @@ bool Verifier::visitVariableScope(const hermes::VariableScope &VS) {
         VS.getParentScope() == curParentVS,
         "VariableScope has multiple different parents.");
   }
+
+  // Check that every variable with a load has at least one store.
+  // NOTE: Don't run this in IR_LOWERED because OptEnvironmentInit breaks this
+  // assumption.
+  if (verificationMode != VerificationMode::IR_LOWERED) {
+    for (auto *var : VS.getVariables()) {
+      bool hasLoad = false;
+      bool hasStore = false;
+      for (auto *varUser : VS.getUsers()) {
+        hasLoad |= llvh::isa<LoadFrameInst>(varUser);
+        hasStore |= llvh::isa<StoreFrameInst>(varUser);
+      }
+      if (hasLoad) {
+        AssertWithMsg(
+            hasStore,
+            "Variable " << var->getName()
+                        << " must have a store for it to load");
+      }
+    }
+  }
+
   return true;
 }
 
@@ -708,6 +729,20 @@ bool Verifier::visitAllocStackInst(const AllocStackInst &Inst) {
       Inst,
       &(Inst.getParent()->back()) != &Inst,
       "Alloca Instruction cannot be the last instruction of a basic block");
+  bool hasLoad = false;
+  bool hasStore = false;
+  for (auto *user : Inst.getUsers()) {
+    hasLoad |= user->getSideEffect().getReadStack();
+    hasStore |= user->getSideEffect().getWriteStack();
+  }
+
+  // TODO: Make this check better by ensuring that there's a store
+  // prior to the load for every possible path through the function.
+  // This isn't dominance, because there may be two stores in separate
+  // branches prior to the load.
+  if (hasLoad)
+    AssertIWithMsg(Inst, hasStore, "LoadStackInst must have a StoreStackInst");
+
   return true;
 }
 
