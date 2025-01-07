@@ -17,6 +17,7 @@
 import type {ParserOptions} from '../ParserOptions';
 import type {
   BinaryExpression,
+  BreakStatement,
   ESNode,
   Expression,
   Identifier,
@@ -24,6 +25,7 @@ import type {
   MatchExpression,
   MatchMemberPattern,
   MatchPattern,
+  MatchStatement,
   MemberExpression,
   ObjectPattern,
   Program,
@@ -726,7 +728,6 @@ function mapMatchExpression(node: MatchExpression): Expression {
             };
       const bindingNodes = statementsOfBindings(root, bindings);
       const caseBody: Array<Statement> = bindingNodes.concat(bodyNode);
-      // Produce an if statement for this the tests of this case
       if (conditions.length > 0) {
         const tests = testsOfConditions(root, conditions);
         return {
@@ -766,6 +767,88 @@ function mapMatchExpression(node: MatchExpression): Expression {
   return iife(statements, params, args);
 }
 
+/**
+ * Match statement transform entry point.
+ */
+function mapMatchStatement(node: MatchStatement): Statement {
+  const {argument, cases} = node;
+  const {hasWildcard, analyses} = analyzeCases(cases);
+
+  const topLabel: Identifier = genIdent();
+  const isSimpleArgument = calculateSimpleArgument(argument);
+  const genRoot: Identifier | null = !isSimpleArgument ? genIdent() : null;
+  const root: Expression = genRoot == null ? argument : genRoot;
+
+  const statements: Array<Statement> = [];
+  if (genRoot != null) {
+    statements.push(variableDeclaration('const', genRoot, argument));
+  }
+  analyses.forEach(({conditions, bindings, guard, body}) => {
+    const breakNode: BreakStatement = {
+      type: 'BreakStatement',
+      label: shallowCloneNode(topLabel),
+      ...etc(),
+    };
+    const bodyStatements = body.body.concat(breakNode);
+    // If we have a guard, then we use a nested if statement
+    // `if (<guard>) return <body>`
+    const guardedBodyStatements: Array<Statement> =
+      guard == null
+        ? bodyStatements
+        : [
+            {
+              type: 'IfStatement',
+              test: guard,
+              consequent: {
+                type: 'BlockStatement',
+                body: bodyStatements,
+                ...etc(),
+              },
+              ...etc(),
+            },
+          ];
+    const bindingNodes = statementsOfBindings(root, bindings);
+    const caseBody: Array<Statement> = bindingNodes.concat(
+      guardedBodyStatements,
+    );
+    if (conditions.length > 0) {
+      const tests = testsOfConditions(root, conditions);
+      statements.push({
+        type: 'IfStatement',
+        test: conjunction(tests),
+        consequent: {
+          type: 'BlockStatement',
+          body: caseBody,
+          ...etc(),
+        },
+        ...etc(),
+      });
+    } else {
+      // No conditions, so no if statement
+      statements.push({
+        type: 'BlockStatement',
+        body: caseBody,
+        ...etc(),
+      });
+    }
+  });
+
+  if (!hasWildcard) {
+    statements.push(fallthroughError(shallowCloneNode(root)));
+  }
+
+  return {
+    type: 'LabeledStatement',
+    label: topLabel,
+    body: {
+      type: 'BlockStatement',
+      body: statements,
+      ...etc(),
+    },
+    ...etc(),
+  };
+}
+
 export function transformProgram(
   program: Program,
   _options: ParserOptions,
@@ -778,6 +861,9 @@ export function transformProgram(
       switch (node.type) {
         case 'MatchExpression': {
           return mapMatchExpression(node);
+        }
+        case 'MatchStatement': {
+          return mapMatchStatement(node);
         }
         case 'Identifier': {
           // A rudimentary check to avoid some collisions with our generated
