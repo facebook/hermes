@@ -884,6 +884,7 @@ exports[`HookDeclaration type parameters Babel 1`] = `
         "params": [
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T1",
             "type": "TypeParameter",
@@ -892,6 +893,7 @@ exports[`HookDeclaration type parameters Babel 1`] = `
           },
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T2",
             "type": "TypeParameter",
@@ -959,6 +961,7 @@ exports[`HookDeclaration type parameters ESTree 1`] = `
         "params": [
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T1",
             "type": "TypeParameter",
@@ -967,6 +970,7 @@ exports[`HookDeclaration type parameters ESTree 1`] = `
           },
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T2",
             "type": "TypeParameter",
