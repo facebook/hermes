@@ -9033,7 +9033,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function printTypeParameter(path, options2, print3) {
     const { node, parent } = path;
-    const parts = [node.type === "TSTypeParameter" && node.const ? "const " : ""];
+    const parts = [node.const ? "const " : ""];
     const name = node.type === "TSTypeParameter" ? print3("name") : node.name;
     if (parent.type === "TSMappedType") {
       if (parent.readonly) {
