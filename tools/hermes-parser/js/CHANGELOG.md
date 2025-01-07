@@ -1,3 +1,11 @@
+## 0.26.0
+
+### `hermes-parser`
+* Support for class static blocks.
+* Forbid `await`/`yield`/`arguments` in class field inits.
+* Support for `const` type parameters in Flow (also in `hermes-estree`, `prettier-plugin-hermes-parser`).
+* Experimental support for Flow pattern matching (also in `hermes-estree`, `hermes-eslint`, `hermes-transform`, `prettier-plugin-hermes-parser`).
+
 ## 0.25.1
 
 ### `babel-plugin-syntax-hermes-parser`
