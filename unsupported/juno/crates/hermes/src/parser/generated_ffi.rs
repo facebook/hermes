@@ -882,6 +882,7 @@ extern "C" {
     pub fn hermes_get_TypeParameterDeclaration_params(node: NodePtr) -> NodeListRef;
     // TypeParameter
     pub fn hermes_get_TypeParameter_name(node: NodePtr) -> NodeLabel;
+    pub fn hermes_get_TypeParameter_const(node: NodePtr) -> bool;
     pub fn hermes_get_TypeParameter_bound(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_TypeParameter_variance(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_TypeParameter_default(node: NodePtr) -> NodePtrOpt;

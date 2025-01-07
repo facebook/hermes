@@ -2172,6 +2172,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
         }
         NodeKind::TypeParameter => {
           let name = cvt.cvt_label(gc, hermes_get_TypeParameter_name(n));
+          let const = hermes_get_TypeParameter_const(n);
           let bound = cvt_node_ptr_opt(cvt, gc, hermes_get_TypeParameter_bound(n));
           let variance = cvt_node_ptr_opt(cvt, gc, hermes_get_TypeParameter_variance(n));
           let default = cvt_node_ptr_opt(cvt, gc, hermes_get_TypeParameter_default(n));
@@ -2179,6 +2180,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           let mut template = ast::template::TypeParameter {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   name,
+                  const,
                   bound,
                   variance,
                   default,
