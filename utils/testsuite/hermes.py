@@ -387,6 +387,7 @@ async def generate_ast(
         args.append("-Xparse-component-syntax")
         args.append("-parse-jsx")
         args.append("-Xinclude-empty-ast-nodes")
+        args.append("-Xparse-flow-match")
     elif "JSX" in test_file:
         args.append("--parse-jsx")
     args.append("-dump-transformed-ast" if transformed else "-dump-ast")
