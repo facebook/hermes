@@ -407,6 +407,14 @@ class InstSimplifyImpl {
           return builder_.createBinaryOperatorInst(
               lhs, rhs, ValueKind::BinaryStrictlyEqualInstKind);
         }
+
+        // ~(null|undefined) == null|undefined is always false.
+        if ((Type::intersectTy(leftTy, kNullOrUndef).isNoType() &&
+             rightTy.isSubsetOf(kNullOrUndef)) ||
+            (Type::intersectTy(rightTy, kNullOrUndef).isNoType() &&
+             leftTy.isSubsetOf(kNullOrUndef))) {
+          return builder_.getLiteralBool(false);
+        }
         break;
 
       case ValueKind::BinaryNotEqualInstKind: // !=
@@ -421,6 +429,14 @@ class InstSimplifyImpl {
           return builder_.createBinaryOperatorInst(
               lhs, rhs, ValueKind::BinaryStrictlyNotEqualInstKind);
         }
+
+        // ~(null|undefined) != null|undefined is always true.
+        if ((Type::intersectTy(leftTy, kNullOrUndef).isNoType() &&
+             rightTy.isSubsetOf(kNullOrUndef)) ||
+            (Type::intersectTy(rightTy, kNullOrUndef).isNoType() &&
+             leftTy.isSubsetOf(kNullOrUndef))) {
+          return builder_.getLiteralBool(true);
+        }
         break;
 
       case ValueKind::BinaryStrictlyEqualInstKind: // ===
@@ -430,10 +446,8 @@ class InstSimplifyImpl {
         }
 
         // Operands of different types can't be strictly equal.
-        if (leftTy.isPrimitive() && rightTy.isPrimitive()) {
-          if (Type::intersectTy(leftTy, rightTy).isNoType()) {
-            return builder_.getLiteralBool(false);
-          }
+        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
+          return builder_.getLiteralBool(false);
         }
         break;
 
@@ -441,6 +455,10 @@ class InstSimplifyImpl {
         // Identical operands can't be non-equal.
         if (identicalForEquality) {
           return builder_.getLiteralBool(false);
+        }
+        // Operands of different types can't be strictly equal.
+        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
+          return builder_.getLiteralBool(true);
         }
         break;
 
