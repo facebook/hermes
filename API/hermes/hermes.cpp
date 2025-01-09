@@ -613,6 +613,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
   std::string utf8(const jsi::String &) override;
 
+  std::u16string utf16(const jsi::String &str) override;
+  std::u16string utf16(const jsi::PropNameID &sym) override;
+
   jsi::Value createValueFromJsonUtf8(const uint8_t *json, size_t length)
       override;
 
@@ -1779,6 +1782,27 @@ jsi::String HermesRuntimeImpl::createStringFromUtf8(
 std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
   return utf8FromStringView(
       vm::StringPrimitive::createStringView(runtime_, stringHandle(str)));
+}
+
+std::u16string HermesRuntimeImpl::utf16(const jsi::String &str) {
+  auto *stringPrim = phv(str).getString();
+  if (stringPrim->isASCII()) {
+    auto arrayRef = stringPrim->getStringRef<char>();
+    return std::u16string(arrayRef.begin(), arrayRef.end());
+  }
+  auto arrayRef = stringPrim->getStringRef<char16_t>();
+  return std::u16string(arrayRef.data(), arrayRef.size());
+}
+
+std::u16string HermesRuntimeImpl::utf16(const jsi::PropNameID &sym) {
+  vm::SymbolID id = phv(sym).getSymbol();
+  auto *stringPrim = runtime_.getStringPrimFromSymbolID(id);
+  if (stringPrim->isASCII()) {
+    auto arrayRef = stringPrim->getStringRef<char>();
+    return std::u16string(arrayRef.begin(), arrayRef.end());
+  }
+  auto arrayRef = stringPrim->getStringRef<char16_t>();
+  return std::u16string(arrayRef.data(), arrayRef.size());
 }
 
 jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(

@@ -1167,6 +1167,37 @@ TEST_P(HermesRuntimeTest, NativeExceptionDoesNotUseGlobalError) {
       test.call(*rt).getString(*rt).utf8(*rt));
 }
 
+TEST_P(HermesRuntimeTest, UTF16Test) {
+  String ascii = String::createFromUtf8(*rt, "z");
+  EXPECT_EQ(ascii.utf16(*rt), u"z");
+
+  String foobar = String::createFromUtf8(*rt, "foobar");
+  EXPECT_EQ(foobar.utf16(*rt), u"foobar");
+
+  String chineseHello = String::createFromUtf8(*rt, "你好");
+  EXPECT_EQ(chineseHello.utf16(*rt), u"你好");
+
+  String thumbsUpEmoji = String::createFromUtf8(*rt, "👍");
+  EXPECT_EQ(thumbsUpEmoji.utf16(*rt), u"👍");
+
+  String combined = String::createFromUtf8(*rt, "foobar👍你好");
+  EXPECT_EQ(combined.utf16(*rt), u"foobar👍你好");
+
+  // We've only added specific implementations for HermesRuntime. The ABI
+  // runtime will convert to UTF8 first, causing the lone surrogates to be
+  // replaced with the Unicode replacement character. We will eventually add the
+  // UTF16-related APIs to the ABI Runtime and test these cases as well.
+  if (dynamic_cast<HermesRuntime *>(rt.get())) {
+    // Thumbs up emoji is encoded as 0xd83d 0xdc4d. These test UTF16 with lone
+    // high and low surrogates.
+    String loneHighSurrogate = eval("'\\ud83d'").getString(*rt);
+    EXPECT_EQ(loneHighSurrogate.utf16(*rt), std::u16string(u"\xd83d"));
+
+    String loneLowSurrogate = eval("'\\udc4d'").getString(*rt);
+    EXPECT_EQ(loneLowSurrogate.utf16(*rt), std::u16string(u"\xdc4d"));
+  }
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
