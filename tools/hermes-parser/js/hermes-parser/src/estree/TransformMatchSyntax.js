@@ -176,6 +176,36 @@ function checkBindingKind(node: MatchPattern, kind: BindingKind): void {
 }
 
 /**
+ * Does an object property's pattern require a `prop-exists` condition added?
+ * If the pattern is a literal like `0`, then it's not required, since the `eq`
+ * condition implies the prop exists. However, if we could be doing an equality
+ * check against `undefined`, then it is required, since that will be true even
+ * if the property doesn't exist.
+ */
+function needsPropExistsCond(pattern: MatchPattern): boolean {
+  switch (pattern.type) {
+    case 'MatchWildcardPattern':
+    case 'MatchBindingPattern':
+    case 'MatchIdentifierPattern':
+    case 'MatchMemberPattern':
+      return true;
+    case 'MatchLiteralPattern':
+    case 'MatchUnaryPattern':
+    case 'MatchObjectPattern':
+    case 'MatchArrayPattern':
+      return false;
+    case 'MatchAsPattern': {
+      const {pattern: asPattern} = pattern;
+      return needsPropExistsCond(asPattern);
+    }
+    case 'MatchOrPattern': {
+      const {patterns} = pattern;
+      return patterns.some(needsPropExistsCond);
+    }
+  }
+}
+
+/**
  * Analyzes a match pattern, and produced both the conditions and bindings
  * produced by that pattern.
  */
@@ -301,15 +331,12 @@ function analyzePattern(
         }
         seenNames.add(name);
         const propKey: Key = key.concat(objKey);
-        switch (propPattern.type) {
-          case 'MatchWildcardPattern':
-          case 'MatchBindingPattern':
-            conditions.push({
-              type: 'prop-exists',
-              key,
-              propName: name,
-            });
-            break;
+        if (needsPropExistsCond(propPattern)) {
+          conditions.push({
+            type: 'prop-exists',
+            key,
+            propName: name,
+          });
         }
         const {conditions: childConditions, bindings: childBindings} =
           analyzePattern(propPattern, propKey, seenBindingNames);

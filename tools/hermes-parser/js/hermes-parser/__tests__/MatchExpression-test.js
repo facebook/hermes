@@ -705,6 +705,41 @@ describe('MatchExpression', () => {
       expect(runMatchExp(output, {foo: false, bar: 2})).toBe(1);
     });
 
+    test('object property with `undefined` value', async () => {
+      const code = `
+        const e = match (x) {
+          {foo: undefined}: true,
+          {bar: undefined as const a}: true,
+          {baz: 0 | undefined}: true,
+          _: false,
+        };
+      `;
+      const output = await transform(code);
+      expect(output).toMatchInlineSnapshot(`
+        "const e = (() => {
+          if (typeof x === "object" && x !== null && "foo" in x && x.foo === undefined) {
+            return true;
+          }
+
+          if (typeof x === "object" && x !== null && "bar" in x && x.bar === undefined) {
+            const a = x.bar;
+            return true;
+          }
+
+          if (typeof x === "object" && x !== null && "baz" in x && (x.baz === 0 || x.baz === undefined)) {
+            return true;
+          }
+
+          return false;
+        })();"
+      `);
+
+      expect(runMatchExp(output, {})).toBe(false);
+      expect(runMatchExp(output, {foo: undefined})).toBe(true);
+      expect(runMatchExp(output, {bar: undefined})).toBe(true);
+      expect(runMatchExp(output, {baz: undefined})).toBe(true);
+    });
+
     test('nested', async () => {
       const code = `
         const e = match (x) {
