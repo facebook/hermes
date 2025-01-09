@@ -659,6 +659,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   bool isHostFunction(const jsi::Function &) const override;
   jsi::Array getPropertyNames(const jsi::Object &) override;
 
+  void setPrototypeOf(const jsi::Object &object, const jsi::Value &prototype)
+      override;
+  jsi::Value getPrototypeOf(const jsi::Object &object) override;
+
   jsi::WeakObject createWeakObject(const jsi::Object &) override;
   jsi::Value lockWeakObject(const jsi::WeakObject &) override;
 
@@ -2016,6 +2020,32 @@ void HermesRuntimeImpl::setExternalMemoryPressure(
   }
 
   ns->setContext(reinterpret_cast<void *>(amt));
+}
+
+void HermesRuntimeImpl::setPrototypeOf(
+    const jsi::Object &object,
+    const jsi::Value &prototype) {
+  if (!prototype.isObject() && !prototype.isNull()) {
+    throw jsi::JSError(
+        *this, "Object prototype argument must be an Object or null");
+  }
+
+  auto cr = vm::JSObject::setParent(
+      vm::vmcast<vm::JSObject>(phv(object)),
+      runtime_,
+      vm::dyn_vmcast<vm::JSObject>(hvFromValue(prototype)),
+      vm::PropOpFlags().plusThrowOnError());
+  checkStatus(cr.getStatus());
+}
+
+jsi::Value HermesRuntimeImpl::getPrototypeOf(const jsi::Object &object) {
+  vm::CallResult<vm::PseudoHandle<vm::JSObject>> cr =
+      vm::JSObject::getPrototypeOf(handle(object), runtime_);
+  checkStatus(cr.getStatus());
+  if (!*cr) {
+    return jsi::Value::null();
+  }
+  return valueFromHermesValue(cr->getHermesValue());
 }
 
 jsi::Value HermesRuntimeImpl::getProperty(
