@@ -1690,7 +1690,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      propValue = std::move(propRes->get());
+      propValue = propRes->get();
       auto strRes = toString_RJS(runtime, propValue);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;

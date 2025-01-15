@@ -51,7 +51,6 @@ double LocalTimeOffsetCache::getLocalTimeOffset(
 int LocalTimeOffsetCache::computeDaylightSaving(int64_t utcTimeMs) {
   std::time_t t = utcTimeMs / MS_PER_SECOND;
   std::tm tm;
-  int ltza;
 #ifdef _WINDOWS
   auto err = ::localtime_s(&tm, &t);
   if (err) {
@@ -68,7 +67,7 @@ int LocalTimeOffsetCache::computeDaylightSaving(int64_t utcTimeMs) {
     return 0;
   }
   int dstOffset = tm.tm_isdst ? MS_PER_HOUR : 0;
-  ltza = tm.tm_gmtoff * MS_PER_SECOND - dstOffset;
+  int ltza = tm.tm_gmtoff * MS_PER_SECOND - dstOffset;
   // If ltza changes, we need to reset the cache.
   if (ltza != ltza_) {
     needsToReset_ = true;
