@@ -62,7 +62,7 @@ findTrap(Handle<JSObject> selfHandle, Runtime &runtime, Predefined::Str name) {
         runtime.makeHandle(std::move(*trapVal)),
         " is not a Proxy trap function");
   }
-  return runtime.makeHandle<Callable>(std::move(trapVal->get()));
+  return runtime.makeHandle<Callable>(trapVal->get());
 }
 
 } // namespace detail

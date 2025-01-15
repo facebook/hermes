@@ -1838,7 +1838,7 @@ ExecutionStatus Runtime::assertBuiltinsUnmodified() {
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto currentBuiltin = dyn_vmcast<NativeFunction>(std::move(cr->get()));
+    auto currentBuiltin = dyn_vmcast<NativeFunction>(cr->get());
     if (!currentBuiltin || currentBuiltin != builtins_[methodIndex]) {
       return raiseTypeError(
           TwineChar16{
