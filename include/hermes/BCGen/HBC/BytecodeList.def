@@ -326,6 +326,16 @@ OPERAND_STRING_ID(GetByIdShort, 4)
 OPERAND_STRING_ID(GetById, 4)
 OPERAND_STRING_ID(GetByIdLong, 4)
 
+/// Get an object property by string table index, with a specified receiver.
+/// Arg1 = Arg2[stringtable[Arg5]]
+/// Arg1 is the destination.
+/// Arg2 is the object to begin the property look up.
+/// Arg3 is a cache index used to speed up the above operation.
+/// Arg4 is receiver.
+/// Arg5 is the string id.
+DEFINE_OPCODE_5(GetByIdWithReceiverLong, Reg8, Reg8, UInt8, Reg8, UInt32)
+OPERAND_STRING_ID(GetByIdWithReceiverLong, 5)
+
 /// Get an object property by string table index, or throw if not found.
 /// This is similar to GetById, but intended for use with global variables
 /// where Arg2 = GetGlobalObject.
@@ -429,6 +439,14 @@ DEFINE_OPCODE_3(GetByVal, Reg8, Reg8, Reg8)
 /// Get a property by value, for the special case where the property is a
 /// numeric literal that is a uint8_t integer. Arg1 = Arg2[Arg3]
 DEFINE_OPCODE_3(GetByIndex, Reg8, Reg8, UInt8)
+
+/// Get a property by value with a specified receiver.
+/// Arg1 = Arg2[Arg3]
+/// Arg1 is the destination register.
+/// Arg2 is the object to begin the property look up. It must be an object.
+/// Arg3 is the property key.
+/// Arg4 is the receiver.
+DEFINE_OPCODE_4(GetByValWithReceiver, Reg8, Reg8, Reg8, Reg8)
 
 /// Set a property by value. Constant string values should instead use GetById
 /// (unless they are array indices according to ES5.1 section 15.4, in which

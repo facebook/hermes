@@ -260,18 +260,24 @@ extern "C" void _sh_ljs_reify_arguments_strict(
   reifyArguments(shr, frame, lazyReg, true);
 }
 
-extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
+extern "C" SHLegacyValue _sh_ljs_get_by_val_with_receiver_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,
-    SHLegacyValue *key) {
-  Handle<> sourceHandle{toPHV(source)}, keyHandle{toPHV(key)};
+    SHLegacyValue *key,
+    SHLegacyValue *receiver) {
   Runtime &runtime = getRuntime(shr);
+  Handle<> sourceHandle{toPHV(source)};
+  Handle<> keyHandle{toPHV(key)};
+  Handle<> receiverHandle{(toPHV(receiver))};
   if (LLVM_LIKELY(sourceHandle->isObject())) {
     CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
     {
       GCScopeMarkerRAII marker{runtime};
-      res = JSObject::getComputed_RJS(
-          Handle<JSObject>::vmcast(sourceHandle), runtime, keyHandle);
+      res = JSObject::getComputedWithReceiver_RJS(
+          Handle<JSObject>::vmcast(sourceHandle),
+          runtime,
+          keyHandle,
+          receiverHandle);
     }
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       _sh_throw_current(shr);
@@ -282,7 +288,8 @@ extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
   CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
   {
     GCScopeMarkerRAII marker{runtime};
-    res = Interpreter::getByValTransient_RJS(runtime, sourceHandle, keyHandle);
+    res = Interpreter::getByValTransientWithReceiver_RJS(
+        runtime, sourceHandle, keyHandle, receiverHandle);
   }
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -957,10 +964,11 @@ extern "C" void _sh_ljs_put_by_val_strict_rjs(
 }
 
 template <bool tryProp>
-static inline HermesValue getById_RJS(
+static inline HermesValue getByIdWithReceiver_RJS(
     Runtime &runtime,
     Handle<> source,
     SymbolID symID,
+    Handle<> receiver,
     PropertyCacheEntry *cacheEntry) {
   //++NumGetById;
   // NOTE: it is safe to use OnREG(GetById) here because all instructions
@@ -1062,10 +1070,11 @@ static inline HermesValue getById_RJS(
     {
       GCScopeMarkerRAII marker(runtime);
       const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
-      resPH = JSObject::getNamed_RJS(
+      resPH = JSObject::getNamedWithReceiver_RJS(
           Handle<JSObject>::vmcast(source),
           runtime,
           symID,
+          receiver,
           !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
           cacheEntry);
     }
@@ -1085,12 +1094,24 @@ static inline HermesValue getById_RJS(
     CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
     {
       GCScopeMarkerRAII marker{runtime};
-      resPH = Interpreter::getByIdTransient_RJS(runtime, source, symID);
+      resPH = Interpreter::getByIdTransientWithReceiver_RJS(
+          runtime, source, symID, receiver);
     }
     if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
       _sh_throw_current(getSHRuntime(runtime));
     return resPH->get();
   }
+}
+
+/// Assume the receiver is the same as the source object.
+template <bool tryProp>
+static inline HermesValue getById_RJS(
+    Runtime &runtime,
+    Handle<> source,
+    SymbolID symID,
+    PropertyCacheEntry *cacheEntry) {
+  return getByIdWithReceiver_RJS<tryProp>(
+      runtime, source, symID, source, cacheEntry);
 }
 
 extern "C" SHLegacyValue _sh_ljs_create_this(
@@ -1214,6 +1235,20 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
       getRuntime(shr),
       Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
+      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+}
+
+extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *receiver,
+    SHSymbolID symID,
+    SHPropertyCacheEntry *propCacheEntry) {
+  return getByIdWithReceiver_RJS<false>(
+      getRuntime(shr),
+      Handle<>{toPHV(source)},
+      SymbolID::unsafeCreate(symID),
+      Handle<>{toPHV(receiver)},
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
 }
 

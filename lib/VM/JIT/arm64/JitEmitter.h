@@ -688,6 +688,14 @@ class Emitter {
     getByIdImpl(frRes, symID, frSource, cacheIdx, commentStr, shFn, #shFn);    \
   }
 
+  void getByIdWithReceiver(
+      FR frRes,
+      SHSymbolID symID,
+      FR frSource,
+      FR frReceiver,
+      uint8_t cacheIdx);
+  void getByValWithReceiver(FR frRes, FR frSource, FR frKey, FR frReceiver);
+
   DECL_GET_BY_ID(getById, "getById", _sh_ljs_get_by_id_rjs)
   DECL_GET_BY_ID(tryGetById, "tryGetById", _sh_ljs_try_get_by_id_rjs)
 

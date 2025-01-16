@@ -295,10 +295,11 @@ inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
   return createPseudoHandle(HermesValue::encodeEmptyValue());
 }
 
-CallResult<PseudoHandle<>> Interpreter::getByIdTransient_RJS(
+CallResult<PseudoHandle<>> Interpreter::getByIdTransientWithReceiver_RJS(
     Runtime &runtime,
     Handle<> base,
-    SymbolID id) {
+    SymbolID id,
+    Handle<> receiver) {
   // This is similar to what ES5.1 8.7.1 special [[Get]] internal
   // method did, but that section doesn't exist in ES9 anymore.
   // Instead, the [[Get]] Receiver argument serves a similar purpose.
@@ -322,7 +323,7 @@ CallResult<PseudoHandle<>> Interpreter::getByIdTransient_RJS(
   }
 
   return JSObject::getNamedWithReceiver_RJS(
-      *primitivePrototypeResult, runtime, id, base);
+      *primitivePrototypeResult, runtime, id, receiver);
 }
 
 PseudoHandle<> Interpreter::getByValTransientFast(
@@ -350,10 +351,11 @@ PseudoHandle<> Interpreter::getByValTransientFast(
   return createPseudoHandle(HermesValue::encodeEmptyValue());
 }
 
-CallResult<PseudoHandle<>> Interpreter::getByValTransient_RJS(
+CallResult<PseudoHandle<>> Interpreter::getByValTransientWithReceiver_RJS(
     Runtime &runtime,
     Handle<> base,
-    Handle<> name) {
+    Handle<> name,
+    Handle<> receiver) {
   // This is similar to what ES5.1 8.7.1 special [[Get]] internal
   // method did, but that section doesn't exist in ES9 anymore.
   // Instead, the [[Get]] Receiver argument serves a similar purpose.
@@ -369,7 +371,7 @@ CallResult<PseudoHandle<>> Interpreter::getByValTransient_RJS(
     return ExecutionStatus::EXCEPTION;
 
   return JSObject::getComputedWithReceiver_RJS(
-      runtime.makeHandle<JSObject>(res.getValue()), runtime, name, base);
+      runtime.makeHandle<JSObject>(res.getValue()), runtime, name, receiver);
 }
 
 static ExecutionStatus
@@ -2413,6 +2415,51 @@ tailCall:
       DISPATCH;
     }
 
+      CASE(GetByIdWithReceiverLong) {
+        if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
+          auto *obj = vmcast<JSObject>(O2REG(GetByIdWithReceiverLong));
+          auto cacheIdx = ip->iGetByIdWithReceiverLong.op3;
+          auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
+          CompressedPointer clazzPtr{obj->getClassGCPtr()};
+          // If we have a cache hit, reuse the cached offset and immediately
+          // return the property.
+          if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+            ++NumGetByIdCacheHits;
+            O1REG(GetByIdWithReceiverLong) = JSObject::getNamedSlotValueUnsafe(
+                                                 obj, runtime, cacheEntry->slot)
+                                                 .unboxToHV(runtime);
+            ip = NEXTINST(GetByIdWithReceiverLong);
+            DISPATCH;
+          }
+          CAPTURE_IP(
+              resPH = JSObject::getNamedWithReceiver_RJS(
+                  Handle<JSObject>::vmcast(&O2REG(GetByIdWithReceiverLong)),
+                  runtime,
+                  ID(ip->iGetByIdWithReceiverLong.op5),
+                  Handle<>(&O4REG(GetByIdWithReceiverLong)),
+                  DEFAULT_PROP_OP_FLAGS(false),
+                  cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry
+                                                             : nullptr));
+          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+        } else {
+          CAPTURE_IP(
+              resPH = Interpreter::getByIdTransientWithReceiver_RJS(
+                  runtime,
+                  Handle<>(&O2REG(GetByIdWithReceiverLong)),
+                  ID(ip->iGetByIdWithReceiverLong.op5),
+                  Handle<>(&O4REG(GetByIdWithReceiverLong))));
+          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+        }
+        O1REG(GetByIdWithReceiverLong) = resPH->getHermesValue();
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(GetByIdWithReceiverLong);
+        DISPATCH;
+      }
+
       CASE(TryPutByIdLooseLong) {
         tryProp = true;
         strictMode = false;
@@ -2577,6 +2624,33 @@ tailCall:
         gcScope.flushToSmallCount(KEEP_HANDLES);
         O1REG(GetByVal) = resPH->get();
         ip = NEXTINST(GetByVal);
+        DISPATCH;
+      }
+      CASE(GetByValWithReceiver) {
+        if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
+          CAPTURE_IP(
+              resPH = JSObject::getComputedWithReceiver_RJS(
+                  Handle<JSObject>::vmcast(&O2REG(GetByValWithReceiver)),
+                  runtime,
+                  Handle<>(&O3REG(GetByValWithReceiver)),
+                  Handle<>(&O4REG(GetByValWithReceiver))));
+          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+        } else {
+          CAPTURE_IP(
+              resPH = Interpreter::getByValTransientWithReceiver_RJS(
+                  runtime,
+                  Handle<>(&O2REG(GetByValWithReceiver)),
+                  Handle<>(&O3REG(GetByValWithReceiver)),
+                  Handle<>(&O4REG(GetByValWithReceiver))));
+          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        O1REG(GetByValWithReceiver) = resPH->get();
+        ip = NEXTINST(GetByValWithReceiver);
         DISPATCH;
       }
       CASE(GetByIndex) {

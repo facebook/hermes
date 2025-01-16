@@ -3195,6 +3195,92 @@ void Emitter::getByIdImpl(
     a.bind(contLab);
 }
 
+void Emitter::getByIdWithReceiver(
+    FR frRes,
+    SHSymbolID symID,
+    FR frSource,
+    FR frReceiver,
+    uint8_t cacheIdx) {
+  comment(
+      "// GetByIdWithReceiver r%u, r%u, r%u, cache %u, symID %u",
+      frRes.index(),
+      frSource.index(),
+      frReceiver.index(),
+      cacheIdx,
+      symID);
+
+  // TODO: Add a fast path, probably by sharing code with getByIdImpl.
+
+  syncAllFRTempExcept(frRes != frSource && frRes != frReceiver ? frRes : FR());
+  syncToFrame(frSource);
+  syncToFrame(frReceiver);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frSource);
+  loadFrameAddr(a64::x2, frReceiver);
+  a.mov(a64::w3, symID);
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x4, 0);
+  } else {
+    a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x4, a64::x4, sizeof(SHPropertyCacheEntry) * cacheIdx);
+  }
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime * shr,
+          const SHLegacyValue *source,
+          const SHLegacyValue *receiver,
+          SHSymbolID symID,
+          SHPropertyCacheEntry *propCacheEntry),
+      _sh_ljs_get_by_id_with_receiver_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::getByValWithReceiver(
+    FR frRes,
+    FR frSource,
+    FR frKey,
+    FR frReceiver) {
+  comment(
+      "// GetByValWithReceiver r%u, r%u, r%u, r%u",
+      frRes.index(),
+      frSource.index(),
+      frReceiver.index(),
+      frKey.index());
+
+  syncAllFRTempExcept(
+      frRes != frSource && frRes != frReceiver && frRes != frKey ? frRes
+                                                                 : FR());
+  syncToFrame(frSource);
+  syncToFrame(frKey);
+  syncToFrame(frReceiver);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frSource);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frReceiver);
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime * shr,
+          SHLegacyValue * source,
+          SHLegacyValue * key,
+          SHLegacyValue * receiver),
+      _sh_ljs_get_by_val_with_receiver_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::jmpTypeOfIs(
     const asmjit::Label &target,
     FR frInput,

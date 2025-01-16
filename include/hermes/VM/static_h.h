@@ -571,10 +571,23 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_id_rjs(
     const SHLegacyValue *source,
     SHSymbolID symID,
     SHPropertyCacheEntry *propCacheEntry);
-SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_val_rjs(
+SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *receiver,
+    SHSymbolID symID,
+    SHPropertyCacheEntry *propCacheEntry);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_val_with_receiver_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,
-    SHLegacyValue *key);
+    SHLegacyValue *key,
+    SHLegacyValue *receiver);
+static inline SHLegacyValue _sh_ljs_get_by_val_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *source,
+    SHLegacyValue *key) {
+  return _sh_ljs_get_by_val_with_receiver_rjs(shr, source, key, source);
+}
 
 /// Get a property from the given object \p source given a valid array index
 /// \p key.

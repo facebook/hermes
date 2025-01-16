@@ -611,6 +611,20 @@ inline void JITContext::Compiler::emitGetByIdShort(
   em_.getById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
 }
 
+inline void JITContext::Compiler::emitGetByIdWithReceiverLong(
+    const inst::GetByIdWithReceiverLongInst *inst) {
+  auto idVal = ID(inst->op5);
+  auto cacheIdx = inst->op3;
+  em_.getByIdWithReceiver(
+      FR(inst->op1), idVal, FR(inst->op2), FR(inst->op4), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitGetByValWithReceiver(
+    const inst::GetByValWithReceiverInst *inst) {
+  em_.getByValWithReceiver(
+      FR(inst->op1), FR(inst->op2), FR(inst->op3), FR(inst->op4));
+}
+
 inline void JITContext::Compiler::emitTryPutByIdLooseLong(
     const inst::TryPutByIdLooseLongInst *inst) {
   auto idVal = ID(inst->op4);

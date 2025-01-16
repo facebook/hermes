@@ -97,8 +97,15 @@ class Interpreter {
   tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id);
 
   /// Implement OpCode::GetById/TryGetById when the base is not an object.
+  static CallResult<PseudoHandle<>> getByIdTransientWithReceiver_RJS(
+      Runtime &runtime,
+      Handle<> base,
+      SymbolID id,
+      Handle<> receiver);
   static CallResult<PseudoHandle<>>
-  getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id);
+  getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id) {
+    return getByIdTransientWithReceiver_RJS(runtime, base, id, base);
+  }
 
   /// Fast path for getByValTransient() -- avoid boxing for \p base if it is
   /// string primitive and \p nameHandle is an array index.
@@ -107,8 +114,15 @@ class Interpreter {
   getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle);
 
   /// Implement OpCode::GetByVal when the base is not an object.
+  static CallResult<PseudoHandle<>> getByValTransientWithReceiver_RJS(
+      Runtime &runtime,
+      Handle<> base,
+      Handle<> name,
+      Handle<> receiver);
   static CallResult<PseudoHandle<>>
-  getByValTransient_RJS(Runtime &runtime, Handle<> base, Handle<> name);
+  getByValTransient_RJS(Runtime &runtime, Handle<> base, Handle<> name) {
+    return getByValTransientWithReceiver_RJS(runtime, base, name, base);
+  }
 
   /// Implement OpCode::PutById/TryPutById when the base is not an object.
   static ExecutionStatus putByIdTransient_RJS(
