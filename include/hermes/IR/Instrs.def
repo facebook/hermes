@@ -96,6 +96,7 @@ DEF_TAG(BinaryInstanceOfInst, BinaryOperatorInst)
 END_VALUE(BinaryOperatorInst)
 
 MARK_FIRST(BaseStorePropertyInst, Instruction)
+DEF_VALUE(StorePropertyWithReceiverInst, BaseStorePropertyInst)
 MARK_FIRST(StorePropertyInst, BaseStorePropertyInst)
 DEF_VALUE(StorePropertyLooseInst, StorePropertyInst)
 DEF_VALUE(StorePropertyStrictInst, StorePropertyInst)

@@ -547,6 +547,9 @@ class TypeInferenceImpl {
   Type inferBinaryOperatorInst(BinaryOperatorInst *inst) {
     return inferBinaryInst(inst);
   }
+  Type inferStorePropertyWithReceiverInst(StorePropertyWithReceiverInst *inst) {
+    return Type::createNoType();
+  }
   Type inferStorePropertyLooseInst(StorePropertyLooseInst *inst) {
     return Type::createNoType();
   }

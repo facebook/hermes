@@ -984,6 +984,11 @@ bool Verifier::visitDeletePropertyStrictInst(
   return true;
 }
 
+bool Verifier::visitStorePropertyWithReceiverInst(
+    const StorePropertyWithReceiverInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitStorePropertyLooseInst(const StorePropertyLooseInst &Inst) {
   return true;
 }

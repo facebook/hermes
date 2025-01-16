@@ -1144,6 +1144,19 @@ class InstrGen {
     os_ << ";\n";
   }
 
+  void generateStorePropertyWithReceiverInst(
+      StorePropertyWithReceiverInst &inst) {
+    os_ << "_sh_ljs_put_by_val_with_receiver_rjs(shr,&";
+    generateRegister(*inst.getObject());
+    os_ << ", &";
+    generateRegister(*inst.getProperty());
+    os_ << ", &";
+    generateRegister(*inst.getStoredValue());
+    os_ << ", &";
+    generateRegister(*inst.getReceiver());
+    os_ << ", " << inst.getIsStrict();
+    os_ << ");\n";
+  }
   void generateStorePropertyInstImpl(StorePropertyInst &inst, bool strictMode) {
     os_.indent(2);
     if (auto *LS = llvh::dyn_cast<LiteralString>(inst.getProperty())) {

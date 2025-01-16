@@ -66,11 +66,18 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   }
 
   // If StorePropertyInst's property ID is a LiteralString, we will keep it
-  // untouched and emit try_put_by_id eventually.
+  // untouched and emit try_put_by_id eventually. Unless it is specifically a
+  // StorePropertyWithReceiverInst. That instruction has no by_id variant.
   if (llvh::isa<BaseStorePropertyInst>(Inst) &&
+      !llvh::isa<StorePropertyWithReceiverInst>(Inst) &&
       opIndex == BaseStorePropertyInst::PropertyIdx &&
       llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
     return true;
+
+  if (llvh::isa<StorePropertyWithReceiverInst>(Inst) &&
+      opIndex == StorePropertyWithReceiverInst::IsStrictIdx) {
+    return true;
+  }
 
   // If LoadPropertyInst's property ID is a LiteralString, we will keep it
   // untouched and emit try_put_by_id eventually.

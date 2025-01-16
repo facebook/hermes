@@ -1477,7 +1477,7 @@ class BaseStorePropertyInst : public Instruction {
   }
 
  public:
-  enum { StoredValueIdx, ObjectIdx, PropertyIdx };
+  enum { StoredValueIdx, ObjectIdx, PropertyIdx, _LastIdx };
 
   explicit BaseStorePropertyInst(
       const BaseStorePropertyInst *src,
@@ -1507,6 +1507,45 @@ class BaseStorePropertyInst : public Instruction {
 
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseStorePropertyInst);
+  }
+};
+
+class StorePropertyWithReceiverInst : public BaseStorePropertyInst {
+  StorePropertyWithReceiverInst(const StorePropertyWithReceiverInst &) = delete;
+  void operator=(const StorePropertyWithReceiverInst &) = delete;
+
+ public:
+  enum { ReceiverIdx = BaseStorePropertyInst::_LastIdx, IsStrictIdx };
+
+  explicit StorePropertyWithReceiverInst(
+      Value *storedValue,
+      Value *globalObject,
+      Value *property,
+      Value *receiver,
+      LiteralBool *isStrict)
+      : BaseStorePropertyInst(
+            ValueKind::StorePropertyWithReceiverInstKind,
+            storedValue,
+            globalObject,
+            property) {
+    pushOperand(receiver);
+    pushOperand(isStrict);
+  }
+  explicit StorePropertyWithReceiverInst(
+      const StorePropertyWithReceiverInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseStorePropertyInst(src, operands) {}
+
+  Value *getReceiver() const {
+    return getOperand(ReceiverIdx);
+  }
+
+  bool getIsStrict() const {
+    return cast<LiteralBool>(getOperand(IsStrictIdx))->getValue();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::StorePropertyWithReceiverInstKind;
   }
 };
 

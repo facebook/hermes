@@ -560,6 +560,22 @@ DeletePropertyStrictInst *IRBuilder::createDeletePropertyStrictInst(
   return DPI;
 }
 
+StorePropertyWithReceiverInst *IRBuilder::createStorePropertyWithReceiverInst(
+    Value *storedValue,
+    Value *object,
+    Value *property,
+    Value *receiver,
+    StoreStrict isStrict) {
+  auto SPI = new StorePropertyWithReceiverInst(
+      storedValue,
+      object,
+      property,
+      receiver,
+      getLiteralBool(isStrict == StoreStrict::Yes));
+  insert(SPI);
+  return SPI;
+}
+
 StorePropertyInst *IRBuilder::createStorePropertyInst(
     Value *storedValue,
     Value *object,

@@ -517,6 +517,17 @@ Arguments | %value is the value to be stored. %object is the object where the fi
 Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation PutValue (ES5.1. sec 8.7.2) is then applied to the returned Reference.
 Effects | May read and write memory or throw.
 
+
+### StorePropertyWithReceiverInst
+
+StorePropertyWithReceiverInst | _
+--- | --- |
+Description | Stores a value to field in a JavaScript object, with a specified receiver object.
+Example |   %4 = StorePropertyWithReceiverInst %value, %object, %property, %receiver, %isStrict
+Arguments | %value is the value to be stored. %object is the object where the field %property will be created or modified. %receiver will be the receiver operand when invoking the `[[Set]] ` internal method. If %isStrict is true, the operation will fail if there is an incompatible property descriptor found during the attempted store..
+Semantics | This follows the same semantics as StorePropertyInst, except the receiver is explicitly specified.
+Effects | May read and write memory or throw.
+
 ### TryStoreGlobalPropertyInst
 
 TryStoreGlobalPropertyInst | _

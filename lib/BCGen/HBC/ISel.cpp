@@ -815,6 +815,18 @@ void HBCISel::generateBinaryOperatorInst(
       break;
   }
 }
+
+void HBCISel::generateStorePropertyWithReceiverInst(
+    StorePropertyWithReceiverInst *Inst,
+    BasicBlock *next) {
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto objReg = encodeValue(Inst->getObject());
+  auto propReg = encodeValue(Inst->getProperty());
+  auto receiverReg = encodeValue(Inst->getReceiver());
+  BCFGen_->emitPutByValWithReceiver(
+      objReg, propReg, valueReg, receiverReg, Inst->getIsStrict());
+}
+
 void HBCISel::generateStorePropertyLooseInst(
     StorePropertyLooseInst *Inst,
     BasicBlock *next) {

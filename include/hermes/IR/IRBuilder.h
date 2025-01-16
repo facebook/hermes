@@ -50,6 +50,7 @@ class IRBuilder {
   //--------------------------------------------------------------------------//
 
   enum class PropEnumerable { No = 0, Yes = 1 };
+  enum class StoreStrict { No = 0, Yes = 1 };
 
   Module *getModule() {
     return M;
@@ -420,6 +421,13 @@ class IRBuilder {
       LiteralString *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       GlobalObjectProperty *property);
+
+  StorePropertyWithReceiverInst *createStorePropertyWithReceiverInst(
+      Value *storedValue,
+      Value *object,
+      Value *property,
+      Value *receiver,
+      StoreStrict isStrict);
 
   StorePropertyInst *
   createStorePropertyInst(Value *storedValue, Value *object, Value *property);
