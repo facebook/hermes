@@ -916,8 +916,8 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
     Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
     // We know that home objects are always ordinary objects.
     Value *superObj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
-    Value *propVal = Builder.createLoadPropertyInst(
-        superObj, genMemberExpressionProperty(mem));
+    Value *propVal = Builder.createLoadPropertyWithReceiverInst(
+        superObj, genMemberExpressionProperty(mem), thisValue);
     return MemberExpressionResult{propVal, nullptr, thisValue};
   }
 

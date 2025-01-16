@@ -76,3 +76,22 @@ c3.asyncFun();
 //CHECK-NEXT: 1
 //CHECK-NEXT: 2
 //CHECK-NEXT: 3
+
+// Test that the receiver is set up correctly for reads.
+(function () {
+  var parent = {
+    x: 10,
+    get prop1() {
+      print(this.x);
+    }
+  }
+  var child = {
+    x: 20,
+    foo() {
+      super.prop1;
+    }
+  }
+  Object.setPrototypeOf(child, parent);
+  child.foo();
+//CHECK-NEXT: 20
+})();
