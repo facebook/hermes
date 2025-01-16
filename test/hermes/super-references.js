@@ -160,3 +160,47 @@ c3.asyncFun();
   }
 //CHECK-NEXT: Pass
 })();
+
+// super throws on null prototype.
+(function () {
+  function key() {
+    return "x";
+  }
+  var obj = {
+    reads() {
+      try {
+        super.x;
+        print("read fail");
+      } catch (err) {
+        print("read threw", err.constructor.name);
+      }
+//CHECK-NEXT: read threw TypeError
+      try {
+        super[key()];
+        print("read fail");
+      } catch (err) {
+        print("read threw", err.constructor.name);
+      }
+//CHECK-NEXT: read threw TypeError
+    },
+    writes() {
+      try {
+        super.x = 42;
+        print("write fail");
+      } catch (err) {
+        print("write threw", err.constructor.name);
+      }
+//CHECK-NEXT: write threw TypeError
+      try {
+        super[key()] = 42;
+        print("write fail");
+      } catch (err) {
+        print("write threw", err.constructor.name);
+      }
+//CHECK-NEXT: write threw TypeError
+    }
+  };
+  Object.setPrototypeOf(obj, null);
+  obj.reads();
+  obj.writes();
+})();
