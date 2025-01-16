@@ -260,33 +260,49 @@ Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
   // We want to invoke the parent of the class we are generating.
   auto *callee = Builder.createLoadParentNoTrapsInst(
       Builder.createLoadFrameInst(constructorScope, LC->constructor));
-  // Derived classes don't take in a `this`, so construct it here.
-  auto *thisParam = Builder.createCreateThisInst(callee, newTarget);
-  auto *superRes = emitCall(
-      call, callee, Builder.getEmptySentinel(), false, thisParam, newTarget);
+
+  // We don't call into emitCall here because we need to generate the IR for the
+  // arguments before generating the IR for the `this` value.
+  bool hasSpread = llvh::any_of(getArguments(call), [](auto &arg) {
+    return llvh::isa<ESTree::SpreadElementNode>(&arg);
+  });
+  Value *superRes;
+  if (hasSpread) {
+    auto *args = genArrayFromElements(getArguments(call));
+    superRes = genBuiltinCall(
+        BuiltinMethod::HermesBuiltin_applyWithNewTarget,
+        {callee,
+         args,
+         Builder.createCreateThisInst(callee, newTarget),
+         newTarget});
+  } else {
+    CallInst::ArgumentList args;
+    for (auto &arg : getArguments(call)) {
+      args.push_back(genExpression(&arg));
+    }
+    auto *thisVal = Builder.createCreateThisInst(callee, newTarget);
+    auto *callInst = Builder.createCallInst(
+        callee,
+        Builder.getEmptySentinel(),
+        false,
+        /* env */ Builder.getEmptySentinel(),
+        newTarget,
+        thisVal,
+        args);
+    superRes = Builder.createGetConstructedObjectInst(thisVal, callInst);
+  }
+  // A super call always returns object.
+  superRes->setType(Type::createObject());
+
   auto *checkedThis = curFunction()->capturedState.thisVal;
   auto *checkedThisScope =
       emitResolveScopeInstIfNeeded(checkedThis->getParent());
   Builder.createThrowIfThisInitializedInst(
       Builder.createLoadFrameInst(checkedThisScope, checkedThis));
-  Value *initializedThisVal = nullptr;
-  if (auto *CI = llvh::dyn_cast<CallInst>(superRes)) {
-    // Correctly pick between the provided `this` and the return value of the
-    // super call.
-    initializedThisVal = Builder.createGetConstructedObjectInst(thisParam, CI);
-  } else {
-    // If it's not a simple call instruction, then the logic of
-    // GetConstructedObject is already being replicated in the way the call was
-    // emitted.
-    initializedThisVal = superRes;
-  }
-  // A construct call always returns object.
-  initializedThisVal->setType(Type::createObject());
-  Builder.createStoreFrameInst(
-      checkedThisScope, initializedThisVal, checkedThis);
+  Builder.createStoreFrameInst(checkedThisScope, superRes, checkedThis);
   // After a successful call to super, run the field initializer function.
   emitLegacyInstanceElementsInitCall();
-  return initializedThisVal;
+  return superRes;
 }
 
 Value *ESTreeIRGen::genLegacyDerivedConstructorRet(

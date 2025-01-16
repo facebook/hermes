@@ -361,3 +361,24 @@ class A {
   Reflect.construct(C1, [], foo);
 // CHECK-NEXT: foo
 })();
+
+// Arguments to super are evaluated before a bad constructor invocation.
+(function () {
+  function foo() {
+    print("foo called");
+  }
+  class C extends Object {
+    constructor() {
+      try {
+        super(foo());
+      } catch (e) {
+        print("error thrown");
+      }
+      return {};
+    }
+  }
+  Object.setPrototypeOf(C, parseInt);
+  new C();
+// CHECK-NEXT: foo called
+// CHECK-NEXT: error thrown
+})();
