@@ -412,6 +412,10 @@ class IRBuilder {
       Value *property);
 
   LoadPropertyInst *createLoadPropertyInst(Value *object, Value *property);
+  LoadPropertyWithReceiverInst *createLoadPropertyWithReceiverInst(
+      Value *object,
+      Value *property,
+      Value *receiver);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       LiteralString *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(

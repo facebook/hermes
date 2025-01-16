@@ -516,6 +516,15 @@ LoadPropertyInst *IRBuilder::createLoadPropertyInst(
   return LPI;
 }
 
+LoadPropertyWithReceiverInst *IRBuilder::createLoadPropertyWithReceiverInst(
+    Value *object,
+    Value *property,
+    Value *receiver) {
+  auto LPI = new LoadPropertyWithReceiverInst(object, property, receiver);
+  insert(LPI);
+  return LPI;
+}
+
 TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
     LiteralString *property) {
   auto *inst = new TryLoadGlobalPropertyInst(getGlobalObject(), property);

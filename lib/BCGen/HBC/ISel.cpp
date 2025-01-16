@@ -202,13 +202,21 @@ class HBCISel {
   uint8_t lastPropertyReadCacheIndex_{0};
   uint8_t lastPropertyWriteCacheIndex_{0};
 
-  /// Map from property name to the read/write cache index for that name.
-  llvh::DenseMap<Identifier, uint8_t> propertyReadCacheIndexForId_;
+  /// This enum is used to provide extra, distinguishing information to the
+  /// property reads that would otherwise share of cache index.
+  enum class PropCacheKind : uint8_t { NormalIdentifier = 0, WithReceiver };
+
+  /// Map from property name & kind to the read cache index for that name.
+  llvh::DenseMap<std::pair<Identifier, int>, uint8_t>
+      propertyReadCacheIndexForId_;
   llvh::DenseMap<Identifier, uint8_t> propertyWriteCacheIndexForId_;
 
   /// Compute and return the index to use for caching the read/write of a
   /// property with the given identifier name.
-  uint8_t acquirePropertyReadCacheIndex(Identifier prop);
+  /// \param k is the kind of property read cache being acquired.
+  uint8_t acquirePropertyReadCacheIndex(
+      Identifier prop,
+      PropCacheKind k = PropCacheKind::NormalIdentifier);
   uint8_t acquirePropertyWriteCacheIndex(Identifier prop);
 
   /// A cache mapping from buffer ID to filelname+source map.
@@ -1045,6 +1053,30 @@ void HBCISel::generateLoadPropertyInst(
 
   auto propReg = encodeValue(prop);
   BCFGen_->emitGetByVal(resultReg, objReg, propReg);
+}
+
+void HBCISel::generateLoadPropertyWithReceiverInst(
+    LoadPropertyWithReceiverInst *Inst,
+    BasicBlock *next) {
+  auto resultReg = encodeValue(Inst);
+  auto objReg = encodeValue(Inst->getObject());
+  auto receiverReg = encodeValue(Inst->getReceiver());
+  auto prop = Inst->getProperty();
+
+  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
+    auto id = BCFGen_->getIdentifierID(Lit);
+    BCFGen_->emitGetByIdWithReceiverLong(
+        resultReg,
+        objReg,
+        acquirePropertyReadCacheIndex(
+            Lit->getValue(), PropCacheKind::WithReceiver),
+        receiverReg,
+        id);
+    return;
+  }
+
+  auto propReg = encodeValue(prop);
+  BCFGen_->emitGetByValWithReceiver(resultReg, objReg, propReg, receiverReg);
 }
 
 void HBCISel::generateTryLoadGlobalPropertyInst(
@@ -2316,11 +2348,13 @@ void HBCISel::run(SourceMapGenerator *outSourceMap) {
   BCFGen_->bytecodeGenerationComplete();
 }
 
-uint8_t HBCISel::acquirePropertyReadCacheIndex(Identifier prop) {
+uint8_t HBCISel::acquirePropertyReadCacheIndex(
+    Identifier prop,
+    PropCacheKind k) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
   // Zero is reserved for indicating no-cache, so cannot be a value in the map.
   uint8_t dummyZero = 0;
-  auto &idx = reuse ? propertyReadCacheIndexForId_[prop] : dummyZero;
+  auto &idx = reuse ? propertyReadCacheIndexForId_[{prop, (int)k}] : dummyZero;
   if (idx) {
     ++NumCachedNodes;
     return idx;

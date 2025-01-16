@@ -1944,7 +1944,7 @@ class BaseLoadPropertyInst : public Instruction {
   }
 
  public:
-  enum { ObjectIdx, PropertyIdx };
+  enum { ObjectIdx, PropertyIdx, _LastIdx };
 
   Value *getObject() const {
     return getOperand(ObjectIdx);
@@ -1992,6 +1992,37 @@ class LoadPropertyInst : public BaseLoadPropertyInst {
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::LoadPropertyInstKind;
+  }
+};
+
+class LoadPropertyWithReceiverInst : public BaseLoadPropertyInst {
+  LoadPropertyWithReceiverInst(const LoadPropertyWithReceiverInst &) = delete;
+  void operator=(const LoadPropertyWithReceiverInst &) = delete;
+
+ public:
+  enum { ReceiverIdx = BaseLoadPropertyInst::_LastIdx };
+  explicit LoadPropertyWithReceiverInst(
+      Value *object,
+      Value *property,
+      Value *receiver)
+      : BaseLoadPropertyInst(
+            ValueKind::LoadPropertyWithReceiverInstKind,
+            object,
+            property) {
+    pushOperand(receiver);
+  }
+  explicit LoadPropertyWithReceiverInst(
+      const LoadPropertyWithReceiverInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseLoadPropertyInst(src, operands) {}
+
+  Value *getReceiver() const {
+    return getOperand(ReceiverIdx);
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LoadPropertyWithReceiverInstKind;
   }
 };
 

@@ -487,6 +487,16 @@ Arguments | %object is the global object. %property is the name of the field, wh
 Semantics | Similar to LoadPropertyInst, but throw if the field doesn't exist.
 Effects | May read and write memory or throw.
 
+### LoadPropertyWithReceiverInst
+
+LoadPropertyWithReceiverInst | _
+--- | --- |
+Description | Loads the value of a field from a JavaScript object.
+Example |  %0 = LoadPropertyWithReceiverInst %object, %property, %receiver
+Arguments | %object is the object to load from. %property is the name of the field. %receiver is receiver of the operation.
+Semantics | The instruction implements ES2024 6.2.5.5 GetValue. This is used for `super` references.
+Effects | May read and write memory or throw.
+
 ### DeletePropertyInst
 
 DeletePropertyInst | _

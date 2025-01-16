@@ -1337,6 +1337,29 @@ class InstrGen {
     generateRegister(*inst.getProperty());
     os_ << ");\n";
   }
+  void generateLoadPropertyWithReceiverInst(
+      LoadPropertyWithReceiverInst &inst) {
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = ";
+    auto prop = inst.getProperty();
+    if (auto *LS = llvh::dyn_cast<LiteralString>(prop)) {
+      os_ << "_sh_ljs_get_by_id_with_receiver_rjs(shr, &";
+      generateRegister(*inst.getObject());
+      os_ << ", &";
+      generateRegister(*inst.getReceiver());
+      os_ << ", ";
+      genStringConstIC(LS) << ");\n";
+      return;
+    }
+    os_ << "_sh_ljs_get_by_val_with_receiver_rjs(shr, &";
+    generateRegister(*inst.getObject());
+    os_ << ", &";
+    generateRegister(*inst.getProperty());
+    os_ << ", &";
+    generateRegister(*inst.getReceiver());
+    os_ << ");\n";
+  }
   void generateTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst &inst) {
     os_.indent(2);
     generateRegister(inst);

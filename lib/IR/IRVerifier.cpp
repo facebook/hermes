@@ -964,6 +964,10 @@ bool Verifier::visitGetBuiltinClosureInst(GetBuiltinClosureInst const &Inst) {
 bool Verifier::visitLoadPropertyInst(const LoadPropertyInst &Inst) {
   return true;
 }
+bool Verifier::visitLoadPropertyWithReceiverInst(
+    const LoadPropertyWithReceiverInst &Inst) {
+  return true;
+}
 bool Verifier::visitTryLoadGlobalPropertyInst(
     const TryLoadGlobalPropertyInst &Inst) {
   return true;
