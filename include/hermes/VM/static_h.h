@@ -560,6 +560,13 @@ SHERMES_EXPORT void _sh_ljs_put_by_val_strict_rjs(
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value);
+SHERMES_EXPORT void _sh_ljs_put_by_val_with_receiver_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value,
+    SHLegacyValue *receiver,
+    bool isStrict);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,

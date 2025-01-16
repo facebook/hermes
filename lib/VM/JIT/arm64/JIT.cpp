@@ -692,6 +692,16 @@ EMIT_BY_VAL(PutByValStrict, putByValStrict)
 
 #undef EMIT_BY_VAL
 
+inline void JITContext::Compiler::emitPutByValWithReceiver(
+    const inst::PutByValWithReceiverInst *inst) {
+  em_.putByValWithReceiver(
+      FR(inst->op1),
+      FR(inst->op2),
+      FR(inst->op3),
+      FR(inst->op4),
+      (bool)inst->op5);
+}
+
 inline void JITContext::Compiler::emitDelByVal(const inst::DelByValInst *inst) {
   em_.delByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4);
 }

@@ -455,6 +455,12 @@ DEFINE_OPCODE_4(GetByValWithReceiver, Reg8, Reg8, Reg8, Reg8)
 DEFINE_OPCODE_3(PutByValLoose, Reg8, Reg8, Reg8)
 DEFINE_OPCODE_3(PutByValStrict, Reg8, Reg8, Reg8)
 
+/// Set a property by value, with a specified receiver.
+/// Arg1[Arg2] = Arg3
+/// Arg4 is the receiver
+/// Arg5 is true if this operation is strict, false for loose.
+DEFINE_OPCODE_5(PutByValWithReceiver, Reg8, Reg8, Reg8, Reg8, UInt8)
+
 /// Delete a property by value (when the value is not known at compile time).
 /// Arg1 = delete Arg2[Arg3]
 /// Arg4 : Integer value set to 1 for strict mode semantics, 0 for loose.

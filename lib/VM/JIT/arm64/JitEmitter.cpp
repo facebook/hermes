@@ -2978,6 +2978,45 @@ void Emitter::putByValImpl(
   callThunkWithSavedIP((void *)shImpl, shImplName);
 }
 
+void Emitter::putByValWithReceiver(
+    FR frTarget,
+    FR frKey,
+    FR frValue,
+    FR frReceiver,
+    bool isStrict) {
+  comment(
+      "// PutByValWithReceiver r%u, r%u, r%u, r%u, %d",
+      frTarget.index(),
+      frKey.index(),
+      frValue.index(),
+      frReceiver.index(),
+      isStrict);
+
+  syncAllFRTempExcept({});
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frValue);
+  syncToFrame(frReceiver);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frValue);
+  loadFrameAddr(a64::x4, frReceiver);
+  a.mov(a64::w5, isStrict);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(
+          SHRuntime *shr,
+          SHLegacyValue *target,
+          SHLegacyValue *key,
+          SHLegacyValue *value,
+          SHLegacyValue *receiver,
+          bool isStrict),
+      _sh_ljs_put_by_val_with_receiver_rjs);
+}
+
 void Emitter::delByVal(FR frRes, FR frTarget, FR frKey, bool strict) {
   comment(
       "// DelByVal r%u, r%u, r%u, %d",

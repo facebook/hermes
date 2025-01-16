@@ -683,6 +683,13 @@ class Emitter {
       "putByValStrict",
       _sh_ljs_put_by_val_strict_rjs);
 
+  void putByValWithReceiver(
+      FR frTarget,
+      FR frKey,
+      FR frValue,
+      FR frReceiver,
+      bool isStrict);
+
 #define DECL_GET_BY_ID(methodName, commentStr, shFn)                           \
   void methodName(FR frRes, SHSymbolID symID, FR frSource, uint8_t cacheIdx) { \
     getByIdImpl(frRes, symID, frSource, cacheIdx, commentStr, shFn, #shFn);    \

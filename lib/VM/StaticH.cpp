@@ -911,25 +911,27 @@ extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
       reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
 }
 
-static inline void putByVal_RJS(
+static inline void putByValWithReceiver_RJS(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value,
+    SHLegacyValue *receiver,
     bool strictMode) {
   Handle<> targetHandle{toPHV(target)}, keyHandle{toPHV(key)},
-      valueHandle{toPHV(value)};
+      valueHandle{toPHV(value)}, receiverHandle{toPHV(receiver)};
   Runtime &runtime = getRuntime(shr);
   if (LLVM_LIKELY(targetHandle->isObject())) {
     const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
     CallResult<bool> res{false};
     {
       GCScopeMarkerRAII marker{runtime};
-      res = JSObject::putComputed_RJS(
+      res = JSObject::putComputedWithReceiver_RJS(
           Handle<JSObject>::vmcast(targetHandle),
           runtime,
           keyHandle,
           valueHandle,
+          receiverHandle,
           defaultPropOpFlags);
     }
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
@@ -948,6 +950,15 @@ static inline void putByVal_RJS(
     _sh_throw_current(shr);
 }
 
+static inline void putByVal_RJS(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value,
+    bool strictMode) {
+  putByValWithReceiver_RJS(shr, target, key, value, target, strictMode);
+}
+
 extern "C" void _sh_ljs_put_by_val_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -961,6 +972,15 @@ extern "C" void _sh_ljs_put_by_val_strict_rjs(
     SHLegacyValue *key,
     SHLegacyValue *value) {
   putByVal_RJS(shr, target, key, value, true);
+}
+extern "C" void _sh_ljs_put_by_val_with_receiver_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value,
+    SHLegacyValue *receiver,
+    bool isStrict) {
+  putByValWithReceiver_RJS(shr, target, key, value, receiver, isStrict);
 }
 
 template <bool tryProp>

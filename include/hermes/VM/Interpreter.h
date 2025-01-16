@@ -275,6 +275,11 @@ class Interpreter {
       CodeBlock *curCodeBlock,
       const inst::Inst *ip);
 
+  static ExecutionStatus casePutByValWithReceiver(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
   /// \return the `this` to be used for a construct call on \p callee, with \p
   /// newTarget as the new.target. We need to take special care when \p callee
   /// is a NativeConstructor, ES6 function, or JSCallableProxy. In these cases,

@@ -2722,6 +2722,40 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(PutByValWithReceiver) {
+        auto defaultPropOpFlags =
+            DEFAULT_PROP_OP_FLAGS(ip->iPutByValWithReceiver.op5);
+        if (LLVM_LIKELY(O1REG(PutByValWithReceiver).isObject())) {
+          CAPTURE_IP_ASSIGN(
+              auto res,
+              JSObject::putComputedWithReceiver_RJS(
+                  Handle<JSObject>::vmcast(&O1REG(PutByValWithReceiver)),
+                  runtime,
+                  Handle<>(&O2REG(PutByValWithReceiver)),
+                  Handle<>(&O3REG(PutByValWithReceiver)),
+                  Handle<>(&O4REG(PutByValWithReceiver)),
+                  defaultPropOpFlags));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+        } else {
+          CAPTURE_IP_ASSIGN(
+              auto retStatus,
+              Interpreter::putByValTransient_RJS(
+                  runtime,
+                  Handle<>(&O1REG(PutByValLoose)),
+                  Handle<>(&O2REG(PutByValLoose)),
+                  Handle<>(&O3REG(PutByValLoose)),
+                  ip->iPutByValWithReceiver.op5));
+          if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(PutByValWithReceiver);
+        DISPATCH;
+      }
+
       CASE(DefineOwnByIndexL) {
         nextIP = NEXTINST(DefineOwnByIndexL);
         idVal = ip->iDefineOwnByIndexL.op3;
