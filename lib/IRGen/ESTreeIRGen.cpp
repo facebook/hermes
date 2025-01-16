@@ -75,7 +75,8 @@ void LReference::emitStore(Value *value) {
           llvh::cast<ESTree::MemberExpressionNode>(ast_),
           value,
           base_,
-          property_);
+          property_,
+          thisValue_);
     case Kind::VarOrGlobal:
       irgen_->emitStore(value, base_, declInit_);
       return;
@@ -454,10 +455,32 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   /// Create lref for member expression (ex: o.f).
   if (auto *ME = llvh::dyn_cast<ESTree::MemberExpressionNode>(node)) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for member expression.\n");
-    Value *obj = genExpression(ME->_object);
+
+    Value *obj;
+    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
+      auto *homeObjectVar = curFunction()->capturedState.homeObject;
+      auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+      Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+      obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+    } else {
+      obj = genExpression(ME->_object);
+    }
+
     Value *prop = genMemberExpressionProperty(ME);
+    Value *thisVal = nullptr;
+    // `thisVal` should only be set for `super` references.
+    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
+      thisVal = genThisExpression();
+    }
     return LReference(
-        LReference::Kind::Member, this, false, ME, obj, prop, sourceLoc);
+        LReference::Kind::Member,
+        this,
+        false,
+        ME,
+        obj,
+        prop,
+        sourceLoc,
+        thisVal);
   }
 
   /// Create lref for identifiers  (ex: a).

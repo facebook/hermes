@@ -1107,7 +1107,21 @@ void ESTreeIRGen::emitMemberStore(
     ESTree::MemberExpressionNode *mem,
     Value *storedValue,
     Value *baseValue,
-    Value *propValue) {
+    Value *propValue,
+    Value *thisValue) {
+  // If \p thisValue is set, this is a store to `super`, so we must set up the
+  // receiver correctly.
+  if (thisValue) {
+    Builder.createStorePropertyWithReceiverInst(
+        storedValue,
+        baseValue,
+        propValue,
+        thisValue,
+        curFunction()->function->isStrictMode() ? IRBuilder::StoreStrict::Yes
+                                                : IRBuilder::StoreStrict::No);
+    return;
+  }
+
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
