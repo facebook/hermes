@@ -431,8 +431,8 @@ Emitter::Emitter(
     unsigned dumpJitCode,
     bool emitAsserts,
     CodeBlock *codeBlock,
-    PropertyCacheEntry *readPropertyCache,
-    PropertyCacheEntry *writePropertyCache,
+    ReadPropertyCacheEntry *readPropertyCache,
+    WritePropertyCacheEntry *writePropertyCache,
     uint32_t numFrameRegs,
     const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
@@ -2561,7 +2561,7 @@ void Emitter::createThis(
   } else {
     a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
     if (cacheIdx != 0)
-      a.add(a64::x3, a64::x3, sizeof(SHPropertyCacheEntry) * cacheIdx);
+      a.add(a64::x3, a64::x3, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
   }
   EMIT_RUNTIME_CALL(
       *this,
@@ -2569,7 +2569,7 @@ void Emitter::createThis(
           SHRuntime *,
           SHLegacyValue *,
           SHLegacyValue *,
-          SHPropertyCacheEntry *),
+          SHReadPropertyCacheEntry *),
       _sh_ljs_create_this);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -3060,7 +3060,7 @@ void Emitter::getByIdImpl(
         SHRuntime *shr,
         const SHLegacyValue *source,
         SHSymbolID symID,
-        SHPropertyCacheEntry *propCacheEntry),
+        SHReadPropertyCacheEntry *propCacheEntry),
     const char *shImplName) {
   comment(
       "// %s r%u, r%u, cache %u, symID %u",
@@ -3143,8 +3143,8 @@ void Emitter::getByIdImpl(
         xTemp4,
         a64::Mem(
             xTemp3,
-            sizeof(SHPropertyCacheEntry) * cacheIdx +
-                offsetof(SHPropertyCacheEntry, clazz)));
+            sizeof(SHReadPropertyCacheEntry) * cacheIdx +
+                offsetof(SHReadPropertyCacheEntry, clazz)));
 
     // Compare hidden classes.
     a.cmp(xTemp2, xTemp4);
@@ -3155,8 +3155,8 @@ void Emitter::getByIdImpl(
         xTemp4.w(),
         a64::Mem(
             xTemp3,
-            sizeof(SHPropertyCacheEntry) * cacheIdx +
-                offsetof(SHPropertyCacheEntry, slot)));
+            sizeof(SHReadPropertyCacheEntry) * cacheIdx +
+                offsetof(SHReadPropertyCacheEntry, slot)));
 
     // Is it an indirect slot?
     a.cmp(xTemp4.w(), HERMESVM_DIRECT_PROPERTY_SLOTS);
@@ -3223,7 +3223,7 @@ void Emitter::getByIdImpl(
   } else {
     a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
     if (cacheIdx != 0)
-      a.add(a64::x3, a64::x3, sizeof(SHPropertyCacheEntry) * cacheIdx);
+      a.add(a64::x3, a64::x3, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
   }
   callThunkWithSavedIP((void *)shImpl, shImplName);
 
@@ -3264,7 +3264,7 @@ void Emitter::getByIdWithReceiver(
   } else {
     a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
     if (cacheIdx != 0)
-      a.add(a64::x4, a64::x4, sizeof(SHPropertyCacheEntry) * cacheIdx);
+      a.add(a64::x4, a64::x4, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
   }
   EMIT_RUNTIME_CALL(
       *this,
@@ -3273,7 +3273,7 @@ void Emitter::getByIdWithReceiver(
           const SHLegacyValue *source,
           const SHLegacyValue *receiver,
           SHSymbolID symID,
-          SHPropertyCacheEntry *propCacheEntry),
+          SHReadPropertyCacheEntry *propCacheEntry),
       _sh_ljs_get_by_id_with_receiver_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -3812,7 +3812,7 @@ void Emitter::putByIdImpl(
         SHLegacyValue *target,
         SHSymbolID symID,
         SHLegacyValue *value,
-        SHPropertyCacheEntry *propCacheEntry),
+        SHWritePropertyCacheEntry *propCacheEntry),
     const char *shImplName) {
   comment(
       "// %s r%u, r%u, cache %u, symID %u",
@@ -3836,7 +3836,7 @@ void Emitter::putByIdImpl(
   } else {
     a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsWritePropertyCachePtr_));
     if (cacheIdx != 0)
-      a.add(a64::x4, a64::x4, sizeof(SHPropertyCacheEntry) * cacheIdx);
+      a.add(a64::x4, a64::x4, sizeof(SHWritePropertyCacheEntry) * cacheIdx);
   }
   callThunkWithSavedIP((void *)shImpl, shImplName);
 }

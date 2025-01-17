@@ -767,7 +767,7 @@ static inline void putById_RJS(
     const PinnedHermesValue *target,
     SymbolID symID,
     const PinnedHermesValue *value,
-    PropertyCacheEntry *cacheEntry) {
+    WritePropertyCacheEntry *cacheEntry) {
   //++NumPutById;
   if (LLVM_LIKELY(target->isObject())) {
     SmallHermesValue shv = SmallHermesValue::encodeHermesValue(*value, runtime);
@@ -860,13 +860,13 @@ extern "C" void _sh_ljs_put_by_id_loose_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, false>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_put_by_id_strict_rjs(
@@ -874,13 +874,13 @@ extern "C" void _sh_ljs_put_by_id_strict_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, true>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
@@ -888,13 +888,13 @@ extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
@@ -902,13 +902,13 @@ extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
 static inline void putByValWithReceiver_RJS(
@@ -989,7 +989,7 @@ static inline HermesValue getByIdWithReceiver_RJS(
     Handle<> source,
     SymbolID symID,
     Handle<> receiver,
-    PropertyCacheEntry *cacheEntry) {
+    ReadPropertyCacheEntry *cacheEntry) {
   //++NumGetById;
   // NOTE: it is safe to use OnREG(GetById) here because all instructions
   // have the same layout: opcode, registers, non-register operands, i.e.
@@ -1129,7 +1129,7 @@ static inline HermesValue getById_RJS(
     Runtime &runtime,
     Handle<> source,
     SymbolID symID,
-    PropertyCacheEntry *cacheEntry) {
+    ReadPropertyCacheEntry *cacheEntry) {
   return getByIdWithReceiver_RJS<tryProp>(
       runtime, source, symID, source, cacheEntry);
 }
@@ -1138,7 +1138,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
     SHLegacyValue *callee,
     SHLegacyValue *newTarget,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry) {
   Runtime &runtime = getRuntime(shr);
   auto *calleePHV = toPHV(callee);
   auto *newTargetPHV = toPHV(newTarget);
@@ -1222,7 +1222,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
         getRuntime(shr),
         lv.newTarget,
         Predefined::getSymbolID(Predefined::prototype),
-        reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+        reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 
     return JSObject::create(
                runtime,
@@ -1239,23 +1239,23 @@ extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<true>(
       getRuntime(shr),
       Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<false>(
       getRuntime(shr),
       Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
@@ -1263,13 +1263,13 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
     const SHLegacyValue *source,
     const SHLegacyValue *receiver,
     SHSymbolID symID,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry) {
   return getByIdWithReceiver_RJS<false>(
       getRuntime(shr),
       Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
       Handle<>{toPHV(receiver)},
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_put_own_by_val(

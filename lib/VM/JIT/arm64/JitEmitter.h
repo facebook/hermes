@@ -394,8 +394,8 @@ class Emitter {
       unsigned dumpJitCode,
       bool emitAsserts,
       CodeBlock *codeBlock,
-      PropertyCacheEntry *readPropertyCache,
-      PropertyCacheEntry *writePropertyCache,
+      ReadPropertyCacheEntry *readPropertyCache,
+      WritePropertyCacheEntry *writePropertyCache,
       uint32_t numFrameRegs,
       const std::function<void(std::string &&message)> &longjmpError);
 
@@ -1173,7 +1173,7 @@ class Emitter {
           SHRuntime *shr,
           const SHLegacyValue *source,
           SHSymbolID symID,
-          SHPropertyCacheEntry *propCacheEntry),
+          SHReadPropertyCacheEntry *propCacheEntry),
       const char *shImplName);
 
   void putByIdImpl(
@@ -1187,7 +1187,7 @@ class Emitter {
           SHLegacyValue *target,
           SHSymbolID symID,
           SHLegacyValue *value,
-          SHPropertyCacheEntry *propCacheEntry),
+          SHWritePropertyCacheEntry *propCacheEntry),
       const char *shImplName);
 
   void getArgumentsPropByValImpl(

@@ -1073,7 +1073,7 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
     SymbolID name,
     Handle<> receiver,
     PropOpFlags opFlags,
-    PropertyCacheEntry *cacheEntry) {
+    ReadPropertyCacheEntry *cacheEntry) {
   NamedPropertyDescriptor desc;
   // Locate the descriptor. propObj contains the object which may be anywhere
   // along the prototype chain.

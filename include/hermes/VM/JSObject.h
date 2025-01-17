@@ -918,7 +918,7 @@ class JSObject : public GCCell {
       Runtime &runtime,
       SymbolID name,
       PropOpFlags opFlags = PropOpFlags(),
-      PropertyCacheEntry *cacheEntry = nullptr);
+      ReadPropertyCacheEntry *cacheEntry = nullptr);
 
   /// Like getNamed, but with a \c receiver.  The receiver is
   /// generally only relevant when JavaScript code is executed.  If an
@@ -932,7 +932,7 @@ class JSObject : public GCCell {
       SymbolID name,
       Handle<> receiver,
       PropOpFlags opFlags = PropOpFlags(),
-      PropertyCacheEntry *cacheEntry = nullptr);
+      ReadPropertyCacheEntry *cacheEntry = nullptr);
 
   // getNamedOrIndexed accesses a property with a SymbolIDs which may be
   // index-like.
@@ -1984,7 +1984,7 @@ inline CallResult<PseudoHandle<>> JSObject::getNamed_RJS(
     Runtime &runtime,
     SymbolID name,
     PropOpFlags opFlags,
-    PropertyCacheEntry *cacheEntry) {
+    ReadPropertyCacheEntry *cacheEntry) {
   return getNamedWithReceiver_RJS(
       selfHandle, runtime, name, selfHandle, opFlags, cacheEntry);
 }

@@ -481,7 +481,8 @@ class InstrGen {
       const llvh::DenseMap<BasicBlock *, unsigned> &bbMap,
       Function &F,
       ModuleGen &moduleGen,
-      uint32_t &nextCacheIdx,
+      uint32_t &nextWriteCacheIdx,
+      uint32_t &nextReadCacheIdx,
       const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs)
       : os_(os),
         ra_(ra),
@@ -489,7 +490,8 @@ class InstrGen {
         F_(F),
         nativeContext_(F.getContext().getNativeContext()),
         moduleGen_(moduleGen),
-        nextCacheIdx_(nextCacheIdx),
+        nextWriteCacheIdx_(nextWriteCacheIdx),
+        nextReadCacheIdx_(nextReadCacheIdx),
         tryIDs_(tryIDs) {
     if (!tryIDs_.empty())
       enclosingTrys_ = *findEnclosingTrysPerBlock(&F_);
@@ -531,8 +533,9 @@ class InstrGen {
   /// The state for the module currently being emitted.
   ModuleGen &moduleGen_;
 
-  /// Starts out at 0 and increments every time a cache index is used
-  uint32_t &nextCacheIdx_;
+  /// These starts at 0 and increments every time a cache index is used
+  uint32_t &nextWriteCacheIdx_;
+  uint32_t &nextReadCacheIdx_;
 
   /// Map from TryStart to an ID for the try/catch.
   /// Set the tryState to the ID when entering the try, restore it when leaving.
@@ -583,19 +586,31 @@ class InstrGen {
     os_ << "get_symbols(shUnit)[" << moduleGen_.stringTable.add(str) << ']';
     return genStringComment(str);
   }
+
   /// Generate a string constant, followed by an optional value (if non-null),
   /// and a cache index. This must be used when
   /// passing parameters to API functions that will use the cache index.
-  llvh::raw_ostream &genStringConstIC(
-      LiteralString *LS,
-      Value *optValue = nullptr) {
+  /// First function is common part, second and third are specializations for
+  /// read and write cache entries.
+  void genStringConstICCommon(LiteralString *LS, Value *optValue) {
     genStringConst(LS);
     if (optValue) {
       os_ << ", ";
       generateRegisterPtr(*optValue);
     }
     os_ << ", ";
-    return genIC(LS);
+  }
+  llvh::raw_ostream &genStringConstWriteIC(
+      LiteralString *LS,
+      Value *optValue = nullptr) {
+    genStringConstICCommon(LS, optValue);
+    return genWriteIC(LS);
+  }
+  llvh::raw_ostream &genStringConstReadIC(
+      LiteralString *LS,
+      Value *optValue = nullptr) {
+    genStringConstICCommon(LS, optValue);
+    return genReadIC(LS);
   }
 
   /// Generate a cache index. This must be used when passing parameters to API
@@ -604,8 +619,11 @@ class InstrGen {
   /// optimization controlled by OptimizationSettings::reusePropCache: that
   /// different instructions accessing the same property probably are for
   /// objects of the same hidden class, and should get the same offset.
-  llvh::raw_ostream &genIC(LiteralString *LS) {
-    return os_ << "get_prop_cache(shUnit) + " << nextCacheIdx_++;
+  llvh::raw_ostream &genWriteIC(LiteralString *LS) {
+    return os_ << "get_write_prop_cache(shUnit) + " << nextWriteCacheIdx_++;
+  }
+  llvh::raw_ostream &genReadIC(LiteralString *LS) {
+    return os_ << "get_read_prop_cache(shUnit) + " << nextReadCacheIdx_++;
   }
 
   /// Helper to generate a value in a register,
@@ -1167,7 +1185,7 @@ class InstrGen {
       os_ << "(shr,&";
       generateRegister(*inst.getObject());
       os_ << ", ";
-      genStringConstIC(LS, inst.getStoredValue()) << ");\n";
+      genStringConstWriteIC(LS, inst.getStoredValue()) << ");\n";
       return;
     }
 
@@ -1204,7 +1222,7 @@ class InstrGen {
     os_ << ", ";
     auto prop = inst.getProperty();
     auto *propStr = cast<LiteralString>(prop);
-    genStringConstIC(propStr, inst.getStoredValue()) << ");\n";
+    genStringConstWriteIC(propStr, inst.getStoredValue()) << ");\n";
   }
   void generateTryStoreGlobalPropertyLooseInst(
       TryStoreGlobalPropertyLooseInst &inst) {
@@ -1331,7 +1349,7 @@ class InstrGen {
       os_ << "_sh_ljs_get_by_id_rjs(shr,&";
       generateRegister(*inst.getObject());
       os_ << ",";
-      genStringConstIC(LS) << ");\n";
+      genStringConstReadIC(LS) << ");\n";
       return;
     }
     // If the prop is an index-like constant, generate the special bytecode.
@@ -1362,7 +1380,7 @@ class InstrGen {
       os_ << ", &";
       generateRegister(*inst.getReceiver());
       os_ << ", ";
-      genStringConstIC(LS) << ");\n";
+      genStringConstReadIC(LS) << ");\n";
       return;
     }
     os_ << "_sh_ljs_get_by_val_with_receiver_rjs(shr, &";
@@ -1381,7 +1399,7 @@ class InstrGen {
     os_ << "_sh_ljs_try_get_by_id_rjs(shr,&";
     generateRegister(*inst.getObject());
     os_ << ", ";
-    genStringConstIC(LS) << ");\n";
+    genStringConstReadIC(LS) << ");\n";
   }
   void generateLoadParentNoTrapsInst(LoadParentNoTrapsInst &inst) {
     os_.indent(2);
@@ -2011,7 +2029,7 @@ class InstrGen {
     Module *M = F_.getParent();
     auto *protoStr =
         M->getLiteralString(M->getContext().getIdentifier("prototype"));
-    genIC(protoStr);
+    genReadIC(protoStr);
     os_ << ");\n";
   }
   void generateHBCGetArgumentsPropByValLooseInst(
@@ -2489,7 +2507,8 @@ void generateFunction(
     Function &F,
     hermes::sh::LineDirectiveEmitter &OS,
     ModuleGen &moduleGen,
-    uint32_t &nextCacheIdx,
+    uint32_t &nextWriteCacheIdx,
+    uint32_t &nextReadCacheIdx,
     BytecodeGenerationOptions options) {
   auto PO = hermes::postOrderAnalysis(&F);
 
@@ -2549,7 +2568,8 @@ void generateFunction(
   srcMgr.dumpCoords(OS, F.getSourceRange().Start);
   OS << '\n';
 
-  InstrGen instrGen(OS, RA, bbMap, F, moduleGen, nextCacheIdx, tryIDs);
+  InstrGen instrGen(
+      OS, RA, bbMap, F, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, tryIDs);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
@@ -2833,7 +2853,8 @@ void generateModule(
 
   // TODO: Share cache indices where the property name is the same and
   // -reuse-prop-cache is passed in.
-  uint32_t nextCacheIdx = 0;
+  uint32_t nextWriteCacheIdx = 0;
+  uint32_t nextReadCacheIdx = 0;
   ModuleGen moduleGen{M, options.optimizationEnabled};
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
@@ -2852,7 +2873,8 @@ void generateModule(
     OS << R"(
 static uint32_t unit_index;
 static inline SHSymbolID* get_symbols(SHUnit *);
-static inline SHPropertyCacheEntry* get_prop_cache(SHUnit *);
+static inline SHWritePropertyCacheEntry* get_write_prop_cache(SHUnit *);
+static inline SHReadPropertyCacheEntry* get_read_prop_cache(SHUnit *);
 static const SHSrcLoc s_source_locations[];
 static SHNativeFuncInfo s_function_info_table[];
 )";
@@ -2873,7 +2895,8 @@ static SHNativeFuncInfo s_function_info_table[];
   M->assignIndexToVariables();
 
   for (auto &F : *M)
-    generateFunction(F, OS, moduleGen, nextCacheIdx, options);
+    generateFunction(
+        F, OS, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, options);
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);
@@ -2891,17 +2914,21 @@ static SHNativeFuncInfo s_function_info_table[];
     OS << "struct UnitData {\n"
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
-       << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n;"
-       << "  SHCompressedPointer object_literal_class_cache["
+       << "  SHWritePropertyCacheEntry write_prop_cache_data["
+       << nextWriteCacheIdx << "];\n;"
+       << "  SHReadPropertyCacheEntry read_prop_cache_data[" << nextReadCacheIdx
+       << "];\n;" << "  SHCompressedPointer object_literal_class_cache["
        << moduleGen.literalBuffers.objShapeTable.size() << "];\n};\n"
        << "SHUnit *CREATE_THIS_UNIT(void) {\n"
        << "  struct UnitData *unit_data = calloc(sizeof(struct UnitData), 1);\n"
        << "  *unit_data = (struct UnitData){.unit = {.index = &unit_index,"
        << ".num_symbols =" << moduleGen.stringTable.size()
-       << ", .num_prop_cache_entries = " << nextCacheIdx
+       << ", .num_write_prop_cache_entries = " << nextWriteCacheIdx
+       << ", .num_read_prop_cache_entries = " << nextReadCacheIdx
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
        << ".strings = s_strings, .symbols = unit_data->symbol_data,"
-       << ".prop_cache = unit_data->prop_cache_data,"
+       << ".write_prop_cache = unit_data->write_prop_cache_data,"
+       << ".read_prop_cache = unit_data->read_prop_cache_data,"
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
@@ -2921,8 +2948,11 @@ SHSymbolID *get_symbols(SHUnit *unit) {
   return ((struct UnitData *)unit)->symbol_data;
 }
 
-SHPropertyCacheEntry *get_prop_cache(SHUnit *unit) {
-  return ((struct UnitData *)unit)->prop_cache_data;
+SHWritePropertyCacheEntry *get_write_prop_cache(SHUnit *unit) {
+  return ((struct UnitData *)unit)->write_prop_cache_data;
+}
+SHReadPropertyCacheEntry *get_read_prop_cache(SHUnit *unit) {
+  return ((struct UnitData *)unit)->read_prop_cache_data;
 }
 )";
     if (options.emitMain) {

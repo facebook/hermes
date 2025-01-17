@@ -93,7 +93,7 @@ class JITContext::Compiler {
             jc.getDumpJITCode(),
             jc.getEmitAsserts(),
             codeBlock,
-            codeBlock->propertyCache(),
+            codeBlock->readPropertyCache(),
             codeBlock->writePropertyCache(),
             // TODO: is getFrameSize() the right thing to call?
             codeBlock->getFrameSize(),

@@ -177,7 +177,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
     Handle<JSObject> obj,
     PropCacheID id) {
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
-  auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
+  auto *cacheEntry = &fixedReadPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
@@ -208,7 +208,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     PropCacheID id,
     SmallHermesValue shv) {
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
-  auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
+  auto *cacheEntry = &fixedWritePropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     JSObject::setNamedSlotValueUnsafe(*obj, *this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
@@ -687,7 +687,10 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
   // dead from runtimeModuleList_, before marking long-lived WeakRoots in them.
   markDomainRefInRuntimeModules(acceptor);
   if (markLongLived) {
-    for (auto &entry : fixedPropCache_) {
+    for (auto &entry : fixedWritePropCache_) {
+      acceptor.acceptWeak(entry.clazz);
+    }
+    for (auto &entry : fixedReadPropCache_) {
       acceptor.acceptWeak(entry.clazz);
     }
     for (auto &rm : runtimeModuleList_)

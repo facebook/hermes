@@ -1275,8 +1275,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       InternalProperty::NumAnonymousInternalProperties + 1>
       rootClazzes_;
 
-  /// Cache for property lookups in non-JS code.
-  PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
+  /// Caches for property lookups in non-JS code.
+  WritePropertyCacheEntry fixedWritePropCache_[(size_t)PropCacheID::_COUNT];
+  ReadPropertyCacheEntry fixedReadPropCache_[(size_t)PropCacheID::_COUNT];
 
   /// StringPrimitive representation of the first 256 characters.
   /// These are allocated as "long-lived" objects, so they don't need

@@ -23,10 +23,16 @@ typedef struct SHUnit SHUnit;
 /// Struct mirroring the layout of PropertyCacheEntry. This allows us to expose
 /// the offsets of certain fields without needing to make the actual C++ version
 /// available here.
-typedef struct SHPropertyCacheEntry {
+
+typedef struct SHWritePropertyCacheEntry {
   SHCompressedPointerRawType clazz;
   uint32_t slot;
-} SHPropertyCacheEntry;
+} SHWritePropertyCacheEntry;
+
+typedef struct SHReadPropertyCacheEntry {
+  SHCompressedPointerRawType clazz;
+  uint32_t slot;
+} SHReadPropertyCacheEntry;
 
 /// Struct mirroring the layout of GCCell.
 typedef struct SHGCCell {
