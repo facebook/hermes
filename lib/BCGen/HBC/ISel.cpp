@@ -50,6 +50,9 @@ STATISTIC(
 STATISTIC(
     NumCacheSlots,
     "Number of cache slots allocated for all put/get property instructions");
+STATISTIC(
+    NumPutCacheSlots,
+    "Number of cache slots allocated for all put property instructions");
 
 /// Given a list of basic blocks \p blocks linearized into the order they will
 /// be generated, \return the set of those basic blocks containing backwards
@@ -2403,6 +2406,7 @@ uint8_t HBCISel::acquirePropertyWriteCacheIndex(Identifier prop) {
 
   ++NumCachedNodes;
   ++NumCacheSlots;
+  ++NumPutCacheSlots;
   idx = ++lastPropertyWriteCacheIndex_;
   return idx;
 }
