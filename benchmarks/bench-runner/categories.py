@@ -388,6 +388,10 @@ _micros = Category(
             "numberArrayReadWrite", "micros/numberArrayReadWrite.js",
             gcMinHeap="1M", gcMaxHeap="1M"
         ),
+        ResourceBenchmark(
+            "protoCache", "micros/protoCache.js",
+            gcMinHeap="1M", gcMaxHeap="1M"
+        ),
     ],
     runByDefault=False,
 )
