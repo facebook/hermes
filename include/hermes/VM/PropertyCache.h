@@ -30,10 +30,20 @@ struct WritePropertyCacheEntry {
 
 /// A cache entry for property reads.
 struct ReadPropertyCacheEntry {
-  /// Cached class.
+  /// Cached class: either for the object being read from,
+  /// or it's prototype.
   WeakRoot<HiddenClass> clazz{nullptr};
 
-  /// Cached property index.
+  /// If \p clazz is a HiddenClass for the prototype, this is
+  /// non-null and is the HiddenClass for the child object.  We call this
+  /// a "negative match": the property was not found on an object
+  /// with this HiddenClass, so if the object used in a subsequent
+  /// read has the same HiddenClass, it also won't have the property.
+  WeakRoot<HiddenClass> negMatchClazz{nullptr};
+
+  /// Cached property index: in the object if \p clazz is the object's
+  /// HiddenClass, or in the object's prototype if \p clazz is the
+  /// prototype's HiddenClass.
   SlotIndex slot{0};
 };
 

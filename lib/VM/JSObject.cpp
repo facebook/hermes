@@ -1095,6 +1095,24 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
     if (cacheEntry && !propObj->getClass(runtime)->isDictionaryNoCache()) {
       cacheEntry->clazz = propObj->getClassGCPtr();
       cacheEntry->slot = desc.slot;
+      if (selfHandle->getParent(runtime) == propObj &&
+          !selfHandle->getClass(runtime)->isDictionary()) {
+        // Property found on an object in the prototype chain.  The proto
+        // cache only works for the immediate proto of the the object,
+        // so don't cache for deeper prototypes.  We also don't cache
+        // if the object HC is a dictionary; those may gain properties without
+        // changing the HC value, which breaks the "negative caching" of
+        // the object HC.  Note that own-property caching can use
+        // a dictionary HC, as long as it hasn't had any properties deleted (or
+        // property flags changed) -- hence the isDictionaryNoCache test above.
+        // But for the negative caching we do here, we have to exempt all
+        // dictionaries, since adding a property could mean that that a
+        // subsequent execution should get the value from the object rather than
+        // the prototype.
+        cacheEntry->negMatchClazz = selfHandle->getClassGCPtr();
+      } else {
+        cacheEntry->negMatchClazz = CompressedPointer(nullptr);
+      }
     }
     return createPseudoHandle(
         getNamedSlotValueUnsafe(propObj, runtime, desc).unboxToHV(runtime));

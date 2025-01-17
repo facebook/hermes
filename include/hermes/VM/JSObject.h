@@ -409,6 +409,13 @@ class JSObject : public GCCell {
     return flags_.proxyObject;
   }
 
+  /// Returns whether the object has any of properties set in \p flags.
+  /// \p flags should have only the flags set, not the objectID.
+  bool hasFlagIn(SHObjectFlags flags) const {
+    assert(flags.objectID == 0);
+    return flags_.bits & flags.bits;
+  }
+
   /// \return true if this object has fast indexed storage, meaning no property
   ///   checks need to be made when reading an indexed value.
   bool hasFastIndexProperties() const {
@@ -420,6 +427,13 @@ class JSObject : public GCCell {
     assert(
         !flags_.proxyObject && "getParent cannot be used with proxy objects");
     return parent_.get(runtime);
+  }
+
+  /// \return the `__proto__` internal property, which may be nullptr.
+  const GCPointer<JSObject> &getParentGCPtr() const {
+    assert(
+        !flags_.proxyObject && "getParent cannot be used with proxy objects");
+    return parent_;
   }
 
   /// \return the hidden class of this object.

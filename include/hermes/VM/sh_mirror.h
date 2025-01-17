@@ -31,6 +31,7 @@ typedef struct SHWritePropertyCacheEntry {
 
 typedef struct SHReadPropertyCacheEntry {
   SHCompressedPointerRawType clazz;
+  SHCompressedPointerRawType negMatchClazz;
   uint32_t slot;
 } SHReadPropertyCacheEntry;
 

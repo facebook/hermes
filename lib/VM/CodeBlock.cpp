@@ -305,6 +305,9 @@ void CodeBlock::markCachedHiddenClasses(
     if (prop.clazz) {
       acceptor.acceptWeak(prop.clazz);
     }
+    if (prop.negMatchClazz) {
+      acceptor.acceptWeak(prop.negMatchClazz);
+    }
   }
   for (auto &prop : llvh::makeMutableArrayRef(
            writePropertyCache(), writePropertyCacheSize_)) {

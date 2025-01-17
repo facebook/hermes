@@ -2295,6 +2295,29 @@ tailCall:
           ip = nextIP;
           DISPATCH;
         }
+        // TODO(T206393003): if we ensure that lazy, proxy, host objects
+        // have special HC's, different from that of an empty object, and
+        // don't do proto caching for such objects, then we wouldn't have
+        // to do this check.
+        const SHObjectFlags kLazyProxyOrHost{
+            .hostObject = 1, .lazyObject = 1, .proxyObject = 1};
+        if (LLVM_LIKELY(
+                cacheEntry->negMatchClazz == clazzPtr &&
+                !obj->hasFlagIn(kLazyProxyOrHost))) {
+          const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
+          if (LLVM_LIKELY(parentGCPtr)) {
+            JSObject *parent = parentGCPtr.getNonNull(runtime);
+            if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
+              ++NumGetByIdProtoHits;
+              // We've already checked that this isn't a Proxy.
+              O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
+                                   parent, runtime, cacheEntry->slot)
+                                   .unboxToHV(runtime);
+              ip = nextIP;
+              DISPATCH;
+            }
+          }
+        }
         auto id = ID(idVal);
         NamedPropertyDescriptor desc;
         OptValue<bool> fastPathResult =
@@ -2330,28 +2353,6 @@ tailCall:
           DISPATCH;
         }
 
-        // The cache may also be populated via the prototype of the object.
-        // This value is only reliable if the fast path was a definite
-        // not-found.
-        if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
-            LLVM_LIKELY(!obj->isProxyObject())) {
-          JSObject *parent = obj->getParent(runtime);
-          // TODO: This isLazy check is because a lazy object is reported as
-          // having no properties and therefore cannot contain the property.
-          // This check does not belong here, it should be merged into
-          // tryGetOwnNamedDescriptorFast().
-          if (parent && cacheEntry->clazz == parent->getClassGCPtr() &&
-              LLVM_LIKELY(!obj->isLazy())) {
-            ++NumGetByIdProtoHits;
-            // We've already checked that this isn't a Proxy.
-            O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
-                                 parent, runtime, cacheEntry->slot)
-                                 .unboxToHV(runtime);
-            ip = nextIP;
-            DISPATCH;
-          }
-        }
-
 #ifdef HERMES_SLOW_DEBUG
         // Call to getNamedDescriptorUnsafe is safe because `id` is kept alive
         // by the IdentifierTable.
@@ -2373,6 +2374,18 @@ tailCall:
         (void)NumGetByIdNotFound;
 #endif
 #ifdef HERMES_SLOW_DEBUG
+        // It's possible that there might be a GC between the time
+        // savedClass is set and the time it is checked (to see if
+        // there was an eviction.  This GC could move the HiddenClass
+        // to which savedClass points, making it an invalid pointer.
+        // We don't dereference this pointer, we just compare it, so
+        // this won't cause a crash.  In this presumably rare case,
+        // the eviction count would be incorrect.  But the
+        // alternative, putting savedClass in a handle so it's a root,
+        // could change GC behavior might alter the program behavior
+        // in some cases: a HiddenClass might be live longer than it
+        // would have been.  We're choosing to go with the first
+        // problem as the lesser of two evils.
         auto *savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
             ? cacheEntry->clazz.get(runtime, runtime.getHeap())
             : nullptr;
