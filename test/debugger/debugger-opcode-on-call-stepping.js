@@ -30,36 +30,32 @@ test();
 test();
 test();
 
-// CHECK: Break on 'debugger' statement in global: {{.*}}:19:1
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:16:5
-// CHECK-NEXT: Continuing execution
+// Auto-generated content below. Please do not modify manually.
 
-// Test doing 'step in'
-// CHECK-NEXT: Break on breakpoint 1 in test: {{.*}}:16:5
-// CHECK-NEXT: Stepped to fn: {{.*}}:12:3
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: fn
-// CHECK-NEXT: Break on breakpoint 1 in test: {{.*}}:16:5
-// CHECK-NEXT: Stepped to fn: {{.*}}:12:3
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: fn
-
-// Test doing 'step over'
-// CHECK-NEXT: Break on breakpoint 1 in test: {{.*}}:16:5
-// CHECK-NEXT: fn
-// CHECK-NEXT: Stepped to global: {{.*}}:26:5
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: Break on breakpoint 1 in test: {{.*}}:16:5
-// CHECK-NEXT: fn
-// CHECK-NEXT: Stepped to global: {{.*}}:27:5
-// CHECK-NEXT: Continuing execution
-
-// Test doing 'step out'
-// CHECK-NEXT: Break on breakpoint 1 in test: {{.*}}:16:5
-// CHECK-NEXT: fn
-// CHECK-NEXT: Stepped to global: {{.*}}:30:5
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: Break on breakpoint 1 in test: {{.*}}:16:5
-// CHECK-NEXT: fn
-// CHECK-NEXT: Stepped to global: {{.*}}:31:5
-// CHECK-NEXT: Continuing execution
+// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-call-stepping.js[2]:19:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-call-stepping.js[2]:16:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in test: {{.*}}debugger-opcode-on-call-stepping.js[2]:16:5
+// CHECK-NEXT:Stepped to fn: {{.*}}debugger-opcode-on-call-stepping.js[2]:12:3
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:fn
+// CHECK-NEXT:Break on breakpoint 1 in test: {{.*}}debugger-opcode-on-call-stepping.js[2]:16:5
+// CHECK-NEXT:Stepped to fn: {{.*}}debugger-opcode-on-call-stepping.js[2]:12:3
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:fn
+// CHECK-NEXT:Break on breakpoint 1 in test: {{.*}}debugger-opcode-on-call-stepping.js[2]:16:5
+// CHECK-NEXT:fn
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-call-stepping.js[2]:26:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in test: {{.*}}debugger-opcode-on-call-stepping.js[2]:16:5
+// CHECK-NEXT:fn
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-call-stepping.js[2]:27:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in test: {{.*}}debugger-opcode-on-call-stepping.js[2]:16:5
+// CHECK-NEXT:fn
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-call-stepping.js[2]:30:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in test: {{.*}}debugger-opcode-on-call-stepping.js[2]:16:5
+// CHECK-NEXT:fn
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-call-stepping.js[2]:31:5
+// CHECK-NEXT:Continuing execution

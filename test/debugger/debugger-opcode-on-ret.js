@@ -31,30 +31,27 @@ test();
 print(obj.number);
 print(obj.number);
 
-// Pause on debugger statement. Setup all the breakpoints we need.
-// CHECK: Break on 'debugger' statement in global: {{.*}}:26:1
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:14:5
-// CHECK-NEXT: Set breakpoint 2 at {{.*}}:22:5
-// CHECK-NEXT: Continuing execution
+// Auto-generated content below. Please do not modify manually.
 
-// Testing forEach:
-// CHECK-NEXT: 2
-// CHECK-NEXT: Break on breakpoint 2 in anonymous: {{.*}}:22:5
-// CHECK-NEXT: Stepped to anonymous: {{.*}}:20:15
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 3
-// CHECK-NEXT: Break on breakpoint 2 in anonymous: {{.*}}:22:5
-// CHECK-NEXT: Stepped to anonymous: {{.*}}:20:15
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 4
-// CHECK-NEXT: Break on breakpoint 2 in anonymous: {{.*}}:22:5
-// CHECK-NEXT: Stepped to test: {{.*}}:20:14
-// CHECK-NEXT: Continuing execution
-
-// Test doing 'continue' on breakpoint placed on top of Ret:
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
+// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-ret.js[2]:26:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-ret.js[2]:14:5
+// CHECK-NEXT:Set breakpoint 2 at {{.*}}debugger-opcode-on-ret.js[2]:22:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:2
+// CHECK-NEXT:Break on breakpoint 2 in anonymous: {{.*}}debugger-opcode-on-ret.js[2]:22:5
+// CHECK-NEXT:Stepped to anonymous: {{.*}}debugger-opcode-on-ret.js[2]:20:15
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:3
+// CHECK-NEXT:Break on breakpoint 2 in anonymous: {{.*}}debugger-opcode-on-ret.js[2]:22:5
+// CHECK-NEXT:Stepped to anonymous: {{.*}}debugger-opcode-on-ret.js[2]:20:15
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:4
+// CHECK-NEXT:Break on breakpoint 2 in anonymous: {{.*}}debugger-opcode-on-ret.js[2]:22:5
+// CHECK-NEXT:Stepped to test: {{.*}}debugger-opcode-on-ret.js[2]:20:14
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret.js[2]:14:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret.js[2]:14:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1

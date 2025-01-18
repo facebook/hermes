@@ -19,9 +19,11 @@ function test() {
 debugger;
 test();
 
-// CHECK: Break on 'debugger' statement in global: {{.*}}:19:1
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:16:5
-// CHECK-NEXT: Continuing execution
+// Auto-generated content below. Please do not modify manually.
 
-// CHECK-NEXT: Break on breakpoint 1 in test: {{.*}}:16:5
-// CHECK-NEXT: Continuing execution
+// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-call.js[2]:19:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-call.js[2]:16:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in test: {{.*}}debugger-opcode-on-call.js[2]:16:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:fn

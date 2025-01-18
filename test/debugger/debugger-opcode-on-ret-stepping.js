@@ -30,39 +30,32 @@ print(obj.number);
 print(obj.number);
 print(obj.number);
 
-// Pause on debugger statement. Setup all the breakpoints we need.
-// CHECK: Break on 'debugger' statement in global: {{.*}}:18:1
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:14:5
-// CHECK-NEXT: Continuing execution
+// Auto-generated content below. Please do not modify manually.
 
-// Verify that reusing the Interpreter loop by delaying the restoration of
-// Debugger OpCode works. Also, that the Debugger OpCode gets restored so that
-// the next usage of obj.number still triggers breakpoint.
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Stepped to global: {{.*}}:21:10
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Stepped to global: {{.*}}:23:10
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
-
-// Test doing 'step over' on breakpoint placed on top of Ret:
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Stepped to global: {{.*}}:26:10
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Stepped to global: {{.*}}:27:10
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
-
-// Test doing 'step out' on breakpoint placed on top of Ret:
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Stepped to global: {{.*}}:30:10
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
-// CHECK-NEXT: Break on breakpoint 1 in get number: {{.*}}:14:5
-// CHECK-NEXT: Stepped to global: {{.*}}:31:10
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: 1
+// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-ret-stepping.js[2]:18:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-ret-stepping.js[2]:14:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret-stepping.js[2]:14:5
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-ret-stepping.js[2]:21:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret-stepping.js[2]:14:5
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-ret-stepping.js[2]:23:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret-stepping.js[2]:14:5
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-ret-stepping.js[2]:26:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret-stepping.js[2]:14:5
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-ret-stepping.js[2]:27:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret-stepping.js[2]:14:5
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-ret-stepping.js[2]:30:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1
+// CHECK-NEXT:Break on breakpoint 1 in get number: {{.*}}debugger-opcode-on-ret-stepping.js[2]:14:5
+// CHECK-NEXT:Stepped to global: {{.*}}debugger-opcode-on-ret-stepping.js[2]:31:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:1
