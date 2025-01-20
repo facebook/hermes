@@ -1135,6 +1135,27 @@ function convertClassMember(
         );
       }
 
+      if (member.value?.type === 'ArrowFunctionExpression') {
+        const [resultTypeAnnotation, deps] = convertAFunction(
+          member.value,
+          context,
+        );
+
+        return [
+          t.ObjectTypePropertySignature({
+            // $FlowFixMe[incompatible-call]
+            key: asDetachedNode<
+              ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+            >(member.key),
+            value: resultTypeAnnotation,
+            optional: member.optional,
+            static: member.static,
+            variance: member.variance,
+          }),
+          deps,
+        ];
+      }
+
       const [resultTypeAnnotation, deps] = convertTypeAnnotation(
         member.typeAnnotation,
         member,
