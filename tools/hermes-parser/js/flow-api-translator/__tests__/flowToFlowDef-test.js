@@ -386,6 +386,16 @@ describe('flowToFlowDef', () => {
            1: string;
          }`,
       );
+      await expectTranslate(
+        `export class A {
+           foo = () => {};
+           static foo = () => {};
+         }`,
+        `declare export class A {
+           foo: () => void;
+           static foo: () => void;
+         }`,
+      );
     });
     it('method', async () => {
       await expectTranslate(
