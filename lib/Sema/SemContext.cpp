@@ -20,10 +20,12 @@ FunctionInfo::FunctionInfo(
     LexicalScope *parentScope)
     : parentFunction(parentFunction),
       parentScope(parentScope),
+      functionBodyScopeIdx(function->functionBodyScopeIdx),
       strict(function->strict),
       customDirectives(function->customDirectives),
       arrow(function->arrow),
       simpleParameterList(function->simpleParameterList),
+      hasParameterExpressions(function->hasParameterExpressions),
       usesArguments(function->usesArguments),
       containsArrowFunctions(function->containsArrowFunctions),
       containsArrowFunctionsUsingArguments(
@@ -65,14 +67,28 @@ FuncIsArrow SemContext::nodeIsArrow(ESTree::Node *node) {
   return FuncIsArrow::No;
 }
 
+FunctionInfo *SemContext::nearestNonArrow(FunctionInfo *info) {
+  FunctionInfo *cur = info;
+  auto *global = getGlobalFunction();
+  // Top-level root program nodes that are not the global function are debugger
+  // eval functions. We don't want to consider these when trying to find the
+  // nearest non-arrow.
+  while (cur->arrow || (cur->isProgramNode && cur != global)) {
+    cur = cur->parentFunction;
+  }
+  assert(cur && "All FunctionInfo should have a non-arrow ancestor.");
+  return cur;
+}
+
 FunctionInfo *SemContext::newFunction(
     FuncIsArrow isArrow,
+    FunctionInfo::ConstructorKind consKind,
     FunctionInfo *parentFunction,
     LexicalScope *parentScope,
     bool strict,
     CustomDirectives customDirectives) {
   functions_.emplace_back(
-      isArrow, parentFunction, parentScope, strict, customDirectives);
+      isArrow, consKind, parentFunction, parentScope, strict, customDirectives);
   return &functions_.back();
 }
 
@@ -123,7 +139,10 @@ Decl *SemContext::cloneDeclIntoScope(Decl *decl, LexicalScope *scope) {
 
 Decl *SemContext::newGlobal(hermes::UniqueString *name, Decl::Kind kind) {
   assert(Decl::isKindGlobal(kind) && "invalid global declaration kind");
-  return newDeclInScope(name, kind, getGlobalScope());
+  // Call root_->newDeclInScope() to ensure that the global declaration is
+  // added to the root scope and doesn't get freed before references to it.
+  // The global scope is stored in the root SemContext.
+  return root_->newDeclInScope(name, kind, getGlobalScope());
 }
 
 Decl *SemContext::funcArgumentsDecl(
@@ -477,6 +496,7 @@ void SemContextDumper::printDecl(llvh::raw_ostream &os, const Decl *d) {
     CASE(Let)
     CASE(Const)
     CASE(Class)
+    CASE(Catch)
     CASE(Import)
     CASE(ES5Catch)
     CASE(FunctionExprName)

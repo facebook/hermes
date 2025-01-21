@@ -63,6 +63,13 @@ Flags flags;
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
+#if !HERMESVM_JIT
+  if (flags.DumpJITCode || flags.EnableJIT || flags.ForceJIT) {
+    llvh::errs() << "JIT is not enabled in this build\n";
+    return EXIT_FAILURE;
+  }
+#endif
+
   auto recStats = (flags.GCPrintStats || flags.GCBeforeStats);
   ExecuteOptions options;
   options.runtimeConfig =
@@ -110,8 +117,10 @@ static int executeHBCBytecodeFromCL(
   options.stopAfterInit = false;
   options.timeLimit = flags.ExecutionTimeLimit;
   options.forceJIT = flags.ForceJIT;
+  options.jitThreshold = flags.JITThreshold;
   options.dumpJITCode = flags.DumpJITCode;
   options.jitCrashOnError = flags.JITCrashOnError;
+  options.jitEmitAsserts = flags.JITEmitAsserts;
   options.stopAfterInit = flags.StopAfterInit;
   options.forceGCBeforeStats = flags.GCBeforeStats;
   options.sampleProfiling = flags.SampleProfiling;

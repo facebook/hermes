@@ -38,11 +38,9 @@ class JSLibFlags {
 
 void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags);
 
-/// Populate the builtin function entries in \b builtins using the corresponding
+/// Populate the builtin function entries in builtins using the corresponding
 /// \c BuiltinMethod::xxx index.
-void createHermesBuiltins(
-    Runtime &runtime,
-    llvh::MutableArrayRef<Callable *> builtins);
+void createHermesBuiltins(Runtime &runtime);
 
 std::unique_ptr<JSLibStorage> createJSLibStorage();
 

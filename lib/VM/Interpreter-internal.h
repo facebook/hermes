@@ -124,26 +124,45 @@ inline double doDec(double d) {
   return d - 1;
 }
 
-template <auto Oper>
-CallResult<HermesValue>
-doOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs);
-
-template <auto Oper>
-CallResult<HermesValue>
-doBitOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs);
-
-template <auto Oper>
-CallResult<HermesValue>
-doShiftOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs);
-
-template <auto Oper>
-CallResult<HermesValue> doIncDecOperSlowPath_RJS(
+template <auto Oper, typename InstType>
+ExecutionStatus doOperSlowPath_RJS(
     Runtime &runtime,
-    Handle<> src);
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
 
-CallResult<HermesValue> doBitNotSlowPath_RJS(Runtime &runtime, Handle<> src);
+template <auto Oper, typename InstType>
+ExecutionStatus doBitOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
 
-CallResult<HermesValue> doNegateSlowPath_RJS(Runtime &runtime, Handle<> src);
+template <auto Oper, typename InstType>
+ExecutionStatus doShiftOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
+
+template <auto Oper, typename InstType>
+ExecutionStatus doIncDecOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
+
+ExecutionStatus doBitNotSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip);
+
+ExecutionStatus doNegateSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip);
+
+ExecutionStatus doCallRequireSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    RuntimeModule *runtimeModule);
 
 } // namespace vm
 } // namespace hermes

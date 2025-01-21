@@ -25,6 +25,7 @@ import {
   FunctionExpressionNameScope,
   FunctionScope,
   GlobalScope,
+  MatchCaseScope,
   ModuleScope,
   SwitchScope,
   TypeScope,
@@ -288,6 +289,12 @@ class ScopeManager {
   nestWithScope(node: WithScope['block']): WithScope {
     return this._nestScope(
       new WithScope(this, this._assertCurrentScope(), node),
+    );
+  }
+
+  nestMatchCaseScope(node: MatchCaseScope['block']): MatchCaseScope {
+    return this._nestScope(
+      new MatchCaseScope(this, this._assertCurrentScope(), node),
     );
   }
 }

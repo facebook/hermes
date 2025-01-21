@@ -82,7 +82,7 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     bool capturedFrame = true;
     auto &frameStorage = sampleStorage.stack[count];
     // Check if it is pure JS frame.
-    auto *calleeCodeBlock = frame.getCalleeCodeBlock(runtime_);
+    auto *calleeCodeBlock = frame.getCalleeCodeBlock();
     if (calleeCodeBlock != nullptr) {
       frameStorage.kind = StackFrame::FrameKind::JSFunction;
       frameStorage.jsFrame.functionId = calleeCodeBlock->getFunctionID();

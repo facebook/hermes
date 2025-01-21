@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O -dump-ir %s | %FileCheck --match-full-lines %s
 // XFAIL: true
 // TODO: This test fails because we disable try/catch inlining.
 

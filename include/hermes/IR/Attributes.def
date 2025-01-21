@@ -46,4 +46,8 @@ ATTRIBUTE(Function, unreachable, "unreachable")
 /// Used a short name here to take less space in IR dumps.
 ATTRIBUTE(CallInst, isNativeJSFunction, "njsf")
 
+/// Indicates that the call is known to be a call to the Metro require
+/// function, which has known semantics we can assume in optimization.
+ATTRIBUTE(CallInst, isMetroRequire, "metro-require")
+
 #undef ATTRIBUTE

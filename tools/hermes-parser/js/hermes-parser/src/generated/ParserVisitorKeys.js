@@ -453,6 +453,63 @@ export const HERMES_AST_VISITOR_KEYS = {
     left: 'Node',
     right: 'Node',
   },
+  MatchArrayPattern: {
+    elements: 'NodeList',
+    rest: 'Node',
+  },
+  MatchAsPattern: {
+    pattern: 'Node',
+    target: 'Node',
+  },
+  MatchBindingPattern: {
+    id: 'Node',
+  },
+  MatchExpression: {
+    argument: 'Node',
+    cases: 'NodeList',
+  },
+  MatchExpressionCase: {
+    pattern: 'Node',
+    body: 'Node',
+    guard: 'Node',
+  },
+  MatchIdentifierPattern: {
+    id: 'Node',
+  },
+  MatchLiteralPattern: {
+    literal: 'Node',
+  },
+  MatchMemberPattern: {
+    base: 'Node',
+    property: 'Node',
+  },
+  MatchObjectPattern: {
+    properties: 'NodeList',
+    rest: 'Node',
+  },
+  MatchObjectPatternProperty: {
+    key: 'Node',
+    pattern: 'Node',
+  },
+  MatchOrPattern: {
+    patterns: 'NodeList',
+  },
+  MatchRestPattern: {
+    argument: 'Node',
+  },
+  MatchStatement: {
+    argument: 'Node',
+    cases: 'NodeList',
+  },
+  MatchStatementCase: {
+    pattern: 'Node',
+    body: 'Node',
+    guard: 'Node',
+  },
+  MatchUnaryPattern: {
+    argument: 'Node',
+  },
+  MatchWildcardPattern: {},
   MemberExpression: {
     object: 'Node',
     property: 'Node',
@@ -563,6 +620,9 @@ export const HERMES_AST_VISITOR_KEYS = {
   },
   SpreadElement: {
     argument: 'Node',
+  },
+  StaticBlock: {
+    body: 'NodeList',
   },
   StringLiteral: {},
   StringLiteralTypeAnnotation: {},

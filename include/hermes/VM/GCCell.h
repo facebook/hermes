@@ -60,6 +60,7 @@ class KindAndSize {
   }
 
  private:
+  friend struct RuntimeOffsets;
   using RawType = CompressedPointer::RawType;
   static constexpr size_t kNumBits = sizeof(RawType) * 8;
   static constexpr size_t kNumKindBits = 8;
@@ -87,6 +88,8 @@ static_assert(
 /// traversal in a contiguous space: given a pointer to the head, you
 /// can get the size, and thus get to the head of the next cell.
 class GCCell {
+  friend struct RuntimeOffsets;
+
   /// Either contains the CellKind and size of this cell, or a forwarding
   /// pointer.
   union {

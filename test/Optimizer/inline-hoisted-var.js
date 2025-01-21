@@ -43,9 +43,8 @@
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS1.x]: undefined|object
-// CHECK-NEXT:  %2 = TypeOfInst (:string) %1: undefined|object
-// CHECK-NEXT:  %3 = BinaryStrictlyEqualInst (:boolean) %2: string, "function": string
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB1, %BB2
+// CHECK-NEXT:  %2 = TypeOfIsInst (:boolean) %1: undefined|object, typeOfIs(Function)
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst 42: number
 // CHECK-NEXT:%BB2:

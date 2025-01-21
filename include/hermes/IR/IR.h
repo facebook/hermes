@@ -13,6 +13,8 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/AST/NativeContext.h"
+#include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
 
@@ -67,6 +69,8 @@ class Type {
     String,
     Number,
     BigInt,
+    // ES2024 4.4.32 Symbol type (not the symbol object)
+    Symbol,
     Environment,
     /// Function code (IR Function value), not a closure.
     FunctionCode,
@@ -90,6 +94,7 @@ class Type {
         "string",
         "number",
         "bigint",
+        "symbol",
         "environment",
         "functionCode",
         "object"};
@@ -113,7 +118,7 @@ class Type {
 
   static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
-      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean);
+      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean) | BIT_TO_VAL(Symbol);
 
   static constexpr uint16_t NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
@@ -167,6 +172,9 @@ class Type {
   }
   static constexpr Type createString() {
     return Type(BIT_TO_VAL(String));
+  }
+  static constexpr Type createSymbol() {
+    return Type(BIT_TO_VAL(Symbol));
   }
   static constexpr Type createObject() {
     return Type(BIT_TO_VAL(Object));
@@ -237,6 +245,9 @@ class Type {
   constexpr bool isBigIntType() const {
     return IS_VAL(BigInt);
   }
+  constexpr bool isSymbolType() const {
+    return IS_VAL(Symbol);
+  }
   constexpr bool isEnvironmentType() const {
     return IS_VAL(Environment);
   }
@@ -301,6 +312,11 @@ class Type {
   /// \returns true if this type can represent a bigint value.
   constexpr bool canBeBigInt() const {
     return canBeType(Type::createBigInt());
+  }
+
+  /// \returns true if this type can represent a symbol value.
+  constexpr bool canBeSymbol() const {
+    return canBeType(Type::createSymbol());
   }
 
   /// \returns true if this type can represent a number value.
@@ -1228,8 +1244,16 @@ class LiteralWrapper : public Literal, public llvh::FoldingSetNode {
   }
 };
 
+using LiteralBuiltinIdx = LiteralWrapper<
+    BuiltinMethod::Enum,
+    ValueKind::LiteralBuiltinIdxKind,
+    Type::createNumber>;
 using LiteralIRType =
     LiteralWrapper<Type, ValueKind::LiteralIRTypeKind, Type::createNull>;
+using LiteralTypeOfIsTypes = LiteralWrapper<
+    TypeOfIsTypes,
+    ValueKind::LiteralTypeOfIsTypesKind,
+    Type::createNull>;
 using LiteralNativeSignature =
     LiteralWrapper<NativeSignature *, ValueKind::LiteralNativeSignatureKind>;
 using LiteralNativeExtern = LiteralWrapper<
@@ -1749,7 +1773,8 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   enum class DefinitionKind {
     ES5Function,
-    ES6Constructor,
+    ES6BaseConstructor,
+    ES6DerivedConstructor,
     ES6Arrow,
     ES6Method,
     // This corresponds to the synthetic function we create in IRGen, which is
@@ -1988,6 +2013,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return customDirectives_.noInline;
   }
 
+  /// Set the function to be noInline.  Useful for certain cases, to
+  /// preserve information useful for optimizations that would be erased
+  /// by inlining.
+  void setNoInline() {
+    customDirectives_.noInline = true;
+  }
+
   OptValue<uint32_t> getStatementCount() const {
     return statementCount_;
   }
@@ -2217,6 +2249,16 @@ struct ilist_alloc_traits<::hermes::VariableScope> {
 
 namespace hermes {
 
+class LowerBuiltinCallsContext;
+
+/// Shared state between optimization passes.
+class OptimizationContext {
+ public:
+  /// Used by LowerBuiltinCalls to cache information about identifiers and
+  /// builtin IDs.
+  std::shared_ptr<LowerBuiltinCallsContext> lowerBuiltinCallsContext = nullptr;
+};
+
 class Module : public Value {
   Module(const Module &) = delete;
   void operator=(const Module &) = delete;
@@ -2284,7 +2326,9 @@ class Module : public Value {
   ValueOFS<LiteralBigInt> literalBigInts_{};
   ValueOFS<LiteralString> literalStrings_{};
   ValueOFS<GlobalObjectProperty> globalProperties_{};
+  ValueOFS<LiteralBuiltinIdx> literalBuiltinIdxs_{};
   ValueOFS<LiteralIRType> literalIRTypes_{};
+  ValueOFS<LiteralTypeOfIsTypes> literalTypeOfIsTypes_{};
   ValueOFS<LiteralNativeSignature> nativeSignatures_{};
   ValueOFS<LiteralNativeExtern> nativeExterns_{};
 
@@ -2322,6 +2366,9 @@ class Module : public Value {
   /// If empty, this has not been generated yet.
   CJSModuleUseGraph cjsModuleUseGraph_{};
 
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> jsModuleFactoryFunctions_;
+
   struct HashRawStrings {
     std::size_t operator()(const RawStringList &rawStrings) const {
       return llvh::hash_combine_range(rawStrings.begin(), rawStrings.end());
@@ -2337,6 +2384,9 @@ class Module : public Value {
 
   /// Set to true when generator functions have been lowered.
   bool areGeneratorsLowered_{false};
+
+  /// Extra data to be shared between optimization passes.
+  OptimizationContext optContext_{};
 
  public:
   explicit Module(std::shared_ptr<Context> ctx)
@@ -2405,6 +2455,13 @@ class Module : public Value {
     return variableScopes_;
   }
 
+  OptimizationContext &getOptimizationContext() {
+    return optContext_;
+  }
+  const OptimizationContext &getOptimizationContext() const {
+    return optContext_;
+  }
+
   /// Assign index to all Variables in all VariableScopes.
   void assignIndexToVariables() {
     for (VariableScope &varScope : variableScopes_)
@@ -2428,7 +2485,13 @@ class Module : public Value {
   LiteralBool *getLiteralBool(bool value);
 
   /// Create a new literal representing an IR type.
+  LiteralBuiltinIdx *getLiteralBuiltinIdx(BuiltinMethod::Enum builtinIdx);
+
+  /// Create a new literal representing an IR type.
   LiteralIRType *getLiteralIRType(Type value);
+
+  /// Create a new literal representing TypeOfIsTypes.
+  LiteralTypeOfIsTypes *getLiteralTypeOfIsTypes(TypeOfIsTypes value);
 
   /// Create a new LiteralNativeSignature.
   LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *data);
@@ -2520,6 +2583,14 @@ class Module : public Value {
   /// Set to true if all CJS modules in this Module have been resolved.
   void setCJSModulesResolved(bool cjsModulesResolved) {
     cjsModulesResolved_ = cjsModulesResolved;
+  }
+
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> &jsModuleFactoryFunctions() {
+    return jsModuleFactoryFunctions_;
+  }
+  const llvh::DenseSet<Function *> &jsModuleFactoryFunctions() const {
+    return jsModuleFactoryFunctions_;
   }
 
   /// \return the set of functions which are used by the modules in the segment

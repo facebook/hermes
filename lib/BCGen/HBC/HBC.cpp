@@ -15,7 +15,6 @@
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
-#include "llvh/Support/Threading.h"
 #include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "hbc-backend"
@@ -227,6 +226,7 @@ static void compileEvalWorker(void *argPtr) {
 
   context.setEmitAsyncBreakCheck(data->compileFlags.emitAsyncBreakCheck);
   context.setConvertES6Classes(data->compileFlags.enableES6Classes);
+  context.setEnableES6BlockScoping(data->compileFlags.enableES6BlockScoping);
   context.setDebugInfoSetting(
       data->compileFlags.debug ? DebugInfoSetting::ALL
                                : DebugInfoSetting::THROWING);
@@ -342,14 +342,9 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
     return {false, *errMsgOpt};
   }
 
-  // Run on a thread to prevent stack overflow if this is run from deep inside
-  // JS execution.
-
-  // Use an 8MB stack, which is the default size on mac and linux.
-  constexpr unsigned kStackSize = 1 << 23;
-
+  // Use this callback-style API to reduce conflicts with stable for now.
   LazyCompilationThreadData data{provider, funcID};
-  llvh::llvm_execute_on_thread(compileLazyFunctionWorker, &data, kStackSize);
+  compileLazyFunctionWorker(&data);
 
   if (data.success) {
     return std::make_pair(true, llvh::StringRef{});
@@ -410,14 +405,10 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
     hbc::BCProviderFromSrc *provider,
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags) {
-  // Run on a thread to prevent stack overflow if this is run from deep inside
-  // JS execution.
-
-  // Use an 8MB stack, which is the default size on mac and linux.
-  constexpr unsigned kStackSize = 1 << 23;
-
+  // Use this callback-style API to reduce conflicts with stable for now.
   EvalThreadData data{std::move(src), provider, enclosingFuncID, compileFlags};
-  llvh::llvm_execute_on_thread(compileEvalWorker, &data, kStackSize);
+  compileEvalWorker(&data);
+
   return data.success
       ? std::make_pair(std::move(data.result), "")
       : std::make_pair(std::unique_ptr<BCProviderFromSrc>{}, data.error);

@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/Passes/OptParentEnvironment.h"
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/Passes/ReorderRegisters.h"
-#include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
@@ -39,13 +38,13 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(new PeepholeLowering());
   PM.addPass(createLowerScopes());
   // LowerBuilinCalls needs to run before the rest of the lowering.
-  PM.addPass(new LowerBuiltinCalls());
+  PM.addPass(createLowerBuiltinCalls());
   PM.addPass(new LowerCalls());
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
   PM.addPass(new LowerNumericProperties());
   // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
-  // AllocObjectInst, StoreNewOwnPropertyInst and StorePropertyInst.
+  // AllocObjectInst, DefineNewOwnPropertyInst and StorePropertyInst.
   PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));

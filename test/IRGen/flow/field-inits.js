@@ -164,7 +164,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS4 []
 
-// CHECK:constructor A(): any [typed]
+// CHECK:base constructor A(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -194,7 +194,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS6 []
 
-// CHECK:constructor B(): any [typed]
+// CHECK:base constructor B(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -259,7 +259,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS11 []
 
-// CHECK:constructor C1(): any [typed]
+// CHECK:derived constructor C1(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -290,7 +290,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS13 []
 
-// CHECK:constructor "A 1#"(): any [typed]
+// CHECK:base constructor "A 1#"(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment

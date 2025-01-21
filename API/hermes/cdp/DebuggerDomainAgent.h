@@ -24,6 +24,13 @@ namespace cdp {
 
 enum class PausedNotificationReason;
 
+/// Last explicit debugger step command issued by the user.
+enum class LastUserStepRequest {
+  StepInto,
+  StepOver,
+  StepOut,
+};
+
 namespace m = ::facebook::hermes::cdp::message;
 
 /// Details about a single Hermes breakpoint, implied by a CDP breakpoint.
@@ -119,7 +126,8 @@ class DebuggerDomainAgent : public DomainAgent {
 
   /// Handles Debugger.setBlackboxedRanges request
   void setBlackboxedRanges(const m::debugger::SetBlackboxedRangesRequest &req);
-
+  /// Handles Debugger.setBlackboxPatterns request
+  void setBlackboxPatterns(const m::debugger::SetBlackboxPatternsRequest &req);
   /// Handles Debugger.setPauseOnExceptions
   void setPauseOnExceptions(
       const m::debugger::SetPauseOnExceptionsRequest &req);
@@ -169,6 +177,77 @@ class DebuggerDomainAgent : public DomainAgent {
       CDPBreakpoint &breakpoint,
       debugger::ScriptID scriptID);
 
+  /// Holds a boolean that determines if scripts without a script url
+  /// (e.g. anonymous scripts) should be blackboxed.
+  /// Same as V8:
+  /// https://source.chromium.org/chromium/chromium/src/+/fef5d519bab86dbd712d76bfca5be90a6e03459c:v8/src/inspector/v8-debugger-agent-impl.cc;l=997-999
+  bool blackboxAnonymousScripts_ = false;
+  /// Optionally, holds a compiled regex pattern that is used to test if
+  /// script urls should be blackboxed.
+  /// See isLocationBlackboxed below for more details. Same as V8:
+  /// https://source.chromium.org/chromium/chromium/src/+/fef5d519bab86dbd712d76bfca5be90a6e03459c:v8/src/inspector/v8-debugger-agent-impl.cc;l=993-996
+  /// Matching using the compiled regex should be done with
+  /// ::hermes::regex::searchWithBytecode.
+  std::optional<std::vector<uint8_t>> compiledBlackboxPatternRegex_;
+
+  /// A vector of 1-based positions per script id indicating where blackbox
+  /// state changes using [from inclusive, to exclusive) pairs.
+  /// [  (start)   ... position[0]) range is not blackboxed
+  /// [position[0] ... position[1]) range is blackboxed
+  /// [position[1] ... position[2]) range is not blackboxed ... ...
+  /// [position[n] ...    (end)   ) range is blackboxed if n is even, not
+  /// blackboxed if odd.
+  /// This is used to determine if the debugger is paused on one of these
+  /// blackboxed ranges, to prevent the user from stopping there in the
+  /// following scenarios:
+  /// 1. Step out- repeats stepping out until reaches a non-blackboxed range.
+  /// 2. Step over- stepping over to a blackboxed range meaning that
+  /// the next un-blackboxed range would be after all the stepping in the
+  /// function are done (because blackboxing is per file, meaning per function
+  /// as well) so we can execute step out as well in this case until we
+  /// step out of blackboxed ranges.
+  /// Comparing with v8, we don’t check if the user comes from a blackboxed
+  /// range, but only if a stepover got you to a blackboxed range. However
+  /// both results in the same thing which is stepping out until reaching a
+  /// non-blackboxed range.
+  /// 3. Step into- execute another step into.
+  /// Repeat this step until outside of a blackboxed range.
+  /// 4. Exceptions triggering the debugger pause-
+  /// (uncaught or if the user chooses to stop on all exceptions)-
+  /// ignore and continue execution
+  /// 5. Debugger statements- ignore and continue execution
+  /// 6. Explicit pause- keep stepping in until reaching a non-blackboxed range
+  /// 7. Manual breakpoints- allow stopping in blackboxed ranges
+  std::unordered_map<debugger::ScriptID, std::vector<std::pair<int, int>>>
+      blackboxedRanges_;
+  /// Checks whether the passed location falls within a blackboxed range
+  /// in blackboxedRanges_.
+  /// Chrome looks at full functions ("frames") to detemine this. See:
+  /// https://source.chromium.org/chromium/chromium/src/+/318e9cfd9fbbbc70906f6a78d017a2708248dc6d:v8/src/inspector/v8-debugger-agent-impl.cc;l=984-1026
+  /// We, on the other hand, look at individual lines since there's no
+  /// difference in practise because the current way functions are blackboxed is
+  /// by using ignoreList in source maps, which blackboxes full files, which
+  /// means also it blackboxes full functions, so there's no difference between
+  /// checking if a line in a function is blackboxed or if the whole function is
+  /// blackboxed.
+  /// This means that we receive one "Debugger.setBlackboxedRanges" per bundle
+  /// file comprised of source js files.
+  /// For each file appearing in the "ignoreList" in source maps, we receive the
+  /// start positions and end positions of the file inside the bundle file:
+  /// [ file 1 start position,
+  ///   file 1 end position,
+  ///   file 2 start position,
+  ///   file 2 end position,
+  ///   ... ]
+  bool isLocationBlackboxed(
+      debugger::ScriptID scriptID,
+      std::string scriptName,
+      int lineNumber,
+      int columnNumber);
+  /// Checks whether the location of the top frame of the call stack is
+  /// blackboxed or not using isLocationBlackboxed
+  bool isTopFrameLocationBlackboxed();
+
   bool checkDebuggerEnabled(const m::Request &req);
   bool checkDebuggerPaused(const m::Request &req);
 
@@ -204,7 +283,28 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Whether to consider the debugger as currently paused. There are some
   /// debugger events such as ScriptLoaded where we don't consider the debugger
   /// to be paused.
+  /// Should only be set using setPaused and setUnpaused.
   bool paused_;
+
+  /// Called when the runtime is paused.
+  void setPaused(PausedNotificationReason pausedNotificationReason);
+
+  /// Called when the runtime is resumed.
+  void setUnpaused();
+
+  /// Set to true when the user selects to explicitly pause execution.
+  /// This is set back to false when the execution is paused.
+  bool explicitPausePending_ = false;
+
+  /// Last explicit step type issued by the user.
+  /// * This is never reset because cdp can't tell if a step command was
+  /// completed since a step command that does not result in further operations
+  /// resolves to a "resume" without "stepFinished" or debugger pause.
+  /// That means that this member should only be used in situations where we are
+  /// sure that a step command was issued in the given scenario. For example, a
+  /// step into command followed by a resume would leave this member holding an
+  /// "StepInto" even when minutes later the execution stops on a breakpoint.
+  std::optional<LastUserStepRequest> lastUserStepRequest_ = std::nullopt;
 };
 
 } // namespace cdp

@@ -35,15 +35,16 @@ function ctor_this_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %use_this(): functionCode
-// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: object, empty: any
-// CHECK-NEXT:  %3 = CallInst (:object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %2: undefined|object, 12: number
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
+// CHECK-NEXT:  %3 = CallInst (:object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
-// CHECK:function use_this(k: number): object [allCallsitesKnownInStrictMode]
+// CHECK:function use_this(k: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:undefined|object) %<this>: undefined|object
-// CHECK-NEXT:       StorePropertyStrictInst 12: number, %0: undefined|object, "k": string
-// CHECK-NEXT:  %2 = CreateRegExpInst (:object) "regexp": string, "": string
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %k: any
+// CHECK-NEXT:       StorePropertyStrictInst %1: any, %0: any, "k": string
+// CHECK-NEXT:  %3 = CreateRegExpInst (:object) "regexp": string, "": string
+// CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end

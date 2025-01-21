@@ -1884,6 +1884,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
                 type: 'TypeAnnotation',
                 typeAnnotation: Transform.TSTypeAnnotation(node.constraint),
               }),
+        const: false,
         default:
           node.default == null
             ? null

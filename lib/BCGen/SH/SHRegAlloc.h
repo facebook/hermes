@@ -400,6 +400,9 @@ class RegisterAllocator {
 
   Function *F;
 
+  /// Whether there are any try/catch statements in the function.
+  bool hasTry_ = false;
+
  public:
   /// Dump the status of the allocator in a textual form.
   void dump(llvh::ArrayRef<BasicBlock *> order);
@@ -407,7 +410,7 @@ class RegisterAllocator {
   /// \returns the computed live interval for the instruction \p I.
   Interval &getInstructionInterval(Instruction *I);
 
-  explicit RegisterAllocator(Function *func) : F(func) {}
+  explicit RegisterAllocator(Function *func);
 
   virtual ~RegisterAllocator() = default;
 
@@ -483,7 +486,7 @@ class RegisterAllocator {
 
  private:
   /// \return the RegClass in which \p inst should be allocated.
-  static RegClass getRegClass(Instruction *inst);
+  RegClass getRegClass(Instruction *inst);
 
   /// Allocate a register for \p inst in the class specified by getRegClass.
   Register allocateInstruction(Instruction *inst);

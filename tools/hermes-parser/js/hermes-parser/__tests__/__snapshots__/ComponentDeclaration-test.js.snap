@@ -4954,6 +4954,7 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
         "params": [
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T1",
             "type": "TypeParameter",
@@ -4962,6 +4963,7 @@ exports[`ComponentDeclaration type parameters Babel 1`] = `
           },
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T2",
             "type": "TypeParameter",
@@ -5040,6 +5042,7 @@ exports[`ComponentDeclaration type parameters ESTree 1`] = `
         "params": [
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T1",
             "type": "TypeParameter",
@@ -5048,6 +5051,7 @@ exports[`ComponentDeclaration type parameters ESTree 1`] = `
           },
           {
             "bound": null,
+            "const": false,
             "default": null,
             "name": "T2",
             "type": "TypeParameter",

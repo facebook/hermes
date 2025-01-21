@@ -142,6 +142,22 @@ import type {
   KeyofTypeAnnotation,
   LabeledStatement,
   LogicalExpression,
+  MatchArrayPattern,
+  MatchAsPattern,
+  MatchBindingPattern,
+  MatchExpression,
+  MatchExpressionCase,
+  MatchIdentifierPattern,
+  MatchLiteralPattern,
+  MatchMemberPattern,
+  MatchObjectPattern,
+  MatchObjectPatternProperty,
+  MatchOrPattern,
+  MatchRestPattern,
+  MatchStatement,
+  MatchStatementCase,
+  MatchUnaryPattern,
+  MatchWildcardPattern,
   MemberExpression,
   MetaProperty,
   MethodDefinition,
@@ -172,6 +188,7 @@ import type {
   ReturnStatement,
   SequenceExpression,
   SpreadElement,
+  StaticBlock,
   StringLiteralTypeAnnotation,
   StringTypeAnnotation,
   Super,
@@ -765,6 +782,86 @@ export function isLogicalExpression(node /*: ESNode | Token */) /*: implies node
 }
     
 
+export function isMatchArrayPattern(node /*: ESNode | Token */) /*: implies node is MatchArrayPattern */ {
+  return node.type === 'MatchArrayPattern';
+}
+    
+
+export function isMatchAsPattern(node /*: ESNode | Token */) /*: implies node is MatchAsPattern */ {
+  return node.type === 'MatchAsPattern';
+}
+    
+
+export function isMatchBindingPattern(node /*: ESNode | Token */) /*: implies node is MatchBindingPattern */ {
+  return node.type === 'MatchBindingPattern';
+}
+    
+
+export function isMatchExpression(node /*: ESNode | Token */) /*: implies node is MatchExpression */ {
+  return node.type === 'MatchExpression';
+}
+    
+
+export function isMatchExpressionCase(node /*: ESNode | Token */) /*: implies node is MatchExpressionCase */ {
+  return node.type === 'MatchExpressionCase';
+}
+    
+
+export function isMatchIdentifierPattern(node /*: ESNode | Token */) /*: implies node is MatchIdentifierPattern */ {
+  return node.type === 'MatchIdentifierPattern';
+}
+    
+
+export function isMatchLiteralPattern(node /*: ESNode | Token */) /*: implies node is MatchLiteralPattern */ {
+  return node.type === 'MatchLiteralPattern';
+}
+    
+
+export function isMatchMemberPattern(node /*: ESNode | Token */) /*: implies node is MatchMemberPattern */ {
+  return node.type === 'MatchMemberPattern';
+}
+    
+
+export function isMatchObjectPattern(node /*: ESNode | Token */) /*: implies node is MatchObjectPattern */ {
+  return node.type === 'MatchObjectPattern';
+}
+    
+
+export function isMatchObjectPatternProperty(node /*: ESNode | Token */) /*: implies node is MatchObjectPatternProperty */ {
+  return node.type === 'MatchObjectPatternProperty';
+}
+    
+
+export function isMatchOrPattern(node /*: ESNode | Token */) /*: implies node is MatchOrPattern */ {
+  return node.type === 'MatchOrPattern';
+}
+    
+
+export function isMatchRestPattern(node /*: ESNode | Token */) /*: implies node is MatchRestPattern */ {
+  return node.type === 'MatchRestPattern';
+}
+    
+
+export function isMatchStatement(node /*: ESNode | Token */) /*: implies node is MatchStatement */ {
+  return node.type === 'MatchStatement';
+}
+    
+
+export function isMatchStatementCase(node /*: ESNode | Token */) /*: implies node is MatchStatementCase */ {
+  return node.type === 'MatchStatementCase';
+}
+    
+
+export function isMatchUnaryPattern(node /*: ESNode | Token */) /*: implies node is MatchUnaryPattern */ {
+  return node.type === 'MatchUnaryPattern';
+}
+    
+
+export function isMatchWildcardPattern(node /*: ESNode | Token */) /*: implies node is MatchWildcardPattern */ {
+  return node.type === 'MatchWildcardPattern';
+}
+    
+
 export function isMemberExpression(node /*: ESNode | Token */) /*: implies node is MemberExpression */ {
   return node.type === 'MemberExpression';
 }
@@ -912,6 +1009,11 @@ export function isSequenceExpression(node /*: ESNode | Token */) /*: implies nod
 
 export function isSpreadElement(node /*: ESNode | Token */) /*: implies node is SpreadElement */ {
   return node.type === 'SpreadElement';
+}
+    
+
+export function isStaticBlock(node /*: ESNode | Token */) /*: implies node is StaticBlock */ {
+  return node.type === 'StaticBlock';
 }
     
 

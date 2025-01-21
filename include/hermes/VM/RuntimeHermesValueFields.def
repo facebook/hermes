@@ -64,6 +64,7 @@ RUNTIME_HV_FIELD(weakSetConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(weakSetPrototype, JSObject)
 RUNTIME_HV_FIELD(weakRefConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(weakRefPrototype, JSObject)
+RUNTIME_HV_FIELD(regExpConstructor, NativeConstructor)
 RUNTIME_HV_FIELD(regExpPrototype, JSObject)
 RUNTIME_HV_FIELD(typedArrayBaseConstructor, NativeConstructor)
 

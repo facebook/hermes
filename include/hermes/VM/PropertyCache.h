@@ -19,11 +19,8 @@ using SlotIndex = uint32_t;
 
 class HiddenClass;
 
-/// A cache entry for a property lookup.
-/// If the class operation that we are performing
-/// matches the values in the cache entry, \c slot is the index of a
-/// non-accessor property.
-struct PropertyCacheEntry {
+/// A cache entry for property writes.
+struct WritePropertyCacheEntry {
   /// Cached class.
   WeakRoot<HiddenClass> clazz{nullptr};
 
@@ -31,12 +28,41 @@ struct PropertyCacheEntry {
   SlotIndex slot{0};
 };
 
-static_assert(sizeof(SHPropertyCacheEntry) == sizeof(PropertyCacheEntry));
+/// A cache entry for property reads.
+struct ReadPropertyCacheEntry {
+  /// Cached class: either for the object being read from,
+  /// or it's prototype.
+  WeakRoot<HiddenClass> clazz{nullptr};
+
+  /// If \p clazz is a HiddenClass for the prototype, this is
+  /// non-null and is the HiddenClass for the child object.  We call this
+  /// a "negative match": the property was not found on an object
+  /// with this HiddenClass, so if the object used in a subsequent
+  /// read has the same HiddenClass, it also won't have the property.
+  WeakRoot<HiddenClass> negMatchClazz{nullptr};
+
+  /// Cached property index: in the object if \p clazz is the object's
+  /// HiddenClass, or in the object's prototype if \p clazz is the
+  /// prototype's HiddenClass.
+  SlotIndex slot{0};
+};
+
 static_assert(
-    offsetof(SHPropertyCacheEntry, clazz) ==
-    offsetof(PropertyCacheEntry, clazz));
+    sizeof(SHWritePropertyCacheEntry) == sizeof(WritePropertyCacheEntry));
 static_assert(
-    offsetof(SHPropertyCacheEntry, slot) == offsetof(PropertyCacheEntry, slot));
+    offsetof(SHWritePropertyCacheEntry, clazz) ==
+    offsetof(WritePropertyCacheEntry, clazz));
+static_assert(
+    offsetof(SHWritePropertyCacheEntry, slot) ==
+    offsetof(WritePropertyCacheEntry, slot));
+static_assert(
+    sizeof(SHReadPropertyCacheEntry) == sizeof(ReadPropertyCacheEntry));
+static_assert(
+    offsetof(SHReadPropertyCacheEntry, clazz) ==
+    offsetof(ReadPropertyCacheEntry, clazz));
+static_assert(
+    offsetof(SHReadPropertyCacheEntry, slot) ==
+    offsetof(ReadPropertyCacheEntry, slot));
 
 } // namespace vm
 } // namespace hermes

@@ -626,10 +626,10 @@ public class NumberFormat {
 
     if (mRoundingType == IPlatformNumberFormatter.RoundingType.SIGNIFICANT_DIGITS) {
       if (mResolvedMaximumSignificantDigits != -1)
-        finalResolvedOptions.put("minimumSignificantDigits", mResolvedMaximumSignificantDigits);
+        finalResolvedOptions.put("maximumSignificantDigits", mResolvedMaximumSignificantDigits);
 
       if (mResolvedMinimumSignificantDigits != -1)
-        finalResolvedOptions.put("maximumSignificantDigits", mResolvedMinimumSignificantDigits);
+        finalResolvedOptions.put("minimumSignificantDigits", mResolvedMinimumSignificantDigits);
 
     } else if (mRoundingType == IPlatformNumberFormatter.RoundingType.FRACTION_DIGITS) {
 

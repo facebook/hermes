@@ -115,9 +115,9 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"get c"(): functionCode
 // IRGEN-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:  %4 = HBCLoadConstInst (:string) "c": string
-// IRGEN-NEXT:       StoreGetterSetterInst %2: object, %3: undefined, %0: object, %4: string, true: boolean
+// IRGEN-NEXT:       DefineOwnGetterSetterInst %2: object, %3: undefined, %0: object, %4: string, true: boolean
 // IRGEN-NEXT:  %6 = HBCLoadConstInst (:null) null: null
-// IRGEN-NEXT:       StoreNewOwnPropertyInst %6: null, %0: object, "d": string, true: boolean
+// IRGEN-NEXT:       DefineNewOwnPropertyInst %6: null, %0: object, "d": string, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 

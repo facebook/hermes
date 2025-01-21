@@ -6,7 +6,7 @@
 
 # -*- coding: utf-8 -*-
 
-""" Executable section size analysis.
+"""Executable section size analysis.
 
 This script analyzes the size of an executable by section.
 The 'measure' command may be given to print size metrics about a single executable,

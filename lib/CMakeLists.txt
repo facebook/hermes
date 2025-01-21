@@ -10,10 +10,12 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/CSE.cpp
   Optimizer/Scalar/CodeMotion.cpp
   Optimizer/Scalar/DCE.cpp
+  Optimizer/Scalar/MetroRequireOpt.cpp
   Optimizer/Scalar/LowerGeneratorFunction.cpp
   Optimizer/Scalar/Mem2Reg.cpp
   Optimizer/Scalar/SimpleMem2Reg.cpp
   Optimizer/Scalar/FrameLoadStoreOpts.cpp
+  Optimizer/Scalar/LowerBuiltinCalls.cpp
   Optimizer/Scalar/ScopeElimination.cpp
   Optimizer/Scalar/TypeInference.cpp
   Optimizer/Scalar/SimpleStackPromotion.cpp
@@ -30,6 +32,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp
   Optimizer/Scalar/TDZDedup.cpp
   Optimizer/Scalar/StripDebugInsts.cpp
+  Optimizer/Scalar/CacheNewObject.cpp
   IR/Analysis.cpp
   IR/IREval.cpp
 )
@@ -41,7 +44,8 @@ add_hermes_library(hermesFrontend
   IRGen/ESTreeIRGen-stmt.cpp
   IRGen/ESTreeIRGen-func.cpp
   IRGen/ESTreeIRGen-except.cpp
-  IRGen/ESTreeIRGen-class.cpp
+  IRGen/ESTreeIRGen-typed-class.cpp
+  IRGen/ESTreeIRGen-legacy-class.cpp
   IR/IR.cpp
   IR/CFG.cpp
   IR/IRBuilder.cpp
@@ -91,6 +95,7 @@ add_subdirectory(Sema)
 add_library(hermescompiler STATIC)
 target_link_libraries(hermescompiler PUBLIC
   LLVHSupport_obj
+  ${BOOST_CONTEXT_LIB}
   dtoa_obj
   hermesADT_obj
   hermesAST2JS_obj
@@ -116,6 +121,7 @@ target_link_libraries(hermescompiler PUBLIC
 add_library(hermesvm_a STATIC)
 target_link_libraries(hermesvm_a PUBLIC
   LLVHSupport_obj
+  ${BOOST_CONTEXT_LIB}
   dtoa_obj
   hermesapi_obj
   hermesADT_obj
@@ -145,6 +151,7 @@ target_link_libraries(hermesvm_a PUBLIC
 add_library(hermesvmlean_a STATIC)
 target_link_libraries(hermesvmlean_a PUBLIC
   LLVHSupport_obj
+  ${BOOST_CONTEXT_LIB}
   dtoa_obj
   hermesapiLean_obj
   hermesADT_obj
@@ -166,6 +173,45 @@ target_link_libraries(hermesvmlean_a PUBLIC
 # CMake requires at least one file for the target, so create an empty file.
 add_library(hermesvm SHARED dummy.cpp)
 add_library(hermesvmlean SHARED dummy.cpp)
+
+if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
+  set_target_properties(hermesvm PROPERTIES
+    FRAMEWORK TRUE
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION}
+    FRAMEWORK_VERSION ${PROJECT_VERSION_MAJOR}
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    MACOSX_FRAMEWORK_BUNDLE_VERSION ${PROJECT_VERSION}
+    MACOSX_FRAMEWORK_IDENTIFIER dev.hermesengine.${HERMES_APPLE_TARGET_PLATFORM}
+  )
+  # Define the deployment target in the frameworks metadata
+  if(HERMES_APPLE_TARGET_PLATFORM MATCHES "iphone")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "appletv")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Resources/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "macos")
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Resources/Info.plist
+    )
+  elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "xr")
+    if(CMAKE_VERSION VERSION_LESS 3.28.4)
+      message("VisionOS Simulator requires CMake version >= 3.28.4")
+    endif()
+
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
+    )
+  endif()
+endif()
+
 # Force the entire hermesvm_a library to be used by hermesvm. There is
 # no cross platform way to do this (force_load is for macOS). Once we upgrade
 # CMake 3.24, we can use the LINK_LIBRARY generator expression to do this.

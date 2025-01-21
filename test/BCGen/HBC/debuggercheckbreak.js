@@ -45,56 +45,56 @@ function test1() {
 // CHECK-NEXT:i3[ASCII, 14..18] #13935A76: test1
 // CHECK-NEXT:i4[ASCII, 19..24] #50223B1A: random
 
-// CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "test1"
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
-// CHECK-NEXT:    CreateClosure     r0, r1, Function<test1>
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<test1>
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "test1"
-// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "test1"
+// CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<test1>(1 params, 17 registers, 3 numbers, 0 non-pointers):
+// CHECK:Function<test1>(1 params, 19 registers, 6 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0014, lexical 0x0000
-// CHECK-NEXT:    LoadConstUInt8    r1, 1
-// CHECK-NEXT:    GetGlobalObject   r7
-// CHECK-NEXT:    LoadConstUInt8    r2, 5
-// CHECK-NEXT:    LoadConstUInt8    r6, 3
-// CHECK-NEXT:    LoadConstZero     r0
+// CHECK-NEXT:    LoadConstUInt8    r3, 1
+// CHECK-NEXT:    GetGlobalObject   r9
+// CHECK-NEXT:    LoadConstUInt8    r4, 5
+// CHECK-NEXT:    LoadConstUInt8    r0, 3
+// CHECK-NEXT:    LoadConstZero     r1
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    TryGetById        r4, r7, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r5, r4, 2, "random"
-// CHECK-NEXT:    Call1             r4, r5, r4
-// CHECK-NEXT:    Mov               r5, r0
+// CHECK-NEXT:    TryGetById        r7, r9, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r8, r7, 2, "random"
+// CHECK-NEXT:    Call1             r8, r8, r7
+// CHECK-NEXT:    Mov               r2, r1
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JStrictEqual      L1, r4, r6
-// CHECK-NEXT:    TryGetById        r3, r7, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r4, r3, 2, "random"
-// CHECK-NEXT:    Call1             r4, r4, r3
-// CHECK-NEXT:    JStrictEqual      L2, r4, r2
-// CHECK-NEXT:    AddN              r0, r5, r1
+// CHECK-NEXT:    JStrictEqual      L1, r8, r0
+// CHECK-NEXT:    TryGetById        r7, r9, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r8, r7, 2, "random"
+// CHECK-NEXT:    Call1             r8, r8, r7
+// CHECK-NEXT:    JStrictEqual      L2, r8, r4
+// CHECK-NEXT:    AddN              r1, r2, r3
 // CHECK-NEXT:    Jmp               L3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadConstUInt8    r2, 10
-// CHECK-NEXT:    Mov               r6, r5
-// CHECK-NEXT:    Mov               r5, r6
-// CHECK-NEXT:    JNotGreaterN      L4, r5, r2
+// CHECK-NEXT:    LoadConstUInt8    r4, 10
+// CHECK-NEXT:    Mov               r0, r2
+// CHECK-NEXT:    Mov               r2, r0
+// CHECK-NEXT:    JNotLessN         L4, r4, r2
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    SubN              r6, r6, r1
-// CHECK-NEXT:    Mov               r5, r6
+// CHECK-NEXT:    SubN              r0, r0, r3
+// CHECK-NEXT:    Mov               r2, r0
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JGreaterN         L5, r5, r2
+// CHECK-NEXT:    JLessN            L5, r4, r2
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    TryGetById        r6, r7, 3, "print"
-// CHECK-NEXT:    LoadConstUndefined r7
-// CHECK-NEXT:    Call2             r6, r6, r7, r5
-// CHECK-NEXT:    Ret               r7
+// CHECK-NEXT:    TryGetById        r9, r9, 3, "print"
+// CHECK-NEXT:    LoadConstUndefined r6
+// CHECK-NEXT:    Call2             r9, r9, r6, r2
+// CHECK-NEXT:    Ret               r6
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}debuggercheckbreak.js

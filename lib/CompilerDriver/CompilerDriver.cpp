@@ -42,6 +42,7 @@
 #include "hermes/Support/Warning.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
+#include "hermes/VM/JIT/Config.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/Debug.h"
@@ -324,6 +325,20 @@ opt<bool> ES6Class(
     Hidden,
     cat(CompilerCategory));
 
+opt<bool> ES6BlockScoping(
+    "Xes6-block-scoping",
+    init(false),
+    desc("Enable support for ES6 block scoping"),
+    Hidden,
+    cat(CompilerCategory));
+
+opt<bool> MetroRequireOpt(
+    "Xmetro-require",
+    init(true),
+    desc("Optimize Metro require calls."),
+    Hidden,
+    cat(CompilerCategory));
+
 opt<bool>
     EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
 
@@ -457,6 +472,12 @@ static opt<bool> DumpBetweenPasses(
     desc("Print IR after every optimization pass"),
     cat(CompilerCategory));
 
+static opt<bool> Colors(
+    "colors",
+    init(false),
+    desc("Use colors in some dumps"),
+    cat(CompilerCategory));
+
 #ifndef NDEBUG
 
 static opt<bool> LexerOnly(
@@ -494,6 +515,13 @@ static opt<bool> ParseFlow(
 static opt<bool> ParseFlowComponentSyntax(
     "Xparse-component-syntax",
     desc("Parse Component syntax"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
+
+static opt<bool> ParseFlowMatch(
+    "Xparse-flow-match",
+    desc("Parse Flow match statements and expressions"),
     init(false),
     Hidden,
     cat(CompilerCategory));
@@ -772,6 +800,10 @@ ESTree::NodePtr parseJS(
     mode = parser::LazyParse;
   }
 
+  bool shouldWrapInIIFE = cl::Typed && !cl::Script;
+  if (shouldWrapInIIFE)
+    context->setAllowReturnOutsideFunction(true);
+
   Optional<ESTree::ProgramNode *> parsedJs;
 
   {
@@ -829,7 +861,7 @@ ESTree::NodePtr parseJS(
   }
 
   // If we are executing in typed mode and not script, then wrap the program.
-  if (cl::Typed && !cl::Script) {
+  if (shouldWrapInIIFE) {
     parsedAST = wrapInIIFE(context, llvh::cast<ESTree::ProgramNode>(parsedAST));
     // In case this API decides it can fail in the future, check for a
     // nullptr.
@@ -1044,6 +1076,7 @@ std::shared_ptr<Context> createContext(
       cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
   codeGenOpts.verifyIRBetweenPasses = cl::VerifyIR;
+  codeGenOpts.colors = cl::Colors;
   codeGenOpts.dumpFunctions.insert(
       cl::DumpFunctions.begin(), cl::DumpFunctions.end());
   codeGenOpts.noDumpFunctions.insert(
@@ -1081,6 +1114,8 @@ std::shared_ptr<Context> createContext(
   context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
   context->setEnableEval(cl::EnableEval);
   context->setConvertES6Classes(cl::ES6Class);
+  context->setEnableES6BlockScoping(cl::ES6BlockScoping);
+  context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
@@ -1138,6 +1173,7 @@ std::shared_ptr<Context> createContext(
     context->setParseFlow(ParseFlowSetting::ALL);
   }
   context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
+  context->setParseFlowMatch(cl::ParseFlowMatch);
 #endif
 
 #if HERMES_PARSE_TS
@@ -2146,6 +2182,9 @@ void printHermesVersion(
 #endif
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
       << "    Unicode RegExp Property Escapes\n"
+#endif
+#if HERMESVM_JIT
+      << "    JIT\n"
 #endif
       << "    Zip file input\n";
   }

@@ -26,24 +26,28 @@ class B extends A {
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'A' Class
 // CHECK-NEXT:        Decl %d.2 'B' Class
-// CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:            Decl %d.3 'A' ClassExprName
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:            Decl %d.3 'arrow1' Let
-// CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.4 'B' ClassExprName
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.5
+// CHECK-NEXT:            Decl %d.5 'arrow1' Let
+// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.5 'arrow2' Let
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:                Decl %d.7 'arrow2' Let
 // CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.5
+// CHECK-NEXT:                Scope %s.7
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    ClassDeclaration
-// CHECK-NEXT:        Id 'A' [D:E:%d.1 'A']
+// CHECK-NEXT:    ClassDeclaration Scope %s.2
+// CHECK-NEXT:        Id 'A' [D:%d.1 E:%d.3 'A']
 // CHECK-NEXT:        ClassBody
-// CHECK-NEXT:    ClassDeclaration
-// CHECK-NEXT:        Id 'B' [D:E:%d.2 'B']
+// CHECK-NEXT:    ClassDeclaration Scope %s.3
+// CHECK-NEXT:        Id 'B' [D:%d.2 E:%d.4 'B']
 // CHECK-NEXT:        Id 'A' [D:E:%d.1 'A']
 // CHECK-NEXT:        ClassBody
 // CHECK-NEXT:            MethodDefinition
@@ -61,5 +65,5 @@ class B extends A {
 // CHECK-NEXT:                                                        ExpressionStatement
 // CHECK-NEXT:                                                            CallExpression
 // CHECK-NEXT:                                                                Super
-// CHECK-NEXT:                                                Id 'arrow2' [D:E:%d.5 'arrow2']
-// CHECK-NEXT:                                Id 'arrow1' [D:E:%d.3 'arrow1']
+// CHECK-NEXT:                                                Id 'arrow2' [D:E:%d.7 'arrow2']
+// CHECK-NEXT:                                Id 'arrow1' [D:E:%d.5 'arrow1']

@@ -8,10 +8,13 @@
 #ifndef HERMES_VM_RUNTIME_H
 #define HERMES_VM_RUNTIME_H
 
+#include "hermes/ADT/TransparentOwningPtr.h"
+#include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/StackExecutor.h"
 #include "hermes/Support/StackOverflowGuard.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/AllocResult.h"
@@ -408,6 +411,12 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Unfortunately we can't use the enum here, since we don't want to include
   /// the builtins header header.
   inline Callable *getBuiltinCallable(unsigned builtinMethodID);
+
+  /// Store \p builtin in the builtins array.
+  /// \pre builtinIndex must not have already been registered.
+  inline void registerBuiltin(
+      BuiltinMethod::Enum builtinIndex,
+      Callable *builtin);
 
   /// ES6-ES11 8.4.1 EnqueueJob ( queueName, job, arguments )
   /// See \c jobQueue_ for how the Jobs and Job Queues are set up in Hermes.
@@ -873,6 +882,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   }
 #endif
 
+  /// \return the stored StackExecutor.
+  StackExecutor &getStackExecutor() {
+    return *stackExecutor_;
+  }
+
   /// \return the newly allocated script ID, incrementing the internal counter.
   facebook::hermes::debugger::ScriptID allocateScriptId() {
     return nextScriptId_++;
@@ -896,6 +910,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 #else
     return false;
 #endif
+  }
+
+  bool hasES6BlockScoping() const {
+    return hasES6Class_;
   }
 
   bool hasIntl() const {
@@ -1088,9 +1106,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Populate JS builtins into the builtins table, after verifying they do
   /// exist from the result of running internal bytecode.
-  void initJSBuiltins(
-      llvh::MutableArrayRef<Callable *> builtins,
-      Handle<JSObject> jsBuiltins);
+  void initJSBuiltins(Handle<JSObject> jsBuiltins);
 
   /// Walk all the builtin methods, assert that they are not overridden. If they
   /// are, throw an exception. This will be called at most once, before freezing
@@ -1143,6 +1159,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Set to true if we should enable ES6 Class
   const bool hasES6Class_;
+
+  /// Set to true if we should enable ES6 block scoping.
+  const bool hasES6BlockScoping_;
 
   /// Set to true if we should enable ECMA-402 Intl APIs.
   const bool hasIntl_;
@@ -1236,12 +1255,13 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   llvh::MutableArrayRef<PinnedHermesValue> registerStackAllocation_;
   PinnedHermesValue *registerStackStart_;
   PinnedHermesValue *registerStackEnd_;
+  /// Past-the-end pointer for the current frame. This points to the first
+  /// uninitialized element at the end of the stack.
   PinnedHermesValue *stackPointer_;
   /// Manages data to be used in the case of a crash.
   std::shared_ptr<CrashManager> crashMgr_;
-  /// Points to the last register in the callers frame. The current frame (the
-  /// callee frame) starts in the next register and continues up to and
-  /// including \c stackPointer_.
+  /// Points to the first register in the current frame. The current frame
+  /// continues up to \c stackPointer (exclusive).
   StackFramePtr currentFrame_{nullptr};
 
   /// Used to guard against stack overflow. Either uses real stack checking or
@@ -1255,8 +1275,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       InternalProperty::NumAnonymousInternalProperties + 1>
       rootClazzes_;
 
-  /// Cache for property lookups in non-JS code.
-  PropertyCacheEntry fixedPropCache_[(size_t)PropCacheID::_COUNT];
+  /// Caches for property lookups in non-JS code.
+  WritePropertyCacheEntry fixedWritePropCache_[(size_t)PropCacheID::_COUNT];
+  ReadPropertyCacheEntry fixedReadPropCache_[(size_t)PropCacheID::_COUNT];
 
   /// StringPrimitive representation of the first 256 characters.
   /// These are allocated as "long-lived" objects, so they don't need
@@ -1267,8 +1288,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// cycles while doing string conversions.
   std::vector<JSObject *> stringCycleCheckVisited_{};
 
-  /// Pointers to callable implementations of builtins.
-  std::vector<Callable *> builtins_{};
+  /// Array of BuiltinMethod::_count length to callable implementations of
+  /// builtins.
+  ///
+  /// Allocated with calloc, will be free() by the destructor.
+  TransparentOwningPtr<Callable *, llvh::FreeDeleter> builtins_{};
 
   /// True if the builtins are all frozen (non-writable, non-configurable).
   bool builtinsFrozen_{false};
@@ -1335,6 +1359,18 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   Debugger debugger_{*this};
 #endif
 
+  /// Use an 8MB stack, which is the default size on mac and linux.
+  static constexpr size_t kExecutorStackSize = 1 << 23;
+
+  /// Idle for 1 second before letting the executor thread be cleaned up,
+  /// after which further tasks will start a new thread.
+  static constexpr std::chrono::milliseconds kExecutorTimeout =
+      std::chrono::milliseconds(1000);
+
+  /// The executor used to run the compiler.
+  std::shared_ptr<StackExecutor> stackExecutor_ =
+      newStackExecutor(kExecutorStackSize, kExecutorTimeout);
+
   /// Holds references to persistent BC providers for the lifetime of the
   /// Runtime. This is needed because the identifier table may contain pointers
   /// into bytecode, and so memory backing these must be preserved.
@@ -1396,7 +1432,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// See \c ::setCurrentIP() and \c ::getCurrentIP() .
   const inst::Inst *currentIP_{nullptr};
 
-#ifndef NDEBUG
   /// Sentinel value for \c currentIP_ to indicate that the currently stored
   /// value is invalid and should not be used.
   /// This is used to invalidate \c currentIP inside the interpreter between
@@ -1405,11 +1440,16 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// ever calls out into a function that may observe the IP without setting it.
   static constexpr uintptr_t kInvalidCurrentIP = 0x1;
 
+#ifndef NDEBUG
   /// The number of alive/active NoRJSScopes. If nonzero, then no JS execution
   /// is allowed
   uint32_t noRJSLevel_{0};
 
   friend class NoRJSScope;
+
+  /// If the function currently at the top of the stack is a JSFunction, assert
+  /// that the given IP falls within it.
+  void assertTopCodeBlockContainsIP(const inst::Inst *ip) const;
 #endif
 
  public:
@@ -1420,6 +1460,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// return to the interpreter at a different IP. This allows things external
   /// to the interpreter loop to affect the flow of bytecode execution.
   inline void setCurrentIP(const inst::Inst *ip) {
+#ifdef HERMES_SLOW_DEBUG
+    assertTopCodeBlockContainsIP(ip);
+#endif
     currentIP_ = ip;
   }
 
@@ -1431,6 +1474,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     assert(
         (uintptr_t)currentIP_ != kInvalidCurrentIP &&
         "Current IP unknown - this probably means a CAPTURE_IP_* is missing in the interpreter.");
+#ifdef HERMES_SLOW_DEBUG
+    assertTopCodeBlockContainsIP(currentIP_);
+#endif
     return currentIP_;
   }
 
@@ -1448,18 +1494,20 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 #endif
 
   /// Save the return address in the caller in the stack frame.
-  /// This needs to be called at the beginning of a function call, after the
-  /// stack frame is set up.
+  /// This needs to be called at the beginning of a function call, before the
+  /// stack frame is set up. \c stackPointer_ should be at the end of the caller
+  /// frame, pointing to the first register of the callee frame that is about to
+  /// be set up.
   void saveCallerIPInStackFrame() {
+    StackFramePtr newFrame(stackPointer_);
 #ifndef NDEBUG
     assert(
-        (!currentFrame_.getSavedIP() ||
+        (!newFrame.getSavedIP() ||
          ((uintptr_t)currentIP_ != kInvalidCurrentIP &&
-          currentFrame_.getSavedIP() == currentIP_)) &&
+          newFrame.getSavedIP() == currentIP_)) &&
         "The ip should either be null or already have the expected value");
 #endif
-    currentFrame_.getSavedIPRef() =
-        HermesValue::encodeNativePointer(getCurrentIP());
+    newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(getCurrentIP());
   }
 
  private:
@@ -1648,7 +1696,7 @@ class ScopedNativeDepthReducer {
   // This is empirically good enough.
   static constexpr int kReducedNativeStackGap =
 #if LLVM_ADDRESS_SANITIZER_BUILD
-      256 * 1024;
+      128 * 1024;
 #else
       32 * 1024;
 #endif

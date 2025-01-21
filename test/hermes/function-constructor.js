@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %hermes -Xes6-proxy -O0 -Wno-direct-eval %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -Xes6-proxy -O -Wno-direct-eval %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -Xes6-proxy -lazy -O0 -Wno-direct-eval %s | %FileCheck --match-full-lines %s
 "use strict";

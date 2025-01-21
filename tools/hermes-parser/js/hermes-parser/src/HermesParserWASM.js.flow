@@ -44,8 +44,16 @@ export type HermesParserWASM = $ReadOnly<{
     (
       'hermesParse',
       'number',
-      ['number', 'number', 'number', 'number', 'number', 'number'],
-    ): (number, number, CBoolean, CBoolean, CBoolean, CBoolean) => number,
+      ['number', 'number', 'number', 'number', 'number', 'number', 'number'],
+    ): (
+      number,
+      number,
+      CBoolean,
+      CBoolean,
+      CBoolean,
+      CBoolean,
+      CBoolean,
+    ) => number,
     ('hermesParseResult_free', 'void', ['number']): number => void,
     ('hermesParseResult_getError', 'string', ['number']): number => string,
     ('hermesParseResult_getErrorLine', 'number', ['number']): number => number,

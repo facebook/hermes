@@ -20,21 +20,21 @@ function foo() {
 
 // CHKRA:function global(): undefined
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "x": string
-// CHKRA-NEXT:  $Reg0 = DeclareGlobalVarInst "foo": string
-// CHKRA-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKRA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %foo(): functionCode
-// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "foo": string
-// CHKRA-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHKRA-NEXT:                 DeclareGlobalVarInst "x": string
+// CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
+// CHKRA-NEXT:  {r0}      %2 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKRA-NEXT:  {r1}      %3 = CreateFunctionInst (:object) {r0} %2: environment, %foo(): functionCode
+// CHKRA-NEXT:  {r0}      %4 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %3: object, {r0} %4: object, "foo": string
+// CHKRA-NEXT:  {np0}     %6 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:                 ReturnInst {np0} %6: undefined
 // CHKRA-NEXT:function_end
 
 // CHKRA:function foo(): any
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  $Reg0 = LoadPropertyInst (:any) $Reg0, "x": string
-// CHKRA-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHKRA-NEXT:  {r0}      %0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r0}      %1 = LoadPropertyInst (:any) {r0} %0: object, "x": string
+// CHKRA-NEXT:                 ReturnInst {r0} %1: any
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
@@ -58,16 +58,16 @@ function foo() {
 // CHKBC-NEXT:i1[ASCII, 6..8] #9290584E: foo
 // CHKBC-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 
-// CHKBC:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
-// CHKBC-NEXT:    CreateClosure     r0, r1, Function<foo>
+// CHKBC-NEXT:    CreateClosure     r2, r1, Function<foo>
 // CHKBC-NEXT:    GetGlobalObject   r1
-// CHKBC-NEXT:    PutByIdLoose      r1, r0, 1, "foo"
-// CHKBC-NEXT:    LoadConstUndefined r1
-// CHKBC-NEXT:    Ret               r1
+// CHKBC-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHKBC-NEXT:    LoadConstUndefined r0
+// CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 numbers, 0 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x000d, lexical 0x0000

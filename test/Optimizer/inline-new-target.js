@@ -61,9 +61,9 @@ function outer2(){
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.foo]: object
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
-// CHECK-NEXT:  %5 = CreateThisInst (:undefined|object) %4: object, empty: any
-// CHECK-NEXT:  %6 = CreateThisInst (:undefined|object) %2: object, empty: any
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
+// CHECK-NEXT:  %6 = CallInst (:object) %4: object, %bar(): functionCode, true: boolean, %1: environment, undefined: undefined, %5: object
+// CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined|object
@@ -72,7 +72,10 @@ function outer2(){
 // CHECK-NEXT:       ReturnInst %0: undefined|object
 // CHECK-NEXT:function_end
 
-// CHECK:function bar(): object [allCallsitesKnownInStrictMode,unreachable]
+// CHECK:function bar(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       UnreachableInst
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.foo]: object
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end

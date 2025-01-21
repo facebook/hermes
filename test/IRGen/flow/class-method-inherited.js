@@ -99,7 +99,7 @@ new D().inherited();
 
 // CHECK:scope %VS4 []
 
-// CHECK:constructor D(): any [typed]
+// CHECK:derived constructor D(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

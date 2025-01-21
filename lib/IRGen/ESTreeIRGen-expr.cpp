@@ -205,6 +205,10 @@ Value *ESTreeIRGen::_genExpressionImpl(
     return genAwaitExpr(A);
   }
 
+  if (auto *classExpr = llvh::dyn_cast<ESTree::ClassExpressionNode>(expr)) {
+    return genLegacyClassExpression(classExpr, nameHint);
+  }
+
   if (auto *ICK = llvh::dyn_cast<ESTree::ImplicitCheckedCastNode>(expr)) {
     // FIXME: emit something.
     return Builder.createCheckedTypeCastInst(
@@ -353,7 +357,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
       if (consecutive) {
         elements.push_back(value);
       } else {
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             value,
             allocArrayInst,
             variableLength ? cast<Value>(Builder.createLoadStackInst(nextIndex))
@@ -457,8 +461,9 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     return emitNativeCall(call, natFuncType);
   }
 
-  // Check for a direct call to eval().
+  // Check for "special calls" -- calls with known special function names.
   if (auto *identNode = llvh::dyn_cast<ESTree::IdentifierNode>(call->_callee)) {
+    // Check for a direct call to eval().
     if (identNode->_name == kw_.identEval)
       return genCallEvalExpr(call);
   }
@@ -502,6 +507,9 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
     thisVal = memResult.base;
     callee = memResult.result;
   } else if (llvh::isa<ESTree::SuperNode>(call->_callee)) {
+    if (curFunction()->hasLegacyClassContext()) {
+      return genLegacyDirectSuper(call);
+    }
     if (curFunction()->calledSuperConstructor_) {
       // Found another super() call than the one that actually initializes the
       // base class.
@@ -529,7 +537,7 @@ Value *ESTreeIRGen::genCallExpr(ESTree::CallExpressionNode *call) {
   Value *res =
       emitCall(call, callee, target, calleeIsAlwaysClosure, thisVal, newTarget);
   if (fieldInitClassType) {
-    emitFieldInitCall(fieldInitClassType);
+    emitTypedFieldInitCall(fieldInitClassType);
   }
   return res;
 }
@@ -654,6 +662,18 @@ Value *ESTreeIRGen::genSHBuiltin(
     return Builder.createFastArrayLengthInst(array);
   }
 
+  if (builtin->_name == kw_.identModuleFactory) {
+    return genSHBuiltinModuleFactory(call);
+  }
+  if (builtin->_name == kw_.identExport) {
+    // We generate no code for $SHBuiltin.export; that's only used as
+    // metadata, and processed by semantic resolution.
+    return Builder.getLiteralUndefined();
+  }
+  if (builtin->_name == kw_.identImport) {
+    return genSHBuiltinImport(call);
+  }
+
   Mod->getContext().getSourceErrorManager().error(
       call->getSourceRange(), "unknown SH builtin call");
   return Builder.getLiteralUndefined();
@@ -726,6 +746,61 @@ Value *ESTreeIRGen::genSHBuiltinExternC(ESTree::CallExpressionNode *call) {
   return Builder.getLiteralNativeExtern(nativeExtern);
 }
 
+Value *ESTreeIRGen::genSHBuiltinModuleFactory(
+    ESTree::CallExpressionNode *call) {
+  ESTree::NodeList &args = ESTree::getArguments(call);
+  assert(
+      call->_arguments.size() == 2 && "Ensured by checks in SemanticResolver.");
+
+  auto argsIter = args.begin();
+
+  ESTree::Node *modIdArg = &(*argsIter);
+  // Success of cast ensured by checks in SemanticResolver.
+  const auto *modIdNumLit = llvh::cast<ESTree::NumericLiteralNode>(modIdArg);
+  unsigned exportModId = static_cast<unsigned>(modIdNumLit->_value);
+  (void)exportModId;
+  assert(
+      static_cast<double>(exportModId) == modIdNumLit->_value &&
+      "Ensured by checks in SemanticResolver.");
+
+  ++argsIter;
+  ESTree::Node *modFactoryFuncArg = &(*argsIter);
+
+  // Now evaluate the function argument as the factory function of the
+  // current module.
+  Value *res = genExpression(modFactoryFuncArg);
+  // The cast below should be justified by a check in SemanticResolver;
+  // module factory functions are required to be function expressions.
+  Function *calledFunc = llvh::cast<CreateFunctionInst>(res)->getFunctionCode();
+  // We make all JS module factory functions noInline: we need to be able to
+  // analyze them, following the use chains of their arguments to identify
+  // require calls (calls to the specified require argument).  If allowed
+  // the module factory functions to be inlined, this would not be possible.
+  // These functions are executed at most once, so the performance impact
+  // of inhibiting this optimization should be negligible.
+  calledFunc->setNoInline();
+  // Remember the factory functions.  Unless we're doing lazy compilation,
+  // in which case the optimization that needs them will never run.
+  if (!Mod->getContext().isLazyCompilation()) {
+    Mod->jsModuleFactoryFunctions().insert(calledFunc);
+  }
+  return res;
+}
+
+Value *ESTreeIRGen::genSHBuiltinImport(ESTree::CallExpressionNode *call) {
+  ESTree::NodeList &args = getArguments(call);
+  assert(
+      call->_arguments.size() == 3 && "Ensured by checks in SemanticResolver.");
+  auto argsIter = args.begin();
+  ++argsIter;
+  ++argsIter;
+
+  ESTree::Node *importExp = &(*argsIter);
+
+  // For now, we just reduce this to the import expression.
+  return genExpression(importExp);
+}
+
 Value *ESTreeIRGen::emitCall(
     ESTree::CallExpressionLikeNode *call,
     Value *callee,
@@ -754,7 +829,7 @@ Value *ESTreeIRGen::emitCall(
         newTarget,
         thisVal,
         args);
-    if (auto *functionType = llvh::dyn_cast<flow::BaseFunctionType>(
+    if (llvh::isa<flow::BaseFunctionType>(
             flowContext_.getNodeTypeOrAny(getCallee(call))->info)) {
       // Every BaseFunctionType currently is going to be compiled to a
       // NativeJSFunction, so always set this flag.
@@ -767,8 +842,14 @@ Value *ESTreeIRGen::emitCall(
   // Otherwise, there exists a spread argument, so the number of arguments
   // is variable.
   // Generate IR for this by creating an array and populating it with the
-  // arguments, then calling HermesInternal.apply.
+  // arguments.
   auto *args = genArrayFromElements(getArguments(call));
+  // If there is a new.target that should be set, use the correct builtin
+  if (!llvh::isa<LiteralUndefined>(newTarget)) {
+    return genBuiltinCall(
+        BuiltinMethod::HermesBuiltin_applyWithNewTarget,
+        {callee, args, thisVal, newTarget});
+  }
   return genBuiltinCall(
       BuiltinMethod::HermesBuiltin_apply, {callee, args, thisVal});
 }
@@ -811,7 +892,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
           nullptr,
           Builder.getLiteralUndefined()};
     }
-    if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+    if (llvh::isa<flow::ClassType>(
             flowContext_.getNodeTypeOrAny(superNode)->info)) {
       auto *property = llvh::dyn_cast<ESTree::IdentifierNode>(mem->_property);
       if (!property || mem->_computed) {
@@ -825,15 +906,18 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
       }
       return emitTypedSuperLoad(superNode, property);
     }
+    // Generate `this` value first. This handles the case where we are in a
+    // derived constructor but no call to `super` has been made. We must throw
+    // an error before we do the property load.
+    Value *thisValue = genThisExpression();
     auto *homeObjectVar = curFunction()->capturedState.homeObject;
     assert(homeObjectVar && "homeObjectVar not populated");
     auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
     Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
     // We know that home objects are always ordinary objects.
     Value *superObj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
-    Value *propVal = Builder.createLoadPropertyInst(
-        superObj, genMemberExpressionProperty(mem));
-    Value *thisValue = genThisExpression();
+    Value *propVal = Builder.createLoadPropertyWithReceiverInst(
+        superObj, genMemberExpressionProperty(mem), thisValue);
     return MemberExpressionResult{propVal, nullptr, thisValue};
   }
 
@@ -1001,7 +1085,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
       thisValue};
 }
 
-void ESTreeIRGen::emitFieldStore(
+void ESTreeIRGen::emitTypedFieldStore(
     flow::ClassType *classType,
     ESTree::Node *prop,
     Value *object,
@@ -1023,11 +1107,25 @@ void ESTreeIRGen::emitMemberStore(
     ESTree::MemberExpressionNode *mem,
     Value *storedValue,
     Value *baseValue,
-    Value *propValue) {
+    Value *propValue,
+    Value *thisValue) {
+  // If \p thisValue is set, this is a store to `super`, so we must set up the
+  // receiver correctly.
+  if (thisValue) {
+    Builder.createStorePropertyWithReceiverInst(
+        storedValue,
+        baseValue,
+        propValue,
+        thisValue,
+        curFunction()->function->isStrictMode() ? IRBuilder::StoreStrict::Yes
+                                                : IRBuilder::StoreStrict::No);
+    return;
+  }
+
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
-      emitFieldStore(classType, mem->_property, baseValue, storedValue);
+      emitTypedFieldStore(classType, mem->_property, baseValue, storedValue);
       return;
     }
   }
@@ -1052,7 +1150,7 @@ void ESTreeIRGen::emitMemberStore(
 
   // Check if we are storing to a FastArray, and generate the specialised
   // instruction for it.
-  if (auto *arrayType = llvh::dyn_cast<flow::ArrayType>(
+  if (llvh::isa<flow::ArrayType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (mem->_computed &&
         llvh::isa<flow::NumberType>(
@@ -1211,39 +1309,6 @@ Value *ESTreeIRGen::genCallEvalExpr(ESTree::CallExpressionNode *call) {
   result->addEntry(evalRes, evalBlock);
   result->addEntry(callRes, callBlock);
   return result;
-}
-
-/// Convert a property key node to its JavaScript string representation.
-static llvh::StringRef propertyKeyAsString(
-    llvh::SmallVectorImpl<char> &storage,
-    ESTree::Node *Key) {
-  // Handle String Literals.
-  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
-  if (auto *Lit = llvh::dyn_cast<ESTree::StringLiteralNode>(Key)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
-    return Lit->_value->str();
-  }
-
-  // Handle identifiers as if they are String Literals.
-  if (auto *Iden = llvh::dyn_cast<ESTree::IdentifierNode>(Key)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
-    return Iden->_name->str();
-  }
-
-  // Handle Number Literals.
-  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
-  if (auto *Lit = llvh::dyn_cast<ESTree::NumericLiteralNode>(Key)) {
-    LLVM_DEBUG(
-        llvh::dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
-    storage.resize(NUMBER_TO_STRING_BUF_SIZE);
-    auto len = numberToString(Lit->_value, storage.data(), storage.size());
-    return llvh::StringRef(storage.begin(), len);
-  }
-
-  llvm_unreachable("Don't know this kind of property key");
-  return llvh::StringRef();
 }
 
 Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
@@ -1413,7 +1478,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
   // haveSeenComputedProp tracks whether we have processed a computed property.
   // Once we do, for all future properties, we can no longer generate
-  // StoreNewOwnPropertyInst because the computed property could have already
+  // DefineNewOwnPropertyInst because the computed property could have already
   // defined any property.
   bool haveSeenComputedProp = false;
 
@@ -1451,21 +1516,21 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
                 capturedObj)
           : genExpression(prop->_value, Identifier{});
       if (prop->_kind->str() == "get") {
-        Builder.createStoreGetterSetterInst(
+        Builder.createDefineOwnGetterSetterInst(
             value,
             Builder.getLiteralUndefined(),
             Obj,
             key,
             IRBuilder::PropEnumerable::Yes);
       } else if (prop->_kind->str() == "set") {
-        Builder.createStoreGetterSetterInst(
+        Builder.createDefineOwnGetterSetterInst(
             Builder.getLiteralUndefined(),
             value,
             Obj,
             key,
             IRBuilder::PropEnumerable::Yes);
       } else {
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             value, Obj, key, IRBuilder::PropEnumerable::Yes);
       }
       haveSeenComputedProp = true;
@@ -1507,13 +1572,13 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         // This value is going to be overwritten, but insert a placeholder in
         // order to maintain insertion order.
         if (haveSeenComputedProp) {
-          Builder.createStoreOwnPropertyInst(
+          Builder.createDefineOwnPropertyInst(
               Builder.getLiteralNull(),
               Obj,
               Key,
               IRBuilder::PropEnumerable::Yes);
         } else {
-          Builder.createStoreNewOwnPropertyInst(
+          Builder.createDefineNewOwnPropertyInst(
               Builder.getLiteralNull(),
               Obj,
               Key,
@@ -1548,7 +1613,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Builder.createIdentifier("set " + keyStr.str()));
       }
 
-      Builder.createStoreGetterSetterInst(
+      Builder.createDefineOwnGetterSetterInst(
           getter, setter, Obj, Key, IRBuilder::PropEnumerable::Yes);
 
       propValue->state = PropertyValue::IRGenerated;
@@ -1575,10 +1640,10 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
           "IR can only be generated once");
       if (haveSeenComputedProp ||
           propValue->state == PropertyValue::Placeholder) {
-        Builder.createStoreOwnPropertyInst(
+        Builder.createDefineOwnPropertyInst(
             value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       } else {
-        Builder.createStoreNewOwnPropertyInst(
+        Builder.createDefineNewOwnPropertyInst(
             value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       }
       propValue->state = PropertyValue::IRGenerated;
@@ -1639,7 +1704,7 @@ Value *ESTreeIRGen::genTypedObjectExpr(
         "Missing stored value in typechecked object literal");
     // Use a literal if possible, otherwise use the default init value.
     // Avoid putting non-literals here because we want to emit PrStore
-    // instead of StoreNewOwnPropertyInst.
+    // instead of DefineNewOwnPropertyInst.
     Value *initValue = nullptr;
     if (llvh::isa<Literal>(it->second.first)) {
       initValue = it->second.first;
@@ -2425,7 +2490,8 @@ Value *ESTreeIRGen::genNewTarget() {
 
   switch (curFunction()->function->getDefinitionKind()) {
     case Function::DefinitionKind::ES5Function:
-    case Function::DefinitionKind::ES6Constructor:
+    case Function::DefinitionKind::ES6BaseConstructor:
+    case Function::DefinitionKind::ES6DerivedConstructor:
       value = Builder.createGetNewTargetInst(
           curFunction()->function->getNewTargetParam());
       break;
@@ -2492,7 +2558,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     auto *proto = Builder.createUnionNarrowTrustedInst(
         Builder.createLoadFrameInst(RSI, it->second.homeObjectVar),
         Type::createObject());
-    Value *newInst = emitClassAllocation(classType, proto);
+    Value *newInst = emitTypedClassAllocation(classType, proto);
 
     // Call the constructor, if necessary.  There is always a constructor,
     // either explicit or implicit.  We will load an implicit ctor (for
@@ -2616,6 +2682,13 @@ Value *ESTreeIRGen::genLogicalExpression(
 }
 
 Value *ESTreeIRGen::genThisExpression() {
+  // Accessing `this` in derived legacy class constructors must be guarded.
+  if (curFunction()->hasLegacyClassContext()) {
+    if (semCtx_.nearestNonArrow(curFunction()->getSemInfo())->constructorKind ==
+        sema::FunctionInfo::ConstructorKind::Derived) {
+      return genLegacyDerivedThis();
+    }
+  }
   // Generators may be used as arrows in async arrow functions, in which case
   // they should load from the captured this.
   auto funcDefKind = curFunction()->function->getDefinitionKind();

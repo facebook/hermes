@@ -23,37 +23,37 @@ function main(x, y, z) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg0 = DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  $Reg0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg0, %main(): functionCode
-// CHECK-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg1, $Reg0, "main": string
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:                 DeclareGlobalVarInst "main": string
+// CHECK-NEXT:  {r0}      %1 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r1}      %2 = CreateFunctionInst (:object) {r0} %1: environment, %main(): functionCode
+// CHECK-NEXT:  {r0}      %3 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:                 StorePropertyLooseInst {r1} %2: object, {r0} %3: object, "main": string
+// CHECK-NEXT:  {np0}     %5 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:                 ReturnInst {np0} %5: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function main(x: any, y: any, z: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg6 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  $Reg5 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:  $Reg4 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  $Reg3 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  $Reg1 = HBCLoadConstInst (:number) 10: number
-// CHECK-NEXT:  $Reg4 = MovInst (:number) $Reg4
-// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg3
-// CHECK-NEXT:  $Reg0 = BranchInst %BB1
+// CHECK-NEXT:  {r1}      %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  {r0}      %1 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  {n4}      %2 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {n3}      %3 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:  {n2}      %4 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {n1}      %5 = HBCLoadConstInst (:number) 10: number
+// CHECK-NEXT:  {n4}      %6 = MovInst (:number) {n4} %2: number
+// CHECK-NEXT:  {n3}      %7 = MovInst (:number) {n3} %3: number
+// CHECK-NEXT:                 BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $Reg4 = PhiInst (:number) $Reg4, %BB0, $Reg4, %BB1
-// CHECK-NEXT:  $Reg3 = PhiInst (:number) $Reg3, %BB0, $Reg3, %BB1
-// CHECK-NEXT:  $Reg7 = BinaryAddInst (:string|number) $Reg6, $Reg4
-// CHECK-NEXT:  $Reg0 = BinaryAddInst (:string|number) $Reg5, $Reg4
-// CHECK-NEXT:  $Reg0 = BinaryMultiplyInst (:number) $Reg7, $Reg0
-// CHECK-NEXT:  $Reg0 = FAddInst (:number) $Reg3, $Reg0
-// CHECK-NEXT:  $Reg7 = FAddInst (:number) $Reg4, $Reg2
-// CHECK-NEXT:  $Reg3 = MovInst (:number) $Reg0
-// CHECK-NEXT:  $Reg4 = MovInst (:number) $Reg7
-// CHECK-NEXT:  $Reg1 = HBCFCmpBrLessThanInst $Reg4, $Reg1, %BB1, %BB2
+// CHECK-NEXT:  {n4}      %9 = PhiInst (:number) {n4} %6: number, %BB0, {n4} %17: number, %BB1
+// CHECK-NEXT:  {n3}     %10 = PhiInst (:number) {n3} %7: number, %BB0, {n3} %16: number, %BB1
+// CHECK-NEXT:  {r3}     %11 = BinaryAddInst (:string|number) {r1} %0: any, {n4} %9: number
+// CHECK-NEXT:  {r2}     %12 = BinaryAddInst (:string|number) {r0} %1: any, {n4} %9: number
+// CHECK-NEXT:  {n0}     %13 = BinaryMultiplyInst (:number) {r3} %11: string|number, {r2} %12: string|number
+// CHECK-NEXT:  {n0}     %14 = FAddInst (:number) {n3} %10: number, {n0} %13: number
+// CHECK-NEXT:  {n5}     %15 = FAddInst (:number) {n4} %9: number, {n2} %4: number
+// CHECK-NEXT:  {n3}     %16 = MovInst (:number) {n0} %14: number
+// CHECK-NEXT:  {n4}     %17 = MovInst (:number) {n5} %15: number
+// CHECK-NEXT:                 HBCFCmpBrLessThanInst {n4} %17: number, {n1} %5: number, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  $Reg0 = ReturnInst $Reg0
+// CHECK-NEXT:                 ReturnInst {n0} %14: number
 // CHECK-NEXT:function_end

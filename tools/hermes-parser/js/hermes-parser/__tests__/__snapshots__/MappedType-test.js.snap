@@ -39,6 +39,7 @@ exports[`MappedType Basic ESTree 1`] = `
           {
             "keyTparam": {
               "bound": null,
+              "const": false,
               "default": null,
               "name": "key",
               "type": "TypeParameter",
@@ -135,6 +136,7 @@ exports[`MappedType Union ESTree 1`] = `
           {
             "keyTparam": {
               "bound": null,
+              "const": false,
               "default": null,
               "name": "key",
               "type": "TypeParameter",

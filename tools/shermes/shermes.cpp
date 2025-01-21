@@ -325,6 +325,20 @@ cl::opt<bool> ES6Class{
     llvh::cl::init(false),
     llvh::cl::cat(CompilerCategory)};
 
+cl::opt<bool> ES6BlockScoping{
+    "Xes6-block-scoping",
+    llvh::cl::Hidden,
+    llvh::cl::desc("Enable support for ES6 block scoping"),
+    llvh::cl::init(false),
+    llvh::cl::cat(CompilerCategory)};
+
+cl::opt<bool> MetroRequireOpt(
+    "Xmetro-require",
+    llvh::cl::init(true),
+    llvh::cl::desc("Optimize Metro require calls."),
+    llvh::cl::Hidden,
+    llvh::cl::cat(CompilerCategory));
+
 cl::opt<bool> Typed(
     "typed",
     cl::desc("Enable typed mode"),
@@ -616,8 +630,8 @@ std::shared_ptr<Context> createContext() {
   // parsing.
   optimizationOpts.staticBuiltins =
       cli::StaticBuiltins == StaticBuiltinSetting::ForceOn;
-  // optimizationOpts.staticRequire = cl::StaticRequire;
-  //
+
+  optimizationOpts.metroRequireOpt = cli::MetroRequireOpt;
 
   optimizationOpts.useLegacyMem2Reg = cli::LegacyMem2Reg;
 
@@ -640,6 +654,7 @@ std::shared_ptr<Context> createContext() {
   context->setStrictMode(cli::Typed || cli::StrictMode);
   context->setEnableEval(cli::EnableEval);
   context->setConvertES6Classes(cli::ES6Class);
+  context->setEnableES6BlockScoping(cli::ES6BlockScoping);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
@@ -732,6 +747,10 @@ ESTree::NodePtr parseJS(
       (singleInputSourceMap.empty() || fileBufs.size() == 1) &&
       "singleInputSourceMap can only be specified for a single input file");
 
+  bool shouldWrapInIIFE = cli::Typed && !cli::Script;
+  if (shouldWrapInIIFE)
+    context->setAllowReturnOutsideFunction(true);
+
   // Whether a parse error ocurred in one of the inputs.
   bool parseError = false;
   for (std::unique_ptr<llvh::MemoryBuffer> &fileBuf : fileBufs) {
@@ -793,7 +812,7 @@ ESTree::NodePtr parseJS(
   }
 
   // If we are executing in typed mode and not script, then wrap the program.
-  if (cli::Typed && !cli::Script) {
+  if (shouldWrapInIIFE) {
     parsedAST = wrapInIIFE(context, parsedAST);
     // In case this API decides it can fail in the future, check for a
     // nullptr.

@@ -52,49 +52,49 @@ function foo() {
 // CHECK-NEXT:i5[ASCII, 22..24] #9290584E: foo
 // CHECK-NEXT:i6[ASCII, 25..29] #A689F65B: print
 
-// CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
-// CHECK-NEXT:    CreateClosure     r0, r1, Function<foo>
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "foo"
-// CHECK-NEXT:    LoadConstUndefined r1
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<foo>(1 params, 11 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<foo>(1 params, 12 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r2, 3
-// CHECK-NEXT:    LoadConstInt      r1, 1234
-// CHECK-NEXT:    StoreNPToEnvironment r2, 0, r1
+// CHECK-NEXT:    CreateFunctionEnvironment r3, 3
+// CHECK-NEXT:    LoadConstInt      r0, 1234
+// CHECK-NEXT:    StoreNPToEnvironment r3, 0, r0
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    TryGetById        r1, r1, 1, "Object"
-// CHECK-NEXT:    CreateThisForNew  r0, r1, 2
-// CHECK-NEXT:    Mov               r3, r0
+// CHECK-NEXT:    CreateThisForNew  r2, r1, 2
+// CHECK-NEXT:    Mov               r4, r2
 // CHECK-NEXT:    Construct         r1, r1, 1
-// CHECK-NEXT:    SelectObject      r1, r0, r1
-// CHECK-NEXT:    StoreToEnvironment r2, 1, r1
+// CHECK-NEXT:    SelectObject      r1, r2, r1
+// CHECK-NEXT:    StoreToEnvironment r3, 1, r1
 // CHECK-NEXT:    CreateRegExp      r1, "Hermes", "i", 0
-// CHECK-NEXT:    StoreToEnvironment r2, 2, r1
-// CHECK-NEXT:    CreateClosure     r2, r2, Function<bar>
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    StoreToEnvironment r3, 2, r1
+// CHECK-NEXT:    CreateClosure     r3, r3, Function<bar>
+// CHECK-NEXT:    Ret               r3
 
-// CHECK:Function<bar>(1 params, 14 registers, 0 numbers, 1 non-pointers):
+// CHECK:Function<bar>(1 params, 16 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
-// CHECK-NEXT:    GetParentEnvironment r4, 0
-// CHECK-NEXT:    LoadFromEnvironment r3, r4, 0
+// CHECK-NEXT:    GetParentEnvironment r3, 0
+// CHECK-NEXT:    LoadFromEnvironment r1, r3, 0
 // CHECK-NEXT:    LoadConstUInt8    r0, 1
-// CHECK-NEXT:    AddN              r0, r3, r0
-// CHECK-NEXT:    StoreNPToEnvironment r4, 0, r0
-// CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    TryGetById        r1, r3, 1, "print"
-// CHECK-NEXT:    LoadFromEnvironment r2, r4, 1
-// CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call2             r2, r1, r0, r2
-// CHECK-NEXT:    TryGetById        r3, r3, 1, "print"
-// CHECK-NEXT:    LoadFromEnvironment r4, r4, 2
-// CHECK-NEXT:    Call2             r4, r3, r0, r4
-// CHECK-NEXT:    Ret               r0
+// CHECK-NEXT:    AddN              r0, r1, r0
+// CHECK-NEXT:    StoreNPToEnvironment r3, 0, r0
+// CHECK-NEXT:    GetGlobalObject   r4
+// CHECK-NEXT:    TryGetById        r6, r4, 1, "print"
+// CHECK-NEXT:    LoadFromEnvironment r5, r3, 1
+// CHECK-NEXT:    LoadConstUndefined r2
+// CHECK-NEXT:    Call2             r5, r6, r2, r5
+// CHECK-NEXT:    TryGetById        r4, r4, 1, "print"
+// CHECK-NEXT:    LoadFromEnvironment r3, r3, 2
+// CHECK-NEXT:    Call2             r3, r4, r2, r3
+// CHECK-NEXT:    Ret               r2
 
 // CHECK:RegExp Bytecodes:
 // CHECK-NEXT:0: /Hermes/i

@@ -488,6 +488,18 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
     }
   }
 
+  /// \return true if the jump instruction at \p loc is a long jump with a
+  /// corresponding short variant.
+  bool hasShortJumpVariant(offset_t loc) const {
+    switch (opcodes_[loc]) {
+#define DEFINE_JUMP_LONG_VARIANT(shortName, longName) case longName##Op:
+#include "hermes/BCGen/HBC/BytecodeList.def"
+      return true;
+      default:
+        return false;
+    }
+  }
+
   /// \return the size of the frame.
   uint32_t getFrameSize() const {
     return frameSize_;

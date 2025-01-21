@@ -140,6 +140,11 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 /// include non-enumerable keys, too.  The keys included will only be of the
 /// types specified by the above flags.
 ///
+/// \name KeepSymbols
+/// Normally, when returning a list of keys, Symbols are converted to
+/// Strings, but if this flag is set, even uniqued Symbols are returned as
+/// Symbols.
+///
 /// Either or both of IncludeSymbols and IncludeNonSymbols may be
 /// specified.  If neither is specified, this may cause an assertion
 /// failure if assertions are enabled.
@@ -147,7 +152,8 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 #define HERMES_VM__LIST_OwnKeysFlags(FLAG) \
   FLAG(IncludeSymbols)                     \
   FLAG(IncludeNonSymbols)                  \
-  FLAG(IncludeNonEnumerable)
+  FLAG(IncludeNonEnumerable)               \
+  FLAG(KeepSymbols)
 
 HERMES_VM__DECLARE_FLAGS_CLASS(OwnKeysFlags, HERMES_VM__LIST_OwnKeysFlags);
 
@@ -378,6 +384,11 @@ class JSObject : public GCCell {
   template <typename T>
   static inline T *initDirectPropStorage(Runtime &runtime, T *self);
 
+  /// \return the full ObjectFlags associated with this object.
+  SHObjectFlags getFlags() const {
+    return flags_;
+  }
+
   /// ES9 9.1 O.[[Extensible]] internal slot
   bool isExtensible() const {
     return !flags_.noExtend;
@@ -398,6 +409,13 @@ class JSObject : public GCCell {
     return flags_.proxyObject;
   }
 
+  /// Returns whether the object has any of properties set in \p flags.
+  /// \p flags should have only the flags set, not the objectID.
+  bool hasFlagIn(SHObjectFlags flags) const {
+    assert(flags.objectID == 0);
+    return flags_.bits & flags.bits;
+  }
+
   /// \return true if this object has fast indexed storage, meaning no property
   ///   checks need to be made when reading an indexed value.
   bool hasFastIndexProperties() const {
@@ -409,6 +427,13 @@ class JSObject : public GCCell {
     assert(
         !flags_.proxyObject && "getParent cannot be used with proxy objects");
     return parent_.get(runtime);
+  }
+
+  /// \return the `__proto__` internal property, which may be nullptr.
+  const GCPointer<JSObject> &getParentGCPtr() const {
+    assert(
+        !flags_.proxyObject && "getParent cannot be used with proxy objects");
+    return parent_;
   }
 
   /// \return the hidden class of this object.
@@ -907,7 +932,7 @@ class JSObject : public GCCell {
       Runtime &runtime,
       SymbolID name,
       PropOpFlags opFlags = PropOpFlags(),
-      PropertyCacheEntry *cacheEntry = nullptr);
+      ReadPropertyCacheEntry *cacheEntry = nullptr);
 
   /// Like getNamed, but with a \c receiver.  The receiver is
   /// generally only relevant when JavaScript code is executed.  If an
@@ -921,7 +946,7 @@ class JSObject : public GCCell {
       SymbolID name,
       Handle<> receiver,
       PropOpFlags opFlags = PropOpFlags(),
-      PropertyCacheEntry *cacheEntry = nullptr);
+      ReadPropertyCacheEntry *cacheEntry = nullptr);
 
   // getNamedOrIndexed accesses a property with a SymbolIDs which may be
   // index-like.
@@ -1551,6 +1576,10 @@ void JSObject::staticAsserts() {
 /// \return an array that contains all enumerable properties of obj (including
 /// those of its prototype etc.) at the indices [beginIndex, endIndex) (any
 /// other part of the array is implementation-defined).
+/// The elements of the array will be one of the following:
+/// * a SymbolID (uniqued) representing a string key
+/// * a StringPrimitive of a string property
+/// * a Number which corresponds to an array index
 /// \param[out] beginIndex beginning of the range of indices storing names
 /// \param[out] endIndex end (exclusive) of the range of indices storing names
 CallResult<Handle<BigStorage>> getForInPropertyNames(
@@ -1969,7 +1998,7 @@ inline CallResult<PseudoHandle<>> JSObject::getNamed_RJS(
     Runtime &runtime,
     SymbolID name,
     PropOpFlags opFlags,
-    PropertyCacheEntry *cacheEntry) {
+    ReadPropertyCacheEntry *cacheEntry) {
   return getNamedWithReceiver_RJS(
       selfHandle, runtime, name, selfHandle, opFlags, cacheEntry);
 }

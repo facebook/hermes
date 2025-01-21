@@ -57,6 +57,9 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // need to be eliminated now, or the "require" parameter cannot be promoted.
   PM.addDCE();
 
+  // Only run LowerBuiltinCallsOptimized once to avoid emitting
+  // multiple fast paths for the same call.
+  PM.addLowerBuiltinCallsOptimized();
   PM.addSimplifyCFG();
   PM.addSimpleStackPromotion();
   PM.addFrameLoadStoreOpts();
@@ -74,6 +77,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addDCE();
   addMem2Reg();
   PM.addFunctionAnalysis();
+  PM.addMetroRequire();
   PM.addInlining();
   PM.addDCE();
   // SimpleStackPromotion doesn't remove unused functions, so run it after DCE
@@ -100,6 +104,8 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addAuditor();
 
   PM.addTypeInference();
+
+  PM.addCacheNewObject();
 
   // Move StartGenerator instructions to the start of functions.
   PM.addHoistStartGenerator();

@@ -104,6 +104,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   optSettings.staticBuiltins = compileFlags.staticBuiltins.hasValue()
       ? compileFlags.staticBuiltins.getValue()
       : false;
+  optSettings.inlineMaxSize = compileFlags.inlineMaxSize;
 
   auto context = std::make_shared<Context>(std::move(codeGenOpts), optSettings);
   std::unique_ptr<SimpleDiagHandlerRAII> outputManager;
@@ -128,6 +129,7 @@ BCProviderFromSrc::createBCProviderFromSrc(
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
   context->setConvertES6Classes(compileFlags.enableES6Classes);
+  context->setEnableES6BlockScoping(compileFlags.enableES6BlockScoping);
   context->setPreemptiveFunctionCompilationThreshold(
       compileFlags.preemptiveFunctionCompilationThreshold);
   context->setPreemptiveFileCompilationThreshold(

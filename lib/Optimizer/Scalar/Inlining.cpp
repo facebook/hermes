@@ -511,7 +511,6 @@ bool Inlining::runOnModule(Module *M) {
   IRBuilder builder(M);
 
   // Literal strings for speculative inlining.
-  auto *functionLS = builder.getLiteralString("function");
   auto *nonFunctionErrorLS =
       builder.getLiteralString("Trying to call a non-function");
 
@@ -626,9 +625,10 @@ bool Inlining::runOnModule(Module *M) {
         auto *inlineBB = builder.createBasicBlock(intoFunction);
 
         // Check if typeof callee === 'function', and throw a type error if not.
-        auto *typeCheck = builder.createTypeOfInst(CI->getCallee());
-        auto *typeCheckResult = builder.createBinaryOperatorInst(
-            typeCheck, functionLS, ValueKind::BinaryStrictlyEqualInstKind);
+        auto *typeCheckResult = builder.createTypeOfIsInst(
+            CI->getCallee(),
+            builder.getLiteralTypeOfIsTypes(
+                TypeOfIsTypes{}.withFunction(true)));
         builder.createCondBranchInst(typeCheckResult, inlineBB, throwBB);
         builder.setInsertionBlock(throwBB);
         builder.createThrowTypeErrorInst(nonFunctionErrorLS);

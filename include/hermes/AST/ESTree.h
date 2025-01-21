@@ -384,24 +384,28 @@ class JSXDecoration {};
 class FlowDecoration {};
 class TSDecoration {};
 class PatternDecoration {};
+class MatchPatternDecoration {};
 class CoverDecoration {};
 
 class CallExpressionLikeDecoration {};
 class MemberExpressionLikeDecoration {};
 
-class ClassExpressionDecoration : public ScopeDecorationBase {};
-
-class ClassLikeDecoration {
+class ClassLikeDecoration : public ScopeDecorationBase {
  public:
   // If non-null, the decorated class has in implicit contructor,
   // and this is the FunctionInfo for the synthetic Function for
   // that constructor.
   sema::FunctionInfo *implicitCtorFunctionInfo{};
 
-  // If non-null, the decorated class has field initializers, and
+  // If non-null, the decorated class needs instance elements initialized, and
   // this is the FunctionInfo for the synthetic Function in which those
   // initializations are done.
-  sema::FunctionInfo *fieldInitFunctionInfo{};
+  sema::FunctionInfo *instanceElementsInitFunctionInfo{};
+
+  // If non-null, the decorated class has static field initializers, and this is
+  // the FunctionInfo for the synthetic Function in which those static
+  // initializations are done.
+  sema::FunctionInfo *staticElementsInitFunctionInfo{};
 };
 
 /// Identifiers keep track of which variable they have been resolved to,
@@ -550,10 +554,6 @@ struct DecoratorTrait<IdentifierNode> {
 template <>
 struct DecoratorTrait<ProgramNode> {
   using Type = ProgramDecoration;
-};
-template <>
-struct DecoratorTrait<ClassExpressionNode> {
-  using Type = ClassExpressionDecoration;
 };
 template <>
 struct DecoratorTrait<ClassLikeNode> {
@@ -1246,6 +1246,12 @@ bool isAsync(FunctionLikeNode *node);
 
 /// \return the super class node of \p node.
 Node *getSuperClass(ClassLikeNode *node);
+
+/// \return the IdentifierNode of \p node. Can be null.
+IdentifierNode *getClassID(ClassLikeNode *node);
+
+/// \return the body node of \p node.
+ClassBodyNode *getClassBody(ClassLikeNode *node);
 
 /// Allow using \p NodeKind in \p llvh::DenseMaps.
 struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {

@@ -131,6 +131,10 @@ class HWReg {
   }
 };
 
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
+    const hermes::vm::arm64::HWReg &hwReg);
+
 /// A frame register can reside simultaneously in one or more of the following
 /// locations:
 /// - The stack frame
@@ -186,17 +190,13 @@ struct HWRegState {
 static constexpr auto xRuntime = a64::x19;
 // x20 is frame
 static constexpr auto xFrame = a64::x20;
-// x0 < xDoubleLim means that it is a double.
-//    cmp   x0, xDoubleLim
-//    b.hs  slowPath
-static constexpr auto xDoubleLim = a64::x21;
 
 /// GP arg registers (inclusive).
 // static constexpr std::pair<uint8_t, uint8_t> kGPArgs(0, 7);
 /// Temporary GP registers (inclusive).
 static constexpr std::pair<uint8_t, uint8_t> kGPTemp(0, 15);
 /// Callee-saved GP registers (inclusive).
-static constexpr std::pair<uint8_t, uint8_t> kGPSaved(22, 28);
+static constexpr std::pair<uint8_t, uint8_t> kGPSaved(21, 28);
 
 /// Vec arg registers (inclusive).
 // static constexpr std::pair<uint8_t, uint8_t> kVecArgs(0, 7);
@@ -286,6 +286,8 @@ class TempRegAlloc {
 class Emitter {
   /// Level of dumping JIT code. Bit 0 indicates code printing on or off.
   unsigned const dumpJitCode_;
+  /// Whether to emit asserts in the JIT'ed code.
+  bool const emitAsserts_;
 
   std::unique_ptr<asmjit::Logger> logger_{};
   std::unique_ptr<asmjit::ErrorHandler> errorHandler_;
@@ -359,12 +361,9 @@ class Emitter {
   /// in x22.
   asmjit::Label returnLabel_{};
 
-  /// Label to branch to when a function is invoked in a way that conflicts with
-  /// its ProhibitInvoke flags. The label will only be initialized if the
-  /// function restricts how it can be called (e.g. arrow functions and
-  /// generators), in which case the check at entry on the invocation type will
-  /// branch to this label if the invocation is invalid.
-  asmjit::Label throwInvalidInvoke_{};
+  /// Label to branch to when catching an exception with setjmp.
+  /// Invalid if there's no try/catch in the function.
+  asmjit::Label catchTableLabel_{};
 
   /// The bytecode codeblock.
   CodeBlock *const codeBlock_;
@@ -393,14 +392,18 @@ class Emitter {
   explicit Emitter(
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
+      bool emitAsserts,
       CodeBlock *codeBlock,
-      PropertyCacheEntry *readPropertyCache,
-      PropertyCacheEntry *writePropertyCache,
+      ReadPropertyCacheEntry *readPropertyCache,
+      WritePropertyCacheEntry *writePropertyCache,
       uint32_t numFrameRegs,
       const std::function<void(std::string &&message)> &longjmpError);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
-  JITCompiledFunctionPtr addToRuntime(asmjit::JitRuntime &jr);
+  /// \param exceptionHandlers the labels for the exception handler table.
+  JITCompiledFunctionPtr addToRuntime(
+      asmjit::JitRuntime &jr,
+      llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
 
 #ifdef NDEBUG
   void assertPostInstructionInvariants() {}
@@ -437,8 +440,13 @@ class Emitter {
   /// argc is a register.
   void callWithNewTargetLong(FR frRes, FR frCallee, FR frNewTarget, FR frArgc);
 
+  /// Special bytecode for calling Metro require.
+  void callRequire(FR frRes, FR frRequireFunc, uint32_t modIndex);
+
   /// Get a builtin closure.
   void getBuiltinClosure(FR frRes, uint32_t builtinIndex);
+
+  void catchInst(FR frRes);
 
   /// Save the return value in x22.
   void ret(FR frValue);
@@ -548,6 +556,11 @@ class Emitter {
   void jmpTrueFalse(bool onTrue, const asmjit::Label &target, FR frInput);
   void jmpUndefined(const asmjit::Label &target, FR frInput);
   void jmp(const asmjit::Label &target);
+  void jmpBuiltinIs(
+      bool invert,
+      const asmjit::Label &target,
+      uint8_t builtinIndex,
+      FR frInput);
 
   void booleanNot(FR frRes, FR frInput);
   void bitNot(FR frRes, FR frInput);
@@ -555,6 +568,8 @@ class Emitter {
 
   void getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize);
   void getNextPName(FR frRes, FR frProps, FR frObj, FR frIdx, FR frSize);
+
+  void toPropertyKey(FR frRes, FR frVal);
 
 #define DECL_COMPARE(                                                   \
     methodName, commentStr, slowCall, condCode, invSlow, passArgsByVal) \
@@ -598,59 +613,54 @@ class Emitter {
       true)
 #undef DECL_COMPARE
 
-#define DECL_JCOND(                                                     \
-    methodName, forceNum, passArgsByVal, commentStr, slowCall, a64inst) \
-  void methodName(                                                      \
-      bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {  \
-    jCond(                                                              \
-        forceNum,                                                       \
-        invert,                                                         \
-        passArgsByVal,                                                  \
-        target,                                                         \
-        rLeft,                                                          \
-        rRight,                                                         \
-        commentStr,                                                     \
-        [](a64::Assembler &as, const asmjit::Label &target) {           \
-          as.a64inst(target);                                           \
-        },                                                              \
-        (void *)slowCall,                                               \
-        #slowCall);                                                     \
+#define DECL_JCOND(                                                      \
+    methodName, forceNum, passArgsByVal, commentStr, slowCall, condCode) \
+  void methodName(                                                       \
+      bool invert, const asmjit::Label &target, FR rLeft, FR rRight) {   \
+    jCond(                                                               \
+        forceNum,                                                        \
+        invert,                                                          \
+        passArgsByVal,                                                   \
+        target,                                                          \
+        rLeft,                                                           \
+        rRight,                                                          \
+        commentStr,                                                      \
+        a64::CondCode::condCode,                                         \
+        (void *)slowCall,                                                \
+        #slowCall);                                                      \
   }
-  DECL_JCOND(jGreater, false, false, "greater", _sh_ljs_greater_rjs, b_gt)
+  DECL_JCOND(jGreater, false, false, "greater", _sh_ljs_greater_rjs, kGT)
   DECL_JCOND(
       jGreaterEqual,
       false,
       false,
       "greater_equal",
       _sh_ljs_greater_equal_rjs,
-      b_ge)
-  DECL_JCOND(jGreaterN, true, false, "greater_n", _sh_ljs_greater_rjs, b_gt)
-  DECL_JCOND(
-      jGreaterEqualN,
-      true,
-      false,
-      "greater_equal_n",
-      _sh_ljs_greater_equal_rjs,
-      b_ge)
-  DECL_JCOND(jLess, false, false, "less", _sh_ljs_less_rjs, b_mi)
+      kGE)
+  DECL_JCOND(jLess, false, false, "less", _sh_ljs_less_rjs, kMI)
   DECL_JCOND(
       jLessEqual,
       false,
       false,
       "less_equal",
       _sh_ljs_less_equal_rjs,
-      b_ls)
-  DECL_JCOND(jLessN, true, false, "less_n", _sh_ljs_less_rjs, b_mi)
+      kLS)
+  DECL_JCOND(jLessN, true, false, "less_n", _sh_ljs_less_rjs, kMI)
   DECL_JCOND(
       jLessEqualN,
       true,
       false,
       "less_equal_n",
       _sh_ljs_less_equal_rjs,
-      b_ls)
-  DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, b_eq)
-  DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, b_eq)
+      kLS)
+  DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, kEQ)
+  DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, kEQ)
 #undef DECL_JCOND
+
+  void
+  jmpTypeOfIs(const asmjit::Label &target, FR frInput, TypeOfIsTypes types);
+
+  void typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types);
 
   void switchImm(
       FR frInput,
@@ -673,10 +683,25 @@ class Emitter {
       "putByValStrict",
       _sh_ljs_put_by_val_strict_rjs);
 
+  void putByValWithReceiver(
+      FR frTarget,
+      FR frKey,
+      FR frValue,
+      FR frReceiver,
+      bool isStrict);
+
 #define DECL_GET_BY_ID(methodName, commentStr, shFn)                           \
   void methodName(FR frRes, SHSymbolID symID, FR frSource, uint8_t cacheIdx) { \
     getByIdImpl(frRes, symID, frSource, cacheIdx, commentStr, shFn, #shFn);    \
   }
+
+  void getByIdWithReceiver(
+      FR frRes,
+      SHSymbolID symID,
+      FR frSource,
+      FR frReceiver,
+      uint8_t cacheIdx);
+  void getByValWithReceiver(FR frRes, FR frSource, FR frKey, FR frReceiver);
 
   DECL_GET_BY_ID(getById, "getById", _sh_ljs_get_by_id_rjs)
   DECL_GET_BY_ID(tryGetById, "tryGetById", _sh_ljs_try_get_by_id_rjs)
@@ -698,9 +723,9 @@ class Emitter {
       "tryPutByIdStrict",
       _sh_ljs_try_put_by_id_strict_rjs);
 
-  void putOwnByIndex(FR frTarget, FR frValue, uint32_t key);
-  void putOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable);
-  void putOwnGetterSetterByVal(
+  void defineOwnByIndex(FR frTarget, FR frValue, uint32_t key);
+  void defineOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable);
+  void defineOwnGetterSetterByVal(
       FR frTarget,
       FR frKey,
       FR frGetter,
@@ -712,21 +737,7 @@ class Emitter {
   void getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx);
   void putOwnBySlotIdx(FR frTarget, FR frValue, uint32_t slotIdx);
 
-#define DECL_DEL_BY_ID(methodName, commentStr, shFn)            \
-  void methodName(FR frRes, FR frTarget, SHSymbolID key) {      \
-    delByIdImpl(frRes, frTarget, key, commentStr, shFn, #shFn); \
-  }
-
-  DECL_DEL_BY_ID(delByIdLoose, "delByIdLoose", _sh_ljs_del_by_id_loose);
-  DECL_DEL_BY_ID(delByIdStrict, "delByIdStrict", _sh_ljs_del_by_id_strict);
-
-#define DECL_DEL_BY_VAL(methodName, commentStr, shFn)              \
-  void methodName(FR frRes, FR frTarget, FR frKey) {               \
-    delByValImpl(frRes, frTarget, frKey, commentStr, shFn, #shFn); \
-  }
-
-  DECL_DEL_BY_VAL(delByValLoose, "delByValLoose", _sh_ljs_del_by_val_loose);
-  DECL_DEL_BY_VAL(delByValStrict, "delByValStrict", _sh_ljs_del_by_val_strict);
+  void delByVal(FR frRes, FR frTarget, FR frKey, bool strict);
 
   void instanceOf(FR frRes, FR frLeft, FR frRight);
   void isIn(FR frRes, FR frLeft, FR frRight);
@@ -768,6 +779,9 @@ class Emitter {
       FR frEnv,
       RuntimeModule *runtimeModule,
       uint32_t functionID);
+  void createBaseClass(FR frRes, FR frPrototypeOut, FR frEnv);
+  void
+  createDerivedClass(FR frRes, FR frPrototypeOut, FR frEnv, FR frSuperClass);
   void createGenerator(
       FR frRes,
       FR frEnv,
@@ -812,6 +826,7 @@ class Emitter {
   void debugger();
   void throwInst(FR frInput);
   void throwIfEmpty(FR frRes, FR frInput);
+  void throwIfThisInitialized(FR frInput);
 
   void createRegExp(
       FR frRes,
@@ -944,8 +959,14 @@ class Emitter {
 
   /// \return a valid register if the FR is in a hw register, otherwise invalid.
   HWReg _isFRInRegister(FR fr);
-  HWReg getOrAllocFRInVecD(FR fr, bool load);
-  HWReg getOrAllocFRInGpX(FR fr, bool load);
+  HWReg getOrAllocFRInVecD(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
+  HWReg getOrAllocFRInGpX(
+      FR fr,
+      bool load,
+      llvh::Optional<HWReg> preferred = llvh::None);
   HWReg getOrAllocFRInAnyReg(
       FR fr,
       bool load,
@@ -965,10 +986,47 @@ class Emitter {
     return isFRKnownType(fr, FRType::Number);
   }
 
+  /// Get the current bytecode IP in \p xOut.
+  void getBytecodeIP(const a64::GpX &xOut);
+
  private:
   /// Allocate or return the offset in RO DATA of the current function's debug
   /// name, in the format ID(name).
   int32_t getDebugFunctionName();
+
+  /// \return the stack size subtracted/added to sp when entering/leaving the
+  /// function. Includes the two words at the top of the stack for x29 and x30.
+  uint32_t getStackSize() const {
+    return ((((gpSaveCount_ + 1) & ~1) + ((vecSaveCount_ + 1) & ~1) + 2) * 8) +
+        getSavedRegsOffset();
+  }
+
+  /// \return the offset of the saved registers in the stack frame.
+  uint32_t getSavedRegsOffset() const {
+    // If there's exceptions, allocate space for SHJmpBuf and saved SHLocals in
+    // the stack.
+    return catchTableLabel_.isValid() ? llvh::alignTo(sizeof(SHJmpBuf) + 8, 16)
+                                      : 0;
+  }
+
+  /// \return the offset of the SHJmpBuf in the stack frame.
+  uint32_t getJmpBufOffset() const {
+    assert(catchTableLabel_.isValid() && "no SHJmpBuf on stack");
+    return 0;
+  }
+
+  /// \return the offset of the saved SHLocals pointer in the stack frame.
+  uint32_t getSavedSHLocalsOffset() const {
+    assert(catchTableLabel_.isValid() && "no saved SHLocals * on stack");
+    return sizeof(SHJmpBuf);
+  }
+
+  /// \return true if \c emittingIP is in a try (i.e. exceptions can be observed
+  ///   in this function).
+  bool isInTry() const {
+    return codeBlock_->findCatchTargetOffset(
+               codeBlock_->getOffsetOf(emittingIP)) != -1;
+  }
 
   void frameSetup(
       unsigned numFrameRegs,
@@ -1011,11 +1069,22 @@ class Emitter {
   /// this does not save the IP.
   void callWithoutThunk(void *fn, const char *name);
 
+  /// Emit the code that runs when this function is longjmped to.
+  /// Performs the catch table lookup and jumps to the appropriate catch block,
+  /// and if no catch block is found, pops the SHJmpBuf and rethrows the
+  /// exception.
+  void emitCatchTable(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
   void emitSlowPaths();
   void emitThunks();
   void emitROData();
 
  private:
+  /// Set up the call frame and perform the call. The caller should have already
+  /// populated the arg count and new target registers.
+  /// \param frRes is the frame register that will contain the result.
+  /// \param frCallee is a frame register containing the callee.
+  void callImpl(FR frRes, FR frCallee);
+
   void arithUnop(
       bool forceNumber,
       FR frRes,
@@ -1078,7 +1147,7 @@ class Emitter {
       FR frLeft,
       FR frRight,
       const char *name,
-      void(fast)(a64::Assembler &a, const asmjit::Label &target),
+      a64::CondCode condCode,
       void *slowCall,
       const char *slowCallName);
 
@@ -1094,24 +1163,6 @@ class Emitter {
           SHLegacyValue *value),
       const char *shImplName);
 
-  void delByIdImpl(
-      FR frRes,
-      FR frTarget,
-      SHSymbolID key,
-      const char *name,
-      SHLegacyValue (
-          *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key),
-      const char *shImplName);
-
-  void delByValImpl(
-      FR frRes,
-      FR frTarget,
-      FR frKey,
-      const char *name,
-      SHLegacyValue (
-          *shImpl)(SHRuntime *shr, SHLegacyValue *target, SHLegacyValue *key),
-      const char *shImplName);
-
   void getByIdImpl(
       FR frRes,
       SHSymbolID symID,
@@ -1122,7 +1173,7 @@ class Emitter {
           SHRuntime *shr,
           const SHLegacyValue *source,
           SHSymbolID symID,
-          SHPropertyCacheEntry *propCacheEntry),
+          SHReadPropertyCacheEntry *propCacheEntry),
       const char *shImplName);
 
   void putByIdImpl(
@@ -1136,7 +1187,7 @@ class Emitter {
           SHLegacyValue *target,
           SHSymbolID symID,
           SHLegacyValue *value,
-          SHPropertyCacheEntry *propCacheEntry),
+          SHWritePropertyCacheEntry *propCacheEntry),
       const char *shImplName);
 
   void getArgumentsPropByValImpl(

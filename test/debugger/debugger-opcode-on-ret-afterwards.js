@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hdb %s < %s.debug | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hdb %s < %s.debug | %FileCheck --match-full-lines %s
 // REQUIRES: debugger
 
 function userBreakpointAfter(a) {

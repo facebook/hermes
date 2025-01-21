@@ -166,7 +166,8 @@
 /// shift, which is a single sbfx instruction on arm64. This turns "at risk"
 /// positive patterns into negative integers. (Similarly, it causes false
 /// negatives for negative patterns with 0 bit 62, by turning them into "safe"
-/// positive patterns).
+/// positive patterns). Since negative numbers with 1 in bit 62 are common in
+/// practice, we prefer the shift approach.
 ///
 /// These are the actual bit patterns that we know are returned by different
 /// hardware architectures:
@@ -457,7 +458,7 @@ static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x)
 static inline int64_t _sh_tryfast_f64_to_i64_cvt(double x) {
   // Note: this eliminates all unsafe positive bit patterns, but also makes
   // it very unlikely that the compiler can exploit the UB here.
-  return (int64_t)x & ~(1ull << 62);
+  return (((int64_t)x) << 1) >> 1;
 }
 
 static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x) {
@@ -646,7 +647,7 @@ static inline int64_t _sh_tryfast_f64_to_i64_cvt(double x) {
       : "w"(x) // Input: double in a floating-point register
   );
   // See file doc-comment for details on round-tripping mitigations.
-  return result & ~(1ull << 62);
+  return (result << 1) >> 1;
 }
 static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x) {
   uint64_t result;
@@ -667,7 +668,7 @@ static inline unsigned _sh_tryfast_f64_to_u32_cvt(double x) {
 static inline int64_t _sh_tryfast_f64_to_i64_cvt(double x) {
   int64_t result = vget_lane_s64(vcvt_s64_f64(vdup_n_f64(x)), 0);
   // See file doc-comment for details on round-tripping mitigations.
-  return result & ~(1ull << 62);
+  return (result << 1) >> 1;
 }
 static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x) {
   uint64_t result = vget_lane_u64(vcvt_u64_f64(vdup_n_f64(x)), 0);

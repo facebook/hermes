@@ -235,10 +235,20 @@ void hermes::vm::sh_unit_mark_long_lived_weak_roots(
     SHUnit *unit,
     WeakRootAcceptor &acceptor) {
   for (auto &prop : llvh::makeMutableArrayRef(
-           reinterpret_cast<PropertyCacheEntry *>(unit->prop_cache),
-           unit->num_prop_cache_entries)) {
+           reinterpret_cast<ReadPropertyCacheEntry *>(unit->read_prop_cache),
+           unit->num_read_prop_cache_entries)) {
     if (prop.clazz)
       acceptor.acceptWeak(prop.clazz);
+    if (prop.negMatchClazz) {
+      acceptor.acceptWeak(prop.negMatchClazz);
+    }
+  }
+  for (auto &prop : llvh::makeMutableArrayRef(
+           reinterpret_cast<WritePropertyCacheEntry *>(unit->write_prop_cache),
+           unit->num_write_prop_cache_entries)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
   }
 
   for (auto &entry : llvh::makeMutableArrayRef(

@@ -7,7 +7,9 @@
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -O0 -exec %s | %FileCheck --match-full-lines %s
 
 print(10 % 2);
 //CHECK: 0
@@ -57,3 +59,22 @@ print(-5.5 % 2.5);
 print(-5.5 % -2.5);
 //CHECK: -0.5
 
+// Define a function to prevent compiler optimizations.
+function mod(a, b){
+    return a % b;
+}
+
+print(mod(10, 2));
+//CHECK: 0
+
+print(1 / mod(-10, 2));
+//CHECK: -Infinity
+
+print(1 / mod(10, -2));
+//CHECK: Infinity
+
+print(mod(-10, 3));
+//CHECK: -1
+
+print(mod(10, 0));
+//CHECK: NaN

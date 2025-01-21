@@ -128,24 +128,26 @@ function main(x) {
 // CHECK-NEXT:                    Decl %d.18 'arguments' Var Arguments
 // CHECK-NEXT:                    Scope %s.13
 // CHECK-NEXT:                    Scope %s.14
+// CHECK-NEXT:                        Scope %s.15
 // CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.15
+// CHECK-NEXT:                Scope %s.16
 // CHECK-NEXT:                    Decl %d.19 'arguments' Var Arguments
-// CHECK-NEXT:                    Scope %s.16
 // CHECK-NEXT:                    Scope %s.17
+// CHECK-NEXT:                    Scope %s.18
 // CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.18
+// CHECK-NEXT:                Scope %s.19
 // CHECK-NEXT:                    Decl %d.20 'arguments' Var Arguments
-// CHECK-NEXT:                    Scope %s.19
-// CHECK-NEXT:                        Scope %s.20
+// CHECK-NEXT:                    Scope %s.20
 // CHECK-NEXT:                        Scope %s.21
-// CHECK-NEXT:                    Scope %s.22
+// CHECK-NEXT:                        Scope %s.22
+// CHECK-NEXT:                    Scope %s.23
+// CHECK-NEXT:                        Scope %s.24
 // CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.23
+// CHECK-NEXT:                Scope %s.25
 // CHECK-NEXT:                    Decl %d.21 'arguments' Var Arguments
-// CHECK-NEXT:                    Scope %s.24
-// CHECK-NEXT:                        Scope %s.25
-// CHECK-NEXT:                        Scope %s.26
+// CHECK-NEXT:                    Scope %s.26
+// CHECK-NEXT:                        Scope %s.27
+// CHECK-NEXT:                        Scope %s.28
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -201,29 +203,29 @@ function main(x) {
 // CHECK-NEXT:                                            ReturnStatement
 // CHECK-NEXT:                                                NumericLiteral : number
 // CHECK-NEXT:                                        CatchClause Scope %s.14
-// CHECK-NEXT:                                            BlockStatement
+// CHECK-NEXT:                                            BlockStatement Scope %s.15
 // CHECK-NEXT:                                                ReturnStatement
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:                            FunctionDeclaration : %function.4
 // CHECK-NEXT:                                Id 'f6' [D:E:%d.10 'f6']
 // CHECK-NEXT:                                BlockStatement
 // CHECK-NEXT:                                    TryStatement
-// CHECK-NEXT:                                        BlockStatement Scope %s.16
+// CHECK-NEXT:                                        BlockStatement Scope %s.17
 // CHECK-NEXT:                                            ReturnStatement
 // CHECK-NEXT:                                                NumericLiteral : number
-// CHECK-NEXT:                                        BlockStatement Scope %s.17
+// CHECK-NEXT:                                        BlockStatement Scope %s.18
 // CHECK-NEXT:                            FunctionDeclaration : %function.4
 // CHECK-NEXT:                                Id 'f7' [D:E:%d.11 'f7']
 // CHECK-NEXT:                                BlockStatement
 // CHECK-NEXT:                                    TryStatement
-// CHECK-NEXT:                                        BlockStatement Scope %s.19
+// CHECK-NEXT:                                        BlockStatement Scope %s.20
 // CHECK-NEXT:                                            TryStatement
-// CHECK-NEXT:                                                BlockStatement Scope %s.20
+// CHECK-NEXT:                                                BlockStatement Scope %s.21
 // CHECK-NEXT:                                                    ReturnStatement
 // CHECK-NEXT:                                                        NumericLiteral : number
-// CHECK-NEXT:                                                BlockStatement Scope %s.21
-// CHECK-NEXT:                                        CatchClause Scope %s.22
-// CHECK-NEXT:                                            BlockStatement
+// CHECK-NEXT:                                                BlockStatement Scope %s.22
+// CHECK-NEXT:                                        CatchClause Scope %s.23
+// CHECK-NEXT:                                            BlockStatement Scope %s.24
 // CHECK-NEXT:                                                ReturnStatement
 // CHECK-NEXT:                                                    NumericLiteral : number
 // CHECK-NEXT:                            FunctionDeclaration : %function.4
@@ -231,12 +233,12 @@ function main(x) {
 // CHECK-NEXT:                                BlockStatement
 // CHECK-NEXT:                                    LabeledStatement
 // CHECK-NEXT:                                        Id 'label'
-// CHECK-NEXT:                                        BlockStatement Scope %s.24
+// CHECK-NEXT:                                        BlockStatement Scope %s.26
 // CHECK-NEXT:                                            TryStatement
-// CHECK-NEXT:                                                BlockStatement Scope %s.25
+// CHECK-NEXT:                                                BlockStatement Scope %s.27
 // CHECK-NEXT:                                                    BreakStatement
 // CHECK-NEXT:                                                        Id 'label'
-// CHECK-NEXT:                                                BlockStatement Scope %s.26
+// CHECK-NEXT:                                                BlockStatement Scope %s.28
 // CHECK-NEXT:                                                    ReturnStatement
 // CHECK-NEXT:                                                        NumericLiteral : number
 // CHECK-NEXT:            ObjectExpression : %object.5

@@ -137,26 +137,27 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
   };
 
   uint32_t readCacheSize = sizeComputer(header.highestReadCacheIndex());
-  uint32_t cacheSize =
-      readCacheSize + sizeComputer(header.highestWriteCacheIndex());
+  uint32_t writeCacheSize = sizeComputer(header.highestWriteCacheIndex());
 
 #ifndef HERMESVM_LEAN
   bool isCodeBlockLazy = !bytecode;
   if (isCodeBlockLazy) {
     readCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
-    cacheSize = 2 * readCacheSize;
+    writeCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
   }
 #endif
 
-  auto allocSize = totalSizeToAlloc<PropertyCacheEntry>(cacheSize);
+  auto allocSize =
+      totalSizeToAlloc<ReadPropertyCacheEntry, WritePropertyCacheEntry>(
+          readCacheSize, writeCacheSize);
   void *mem = checkedMalloc(allocSize);
   return std::unique_ptr<CodeBlock>(new (mem) CodeBlock(
       runtimeModule,
       header,
       bytecode,
       functionID,
-      cacheSize,
-      /* writePropCacheOffset */ readCacheSize));
+      readCacheSize,
+      writeCacheSize));
 }
 
 int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
@@ -215,7 +216,13 @@ ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");
   auto *provider = runtimeModule_->getBytecode();
 
-  auto [success, errMsg] = hbc::compileLazyFunction(provider, functionID_);
+  bool success;
+  llvh::StringRef errMsg;
+  executeInStack(
+      runtime.getStackExecutor(), [&success, &errMsg, &provider, this]() {
+        std::tie(success, errMsg) =
+            hbc::compileLazyFunction(provider, functionID_);
+      });
   if (!success) {
     // Raise a SyntaxError to be consistent with eval().
     return runtime.raiseSyntaxError(llvh::StringRef{errMsg});
@@ -294,7 +301,16 @@ void CodeBlock::markCachedHiddenClasses(
     Runtime &runtime,
     WeakRootAcceptor &acceptor) {
   for (auto &prop :
-       llvh::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
+       llvh::makeMutableArrayRef(readPropertyCache(), readPropertyCacheSize_)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
+    if (prop.negMatchClazz) {
+      acceptor.acceptWeak(prop.negMatchClazz);
+    }
+  }
+  for (auto &prop : llvh::makeMutableArrayRef(
+           writePropertyCache(), writePropertyCacheSize_)) {
     if (prop.clazz) {
       acceptor.acceptWeak(prop.clazz);
     }

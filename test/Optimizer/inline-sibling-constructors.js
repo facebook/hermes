@@ -45,9 +45,18 @@ function outer() {
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:function Point(x: any, y: any, z: any): undefined [allCallsitesKnownInStrictMode,unreachable]
+// CHECK:function Point(x: any, y: any, z: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       UnreachableInst
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %1 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
+// CHECK-NEXT:       CacheNewObjectInst %0: any, %1: undefined|object, "x": string, "y": string, "z": string
+// CHECK-NEXT:  %3 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %5 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:       StorePropertyStrictInst %3: any, %0: any, "x": string
+// CHECK-NEXT:       StorePropertyStrictInst %4: any, %0: any, "y": string
+// CHECK-NEXT:       StorePropertyStrictInst %5: any, %0: any, "z": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function makePoint(x: any, y: any, z: any): object
@@ -57,9 +66,9 @@ function outer() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %3 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:object) %0: environment, [%VS1.Point]: object
-// CHECK-NEXT:  %5 = CreateThisInst (:undefined|object) %4: object, empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %1: any, %5: undefined|object, "x": string
-// CHECK-NEXT:       StorePropertyStrictInst %2: any, %5: undefined|object, "y": string
-// CHECK-NEXT:       StorePropertyStrictInst %3: any, %5: undefined|object, "z": string
-// CHECK-NEXT:       ReturnInst %5: undefined|object
+// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %1: any, %5: object, "x": string
+// CHECK-NEXT:       StorePropertyStrictInst %2: any, %5: object, "y": string
+// CHECK-NEXT:       StorePropertyStrictInst %3: any, %5: object, "z": string
+// CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end

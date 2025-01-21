@@ -258,8 +258,15 @@ void installConsoleBindings(
     ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler,
     const std::string *filename) {
+  vm::GCScopeMarkerRAII marker{runtime};
   vm::DefinePropertyFlags normalDPF =
       vm::DefinePropertyFlags::getNewNonEnumerableFlags();
+
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSObject> console;
+    vm::PinnedValue<> print;
+  } lv;
+  vm::LocalsRAII lraii{runtime, &lv};
 
   auto defineGlobalFunc = [&](vm::SymbolID name,
                               vm::NativeFunctionPtr functionPtr,
@@ -327,6 +334,27 @@ void installConsoleBindings(
       &ctx,
       1);
 
+  lv.console = vm::JSObject::create(runtime);
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      runtime.getGlobal(),
+      runtime,
+      runtime
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("console")))
+          .get(),
+      normalDPF,
+      lv.console));
+  lv.print = runtime.ignoreAllocationFailure(vm::JSObject::getNamed_RJS(
+      runtime.getGlobal(),
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::print)));
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      lv.console,
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::log),
+      normalDPF,
+      lv.print));
+
   initTest262Harness(runtime);
 }
 
@@ -370,8 +398,10 @@ bool executeHBCBytecodeImpl(
 
   // TODO: surely this should use RuntimeConfig?
   runtime->getJITContext().setForceJIT(options.forceJIT);
+  runtime->getJITContext().setDefaultExecThreshold(options.jitThreshold);
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
+  runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);
 
   if (options.timeLimit > 0) {
     runtime->timeLimitMonitor = vm::TimeLimitMonitor::getOrCreate();

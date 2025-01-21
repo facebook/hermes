@@ -22,6 +22,27 @@ using namespace ::hermes::parser;
 
 namespace {
 
+/// Converts the data in the JSONString \p str into a u16string
+std::u16string jsonStringToU16String(
+    const ::hermes::parser::JSONString &jsonStr) {
+  auto strRef = jsonStr.str();
+  std::u16string ret;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(ret), strRef.begin(), strRef.end());
+  return ret;
+}
+
+/// Converts the data in the JSONString \p str into a u8string. Each code unit
+/// encoded in the JSONString is expected to represent each byte of the UTF-8
+/// String.
+std::string jsonStringToU8String(const ::hermes::parser::JSONString &jsonStr) {
+  auto strRef = jsonStr.str();
+  std::string ret;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(ret), strRef.begin(), strRef.end());
+  return ret;
+}
+
 ::hermes::SHA1 parseHashStrAsNumber(llvh::StringRef hashStr) {
   ::hermes::SHA1 sourceHash{};
   // Each byte is 2 characters.
@@ -42,8 +63,7 @@ JSONObject *parseJSON(
     std::unique_ptr<llvh::MemoryBuffer> stream) {
   JSONFactory factory(alloc);
   ::hermes::SourceErrorManager sm;
-  // Convert surrogates, since JSI deals in UTF-8.
-  JSONParser parser(factory, std::move(stream), sm, /*convertSurrogates*/ true);
+  JSONParser parser(factory, std::move(stream), sm);
   auto rootObj = parser.parse();
   if (!rootObj) {
     // The source error manager will print to stderr.
@@ -277,6 +297,15 @@ SynthTrace getTrace(
         trace.emplace_back<SynthTrace::CreateObjectRecord>(
             timeFromStart, objID->getValue());
         break;
+      case RecordType::CreateObjectWithPrototype: {
+        auto *prototype =
+            llvh::dyn_cast_or_null<JSONString>(obj->get("prototype"));
+        trace.emplace_back<SynthTrace::CreateObjectWithPrototypeRecord>(
+            timeFromStart,
+            objID->getValue(),
+            SynthTrace::decode(prototype->c_str()));
+        break;
+      }
       case RecordType::QueueMicrotask: {
         auto callbackID =
             getNumberAs<SynthTrace::ObjectID>(obj->get("callbackID"));
@@ -333,11 +362,12 @@ SynthTrace getTrace(
               str->str().data(),
               str->str().size());
         } else {
+          auto utf8Str = jsonStringToU8String(*str);
           trace.emplace_back<SynthTrace::CreateStringRecord>(
               timeFromStart,
               objID->getValue(),
-              reinterpret_cast<const uint8_t *>(str->str().data()),
-              str->str().size());
+              reinterpret_cast<const uint8_t *>(utf8Str.data()),
+              utf8Str.size());
         }
         break;
       }
@@ -363,11 +393,12 @@ SynthTrace getTrace(
                 str->str().data(),
                 str->str().size());
           } else {
+            auto utf8Str = jsonStringToU8String(*str);
             trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
                 timeFromStart,
                 id->getValue(),
-                reinterpret_cast<const uint8_t *>(str->str().data()),
-                str->str().size());
+                reinterpret_cast<const uint8_t *>(utf8Str.data()),
+                utf8Str.size());
           }
         }
         break;
@@ -525,9 +556,39 @@ SynthTrace getTrace(
       case RecordType::Utf8: {
         auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
         trace.emplace_back<SynthTrace::Utf8Record>(
-            timeFromStart, SynthTrace::decode(objId->str()), retval->c_str());
+            timeFromStart,
+            SynthTrace::decode(objId->str()),
+            jsonStringToU8String(*retval));
         break;
       }
+      case RecordType::Utf16: {
+        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
+        trace.emplace_back<SynthTrace::Utf16Record>(
+            timeFromStart,
+            SynthTrace::decode(objId->str()),
+            jsonStringToU16String(*retval));
+        break;
+      }
+      case RecordType::GetStringData: {
+        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
+        auto *strData = llvh::dyn_cast_or_null<JSONString>(obj->get("strData"));
+        trace.emplace_back<SynthTrace::GetStringDataRecord>(
+            timeFromStart,
+            SynthTrace::decode(objId->str()),
+            jsonStringToU16String(*strData));
+        break;
+      }
+      case RecordType::SetPrototype: {
+        trace.emplace_back<SynthTrace::SetPrototypeRecord>(
+            timeFromStart,
+            objID->getValue(),
+            SynthTrace::decode(propValue->c_str()));
+        break;
+      }
+      case RecordType::GetPrototype:
+        trace.emplace_back<SynthTrace::GetPrototypeRecord>(
+            timeFromStart, objID->getValue());
+        break;
       case RecordType::Global: {
         trace.emplace_back<SynthTrace::GlobalRecord>(
             timeFromStart, objID->getValue());

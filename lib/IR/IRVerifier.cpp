@@ -92,8 +92,8 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
   LLVM_NODISCARD bool visitBasicBlock(const BasicBlock &BB);
   LLVM_NODISCARD bool visitVariableScope(const VariableScope &VS);
 
-  LLVM_NODISCARD bool visitBaseStoreOwnPropertyInst(
-      const BaseStoreOwnPropertyInst &Inst);
+  LLVM_NODISCARD bool visitBaseDefineOwnPropertyInst(
+      const BaseDefineOwnPropertyInst &Inst);
   LLVM_NODISCARD bool visitBaseCreateLexicalChildInst(
       const BaseCreateLexicalChildInst &Inst);
   LLVM_NODISCARD bool visitBaseCreateCallableInst(
@@ -501,6 +501,27 @@ bool Verifier::visitVariableScope(const hermes::VariableScope &VS) {
         VS.getParentScope() == curParentVS,
         "VariableScope has multiple different parents.");
   }
+
+  // Check that every variable with a load has at least one store.
+  // NOTE: Don't run this in IR_LOWERED because OptEnvironmentInit breaks this
+  // assumption.
+  if (verificationMode != VerificationMode::IR_LOWERED) {
+    for (auto *var : VS.getVariables()) {
+      bool hasLoad = false;
+      bool hasStore = false;
+      for (auto *varUser : VS.getUsers()) {
+        hasLoad |= llvh::isa<LoadFrameInst>(varUser);
+        hasStore |= llvh::isa<StoreFrameInst>(varUser);
+      }
+      if (hasLoad) {
+        AssertWithMsg(
+            hasStore,
+            "Variable " << var->getName()
+                        << " must have a store for it to load");
+      }
+    }
+  }
+
   return true;
 }
 
@@ -570,6 +591,7 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
               llvh::isa<BaseCreateLexicalChildInst>(Inst) ||
               llvh::isa<LoadStackInst>(Inst) ||
               llvh::isa<StoreStackInst>(Inst) || llvh::isa<PhiInst>(Inst) ||
+              llvh::isa<CreateClassInst>(Inst) ||
               llvh::isa<LoadFrameInst>(Inst) || llvh::isa<StoreFrameInst>(Inst),
           "Environments can only be an operand to certain instructions.");
     }
@@ -654,6 +676,10 @@ bool Verifier::visitHBCResolveParentEnvironmentInst(
   return true;
 }
 
+bool Verifier::visitToPropertyKeyInst(const ToPropertyKeyInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitAsNumberInst(const AsNumberInst &Inst) {
   AssertIWithMsg(
       Inst,
@@ -703,6 +729,20 @@ bool Verifier::visitAllocStackInst(const AllocStackInst &Inst) {
       Inst,
       &(Inst.getParent()->back()) != &Inst,
       "Alloca Instruction cannot be the last instruction of a basic block");
+  bool hasLoad = false;
+  bool hasStore = false;
+  for (auto *user : Inst.getUsers()) {
+    hasLoad |= user->getSideEffect().getReadStack();
+    hasStore |= user->getSideEffect().getWriteStack();
+  }
+
+  // TODO: Make this check better by ensuring that there's a store
+  // prior to the load for every possible path through the function.
+  // This isn't dominance, because there may be two stores in separate
+  // branches prior to the load.
+  if (hasLoad)
+    AssertIWithMsg(Inst, hasStore, "LoadStackInst must have a StoreStackInst");
+
   return true;
 }
 
@@ -745,6 +785,14 @@ bool Verifier::visitTypeOfInst(const TypeOfInst &) {
   return true;
 }
 
+bool Verifier::visitTypeOfIsInst(const TypeOfIsInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<LiteralTypeOfIsTypes>(Inst.getOperand(TypeOfIsInst::TypesIdx)),
+      "TypeOfIsInst::Types must be a TypeOfIs literal");
+  return true;
+}
+
 bool Verifier::visitUnaryOperatorInst(const UnaryOperatorInst &Inst) {
   // Nothing to verify at this point.
   return true;
@@ -767,11 +815,19 @@ bool Verifier::visitTryEndInst(const TryEndInst &Inst) {
   return true;
 }
 
+bool Verifier::visitBranchIfBuiltinInst(const BranchIfBuiltinInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitStoreStackInst(const StoreStackInst &Inst) {
   AssertIWithMsg(
       Inst,
       !llvh::isa<AllocStackInst>(Inst.getValue()),
       "Storing the address of stack location");
+  AssertIWithMsg(
+      Inst,
+      Inst.getValue()->getType().isSubsetOf(Inst.getPtr()->getType()),
+      "Value type mismatch");
   AssertIWithMsg(
       Inst, !Inst.hasUsers(), "Store Instructions must not have users");
   return true;
@@ -783,6 +839,10 @@ bool Verifier::visitStoreFrameInst(const StoreFrameInst &Inst) {
   auto *scope = Inst.getScope();
   AssertIWithMsg(
       Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
+  AssertIWithMsg(
+      Inst,
+      Inst.getValue()->getType().isSubsetOf(Inst.getVariable()->getType()),
+      "Value type mismatch");
   if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
     AssertIWithMsg(
         Inst,
@@ -882,6 +942,11 @@ bool Verifier::visitHBCCallNInst(const HBCCallNInst &Inst) {
   return true;
 }
 
+bool Verifier::visitCreateClassInst(const CreateClassInst &Inst) {
+  // Nothing to verify.
+  return true;
+}
+
 bool Verifier::visitCallBuiltinInst(CallBuiltinInst const &Inst) {
   assert(
       isNativeBuiltin(Inst.getBuiltinIndex()) &&
@@ -899,6 +964,10 @@ bool Verifier::visitGetBuiltinClosureInst(GetBuiltinClosureInst const &Inst) {
 bool Verifier::visitLoadPropertyInst(const LoadPropertyInst &Inst) {
   return true;
 }
+bool Verifier::visitLoadPropertyWithReceiverInst(
+    const LoadPropertyWithReceiverInst &Inst) {
+  return true;
+}
 bool Verifier::visitTryLoadGlobalPropertyInst(
     const TryLoadGlobalPropertyInst &Inst) {
   return true;
@@ -912,6 +981,11 @@ bool Verifier::visitDeletePropertyLooseInst(
 bool Verifier::visitDeletePropertyStrictInst(
     const DeletePropertyStrictInst &Inst) {
   // Nothing to verify at this point.
+  return true;
+}
+
+bool Verifier::visitStorePropertyWithReceiverInst(
+    const StorePropertyWithReceiverInst &Inst) {
   return true;
 }
 
@@ -932,44 +1006,45 @@ bool Verifier::visitTryStoreGlobalPropertyStrictInst(
   return true;
 }
 
-bool Verifier::visitBaseStoreOwnPropertyInst(
-    const BaseStoreOwnPropertyInst &Inst) {
+bool Verifier::visitBaseDefineOwnPropertyInst(
+    const BaseDefineOwnPropertyInst &Inst) {
   AssertIWithMsg(
       Inst,
       llvh::isa<LiteralBool>(
-          Inst.getOperand(StoreOwnPropertyInst::IsEnumerableIdx)),
-      "BaseStoreOwnPropertyInst::IsEnumerable must be a boolean literal");
+          Inst.getOperand(DefineOwnPropertyInst::IsEnumerableIdx)),
+      "BaseDefineOwnPropertyInst::IsEnumerable must be a boolean literal");
   return true;
 }
-bool Verifier::visitStoreOwnPropertyInst(const StoreOwnPropertyInst &Inst) {
-  return visitBaseStoreOwnPropertyInst(Inst);
+bool Verifier::visitDefineOwnPropertyInst(const DefineOwnPropertyInst &Inst) {
+  return visitBaseDefineOwnPropertyInst(Inst);
 }
-bool Verifier::visitStoreNewOwnPropertyInst(
-    const StoreNewOwnPropertyInst &Inst) {
-  ReturnIfNot(visitBaseStoreOwnPropertyInst(Inst));
+bool Verifier::visitDefineNewOwnPropertyInst(
+    const DefineNewOwnPropertyInst &Inst) {
+  ReturnIfNot(visitBaseDefineOwnPropertyInst(Inst));
   AssertIWithMsg(
       Inst,
       Inst.getObject()->getType().isObjectType(),
-      "StoreNewOwnPropertyInst::Object must be known to be an object");
+      "DefineNewOwnPropertyInst::Object must be known to be an object");
   if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getProperty())) {
     AssertIWithMsg(
         Inst,
         LN->convertToArrayIndex().hasValue(),
-        "StoreNewOwnPropertyInst::Property can only be an index-like number");
+        "DefineNewOwnPropertyInst::Property can only be an index-like number");
   } else {
     AssertIWithMsg(
         Inst,
         llvh::isa<LiteralString>(Inst.getProperty()),
-        "StoreNewOwnPropertyInst::Property must be a string or number literal");
+        "DefineNewOwnPropertyInst::Property must be a string or number literal");
   }
   return true;
 }
 
-bool Verifier::visitStoreGetterSetterInst(const StoreGetterSetterInst &Inst) {
+bool Verifier::visitDefineOwnGetterSetterInst(
+    const DefineOwnGetterSetterInst &Inst) {
   AssertIWithMsg(
       Inst,
       llvh::isa<LiteralBool>(
-          Inst.getOperand(StoreGetterSetterInst::IsEnumerableIdx)),
+          Inst.getOperand(DefineOwnGetterSetterInst::IsEnumerableIdx)),
       "StoreGetterSetterInsr::IsEnumerable must be a boolean constant");
   return true;
 }
@@ -1340,6 +1415,14 @@ bool Verifier::visitLoadParamInst(hermes::LoadParamInst const &Inst) {
 bool Verifier::visitHBCCompareBranchInst(const HBCCompareBranchInst &Inst) {
   return visitCondBranchLikeInst(Inst) && visitBinaryOperatorLikeInst(Inst);
 }
+bool Verifier::visitHBCCmpBrTypeOfIsInst(const HBCCmpBrTypeOfIsInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<LiteralTypeOfIsTypes>(
+          Inst.getOperand(HBCCmpBrTypeOfIsInst::TypesIdx)),
+      "HBCCmpBrTypeOfIsInst::Types must be a TypeOfIs literal");
+  return visitCondBranchLikeInst(Inst);
+}
 
 bool Verifier::visitCreateGeneratorInst(const CreateGeneratorInst &Inst) {
   ReturnIfNot(visitBaseCreateLexicalChildInst(Inst));
@@ -1442,7 +1525,8 @@ bool Verifier::visitGetNewTargetInst(GetNewTargetInst const &Inst) {
   AssertIWithMsg(
       Inst,
       definitionKind == Function::DefinitionKind::ES5Function ||
-          definitionKind == Function::DefinitionKind::ES6Constructor ||
+          definitionKind == Function::DefinitionKind::ES6BaseConstructor ||
+          definitionKind == Function::DefinitionKind::ES6DerivedConstructor ||
           definitionKind == Function::DefinitionKind::ES6Method,
       "GetNewTargetInst can only be used in ES6 constructors, ES5 functions, and ES6 methods");
   AssertIWithMsg(
@@ -1479,6 +1563,11 @@ bool Verifier::visitThrowIfInst(const ThrowIfInst &Inst) {
       Inst,
       !Inst.getType().canBeEmpty(),
       "ThrowIfInst can never return type Empty");
+  return true;
+}
+
+bool Verifier::visitThrowIfThisInitializedInst(
+    const ThrowIfThisInitializedInst &Inst) {
   return true;
 }
 
@@ -1620,6 +1709,10 @@ bool Verifier::visitLazyCompilationDataInst(
 
 bool Verifier::visitEvalCompilationDataInst(
     const hermes::EvalCompilationDataInst &Inst) {
+  return true;
+}
+
+bool Verifier::visitCacheNewObjectInst(const CacheNewObjectInst &Inst) {
   return true;
 }
 

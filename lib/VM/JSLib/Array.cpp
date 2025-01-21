@@ -338,6 +338,112 @@ Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
   return cons;
 }
 
+/// Populate \p flags with the flags to be used to check for fast path for array
+/// methods.
+/// Ensures that there's a fast indexed storage with no non-default behaviors
+/// applied to it, along with an objectID of 0 (for easy comparison).
+static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
+  // This code should set every field in SHObjectFlags to make sure we don't
+  // miss one, which is checked by the assert in arrayFastPathCheck.
+  res.noExtend = 0;
+  res.sealed = 0;
+  res.frozen = 0;
+  res.indexedStorage = 1;
+  res.fastIndexProperties = 1;
+  res.hostObject = 0;
+  res.lazyObject = 0;
+  res.proxyObject = 0;
+  res.objectID = 0;
+}
+
+/// Check for the fast path for array methods that can be optimized when running
+/// on an extensible ordinary JSArray with the standard HiddenClass ('length'
+/// hasn't been modified) with no accessors or indexed properties in bounds in
+/// the prototype chain. The object must also have indexed storage that starts
+/// at 0 and ends at the length of the array.
+///
+/// \param arr the array to check for fast pathing.
+/// \param arrayClass the default HiddenClass of an array.
+/// \param len the length of \p arr.
+///
+/// \return whether we can use the fast path for Array methods on \p arr.
+static bool arrayFastPathCheck(
+    PointerBase &runtime,
+    JSArray *arr,
+    HiddenClass *arrayClass,
+    uint32_t len) {
+  assert(arr && "arr must be non-null");
+
+  // To use the fast path, the object has to be an array with fast index
+  // properties (no index-like properties that we can't read quickly).
+  // Make our own SHObjectFlags here to compare against quickly, to avoid having
+  // to use lots of accessors on JSObject.
+  SHObjectFlags arrayFastPathObjectFlags{};
+  setArrayFastPathObjectFlags(arrayFastPathObjectFlags);
+
+#ifndef NDEBUG
+  // Test that all the flags are handled in setArrayFastPathObjectFlags
+  // by starting with all the bits reversed and calling the function,
+  // and making sure the result is the same.
+  SHObjectFlags flagsForAssert{};
+  std::memset(&flagsForAssert, 0xff, sizeof(SHObjectFlags));
+  setArrayFastPathObjectFlags(flagsForAssert);
+  assert(
+      std::memcmp(
+          &flagsForAssert, &arrayFastPathObjectFlags, sizeof(SHObjectFlags)) ==
+          0 &&
+      "setArrayFastPathObjectFlags is missing a flag");
+#endif
+
+  SHObjectFlags arrFlags = arr->getFlags();
+  // Ensure the objectIDs are the same for comparison purposes.
+  arrFlags.objectID = 0;
+
+  static_assert(
+      sizeof(SHObjectFlags) == sizeof(uint32_t),
+      "SHObjectFlags must be uint32_t");
+  if (LLVM_UNLIKELY(
+          std::memcmp(&arrayFastPathObjectFlags, &arrFlags, sizeof(uint32_t)) !=
+          0))
+    return false;
+
+  // Fast path assumes that 'length' hasn't been reconfigured.
+  if (LLVM_UNLIKELY(arr->getClass(runtime) != arrayClass))
+    return false;
+
+  // Fast path assumes that the array storage goes from 0 to len.
+  if (arr->getBeginIndex() != 0 || arr->getEndIndex() != len)
+    return false;
+
+  // Check if there are any index-like properties in any parent.
+  // If so, we can't use the fast path.
+  for (JSObject *curParent = arr->getParent(runtime); curParent != nullptr;
+       curParent = curParent->getParent(runtime)) {
+    // Any index-like properties in the parent means we can't use the fast path
+    // because we might trigger an accessor or have to check property flags.
+    if (LLVM_UNLIKELY(
+            curParent->getClass(runtime)->getHasIndexLikeProperties()))
+      return false;
+
+    auto [beginParent, endParent] =
+        JSObject::getOwnIndexedRange(curParent, runtime);
+    // If there are any indexed properties in the parent we can't use the fast
+    // path. We check this specially because Array.prototype is itself
+    // an array that starts with no actual indexed properties.
+    //
+    // NOTE: It may be possible to use the fast path if the indexed properties
+    // don't overlap with the array's own indexed range, but that seems
+    // unnecessary to check for now given that this check is really to make sure
+    // that Array.prototype isn't filled with properties, and keeping track of
+    // the upper bound on the length here takes more effort and is potentially
+    // error-prone.
+    if (LLVM_UNLIKELY(beginParent < endParent))
+      return false;
+  }
+
+  return true;
+}
+
 CallResult<HermesValue>
 arrayConstructor(void *, Runtime &runtime, NativeArgs args) {
   // NativeConstructors create their own this when called with new. The array
@@ -1023,32 +1129,89 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
+/// Fast path for Array.prototype.push() when the array is a normal array.
+/// \pre \p arr is an array with fast index properties and there are no
+///   index-like properties in any parents.
+/// \pre \p The storage for \p arr starts at 0 and ends at its length.
+/// \param arr the array to push onto.
+/// \param len the length of \p arr (before pushing).
+/// \param args the original NativeArgs to push().
+static CallResult<HermesValue> arrayPrototypePushFastPath(
+    Runtime &runtime,
+    Handle<JSArray> arr,
+    uint32_t len,
+    const NativeArgs &args) {
+  uint32_t argCount = args.getArgCount();
+
+  assert(
+      UINT32_MAX - len >= argCount &&
+      "integer overflow checked before calling fast path");
+  uint32_t finalLen = len + argCount;
+
+  // Expand the array to make room for the new items.
+  // Length property will be set at the end.
+  if (LLVM_UNLIKELY(
+          JSArray::setStorageEndIndex(arr, runtime, finalLen) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  for (uint32_t i = 0; i < argCount; ++i) {
+    // Perform potential allocation before dereferencing arr.
+    SmallHermesValue shv =
+        SmallHermesValue::encodeHermesValue(args.getArg(i), runtime);
+    JSArray::unsafeSetExistingElementAt(*arr, runtime, i + len, shv);
+  }
+
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(
+              arr, runtime, finalLen, PropOpFlags().plusThrowOnError()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return HermesValue::encodeTrustedNumberValue(finalLen);
+}
+
 /// ES9.0 22.1.3.18.
 CallResult<HermesValue>
 arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
     PinnedValue<JSObject> O;
+    PinnedValue<JSArray> arr;
     PinnedValue<> len;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
   GCScope gcScope(runtime);
-  // 1. Let O be ? ToObject(this value).
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.O = vmcast<JSObject>(*objRes);
+
+  // 3. Let items be a List whose elements are, in left to right order, the
+  // arguments that were passed to this function invocation.
+  // 4. Let argCount be the number of elements in items.
+  uint32_t argCount = args.getArgCount();
 
   // 2. Let len be ? ToLength(? Get(O, "length")).
-  auto arr = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
-                                   : Runtime::makeNullHandle<JSArray>();
-  if (LLVM_LIKELY(arr)) {
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
+    lv.O = args.vmcastThis<JSObject>();
+    lv.arr = args.vmcastThis<JSArray>();
     // Fast path for getting the length.
-    lv.len = HermesValue::encodeTrustedNumberValue(
-        JSArray::getLength(arr.get(), runtime));
+    uint32_t len = JSArray::getLength(*lv.arr, runtime);
+
+    if (LLVM_LIKELY(len < UINT32_MAX - argCount) &&
+        arrayFastPathCheck(runtime, *lv.arr, *runtime.arrayClass, len)) {
+      return arrayPrototypePushFastPath(runtime, lv.arr, len, args);
+    }
+
+    lv.len = HermesValue::encodeTrustedNumberValue(len);
   } else {
     // Slow path, used when pushing onto non-array objects.
+    // 1. Let O be ? ToObject(this value).
+    auto objRes = toObject(runtime, args.getThisHandle());
+    if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.O = vmcast<JSObject>(*objRes);
+    lv.arr = nullptr;
     auto propRes = JSObject::getNamed_RJS(
         lv.O, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -1061,11 +1224,6 @@ arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
     }
     lv.len = lenRes.getValue();
   }
-
-  // 3. Let items be a List whose elements are, in left to right order, the
-  // arguments that were passed to this function invocation.
-  // 4. Let argCount be the number of elements in items.
-  uint32_t argCount = args.getArgCount();
 
   // 5. If len + argCount > 2**53-1, throw a TypeError exception.
   if (lv.len->getNumber() + (double)argCount > (1ULL << 53) - 1) {
@@ -2066,10 +2224,132 @@ arrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   return lv.A.getHermesValue();
 }
 
+/// Fast path for Array.prototype.slice() when the array is a normal array.
+/// \pre \p O is an array with fast index properties and there are no index-like
+///   properties in any parents.
+/// \pre \p The storage for \p O starts at 0 and ends at its length.
+/// \param O the array to splice.
+/// \param len the length of O.
+/// \param A the array to populate with deleted elements.
+/// \param actualStart the start index to splice.
+/// \param actualDeleteCount the number of elements to delete.
+/// \param itemCount the number of elements to insert from \p args.
+/// \param args the original NativeArgs to splice().
+/// \return the result of the splice (\p A).
+static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
+    Runtime &runtime,
+    Handle<JSArray> O,
+    uint32_t len,
+    Handle<JSArray> A,
+    uint32_t actualStart,
+    uint32_t actualDeleteCount,
+    uint32_t itemCount,
+    NativeArgs args) {
+  assert(O->hasFastIndexProperties() && "O must have fast index properties");
+  assert(!O->isProxyObject() && "O must not be proxy");
+  assert(O->getBeginIndex() == 0 && "incorrect begin index");
+  assert(O->getEndIndex() == len && "incorrect end index");
+
+  // Populate A (the result array) with the deleted elements.
+  // No need to set the length property, since it was already set when A was
+  // allocated.
+  if (LLVM_UNLIKELY(
+          JSArray::setStorageEndIndex(A, runtime, actualDeleteCount) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  {
+    NoAllocScope noAlloc(runtime);
+    JSArray::StorageType *aStorage = A->getIndexedStorage(runtime);
+    JSArray::StorageType *oStorage = O->getIndexedStorage(runtime);
+    for (uint32_t j = 0; j < actualDeleteCount; ++j) {
+      uint32_t from = actualStart + j;
+      SmallHermesValue elem = oStorage->at(runtime, from);
+      aStorage->set(runtime, j, elem);
+    }
+  }
+
+  // Final length of O.
+  assert(actualDeleteCount <= len && "actualDeleteCount out of range");
+  assert(
+      UINT32_MAX - itemCount > len - actualDeleteCount &&
+      "overflow must be checked before calling fast path");
+  uint32_t finalLen = len - actualDeleteCount + itemCount;
+
+  if (itemCount < actualDeleteCount) {
+    // Inserting less items than deleting.
+
+    // Shift non-deleted items to the left.
+    // Copy items from (k + actualDeleteCount) to (k + itemCount).
+    // This leaves itemCount spaces to copy the arguments into.
+
+    NoAllocScope noAlloc(runtime);
+    JSArray::StorageType *oStorage = O->getIndexedStorage(runtime);
+    for (uint32_t k = actualStart; k < len - actualDeleteCount; ++k) {
+      uint32_t from = k + actualDeleteCount;
+      uint32_t to = k + itemCount;
+      SmallHermesValue elem = oStorage->at(runtime, from);
+      oStorage->set(runtime, to, elem);
+    }
+
+    // Shrink the array size to the new length.
+    JSArray::StorageType::resizeWithinCapacity(oStorage, runtime, finalLen);
+  } else if (itemCount > actualDeleteCount) {
+    // Inserting more items than deleting.
+
+    // Expand the array to make room for the new items.
+    // Length property will be set at the end.
+    if (LLVM_UNLIKELY(
+            JSArray::setStorageEndIndex(O, runtime, finalLen) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // Start from the right, and copy elements to the right.
+    // This makes space to insert the elements from the arguments.
+    // Loop k from (len - actualDeleteCount) to actualStart (exclusive),
+    // just like the spec does for the slow path.
+
+    NoAllocScope noAlloc(runtime);
+    JSArray::StorageType *oStorage = O->getIndexedStorage(runtime);
+    for (uint32_t k = len - actualDeleteCount; k > actualStart; --k) {
+      uint32_t from = k + actualDeleteCount - 1;
+      uint32_t to = k + itemCount - 1;
+      SmallHermesValue elem = oStorage->at(runtime, from);
+      oStorage->set(runtime, to, elem);
+    }
+  }
+
+  // Finally, just copy the elements from the args into the array
+  // where they belong.
+  // NOTE: This may allocate because we're converting to SmallHermesValue,
+  // so we can't keep the storage around across iterations.
+  for (uint32_t j = 0; j < itemCount; ++j) {
+    // Declare a local variable so that SmallHermesValue::encodeHermesValue
+    // (possible allocation) happens before *O.
+    // Avoids argument reordering problems.
+    // Get args starting at 2 because the first two args are start and
+    // deleteCount.
+    SmallHermesValue elem =
+        SmallHermesValue::encodeHermesValue(args.getArg(j + 2), runtime);
+    JSArray::unsafeSetExistingElementAt(*O, runtime, actualStart + j, elem);
+  }
+
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(
+              O, runtime, finalLen, PropOpFlags().plusThrowOnError()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return A.getHermesValue();
+}
+
 CallResult<HermesValue>
 arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
     PinnedValue<JSObject> O;
+    PinnedValue<JSArray> OArray;
     PinnedValue<> lenProp;
     PinnedValue<JSArray> A;
     PinnedValue<> from;
@@ -2083,32 +2363,40 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
   LocalsRAII lraii{runtime, &lv};
 
   GCScope gcScope(runtime);
-  auto objRes = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.O = vmcast<JSObject>(*objRes);
 
-  auto propRes = JSObject::getNamed_RJS(
-      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  uint64_t len;
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
+    lv.O = vmcast<JSObject>(args.getThisArg());
+    lv.OArray = vmcast<JSArray>(args.getThisArg());
+    len = JSArray::getLength(vmcast<JSArray>(args.getThisArg()), runtime);
+  } else {
+    auto objRes = toObject(runtime, args.getThisHandle());
+    if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.O = vmcast<JSObject>(*objRes);
+    auto propRes = JSObject::getNamed_RJS(
+        lv.O, runtime, Predefined::getSymbolID(Predefined::length));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.lenProp = std::move(*propRes);
+    auto lenRes = toLengthU64(runtime, lv.lenProp);
+    if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    len = *lenRes;
   }
-  lv.lenProp = std::move(*propRes);
-  auto lenRes = toLengthU64(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  double len = *lenRes;
 
   auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  // Must use double here to account for Infinity.
   double relativeStart = intRes->getNumber();
   // Index to start the deletion/insertion at.
   double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                         : std::min(relativeStart, len);
+                                         : std::min(relativeStart, (double)len);
 
   // Implement the newer calculation of actualDeleteCount (ES6.0),
   // since 5.1 doesn't define behavior for less than 2 arguments.
@@ -2139,7 +2427,7 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
 
   // If len+insertCount−actualDeleteCount > 2^53-1, throw a TypeError exception.
   // Checks for overflow as well.
-  auto lenAfterInsert = len + insertCount;
+  uint64_t lenAfterInsert = len + insertCount;
   if (LLVM_UNLIKELY(
           lenAfterInsert < len ||
           lenAfterInsert - actualDeleteCount > (1LLU << 53) - 1)) {
@@ -2156,6 +2444,28 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
   }
   lv.A = std::move(*arrRes);
 
+  // Number of new items to add to the array.
+  uint32_t itemCount = args.getArgCount() > 2 ? args.getArgCount() - 2 : 0;
+
+  // If we can use the fast path, do so.
+  if (LLVM_LIKELY(*lv.OArray) &&
+      LLVM_LIKELY(
+          arrayFastPathCheck(runtime, *lv.OArray, *runtime.arrayClass, len)) &&
+      LLVM_LIKELY(len - actualDeleteCount < UINT32_MAX - itemCount)) {
+    // These can be cast to uint32_t because we know that O is a JSArray.
+    assert(actualStart <= len && "actualStart out of range");
+    assert(actualDeleteCount <= len && "actualDeleteCount out of range");
+    return arrayPrototypeSpliceFastPath(
+        runtime,
+        lv.OArray,
+        (uint32_t)len,
+        lv.A,
+        (uint32_t)actualStart,
+        (uint32_t)actualDeleteCount,
+        itemCount,
+        args);
+  }
+
   // Value storage used for copying values.
   MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
   MutableHandle<JSObject> fromDescObjHandle{lv.fromDescObj};
@@ -2163,7 +2473,6 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
   auto gcMarker = gcScope.createMarker();
   {
     // Copy actualDeleteCount elements to A, starting at actualStart.
-    // TODO: Add a fast path for actual arrays.
     for (uint32_t j = 0; j < actualDeleteCount; ++j) {
       lv.from = HermesValue::encodeTrustedNumberValue(actualStart + j);
 
@@ -2213,15 +2522,11 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  // Number of new items to add to the array.
-  uint32_t itemCount = args.getArgCount() > 2 ? args.getArgCount() - 2 : 0;
-
   if (itemCount < actualDeleteCount) {
     // Inserting less items than deleting.
 
     // Copy items from (k + actualDeleteCount) to (k + itemCount).
     // This leaves itemCount spaces to copy the arguments into.
-    // TODO: Add a fast path for actual arrays.
     for (double j = actualStart; j < len - actualDeleteCount; ++j) {
       lv.from = HermesValue::encodeTrustedNumberValue(j + actualDeleteCount);
       lv.to = HermesValue::encodeTrustedNumberValue(j + itemCount);
@@ -2272,7 +2577,6 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
     double i = len - 1;
 
     // Delete the remaining elements from the right that we didn't copy into.
-    // TODO: Add a fast path for actual arrays.
     while (i > (len - actualDeleteCount + itemCount - 1)) {
       lv.i = HermesValue::encodeTrustedNumberValue(i);
       if (LLVM_UNLIKELY(
@@ -2289,7 +2593,6 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
 
     // Start from the right, and copy elements to the right.
     // This makes space to insert the elements from the arguments.
-    // TODO: Add a fast path for actual arrays.
     for (double j = len - actualDeleteCount; j > actualStart; --j) {
       lv.from =
           HermesValue::encodeTrustedNumberValue(j + actualDeleteCount - 1);
@@ -2342,7 +2645,6 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
 
   {
     // Finally, just copy the elements from the args into the array.
-    // TODO: Add a fast path for actual arrays.
     lv.k = HermesValue::encodeTrustedNumberValue(actualStart);
     for (size_t j = 2; j < argCount; ++j) {
       if (LLVM_UNLIKELY(

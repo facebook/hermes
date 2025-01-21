@@ -27,7 +27,7 @@ The data we need to run both lazy compilation and debugger `eval` is stored in `
 
 The fact that we persist `Module` and `SemContext` allows us to run the compiler with new code almost as if it existed the whole time.
 
-We introduce two IR instructions: `LazyCompilationDataInst` and `EvalCompilationDataInst`. These store data needed for lazy/eval compilatoin respectively and ensure that relevant Variables are kept alive by storing every parent `VariableScope` as an operand (the `VariableScope`s have users, so they won't get destroyed).
+We introduce two IR instructions: `LazyCompilationDataInst` and `EvalCompilationDataInst`. These store data needed for lazy/eval compilation respectively and ensure that relevant Variables are kept alive by storing every parent `VariableScope` as an operand (the `VariableScope`s have users, so they won't get destroyed).
 
 We can optionally have a pointer to an IR `Function` from the `functionIR_` field of `BytecodeFunction`, which allows us to get to the relevant `CompilationDataInst`. The `functionIR_` will be destroyed when the `BytecodeFunction` is itself destroyed along with its `BytecodeModule` when the GC cleans up the corresponding `RuntimeModule`.
 
@@ -41,7 +41,7 @@ The first time the resolver runs with lazy compilation or in preparation for all
 
 `SemanticResolver::runLazy` is the entrypoint into `SemanticResolver` for lazy compilation. It uses an *existing* `SemContext` and adds new information to it. After resolving a lazy function, it cleans up binding table state unless we still need it for debugger `eval` in the future.
 
-`SemanticResolver::runInScope` allows for local `eval`, and operates similarly, though it requires a `ProgramNode` as input. It doesn't fre any preexisting `SemContext` data. It is called with a *new* `SemContext`, which is created as a child of the original `SemContext` to share the binding table but to allow it to be freed separately from the root `SemContext`.
+`SemanticResolver::runInScope` allows for local `eval`, and operates similarly, though it requires a `ProgramNode` as input. It doesn't free any preexisting `SemContext` data. It is called with a *new* `SemContext`, which is created as a child of the original `SemContext` to share the binding table but to allow it to be freed separately from the root `SemContext`.
 
 These paths just run the `SemanticResolver` as usual after some setup, because they can restore the binding table state and internal `SemanticResolver` state based on their input.
 

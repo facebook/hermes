@@ -47,6 +47,13 @@ class SemanticResolver
   /// be inserted in the global scope.
   const DeclarationFileListTy &ambientDecls_;
 
+  /// A set of names that are restricted in the global scope.
+  /// https://262.ecma-international.org/14.0/#sec-hasrestrictedglobalproperty
+  /// ES14.0 9.1.1.4.14 HasRestrictedGlobalProperty:
+  ///   Any global properties that are defined to be non-configurable
+  ///   are restricted.
+  llvh::SmallDenseSet<UniqueString *, 4> restrictedGlobalProperties_{};
+
   /// If not null, store all instances of DeclCollector here, for use by other
   /// passes.
   DeclCollectorMapTy *const saveDecls_;
@@ -77,6 +84,9 @@ class SemanticResolver
   /// the AST. False if we just want to validate the AST.
   bool compile_;
 
+  /// True if we are preparing the AST for typed JS.
+  bool typed_;
+
   /// 'await' isn't allowed to be an identifier anywhere in the parameters
   /// of an async arrow function, including the parameters of nested arrow
   /// functions in the parameter initializers.
@@ -84,6 +94,12 @@ class SemanticResolver
   /// have a reparse step, so we avoid revisiting the entire tree by checking in
   /// SemanticResolver.
   bool forbidAwaitAsIdentifier_ = false;
+
+  /// True if we are forbidding await expressions.
+  bool forbidAwaitExpression_{false};
+
+  /// True if we are forbidding 'arguments' identifier.
+  bool forbidArguments_{false};
 
  public:
   /// This constant enables the more expensive path in RecursiveVisitorDispatch,
@@ -95,12 +111,14 @@ class SemanticResolver
   ///     instances for reuse by later passes.
   /// \param compile whether this resolution is intended to compile or just
   ///   parsing.
+  /// \param typed whether this resolution is for typed code.
   explicit SemanticResolver(
       Context &astContext,
       sema::SemContext &semCtx,
       const DeclarationFileListTy &ambientDecls,
       DeclCollectorMapTy *saveDecls,
-      bool compile);
+      bool compile,
+      bool typed = false);
 
   explicit SemanticResolver(
       Context &astContext,
@@ -226,9 +244,11 @@ class SemanticResolver
 
   void visit(ESTree::ClassDeclarationNode *node);
   void visit(ESTree::ClassExpressionNode *node);
+  void visitClassAsExpr(ESTree::ClassLikeNode *node);
   void visit(ESTree::PrivateNameNode *node);
   void visit(ESTree::ClassPrivatePropertyNode *node);
   void visit(ESTree::ClassPropertyNode *node);
+  void visit(ESTree::StaticBlockNode *node);
   void visit(ESTree::MethodDefinitionNode *node, ESTree::Node *parent);
 
   void visit(ESTree::SuperNode *node, ESTree::Node *parent);
@@ -283,9 +303,12 @@ class SemanticResolver
    public:
     /// Create a binding scope and push a semantic scope.
     /// \param scopeNode is the AST node with which to associate the scope.
+    /// \param isFunctionBodyScope whether this is the scope for the function
+    ///   body of the current FunctionInfo.
     explicit ScopeRAII(
         SemanticResolver &resolver,
-        ESTree::ScopeDecorationBase *scopeDecoration = nullptr);
+        ESTree::ScopeDecorationBase *scopeDecoration = nullptr,
+        bool isFunctionBodyScope = false);
 
     /// Pops the created scope if it was pushed.
     ~ScopeRAII();
@@ -306,6 +329,13 @@ class SemanticResolver
   inline FunctionInfo *curFunctionInfo();
   inline const FunctionInfo *curFunctionInfo() const;
 
+  /// Declare 'arguments' for use in either the function or the parameters.
+  void declareArguments() {
+    Decl *argsDecl =
+        semCtx_.funcArgumentsDecl(curFunctionInfo(), kw_.identArguments);
+    bindingTable_.try_emplace(kw_.identArguments, Binding{argsDecl, nullptr});
+  }
+
   void visitFunctionLike(
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
@@ -320,11 +350,26 @@ class SemanticResolver
       ESTree::Node *body,
       ESTree::NodeList &params);
 
+  /// Visit the rest of the function body having visited the params already.
+  /// NOTE: Used by visitFunctionLikeInFunctionContext to allow ScopeRAII to be
+  /// conditionally declared in a more readable way.
+  void visitFunctionBodyAfterParamsVisited(
+      ESTree::FunctionLikeNode *node,
+      ESTree::IdentifierNode *id,
+      ESTree::Node *body,
+      ESTree::BlockStatementNode *blockBody,
+      bool hasParameterNamedArguments);
+
   void visitFunctionExpression(
       ESTree::FunctionExpressionNode *node,
       ESTree::Node *body,
       ESTree::NodeList &params,
       ESTree::Node *parent);
+
+  /// Visit calls to module-related $SHBuiltin functions.
+  void visitModuleFactory(ESTree::CallExpressionNode *node);
+  void visitModuleExport(ESTree::CallExpressionNode *node);
+  void visitModuleImport(ESTree::CallExpressionNode *node);
 
   /// Resolve an identifier to a declaration and record the resolution.
   /// Emit a warning for undeclared identifiers in strict mode.
@@ -454,9 +499,6 @@ class FunctionContext {
   /// The AST node of the function.
   ESTree::FunctionLikeNode *const node;
 
-  /// Whether this function is a class constructor.
-  bool isConstructor{false};
-
   /// The currently active labels in the function.
   llvh::DenseMap<ESTree::NodeLabel, Label> labelMap;
 
@@ -472,9 +514,10 @@ class FunctionContext {
   /// All declarations in the function.
   std::unique_ptr<DeclCollector> decls;
 
-  /// The set of names that have been promoted to function scope by
-  /// promoteScopedFunctionDecls in this function.
-  llvh::DenseSet<UniqueString *> promotedFuncDecls{};
+  /// The map of names that have been promoted to function scope by
+  /// promoteScopedFunctionDecls in this function, mapped to their Var
+  /// declaration in function scope.
+  llvh::DenseMap<UniqueString *, Decl *> promotedFuncDecls{};
 
   /// The depth of the function's scope in the binding table.
   /// Populated when ScopeRAII is created within the function.
@@ -494,6 +537,7 @@ class FunctionContext {
       ESTree::FunctionLikeNode *node,
       FunctionInfo *parentSemInfo,
       bool strict,
+      FunctionInfo::ConstructorKind consKind,
       CustomDirectives customDirectives);
 
   explicit FunctionContext(
@@ -520,11 +564,6 @@ class FunctionContext {
 
   /// \return the optional function name, or nullptr.
   UniqueString *getFunctionName() const;
-
-  /// Returns the nearest non-arrow (non-proper) ancestor of the current
-  /// FunctionContext that is not for an arrow function.  This will always
-  /// exist.
-  const FunctionContext *nearestNonArrow() const;
 };
 
 inline FunctionInfo *SemanticResolver::curFunctionInfo() {
@@ -550,11 +589,14 @@ class ClassContext {
   /// below.
   void createImplicitConstructorFunctionInfo();
 
-  /// The caller asserts that the class of the current context
-  /// has field initializers.  On first call for a \p classDecoration, creates a
-  /// FunctionInfo for an implicit function to do the field initializations.
-  /// On subsequent calls, return that FunctionInfo.
-  FunctionInfo *getOrCreateFieldInitFunctionInfo();
+  /// On first call, creates a FunctionInfo for an implicit function to do the
+  /// instance elements initializations. On subsequent calls, return that
+  /// FunctionInfo.
+  FunctionInfo *getOrCreateInstanceElementsInitFunctionInfo();
+
+  /// Get or create a synthetic function information for the static elements
+  /// initializer of a class.
+  FunctionInfo *getOrCreateStaticElementsInitFunctionInfo();
 
   /// \return true if the current class of this context is a derived class.
   bool isDerivedClass() const {

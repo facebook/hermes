@@ -162,7 +162,8 @@ static Type functionNewTargetType(Function::DefinitionKind defKind) {
   switch (defKind) {
     case Function::DefinitionKind::ES5Function:
       return Type::unionTy(Type::createObject(), Type::createUndefined());
-    case Function::DefinitionKind::ES6Constructor:
+    case Function::DefinitionKind::ES6BaseConstructor:
+    case Function::DefinitionKind::ES6DerivedConstructor:
       return Type::createObject();
     case Function::DefinitionKind::ES6Arrow:
     case Function::DefinitionKind::GeneratorInnerArrow:
@@ -229,8 +230,10 @@ std::string Function::getDefinitionKindStr(bool isDescriptive) const {
   switch (definitionKind_) {
     case Function::DefinitionKind::ES5Function:
       return "function";
-    case Function::DefinitionKind::ES6Constructor:
-      return "constructor";
+    case Function::DefinitionKind::ES6BaseConstructor:
+      return "base constructor";
+    case Function::DefinitionKind::ES6DerivedConstructor:
+      return "derived constructor";
     case Function::DefinitionKind::ES6Arrow:
       return isDescriptive ? "arrow function" : "arrow";
     case Function::DefinitionKind::ES6Method:
@@ -283,7 +286,8 @@ llvh::Optional<llvh::StringRef> Function::getSourceRepresentationStr() const {
 
 Function::ProhibitInvoke Function::getProhibitInvoke() const {
   // ES6 constructors must be invoked as constructors.
-  if (definitionKind_ == DefinitionKind::ES6Constructor)
+  if (definitionKind_ == DefinitionKind::ES6BaseConstructor ||
+      definitionKind_ == DefinitionKind::ES6DerivedConstructor)
     return ProhibitInvoke::ProhibitCall;
 
   // Generators, async functions, methods, and arrow functions may not be
@@ -446,6 +450,9 @@ void Function::eraseFromParentNoDestroy() {
     begin()->eraseFromParent();
   }
   getParent()->getFunctionList().remove(getIterator());
+  // Also remove from any Module data structures that contain function
+  // references.
+  getParent()->jsModuleFactoryFunctions().erase(this);
 }
 
 void Function::eraseFromCompiledFunctionsNoDestroy() {
@@ -944,8 +951,17 @@ GlobalObjectProperty *Module::addGlobalProperty(
   return res;
 }
 
+LiteralBuiltinIdx *Module::getLiteralBuiltinIdx(
+    BuiltinMethod::Enum builtinIdx) {
+  return literalBuiltinIdxs_.getOrEmplace(builtinIdx).first;
+}
+
 LiteralIRType *Module::getLiteralIRType(Type value) {
   return literalIRTypes_.getOrEmplace(value).first;
+}
+
+LiteralTypeOfIsTypes *Module::getLiteralTypeOfIsTypes(TypeOfIsTypes value) {
+  return literalTypeOfIsTypes_.getOrEmplace(value).first;
 }
 
 LiteralNativeSignature *Module::getLiteralNativeSignature(

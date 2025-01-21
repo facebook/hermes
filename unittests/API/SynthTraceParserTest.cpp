@@ -25,7 +25,7 @@ struct SynthTraceParserTest : public ::testing::Test {
 TEST_F(SynthTraceParserTest, ParseHeader) {
   const char *src = R"(
 {
-  "version": 4,
+  "version": 5,
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
@@ -74,7 +74,7 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
 TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
   const char *src = R"(
 {
-  "version": 4,
+  "version": 5,
   "globalObjID": 258,
   "runtimeConfig": {},
   "trace": []
@@ -109,7 +109,7 @@ TEST_F(SynthTraceParserTest, SynthVersionMismatch) {
 TEST_F(SynthTraceParserTest, ParsePropID) {
   const char *src = R"(
 {
-  "version": 4,
+  "version": 5,
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
@@ -223,6 +223,249 @@ TEST_F(SynthTraceParserTest, BigIntToStringRecord) {
 }
   )";
   parseSynthTrace(bufFromStr(src));
+}
+
+TEST_F(SynthTraceParserTest, ParseUtf8Record) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "Utf8Record",
+      "time": 1234,
+      "objID": "string:1110",
+      "retval": "hi"
+    },
+    {
+      "type": "Utf8Record",
+      "time": 1234,
+      "objID": "string:1112",
+      "retval": "\u00ed\u00a0\u00bd"
+    },
+    {
+      "type": "Utf8Record",
+      "time": 1234,
+      "objID": "string:1113",
+      "retval": "nice\u00f0\u009f\u0091\u008d"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 =
+      dynamic_cast<const SynthTrace::Utf8Record &>(*trace.records().at(0));
+  ASSERT_EQ(record0.retVal_, "hi");
+
+  // This is testing that SynthTraceParser is able to parse invalid UTF-8
+  auto record1 =
+      dynamic_cast<const SynthTrace::Utf8Record &>(*trace.records().at(1));
+  ASSERT_EQ(record1.retVal_, "\xed\xa0\xbd");
+
+  auto record2 =
+      dynamic_cast<const SynthTrace::Utf8Record &>(*trace.records().at(2));
+  ASSERT_EQ(record2.retVal_, "nice👍");
+}
+
+TEST_F(SynthTraceParserTest, ParseUtf16Record) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "Utf16Record",
+      "time": 1234,
+      "objID": "string:1110",
+      "retval": "hi"
+    },
+    {
+      "type": "Utf16Record",
+      "time": 1234,
+      "objID": "string:1111",
+      "retval": "\ud83d"
+    },
+    {
+      "type": "Utf16Record",
+      "time": 1234,
+      "objID": "string:1112",
+      "retval": "nice\ud83d\udc4d"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 =
+      dynamic_cast<const SynthTrace::Utf16Record &>(*trace.records().at(0));
+  ASSERT_EQ(record0.retVal_, u"hi");
+
+  // We should be able to parse a lone surrogate
+  auto record1 =
+      dynamic_cast<const SynthTrace::Utf16Record &>(*trace.records().at(1));
+  ASSERT_EQ(record1.retVal_, u"\xd83d");
+
+  auto record2 =
+      dynamic_cast<const SynthTrace::Utf16Record &>(*trace.records().at(2));
+  ASSERT_EQ(record2.retVal_, u"nice👍");
+}
+
+TEST_F(SynthTraceParserTest, ParseGetStringDataRecord) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "GetStringDataRecord",
+      "time": 1234,
+      "objID": "string:1110",
+      "strData": "\nhello\ud83d\udc4b\\"
+    },
+    {
+      "type": "GetStringDataRecord",
+      "time": 1234,
+      "objID": "propNameID:1111",
+      "strData": "\ud83d"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 = dynamic_cast<const SynthTrace::GetStringDataRecord &>(
+      *trace.records().at(0));
+  ASSERT_EQ(record0.strData_, u"\nhello👋\\");
+  ASSERT_EQ(record0.objID_, SynthTrace::encodeString(1110));
+
+  auto record1 = dynamic_cast<const SynthTrace::GetStringDataRecord &>(
+      *trace.records().at(1));
+  ASSERT_EQ(record1.strData_, u"\xd83d");
+  ASSERT_EQ(record1.objID_, SynthTrace::encodePropNameID(1111));
+}
+
+TEST_F(SynthTraceParserTest, ParseSetAndGetPrototypeRecord) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "SetPrototypeRecord",
+      "time": 1234,
+      "objID": 1,
+      "value": "null:"
+    },
+    {
+      "type": "SetPrototypeRecord",
+      "time": 12,
+      "objID": 2,
+      "value": "object:1"
+    },
+    {
+      "type": "GetPrototypeRecord",
+      "time": 123,
+      "objID": 1
+    },
+    {
+      "type": "GetPrototypeRecord",
+      "time": 1234,
+      "objID": 2
+    },
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 = dynamic_cast<const SynthTrace::SetPrototypeRecord &>(
+      *trace.records().at(0));
+  ASSERT_EQ(record0.objID_, 1);
+  ASSERT_EQ(record0.value_, SynthTrace::encodeNull());
+
+  auto record1 = dynamic_cast<const SynthTrace::SetPrototypeRecord &>(
+      *trace.records().at(1));
+  ASSERT_EQ(record1.objID_, 2);
+  ASSERT_EQ(record1.value_, SynthTrace::encodeObject(1));
+
+  auto record2 = dynamic_cast<const SynthTrace::GetPrototypeRecord &>(
+      *trace.records().at(2));
+  ASSERT_EQ(record2.objID_, 1);
+
+  auto record3 = dynamic_cast<const SynthTrace::GetPrototypeRecord &>(
+      *trace.records().at(3));
+  ASSERT_EQ(record3.objID_, 2);
+}
+
+TEST_F(SynthTraceParserTest, ParseCreateObjectWithPrototypeRecord) {
+  const char *src = R"(
+{
+  "version": 5,
+  "globalObjID": 258,
+  "runtimeConfig": {
+    "gcConfig": {
+      "initHeapSize": 33554432,
+      "maxHeapSize": 536870912
+    }
+  },
+  "trace": [
+    {
+      "type": "CreateObjectWithPrototypeRecord",
+      "time": 1234,
+      "objID": 1,
+      "prototype": "null:"
+    },
+    {
+      "type": "CreateObjectWithPrototypeRecord",
+      "time": 12345,
+      "objID": 2,
+      "prototype": "object:1"
+    }
+  ]
+}
+  )";
+  auto parseResult = parseSynthTrace(bufFromStr(src));
+  SynthTrace &trace = std::get<0>(parseResult);
+
+  auto record0 =
+      dynamic_cast<const SynthTrace::CreateObjectWithPrototypeRecord &>(
+          *trace.records().at(0));
+  ASSERT_EQ(record0.objID_, 1);
+  ASSERT_EQ(record0.prototype_, SynthTrace::encodeNull());
+
+  auto record1 =
+      dynamic_cast<const SynthTrace::CreateObjectWithPrototypeRecord &>(
+          *trace.records().at(1));
+  ASSERT_EQ(record1.objID_, 2);
+  ASSERT_EQ(record1.prototype_, SynthTrace::encodeObject(1));
 }
 
 } // namespace

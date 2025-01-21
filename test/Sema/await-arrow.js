@@ -20,8 +20,9 @@ async (x = () => { return await; }) => {}
 // CHECK-NEXT:    Func loose
 // CHECK-NEXT:        Scope %s.2
 // CHECK-NEXT:            Decl %d.2 'x' Parameter
-// CHECK-NEXT:        Func loose
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:        Func loose
+// CHECK-NEXT:            Scope %s.4
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    VariableDeclaration

@@ -67,10 +67,24 @@ bool canEscapeThroughCall(Instruction *C, Function *F, BaseCallInst *CI) {
       return true;
 
   // Check if the closure is passed as the new.target argument, and the function
-  // actually uses it.
-  // TODO: Allow certain instructions to use new.target.
-  if (C == CI->getNewTarget() && F->getNewTargetParam()->hasUsers())
-    return true;
+  // actually uses it in a way that can escape.
+  if (C == CI->getNewTarget()) {
+    // If NewTargetParam has no users, the closure can't escape through it.
+    // Check all the users to see if there's any that might let it escape.
+    for (auto *newTargetUser : F->getNewTargetParam()->getUsers()) {
+      auto *getNewTarget = llvh::dyn_cast<GetNewTargetInst>(newTargetUser);
+      if (!getNewTarget) {
+        // Unknown user of NewTargetParam.
+        return true;
+      }
+      for (auto *getNewTargetUser : getNewTarget->getUsers()) {
+        // Certain instructions are known not to leak new.target even if they
+        // use it.
+        if (!llvh::isa<CacheNewObjectInst>(getNewTargetUser))
+          return true;
+      }
+    }
+  }
 
   return false;
 }
@@ -125,6 +139,11 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Module *M = F->getParent();
   IRBuilder builder(M);
 
+  // The only kind of function which does not expect a made `this` parameter in
+  // a construct call is a derived class constructor.
+  bool funcExpectsThisInConstruct =
+      F->getDefinitionKind() != Function::DefinitionKind::ES6DerivedConstructor;
+
   /// Define an element in the worklist below.
   struct UserInfo {
     /// An instruction that is known to have either the value of the closure, or
@@ -156,6 +175,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   // to avoid going back and forth between the corresponding loads.
   llvh::SmallPtrSet<Instruction *, 2> visited{};
 
+  IRBuilder::InstructionDestroyer destroyer{};
+
   worklist.push_back({create, true, create->getScope()});
   while (!worklist.empty()) {
     // Instruction whose only possible closure value is the one being analyzed.
@@ -184,9 +205,24 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         continue;
       }
 
-      // Construction setup instructions can't leak the closure on their own,
-      // but don't contribute to the call graph.
-      if (isConstructionSetup(closureUser, closureInst)) {
+      if (auto *CTI = llvh::dyn_cast<CreateThisInst>(closureUser)) {
+        assert(
+            CTI->getClosure() == closureInst &&
+            "Closure must be closure argument to CreateThisInst");
+        if (isAlwaysClosure) {
+          if (funcExpectsThisInConstruct) {
+            CTI->setType(Type::createObject());
+          } else {
+            // If a function does not expect any `this`, then we can just remove
+            // the `CreateThis` altogether since it was just going to return
+            // undefined.
+            CTI->replaceAllUsesWith(builder.getLiteralUndefined());
+            destroyer.add(CTI);
+          }
+        }
+        // CreateThis leaks the closure because the created object can still
+        // access the function via its parent's `.constructor` prototype.
+        F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         continue;
       }
 
@@ -207,6 +243,17 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         // If we know the operand is always a closure, typeof can be eliminated.
         if (isAlwaysClosure)
           TOI->replaceAllUsesWith(builder.getLiteralString("function"));
+        // typeof does not leak the closure.
+        continue;
+      }
+
+      if (auto *TOI = llvh::dyn_cast<TypeOfIsInst>(closureUser)) {
+        assert(TOI->getArgument() == closureInst && "unexpected operand");
+        // If we know the operand is always a closure, typeofis can be
+        // simplified to the result of the check.
+        if (isAlwaysClosure)
+          TOI->replaceAllUsesWith(
+              builder.getLiteralBool(TOI->getTypes()->getData().hasFunction()));
         // typeof does not leak the closure.
         continue;
       }

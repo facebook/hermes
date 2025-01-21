@@ -67,17 +67,17 @@ function foo(p) {
 // CHECK-NEXT:Object Shape Table:
 // CHECK-NEXT:0[0, 2]
 // CHECK-NEXT:1[3, 3]
-// CHECK-NEXT:Function<global>(1 params, 11 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:Function<global>(1 params, 12 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 2<Reg8>, 0<UInt32>
+// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
 // CHECK-NEXT:[@ 6] DeclareGlobalVar 5<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 0<Reg8>, 2<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 16] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 5<UInt16>
-// CHECK-NEXT:[@ 24] CreateClosure 1<Reg8>, 2<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 29] LoadConstUndefined 2<Reg8>
-// CHECK-NEXT:[@ 31] Call1 2<Reg8>, 1<Reg8>, 2<Reg8>
-// CHECK-NEXT:[@ 35] Ret 2<Reg8>
+// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 16] GetGlobalObject 3<Reg8>
+// CHECK-NEXT:[@ 18] PutByIdLoose 3<Reg8>, 2<Reg8>, 1<UInt8>, 5<UInt16>
+// CHECK-NEXT:[@ 24] CreateClosure 1<Reg8>, 1<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 29] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 31] Call1 1<Reg8>, 1<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 35] Ret 1<Reg8>
 
 // CHECK:Function<foo>(2 params, 1 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 0<UInt16>, 0<UInt16>

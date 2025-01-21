@@ -6,6 +6,7 @@
  */
 
 #include "hermes/BCGen/SerializedLiteralParser.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/Interpreter.h"
@@ -15,6 +16,7 @@
 #include "hermes/VM/JSGeneratorObject.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/ModuleExportsCache-inline.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
@@ -258,18 +260,24 @@ extern "C" void _sh_ljs_reify_arguments_strict(
   reifyArguments(shr, frame, lazyReg, true);
 }
 
-extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
+extern "C" SHLegacyValue _sh_ljs_get_by_val_with_receiver_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,
-    SHLegacyValue *key) {
-  Handle<> sourceHandle{toPHV(source)}, keyHandle{toPHV(key)};
+    SHLegacyValue *key,
+    SHLegacyValue *receiver) {
   Runtime &runtime = getRuntime(shr);
+  Handle<> sourceHandle{toPHV(source)};
+  Handle<> keyHandle{toPHV(key)};
+  Handle<> receiverHandle{(toPHV(receiver))};
   if (LLVM_LIKELY(sourceHandle->isObject())) {
     CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
     {
       GCScopeMarkerRAII marker{runtime};
-      res = JSObject::getComputed_RJS(
-          Handle<JSObject>::vmcast(sourceHandle), runtime, keyHandle);
+      res = JSObject::getComputedWithReceiver_RJS(
+          Handle<JSObject>::vmcast(sourceHandle),
+          runtime,
+          keyHandle,
+          receiverHandle);
     }
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       _sh_throw_current(shr);
@@ -280,7 +288,8 @@ extern "C" SHLegacyValue _sh_ljs_get_by_val_rjs(
   CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
   {
     GCScopeMarkerRAII marker{runtime};
-    res = Interpreter::getByValTransient_RJS(runtime, sourceHandle, keyHandle);
+    res = Interpreter::getByValTransientWithReceiver_RJS(
+        runtime, sourceHandle, keyHandle, receiverHandle);
   }
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -329,11 +338,24 @@ extern "C" SHLegacyValue _sh_catch(
     uint32_t stackSize) {
   Runtime &runtime = getRuntime(shr);
   runtime.shCurJmpBuf = runtime.shCurJmpBuf->prev;
+  _sh_catch_no_pop(shr, locals, frame, stackSize);
+  return _sh_get_clear_thrown_value(shr);
+}
+
+extern "C" void _sh_catch_no_pop(
+    SHRuntime *shr,
+    SHLocals *locals,
+    SHLegacyValue *frame,
+    uint32_t stackSize) {
+  Runtime &runtime = getRuntime(shr);
 
   runtime.shLocals = locals;
   runtime.popToSavedStackPointer(toPHV(frame + stackSize));
   runtime.setCurrentFrame(StackFramePtr(toPHV(frame)));
+}
 
+extern "C" SHLegacyValue _sh_get_clear_thrown_value(SHRuntime *shr) {
+  Runtime &runtime = getRuntime(shr);
   SHLegacyValue res = runtime.getThrownValue();
   runtime.clearThrownValue();
   return res;
@@ -346,7 +368,7 @@ extern "C" void _sh_throw_current(SHRuntime *shr) {
     fprintf(stderr, "SH: uncaught exception");
     abort();
   }
-  _longjmp(runtime.shCurJmpBuf->buf, 1);
+  _sh_longjmp(runtime.shCurJmpBuf->buf, 1);
   // longjmp is not marked as noreturn, so use llvm_unreachable to avoid a
   // compiler warning that this function doesn't actually seem to be noreturn.
   llvm_unreachable("longjmp cannot return");
@@ -367,6 +389,14 @@ extern "C" void _sh_throw_type_error_ascii(
     SHRuntime *shr,
     const char *message) {
   (void)getRuntime(shr).raiseTypeError(TwineChar16(message));
+  _sh_throw_current(shr);
+}
+
+extern "C" void _sh_throw_reference_error_ascii(
+    SHRuntime *shr,
+    const char *message) {
+  Runtime &runtime = getRuntime(shr);
+  (void)runtime.raiseReferenceError(message);
   _sh_throw_current(shr);
 }
 
@@ -436,22 +466,87 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
 
+extern "C" SHLegacyValue _sh_ljs_callRequire(
+    SHRuntime *shr,
+    SHArrayStorage **exportCache,
+    SHLegacyValue *requireFunc,
+    uint32_t modIndex) {
+  // Check the cache.
+  SHLegacyValue res = module_export_cache::get(
+      reinterpret_cast<ArrayStorage *>(*exportCache), modIndex);
+  if (!_sh_ljs_is_empty(res)) {
+    return res;
+  }
+
+  Runtime &runtime = getRuntime(shr);
+  auto slowRes = [&]() -> CallResult<SHLegacyValue> {
+    struct : public Locals {
+      PinnedValue<> modExport;
+      PinnedValue<Callable> reqFuncPV;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+
+    // The value should be a Callable, or else we raise an error (as
+    // Interpreter::handleCallSlowPath does).
+    auto *reqPHV = toPHV(requireFunc);
+    Callable *reqFuncCallable = dyn_vmcast_or_null<Callable>(*reqPHV);
+    if (!reqFuncCallable) {
+      (void)runtime.raiseTypeErrorForValue(
+          Handle<>(reqPHV), " is not a function");
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    lv.reqFuncPV = reqFuncCallable;
+    CallResult<PseudoHandle<>> modExport = Callable::executeCall1(
+        lv.reqFuncPV,
+        runtime,
+        HandleRootOwner::getUndefinedValue(),
+        HermesValue::encodeTrustedNumberValue(modIndex));
+    if (LLVM_UNLIKELY(modExport == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    lv.modExport = modExport->get();
+
+    // Populate the cache.
+    module_export_cache::set(
+        getRuntime(shr),
+        reinterpret_cast<ArrayStorage *&>(*exportCache),
+        modIndex,
+        lv.modExport);
+
+    // Whether or not the caching above succeeded, return the module export.
+    return lv.modExport.get();
+  }();
+  if (LLVM_UNLIKELY(slowRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *slowRes;
+}
+
 extern "C" SHLegacyValue _sh_ljs_call_builtin(
     SHRuntime *shr,
     SHLegacyValue *frame,
     uint32_t argCount,
     uint32_t builtinMethodID) {
-  Runtime &runtime = getRuntime(shr);
-  StackFramePtr newFrame(runtime.getStackPointer());
-  newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
-  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
-  newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
-  newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
-  newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(
-      runtime.getBuiltinCallable(builtinMethodID));
-  return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
+  auto res = [&]() {
+    Runtime &runtime = getRuntime(shr);
+    StackFramePtr newFrame(runtime.getStackPointer());
+    newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
+    newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
+    newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
+
+    auto callee =
+        vmcast<NativeFunction>(runtime.getBuiltinCallable(builtinMethodID));
+    newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(callee);
+
+    GCScopeMarkerRAII marker{runtime};
+    return NativeFunction::_nativeCall(callee, runtime);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return res->getHermesValue();
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_builtin_closure(
@@ -558,6 +653,46 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
   return *genObjRes;
 }
 
+extern "C" SHLegacyValue _sh_ljs_create_class(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit,
+    SHLegacyValue *homeObjectOut,
+    SHLegacyValue *superClass) {
+  assert(!_sh_ljs_is_null(*env) && "create class cannot have null environment");
+  Runtime &runtime = getRuntime(shr);
+  GCScopeMarkerRAII marker{runtime};
+  auto classRes = createClass(
+      runtime,
+      superClass ? Handle{toPHV(superClass)} : Runtime::getEmptyValue(),
+      [&runtime, env, func, funcInfo, unit, superClass](
+          Handle<JSObject> ctorParent) {
+        // Derived classes get their own special CellKind.
+        return superClass ? *NativeJSDerivedClass::create(
+                                runtime,
+                                ctorParent,
+                                Handle<Environment>::vmcast(toPHV(env)),
+                                func,
+                                funcInfo,
+                                unit,
+                                0)
+                          : *NativeJSFunction::create(
+                                runtime,
+                                ctorParent,
+                                Handle<Environment>::vmcast(toPHV(env)),
+                                func,
+                                funcInfo,
+                                unit,
+                                0);
+      });
+  if (classRes == ExecutionStatus::EXCEPTION)
+    _sh_throw_current(shr);
+  *homeObjectOut = HermesValue::encodeObjectValue(std::get<1>(*classRes));
+  return HermesValue::encodeObjectValue(std::get<0>(*classRes));
+}
+
 extern "C" SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
@@ -632,7 +767,7 @@ static inline void putById_RJS(
     const PinnedHermesValue *target,
     SymbolID symID,
     const PinnedHermesValue *value,
-    PropertyCacheEntry *cacheEntry) {
+    WritePropertyCacheEntry *cacheEntry) {
   //++NumPutById;
   if (LLVM_LIKELY(target->isObject())) {
     SmallHermesValue shv = SmallHermesValue::encodeHermesValue(*value, runtime);
@@ -725,13 +860,13 @@ extern "C" void _sh_ljs_put_by_id_loose_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, false>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_put_by_id_strict_rjs(
@@ -739,13 +874,13 @@ extern "C" void _sh_ljs_put_by_id_strict_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, true>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
@@ -753,13 +888,13 @@ extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
@@ -767,34 +902,36 @@ extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
-static inline void putByVal_RJS(
+static inline void putByValWithReceiver_RJS(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value,
+    SHLegacyValue *receiver,
     bool strictMode) {
   Handle<> targetHandle{toPHV(target)}, keyHandle{toPHV(key)},
-      valueHandle{toPHV(value)};
+      valueHandle{toPHV(value)}, receiverHandle{toPHV(receiver)};
   Runtime &runtime = getRuntime(shr);
   if (LLVM_LIKELY(targetHandle->isObject())) {
     const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
     CallResult<bool> res{false};
     {
       GCScopeMarkerRAII marker{runtime};
-      res = JSObject::putComputed_RJS(
+      res = JSObject::putComputedWithReceiver_RJS(
           Handle<JSObject>::vmcast(targetHandle),
           runtime,
           keyHandle,
           valueHandle,
+          receiverHandle,
           defaultPropOpFlags);
     }
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
@@ -813,6 +950,15 @@ static inline void putByVal_RJS(
     _sh_throw_current(shr);
 }
 
+static inline void putByVal_RJS(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value,
+    bool strictMode) {
+  putByValWithReceiver_RJS(shr, target, key, value, target, strictMode);
+}
+
 extern "C" void _sh_ljs_put_by_val_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -827,13 +973,23 @@ extern "C" void _sh_ljs_put_by_val_strict_rjs(
     SHLegacyValue *value) {
   putByVal_RJS(shr, target, key, value, true);
 }
+extern "C" void _sh_ljs_put_by_val_with_receiver_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value,
+    SHLegacyValue *receiver,
+    bool isStrict) {
+  putByValWithReceiver_RJS(shr, target, key, value, receiver, isStrict);
+}
 
 template <bool tryProp>
-static inline HermesValue getById_RJS(
+static inline HermesValue getByIdWithReceiver_RJS(
     Runtime &runtime,
     Handle<> source,
     SymbolID symID,
-    PropertyCacheEntry *cacheEntry) {
+    Handle<> receiver,
+    ReadPropertyCacheEntry *cacheEntry) {
   //++NumGetById;
   // NOTE: it is safe to use OnREG(GetById) here because all instructions
   // have the same layout: opcode, registers, non-register operands, i.e.
@@ -934,10 +1090,11 @@ static inline HermesValue getById_RJS(
     {
       GCScopeMarkerRAII marker(runtime);
       const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
-      resPH = JSObject::getNamed_RJS(
+      resPH = JSObject::getNamedWithReceiver_RJS(
           Handle<JSObject>::vmcast(source),
           runtime,
           symID,
+          receiver,
           !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
           cacheEntry);
     }
@@ -957,7 +1114,8 @@ static inline HermesValue getById_RJS(
     CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
     {
       GCScopeMarkerRAII marker{runtime};
-      resPH = Interpreter::getByIdTransient_RJS(runtime, source, symID);
+      resPH = Interpreter::getByIdTransientWithReceiver_RJS(
+          runtime, source, symID, receiver);
     }
     if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
       _sh_throw_current(getSHRuntime(runtime));
@@ -965,18 +1123,37 @@ static inline HermesValue getById_RJS(
   }
 }
 
+/// Assume the receiver is the same as the source object.
+template <bool tryProp>
+static inline HermesValue getById_RJS(
+    Runtime &runtime,
+    Handle<> source,
+    SymbolID symID,
+    ReadPropertyCacheEntry *cacheEntry) {
+  return getByIdWithReceiver_RJS<tryProp>(
+      runtime, source, symID, source, cacheEntry);
+}
+
 extern "C" SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
     SHLegacyValue *callee,
     SHLegacyValue *newTarget,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry) {
   Runtime &runtime = getRuntime(shr);
   auto *calleePHV = toPHV(callee);
+  auto *newTargetPHV = toPHV(newTarget);
   {
-    if (LLVM_UNLIKELY(!calleePHV->isObject())) {
+    // TODO(T168592126) standardize on where we perform function call
+    // validation for the native backend.
+    if (LLVM_UNLIKELY(!vmisa<Callable>(*calleePHV))) {
       (void)runtime.raiseTypeErrorForValue(
           Handle<>(calleePHV), " cannot be used as a constructor.");
-      goto invalidCallee;
+      goto throwCurrent;
+    }
+    if (LLVM_UNLIKELY(!vmisa<Callable>(*newTargetPHV))) {
+      (void)runtime.raiseTypeErrorForValue(
+          Handle<>(newTargetPHV), " invalid new.target.");
+      goto throwCurrent;
     }
 
     auto *calleeFunc = vmcast<JSObject>(*calleePHV);
@@ -990,7 +1167,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
       // Callables that make their own this should be given undefined in a
       // construct call.
       return HermesValue::encodeUndefinedValue();
-    } else if (cellKind >= CellKind::CallableKind_first) {
+    } else if (cellKind >= CellKind::CallableUnknownMakesThisKind_first) {
       correctNewTarget = vmcast<Callable>(*toPHV(newTarget));
       while (auto *bound = dyn_vmcast<BoundFunction>(calleeFunc)) {
         calleeFunc = bound->getTarget(runtime);
@@ -1003,7 +1180,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
       cellKind = calleeFunc->getKind();
       // Repeat the checks, now against the target.
       if (cellKind >= CellKind::CallableExpectsThisKind_first) {
-        correctNewTarget = vmcast<Callable>(calleeFunc);
+        // Do nothing, correctNewTarget is already set up correctly.
       } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
         return HermesValue::encodeUndefinedValue();
       } else {
@@ -1012,13 +1189,13 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
         // NativeFunction as a constructor.
         (void)runtime.raiseTypeError(
             "This function cannot be used as a constructor.");
-        goto invalidCallee;
+        goto throwCurrent;
       }
     } else {
       // Not a Callable.
       (void)runtime.raiseTypeErrorForValue(
           Handle<>(calleePHV), " cannot be used as a constructor.");
-      goto invalidCallee;
+      goto throwCurrent;
     }
 
     // We shouldn't need to check that new.target is a constructor explicitly.
@@ -1045,7 +1222,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
         getRuntime(shr),
         lv.newTarget,
         Predefined::getSymbolID(Predefined::prototype),
-        reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+        reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 
     return JSObject::create(
                runtime,
@@ -1054,7 +1231,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
                    : runtime.objectPrototype)
         .getHermesValue();
   }
-invalidCallee:
+throwCurrent:
   _sh_throw_current(shr);
 }
 
@@ -1062,23 +1239,37 @@ extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<true>(
       getRuntime(shr),
       Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    SHPropertyCacheEntry *propCacheEntry) {
+    SHReadPropertyCacheEntry *propCacheEntry) {
   return getById_RJS<false>(
       getRuntime(shr),
       Handle<>{toPHV(source)},
       SymbolID::unsafeCreate(symID),
-      reinterpret_cast<PropertyCacheEntry *>(propCacheEntry));
+      reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
+}
+
+extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *receiver,
+    SHSymbolID symID,
+    SHReadPropertyCacheEntry *propCacheEntry) {
+  return getByIdWithReceiver_RJS<false>(
+      getRuntime(shr),
+      Handle<>{toPHV(source)},
+      SymbolID::unsafeCreate(symID),
+      Handle<>{toPHV(receiver)},
+      reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 
 extern "C" void _sh_ljs_put_own_by_val(
@@ -1095,7 +1286,8 @@ extern "C" void _sh_ljs_put_own_by_val(
         runtime,
         Handle<>(toPHV(key)),
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        Handle<>(toPHV(value)));
+        Handle<>(toPHV(value)),
+        PropOpFlags().plusThrowOnError());
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -1114,7 +1306,8 @@ extern "C" void _sh_ljs_put_own_ne_by_val(
         runtime,
         Handle<>(toPHV(key)),
         DefinePropertyFlags::getNewNonEnumerableFlags(),
-        Handle<>(toPHV(value)));
+        Handle<>(toPHV(value)),
+        PropOpFlags().plusThrowOnError());
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -1135,7 +1328,8 @@ extern "C" void _sh_ljs_put_own_by_index(
         runtime,
         indexHandle,
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        Handle<>(toPHV(value)));
+        Handle<>(toPHV(value)),
+        PropOpFlags().plusThrowOnError());
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -1214,7 +1408,7 @@ extern "C" void _sh_ljs_put_own_getter_setter_by_val(
     }
     assert(
         (dpFlags.setSetter || dpFlags.setGetter) &&
-        "No accessor set in PutOwnGetterSetterByVal");
+        "No accessor set in DefineOwnGetterSetterByVal");
 
     auto res =
         PropertyAccessor::create(runtime, getterCallable, setterCallable);
@@ -1231,70 +1425,6 @@ extern "C" void _sh_ljs_put_own_getter_setter_by_val(
 
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
-}
-
-static HermesValue delById(
-    Runtime &runtime,
-    PinnedHermesValue *target,
-    SymbolID key,
-    bool strictMode) {
-  const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
-  CallResult<bool> status{ExecutionStatus::EXCEPTION};
-  if (LLVM_LIKELY(target->isObject())) {
-    {
-      GCScopeMarkerRAII marker{runtime};
-      status = JSObject::deleteNamed(
-          Handle<JSObject>::vmcast(toPHV(target)),
-          runtime,
-          key,
-          defaultPropOpFlags);
-    }
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-      _sh_throw_current(getSHRuntime(runtime));
-    }
-    return HermesValue::encodeBoolValue(status.getValue());
-  } else {
-    // This is the "slow path".
-    CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
-    {
-      GCScopeMarkerRAII marker{runtime};
-      res = toObject(runtime, Handle<>(target));
-    }
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-      // If an exception is thrown, likely we are trying to convert
-      // undefined/null to an object. Passing over the name of the property
-      // so that we could emit more meaningful error messages.
-      // CAPTURE_IP(amendPropAccessErrorMsgWithPropName(
-      //     runtime, Handle<>(&O2REG(DelById)), "delete", ID(idVal)));
-      _sh_throw_current(getSHRuntime(runtime));
-    }
-    {
-      GCScopeMarkerRAII marker{runtime};
-      Handle tmpHandle{runtime, res.getValue()};
-      status = JSObject::deleteNamed(
-          Handle<JSObject>::vmcast(tmpHandle),
-          runtime,
-          key,
-          defaultPropOpFlags);
-    }
-    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-      _sh_throw_current(getSHRuntime(runtime));
-    }
-    return HermesValue::encodeBoolValue(status.getValue());
-  }
-}
-
-extern "C" SHLegacyValue _sh_ljs_del_by_id_strict(
-    SHRuntime *shr,
-    SHLegacyValue *target,
-    SHSymbolID key) {
-  return delById(
-      getRuntime(shr), toPHV(target), SymbolID::unsafeCreate(key), true);
-}
-extern "C" SHLegacyValue
-_sh_ljs_del_by_id_loose(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key) {
-  return delById(
-      getRuntime(shr), toPHV(target), SymbolID::unsafeCreate(key), false);
 }
 
 static HermesValue delByVal(
@@ -1632,6 +1762,15 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   return arr;
 }
 
+extern "C" SHLegacyValue _sh_ljs_cache_new_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *thisArg,
+    SHLegacyValue *newTarget,
+    uint32_t shapeTableIndex) {
+  return *thisArg;
+}
+
 extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
 
@@ -1677,17 +1816,24 @@ extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
 
   auto cr = [&runtime, base, index, size]() -> CallResult<HermesValue> {
     GCScopeMarkerRAII marker{runtime};
-    Handle baseHandle{toPHV(base)};
-    // Convert to object and store it back to the register.
-    auto res = toObject(runtime, baseHandle);
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
+    if (LLVM_UNLIKELY(!vmisa<JSObject>(*toPHV(base)))) {
+      Handle<> baseHandle{toPHV(base)};
+      // Convert to object and store it back to the register.
+      auto res = toObject(runtime, baseHandle);
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      *base = res.getValue();
     }
-    *base = res.getValue();
 
-    auto obj = runtime.makeMutableHandle(vmcast<JSObject>(res.getValue()));
+    struct : public Locals {
+      PinnedValue<JSObject> obj;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+    lv.obj = vmcast<JSObject>(*toPHV(base));
     uint32_t beginIndex;
     uint32_t endIndex;
+    MutableHandle<JSObject> obj{lv.obj};
     auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
     if (cr == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -1718,20 +1864,36 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
   Handle obj = Handle<JSObject>::vmcast(toPHV(base));
   auto result =
       [&runtime, arr, obj, indexVal, sizeVal]() -> CallResult<HermesValue> {
+    struct : public Locals {
+      PinnedValue<> tmp;
+      PinnedValue<JSObject> propObj;
+      PinnedValue<SymbolID> tmpPropNameStorage;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
     GCScopeMarkerRAII marker{runtime};
     uint32_t idx = toPHV(indexVal)->getNumber();
     uint32_t size = toPHV(sizeVal)->getNumber();
-    MutableHandle<> tmpHandle{runtime};
-    MutableHandle<JSObject> propObj{runtime};
-    MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+    MutableHandle<JSObject> propObj{lv.propObj};
+    MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
     // Loop until we find a property which is present.
     while (idx < size) {
-      tmpHandle = arr->at(runtime, idx);
-      ComputedPropertyDescriptor desc;
-      ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
-          obj, runtime, tmpHandle, propObj, tmpPropNameStorage, desc);
-      if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
+      lv.tmp = arr->at(runtime, idx);
+      if (lv.tmp->isSymbol()) {
+        // NOTE: This call is safe because we immediately discard desc,
+        // so it can't outlive the SymbolID.
+        NamedPropertyDescriptor desc;
+        propObj = JSObject::getNamedDescriptorUnsafe(
+            obj, runtime, lv.tmp->getSymbol(), desc);
+      } else {
+        assert(
+            (lv.tmp->isNumber() || lv.tmp->isString()) &&
+            "GetNextPName must be symbol, string, number");
+        ComputedPropertyDescriptor desc;
+        ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
+            obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
       }
       if (LLVM_LIKELY(propObj))
         break;
@@ -1739,15 +1901,32 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     }
     if (idx < size) {
       // We must return the property as a string
-      if (tmpHandle->isNumber()) {
-        auto status = toString_RJS(runtime, tmpHandle);
+      if (lv.tmp->isNumber()) {
+        auto strRes = numberToStringPrimitive(runtime, lv.tmp->getNumber());
+        if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lv.tmp = strRes->getHermesValue();
+      } else if (lv.tmp->isSymbol()) {
+        // for-in enumeration only returns numbers and strings.
+        // In most cases (i.e. non-Proxy), we keep the symbol around instead
+        // and convert here, so that the above getNamedDescriptor call is
+        // faster. Proxy has a filter so that it only returns Strings here. So
+        // we don't have to check isUniqued and can convert to string
+        // unconditionally.
         assert(
-            status == ExecutionStatus::RETURNED &&
-            "toString on number cannot fail");
-        tmpHandle = status->getHermesValue();
+            lv.tmp->getSymbol().isUniqued() &&
+            "Symbol primitives (non-uniqued) can't be used in for-in, "
+            "not even by Proxy");
+        lv.tmp = HermesValue::encodeStringValue(
+            runtime.getStringPrimFromSymbolID(lv.tmp->getSymbol()));
+      } else {
+        assert(
+            lv.tmp->isString() &&
+            "GetNextPName must be symbol, string, number");
       }
       *indexVal = HermesValue::encodeTrustedNumberValue(idx + 1);
-      return tmpHandle.get();
+      return lv.tmp.get();
     } else {
       return HermesValue::encodeUndefinedValue();
     }

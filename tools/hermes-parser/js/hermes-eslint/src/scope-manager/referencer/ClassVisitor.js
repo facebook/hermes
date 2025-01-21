@@ -18,6 +18,7 @@ import type {
   Identifier,
   MethodDefinition,
   PropertyDefinition,
+  StaticBlock,
 } from 'hermes-estree';
 import type {Referencer} from './Referencer';
 
@@ -125,6 +126,12 @@ class ClassVisitor extends Visitor {
     this._referencer.visitFunction(node.value);
   }
 
+  visitStaticBlock(node: StaticBlock): void {
+    this._referencer.scopeManager.nestClassStaticBlockScope(node);
+    this._referencer.visitChildren(node);
+    this._referencer.close(node);
+  }
+
   visitType: (?ESNode) => void = (node): void => {
     if (!node) {
       return;
@@ -148,6 +155,10 @@ class ClassVisitor extends Visitor {
 
   MethodDefinition(node: MethodDefinition): void {
     this.visitMethod(node);
+  }
+
+  StaticBlock(node: StaticBlock): void {
+    this.visitStaticBlock(node);
   }
 
   Identifier(node: Identifier): void {

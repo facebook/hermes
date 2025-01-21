@@ -100,127 +100,127 @@ function f(x) {
 // CHECK-NEXT:i1[ASCII, 0..0] #00019A16: g
 // CHECK-NEXT:i2[ASCII, 6..6] #00019E07: f
 
-// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r2, 0
+// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "g"
 // CHECK-NEXT:    DeclareGlobalVar  "f"
-// CHECK-NEXT:    CreateClosure     r0, r2, Function<g>
-// CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdStrict     r1, r0, 1, "g"
-// CHECK-NEXT:    CreateClosure     r2, r2, Function<f>
-// CHECK-NEXT:    PutByIdStrict     r1, r2, 2, "f"
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<g>
+// CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    PutByIdStrict     r3, r2, 1, "g"
+// CHECK-NEXT:    CreateClosure     r1, r1, Function<f>
+// CHECK-NEXT:    PutByIdStrict     r3, r1, 2, "f"
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<g>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<f>(2 params, 11 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<f>(2 params, 12 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:    SwitchImm         r2, 292, L18, 0, 16
 // CHECK-NEXT:L17:
-// CHECK-NEXT:    LoadConstInt      r1, 3352
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3352
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L16:
-// CHECK-NEXT:    LoadConstInt      r1, 3523
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3523
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L15:
-// CHECK-NEXT:    LoadConstInt      r1, 3342
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3342
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L14:
-// CHECK-NEXT:    LoadConstInt      r1, 3254
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3254
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L13:
-// CHECK-NEXT:    LoadConstInt      r1, 3243
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3243
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L12:
-// CHECK-NEXT:    LoadConstInt      r1, 2332
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 2332
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L11:
-// CHECK-NEXT:    LoadConstInt      r1, 3211
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3211
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L10:
-// CHECK-NEXT:    LoadConstInt      r1, 3642
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3642
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L9:
-// CHECK-NEXT:    LoadConstInt      r1, 2332
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 2332
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L8:
-// CHECK-NEXT:    LoadConstInt      r1, 3234
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 3234
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L7:
-// CHECK-NEXT:    LoadConstInt      r1, 323
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 323
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L6:
-// CHECK-NEXT:    LoadConstInt      r1, 362
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 362
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    GetByIdShort      r0, r1, 1, "g"
+// CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    GetByIdShort      r3, r3, 1, "g"
 // CHECK-NEXT:    LoadConstUndefined r1
-// CHECK-NEXT:    Call1             r1, r0, r1
-// CHECK-NEXT:    LoadConstInt      r1, 342
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    Call1             r3, r3, r1
+// CHECK-NEXT:    LoadConstInt      r0, 342
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    LoadConstUInt8    r1, 132
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstUInt8    r0, 132
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    LoadConstInt      r1, 322
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 322
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L2:
-// CHECK-NEXT:    LoadConstInt      r1, 342
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstInt      r0, 342
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadConstUInt8    r1, 32
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadConstUInt8    r0, 32
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L18:
 // CHECK-NEXT:    SwitchImm         r2, 199, L23, 1, 14
 // CHECK-NEXT:L30:
-// CHECK-NEXT:    LoadConstInt      r2, 3342
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 3342
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L29:
-// CHECK-NEXT:    LoadConstInt      r2, 3254
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 3254
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L28:
-// CHECK-NEXT:    LoadConstInt      r2, 3243
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 3243
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L27:
-// CHECK-NEXT:    LoadConstInt      r2, 2332
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 2332
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L26:
-// CHECK-NEXT:    LoadConstInt      r2, 3211
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 3211
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L25:
-// CHECK-NEXT:    LoadConstInt      r2, 3642
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 3642
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L24:
-// CHECK-NEXT:    LoadConstInt      r2, 2332
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 2332
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L22:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r1, r2, 1, "g"
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Call1             r2, r1, r2
-// CHECK-NEXT:    LoadConstInt      r2, 342
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    GetByIdShort      r2, r2, 1, "g"
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    Call1             r2, r2, r1
+// CHECK-NEXT:    LoadConstInt      r0, 342
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L21:
-// CHECK-NEXT:    LoadConstUInt8    r2, 132
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstUInt8    r0, 132
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L20:
-// CHECK-NEXT:    LoadConstInt      r2, 322
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 322
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L19:
-// CHECK-NEXT:    LoadConstInt      r2, 342
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadConstInt      r0, 342
+// CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L23:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r1, r2, 1, "g"
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Call1             r1, r1, r2
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    GetByIdShort      r2, r2, 1, "g"
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    Call1             r2, r2, r1
+// CHECK-NEXT:    Ret               r1
 
 // CHECK: Jump Tables:
 // CHECK-NEXT:  offset 292

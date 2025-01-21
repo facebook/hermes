@@ -314,12 +314,7 @@ TEST_F(AsyncDebuggerAPITest, ResumeFromPausedTest) {
   EXPECT_EQ(finalEvent, DebuggerEventType::Resumed);
 }
 
-// This test seemingly has a data race because it calls resumeFromPaused() from
-// a non-runtime thread. But that's being done to ensure the only thing being
-// signaled is due to DebuggerEventCallback being removed. So disable this test
-// when running with ThreadSanitizer.
-#if !defined(__has_feature) || !__has_feature(thread_sanitizer)
-TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
+TEST_F(AsyncDebuggerAPITest, RemoveLastDebuggerEventCallbackTest) {
   // This needs to be a while-loop because Explicit AsyncBreak will only happen
   // while there is JS to run
   scheduleScript(R"(
@@ -327,8 +322,9 @@ TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
     }
   )");
 
-  // Multiple callbacks are registered to make sure AsyncDebuggerAPI doesn't
-  // break out of processInterruptWhilePaused() due to having no callbacks.
+  // Multiple callbacks are registered to make sure AsyncDebuggerAPI only breaks
+  // out of processInterruptWhilePaused() when it reaches 0
+  // DebuggerEventCallbacks.
   DebuggerEventCallbackID callbackID =
       asyncDebuggerAPI_->addDebuggerEventCallback_TS(
           [](HermesRuntime &runtime,
@@ -341,35 +337,51 @@ TEST_F(AsyncDebuggerAPITest, NotifyDueToEventCallbacksTest) {
             [promise](
                 HermesRuntime &runtime,
                 AsyncDebuggerAPI &asyncDebugger,
-                DebuggerEventType event) { promise->set_value(true); });
+                DebuggerEventType event) {
+              EXPECT_EQ(event, DebuggerEventType::ExplicitPause);
+              promise->set_value(true);
+            });
         runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
       },
       "wait on explicit pause"));
 
-  // At this point, the runtime thread is paused due to Explicit AsyncBreak
+  // Trigger an interrupt to make sure that we're inside
+  // processInterruptWhilePaused()
+  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
+    asyncDebuggerAPI_->triggerInterrupt_TS(
+        [this, promise](HermesRuntime &runtime) {
+          // stop the script
+          stopFlag_.store(true);
 
-  // We're not on the runtime thread, but because we know for sure the runtime
-  // thread is paused at this point it's safe to call
-  // resumeFromPaused().
-  asyncDebuggerAPI_->resumeFromPaused(AsyncDebugCommand::Continue);
-  // break out of loop
-  stopFlag_.store(true);
+          promise->set_value(asyncDebuggerAPI_->isWaitingForCommand());
+        });
+  }));
+
+  // Remove one of the DebuggerEventCallbacks. Since this is not the last one,
+  // it's expected that we don't exit out of processInterruptWhilePaused().
+  asyncDebuggerAPI_->removeDebuggerEventCallback_TS(callbackID);
+
+  // Trigger an interrupt to make sure that we're still waiting for command in
+  // processInterruptWhilePaused().
+  EXPECT_TRUE(waitFor<bool>([this](auto promise) {
+    asyncDebuggerAPI_->triggerInterrupt_TS(
+        [this, promise](HermesRuntime &runtime) {
+          promise->set_value(asyncDebuggerAPI_->isWaitingForCommand());
+        });
+  }));
 
   EXPECT_TRUE(waitFor<bool>(
       [this](auto promise) {
         // Schedule something on the runtime thread to confirm that we broke out
-        // of processInterruptWhilePaused() after removing a
+        // of processInterruptWhilePaused() after removing the last
         // DebuggerEventCallback
         runtimeThread_->add([promise]() { promise->set_value(true); });
-        // Removing a DebuggerEventCallback will signal and cause another
+        // Removing the last DebuggerEventCallback will signal and cause another
         // iteration of processInterruptWhilePaused()
         asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
       },
       "wait on runtime thread freed up"));
-
-  asyncDebuggerAPI_->removeDebuggerEventCallback_TS(callbackID);
 }
-#endif
 
 TEST_F(AsyncDebuggerAPITest, NoDebuggerEventCallbackTest) {
   scheduleScript("debugger;");

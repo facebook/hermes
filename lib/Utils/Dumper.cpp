@@ -152,8 +152,9 @@ llvh::raw_ostream &operator<<(
 }
 
 void IRPrinter::printTypeLabel(Value *v) {
-  // Don't print the type of basic blocks or LiteralIRType.
-  if (llvh::isa<BasicBlock>(v) || llvh::isa<LiteralIRType>(v))
+  // Don't print the type of basic blocks or certain literals.
+  if (llvh::isa<BasicBlock>(v) || llvh::isa<LiteralIRType>(v) ||
+      llvh::isa<LiteralTypeOfIsTypes>(v))
     return;
   setColor(Color::Type);
   os_ << ": " << v->getType();
@@ -162,15 +163,8 @@ void IRPrinter::printTypeLabel(Value *v) {
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   auto &ctx = I->getContext();
-  if (isa<CallBuiltinInst>(I) && opIndex == CallInst::CalleeIdx) {
-    os_ << "["
-        << getBuiltinMethodName(cast<CallBuiltinInst>(I)->getBuiltinIndex())
-        << "]";
-  } else if (isa<GetBuiltinClosureInst>(I) && opIndex == 0) {
-    os_ << "["
-        << getBuiltinMethodName(
-               cast<GetBuiltinClosureInst>(I)->getBuiltinIndex())
-        << "]";
+  if (auto *builtinIdx = dyn_cast<LiteralBuiltinIdx>(V)) {
+    os_ << "[" << getBuiltinMethodName(builtinIdx->getData()) << "]";
   } else if (auto LBI = dyn_cast<LiteralBigInt>(V)) {
     os_ << LBI->getValue()->str();
   } else if (auto LS = dyn_cast<LiteralString>(V)) {
@@ -222,6 +216,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
         << namer_.getVarName(VR) << "]";
   } else if (auto *lt = llvh::dyn_cast<LiteralIRType>(V)) {
     os_ << "type(" << lt->getData() << ")";
+  } else if (auto *lt = llvh::dyn_cast<LiteralTypeOfIsTypes>(V)) {
+    os_ << "typeOfIs(" << lt->getData() << ")";
   } else if (auto *NS = llvh::dyn_cast<LiteralNativeSignature>(V)) {
     os_ << '"';
     NS->getData()->format(os_);

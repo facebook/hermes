@@ -397,10 +397,14 @@ uint64_t global_thread_id() {
   return GetCurrentThreadId();
 }
 
-std::pair<const void *, size_t> thread_stack_bounds(unsigned) {
+namespace detail {
+
+std::pair<const void *, size_t> thread_stack_bounds_impl() {
   // Native stack checking unsupported on Windows.
   return {nullptr, 0};
 }
+
+} // namespace detail
 
 void set_thread_name(const char *name) {
   // Set the thread name for TSAN. It doesn't share the same name mapping as the

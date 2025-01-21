@@ -76,3 +76,131 @@ c3.asyncFun();
 //CHECK-NEXT: 1
 //CHECK-NEXT: 2
 //CHECK-NEXT: 3
+
+// Test that the receiver is set up correctly for reads.
+(function () {
+  var parent = {
+    x: 10,
+    get prop1() {
+      print(this.x);
+    }
+  }
+  var child = {
+    x: 20,
+    foo() {
+      super.prop1;
+    }
+  }
+  Object.setPrototypeOf(child, parent);
+  child.foo();
+//CHECK-NEXT: 20
+})();
+
+// Test that the receiver is set up correctly for writes.
+(function () {
+  var parent = {
+    x: 30,
+    set prop1(value) {
+      print(this.x);
+    }
+  }
+  var child = {
+    x: 40,
+    foo() {
+      super.prop1 = "value";
+    }
+  }
+  Object.setPrototypeOf(child, parent);
+  child.foo();
+//CHECK-NEXT: 40
+})();
+
+// Test that super writes throw under correct conditions.
+
+// Should not throw
+(function () {
+  var parent = {}
+  Object.defineProperty(parent, 'prop1', {
+    value: 50,
+    writable: false
+  });
+  var child = {
+    foo() {
+      super.prop1 = "value";
+    }
+  };
+  Object.setPrototypeOf(child, parent);
+  // This doesn't throw.
+  child.foo();
+  print(child.prop1);
+//CHECK-NEXT: 50
+  print(parent.prop1);
+//CHECK-NEXT: 50
+})();
+
+// Should throw
+(function () {
+  "use strict";
+  var parent = {}
+  Object.defineProperty(parent, 'prop1', {
+    value: 50,
+    writable: false
+  });
+  var child = {
+    foo() {
+      super.prop1 = "value";
+    }
+  };
+  Object.setPrototypeOf(child, parent);
+  try {
+    child.foo();
+    print("Fail");
+  } catch (e) {
+    print("Pass");
+  }
+//CHECK-NEXT: Pass
+})();
+
+// super throws on null prototype.
+(function () {
+  function key() {
+    return "x";
+  }
+  var obj = {
+    reads() {
+      try {
+        super.x;
+        print("read fail");
+      } catch (err) {
+        print("read threw", err.constructor.name);
+      }
+//CHECK-NEXT: read threw TypeError
+      try {
+        super[key()];
+        print("read fail");
+      } catch (err) {
+        print("read threw", err.constructor.name);
+      }
+//CHECK-NEXT: read threw TypeError
+    },
+    writes() {
+      try {
+        super.x = 42;
+        print("write fail");
+      } catch (err) {
+        print("write threw", err.constructor.name);
+      }
+//CHECK-NEXT: write threw TypeError
+      try {
+        super[key()] = 42;
+        print("write fail");
+      } catch (err) {
+        print("write threw", err.constructor.name);
+      }
+//CHECK-NEXT: write threw TypeError
+    }
+  };
+  Object.setPrototypeOf(obj, null);
+  obj.reads();
+  obj.writes();
+})();

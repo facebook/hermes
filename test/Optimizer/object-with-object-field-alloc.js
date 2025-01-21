@@ -51,7 +51,7 @@ new Foo();
 // CHECK-NEXT:        ReturnInst %12: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:constructor O(): undefined [typed]
+// CHECK:base constructor O(): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = HBCLoadConstInst (:number) 7: number
 // CHECK-NEXT:  %1 = LoadParamInst (:object) %<this>: object
@@ -60,7 +60,7 @@ new Foo();
 // CHECK-NEXT:       ReturnInst %3: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:constructor Foo(): undefined [typed]
+// CHECK:base constructor Foo(): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

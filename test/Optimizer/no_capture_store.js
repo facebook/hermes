@@ -105,12 +105,12 @@ function outer() {
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %test1(): functionCode
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %test2(): functionCode
 // CHECK-NEXT:  %7 = AllocArrayInst (:object) 5: number
-// CHECK-NEXT:       StoreOwnPropertyInst %4: object, %7: object, 0: number, true: boolean
-// CHECK-NEXT:       StoreOwnPropertyInst %3: object, %7: object, 1: number, true: boolean
-// CHECK-NEXT:        StoreOwnPropertyInst %5: object, %7: object, 2: number, true: boolean
-// CHECK-NEXT:        StoreOwnPropertyInst %6: object, %7: object, 3: number, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst %4: object, %7: object, 0: number, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst %3: object, %7: object, 1: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %5: object, %7: object, 2: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %6: object, %7: object, 3: number, true: boolean
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS2.envVar]: any
-// CHECK-NEXT:        StoreOwnPropertyInst %12: any, %7: object, 4: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %12: any, %7: object, 4: number, true: boolean
 // CHECK-NEXT:        ReturnInst %7: object
 // CHECK-NEXT:function_end
 

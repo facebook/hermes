@@ -42,14 +42,19 @@ if (POLICY CMP0026)
   cmake_policy(SET CMP0026 OLD)
 endif()
 
+# Require a build type
+if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL ""))
+    message(FATAL_ERROR "Please set CMAKE_BUILD_TYPE")
+endif()
+
 # Has to be set before `project` as per documentation
 # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
 set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 
 if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(CMAKE_OSX_SYSROOT "macosx")
-  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
-  set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   set(CMAKE_HAVE_THREADS_LIBRARY 1)
   set(CMAKE_USE_WIN32_THREADS_INIT 0)
@@ -197,10 +202,6 @@ set(HERMES_ENABLE_FUZZILLI OFF CACHE BOOL
 set(HERMES_ENABLE_TOOLS ON CACHE BOOL
   "Enable CLI tools")
 
-# Enable bitcode
-set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
-  "Include bitcode with the framework")
-
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
@@ -268,9 +269,6 @@ set(ANDROID_LINUX_PERF_PATH ""
 set(HERMES_MSVC_MP ON CACHE STRING
   "Enable /MP in MSVC for parallel builds")
 
-set(EMSCRIPTEN_FASTCOMP OFF CACHE BOOL
-  "Emscripten is using the fastcomp backend instead of the LLVM one")
-
 set(HERMES_ENABLE_INTL OFF CACHE BOOL
   "Enable JS Intl support (WIP)")
 
@@ -280,11 +278,8 @@ set(HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES ON CACHE BOOL
 set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
   "Enable the test suite")
 
-set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
+set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
-
-set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
-  "Whether to build a DWARF debugging symbols bundle")
 
 set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 
@@ -302,6 +297,9 @@ set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
 # 1: JIT is enabled if supported by the platform
 # 2: JIT is enabled
 set(HERMESVM_ALLOW_JIT 0 CACHE STRING "JIT mode: 0 (off), 1 (auto) or 2 (force on)")
+
+set(HERMES_ALLOW_BOOST_CONTEXT 1 CACHE STRING
+   "Use Boost.Context fibers: 0 (off), 1 (auto) or 2 (force on)")
 
 # Used in the compiler, for various compilation statistics.
 set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
@@ -325,21 +323,12 @@ if(HERMES_CHECK_NATIVE_STACK)
   add_definitions(-DHERMES_CHECK_NATIVE_STACK)
 endif()
 
-if(HERMES_BUILD_APPLE_DSYM)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
-endif()
-
 if (HERMES_IS_MOBILE_BUILD)
   add_definitions(-DHERMES_IS_MOBILE_BUILD)
 endif()
 
 if (HERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
   add_definitions(-DHERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
-endif()
-
-# Enable debug mode by default
-if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 if (HERMES_STATIC_LINK)
@@ -535,6 +524,28 @@ if (HERMESVM_ALLOW_JIT)
   add_definitions(-DHERMESVM_ALLOW_JIT=${HERMESVM_ALLOW_JIT})
 endif ()
 
+if (HERMES_ALLOW_BOOST_CONTEXT EQUAL 0)
+    set(HERMES_USE_BOOST_CONTEXT 0)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 2)
+    set(HERMES_USE_BOOST_CONTEXT 1)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 1)
+    if (HERMES_ENABLE_ADDRESS_SANITIZER OR EMSCRIPTEN)
+        set(HERMES_USE_BOOST_CONTEXT 0)
+    else()
+        set(HERMES_USE_BOOST_CONTEXT 1)
+    endif()
+else ()
+    message(FATAL_ERROR "Invalid HERMES_ALLOW_BOOST_CONTEXT value ${HERMES_ALLOW_BOOST_CONTEXT}")
+endif ()
+# Use BOOST_CONTEXT_LIB to rever to boost_context as a dependency, regardless of
+# whether it is enabled.
+if (HERMES_USE_BOOST_CONTEXT)
+    set(BOOST_CONTEXT_LIB boost_context)
+else()
+    set(BOOST_CONTEXT_LIB )
+endif()
+add_definitions(-DHERMES_USE_BOOST_CONTEXT=${HERMES_USE_BOOST_CONTEXT})
+
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
   append("-fvisibility=hidden" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
@@ -559,7 +570,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   endif()
   # MSVC does not have strict aliasing so there is no need to support it.
   # Similar to GCC/Clang above, disable strict signed integer overflow.
-  append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  # TODO: Investigate disabling strict signed integer overflow for MSVC
+  # append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
@@ -705,7 +717,13 @@ if(HERMES_IS_ANDROID)
   find_package(fbjni REQUIRED CONFIG)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  # MSVC requires c++20, because of the use of designated initializers in the codebase.
+  set(CMAKE_CXX_STANDARD 20)
+else()
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

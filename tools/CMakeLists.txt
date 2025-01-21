@@ -21,3 +21,7 @@ add_subdirectory(node-hermes)
 add_subdirectory(shermes)
 add_subdirectory(synth)
 add_subdirectory(hcdp)
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
+  add_subdirectory(facebook)
+endif()

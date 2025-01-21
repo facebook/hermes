@@ -142,11 +142,17 @@ struct ExecuteOptions {
   /// Force JIT on all functions.
   bool forceJIT{false};
 
+  /// JIT compilation threshold.
+  uint32_t jitThreshold{1 << 5};
+
   /// Dump JIT'ed code.
   unsigned dumpJITCode{0};
 
   /// Fatally crash on any JIT compilation error.
   bool jitCrashOnError{false};
+
+  /// Emit asserts in JIT'ed code
+  bool jitEmitAsserts{false};
 
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};

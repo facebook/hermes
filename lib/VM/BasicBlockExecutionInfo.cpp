@@ -8,7 +8,9 @@
 #ifdef HERMESVM_PROFILER_BB
 
 #include "hermes/VM/BasicBlockExecutionInfo.h"
+
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/MD5.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Runtime.h"
@@ -16,6 +18,7 @@
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/Support/MD5.h"
 
+#include <deque>
 #include <string>
 
 const static int32_t BASIC_BLOCK_STAT_VERSION = 2;
@@ -36,14 +39,6 @@ void BasicBlockExecutionInfo::resizeFuncStatMap(
   funcStat.resize(pointIndex == 0 ? kMaxBlockNumbers : pointIndex + 1);
 }
 
-static llvh::MD5::MD5Result doMD5Checksum(llvh::ArrayRef<uint8_t> bytecode) {
-  llvh::MD5 md5;
-  llvh::MD5::MD5Result checksum;
-  md5.update(bytecode);
-  md5.final(checksum);
-  return checksum;
-}
-
 void BasicBlockExecutionInfo::dump(llvh::raw_ostream &OS) {
   JSONEmitter json(OS);
   json.openDict();
@@ -53,14 +48,55 @@ void BasicBlockExecutionInfo::dump(llvh::raw_ostream &OS) {
   json.emitKey("functions");
   json.openArray();
 
+  using CodeChecksumPair = std::pair<CodeBlock *, llvh::SmallString<32>>;
+  std::deque<CodeChecksumPair> codeBlocksAndMD5;
+  // We want to detect collisions.
+  llvh::DenseMap<llvh::StringRef, unsigned> checksumToIndex;
   for (const auto &funcEntry : basicBlockStats_) {
+    const llvh::SmallString checksum =
+        doMD5Checksum(
+            funcEntry.first->getFunctionID(), funcEntry.first->getOpcodeArray())
+            .digest();
+    llvh::StringRef checksumRef =
+        codeBlocksAndMD5.emplace_back(funcEntry.first, std::move(checksum))
+            .second;
+
+    auto iter = checksumToIndex.find(checksumRef);
+    if (iter != checksumToIndex.end()) {
+      hermes_fatal(
+          (std::string(
+               "There was a collision on the MD5 hashes for two functions.\n") +
+           "Checksum: " + checksum +
+           ", indexes: " + std::to_string(iter->second) + ", " +
+           std::to_string(funcEntry.first->getFunctionID()) + ".\n" +
+           "This should be extremely unlikely; it's probably a bug.\n"
+           "Results from the profile written are suspect.\n")
+              .str());
+    } else {
+      checksumToIndex[checksumRef] = funcEntry.first->getFunctionID();
+    }
+  }
+
+  // It's not necessary for correctness to sort these, but doing so
+  // makes it easier to verify that identical runs produce identical
+  // profiles.
+  std::sort(
+      codeBlocksAndMD5.begin(),
+      codeBlocksAndMD5.end(),
+      [](const CodeChecksumPair &a, const CodeChecksumPair &b) {
+        return a.second < b.second;
+      });
+
+  for (const auto &pair : codeBlocksAndMD5) {
+    CodeBlock *codeBlock = pair.first;
     json.openDict();
-    auto md5Result = doMD5Checksum(funcEntry.first->getOpcodeArray());
-    json.emitKeyValue("checksum", md5Result.digest().str());
+
+    json.emitKeyValue("checksum", pair.second);
 
     // hbcdump will be responsible to check overflow scenario(index-zero entry
     // is not empty).
-    const auto &funcStat = funcEntry.second;
+    const auto &funcStat = basicBlockStats_.at(codeBlock);
+
     json.emitKey("basic_blocks");
     uint16_t profileIndex = 0;
     json.openArray();
@@ -74,9 +110,11 @@ void BasicBlockExecutionInfo::dump(llvh::raw_ostream &OS) {
       ++profileIndex;
     }
     json.closeArray();
+
     json.closeDict();
   }
-  json.closeArray();
+  json.closeArray(); // Functions.
+
   json.closeDict();
   OS.flush();
 }

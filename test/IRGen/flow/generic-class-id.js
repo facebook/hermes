@@ -79,7 +79,7 @@ const s: string = i2.val;
 
 // CHECK:scope %VS2 [val: any]
 
-// CHECK:constructor ID(val: number): any [typed]
+// CHECK:base constructor ID(val: number): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -94,7 +94,7 @@ const s: string = i2.val;
 
 // CHECK:scope %VS3 [val: any]
 
-// CHECK:constructor "ID 1#"(val: string): any [typed]
+// CHECK:base constructor "ID 1#"(val: string): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

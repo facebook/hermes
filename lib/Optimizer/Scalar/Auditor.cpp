@@ -40,6 +40,7 @@ STATISTIC(
     CallsOther,
     "Number of call instructions: callee obtained in other ways");
 STATISTIC(Calls, "Number of call instructions of all kinds");
+STATISTIC(Functions, "Number of functions");
 
 STATISTIC(TypeUndefined, "Number of instructions with type undefined");
 STATISTIC(TypeNull, "Number of instructions with type null");
@@ -128,6 +129,8 @@ bool Auditor::runOnFunction(Function *F) {
              << F->getInternalNameStr() << "\n");
 
   auditInferredTypes(F);
+
+  Functions++;
 
   return false;
 }

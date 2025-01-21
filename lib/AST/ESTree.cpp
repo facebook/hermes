@@ -237,5 +237,30 @@ Node *getSuperClass(ClassLikeNode *node) {
   llvm_unreachable("invalid ClassLikeNode");
 }
 
+IdentifierNode *getClassID(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return llvh::dyn_cast_or_null<IdentifierNode>(
+          cast<ClassExpressionNode>(node)->_id);
+    case NodeKind::ClassDeclaration:
+      return dyn_cast<IdentifierNode>(cast<ClassDeclarationNode>(node)->_id);
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
+ClassBodyNode *getClassBody(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return cast<ClassBodyNode>(cast<ClassExpressionNode>(node)->_body);
+    case NodeKind::ClassDeclaration:
+      return cast<ClassBodyNode>(cast<ClassDeclarationNode>(node)->_body);
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
 } // namespace ESTree
 } // namespace hermes

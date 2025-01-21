@@ -43,6 +43,11 @@ static void initTest262Bindings(facebook::hermes::HermesRuntime &hrt) {
   // Define global function alert().
   auto printFunc = global.getProperty(hrt, "print");
   global.setProperty(hrt, "alert", printFunc);
+
+  // Define console.log.
+  facebook::jsi::Object consoleObj{hrt};
+  global.setProperty(hrt, "console", consoleObj);
+  consoleObj.setProperty(hrt, "log", printFunc);
 }
 
 extern "C" SHERMES_EXPORT void init_console_bindings(SHRuntime *shr) {

@@ -35,33 +35,33 @@ function fibonacci(num) {
 // CHECK-NEXT:s0[ASCII, 0..5]: global
 // CHECK-NEXT:i1[ASCII, 6..14] #85794EA3: fibonacci
 
-// CHECK:Function<global>(1 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 0<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 16] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 24] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 26] Ret 1<Reg8>
+// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 24] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 26] Ret 0<Reg8>
 
-// CHECK:Function<fibonacci>(2 params, 15 registers, 1 numbers, 1 non-pointers):
+// CHECK:Function<fibonacci>(2 params, 15 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] LoadConstUInt8 0<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 6] JLessEqual 45<Addr8>, 2<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 10] GetGlobalObject 5<Reg8>
-// CHECK-NEXT:[@ 12] GetByIdShort 3<Reg8>, 5<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 17] Sub 4<Reg8>, 2<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 21] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 23] Call2 4<Reg8>, 3<Reg8>, 1<Reg8>, 4<Reg8>
-// CHECK-NEXT:[@ 28] GetByIdShort 3<Reg8>, 5<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 33] LoadConstUInt8 5<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 36] Sub 5<Reg8>, 2<Reg8>, 5<Reg8>
-// CHECK-NEXT:[@ 40] Call2 5<Reg8>, 3<Reg8>, 1<Reg8>, 5<Reg8>
-// CHECK-NEXT:[@ 45] Add 5<Reg8>, 4<Reg8>, 5<Reg8>
-// CHECK-NEXT:[@ 49] Ret 5<Reg8>
-// CHECK-NEXT:[@ 51] Ret 0<Reg8>
+// CHECK-NEXT:[@ 0] LoadParam 5<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 3] LoadConstUInt8 1<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 6] JLessEqual 45<Addr8>, 5<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 10] GetGlobalObject 3<Reg8>
+// CHECK-NEXT:[@ 12] GetByIdShort 4<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 17] Sub 0<Reg8>, 5<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 21] LoadConstUndefined 2<Reg8>
+// CHECK-NEXT:[@ 23] Call2 4<Reg8>, 4<Reg8>, 2<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 28] GetByIdShort 3<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 33] LoadConstUInt8 0<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 36] Sub 0<Reg8>, 5<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 40] Call2 3<Reg8>, 3<Reg8>, 2<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 45] Add 3<Reg8>, 4<Reg8>, 3<Reg8>
+// CHECK-NEXT:[@ 49] Ret 3<Reg8>
+// CHECK-NEXT:[@ 51] Ret 1<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}fibonacci.js

@@ -53,6 +53,14 @@ class JITContext {
     enabled_ = enabled;
   }
 
+  /// Set the default threshold for function execution count before a function
+  /// is compiled. On a per-function basis, the count may be altered based on
+  /// internal heuristics.
+  /// Can be overridden by setForceJIT(true).
+  void setDefaultExecThreshold(uint32_t threshold) {
+    defaultExecThreshold_ = threshold;
+  }
+
   /// Enable or disable dumping JIT'ed Code.
   void setDumpJITCode(unsigned dump) {
     dumpJITCode_ = dump;
@@ -75,7 +83,17 @@ class JITContext {
 
   /// Set the flag to force jitting of all functions.
   void setForceJIT(bool force) {
-    execThreshold_ = force ? 0 : DEFAULT_EXEC_THRESHOLD;
+    forceJIT_ = force;
+  }
+
+  /// Set the flag to emit asserts in the JIT'ed code.
+  void setEmitAsserts(bool emitAsserts) {
+    emitAsserts_ = emitAsserts;
+  }
+
+  /// \return true if we should emit asserts in the JIT'ed code.
+  bool getEmitAsserts() {
+    return emitAsserts_;
   }
 
  private:
@@ -93,12 +111,15 @@ class JITContext {
   unsigned dumpJITCode_{0};
   /// whether to fatally crash on JIT compilation errors
   bool crashOnError_{false};
+  /// Whether to emit asserts in the JIT'ed code.
+  bool emitAsserts_{false};
+  /// Whether to force jitting of all functions.
+  /// If true, ignores the default exec threshold completely.
+  bool forceJIT_{false};
 
-  /// Execution threshold before a function is compiled.
-  unsigned execThreshold_ = 0;
-
-  /// The JIT default threshold for function execution count
-  static constexpr uint32_t DEFAULT_EXEC_THRESHOLD = 0;
+  /// The JIT threshold for function execution count.
+  /// Lowered based on the loop depth before deciding whether to JIT.
+  uint32_t defaultExecThreshold_ = 1 << 5;
 };
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -112,8 +133,18 @@ inline JITCompiledFunctionPtr JITContext::compile(
     return nullptr;
   if (LLVM_LIKELY(codeBlock->getDontJIT()))
     return nullptr;
-  if (LLVM_LIKELY(codeBlock->getExecutionCount() < DEFAULT_EXEC_THRESHOLD))
+
+  uint32_t loopDepth = codeBlock->getFunctionHeader().loopDepth();
+  // It's possible that if the loop depth is too high, we will set the
+  // execThreshold to 0 for this function, but that's OK because we want to JIT
+  // it immediately.
+  assert(loopDepth <= 3 && "loopDepth is larger than expected");
+  uint32_t execThreshold =
+      forceJIT_ ? 0 : (defaultExecThreshold_ >> (loopDepth * 2));
+
+  if (LLVM_LIKELY(codeBlock->getExecutionCount() < execThreshold))
     return nullptr;
+
   return compileImpl(runtime, codeBlock);
 }
 

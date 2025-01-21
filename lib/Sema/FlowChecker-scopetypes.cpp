@@ -866,8 +866,7 @@ class FlowChecker::DeclareScopeTypes {
       bool populated = outer.validateAndBindTypeParameters(
           llvh::cast<ESTree::TypeParameterDeclarationNode>(
               aliasNode->_typeParameters),
-          llvh::cast<ESTree::TypeParameterInstantiationNode>(
-              generic.annotation->_typeParameters),
+          generic.annotation->_typeParameters->getSourceRange(),
           generic.typeArgTypes,
           scope);
       if (!populated) {
@@ -903,8 +902,7 @@ class FlowChecker::DeclareScopeTypes {
     assert(typeDecl->genericClassDecl && "Expected a generic class");
     sema::Decl *newDecl = outer.specializeGenericWithParsedTypes(
         typeDecl->genericClassDecl,
-        llvh::cast<ESTree::TypeParameterInstantiationNode>(
-            generic.annotation->_typeParameters),
+        generic.annotation->_typeParameters->getSourceRange(),
         generic.typeArgTypes,
         typeDecl->genericClassDecl->scope);
 

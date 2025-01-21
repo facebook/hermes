@@ -190,6 +190,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
     compileFlags_.enableGenerator = runtimeConfig.getEnableGenerator();
     compileFlags_.enableES6Classes = runtimeConfig.getES6Class();
+    compileFlags_.enableES6BlockScoping = runtimeConfig.getES6BlockScoping();
     compileFlags_.emitAsyncBreakCheck =
         runtimeConfig.getAsyncBreakCheckInEval();
     runtime_.addCustomRootsFunction(
@@ -493,11 +494,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return ::hermes::vm::Handle<::hermes::vm::JSObject>::vmcast(&phv(obj));
   }
 
-  static ::hermes::vm::Handle<::hermes::vm::JSArray> arrayHandle(
-      const jsi::Array &arr) {
-    return ::hermes::vm::Handle<::hermes::vm::JSArray>::vmcast(&phv(arr));
-  }
-
   static ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer> arrayBufferHandle(
       const jsi::ArrayBuffer &arr) {
     return ::hermes::vm::Handle<::hermes::vm::JSArrayBuffer>::vmcast(&phv(arr));
@@ -626,12 +622,26 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
   std::string utf8(const jsi::String &) override;
 
+  std::u16string utf16(const jsi::String &str) override;
+  std::u16string utf16(const jsi::PropNameID &sym) override;
+
+  void getStringData(
+      const jsi::String &str,
+      void *ctx,
+      void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) override;
+
+  void getPropNameIdData(
+      const jsi::PropNameID &sym,
+      void *ctx,
+      void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) override;
+
   jsi::Value createValueFromJsonUtf8(const uint8_t *json, size_t length)
       override;
 
   jsi::Object createObject() override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
   std::shared_ptr<jsi::HostObject> getHostObject(const jsi::Object &) override;
+  jsi::Object createObjectWithPrototype(const jsi::Value &prototype) override;
   jsi::HostFunctionType &getHostFunction(const jsi::Function &) override;
   bool hasNativeState(const jsi::Object &) override;
   std::shared_ptr<jsi::NativeState> getNativeState(
@@ -658,6 +668,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   bool isHostObject(const jsi::Object &) const override;
   bool isHostFunction(const jsi::Function &) const override;
   jsi::Array getPropertyNames(const jsi::Object &) override;
+
+  void setPrototypeOf(const jsi::Object &object, const jsi::Value &prototype)
+      override;
+  jsi::Value getPrototypeOf(const jsi::Object &object) override;
 
   jsi::WeakObject createWeakObject(const jsi::Object &) override;
   jsi::Value lockWeakObject(const jsi::WeakObject &) override;
@@ -927,7 +941,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       return value_;
     }
 
-    void invalidate() override {
+    void invalidate() noexcept override {
 #ifdef ASSERT_ON_DANGLING_VM_REFS
       assert(
           ((1u << 31) & refCount_) == 0 &&
@@ -936,7 +950,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       dec();
     }
 
-    void inc() {
+    void inc() noexcept {
       // It is always safe to use relaxed operations for incrementing the
       // reference count, because the only operation that may occur concurrently
       // with it is decrementing the reference count, and we do not need to
@@ -947,7 +961,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       (void)oldCount;
     }
 
-    void dec() {
+    void dec() noexcept {
       // It is safe to use relaxed operations here because decrementing the
       // reference count is the only access that may be performed without proper
       // synchronisation. As a result, the only ordering we need to enforce when
@@ -1836,6 +1850,56 @@ std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
       vm::StringPrimitive::createStringView(runtime_, stringHandle(str)));
 }
 
+std::u16string HermesRuntimeImpl::utf16(const jsi::String &str) {
+  auto *stringPrim = phv(str).getString();
+  if (stringPrim->isASCII()) {
+    auto arrayRef = stringPrim->getStringRef<char>();
+    return std::u16string(arrayRef.begin(), arrayRef.end());
+  }
+  auto arrayRef = stringPrim->getStringRef<char16_t>();
+  return std::u16string(arrayRef.data(), arrayRef.size());
+}
+
+std::u16string HermesRuntimeImpl::utf16(const jsi::PropNameID &sym) {
+  vm::SymbolID id = phv(sym).getSymbol();
+  auto *stringPrim = runtime_.getStringPrimFromSymbolID(id);
+  if (stringPrim->isASCII()) {
+    auto arrayRef = stringPrim->getStringRef<char>();
+    return std::u16string(arrayRef.begin(), arrayRef.end());
+  }
+  auto arrayRef = stringPrim->getStringRef<char16_t>();
+  return std::u16string(arrayRef.data(), arrayRef.size());
+}
+
+void HermesRuntimeImpl::getStringData(
+    const jsi::String &str,
+    void *ctx,
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) {
+  auto *stringPrim = phv(str).getString();
+  if (stringPrim->isASCII()) {
+    auto arrayRef = stringPrim->getStringRef<char>();
+    cb(ctx, true, arrayRef.data(), arrayRef.size());
+  } else {
+    auto arrayRef = stringPrim->getStringRef<char16_t>();
+    cb(ctx, false, arrayRef.data(), arrayRef.size());
+  }
+}
+
+void HermesRuntimeImpl::getPropNameIdData(
+    const jsi::PropNameID &sym,
+    void *ctx,
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) {
+  vm::SymbolID id = phv(sym).getSymbol();
+  auto *stringPrim = runtime_.getStringPrimFromSymbolID(id);
+  if (stringPrim->isASCII()) {
+    auto arrayRef = stringPrim->getStringRef<char>();
+    cb(ctx, true, arrayRef.data(), arrayRef.size());
+  } else {
+    auto arrayRef = stringPrim->getStringRef<char16_t>();
+    cb(ctx, false, arrayRef.data(), arrayRef.size());
+  }
+}
+
 jsi::Value HermesRuntimeImpl::createValueFromJsonUtf8(
     const uint8_t *json,
     size_t length) {
@@ -1860,6 +1924,19 @@ jsi::Object HermesRuntimeImpl::createObject(
       runtime_, std::make_unique<JsiProxy>(*this, ho));
   checkStatus(objRes.getStatus());
   return add<jsi::Object>(*objRes);
+}
+
+jsi::Object HermesRuntimeImpl::createObjectWithPrototype(
+    const jsi::Value &prototype) {
+  if (!prototype.isObject() && !prototype.isNull()) {
+    throw jsi::JSError(
+        *this, "Object prototype argument must be an Object or null");
+  }
+
+  auto object = vm::JSObject::create(
+      runtime_,
+      vm::Handle<vm::JSObject>::dyn_vmcast(vmHandleFromValue(prototype)));
+  return add<jsi::Object>(object.getHermesValue());
 }
 
 std::shared_ptr<jsi::HostObject> HermesRuntimeImpl::getHostObject(
@@ -2010,6 +2087,32 @@ void HermesRuntimeImpl::setExternalMemoryPressure(
   ns->setContext(reinterpret_cast<void *>(amt));
 }
 
+void HermesRuntimeImpl::setPrototypeOf(
+    const jsi::Object &object,
+    const jsi::Value &prototype) {
+  if (!prototype.isObject() && !prototype.isNull()) {
+    throw jsi::JSError(
+        *this, "Object prototype argument must be an Object or null");
+  }
+
+  auto cr = vm::JSObject::setParent(
+      vm::vmcast<vm::JSObject>(phv(object)),
+      runtime_,
+      vm::dyn_vmcast<vm::JSObject>(hvFromValue(prototype)),
+      vm::PropOpFlags().plusThrowOnError());
+  checkStatus(cr.getStatus());
+}
+
+jsi::Value HermesRuntimeImpl::getPrototypeOf(const jsi::Object &object) {
+  vm::CallResult<vm::PseudoHandle<vm::JSObject>> cr =
+      vm::JSObject::getPrototypeOf(handle(object), runtime_);
+  checkStatus(cr.getStatus());
+  if (!*cr) {
+    return jsi::Value::null();
+  }
+  return valueFromHermesValue(cr->getHermesValue());
+}
+
 jsi::Value HermesRuntimeImpl::getProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
@@ -2084,7 +2187,12 @@ void HermesRuntimeImpl::setPropertyValue(
 }
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {
-  return vm::vmisa<vm::JSArray>(phv(obj));
+  if (vm::vmisa<vm::JSArray>(phv(obj))) {
+    return true;
+  }
+  auto cr = vm::isArray(runtime_, vm::vmcast<vm::JSObject>(phv(obj)));
+  const_cast<HermesRuntimeImpl *>(this)->checkStatus(cr.getStatus());
+  return *cr;
 }
 
 bool HermesRuntimeImpl::isArrayBuffer(const jsi::Object &obj) const {
@@ -2115,13 +2223,24 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
 
   auto ret = createArray(length);
   for (size_t i = 0; i < length; ++i) {
-    vm::HermesValue name = arr->at(runtime_, beginIndex + i);
-    if (name.isString()) {
-      ret.setValueAtIndex(*this, i, valueFromHermesValue(name));
-    } else if (name.isNumber()) {
+    vm::PseudoHandle<> name =
+        vm::createPseudoHandle(arr->at(runtime_, beginIndex + i));
+    if (name->isString()) {
+      ret.setValueAtIndex(
+          *this, i, valueFromHermesValue(name.getHermesValue()));
+    } else if (name->isSymbol()) {
+      // May allocate. 'name' must not be used afterwards.
+      vm::StringPrimitive *str =
+          runtime_.getStringPrimFromSymbolID(name->getSymbol());
+      name.invalidate();
+      ret.setValueAtIndex(
+          *this,
+          i,
+          valueFromHermesValue(vm::HermesValue::encodeStringValue(str)));
+    } else if (name->isNumber()) {
       std::string s;
       llvh::raw_string_ostream os(s);
-      os << static_cast<size_t>(name.getNumber());
+      os << static_cast<size_t>(name->getNumber());
       ret.setValueAtIndex(
           *this, i, jsi::String::createFromAscii(*this, os.str()));
     } else {
@@ -2172,7 +2291,26 @@ jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
 }
 
 size_t HermesRuntimeImpl::size(const jsi::Array &arr) {
-  return vm::JSArray::getLength(*arrayHandle(arr), runtime_);
+  if (LLVM_LIKELY(vm::vmisa<vm::JSArray>(phv(arr)))) {
+    return vm::JSArray::getLength(vm::vmcast<vm::JSArray>(phv(arr)), runtime_);
+  }
+
+  vm::GCScope gcScope(runtime_);
+  struct : vm::Locals {
+    vm::PinnedValue<> lenProp;
+  } lv;
+  vm::LocalsRAII lraii{runtime_, &lv};
+  auto cr = vm::JSObject::getNamed_RJS(
+      handle(arr),
+      runtime_,
+      vm::Predefined::getSymbolID(vm::Predefined::length));
+  checkStatus(cr.getStatus());
+
+  lv.lenProp = std::move(*cr);
+  auto lenRes = toLength(runtime_, lv.lenProp);
+  checkStatus(lenRes.getStatus());
+
+  return lenRes->getNumber();
 }
 
 size_t HermesRuntimeImpl::size(const jsi::ArrayBuffer &arr) {
@@ -2197,7 +2335,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
   }
 
   auto res = vm::JSObject::getComputed_RJS(
-      arrayHandle(arr),
+      handle(arr),
       runtime_,
       runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)));
   checkStatus(res.getStatus());
@@ -2216,7 +2354,7 @@ void HermesRuntimeImpl::setValueAtIndexImpl(
   }
 
   auto res = vm::JSObject::putComputed_RJS(
-      arrayHandle(arr),
+      handle(arr),
       runtime_,
       runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)),
       vmHandleFromValue(value));

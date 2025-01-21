@@ -126,6 +126,22 @@ import type {
   KeyofTypeAnnotation as KeyofTypeAnnotationType,
   LabeledStatement as LabeledStatementType,
   LogicalExpression as LogicalExpressionType,
+  MatchArrayPattern as MatchArrayPatternType,
+  MatchAsPattern as MatchAsPatternType,
+  MatchBindingPattern as MatchBindingPatternType,
+  MatchExpression as MatchExpressionType,
+  MatchExpressionCase as MatchExpressionCaseType,
+  MatchIdentifierPattern as MatchIdentifierPatternType,
+  MatchLiteralPattern as MatchLiteralPatternType,
+  MatchMemberPattern as MatchMemberPatternType,
+  MatchObjectPattern as MatchObjectPatternType,
+  MatchObjectPatternProperty as MatchObjectPatternPropertyType,
+  MatchOrPattern as MatchOrPatternType,
+  MatchRestPattern as MatchRestPatternType,
+  MatchStatement as MatchStatementType,
+  MatchStatementCase as MatchStatementCaseType,
+  MatchUnaryPattern as MatchUnaryPatternType,
+  MatchWildcardPattern as MatchWildcardPatternType,
   MetaProperty as MetaPropertyType,
   MethodDefinition as MethodDefinitionType,
   MixedTypeAnnotation as MixedTypeAnnotationType,
@@ -153,6 +169,7 @@ import type {
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
   SpreadElement as SpreadElementType,
+  StaticBlock as StaticBlockType,
   StringLiteralTypeAnnotation as StringLiteralTypeAnnotationType,
   StringTypeAnnotation as StringTypeAnnotationType,
   Super as SuperType,
@@ -808,6 +825,92 @@ export type LogicalExpressionProps = {
   +operator: LogicalExpressionType['operator'],
 };
 
+export type MatchArrayPatternProps = {
+  +elements: $ReadOnlyArray<
+    MaybeDetachedNode<MatchArrayPatternType['elements'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<MatchArrayPatternType['rest']>,
+};
+
+export type MatchAsPatternProps = {
+  +pattern: MaybeDetachedNode<MatchAsPatternType['pattern']>,
+  +target: MaybeDetachedNode<MatchAsPatternType['target']>,
+};
+
+export type MatchBindingPatternProps = {
+  +id: MaybeDetachedNode<MatchBindingPatternType['id']>,
+  +kind: MatchBindingPatternType['kind'],
+};
+
+export type MatchExpressionProps = {
+  +argument: MaybeDetachedNode<MatchExpressionType['argument']>,
+  +cases: $ReadOnlyArray<
+    MaybeDetachedNode<MatchExpressionType['cases'][number]>,
+  >,
+};
+
+export type MatchExpressionCaseProps = {
+  +pattern: MaybeDetachedNode<MatchExpressionCaseType['pattern']>,
+  +body: MaybeDetachedNode<MatchExpressionCaseType['body']>,
+  +guard?: ?MaybeDetachedNode<MatchExpressionCaseType['guard']>,
+};
+
+export type MatchIdentifierPatternProps = {
+  +id: MaybeDetachedNode<MatchIdentifierPatternType['id']>,
+};
+
+export type MatchLiteralPatternProps = {
+  +literal: MaybeDetachedNode<MatchLiteralPatternType['literal']>,
+};
+
+export type MatchMemberPatternProps = {
+  +base: MaybeDetachedNode<MatchMemberPatternType['base']>,
+  +property: MaybeDetachedNode<MatchMemberPatternType['property']>,
+};
+
+export type MatchObjectPatternProps = {
+  +properties: $ReadOnlyArray<
+    MaybeDetachedNode<MatchObjectPatternType['properties'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<MatchObjectPatternType['rest']>,
+};
+
+export type MatchObjectPatternPropertyProps = {
+  +key: MaybeDetachedNode<MatchObjectPatternPropertyType['key']>,
+  +pattern: MaybeDetachedNode<MatchObjectPatternPropertyType['pattern']>,
+  +shorthand: MatchObjectPatternPropertyType['shorthand'],
+};
+
+export type MatchOrPatternProps = {
+  +patterns: $ReadOnlyArray<
+    MaybeDetachedNode<MatchOrPatternType['patterns'][number]>,
+  >,
+};
+
+export type MatchRestPatternProps = {
+  +argument?: ?MaybeDetachedNode<MatchRestPatternType['argument']>,
+};
+
+export type MatchStatementProps = {
+  +argument: MaybeDetachedNode<MatchStatementType['argument']>,
+  +cases: $ReadOnlyArray<
+    MaybeDetachedNode<MatchStatementType['cases'][number]>,
+  >,
+};
+
+export type MatchStatementCaseProps = {
+  +pattern: MaybeDetachedNode<MatchStatementCaseType['pattern']>,
+  +body: MaybeDetachedNode<MatchStatementCaseType['body']>,
+  +guard?: ?MaybeDetachedNode<MatchStatementCaseType['guard']>,
+};
+
+export type MatchUnaryPatternProps = {
+  +argument: MaybeDetachedNode<MatchUnaryPatternType['argument']>,
+  +operator: MatchUnaryPatternType['operator'],
+};
+
+export type MatchWildcardPatternProps = {};
+
 export type MetaPropertyProps = {
   +meta: MaybeDetachedNode<MetaPropertyType['meta']>,
   +property: MaybeDetachedNode<MetaPropertyType['property']>,
@@ -982,6 +1085,10 @@ export type SpreadElementProps = {
   +argument: MaybeDetachedNode<SpreadElementType['argument']>,
 };
 
+export type StaticBlockProps = {
+  +body: $ReadOnlyArray<MaybeDetachedNode<StaticBlockType['body'][number]>>,
+};
+
 export type StringLiteralTypeAnnotationProps = {
   +value: StringLiteralTypeAnnotationType['value'],
   +raw: StringLiteralTypeAnnotationType['raw'],
@@ -1085,6 +1192,7 @@ export type TypeOperatorProps = {
 
 export type TypeParameterProps = {
   +name: TypeParameterType['name'],
+  +const: TypeParameterType['const'],
   +bound?: ?MaybeDetachedNode<TypeParameterType['bound']>,
   +variance?: ?MaybeDetachedNode<TypeParameterType['variance']>,
   +default?: ?MaybeDetachedNode<TypeParameterType['default']>,
@@ -2646,6 +2754,240 @@ export function LogicalExpression(props: {
   return node;
 }
 
+export function MatchArrayPattern(props: {
+  ...MatchArrayPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchArrayPatternType> {
+  const node = detachedProps<MatchArrayPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchArrayPattern',
+      elements: props.elements.map(n => asDetachedNodeForCodeGen(n)),
+      rest: asDetachedNodeForCodeGen(props.rest),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchAsPattern(props: {
+  ...MatchAsPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchAsPatternType> {
+  const node = detachedProps<MatchAsPatternType>((props.parent: $FlowFixMe), {
+    type: 'MatchAsPattern',
+    pattern: asDetachedNodeForCodeGen(props.pattern),
+    target: asDetachedNodeForCodeGen(props.target),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchBindingPattern(props: {
+  ...MatchBindingPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchBindingPatternType> {
+  const node = detachedProps<MatchBindingPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchBindingPattern',
+      id: asDetachedNodeForCodeGen(props.id),
+      kind: props.kind,
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchExpression(props: {
+  ...MatchExpressionProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchExpressionType> {
+  const node = detachedProps<MatchExpressionType>((props.parent: $FlowFixMe), {
+    type: 'MatchExpression',
+    argument: asDetachedNodeForCodeGen(props.argument),
+    cases: props.cases.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchExpressionCase(props: {
+  ...MatchExpressionCaseProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchExpressionCaseType> {
+  const node = detachedProps<MatchExpressionCaseType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchExpressionCase',
+      pattern: asDetachedNodeForCodeGen(props.pattern),
+      body: asDetachedNodeForCodeGen(props.body),
+      guard: asDetachedNodeForCodeGen(props.guard),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchIdentifierPattern(props: {
+  ...MatchIdentifierPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchIdentifierPatternType> {
+  const node = detachedProps<MatchIdentifierPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchIdentifierPattern',
+      id: asDetachedNodeForCodeGen(props.id),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchLiteralPattern(props: {
+  ...MatchLiteralPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchLiteralPatternType> {
+  const node = detachedProps<MatchLiteralPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchLiteralPattern',
+      literal: asDetachedNodeForCodeGen(props.literal),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchMemberPattern(props: {
+  ...MatchMemberPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchMemberPatternType> {
+  const node = detachedProps<MatchMemberPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchMemberPattern',
+      base: asDetachedNodeForCodeGen(props.base),
+      property: asDetachedNodeForCodeGen(props.property),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchObjectPattern(props: {
+  ...MatchObjectPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchObjectPatternType> {
+  const node = detachedProps<MatchObjectPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchObjectPattern',
+      properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
+      rest: asDetachedNodeForCodeGen(props.rest),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchObjectPatternProperty(props: {
+  ...MatchObjectPatternPropertyProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchObjectPatternPropertyType> {
+  const node = detachedProps<MatchObjectPatternPropertyType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchObjectPatternProperty',
+      key: asDetachedNodeForCodeGen(props.key),
+      pattern: asDetachedNodeForCodeGen(props.pattern),
+      shorthand: props.shorthand,
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchOrPattern(props: {
+  ...MatchOrPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchOrPatternType> {
+  const node = detachedProps<MatchOrPatternType>((props.parent: $FlowFixMe), {
+    type: 'MatchOrPattern',
+    patterns: props.patterns.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchRestPattern(props: {
+  ...MatchRestPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchRestPatternType> {
+  const node = detachedProps<MatchRestPatternType>((props.parent: $FlowFixMe), {
+    type: 'MatchRestPattern',
+    argument: asDetachedNodeForCodeGen(props.argument),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchStatement(props: {
+  ...MatchStatementProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchStatementType> {
+  const node = detachedProps<MatchStatementType>((props.parent: $FlowFixMe), {
+    type: 'MatchStatement',
+    argument: asDetachedNodeForCodeGen(props.argument),
+    cases: props.cases.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchStatementCase(props: {
+  ...MatchStatementCaseProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchStatementCaseType> {
+  const node = detachedProps<MatchStatementCaseType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchStatementCase',
+      pattern: asDetachedNodeForCodeGen(props.pattern),
+      body: asDetachedNodeForCodeGen(props.body),
+      guard: asDetachedNodeForCodeGen(props.guard),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchUnaryPattern(props: {
+  ...MatchUnaryPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchUnaryPatternType> {
+  const node = detachedProps<MatchUnaryPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchUnaryPattern',
+      argument: asDetachedNodeForCodeGen(props.argument),
+      operator: props.operator,
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchWildcardPattern(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<MatchWildcardPatternType> {
+  return detachedProps<MatchWildcardPatternType>((props.parent: $FlowFixMe), {
+    type: 'MatchWildcardPattern',
+  });
+}
+
 export function MetaProperty(props: {
   ...MetaPropertyProps,
   +parent?: ESNode,
@@ -3057,6 +3399,18 @@ export function SpreadElement(props: {
   return node;
 }
 
+export function StaticBlock(props: {
+  ...StaticBlockProps,
+  +parent?: ESNode,
+}): DetachedNode<StaticBlockType> {
+  const node = detachedProps<StaticBlockType>((props.parent: $FlowFixMe), {
+    type: 'StaticBlock',
+    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
 export function StringLiteralTypeAnnotation(props: {
   ...StringLiteralTypeAnnotationProps,
   +parent?: ESNode,
@@ -3332,6 +3686,7 @@ export function TypeParameter(props: {
   const node = detachedProps<TypeParameterType>((props.parent: $FlowFixMe), {
     type: 'TypeParameter',
     name: props.name,
+    const: props.const,
     bound: asDetachedNodeForCodeGen(props.bound),
     variance: asDetachedNodeForCodeGen(props.variance),
     default: asDetachedNodeForCodeGen(props.default),

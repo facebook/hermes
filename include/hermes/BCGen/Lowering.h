@@ -82,10 +82,10 @@ class LowerCalls : public FunctionPass {
 };
 
 // Limits the size of a function's array buffer by creating a
-// StoreOwnPropertyInst for each element in an AllocArray once it reaches
+// DefineOwnPropertyInst for each element in an AllocArray once it reaches
 // maxSize_ elements, since bytecode instructions can only represent up to
 // a certain sized array.
-// Also creates a StoreOwnPropertyInst for any `undefined` literal in an
+// Also creates a DefineOwnPropertyInst for any `undefined` literal in an
 // AllocArray, and all literals past it, since undefined cannot be added
 // to the array buffer.
 class LimitAllocArray : public FunctionPass {

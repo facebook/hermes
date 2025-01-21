@@ -63,6 +63,9 @@ class ScopedFunctionPromoter {
   void visit(WithStatementNode *node) {
     visitScope(node);
   }
+  void visit(CatchClauseNode *node) {
+    visitScope(node);
+  }
 
   /// Needed by RecursiveVisitorDispatch. Optionally can protect against too
   /// deep nesting.
@@ -143,7 +146,7 @@ void ScopedFunctionPromoter::visitScope(Node *node) {
 }
 
 void ScopedFunctionPromoter::processParameters(FunctionLikeNode *funcNode) {
-  for (Decl *decl : funcNode->getSemInfo()->getFunctionScope()->decls) {
+  for (Decl *decl : funcNode->getSemInfo()->getParameterScope()->decls) {
     if (decl->kind == Decl::Kind::Parameter) {
       UniqueString *name = decl->name.getUnderlyingPointer();
       if (funcNames_.count(name)) {
@@ -196,8 +199,10 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
     idents.clear();
     Decl::Kind declKind = extractDeclaredIdents(node, idents);
 
-    // We are only interested in let-like declarations.
-    if (!Decl::isKindLetLike(declKind))
+    // We are only interested in let-like declarations, but not ES5Catch.
+    // ES5Catch doesn't conflict with Var declarations.
+    // See ES14.0 B.3.4.
+    if (!Decl::isKindLetLike(declKind) || declKind == Decl::Kind::ES5Catch)
       continue;
 
     // Remember only idents matching the set.
@@ -255,6 +260,16 @@ Decl::Kind ScopedFunctionPromoter::extractDeclaredIdents(
   if (auto *cd = llvh::dyn_cast<ClassDeclarationNode>(node)) {
     resolver_.extractDeclaredIdentsFromID(cd->_id, idents);
     return Decl::Kind::Class;
+  }
+
+  if (auto *catchClause = llvh::dyn_cast<CatchClauseNode>(node)) {
+    resolver_.extractDeclaredIdentsFromID(catchClause->_param, idents);
+    if (auto *id =
+            llvh::dyn_cast_or_null<IdentifierNode>(catchClause->_param)) {
+      return Decl::Kind::ES5Catch;
+    } else {
+      return Decl::Kind::Catch;
+    }
   }
 
   {

@@ -38,30 +38,36 @@ class Bar2 extends Foo {
 // CHECK-NEXT:        Decl %d.1 'Foo' Class
 // CHECK-NEXT:        Decl %d.2 'Bar' Class
 // CHECK-NEXT:        Decl %d.3 'Bar2' Class
-// CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:    Func strict
+// CHECK-NEXT:            Decl %d.4 'Foo' ClassExprName
 // CHECK-NEXT:        Scope %s.3
-// CHECK-NEXT:            Decl %d.4 'f' Var
-// CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Decl %d.5 'Bar' ClassExprName
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:            Decl %d.6 'Bar2' ClassExprName
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.5
-// CHECK-NEXT:            Decl %d.6 'f0' Var
-// CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.6
+// CHECK-NEXT:            Decl %d.7 'f' Var
+// CHECK-NEXT:            Decl %d.8 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:                Decl %d.8 'f1' Var
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.8
+// CHECK-NEXT:            Decl %d.9 'f0' Var
+// CHECK-NEXT:            Decl %d.10 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:                Decl %d.11 'f1' Var
 // CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.7
+// CHECK-NEXT:                Scope %s.10
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    ClassDeclaration
-// CHECK-NEXT:        Id 'Foo' [D:E:%d.1 'Foo']
+// CHECK-NEXT:    ClassDeclaration Scope %s.2
+// CHECK-NEXT:        Id 'Foo' [D:%d.1 E:%d.4 'Foo']
 // CHECK-NEXT:        ClassBody
-// CHECK-NEXT:    ClassDeclaration
-// CHECK-NEXT:        Id 'Bar' [D:E:%d.2 'Bar']
+// CHECK-NEXT:    ClassDeclaration Scope %s.3
+// CHECK-NEXT:        Id 'Bar' [D:%d.2 E:%d.5 'Bar']
 // CHECK-NEXT:        Id 'Foo' [D:E:%d.1 'Foo']
 // CHECK-NEXT:        ClassBody
 // CHECK-NEXT:            MethodDefinition
@@ -75,12 +81,12 @@ class Bar2 extends Foo {
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression
 // CHECK-NEXT:                                                Super
-// CHECK-NEXT:                                Id 'f' [D:E:%d.4 'f']
+// CHECK-NEXT:                                Id 'f' [D:E:%d.7 'f']
 // CHECK-NEXT:                        ExpressionStatement
 // CHECK-NEXT:                            CallExpression
-// CHECK-NEXT:                                Id 'f' [D:E:%d.4 'f']
-// CHECK-NEXT:    ClassDeclaration
-// CHECK-NEXT:        Id 'Bar2' [D:E:%d.3 'Bar2']
+// CHECK-NEXT:                                Id 'f' [D:E:%d.7 'f']
+// CHECK-NEXT:    ClassDeclaration Scope %s.4
+// CHECK-NEXT:        Id 'Bar2' [D:%d.3 E:%d.6 'Bar2']
 // CHECK-NEXT:        Id 'Foo' [D:E:%d.1 'Foo']
 // CHECK-NEXT:        ClassBody
 // CHECK-NEXT:            MethodDefinition
@@ -98,11 +104,11 @@ class Bar2 extends Foo {
 // CHECK-NEXT:                                                        ExpressionStatement
 // CHECK-NEXT:                                                            CallExpression
 // CHECK-NEXT:                                                                Super
-// CHECK-NEXT:                                                Id 'f1' [D:E:%d.8 'f1']
+// CHECK-NEXT:                                                Id 'f1' [D:E:%d.11 'f1']
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression
-// CHECK-NEXT:                                                Id 'f1' [D:E:%d.8 'f1']
-// CHECK-NEXT:                                Id 'f0' [D:E:%d.6 'f0']
+// CHECK-NEXT:                                                Id 'f1' [D:E:%d.11 'f1']
+// CHECK-NEXT:                                Id 'f0' [D:E:%d.9 'f0']
 // CHECK-NEXT:                        ExpressionStatement
 // CHECK-NEXT:                            CallExpression
-// CHECK-NEXT:                                Id 'f0' [D:E:%d.6 'f0']
+// CHECK-NEXT:                                Id 'f0' [D:E:%d.9 'f0']

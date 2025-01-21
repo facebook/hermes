@@ -68,6 +68,29 @@ bool compileJS(
     std::string &bytecode,
     bool optimize = true);
 
+/// Options for overload of compileJS that accepts CompileJSOptions.
+struct CompileJSOptions {
+  /// If true, the bytecode will be optimized.
+  bool optimize{true};
+  /// Maximum number of instructions (in addition to parameter handling)
+  /// that is allowed for inlining of small functions.
+  unsigned inlineMaxSize{1};
+  /// If true, the bytecode will be interruptable.
+  bool emitAsyncBreakCheck{false};
+  /// If true, debugging information will be generated in the bytecode.
+  bool debug{false};
+};
+
+/// Like the other compileJS overloads, but takes a struct of options with some
+/// additional configurability.
+bool compileJS(
+    const std::string &str,
+    const std::string &sourceURL,
+    std::string &bytecode,
+    const CompileJSOptions &options,
+    DiagnosticHandler *diagHandler,
+    std::optional<std::string_view> sourceMapBuf = std::nullopt);
+
 } // namespace hermes
 
 #endif

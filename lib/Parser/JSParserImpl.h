@@ -215,11 +215,6 @@ class JSParserImpl {
   /// so we can recover directive nodes back in the lazyParse pass.
   llvh::SmallVector<UniqueString *, 1> seenDirectives_{};
 
-  /// Whether we're currently parsing formal parameters of a function.
-  /// Saved/restored by parseFormalParameters.
-  /// Used to control lazy compilation, which is disabled in parameters.
-  bool isFormalParams_ = false;
-
   /// Whether the current function is an arrow function.
   /// Only set/restored by SaveFunctionState when entering/exiting a new
   /// function.
@@ -337,6 +332,9 @@ class JSParserImpl {
   UniqueString *rendersIdent_;
   UniqueString *rendersMaybeOperator_;
   UniqueString *rendersStarOperator_;
+
+  UniqueString *matchIdent_;
+  UniqueString *underscoreIdent_;
 #endif
 
 #if HERMES_PARSE_TS
@@ -933,6 +931,11 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseNewExpressionOrOptionalExpression(
       IsConstructorCall isConstructorCall);
   Optional<ESTree::Node *> parseLeftHandSideExpression();
+  /// Parse the remainder of a LHS expression after parsing a "new or optional
+  /// expression". Includes parsing the type args and call args.
+  Optional<ESTree::Node *> parseLeftHandSideExpressionTail(
+      SMLoc startLoc,
+      ESTree::Node *expr);
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();
 
@@ -975,6 +978,17 @@ class JSParserImpl {
       ClassParseKind kind);
 
   Optional<ESTree::ClassBodyNode *> parseClassBody(SMLoc startLoc);
+
+  /// Inner loop of parsing the class body.
+  /// \param body is the output list of class element nodes.
+  /// \param[in/out] constructor is the constructor node that has been parsed
+  ///  already, or nullptr if there's none.
+  /// \param eagerly force non-lazy parsing.
+  /// \return false if there was an error.
+  bool parseClassBodyImpl(
+      ESTree::NodeList &body,
+      ESTree::Node *&constructor,
+      bool eagerly);
 
   Optional<ESTree::Node *> parseClassElement(
       bool isStatic,
@@ -1225,6 +1239,41 @@ class JSParserImpl {
       ESTree::NodeList &paramList);
   Optional<ESTree::Node *> parseComponentTypeRestParameterFlow(Param param);
   Optional<ESTree::Node *> parseComponentTypeParameterFlow(Param param);
+
+  /// Checks if we are *maybe* at the start of a Flow match expression or
+  /// statement: `match` [no LineTerminator here]  `(`
+  bool checkMaybeFlowMatch() {
+    if (!check(matchIdent_))
+      return false;
+    return checkMaybeFlowMatchSlowPath();
+  }
+  bool checkMaybeFlowMatchSlowPath();
+  /// Validate and process an argument list into a sequence expression for
+  /// use as the argument to a match statement or expression.
+  ESTree::Node *reparseArgumentsAsMatchArgumentFlow(
+      SMRange range,
+      ESTree::NodeList &&argList);
+  /// Attempt to parse a 'match' statement. Rollback if not successful.
+  /// \pre `checkMaybeFlowMatch()` is true, meaning the current token and
+  /// following token are: `match` [no LineTerminator here]  `(`
+  /// \return nullptr if there was no error but attempting to parse the match
+  /// statement is not possible as `match` followed by Arguments, `match (...)`,
+  /// was not followed by a curly brace: [no LineTerminator here]  `{`.
+  /// None on error.
+  Optional<ESTree::Node *> tryParseMatchStatementFlow(Param param);
+  /// Parse either a 'match' expression, or a call to an identifier
+  /// of the name 'match'.
+  Optional<ESTree::Node *> parseMatchCallOrMatchExpressionFlow();
+  Optional<ESTree::Node *> parseMatchExpressionFlow(
+      SMLoc start,
+      ESTree::Node *argument);
+  Optional<ESTree::Node *> parseMatchPatternFlow();
+  Optional<ESTree::Node *> parseMatchSubpatternFlow();
+  Optional<ESTree::IdentifierNode *> parseMatchBindingIdentifierFlow();
+  Optional<ESTree::MatchBindingPatternNode *> parseMatchBindingPatternFlow();
+  Optional<ESTree::Node *> parseMatchRestPatternFlow();
+  Optional<ESTree::Node *> parseMatchObjectPatternFlow();
+  Optional<ESTree::Node *> parseMatchArrayPatternFlow();
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);

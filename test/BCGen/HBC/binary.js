@@ -57,48 +57,48 @@ function foo() { return; }
 // CHECK-NEXT:i1[ASCII, 6..11] #A5D4F6F9: binary
 // CHECK-NEXT:i2[ASCII, 12..14] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r2, 0
+// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "binary"
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    CreateClosure     r0, r2, Function<binary>
-// CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "binary"
-// CHECK-NEXT:    CreateClosure     r2, r2, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 2, "foo"
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<binary>
+// CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "binary"
+// CHECK-NEXT:    CreateClosure     r1, r1, Function<foo>
+// CHECK-NEXT:    PutByIdLoose      r3, r1, 2, "foo"
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<binary>(1 params, 11 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<binary>(1 params, 13 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r1, r2, 1, "foo"
-// CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call1             r1, r1, r0
+// CHECK-NEXT:    GetByIdShort      r3, r2, 1, "foo"
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    Call1             r3, r3, r1
 // CHECK-NEXT:    GetByIdShort      r2, r2, 1, "foo"
-// CHECK-NEXT:    Call1             r2, r2, r0
-// CHECK-NEXT:    Eq                r0, r1, r2
-// CHECK-NEXT:    Neq               r0, r1, r2
-// CHECK-NEXT:    Neq               r0, r1, r2
-// CHECK-NEXT:    Less              r0, r1, r2
-// CHECK-NEXT:    LessEq            r0, r1, r2
-// CHECK-NEXT:    Greater           r0, r1, r2
-// CHECK-NEXT:    GreaterEq         r0, r1, r2
-// CHECK-NEXT:    LShift            r0, r1, r2
-// CHECK-NEXT:    RShift            r0, r1, r2
-// CHECK-NEXT:    URshift           r0, r1, r2
-// CHECK-NEXT:    Add               r0, r1, r2
-// CHECK-NEXT:    Sub               r0, r1, r2
-// CHECK-NEXT:    Mul               r0, r1, r2
-// CHECK-NEXT:    Div               r0, r1, r2
-// CHECK-NEXT:    Mod               r0, r1, r2
-// CHECK-NEXT:    BitOr             r0, r1, r2
-// CHECK-NEXT:    BitXor            r0, r1, r2
-// CHECK-NEXT:    BitAnd            r0, r1, r2
-// CHECK-NEXT:    IsIn              r0, r1, r2
-// CHECK-NEXT:    StrictNeq         r2, r1, r2
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    Call1             r2, r2, r1
+// CHECK-NEXT:    Eq                r1, r3, r2
+// CHECK-NEXT:    Neq               r1, r3, r2
+// CHECK-NEXT:    Neq               r1, r3, r2
+// CHECK-NEXT:    Less              r1, r3, r2
+// CHECK-NEXT:    LessEq            r1, r3, r2
+// CHECK-NEXT:    Greater           r1, r3, r2
+// CHECK-NEXT:    GreaterEq         r1, r3, r2
+// CHECK-NEXT:    LShift            r4, r3, r2
+// CHECK-NEXT:    RShift            r4, r3, r2
+// CHECK-NEXT:    URshift           r0, r3, r2
+// CHECK-NEXT:    Add               r4, r3, r2
+// CHECK-NEXT:    Sub               r4, r3, r2
+// CHECK-NEXT:    Mul               r4, r3, r2
+// CHECK-NEXT:    Div               r4, r3, r2
+// CHECK-NEXT:    Mod               r4, r3, r2
+// CHECK-NEXT:    BitOr             r4, r3, r2
+// CHECK-NEXT:    BitXor            r4, r3, r2
+// CHECK-NEXT:    BitAnd            r4, r3, r2
+// CHECK-NEXT:    IsIn              r1, r3, r2
+// CHECK-NEXT:    StrictNeq         r1, r3, r2
+// CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<foo>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:    LoadConstUndefined r0

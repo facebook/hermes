@@ -44,7 +44,9 @@ DEF_TAG(UnaryDecInst, UnaryOperatorInst)
 END_VALUE(UnaryOperatorInst)
 
 DEF_VALUE(TypeOfInst, Instruction)
+DEF_VALUE(TypeOfIsInst, Instruction)
 DEF_VALUE(AddEmptyStringInst, Instruction)
+DEF_VALUE(ToPropertyKeyInst, Instruction)
 DEF_VALUE(AsNumberInst, Instruction)
 DEF_VALUE(AsNumericInst, Instruction)
 DEF_VALUE(AsInt32Inst, Instruction)
@@ -94,6 +96,7 @@ DEF_TAG(BinaryInstanceOfInst, BinaryOperatorInst)
 END_VALUE(BinaryOperatorInst)
 
 MARK_FIRST(BaseStorePropertyInst, Instruction)
+DEF_VALUE(StorePropertyWithReceiverInst, BaseStorePropertyInst)
 MARK_FIRST(StorePropertyInst, BaseStorePropertyInst)
 DEF_VALUE(StorePropertyLooseInst, StorePropertyInst)
 DEF_VALUE(StorePropertyStrictInst, StorePropertyInst)
@@ -105,12 +108,12 @@ DEF_VALUE(TryStoreGlobalPropertyStrictInst, TryStoreGlobalPropertyInst)
 MARK_LAST(TryStoreGlobalPropertyInst)
 MARK_LAST(BaseStorePropertyInst)
 
-MARK_FIRST(BaseStoreOwnPropertyInst, Instruction)
-DEF_VALUE(StoreOwnPropertyInst, BaseStoreOwnPropertyInst)
-DEF_VALUE(StoreNewOwnPropertyInst, BaseStoreOwnPropertyInst)
-MARK_LAST(BaseStoreOwnPropertyInst)
+MARK_FIRST(BaseDefineOwnPropertyInst, Instruction)
+DEF_VALUE(DefineOwnPropertyInst, BaseDefineOwnPropertyInst)
+DEF_VALUE(DefineNewOwnPropertyInst, BaseDefineOwnPropertyInst)
+MARK_LAST(BaseDefineOwnPropertyInst)
 
-DEF_VALUE(StoreGetterSetterInst, Instruction)
+DEF_VALUE(DefineOwnGetterSetterInst, Instruction)
 
 MARK_FIRST(DeletePropertyInst, Instruction)
 DEF_VALUE(DeletePropertyLooseInst, DeletePropertyInst)
@@ -119,6 +122,7 @@ MARK_LAST(DeletePropertyInst)
 
 MARK_FIRST(BaseLoadPropertyInst, Instruction)
 DEF_VALUE(LoadPropertyInst, BaseLoadPropertyInst)
+DEF_VALUE(LoadPropertyWithReceiverInst, BaseLoadPropertyInst)
 DEF_VALUE(TryLoadGlobalPropertyInst, BaseLoadPropertyInst)
 MARK_LAST(BaseLoadPropertyInst)
 
@@ -134,6 +138,7 @@ DEF_VALUE(DebuggerInst, Instruction)
 DEF_VALUE(CreateRegExpInst, Instruction)
 DEF_VALUE(GetNewTargetInst, Instruction)
 DEF_VALUE(ThrowIfInst, Instruction)
+DEF_VALUE(ThrowIfThisInitializedInst, Instruction)
 DEF_VALUE(IteratorBeginInst, Instruction)
 DEF_VALUE(IteratorNextInst, Instruction)
 DEF_VALUE(IteratorCloseInst, Instruction)
@@ -147,6 +152,7 @@ MARK_FIRST(BaseCreateLexicalChildInst, Instruction)
 
 MARK_FIRST(BaseCreateCallableInst, BaseCreateLexicalChildInst)
 DEF_VALUE(CreateFunctionInst, BaseCreateCallableInst)
+DEF_VALUE(CreateClassInst, Instruction)
 MARK_LAST(BaseCreateCallableInst)
 
 DEF_VALUE(CreateGeneratorInst, BaseCreateLexicalChildInst)
@@ -163,6 +169,7 @@ TERMINATOR(GetPNamesInst, TerminatorInst)
 TERMINATOR(GetNextPNameInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
 TERMINATOR(TryEndInst, TerminatorInst)
+TERMINATOR(BranchIfBuiltinInst, TerminatorInst)
 TERMINATOR(UnreachableInst, TerminatorInst)
 
 BEGIN_TERMINATOR(HBCCompareBranchInst, TerminatorInst)
@@ -189,6 +196,8 @@ END_VALUE(HBCFCompareBranchInst)
 
 TERMINATOR(SwitchImmInst, TerminatorInst)
 TERMINATOR(SaveAndYieldInst, TerminatorInst)
+
+TERMINATOR(HBCCmpBrTypeOfIsInst, TerminatorInst)
 MARK_LAST(TerminatorInst)
 
 MARK_FIRST(BaseCallInst, Instruction)
@@ -214,6 +223,8 @@ DEF_VALUE(GetClosureScopeInst, BaseScopeInst)
 DEF_VALUE(HBCResolveParentEnvironmentInst, BaseScopeInst)
 DEF_VALUE(HBCCreateFunctionEnvironmentInst, BaseScopeInst)
 MARK_LAST(BaseScopeInst)
+
+DEF_VALUE(CacheNewObjectInst, Instruction)
 
 // These are target dependent instructions:
 

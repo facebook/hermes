@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/IR/IR.h"
 
 #include "llvh/ADT/SmallVector.h"
@@ -211,6 +212,37 @@ class AddEmptyStringInst : public SingleOperandInst {
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::AddEmptyStringInstKind;
+  }
+};
+
+class ToPropertyKeyInst : public SingleOperandInst {
+  ToPropertyKeyInst(const ToPropertyKeyInst &) = delete;
+  void operator=(const ToPropertyKeyInst &) = delete;
+
+ public:
+  explicit ToPropertyKeyInst(Value *value)
+      : SingleOperandInst(ValueKind::ToPropertyKeyInstKind, value) {
+    setType(Type::unionTy(Type::createString(), Type::createSymbol()));
+  }
+  explicit ToPropertyKeyInst(
+      const ToPropertyKeyInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands) {}
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect::createExecute();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ToPropertyKeyInstKind;
   }
 };
 
@@ -977,6 +1009,62 @@ class CreateFunctionInst : public BaseCreateCallableInst {
   }
 };
 
+class CreateClassInst : public BaseCreateCallableInst {
+  CreateClassInst(const CreateClassInst &) = delete;
+  void operator=(const CreateClassInst &) = delete;
+
+ public:
+  enum { SuperClassIdx = BaseCreateCallableInst::LAST_IDX, HomeObjectOutIdx };
+  explicit CreateClassInst(
+      BaseScopeInst *scope,
+      Function *code,
+      Value *superClass,
+      AllocStackInst *homeObjectOutput)
+      : BaseCreateCallableInst(ValueKind::CreateClassInstKind, scope, code) {
+    assert(
+        (llvh::isa<NormalFunction>(code)) &&
+        "Only NormalFunction supported by CreateClassInst");
+    setType(*getInherentTypeImpl());
+    pushOperand(superClass);
+    pushOperand(homeObjectOutput);
+  }
+  explicit CreateClassInst(
+      const CreateClassInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseCreateCallableInst(src, operands) {}
+
+  Value *getHomeObjectOutput() {
+    return getOperand(HomeObjectOutIdx);
+  }
+
+  Value *getSuperClass() const {
+    return getOperand(SuperClassIdx);
+  }
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
+  SideEffect getSideEffectImpl() const {
+    if (llvh::isa<EmptySentinel>(getSuperClass())) {
+      // When creating a derived class, we look up the .prototype of the super
+      // class we are deriving from. This property look up can potentially
+      // trigger JS.
+      return SideEffect::createExecute().setWriteStack();
+    } else {
+      return SideEffect{}.setReadHeap().setWriteStack();
+    }
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CreateClassInstKind;
+  }
+};
+
 class BaseCallInst : public Instruction {
   BaseCallInst(const BaseCallInst &) = delete;
   void operator=(const BaseCallInst &) = delete;
@@ -1215,7 +1303,7 @@ class CallBuiltinInst : public BaseCallInst {
  public:
   enum { ThisIdx = BaseCallInst::_LastIdx };
   explicit CallBuiltinInst(
-      LiteralNumber *callee,
+      LiteralBuiltinIdx *callee,
       EmptySentinel *target,
       LiteralBool *calleeIsAlwaysClosure,
       EmptySentinel *env,
@@ -1231,8 +1319,7 @@ class CallBuiltinInst : public BaseCallInst {
             /* thisValue */ undefined,
             args) {
     assert(
-        callee->getValue() == (int)callee->getValue() &&
-        callee->getValue() < (double)BuiltinMethod::_count &&
+        (uint32_t)callee->getData() < (uint32_t)BuiltinMethod::_count &&
         "invalid builtin call");
   }
   explicit CallBuiltinInst(
@@ -1241,7 +1328,7 @@ class CallBuiltinInst : public BaseCallInst {
       : BaseCallInst(src, operands) {}
 
   BuiltinMethod::Enum getBuiltinIndex() const {
-    return (BuiltinMethod::Enum)cast<LiteralNumber>(getCallee())->asInt32();
+    return cast<LiteralBuiltinIdx>(getCallee())->getData();
   }
 
   static bool classof(const Value *V) {
@@ -1256,10 +1343,10 @@ class GetBuiltinClosureInst : public Instruction {
  public:
   enum { BuiltinIndexIdx };
 
-  explicit GetBuiltinClosureInst(LiteralNumber *builtinIndex)
+  explicit GetBuiltinClosureInst(LiteralBuiltinIdx *builtinIndex)
       : Instruction(ValueKind::GetBuiltinClosureInstKind) {
     assert(
-        builtinIndex->asUInt32() < BuiltinMethod::_count &&
+        (uint32_t)builtinIndex->getData() < BuiltinMethod::_count &&
         "invalid builtin call");
     pushOperand(builtinIndex);
     setType(*getInherentTypeImpl());
@@ -1285,8 +1372,7 @@ class GetBuiltinClosureInst : public Instruction {
   }
 
   BuiltinMethod::Enum getBuiltinIndex() const {
-    return static_cast<BuiltinMethod::Enum>(
-        cast<LiteralNumber>(getOperand(BuiltinIndexIdx))->asInt32());
+    return cast<LiteralBuiltinIdx>(getOperand(BuiltinIndexIdx))->getData();
   }
 
   static bool classof(const Value *V) {
@@ -1391,7 +1477,7 @@ class BaseStorePropertyInst : public Instruction {
   }
 
  public:
-  enum { StoredValueIdx, ObjectIdx, PropertyIdx };
+  enum { StoredValueIdx, ObjectIdx, PropertyIdx, _LastIdx };
 
   explicit BaseStorePropertyInst(
       const BaseStorePropertyInst *src,
@@ -1421,6 +1507,45 @@ class BaseStorePropertyInst : public Instruction {
 
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseStorePropertyInst);
+  }
+};
+
+class StorePropertyWithReceiverInst : public BaseStorePropertyInst {
+  StorePropertyWithReceiverInst(const StorePropertyWithReceiverInst &) = delete;
+  void operator=(const StorePropertyWithReceiverInst &) = delete;
+
+ public:
+  enum { ReceiverIdx = BaseStorePropertyInst::_LastIdx, IsStrictIdx };
+
+  explicit StorePropertyWithReceiverInst(
+      Value *storedValue,
+      Value *globalObject,
+      Value *property,
+      Value *receiver,
+      LiteralBool *isStrict)
+      : BaseStorePropertyInst(
+            ValueKind::StorePropertyWithReceiverInstKind,
+            storedValue,
+            globalObject,
+            property) {
+    pushOperand(receiver);
+    pushOperand(isStrict);
+  }
+  explicit StorePropertyWithReceiverInst(
+      const StorePropertyWithReceiverInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseStorePropertyInst(src, operands) {}
+
+  Value *getReceiver() const {
+    return getOperand(ReceiverIdx);
+  }
+
+  bool getIsStrict() const {
+    return cast<LiteralBool>(getOperand(IsStrictIdx))->getValue();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::StorePropertyWithReceiverInstKind;
   }
 };
 
@@ -1575,12 +1700,12 @@ class TryStoreGlobalPropertyStrictInst : public TryStoreGlobalPropertyInst {
   }
 };
 
-class BaseStoreOwnPropertyInst : public Instruction {
-  BaseStoreOwnPropertyInst(const BaseStoreOwnPropertyInst &) = delete;
-  void operator=(const BaseStoreOwnPropertyInst &) = delete;
+class BaseDefineOwnPropertyInst : public Instruction {
+  BaseDefineOwnPropertyInst(const BaseDefineOwnPropertyInst &) = delete;
+  void operator=(const BaseDefineOwnPropertyInst &) = delete;
 
  protected:
-  explicit BaseStoreOwnPropertyInst(
+  explicit BaseDefineOwnPropertyInst(
       ValueKind kind,
       Value *storedValue,
       Value *object,
@@ -1610,8 +1735,8 @@ class BaseStoreOwnPropertyInst : public Instruction {
     return cast<LiteralBool>(getOperand(IsEnumerableIdx))->getValue();
   }
 
-  explicit BaseStoreOwnPropertyInst(
-      const BaseStoreOwnPropertyInst *src,
+  explicit BaseDefineOwnPropertyInst(
+      const BaseDefineOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -1627,50 +1752,50 @@ class BaseStoreOwnPropertyInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseStoreOwnPropertyInst);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseDefineOwnPropertyInst);
   }
 };
 
-class StoreOwnPropertyInst : public BaseStoreOwnPropertyInst {
-  StoreOwnPropertyInst(const StoreOwnPropertyInst &) = delete;
-  void operator=(const StoreOwnPropertyInst &) = delete;
+class DefineOwnPropertyInst : public BaseDefineOwnPropertyInst {
+  DefineOwnPropertyInst(const DefineOwnPropertyInst &) = delete;
+  void operator=(const DefineOwnPropertyInst &) = delete;
 
  public:
-  explicit StoreOwnPropertyInst(
+  explicit DefineOwnPropertyInst(
       Value *storedValue,
       Value *object,
       Value *property,
       LiteralBool *isEnumerable)
-      : BaseStoreOwnPropertyInst(
-            ValueKind::StoreOwnPropertyInstKind,
+      : BaseDefineOwnPropertyInst(
+            ValueKind::DefineOwnPropertyInstKind,
             storedValue,
             object,
             property,
             isEnumerable) {}
 
-  explicit StoreOwnPropertyInst(
-      const StoreOwnPropertyInst *src,
+  explicit DefineOwnPropertyInst(
+      const DefineOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : BaseStoreOwnPropertyInst(src, operands) {}
+      : BaseDefineOwnPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::StoreOwnPropertyInstKind;
+    return kind == ValueKind::DefineOwnPropertyInstKind;
   }
 };
 
-class StoreNewOwnPropertyInst : public BaseStoreOwnPropertyInst {
-  StoreNewOwnPropertyInst(const StoreNewOwnPropertyInst &) = delete;
-  void operator=(const StoreNewOwnPropertyInst &) = delete;
+class DefineNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
+  DefineNewOwnPropertyInst(const DefineNewOwnPropertyInst &) = delete;
+  void operator=(const DefineNewOwnPropertyInst &) = delete;
 
  public:
-  explicit StoreNewOwnPropertyInst(
+  explicit DefineNewOwnPropertyInst(
       Value *storedValue,
       Value *object,
       Literal *property,
       LiteralBool *isEnumerable)
-      : BaseStoreOwnPropertyInst(
-            ValueKind::StoreNewOwnPropertyInstKind,
+      : BaseDefineOwnPropertyInst(
+            ValueKind::DefineNewOwnPropertyInstKind,
             storedValue,
             object,
             property,
@@ -1684,20 +1809,20 @@ class StoreNewOwnPropertyInst : public BaseStoreOwnPropertyInst {
         "object operand must be known to be an object");
   }
 
-  explicit StoreNewOwnPropertyInst(
-      const StoreNewOwnPropertyInst *src,
+  explicit DefineNewOwnPropertyInst(
+      const DefineNewOwnPropertyInst *src,
       llvh::ArrayRef<Value *> operands)
-      : BaseStoreOwnPropertyInst(src, operands) {}
+      : BaseDefineOwnPropertyInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::StoreNewOwnPropertyInstKind;
+    return kind == ValueKind::DefineNewOwnPropertyInstKind;
   }
 };
 
-class StoreGetterSetterInst : public Instruction {
-  StoreGetterSetterInst(const StoreGetterSetterInst &) = delete;
-  void operator=(const StoreGetterSetterInst &) = delete;
+class DefineOwnGetterSetterInst : public Instruction {
+  DefineOwnGetterSetterInst(const DefineOwnGetterSetterInst &) = delete;
+  void operator=(const DefineOwnGetterSetterInst &) = delete;
 
  public:
   enum {
@@ -1724,13 +1849,13 @@ class StoreGetterSetterInst : public Instruction {
     return cast<LiteralBool>(getOperand(IsEnumerableIdx))->getValue();
   }
 
-  explicit StoreGetterSetterInst(
+  explicit DefineOwnGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
       Value *object,
       Value *property,
       LiteralBool *isEnumerable)
-      : Instruction(ValueKind::StoreGetterSetterInstKind) {
+      : Instruction(ValueKind::DefineOwnGetterSetterInstKind) {
     setType(Type::createNoType());
     pushOperand(storedGetter);
     pushOperand(storedSetter);
@@ -1738,8 +1863,8 @@ class StoreGetterSetterInst : public Instruction {
     pushOperand(property);
     pushOperand(isEnumerable);
   }
-  explicit StoreGetterSetterInst(
-      const StoreGetterSetterInst *src,
+  explicit DefineOwnGetterSetterInst(
+      const DefineOwnGetterSetterInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -1756,7 +1881,7 @@ class StoreGetterSetterInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::StoreGetterSetterInstKind;
+    return kind == ValueKind::DefineOwnGetterSetterInstKind;
   }
 };
 
@@ -1858,7 +1983,7 @@ class BaseLoadPropertyInst : public Instruction {
   }
 
  public:
-  enum { ObjectIdx, PropertyIdx };
+  enum { ObjectIdx, PropertyIdx, _LastIdx };
 
   Value *getObject() const {
     return getOperand(ObjectIdx);
@@ -1906,6 +2031,37 @@ class LoadPropertyInst : public BaseLoadPropertyInst {
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::LoadPropertyInstKind;
+  }
+};
+
+class LoadPropertyWithReceiverInst : public BaseLoadPropertyInst {
+  LoadPropertyWithReceiverInst(const LoadPropertyWithReceiverInst &) = delete;
+  void operator=(const LoadPropertyWithReceiverInst &) = delete;
+
+ public:
+  enum { ReceiverIdx = BaseLoadPropertyInst::_LastIdx };
+  explicit LoadPropertyWithReceiverInst(
+      Value *object,
+      Value *property,
+      Value *receiver)
+      : BaseLoadPropertyInst(
+            ValueKind::LoadPropertyWithReceiverInstKind,
+            object,
+            property) {
+    pushOperand(receiver);
+  }
+  explicit LoadPropertyWithReceiverInst(
+      const LoadPropertyWithReceiverInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseLoadPropertyInst(src, operands) {}
+
+  Value *getReceiver() const {
+    return getOperand(ReceiverIdx);
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LoadPropertyWithReceiverInstKind;
   }
 };
 
@@ -2463,6 +2619,51 @@ class TypeOfInst : public Instruction {
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::TypeOfInstKind;
+  }
+};
+
+class TypeOfIsInst : public Instruction {
+ private:
+  TypeOfIsInst(const TypeOfIsInst &) = delete;
+  void operator=(const TypeOfIsInst &) = delete;
+
+ public:
+  enum { ArgumentIdx, TypesIdx };
+
+  explicit TypeOfIsInst(Value *op, LiteralTypeOfIsTypes *types)
+      : Instruction(ValueKind::TypeOfIsInstKind) {
+    setType(*getInherentTypeImpl());
+    pushOperand(op);
+    pushOperand(types);
+  }
+  explicit TypeOfIsInst(
+      const TypeOfIsInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getArgument() const {
+    return getOperand(ArgumentIdx);
+  }
+  LiteralTypeOfIsTypes *getTypes() const {
+    return llvh::cast<LiteralTypeOfIsTypes>(getOperand(TypesIdx));
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setIdempotent();
+  }
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createBoolean();
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::TypeOfIsInstKind;
   }
 };
 
@@ -3025,6 +3226,70 @@ class TryEndInst : public TerminatorInst {
   }
 };
 
+class BranchIfBuiltinInst : public TerminatorInst {
+  BranchIfBuiltinInst(const BranchIfBuiltinInst &) = delete;
+  void operator=(const BranchIfBuiltinInst &) = delete;
+
+ public:
+  enum { BuiltinIdx, ArgumentIdx, TrueBlockIdx, FalseBlockIdx };
+
+  explicit BranchIfBuiltinInst(
+      LiteralBuiltinIdx *builtin,
+      Value *argument,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock)
+      : TerminatorInst(ValueKind::BranchIfBuiltinInstKind) {
+    setType(Type::createNoType());
+    pushOperand(builtin);
+    pushOperand(argument);
+    pushOperand(trueBlock);
+    pushOperand(falseBlock);
+  }
+  explicit BranchIfBuiltinInst(
+      const BranchIfBuiltinInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  BuiltinMethod::Enum getBuiltinIndex() const {
+    return cast<LiteralBuiltinIdx>(getOperand(BuiltinIdx))->getData();
+  }
+  Value *getArgument() {
+    return getOperand(ArgumentIdx);
+  }
+  BasicBlock *getTrueBlock() const {
+    return cast<BasicBlock>(getOperand(TrueBlockIdx));
+  }
+  BasicBlock *getFalseBlock() const {
+    return cast<BasicBlock>(getOperand(FalseBlockIdx));
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::BranchIfBuiltinInstKind;
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 2;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    return cast<BasicBlock>(getOperand(TrueBlockIdx + idx));
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    setOperand(B, TrueBlockIdx + idx);
+  }
+};
+
 class PhiInst : public Instruction {
   PhiInst(const PhiInst &) = delete;
   void operator=(const PhiInst &) = delete;
@@ -3343,6 +3608,48 @@ class ThrowIfInst : public Instruction {
   }
 };
 
+class ThrowIfThisInitializedInst : public Instruction {
+  ThrowIfThisInitializedInst(const ThrowIfThisInitializedInst &) = delete;
+  void operator=(const ThrowIfThisInitializedInst &) = delete;
+
+ public:
+  enum { DerivedClassCheckedThisIdx };
+
+  explicit ThrowIfThisInitializedInst(Value *derivedClassCheckedThis)
+      : Instruction(ValueKind::ThrowIfThisInitializedInstKind) {
+    pushOperand(derivedClassCheckedThis);
+    setType(Type::createNoType());
+  }
+  explicit ThrowIfThisInitializedInst(
+      const ThrowIfThisInitializedInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getDerivedClassCheckedThis() const {
+    return getOperand(DerivedClassCheckedThisIdx);
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setThrow();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::ThrowIfThisInitializedInstKind;
+  }
+};
+
 class HBCResolveParentEnvironmentInst : public BaseScopeInst {
   HBCResolveParentEnvironmentInst(const HBCResolveParentEnvironmentInst &) =
       delete;
@@ -3471,6 +3778,75 @@ class SwitchImmInst : public TerminatorInst {
   }
   BasicBlock *getSuccessorImpl(unsigned idx) const;
   void setSuccessorImpl(unsigned idx, BasicBlock *B);
+};
+
+class HBCCmpBrTypeOfIsInst : public TerminatorInst {
+  HBCCmpBrTypeOfIsInst(const HBCCmpBrTypeOfIsInst &) = delete;
+  void operator=(const HBCCmpBrTypeOfIsInst &) = delete;
+
+ public:
+  enum { ArgumentIdx, TypesIdx, TrueBlockIdx, FalseBlockIdx };
+
+  explicit HBCCmpBrTypeOfIsInst(
+      Value *op,
+      LiteralTypeOfIsTypes *types,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock)
+      : TerminatorInst(ValueKind::HBCCmpBrTypeOfIsInstKind) {
+    setType(Type::createNoType());
+    pushOperand(op);
+    pushOperand(types);
+    pushOperand(trueBlock);
+    pushOperand(falseBlock);
+  }
+
+  Value *getArgument() const {
+    return getOperand(ArgumentIdx);
+  }
+  LiteralTypeOfIsTypes *getTypes() const {
+    return llvh::cast<LiteralTypeOfIsTypes>(getOperand(TypesIdx));
+  }
+
+  BasicBlock *getTrueDest() const {
+    return cast<BasicBlock>(getOperand(TrueBlockIdx));
+  }
+  BasicBlock *getFalseDest() const {
+    return cast<BasicBlock>(getOperand(FalseBlockIdx));
+  }
+  explicit HBCCmpBrTypeOfIsInst(
+      const HBCCmpBrTypeOfIsInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : TerminatorInst(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect::createExecute();
+  }
+
+  unsigned getNumSuccessorsImpl() const {
+    return 2;
+  }
+  BasicBlock *getSuccessorImpl(unsigned idx) const {
+    if (idx == 0)
+      return getTrueDest();
+    if (idx == 1)
+      return getFalseDest();
+    llvm_unreachable("HBCCmpBrTypeOfIsInstKind only have 2 successors!");
+  }
+  void setSuccessorImpl(unsigned idx, BasicBlock *B) {
+    assert(idx <= 1 && "HBCCmpBrTypeOfIsInstKind only have 2 successors!");
+    setOperand(B, idx + TrueBlockIdx);
+  }
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::HBCCmpBrTypeOfIsInstKind;
+  }
 };
 
 class SaveAndYieldInst : public TerminatorInst {
@@ -4461,6 +4837,74 @@ class IteratorCloseInst : public Instruction {
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::IteratorCloseInstKind;
+  }
+};
+
+class CacheNewObjectInst : public Instruction {
+  CacheNewObjectInst(const CacheNewObjectInst &) = delete;
+  void operator=(const CacheNewObjectInst &) = delete;
+
+ public:
+  enum { ThisIdx, NewTargetIdx, FirstKeyIdx };
+
+  explicit CacheNewObjectInst(
+      Value *thisParameter,
+      Value *newTarget,
+      llvh::ArrayRef<LiteralString *> keys)
+      : Instruction(ValueKind::CacheNewObjectInstKind) {
+    assert(!keys.empty() && "keys must be non-empty");
+    setType(Type::createNoType());
+    pushOperand(thisParameter);
+    pushOperand(newTarget);
+    for (Literal *key : keys) {
+      pushOperand(key);
+    }
+  }
+  explicit CacheNewObjectInst(
+      const CacheNewObjectInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+
+  /// \return the this parameter modified by this instruction.
+  Value *getThis() {
+    return getOperand(ThisIdx);
+  }
+
+  /// \return the new.target value used by this instruction.
+  Value *getNewTarget() {
+    return getOperand(NewTargetIdx);
+  }
+
+  static bool isTyped() {
+    return false;
+  }
+
+  /// \return the number of keys in the object to cache.
+  unsigned getNumKeys() const {
+    return getNumOperands() - FirstKeyIdx;
+  }
+
+  /// \return the \p index key name.
+  LiteralString *getKey(unsigned index) const {
+    return llvh::cast<LiteralString>(getOperand(FirstKeyIdx + index));
+  }
+
+  SideEffect getSideEffectImpl() const {
+    // This instruction is only run for its side effects.
+    // It has no output, it just modifies the hidden class of the 'this' object.
+    return SideEffect{}.setWriteHeap();
+  }
+
+  WordBitSet<> getChangedOperandsImpl() {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::CacheNewObjectInstKind;
   }
 };
 
@@ -5496,6 +5940,8 @@ class LazyCompilationDataInst : public Instruction {
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
     HomeObjectIdx,
+    ClsConstructorIdx,
+    ClsInstanceElemInitFuncIdx,
     ParentVarScopeIdx
   };
 
@@ -5505,6 +5951,8 @@ class LazyCompilationDataInst : public Instruction {
       Value *capturedNewTarget,
       Value *capturedArguments,
       Value *capturedHomeObject,
+      Value *clsConstructor,
+      Value *clsInstanceElemInitFunc,
       VariableScope *parentVarScope)
       : Instruction(ValueKind::LazyCompilationDataInstKind), data_(data) {
     // Store the captured variables as EmptySentinel if they were null.
@@ -5520,6 +5968,8 @@ class LazyCompilationDataInst : public Instruction {
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
     pushOperand(capturedHomeObject);
+    pushOperand(clsConstructor);
+    pushOperand(clsInstanceElemInitFunc);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: LazyCompilationData relies on the fact that we don't delete
@@ -5571,6 +6021,20 @@ class LazyCompilationDataInst : public Instruction {
   const Variable *getHomeObject() const {
     return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
   }
+  /// \return the class context constructor Variable, nullptr if there is none.
+  Variable *getClsConstructor() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsConstructorIdx));
+  }
+  /// \return the class context instance elements initializer Variable, nullptr
+  /// if there is none.
+  Variable *getClsInstaneElemInitFunc() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsInstanceElemInitFuncIdx));
+  }
+
+  // Derived constructor `this` (operand at ClsConstructorIdx) can be empty.
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
 
   static bool hasOutput() {
     return false;
@@ -5614,6 +6078,8 @@ class EvalCompilationDataInst : public Instruction {
     CapturedNewTargetIdx,
     CapturedArgumentsIdx,
     HomeObjectIdx,
+    ClsConstructorIdx,
+    ClsInstElemInitFuncIdx,
     FuncVarScopeIdx
   };
 
@@ -5623,6 +6089,8 @@ class EvalCompilationDataInst : public Instruction {
       Value *capturedNewTarget,
       Value *capturedArguments,
       Value *homeObject,
+      Value *classCtxConstructor,
+      Value *classCtxInitFuncVar,
       VariableScope *funcVarScope)
       : Instruction(ValueKind::EvalCompilationDataInstKind), data_(data) {
     assert(
@@ -5636,6 +6104,8 @@ class EvalCompilationDataInst : public Instruction {
     pushOperand(capturedNewTarget);
     pushOperand(capturedArguments);
     pushOperand(homeObject);
+    pushOperand(classCtxConstructor);
+    pushOperand(classCtxInitFuncVar);
     // Push all VariableScopes which must be kept alive to properly compile this
     // function.
     // NOTE: EvalCompilationData relies on the fact that we don't delete
@@ -5683,6 +6153,15 @@ class EvalCompilationDataInst : public Instruction {
   /// \return the captured \c homeObject Variable, nullptr if there is none.
   Variable *getHomeObject() {
     return llvh::dyn_cast<Variable>(getOperand(HomeObjectIdx));
+  }
+  /// \return the class context constructor Variable, nullptr if there is none.
+  Variable *getClsConstructor() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsConstructorIdx));
+  }
+  /// \return the class context instance elements initializer Variable, nullptr
+  /// if there is none.
+  Variable *getClsInstElemInitFunc() {
+    return llvh::dyn_cast<Variable>(getOperand(ClsInstElemInitFuncIdx));
   }
 
   static bool hasOutput() {

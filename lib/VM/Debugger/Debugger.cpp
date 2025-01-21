@@ -629,8 +629,7 @@ auto Debugger::getStackTrace() const -> StackTrace {
   // Also note that each frame saves its caller's code block and IP (the
   // SavedCodeBlock and SavedIP). We obtain the current code location by getting
   // the Callee CodeBlock of the top frame.
-  const CodeBlock *codeBlock =
-      runtime_.getCurrentFrame()->getCalleeCodeBlock(runtime_);
+  const CodeBlock *codeBlock = runtime_.getCurrentFrame()->getCalleeCodeBlock();
   const inst::Inst *ip = runtime_.getCurrentIP();
   GCScopeMarkerRAII marker2{runtime_};
   for (auto cf : runtime_.getStackFrames()) {
@@ -667,7 +666,7 @@ auto Debugger::getStackTrace() const -> StackTrace {
       // frame's saved IP.
       StackFramePtr prev = cf->getPreviousFrame();
       assert(prev && "bound function calls must have a caller");
-      if (CodeBlock *parentCB = prev->getCalleeCodeBlock(runtime_)) {
+      if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
         codeBlock = parentCB;
       }
     }
@@ -922,10 +921,10 @@ void Debugger::breakpointCaller(bool forRestorationBreakpoint) {
     assert(
         frameIt != callFrames.end() &&
         "The frame that has saved ip cannot be the bottom frame");
-  } while (!frameIt->getCalleeCodeBlock(runtime_));
+  } while (!frameIt->getCalleeCodeBlock());
   // In the frame below, the 'calleeClosureORCB' register contains
   // the code block we need.
-  CodeBlock *codeBlock = frameIt->getCalleeCodeBlock(runtime_);
+  CodeBlock *codeBlock = frameIt->getCalleeCodeBlock();
   assert(codeBlock && "The code block must exist since we have ip");
   // Track the call stack depth that the breakpoint would be set on.
 
@@ -1112,7 +1111,7 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
     result.variableCountsByScope_.push_back(0);
     return result;
   }
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
   if (!cb) {
     // Native functions have no saved code block.
     result.variableCountsByScope_.push_back(0);
@@ -1143,7 +1142,7 @@ HermesValue Debugger::getVariableInFrame(
     // TODO: support them.
     return undefined;
   }
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
   assert(cb && "Unexpectedly null code block");
 
   if (outName)
@@ -1244,7 +1243,15 @@ HermesValue Debugger::evalInFrame(
     return HermesValue::encodeUndefinedValue();
   }
 
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
+
+  // If we are debugging inside of a derived class constuctor, we make an arrow
+  // function for the eval expression. It would be invalid to call that arrow
+  // function with a non-undefined new.target.
+  Handle<> newTarget =
+      vmisa<JSDerivedClass>(*frameInfo->frame->getCalleeClosureHandleUnsafe())
+      ? Runtime::getUndefinedValue()
+      : Handle<>(&frameInfo->frame->getNewTargetRef());
 
   // Interpreting code requires that the `thrownValue_` is empty.
   // Save it temporarily so we can restore it after the evalInEnvironment.
@@ -1258,7 +1265,7 @@ HermesValue Debugger::evalInFrame(
       env,
       cb,
       Handle<>(&frameInfo->frame->getThisArgRef()),
-      Handle<>(&frameInfo->frame->getNewTargetRef()),
+      newTarget,
       singleFunction);
 
   // Check if an exception was thrown.

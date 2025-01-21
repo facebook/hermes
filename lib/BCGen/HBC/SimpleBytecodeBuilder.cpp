@@ -125,6 +125,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
       FunctionHeader funcHeader{
           opcodeSize,
           functions_[i].paramCount,
+          /* loopDepth */ 0,
           functions_[i].frameSize,
           /* numberRegCount */ 0,
           /* nonPtrRegCount */ 0,
@@ -159,6 +160,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
       FunctionHeader funcHeader{
           opcodeSize,
           functions_[i].paramCount,
+          /* loopDepth */ 0,
           functions_[i].frameSize,
           /* numberRegCount */ 0,
           /* nonPtrRegCount */ 0,

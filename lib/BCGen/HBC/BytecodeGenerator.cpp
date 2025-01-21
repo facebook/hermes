@@ -11,7 +11,6 @@
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
-#include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -95,7 +94,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     FileAndSourceMapIdCache &debugCache,
     SourceMapGenerator *sourceMapGen,
     DebugInfoGenerator &debugInfoGenerator) {
-  BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxRegisterUsage()};
+  BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxHVMRegisterUsage()};
 
   if (F->isLazy()) {
     // Move the Function out of the main function list.
@@ -112,12 +111,22 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   assert(
       funcGen.complete_ && "ISel did not complete BytecodeFunctionGenerator");
 
+  // Get the number of bits needed to encode the loop depth.
+  // Avoid overflowing the FunctionHeader just for loop depth.
+#define DECLARE_BITFIELD(api_type, store_type, name, bits) \
+  [[maybe_unused]] constexpr uint32_t name##Width = bits;
+  FUNC_HEADER_FIELDS(DECLARE_BITFIELD)
+#undef DECLARE_BITFIELD
+
   FunctionHeader header{
       funcGen.bytecodeSize_,
       F->getExpectedParamCountIncludingThis(),
+      std::min(
+          RA.getMaxLoopDepth(),
+          llvh::maskTrailingOnes<uint32_t>(loopDepthWidth)),
       funcGen.frameSize_,
-      RA.getNumberRegCount(),
-      RA.getNonPtrRegCount(),
+      RA.getMaxRegisterUsage(RegClass::Number),
+      RA.getMaxRegisterUsage(RegClass::NonPtr),
       nameID,
       funcGen.highestReadCacheIndex_,
       funcGen.highestWriteCacheIndex_};
@@ -272,7 +281,8 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(DeletePropertyLooseInst);
     CASE_WITH_PROP_IDX(DeletePropertyStrictInst);
     CASE_WITH_PROP_IDX(LoadPropertyInst);
-    CASE_WITH_PROP_IDX(StoreNewOwnPropertyInst);
+    CASE_WITH_PROP_IDX(LoadPropertyWithReceiverInst);
+    CASE_WITH_PROP_IDX(DefineNewOwnPropertyInst);
     CASE_WITH_PROP_IDX(StorePropertyLooseInst);
     CASE_WITH_PROP_IDX(StorePropertyStrictInst);
     CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);

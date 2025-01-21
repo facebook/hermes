@@ -34,9 +34,13 @@ class CodeBlock;
 typedef HermesValue (*JITCompiledFunctionPtr)(Runtime *runtime);
 
 /// A sequence of instructions representing the body of a function.
-class CodeBlock final
-    : private llvh::TrailingObjects<CodeBlock, PropertyCacheEntry> {
+class CodeBlock final : private llvh::TrailingObjects<
+                            CodeBlock,
+                            ReadPropertyCacheEntry,
+                            WritePropertyCacheEntry> {
   friend TrailingObjects;
+  friend struct RuntimeOffsets;
+
   /// Points to the runtime module with the information required for this code
   /// block.
   RuntimeModule *const runtimeModule_;
@@ -72,27 +76,31 @@ class CodeBlock final
   uint32_t numInstalledBreakpoints_ = 0;
 #endif
 
-  /// Total size of the property cache.
-  const uint32_t propertyCacheSize_;
-
-  /// Offset of the write property cache, which occurs after the read property
-  /// cache.
-  const uint32_t writePropCacheOffset_;
+  /// Total size of the property caches.
+  const uint32_t readPropertyCacheSize_;
+  const uint32_t writePropertyCacheSize_;
 
   CodeBlock(
       RuntimeModule *runtimeModule,
       hbc::RuntimeFunctionHeader header,
       const uint8_t *bytecode,
       uint32_t functionID,
-      uint32_t cacheSize,
-      uint32_t writePropCacheOffset)
+      uint32_t readCacheSize,
+      uint32_t writeCacheSize)
       : runtimeModule_(runtimeModule),
         functionHeader_(header),
         bytecode_(bytecode),
         functionID_(functionID),
-        propertyCacheSize_(cacheSize),
-        writePropCacheOffset_(writePropCacheOffset) {
-    std::uninitialized_fill_n(propertyCache(), cacheSize, PropertyCacheEntry{});
+        readPropertyCacheSize_(readCacheSize),
+        writePropertyCacheSize_(writeCacheSize) {
+    std::uninitialized_fill_n(
+        readPropertyCache(), readCacheSize, ReadPropertyCacheEntry{});
+    std::uninitialized_fill_n(
+        writePropertyCache(), writeCacheSize, WritePropertyCacheEntry{});
+  }
+
+  size_t numTrailingObjects(OverloadToken<ReadPropertyCacheEntry>) const {
+    return readPropertyCacheSize_;
   }
 
  public:
@@ -109,13 +117,13 @@ class CodeBlock final
 
   using const_iterator = const uint8_t *;
 
-  /// \return the base pointer of the property cache.
-  PropertyCacheEntry *propertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>();
+  /// \return the base pointers of the property caches.
+  ReadPropertyCacheEntry *readPropertyCache() {
+    return getTrailingObjects<ReadPropertyCacheEntry>();
   }
 
-  PropertyCacheEntry *writePropertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>() + writePropCacheOffset_;
+  WritePropertyCacheEntry *writePropertyCache() {
+    return getTrailingObjects<WritePropertyCacheEntry>();
   }
 
   uint32_t getParamCount() const {
@@ -313,16 +321,14 @@ class CodeBlock final
   void clearExecutionCount() {}
 #endif
 
-  inline PropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
-    assert(idx < writePropCacheOffset_ && "idx out of ReadCache bound");
-    return &propertyCache()[idx];
+  inline ReadPropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
+    assert(idx < readPropertyCacheSize_ && "idx out of ReadCache bound");
+    return &readPropertyCache()[idx];
   }
 
-  inline PropertyCacheEntry *getWriteCacheEntry(uint8_t idx) {
-    assert(
-        writePropCacheOffset_ + idx < propertyCacheSize_ &&
-        "idx out of WriteCache bound");
-    return &propertyCache()[writePropCacheOffset_ + idx];
+  inline WritePropertyCacheEntry *getWriteCacheEntry(uint8_t idx) {
+    assert(idx < writePropertyCacheSize_ && "idx out of WriteCache bound");
+    return &writePropertyCache()[idx];
   }
 
   // Mark all hidden classes in the property cache as roots.
@@ -345,7 +351,8 @@ class CodeBlock final
   /// \return an estimate of the size of additional memory used by this
   /// CodeBlock.
   size_t additionalMemorySize() const {
-    return propertyCacheSize_ * sizeof(PropertyCacheEntry);
+    return (readPropertyCacheSize_ * sizeof(ReadPropertyCacheEntry)) +
+        (writePropertyCacheSize_ * sizeof(WritePropertyCacheEntry));
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER

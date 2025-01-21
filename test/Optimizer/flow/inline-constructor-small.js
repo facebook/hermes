@@ -38,7 +38,7 @@ print(p1.x, p2.x);
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:constructor Point(x: number, y: number): undefined [typed]
+// CHECK:base constructor Point(x: number, y: number): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number

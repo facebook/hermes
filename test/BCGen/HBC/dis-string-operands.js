@@ -13,7 +13,6 @@ var glob = {prop: bar()};
 var re = /foo/i;
 glob.baz;
 bazz = "const-string";
-delete glob.baz;
 
 //CHECK:    DeclareGlobalVar  "glob"
 //CHECK:    DeclareGlobalVar  "re"
@@ -30,6 +29,4 @@ delete glob.baz;
 //CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 3, "baz"
 //CHECK:    LoadConstString   {{r[0-9]+}}, "const-string"
 //CHECK:    TryPutByIdStrict  {{r[0-9]+}}, {{r[0-9]+}}, 3, "bazz"
-//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 2, "glob"
-//CHECK:    DelByIdStrict     {{r[0-9]+}}, {{r[0-9]+}}, "baz"
 //CHECK:    Ret               {{r[0-9]+}}

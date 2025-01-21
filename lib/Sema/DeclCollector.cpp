@@ -172,9 +172,9 @@ void DeclCollector::visit(ESTree::CatchClauseNode *node) {
     addToCur(node);
     visitESTreeNode(*this, node->_param, node);
   }
-  // Declarations in the catch body are associated with CatchClauseNode,
-  // not BlockStatementNode.
-  visitESTreeChildren(*this, node->_body);
+  // CatchClauseNode is supposed to have separate scopes for the body and the
+  // parameters.
+  visitESTreeNode(*this, node->_body, node);
   closeScope(node);
 }
 void DeclCollector::visit(ESTree::SwitchStatementNode *node) {

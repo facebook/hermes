@@ -15,7 +15,7 @@ class B {
     super();
   }
 }
-// CHECK: {{.*}} error: super() call only allowed in subclass constructor
+// CHECK: {{.*}} error: super() call only allowed in derived class constructor
 
 class C {
   constructor() {
@@ -24,7 +24,7 @@ class C {
     };
   }
 }
-// CHECK: {{.*}} error: super() call only allowed in subclass constructor
+// CHECK: {{.*}} error: super() call only allowed in derived class constructor
 
 class E extends A {
   constructor() {
@@ -33,11 +33,11 @@ class E extends A {
     }
   }
 }
-// CHECK: {{.*}} error: super() call only allowed in constructor
+// CHECK: {{.*}} error: super() call only allowed in derived class constructor
 
 var o = {
   m1() {
     super();
   }
 }
-// CHECK: {{.*}} error: super() call only allowed in constructor
+// CHECK: {{.*}} error: super() call only allowed in derived class constructor

@@ -246,6 +246,7 @@ int main(int argc, char **argv) {
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::flags.GCBeforeStats;
+    options.enableJIT = cl::flags.EnableJIT;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     options.basicBlockProfiling = cl::flags.BasicBlockProfiling;

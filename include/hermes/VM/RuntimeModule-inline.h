@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_RUNTIMEMODULE_INLINE_H
 #define HERMES_VM_RUNTIMEMODULE_INLINE_H
 
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
@@ -32,6 +33,19 @@ inline Domain *RuntimeModule::getDomainForSamplingProfiler(PointerBase &base) {
   Domain *domain = domain_.getNoBarrierUnsafe(runtime_);
   assert(domain && "RuntimeModule has an invalid Domain");
   return domain;
+}
+
+HermesValue RuntimeModule::getModuleExport(uint32_t modIndex) const {
+  // If moduleExports_ is allocated, and \p modIndex is in range, return the
+  // previously cached value.  Otherwise return empty to indicate a cache miss.
+  // If moduleExports_ is null, it will be allocated in the cache-miss slow
+  // path.  If is allocated, but we fail to expand the moduleExports_ cache,
+  // indices out of range will take the slow path.
+  if (LLVM_LIKELY(moduleExports_ && modIndex < moduleExports_->size())) {
+    return moduleExports_->at(modIndex);
+  } else {
+    return HermesValue::encodeEmptyValue();
+  }
 }
 
 } // namespace vm

@@ -85,10 +85,16 @@ TEST(test_sh_fp_trunc, TryFastF64ToI64) {
   x = 1e20; // A value that is out of range for int64_t
   EXPECT_FALSE(sh_tryfast_f64_to_i64(x, result));
 
-  // Negative value
-  x = -4611686141884235776.0;
+  // Negative values
+  x = -4.0;
   EXPECT_TRUE(sh_tryfast_f64_to_i64(x, result));
-  EXPECT_EQ(result, -4611686141884235776);
+  EXPECT_EQ(result, -4);
+  x = -255.0;
+  EXPECT_TRUE(sh_tryfast_f64_to_i64(x, result));
+  EXPECT_EQ(result, -255);
+  x = -4611686018427387904.0;
+  EXPECT_TRUE(sh_tryfast_f64_to_i64(x, result));
+  EXPECT_EQ(result, -4611686018427387904);
 
   x = 0.0;
   EXPECT_TRUE(sh_tryfast_f64_to_i64(x, result));

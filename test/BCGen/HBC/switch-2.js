@@ -100,97 +100,97 @@ function f(x) {
 // CHECK-NEXT:i1[ASCII, 0..0] #00019A16: g
 // CHECK-NEXT:i2[ASCII, 6..6] #00019E07: f
 
-// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 2<Reg8>, 0<UInt32>
+// CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
 // CHECK-NEXT:[@ 6] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 11] DeclareGlobalVar 2<UInt32>
-// CHECK-NEXT:[@ 16] CreateClosure 0<Reg8>, 2<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 21] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 23] PutByIdStrict 1<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 29] CreateClosure 2<Reg8>, 2<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 34] PutByIdStrict 1<Reg8>, 2<Reg8>, 2<UInt8>, 2<UInt16>
-// CHECK-NEXT:[@ 40] LoadConstUndefined 2<Reg8>
-// CHECK-NEXT:[@ 42] Ret 2<Reg8>
+// CHECK-NEXT:[@ 16] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 21] GetGlobalObject 3<Reg8>
+// CHECK-NEXT:[@ 23] PutByIdStrict 3<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 29] CreateClosure 1<Reg8>, 1<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 34] PutByIdStrict 3<Reg8>, 1<Reg8>, 2<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 40] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 42] Ret 0<Reg8>
 
 // CHECK:Function<g>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:[@ 0] LoadConstUndefined 0<Reg8>
 // CHECK-NEXT:[@ 2] Ret 0<Reg8>
 
-// CHECK:Function<f>(2 params, 11 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<f>(2 params, 12 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] SwitchImm 2<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
-// CHECK-NEXT:[@ 21] LoadConstInt 1<Reg8>, 3352<Imm32>
-// CHECK-NEXT:[@ 27] Ret 1<Reg8>
-// CHECK-NEXT:[@ 29] LoadConstInt 1<Reg8>, 3523<Imm32>
-// CHECK-NEXT:[@ 35] Ret 1<Reg8>
-// CHECK-NEXT:[@ 37] LoadConstInt 1<Reg8>, 3342<Imm32>
-// CHECK-NEXT:[@ 43] Ret 1<Reg8>
-// CHECK-NEXT:[@ 45] LoadConstInt 1<Reg8>, 3254<Imm32>
-// CHECK-NEXT:[@ 51] Ret 1<Reg8>
-// CHECK-NEXT:[@ 53] LoadConstInt 1<Reg8>, 3243<Imm32>
-// CHECK-NEXT:[@ 59] Ret 1<Reg8>
-// CHECK-NEXT:[@ 61] LoadConstInt 1<Reg8>, 2332<Imm32>
-// CHECK-NEXT:[@ 67] Ret 1<Reg8>
-// CHECK-NEXT:[@ 69] LoadConstInt 1<Reg8>, 3211<Imm32>
-// CHECK-NEXT:[@ 75] Ret 1<Reg8>
-// CHECK-NEXT:[@ 77] LoadConstInt 1<Reg8>, 3642<Imm32>
-// CHECK-NEXT:[@ 83] Ret 1<Reg8>
-// CHECK-NEXT:[@ 85] LoadConstInt 1<Reg8>, 2332<Imm32>
-// CHECK-NEXT:[@ 91] Ret 1<Reg8>
-// CHECK-NEXT:[@ 93] LoadConstInt 1<Reg8>, 3234<Imm32>
-// CHECK-NEXT:[@ 99] Ret 1<Reg8>
-// CHECK-NEXT:[@ 101] LoadConstInt 1<Reg8>, 323<Imm32>
-// CHECK-NEXT:[@ 107] Ret 1<Reg8>
-// CHECK-NEXT:[@ 109] LoadConstInt 1<Reg8>, 362<Imm32>
-// CHECK-NEXT:[@ 115] Ret 1<Reg8>
-// CHECK-NEXT:[@ 117] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 119] GetByIdShort 0<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 21] LoadConstInt 0<Reg8>, 3352<Imm32>
+// CHECK-NEXT:[@ 27] Ret 0<Reg8>
+// CHECK-NEXT:[@ 29] LoadConstInt 0<Reg8>, 3523<Imm32>
+// CHECK-NEXT:[@ 35] Ret 0<Reg8>
+// CHECK-NEXT:[@ 37] LoadConstInt 0<Reg8>, 3342<Imm32>
+// CHECK-NEXT:[@ 43] Ret 0<Reg8>
+// CHECK-NEXT:[@ 45] LoadConstInt 0<Reg8>, 3254<Imm32>
+// CHECK-NEXT:[@ 51] Ret 0<Reg8>
+// CHECK-NEXT:[@ 53] LoadConstInt 0<Reg8>, 3243<Imm32>
+// CHECK-NEXT:[@ 59] Ret 0<Reg8>
+// CHECK-NEXT:[@ 61] LoadConstInt 0<Reg8>, 2332<Imm32>
+// CHECK-NEXT:[@ 67] Ret 0<Reg8>
+// CHECK-NEXT:[@ 69] LoadConstInt 0<Reg8>, 3211<Imm32>
+// CHECK-NEXT:[@ 75] Ret 0<Reg8>
+// CHECK-NEXT:[@ 77] LoadConstInt 0<Reg8>, 3642<Imm32>
+// CHECK-NEXT:[@ 83] Ret 0<Reg8>
+// CHECK-NEXT:[@ 85] LoadConstInt 0<Reg8>, 2332<Imm32>
+// CHECK-NEXT:[@ 91] Ret 0<Reg8>
+// CHECK-NEXT:[@ 93] LoadConstInt 0<Reg8>, 3234<Imm32>
+// CHECK-NEXT:[@ 99] Ret 0<Reg8>
+// CHECK-NEXT:[@ 101] LoadConstInt 0<Reg8>, 323<Imm32>
+// CHECK-NEXT:[@ 107] Ret 0<Reg8>
+// CHECK-NEXT:[@ 109] LoadConstInt 0<Reg8>, 362<Imm32>
+// CHECK-NEXT:[@ 115] Ret 0<Reg8>
+// CHECK-NEXT:[@ 117] GetGlobalObject 3<Reg8>
+// CHECK-NEXT:[@ 119] GetByIdShort 3<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 124] LoadConstUndefined 1<Reg8>
-// CHECK-NEXT:[@ 126] Call1 1<Reg8>, 0<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 130] LoadConstInt 1<Reg8>, 342<Imm32>
-// CHECK-NEXT:[@ 136] Ret 1<Reg8>
-// CHECK-NEXT:[@ 138] LoadConstUInt8 1<Reg8>, 132<UInt8>
-// CHECK-NEXT:[@ 141] Ret 1<Reg8>
-// CHECK-NEXT:[@ 143] LoadConstInt 1<Reg8>, 322<Imm32>
-// CHECK-NEXT:[@ 149] Ret 1<Reg8>
-// CHECK-NEXT:[@ 151] LoadConstInt 1<Reg8>, 342<Imm32>
-// CHECK-NEXT:[@ 157] Ret 1<Reg8>
-// CHECK-NEXT:[@ 159] LoadConstUInt8 1<Reg8>, 32<UInt8>
-// CHECK-NEXT:[@ 162] Ret 1<Reg8>
+// CHECK-NEXT:[@ 126] Call1 3<Reg8>, 3<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 130] LoadConstInt 0<Reg8>, 342<Imm32>
+// CHECK-NEXT:[@ 136] Ret 0<Reg8>
+// CHECK-NEXT:[@ 138] LoadConstUInt8 0<Reg8>, 132<UInt8>
+// CHECK-NEXT:[@ 141] Ret 0<Reg8>
+// CHECK-NEXT:[@ 143] LoadConstInt 0<Reg8>, 322<Imm32>
+// CHECK-NEXT:[@ 149] Ret 0<Reg8>
+// CHECK-NEXT:[@ 151] LoadConstInt 0<Reg8>, 342<Imm32>
+// CHECK-NEXT:[@ 157] Ret 0<Reg8>
+// CHECK-NEXT:[@ 159] LoadConstUInt8 0<Reg8>, 32<UInt8>
+// CHECK-NEXT:[@ 162] Ret 0<Reg8>
 // CHECK-NEXT:[@ 164] SwitchImm 2<Reg8>, 199<UInt32>, 116<Addr32>, 1<UInt32>, 14<UInt32>
-// CHECK-NEXT:[@ 182] LoadConstInt 2<Reg8>, 3342<Imm32>
-// CHECK-NEXT:[@ 188] Ret 2<Reg8>
-// CHECK-NEXT:[@ 190] LoadConstInt 2<Reg8>, 3254<Imm32>
-// CHECK-NEXT:[@ 196] Ret 2<Reg8>
-// CHECK-NEXT:[@ 198] LoadConstInt 2<Reg8>, 3243<Imm32>
-// CHECK-NEXT:[@ 204] Ret 2<Reg8>
-// CHECK-NEXT:[@ 206] LoadConstInt 2<Reg8>, 2332<Imm32>
-// CHECK-NEXT:[@ 212] Ret 2<Reg8>
-// CHECK-NEXT:[@ 214] LoadConstInt 2<Reg8>, 3211<Imm32>
-// CHECK-NEXT:[@ 220] Ret 2<Reg8>
-// CHECK-NEXT:[@ 222] LoadConstInt 2<Reg8>, 3642<Imm32>
-// CHECK-NEXT:[@ 228] Ret 2<Reg8>
-// CHECK-NEXT:[@ 230] LoadConstInt 2<Reg8>, 2332<Imm32>
-// CHECK-NEXT:[@ 236] Ret 2<Reg8>
+// CHECK-NEXT:[@ 182] LoadConstInt 0<Reg8>, 3342<Imm32>
+// CHECK-NEXT:[@ 188] Ret 0<Reg8>
+// CHECK-NEXT:[@ 190] LoadConstInt 0<Reg8>, 3254<Imm32>
+// CHECK-NEXT:[@ 196] Ret 0<Reg8>
+// CHECK-NEXT:[@ 198] LoadConstInt 0<Reg8>, 3243<Imm32>
+// CHECK-NEXT:[@ 204] Ret 0<Reg8>
+// CHECK-NEXT:[@ 206] LoadConstInt 0<Reg8>, 2332<Imm32>
+// CHECK-NEXT:[@ 212] Ret 0<Reg8>
+// CHECK-NEXT:[@ 214] LoadConstInt 0<Reg8>, 3211<Imm32>
+// CHECK-NEXT:[@ 220] Ret 0<Reg8>
+// CHECK-NEXT:[@ 222] LoadConstInt 0<Reg8>, 3642<Imm32>
+// CHECK-NEXT:[@ 228] Ret 0<Reg8>
+// CHECK-NEXT:[@ 230] LoadConstInt 0<Reg8>, 2332<Imm32>
+// CHECK-NEXT:[@ 236] Ret 0<Reg8>
 // CHECK-NEXT:[@ 238] GetGlobalObject 2<Reg8>
-// CHECK-NEXT:[@ 240] GetByIdShort 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 245] LoadConstUndefined 2<Reg8>
-// CHECK-NEXT:[@ 247] Call1 2<Reg8>, 1<Reg8>, 2<Reg8>
-// CHECK-NEXT:[@ 251] LoadConstInt 2<Reg8>, 342<Imm32>
-// CHECK-NEXT:[@ 257] Ret 2<Reg8>
-// CHECK-NEXT:[@ 259] LoadConstUInt8 2<Reg8>, 132<UInt8>
-// CHECK-NEXT:[@ 262] Ret 2<Reg8>
-// CHECK-NEXT:[@ 264] LoadConstInt 2<Reg8>, 322<Imm32>
-// CHECK-NEXT:[@ 270] Ret 2<Reg8>
-// CHECK-NEXT:[@ 272] LoadConstInt 2<Reg8>, 342<Imm32>
-// CHECK-NEXT:[@ 278] Ret 2<Reg8>
+// CHECK-NEXT:[@ 240] GetByIdShort 2<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 245] LoadConstUndefined 1<Reg8>
+// CHECK-NEXT:[@ 247] Call1 2<Reg8>, 2<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 251] LoadConstInt 0<Reg8>, 342<Imm32>
+// CHECK-NEXT:[@ 257] Ret 0<Reg8>
+// CHECK-NEXT:[@ 259] LoadConstUInt8 0<Reg8>, 132<UInt8>
+// CHECK-NEXT:[@ 262] Ret 0<Reg8>
+// CHECK-NEXT:[@ 264] LoadConstInt 0<Reg8>, 322<Imm32>
+// CHECK-NEXT:[@ 270] Ret 0<Reg8>
+// CHECK-NEXT:[@ 272] LoadConstInt 0<Reg8>, 342<Imm32>
+// CHECK-NEXT:[@ 278] Ret 0<Reg8>
 // CHECK-NEXT:[@ 280] GetGlobalObject 2<Reg8>
-// CHECK-NEXT:[@ 282] GetByIdShort 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 287] LoadConstUndefined 2<Reg8>
-// CHECK-NEXT:[@ 289] Call1 1<Reg8>, 1<Reg8>, 2<Reg8>
-// CHECK-NEXT:[@ 293] Ret 2<Reg8>
+// CHECK-NEXT:[@ 282] GetByIdShort 2<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 287] LoadConstUndefined 1<Reg8>
+// CHECK-NEXT:[@ 289] Call1 2<Reg8>, 2<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 293] Ret 1<Reg8>
 
 // CHECK: Jump Tables:
 // CHECK-NEXT:  offset 292

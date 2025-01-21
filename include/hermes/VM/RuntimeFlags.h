@@ -214,9 +214,17 @@ struct VMOnlyRuntimeFlags {
   llvh::cl::opt<bool> ForceJIT{
       "Xforce-jit",
       llvh::cl::Hidden,
+      llvh::cl::ZeroOrMore,
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("force JIT compilation of every function"),
       llvh::cl::init(false)};
+
+  llvh::cl::opt<uint32_t> JITThreshold{
+      "Xjit-threshold",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("default minimum number of invocations to JIT compile"),
+      llvh::cl::init(1 << 5)};
 
   /// To get the value of this CLI option, use the method below.
   llvh::cl::opt<unsigned> DumpJITCode{
@@ -233,6 +241,21 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("crash on any JIT compilation error"),
       llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> JITEmitAsserts{
+      "Xjit-emit-asserts",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+#ifdef NDEBUG
+      llvh::cl::desc(
+          "(default false) Whether assertions in JIT compiled code are enabled"),
+      llvh::cl::init(false),
+#else
+      llvh::cl::desc(
+          "(default true) Whether assertions in JIT compiled code are enabled"),
+      llvh::cl::init(true)
+#endif
+  };
 };
 
 /// All command line runtime options relevant to the VM, including options

@@ -27,10 +27,10 @@
 #ifndef HERMES_SUPPORT_STACKOVERFLOWGUARD_H
 #define HERMES_SUPPORT_STACKOVERFLOWGUARD_H
 
-#include <cstddef>
-#include "hermes/Support/OSCompat.h"
 #include "llvh/Support/Compiler.h"
-#include "llvh/Support/raw_ostream.h"
+
+#include <cstddef>
+#include <cstdint>
 
 namespace hermes {
 
@@ -91,14 +91,7 @@ class StackOverflowGuard {
   /// Sets \c stackLow_ \c stackHigh_.
   /// \return true if the native stack is overflowing the bounds of the
   ///   current thread.
-  bool isStackOverflowingSlowPath() {
-    auto [highPtr, size] = oscompat::thread_stack_bounds(nativeStackGap);
-    nativeStackHigh = (const char *)highPtr;
-    nativeStackSize = size;
-    return LLVM_UNLIKELY(
-        (uintptr_t)nativeStackHigh - (uintptr_t)__builtin_frame_address(0) >
-        nativeStackSize);
-  }
+  bool isStackOverflowingSlowPath();
 };
 
 #else

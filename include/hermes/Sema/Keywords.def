@@ -59,4 +59,8 @@ HERMES_KEYWORD(CNull, "c_null")
 HERMES_KEYWORD(CNativeRuntime, "c_native_runtime")
 HERMES_KEYWORD(PrivFastArrayPush, "?fastArrayPush")
 
+HERMES_KEYWORD(ModuleFactory, "moduleFactory")
+HERMES_KEYWORD(Export, "export")
+HERMES_KEYWORD(Import, "import")
+
 #undef HERMES_KEYWORD
