@@ -27,7 +27,7 @@ component_syntax=true
 enums=true
 
 [version]
-^0.258.1
+^0.259.0
 
 [lints]
 untyped-type-import=error
