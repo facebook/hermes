@@ -107,7 +107,8 @@ TEST_F(SynthTraceTest, PropNameIDUtf8) {
 }
 
 TEST_F(SynthTraceTest, PropNameIDUtf16) {
-  const std::string utf8 = "hello👍\n";
+  // 👍 in UTF8 encoding is 0xf0 0x9f 0x91 0x8d
+  const std::string utf8 = "hello\xf0\x9f\x91\x8d\n";
   const jsi::PropNameID name = jsi::PropNameID::forUtf8(*rt, utf8);
   name.utf16(*rt);
 
@@ -121,7 +122,9 @@ TEST_F(SynthTraceTest, PropNameIDUtf16) {
       *records[0]);
   EXPECT_EQ_RECORD(
       SynthTrace::Utf16Record(
-          records[1]->time_, SynthTrace::encodePropNameID(objId), u"hello👍\n"),
+          records[1]->time_,
+          SynthTrace::encodePropNameID(objId),
+          u"hello\xd83d\xdc4d\n"),
       *records[1]);
 }
 
@@ -145,7 +148,8 @@ TEST_F(SynthTraceTest, StringUtf8) {
 }
 
 TEST_F(SynthTraceTest, StringUtf16) {
-  const std::string utf8 = "hello👍\n";
+  // 👍 in UTF8 encoding is 0xf0 0x9f 0x91 0x8d
+  const std::string utf8 = "hello\xf0\x9f\x91\x8d\n";
 
   const jsi::String str = jsi::String::createFromUtf8(*rt, utf8);
   str.utf16(*rt);
@@ -159,13 +163,16 @@ TEST_F(SynthTraceTest, StringUtf16) {
       *records[0]);
   EXPECT_EQ_RECORD(
       SynthTrace::Utf16Record(
-          records[1]->time_, SynthTrace::encodeString(objId), u"hello👍\n"),
+          records[1]->time_,
+          SynthTrace::encodeString(objId),
+          u"hello\xd83d\xdc4d\n"),
       *records[1]);
 }
 
 TEST_F(SynthTraceTest, GetStringData) {
   const std::string ascii = "foo";
-  const std::string emoji = "hello👋";
+  // 👋 in UTF8 encoding is 0xf0 0x9f 0x91 0x8b
+  const std::string emoji = "hello\xf0\x9f\x91\x8b";
 
   auto cb = [](bool ascii, const void *data, size_t num) {};
 
@@ -197,7 +204,9 @@ TEST_F(SynthTraceTest, GetStringData) {
       *records[2]);
   EXPECT_EQ_RECORD(
       SynthTrace::GetStringDataRecord(
-          records[3]->time_, SynthTrace::encodeString(emojiId), u"hello👋"),
+          records[3]->time_,
+          SynthTrace::encodeString(emojiId),
+          u"hello\xd83d\xdc4b"),
       *records[3]);
 }
 

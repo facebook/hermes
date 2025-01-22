@@ -1174,14 +1174,20 @@ TEST_P(HermesRuntimeTest, UTF16Test) {
   String foobar = String::createFromUtf8(*rt, "foobar");
   EXPECT_EQ(foobar.utf16(*rt), u"foobar");
 
-  String chineseHello = String::createFromUtf8(*rt, "你好");
-  EXPECT_EQ(chineseHello.utf16(*rt), u"你好");
+  // 你 in UTF-8 encoding is 0xe4 0xbd 0xa0 and 好 is 0xe5 0xa5 0xbd
+  // 你 in UTF-16 encoding is 0x4f60 and 好 is 0x597d
+  String chineseHello = String::createFromUtf8(*rt, "\xe4\xbd\xa0\xe5\xa5\xbd");
+  EXPECT_EQ(chineseHello.utf16(*rt), u"\x4f60\x597d");
 
-  String thumbsUpEmoji = String::createFromUtf8(*rt, "👍");
-  EXPECT_EQ(thumbsUpEmoji.utf16(*rt), u"👍");
+  // 👍 in UTF-8 encoding is 0xf0 0x9f 0x91 0x8d
+  // 👍 in UTF-16 encoding is 0xd83d 0xdc4d
+  String thumbsUpEmoji = String::createFromUtf8(*rt, "\xf0\x9f\x91\x8d");
+  EXPECT_EQ(thumbsUpEmoji.utf16(*rt), u"\xd83d\xdc4d");
 
-  String combined = String::createFromUtf8(*rt, "foobar👍你好");
-  EXPECT_EQ(combined.utf16(*rt), u"foobar👍你好");
+  // String is foobar👍你好
+  String combined = String::createFromUtf8(
+      *rt, "foobar\xf0\x9f\x91\x8d\xe4\xbd\xa0\xe5\xa5\xbd");
+  EXPECT_EQ(combined.utf16(*rt), u"foobar\xd83d\xdc4d\x4f60\x597d");
 
   // We've only added specific implementations for HermesRuntime. The ABI
   // runtime will convert to UTF8 first, causing the lone surrogates to be
@@ -1230,9 +1236,11 @@ TEST_P(HermesRuntimeTest, GetStringDataTest) {
   EXPECT_EQ(buf, u"fbar");
   buf.clear();
 
-  String utf16Str = String::createFromUtf8(*rt, "👍foobar你好");
+  // String is foobar👍你好
+  String utf16Str = String::createFromUtf8(
+      *rt, "foobar\xf0\x9f\x91\x8d\xe4\xbd\xa0\xe5\xa5\xbd");
   utf16Str.getStringData(*rt, cb);
-  EXPECT_EQ(buf, u"👍fbar你好");
+  EXPECT_EQ(buf, u"fbar\xd83d\xdc4d\x4f60\x597d");
   buf.clear();
 }
 
@@ -1268,9 +1276,11 @@ TEST_P(HermesRuntimeTest, GetPropNameIdDataTest) {
   EXPECT_EQ(buf, u"fbar");
   buf.clear();
 
-  PropNameID utf16 = PropNameID::forUtf8(*rt, "👍foobar你好");
+  // String is foobar👍你好
+  PropNameID utf16 = PropNameID::forUtf8(
+      *rt, "foobar\xf0\x9f\x91\x8d\xe4\xbd\xa0\xe5\xa5\xbd");
   utf16.getPropNameIdData(*rt, cb);
-  EXPECT_EQ(buf, u"👍fbar你好");
+  EXPECT_EQ(buf, u"fbar\xd83d\xdc4d\x4f60\x597d");
   buf.clear();
 }
 
