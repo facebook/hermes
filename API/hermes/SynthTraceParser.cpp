@@ -226,18 +226,17 @@ SynthTrace getTrace(
   SynthTrace trace(
       ::hermes::vm::RuntimeConfig(), /* traceStream */ nullptr, globalObjID);
   auto getListOfTraceValues =
-      [](JSONArray *array,
-         SynthTrace &trace) -> std::vector<SynthTrace::TraceValue> {
+      [](JSONArray *array) -> std::vector<SynthTrace::TraceValue> {
     std::vector<SynthTrace::TraceValue> values;
     std::transform(
         array->begin(),
         array->end(),
         std::back_inserter(values),
-        [&trace](const JSONValue *value) -> SynthTrace::TraceValue {
+        [](const JSONValue *value) -> SynthTrace::TraceValue {
           if (value->getKind() != JSONKind::String) {
             ::hermes::hermes_fatal("Array should contain only strings");
           }
-          return trace.decode(llvh::cast<JSONString>(value)->c_str());
+          return SynthTrace::decode(llvh::cast<JSONString>(value)->c_str());
         });
     return values;
   };
@@ -299,7 +298,7 @@ SynthTrace getTrace(
       }
       case RecordType::EndExecJS:
         trace.emplace_back<SynthTrace::EndExecJSRecord>(
-            timeFromStart, trace.decode(retval->c_str()));
+            timeFromStart, SynthTrace::decode(retval->c_str()));
         break;
       case RecordType::Marker:
         trace.emplace_back<SynthTrace::MarkerRecord>(
@@ -428,7 +427,9 @@ SynthTrace getTrace(
       }
       case RecordType::CreatePropNameIDWithValue: {
         trace.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
-            timeFromStart, objID->getValue(), trace.decode(propValue->c_str()));
+            timeFromStart,
+            objID->getValue(),
+            SynthTrace::decode(propValue->c_str()));
         break;
       }
       case RecordType::CreateHostObject:
@@ -476,7 +477,7 @@ SynthTrace getTrace(
 #ifdef HERMESVM_API_TRACE_DEBUG
             std::string(propName->c_str()),
 #endif
-            trace.decode(propValue->c_str()));
+            SynthTrace::decode(propValue->c_str()));
         break;
       case RecordType::HasProperty:
         trace.emplace_back<SynthTrace::HasPropertyRecord>(
@@ -510,36 +511,36 @@ SynthTrace getTrace(
             timeFromStart,
             objID->getValue(),
             arrayIndex->getValue(),
-            trace.decode(propValue->c_str()));
+            SynthTrace::decode(propValue->c_str()));
         break;
       case RecordType::CallFromNative:
         trace.emplace_back<SynthTrace::CallFromNativeRecord>(
             timeFromStart,
             funcID->getValue(),
-            trace.decode(thisArg->c_str()),
-            getListOfTraceValues(callArgs, trace));
+            SynthTrace::decode(thisArg->c_str()),
+            getListOfTraceValues(callArgs));
         break;
       case RecordType::ConstructFromNative:
         trace.emplace_back<SynthTrace::ConstructFromNativeRecord>(
             timeFromStart,
             funcID->getValue(),
-            trace.decode(thisArg->c_str()),
-            getListOfTraceValues(callArgs, trace));
+            SynthTrace::decode(thisArg->c_str()),
+            getListOfTraceValues(callArgs));
         break;
       case RecordType::ReturnFromNative:
         trace.emplace_back<SynthTrace::ReturnFromNativeRecord>(
-            timeFromStart, trace.decode(retval->c_str()));
+            timeFromStart, SynthTrace::decode(retval->c_str()));
         break;
       case RecordType::ReturnToNative:
         trace.emplace_back<SynthTrace::ReturnToNativeRecord>(
-            timeFromStart, trace.decode(retval->c_str()));
+            timeFromStart, SynthTrace::decode(retval->c_str()));
         break;
       case RecordType::CallToNative:
         trace.emplace_back<SynthTrace::CallToNativeRecord>(
             timeFromStart,
             funcID->getValue(),
-            trace.decode(thisArg->c_str()),
-            getListOfTraceValues(callArgs, trace));
+            SynthTrace::decode(thisArg->c_str()),
+            getListOfTraceValues(callArgs));
         break;
       case RecordType::GetPropertyNative:
         trace.emplace_back<SynthTrace::GetPropertyNativeRecord>(
@@ -550,7 +551,7 @@ SynthTrace getTrace(
         break;
       case RecordType::GetPropertyNativeReturn:
         trace.emplace_back<SynthTrace::GetPropertyNativeReturnRecord>(
-            timeFromStart, trace.decode(retval->c_str()));
+            timeFromStart, SynthTrace::decode(retval->c_str()));
         break;
       case RecordType::SetPropertyNative:
         trace.emplace_back<SynthTrace::SetPropertyNativeRecord>(
@@ -558,7 +559,7 @@ SynthTrace getTrace(
             hostObjID->getValue(),
             propNameID->getValue(),
             propName->c_str(),
-            trace.decode(propValue->c_str()));
+            SynthTrace::decode(propValue->c_str()));
         break;
       case RecordType::SetPropertyNativeReturn:
         trace.emplace_back<SynthTrace::SetPropertyNativeReturnRecord>(
@@ -572,7 +573,7 @@ SynthTrace getTrace(
         auto *pnids =
             llvh::dyn_cast_or_null<JSONArray>(obj->get("propNameIDs"));
         trace.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
-            timeFromStart, getListOfTraceValues(pnids, trace));
+            timeFromStart, getListOfTraceValues(pnids));
         break;
       }
       case RecordType::SetExternalMemoryPressure: {
