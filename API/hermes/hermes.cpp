@@ -604,6 +604,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
       override;
   jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override;
+  jsi::PropNameID createPropNameIDFromUtf16(
+      const char16_t *utf16,
+      size_t length) override;
   jsi::PropNameID createPropNameIDFromString(const jsi::String &str) override;
   jsi::PropNameID createPropNameIDFromSymbol(const jsi::Symbol &sym) override;
   std::string utf8(const jsi::PropNameID &) override;
@@ -620,6 +623,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   jsi::String createStringFromAscii(const char *str, size_t length) override;
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
+  jsi::String createStringFromUtf16(const char16_t *utf16, size_t length)
+      override;
   std::string utf8(const jsi::String &) override;
 
   std::u16string utf16(const jsi::String &str) override;
@@ -715,6 +720,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   void checkStatus(vm::ExecutionStatus);
   vm::HermesValue stringHVFromAscii(const char *ascii, size_t length);
   vm::HermesValue stringHVFromUtf8(const uint8_t *utf8, size_t length);
+  vm::HermesValue stringHVFromUtf16(const char16_t *utf16, size_t length);
   std::string utf8FromStringView(vm::StringView view);
 
   /// Extract a UTF-8 message from the given exception \p ex as UTF-16. Uses
@@ -1713,6 +1719,17 @@ jsi::PropNameID HermesRuntimeImpl::createPropNameIDFromUtf8(
   return add<jsi::PropNameID>(cr->getHermesValue());
 }
 
+jsi::PropNameID HermesRuntimeImpl::createPropNameIDFromUtf16(
+    const char16_t *utf16,
+    size_t length) {
+  vm::GCScope gcScope(runtime_);
+  auto cr = vm::stringToSymbolID(
+      runtime_,
+      vm::createPseudoHandle(stringHVFromUtf16(utf16, length).getString()));
+  checkStatus(cr.getStatus());
+  return add<jsi::PropNameID>(cr->getHermesValue());
+}
+
 jsi::PropNameID HermesRuntimeImpl::createPropNameIDFromString(
     const jsi::String &str) {
   vm::GCScope gcScope(runtime_);
@@ -1843,6 +1860,13 @@ jsi::String HermesRuntimeImpl::createStringFromUtf8(
     size_t length) {
   vm::GCScope gcScope(runtime_);
   return add<jsi::String>(stringHVFromUtf8(utf8, length));
+}
+
+jsi::String HermesRuntimeImpl::createStringFromUtf16(
+    const char16_t *utf16,
+    size_t length) {
+  vm::GCScope gcScope(runtime_);
+  return add<jsi::String>(stringHVFromUtf16(utf16, length));
 }
 
 std::string HermesRuntimeImpl::utf8(const jsi::String &str) {
@@ -2562,6 +2586,15 @@ vm::HermesValue HermesRuntimeImpl::stringHVFromUtf8(
   const bool IgnoreInputErrors = true;
   auto strRes = vm::StringPrimitive::createEfficient(
       runtime_, llvh::makeArrayRef(utf8, length), IgnoreInputErrors);
+  checkStatus(strRes.getStatus());
+  return *strRes;
+}
+
+vm::HermesValue HermesRuntimeImpl::stringHVFromUtf16(
+    const char16_t *utf16,
+    size_t length) {
+  auto strRes = vm::StringPrimitive::createEfficient(
+      runtime_, llvh::makeArrayRef(utf16, length));
   checkStatus(strRes.getStatus());
   return *strRes;
 }
