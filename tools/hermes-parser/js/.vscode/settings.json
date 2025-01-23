@@ -4,7 +4,7 @@
           "source.fixAll.eslint",
           "source.fixAll.format",
         ],
-        "editor.defaultFormatter": "nuclide.prettier",
+        "editor.defaultFormatter": "nuclide.meta-prettier-vscode",
         "editor.formatOnSave": true,
     },
     "eslint.autofixOnSave.ruleAllowlist": [
