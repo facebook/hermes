@@ -221,6 +221,22 @@ describe('flowToFlowDef', () => {
          declare export default {add: typeof add};`,
       );
     });
+    it('export default member expression', async () => {
+      await expectTranslate(
+        `import {foo} from 'foo';
+         export default foo.bar;`,
+        `import {foo} from 'foo';
+         declare export default typeof foo.bar;`,
+      );
+    });
+    it('export default object with member expression', async () => {
+      await expectTranslate(
+        `import {foo} from 'foo';
+         export default {bar: foo.bar};`,
+        `import {foo} from 'foo';
+         declare export default {bar: typeof foo.bar};`,
+      );
+    });
   });
   describe('ExportAllDeclaration', () => {
     it('export basic', async () => {
