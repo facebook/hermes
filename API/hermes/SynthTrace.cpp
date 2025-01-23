@@ -359,6 +359,8 @@ static std::string encodingName(SynthTrace::StringEncodingType encoding) {
       return "UTF-8";
     case SynthTrace::StringEncodingType::ASCII:
       return "ASCII";
+    case SynthTrace::StringEncodingType::UTF16:
+      return "UTF-16";
     default:
       llvm_unreachable("Invalid encoding type encountered.");
   }
@@ -368,13 +370,18 @@ void SynthTrace::CreateStringRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("encoding", encodingName(encodingType_));
-  // For UTF-8 Strings, copy the content to a char16 array and emit each byte as
-  // a code unit. This allows us to reconstruct the exact string byte-for-byte
-  // during replay.
-  std::vector<char16_t> char16Vector(
-      (const unsigned char *)chars_.data(),
-      (const unsigned char *)chars_.data() + chars_.size());
-  json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
+  if (encodingType_ == StringEncodingType::UTF16) {
+    json.emitKeyValue(
+        "chars", llvh::ArrayRef(chars16_.data(), chars16_.size()));
+  } else {
+    // For UTF-8 Strings, copy the content to a char16 array and emit each byte
+    // as a code unit. This allows us to reconstruct the exact string
+    // byte-for-byte during replay.
+    std::vector<char16_t> char16Vector(
+        (const unsigned char *)chars_.data(),
+        (const unsigned char *)chars_.data() + chars_.size());
+    json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
+  }
 }
 
 void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
@@ -382,13 +389,18 @@ void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", propNameID_);
   json.emitKeyValue("encoding", encodingName(encodingType_));
-  // For UTF-8 Strings, copy the content to a char16 array and emit each byte
-  // as a code unit. This allows us to reconstruct the exact string
-  // byte-for-byte during replay.
-  std::vector<char16_t> char16Vector(
-      (const unsigned char *)chars_.data(),
-      (const unsigned char *)chars_.data() + chars_.size());
-  json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
+  if (encodingType_ == StringEncodingType::UTF16) {
+    json.emitKeyValue(
+        "chars", llvh::ArrayRef(chars16_.data(), chars16_.size()));
+  } else {
+    // For UTF-8 Strings, copy the content to a char16 array and emit each byte
+    // as a code unit. This allows us to reconstruct the exact string
+    // byte-for-byte during replay.
+    std::vector<char16_t> char16Vector(
+        (const unsigned char *)chars_.data(),
+        (const unsigned char *)chars_.data() + chars_.size());
+    json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
+  }
 }
 
 void SynthTrace::CreatePropNameIDWithValueRecord::toJSONInternal(
