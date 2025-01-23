@@ -183,6 +183,7 @@ class SynthTrace {
   RECORD(CreateObjectWithPrototype)      \
   RECORD(CreateString)                   \
   RECORD(CreatePropNameID)               \
+  RECORD(CreatePropNameIDWithValue)      \
   RECORD(CreateHostObject)               \
   RECORD(CreateHostFunction)             \
   RECORD(QueueMicrotask)                 \
@@ -601,19 +602,13 @@ class SynthTrace {
   /// created by the native code.
   struct CreatePropNameIDRecord : public Record {
     static constexpr RecordType type{RecordType::CreatePropNameID};
-    /// The ObjectID of the PropNameID that was created by
-    /// Runtime::createPropNameIDFromXxx() functions.
+    /// The ObjectID of the PropNameID that was created.
     const ObjectID propNameID_;
     /// The string that was passed to Runtime::createPropNameIDFromAscii() or
     /// Runtime::createPropNameIDFromUtf8().
     std::string chars_;
-    /// The String for Symbol that was passed to
-    /// Runtime::createPropNameIDFromString() or
-    /// Runtime::createPropNameIDFromSymbol().
-    const TraceValue traceValue_{TraceValue::encodeUndefinedValue()};
-    /// Whether the PropNameID was created from ASCII, UTF8, jsi::String
-    /// (TRACEVALUE) or jsi::Symbol (TRACEVALUE).
-    enum ValueType { ASCII, UTF8, TRACEVALUE } valueType_;
+    /// Whether the PropNameID was created from ASCII or UTF-8
+    enum ValueType { ASCII, UTF8 } valueType_;
 
     // General UTF-8.
     CreatePropNameIDRecord(
@@ -635,15 +630,38 @@ class SynthTrace {
           propNameID_(propNameID),
           chars_(chars, length),
           valueType_(ASCII) {}
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> defs() const override {
+      return {propNameID_};
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {};
+    }
+  };
+
+  /// A CreatePropNameIDWithValueRecord is an event where a jsi::PropNameID is
+  /// created by the native code from JSI Value
+  struct CreatePropNameIDWithValueRecord : public Record {
+    static constexpr RecordType type{RecordType::CreatePropNameIDWithValue};
+    /// The ObjectID of the PropNameID that was created.
+    const ObjectID propNameID_;
+    /// The String or Symbol that was passed to
+    /// Runtime::createPropNameIDFromString() or
+    /// Runtime::createPropNameIDFromSymbol().
+    const TraceValue traceValue_;
+
     // jsi::String or jsi::Symbol.
-    CreatePropNameIDRecord(
+    CreatePropNameIDWithValueRecord(
         TimeSinceStart time,
         ObjectID propNameID,
         TraceValue traceValue)
-        : Record(time),
-          propNameID_(propNameID),
-          traceValue_(traceValue),
-          valueType_(TRACEVALUE) {}
+        : Record(time), propNameID_(propNameID), traceValue_(traceValue) {}
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {

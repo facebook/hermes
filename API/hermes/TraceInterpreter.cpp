@@ -845,17 +845,23 @@ void TraceInterpreter::executeRecords() {
                 return PropNameID::forAscii(rt_, cpnr.chars_);
               case SynthTrace::CreatePropNameIDRecord::UTF8:
                 return PropNameID::forUtf8(rt_, cpnr.chars_);
-              case SynthTrace::CreatePropNameIDRecord::TRACEVALUE: {
-                auto val = traceValueToJSIValue(cpnr.traceValue_);
-                if (val.isSymbol())
-                  return PropNameID::forSymbol(rt_, val.getSymbol(rt_));
-                return PropNameID::forString(rt_, val.getString(rt_));
-              }
             }
             llvm_unreachable("No other way to construct PropNameID");
           }();
           addToPropNameIDMap(
               cpnr.propNameID_, std::move(propNameID), currentExecIndex);
+          break;
+        }
+        case RecordType::CreatePropNameIDWithValue: {
+          const auto &record =
+              static_cast<const SynthTrace::CreatePropNameIDWithValueRecord &>(
+                  *rec);
+          auto val = traceValueToJSIValue(record.traceValue_);
+          PropNameID propNameID = val.isSymbol()
+              ? PropNameID::forSymbol(rt_, val.getSymbol(rt_))
+              : PropNameID::forString(rt_, val.getString(rt_));
+          addToPropNameIDMap(
+              record.propNameID_, std::move(propNameID), currentExecIndex);
           break;
         }
         case RecordType::CreateHostObject: {

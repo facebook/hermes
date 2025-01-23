@@ -418,7 +418,7 @@ TEST_F(SynthTraceTest, GetProperty) {
       records[3]->time_, SynthTrace::encodeUndefined());
   EXPECT_EQ_RECORD(rtnExpect0, *records[3]);
   EXPECT_EQ_RECORD(
-      SynthTrace::CreatePropNameIDRecord(
+      SynthTrace::CreatePropNameIDWithValueRecord(
           records[4]->time_, aPropID, SynthTrace::encodeString(aStringID)),
       *records[4]);
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
