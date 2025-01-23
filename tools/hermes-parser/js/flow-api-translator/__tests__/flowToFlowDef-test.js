@@ -213,6 +213,14 @@ describe('flowToFlowDef', () => {
          declare export default typeof foo;`,
       );
     });
+    it('export default object expression', async () => {
+      await expectTranslate(
+        `const add = (a: number, b: number) => a + b;
+         export default {add};`,
+        `declare const add: (a: number, b: number) => void;
+         declare export default {add: typeof add};`,
+      );
+    });
   });
   describe('ExportAllDeclaration', () => {
     it('export basic', async () => {
@@ -582,7 +590,7 @@ describe('flowToFlowDef', () => {
         await expectTranslateExpression(`{1: 1}`, `{1: 1}`);
       });
       it('spread', async () => {
-        await expectTranslateExpression(`{...a}`, `{...a}`);
+        await expectTranslateExpression(`{...a}`, `{...typeof a}`);
       });
     });
     describe('Literals', () => {

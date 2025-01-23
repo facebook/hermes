@@ -443,7 +443,7 @@ function convertExpressionToTypeAnnotation(
     }
     case 'Identifier': {
       return [
-        t.GenericTypeAnnotation({id: t.Identifier({name: expr.name})}),
+        t.TypeofTypeAnnotation({argument: t.Identifier({name: expr.name})}),
         analyzeTypeDependencies(expr, context),
       ];
     }
