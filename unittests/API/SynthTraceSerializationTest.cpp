@@ -11,7 +11,6 @@
 #include <hermes/TraceInterpreter.h>
 #include <hermes/TracingRuntime.h>
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <hermes/hermes.h>

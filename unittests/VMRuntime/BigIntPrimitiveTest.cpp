@@ -13,7 +13,6 @@
 #include <array>
 #include <vector>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace hermes::bigint;

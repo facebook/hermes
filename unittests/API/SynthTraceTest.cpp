@@ -15,7 +15,6 @@
 #include "hermes/VM/VMExperiments.h"
 #include "llvh/Support/SHA1.h"
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <hermes/CompileJS.h>
