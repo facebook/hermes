@@ -228,7 +228,7 @@ TEST(JSONEmitterTest, EmitUTF16) {
   llvh::raw_string_ostream OS(storage);
   JSONEmitter json(OS);
 
-  std::u16string str = u"hi👋";
+  std::u16string str = u"hi\xd83d\xdc4b";
   json.openDict();
   json.emitKeyValue("str", llvh::ArrayRef(str.data(), str.size()));
   json.closeDict();
