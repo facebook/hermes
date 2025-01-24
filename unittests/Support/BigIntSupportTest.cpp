@@ -16,8 +16,6 @@
 #include <tuple>
 #include <vector>
 
-#include "gmock/gmock.h"
-
 namespace {
 
 using namespace hermes;
