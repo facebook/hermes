@@ -684,7 +684,7 @@ void TracingRuntime::getPropNameIdData(
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
   jsi::PropNameID res = RD::createPropNameIDFromString(str);
-  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+  trace_.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
       getTimeSinceStart(),
       defObjectID(res),
       SynthTrace::encodeString(useObjectID(str)));
@@ -694,7 +694,7 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromString(
 jsi::PropNameID TracingRuntime::createPropNameIDFromSymbol(
     const jsi::Symbol &sym) {
   jsi::PropNameID res = RD::createPropNameIDFromSymbol(sym);
-  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+  trace_.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
       getTimeSinceStart(),
       defObjectID(res),
       SynthTrace::encodeSymbol(useObjectID(sym)));

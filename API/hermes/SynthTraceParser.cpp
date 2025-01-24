@@ -373,34 +373,29 @@ SynthTrace getTrace(
       }
       case RecordType::CreatePropNameID: {
         auto id = llvh::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
-        if (propValue) {
+        auto encoding =
+            llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
+        auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
+        if (encoding->str() == "ASCII") {
           trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-              timeFromStart, id->getValue(), trace.decode(propValue->c_str()));
+              timeFromStart,
+              id->getValue(),
+              str->str().data(),
+              str->str().size());
         } else {
-          auto encoding =
-              llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
-          bool isAscii = false;
-          if (encoding->str() == "ASCII") {
-            isAscii = true;
-          } else {
-            assert(encoding->str() == "UTF-8");
-          }
-          auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
-          if (isAscii) {
-            trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-                timeFromStart,
-                id->getValue(),
-                str->str().data(),
-                str->str().size());
-          } else {
-            auto utf8Str = jsonStringToU8String(*str);
-            trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-                timeFromStart,
-                id->getValue(),
-                reinterpret_cast<const uint8_t *>(utf8Str.data()),
-                utf8Str.size());
-          }
+          assert(encoding->str() == "UTF-8");
+          auto utf8Str = jsonStringToU8String(*str);
+          trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+              timeFromStart,
+              id->getValue(),
+              reinterpret_cast<const uint8_t *>(utf8Str.data()),
+              utf8Str.size());
         }
+        break;
+      }
+      case RecordType::CreatePropNameIDWithValue: {
+        trace.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
+            timeFromStart, objID->getValue(), trace.decode(propValue->c_str()));
         break;
       }
       case RecordType::CreateHostObject:

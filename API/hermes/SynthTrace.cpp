@@ -382,18 +382,21 @@ void SynthTrace::CreatePropNameIDRecord::toJSONInternal(
     JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", propNameID_);
-  if (valueType_ == TRACEVALUE)
-    json.emitKeyValue("value", encode(traceValue_));
-  else {
-    json.emitKeyValue("encoding", encodingName(valueType_ == ASCII));
-    // For UTF-8 Strings, copy the content to a char16 array and emit each byte
-    // as a code unit. This allows us to reconstruct the exact string
-    // byte-for-byte during replay.
-    std::vector<char16_t> char16Vector(
-        (const unsigned char *)chars_.data(),
-        (const unsigned char *)chars_.data() + chars_.size());
-    json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
-  }
+  json.emitKeyValue("encoding", encodingName(valueType_ == ASCII));
+  // For UTF-8 Strings, copy the content to a char16 array and emit each byte
+  // as a code unit. This allows us to reconstruct the exact string
+  // byte-for-byte during replay.
+  std::vector<char16_t> char16Vector(
+      (const unsigned char *)chars_.data(),
+      (const unsigned char *)chars_.data() + chars_.size());
+  json.emitKeyValue("chars", llvh::ArrayRef(char16Vector));
+}
+
+void SynthTrace::CreatePropNameIDWithValueRecord::toJSONInternal(
+    JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", propNameID_);
+  json.emitKeyValue("value", encode(traceValue_));
 }
 
 void SynthTrace::CreateHostFunctionRecord::toJSONInternal(
