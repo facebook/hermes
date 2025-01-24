@@ -172,7 +172,7 @@ class SynthTrace {
   };
 
   /// Represents the encoding type of a String or PropNameId
-  enum class StringEncodingType { ASCII, UTF8 };
+  enum class StringEncodingType { ASCII, UTF8, UTF16 };
 
   /// A TimePoint is a time when some event occurred.
   using TimePoint = std::chrono::steady_clock::time_point;
@@ -566,7 +566,9 @@ class SynthTrace {
     /// The string that was passed to Runtime::createStringFromAscii() or
     /// Runtime::createStringFromUtf8() when the string was created.
     std::string chars_;
-    /// Whether the string was created from ASCII or UTF8
+    /// The string that was passed to Runtime::createStringFromUtf16()
+    std::u16string chars16_;
+    /// Whether the String was created from ASCII, UTF-8 or UTF-16
     StringEncodingType encodingType_;
 
     // General UTF-8.
@@ -589,6 +591,16 @@ class SynthTrace {
           objID_(objID),
           chars_(chars, length),
           encodingType_(StringEncodingType::ASCII) {}
+    // UTF-16.
+    CreateStringRecord(
+        TimeSinceStart time,
+        ObjectID objID,
+        const char16_t *chars,
+        size_t length)
+        : Record(time),
+          objID_(objID),
+          chars16_(chars, length),
+          encodingType_(StringEncodingType::UTF16) {}
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {
@@ -613,7 +625,9 @@ class SynthTrace {
     /// The string that was passed to Runtime::createPropNameIDFromAscii() or
     /// Runtime::createPropNameIDFromUtf8().
     std::string chars_;
-    /// Whether the PropNameID was created from ASCII or UTF-8
+    /// The string that was passed to Runtime::createPropNameIDFromUtf16()
+    std::u16string chars16_;
+    /// Whether the PropNameID was created from ASCII, UTF-8, or UTF-16
     StringEncodingType encodingType_;
 
     // General UTF-8.
@@ -636,6 +650,16 @@ class SynthTrace {
           propNameID_(propNameID),
           chars_(chars, length),
           encodingType_(StringEncodingType::ASCII) {}
+    // UTF16
+    CreatePropNameIDRecord(
+        TimeSinceStart time,
+        ObjectID propNameID,
+        const char16_t *chars,
+        size_t length)
+        : Record(time),
+          propNameID_(propNameID),
+          chars16_(chars, length),
+          encodingType_(StringEncodingType::UTF16) {}
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
     RecordType getType() const override {

@@ -22,6 +22,18 @@ using namespace ::hermes::parser;
 
 namespace {
 
+SynthTrace::StringEncodingType getStringEncodingType(
+    const std::string &encodingStr) {
+  if (encodingStr == "ASCII") {
+    return SynthTrace::StringEncodingType::ASCII;
+  }
+  if (encodingStr == "UTF-8") {
+    return SynthTrace::StringEncodingType::UTF8;
+  }
+  assert(encodingStr == "UTF-16");
+  return SynthTrace::StringEncodingType::UTF16;
+}
+
 /// Converts the data in the JSONString \p str into a u16string
 std::u16string jsonStringToU16String(
     const ::hermes::parser::JSONString &jsonStr) {
@@ -348,26 +360,34 @@ SynthTrace getTrace(
       case RecordType::CreateString: {
         auto encoding =
             llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
-        bool isAscii = false;
-        if (encoding->str() == "ASCII") {
-          isAscii = true;
-        } else {
-          assert(encoding->str() == "UTF-8");
-        }
         auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
-        if (isAscii) {
-          trace.emplace_back<SynthTrace::CreateStringRecord>(
-              timeFromStart,
-              objID->getValue(),
-              str->str().data(),
-              str->str().size());
-        } else {
-          auto utf8Str = jsonStringToU8String(*str);
-          trace.emplace_back<SynthTrace::CreateStringRecord>(
-              timeFromStart,
-              objID->getValue(),
-              reinterpret_cast<const uint8_t *>(utf8Str.data()),
-              utf8Str.size());
+        switch (getStringEncodingType(encoding->str())) {
+          case SynthTrace::StringEncodingType::ASCII: {
+            trace.emplace_back<SynthTrace::CreateStringRecord>(
+                timeFromStart,
+                objID->getValue(),
+                str->str().data(),
+                str->str().size());
+            break;
+          }
+          case SynthTrace::StringEncodingType::UTF8: {
+            auto utf8Str = jsonStringToU8String(*str);
+            trace.emplace_back<SynthTrace::CreateStringRecord>(
+                timeFromStart,
+                objID->getValue(),
+                reinterpret_cast<const uint8_t *>(utf8Str.data()),
+                utf8Str.size());
+            break;
+          }
+          case SynthTrace::StringEncodingType::UTF16: {
+            auto utf16Str = jsonStringToU16String(*str);
+            trace.emplace_back<SynthTrace::CreateStringRecord>(
+                timeFromStart,
+                objID->getValue(),
+                utf16Str.data(),
+                utf16Str.size());
+            break;
+          }
         }
         break;
       }
@@ -376,20 +396,33 @@ SynthTrace getTrace(
         auto encoding =
             llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
         auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
-        if (encoding->str() == "ASCII") {
-          trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-              timeFromStart,
-              id->getValue(),
-              str->str().data(),
-              str->str().size());
-        } else {
-          assert(encoding->str() == "UTF-8");
-          auto utf8Str = jsonStringToU8String(*str);
-          trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
-              timeFromStart,
-              id->getValue(),
-              reinterpret_cast<const uint8_t *>(utf8Str.data()),
-              utf8Str.size());
+        switch (getStringEncodingType(encoding->str())) {
+          case SynthTrace::StringEncodingType::ASCII: {
+            trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+                timeFromStart,
+                id->getValue(),
+                str->str().data(),
+                str->str().size());
+            break;
+          }
+          case SynthTrace::StringEncodingType::UTF8: {
+            auto utf8Str = jsonStringToU8String(*str);
+            trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+                timeFromStart,
+                id->getValue(),
+                reinterpret_cast<const uint8_t *>(utf8Str.data()),
+                utf8Str.size());
+            break;
+          }
+          case SynthTrace::StringEncodingType::UTF16: {
+            auto utf16Str = jsonStringToU16String(*str);
+            trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+                timeFromStart,
+                id->getValue(),
+                utf16Str.data(),
+                utf16Str.size());
+            break;
+          }
         }
         break;
       }

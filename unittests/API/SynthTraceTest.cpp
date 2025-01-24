@@ -1489,16 +1489,14 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
 TEST_F(SynthTraceReplayTest, UTF16Replay) {
   {
     auto &rt = *traceRt;
-    jsi::String emoji = eval(rt, "'\\ud83d\\udc4d'").getString(rt);
-    rt.global().setProperty(rt, "emoji", emoji);
+    // UTF-16 encoding for 👍 is 0xd83d 0xdc4d
+    jsi::String emoji = jsi::String::createFromUtf16(rt, u"\xd83d\xdc4d");
     emoji.utf16(rt);
 
-    jsi::String loneHighSurrogate = eval(rt, "'\\ud83d'").getString(rt);
-    rt.global().setProperty(rt, "loneHighSurrogate", loneHighSurrogate);
+    jsi::String loneHighSurrogate = jsi::String::createFromUtf16(rt, u"\xd83d");
     loneHighSurrogate.utf16(rt);
 
-    jsi::String ascii = eval(rt, "'hello'").getString(rt);
-    rt.global().setProperty(rt, "hello", ascii);
+    jsi::String ascii = jsi::String::createFromUtf16(rt, u"hello");
     ascii.utf16(rt);
   }
 
@@ -1511,13 +1509,14 @@ TEST_F(SynthTraceReplayTest, GetStringDataReplay) {
   {
     auto &rt = *traceRt;
     auto cb = [](bool ascii, const void *data, size_t num) {};
-    jsi::String emoji = eval(rt, "'\\ud83d\\udc4d'").getString(rt);
+    // UTF-16 encoding for 👍 is 0xd83d 0xdc4d
+    jsi::String emoji = jsi::String::createFromUtf16(rt, u"\xd83d\xdc4d");
     emoji.getStringData(rt, cb);
 
-    jsi::String loneHighSurrogate = eval(rt, "'\\ud83d'").getString(rt);
+    jsi::String loneHighSurrogate = jsi::String::createFromUtf16(rt, u"\xd83d");
     loneHighSurrogate.getStringData(rt, cb);
 
-    jsi::String ascii = eval(rt, "'hello'").getString(rt);
+    jsi::String ascii = jsi::String::createFromUtf16(rt, u"hello");
     ascii.getStringData(rt, cb);
   }
 
@@ -1528,18 +1527,16 @@ TEST_F(SynthTraceReplayTest, GetPropNameIdDataReplay) {
   {
     auto &rt = *traceRt;
     auto cb = [](bool ascii, const void *data, size_t num) {};
-    jsi::String emoji = eval(rt, "'\\ud83d\\udc4d'").getString(rt);
-    auto emojiProp = jsi::PropNameID::forString(rt, emoji);
-    emojiProp.getPropNameIdData(rt, cb);
+    // UTF-16 encoding for 👍 is 0xd83d 0xdc4d
+    jsi::PropNameID emoji = jsi::PropNameID::forUtf16(rt, u"\xd83d\xdc4d");
+    emoji.getPropNameIdData(rt, cb);
 
-    jsi::String loneHighSurrogate = eval(rt, "'\\ud83d'").getString(rt);
-    auto loneHighSurrogateProp =
-        jsi::PropNameID::forString(rt, loneHighSurrogate);
-    loneHighSurrogateProp.getPropNameIdData(rt, cb);
+    jsi::PropNameID loneHighSurrogate =
+        jsi::PropNameID::forUtf16(rt, u"\xd83d");
+    loneHighSurrogate.getPropNameIdData(rt, cb);
 
-    jsi::String ascii = eval(rt, "'hello'").getString(rt);
-    auto asciiProp = jsi::PropNameID::forString(rt, ascii);
-    asciiProp.getPropNameIdData(rt, cb);
+    jsi::PropNameID ascii = jsi::PropNameID::forUtf16(rt, u"hello");
+    ascii.getPropNameIdData(rt, cb);
   }
 
   replay();

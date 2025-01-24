@@ -823,17 +823,23 @@ void TraceInterpreter::executeRecords() {
             case SynthTrace::StringEncodingType::ASCII:
               str = String::createFromAscii(
                   rt_, csr.chars_.data(), csr.chars_.size());
+              TRACE_EXPECT_EQ(csr.chars_, str.asString(rt_).utf8(rt_));
               break;
             case SynthTrace::StringEncodingType::UTF8:
               str = String::createFromUtf8(
                   rt_,
                   reinterpret_cast<const uint8_t *>(csr.chars_.data()),
                   csr.chars_.size());
+              TRACE_EXPECT_EQ(csr.chars_, str.asString(rt_).utf8(rt_));
+              break;
+            case SynthTrace::StringEncodingType::UTF16:
+              str = String::createFromUtf16(
+                  rt_, csr.chars16_.data(), csr.chars16_.size());
+              TRACE_EXPECT_EQ_UTF16(csr.chars16_, str.asString(rt_).utf16(rt_));
               break;
             default:
               llvm_unreachable("No other way to construct String");
           }
-          TRACE_EXPECT_EQ(csr.chars_, str.asString(rt_).utf8(rt_));
           addToObjectMap(csr.objID_, std::move(str), currentExecIndex);
           break;
         }
@@ -847,6 +853,8 @@ void TraceInterpreter::executeRecords() {
                 return PropNameID::forAscii(rt_, cpnr.chars_);
               case SynthTrace::StringEncodingType::UTF8:
                 return PropNameID::forUtf8(rt_, cpnr.chars_);
+              case SynthTrace::StringEncodingType::UTF16:
+                return PropNameID::forUtf16(rt_, cpnr.chars16_);
             }
             llvm_unreachable("No other way to construct PropNameID");
           }();
