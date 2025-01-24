@@ -63,6 +63,9 @@ class BytecodeModuleGenerator {
   /// This map is populated before instruction selection.
   LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap_{};
 
+  /// The debug ID cache for the module.
+  FileAndSourceMapIdCache &debugIdCache_;
+
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
 
@@ -98,12 +101,14 @@ class BytecodeModuleGenerator {
   BytecodeModuleGenerator(
       BytecodeModule &bcModule,
       Module *M,
+      FileAndSourceMapIdCache &debugIdCache,
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults(),
       SourceMapGenerator *sourceMapGen = nullptr,
       std::unique_ptr<BCProviderBase> baseBCProvider = nullptr)
       : bm_(bcModule),
         M_(M),
         debugInfoGenerator_(bm_.getDebugInfo()),
+        debugIdCache_(debugIdCache),
         options_(options),
         sourceMapGen_(sourceMapGen),
         baseBCProvider_(std::move(baseBCProvider)) {
