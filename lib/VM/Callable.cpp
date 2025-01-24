@@ -102,17 +102,6 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     assert(
         cr != ExecutionStatus::EXCEPTION && "failed to define length and name");
     (void)cr;
-  } else if (vmisa<BoundFunction>(fn.get())) {
-    Handle<BoundFunction> boundfn = Handle<BoundFunction>::vmcast(fn);
-    Handle<Callable> target = runtime.makeHandle(boundfn->getTarget(runtime));
-    unsigned int argsWithThis = boundfn->getArgCountWithThis(runtime);
-
-    auto res = BoundFunction::initializeLengthAndName_RJS(
-        boundfn, runtime, target, argsWithThis == 0 ? 0 : argsWithThis - 1);
-    assert(
-        res != ExecutionStatus::EXCEPTION &&
-        "failed to define length and name of bound function");
-    (void)res;
   } else {
     // no other kind of function can be lazy currently
     assert(false && "invalid lazy function");
@@ -536,16 +525,9 @@ CallResult<HermesValue> BoundFunction::create(
       arrHandle);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
-  if (target->isLazy()) {
-    // If the target is lazy we can make the bound function lazy.
-    // If the target is NOT lazy, it might have getter/setters on length that
-    // throws and we also need to throw.
-    selfHandle->flags_.lazyObject = 1;
-  } else {
-    if (initializeLengthAndName_RJS(selfHandle, runtime, target, argCount) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
+  if (initializeLengthAndName_RJS(selfHandle, runtime, target, argCount) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
   }
   return selfHandle.getHermesValue();
 }
