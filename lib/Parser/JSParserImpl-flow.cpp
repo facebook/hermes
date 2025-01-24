@@ -4210,7 +4210,7 @@ JSParserImpl::parseMethodishTypeAnnotationFlow(
           start))
     return None;
 
-  auto optReturn = parseTypeAnnotationFlow();
+  auto optReturn = parseReturnTypeAnnotationFlow();
   if (!optReturn)
     return None;
 
