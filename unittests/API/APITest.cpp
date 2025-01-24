@@ -1167,7 +1167,7 @@ TEST_P(HermesRuntimeTest, NativeExceptionDoesNotUseGlobalError) {
       test.call(*rt).getString(*rt).utf8(*rt));
 }
 
-TEST_P(HermesRuntimeTest, UTF16Test) {
+TEST_P(HermesRuntimeTest, UTF16ConversionTest) {
   String ascii = String::createFromUtf8(*rt, "z");
   EXPECT_EQ(ascii.utf16(*rt), u"z");
 
@@ -1201,6 +1201,37 @@ TEST_P(HermesRuntimeTest, UTF16Test) {
 
     String loneLowSurrogate = eval("'\\udc4d'").getString(*rt);
     EXPECT_EQ(loneLowSurrogate.utf16(*rt), std::u16string(u"\xdc4d"));
+  }
+}
+
+TEST_P(HermesRuntimeTest, CreateFromUtf16Test) {
+  std::u16string utf16 = u"foobar";
+
+  auto jsString = String::createFromUtf16(*rt, utf16);
+  EXPECT_EQ(jsString.utf16(*rt), utf16);
+  auto prop = PropNameID::forUtf16(*rt, utf16);
+  EXPECT_EQ(prop.utf16(*rt), utf16);
+
+  // 👋 in UTF-16 encoding is 0xd83d 0xdc4b
+  utf16 = u"hello!\xd83d\xdc4b";
+  jsString = String::createFromUtf16(*rt, utf16.data(), utf16.length());
+  EXPECT_EQ(jsString.utf16(*rt), utf16);
+  prop = PropNameID::forUtf16(*rt, utf16);
+  EXPECT_EQ(prop.utf16(*rt), utf16);
+
+  // We've only added specific UTF16 implementation HermesRuntime. The ABI
+  // runtime will convert to UTF8 first, then to UTF16. This causes lone
+  // surrogates to be replaced with the Unicode replacement character. Until we
+  // add the UF16 implementation to the ABI Runtime, gate the lone surrogate
+  // test case.
+  if (dynamic_cast<HermesRuntime *>(rt.get())) {
+    // Thumbs up emoji is encoded as 0xd83d 0xdc4d. The following tests String
+    // creation with a lone surrogate.
+    utf16 = u"\xd83d";
+    jsString = String::createFromUtf16(*rt, utf16.data(), utf16.length());
+    EXPECT_EQ(jsString.utf16(*rt), utf16);
+    prop = PropNameID::forUtf16(*rt, utf16);
+    EXPECT_EQ(prop.utf16(*rt), utf16);
   }
 }
 
