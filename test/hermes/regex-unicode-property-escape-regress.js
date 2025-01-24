@@ -20,3 +20,8 @@ print("regex regress");
 
 print(re.exec("a") == null);
 // CHECK-NEXT:true
+
+// Ensure that the "Assigned" category was generated correctly.
+re = /[\P{Assigned}]/u;
+print(re.exec("\u0378") == null);
+// CHECK-NEXT:false
