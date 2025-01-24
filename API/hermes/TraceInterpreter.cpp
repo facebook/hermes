@@ -819,14 +819,19 @@ void TraceInterpreter::executeRecords() {
           const auto &csr =
               static_cast<const SynthTrace::CreateStringRecord &>(*rec);
           Value str;
-          if (csr.ascii_) {
-            str = String::createFromAscii(
-                rt_, csr.chars_.data(), csr.chars_.size());
-          } else {
-            str = String::createFromUtf8(
-                rt_,
-                reinterpret_cast<const uint8_t *>(csr.chars_.data()),
-                csr.chars_.size());
+          switch (csr.encodingType_) {
+            case SynthTrace::StringEncodingType::ASCII:
+              str = String::createFromAscii(
+                  rt_, csr.chars_.data(), csr.chars_.size());
+              break;
+            case SynthTrace::StringEncodingType::UTF8:
+              str = String::createFromUtf8(
+                  rt_,
+                  reinterpret_cast<const uint8_t *>(csr.chars_.data()),
+                  csr.chars_.size());
+              break;
+            default:
+              llvm_unreachable("No other way to construct String");
           }
           TRACE_EXPECT_EQ(csr.chars_, str.asString(rt_).utf8(rt_));
           addToObjectMap(csr.objID_, std::move(str), currentExecIndex);
@@ -837,10 +842,10 @@ void TraceInterpreter::executeRecords() {
               static_cast<const SynthTrace::CreatePropNameIDRecord &>(*rec);
           // We perform the calls below for their side effects (for example,
           jsi::PropNameID propNameID = [&] {
-            switch (cpnr.valueType_) {
-              case SynthTrace::CreatePropNameIDRecord::ASCII:
+            switch (cpnr.encodingType_) {
+              case SynthTrace::StringEncodingType::ASCII:
                 return PropNameID::forAscii(rt_, cpnr.chars_);
-              case SynthTrace::CreatePropNameIDRecord::UTF8:
+              case SynthTrace::StringEncodingType::UTF8:
                 return PropNameID::forUtf8(rt_, cpnr.chars_);
             }
             llvm_unreachable("No other way to construct PropNameID");
