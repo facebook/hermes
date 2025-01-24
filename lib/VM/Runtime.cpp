@@ -1974,13 +1974,17 @@ uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
     }
     default:
       assert(!value->isPointer() && "Unhandled pointer type");
-      if (value->isNumber() && value->getNumber() == 0) {
+      if (value->isNumber()) {
+        // We need to check for NaNs because they may differ in the sign bit,
+        // but they should have the same hash value.
+        if (LLVM_UNLIKELY(value->isNaN()))
+          return llvh::hash_value(HermesValue::encodeNaNValue().getRaw());
         // To normalize -0 to 0.
-        return 0;
-      } else {
-        // For everything else, we just take advantage of HermesValue.
-        return llvh::hash_value(value->getRaw());
+        if (value->getNumber() == 0)
+          return 0;
       }
+      // For everything else, we just take advantage of HermesValue.
+      return llvh::hash_value(value->getRaw());
   }
 }
 
