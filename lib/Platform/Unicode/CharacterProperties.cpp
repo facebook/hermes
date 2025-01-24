@@ -310,8 +310,10 @@ void addRangeArrayPoolToBracket(
         receiver->add(CodePointRange{last, range.first - last});
         last = range.second + 1;
       }
-      // Add the final range.
-      receiver->add(CodePointRange{last, UNICODE_MAX_VALUE - last});
+      // Only add the final range if there's room at the end of the valid
+      // unicode space.
+      if (last < UNICODE_MAX_VALUE)
+        receiver->add(CodePointRange{last, UNICODE_MAX_VALUE - last});
     } else {
       for (auto range : rangePool) {
         const uint32_t length = range.second - range.first + 1;
