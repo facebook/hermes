@@ -2166,7 +2166,18 @@ void SemanticResolver::validateAndDeclareIdentifier(
             "Can't create duplicate variable that shadows a global property: '") +
             ident->_name->str() + "'");
   }
-    
+
+
+  // A promoted function involves two declarations: one for the global scope
+  // and one for the block scope.
+  // This statement handles the scenario where an identifier already
+  // has an associated declaration and focuses on creating the promoted
+  // declaration instead.
+  //  a. A block-scoped declaration is created and linked with the identifier.
+  //  b. The binding table is updated to associate the identifier name with
+  //    the correct declaration. It is necessary to use `put` instead
+  //    of `try_emplace` as there could be multiple identifiers with the same
+  //    name, requiring replacement of the previous binding.
   if (semCtx_.getDeclarationDecl(ident) &&
       functionContext()->promotedFuncDecls.count(ident->_name)) {
     decl = semCtx_.newDeclInScope(ident->_name, kind, curScope_);

@@ -1308,7 +1308,7 @@ class ESTreeIRGen {
   /// Resolve the identifier node associated with the promoted function
   /// to the corresponding global variable in expression context.
   Value *resolveIdentifierPromoted(ESTree::IdentifierNode *id) {
-    auto declPromoted = getIDDeclPromoted(id);
+    auto *declPromoted = getIDDeclPromoted(id);
     return declPromoted ? getDeclData(declPromoted) : nullptr;
   }
 
