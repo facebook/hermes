@@ -2167,7 +2167,6 @@ void SemanticResolver::validateAndDeclareIdentifier(
             ident->_name->str() + "'");
   }
 
-
   // A promoted function involves two declarations: one for the global scope
   // and one for the block scope.
   // This statement handles the scenario where an identifier already
