@@ -213,6 +213,30 @@ describe('flowToFlowDef', () => {
          declare export default typeof foo;`,
       );
     });
+    it('export default object expression', async () => {
+      await expectTranslate(
+        `const add = (a: number, b: number) => a + b;
+         export default {add};`,
+        `declare const add: (a: number, b: number) => void;
+         declare export default {add: typeof add};`,
+      );
+    });
+    it('export default member expression', async () => {
+      await expectTranslate(
+        `import {foo} from 'foo';
+         export default foo.bar;`,
+        `import {foo} from 'foo';
+         declare export default typeof foo.bar;`,
+      );
+    });
+    it('export default object with member expression', async () => {
+      await expectTranslate(
+        `import {foo} from 'foo';
+         export default {bar: foo.bar};`,
+        `import {foo} from 'foo';
+         declare export default {bar: typeof foo.bar};`,
+      );
+    });
   });
   describe('ExportAllDeclaration', () => {
     it('export basic', async () => {
@@ -376,6 +400,16 @@ describe('flowToFlowDef', () => {
          }`,
         `declare export class A {
            1: string;
+         }`,
+      );
+      await expectTranslate(
+        `export class A {
+           foo = () => {};
+           static foo = () => {};
+         }`,
+        `declare export class A {
+           foo: () => void;
+           static foo: () => void;
          }`,
       );
     });
@@ -582,7 +616,7 @@ describe('flowToFlowDef', () => {
         await expectTranslateExpression(`{1: 1}`, `{1: 1}`);
       });
       it('spread', async () => {
-        await expectTranslateExpression(`{...a}`, `{...a}`);
+        await expectTranslateExpression(`{...a}`, `{...typeof a}`);
       });
     });
     describe('Literals', () => {

@@ -10,6 +10,7 @@
 
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
+#include "hermes/BCGen/HBC/FileAndSourceMapIdCache.h"
 
 #include "llvh/ADT/Optional.h"
 
@@ -86,6 +87,12 @@ class BCProviderFromSrc final : public BCProviderBase {
     /// May be shared with other BCProviders during local eval,
     /// which reuses SemContext and the IR but makes a new BCProvider.
     std::shared_ptr<sema::SemContext> semCtx;
+
+    /// The file and source map ID cache used for compiling more code into this
+    /// BytecodeModule.
+    /// Keep alive between lazy compilation calls to avoid expensive lookups
+    /// for huge data URLs in sourceMappingURL.
+    FileAndSourceMapIdCache fileAndSourceMapIdCache;
 
     explicit CompilationData(
         const BytecodeGenerationOptions &genOptions,
@@ -234,6 +241,11 @@ class BCProviderFromSrc final : public BCProviderBase {
   /// \return the shared_ptr for the SemContext so it can be copied.
   const std::shared_ptr<sema::SemContext> &shareSemCtx() const {
     return compilationData_.semCtx;
+  }
+
+  /// \return the FileAndSourceMapIdCache for debug IDs.
+  FileAndSourceMapIdCache &getFileAndSourceMapIdCache() {
+    return compilationData_.fileAndSourceMapIdCache;
   }
 
   SHA1 getSourceHash() const override {

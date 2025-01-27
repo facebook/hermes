@@ -54,6 +54,7 @@ bool generateBytecodeFunctionLazy(
     Module *M,
     Function *lazyFunc,
     uint32_t lazyFuncID,
+    FileAndSourceMapIdCache &debugIdCache,
     const BytecodeGenerationOptions &options);
 
 /// Generates a BytecodeModule from a module \p M, and will return a unique_ptr

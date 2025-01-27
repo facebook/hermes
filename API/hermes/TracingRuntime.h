@@ -59,12 +59,17 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::String createStringFromAscii(const char *str, size_t length) override;
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
+  jsi::String createStringFromUtf16(const char16_t *utf16, size_t length)
+      override;
   std::string utf8(const jsi::PropNameID &) override;
 
   jsi::PropNameID createPropNameIDFromAscii(const char *str, size_t length)
       override;
   jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override;
+  jsi::PropNameID createPropNameIDFromUtf16(
+      const char16_t *utf16,
+      size_t length) override;
   std::string utf8(const jsi::String &) override;
 
   std::u16string utf16(const jsi::PropNameID &) override;

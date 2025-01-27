@@ -50,6 +50,7 @@ import type {
   ObjectTypeProperty,
   OpaqueType,
   QualifiedTypeIdentifier,
+  QualifiedTypeofIdentifier,
   Program,
   RestElement,
   Statement,
@@ -443,7 +444,7 @@ function convertExpressionToTypeAnnotation(
     }
     case 'Identifier': {
       return [
-        t.GenericTypeAnnotation({id: t.Identifier({name: expr.name})}),
+        t.TypeofTypeAnnotation({argument: t.Identifier({name: expr.name})}),
         analyzeTypeDependencies(expr, context),
       ];
     }
@@ -459,6 +460,14 @@ function convertExpressionToTypeAnnotation(
     case 'FunctionExpression': {
       const [resultExpr, deps] = convertAFunction(expr, context);
       return [resultExpr, deps];
+    }
+    case 'MemberExpression': {
+      return [
+        t.TypeofTypeAnnotation({
+          argument: convertExpressionToTypeofIdentifier(expr, context),
+        }),
+        analyzeTypeDependencies(expr, context),
+      ];
     }
     default: {
       return [
@@ -1003,6 +1012,31 @@ function convertExpressionToIdentifier(
   );
 }
 
+function convertExpressionToTypeofIdentifier(
+  node: Expression,
+  context: TranslationContext,
+): DetachedNode<Identifier> | DetachedNode<QualifiedTypeofIdentifier> {
+  if (node.type === 'Identifier') {
+    return t.Identifier({name: node.name});
+  }
+
+  if (node.type === 'MemberExpression') {
+    const {property, object} = node;
+    if (property.type === 'Identifier' && object.type !== 'Super') {
+      return t.QualifiedTypeofIdentifier({
+        qualification: convertExpressionToTypeofIdentifier(object, context),
+        id: t.Identifier({name: property.name}),
+      });
+    }
+  }
+
+  throw translationError(
+    node,
+    `Expected ${node.type} to be an Identifier or Member with Identifier property, non-Super object.`,
+    context,
+  );
+}
+
 function convertSuperClassHelper(
   detachedId: DetachedNode<Identifier | QualifiedTypeIdentifier>,
   nodeForDependencies: ESNode,
@@ -1133,6 +1167,27 @@ function convertClassMember(
           `ClassMember PropertyDefinition: Unsupported key type of "${member.key.type}"`,
           context,
         );
+      }
+
+      if (member.value?.type === 'ArrowFunctionExpression') {
+        const [resultTypeAnnotation, deps] = convertAFunction(
+          member.value,
+          context,
+        );
+
+        return [
+          t.ObjectTypePropertySignature({
+            // $FlowFixMe[incompatible-call]
+            key: asDetachedNode<
+              ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+            >(member.key),
+            value: resultTypeAnnotation,
+            optional: member.optional,
+            static: member.static,
+            variance: member.variance,
+          }),
+          deps,
+        ];
       }
 
       const [resultTypeAnnotation, deps] = convertTypeAnnotation(

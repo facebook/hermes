@@ -564,6 +564,15 @@ jsi::String TracingRuntime::createStringFromUtf8(
   return res;
 };
 
+jsi::String TracingRuntime::createStringFromUtf16(
+    const char16_t *utf16,
+    size_t length) {
+  jsi::String res = RD::createStringFromUtf16(utf16, length);
+  trace_.emplace_back<SynthTrace::CreateStringRecord>(
+      getTimeSinceStart(), defObjectID(res), utf16, length);
+  return res;
+}
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromAscii(
     const char *str,
     size_t length) {
@@ -579,6 +588,15 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromUtf8(
   jsi::PropNameID res = RD::createPropNameIDFromUtf8(utf8, length);
   trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
       getTimeSinceStart(), defObjectID(res), utf8, length);
+  return res;
+}
+
+jsi::PropNameID TracingRuntime::createPropNameIDFromUtf16(
+    const char16_t *utf16,
+    size_t length) {
+  jsi::PropNameID res = RD::createPropNameIDFromUtf16(utf16, length);
+  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+      getTimeSinceStart(), defObjectID(res), utf16, length);
   return res;
 }
 
@@ -684,7 +702,7 @@ void TracingRuntime::getPropNameIdData(
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
   jsi::PropNameID res = RD::createPropNameIDFromString(str);
-  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+  trace_.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
       getTimeSinceStart(),
       defObjectID(res),
       SynthTrace::encodeString(useObjectID(str)));
@@ -694,7 +712,7 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromString(
 jsi::PropNameID TracingRuntime::createPropNameIDFromSymbol(
     const jsi::Symbol &sym) {
   jsi::PropNameID res = RD::createPropNameIDFromSymbol(sym);
-  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+  trace_.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
       getTimeSinceStart(),
       defObjectID(res),
       SynthTrace::encodeSymbol(useObjectID(sym)));

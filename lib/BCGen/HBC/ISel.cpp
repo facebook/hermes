@@ -452,9 +452,6 @@ inline FileAndSourceMapId HBCISel::obtainFileAndSourceMapId(
     sourceMappingUrl = sm.getSourceMappingUrl(bufId);
   }
 
-  // Lazily compiled functions ask to strip the source mapping URL because
-  // it was already encoded in the top level module, and it could be a 1MB+
-  // data url that we don't want to duplicate once per function.
   if (sourceMappingUrl.empty()) {
     currentSourceMappingUrlId = kInvalidSourceMappingUrlId;
   } else {

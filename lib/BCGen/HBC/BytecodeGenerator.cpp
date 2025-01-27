@@ -436,9 +436,6 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
   BytecodeOptions &bytecodeOptions = bm_.getBytecodeOptionsMut();
   bytecodeOptions.cjsModulesStaticallyResolved = M_->getCJSModulesResolved();
 
-  // Allow reusing the debug cache between functions
-  FileAndSourceMapIdCache debugCache{};
-
   M_->assignIndexToVariables();
 
   const uint32_t strippedFunctionNameId =
@@ -505,7 +502,7 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
             *this,
             RA,
             options_,
-            debugCache,
+            debugIdCache_,
             sourceMapGen_,
             debugInfoGenerator_);
     if (!func)

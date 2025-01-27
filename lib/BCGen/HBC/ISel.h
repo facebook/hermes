@@ -8,9 +8,7 @@
 #ifndef HERMES_BCGEN_HBC_ISEL_H
 #define HERMES_BCGEN_HBC_ISEL_H
 
-#include "llvh/ADT/DenseMap.h"
-
-#include <cstdint>
+#include "hermes/BCGen/HBC/FileAndSourceMapIdCache.h"
 
 namespace hermes {
 
@@ -22,21 +20,6 @@ namespace hbc {
 
 class BytecodeFunctionGenerator;
 class HVMRegisterAllocator;
-
-/// The filename ID and source map URL ID of a buffer.
-struct FileAndSourceMapId {
-  /// ID of the filename when added to BytecodeFunctionGenerator.
-  uint32_t filenameId;
-  /// ID of the source map URL when added as a file to
-  /// BytecodeFunctionGenerator.
-  uint32_t sourceMappingUrlId;
-};
-
-/// A map from buffer ID to filelname+source map.
-/// Looking up filename/sourcemap id for each instruction is pretty slow,
-/// so we cache it.
-using FileAndSourceMapIdCache =
-    llvh::SmallDenseMap<unsigned, FileAndSourceMapId>;
 
 /// Generate the bytecode stream for the function.
 void runHBCISel(

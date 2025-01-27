@@ -2299,8 +2299,11 @@ tailCall:
         // have special HC's, different from that of an empty object, and
         // don't do proto caching for such objects, then we wouldn't have
         // to do this check.
-        const SHObjectFlags kLazyProxyOrHost{
-            .hostObject = 1, .lazyObject = 1, .proxyObject = 1};
+        SHObjectFlags kLazyProxyOrHost;
+        kLazyProxyOrHost.bits = 0;
+        kLazyProxyOrHost.hostObject = 1;
+        kLazyProxyOrHost.lazyObject = 1;
+        kLazyProxyOrHost.proxyObject = 1;
         if (LLVM_LIKELY(
                 cacheEntry->negMatchClazz == clazzPtr &&
                 !obj->hasFlagIn(kLazyProxyOrHost))) {

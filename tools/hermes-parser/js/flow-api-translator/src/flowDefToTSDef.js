@@ -3285,7 +3285,10 @@ const getTransforms = (
             }
 
             const spreadType = transformTypeAnnotationType(property.argument);
-            if (spreadType.type !== 'TSTypeReference') {
+            if (
+              spreadType.type !== 'TSTypeReference' &&
+              spreadType.type !== 'TSTypeQuery'
+            ) {
               return unsupportedAnnotation(
                 property,
                 'object types with complex spreads',

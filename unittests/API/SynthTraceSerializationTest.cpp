@@ -11,7 +11,6 @@
 #include <hermes/TraceInterpreter.h>
 #include <hermes/TracingRuntime.h>
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <hermes/hermes.h>
@@ -401,7 +400,7 @@ TEST_F(SynthTraceSerializationTest, Utf16Record) {
   EXPECT_EQ(
       serialized,
       to_string(SynthTrace::Utf16Record(
-          dummyTime, SynthTrace::encodeString(123), u"hi👋")));
+          dummyTime, SynthTrace::encodeString(123), u"hi\xd83d\xdc4b")));
   serialized =
       R"({"type":"Utf16Record","time":0,"objID":"string:111","retval":"\ud83d"})";
   EXPECT_EQ(
@@ -416,7 +415,7 @@ TEST_F(SynthTraceSerializationTest, GetStringDataRecord) {
   EXPECT_EQ(
       serialized,
       to_string(SynthTrace::GetStringDataRecord(
-          dummyTime, SynthTrace::encodeString(123), u"\nhello👋\\")));
+          dummyTime, SynthTrace::encodeString(123), u"\nhello\xd83d\xdc4b\\")));
   serialized =
       R"({"type":"GetStringDataRecord","time":0,"objID":"propNameID:111","strData":"\ud83d"})";
   EXPECT_EQ(
