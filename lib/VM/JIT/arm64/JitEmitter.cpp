@@ -710,7 +710,7 @@ void Emitter::frameSetup(
        }});
 
   comment("// xFrame");
-  a.ldr(xFrame, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
+  a.ldr(xFrame, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
 
   // If the function has a prohibitInvoke flag, we need to check if it has been
   // called correctly.
@@ -771,7 +771,7 @@ void Emitter::frameSetup(
 
   // Compute the remaining available stack space:
   // runtime.registerStackEnd_ - runtime.stackPointer_
-  a.ldr(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, registerStackEnd_)));
+  a.ldr(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::registerStackEnd));
   a.sub(a64::x0, a64::x0, xFrame);
   // Check if we need more registers than remain.
   size_t totalRegsToAlloc = numFrameRegs + hbc::StackFrameLayout::FirstLocal;
@@ -790,8 +790,8 @@ void Emitter::frameSetup(
   }
 
   // Advance the register stack.
-  a.str(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
-  a.str(xFrame, a64::Mem(xRuntime, offsetof(Runtime, currentFrame_)));
+  a.str(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
+  a.str(xFrame, a64::Mem(xRuntime, RuntimeOffsets::currentFrame));
 
   // Fill it with undefined.
   a.mov(a64::x0, _sh_ljs_undefined().raw);
@@ -945,7 +945,7 @@ void Emitter::callThunk(void *fn, const char *name) {
 void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   // Save the current IP in the runtime.
   getBytecodeIP(a64::x16);
-  a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+  a.str(a64::x16, a64::Mem(xRuntime, RuntimeOffsets::currentIP));
 
   // Call the passed function.
   callThunk(fn, name);
@@ -953,7 +953,7 @@ void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   if (emitAsserts_) {
     // Invalidate the current IP to make sure it is set before the next call.
     a.mov(a64::x16, Runtime::kInvalidCurrentIP);
-    a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+    a.str(a64::x16, a64::Mem(xRuntime, RuntimeOffsets::currentIP));
   }
 }
 
@@ -4291,7 +4291,7 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   // Save the current IP in both the SavedIP slot and the runtime.
   getBytecodeIP(savedIPReg.a64GpX());
   frUpdatedWithHW(savedIPArg, savedIPReg, FRType::OtherNonPtr);
-  a.str(savedIPReg.a64GpX(), a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+  a.str(savedIPReg.a64GpX(), a64::Mem(xRuntime, RuntimeOffsets::currentIP));
 
   FR savedCodeBlockArg = FR{nRegs + hbc::StackFrameLayout::SavedCodeBlock};
   // TODO: We should be able to directly store xzr.
