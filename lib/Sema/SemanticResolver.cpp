@@ -2172,8 +2172,8 @@ void SemanticResolver::validateAndDeclareIdentifier(
   // This statement handles the scenario where an identifier already
   // has an associated declaration and focuses on creating the promoted
   // declaration instead.
-  //  a. A block-scoped declaration is created and linked with the identifier.
-  //  b. The binding table is updated to associate the identifier name with
+  //  1. A block-scoped declaration is created and linked with the identifier.
+  //  2. The binding table is updated to associate the identifier name with
   //    the correct declaration. It is necessary to use `put` instead
   //    of `try_emplace` as there could be multiple identifiers with the same
   //    name, requiring replacement of the previous binding.
