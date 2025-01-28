@@ -326,6 +326,116 @@ class C { m(): this is T {} }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ]
 // CHECK-NEXT:   }
+// CHECK-NEXT: },
+
+class C { m(): implies x is T {} }
+// CHECK-NEXT: {
+// CHECK-NEXT:   "type": "ClassDeclaration",
+// CHECK-NEXT:   "id": {
+// CHECK-NEXT:     "type": "Identifier",
+// CHECK-NEXT:     "name": "C"
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "superClass": null,
+// CHECK-NEXT:   "body": {
+// CHECK-NEXT:     "type": "ClassBody",
+// CHECK-NEXT:     "body": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "type": "MethodDefinition",
+// CHECK-NEXT:         "key": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "m"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "value": {
+// CHECK-NEXT:           "type": "FunctionExpression",
+// CHECK-NEXT:           "id": null,
+// CHECK-NEXT:           "params": [],
+// CHECK-NEXT:           "body": {
+// CHECK-NEXT:             "type": "BlockStatement",
+// CHECK-NEXT:             "body": []
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "returnType": {
+// CHECK-NEXT:             "type": "TypeAnnotation",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypePredicate",
+// CHECK-NEXT:               "parameterName": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "x"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "T"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "implies"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "generator": false,
+// CHECK-NEXT:           "async": false
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "kind": "method",
+// CHECK-NEXT:         "computed": false,
+// CHECK-NEXT:         "static": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     ]
+// CHECK-NEXT:   }
+// CHECK-NEXT: },
+
+class C { m(): implies this is T {} }
+// CHECK-NEXT: {
+// CHECK-NEXT:   "type": "ClassDeclaration",
+// CHECK-NEXT:   "id": {
+// CHECK-NEXT:     "type": "Identifier",
+// CHECK-NEXT:     "name": "C"
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "superClass": null,
+// CHECK-NEXT:   "body": {
+// CHECK-NEXT:     "type": "ClassBody",
+// CHECK-NEXT:     "body": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:         "type": "MethodDefinition",
+// CHECK-NEXT:         "key": {
+// CHECK-NEXT:           "type": "Identifier",
+// CHECK-NEXT:           "name": "m"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "value": {
+// CHECK-NEXT:           "type": "FunctionExpression",
+// CHECK-NEXT:           "id": null,
+// CHECK-NEXT:           "params": [],
+// CHECK-NEXT:           "body": {
+// CHECK-NEXT:             "type": "BlockStatement",
+// CHECK-NEXT:             "body": []
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "returnType": {
+// CHECK-NEXT:             "type": "TypeAnnotation",
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "TypePredicate",
+// CHECK-NEXT:               "parameterName": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "this"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "T"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "kind": "implies"
+// CHECK-NEXT:             }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "generator": false,
+// CHECK-NEXT:           "async": false
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "kind": "method",
+// CHECK-NEXT:         "computed": false,
+// CHECK-NEXT:         "static": false
+// CHECK-NEXT:       }
+// CHECK-NEXT:     ]
+// CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 // CHECK-NEXT:   ]
