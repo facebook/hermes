@@ -9,7 +9,7 @@
 
 {
     function promotedFunction(endRecursion) {
-        if(endRecursion) {
+        if(!endRecursion) {
             promotedFunction(true);
             return;
         }
@@ -21,7 +21,7 @@
 
 {
     function promotedFunction(endRecursion) {
-        if(endRecursion) {
+        if(!endRecursion) {
             promotedFunction(true);
             return;
         }
