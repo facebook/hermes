@@ -21,7 +21,7 @@
 
 #define DEBUG_TYPE "jit"
 
-#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
+#if defined(HERMESVM_COMPRESSED_POINTERS)
 #error JIT does not support compressed pointers or boxed doubles yet
 #endif
 
@@ -2021,8 +2021,24 @@ void Emitter::fastArrayLength(FR frRes, FR frArr) {
   freeReg(temp);
   emit_sh_ljs_get_pointer(a, temp.a64GpX(), hwArr.a64GpX());
 
+#ifdef HERMESVM_BOXED_DOUBLES
+  // If boxed doubles are enabled, load the size from the ArrayStorage, where it
+  // is stored as an integer.
+  a.ldr(
+      temp.a64GpX(),
+      a64::Mem(temp.a64GpX(), offsetof(SHFastArray, indexedStorage)));
+  a.ldr(
+      temp.a64GpX().w(),
+      a64::Mem(temp.a64GpX(), offsetof(SHArrayStorage, size)));
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
+  a.ucvtf(hwRes.a64VecD(), temp.a64GpX().w());
+#else
+  // If boxed doubles are disabled, we can just load the size from the length
+  // property of the FastArray.
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWFromMem(hwRes, a64::Mem(temp.a64GpX(), offsetof(SHFastArray, length)));
+#endif
+
   frUpdatedWithHW(frRes, hwRes);
 }
 
@@ -2032,6 +2048,22 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
       frRes.index(),
       frArr.index(),
       frIdx.index());
+#ifdef HERMESVM_BOXED_DOUBLES
+  syncAllFRTempExcept(frRes != frArr && frRes != frIdx ? frRes : FR());
+  syncAllFRTempExcept({});
+  syncToFrame(frArr);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frArr);
+  movHWFromFR(HWReg::vecD(0), frIdx);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, double idx),
+      _sh_fastarray_load);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+#else
   asmjit::Label slowPathLab = newSlowPathLabel();
   // We allocate a temporary register to compute the address instead of using
   // the result register in case the result has a VecD allocated for it.
@@ -2102,6 +2134,7 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
          EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_array_oob);
          // Call does not return.
        }});
+#endif
 }
 
 void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
@@ -3077,7 +3110,14 @@ void Emitter::getByIdImpl(
   // All temporaries will potentially be clobbered by the slow path.
   syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
 
-  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
+  constexpr bool canHaveFastPath =
+#ifdef HERMESVM_BOXED_DOUBLES
+      false;
+#else
+      true;
+#endif
+
+  if (canHaveFastPath && cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
     // Label for indirect property access.
     asmjit::Label indirectLab = a.newLabel();
     slowPathLab = a.newLabel();
