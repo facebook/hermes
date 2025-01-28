@@ -689,6 +689,14 @@ void SemanticResolver::visit(ESTree::ContinueStatementNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::WithStatementNode *node) {
+  if (curFunctionInfo()->strict) {
+    if (compile_)
+      sm_.error(
+          node->getStartLoc(),
+          "with statement is not supported in strict mode");
+    return;
+  }
+
   semCtx_.setWithLexicalDepth(node, curScope_->depth+1);
   visitESTreeChildren(*this, node);
 }

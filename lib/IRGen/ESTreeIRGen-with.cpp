@@ -26,18 +26,20 @@ void ESTreeIRGen::genWithStatement(ESTree::WithStatementNode *with) {
   withScopes_.pop_back();
 }
 
-Value *ESTreeIRGen::emitLoadOrStoreWithStatementImpl(
-    Value *value,
-    Value *ptr,
-    bool declInit_,
-    ESTree::IdentifierNode *id,
-    ConditionalChainType conditionalChainType,
-    bool inhibitThrow) {
-  uint32_t identifierDepth = INT_MAX;
-  std::string_view name;
+template <typename Callback>
+Value *ESTreeIRGen::createWithConditionalChain(
+    ESTree::Node *node,
+    const Callback &callback) {
+  ESTree::IdentifierNode *identifier = !withScopes_.empty() && node
+      ? llvh::dyn_cast<ESTree::IdentifierNode>(node)
+      : nullptr;
+  if (!identifier) {
+    return callback(nullptr, "");
+  }
 
-  identifierDepth = getIDDecl(id)->scope->depth;
-  name = id->_name->c_str();
+  uint32_t identifierDepth = INT_MAX;
+  identifierDepth = getIDDecl(identifier)->scope->depth;
+  std::string_view name = identifier->_name->c_str();
 
   auto compareDepth = [](uint32_t searching, const WithScopeInfo &scope) {
     return scope.depth > searching;
@@ -46,39 +48,17 @@ Value *ESTreeIRGen::emitLoadOrStoreWithStatementImpl(
   auto it = std::upper_bound(
       withScopes_.begin(), withScopes_.end(), identifierDepth, compareDepth);
 
-  return createConditionalChainImpl(
-      it,
-      withScopes_.end(),
-      ptr,
-      value,
-      declInit_,
-      name,
-      conditionalChainType,
-      inhibitThrow);
+  return createWithConditionalChainImpl(it, withScopes_.end(), callback, name);
 }
 
-Value *ESTreeIRGen::createConditionalChainImpl(
+template <typename Callback>
+Value *ESTreeIRGen::createWithConditionalChainImpl(
     std::vector<WithScopeInfo>::iterator begin,
     std::vector<WithScopeInfo>::iterator end,
-    Value *ptr,
-    Value *value,
-    bool declInit_,
-    std::string_view name,
-    ConditionalChainType conditionalChainType,
-    bool inhibitThrow) {
+    const Callback &callback,
+    std::string_view name) {
   if (begin == end) {
-    if (conditionalChainType ==
-        ConditionalChainType::OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE) {
-      return Builder.getLiteralUndefined();
-    } else if (
-        conditionalChainType ==
-        ConditionalChainType::OBJECT_ONLY_WITH_GLOBAL_ALTERNATE) {
-      return Builder.getGlobalObject();
-    } else if (value) {
-      return emitStore(value, ptr, declInit_);
-    } else {
-      return emitLoad(ptr, inhibitThrow);
-    }
+    return callback(nullptr, name);
   }
 
   auto &current = *(end - 1);
@@ -99,26 +79,12 @@ Value *ESTreeIRGen::createConditionalChainImpl(
 
   auto consequentGenerator = [&]() -> Value * {
     auto loadWithObj = emitLoad(current.object, false);
-
-    if (conditionalChainType == ConditionalChainType::MEMBER_EXPRESSION) {
-      if (value) {
-        return Builder.createStorePropertyInst(value, loadWithObj, name.data());
-      } else {
-        return Builder.createLoadPropertyInst(loadWithObj, name.data());
-      }
-    }
-    return loadWithObj;
+    return callback(loadWithObj, name);
   };
 
   auto alternateGenerator = [&]() -> Value * {
-    return createConditionalChainImpl(
-        begin, end - 1,
-        ptr,
-        value,
-        declInit_,
-        name,
-        conditionalChainType,
-        inhibitThrow);
+    return createWithConditionalChainImpl(
+        begin, end - 1, callback, name);
   };
 
   return genConditionalExpr(
@@ -130,33 +96,37 @@ Value *ESTreeIRGen::withAwareEmitLoad(
     ESTree::Node *node,
     ConditionalChainType conditionalChainType,
     bool inhibitThrow) {
-  auto *identifier =
-      llvh::dyn_cast_or_null<ESTree::IdentifierNode>(node);
-  if (!identifier || withScopes_.empty()) {
-    if (!ptr)
-      return Builder.getLiteralUndefined();
-    return emitLoad(ptr, inhibitThrow);
-  }
-  return emitLoadOrStoreWithStatementImpl(
-      nullptr, ptr, false, identifier, conditionalChainType, inhibitThrow);
+  return createWithConditionalChain(
+      node, [&](Value *withObject, std::string_view idName) -> Value * {
+        switch (conditionalChainType) {
+          case ConditionalChainType::OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE:
+            return withObject ? withObject : Builder.getLiteralUndefined();
+          case ConditionalChainType::OBJECT_ONLY_WITH_GLOBAL_ALTERNATE:
+            return withObject ? withObject : Builder.getGlobalObject();
+          case ConditionalChainType::MEMBER_EXPRESSION:
+            return withObject
+                ? Builder.createLoadPropertyInst(withObject, idName.data())
+                : emitLoad(ptr, inhibitThrow);
+          default:
+            llvm_unreachable("Unhandled conditionalChainType");
+        }
+      });
 }
 
-Value *ESTreeIRGen::withAwareEmitStore(
+void ESTreeIRGen::withAwareEmitStore(
     Value *storedValue,
     Value *ptr,
     bool declInit_,
     ESTree::Node *node) {
-  auto *identifier =
-      llvh::dyn_cast_or_null<ESTree::IdentifierNode>(node);
-  if (!identifier || withScopes_.empty()) {
-    return emitStore(storedValue, ptr, declInit_);
-  }
-  return emitLoadOrStoreWithStatementImpl(
-      storedValue,
-      ptr,
-      declInit_,
-      identifier,
-      ConditionalChainType::MEMBER_EXPRESSION);
+  createWithConditionalChain(
+      node, [&](Value *withObject, std::string_view idName) {
+        if (!withObject)
+          emitStore(storedValue, ptr, declInit_);
+        else
+          Builder.createStorePropertyInst(
+              storedValue, withObject, idName.data());
+        return Builder.getLiteralUndefined();
+      });
 }
 
 } // namespace irgen

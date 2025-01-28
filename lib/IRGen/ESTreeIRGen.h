@@ -426,7 +426,8 @@ class ESTreeIRGen {
   /// "outer" and "inner" generator function.
   using CompiledMapKey = llvh::PointerIntPair<ESTree::Node *, 2>;
 
-
+  // Information about each nested 'with' statement, used to resolve identifiers
+  // correctly.
   struct WithScopeInfo {
 
     /// Lexical depth of the 'with' body
@@ -1403,7 +1404,7 @@ class ESTreeIRGen {
   /// \return the instruction performing the store.
   Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
 
-  enum ConditionalChainType {
+  enum class ConditionalChainType : uint8_t {
     // Multiple options to create the conditional chain:
     MEMBER_EXPRESSION, // (a.var ? a.var : var)
     OBJECT_ONLY_WITH_UNDEFINED_ALTERNATE, // (a.var ? a : undefined)
@@ -1437,7 +1438,7 @@ class ESTreeIRGen {
   /// check should be skipped.
   /// \param node the AST node associated with the identifier in the store operation.
   /// \return the stored value, possibly modified to respect 'with' context rules.
-  Value *withAwareEmitStore(
+  void withAwareEmitStore(
       Value *storedValue,
       Value *ptr,
       bool declInit_,
@@ -1472,10 +1473,11 @@ class ESTreeIRGen {
     CompiledMapKey key(node, (unsigned)extraKey);
     assert(compiledEntities_.count(key) == 0 && "Overwriting compiled entity");
     compiledEntities_[key] = value;
-    compilationQueue_.emplace_back([this, f = std::forward<F>(f), withScopesCopy = withScopes_]() mutable {
-      this->withScopes_ = std::move(withScopesCopy);
-      f();
-    });
+    compilationQueue_.emplace_back(
+        [this, f = std::forward<F>(f), withScopesCopy = withScopes_]() mutable {
+          this->withScopes_ = std::move(withScopesCopy);
+          f();
+        });
   }
 
   /// Run all tasks in the compilation queue until it is empty.
@@ -1501,23 +1503,23 @@ class ESTreeIRGen {
     return static_cast<Value *>(decl->customData);
   }
 
-  Value *emitLoadOrStoreWithStatementImpl(
-      Value *value, // value to store, nullptr if reading
-      Value *ptr,   // ptr used to read/store the value
-      bool declInit_,
-      ESTree::IdentifierNode *id,
-      ConditionalChainType conditionalChainType,
-      bool inhibitThrow = false);
+  /// Generates ternary operator chain for loads/stores on objects in all
+  /// surrounding with scopes.
+  /// \p callback void(Value *withObject, string_view name) - is called with the
+  /// object from `with(object)` if the identifier is found on the object from
+  /// surrounding with objects. Else is called with nullptr object indicating
+  /// that the identifier was not found in any of the surrounding with objects.
+  template <typename Callback>
+  Value *createWithConditionalChain(
+      ESTree::Node *node,
+      const Callback &callback);
 
-  Value *createConditionalChainImpl(
+  template <typename Callback>
+  Value *createWithConditionalChainImpl(
       std::vector<WithScopeInfo>::iterator begin,
       std::vector<WithScopeInfo>::iterator end,
-      Value *ptr,
-      Value *value,
-      bool declInit_,
-      std::string_view name,
-      ConditionalChainType conditionalChainType,
-      bool inhibitThrow);
+      const Callback &callback,
+      std::string_view name);
 };
 
 template <typename EB, typename EF, typename EH>
