@@ -1030,8 +1030,9 @@ const getTransforms = (
         superClass:
           superClass == null
             ? null
-            : // Bug: superclass.id can be qualified
-              transform.Identifier((superClass.id: $FlowFixMe), false),
+            : superClass.id.type === 'QualifiedTypeIdentifier'
+            ? transform.QualifiedTypeIdentifier(superClass.id)
+            : transform.Identifier((superClass.id: $FlowFixMe), false),
         superTypeParameters:
           superClass?.typeParameters == null
             ? undefined
