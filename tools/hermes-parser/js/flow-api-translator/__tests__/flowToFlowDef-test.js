@@ -444,6 +444,16 @@ describe('flowToFlowDef', () => {
            static 2(): void;
          }`,
       );
+      await expectTranslate(
+        `export class A {
+           [Symbol.iterator]() {}
+           static get [Symbol.asyncIterator]() {}
+         }`,
+        `declare export class A {
+           @@iterator(): void;
+           static get @@asyncIterator(): void;
+         }`,
+      );
     });
   });
   describe('InterfaceDeclaration', () => {

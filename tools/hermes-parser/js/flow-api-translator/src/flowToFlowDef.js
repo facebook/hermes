@@ -85,6 +85,7 @@ import {
   isStringLiteral,
   isNumericLiteral,
   isIdentifier,
+  isMemberExpressionWithNonComputedProperty,
 } from 'hermes-estree';
 
 const EMPTY_TRANSLATION_RESULT = [null, []];
@@ -1218,7 +1219,13 @@ function convertClassMember(
       if (
         !isIdentifier(member.key) &&
         !isStringLiteral(member.key) &&
-        !isNumericLiteral(member.key)
+        !isNumericLiteral(member.key) &&
+        !(
+          isMemberExpressionWithNonComputedProperty(member.key) &&
+          member.key.object.type === 'Identifier' &&
+          member.key.object.name === 'Symbol' &&
+          ['iterator', 'asyncIterator'].includes(member.key.property.name)
+        )
       ) {
         throw translationError(
           member.key,
@@ -1229,15 +1236,23 @@ function convertClassMember(
 
       const [resultValue, deps] = convertAFunction(member.value, context);
 
+      const newKey =
+        isMemberExpressionWithNonComputedProperty(member.key) &&
+        member.key.object.type === 'Identifier' &&
+        member.key.object.name === 'Symbol'
+          ? t.Identifier({name: `@@${member.key.property.name}`})
+          : member.key;
+
       if (member.kind === 'get' || member.kind === 'set') {
         // accessors are methods - but flow accessor signatures are properties
         const kind = member.kind;
+
         return [
           t.ObjectTypeAccessorSignature({
             // $FlowFixMe[incompatible-call]
             key: asDetachedNode<
               ClassPropertyNameComputed | ClassPropertyNameNonComputed,
-            >(member.key),
+            >(newKey),
             value: resultValue,
             static: member.static,
             kind,
@@ -1251,7 +1266,7 @@ function convertClassMember(
           // $FlowFixMe[incompatible-call]
           key: asDetachedNode<
             ClassPropertyNameComputed | ClassPropertyNameNonComputed,
-          >(member.key),
+          >(newKey),
           value: resultValue,
           static: member.static,
         }),
