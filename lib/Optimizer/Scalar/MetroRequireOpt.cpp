@@ -48,10 +48,6 @@ class MetroRequireImpl {
   /// Builder used for new instructions.
   IRBuilder builder_;
 
-  /// Set to false if there is at least one case that we couldn't resolve
-  /// statically.
-  bool canResolve_{true};
-
   /// An instance of using the "require" parameter or a value derived
   /// from it.
   struct Usage {
@@ -80,9 +76,8 @@ class MetroRequireImpl {
         : call(call), resolvedTarget(resolvedTarget) {}
   };
 
-  /// All resolved require calls. If canResolve_ is true, we can replace them
-  /// with HermesInternal.require() calls.
-  std::vector<ResolvedRequire> resolvedRequireCalls_{};
+  /// True if we've resolved at least one require call.
+  bool resolvedRequireCalls_{false};
 
  public:
   MetroRequireImpl(Module *M)
@@ -113,24 +108,7 @@ bool MetroRequireImpl::run() {
     resolveMetroModule(jsModuleFactoryFunc);
   }
 
-  if (!canResolve_)
-    return false;
-
-  // Replace all resolved calls with calls to HermesInternal.requireFast().
-  for (const auto &RR : resolvedRequireCalls_) {
-    builder_.setInsertionPointAfter(RR.call);
-
-    builder_.setLocation(RR.call->getLocation());
-
-    /// (CallBuiltin "requireFast", resolvedTarget)
-    auto callHI = builder_.createCallBuiltinInst(
-        BuiltinMethod::HermesBuiltin_requireFast, RR.resolvedTarget);
-
-    RR.call->replaceAllUsesWith(callHI);
-    RR.call->eraseFromParent();
-  }
-
-  return !resolvedRequireCalls_.empty();
+  return resolvedRequireCalls_;
 }
 
 static constexpr unsigned kRequireIndex = 2;
@@ -216,32 +194,11 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
     Usage U = workList.pop_back_val();
 
     if (auto *call = llvh::dyn_cast<BaseCallInst>(U.I)) {
-      // Make sure require() doesn't escape as a parameter.
-      bool fail = false;
-      for (unsigned numArgs = call->getNumArguments(), arg = 0; arg != numArgs;
-           ++arg) {
-        if (call->getArgument(arg) == U.V) {
-          // Oops, "require" is passed as parameter.
-          EM_.warning(
-              Warning::UnresolvedStaticRequire,
-              call->getLocation(),
-              "'require' used as function call argument");
-          // No need to analyze this usage anymore.
-          fail = true;
-          canResolve_ = false;
-          break;
-        }
-      }
-
-      if (fail)
-        continue;
-
       if (!llvh::isa<CallInst>(call)) {
         EM_.warning(
             Warning::UnresolvedStaticRequire,
             call->getLocation(),
             "'require' used in unexpected way");
-        canResolve_ = false;
         continue;
       }
 
@@ -250,14 +207,12 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
             Warning::UnresolvedStaticRequire,
             call->getLocation(),
             "'require' used as a constructor");
-        canResolve_ = false;
         continue;
       }
 
-      assert(
-          call->getCallee() == U.V && "Value is not used at all in CallInst");
-
-      resolveRequireCall(moduleFactoryFunction, llvh::cast<CallInst>(call));
+      if (call->getCallee() == U.V) {
+        resolveRequireCall(moduleFactoryFunction, llvh::cast<CallInst>(call));
+      }
     } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(U.I)) {
       // Storing "require" into a stack location.  Record that this location
       // has a store of 'require'; later we'll see if all stores store
@@ -279,7 +234,6 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
                 SF->getFunction()->getOriginalOrInferredName().str() +
                 "', 'require' is copied to a variable which " +
                 "cannot be analyzed");
-        canResolve_ = false;
         continue;
       }
       addUsers(SF->getVariable());
@@ -287,35 +241,18 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
       // Loading "require" from a frame variable.
 
       addUsers(LF);
-    } else if (auto *LPI = llvh::dyn_cast<BaseLoadPropertyInst>(U.I)) {
-      if (LPI->getProperty() == U.V) {
-        // `require` must not be used as a key in a LoadPropertyInst,
-        // because it could be used in a getter and escape.
-        canResolve_ = false;
-        EM_.warning(
-            Warning::UnresolvedStaticRequire,
-            U.I->getLocation(),
-            "In function '" +
-                SF->getFunction()->getOriginalOrInferredName().str() +
-                "', 'require' is used as a property key and " +
-                "cannot be analyzed");
-      }
-      // Loading values from require is allowed.
-      // In particular, require.context is used to load new segments.
-
     } else if (auto *phi = llvh::dyn_cast<PhiInst>(U.I)) {
       // If a phi has been placed on the worklist, it's known that
       // all its inputs are require.  Add the phi's users.
       addUsers(phi);
 
     } else {
-      canResolve_ = false;
       EM_.warning(
           Warning::UnresolvedStaticRequire,
           U.I->getLocation(),
           "In function '" +
               U.I->getFunction()->getOriginalOrInferredName().str() +
-              "', 'require' escapes or is modified");
+              "', 'require' param is used in an unanalyzable way");
     }
 
     if (workList.empty()) {
@@ -370,7 +307,6 @@ void MetroRequireImpl::resolveRequireCall(
         Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require() invoked with insufficient arguments");
-    canResolve_ = false;
     return;
   }
 
@@ -380,7 +316,6 @@ void MetroRequireImpl::resolveRequireCall(
         Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require argument not literal number");
-    canResolve_ = false;
     return;
   }
   if (!litNum->isUInt32Representible()) {
@@ -388,7 +323,6 @@ void MetroRequireImpl::resolveRequireCall(
         Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require argument must be non-negative integer");
-    canResolve_ = false;
     return;
   }
 
@@ -397,7 +331,6 @@ void MetroRequireImpl::resolveRequireCall(
         Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require call whose callee is not always closure");
-    canResolve_ = false;
     return;
   }
 
@@ -406,7 +339,6 @@ void MetroRequireImpl::resolveRequireCall(
         Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require call with an 'env' argument");
-    canResolve_ = false;
     return;
   }
 
@@ -415,7 +347,6 @@ void MetroRequireImpl::resolveRequireCall(
         Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require call whose 'newTarget' is not undefined");
-    canResolve_ = false;
     return;
   }
   if (!call->getThis()->getType().isUndefinedType()) {
@@ -423,11 +354,11 @@ void MetroRequireImpl::resolveRequireCall(
         Warning::UnresolvedStaticRequire,
         call->getLocation(),
         "require call whose 'this' is not undefined");
-    canResolve_ = false;
     return;
   }
 
   call->getAttributesRef(moduleFactoryFunction->getParent()).isMetroRequire = 1;
+  resolvedRequireCalls_ = true;
 
   ++NumRequireCallsResolved;
 }
