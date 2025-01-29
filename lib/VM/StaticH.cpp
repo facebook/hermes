@@ -1012,6 +1012,27 @@ static inline HermesValue getByIdWithReceiver_RJS(
       return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
           .unboxToHV(runtime);
     }
+
+    // See if it's a proto cache hit.
+    SHObjectFlags kLazyProxyOrHost;
+    kLazyProxyOrHost.bits = 0;
+    kLazyProxyOrHost.hostObject = 1;
+    kLazyProxyOrHost.lazyObject = 1;
+    kLazyProxyOrHost.proxyObject = 1;
+    if (LLVM_LIKELY(
+            cacheEntry->negMatchClazz == clazzPtr &&
+            !obj->hasFlagIn(kLazyProxyOrHost))) {
+      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
+      if (LLVM_LIKELY(parentGCPtr)) {
+        JSObject *parent = parentGCPtr.getNonNull(runtime);
+        if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
+          return JSObject::getNamedSlotValueUnsafe(
+                     parent, runtime, cacheEntry->slot)
+              .unboxToHV(runtime);
+        }
+      }
+    }
+
     NamedPropertyDescriptor desc;
     OptValue<bool> fastPathResult =
         JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, symID, desc);
@@ -1040,26 +1061,6 @@ static inline HermesValue getByIdWithReceiver_RJS(
           "tryGetOwnNamedDescriptorFast returned true on Proxy");
       return JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
           .unboxToHV(runtime);
-    }
-
-    // The cache may also be populated via the prototype of the object.
-    // This value is only reliable if the fast path was a definite
-    // not-found.
-    if (cacheEntry && fastPathResult.hasValue() && !fastPathResult.getValue() &&
-        LLVM_LIKELY(!obj->isProxyObject())) {
-      JSObject *parent = obj->getParent(runtime);
-      // TODO: This isLazy check is because a lazy object is reported as
-      // having no properties and therefore cannot contain the property.
-      // This check does not belong here, it should be merged into
-      // tryGetOwnNamedDescriptorFast().
-      if (parent && cacheEntry->clazz == parent->getClassGCPtr() &&
-          LLVM_LIKELY(!obj->isLazy())) {
-        //++NumGetByIdProtoHits;
-        // We've already checked that this isn't a Proxy.
-        return JSObject::getNamedSlotValueUnsafe(
-                   parent, runtime, cacheEntry->slot)
-            .unboxToHV(runtime);
-      }
     }
 
 #ifdef HERMES_SLOW_DEBUG

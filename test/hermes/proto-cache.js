@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // Exercise the proto cache.
 print(function () {
