@@ -21,8 +21,8 @@
 
 #define DEBUG_TYPE "jit"
 
-#if defined(HERMESVM_COMPRESSED_POINTERS)
-#error JIT does not support compressed pointers or boxed doubles yet
+#if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
+#error JIT does not support non-contiguous heap with compressed pointers
 #endif
 
 namespace hermes::vm::arm64 {
@@ -315,6 +315,53 @@ void emit_double_is_uint32(
   a.fcvtzu(wTemp, dInput);
   a.ucvtf(dTemp, wTemp);
   a.fcmp(dTemp, dInput);
+}
+
+/// Given a compressed pointer in \p xInOut, decompress it and place the result
+/// in \p xInOut.
+void emit_sh_cp_decode(a64::Assembler &a, const a64::GpX &xInOut) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.cmp(xInOut, 0);
+  a.add(xInOut, xRuntime, xInOut);
+  a.csel(xInOut, a64::xzr, xInOut, a64::CondCode::kEQ);
+#endif
+}
+
+/// Given a compressed pointer in \p xInOut that is known to be non-null,
+/// decompress it and place the result in \p xInOut.
+void emit_sh_cp_decode_non_null(a64::Assembler &a, const a64::GpX &xInOut) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.add(xInOut, xRuntime, xInOut);
+#endif
+}
+
+/// Load a compressed pointer from \p mem and decompress it into \p dest.
+void emit_load_and_sh_cp_decode(
+    a64::Assembler &a,
+    const a64::GpX &dest,
+    const a64::Mem &mem) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.ldr(dest.w(), mem);
+  emit_sh_cp_decode(a, dest);
+#else
+  a.ldr(dest, mem);
+  (void)emit_sh_cp_decode;
+#endif
+}
+
+/// Load a compressed pointer that is known to be non-null from \p mem and
+/// decompress it into \p dest.
+void emit_load_and_sh_cp_decode_non_null(
+    a64::Assembler &a,
+    const a64::GpX &dest,
+    const a64::Mem &mem) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.ldr(dest.w(), mem);
+  emit_sh_cp_decode_non_null(a, dest);
+#else
+  a.ldr(dest, mem);
+  (void)emit_sh_cp_decode_non_null;
+#endif
 }
 
 class OurErrorHandler : public asmjit::ErrorHandler {
@@ -2024,7 +2071,8 @@ void Emitter::fastArrayLength(FR frRes, FR frArr) {
 #ifdef HERMESVM_BOXED_DOUBLES
   // If boxed doubles are enabled, load the size from the ArrayStorage, where it
   // is stored as an integer.
-  a.ldr(
+  emit_load_and_sh_cp_decode_non_null(
+      a,
       temp.a64GpX(),
       a64::Mem(temp.a64GpX(), offsetof(SHFastArray, indexedStorage)));
   a.ldr(
@@ -2048,7 +2096,7 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
       frRes.index(),
       frArr.index(),
       frIdx.index());
-#ifdef HERMESVM_BOXED_DOUBLES
+#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
   syncAllFRTempExcept(frRes != frArr && frRes != frIdx ? frRes : FR());
   syncAllFRTempExcept({});
   syncToFrame(frArr);
@@ -2287,10 +2335,12 @@ void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
   // get pointer.
   emit_sh_ljs_get_pointer(a, xTmp1, xTmp1);
   // xTmp1 = closure->environment
-  a.ldr(xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
+  emit_load_and_sh_cp_decode_non_null(
+      a, xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
   for (; level; --level) {
     // xTmp1 = env->parent.
-    a.ldr(xTmp1, a64::Mem(xTmp1, offsetof(SHEnvironment, parentEnvironment)));
+    emit_load_and_sh_cp_decode_non_null(
+        a, xTmp1, a64::Mem(xTmp1, offsetof(SHEnvironment, parentEnvironment)));
   }
   // encode object.
   emit_sh_ljs_object(a, xTmp1);
@@ -2310,7 +2360,8 @@ void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
   auto hwRes = getOrAllocFRInGpX(frRes, false);
   // Use the result register as a scratch register for computing the address.
   emit_sh_ljs_get_pointer(a, hwRes.a64GpX(), hwClosure.a64GpX());
-  movHWFromMem(hwRes, a64::Mem(hwRes.a64GpX(), ofs));
+  emit_load_and_sh_cp_decode_non_null(
+      a, hwRes.a64GpX(), a64::Mem(hwRes.a64GpX(), ofs));
   // The result is a pointer, so add the object tag.
   emit_sh_ljs_object(a, hwRes.a64GpX());
   frUpdatedWithHW(frRes, hwRes);
@@ -2937,8 +2988,10 @@ void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
   // xTmp contains the unencoded pointer value.
-  a.ldr(xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  emit_load_and_sh_cp_decode(
+      a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
   // Check whether it is nullptr and set flags.
+  // TODO: Combine this null check with the one in emit_load_and_sh_cp_decode.
   a.cmp(xTmp, 0);
   // xRes contains the encoded pointer.
   emit_sh_ljs_object2(a, xRes, xTmp);
@@ -2957,7 +3010,8 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
-  a.ldr(xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_load_and_sh_cp_decode_non_null(
+      a, xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
   emit_sh_ljs_object(a, xRes);
 
   frUpdatedWithHW(frRes, hwRes);
@@ -3111,7 +3165,7 @@ void Emitter::getByIdImpl(
   syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
 
   constexpr bool canHaveFastPath =
-#ifdef HERMESVM_BOXED_DOUBLES
+#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
       false;
 #else
       true;
@@ -3170,9 +3224,6 @@ void Emitter::getByIdImpl(
     // xTemp1 is the pointer to the object.
     emit_sh_ljs_get_pointer(a, xTemp1, hwSourceGpx.a64GpX());
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
-#error Compressed pointers not implemented
-#endif
     // xTemp2 is the hidden class.
     a.ldr(xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
 

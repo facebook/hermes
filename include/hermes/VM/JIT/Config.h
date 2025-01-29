@@ -31,7 +31,8 @@
 // If the JIT is allowed by configuration, enable it on platforms that support
 // it.
 #if !defined(HERMESVM_JIT) && (defined(__aarch64__) || defined(_M_ARM64)) && \
-    !defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_BOXED_DOUBLES)
+    (!defined(HERMESVM_COMPRESSED_POINTERS) ||                               \
+     defined(HERMESVM_CONTIGUOUS_HEAP))
 #define HERMESVM_JIT 1
 #else
 #define HERMESVM_JIT 0
