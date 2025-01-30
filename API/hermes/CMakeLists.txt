@@ -78,12 +78,6 @@ add_hermes_library(hermesapi
   )
 target_include_directories(hermesapi_obj PUBLIC ..)
 
-add_hermes_library(hermesapiLean
-        ${api_sources}
-        LINK_OBJLIBS hermesPublic LINK_LIBS jsi ${CDP_DEPS})
-target_include_directories(hermesapiLean_obj PUBLIC ..)
-target_compile_definitions(hermesapiLean_obj PUBLIC HERMESVM_LEAN)
-
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_OBJLIBS hermesapi)
 

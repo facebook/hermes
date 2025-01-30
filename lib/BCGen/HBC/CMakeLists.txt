@@ -34,6 +34,7 @@ add_hermes_library(hermesHBCBackend
 )
 
 add_hermes_library(hermesHBCBackendLean
+  HBCStub.cpp
   BCProvider.cpp
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
@@ -42,5 +43,3 @@ add_hermes_library(hermesHBCBackendLean
   LINK_OBJLIBS
   hermesSupport
 )
-
-target_compile_definitions(hermesHBCBackendLean_obj PUBLIC HERMESVM_LEAN)
