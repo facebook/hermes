@@ -2238,89 +2238,110 @@ tailCall:
         DISPATCH;
       }
 
+#ifndef NDEBUG
+#define INC_NUMGETBYIDDICT                                               \
+  if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary()) \
+    ++NumGetByIdDict;
+#else
+#define INC_NUMGETBYIDDICT (void)NumGetByIdDict;
+#endif
+
+#define GET_BY_ID_FAST_PATH(name)                                             \
+  ++NumGetById;                                                               \
+  if (LLVM_LIKELY(O2REG(name).isObject())) {                                  \
+    auto *obj = vmcast<JSObject>(O2REG(name));                                \
+    auto cacheIdx = ip->i##name.op3;                                          \
+    auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);             \
+    CompressedPointer clazzPtr{obj->getClassGCPtr()};                         \
+    INC_NUMGETBYIDDICT;                                                       \
+    /* If we have a cache hit, reuse the cached offset and immediately return \
+     * the property. */                                                       \
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {                         \
+      ++NumGetByIdCacheHits;                                                  \
+      O1REG(name) =                                                           \
+          JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)   \
+              .unboxToHV(runtime);                                            \
+      ip = nextIP;                                                            \
+      DISPATCH;                                                               \
+    }                                                                         \
+    /* TODO(T206393003): if we ensure that lazy, proxy, host objects          \
+     * have special HC's, different from that of an empty object, and         \
+     * don't do proto caching for such objects, then we wouldn't have         \
+     * to do this check. */                                                   \
+    SHObjectFlags kLazyProxyOrHost;                                           \
+    kLazyProxyOrHost.bits = 0;                                                \
+    kLazyProxyOrHost.hostObject = 1;                                          \
+    kLazyProxyOrHost.lazyObject = 1;                                          \
+    kLazyProxyOrHost.proxyObject = 1;                                         \
+    if (LLVM_LIKELY(                                                          \
+            cacheEntry->negMatchClazz == clazzPtr &&                          \
+            !obj->hasFlagIn(kLazyProxyOrHost))) {                             \
+      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();         \
+      if (LLVM_LIKELY(parentGCPtr)) {                                         \
+        JSObject *parent = parentGCPtr.getNonNull(runtime);                   \
+        if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {      \
+          ++NumGetByIdProtoHits;                                              \
+          /* We've already checked that this isn't a Proxy. */                \
+          O1REG(name) = JSObject::getNamedSlotValueUnsafe(                    \
+                            parent, runtime, cacheEntry->slot)                \
+                            .unboxToHV(runtime);                              \
+          ip = nextIP;                                                        \
+          DISPATCH;                                                           \
+        }                                                                     \
+      }                                                                       \
+    }                                                                         \
+    goto getByIdIsObject;                                                     \
+  } else {                                                                    \
+    goto getByIdNonObject;                                                    \
+  }
+
       CASE(TryGetByIdLong) {
         tryProp = true;
         idVal = ip->iTryGetByIdLong.op4;
         nextIP = NEXTINST(TryGetByIdLong);
-        goto getById;
+        GET_BY_ID_FAST_PATH(TryGetByIdLong);
       }
       CASE(GetByIdLong) {
         tryProp = false;
         idVal = ip->iGetByIdLong.op4;
         nextIP = NEXTINST(GetByIdLong);
-        goto getById;
+        GET_BY_ID_FAST_PATH(GetByIdLong);
       }
       CASE(GetByIdShort) {
         tryProp = false;
         idVal = ip->iGetByIdShort.op4;
         nextIP = NEXTINST(GetByIdShort);
-        goto getById;
+        GET_BY_ID_FAST_PATH(GetByIdShort);
       }
       CASE(TryGetById) {
         tryProp = true;
         idVal = ip->iTryGetById.op4;
         nextIP = NEXTINST(TryGetById);
-        goto getById;
+        GET_BY_ID_FAST_PATH(TryGetById);
       }
       CASE(GetById) {
         tryProp = false;
         idVal = ip->iGetById.op4;
         nextIP = NEXTINST(GetById);
+        GET_BY_ID_FAST_PATH(GetById);
       }
-    getById: {
-      ++NumGetById;
+
+#undef INC_NUMGETBYIDDICT
+#undef GET_BY_ID_FAST_PATH
+
       // NOTE: it is safe to use OnREG(GetById) here because all instructions
       // have the same layout: opcode, registers, non-register operands, i.e.
       // they only differ in the width of the last "identifier" field.
-      if (LLVM_LIKELY(O2REG(GetById).isObject())) {
+      {
+        // Jump here if argument is an object.
+      getByIdIsObject:
+        assert(O2REG(GetById).isObject() && "checked in each case");
         auto *obj = vmcast<JSObject>(O2REG(GetById));
         auto cacheIdx = ip->iGetById.op3;
         auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
 
         CompressedPointer clazzPtr{obj->getClassGCPtr()};
-#ifndef NDEBUG
-        if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary())
-          ++NumGetByIdDict;
-#else
-        (void)NumGetByIdDict;
-#endif
 
-        // If we have a cache hit, reuse the cached offset and immediately
-        // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-          ++NumGetByIdCacheHits;
-          O1REG(GetById) =
-              JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
-                  .unboxToHV(runtime);
-          ip = nextIP;
-          DISPATCH;
-        }
-        // TODO(T206393003): if we ensure that lazy, proxy, host objects
-        // have special HC's, different from that of an empty object, and
-        // don't do proto caching for such objects, then we wouldn't have
-        // to do this check.
-        SHObjectFlags kLazyProxyOrHost;
-        kLazyProxyOrHost.bits = 0;
-        kLazyProxyOrHost.hostObject = 1;
-        kLazyProxyOrHost.lazyObject = 1;
-        kLazyProxyOrHost.proxyObject = 1;
-        if (LLVM_LIKELY(
-                cacheEntry->negMatchClazz == clazzPtr &&
-                !obj->hasFlagIn(kLazyProxyOrHost))) {
-          const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
-          if (LLVM_LIKELY(parentGCPtr)) {
-            JSObject *parent = parentGCPtr.getNonNull(runtime);
-            if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
-              ++NumGetByIdProtoHits;
-              // We've already checked that this isn't a Proxy.
-              O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
-                                   parent, runtime, cacheEntry->slot)
-                                   .unboxToHV(runtime);
-              ip = nextIP;
-              DISPATCH;
-            }
-          }
-        }
         auto id = ID(idVal);
         NamedPropertyDescriptor desc;
         OptValue<bool> fastPathResult =
@@ -2414,7 +2435,15 @@ tailCall:
           ++NumGetByIdCacheEvicts;
         }
 #endif
-      } else {
+        O1REG(GetById) = resPH->get();
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = nextIP;
+        DISPATCH;
+      }
+      {
+        // Jump here if argument is NOT an object.
+      getByIdNonObject:
+        assert(!O2REG(GetById).isObject() && "checked in each case");
         ++NumGetByIdTransient;
         assert(!tryProp && "TryGetById can only be used on the global object");
         /* Slow path. */
@@ -2424,12 +2453,11 @@ tailCall:
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
+        O1REG(GetById) = resPH->get();
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = nextIP;
+        DISPATCH;
       }
-      O1REG(GetById) = resPH->get();
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
 
       CASE(GetByIdWithReceiverLong) {
         if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
