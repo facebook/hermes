@@ -244,21 +244,14 @@ bool CodeBlock::coordsInLazyFunction(SMLoc loc) const {
 }
 
 std::vector<uint32_t> CodeBlock::getVariableCounts() const {
-  auto *provider =
-      llvh::dyn_cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
-  if (!provider) {
-    return std::vector<uint32_t>({0});
-  }
-  return hbc::getVariableCounts(provider, functionID_);
+  return hbc::getVariableCounts(runtimeModule_->getBytecode(), functionID_);
 }
 
 llvh::StringRef CodeBlock::getVariableNameAtDepth(
     uint32_t depth,
     uint32_t variableIndex) const {
-  auto *provider =
-      llvh::cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
   return hbc::getVariableNameAtDepth(
-      provider, functionID_, depth, variableIndex);
+      runtimeModule_->getBytecode(), functionID_, depth, variableIndex);
 }
 #endif
 

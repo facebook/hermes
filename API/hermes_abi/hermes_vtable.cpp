@@ -10,7 +10,7 @@
 #include "hermes_abi/hermes_abi.h"
 
 #include "hermes/ADT/ManagedChunkedList.h"
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
@@ -478,7 +478,7 @@ HermesABIValueOrError evaluate_javascript_source(
   return abi::createValueOrError(HermesABIErrorCodeNativeException);
 #else
   llvh::StringRef sourceURLRef(sourceURL, sourceURLLength);
-  auto bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+  auto bcErr = hbc::createBCProviderFromSrc(
       std::make_unique<BufferWrapper>(source),
       sourceURLRef,
       /* sourceMap */ {},

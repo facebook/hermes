@@ -1769,6 +1769,7 @@ CompileResult generateBytecodeForExecution(
       return BackendError;
     }
 
+    assert(BM && "BytecodeModule should not be null if no errors");
     result.bytecodeProvider = hbc::BCProviderFromSrc::createFromBytecodeModule(
         std::move(BM), std::move(compilationData));
   } else {

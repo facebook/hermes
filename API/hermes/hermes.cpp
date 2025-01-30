@@ -11,8 +11,8 @@
 
 #include "hermes/ADT/ManagedChunkedList.h"
 #include "hermes/BCGen/HBC/BCProvider.h"
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Platform/Logging.h"
 #include "hermes/Public/JSOutOfMemoryError.h"
@@ -1559,15 +1559,13 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
         throw std::runtime_error("Error parsing source map:" + errorStr);
       }
     }
-    bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+    bcErr = hbc::createBCProviderFromSrc(
         ensureZeroTerminated(jsiBuffer),
         sourceURL,
         std::move(sourceMap),
         compileFlags_);
     if (bcErr.first) {
-      runtimeFlags.persistent =
-          llvh::cast<hbc::BCProviderFromSrc>(bcErr.first.get())
-              ->allowPersistent();
+      runtimeFlags.persistent = bcErr.first->allowPersistent();
     }
 #endif
   }

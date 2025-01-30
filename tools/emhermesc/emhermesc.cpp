@@ -145,7 +145,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
 
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
-  auto res = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+  auto res = hbc::createBCProviderFromSrc(
       std::make_unique<hermes::Buffer>((const uint8_t *)source, sourceSize - 1),
       sourceURL ? sourceURL : "",
       std::move(sourceMap),

@@ -8,7 +8,9 @@
 #include "hermes/BCGen/HBC/HBC.h"
 
 #include "BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Sema/SemResolve.h"
 #include "hermes/Support/MemoryBuffer.h"
@@ -21,6 +23,32 @@
 
 namespace hermes {
 namespace hbc {
+
+void fullOptimizationPipeline(Module &M) {
+  hermes::runFullOptimizationPasses(M);
+}
+
+std::pair<std::unique_ptr<BCProvider>, std::string> createBCProviderFromSrc(
+    std::unique_ptr<Buffer> buffer,
+    llvh::StringRef sourceURL,
+    std::unique_ptr<SourceMap> sourceMap,
+    const CompileFlags &compileFlags,
+    llvh::StringRef topLevelFunctionName,
+    SourceErrorManager::DiagHandlerTy diagHandler,
+    void *diagContext,
+    const std::function<void(Module &)> &runOptimizationPasses,
+    const BytecodeGenerationOptions &defaultBytecodeGenerationOptions) {
+  return BCProviderFromSrc::create(
+      std::move(buffer),
+      sourceURL,
+      std::move(sourceMap),
+      compileFlags,
+      topLevelFunctionName,
+      diagHandler,
+      diagContext,
+      runOptimizationPasses,
+      defaultBytecodeGenerationOptions);
+}
 
 std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Module *M,
@@ -410,13 +438,21 @@ bool coordsInLazyFunction(
       loc.getPointer() < F->getSourceRange().End.getPointer();
 }
 
-std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
+std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     std::unique_ptr<Buffer> src,
-    hbc::BCProviderFromSrc *provider,
+    hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags) {
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
+  if (!providerFromSrc) {
+    return std::make_pair(
+        std::unique_ptr<BCProviderFromSrc>{},
+        "Code compiled without support for eval");
+  }
   // Use this callback-style API to reduce conflicts with stable for now.
-  EvalThreadData data{std::move(src), provider, enclosingFuncID, compileFlags};
+  EvalThreadData data{
+      std::move(src), providerFromSrc, enclosingFuncID, compileFlags};
   compileEvalWorker(&data);
 
   return data.success
@@ -425,9 +461,15 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
 }
 
 std::vector<uint32_t> getVariableCounts(
-    hbc::BCProviderFromSrc *provider,
+    hbc::BCProvider *provider,
     uint32_t funcID) {
-  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
+  if (!providerFromSrc) {
+    return std::vector<uint32_t>({0});
+  }
+
+  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
   hbc::BytecodeFunction &bcFunc = bcModule->getFunction(funcID);
   Function *F = bcFunc.getFunctionIR();
   if (!F) {
@@ -455,11 +497,14 @@ std::vector<uint32_t> getVariableCounts(
 }
 
 llvh::StringRef getVariableNameAtDepth(
-    hbc::BCProviderFromSrc *provider,
+    hbc::BCProvider *provider,
     uint32_t funcID,
     uint32_t depth,
     uint32_t variableIndex) {
-  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::cast<hbc::BCProviderFromSrc>(provider);
+
+  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
   hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
   Function *F = lazyFunc.getFunctionIR();
   assert(F && "no lazy IR for lazy function");

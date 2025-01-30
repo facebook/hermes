@@ -8,6 +8,8 @@
 #include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/IR/IR.h"
+#include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Sema/SemContext.h"
@@ -82,7 +84,7 @@ void BCProviderFromSrc::setBytecodeModuleRefs() {
 }
 
 std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
-BCProviderFromSrc::createBCProviderFromSrc(
+BCProviderFromSrc::create(
     std::unique_ptr<Buffer> buffer,
     llvh::StringRef sourceURL,
     std::unique_ptr<SourceMap> sourceMap,
@@ -222,7 +224,11 @@ BCProviderFromSrc::createBCProviderFromSrc(
   }
   auto result =
       createFromBytecodeModule(std::move(BM), CompilationData{opts, M, semCtx});
-  result->singleFunction_ = isSingleFunctionExpression(parsed.getValue());
+  if (compileFlags.requireSingleFunction &&
+      !isSingleFunctionExpression(parsed.getValue())) {
+    return {nullptr, "Invalid function expression"};
+  }
+
   return {std::move(result), std::string{}};
 }
 

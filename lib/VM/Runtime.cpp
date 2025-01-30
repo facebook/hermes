@@ -10,7 +10,7 @@
 #include "hermes/VM/Runtime.h"
 
 #include "hermes/BCGen/HBC/BCProvider.h"
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Platform/Logging.h"
@@ -1021,11 +1021,11 @@ CallResult<HermesValue> Runtime::run(
   return raiseEvalUnsupported(llvh::StringRef(
       reinterpret_cast<const char *>(buffer->data()), buffer->size()));
 #else
-  std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
+  std::unique_ptr<hbc::BCProvider> bytecode;
   {
     PerfSection loading("Loading new JavaScript code");
     loading.addArg("url", sourceURL);
-    auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+    auto bytecode_err = hbc::createBCProviderFromSrc(
         std::move(code), sourceURL, /* sourceMap */ nullptr, compileFlags);
     if (!bytecode_err.first) {
       return raiseSyntaxError(TwineChar16(bytecode_err.second));
@@ -1069,13 +1069,10 @@ CallResult<HermesValue> Runtime::runBytecode(
   if (flags.persistent) {
 #ifndef HERMESVM_LEAN
     // Persistent flag can't be true if the BCProvider doesn't support it.
-    if (auto *providerFromSrc =
-            llvh::dyn_cast<hbc::BCProviderFromSrc>(bytecode.get())) {
-      if (LLVM_UNLIKELY(!providerFromSrc->allowPersistent())) {
-        const char *msg = "Cannot enable persistent mode for lazy compilation";
-        hermesLog("Hermes", "%s", msg);
-        hermes_fatal(msg);
-      }
+    if (LLVM_UNLIKELY(!bytecode->allowPersistent())) {
+      const char *msg = "Cannot enable persistent mode for lazy compilation";
+      hermesLog("Hermes", "%s", msg);
+      hermes_fatal(msg);
     }
 #endif
 

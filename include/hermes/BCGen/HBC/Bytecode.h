@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/BCGen/ShapeTableEntry.h"
-#include "hermes/IRGen/IRGen.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/StringTableEntry.h"
@@ -27,6 +26,10 @@
 
 namespace hermes {
 class SourceMapGenerator;
+
+namespace sema {
+class SemContext;
+}
 
 namespace hbc {
 class BCProviderFromSrc;

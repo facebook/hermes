@@ -7,8 +7,7 @@
 
 #include "CompileJS.h"
 
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
-#include "hermes/Optimizer/PassManager/Pipeline.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
 
@@ -68,7 +67,7 @@ bool compileJS(
 
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
-  auto res = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+  auto res = hbc::createBCProviderFromSrc(
       std::make_unique<hermes::Buffer>((const uint8_t *)str.data(), str.size()),
       sourceURL,
       std::move(sourceMap),
@@ -76,7 +75,7 @@ bool compileJS(
       "global",
       diagHandler ? diagHandlerAdapter : nullptr,
       diagHandler,
-      compileJSOptions.optimize ? runFullOptimizationPasses : nullptr);
+      compileJSOptions.optimize ? hbc::fullOptimizationPipeline : nullptr);
   if (!res.first)
     return false;
 
@@ -85,6 +84,9 @@ bool compileJS(
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = compileJSOptions.optimize;
 
+  assert(
+      res.first->getBytecodeModule() &&
+      "BCProviderFromSrc must have a bytecode module");
   hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
       llvh::SHA1::hash(llvh::makeArrayRef(

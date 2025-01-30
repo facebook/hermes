@@ -28,6 +28,7 @@ namespace hermes {
 namespace hbc {
 class BCProviderBase;
 class BCProviderFromBuffer;
+class BytecodeModule;
 
 // Making BCProvider an alias to BCProviderFromBuffer when eval is disabled
 // eliminates the cost of virtual function calls and allows for inlining.
@@ -279,8 +280,16 @@ class BCProviderBase {
 
   virtual ~BCProviderBase() = default;
 
+  /// \return the BytecodeModule, nullptr if none exists.
+  virtual BytecodeModule *getBytecodeModule() = 0;
+
   /// Check whether a function with \p functionID is lazy.
   virtual bool isFunctionLazy(uint32_t functionID) const = 0;
+
+  /// \return whether the provider can be loaded as persistent,
+  /// which is not possible if the underlying storage may be mutated,
+  /// e.g. in the case of lazy compilation.
+  virtual bool allowPersistent() const = 0;
 
   /// Read some bytecode into OS page cache (only implemented for buffers).
   virtual void startWarmup(uint8_t percent) {}
@@ -515,8 +524,17 @@ class BCProviderFromBuffer final : public BCProviderBase {
     delete debugInfo_;
   }
 
+  /// \return the BytecodeModule, nullptr if none exists.
+  BytecodeModule *getBytecodeModule() override {
+    return nullptr;
+  }
+
   bool isFunctionLazy(uint32_t functionID) const override {
     return false;
+  }
+
+  bool allowPersistent() const override {
+    return true;
   }
 
   static bool classof(const BCProviderBase *provider) {
