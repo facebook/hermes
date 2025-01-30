@@ -50,7 +50,6 @@ One popular implementation strategy followed by other engines, is to bundle an i
 ## Supported on Android only
 - `Intl.NumberFormat`
   - `Intl.NumberFormat.prototype.formatToParts`
-  - `Intl.DateTimeFormat.prototype.formatToParts`
 
 ## * Limitations on property support
 
