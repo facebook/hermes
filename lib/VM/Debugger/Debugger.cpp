@@ -1310,7 +1310,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
 
   OptValue<hbc::DebugSearchResult> locationOpt{};
 
-#ifndef HERMESVM_LEAN
   // If we could have lazy code blocks, compile them before we try to resolve.
   // Eagerly compile code blocks that may contain the location.
   // This is done using a search in which we enumerate all CodeBlocks in the
@@ -1389,7 +1388,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       }
     }
   }
-#endif
 
   // Iterate backwards through runtime modules, under the assumption that
   // modules at the end of the list were added more recently, and are more

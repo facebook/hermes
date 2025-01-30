@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Platform/Logging.h"
+#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AlignedHeapSegment.h"
@@ -42,10 +43,6 @@
 #include "hermes/InternalJavaScript/internal_unit.h"
 #else
 #include "hermes/InternalJavaScript/InternalBytecode.h"
-#endif
-
-#ifndef HERMESVM_LEAN
-#include "hermes/Support/MemoryBuffer.h"
 #endif
 
 #include "llvh/ADT/Hashing.h"
@@ -997,9 +994,6 @@ CallResult<HermesValue> Runtime::run(
     llvh::StringRef code,
     llvh::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
-#ifdef HERMESVM_LEAN
-  return raiseEvalUnsupported(code);
-#else
   std::unique_ptr<hermes::Buffer> buffer;
   if (compileFlags.lazy) {
     buffer.reset(new hermes::OwnedMemoryBuffer(
@@ -1009,18 +1003,12 @@ CallResult<HermesValue> Runtime::run(
         new hermes::OwnedMemoryBuffer(llvh::MemoryBuffer::getMemBuffer(code)));
   }
   return run(std::move(buffer), sourceURL, compileFlags);
-#endif
 }
 
 CallResult<HermesValue> Runtime::run(
     std::unique_ptr<hermes::Buffer> code,
     llvh::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
-#ifdef HERMESVM_LEAN
-  auto buffer = code.get();
-  return raiseEvalUnsupported(llvh::StringRef(
-      reinterpret_cast<const char *>(buffer->data()), buffer->size()));
-#else
   std::unique_ptr<hbc::BCProvider> bytecode;
   {
     PerfSection loading("Loading new JavaScript code");
@@ -1039,7 +1027,6 @@ CallResult<HermesValue> Runtime::run(
     rmflags.persistent = true;
   return runBytecode(
       std::move(bytecode), rmflags, sourceURL, makeNullHandle<Environment>());
-#endif
 }
 
 CallResult<HermesValue> Runtime::runBytecode(
@@ -1067,14 +1054,12 @@ CallResult<HermesValue> Runtime::runBytecode(
   }
 
   if (flags.persistent) {
-#ifndef HERMESVM_LEAN
     // Persistent flag can't be true if the BCProvider doesn't support it.
     if (LLVM_UNLIKELY(!bytecode->allowPersistent())) {
       const char *msg = "Cannot enable persistent mode for lazy compilation";
       hermesLog("Hermes", "%s", msg);
       hermes_fatal(msg);
     }
-#endif
 
     persistentBCProviders_.push_back(bytecode);
     if (bytecodeWarmupPercent_ > 0) {

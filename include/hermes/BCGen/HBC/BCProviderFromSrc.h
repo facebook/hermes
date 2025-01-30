@@ -18,7 +18,6 @@
 namespace hermes {
 namespace hbc {
 
-#ifndef HERMESVM_LEAN
 /// BCProviderFromSrc is used when we are construction the bytecode from
 /// source compilation, i.e. we generate BytecodeModule/BytecodeFunction
 /// in this code path, and all the data are stored in those classes.
@@ -209,7 +208,6 @@ class BCProviderFromSrc final : public BCProviderBase {
   }
 };
 
-#endif // HERMESVM_LEAN
 } // namespace hbc
 } // namespace hermes
 

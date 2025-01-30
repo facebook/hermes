@@ -473,10 +473,6 @@ HermesABIValueOrError evaluate_javascript_source(
     const char *sourceURL,
     size_t sourceURLLength) {
   auto *hart = impl(abiRt);
-#ifdef HERMESVM_LEAN
-  hart->nativeExceptionMessage = "source compilation not supported";
-  return abi::createValueOrError(HermesABIErrorCodeNativeException);
-#else
   llvh::StringRef sourceURLRef(sourceURL, sourceURLLength);
   auto bcErr = hbc::createBCProviderFromSrc(
       std::make_unique<BufferWrapper>(source),
@@ -489,7 +485,6 @@ HermesABIValueOrError evaluate_javascript_source(
   }
 
   return runBCProvider(hart, std::move(bcErr.first), sourceURLRef);
-#endif
 }
 
 HermesABIValueOrError evaluate_hermes_bytecode(

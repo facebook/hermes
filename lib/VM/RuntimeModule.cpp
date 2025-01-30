@@ -134,13 +134,11 @@ ExecutionStatus RuntimeModule::initializeMayAllocate(
 }
 
 CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
-#ifndef HERMESVM_LEAN
   if (bcProvider_->isFunctionLazy(index)) {
     functionMap_[index] = CodeBlock::createCodeBlock(
         this, bcProvider_->getFunctionHeader(index), nullptr, index);
     return functionMap_[index].get();
   }
-#endif
   functionMap_[index] = CodeBlock::createCodeBlock(
       this,
       bcProvider_->getFunctionHeader(index),

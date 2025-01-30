@@ -139,13 +139,11 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
   uint32_t readCacheSize = sizeComputer(header.highestReadCacheIndex());
   uint32_t writeCacheSize = sizeComputer(header.highestWriteCacheIndex());
 
-#ifndef HERMESVM_LEAN
   bool isCodeBlockLazy = !bytecode;
   if (isCodeBlockLazy) {
     readCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
     writeCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
   }
-#endif
 
   auto allocSize =
       totalSizeToAlloc<ReadPropertyCacheEntry, WritePropertyCacheEntry>(
@@ -211,7 +209,6 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocationForFunction()
       ->getLocationForFunction(*debugLocsOffset);
 }
 
-#ifndef HERMESVM_LEAN
 ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");
   auto *provider = runtimeModule_->getBytecode();
@@ -253,7 +250,6 @@ llvh::StringRef CodeBlock::getVariableNameAtDepth(
   return hbc::getVariableNameAtDepth(
       runtimeModule_->getBytecode(), functionID_, depth, variableIndex);
 }
-#endif
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   // Note that for the case of lazy compilation, the function sources had been

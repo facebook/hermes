@@ -30,13 +30,7 @@ class BCProviderBase;
 class BCProviderFromBuffer;
 class BytecodeModule;
 
-// Making BCProvider an alias to BCProviderFromBuffer when eval is disabled
-// eliminates the cost of virtual function calls and allows for inlining.
-#ifdef HERMESVM_LEAN
-using BCProvider = BCProviderFromBuffer;
-#else
 using BCProvider = BCProviderBase;
-#endif
 
 using StringID = uint32_t;
 

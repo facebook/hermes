@@ -30,9 +30,6 @@ CallResult<HermesValue> evalInEnvironment(
     Handle<> thisArg,
     Handle<> newTarget,
     bool singleFunction) {
-#ifdef HERMESVM_LEAN
-  return runtime.raiseEvalUnsupported(utf8code);
-#else
   if (!runtime.enableEval) {
     return runtime.raiseEvalUnsupported(utf8code);
   }
@@ -122,7 +119,6 @@ CallResult<HermesValue> evalInEnvironment(
       environment,
       thisArg,
       newTarget);
-#endif
 }
 
 CallResult<HermesValue> directEval(

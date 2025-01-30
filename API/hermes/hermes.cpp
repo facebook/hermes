@@ -1493,8 +1493,6 @@ class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
   }
 };
 
-#ifndef HERMESVM_LEAN
-
 /// If the buffer contains an embedded terminating zero, shrink it, so it is
 /// one past the size, as per the LLVM MemoryBuffer convention. Otherwise, copy
 /// it into a new zero-terminated buffer.
@@ -1512,8 +1510,6 @@ std::unique_ptr<BufferAdapter> ensureZeroTerminated(
         std::string((const char *)data, size)));
   }
 }
-
-#endif
 
 } // namespace
 
@@ -1540,9 +1536,6 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
         std::make_unique<BufferAdapter>(jsiBuffer));
     runtimeFlags.persistent = true;
   } else {
-#if defined(HERMESVM_LEAN)
-    bcErr.second = "prepareJavaScript source compilation not supported";
-#else
     std::unique_ptr<::hermes::SourceMap> sourceMap{};
     if (sourceMapBuf) {
       auto buf0 = ensureZeroTerminated(sourceMapBuf);
@@ -1567,7 +1560,6 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
     if (bcErr.first) {
       runtimeFlags.persistent = bcErr.first->allowPersistent();
     }
-#endif
   }
   if (!bcErr.first) {
     LOG_EXCEPTION_CAUSE("Compiling JS failed: %s", bcErr.second.c_str());
