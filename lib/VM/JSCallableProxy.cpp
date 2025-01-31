@@ -42,23 +42,13 @@ void JSCallableProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 PseudoHandle<JSCallableProxy> JSCallableProxy::create(Runtime &runtime) {
   auto *cproxy = runtime.makeAFixed<JSCallableProxy>(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.objectPrototype),
+      HandleRootOwner::makeNullHandle<JSObject>(),
       runtime.getHiddenClassForPrototype(
-          runtime.objectPrototypeRawPtr,
-          JSObject::numOverlapSlots<JSCallableProxy>()));
+          nullptr, JSObject::numOverlapSlots<JSCallableProxy>()));
 
   cproxy->flags_.proxyObject = true;
 
   return JSObjectInit::initToPseudoHandle(runtime, cproxy);
-}
-
-CallResult<HermesValue> JSCallableProxy::create(
-    Runtime &runtime,
-    Handle<JSObject> prototype) {
-  assert(
-      prototype.get() == runtime.objectPrototypeRawPtr &&
-      "JSCallableProxy::create() can only be used with object prototype");
-  return create(runtime).getHermesValue();
 }
 
 void JSCallableProxy::setTargetAndHandler(

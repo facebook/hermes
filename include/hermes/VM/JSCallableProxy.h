@@ -33,10 +33,6 @@ class JSCallableProxy : public NativeFunction {
 
   static PseudoHandle<JSCallableProxy> create(Runtime &runtime);
 
-  static CallResult<HermesValue> create(
-      Runtime &runtime,
-      Handle<JSObject> prototype);
-
   void setTargetAndHandler(
       Runtime &runtime,
       Handle<JSObject> target,
