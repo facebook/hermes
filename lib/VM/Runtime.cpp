@@ -2114,6 +2114,46 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
 std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   NoAllocScope noAlloc(*this);
   std::string res;
+
+  /// Try adding the function name and source location into res for the native
+  /// frame. Return false if no valid source location or calleeHV is not a
+  /// NativeJSFunction.
+  auto tryAddNativeFrame = [&res, this](
+                               HermesValue calleeHV, const SHLocals *locals) {
+    if (!locals || locals->src_location_idx == 0)
+      return false;
+    const SHUnit *unit = locals->unit;
+    // If unit is nonnull then we have a valid location and can use the
+    // fields in loc. Otherwise, it is an unknown location.
+    if (!unit)
+      return false;
+
+    if (!vmisa<NativeJSFunction>(calleeHV))
+      return false;
+    auto *callee = vmcast<NativeJSFunction>(calleeHV);
+    auto nameIndex = callee->getFunctionInfo()->name_index;
+    assert(
+        nameIndex < unit->num_symbols &&
+        "out of bound access on symbols table");
+    SymbolID nameSym = SymbolID::unsafeCreate(unit->symbols[nameIndex]);
+    auto name = identifierTable_.convertSymbolToUTF8(nameSym);
+
+    uint32_t curLocIdx = locals->src_location_idx;
+    assert(
+        curLocIdx < unit->source_locations_size &&
+        "out of bound access on source locations table");
+    SHSrcLoc curLoc = unit->source_locations[curLocIdx];
+    assert(
+        curLoc.filename_idx < unit->num_symbols &&
+        "out of bound access on symbols table");
+    auto fnameSym = SymbolID::unsafeCreate(unit->symbols[curLoc.filename_idx]);
+    auto fname = identifierTable_.convertSymbolToUTF8(fnameSym);
+    res += name + ": " + fname + ":" + std::to_string(curLoc.line) + ":" +
+        std::to_string(curLoc.column) + "\n";
+
+    return true;
+  };
+
   // Note that the order of iteration is youngest (leaf) frame to oldest.
   for (auto frame : getStackFrames()) {
     auto codeBlock = frame->getCalleeCodeBlock();
@@ -2139,7 +2179,10 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
       }
       res += "\n";
     } else {
-      res += "<Native code>\n";
+      if (!tryAddNativeFrame(
+              frame.getCalleeClosureOrCBRef(), frame.getSHLocals())) {
+        res += "<Native code>\n";
+      }
     }
     // Get the ip of the caller frame -- which will then be correct for the
     // next iteration.
