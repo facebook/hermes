@@ -43,6 +43,16 @@ except TypeError:
     RESOURCE_ROOT = Path(os.path.dirname(__file__))
 
 
+def strip_nargs(value: str):
+    """
+    Strip the leading/trailing whitespaces in values passed to nargs.
+
+    Adding leading/trailing whitespaces is a common workaround to pass argument
+    values with '-' in it (otherwise, argparse will treat it as another flag).
+    """
+    return value.strip()
+
+
 def create_parser():
     # Common argument for running all testsuite
     desp = """
@@ -112,6 +122,7 @@ def create_parser():
         dest="extra_compile_args",
         nargs="+",
         default=[],
+        type=strip_nargs,
         help="Extra compiler arguments, separated by whitespace",
     )
     parser.add_argument(
@@ -119,6 +130,7 @@ def create_parser():
         dest="extra_vm_args",
         nargs="+",
         default=[],
+        type=strip_nargs,
         help="Extra VM arguments, separated by whitespace",
     )
     parser.add_argument(
