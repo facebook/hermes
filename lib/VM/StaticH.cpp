@@ -624,8 +624,7 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
         Handle<Environment>::vmcast(toPHV(env)),
         func,
         funcInfo,
-        unit,
-        0);
+        unit);
     auto generatorFunction = runtime.makeHandle(vmcast<NativeJSFunction>(
         runtime.getCurrentFrame().getCalleeClosureUnsafe()));
     assert(
@@ -676,16 +675,14 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
                                 Handle<Environment>::vmcast(toPHV(env)),
                                 func,
                                 funcInfo,
-                                unit,
-                                0)
+                                unit)
                           : *NativeJSFunction::create(
                                 runtime,
                                 ctorParent,
                                 Handle<Environment>::vmcast(toPHV(env)),
                                 func,
                                 funcInfo,
-                                unit,
-                                0);
+                                unit);
       });
   if (classRes == ExecutionStatus::EXCEPTION)
     _sh_throw_current(shr);
@@ -707,8 +704,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
                  : Runtime::makeNullHandle<Environment>(),
              func,
              funcInfo,
-             unit,
-             0)
+             unit)
       .getHermesValue();
 }
 

@@ -535,15 +535,12 @@ class NativeJSFunction : public Callable {
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param funcInfo pointer to the information describing the function.
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit,
-      unsigned additionalSlotCount = 0);
+      const SHUnit *unit);
 
   /// Create an instance of NativeJSFunction.
   /// \param parentHandle object to use as [[Prototype]].
@@ -551,16 +548,13 @@ class NativeJSFunction : public Callable {
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param funcInfo pointer to the information describing the function.
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit,
-      unsigned additionalSlotCount = 0);
+      const SHUnit *unit);
 
   /// Create a Function with the prototype property set to new Object(). The
   /// parent is inferred by the kind of the function.
@@ -568,38 +562,12 @@ class NativeJSFunction : public Callable {
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param funcInfo pointer to the information describing the function.
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
   static Handle<NativeJSFunction> createWithInferredParent(
       Runtime &runtime,
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit,
-      unsigned additionalSlotCount = 0);
-
-  /// \return the value in an additional slot.
-  /// \param index must be less than the \c additionalSlotCount passed to
-  /// the create method.
-  static SmallHermesValue getAdditionalSlotValue(
-      NativeJSFunction *self,
-      Runtime &runtime,
-      unsigned index) {
-    return JSObject::getInternalProperty(
-        self, runtime, numOverlapSlots<NativeJSFunction>() + index);
-  }
-
-  /// Set the value in an additional slot.
-  /// \param index must be less than the \c additionalSlotCount passed to
-  /// the create method.
-  static void setAdditionalSlotValue(
-      NativeJSFunction *self,
-      Runtime &runtime,
-      unsigned index,
-      SmallHermesValue value) {
-    JSObject::setInternalProperty(
-        self, runtime, numOverlapSlots<NativeJSFunction>() + index, value);
-  }
+      const SHUnit *unit);
 
  public:
   NativeJSFunction(
@@ -684,8 +652,7 @@ class NativeJSDerivedClass : public NativeJSFunction {
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit,
-      unsigned additionalSlotCount = 0);
+      const SHUnit *unit);
 };
 
 /// A pointer to native function.

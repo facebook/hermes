@@ -927,22 +927,17 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     Handle<JSObject> parentHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
-    const SHUnit *unit,
-    unsigned additionalSlotCount) {
-  size_t reservedSlots =
-      numOverlapSlots<NativeJSFunction>() + additionalSlotCount;
+    const SHUnit *unit) {
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
+      runtime.getHiddenClassForPrototype(
+          *parentHandle, numOverlapSlots<NativeJSFunction>()),
       functionPtr,
       funcInfo,
       unit);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
-  // Allocate a propStorage if the number of additional slots requires it.
-  runtime.ignoreAllocationFailure(
-      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
   selfHandle->flags_.lazyObject = 1;
   return selfHandle;
 }
@@ -953,14 +948,12 @@ Handle<NativeJSFunction> NativeJSFunction::create(
     Handle<Environment> parentEnvHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
-    const SHUnit *unit,
-    unsigned additionalSlotCount) {
+    const SHUnit *unit) {
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeJSFunction>() + additionalSlotCount),
+          *parentHandle, numOverlapSlots<NativeJSFunction>()),
       parentEnvHandle,
       functionPtr,
       funcInfo,
@@ -987,16 +980,14 @@ Handle<NativeJSFunction> NativeJSFunction::createWithInferredParent(
     Handle<Environment> parentEnvHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
-    const SHUnit *unit,
-    unsigned additionalSlotCount) {
+    const SHUnit *unit) {
   return NativeJSFunction::create(
       runtime,
       inferredParent(runtime, (FuncKind)funcInfo->kind),
       parentEnvHandle,
       functionPtr,
       funcInfo,
-      unit,
-      0);
+      unit);
 }
 
 /// This is a lightweight and unsafe wrapper intended to be used only by the
@@ -1071,14 +1062,12 @@ Handle<NativeJSDerivedClass> NativeJSDerivedClass::create(
     Handle<Environment> parentEnvHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
-    const SHUnit *unit,
-    unsigned additionalSlotCount) {
+    const SHUnit *unit) {
   auto *cell = runtime.makeAFixed<NativeJSDerivedClass>(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeJSDerivedClass>() + additionalSlotCount),
+          *parentHandle, numOverlapSlots<NativeJSDerivedClass>()),
       parentEnvHandle,
       functionPtr,
       funcInfo,
