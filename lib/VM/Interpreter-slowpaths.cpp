@@ -7,6 +7,7 @@
 
 #define DEBUG_TYPE "vm"
 #include "JSLib/JSLibInternal.h"
+#include "hermes/Support/Statistic.h"
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
@@ -19,6 +20,28 @@
 #include "hermes/VM/StringPrimitive.h"
 
 #include "Interpreter-internal.h"
+
+HERMES_SLOW_STATISTIC(
+    NumGetByIdCacheEvicts,
+    "NumGetByIdCacheEvicts: Number of property 'read by id' cache evictions");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdFastPaths,
+    "NumGetByIdFastPaths: Number of property 'read by id' fast paths");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdAccessor,
+    "NumGetByIdAccessor: Number of property 'read by id' accessors");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdProto,
+    "NumGetByIdProto: Number of property 'read by id' in the prototype chain");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdNotFound,
+    "NumGetByIdNotFound: Number of property 'read by id' not found");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdTransient,
+    "NumGetByIdTransient: Number of property 'read by id' of non-objects");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdSlow,
+    "NumGetByIdSlow: Number of property 'read by id' slow path");
 
 namespace hermes {
 namespace vm {
@@ -1079,6 +1102,199 @@ ExecutionStatus doCallRequireSlowPath_RJS(
       runtime, modIndex, Handle<>(&O1REG(CallRequire)));
   // Whether or not the caching above succeeded, write the module export
   // to the return register.
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus doGetByIdSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock,
+    uint32_t idVal,
+    bool tryProp) {
+  auto id = ID(idVal);
+  // NOTE: it is safe to use OnREG(GetById) here because all instructions
+  // have the same layout: opcode, registers, non-register operands, i.e.
+  // they only differ in the width of the last "identifier" field.
+  if (LLVM_UNLIKELY(!O2REG(GetById).isObject())) {
+    ++NumGetByIdTransient;
+    assert(!tryProp && "TryGetById can only be used on the global object");
+    /* Slow path. */
+    auto resPH = Interpreter::getByIdTransient_RJS(
+        runtime, Handle<>(&O2REG(GetById)), id);
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    O1REG(GetById) = resPH->get();
+    return ExecutionStatus::RETURNED;
+  }
+
+  auto *obj = vmcast<JSObject>(O2REG(GetById));
+  auto cacheIdx = ip->iGetById.op3;
+  auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
+
+  NamedPropertyDescriptor desc;
+  OptValue<bool> fastPathResult =
+      JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
+  if (LLVM_LIKELY(fastPathResult.hasValue() && fastPathResult.getValue()) &&
+      !desc.flags.accessor) {
+    ++NumGetByIdFastPaths;
+
+    // cacheIdx == 0 indicates no caching so don't update the cache in
+    // those cases.
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+#ifdef HERMES_SLOW_DEBUG
+      if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
+        ++NumGetByIdCacheEvicts;
+#else
+      (void)NumGetByIdCacheEvicts;
+#endif
+      // Cache the class, id and property slot.
+      cacheEntry->clazz = clazzPtr;
+      cacheEntry->slot = desc.slot;
+    }
+
+    assert(
+        !obj->isProxyObject() &&
+        "tryGetOwnNamedDescriptorFast returned true on Proxy");
+    O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
+                         .unboxToHV(runtime);
+    return ExecutionStatus::RETURNED;
+  }
+
+#ifdef HERMES_SLOW_DEBUG
+  // Call to getNamedDescriptorUnsafe is safe because `id` is kept alive
+  // by the IdentifierTable.
+  JSObject *propObj = JSObject::getNamedDescriptorUnsafe(
+      Handle<JSObject>::vmcast(&O2REG(GetById)), runtime, id, desc);
+  if (propObj) {
+    if (desc.flags.accessor)
+      ++NumGetByIdAccessor;
+    else if (propObj != vmcast<JSObject>(O2REG(GetById)))
+      ++NumGetByIdProto;
+  } else {
+    ++NumGetByIdNotFound;
+  }
+#else
+  (void)NumGetByIdAccessor;
+  (void)NumGetByIdProto;
+  (void)NumGetByIdNotFound;
+#endif
+#ifdef HERMES_SLOW_DEBUG
+  // It's possible that there might be a GC between the time
+  // savedClass is set and the time it is checked (to see if
+  // there was an eviction.  This GC could move the HiddenClass
+  // to which savedClass points, making it an invalid pointer.
+  // We don't dereference this pointer, we just compare it, so
+  // this won't cause a crash.  In this presumably rare case,
+  // the eviction count would be incorrect.  But the
+  // alternative, putting savedClass in a handle so it's a root,
+  // could change GC behavior might alter the program behavior
+  // in some cases: a HiddenClass might be live longer than it
+  // would have been.  We're choosing to go with the first
+  // problem as the lesser of two evils.
+  auto *savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
+      ? cacheEntry->clazz.get(runtime, runtime.getHeap())
+      : nullptr;
+#endif
+  ++NumGetByIdSlow;
+  // Getting properties is not affected by strictness, so just use false.
+  const auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
+  auto resPH = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(&O2REG(GetById)),
+      runtime,
+      id,
+      !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
+      cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry : nullptr);
+  if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+#ifdef HERMES_SLOW_DEBUG
+  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
+      cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
+    ++NumGetByIdCacheEvicts;
+  }
+#endif
+
+  O1REG(GetById) = resPH->get();
+  return ExecutionStatus::RETURNED;
+}
+
+inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
+    Runtime &runtime,
+    Handle<> base,
+    SymbolID id) {
+  if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
+    return createPseudoHandle(HermesValue::encodeTrustedNumberValue(
+        base->getString()->getStringLength()));
+  }
+  return createPseudoHandle(HermesValue::encodeEmptyValue());
+}
+
+CallResult<PseudoHandle<>> Interpreter::getByIdTransientWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<> base,
+    SymbolID id,
+    Handle<> receiver) {
+  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
+  // method did, but that section doesn't exist in ES9 anymore.
+  // Instead, the [[Get]] Receiver argument serves a similar purpose.
+
+  // Fast path: try to get primitive own property directly first.
+  PseudoHandle<> valOpt = tryGetPrimitiveOwnPropertyById(runtime, base, id);
+  if (!valOpt->isEmpty()) {
+    return valOpt;
+  }
+
+  // get the property descriptor from primitive prototype without
+  // boxing with vm::toObject().  This is where any properties will
+  // be.
+  CallResult<Handle<JSObject>> primitivePrototypeResult =
+      getPrimitivePrototype(runtime, base);
+  if (primitivePrototypeResult == ExecutionStatus::EXCEPTION) {
+    // If an exception is thrown, likely we are trying to read property on
+    // undefined/null. Passing over the name of the property
+    // so that we could emit more meaningful error messages.
+    return amendPropAccessErrorMsgWithPropName(runtime, base, "read", id);
+  }
+
+  return JSObject::getNamedWithReceiver_RJS(
+      *primitivePrototypeResult, runtime, id, receiver);
+}
+
+ExecutionStatus doGetByIdWithReceiverSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock) {
+  if (LLVM_UNLIKELY(!O2REG(GetByIdWithReceiverLong).isObject())) {
+    auto resPH = Interpreter::getByIdTransientWithReceiver_RJS(
+        runtime,
+        Handle<>(&O2REG(GetByIdWithReceiverLong)),
+        ID(ip->iGetByIdWithReceiverLong.op5),
+        Handle<>(&O4REG(GetByIdWithReceiverLong)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    O1REG(GetByIdWithReceiverLong) = resPH->getHermesValue();
+    return ExecutionStatus::RETURNED;
+  }
+  auto cacheIdx = ip->iGetByIdWithReceiverLong.op3;
+  auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
+  auto resPH = JSObject::getNamedWithReceiver_RJS(
+      Handle<JSObject>::vmcast(&O2REG(GetByIdWithReceiverLong)),
+      runtime,
+      ID(ip->iGetByIdWithReceiverLong.op5),
+      Handle<>(&O4REG(GetByIdWithReceiverLong)),
+      DEFAULT_PROP_OP_FLAGS(false),
+      cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry : nullptr);
+  if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  O1REG(GetByIdWithReceiverLong) = resPH->getHermesValue();
   return ExecutionStatus::RETURNED;
 }
 
