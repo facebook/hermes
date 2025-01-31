@@ -947,6 +947,25 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
 #endif // NDEBUG
 
+/// The ENCODE_HV_AS_SHV macro is intended to be used when we need to convert
+/// a HermesValue to a SmallHermesValue in interpreter code. It takes the
+/// HermesValue \p src and declares a new SmallHermesValue with name \p dst that
+/// contains the converted value. If boxed doubles are enabled, the conversion
+/// may allocate, and this will perform a CAPTURE_IP accordingly.
+#ifdef HERMESVM_BOXED_DOUBLES
+// When boxed doubles are enabled, encodeHermesValue may allocate when a double
+// is boxed, so we have to use CAPTURE_IP.
+#define ENCODE_HV_AS_SHV(dst, src) \
+  CAPTURE_IP_ASSIGN(               \
+      SmallHermesValue dst, SmallHermesValue::encodeHermesValue(src, runtime))
+#else
+// When boxed doubles are disabled, SmallHermesValue is identical to
+// HermesValue, but it is still technically a distinct type. So
+// encodeHermesValue is effectively just a cast.
+#define ENCODE_HV_AS_SHV(dst, src) \
+  SmallHermesValue dst = SmallHermesValue::encodeHermesValue(src, runtime);
+#endif
+
 /// \def DONT_CAPTURE_IP(expr)
 /// \param expr A call expression to a function external to the interpreter. The
 ///   expression should not make any allocations and the IP should be set
@@ -2562,9 +2581,7 @@ tailCall:
     putById: {
       ++NumPutById;
       if (LLVM_LIKELY(O1REG(PutByIdLoose).isObject())) {
-        CAPTURE_IP_ASSIGN(
-            SmallHermesValue shv,
-            SmallHermesValue::encodeHermesValue(O2REG(PutByIdLoose), runtime));
+        ENCODE_HV_AS_SHV(shv, O2REG(PutByIdLoose));
         auto *obj = vmcast<JSObject>(O1REG(PutByIdLoose));
         auto cacheIdx = ip->iPutByIdLoose.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
@@ -3264,10 +3281,7 @@ tailCall:
       CASE(FastArrayStore) {
         double idx = O2REG(FastArrayStore).getNumber();
         uint32_t intIndex = _sh_tryfast_f64_to_u32_cvt(idx);
-        CAPTURE_IP_ASSIGN(
-            auto shv,
-            SmallHermesValue::encodeHermesValue(
-                O3REG(FastArrayStore), runtime));
+        ENCODE_HV_AS_SHV(shv, O3REG(FastArrayStore));
         auto *storage = vmcast<FastArray>(O1REG(FastArrayStore))
                             ->unsafeGetIndexedStorage(runtime);
 
@@ -3561,9 +3575,7 @@ tailCall:
       assert(
           O1REG(PutOwnBySlotIdx).isObject() &&
           "Object argument of PutOwnBySlotIdx must be an object");
-      CAPTURE_IP_ASSIGN(
-          SmallHermesValue shv,
-          SmallHermesValue::encodeHermesValue(O2REG(PutOwnBySlotIdx), runtime));
+      ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdx));
       JSObject::setNamedSlotValueUnsafe(
           vmcast<JSObject>(O1REG(PutOwnBySlotIdx)), runtime, idVal, shv);
       gcScope.flushToSmallCount(KEEP_HANDLES);
