@@ -66,15 +66,6 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumPutByIdCacheHits,
     "NumPutByIdCacheHits: Number of property 'write by id' cache hits");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdCacheEvicts,
-    "NumPutByIdCacheEvicts: Number of property 'write by id' cache evictions");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdFastPaths,
-    "NumPutByIdFastPaths: Number of property 'write by id' fast paths");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdTransient,
-    "NumPutByIdTransient: Number of property 'write by id' to non-objects");
 
 HERMES_SLOW_STATISTIC(
     NumNativeFunctionCalls,
@@ -309,121 +300,6 @@ CallResult<PseudoHandle<>> Interpreter::getByValTransientWithReceiver_RJS(
 
   return JSObject::getComputedWithReceiver_RJS(
       runtime.makeHandle<JSObject>(res.getValue()), runtime, name, receiver);
-}
-
-static ExecutionStatus
-transientObjectPutErrorMessage(Runtime &runtime, Handle<> base, SymbolID id) {
-  // Emit an error message that looks like:
-  // "Cannot create property '%{id}' on ${typeof base} '${String(base)}'".
-  StringView propName = runtime.getIdentifierTable().getStringView(runtime, id);
-  Handle<StringPrimitive> baseType =
-      runtime.makeHandle(vmcast<StringPrimitive>(typeOf(runtime, base)));
-  StringView baseTypeAsString =
-      StringPrimitive::createStringView(runtime, baseType);
-  MutableHandle<StringPrimitive> valueAsString{runtime};
-  if (base->isSymbol()) {
-    // Special workaround for Symbol which can't be stringified.
-    auto str = symbolDescriptiveString(runtime, Handle<SymbolID>::vmcast(base));
-    if (str != ExecutionStatus::EXCEPTION) {
-      valueAsString = *str;
-    } else {
-      runtime.clearThrownValue();
-      valueAsString = StringPrimitive::createNoThrow(
-          runtime, "<<Exception occurred getting the value>>");
-    }
-  } else {
-    auto str = toString_RJS(runtime, base);
-    assert(
-        str != ExecutionStatus::EXCEPTION &&
-        "Primitives should be convertible to string without exceptions");
-    valueAsString = std::move(*str);
-  }
-  StringView valueAsStringPrintable =
-      StringPrimitive::createStringView(runtime, valueAsString);
-
-  SmallU16String<32> tmp1;
-  SmallU16String<32> tmp2;
-  return runtime.raiseTypeError(
-      TwineChar16("Cannot create property '") + propName + "' on " +
-      baseTypeAsString.getUTF16Ref(tmp1) + " '" +
-      valueAsStringPrintable.getUTF16Ref(tmp2) + "'");
-}
-
-ExecutionStatus Interpreter::putByIdTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id,
-    Handle<> value,
-    bool strictMode) {
-  // ES5.1 8.7.2 special [[Get]] internal method.
-  // TODO: avoid boxing primitives unless we are calling an accessor.
-
-  // 1. Let O be ToObject(base)
-  auto res = toObject(runtime, base);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    // If an exception is thrown, likely we are trying to convert
-    // undefined/null to an object. Passing over the name of the property
-    // so that we could emit more meaningful error messages.
-    return amendPropAccessErrorMsgWithPropName(runtime, base, "set", id);
-  }
-
-  auto O = runtime.makeHandle<JSObject>(res.getValue());
-
-  NamedPropertyDescriptor desc;
-  JSObject *propObj = JSObject::getNamedDescriptorUnsafe(O, runtime, id, desc);
-
-  // Is this a missing property, or a data property defined in the prototype
-  // chain? In both cases we would need to create an own property on the
-  // transient object, which is prohibited.
-  if (!propObj ||
-      (propObj != O.get() &&
-       (!desc.flags.accessor && !desc.flags.proxyObject))) {
-    if (strictMode) {
-      return transientObjectPutErrorMessage(runtime, base, id);
-    }
-    return ExecutionStatus::RETURNED;
-  }
-
-  // Modifying an own data property in a transient object is prohibited.
-  if (!desc.flags.accessor && !desc.flags.proxyObject) {
-    if (strictMode) {
-      return runtime.raiseTypeError(
-          "Cannot modify a property in a transient object");
-    }
-    return ExecutionStatus::RETURNED;
-  }
-
-  if (desc.flags.accessor) {
-    // This is an accessor.
-    auto *accessor = vmcast<PropertyAccessor>(
-        JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc)
-            .getObject(runtime));
-
-    // It needs to have a setter.
-    if (!accessor->setter) {
-      if (strictMode) {
-        return runtime.raiseTypeError("Cannot modify a read-only accessor");
-      }
-      return ExecutionStatus::RETURNED;
-    }
-
-    CallResult<PseudoHandle<>> setRes = Callable::executeCall1(
-        runtime.makeHandle(accessor->setter), runtime, base, *value);
-    if (setRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-  } else {
-    assert(desc.flags.proxyObject && "descriptor flags are impossible");
-    CallResult<bool> setRes = JSProxy::setNamed(
-        runtime.makeHandle(propObj), runtime, id, value, base);
-    if (setRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (!*setRes && strictMode) {
-      return runtime.raiseTypeError("transient proxy set returned false");
-    }
-  }
-  return ExecutionStatus::RETURNED;
 }
 
 ExecutionStatus Interpreter::putByValTransient_RJS(
@@ -2387,66 +2263,19 @@ tailCall:
           ip = nextIP;
           DISPATCH;
         }
-        auto id = ID(idVal);
-        NamedPropertyDescriptor desc;
-        OptValue<bool> hasOwnProp =
-            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
-        if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
-            !desc.flags.accessor && desc.flags.writable &&
-            !desc.flags.internalSetter) {
-          ++NumPutByIdFastPaths;
-
-          // cacheIdx == 0 indicates no caching so don't update the cache in
-          // those cases.
-          HiddenClass *clazz =
-              vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-          if (LLVM_LIKELY(!clazz->isDictionary()) &&
-              LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
-#ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
-              ++NumPutByIdCacheEvicts;
-#else
-            (void)NumPutByIdCacheEvicts;
-#endif
-            // Cache the class and property slot.
-            cacheEntry->clazz = clazzPtr;
-            cacheEntry->slot = desc.slot;
-          }
-
-          // This must be valid because an own property was already found.
-          JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv);
-          ip = nextIP;
-          DISPATCH;
-        }
-        const PropOpFlags defaultPropOpFlags =
-            DEFAULT_PROP_OP_FLAGS(strictMode);
-        CAPTURE_IP_ASSIGN(
-            auto putRes,
-            JSObject::putNamed_RJS(
-                Handle<JSObject>::vmcast(&O1REG(PutByIdLoose)),
-                runtime,
-                id,
-                Handle<>(&O2REG(PutByIdLoose)),
-                !tryProp ? defaultPropOpFlags
-                         : defaultPropOpFlags.plusMustExist()));
-        if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-      } else {
-        ++NumPutByIdTransient;
-        assert(!tryProp && "TryPutById can only be used on the global object");
-        CAPTURE_IP_ASSIGN(
-            auto retStatus,
-            Interpreter::putByIdTransient_RJS(
-                runtime,
-                Handle<>(&O1REG(PutByIdLoose)),
-                ID(idVal),
-                Handle<>(&O2REG(PutByIdLoose)),
-                strictMode));
-        if (retStatus == ExecutionStatus::EXCEPTION) {
-          goto exception;
-        }
       }
+      CAPTURE_IP_ASSIGN(
+          ExecutionStatus res,
+          doPutByIdSlowPath_RJS(
+              runtime,
+              frameRegs,
+              ip,
+              curCodeBlock,
+              idVal,
+              strictMode,
+              tryProp));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+        goto exception;
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;

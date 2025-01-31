@@ -178,6 +178,15 @@ ExecutionStatus doGetByIdWithReceiverSlowPath_RJS(
     const Inst *ip,
     CodeBlock *curCodeBlock);
 
+ExecutionStatus doPutByIdSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock,
+    uint32_t idVal,
+    bool strictMode,
+    bool tryProp);
+
 } // namespace vm
 } // namespace hermes
 #endif // HERMES_VM_INTERPRETER_INTERNAL_H
