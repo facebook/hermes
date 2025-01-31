@@ -1865,16 +1865,36 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
       PinnedValue<> tmp;
       PinnedValue<JSObject> propObj;
       PinnedValue<SymbolID> tmpPropNameStorage;
+      PinnedValue<HiddenClass> cachedClass;
     } lv;
     LocalsRAII lraii{runtime, &lv};
     GCScopeMarkerRAII marker{runtime};
     uint32_t idx = toPHV(indexVal)->getNumber();
     uint32_t size = toPHV(sizeVal)->getNumber();
+    // If there's a class at index 2, it means we have a cached class.
+    uint32_t startIdx = 0;
+    uint32_t numObjProps = 0;
+    if (LLVM_LIKELY(size > 2)) {
+      lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(runtime, 2));
+      if (lv.cachedClass.get()) {
+        startIdx = arr->at(runtime, 0).getNumberAs<uint32_t>();
+        numObjProps = arr->at(runtime, 1).getNumberAs<uint32_t>();
+      }
+    }
+
     MutableHandle<JSObject> propObj{lv.propObj};
     MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
     // Loop until we find a property which is present.
     while (idx < size) {
       lv.tmp = arr->at(runtime, idx);
+      // If there's no caching, lv.cachedClass is nullptr and the comparison
+      // will fail.
+      if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&
+          LLVM_LIKELY(lv.cachedClass.get() == obj->getClass(runtime))) {
+        // Cached.
+        propObj = obj;
+        break;
+      }
       if (lv.tmp->isSymbol()) {
         // NOTE: This call is safe because we immediately discard desc,
         // so it can't outlive the SymbolID.
