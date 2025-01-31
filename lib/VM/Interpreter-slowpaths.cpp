@@ -565,6 +565,107 @@ ExecutionStatus Interpreter::caseDelByVal(
   return ExecutionStatus::RETURNED;
 }
 
+PseudoHandle<> Interpreter::getByValTransientFast(
+    Runtime &runtime,
+    Handle<> base,
+    Handle<> nameHandle) {
+  if (base->isString()) {
+    // Handle most common fast path -- array index property for string
+    // primitive.
+    // Since primitive string cannot have index like property we can
+    // skip ObjectFlags::fastIndexProperties checking and directly
+    // checking index storage from StringPrimitive.
+
+    OptValue<uint32_t> arrayIndex = toArrayIndexFastPath(*nameHandle);
+    // Get character directly from primitive if arrayIndex is within range.
+    // Otherwise we need to fall back to prototype lookup.
+    if (arrayIndex &&
+        arrayIndex.getValue() < base->getString()->getStringLength()) {
+      return createPseudoHandle(
+          runtime
+              .getCharacterString(base->getString()->at(arrayIndex.getValue()))
+              .getHermesValue());
+    }
+  }
+  return createPseudoHandle(HermesValue::encodeEmptyValue());
+}
+
+CallResult<PseudoHandle<>> Interpreter::getByValTransientWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<> base,
+    Handle<> name,
+    Handle<> receiver) {
+  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
+  // method did, but that section doesn't exist in ES9 anymore.
+  // Instead, the [[Get]] Receiver argument serves a similar purpose.
+
+  // Optimization: check fast path first.
+  PseudoHandle<> fastRes = getByValTransientFast(runtime, base, name);
+  if (!fastRes->isEmpty()) {
+    return fastRes;
+  }
+
+  auto res = toObject(runtime, base);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  return JSObject::getComputedWithReceiver_RJS(
+      runtime.makeHandle<JSObject>(res.getValue()), runtime, name, receiver);
+}
+
+ExecutionStatus Interpreter::caseGetByVal(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  CallResult<PseudoHandle<HermesValue>> resPH{ExecutionStatus::EXCEPTION};
+  if (LLVM_LIKELY(O2REG(GetByVal).isObject())) {
+    resPH = JSObject::getComputed_RJS(
+        Handle<JSObject>::vmcast(&O2REG(GetByVal)),
+        runtime,
+        Handle<>(&O3REG(GetByVal)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    // This is the "slow path".
+    resPH = Interpreter::getByValTransient_RJS(
+        runtime, Handle<>(&O2REG(GetByVal)), Handle<>(&O3REG(GetByVal)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  O1REG(GetByVal) = resPH->get();
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::caseGetByValWithReceiver(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  CallResult<PseudoHandle<HermesValue>> resPH{ExecutionStatus::EXCEPTION};
+  if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
+    resPH = JSObject::getComputedWithReceiver_RJS(
+        Handle<JSObject>::vmcast(&O2REG(GetByValWithReceiver)),
+        runtime,
+        Handle<>(&O3REG(GetByValWithReceiver)),
+        Handle<>(&O4REG(GetByValWithReceiver)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    resPH = Interpreter::getByValTransientWithReceiver_RJS(
+        runtime,
+        Handle<>(&O2REG(GetByValWithReceiver)),
+        Handle<>(&O3REG(GetByValWithReceiver)),
+        Handle<>(&O4REG(GetByValWithReceiver)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  O1REG(GetByValWithReceiver) = resPH->get();
+  return ExecutionStatus::RETURNED;
+}
+
 CallResult<HermesValue> Interpreter::createThisImpl(
     Runtime &runtime,
     PinnedHermesValue *callee,
