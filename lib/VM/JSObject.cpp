@@ -123,6 +123,9 @@ void JSObject::initializeLazyObject(
     Runtime &runtime,
     Handle<JSObject> lazyObject) {
   assert(lazyObject->flags_.lazyObject && "object must be lazy");
+  assert(
+      lazyObject->getClass(runtime) == *runtime.lazyObjectClass &&
+      "lazy object must have lazy class");
   // object is now assumed to be a regular object.
   lazyObject->flags_.lazyObject = 0;
 

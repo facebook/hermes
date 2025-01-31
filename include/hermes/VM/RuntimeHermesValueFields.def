@@ -75,6 +75,7 @@ RUNTIME_HV_FIELD(throwTypeErrorAccessor, PropertyAccessor)
 RUNTIME_HV_FIELD(arrayClass, HiddenClass)
 RUNTIME_HV_FIELD(fastArrayClass, HiddenClass)
 RUNTIME_HV_FIELD(regExpMatchClass, HiddenClass)
+RUNTIME_HV_FIELD(lazyObjectClass, HiddenClass)
 
 RUNTIME_HV_FIELD(iteratorPrototype, JSObject)
 RUNTIME_HV_FIELD(arrayIteratorPrototype, JSObject)

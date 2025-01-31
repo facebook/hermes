@@ -396,6 +396,11 @@ Runtime::Runtime(
       clazz = *addResult->first;
       rootClazzes_[i] = clazz.getHermesValue();
     }
+
+    // Create a separate hidden class for lazy objects so that they never
+    // compare equal to ordinary objects.
+    lazyObjectClass = vmcast<HiddenClass>(
+        ignoreAllocationFailure(HiddenClass::createRoot(*this)));
   }
 
   global_ = JSObject::create(*this, makeNullHandle<JSObject>());

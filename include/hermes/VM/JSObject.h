@@ -444,6 +444,18 @@ class JSObject : public GCCell {
     return clazz_;
   }
 
+  /// Set the hidden class of this object to \p clazz. This does not allocate
+  /// indirect property storage, and must only be used when the current and new
+  /// hidden classes do not have more properties than the direct storage. Note
+  /// that if used incorrectly, this can create completely invalid objects.
+  void setClassNoAllocPropStorageUnsafe(Runtime &runtime, HiddenClass *clazz) {
+    // Check that there is no prop storage already allocated, and the new class
+    // does not require it.
+    assert(!propStorage_);
+    assert(clazz->getNumProperties() <= DIRECT_PROPERTY_SLOTS);
+    clazz_.set(runtime, clazz, runtime.getHeap());
+  }
+
   /// \return the object ID. Assign one if not yet exist. This ID can be used
   /// in Set or Map where hashing is required. We don't assign object an ID
   /// until we actually need it. An exception is lazily created objects where

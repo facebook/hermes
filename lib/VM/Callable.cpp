@@ -116,10 +116,29 @@ std::string Callable::_snapshotNameImpl(GCCell *cell, GC &gc) {
 }
 #endif
 
+/// \return the inferred parent of a Callable based on its \p kind.
+static Handle<JSObject> inferredParent(Runtime &runtime, FuncKind kind) {
+  if (kind == FuncKind::Generator) {
+    return runtime.generatorFunctionPrototype;
+  } else if (kind == FuncKind::Async) {
+    return runtime.asyncFunctionPrototype;
+  } else {
+    assert(kind == FuncKind::Normal && "Unsupported function kind");
+    return runtime.functionPrototype;
+  }
+}
+
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   // lazy functions can be Bound or JS Functions.
   if (auto jsFun = Handle<JSFunction>::dyn_vmcast(fn)) {
     const CodeBlock *codeBlock = jsFun->getCodeBlock();
+
+    // Set the actual non-lazy hidden class.
+    Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
+        *inferredParent(runtime, (FuncKind)codeBlock->getHeaderFlags().kind),
+        numOverlapSlots<JSFunction>());
+    jsFun->setClassNoAllocPropStorageUnsafe(runtime, *newClass);
+
     // Create empty object for prototype.
     auto prototypeParent = Callable::isGeneratorFunction(*jsFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
@@ -147,6 +166,12 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         cr != ExecutionStatus::EXCEPTION && "failed to define length and name");
     (void)cr;
   } else if (auto nativeFun = Handle<NativeJSFunction>::dyn_vmcast(fn)) {
+    // Set the actual non-lazy hidden class.
+    Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
+        *inferredParent(runtime, (FuncKind)nativeFun->getFunctionInfo()->kind),
+        numOverlapSlots<NativeJSFunction>());
+    nativeFun->setClassNoAllocPropStorageUnsafe(runtime, *newClass);
+
     auto prototypeParent = Callable::isGeneratorFunction(*nativeFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime.objectPrototype);
@@ -931,8 +956,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<NativeJSFunction>()),
+      runtime.lazyObjectClass,
       functionPtr,
       funcInfo,
       unit);
@@ -952,8 +976,7 @@ Handle<NativeJSFunction> NativeJSFunction::create(
   auto *cell = runtime.makeAFixed<NativeJSFunction>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<NativeJSFunction>()),
+      runtime.lazyObjectClass,
       parentEnvHandle,
       functionPtr,
       funcInfo,
@@ -961,18 +984,6 @@ Handle<NativeJSFunction> NativeJSFunction::create(
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
   selfHandle->flags_.lazyObject = 1;
   return selfHandle;
-}
-
-/// \return the inferred parent of a Callable based on its \p kind.
-static Handle<JSObject> inferredParent(Runtime &runtime, FuncKind kind) {
-  if (kind == FuncKind::Generator) {
-    return runtime.generatorFunctionPrototype;
-  } else if (kind == FuncKind::Async) {
-    return runtime.asyncFunctionPrototype;
-  } else {
-    assert(kind == FuncKind::Normal && "Unsupported function kind");
-    return runtime.functionPrototype;
-  }
 }
 
 Handle<NativeJSFunction> NativeJSFunction::createWithInferredParent(
@@ -1066,8 +1077,7 @@ Handle<NativeJSDerivedClass> NativeJSDerivedClass::create(
   auto *cell = runtime.makeAFixed<NativeJSDerivedClass>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<NativeJSDerivedClass>()),
+      runtime.lazyObjectClass,
       parentEnvHandle,
       functionPtr,
       funcInfo,
@@ -1362,8 +1372,7 @@ PseudoHandle<JSFunction> JSFunction::create(
       runtime,
       domain,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSFunction>()),
+      runtime.lazyObjectClass,
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1503,8 +1512,7 @@ PseudoHandle<JSDerivedClass> JSDerivedClass::create(
       runtime,
       domain,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSDerivedClass>()),
+      runtime.lazyObjectClass,
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
