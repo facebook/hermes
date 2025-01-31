@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC %s | %FileCheck --match-full-lines %s
-// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
-// REQUIRES: exception_on_oom
+// RUN: %hermes -Xhermes-internal-test-methods -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -Wx,-Xhermes-internal-test-methods -g -exec %s | %FileCheck --match-full-lines %s
 "use strict";
 
 function c() {
