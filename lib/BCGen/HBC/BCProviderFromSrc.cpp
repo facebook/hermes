@@ -14,6 +14,7 @@
 #include "hermes/Runtime/Libhermes.h"
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Sema/SemResolve.h"
+#include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
@@ -87,7 +88,7 @@ std::pair<std::unique_ptr<BCProviderFromSrc>, std::string>
 BCProviderFromSrc::create(
     std::unique_ptr<Buffer> buffer,
     llvh::StringRef sourceURL,
-    std::unique_ptr<SourceMap> sourceMap,
+    llvh::StringRef sourceMap,
     const CompileFlags &compileFlags,
     llvh::StringRef topLevelFunctionName,
     SourceErrorManager::DiagHandlerTy diagHandler,
@@ -161,11 +162,26 @@ BCProviderFromSrc::create(
       buffer->size() >= context->getPreemptiveFileCompilationThreshold();
   int fileBufId = context->getSourceErrorManager().addNewSourceBuffer(
       std::make_unique<HermesLLVMMemoryBuffer>(std::move(buffer), sourceURL));
-  if (sourceMap != nullptr) {
+
+  if (!sourceMap.empty()) {
+    assert(sourceMap.back() == '\0' && "Must be null terminated");
+    // Convert the buffer into a form the parser needs. Note that the incoming
+    // buffer has the null terminator embedded at the end, whereas for the
+    // MemoryBuffer we want it past-the-end, so we shrink it by one.
+    llvh::MemoryBufferRef mbref(
+        llvh::StringRef{sourceMap.data(), sourceMap.size() - 1}, "");
+    SimpleDiagHandler diag;
+    SourceErrorManager sm;
+    diag.installInto(sm);
+    std::unique_ptr<SourceMap> parsedSM = SourceMapParser::parse(mbref, {}, sm);
+    if (!parsedSM) {
+      auto errorStr = diag.getErrorString();
+      return std::make_pair(nullptr, "Error parsing source map: " + errorStr);
+    }
     auto sourceMapTranslator =
         std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());
     context->getSourceErrorManager().setTranslator(sourceMapTranslator);
-    sourceMapTranslator->addSourceMap(fileBufId, std::move(sourceMap));
+    sourceMapTranslator->addSourceMap(fileBufId, std::move(parsedSM));
   }
 
   auto parserMode = parser::FullParse;

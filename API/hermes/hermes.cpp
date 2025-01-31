@@ -1536,27 +1536,15 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
         std::make_unique<BufferAdapter>(jsiBuffer));
     runtimeFlags.persistent = true;
   } else {
-    std::unique_ptr<::hermes::SourceMap> sourceMap{};
+    llvh::StringRef sourceMap;
+    std::unique_ptr<BufferAdapter> buf0;
     if (sourceMapBuf) {
-      auto buf0 = ensureZeroTerminated(sourceMapBuf);
-      // Convert the buffer into a form the parser needs.
-      llvh::MemoryBufferRef mbref(
-          llvh::StringRef((const char *)buf0->data(), buf0->size()), "");
-      ::hermes::SimpleDiagHandler diag;
-      ::hermes::SourceErrorManager sm;
-      diag.installInto(sm);
-      sourceMap = ::hermes::SourceMapParser::parse(mbref, {}, sm);
-      if (!sourceMap) {
-        auto errorStr = diag.getErrorString();
-        LOG_EXCEPTION_CAUSE("Error parsing source map: %s", errorStr.c_str());
-        throw std::runtime_error("Error parsing source map:" + errorStr);
-      }
+      buf0 = ensureZeroTerminated(sourceMapBuf);
+      // The source map StringRef must include the null terminator.
+      sourceMap = llvh::StringRef((const char *)buf0->data(), buf0->size() + 1);
     }
     bcErr = hbc::createBCProviderFromSrc(
-        ensureZeroTerminated(jsiBuffer),
-        sourceURL,
-        std::move(sourceMap),
-        compileFlags_);
+        ensureZeroTerminated(jsiBuffer), sourceURL, sourceMap, compileFlags_);
     if (bcErr.first) {
       runtimeFlags.persistent = bcErr.first->allowPersistent();
     }

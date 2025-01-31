@@ -1019,7 +1019,7 @@ CallResult<HermesValue> Runtime::run(
     PerfSection loading("Loading new JavaScript code");
     loading.addArg("url", sourceURL);
     auto bytecode_err = hbc::createBCProviderFromSrc(
-        std::move(code), sourceURL, /* sourceMap */ nullptr, compileFlags);
+        std::move(code), sourceURL, /* sourceMap */ {}, compileFlags);
     if (!bytecode_err.first) {
       return raiseSyntaxError(TwineChar16(bytecode_err.second));
     }

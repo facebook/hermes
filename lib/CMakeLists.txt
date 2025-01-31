@@ -166,7 +166,6 @@ target_link_libraries(hermesvmlean_a PUBLIC
   hermesPublic_obj
   hermesRegex_obj
   hermesSupport_obj
-  hermesSourceMap_obj
   hermesVMRuntime_obj
   zip_obj
   )

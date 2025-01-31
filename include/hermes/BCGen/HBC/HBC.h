@@ -87,7 +87,9 @@ void fullOptimizationPipeline(Module &M);
 ///   "eval" for eval, "global" for ordinary scripts.
 /// \param sourceURL this will be used as the "file name" of the buffer for
 ///     errors, stack traces, etc.
-/// \param sourceMap optional input source map for \p buffer.
+/// \param sourceMap optional input source map for \p buffer. It may be empty
+///     if no source map is provided. If it is non-empty, the last byte must
+///     be a null terminator.
 /// \param compileFlags self explanatory
 /// \param diagHandler handler for errors/warnings/notes.
 /// \param diagContext opaque data that will be passed to diagHandler.
@@ -104,7 +106,7 @@ void fullOptimizationPipeline(Module &M);
 std::pair<std::unique_ptr<BCProvider>, std::string> createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
     llvh::StringRef sourceURL,
-    std::unique_ptr<SourceMap> sourceMap,
+    llvh::StringRef sourceMap,
     const CompileFlags &compileFlags,
     llvh::StringRef topLevelFunctionName = "global",
     SourceErrorManager::DiagHandlerTy diagHandler = {},

@@ -116,7 +116,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
     const char *sourceMapData,
     size_t sourceMapSize) {
   auto compileRes = std::make_unique<CompileResult>();
-  std::unique_ptr<SourceMap> sourceMap;
+  llvh::StringRef smRef;
 
   if (source[sourceSize - 1] != 0) {
     compileRes->error_ = "Input source must be zero-terminated";
@@ -129,15 +129,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
       return compileRes.release();
     }
 
-    SourceErrorManager sm;
-    SimpleDiagHandlerRAII diagHandler(sm);
-    sourceMap =
-        SourceMapParser::parse({sourceMapData, sourceMapSize - 1}, {}, sm);
-    if (!sourceMap) {
-      compileRes->error_ =
-          "Failed to parse source map:" + diagHandler.getErrorString();
-      return compileRes.release();
-    }
+    smRef = {sourceMapData, sourceMapSize};
   }
 
   hbc::CompileFlags flags{};
@@ -148,7 +140,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
   auto res = hbc::createBCProviderFromSrc(
       std::make_unique<hermes::Buffer>((const uint8_t *)source, sourceSize - 1),
       sourceURL ? sourceURL : "",
-      std::move(sourceMap),
+      smRef,
       flags);
   if (!res.first) {
     if (!res.second.empty())

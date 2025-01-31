@@ -54,14 +54,16 @@ bool compileJS(
   flags.emitAsyncBreakCheck = compileJSOptions.emitAsyncBreakCheck;
   flags.inlineMaxSize = compileJSOptions.inlineMaxSize;
 
-  std::unique_ptr<hermes::SourceMap> sourceMap{};
-  // parse the source map if one was provided
+  // If there is a source map, ensure that it is null terminated, copying it if
+  // needed.
+  std::string smCopy;
+  llvh::StringRef smRef;
   if (sourceMapBuf.has_value()) {
-    hermes::SourceErrorManager sm;
-    sourceMap = hermes::SourceMapParser::parse(
-        llvh::StringRef{sourceMapBuf->data(), sourceMapBuf->size()}, {}, sm);
-    if (!sourceMap) {
-      return false;
+    if (sourceMapBuf->back() != '\0') {
+      smCopy = *sourceMapBuf;
+      smRef = {smCopy.data(), smCopy.size() + 1};
+    } else {
+      smRef = {sourceMapBuf->data(), sourceMapBuf->size()};
     }
   }
 
@@ -70,7 +72,7 @@ bool compileJS(
   auto res = hbc::createBCProviderFromSrc(
       std::make_unique<hermes::Buffer>((const uint8_t *)str.data(), str.size()),
       sourceURL,
-      std::move(sourceMap),
+      smRef,
       flags,
       "global",
       diagHandler ? diagHandlerAdapter : nullptr,

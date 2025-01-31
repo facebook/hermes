@@ -31,7 +31,7 @@ void fullOptimizationPipeline(Module &M) {
 std::pair<std::unique_ptr<BCProvider>, std::string> createBCProviderFromSrc(
     std::unique_ptr<Buffer> buffer,
     llvh::StringRef sourceURL,
-    std::unique_ptr<SourceMap> sourceMap,
+    llvh::StringRef sourceMap,
     const CompileFlags &compileFlags,
     llvh::StringRef topLevelFunctionName,
     SourceErrorManager::DiagHandlerTy diagHandler,
@@ -41,7 +41,7 @@ std::pair<std::unique_ptr<BCProvider>, std::string> createBCProviderFromSrc(
   return BCProviderFromSrc::create(
       std::move(buffer),
       sourceURL,
-      std::move(sourceMap),
+      sourceMap,
       compileFlags,
       topLevelFunctionName,
       diagHandler,
