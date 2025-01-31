@@ -3563,43 +3563,51 @@ tailCall:
       DISPATCH;
     }
       CASE(PutOwnBySlotIdxLong) {
-        nextIP = NEXTINST(PutOwnBySlotIdxLong);
-        idVal = ip->iPutOwnBySlotIdxLong.op3;
-        goto putOwnBySlotIdx;
+        assert(
+            O1REG(PutOwnBySlotIdxLong).isObject() &&
+            "Object argument of PutOwnBySlotIdx must be an object");
+        ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdxLong));
+        JSObject::setNamedSlotValueUnsafe(
+            vmcast<JSObject>(O1REG(PutOwnBySlotIdxLong)),
+            runtime,
+            ip->iPutOwnBySlotIdxLong.op3,
+            shv);
+        ip = NEXTINST(PutOwnBySlotIdxLong);
+        DISPATCH;
       }
       CASE(PutOwnBySlotIdx) {
-        nextIP = NEXTINST(PutOwnBySlotIdx);
-        idVal = ip->iPutOwnBySlotIdx.op3;
+        assert(
+            O1REG(PutOwnBySlotIdx).isObject() &&
+            "Object argument of PutOwnBySlotIdx must be an object");
+        ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdx));
+        JSObject::setNamedSlotValueUnsafe(
+            vmcast<JSObject>(O1REG(PutOwnBySlotIdx)),
+            runtime,
+            ip->iPutOwnBySlotIdx.op3,
+            shv);
+        ip = NEXTINST(PutOwnBySlotIdx);
+        DISPATCH;
       }
-    putOwnBySlotIdx: {
-      assert(
-          O1REG(PutOwnBySlotIdx).isObject() &&
-          "Object argument of PutOwnBySlotIdx must be an object");
-      ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdx));
-      JSObject::setNamedSlotValueUnsafe(
-          vmcast<JSObject>(O1REG(PutOwnBySlotIdx)), runtime, idVal, shv);
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
 
       CASE(GetOwnBySlotIdxLong) {
-        nextIP = NEXTINST(GetOwnBySlotIdxLong);
-        idVal = ip->iGetOwnBySlotIdxLong.op3;
-        goto getOwnBySlotIdx;
+        O1REG(GetOwnBySlotIdxLong) =
+            JSObject::getNamedSlotValueUnsafe(
+                vmcast<JSObject>(O2REG(GetOwnBySlotIdxLong)),
+                runtime,
+                ip->iGetOwnBySlotIdxLong.op3)
+                .unboxToHV(runtime);
+        ip = NEXTINST(GetOwnBySlotIdxLong);
+        DISPATCH;
       }
       CASE(GetOwnBySlotIdx) {
-        nextIP = NEXTINST(GetOwnBySlotIdx);
-        idVal = ip->iGetOwnBySlotIdx.op3;
+        O1REG(GetOwnBySlotIdx) = JSObject::getNamedSlotValueUnsafe(
+                                     vmcast<JSObject>(O2REG(GetOwnBySlotIdx)),
+                                     runtime,
+                                     ip->iGetOwnBySlotIdx.op3)
+                                     .unboxToHV(runtime);
+        ip = NEXTINST(GetOwnBySlotIdx);
+        DISPATCH;
       }
-    getOwnBySlotIdx: {
-      O1REG(GetOwnBySlotIdx) =
-          JSObject::getNamedSlotValueUnsafe(
-              vmcast<JSObject>(O2REG(GetOwnBySlotIdx)), runtime, idVal)
-              .unboxToHV(runtime);
-      ip = nextIP;
-      DISPATCH;
-    }
 
       CASE_OUTOFLINE(DelByVal);
 
