@@ -254,19 +254,6 @@ CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
   }
 }
 
-ExecutionStatus Interpreter::putByValTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> name,
-    Handle<> value,
-    bool strictMode) {
-  auto idRes = valueToSymbolID(runtime, name);
-  if (idRes == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
-
-  return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
-}
-
 static CallResult<HiddenClass *> getHiddenClassForBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
@@ -2272,72 +2259,16 @@ tailCall:
 
       CASE(PutByValLoose)
       CASE(PutByValStrict) {
-        bool strictMode = (ip->opCode == OpCode::PutByValStrict);
-        if (LLVM_LIKELY(O1REG(PutByValLoose).isObject())) {
-          auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
-          CAPTURE_IP_ASSIGN(
-              auto putRes,
-              JSObject::putComputed_RJS(
-                  Handle<JSObject>::vmcast(&O1REG(PutByValLoose)),
-                  runtime,
-                  Handle<>(&O2REG(PutByValLoose)),
-                  Handle<>(&O3REG(PutByValLoose)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          // This is the "slow path".
-          CAPTURE_IP_ASSIGN(
-              auto retStatus,
-              Interpreter::putByValTransient_RJS(
-                  runtime,
-                  Handle<>(&O1REG(PutByValLoose)),
-                  Handle<>(&O2REG(PutByValLoose)),
-                  Handle<>(&O3REG(PutByValLoose)),
-                  strictMode));
-          if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        }
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status, casePutByVal(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+          goto exception;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(PutByValLoose);
         DISPATCH;
       }
 
-      CASE(PutByValWithReceiver) {
-        auto defaultPropOpFlags =
-            DEFAULT_PROP_OP_FLAGS(ip->iPutByValWithReceiver.op5);
-        if (LLVM_LIKELY(O1REG(PutByValWithReceiver).isObject())) {
-          CAPTURE_IP_ASSIGN(
-              auto res,
-              JSObject::putComputedWithReceiver_RJS(
-                  Handle<JSObject>::vmcast(&O1REG(PutByValWithReceiver)),
-                  runtime,
-                  Handle<>(&O2REG(PutByValWithReceiver)),
-                  Handle<>(&O3REG(PutByValWithReceiver)),
-                  Handle<>(&O4REG(PutByValWithReceiver)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          CAPTURE_IP_ASSIGN(
-              auto retStatus,
-              Interpreter::putByValTransient_RJS(
-                  runtime,
-                  Handle<>(&O1REG(PutByValLoose)),
-                  Handle<>(&O2REG(PutByValLoose)),
-                  Handle<>(&O3REG(PutByValLoose)),
-                  ip->iPutByValWithReceiver.op5));
-          if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(PutByValWithReceiver);
-        DISPATCH;
-      }
+      CASE_OUTOFLINE(PutByValWithReceiver);
 
       CASE(DefineOwnByIndexL) {
         nextIP = NEXTINST(DefineOwnByIndexL);

@@ -666,6 +666,81 @@ ExecutionStatus Interpreter::caseGetByValWithReceiver(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus Interpreter::putByValTransient_RJS(
+    Runtime &runtime,
+    Handle<> base,
+    Handle<> name,
+    Handle<> value,
+    bool strictMode) {
+  auto idRes = valueToSymbolID(runtime, name);
+  if (idRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
+}
+
+ExecutionStatus Interpreter::casePutByVal(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  bool strictMode = (ip->opCode == inst::OpCode::PutByValStrict);
+  if (LLVM_LIKELY(O1REG(PutByValLoose).isObject())) {
+    auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+    auto putRes = JSObject::putComputed_RJS(
+        Handle<JSObject>::vmcast(&O1REG(PutByValLoose)),
+        runtime,
+        Handle<>(&O2REG(PutByValLoose)),
+        Handle<>(&O3REG(PutByValLoose)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    // This is the "slow path".
+    auto retStatus = Interpreter::putByValTransient_RJS(
+        runtime,
+        Handle<>(&O1REG(PutByValLoose)),
+        Handle<>(&O2REG(PutByValLoose)),
+        Handle<>(&O3REG(PutByValLoose)),
+        strictMode);
+    if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::casePutByValWithReceiver(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  auto defaultPropOpFlags =
+      DEFAULT_PROP_OP_FLAGS(ip->iPutByValWithReceiver.op5);
+  if (LLVM_LIKELY(O1REG(PutByValWithReceiver).isObject())) {
+    auto res = JSObject::putComputedWithReceiver_RJS(
+        Handle<JSObject>::vmcast(&O1REG(PutByValWithReceiver)),
+        runtime,
+        Handle<>(&O2REG(PutByValWithReceiver)),
+        Handle<>(&O3REG(PutByValWithReceiver)),
+        Handle<>(&O4REG(PutByValWithReceiver)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    auto retStatus = Interpreter::putByValTransient_RJS(
+        runtime,
+        Handle<>(&O1REG(PutByValLoose)),
+        Handle<>(&O2REG(PutByValLoose)),
+        Handle<>(&O3REG(PutByValLoose)),
+        ip->iPutByValWithReceiver.op5);
+    if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  return ExecutionStatus::RETURNED;
+}
+
 CallResult<HermesValue> Interpreter::createThisImpl(
     Runtime &runtime,
     PinnedHermesValue *callee,
