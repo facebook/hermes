@@ -5192,6 +5192,7 @@ void Emitter::bitBinOp(
     FR frRes,
     FR frLeft,
     FR frRight,
+    bool unsignedRes,
     const char *name,
     SHLegacyValue (*slowCall)(
         SHRuntime *shr,
@@ -5253,7 +5254,10 @@ void Emitter::bitBinOp(
 
   // Invoke the fast path, and move the result back as a 32 bit integer.
   fast(a, hwTempLGpX.a64GpX(), hwTempLGpX.a64GpX(), hwTempRGpX.a64GpX());
-  a.scvtf(hwRes.a64VecD(), hwTempLGpX.a64GpX().w());
+  if (unsignedRes)
+    a.ucvtf(hwRes.a64VecD(), hwTempLGpX.a64GpX().w());
+  else
+    a.scvtf(hwRes.a64VecD(), hwTempLGpX.a64GpX().w());
 
   a.bind(contLab);
 
