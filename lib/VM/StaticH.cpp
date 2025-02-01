@@ -1010,14 +1010,12 @@ static inline HermesValue getByIdWithReceiver_RJS(
     }
 
     // See if it's a proto cache hit.
-    SHObjectFlags kLazyProxyOrHost;
-    kLazyProxyOrHost.bits = 0;
-    kLazyProxyOrHost.hostObject = 1;
-    kLazyProxyOrHost.lazyObject = 1;
-    kLazyProxyOrHost.proxyObject = 1;
-    if (LLVM_LIKELY(
-            cacheEntry->negMatchClazz == clazzPtr &&
-            !obj->hasFlagIn(kLazyProxyOrHost))) {
+    if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {
+      // Proxy, HostObject and lazy objects have special hidden classes, so they
+      // should never match the cached class.
+      assert(!obj->getFlags().proxyObject);
+      assert(!obj->getFlags().hostObject);
+      assert(!obj->getFlags().lazyObject);
       const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
       if (LLVM_LIKELY(parentGCPtr)) {
         JSObject *parent = parentGCPtr.getNonNull(runtime);

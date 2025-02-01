@@ -1094,6 +1094,14 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
   if (LLVM_LIKELY(
           !desc.flags.accessor && !desc.flags.hostObject &&
           !desc.flags.proxyObject)) {
+    // The object must not be a proxy or HostObject, given that the descriptor
+    // does not indicate them.
+    assert(
+        !selfHandle->getFlags().proxyObject &&
+        !selfHandle->getFlags().hostObject);
+    // The object cannot be lazy after a lookup has occurred.
+    assert(!selfHandle->getFlags().lazyObject);
+
     // Populate the cache if requested.
     if (cacheEntry && !propObj->getClass(runtime)->isDictionaryNoCache()) {
       cacheEntry->clazz = propObj->getClassGCPtr();

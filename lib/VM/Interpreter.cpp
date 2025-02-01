@@ -2035,18 +2035,12 @@ tailCall:
       ip = NEXTINST(name);                                                    \
       DISPATCH;                                                               \
     }                                                                         \
-    /* TODO(T206393003): if we ensure that lazy, proxy, host objects          \
-     * have special HC's, different from that of an empty object, and         \
-     * don't do proto caching for such objects, then we wouldn't have         \
-     * to do this check. */                                                   \
-    SHObjectFlags kLazyProxyOrHost;                                           \
-    kLazyProxyOrHost.bits = 0;                                                \
-    kLazyProxyOrHost.hostObject = 1;                                          \
-    kLazyProxyOrHost.lazyObject = 1;                                          \
-    kLazyProxyOrHost.proxyObject = 1;                                         \
-    if (LLVM_LIKELY(                                                          \
-            cacheEntry->negMatchClazz == clazzPtr &&                          \
-            !obj->hasFlagIn(kLazyProxyOrHost))) {                             \
+    if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {                 \
+      /* Proxy, HostObject and lazy objects have special hidden classes, so   \
+       * they should never match the cached class. */                         \
+      assert(!obj->getFlags().proxyObject);                                   \
+      assert(!obj->getFlags().hostObject);                                    \
+      assert(!obj->getFlags().lazyObject);                                    \
       const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();         \
       if (LLVM_LIKELY(parentGCPtr)) {                                         \
         JSObject *parent = parentGCPtr.getNonNull(runtime);                   \
