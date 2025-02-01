@@ -1554,7 +1554,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
-static Handle<HiddenClass> getHiddenClassForBuffer(
+static HiddenClass *getHiddenClassForBuffer(
     SHRuntime *shr,
     SHUnit *unit,
     uint32_t shapeTableIndex) {
@@ -1563,11 +1563,16 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
   auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
       &unit->object_literal_class_cache[shapeTableIndex]);
   if (*cacheEntry)
-    return runtime.makeHandle(cacheEntry->get(runtime, runtime.getHeap()));
+    return cacheEntry->get(runtime, runtime.getHeap());
 
-  MutableHandle<HiddenClass> clazz =
-      runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
-          *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()));
+  struct : Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<> tmpHandleKey;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.clazz = *runtime.getHiddenClassForPrototype(
+      *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
 
   struct {
     void addProperty(SymbolID sym) {
@@ -1594,16 +1599,12 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
       llvm_unreachable("Object literal key cannot be a bool.");
     }
 
-    MutableHandle<HiddenClass> &clazz;
-    MutableHandle<> tmpHandleKey;
+    PinnedValue<HiddenClass> &clazz;
+    PinnedValue<> &tmpHandleKey;
     Runtime &runtime;
     SHUnit *unit;
     GCScopeMarkerRAII marker;
-  } v{clazz,
-      MutableHandle<>{runtime},
-      runtime,
-      unit,
-      GCScopeMarkerRAII{runtime}};
+  } v{lv.clazz, lv.tmpHandleKey, runtime, unit, GCScopeMarkerRAII{runtime}};
 
   llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
   const SHShapeTableEntry &info = unit->obj_shape_table[shapeTableIndex];
@@ -1611,17 +1612,17 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
   SerializedLiteralParser::parse(
       keyBuffer.slice(info.key_buffer_offset), info.num_props, v);
 
-  if (LLVM_LIKELY(!clazz->isDictionary())) {
+  if (LLVM_LIKELY(!lv.clazz->isDictionary())) {
     assert(
-        info.num_props == clazz->getNumProperties() &&
+        info.num_props == lv.clazz->getNumProperties() &&
         "numLiterals should match hidden class property count.");
     assert(
-        clazz->getNumProperties() < 256 &&
+        lv.clazz->getNumProperties() < 256 &&
         "cached hidden class should have property count less than 256");
-    cacheEntry->set(runtime, clazz.get());
+    cacheEntry->set(runtime, lv.clazz.get());
   }
 
-  return {clazz};
+  return *lv.clazz;
 }
 
 extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
@@ -1630,15 +1631,20 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
   Runtime &runtime = getRuntime(shr);
-  GCScopeMarkerRAII marker{runtime};
+  NoLeakHandleScope marker{runtime};
+
+  struct : Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  Handle<HiddenClass> clazz =
-      getHiddenClassForBuffer(shr, unit, shapeTableIndex);
-  auto numProps = clazz->getNumProperties();
-  Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime, clazz));
+  lv.clazz = getHiddenClassForBuffer(shr, unit, shapeTableIndex);
+  auto numProps = lv.clazz->getNumProperties();
+  lv.obj = JSObject::create(runtime, lv.clazz);
 
   struct {
     void visitStringID(StringID id) {
@@ -1661,18 +1667,18 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
       JSObject::setNamedSlotValueUnsafe(*obj, runtime, i++, shv);
     }
 
-    Handle<JSObject> obj;
+    PinnedValue<JSObject> &obj;
     Runtime &runtime;
     SHUnit *unit;
     size_t i;
-  } v{obj, runtime, unit, 0};
+  } v{lv.obj, runtime, unit, 0};
 
   llvh::ArrayRef literalValBuffer{
       unit->literal_val_buffer, unit->literal_val_buffer_size};
   SerializedLiteralParser::parse(
       literalValBuffer.slice(valBufferOffset), numProps, v);
 
-  return obj.getHermesValue();
+  return lv.obj.getHermesValue();
 }
 
 extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint) {
