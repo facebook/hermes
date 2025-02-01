@@ -24,12 +24,15 @@
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/HeapRuntime.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSMapImpl.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PredefinedStringIDs.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
@@ -397,10 +400,33 @@ Runtime::Runtime(
       rootClazzes_[i] = clazz.getHermesValue();
     }
 
-    // Create a separate hidden class for lazy objects so that they never
+    // Create a separate hierarchy of hidden classes for lazy objects, Proxy and
+    // HostObject, for lazy objects so that they never
     // compare equal to ordinary objects.
-    lazyObjectClass = vmcast<HiddenClass>(
+    clazz = vmcast<HiddenClass>(
         ignoreAllocationFailure(HiddenClass::createRoot(*this)));
+
+    // For lazy objects, they should just use this empty HiddenClass until they
+    // are actually populated.
+    lazyObjectClass = clazz;
+
+    for (unsigned i = 1; i <= std::max(
+                                  {JSObject::numOverlapSlots<JSProxy>(),
+                                   JSObject::numOverlapSlots<JSCallableProxy>(),
+                                   JSObject::numOverlapSlots<HostObject>()});
+         ++i) {
+      auto addResult = HiddenClass::reserveSlot(clazz, *this);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      clazz = *addResult->first;
+      if (i == JSObject::numOverlapSlots<JSProxy>())
+        proxyClass = clazz;
+      if (i == JSObject::numOverlapSlots<JSCallableProxy>())
+        callableProxyClass = clazz;
+      if (i == JSObject::numOverlapSlots<HostObject>())
+        hostObjectClass = clazz;
+    }
   }
 
   global_ = JSObject::create(*this, makeNullHandle<JSObject>());
