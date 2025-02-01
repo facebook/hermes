@@ -1554,25 +1554,17 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
-static HiddenClass *getHiddenClassForBuffer(
-    SHRuntime *shr,
+static HiddenClass *addBufferPropertiesToHiddenClass(
+    Runtime &runtime,
     SHUnit *unit,
-    uint32_t shapeTableIndex) {
-  Runtime &runtime = getRuntime(shr);
-
-  auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
-      &unit->object_literal_class_cache[shapeTableIndex]);
-  if (*cacheEntry)
-    return cacheEntry->get(runtime, runtime.getHeap());
-
+    const SHShapeTableEntry *info,
+    HiddenClass *rootClazz) {
   struct : Locals {
     PinnedValue<HiddenClass> clazz;
     PinnedValue<> tmpHandleKey;
   } lv;
   LocalsRAII lraii{runtime, &lv};
-
-  lv.clazz = *runtime.getHiddenClassForPrototype(
-      *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+  lv.clazz = rootClazz;
 
   struct {
     void addProperty(SymbolID sym) {
@@ -1607,20 +1599,9 @@ static HiddenClass *getHiddenClassForBuffer(
   } v{lv.clazz, lv.tmpHandleKey, runtime, unit, GCScopeMarkerRAII{runtime}};
 
   llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
-  const SHShapeTableEntry &info = unit->obj_shape_table[shapeTableIndex];
 
   SerializedLiteralParser::parse(
-      keyBuffer.slice(info.key_buffer_offset), info.num_props, v);
-
-  if (LLVM_LIKELY(!lv.clazz->isDictionary())) {
-    assert(
-        info.num_props == lv.clazz->getNumProperties() &&
-        "numLiterals should match hidden class property count.");
-    assert(
-        lv.clazz->getNumProperties() < 256 &&
-        "cached hidden class should have property count less than 256");
-    cacheEntry->set(runtime, lv.clazz.get());
-  }
+      keyBuffer.slice(info->key_buffer_offset), info->num_props, v);
 
   return *lv.clazz;
 }
@@ -1633,6 +1614,32 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
   Runtime &runtime = getRuntime(shr);
   NoLeakHandleScope marker{runtime};
 
+  HiddenClass *clazz;
+  auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
+      &unit->object_literal_class_cache[shapeTableIndex]);
+  if (*cacheEntry) {
+    // There is a already a cached entry for this shape, we can just use that.
+    clazz = cacheEntry->getNonNull(runtime, runtime.getHeap());
+  } else {
+    // There is no cached entry, construct the class from scratch and try to
+    // cache it.
+    const SHShapeTableEntry *shapeInfo =
+        &unit->obj_shape_table[shapeTableIndex];
+    clazz = addBufferPropertiesToHiddenClass(
+        runtime,
+        unit,
+        shapeInfo,
+        *runtime.getHiddenClassForPrototype(
+            *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()));
+    assert(
+        shapeInfo->num_props == clazz->getNumProperties() &&
+        "numLiterals should match hidden class property count.");
+    // Dictionary mode classes cannot be cached since they can change as the
+    // resulting object is modified.
+    if (LLVM_LIKELY(!clazz->isDictionary()))
+      cacheEntry->set(runtime, clazz);
+  }
+
   struct : Locals {
     PinnedValue<HiddenClass> clazz;
     PinnedValue<JSObject> obj;
@@ -1642,7 +1649,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  lv.clazz = getHiddenClassForBuffer(shr, unit, shapeTableIndex);
+  lv.clazz = clazz;
   auto numProps = lv.clazz->getNumProperties();
   lv.obj = JSObject::create(runtime, lv.clazz);
 
