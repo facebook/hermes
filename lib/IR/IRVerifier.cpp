@@ -548,10 +548,12 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   for (unsigned i = 0; i < Inst.getNumOperands(); i++) {
     auto Operand = Inst.getOperand(i);
     AssertIWithMsg(Inst, Operand != nullptr, "Invalid operand");
-    AssertIWithMsg(
-        Inst,
-        getUsersSetForValue(Operand).count(&Inst) == 1,
-        "This instruction is not in the User list of the operand");
+    if (Operand->tracksUsers()) {
+      AssertIWithMsg(
+          Inst,
+          getUsersSetForValue(Operand).count(&Inst) == 1,
+          "This instruction is not in the User list of the operand");
+    }
     if (llvh::isa<Variable>(Operand)) {
       AssertIWithMsg(
           Inst,

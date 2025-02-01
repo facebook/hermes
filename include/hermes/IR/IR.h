@@ -717,6 +717,9 @@ class Value {
   /// Run a Value's destructor and deallocate its memory.
   static void destroy(Value *V);
 
+  /// \return true if this instruction tracks its users.
+  inline bool tracksUsers() const;
+
   /// \return the users of the value.
   const UseListTy &getUsers() const;
 
@@ -2680,6 +2683,12 @@ class Module : public Value {
 /// The hash of a Type is the hash of its opaque value.
 static inline llvh::hash_code hash_value(Type V) {
   return V.hash();
+}
+
+inline bool Value::tracksUsers() const {
+  // We do not track users of literals because we never need to enumerate them
+  // and they can be very costly to maintain.
+  return !llvh::isa<Literal>(this);
 }
 
 inline Function *Instruction::getFunction() const {

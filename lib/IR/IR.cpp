@@ -74,24 +74,32 @@ llvh::StringRef Value::getKindStr() const {
 }
 
 const Value::UseListTy &Value::getUsers() const {
+  assert(tracksUsers() && "Instruction does not track its users.");
   return Users;
 }
 
 unsigned Value::getNumUsers() const {
+  assert(tracksUsers() && "Instruction does not track its users.");
   return Users.size();
 }
 
 bool Value::hasUsers() const {
+  assert(tracksUsers() && "Instruction does not track its users.");
   return Users.size();
 }
 
 bool Value::hasOneUser() const {
+  assert(tracksUsers() && "Instruction does not track its users.");
   return 1 == Users.size();
 }
 
 void Value::removeUse(Use U) {
-  assert(Users.size() && "Removing a user from an empty list");
   assert(U.first == this && "Invalid user");
+  // If the instruction should not track users, do nothing.
+  if (!tracksUsers())
+    return;
+
+  assert(Users.size() && "Removing a user from an empty list");
 
   // We don't care about the order of the operands in the use vector. One cheap
   // way to delete an element is to pop the last element and save it on top of
@@ -116,11 +124,16 @@ void Value::removeUse(Use U) {
 }
 
 Value::Use Value::addUser(Instruction *Inst) {
+  // If the instruction should not track users, just return a dummy use.
+  if (!tracksUsers())
+    return {this, 0};
+
   Users.push_back(Inst);
   return {this, static_cast<unsigned>(Users.size() - 1)};
 }
 
 void Value::replaceAllUsesWith(Value *Other) {
+  assert(tracksUsers() && "Instruction does not track its users.");
   if (this == Other) {
     return;
   }
