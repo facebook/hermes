@@ -191,6 +191,8 @@ class JSParserImpl {
       128
 #elif defined(_MSC_VER) && defined(HERMES_SLOW_DEBUG)
       128
+#elif defined(_MSC_VER) && defined(__clang__) && !defined(NDEBUG)
+      128
 #elif defined(_MSC_VER)
       512
 #else

@@ -948,6 +948,8 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
       // On windows in dbg mode builds, stack frames are bigger, and a depth
       // limit of 384 results in a C++ stack overflow in testing.
       128
+#elif defined(_MSC_VER) && defined(__clang__) && !defined(NDEBUG)
+      128
 #elif defined(_MSC_VER) && !NDEBUG
       192
 #else
