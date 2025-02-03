@@ -928,12 +928,44 @@ const getTransforms = (
               cloneJSDocCommentsToNewNode(member, newNode);
               classMembers.push(newNode);
             } else {
+              const [key, computed] = (() => {
+                const _key = member.key;
+                if (_key.type === 'Identifier' && _key.name.startsWith('@@')) {
+                  const name = _key.name.slice(2);
+                  if (['iterator', 'asyncIterator'].includes(name)) {
+                    return [
+                      {
+                        type: 'MemberExpression',
+                        computed: false,
+                        object: {
+                          type: 'Identifier',
+                          name: 'Symbol',
+                          optional: false,
+                          loc: DUMMY_LOC,
+                        },
+                        optional: false,
+                        property: {
+                          type: 'Identifier',
+                          name,
+                          optional: false,
+                          loc: DUMMY_LOC,
+                        },
+                        loc: DUMMY_LOC,
+                      },
+                      true,
+                    ];
+                  }
+                }
+
+                return [member.key, member.computed];
+              })();
+
               const newNode: TSESTree.MethodDefinitionAmbiguous = {
                 type: 'MethodDefinition',
                 loc: DUMMY_LOC,
                 accessibility: member.accessibility,
-                computed: member.computed ?? false,
-                key: member.key,
+                computed: computed ?? false,
+                key,
                 kind: member.kind,
                 optional: member.optional,
                 override: false,
