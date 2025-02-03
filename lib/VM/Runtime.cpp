@@ -2222,7 +2222,8 @@ void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
   if (samplingProfiler) {
     switch (kind) {
       case GCEventKind::CollectionStart:
-        samplingProfiler->suspend(extraInfo);
+        samplingProfiler->suspend(
+            SamplingProfiler::SuspendFrameInfo::Kind::GC, extraInfo);
         break;
       case GCEventKind::CollectionEnd:
         samplingProfiler->resume();

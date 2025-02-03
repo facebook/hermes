@@ -223,22 +223,26 @@ void SamplingProfiler::clear() {
   threadNames_.clear();
 }
 
-void SamplingProfiler::suspend(std::string_view extraInfo) {
+void SamplingProfiler::suspend(
+    SuspendFrameInfo::Kind reason,
+    llvh::StringRef gcSuspendDetails) {
   // Need to check whether the profiler is enabled without holding the
   // runtimeDataLock_. Otherwise, we'd have a lock inversion.
   bool enabled = sampling_profiler::Sampler::get()->enabled();
 
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  if (++suspendCount_ > 1 || extraInfo.empty()) {
-    // If there are multiple nested suspend calls use a default "suspended"
-    // label for the suspend entry in the call stack. Also use the default
-    // when no extra info is provided.
-    extraInfo = "suspended";
+  if (++suspendCount_ > 1) {
+    // If there are multiple nested suspend calls use a default "multiple" frame
+    // kind for the suspend entry in the call stack.
+    reason = SuspendFrameInfo::Kind::Multiple;
+  } else if (reason == SuspendFrameInfo::Kind::GC && gcSuspendDetails.empty()) {
+    // If no GC reason was provided, use a default "suspend" value.
+    gcSuspendDetails = "suspend";
   }
 
   // Only record the stack trace for the first suspend() call.
   if (LLVM_UNLIKELY(enabled && suspendCount_ == 1)) {
-    recordPreSuspendStack(extraInfo);
+    recordPreSuspendStack(reason, gcSuspendDetails);
   }
 }
 
@@ -250,10 +254,15 @@ void SamplingProfiler::resume() {
   }
 }
 
-void SamplingProfiler::recordPreSuspendStack(std::string_view extraInfo) {
-  std::pair<std::unordered_set<std::string>::iterator, bool> retPair =
-      suspendEventExtraInfoSet_.emplace(extraInfo);
-  SuspendFrameInfo suspendExtraInfo = &(*(retPair.first));
+void SamplingProfiler::recordPreSuspendStack(
+    SuspendFrameInfo::Kind reason,
+    llvh::StringRef gcFrame) {
+  SuspendFrameInfo suspendExtraInfo{reason, nullptr};
+  if (reason == SuspendFrameInfo::Kind::GC) {
+    std::pair<std::unordered_set<std::string>::iterator, bool> retPair =
+        gcEventExtraInfoSet_.emplace(gcFrame);
+    suspendExtraInfo.gcFrame = &(*(retPair.first));
+  }
 
   auto &leafFrame = preSuspendStackStorage_.stack[0];
   leafFrame.kind = StackFrame::FrameKind::SuspendFrame;
@@ -280,7 +289,8 @@ bool operator==(
       return left.nativeFrame == right.nativeFrame;
 
     case SamplingProfiler::StackFrame::FrameKind::SuspendFrame:
-      return left.suspendFrame == right.suspendFrame;
+      return left.suspendFrame.kind == right.suspendFrame.kind &&
+          left.suspendFrame.gcFrame == right.suspendFrame.gcFrame;
 
     default:
       llvm_unreachable("Unknown frame kind");

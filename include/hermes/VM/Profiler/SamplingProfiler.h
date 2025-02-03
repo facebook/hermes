@@ -56,8 +56,29 @@ class SamplingProfiler {
   /// been registered with the sampling profiler yet, and therefore can be moved
   /// by the GC.
   using NativeFunctionFrameInfo = size_t;
-  /// GC frame info. Pointing to string in suspendEventExtraInfoSet_.
-  using SuspendFrameInfo = const std::string *;
+
+  /// Details about a suspend frame.
+  struct SuspendFrameInfo {
+    /// GC frame info. Pointing to string in gcEventExtraInfoSet_.
+    using GCFrameInfo = const std::string *;
+
+    /// Cause of the suspension.
+    enum class Kind {
+      /// Suspended to perform GC actions. The gcFrame field contains additional
+      /// details specific to the GC.
+      GC,
+      /// Suspended to perform debugger actions.
+      Debugger,
+      /// Multiple suspensions have occurred.
+      Multiple,
+    } kind;
+    /// Extra information about GC suspensions. Only valid when \c kind is
+    /// \c GC. Pointing to string in gcEventExtraInfoSet_; it is optional
+    /// and can be null to indicate no extra info.
+    /// We can't directly use std::string here because it is
+    /// inside a union.
+    GCFrameInfo gcFrame;
+  };
 
   // This will break with more than one RuntimeModule(like FB4a, eval() call or
   // lazy compilation etc...). It is simply a temporary thing to get started.
@@ -80,11 +101,7 @@ class SamplingProfiler {
       LoomNativeFrameInfo nativeFunctionPtrForLoom;
       /// Native function frame info storage used for "regular" profiling.
       NativeFunctionFrameInfo nativeFrame;
-      /// Suspend frame info. Pointing to string
-      /// in suspendExtraInfoSet_; it is optional and
-      /// can be null to indicate no extra info.
-      /// We can't directly use std::string here because it is
-      /// inside a union.
+      /// Suspend frame info.
       SuspendFrameInfo suspendFrame;
     };
     FrameKind kind;
@@ -175,7 +192,7 @@ class SamplingProfiler {
   ThreadNamesMap threadNames_;
 
   /// Unique GC event extra info strings container.
-  std::unordered_set<std::string> suspendEventExtraInfoSet_;
+  std::unordered_set<std::string> gcEventExtraInfoSet_;
 
   /// Domains to be kept alive for sampled RuntimeModules. Protected by
   /// runtimeDataLock_.
@@ -223,7 +240,9 @@ class SamplingProfiler {
  private:
   /// Record JS stack at time of suspension, caller must hold
   /// runtimeDataLock_.
-  void recordPreSuspendStack(std::string_view extraInfo);
+  void recordPreSuspendStack(
+      SuspendFrameInfo::Kind reason,
+      llvh::StringRef gcFrame);
 
  protected:
   /// Clear previous stored samples.
@@ -269,8 +288,11 @@ class SamplingProfiler {
   static bool disable();
 
   /// Suspends the sample profiling. Every call to suspend must be matched by a
-  /// call to resume.
-  void suspend(std::string_view reason);
+  /// call to resume. \c reason indicates the cause of suspension. If \c reason
+  /// is GC, \c gcFrame can provide extra details, otherwise it is ignored.
+  void suspend(
+      SuspendFrameInfo::Kind reason,
+      llvh::StringRef gcSuspendDetails = "");
 
   /// Resumes the sample profiling. There must have been a previous call to
   /// suspend() that hansn't been resume()d yet.
@@ -290,7 +312,7 @@ class SuspendSamplingProfilerRAII {
  public:
   explicit SuspendSamplingProfilerRAII(
       Runtime &runtime,
-      std::string_view reason = "")
+      SamplingProfiler::SuspendFrameInfo::Kind reason)
       : profiler_(runtime.samplingProfiler.get()) {
     if (profiler_) {
       profiler_->suspend(reason);
