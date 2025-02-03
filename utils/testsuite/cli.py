@@ -337,6 +337,7 @@ async def run(
         skip_categories = [
             SkipCategory.SKIP_LIST,
             SkipCategory.MANUAL_SKIP_LIST,
+            SkipCategory.PLATFORM_SKIP_LIST,
         ]
         if lazy:
             skip_categories.append(SkipCategory.LAZY_SKIP_LIST)

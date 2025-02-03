@@ -44,6 +44,7 @@ class SkippedPathsOrFeaturesDict(TypedDict):
     unsupported_features: List[str]
     permant_unsupported_features: List[str]
     intl_tests: List[SkippedPathItem]
+    platform_skip_list: Dict[str, List[SkippedPathItem]]
 
 
 # Use | with Python 3.10+
