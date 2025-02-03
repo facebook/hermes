@@ -497,6 +497,11 @@ class SemContext {
     return nullptr;
   }
 
+  /// Clears all promoted declarations.
+  void clearPromotedDecls() {
+    promotedFunctionDecls_.clear();
+  }
+
   /// Set the "declaration decl" and the "expression decl" of the identifier
   /// node to the same value.
   void setBothDecl(ESTree::IdentifierNode *node, Decl *decl) {

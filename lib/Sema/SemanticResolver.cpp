@@ -93,6 +93,8 @@ bool SemanticResolver::runLazy(
     if (astContext_.getDebugInfoSetting() != DebugInfoSetting::ALL) {
       semInfo->bindingTableScope.reset();
     }
+
+    semCtx_.clearPromotedDecls();
   });
 
   canReferenceSuper_ = rootNode->isMethodDefinition ||
