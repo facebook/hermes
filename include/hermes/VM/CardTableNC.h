@@ -63,11 +63,9 @@ class CardTable {
   static constexpr size_t kCardSize = 1 << kLogCardSize; // ==> 512-byte cards.
   static constexpr size_t kSegmentSize = 1 << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
 
-  /// The number of valid indices into the card table.
-  static constexpr size_t kValidIndices = kSegmentSize >> kLogCardSize;
-
-  /// The size of the card table.
-  static constexpr size_t kCardTableSize = kValidIndices;
+  /// The size of the maximum inline card table. CardStatus array and boundary
+  /// array for larger segment has larger size and is stored separately.
+  static constexpr size_t kInlineCardTableSize = kSegmentSize >> kLogCardSize;
 
   /// For convenience, this is a conversion factor to determine how many bytes
   /// in the heap correspond to a single byte in the card table. This is
@@ -77,23 +75,32 @@ class CardTable {
   /// guaranteed by a static_assert below.
   static constexpr size_t kHeapBytesPerCardByte = kCardSize;
 
-  /// A prefix of every segment is occupied by auxilary data
-  /// structures.  The card table is the first such data structure.
-  /// The card table maps to the segment.  Only the suffix of the card
-  /// table that maps to the suffix of entire segment that is used for
-  /// allocation is ever used; the prefix that maps to the card table
-  /// itself is not used.  (Nor is the portion that of the card table
-  /// that maps to the other auxiliary data structure, the mark bit
-  /// array, but we don't attempt to calculate that here.)
-  /// It is useful to know the size of this unused region of
-  /// the card table, so it can be used for other purposes.
-  /// Note that the total size of the card table is 2 times
-  /// kCardTableSize, since the CardTable contains two byte arrays of
-  /// that size (cards_ and _boundaries_).
-  static constexpr size_t kFirstUsedIndex =
-      (2 * kCardTableSize) >> kLogCardSize;
+  /// A prefix of every segment is occupied by auxiliary data structures. The
+  /// card table is the first such data structure. The card table maps to the
+  /// segment. Only the suffix of the card table that maps to the suffix of
+  /// entire segment that is used for allocation is ever used; the prefix that
+  /// maps to the card table itself is not used, nor is the portion of the card
+  /// table that maps to the other auxiliary data structure: the mark bit array
+  /// and guard pages. This small space can be used for other purpose, such as
+  /// storing the SHSegmentInfo (we assert in AlignedHeapSegment that its
+  /// size won't exceed this unused space). The actual first used index should
+  /// take into account all these structures. Here we only calculate for
+  /// CardTable and size of SHSegmentInfo. It's only used as starting index for
+  /// clearing/dirtying range of bits.
+  /// Note that the total size of the card table is 2 times kCardTableSize,
+  /// since the CardTable contains two byte arrays of that size (cards_ and
+  /// boundaries_). And this index must be larger than the size of SHSegmentInfo
+  /// to avoid corrupting it when clearing/dirtying bits.
+  static constexpr size_t kFirstUsedIndex = std::max(
+      sizeof(SHSegmentInfo),
+      (2 * kInlineCardTableSize) >> kLogCardSize);
 
-  CardTable() = default;
+  CardTable() {
+    // Preserve the segment size.
+    auto *segmentInfo_ = reinterpret_cast<SHSegmentInfo *>(this);
+    segmentInfo_->shiftedSegmentSize =
+        kSegmentSize >> HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+  }
   /// CardTable is not copyable or movable: It must be constructed in-place.
   CardTable(const CardTable &) = delete;
   CardTable(CardTable &&) = delete;
@@ -117,7 +124,7 @@ class CardTable {
   ///
   /// \pre \p index is bounded:
   ///
-  ///     0 <= index <= kValidIndices
+  ///     0 <= index <= getEndIndex()
   inline const char *indexToAddress(size_t index) const;
 
   /// Make the card table entry for the given address dirty.
@@ -184,6 +191,19 @@ class CardTable {
   /// is the first object.)
   GCCell *firstObjForCard(unsigned index) const;
 
+  /// Get the segment size from SHSegmentInfo. This is only used in debug code
+  /// or when clearing the entire card table.
+  size_t getSegmentSize() const {
+    auto *segmentInfo_ = reinterpret_cast<const SHSegmentInfo *>(this);
+    return (size_t)segmentInfo_->shiftedSegmentSize
+        << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+  }
+
+  /// The end index of the card table (all valid indices should be smaller).
+  size_t getEndIndex() const {
+    return getSegmentSize() >> kLogCardSize;
+  }
+
 #ifdef HERMES_EXTRA_DEBUG
   /// Temporary debugging hack: yield the numeric value of the boundaries_ array
   /// for the given \p index.
@@ -215,9 +235,11 @@ class CardTable {
 
  private:
 #ifndef NDEBUG
-  /// Returns the pointer to the end of the storage containing \p ptr
-  /// (exclusive).
-  static void *storageEnd(const void *ptr);
+  /// Returns the pointer to the end of the storage starting at \p lowLim.
+  void *storageEnd(const void *lowLim) const {
+    return reinterpret_cast<void *>(
+        reinterpret_cast<uintptr_t>(lowLim) + getSegmentSize());
+  }
 #endif
 
   enum class CardStatus : char { Clean = 0, Dirty = 1 };
@@ -257,7 +279,7 @@ class CardTable {
 
   /// This needs to be atomic so that the background thread in Hades can safely
   /// dirty cards when compacting.
-  std::array<AtomicIfConcurrentGC<CardStatus>, kCardTableSize> cards_{};
+  std::array<AtomicIfConcurrentGC<CardStatus>, kInlineCardTableSize> cards_{};
 
   /// See the comment at kHeapBytesPerCardByte above to see why this is
   /// necessary.
@@ -275,7 +297,7 @@ class CardTable {
   /// time:  If we allocate a large object that crosses many cards, the first
   /// crossed cards gets a non-negative value, and each subsequent one uses the
   /// maximum exponent that stays within the card range for the object.
-  int8_t boundaries_[kCardTableSize];
+  int8_t boundaries_[kInlineCardTableSize];
 };
 
 /// Implementations of inlines.
@@ -305,7 +327,7 @@ inline size_t CardTable::addressToIndex(const void *addr) const {
 }
 
 inline const char *CardTable::indexToAddress(size_t index) const {
-  assert(index <= kValidIndices && "index must be within the index range");
+  assert(index <= getEndIndex() && "index must be within the index range");
   const char *res = base() + (index << kLogCardSize);
   assert(
       base() <= res && res <= storageEnd(base()) &&
@@ -323,7 +345,7 @@ inline bool CardTable::isCardForAddressDirty(const void *addr) const {
 }
 
 inline bool CardTable::isCardForIndexDirty(size_t index) const {
-  assert(index < kValidIndices && "index is required to be in range.");
+  assert(index < getEndIndex() && "index is required to be in range.");
   return cards_[index].load(std::memory_order_relaxed) == CardStatus::Dirty;
 }
 
