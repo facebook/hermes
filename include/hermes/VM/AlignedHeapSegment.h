@@ -648,14 +648,6 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
         Contents::CardStatus::Dirty);
   }
 
-  /// Returns whether the card table entry for the given address is dirty.
-  /// \pre \p addr is required to be an address covered by the card table.
-  static bool isCardForAddressDirty(const void *addr) {
-    auto *segContents = contents(storageStart(addr));
-    return segContents->cards_[addressToCardIndex(segContents, addr)].load(
-               std::memory_order_relaxed) == Contents::CardStatus::Dirty;
-  }
-
   /// Find the head of the first cell that extends into the card at index
   /// \p cardIdx.
   /// \return A cell such that
