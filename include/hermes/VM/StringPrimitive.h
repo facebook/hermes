@@ -838,6 +838,7 @@ template <typename T, bool Uniqued>
 const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     DynamicStringPrimitive<T, Uniqued>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     nullptr,
     nullptr,
     nullptr
@@ -865,6 +866,7 @@ template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     ExternalStringPrimitive<T>::_finalizeImpl,
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr
@@ -886,6 +888,7 @@ template <typename T>
 const VTable BufferedStringPrimitive<T>::vt = VTable(
     BufferedStringPrimitive<T>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     nullptr, // finalize.
     nullptr, // mallocSize
     nullptr

@@ -95,6 +95,7 @@ void TransitionMap::uncleanMakeLarge(Runtime &runtime) {
 const VTable HiddenClass::vt{
     CellKind::HiddenClassKind,
     cellSize<HiddenClass>(),
+    /* allowLargeAlloc */ false,
     _finalizeImpl,
     _mallocSizeImpl,
     nullptr

@@ -19,6 +19,7 @@ template <typename HVType>
 const VTable ArrayStorageBase<HVType>::vt(
     ArrayStorageBase<HVType>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     nullptr,
     nullptr,
     _trimSizeCallback
