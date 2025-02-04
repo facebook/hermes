@@ -55,7 +55,7 @@ AlignedHeapSegment::AlignedHeapSegment(
       ((reinterpret_cast<uintptr_t>(lowLim) + segmentSize) %
        oscompat::page_size()) == 0 &&
       "The higher limit must be page aligned");
-  new (contents()) Contents();
+  new (contents()) Contents(segmentSize);
   contents()->protectGuardPage(oscompat::ProtectMode::None);
 
 #ifndef NDEBUG
@@ -85,7 +85,7 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   if (lowLim() == nullptr) {
     return;
   }
-  size_t segmentSize = cardTable().getSegmentSize();
+  size_t segmentSize = contents()->getSegmentSize();
   contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
   contents()->~Contents();
   __asan_unpoison_memory_region(start(), segmentSize - kOffsetOfAllocRegion);

@@ -27,14 +27,25 @@ struct CardObjectBoundaryNCTest : public ::testing::Test {
     char *resPtr = reinterpret_cast<char *>(res.ptr);
     char *nextPtr = segment.level();
     if (boundary.address() < nextPtr) {
-      segment.cardTable().updateBoundaries(&boundary, resPtr, nextPtr);
+      updateBoundaries(&boundary, resPtr, nextPtr);
     }
     return res.ptr;
   }
 
+  void updateBoundaries(
+      CardBoundaryTable::Boundary *boundary,
+      const char *start,
+      const char *end) {
+    segment.cardBoundaryTable().updateBoundaries(boundary, start, end);
+  }
+
+  CardBoundaryTable::Boundary nextBoundary(const char *level) {
+    return segment.cardBoundaryTable().nextBoundary(level);
+  }
+
   std::unique_ptr<StorageProvider> provider;
   FixedSizeHeapSegment segment;
-  CardTable::Boundary boundary;
+  CardBoundaryTable::Boundary boundary;
 
   size_t segStartIndex;
 };
@@ -42,56 +53,70 @@ struct CardObjectBoundaryNCTest : public ::testing::Test {
 CardObjectBoundaryNCTest::CardObjectBoundaryNCTest()
     : provider(StorageProvider::mmapProvider()),
       segment(std::move(FixedSizeHeapSegment::create(provider.get()).get())),
-      boundary(segment.cardTable().nextBoundary(segment.start())),
+      boundary(segment.cardBoundaryTable().nextBoundary(segment.start())),
       segStartIndex(boundary.index()) {}
 
 TEST_F(CardObjectBoundaryNCTest, NextBoundaryInitial) {
-  auto actual = segment.cardTable().nextBoundary(segment.start());
+  auto actual = nextBoundary(segment.start());
   EXPECT_EQ(segment.start(), actual.address());
 }
 
 TEST_F(CardObjectBoundaryNCTest, NextBoundaryIncrement) {
-  auto actual = segment.cardTable().nextBoundary(segment.start() + HeapAlign);
-  EXPECT_EQ(segment.start() + CardTable::kCardSize, actual.address());
+  auto actual = nextBoundary(segment.start() + HeapAlign);
+  EXPECT_EQ(segment.start() + CardBoundaryTable::kCardSize, actual.address());
 }
 
 TEST_F(CardObjectBoundaryNCTest, NextBoundaryOnBoundary) {
-  auto actual =
-      segment.cardTable().nextBoundary(segment.start() + CardTable::kCardSize);
-  EXPECT_EQ(segment.start() + CardTable::kCardSize, actual.address());
+  auto actual = nextBoundary(segment.start() + CardBoundaryTable::kCardSize);
+  EXPECT_EQ(segment.start() + CardBoundaryTable::kCardSize, actual.address());
 }
 
 TEST_F(CardObjectBoundaryNCTest, FirstAlloc) {
   void *res = alloc(cellSize<GCCell>());
   EXPECT_EQ(segment.start(), reinterpret_cast<char *>(res));
-  EXPECT_EQ(res, segment.cardTable().firstObjForCard(segStartIndex));
-  EXPECT_EQ(segment.start() + CardTable::kCardSize, boundary.address());
+  EXPECT_EQ(
+      res,
+      segment.cardBoundaryTable().firstObjForCard(
+          segment.lowLim(), segment.hiLim(), segStartIndex));
+  EXPECT_EQ(segment.start() + CardBoundaryTable::kCardSize, boundary.address());
 }
 
 TEST_F(CardObjectBoundaryNCTest, CrossingSmallAlloc) {
   (void)alloc(cellSize<GCCell>());
-  void *res1 = alloc(CardTable::kCardSize);
-  EXPECT_EQ(res1, segment.cardTable().firstObjForCard(segStartIndex + 1));
-  EXPECT_EQ(segment.start() + 2 * CardTable::kCardSize, boundary.address());
+  void *res1 = alloc(CardBoundaryTable::kCardSize);
+  EXPECT_EQ(
+      res1,
+      segment.cardBoundaryTable().firstObjForCard(
+          segment.lowLim(), segment.hiLim(), segStartIndex + 1));
+  EXPECT_EQ(
+      segment.start() + 2 * CardBoundaryTable::kCardSize, boundary.address());
 }
 
 TEST_F(CardObjectBoundaryNCTest, CrossingSmallAllocAtCardStart) {
   // Do an alloc to get to the start of the next card.
-  (void)alloc(CardTable::kCardSize);
+  (void)alloc(CardBoundaryTable::kCardSize);
   void *res = alloc(cellSize<GCCell>());
   EXPECT_EQ(
       reinterpret_cast<char *>(res),
-      segment.cardTable().indexToAddress(segStartIndex + 1));
-  EXPECT_EQ(res, segment.cardTable().firstObjForCard(segStartIndex + 1));
+      segment.cardBoundaryTable().indexToAddress(
+          segment.lowLim(), segStartIndex + 1));
+  EXPECT_EQ(
+      res,
+      segment.cardBoundaryTable().firstObjForCard(
+          segment.lowLim(), segment.hiLim(), segStartIndex + 1));
 }
 
 TEST_F(CardObjectBoundaryNCTest, CrossingLargeAlloc) {
   (void)alloc(cellSize<GCCell>());
   const size_t kNumCards = 20;
-  void *res1 = alloc(kNumCards * CardTable::kCardSize);
-  EXPECT_EQ(segment.start() + 21 * CardTable::kCardSize, boundary.address());
+  void *res1 = alloc(kNumCards * CardBoundaryTable::kCardSize);
+  EXPECT_EQ(
+      segment.start() + 21 * CardBoundaryTable::kCardSize, boundary.address());
   for (size_t i = 0; i < kNumCards; i++) {
-    EXPECT_EQ(res1, segment.cardTable().firstObjForCard(segStartIndex + 1 + i));
+    EXPECT_EQ(
+        res1,
+        segment.cardBoundaryTable().firstObjForCard(
+            segment.lowLim(), segment.hiLim(), segStartIndex + 1 + i));
   }
 }
 
