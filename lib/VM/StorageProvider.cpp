@@ -12,6 +12,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 
+#include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/DenseMap.h"
 #include "llvh/Support/ErrorHandling.h"
 #include "llvh/Support/MathExtras.h"
@@ -55,14 +56,17 @@ namespace vm {
 
 namespace {
 
+/// Minimum segment storage size. Any larger segment size should be a multiple
+/// of it.
+constexpr auto kSegmentUnitSize = AlignedHeapSegment::kSegmentUnitSize;
+
 bool isAligned(void *p) {
-  return (reinterpret_cast<uintptr_t>(p) &
-          (FixedSizeHeapSegment::storageSize() - 1)) == 0;
+  return (reinterpret_cast<uintptr_t>(p) & (kSegmentUnitSize - 1)) == 0;
 }
 
 char *alignAlloc(void *p) {
-  return reinterpret_cast<char *>(llvh::alignTo(
-      reinterpret_cast<uintptr_t>(p), FixedSizeHeapSegment::storageSize()));
+  return reinterpret_cast<char *>(
+      llvh::alignTo(reinterpret_cast<uintptr_t>(p), kSegmentUnitSize));
 }
 
 void *getMmapHint() {
@@ -78,68 +82,107 @@ void *getMmapHint() {
 
 class VMAllocateStorageProvider final : public StorageProvider {
  public:
-  llvh::ErrorOr<void *> newStorageImpl(const char *name) override;
-  void deleteStorageImpl(void *storage) override;
+  llvh::ErrorOr<void *> newStorageImpl(size_t sz, const char *name) override;
+  void deleteStorageImpl(void *storage, size_t sz) override;
 };
 
 class ContiguousVAStorageProvider final : public StorageProvider {
  public:
   ContiguousVAStorageProvider(size_t size)
-      : size_(llvh::alignTo<FixedSizeHeapSegment::storageSize()>(size)) {
-    auto result = oscompat::vm_reserve_aligned(
-        size_, FixedSizeHeapSegment::storageSize(), getMmapHint());
+      : size_(llvh::alignTo<kSegmentUnitSize>(size)),
+        statusBits_(size_ / kSegmentUnitSize + 1) {
+    auto result =
+        oscompat::vm_reserve_aligned(size_, kSegmentUnitSize, getMmapHint());
     if (!result)
       hermes_fatal("Contiguous storage allocation failed.", result.getError());
-    level_ = start_ = static_cast<char *>(*result);
+    start_ = static_cast<char *>(*result);
     oscompat::vm_name(start_, size_, kFreeRegionName);
+    // Set the additional bit so that we could always find a next used bit.
+    statusBits_.set(statusBits_.size() - 1);
   }
   ~ContiguousVAStorageProvider() override {
     oscompat::vm_release_aligned(start_, size_);
   }
 
-  llvh::ErrorOr<void *> newStorageImpl(const char *name) override {
-    void *storage;
-    if (!freelist_.empty()) {
-      storage = freelist_.back();
-      freelist_.pop_back();
-    } else if (level_ < start_ + size_) {
-      storage =
-          std::exchange(level_, level_ + FixedSizeHeapSegment::storageSize());
-    } else {
+  llvh::ErrorOr<void *> newStorageImpl(size_t sz, const char *name) override {
+    assert(
+        statusBits_.find_first_unset() == firstFreeBit_ &&
+        "firstFreeBit_ should always be the first unset bit");
+
+    // No available space to use.
+    if (LLVM_UNLIKELY(firstFreeBit_ == -1)) {
       return make_error_code(OOMError::MaxStorageReached);
     }
-    auto res =
-        oscompat::vm_commit(storage, FixedSizeHeapSegment::storageSize());
+
+    void *storage;
+    int numUnits = sz / kSegmentUnitSize;
+    int curFreeBit = firstFreeBit_;
+    // Search for a large enough continuous bit range.
+    while (true) {
+      int nextUsedBit = statusBits_.find_next(firstFreeBit_);
+      // Note that because we add a past-the-end bit that is always set,
+      // nextUsedBit will never be -1.
+      if (nextUsedBit - curFreeBit >= numUnits)
+        break;
+      curFreeBit = statusBits_.find_next_unset(nextUsedBit);
+      if (curFreeBit == -1) {
+        return make_error_code(OOMError::TooLargeSegmentRequest);
+      }
+    }
+
+    storage = start_ + curFreeBit * kSegmentUnitSize;
+    statusBits_.set(curFreeBit, curFreeBit + numUnits);
+    // Reset it to the new leftmost free bit.
+    firstFreeBit_ = statusBits_.find_next_unset(firstFreeBit_);
+
+    auto res = oscompat::vm_commit(storage, sz);
     if (res) {
-      oscompat::vm_name(storage, FixedSizeHeapSegment::storageSize(), name);
+      oscompat::vm_name(storage, sz, name);
     }
     return res;
   }
 
-  void deleteStorageImpl(void *storage) override {
+  void deleteStorageImpl(void *storage, size_t sz) override {
     assert(
-        !llvh::alignmentAdjustment(
-            storage, FixedSizeHeapSegment::storageSize()) &&
+        !llvh::alignmentAdjustment(storage, kSegmentUnitSize) &&
         "Storage not aligned");
-    assert(storage >= start_ && storage < level_ && "Storage not in region");
-    oscompat::vm_name(
-        storage, FixedSizeHeapSegment::storageSize(), kFreeRegionName);
-    oscompat::vm_uncommit(storage, FixedSizeHeapSegment::storageSize());
-    freelist_.push_back(storage);
+    assert(
+        storage >= start_ && storage < start_ + size_ &&
+        "Storage not in region");
+    oscompat::vm_name(storage, sz, kFreeRegionName);
+    oscompat::vm_uncommit(storage, sz);
+    size_t numUnits = sz / kSegmentUnitSize;
+    // Reset all bits for this storage.
+    int startIndex = (static_cast<char *>(storage) - start_) / kSegmentUnitSize;
+    statusBits_.reset(startIndex, startIndex + numUnits);
+    if (startIndex < firstFreeBit_)
+      firstFreeBit_ = startIndex;
   }
 
  private:
   static constexpr const char *kFreeRegionName = "hermes-free-heap";
   size_t size_;
   char *start_;
-  char *level_;
-  llvh::SmallVector<void *, 0> freelist_;
+  /// First free bit in \c statusBits_. We always make new allocation from the
+  /// leftmost free bit, based on heuristics:
+  /// 1. Usually the reserved address space is not full.
+  /// 2. Storage with size kSegmentUnitSize is allocated and deleted more
+  /// frequently than larger storage.
+  /// 3. Likely small storage will find space available from leftmost free bit,
+  /// leaving enough space at the right side for large storage.
+  /// If no free bit available, it will be -1.
+  int firstFreeBit_{0};
+  /// One bit for each kSegmentUnitSize space in the entire reserved virtual
+  /// address space. A bit is set if the corresponding space is used. One
+  /// additional set bit is added in the end, to make finding next set bit
+  /// easier (always return the last index instead of -1).
+  llvh::BitVector statusBits_;
 };
 
 class MallocStorageProvider final : public StorageProvider {
  public:
-  llvh::ErrorOr<void *> newStorageImpl(const char *name) override;
-  void deleteStorageImpl(void *storage) override;
+  llvh::ErrorOr<void *> newStorageImpl(size_t sz, const char *name) override;
+  void deleteStorageImpl(void *storage, size_t sz) override;
 
  private:
   /// Map aligned starts to actual starts for freeing.
@@ -149,46 +192,48 @@ class MallocStorageProvider final : public StorageProvider {
 };
 
 llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
+    size_t sz,
     const char *name) {
-  assert(FixedSizeHeapSegment::storageSize() % oscompat::page_size() == 0);
+  assert(kSegmentUnitSize % oscompat::page_size() == 0);
   // Allocate the space, hoping it will be the correct alignment.
-  auto result = oscompat::vm_allocate_aligned(
-      FixedSizeHeapSegment::storageSize(),
-      FixedSizeHeapSegment::storageSize(),
-      getMmapHint());
+  auto result =
+      oscompat::vm_allocate_aligned(sz, kSegmentUnitSize, getMmapHint());
   if (!result) {
     return result;
   }
   void *mem = *result;
   assert(isAligned(mem));
   (void)&isAligned;
-#ifdef HERMESVM_ALLOW_HUGE_PAGES
-  oscompat::vm_hugepage(mem, FixedSizeHeapSegment::storageSize());
-#endif
-
+  oscompat::vm_hugepage(mem, sz);
   // Name the memory region on platforms that support naming.
-  oscompat::vm_name(mem, FixedSizeHeapSegment::storageSize(), name);
+  oscompat::vm_name(mem, sz, name);
   return mem;
 }
 
-void VMAllocateStorageProvider::deleteStorageImpl(void *storage) {
+void VMAllocateStorageProvider::deleteStorageImpl(void *storage, size_t sz) {
   if (!storage) {
     return;
   }
-  oscompat::vm_free_aligned(storage, FixedSizeHeapSegment::storageSize());
+  oscompat::vm_free_aligned(storage, sz);
 }
 
-llvh::ErrorOr<void *> MallocStorageProvider::newStorageImpl(const char *name) {
+llvh::ErrorOr<void *> MallocStorageProvider::newStorageImpl(
+    size_t sz,
+    const char *name) {
   // name is unused, can't name malloc memory.
   (void)name;
-  void *mem = checkedMalloc2(FixedSizeHeapSegment::storageSize(), 2u);
+  // Allocate size of sz + kSegmentUnitSize so that we could get an address
+  // aligned to kSegmentUnitSize.
+  void *mem = checkedMalloc(sz + kSegmentUnitSize);
   void *lowLim = alignAlloc(mem);
   assert(isAligned(lowLim) && "New storage should be aligned");
   lowLimToAllocHandle_[lowLim] = mem;
   return lowLim;
 }
 
-void MallocStorageProvider::deleteStorageImpl(void *storage) {
+void MallocStorageProvider::deleteStorageImpl(void *storage, size_t sz) {
+  // free() does not need the memory size.
+  (void)sz;
   if (!storage) {
     return;
   }
@@ -218,8 +263,11 @@ std::unique_ptr<StorageProvider> StorageProvider::mallocProvider() {
   return std::unique_ptr<StorageProvider>(new MallocStorageProvider);
 }
 
-llvh::ErrorOr<void *> StorageProvider::newStorage(const char *name) {
-  auto res = newStorageImpl(name);
+llvh::ErrorOr<void *> StorageProvider::newStorage(size_t sz, const char *name) {
+  assert(
+      sz && (sz % kSegmentUnitSize == 0) &&
+      "Allocated storage size must be multiples of kSegmentUnitSize");
+  auto res = newStorageImpl(sz, name);
 
   if (res) {
     numSucceededAllocs_++;
@@ -230,13 +278,17 @@ llvh::ErrorOr<void *> StorageProvider::newStorage(const char *name) {
   return res;
 }
 
-void StorageProvider::deleteStorage(void *storage) {
+void StorageProvider::deleteStorage(void *storage, size_t sz) {
   if (!storage) {
     return;
   }
 
+  assert(
+      sz && (sz % kSegmentUnitSize == 0) &&
+      "Allocated storage size must be multiples of kSegmentUnitSize");
+
   numDeletedAllocs_++;
-  deleteStorageImpl(storage);
+  return deleteStorageImpl(storage, sz);
 }
 
 llvh::ErrorOr<std::pair<void *, size_t>>

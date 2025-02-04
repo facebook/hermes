@@ -29,9 +29,9 @@ class LimitedStorageProvider final : public StorageProvider {
       : delegate_(std::move(provider)), limit_(limit) {}
 
  protected:
-  llvh::ErrorOr<void *> newStorageImpl(const char *name) override;
+  llvh::ErrorOr<void *> newStorageImpl(size_t sz, const char *name) override;
 
-  void deleteStorageImpl(void *storage) override;
+  void deleteStorageImpl(void *storage, size_t sz) override;
 };
 
 } // namespace vm
