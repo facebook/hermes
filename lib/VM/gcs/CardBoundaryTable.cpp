@@ -110,6 +110,16 @@ void CardBoundaryTable::verifyBoundaries(char *start, char *level) const {
         "Card object boundary is broken: first obj doesn't extend into card");
   }
 }
+
+GCCell *CardBoundaryTable::findObjectContaining(
+    const char *lowLim,
+    const char *hiLim,
+    const void *loc) const {
+  GCCell *obj = firstObjForCard(lowLim, hiLim, addressToIndex(loc));
+  while (obj->nextCell() < loc)
+    obj = obj->nextCell();
+  return obj;
+}
 #endif // HERMES_SLOW_DEBUG
 
 } // namespace vm
