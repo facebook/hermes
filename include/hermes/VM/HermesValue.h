@@ -589,6 +589,7 @@ class GCHermesValueBase final : public HVType {
       GCHermesValueBase<HVType> *first,
       GCHermesValueBase<HVType> *last,
       GCHermesValueBase<HVType> *result,
+      const GCCell *owningObj,
       GC &gc);
 
   /// Copies a range of values and performs a write barrier on each.

@@ -1163,9 +1163,11 @@ class GCBase {
   void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
   void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCHermesValue *start,
       uint32_t numHVs);
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCSmallHermesValue *start,
       uint32_t numHVs);
   void snapshotWriteBarrier(const GCHermesValue *loc);

@@ -1991,27 +1991,40 @@ void HadesGC::constructorWriteBarrierSlow(
 }
 
 void HadesGC::constructorWriteBarrierRangeSlow(
+    const GCCell *owningObj,
     const GCHermesValue *start,
     uint32_t numHVs) {
   assert(
-      FixedSizeHeapSegment::containedInSame(start, start + numHVs) &&
-      "Range must start and end within a heap segment.");
+      reinterpret_cast<const char *>(owningObj) <=
+          reinterpret_cast<const char *>(start) &&
+      reinterpret_cast<const char *>(start + numHVs) <=
+          (reinterpret_cast<const char *>(owningObj) +
+           owningObj->getAllocatedSize()) &&
+      "Range must start and end within the owning object.");
 
   // Most constructors should be running in the YG, so in the common case, we
   // can avoid doing anything for the whole range. If the range is in the OG,
   // then just dirty all the cards corresponding to it, and we can scan them for
   // pointers later. This is less precise but makes the write barrier faster.
 
-  FixedSizeHeapSegment::dirtyCardsForAddressRange(start, start + numHVs);
+  AlignedHeapSegment::dirtyCardsForAddressRange(
+      owningObj, start, start + numHVs);
 }
 
 void HadesGC::constructorWriteBarrierRangeSlow(
+    const GCCell *owningObj,
     const GCSmallHermesValue *start,
     uint32_t numHVs) {
   assert(
-      FixedSizeHeapSegment::containedInSame(start, start + numHVs) &&
-      "Range must start and end within a heap segment.");
-  FixedSizeHeapSegment::dirtyCardsForAddressRange(start, start + numHVs);
+      reinterpret_cast<const char *>(owningObj) <=
+          reinterpret_cast<const char *>(start) &&
+      reinterpret_cast<const char *>(start + numHVs) <=
+          (reinterpret_cast<const char *>(owningObj) +
+           owningObj->getAllocatedSize()) &&
+      "Range must start and end within the owning object.");
+
+  AlignedHeapSegment::dirtyCardsForAddressRange(
+      owningObj, start, start + numHVs);
 }
 
 void HadesGC::snapshotWriteBarrierRangeSlow(

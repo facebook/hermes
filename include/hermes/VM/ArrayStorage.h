@@ -237,7 +237,7 @@ class ArrayStorageBase final
     auto *fromStart = other->data();
     auto *fromEnd = fromStart + otherSz;
     GCHVType::uninitialized_copy(
-        fromStart, fromEnd, data() + sz, runtime.getHeap());
+        fromStart, fromEnd, data() + sz, this, runtime.getHeap());
     size_.store(sz + otherSz, std::memory_order_release);
   }
 
