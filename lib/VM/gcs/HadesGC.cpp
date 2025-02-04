@@ -174,7 +174,10 @@ template <typename CallbackFunction>
 void HadesGC::forAllObjsInSegment(
     hermes::vm::AlignedHeapSegment &seg,
     CallbackFunction callback) {
-  for (GCCell *cell : seg.cells()) {
+  for (GCCell *cell = reinterpret_cast<GCCell *>(seg.start()),
+              *end = reinterpret_cast<GCCell *>(seg.level());
+       cell < end;
+       cell = cell->nextCell()) {
     // Skip free-list entries.
     if (!vmisa<OldGen::FreelistCell>(cell)) {
       callback(cell);
@@ -1052,7 +1055,11 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
   size_t mergedCells = 0;
   int32_t segmentSweptBytes = 0;
-  for (GCCell *cell : segments_[sweepIterator_.segNumber].cells()) {
+  auto &seg = segments_[sweepIterator_.segNumber];
+  for (GCCell *cell = reinterpret_cast<GCCell *>(seg.start()),
+              *end = reinterpret_cast<GCCell *>(seg.level());
+       cell < end;
+       cell = cell->nextCell()) {
     assert(cell->isValid() && "Invalid cell in sweeping");
     if (AlignedHeapSegment::getCellMarkBit(cell)) {
       // Cannot concurrently trim storage. Technically just checking
