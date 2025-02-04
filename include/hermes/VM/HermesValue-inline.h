@@ -33,8 +33,30 @@ template <typename HVType>
 template <typename NeedsBarriers>
 GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc) : HVType{hv} {
   assert(!hv.isPointer() || hv.getPointer());
-  if (NeedsBarriers::value)
+  if (NeedsBarriers::value) {
     gc.constructorWriteBarrier(this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrierInCtor(this, hv) &&
+        "Can't skip write barriers for this GCHermesValueBase and target value");
+  }
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+GCHermesValueBase<HVType>::GCHermesValueBase(
+    HVType hv,
+    GC &gc,
+    const GCCell *owningObj)
+    : HVType{hv} {
+  assert(!hv.isPointer() || hv.getPointer());
+  if (NeedsBarriers::value) {
+    gc.constructorWriteBarrierForLargeObj(owningObj, this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrierInCtor(this, hv) &&
+        "This GCHermesValueBase construction cannot skip write barrier");
+  }
 }
 
 template <typename HVType>
@@ -58,6 +80,27 @@ inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
   assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
   if (NeedsBarriers::value)
     gc.writeBarrier(this, hv);
+  HVType::setNoBarrier(hv);
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+inline void GCHermesValueBase<HVType>::setInLarge(
+    HVType hv,
+    GC &gc,
+    const GCCell *owningObj) {
+  if (hv.isPointer()) {
+    HERMES_SLOW_ASSERT(
+        gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
+        "Setting an invalid pointer into a GCHermesValue");
+  }
+  if constexpr (NeedsBarriers::value) {
+    gc.writeBarrierForLargeObj(owningObj, this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrier(this, hv) &&
+        "Can't skip write barriers for this GCHermesValueBase and target value");
+  }
   HVType::setNoBarrier(hv);
 }
 
