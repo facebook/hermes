@@ -18,6 +18,7 @@
 #include "llvh/Support/Compiler.h"
 
 #include "ChromeTraceSerializer.h"
+#include "ProfileGenerator.h"
 #include "SamplingProfilerSampler.h"
 
 #include <fcntl.h>
@@ -205,6 +206,31 @@ void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
       ChromeTraceFormat::create(
           oscompat::process_id(), threadNames_, sampledStacks_));
   clear();
+}
+
+std::vector<facebook::hermes::sampling_profiler::Profile>
+SamplingProfiler::dumpAsProfilesGlobal() {
+  auto globalProfiler = sampling_profiler::Sampler::get();
+  std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
+
+  std::vector<facebook::hermes::sampling_profiler::Profile> profiles;
+  for (auto *currentProfilerInstance : globalProfiler->profilers_) {
+    auto profileForCurrentInstance = currentProfilerInstance->dumpAsProfile();
+    profiles.push_back(std::move(profileForCurrentInstance));
+  }
+
+  return profiles;
+}
+
+facebook::hermes::sampling_profiler::Profile SamplingProfiler::dumpAsProfile() {
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
+  auto pid = oscompat::process_id();
+
+  facebook::hermes::sampling_profiler::Profile profile =
+      ProfileGenerator::generate(*this, pid, threadNames_, sampledStacks_);
+
+  clear();
+  return profile;
 }
 
 bool SamplingProfiler::enable(double meanHzFreq) {
