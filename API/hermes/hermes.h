@@ -17,6 +17,7 @@
 
 #include <hermes/Public/HermesExport.h>
 #include <hermes/Public/RuntimeConfig.h>
+#include <hermes/Public/SamplingProfiler.h>
 #include <jsi/jsi.h>
 #include <unordered_map>
 
@@ -88,6 +89,15 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Serialize the sampled stack to the format expected by DevTools'
   /// Profiler.stop return type.
   void sampledTraceToStreamInDevToolsFormat(std::ostream &stream);
+
+  /// Dump sampled stack trace for a given runtime to a data structure that can
+  /// be used by third parties.
+  sampling_profiler::Profile dumpSampledTraceToProfile();
+
+  /// Dump sampled stack trace for all registered local sampling profiler
+  /// instances to a data structure that can be used by third parties.
+  static std::vector<sampling_profiler::Profile>
+  dumpSampledTraceToProfilesGlobal();
 
   /// Return the executed JavaScript function info.
   /// This information holds the segmentID, Virtualoffset and sourceURL.
