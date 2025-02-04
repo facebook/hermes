@@ -971,15 +971,45 @@ bool GCBase::shouldSanitizeHandles() {
   }
 
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCHermesValue *,
+    HermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCSmallHermesValue *,
+    SmallHermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCPointerBase *,
+    const GCCell *);
 GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
+    const GCHermesValue *,
+    HermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
     const GCSmallHermesValue *,
     SmallHermesValue);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
+    const GCSmallHermesValue *,
+    SmallHermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
+    const GCPointerBase *,
+    const GCCell *);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
     const GCPointerBase *,
     const GCCell *);
 GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
