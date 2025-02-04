@@ -520,9 +520,15 @@ template <typename HVType>
 class GCHermesValueBase final : public HVType {
  public:
   GCHermesValueBase() : HVType(HVType::encodeUndefinedValue()) {}
-  /// Initialize a GCHermesValue from another HV. Performs a write barrier.
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier. This
+  /// must not be used if it lives in an object that supports large allocation.
   template <typename NeedsBarriers = std::true_type>
   GCHermesValueBase(HVType hv, GC &gc);
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier using
+  /// \p owningObj, which owns this GCHermesValue and may support large
+  /// allocation.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueBase(HVType hv, GC &gc, const GCCell *owningObj);
   /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
   /// barrier, depending on the GC.
   /// NOTE: The last parameter is unused, but acts as an overload selector.
@@ -530,14 +536,24 @@ class GCHermesValueBase final : public HVType {
   GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t);
   GCHermesValueBase(const HVType &) = delete;
 
-  /// The HermesValue \p hv may be an object pointer.  Assign the
-  /// value, and perform any necessary write barriers.
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers. This must not be used if it lives in
+  /// an object that supports large allocation.
   template <typename NeedsBarriers = std::true_type>
   inline void set(HVType hv, GC &gc);
+
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers. \p owningObj is the object that
+  /// contains this GCHermesValueBase, and it may support large allocation.
+  /// for which the object pointer is needed by writer barriers.
+  template <typename NeedsBarriers = std::true_type>
+  inline void setInLarge(HVType hv, GC &gc, const GCCell *owningObj);
 
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
   /// Some GCs still need to do a write barrier though, so pass a GC parameter.
+  /// Note that this can be used for any object, since the value is not a
+  /// pointer and does not require a write barrier.
   inline void setNonPtr(HVType hv, GC &gc);
 
   /// Force a write barrier to occur on this value, as if the value was being
