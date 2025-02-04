@@ -578,9 +578,12 @@ static inline const Inst *nextInstCall(const Inst *ip) {
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
-  if (LLVM_UNLIKELY(
-          newCodeBlock->lazyCompile(*this) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(newCodeBlock->isLazy())) {
+    if (LLVM_UNLIKELY(
+            newCodeBlock->compileLazyFunction(*this) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   }
 
 #if defined(HERMES_MEMORY_INSTRUMENTATION) || !defined(NDEBUG)
@@ -1431,9 +1434,12 @@ tailCall:
 #endif
 
         CodeBlock *calleeBlock = func->getCodeBlock();
-        CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
+        if (LLVM_UNLIKELY(calleeBlock->isLazy())) {
+          CAPTURE_IP_ASSIGN(
+              auto res, calleeBlock->compileLazyFunction(runtime));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
         }
 
         if (auto jitPtr = runtime.jitContext_.compile(runtime, calleeBlock)) {

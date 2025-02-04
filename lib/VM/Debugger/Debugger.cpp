@@ -1368,7 +1368,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
         // The code block probably contains the breakpoint we want to set.
         // First, we compile it.
         if (LLVM_UNLIKELY(
-                codeBlock->lazyCompile(runtime_) ==
+                codeBlock->compileLazyFunction(runtime_) ==
                 ExecutionStatus::EXCEPTION)) {
           // TODO: how to better handle this?
           runtime_.clearThrownValue();

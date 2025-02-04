@@ -217,12 +217,10 @@ class CodeBlock final : private llvh::TrailingObjects<
   bool isLazy() const {
     return !bytecode_;
   }
-  ExecutionStatus lazyCompile(Runtime &runtime) {
-    if (LLVM_LIKELY(!isLazy()))
-      return ExecutionStatus::RETURNED;
-    return lazyCompileImpl(runtime);
-  }
-  ExecutionStatus lazyCompileImpl(Runtime &runtime);
+
+  /// Compile this function, which must be lazy.
+  /// \pre isLazy() is true.
+  ExecutionStatus compileLazyFunction(Runtime &runtime);
 
   /// \pre isLazy() is true.
   /// \return whether the coordinates are in the lazy function.

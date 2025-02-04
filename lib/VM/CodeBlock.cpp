@@ -209,7 +209,7 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocationForFunction()
       ->getLocationForFunction(*debugLocsOffset);
 }
 
-ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
+ExecutionStatus CodeBlock::compileLazyFunction(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");
   auto *provider = runtimeModule_->getBytecode();
 
