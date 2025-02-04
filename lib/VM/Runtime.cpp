@@ -159,7 +159,7 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   uint64_t maxHeapSize = runtimeConfig.getGCConfig().getMaxHeapSize();
   // Allow some extra segments for the runtime, and as a buffer for the GC.
   uint64_t providerSize = std::min<uint64_t>(
-      1ULL << 32, maxHeapSize + AlignedHeapSegment::storageSize() * 4);
+      1ULL << 32, maxHeapSize + FixedSizeHeapSegment::storageSize() * 4);
   std::shared_ptr<StorageProvider> sp =
       StorageProvider::contiguousVAProvider(providerSize);
   auto rt = HeapRuntime<Runtime>::create(sp);
@@ -252,7 +252,12 @@ void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
       reinterpret_cast<char *>(lowLim) - (idx << AlignedHeapSegment::kLogSize);
   segmentMap[idx] = bias;
 #endif
-  assert(lowLim == AlignedHeapSegment::storageStart(lowLim) && "Precondition");
+  // Ideally we need to assert that lowLim is the start address of the segment,
+  // but the approach for computing segment start address does not work for
+  // JumboHeapSegment.
+  assert(
+      (uintptr_t)(lowLim) % AlignedHeapSegment::kSegmentUnitSize == 0 &&
+      "Segment start address should be aligned to kSegmentUnitSize");
   AlignedHeapSegment::setSegmentIndexFromStart(lowLim, idx);
 }
 
