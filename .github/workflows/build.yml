@@ -78,7 +78,7 @@ jobs:
         name: linux-hermes
         path: output
   macos:
-    runs-on: macos-latest
+    runs-on: macos-14-arm64
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
@@ -110,7 +110,7 @@ jobs:
         name: macos-hermes
         path: output
   build-apple-runtime:
-    runs-on: macos-latest
+    runs-on: macos-14-arm64
     env:
       TERM: dumb
       HERMES_WS_DIR: "/tmp/hermes"
@@ -141,7 +141,7 @@ jobs:
     - name: Build the Mac frameworks
       run: "./utils/build-mac-framework.sh"
   test-macos:
-    runs-on: macos-latest
+    runs-on: macos-14-arm64
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
@@ -157,7 +157,7 @@ jobs:
         cmake --build ./build
         cmake --build ./build --target check-hermes
   test-apple-runtime:
-    runs-on: macos-latest
+    runs-on: macos-14-arm64
     needs: build-apple-runtime
     env:
       TERM: dumb
@@ -193,12 +193,13 @@ jobs:
       working-directory: test/ApplePlatformsIntegrationTestApp
     - name: Test iPhone application
       run: |-
-        # Xcode 15 uses iOS 17 for simulator, and only iPhone 14/15 can work by
-        # default, so use the oldest working model here.
+        # macos-14 installs simulators for iPhone 15/16, so use the oldest model
+        # here:
+        # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md
         xcodebuild test \
           -workspace ApplePlatformsIntegrationTests.xcworkspace \
           -configuration Debug \
-          -destination 'platform=iOS Simulator,name=iPhone 14' \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
           -scheme ApplePlatformsIntegrationMobileTests
       working-directory: test/ApplePlatformsIntegrationTestApp
     - name: Test Apple Vision application
@@ -218,7 +219,7 @@ jobs:
           -scheme ApplePlatformsIntegrationTVOSTests
       working-directory: test/ApplePlatformsIntegrationTestApp
   package-apple-runtime:
-    runs-on: macos-latest
+    runs-on: macos-14-arm64
     needs:
     - test-macos
     - test-apple-runtime
@@ -566,7 +567,7 @@ jobs:
         emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
   test-macos-test262:
-    runs-on: macos-latest
+    runs-on: macos-14-arm64
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
