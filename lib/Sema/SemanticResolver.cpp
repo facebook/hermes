@@ -94,6 +94,10 @@ bool SemanticResolver::runLazy(
       semInfo->bindingTableScope.reset();
     }
 
+    // promotedDecls is used immediately and relies on IdentifierNode,
+    // which is deallocated between invocations of lazy compilation.
+    // Therefore, it is necessary to clear promotedDecls when freeing the
+    // AST in order to avoid dangling pointers.
     semCtx_.clearPromotedDecls();
   });
 
