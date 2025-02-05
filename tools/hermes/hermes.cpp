@@ -124,6 +124,7 @@ static int executeHBCBytecodeFromCL(
   options.stopAfterInit = flags.StopAfterInit;
   options.forceGCBeforeStats = flags.GCBeforeStats;
   options.sampleProfiling = flags.SampleProfiling;
+  options.sampleProfilingFreq = flags.SampleProfilingFreq;
   options.heapTimeline = flags.HeapTimeline;
 
   bool success;

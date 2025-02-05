@@ -452,7 +452,7 @@ bool executeHBCBytecodeImpl(
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
-    vm::SamplingProfiler::enable();
+    vm::SamplingProfiler::enable(options.sampleProfilingFreq);
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 

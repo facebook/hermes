@@ -102,6 +102,12 @@ struct VMOnlyRuntimeFlags {
               "Dump profile in Tracery format")),
       llvh::cl::cat(RuntimeCategory)};
 
+  llvh::cl::opt<double> SampleProfilingFreq{
+      "sample-profiling-freq",
+      llvh::cl::init(100),
+      llvh::cl::desc("Sampling profiler frequency (in Hz)"),
+      llvh::cl::cat(RuntimeCategory)};
+
   llvh::cl::opt<MemorySize, false, MemorySizeParser> MaxHeapSize{
       "gc-max-heap",
       llvh::cl::desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),
