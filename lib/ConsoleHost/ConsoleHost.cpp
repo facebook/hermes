@@ -465,21 +465,6 @@ bool executeHBCBytecodeImpl(
       sourceURL,
       vm::Runtime::makeNullHandle<vm::Environment>());
 
-#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  switch (options.sampleProfiling) {
-    case ExecuteOptions::SampleProfilingMode::None:
-      break;
-    case ExecuteOptions::SampleProfilingMode::Chrome:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
-      break;
-    case ExecuteOptions::SampleProfilingMode::Tracery:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpTraceryTrace(llvh::errs());
-      break;
-  }
-#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
-
   bool threwException = status == vm::ExecutionStatus::EXCEPTION;
 
   if (threwException) {
@@ -512,6 +497,21 @@ bool executeHBCBytecodeImpl(
       microtask::performCheckpoint(*runtime);
     }
   }
+
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
+  switch (options.sampleProfiling) {
+    case ExecuteOptions::SampleProfilingMode::None:
+      break;
+    case ExecuteOptions::SampleProfilingMode::Chrome:
+      vm::SamplingProfiler::disable();
+      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
+      break;
+    case ExecuteOptions::SampleProfilingMode::Tracery:
+      vm::SamplingProfiler::disable();
+      runtime->samplingProfiler->dumpTraceryTrace(llvh::errs());
+      break;
+  }
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
 #ifdef HERMESVM_PROFILER_OPCODE
   runtime->dumpOpcodeStats(llvh::outs());
