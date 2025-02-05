@@ -29,7 +29,7 @@
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -37,7 +37,7 @@
 // CHECK:function ""(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:number|bigint) %1: object, %foo(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %4 = TypeOfInst (:string) %2: number|bigint
@@ -48,8 +48,8 @@
 // CHECK:function foo(): number|bigint [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %o(): functionCode
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %" 1#"(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %o(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 1#"(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, %1: object, "valueOf": string
 // CHECK-NEXT:  %4 = UnaryMinusInst (:number|bigint) %1: object
 // CHECK-NEXT:       ReturnInst %4: number|bigint

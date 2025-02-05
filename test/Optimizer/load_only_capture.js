@@ -32,9 +32,9 @@ function load_dedup(foo){
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "load_only_capture": string
 // CHECK-NEXT:       DeclareGlobalVarInst "load_dedup": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %load_only_capture(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %load_only_capture(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "load_only_capture": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %load_dedup(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %load_dedup(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "load_dedup": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -52,7 +52,7 @@ function load_dedup(foo){
 // CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %7 = PhiInst (:number) 0: number, %BB0, %10: number, %BB1
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %""(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, %2: any, "k": string
 // CHECK-NEXT:  %10 = FAddInst (:number) %7: number, 1: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %10: number, [%VS1.i]: number
@@ -72,7 +72,7 @@ function load_dedup(foo){
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %foo: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.foo]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.x]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS2: any, %bar(): functionCode
 // CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS2.x]: any
 // CHECK-NEXT:       ReturnInst %5: object

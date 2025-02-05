@@ -34,7 +34,7 @@ function foo(o) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -52,7 +52,7 @@ function foo(o) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.cnt]: number
 // CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag2]: undefined|number
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %VS1: any, %""(): functionCode
 // CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
@@ -92,7 +92,7 @@ function foo(o) {
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS0: any, %foo(): functionCode
 // CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
@@ -110,7 +110,7 @@ function foo(o) {
 // CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %4: undefined
 // CHKLIR-NEXT:       StoreFrameInst %0: environment, %4: undefined, [%VS1.flag2]: undefined|number
-// CHKLIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHKLIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS1: any, %""(): functionCode
 // CHKLIR-NEXT:       ReturnInst %7: object
 // CHKLIR-NEXT:function_end
 

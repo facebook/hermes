@@ -36,11 +36,11 @@ function level0(x) {
 // CHECK-NEXT:       DeclareGlobalVarInst "same_func_name": string
 // CHECK-NEXT:       DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:       DeclareGlobalVarInst "level0": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %same_func_name(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %same_func_name(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "same_func_name": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %sink(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %level0(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %level0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "level0": string
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
@@ -56,7 +56,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %same_param_name: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.same_param_name]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %"same_func_name 1#"(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"same_func_name 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.same_func_name]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -84,7 +84,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %level1(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS3: any, %level1(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS3.level1]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -97,7 +97,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %same_param_name: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.same_param_name]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %"same_func_name 2#"(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS4: any, %"same_func_name 2#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS4.same_func_name]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -110,7 +110,7 @@ function level0(x) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.y]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %level2(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS5: any, %level2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS5.level2]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

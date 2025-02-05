@@ -82,15 +82,15 @@ function badThrow() {
 // CHECK-NEXT:       DeclareGlobalVarInst "control_catch": string
 // CHECK-NEXT:       DeclareGlobalVarInst "multi": string
 // CHECK-NEXT:       DeclareGlobalVarInst "badThrow": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %simple(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "simple": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %control_flow(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %control_flow(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "control_flow": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %control_catch(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %control_catch(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "control_catch": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %multi(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %multi(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "multi": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %badThrow(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %badThrow(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "badThrow": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

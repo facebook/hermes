@@ -73,17 +73,17 @@ function expression_prop(obj) {
 // CHECK-NEXT:       DeclareGlobalVarInst "modify_prop": string
 // CHECK-NEXT:       DeclareGlobalVarInst "modify_value": string
 // CHECK-NEXT:       DeclareGlobalVarInst "expression_prop": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %simple_loop(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_loop(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "simple_loop": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %different_prop(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %different_prop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "different_prop": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %different_obj(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %different_obj(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "different_obj": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %modify_prop(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %modify_prop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "modify_prop": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %modify_value(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %modify_value(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "modify_value": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %expression_prop(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %expression_prop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "expression_prop": string
 // CHECK-NEXT:  %19 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %19: any

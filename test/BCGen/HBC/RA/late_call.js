@@ -31,10 +31,10 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  {r2}      %3 = CreateFunctionInst (:object) {r0} %0: environment, %foo(): functionCode
+// CHECK-NEXT:  {r2}      %3 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:  {r1}      %4 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {r2} %3: object, {r1} %4: object, "foo": string
-// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %bar(): functionCode
+// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %6: object, {r1} %4: object, "bar": string
 // CHECK-NEXT:  {np0}     %8 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %8: undefined

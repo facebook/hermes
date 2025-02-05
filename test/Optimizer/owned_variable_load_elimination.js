@@ -26,7 +26,7 @@ function foo(sink){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -66,7 +66,7 @@ function foo(sink){
 // CHECK-NEXT:  %23 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: number
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %1: environment, %VS1: any, %""(): functionCode
 // CHECK-NEXT:        ReturnInst %25: object
 // CHECK-NEXT:function_end
 

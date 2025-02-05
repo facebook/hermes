@@ -1365,6 +1365,16 @@ bool Verifier::visitGetParentScopeInst(const GetParentScopeInst &Inst) {
       Inst,
       Inst.getParentScopeParam() == Inst.getFunction()->getParentScopeParam(),
       "Using incorect parent scope parameter.");
+
+  for (auto *U : Inst.getFunction()->getUsers()) {
+    if (auto *BCLI = llvh::dyn_cast<BaseCreateLexicalChildInst>(U)) {
+      AssertIWithMsg(
+          Inst,
+          BCLI->getVarScope() == Inst.getVariableScope(),
+          "Scope result does not match function creation");
+      break;
+    }
+  }
   return true;
 }
 bool Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {

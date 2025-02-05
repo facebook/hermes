@@ -40,9 +40,9 @@ function outer2(){
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "outer": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %outer2(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer2(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "outer2": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -58,9 +58,9 @@ function outer2(){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.foo]: object
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
 // CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
 // CHECK-NEXT:  %6 = CallInst (:object) %4: object, %bar(): functionCode, true: boolean, %1: environment, undefined: undefined, %5: object
 // CHECK-NEXT:       ReturnInst %6: object

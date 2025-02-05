@@ -26,7 +26,7 @@ id<string>('a');
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
@@ -43,9 +43,9 @@ id<string>('a');
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %exports: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.id]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %id(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %id(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.id#1]: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"id 1#"(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"id 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS1.id#2]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.id#1]: any
 // CHECK-NEXT:  %10 = CheckedTypeCastInst (:object) %9: any, type(object)

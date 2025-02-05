@@ -42,13 +42,13 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_hoisting_of_func_expr": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test0(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test0": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test1(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test2": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test_hoisting_of_func_expr(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_hoisting_of_func_expr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_hoisting_of_func_expr": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
@@ -62,7 +62,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %""(): functionCode
 // CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -75,7 +75,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.x]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %" 1#"(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS2: any, %" 1#"(): functionCode
 // CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -88,7 +88,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %" 2#"(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS3: any, %" 2#"(): functionCode
 // CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -99,7 +99,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %some_local_name(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS4: any, %some_local_name(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS4.some_local_name]: any
 // CHECK-NEXT:  %4 = CallInst (:any) %2: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -130,7 +130,7 @@ function test_hoisting_of_func_expr() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %" 3#"(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS7: any, %" 3#"(): functionCode
 // CHECK-NEXT:  %3 = CallInst (:any) %2: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

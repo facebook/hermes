@@ -22,10 +22,10 @@ function foo(x) {
 // CHECK-NEXT:  {r1}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  {r0}      %1 = DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:  {r0}      %2 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  {r2}      %3 = CreateFunctionInst (:object) {r1} %0: environment, %sink(): functionCode
+// CHECK-NEXT:  {r2}      %3 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %sink(): functionCode
 // CHECK-NEXT:  {r3}      %4 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %5 = StorePropertyLooseInst {r2} %3: object, {r3} %4: object, "sink": string
-// CHECK-NEXT:  {r1}      %6 = CreateFunctionInst (:object) {r1} %0: environment, %foo(): functionCode
+// CHECK-NEXT:  {r1}      %6 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:  {r2}      %7 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %8 = StorePropertyLooseInst {r1} %6: object, {r2} %7: object, "foo": string
 // CHECK-NEXT:  {r1}      %9 = AllocStackInst (:any) $?anon_0_ret: any

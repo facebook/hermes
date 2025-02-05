@@ -26,7 +26,7 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -34,11 +34,11 @@ function main() {
 // CHECK:function main(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f(): functionCode
 // CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "flag": string
 // CHECK-NEXT:       CondBranchInst %2: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %g(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %g(): functionCode
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = PhiInst (:object) %4: object, %BB1, %1: object, %BB0

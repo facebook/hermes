@@ -22,7 +22,7 @@ function numberPlusBigInt() {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "numberPlusBigInt": string
-// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %numberPlusBigInt(): functionCode
+// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %numberPlusBigInt(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "numberPlusBigInt": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end

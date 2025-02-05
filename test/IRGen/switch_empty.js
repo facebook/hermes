@@ -27,9 +27,9 @@ function onlyDefault () {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "empty": string
 // CHECK-NEXT:       DeclareGlobalVarInst "onlyDefault": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %empty(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %empty(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "empty": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %onlyDefault(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %onlyDefault(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "onlyDefault": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any

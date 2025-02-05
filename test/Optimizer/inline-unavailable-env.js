@@ -32,7 +32,7 @@ function foo(sink){
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -46,7 +46,7 @@ function foo(sink){
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %sink: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: undefined|object
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.numBar]: number
 // CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: object
@@ -71,7 +71,7 @@ function foo(sink){
 // CHECK-NEXT:  %3 = FAddInst (:number) %2: number, 1: number
 // CHECK-NEXT:       StoreFrameInst %0: environment, %3: number, [%VS1.numBar]: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: number, [%VS2.y]: number
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %x(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS2: any, %x(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: environment, %6: object, [%VS1.x]: undefined|object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

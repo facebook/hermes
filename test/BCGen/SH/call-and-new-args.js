@@ -30,12 +30,12 @@ function test_builtin(a) {
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_new": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_builtin": string
-// CHECK-NEXT:  {loc2}    %4 = CreateFunctionInst (:object) {loc0} %0: environment, %test_call(): functionCode
+// CHECK-NEXT:  {loc2}    %4 = CreateFunctionInst (:object) {loc0} %0: environment, %VS0: any, %test_call(): functionCode
 // CHECK-NEXT:  {loc1}    %5 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {loc2} %4: object, {loc1} %5: object, "test_call": string
-// CHECK-NEXT:  {loc2}    %7 = CreateFunctionInst (:object) {loc0} %0: environment, %test_new(): functionCode
+// CHECK-NEXT:  {loc2}    %7 = CreateFunctionInst (:object) {loc0} %0: environment, %VS0: any, %test_new(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {loc2} %7: object, {loc1} %5: object, "test_new": string
-// CHECK-NEXT:  {loc0}    %9 = CreateFunctionInst (:object) {loc0} %0: environment, %test_builtin(): functionCode
+// CHECK-NEXT:  {loc0}    %9 = CreateFunctionInst (:object) {loc0} %0: environment, %VS0: any, %test_builtin(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {loc0} %9: object, {loc1} %5: object, "test_builtin": string
 // CHECK-NEXT:  {np0}    %11 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %11: undefined

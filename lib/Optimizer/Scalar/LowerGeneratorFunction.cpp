@@ -230,10 +230,12 @@ void LowerToStateMachine::setupScopes() {
   // means we must change the operand to the CreateGeneratorInst with this new
   // scope.
   auto *existingScopeOperand = llvh::cast<BaseScopeInst>(CGI_->getScope());
-  auto *newScope = builder_.createCreateScopeInst(
-      builder_.createVariableScope(existingScopeOperand->getVariableScope()),
-      existingScopeOperand);
+  auto *newVarScope =
+      builder_.createVariableScope(existingScopeOperand->getVariableScope());
+  auto *newScope =
+      builder_.createCreateScopeInst(newVarScope, existingScopeOperand);
   CGI_->setOperand(newScope, CreateGeneratorInst::ScopeIdx);
+  CGI_->setVarScope(newVarScope);
   newOuterScope_ = newScope;
   movePastFirstInBlock(builder_, &inner_->front());
   getParentOuterScope_ = builder_.createGetParentScopeInst(

@@ -30,7 +30,7 @@ function foo(x) {
 // CHECK-NEXT:  {r0}      %1 = DeclareGlobalVarInst "a": string
 // CHECK-NEXT:  {r0}      %2 = DeclareGlobalVarInst "b": string
 // CHECK-NEXT:  {r0}      %3 = DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {r1} %0: environment, %foo(): functionCode
+// CHECK-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:  {r2}      %5 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %6 = StorePropertyLooseInst {r1} %4: object, {r2} %5: object, "foo": string
 // CHECK-NEXT:  {r1}      %7 = AllocStackInst (:any) $?anon_0_ret: any
@@ -75,7 +75,7 @@ function foo(x) {
 // CHKOPT-NEXT:                 DeclareGlobalVarInst "b": string
 // CHKOPT-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKOPT-NEXT:  {r0}      %3 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKOPT-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {r0} %3: environment, %foo(): functionCode
+// CHKOPT-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {r0} %3: environment, %VS0: any, %foo(): functionCode
 // CHKOPT-NEXT:  {r0}      %5 = HBCGetGlobalObjectInst (:object)
 // CHKOPT-NEXT:                 StorePropertyLooseInst {r1} %4: object, {r0} %5: object, "foo": string
 // CHKOPT-NEXT:  {np0}     %7 = HBCLoadConstInst (:undefined) undefined: undefined

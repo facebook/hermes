@@ -42,16 +42,16 @@ function check_phi_handling(x) {
 // CHECK-NEXT:                 DeclareGlobalVarInst "build": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "buffalobuffalo": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "check_phi_handling": string
-// CHECK-NEXT:  {r2}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %count(): functionCode
+// CHECK-NEXT:  {r2}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %count(): functionCode
 // CHECK-NEXT:  {r1}      %7 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {r2} %6: object, {r1} %7: object, "count": string
-// CHECK-NEXT:  {r2}      %9 = CreateFunctionInst (:object) {r0} %0: environment, %select(): functionCode
+// CHECK-NEXT:  {r2}      %9 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %select(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r2} %9: object, {r1} %7: object, "select": string
-// CHECK-NEXT:  {r2}     %11 = CreateFunctionInst (:object) {r0} %0: environment, %build(): functionCode
+// CHECK-NEXT:  {r2}     %11 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %build(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r2} %11: object, {r1} %7: object, "build": string
-// CHECK-NEXT:  {r2}     %13 = CreateFunctionInst (:object) {r0} %0: environment, %buffalobuffalo(): functionCode
+// CHECK-NEXT:  {r2}     %13 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %buffalobuffalo(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r2} %13: object, {r1} %7: object, "buffalobuffalo": string
-// CHECK-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {r0} %0: environment, %check_phi_handling(): functionCode
+// CHECK-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %check_phi_handling(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %15: object, {r1} %7: object, "check_phi_handling": string
 // CHECK-NEXT:  {np0}    %17 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %17: undefined

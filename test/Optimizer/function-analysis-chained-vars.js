@@ -32,7 +32,7 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -43,8 +43,8 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %x(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %x(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS1.x]: object
 // CHECK-NEXT:  %5 = CallInst (:object) %2: object, %foo(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
@@ -56,7 +56,7 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS2: any, %bar(): functionCode
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %0: environment, [%VS1.x]: object
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS2.y]: object
 // CHECK-NEXT:       ReturnInst %2: object

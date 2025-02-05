@@ -34,9 +34,9 @@ function test_two(x,y,z) {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %test_one(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_one(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test_two(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_two(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_two": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

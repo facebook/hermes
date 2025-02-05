@@ -23,7 +23,7 @@ function outer1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer1": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer1(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "outer1": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -31,7 +31,7 @@ function outer1() {
 // CHECK:function outer1(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dontInline(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dontInline(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:any) %1: object, %dontInline(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end

@@ -36,12 +36,12 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "checkNonStaticBuiltin": string
-// CHKRA-NEXT:  {r2}      %4 = CreateFunctionInst (:object) {r1} %0: environment, %foo(): functionCode
+// CHKRA-NEXT:  {r2}      %4 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
 // CHKRA-NEXT:  {r0}      %5 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:                 StorePropertyLooseInst {r2} %4: object, {r0} %5: object, "foo": string
-// CHKRA-NEXT:  {r2}      %7 = CreateFunctionInst (:object) {r1} %0: environment, %shadows(): functionCode
+// CHKRA-NEXT:  {r2}      %7 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %shadows(): functionCode
 // CHKRA-NEXT:                 StorePropertyLooseInst {r2} %7: object, {r0} %5: object, "shadows": string
-// CHKRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %0: environment, %checkNonStaticBuiltin(): functionCode
+// CHKRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %checkNonStaticBuiltin(): functionCode
 // CHKRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %5: object, "checkNonStaticBuiltin": string
 // CHKRA-NEXT:  {r1}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %5: object, "print": string
 // CHKRA-NEXT:  {r2}     %12 = LoadPropertyInst (:any) {r0} %5: object, "foo": string

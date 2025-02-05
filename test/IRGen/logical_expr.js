@@ -27,13 +27,13 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 // CHECK-NEXT:       DeclareGlobalVarInst "logical_or": string
 // CHECK-NEXT:       DeclareGlobalVarInst "logical_and_and": string
 // CHECK-NEXT:       DeclareGlobalVarInst "logical_and_or": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %logical_and(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_and(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "logical_and": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %logical_or(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_or(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "logical_or": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %logical_and_and(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_and_and(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "logical_and_and": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %logical_and_or(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_and_or(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "logical_and_or": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any

@@ -51,17 +51,17 @@ function loop_member_expr_lhs() {
 // CHECK-NEXT:       DeclareGlobalVarInst "for_in_loop_with_named_break": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check_var_decl_for_in_loop": string
 // CHECK-NEXT:       DeclareGlobalVarInst "loop_member_expr_lhs": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %sink(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %simple_for_in_loop(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_for_in_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "simple_for_in_loop": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %for_in_loop_with_break_continue(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %for_in_loop_with_break_continue(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "for_in_loop_with_break_continue": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %for_in_loop_with_named_break(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %for_in_loop_with_named_break(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "for_in_loop_with_named_break": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %check_var_decl_for_in_loop(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check_var_decl_for_in_loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "check_var_decl_for_in_loop": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %loop_member_expr_lhs(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %loop_member_expr_lhs(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "loop_member_expr_lhs": string
 // CHECK-NEXT:  %19 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %19: any

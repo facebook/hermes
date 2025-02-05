@@ -48,13 +48,13 @@ function check4() {
 // CHECK-NEXT:       DeclareGlobalVarInst "check2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check4": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %check1(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "check1": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %check2(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "check2": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %check3(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "check3": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %check4(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "check4": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
@@ -103,7 +103,7 @@ function check4() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS3.x]: any|empty
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %check3_inner(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS3: any, %check3_inner(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS3.check3_inner]: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS3.check3_inner]: any
 // CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined

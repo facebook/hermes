@@ -41,7 +41,7 @@ print(e);
 // RA-NEXT:%BB1:
 // RA-NEXT:  {r2}      %7 = CatchInst (:any)
 // RA-NEXT:                 StoreFrameInst {r1} %0: environment, {r2} %7: any, [%VS0.e]: any
-// RA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %0: environment, %local(): functionCode
+// RA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %local(): functionCode
 // RA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %4: object, "local": string
 // RA-NEXT:  {r3}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
 // RA-NEXT:  {r1}     %12 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "local": string

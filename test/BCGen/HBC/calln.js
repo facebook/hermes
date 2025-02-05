@@ -34,16 +34,16 @@ function foo5(f) { f(1, 2, 3, 4); }
 // LRA-NEXT:                 DeclareGlobalVarInst "foo3": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo4": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo5": string
-// LRA-NEXT:  {r1}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %foo1(): functionCode
+// LRA-NEXT:  {r1}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo1(): functionCode
 // LRA-NEXT:  {r2}      %7 = HBCGetGlobalObjectInst (:object)
 // LRA-NEXT:                 StorePropertyLooseInst {r1} %6: object, {r2} %7: object, "foo1": string
-// LRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r0} %0: environment, %foo2(): functionCode
+// LRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo2(): functionCode
 // LRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r2} %7: object, "foo2": string
-// LRA-NEXT:  {r1}     %11 = CreateFunctionInst (:object) {r0} %0: environment, %foo3(): functionCode
+// LRA-NEXT:  {r1}     %11 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo3(): functionCode
 // LRA-NEXT:                 StorePropertyLooseInst {r1} %11: object, {r2} %7: object, "foo3": string
-// LRA-NEXT:  {r1}     %13 = CreateFunctionInst (:object) {r0} %0: environment, %foo4(): functionCode
+// LRA-NEXT:  {r1}     %13 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo4(): functionCode
 // LRA-NEXT:                 StorePropertyLooseInst {r1} %13: object, {r2} %7: object, "foo4": string
-// LRA-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {r0} %0: environment, %foo5(): functionCode
+// LRA-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo5(): functionCode
 // LRA-NEXT:                 StorePropertyLooseInst {r0} %15: object, {r2} %7: object, "foo5": string
 // LRA-NEXT:  {np0}    %17 = HBCLoadConstInst (:undefined) undefined: undefined
 // LRA-NEXT:                 ReturnInst {np0} %17: undefined

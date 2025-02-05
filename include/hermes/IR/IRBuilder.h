@@ -306,7 +306,7 @@ class IRBuilder {
       AllocStackInst *homeObjectOutput);
 
   CreateFunctionInst *createCreateFunctionInst(
-      Instruction *scope,
+      BaseScopeInst *scope,
       Function *code);
 
   GetParentScopeInst *createGetParentScopeInst(
@@ -593,7 +593,7 @@ class IRBuilder {
       BasicBlock *nextBlock);
 
   CreateGeneratorInst *createCreateGeneratorInst(
-      Instruction *scope,
+      BaseScopeInst *scope,
       NormalFunction *innerFn);
 
   StartGeneratorInst *createStartGeneratorInst();

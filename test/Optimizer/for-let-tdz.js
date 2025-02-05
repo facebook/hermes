@@ -77,19 +77,19 @@ function foo_var() {
 // CHECK-NEXT:       DeclareGlobalVarInst "foo_allnc": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo_init_capture": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo_var": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %foo_full(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_full(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "foo_full": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %foo_testnc(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_testnc(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "foo_testnc": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %foo_updatenc(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_updatenc(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "foo_updatenc": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %foo_testnc_updatenc(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_testnc_updatenc(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "foo_testnc_updatenc": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %foo_allnc(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_allnc(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "foo_allnc": string
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %foo_init_capture(): functionCode
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_init_capture(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "foo_init_capture": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %foo_var(): functionCode
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_var(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "foo_var": string
 // CHECK-NEXT:  %23 = AllocArrayInst (:object) 0: number
 // CHECK-NEXT:        StorePropertyLooseInst %23: object, globalObject: object, "arr": string
@@ -112,7 +112,7 @@ function foo_var() {
 // CHECK-NEXT:  %7 = PhiInst (:number) %3: number, %BB1, %20: number, %BB3
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "push": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %4: environment, %" 1#"(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %4: environment, %VS1: any, %" 1#"(): functionCode
 // CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, %8: any, %10: object
 // CHECK-NEXT:  %12 = FAddInst (:number) %7: number, 1: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, %12: number, [%VS1.i]: number
@@ -121,7 +121,7 @@ function foo_var() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %16 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %17 = LoadPropertyInst (:any) %16: any, "push": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %4: environment, %""(): functionCode
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %4: environment, %VS1: any, %""(): functionCode
 // CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, false: boolean, empty: any, undefined: undefined, %16: any, %18: object
 // CHECK-NEXT:  %20 = FAddInst (:number) %3: number, 2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, %20: number, [%VS1.i]: number
@@ -129,7 +129,7 @@ function foo_var() {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %23 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %24 = LoadPropertyInst (:any) %23: any, "push": string
-// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %4: environment, %" 2#"(): functionCode
+// CHECK-NEXT:  %25 = CreateFunctionInst (:object) %4: environment, %VS1: any, %" 2#"(): functionCode
 // CHECK-NEXT:  %26 = CallInst (:any) %24: any, empty: any, false: boolean, empty: any, undefined: undefined, %23: any, %25: object
 // CHECK-NEXT:  %27 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %28 = CallInst (:any) %27: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: number
@@ -159,7 +159,7 @@ function foo_var() {
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %13 = LoadPropertyInst (:any) %12: any, "push": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %4: environment, %" 3#"(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %4: environment, %VS2: any, %" 3#"(): functionCode
 // CHECK-NEXT:  %15 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, %12: any, %14: object
 // CHECK-NEXT:  %16 = FAddInst (:number) %3: number, 2: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, %16: number, [%VS2.i]: number
@@ -167,7 +167,7 @@ function foo_var() {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %19 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) %19: any, "push": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %4: environment, %" 4#"(): functionCode
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %4: environment, %VS2: any, %" 4#"(): functionCode
 // CHECK-NEXT:  %22 = CallInst (:any) %20: any, empty: any, false: boolean, empty: any, undefined: undefined, %19: any, %21: object
 // CHECK-NEXT:  %23 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %24 = CallInst (:any) %23: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: number
@@ -192,7 +192,7 @@ function foo_var() {
 // CHECK-NEXT:  %7 = PhiInst (:number) %3: number, %BB1, %16: number, %BB3
 // CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "push": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %4: environment, %" 5#"(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %4: environment, %VS3: any, %" 5#"(): functionCode
 // CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, %8: any, %10: object
 // CHECK-NEXT:  %12 = FAddInst (:number) %7: number, 1: number
 // CHECK-NEXT:        StoreFrameInst %4: environment, %12: number, [%VS3.i]: number
@@ -205,7 +205,7 @@ function foo_var() {
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:  %19 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %20 = LoadPropertyInst (:any) %19: any, "push": string
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %4: environment, %" 6#"(): functionCode
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %4: environment, %VS3: any, %" 6#"(): functionCode
 // CHECK-NEXT:  %22 = CallInst (:any) %20: any, empty: any, false: boolean, empty: any, undefined: undefined, %19: any, %21: object
 // CHECK-NEXT:  %23 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %24 = CallInst (:any) %23: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: number
@@ -226,7 +226,7 @@ function foo_var() {
 // CHECK-NEXT:       StoreFrameInst %3: environment, %2: number, [%VS4.i]: number
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "arr": string
 // CHECK-NEXT:  %6 = LoadPropertyInst (:any) %5: any, "push": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %3: environment, %" 7#"(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %3: environment, %VS4: any, %" 7#"(): functionCode
 // CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, %5: any, %7: object
 // CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: number

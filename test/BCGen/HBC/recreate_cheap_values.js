@@ -26,10 +26,10 @@ function negzero(f) {
 // CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:                 DeclareGlobalVarInst "poszero": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "negzero": string
-// CHECK-NEXT:  {r1}      %3 = CreateFunctionInst (:object) {r0} %0: environment, %poszero(): functionCode
+// CHECK-NEXT:  {r1}      %3 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %poszero(): functionCode
 // CHECK-NEXT:  {r2}      %4 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {r1} %3: object, {r2} %4: object, "poszero": string
-// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %negzero(): functionCode
+// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %negzero(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %6: object, {r2} %4: object, "negzero": string
 // CHECK-NEXT:  {np0}     %8 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %8: undefined

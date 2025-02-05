@@ -35,11 +35,11 @@ function test_three(x, one, two) {
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_three": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %test_one(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_one(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %test_two(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_two(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_two": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %test_three(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_three(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_three": string
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any

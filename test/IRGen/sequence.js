@@ -30,13 +30,13 @@ function test2(x,y) {
 // CHECK-NEXT:       DeclareGlobalVarInst "sink1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %sink0(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "sink0": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %sink1(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "sink1": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test1(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test2": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any

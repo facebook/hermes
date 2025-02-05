@@ -49,13 +49,13 @@ function forof_continue(seq) {
 // CHECK-NEXT:       DeclareGlobalVarInst "forof_update": string
 // CHECK-NEXT:       DeclareGlobalVarInst "forof_break": string
 // CHECK-NEXT:       DeclareGlobalVarInst "forof_continue": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %forof_normal(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %forof_normal(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "forof_normal": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %forof_update(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %forof_update(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "forof_update": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %forof_break(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %forof_break(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "forof_break": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %forof_continue(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %forof_continue(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "forof_continue": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any

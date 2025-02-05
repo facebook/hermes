@@ -32,7 +32,7 @@ new D().inherited();
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
@@ -50,15 +50,15 @@ new D().inherited();
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.C]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.D]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.C]: any
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %inherited(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %inherited(): functionCode
 // CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) empty: any, "inherited": string, %8: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, %6: object, "prototype": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
 // CHECK-NEXT:  %13 = CheckedTypeCastInst (:object) %12: any, type(object)
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %D(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %VS1: any, %D(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %14: object, [%VS1.D]: any
 // CHECK-NEXT:  %16 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
 // CHECK-NEXT:  %17 = PrLoadInst (:object) %16: object, 0: number, "inherited": string

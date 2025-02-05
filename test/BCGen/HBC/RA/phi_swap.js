@@ -25,7 +25,7 @@ function foo (a, b) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  {r0}      %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  {r1}      %2 = CreateFunctionInst (:object) {r0} %1: environment, %foo(): functionCode
+// CHECK-NEXT:  {r1}      %2 = CreateFunctionInst (:object) {r0} %1: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:  {r0}      %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyLooseInst {r1} %2: object, {r0} %3: object, "foo": string
 // CHECK-NEXT:  {np0}     %5 = HBCLoadConstInst (:undefined) undefined: undefined

@@ -53,21 +53,21 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:       DeclareGlobalVarInst "yieldStar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "destr": string
 // CHECK-NEXT:       DeclareGlobalVarInst "initializer": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %simple(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "simple": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %useResult(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %useResult(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "useResult": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %loop(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %loop(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "loop": string
 // CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %14: any
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %simple2(): functionCode
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "simple2": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %yieldStar(): functionCode
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %VS0: any, %yieldStar(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "yieldStar": string
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %destr(): functionCode
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %VS0: any, %destr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "destr": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %initializer(): functionCode
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %VS0: any, %initializer(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "initializer": string
 // CHECK-NEXT:  %24 = LoadStackInst (:any) %14: any
 // CHECK-NEXT:        ReturnInst %24: any
@@ -77,7 +77,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %simple?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %simple?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -85,7 +85,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %useResult?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %useResult?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -93,7 +93,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %loop?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %loop?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -101,7 +101,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %simple2?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %simple2?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -109,7 +109,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %yieldStar?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %yieldStar?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -117,7 +117,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %destr?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %destr?inner(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object
@@ -127,7 +127,7 @@ var initializer = function*(x = foo()) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %initializer?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %initializer?inner(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object

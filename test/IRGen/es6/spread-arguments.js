@@ -21,7 +21,7 @@ function foo(fn, x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
@@ -66,7 +66,7 @@ function foo(fn, x) {
 // OPT-NEXT:%BB0:
 // OPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-NEXT:       DeclareGlobalVarInst "foo": string
-// OPT-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// OPT-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // OPT-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // OPT-NEXT:       ReturnInst undefined: undefined
 // OPT-NEXT:function_end

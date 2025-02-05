@@ -35,7 +35,7 @@ print(bench(4e6, 100))
 // CHINT-NEXT:%BB0:
 // CHINT-NEXT:            %0            = DeclareGlobalVarInst "bench": string
 // CHINT-NEXT:  {loc0}    %1 [2...3)    = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHINT-NEXT:  {loc1}    %2 [3...5)    = CreateFunctionInst (:object) %1: environment, %bench(): functionCode
+// CHINT-NEXT:  {loc1}    %2 [3...5)    = CreateFunctionInst (:object) %1: environment, %VS0: any, %bench(): functionCode
 // CHINT-NEXT:  {loc0}    %3 [4...7)    = HBCGetGlobalObjectInst (:object)
 // CHINT-NEXT:            %4            = StorePropertyStrictInst %2: object, %3: object, "bench": string
 // CHINT-NEXT:  {loc1}    %5 [6...12)   = TryLoadGlobalPropertyInst (:any) %3: object, "print": string
@@ -102,7 +102,7 @@ print(bench(4e6, 100))
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "bench": string
 // CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %bench(): functionCode
+// CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %VS0: any, %bench(): functionCode
 // CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:                 StorePropertyStrictInst {loc1} %2: object, {loc0} %3: object, "bench": string
 // CHECK-NEXT:  {loc1}    %5 = TryLoadGlobalPropertyInst (:any) {loc0} %3: object, "print": string

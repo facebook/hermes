@@ -26,9 +26,9 @@ function f2(){
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f2": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %f1(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "f1": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %f2(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "f2": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

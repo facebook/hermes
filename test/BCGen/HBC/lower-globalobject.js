@@ -23,7 +23,7 @@ function foo() {
 // CHKRA-NEXT:                 DeclareGlobalVarInst "x": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:  {r0}      %2 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKRA-NEXT:  {r1}      %3 = CreateFunctionInst (:object) {r0} %2: environment, %foo(): functionCode
+// CHKRA-NEXT:  {r1}      %3 = CreateFunctionInst (:object) {r0} %2: environment, %VS0: any, %foo(): functionCode
 // CHKRA-NEXT:  {r0}      %4 = HBCGetGlobalObjectInst (:object)
 // CHKRA-NEXT:                 StorePropertyLooseInst {r1} %3: object, {r0} %4: object, "foo": string
 // CHKRA-NEXT:  {np0}     %6 = HBCLoadConstInst (:undefined) undefined: undefined

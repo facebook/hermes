@@ -57,11 +57,11 @@ function outer() {
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "bar": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "main": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "outer": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -89,7 +89,7 @@ function outer() {
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "bar": string
 // CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [%VS1.k3]: any
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %VS1: any, %""(): functionCode
 // CHECK-NEXT:        ReturnInst %14: object
 // CHECK-NEXT:function_end
 
@@ -100,10 +100,10 @@ function outer() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.envVar]: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %setValue(): functionCode
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %getValue(): functionCode
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %test1(): functionCode
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %test2(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS2: any, %setValue(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS2: any, %getValue(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS2: any, %test1(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS2: any, %test2(): functionCode
 // CHECK-NEXT:  %7 = AllocArrayInst (:object) 5: number
 // CHECK-NEXT:       DefineOwnPropertyInst %4: object, %7: object, 0: number, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst %3: object, %7: object, 1: number, true: boolean

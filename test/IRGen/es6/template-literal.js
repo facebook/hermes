@@ -39,15 +39,15 @@ function f5(x) {
 // CHKIR-NEXT:       DeclareGlobalVarInst "f3": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "f4": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "f5": string
-// CHKIR-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %f1(): functionCode
+// CHKIR-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f1(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "f1": string
-// CHKIR-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %f2(): functionCode
+// CHKIR-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f2(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "f2": string
-// CHKIR-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %f3(): functionCode
+// CHKIR-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f3(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "f3": string
-// CHKIR-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %f4(): functionCode
+// CHKIR-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f4(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "f4": string
-// CHKIR-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %f5(): functionCode
+// CHKIR-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f5(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "f5": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end

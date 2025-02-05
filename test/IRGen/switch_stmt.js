@@ -89,17 +89,17 @@ function fallthrough(b) {
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "fallthrough": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %days_of_the_week(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %days_of_the_week(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "days_of_the_week": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %simple_xor(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_xor(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "simple_xor": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %simple_xor2(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_xor2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "simple_xor2": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %simple_test0(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_test0(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "simple_test0": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %simple_test1(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_test1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "simple_test1": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %fallthrough(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %fallthrough(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "fallthrough": string
 // CHECK-NEXT:  %19 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %19: any

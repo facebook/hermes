@@ -918,14 +918,16 @@ class BaseCreateLexicalChildInst : public Instruction {
   explicit BaseCreateLexicalChildInst(
       ValueKind kind,
       Instruction *scope,
+      VariableScope *varScope,
       Function *code)
       : Instruction(kind) {
     pushOperand(scope);
+    pushOperand(varScope);
     pushOperand(code);
   }
 
  public:
-  enum { ScopeIdx, FunctionCodeIdx, LAST_IDX };
+  enum { ScopeIdx, VarScopeIdx, FunctionCodeIdx, LAST_IDX };
 
   explicit BaseCreateLexicalChildInst(
       const BaseCreateLexicalChildInst *src,
@@ -934,6 +936,12 @@ class BaseCreateLexicalChildInst : public Instruction {
 
   Instruction *getScope() const {
     return cast<Instruction>(getOperand(ScopeIdx));
+  }
+  VariableScope *getVarScope() const {
+    return llvh::cast<VariableScope>(getOperand(VarScopeIdx));
+  }
+  void setVarScope(VariableScope *scope) {
+    setOperand(scope, VarScopeIdx);
   }
 
   Function *getFunctionCode() const {
@@ -965,8 +973,9 @@ class BaseCreateCallableInst : public BaseCreateLexicalChildInst {
   explicit BaseCreateCallableInst(
       ValueKind kind,
       Instruction *scope,
+      VariableScope *varScope,
       Function *code)
-      : BaseCreateLexicalChildInst(kind, scope, code) {
+      : BaseCreateLexicalChildInst(kind, scope, varScope, code) {
     setType(*getInherentTypeImpl());
   }
 
@@ -991,8 +1000,15 @@ class CreateFunctionInst : public BaseCreateCallableInst {
   void operator=(const CreateFunctionInst &) = delete;
 
  public:
-  explicit CreateFunctionInst(Instruction *scope, Function *code)
-      : BaseCreateCallableInst(ValueKind::CreateFunctionInstKind, scope, code) {
+  explicit CreateFunctionInst(
+      Instruction *scope,
+      VariableScope *varScope,
+      Function *code)
+      : BaseCreateCallableInst(
+            ValueKind::CreateFunctionInstKind,
+            scope,
+            varScope,
+            code) {
     assert(
         (llvh::isa<NormalFunction>(code) ||
          llvh::isa<GeneratorFunction>(code) ||
@@ -1020,7 +1036,11 @@ class CreateClassInst : public BaseCreateCallableInst {
       Function *code,
       Value *superClass,
       AllocStackInst *homeObjectOutput)
-      : BaseCreateCallableInst(ValueKind::CreateClassInstKind, scope, code) {
+      : BaseCreateCallableInst(
+            ValueKind::CreateClassInstKind,
+            scope,
+            scope->getVariableScope(),
+            code) {
     assert(
         (llvh::isa<NormalFunction>(code)) &&
         "Only NormalFunction supported by CreateClassInst");
@@ -4629,10 +4649,14 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
   void operator=(const CreateGeneratorInst &) = delete;
 
  public:
-  explicit CreateGeneratorInst(Instruction *scope, NormalFunction *genFunction)
+  explicit CreateGeneratorInst(
+      Instruction *scope,
+      VariableScope *varScope,
+      NormalFunction *genFunction)
       : BaseCreateLexicalChildInst(
             ValueKind::CreateGeneratorInstKind,
             scope,
+            varScope,
             genFunction) {
     setType(*getInherentTypeImpl());
   }

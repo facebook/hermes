@@ -26,7 +26,7 @@ function foo(i) {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHKIR-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHKIR-NEXT:       ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -48,7 +48,7 @@ function foo(i) {
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS0: any, %foo(): functionCode
 // CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined

@@ -23,7 +23,7 @@ function g14(z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "g14": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %g14(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %g14(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "g14": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -35,7 +35,7 @@ function g14(z) {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %w(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %w(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS1.w]: object
 // CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "k": string
 // CHECK-NEXT:  %6 = BinaryMultiplyInst (:number) %5: any, 1: number
@@ -48,7 +48,7 @@ function g14(z) {
 // CHECK-NEXT:  %12 = BinaryAddInst (:string|number) %11: any, 1: number
 // CHECK-NEXT:  %13 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: string|number
 // CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) empty: any, "m": string, null: null
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %m(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %VS1: any, %m(): functionCode
 // CHECK-NEXT:        PrStoreInst %15: object, %14: object, 0: number, "m": string, false: boolean
 // CHECK-NEXT:        ReturnInst %14: object
 // CHECK-NEXT:%BB2:
@@ -65,7 +65,7 @@ function g14(z) {
 // CHECK:function m(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"w 1#"(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS1: any, %"w 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS1.w]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

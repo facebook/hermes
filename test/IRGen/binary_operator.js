@@ -84,13 +84,13 @@
 // CHECK-NEXT:       DeclareGlobalVarInst "assignment_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "member_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "binary_ops": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %assignment_test(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %assignment_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "assignment_test": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %member_test(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %member_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "member_test": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %binary_ops(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %binary_ops(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "binary_ops": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any

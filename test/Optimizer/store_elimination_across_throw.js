@@ -30,7 +30,7 @@
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -43,7 +43,7 @@
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: undefined|number
 // CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.tdz]: empty|undefined
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %throwTDZ(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %throwTDZ(): functionCode
 // CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %6 = CatchInst (:any)
