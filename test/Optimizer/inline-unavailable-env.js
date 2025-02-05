@@ -56,7 +56,7 @@ function foo(sink){
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:        ThrowTypeErrorInst "Trying to call a non-function": string
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %11 = GetClosureScopeInst (:environment) %VS2: any, %7: undefined|object
+// CHECK-NEXT:  %11 = GetClosureScopeInst (:environment) %VS2: any, %x(): functionCode, %7: undefined|object
 // CHECK-NEXT:  %12 = LoadFrameInst (:number) %11: environment, [%VS2.y]: number
 // CHECK-NEXT:  %13 = FAddInst (:number) %12: number, 1: number
 // CHECK-NEXT:        StoreFrameInst %11: environment, %13: number, [%VS2.y]: number

@@ -409,8 +409,9 @@ LIRResolveScopeInst *IRBuilder::createLIRResolveScopeInst(
 
 GetClosureScopeInst *IRBuilder::createGetClosureScopeInst(
     VariableScope *scope,
+    Function *F,
     Value *closure) {
-  auto *GCSI = new GetClosureScopeInst(scope, closure);
+  auto *GCSI = new GetClosureScopeInst(scope, F, closure);
   insert(GCSI);
   return GCSI;
 }

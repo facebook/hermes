@@ -327,9 +327,8 @@ class IRBuilder {
       Instruction *startScope,
       LiteralNumber *numLevels);
 
-  GetClosureScopeInst *createGetClosureScopeInst(
-      VariableScope *scope,
-      Value *closure);
+  GetClosureScopeInst *
+  createGetClosureScopeInst(VariableScope *scope, Function *F, Value *closure);
 
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 

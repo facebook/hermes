@@ -1389,6 +1389,15 @@ bool Verifier::visitLIRResolveScopeInst(
 }
 bool Verifier::visitGetClosureScopeInst(
     const hermes::GetClosureScopeInst &Inst) {
+  for (auto *U : Inst.getFunctionCode()->getUsers()) {
+    if (auto *BCLI = llvh::dyn_cast<BaseCreateLexicalChildInst>(U)) {
+      AssertIWithMsg(
+          Inst,
+          BCLI->getVarScope() == Inst.getVariableScope(),
+          "Scope result does not match function creation");
+      return true;
+    }
+  }
   return true;
 }
 

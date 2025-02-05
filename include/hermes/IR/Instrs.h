@@ -786,11 +786,15 @@ class GetClosureScopeInst : public BaseScopeInst {
   GetClosureScopeInst(const GetClosureScopeInst &) = delete;
   void operator=(const GetClosureScopeInst &) = delete;
 
-  enum { ClosureIdx = BaseScopeInst::LAST_IDX };
+  enum { FunctionCodeIdx = BaseScopeInst::LAST_IDX, ClosureIdx };
 
  public:
-  explicit GetClosureScopeInst(VariableScope *varScope, Value *closure)
+  explicit GetClosureScopeInst(
+      VariableScope *varScope,
+      Function *F,
+      Value *closure)
       : BaseScopeInst(ValueKind::GetClosureScopeInstKind, varScope) {
+    pushOperand(F);
     pushOperand(closure);
   }
   explicit GetClosureScopeInst(
@@ -798,8 +802,11 @@ class GetClosureScopeInst : public BaseScopeInst {
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
 
-  Value *getClosure() {
+  Value *getClosure() const {
     return cast<Instruction>(getOperand(ClosureIdx));
+  }
+  Function *getFunctionCode() const {
+    return cast<Function>(getOperand(FunctionCodeIdx));
   }
 
   SideEffect getSideEffectImpl() const {

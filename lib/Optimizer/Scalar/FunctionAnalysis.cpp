@@ -378,6 +378,15 @@ void analyzeFunctionCallsites(Function *F) {
       continue;
     }
 
+    if (auto *GCSI = llvh::dyn_cast<GetClosureScopeInst>(user)) {
+      // Ignore uses in GetClosureScopeInst.
+      (void)GCSI;
+      assert(
+          GCSI->getFunctionCode() == F &&
+          "invalid use of Function as operand of GetClosureScopeInst");
+      continue;
+    }
+
     // Unknown user of Function.
     LLVM_DEBUG(
         llvh::dbgs() << "Unknown function user: " << user->getKindStr()

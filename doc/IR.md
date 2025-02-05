@@ -374,8 +374,8 @@ Effects | Does not read or write to memory.
 GetClosureScopeInst | _
 --- | --- |
 Description | Retrieve the scope from the given closure.
-Example | %0 = GetClosureScopeInst %varScope, %closure
-Arguments | %varScope is the VariableScope that describes the resulting scope. %closure is the closure from which to read the scope.
+Example | %0 = GetClosureScopeInst %varScope, %function, %closure
+Arguments | %varScope is the VariableScope that describes the resulting scope. %function is the IR function that the closure operand is known to refer to. %closure is the closure from which to read the scope.
 Semantics | The instruction returns the scope stored in the given closure.
 Effects | Does not read or write to memory.
 
