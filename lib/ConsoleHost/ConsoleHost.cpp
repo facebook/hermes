@@ -452,6 +452,11 @@ bool executeHBCBytecodeImpl(
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
+    if (options.profilingOutFile.empty()) {
+      llvh::errs()
+          << "Please specify a profiling output file with -profiling-out\n";
+      return false;
+    }
     vm::SamplingProfiler::enable(options.sampleProfilingFreq);
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
@@ -499,17 +504,25 @@ bool executeHBCBytecodeImpl(
   }
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  switch (options.sampleProfiling) {
-    case ExecuteOptions::SampleProfilingMode::None:
-      break;
-    case ExecuteOptions::SampleProfilingMode::Chrome:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
-      break;
-    case ExecuteOptions::SampleProfilingMode::Tracery:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpTraceryTrace(llvh::errs());
-      break;
+  if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
+    assert(!options.profilingOutFile.empty() && "Must not be empty");
+    OutputStream fileOS;
+    if (!fileOS.open(options.profilingOutFile, llvh::sys::fs::F_Text))
+      return false;
+    switch (options.sampleProfiling) {
+      case ExecuteOptions::SampleProfilingMode::None:
+        llvm_unreachable("Cannot be none");
+      case ExecuteOptions::SampleProfilingMode::Chrome:
+        vm::SamplingProfiler::disable();
+        runtime->samplingProfiler->dumpChromeTrace(fileOS.os());
+        break;
+      case ExecuteOptions::SampleProfilingMode::Tracery:
+        vm::SamplingProfiler::disable();
+        runtime->samplingProfiler->dumpTraceryTrace(fileOS.os());
+        break;
+    }
+    if (!fileOS.close())
+      return false;
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
