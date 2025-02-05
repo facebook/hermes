@@ -1237,6 +1237,38 @@ const getTransforms = (
             // intentional fallthrough to the "default" handling
           }
 
+          case 'TypeofTypeAnnotation': {
+            if (
+              declaration.type === 'TypeofTypeAnnotation' &&
+              declaration.argument.type === 'Identifier'
+            ) {
+              const name = declaration.argument.name;
+              const exportedVar = topScope.set.get(name);
+              if (exportedVar != null && exportedVar.defs.length === 1) {
+                const def = exportedVar.defs[0];
+
+                switch (def.type) {
+                  case 'ClassName': {
+                    return {
+                      type: 'ExportDefaultDeclaration',
+                      declaration: {
+                        type: 'Identifier',
+                        decorators: [],
+                        name,
+                        optional: false,
+                        loc: DUMMY_LOC,
+                      },
+                      exportKind: 'value',
+                      loc: DUMMY_LOC,
+                    };
+                  }
+                }
+              }
+            }
+
+            // intentional fallthrough to the "default" handling
+          }
+
           default: {
             /*
             flow allows syntax like
