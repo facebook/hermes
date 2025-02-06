@@ -248,6 +248,15 @@ bool Verifier::visitFunction(const Function &F) {
         "Only GetNewTargetInst may use the newTargetParam");
   }
 
+  for (Instruction *user : F.getUsers()) {
+    AssertIWithMsg(
+        (*user),
+        llvh::isa<BaseCallInst>(user) ||
+            llvh::isa<BaseCreateLexicalChildInst>(user) ||
+            llvh::isa<GetClosureScopeInst>(user),
+        "Function can only be an operand to certain instructions");
+  }
+
   FunctionState newFunctionState(this, F);
 
   // Verify all basic blocks are valid
