@@ -216,6 +216,61 @@ static bool sinkInstructionsInBlock(
       ++NumCM;
       ++NumSunk;
     }
+
+    // If the instruction has multiple users, we will sink it to the first
+    // common dominator of all of them, tracked by this variable.
+    BasicBlock *newBlock = nullptr;
+
+    /// Update newBlock to account for a user in \p useBB.
+    auto merge = [&newBlock, &dominance](BasicBlock *useBB) {
+      newBlock = newBlock
+          ? dominance.findNearestCommonDominator(newBlock, useBB)
+          : useBB;
+    };
+    for (auto *U : I->getUsers()) {
+      if (auto *phi = llvh::dyn_cast<PhiInst>(U)) {
+        // For Phi, ensure that the new block dominates the blocks from which
+        // this instruction is the incoming value.
+        for (unsigned i = 0, e = phi->getNumEntries(); i < e; ++i) {
+          auto [val, pred] = phi->getEntry(i);
+          if (val == I)
+            merge(pred);
+        }
+        continue;
+      }
+
+      // If the user is some other FirstInBlock instruction, give up.
+      if (U->getSideEffect().getFirstInBlock()) {
+        newBlock = nullptr;
+        break;
+      }
+
+      // Ensure that the new block dominates this user.
+      merge(U->getParent());
+    }
+
+    // If no new block was determined, move on.
+    if (!newBlock || newBlock == BB)
+      continue;
+
+    // If we cannot prove that the new location is in the same loop as the
+    // current location, bail.
+    if (loops.isBlockInLoop(newBlock)) {
+      auto *nbHeader = loops.getLoopHeader(newBlock);
+      if (!nbHeader || nbHeader != header)
+        continue;
+    }
+
+    // Move the instruction to the first available location in the new block.
+    for (auto &newLoc : *newBlock) {
+      if (!newLoc.getSideEffect().getFirstInBlock()) {
+        I->moveBefore(&newLoc);
+        changed = true;
+        ++NumCM;
+        ++NumSunk;
+        break;
+      }
+    }
   }
   return changed;
 }
