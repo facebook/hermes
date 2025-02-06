@@ -62,8 +62,8 @@ function foo() { return; }
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "binary"
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    CreateClosure     r2, r1, Function<binary>
 // CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<binary>
 // CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "binary"
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<foo>
 // CHECK-NEXT:    PutByIdLoose      r3, r1, 2, "foo"

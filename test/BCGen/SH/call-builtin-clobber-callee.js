@@ -19,10 +19,10 @@ function test_call_after_builtin() {
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call_after_builtin": string
-// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %VS0: any, %test_call_after_builtin(): functionCode
-// CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:                 StorePropertyLooseInst {loc1} %2: object, {loc0} %3: object, "test_call_after_builtin": string
+// CHECK-NEXT:  {loc1}    %1 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {loc0}    %2 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {loc0}    %3 = CreateFunctionInst (:object) {loc0} %2: environment, %VS0: any, %test_call_after_builtin(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {loc0} %3: object, {loc1} %1: object, "test_call_after_builtin": string
 // CHECK-NEXT:  {np0}     %5 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %5: undefined
 // CHECK-NEXT:function_end

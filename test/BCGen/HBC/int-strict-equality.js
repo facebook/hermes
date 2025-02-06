@@ -168,8 +168,8 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_could_be_int"
-// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_int>
 // CHKBC-NEXT:    GetGlobalObject   r3
+// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_int>
 // CHKBC-NEXT:    PutByIdLoose      r3, r2, 1, "test_int_int"
 // CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_uint>
 // CHKBC-NEXT:    PutByIdLoose      r3, r2, 2, "test_int_uint"
@@ -195,8 +195,8 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:Offset in debug table: source 0x001c, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r3, 1
 // CHKBC-NEXT:    ToInt32           r1, r3
-// CHKBC-NEXT:    LoadParam         r3, 2
 // CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    LoadParam         r3, 2
 // CHKBC-NEXT:    URshift           r0, r3, r0
 // CHKBC-NEXT:    JStrictEqual      L1, r1, r0
 // CHKBC-NEXT:    LoadConstUndefined r2
@@ -206,8 +206,8 @@ function test_could_be_int(func) {
 
 // CHKBC:Function<test_uint_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
-// CHKBC-NEXT:    LoadParam         r3, 1
 // CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    LoadParam         r3, 1
 // CHKBC-NEXT:    URshift           r1, r3, r0
 // CHKBC-NEXT:    LoadParam         r3, 2
 // CHKBC-NEXT:    URshift           r0, r3, r0

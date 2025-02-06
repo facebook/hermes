@@ -44,8 +44,8 @@ function bar() {
 // CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
 // CHECK-NEXT:[@ 6] DeclareGlobalVar 2<UInt32>
 // CHECK-NEXT:[@ 11] DeclareGlobalVar 1<UInt32>
-// CHECK-NEXT:[@ 16] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 21] GetGlobalObject 3<Reg8>
+// CHECK-NEXT:[@ 16] GetGlobalObject 3<Reg8>
+// CHECK-NEXT:[@ 18] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
 // CHECK-NEXT:[@ 23] PutByIdLoose 3<Reg8>, 2<Reg8>, 1<UInt8>, 2<UInt16>
 // CHECK-NEXT:[@ 29] CreateClosure 1<Reg8>, 1<Reg8>, 2<UInt16>
 // CHECK-NEXT:[@ 34] PutByIdLoose 3<Reg8>, 1<Reg8>, 2<UInt8>, 1<UInt16>

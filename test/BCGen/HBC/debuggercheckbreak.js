@@ -48,10 +48,10 @@ function test1() {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "test1"
+// CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
-// CHECK-NEXT:    CreateClosure     r2, r1, Function<test1>
-// CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "test1"
+// CHECK-NEXT:    CreateClosure     r1, r1, Function<test1>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "test1"
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Ret               r0
@@ -105,8 +105,8 @@ function test1() {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 5: line 10 col 1
-// CHECK-NEXT:    bc 11: line 10 col 1
+// CHECK-NEXT:    bc 7: line 10 col 1
+// CHECK-NEXT:    bc 13: line 10 col 1
 // CHECK-NEXT:    bc 18: line 10 col 1
 // CHECK-NEXT:    bc 27: line 21 col 1
 // CHECK-NEXT:  0x0014  function idx 1, starts at line 10 col 1

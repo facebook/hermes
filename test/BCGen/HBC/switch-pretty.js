@@ -105,8 +105,8 @@ function f(x) {
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "g"
 // CHECK-NEXT:    DeclareGlobalVar  "f"
-// CHECK-NEXT:    CreateClosure     r2, r1, Function<g>
 // CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<g>
 // CHECK-NEXT:    PutByIdStrict     r3, r2, 1, "g"
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<f>
 // CHECK-NEXT:    PutByIdStrict     r3, r1, 2, "f"

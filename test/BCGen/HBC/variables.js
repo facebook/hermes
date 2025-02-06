@@ -132,16 +132,16 @@ function daa(a) {
 // CHKOPT-NEXT:       DeclareGlobalVarInst "bar": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "foo": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "daa": string
-// CHKOPT-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
-// CHKOPT-NEXT:  %6 = HBCGetGlobalObjectInst (:object)
-// CHKOPT-NEXT:       StorePropertyStrictInst %5: object, %6: object, "bar": string
+// CHKOPT-NEXT:  %5 = HBCGetGlobalObjectInst (:object)
+// CHKOPT-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
+// CHKOPT-NEXT:       StorePropertyStrictInst %6: object, %5: object, "bar": string
 // CHKOPT-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// CHKOPT-NEXT:       StorePropertyStrictInst %8: object, %6: object, "foo": string
+// CHKOPT-NEXT:       StorePropertyStrictInst %8: object, %5: object, "foo": string
 // CHKOPT-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %daa(): functionCode
-// CHKOPT-NEXT:        StorePropertyStrictInst %10: object, %6: object, "daa": string
+// CHKOPT-NEXT:        StorePropertyStrictInst %10: object, %5: object, "daa": string
 // CHKOPT-NEXT:  %12 = HBCLoadConstInst (:number) 5: number
-// CHKOPT-NEXT:        StorePropertyStrictInst %12: number, %6: object, "a": string
-// CHKOPT-NEXT:  %14 = LoadPropertyInst (:any) %6: object, "a": string
+// CHKOPT-NEXT:        StorePropertyStrictInst %12: number, %5: object, "a": string
+// CHKOPT-NEXT:  %14 = LoadPropertyInst (:any) %5: object, "a": string
 // CHKOPT-NEXT:        ReturnInst %14: any
 // CHKOPT-NEXT:function_end
 
@@ -166,9 +166,9 @@ function daa(a) {
 // CHKOPT:function daa(a: any): object
 // CHKOPT-NEXT:%BB0:
 // CHKOPT-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS1: any, %parentScope: environment
-// CHKOPT-NEXT:  %1 = LoadParamInst (:any) %a: any
-// CHKOPT-NEXT:  %2 = HBCLoadConstInst (:number) 1: number
-// CHKOPT-NEXT:  %3 = BinaryAddInst (:string|number) %1: any, %2: number
+// CHKOPT-NEXT:  %1 = HBCLoadConstInst (:number) 1: number
+// CHKOPT-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHKOPT-NEXT:  %3 = BinaryAddInst (:string|number) %2: any, %1: number
 // CHKOPT-NEXT:       StoreFrameInst %0: environment, %3: string|number, [%VS1.b]: undefined|string|number
 // CHKOPT-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS1: any, %daa_capture(): functionCode
 // CHKOPT-NEXT:       ReturnInst %5: object

@@ -45,22 +45,22 @@ print(glob);
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:                 DeclareGlobalVarInst "glob": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "bad": string
-// CHKRA-NEXT:  {r0}      %2 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKRA-NEXT:  {r1}      %3 = CreateFunctionInst (:object) {r0} %2: environment, %VS0: any, %bad(): functionCode
-// CHKRA-NEXT:  {r0}      %4 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %3: object, {r0} %4: object, "bad": string
+// CHKRA-NEXT:  {r0}      %2 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r1}      %3 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKRA-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {r1} %3: environment, %VS0: any, %bad(): functionCode
+// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %4: object, {r0} %2: object, "bad": string
 // CHKRA-NEXT:  {np1}     %6 = HBCLoadConstInst (:null) null: null
-// CHKRA-NEXT:                 StorePropertyLooseInst {np1} %6: null, {r0} %4: object, "glob": string
-// CHKRA-NEXT:  {r2}      %8 = LoadPropertyInst (:any) {r0} %4: object, "bad": string
-// CHKRA-NEXT:  {np0}     %9 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKRA-NEXT:  {r1}     %10 = HBCLoadConstInst (:string) "foo": string
-// CHKRA-NEXT:  {r1}     %11 = HBCCallNInst (:any) {r2} %8: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %9: undefined, {r1} %10: string, {np1} %6: null
-// CHKRA-NEXT:  {r2}     %12 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
+// CHKRA-NEXT:                 StorePropertyLooseInst {np1} %6: null, {r0} %2: object, "glob": string
+// CHKRA-NEXT:  {r2}      %8 = LoadPropertyInst (:any) {r0} %2: object, "bad": string
+// CHKRA-NEXT:  {r1}      %9 = HBCLoadConstInst (:string) "foo": string
+// CHKRA-NEXT:  {np0}    %10 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r1}     %11 = HBCCallNInst (:any) {r2} %8: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %10: undefined, {r1} %9: string, {np1} %6: null
+// CHKRA-NEXT:  {r2}     %12 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
 // CHKRA-NEXT:  {r1}     %13 = HBCLoadConstInst (:string) "phi": string
-// CHKRA-NEXT:  {r1}     %14 = HBCCallNInst (:any) {r2} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %9: undefined, {r1} %13: string
-// CHKRA-NEXT:  {r1}     %15 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
-// CHKRA-NEXT:  {r0}     %16 = LoadPropertyInst (:any) {r0} %4: object, "glob": string
-// CHKRA-NEXT:  {r0}     %17 = HBCCallNInst (:any) {r1} %15: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %9: undefined, {r0} %16: any
+// CHKRA-NEXT:  {r1}     %14 = HBCCallNInst (:any) {r2} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %10: undefined, {r1} %13: string
+// CHKRA-NEXT:  {r1}     %15 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
+// CHKRA-NEXT:  {r0}     %16 = LoadPropertyInst (:any) {r0} %2: object, "glob": string
+// CHKRA-NEXT:  {r0}     %17 = HBCCallNInst (:any) {r1} %15: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %10: undefined, {r0} %16: any
 // CHKRA-NEXT:                 ReturnInst {r0} %17: any
 // CHKRA-NEXT:function_end
 

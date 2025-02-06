@@ -62,8 +62,8 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "staticProto"
 // CHECK-NEXT:    DeclareGlobalVar  "dynamicProto"
-// CHECK-NEXT:    CreateClosure     r2, r1, Function<staticProto>
 // CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<staticProto>
 // CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "staticProto"
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<dynamicProto>
 // CHECK-NEXT:    PutByIdLoose      r3, r1, 2, "dynamicProto"
@@ -81,8 +81,8 @@ function dynamicProto(func, getProto) {
 // CHECK:Function<dynamicProto>(3 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
 // CHECK-NEXT:    NewObjectWithBuffer r2, 1, 13
-// CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    Call1             r1, r1, r0
 // CHECK-NEXT:    PutOwnBySlotIdx   r2, r1, 0
 // CHECK-NEXT:    LoadParam         r1, 2

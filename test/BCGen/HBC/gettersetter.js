@@ -48,17 +48,17 @@ var obj = {
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
 // CHECK-NEXT:    NewObject         r5
-// CHECK-NEXT:    CreateClosure     r4, r1, Function<get b>
+// CHECK-NEXT:    LoadConstString   r4, "b"
 // CHECK-NEXT:    CreateClosure     r3, r1, Function<set b>
-// CHECK-NEXT:    LoadConstString   r2, "b"
-// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r2, r4, r3, 1
-// CHECK-NEXT:    CreateClosure     r3, r1, Function<get c>
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<get b>
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r4, r2, r3, 1
+// CHECK-NEXT:    LoadConstString   r3, "c"
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    LoadConstString   r2, "c"
-// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r2, r3, r0, 1
-// CHECK-NEXT:    CreateClosure     r2, r1, Function<set d>
-// CHECK-NEXT:    LoadConstString   r1, "d"
-// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r1, r0, r2, 1
+// CHECK-NEXT:    CreateClosure     r2, r1, Function<get c>
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r3, r2, r0, 1
+// CHECK-NEXT:    LoadConstString   r2, "d"
+// CHECK-NEXT:    CreateClosure     r1, r1, Function<set d>
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r5, r2, r0, r1, 1
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    PutByIdLoose      r1, r5, 1, "obj"
 // CHECK-NEXT:    Ret               r0

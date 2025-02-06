@@ -51,8 +51,8 @@ try {
 // CHECK-NEXT:    DeclareGlobalVar  "condition"
 // CHECK-NEXT:    LoadConstUndefined r3
 // CHECK-NEXT:    LoadConstUndefined r5
-// CHECK-NEXT:    LoadConstFalse    r0
 // CHECK-NEXT:    GetGlobalObject   r1
+// CHECK-NEXT:    LoadConstFalse    r0
 // CHECK-NEXT:    PutByIdStrict     r1, r0, 1, "condition"
 // CHECK-NEXT:L8:
 // CHECK-NEXT:    ProfilePoint      6

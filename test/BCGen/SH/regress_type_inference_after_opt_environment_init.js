@@ -32,10 +32,10 @@ foo((fn) => fn());
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
-// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %3: object, "foo": string
+// CHECK-NEXT:  %2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, %2: object, "foo": string
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %2: object, "foo": string
 // CHECK-NEXT:  %6 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %8 = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, %6: undefined, %6: undefined, %7: object
@@ -48,20 +48,20 @@ foo((fn) => fn());
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %sink: any
-// CHECK-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
-// CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, %3: undefined, %3: undefined, %4: object
+// CHECK-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %sink: any
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, %2: undefined, %2: undefined, %3: object
 // CHECK-NEXT:  %6 = HBCLoadConstInst (:number) 0: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: number, [%VS1.x]: undefined|number
-// CHECK-NEXT:       ReturnInst %3: undefined
+// CHECK-NEXT:       ReturnInst %2: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow ""(fn: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %fn: any
-// CHECK-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  %2 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, %1: undefined, %1: undefined
+// CHECK-NEXT:  %0 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %fn: any
+// CHECK-NEXT:  %2 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, %0: undefined, %0: undefined
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 

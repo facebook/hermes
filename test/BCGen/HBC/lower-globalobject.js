@@ -22,10 +22,10 @@ function foo() {
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:                 DeclareGlobalVarInst "x": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHKRA-NEXT:  {r0}      %2 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKRA-NEXT:  {r1}      %3 = CreateFunctionInst (:object) {r0} %2: environment, %VS0: any, %foo(): functionCode
-// CHKRA-NEXT:  {r0}      %4 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %3: object, {r0} %4: object, "foo": string
+// CHKRA-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r0}      %3 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKRA-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {r0} %3: environment, %VS0: any, %foo(): functionCode
+// CHKRA-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "foo": string
 // CHKRA-NEXT:  {np0}     %6 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:                 ReturnInst {np0} %6: undefined
 // CHKRA-NEXT:function_end
@@ -62,10 +62,10 @@ function foo() {
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
+// CHKBC-NEXT:    GetGlobalObject   r2
 // CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
-// CHKBC-NEXT:    CreateClosure     r2, r1, Function<foo>
-// CHKBC-NEXT:    GetGlobalObject   r1
-// CHKBC-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHKBC-NEXT:    CreateClosure     r1, r1, Function<foo>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    Ret               r0
 

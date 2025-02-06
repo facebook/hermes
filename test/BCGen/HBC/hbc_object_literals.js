@@ -123,21 +123,21 @@ function obj7() {
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj5": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj6": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj7": string
-// IRGEN-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj1(): functionCode
-// IRGEN-NEXT:  %9 = HBCGetGlobalObjectInst (:object)
-// IRGEN-NEXT:        StorePropertyLooseInst %8: object, %9: object, "obj1": string
+// IRGEN-NEXT:  %8 = HBCGetGlobalObjectInst (:object)
+// IRGEN-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj1(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %9: object, %8: object, "obj1": string
 // IRGEN-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj2(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %11: object, %9: object, "obj2": string
+// IRGEN-NEXT:        StorePropertyLooseInst %11: object, %8: object, "obj2": string
 // IRGEN-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj3(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %13: object, %9: object, "obj3": string
+// IRGEN-NEXT:        StorePropertyLooseInst %13: object, %8: object, "obj3": string
 // IRGEN-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj4(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %15: object, %9: object, "obj4": string
+// IRGEN-NEXT:        StorePropertyLooseInst %15: object, %8: object, "obj4": string
 // IRGEN-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj5(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %17: object, %9: object, "obj5": string
+// IRGEN-NEXT:        StorePropertyLooseInst %17: object, %8: object, "obj5": string
 // IRGEN-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj6(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %19: object, %9: object, "obj6": string
+// IRGEN-NEXT:        StorePropertyLooseInst %19: object, %8: object, "obj6": string
 // IRGEN-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj7(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %21: object, %9: object, "obj7": string
+// IRGEN-NEXT:        StorePropertyLooseInst %21: object, %8: object, "obj7": string
 // IRGEN-NEXT:  %23 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:        ReturnInst %23: undefined
 // IRGEN-NEXT:function_end
@@ -370,8 +370,8 @@ function obj7() {
 // BCGEN-NEXT:    DeclareGlobalVar  "obj5"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj6"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj7"
-// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj1>
 // BCGEN-NEXT:    GetGlobalObject   r3
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj1>
 // BCGEN-NEXT:    PutByIdLoose      r3, r2, 1, "obj1"
 // BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj2>
 // BCGEN-NEXT:    PutByIdLoose      r3, r2, 2, "obj2"

@@ -36,15 +36,15 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "checkNonStaticBuiltin": string
-// CHKRA-NEXT:  {r2}      %4 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
-// CHKRA-NEXT:  {r0}      %5 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:                 StorePropertyLooseInst {r2} %4: object, {r0} %5: object, "foo": string
+// CHKRA-NEXT:  {r0}      %4 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r2}      %5 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
+// CHKRA-NEXT:                 StorePropertyLooseInst {r2} %5: object, {r0} %4: object, "foo": string
 // CHKRA-NEXT:  {r2}      %7 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %shadows(): functionCode
-// CHKRA-NEXT:                 StorePropertyLooseInst {r2} %7: object, {r0} %5: object, "shadows": string
+// CHKRA-NEXT:                 StorePropertyLooseInst {r2} %7: object, {r0} %4: object, "shadows": string
 // CHKRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %checkNonStaticBuiltin(): functionCode
-// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %5: object, "checkNonStaticBuiltin": string
-// CHKRA-NEXT:  {r1}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %5: object, "print": string
-// CHKRA-NEXT:  {r2}     %12 = LoadPropertyInst (:any) {r0} %5: object, "foo": string
+// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %4: object, "checkNonStaticBuiltin": string
+// CHKRA-NEXT:  {r1}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
+// CHKRA-NEXT:  {r2}     %12 = LoadPropertyInst (:any) {r0} %4: object, "foo": string
 // CHKRA-NEXT:  {np0}    %13 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  {r0}     %14 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
 // CHKRA-NEXT:  {r4}     %15 = ImplicitMovInst (:undefined) {np0} %13: undefined
@@ -144,8 +144,8 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...
-// CHKBC-NEXT:    CreateClosure     r3, r2, Function<foo>
 // CHKBC-NEXT:    GetGlobalObject   r1
+// CHKBC-NEXT:    CreateClosure     r3, r2, Function<foo>
 // CHKBC-NEXT:    PutByIdLoose      r1, r3, 1, "foo"
 // CHKBC-NEXT:    CreateClosure     r3, r2, Function<shadows>
 // CHKBC-NEXT:    PutByIdLoose      r1, r3, 2, "shadows"

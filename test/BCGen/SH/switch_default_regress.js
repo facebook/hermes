@@ -47,10 +47,10 @@ function foo(i) {
 // CHKLIR:function global(): undefined
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS0: any, %foo(): functionCode
-// CHKLIR-NEXT:  %3 = HBCGetGlobalObjectInst (:object)
-// CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
+// CHKLIR-NEXT:  %1 = HBCGetGlobalObjectInst (:object)
+// CHKLIR-NEXT:  %2 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKLIR-NEXT:  %3 = CreateFunctionInst (:object) %2: environment, %VS0: any, %foo(): functionCode
+// CHKLIR-NEXT:       StorePropertyLooseInst %3: object, %1: object, "foo": string
 // CHKLIR-NEXT:  %5 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:       ReturnInst %5: undefined
 // CHKLIR-NEXT:function_end

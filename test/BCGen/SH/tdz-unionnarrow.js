@@ -74,14 +74,14 @@ function f2() {
 
 // CHKLIR:function f1(): string|number
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHKLIR-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHKLIR-NEXT:  %2 = HBCLoadConstInst (:empty) empty: empty
-// CHKLIR-NEXT:       StoreFrameInst %1: environment, %2: empty, [%VS1.x]: empty
-// CHKLIR-NEXT:  %4 = ThrowIfInst (:any) %2: empty, type(empty)
-// CHKLIR-NEXT:  %5 = UnionNarrowTrustedInst (:any) %2: empty
-// CHKLIR-NEXT:  %6 = HBCLoadConstInst (:number) 1: number
-// CHKLIR-NEXT:  %7 = BinaryAddInst (:string|number) %5: any, %6: number
+// CHKLIR-NEXT:  %0 = HBCLoadConstInst (:empty) empty: empty
+// CHKLIR-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHKLIR-NEXT:  %2 = CreateScopeInst (:environment) %VS1: any, %1: environment
+// CHKLIR-NEXT:       StoreFrameInst %2: environment, %0: empty, [%VS1.x]: empty
+// CHKLIR-NEXT:  %4 = ThrowIfInst (:any) %0: empty, type(empty)
+// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:number) 1: number
+// CHKLIR-NEXT:  %6 = UnionNarrowTrustedInst (:any) %0: empty
+// CHKLIR-NEXT:  %7 = BinaryAddInst (:string|number) %6: any, %5: number
 // CHKLIR-NEXT:       ReturnInst %7: string|number
 // CHKLIR-NEXT:function_end
 

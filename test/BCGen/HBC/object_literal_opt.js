@@ -71,11 +71,11 @@ function foo(p) {
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
 // CHECK-NEXT:[@ 6] DeclareGlobalVar 5<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 16] GetGlobalObject 3<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 3<Reg8>, 2<Reg8>, 1<UInt8>, 5<UInt16>
-// CHECK-NEXT:[@ 24] CreateClosure 1<Reg8>, 1<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 29] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 11] GetGlobalObject 2<Reg8>
+// CHECK-NEXT:[@ 13] CreateClosure 3<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 18] PutByIdLoose 2<Reg8>, 3<Reg8>, 1<UInt8>, 5<UInt16>
+// CHECK-NEXT:[@ 24] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 26] CreateClosure 1<Reg8>, 1<Reg8>, 2<UInt16>
 // CHECK-NEXT:[@ 31] Call1 1<Reg8>, 1<Reg8>, 0<Reg8>
 // CHECK-NEXT:[@ 35] Ret 1<Reg8>
 

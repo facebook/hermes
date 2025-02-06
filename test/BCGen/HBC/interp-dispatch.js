@@ -53,16 +53,16 @@ print(bench(4e6, 100))
 // CHECK:Function<global>(1 params, 15 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "bench"
-// CHECK-NEXT:    CreateTopLevelEnvironment r3, 0
-// CHECK-NEXT:    CreateClosure     r4, r3, Function<bench>
 // CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    CreateTopLevelEnvironment r4, 0
+// CHECK-NEXT:    CreateClosure     r4, r4, Function<bench>
 // CHECK-NEXT:    PutByIdStrict     r3, r4, 1, "bench"
 // CHECK-NEXT:    TryGetById        r4, r3, 1, "print"
 // CHECK-NEXT:    GetByIdShort      r3, r3, 2, "bench"
+// CHECK-NEXT:    LoadConstUInt8    r0, 100
+// CHECK-NEXT:    LoadConstInt      r1, 4000000
 // CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    LoadConstInt      r0, 4000000
-// CHECK-NEXT:    LoadConstUInt8    r1, 100
-// CHECK-NEXT:    Call3             r3, r3, r2, r0, r1
+// CHECK-NEXT:    Call3             r3, r3, r2, r1, r0
 // CHECK-NEXT:    Call2             r3, r4, r2, r3
 // CHECK-NEXT:    Ret               r3
 

@@ -36,14 +36,14 @@ foo(0,0,1);
 // CHECK:Function<global>(1 params, 16 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    CreateTopLevelEnvironment r3, 0
-// CHECK-NEXT:    CreateClosure     r4, r3, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    CreateTopLevelEnvironment r4, 0
+// CHECK-NEXT:    CreateClosure     r4, r4, Function<foo>
 // CHECK-NEXT:    PutByIdStrict     r3, r4, 1, "foo"
 // CHECK-NEXT:    GetByIdShort      r3, r3, 1, "foo"
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    LoadConstZero     r0
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
+// CHECK-NEXT:    LoadConstZero     r0
+// CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Call4             r3, r3, r2, r0, r0, r1
 // CHECK-NEXT:    Ret               r3
 
