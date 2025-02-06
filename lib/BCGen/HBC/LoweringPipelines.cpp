@@ -39,6 +39,7 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   PM.addPass(createLowerScopes());
   // LowerBuilinCalls needs to run before the rest of the lowering.
   PM.addPass(createLowerBuiltinCalls());
+  // Turn Calls into CallNs.
   PM.addPass(new LowerCalls());
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
@@ -63,7 +64,6 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
     PM.addPass(createOptParentEnvironment());
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());
-    // Turn Calls into CallNs.
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
