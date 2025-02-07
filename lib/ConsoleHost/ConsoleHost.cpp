@@ -72,7 +72,9 @@ createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
     return runtime.raiseTypeError(
         "Filename must end in .heapsnapshot or .heaptimeline");
   }
-  if (auto err = runtime.getHeap().createSnapshotToFile(fileName)) {
+  std::error_code err;
+  llvh::raw_fd_ostream os(fileName, err, llvh::sys::fs::FileAccess::FA_Write);
+  if (err) {
     // This isn't a TypeError, but no other built-in can express file errors,
     // so this will have to do.
     return runtime.raiseTypeError(
@@ -80,6 +82,9 @@ createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
         llvh::StringRef(fileName) +
         "\". System error: " + llvh::StringRef(err.message()));
   }
+  // Taking a snapshot always starts with garbage collection.
+  runtime.collect("snapshot");
+  runtime.getHeap().createSnapshot(os, true);
   return HermesValue::encodeUndefinedValue();
 #else // !defined(HERMES_MEMORY_INSTRUMENTATION)
   return runtime.raiseTypeError(

@@ -413,6 +413,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
     if (code) {
       throw std::system_error(code);
     }
+    // Taking a snapshot always starts with garbage collection.
+    runtime_.getHeap().collect("snapshot");
     runtime_.getHeap().createSnapshot(os, options.captureNumericValue);
 #else
     throw std::logic_error(
@@ -426,6 +428,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
       std::ostream &os,
       const HeapSnapshotOptions &options) override {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
+    // Taking a snapshot always starts with garbage collection.
+    runtime_.getHeap().collect("snapshot");
     llvh::raw_os_ostream ros(os);
     runtime_.getHeap().createSnapshot(ros, options.captureNumericValue);
 #else

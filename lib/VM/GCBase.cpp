@@ -126,16 +126,6 @@ void GCBase::runtimeWillExecute() {
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
-  std::error_code code;
-  llvh::raw_fd_ostream os(fileName, code, llvh::sys::fs::FileAccess::FA_Write);
-  if (code) {
-    return code;
-  }
-  createSnapshot(os, true);
-  return std::error_code{};
-}
-
 namespace {
 
 constexpr HeapSnapshot::NodeID objectIDForRootSection(
@@ -692,7 +682,17 @@ void GCBase::checkTripwire(size_t dataSize) {
     Ctx(GCBase *gc) : gc_(gc) {}
 
     std::error_code createSnapshotToFile(const std::string &path) override {
-      return gc_->createSnapshotToFile(path);
+      std::error_code code;
+      llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
+      if (code) {
+        return code;
+      }
+      // We currently cannot call collect() to perform a full collection here
+      // because this is typically called while gcMutex_ is already held. While
+      // we could refactor it to work, it is unlikely to provide much value
+      // since the tripwire is invoked shortly after a collection anyway.
+      gc_->createSnapshot(os, true);
+      return std::error_code{};
     }
 
     std::error_code createSnapshot(std::ostream &os, bool captureNumericValue)
