@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | (! %hermes - 2>&1 -gc-sanitize-handles=0 ) | %FileCheck --match-full-lines %s
+// RUN: %hermes %s | (! %shermes -exec - 2>&1 -Wx,-gc-sanitize-handles=0 ) | %FileCheck --match-full-lines %s
 // REQUIRES: !slow_debug && !gc_malloc
 
 // Print a huge object literal with 300,000 entries.

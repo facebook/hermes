@@ -1625,6 +1625,14 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     // cache it.
     const SHShapeTableEntry *shapeInfo =
         &unit->obj_shape_table[shapeTableIndex];
+
+    if (shapeInfo->num_props > HiddenClass::maxNumProperties()) {
+      (void)runtime.raiseRangeError(
+          TwineChar16("Object has more than ") +
+          HiddenClass::maxNumProperties() + " properties");
+      _sh_throw_current(shr);
+    }
+
     clazz = addBufferPropertiesToHiddenClass(
         runtime,
         unit,
