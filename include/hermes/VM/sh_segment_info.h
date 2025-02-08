@@ -12,6 +12,10 @@
 /// contain segment-specific information.
 typedef struct SHSegmentInfo {
   unsigned index;
+  // Every segment is aligned to 1<<HERMESVM_LOG_HEAP_SEGMENT_SIZE, so we only
+  // need to store the bits after a right shift. A two bytes integer is large
+  // enough to hold a 4GB segment.
+  unsigned short shiftedSegmentSize;
 } SHSegmentInfo;
 
 #endif
