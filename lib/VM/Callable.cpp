@@ -607,6 +607,7 @@ const CallableVTable BoundFunction::vt{
         VTable(
             CellKind::BoundFunctionKind,
             cellSize<BoundFunction>(),
+            false,
             nullptr,
             nullptr,
             nullptr
@@ -912,6 +913,7 @@ const CallableVTable NativeJSFunction::vt{
         VTable(
             CellKind::NativeJSFunctionKind,
             cellSize<NativeJSFunction>(),
+            false,
             nullptr,
             nullptr,
             nullptr
@@ -1095,6 +1097,7 @@ const CallableVTable NativeFunction::vt{
         VTable(
             CellKind::NativeFunctionKind,
             cellSize<NativeFunction>(),
+            false,
             nullptr,
             nullptr,
             nullptr
@@ -1274,6 +1277,7 @@ const CallableVTable NativeConstructor::vt{
         VTable(
             CellKind::NativeConstructorKind,
             cellSize<NativeConstructor>(),
+            false,
             nullptr,
             nullptr,
             nullptr
@@ -1331,6 +1335,7 @@ const CallableVTable JSFunction::vt{
         VTable(
             CellKind::JSFunctionKind,
             cellSize<JSFunction>(),
+            false,
             nullptr,
             nullptr,
             nullptr

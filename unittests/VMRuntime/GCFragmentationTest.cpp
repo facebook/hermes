@@ -30,15 +30,15 @@ TEST(GCFragmentationTest, TestCoalescing) {
   // allocate.
   static const size_t kNumAvailableSegments = kNumSegments + 1;
   static const size_t kHeapSize =
-      AlignedHeapSegment::maxSize() * kNumAvailableSegments;
+      FixedSizeHeapSegment::maxSize() * kNumAvailableSegments;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
-  using SixteenthCell = EmptyCell<AlignedHeapSegment::maxSize() / 16>;
-  using EighthCell = EmptyCell<AlignedHeapSegment::maxSize() / 8>;
-  using QuarterCell = EmptyCell<AlignedHeapSegment::maxSize() / 4>;
+  using SixteenthCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 16>;
+  using EighthCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 8>;
+  using QuarterCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 4>;
 
   {
     GCScope scope(rt);
