@@ -204,6 +204,14 @@ enum XorPtrKeyID {
 ///         const GCSmallHermesValue *start,
 ///         uint32_t numHVs);
 ///
+///   The above barriers may have a variant with "ForLargeObj" suffix, which is
+///   used when the heap location may be from a GCCell of a kind that supports
+///   large allocation. This variant is less efficient since it has to load the
+///   cards array through pointer in SHSegmentInfo, instead of the inline array
+///   field in CardTable structure. Because of this, these variant write
+///   barriers need a pointer to the start of the object in order to locate the
+///   card table for an object that is larger than the unit segment size.
+///
 ///   In debug builds: is a write barrier necessary for a write of the given
 ///   GC pointer \p value to the given \p loc?
 ///      bool needsWriteBarrier(void *loc, void *value);
@@ -226,7 +234,7 @@ enum XorPtrKeyID {
 ///   Return the maximum amount of bytes holdable by this heap.
 ///     gcheapsize_t max() const;
 ///   Return the total amount of bytes of storage this GC will require.
-///   This will be a multiple of AlignedHeapSegment::storageSize().
+///   This will be a multiple of FixedSizeHeapSegment::storageSize().
 ///     gcheapsize_t storageFootprint() const;
 ///
 class GCBase {
@@ -1076,6 +1084,12 @@ class GCBase {
       SmallHermesValue value) const = 0;
   virtual bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCHermesValue *loc,
+      HermesValue value) const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value) const = 0;
   /// \}
 #endif
 
@@ -1150,18 +1164,44 @@ class GCBase {
   /// Default implementations for read and write barriers: do nothing.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValue *loc,
+      HermesValue value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCPointerBase *loc,
+      const GCCell *value);
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
   void constructorWriteBarrier(
       const GCSmallHermesValue *loc,
       SmallHermesValue value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValue *loc,
+      HermesValue value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCPointerBase *loc,
+      const GCCell *value);
   void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
   void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCHermesValue *start,
       uint32_t numHVs);
   void constructorWriteBarrierRange(
+      const GCCell *owningObj,
       const GCSmallHermesValue *start,
       uint32_t numHVs);
   void snapshotWriteBarrier(const GCHermesValue *loc);
