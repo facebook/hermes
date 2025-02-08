@@ -965,23 +965,63 @@ bool GCBase::shouldSanitizeHandles() {
     runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2); }); \
   }
 
+#define GCBASE_BARRIER_3(name, type1, type2, type3)                   \
+  void GCBase::name(type1 arg1, type2 arg2, type3 arg3) {             \
+    runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2, arg3); }); \
+  }
+
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCHermesValue *,
+    HermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCSmallHermesValue *,
+    SmallHermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCPointerBase *,
+    const GCCell *);
 GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
+    const GCHermesValue *,
+    HermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
+    const GCSmallHermesValue *,
+    SmallHermesValue);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
     const GCSmallHermesValue *,
     SmallHermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
     const GCPointerBase *,
     const GCCell *);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
+    const GCPointerBase *,
+    const GCCell *);
 GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
 GCBASE_BARRIER_2(writeBarrierRange, const GCSmallHermesValue *, uint32_t);
-GCBASE_BARRIER_2(constructorWriteBarrierRange, const GCHermesValue *, uint32_t);
-GCBASE_BARRIER_2(
+GCBASE_BARRIER_3(
     constructorWriteBarrierRange,
+    const GCCell *,
+    const GCHermesValue *,
+    uint32_t);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierRange,
+    const GCCell *,
     const GCSmallHermesValue *,
     uint32_t);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
