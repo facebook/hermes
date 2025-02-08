@@ -27,6 +27,7 @@ const ObjectVTable JSRegExp::vt{
     VTable(
         CellKind::JSRegExpKind,
         cellSize<JSRegExp>(),
+        /* allowLargeAlloc */ false,
         JSRegExp::_finalizeImpl,
         JSRegExp::_mallocSizeImpl,
         nullptr
