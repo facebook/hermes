@@ -17,6 +17,7 @@ template <typename HVType>
 const VTable SegmentedArrayBase<HVType>::Segment::vt(
     getCellKind(),
     cellSize<SegmentedArrayBase::Segment>(),
+    false,
     nullptr,
     nullptr,
     nullptr
@@ -76,6 +77,7 @@ template <typename HVType>
 const VTable SegmentedArrayBase<HVType>::vt(
     getCellKind(),
     /*variableSize*/ 0,
+    false,
     nullptr,
     nullptr,
     _trimSizeCallback
@@ -292,7 +294,8 @@ ExecutionStatus SegmentedArrayBase<HVType>::growRight(
       self->inlineStorage(),
       self->inlineStorage() + numSlotsUsed,
       newSegmentedArray->inlineStorage(),
-      runtime.getHeap());
+      runtime.getHeap(),
+      newSegmentedArray.get());
   // Set the size of the new array to be the same as the old array's size.
   newSegmentedArray->numSlotsUsed_.store(
       numSlotsUsed, std::memory_order_release);
