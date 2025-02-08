@@ -36,8 +36,8 @@ struct CardTableNCTest : public ::testing::Test {
 
  protected:
   std::unique_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
-  AlignedHeapSegment seg{
-      std::move(AlignedHeapSegment::create(provider.get()).get())};
+  FixedSizeHeapSegment seg{
+      std::move(FixedSizeHeapSegment::create(provider.get()).get())};
   CardTable *table{new (seg.lowLim()) CardTable()};
 
   // Addresses in the aligned storage to interact with during the tests.
@@ -58,9 +58,10 @@ void CardTableNCTest::dirtyRangeTest(
 
 CardTableNCTest::CardTableNCTest() {
   // For purposes of this test, we'll assume the first writeable byte of
-  // the segment comes just after the card table (which is at the
-  // start of the segment).
-  auto first = seg.lowLim() + sizeof(CardTable);
+  // the segment comes just after the memory region that can be mapped by
+  // kFirstUsedIndex bytes.
+  auto first = seg.lowLim() +
+      CardTable::kFirstUsedIndex * CardTable::kHeapBytesPerCardByte;
   auto last = reinterpret_cast<char *>(llvh::alignDown(
       reinterpret_cast<uintptr_t>(seg.hiLim() - 1), CardTable::kCardSize));
 
