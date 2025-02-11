@@ -1960,7 +1960,7 @@ bool SemanticResolver::extractDeclaredIdentsFromID(
   }
 
   if (auto *param = llvh::dyn_cast<ComponentParameterNode>(node)) {
-    return extractDeclaredIdentsFromID(param->_name, idents);
+    return extractDeclaredIdentsFromID(param->_local, idents);
   }
 
   sm_.error(node->getSourceRange(), "invalid destructuring target");
