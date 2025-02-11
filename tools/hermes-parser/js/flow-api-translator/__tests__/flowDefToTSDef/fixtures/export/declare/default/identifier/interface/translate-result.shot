@@ -13,6 +13,8 @@ exports[`flowDefToTSDef export/declare/default/identifier/interface 1`] = `
 
 declare interface Foo {}
 declare const $$EXPORT_DEFAULT_DECLARATION$$: Foo;
+declare type $$EXPORT_DEFAULT_DECLARATION$$ =
+  typeof $$EXPORT_DEFAULT_DECLARATION$$;
 export default $$EXPORT_DEFAULT_DECLARATION$$;
 "
 `;

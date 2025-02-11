@@ -14,6 +14,8 @@ exports[`flowDefToTSDef export/declare/default/identifier/member 1`] = `
 import * as React from 'react';
 type Props = {a: string};
 declare const $$EXPORT_DEFAULT_DECLARATION$$: React.ComponentType<Props>;
+declare type $$EXPORT_DEFAULT_DECLARATION$$ =
+  typeof $$EXPORT_DEFAULT_DECLARATION$$;
 export default $$EXPORT_DEFAULT_DECLARATION$$;
 "
 `;
