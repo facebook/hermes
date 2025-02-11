@@ -1453,9 +1453,11 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
 
   FoundDirectives directives{};
 
-  // Arrow functions have their bodies turned into BlockStatement before visit.
-  auto *blockBody = llvh::cast<BlockStatementNode>(body);
-  directives = scanDirectives(blockBody->_body);
+  // Arrow functions have their bodies turned into BlockStatement before visit,
+  // but only in compile_ mode.
+  auto *blockBody = llvh::dyn_cast<BlockStatementNode>(body);
+  if (blockBody)
+    directives = scanDirectives(blockBody->_body);
 
   // Set the strictness if necessary.
   if (directives.useStrictNode)
@@ -1474,7 +1476,7 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     validateDeclarationName(Decl::Kind::FunctionExprName, id);
   }
 
-  if (blockBody->isLazyFunctionBody) {
+  if (blockBody && blockBody->isLazyFunctionBody) {
     // Don't descend into lazy functions, don't create a scope.
     // But do record the surrounding scope in the FunctionInfo.
     assert(node->getSemInfo() && "semInfo must be set in first pass");

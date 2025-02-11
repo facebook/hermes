@@ -320,7 +320,10 @@ class CheckImplicitReturn {
 bool mayReachImplicitReturn(ESTree::FunctionLikeNode *root) {
   CheckImplicitReturn visitor{};
   BlockStatementNode *block = getBlockStatement(root);
-  assert(block && "arrows have been normalized to contain block bodies");
+  // Arrow functions have their bodies turned into BlockStatement before visit,
+  // but only in compile_ mode.
+  if (!block)
+    return false;
   auto result = visitor.checkTermination(block);
   assert(
       (result.targetLabels.empty() || result.mustExecuteNextStatement()) &&
