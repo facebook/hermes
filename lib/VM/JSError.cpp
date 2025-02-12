@@ -31,6 +31,7 @@ const ObjectVTable JSError::vt{
     VTable(
         CellKind::JSErrorKind,
         cellSize<JSError>(),
+        /* allowLargeAlloc */ false,
         JSError::_finalizeImpl,
         JSError::_mallocSizeImpl),
     JSError::_getOwnIndexedRangeImpl,
