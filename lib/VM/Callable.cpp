@@ -607,6 +607,7 @@ const CallableVTable BoundFunction::vt{
         VTable(
             CellKind::BoundFunctionKind,
             cellSize<BoundFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -912,6 +913,7 @@ const CallableVTable NativeJSFunction::vt{
         VTable(
             CellKind::NativeJSFunctionKind,
             cellSize<NativeJSFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1038,6 +1040,7 @@ const CallableVTable NativeJSDerivedClass::vt{
         VTable(
             CellKind::NativeJSDerivedClassKind,
             cellSize<NativeJSDerivedClass>(),
+            /*allowLargeAlloc*/ false,
             nullptr,
             nullptr,
             nullptr
@@ -1095,6 +1098,7 @@ const CallableVTable NativeFunction::vt{
         VTable(
             CellKind::NativeFunctionKind,
             cellSize<NativeFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1274,6 +1278,7 @@ const CallableVTable NativeConstructor::vt{
         VTable(
             CellKind::NativeConstructorKind,
             cellSize<NativeConstructor>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1331,6 +1336,7 @@ const CallableVTable JSFunction::vt{
         VTable(
             CellKind::JSFunctionKind,
             cellSize<JSFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1473,6 +1479,7 @@ const CallableVTable JSDerivedClass::vt{
         VTable(
             CellKind::JSDerivedClassKind,
             cellSize<JSDerivedClass>(),
+            /*allowLargeAlloc*/ false,
             nullptr,
             nullptr,
             nullptr
