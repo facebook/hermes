@@ -9,6 +9,7 @@
 
 #include "hermes/AST/RecursiveVisitor.h"
 
+#if HERMES_PARSE_TS && HERMES_PARSE_FLOW
 namespace hermes {
 
 namespace {
@@ -401,3 +402,4 @@ ESTree::ProgramNode *convertTSToFlow(
 }
 
 } // namespace hermes
+#endif
