@@ -12,6 +12,7 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
+#include "hermes/Public/SamplingProfiler.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSNativeFunctions.h"
 #include "hermes/VM/Runtime.h"
@@ -267,6 +268,10 @@ class SamplingProfiler {
   /// Dump sampled stack to \p OS in tracery trace format.
   void dumpTraceryTrace(llvh::raw_ostream &OS);
 
+  /// Dump sampled stack trace to data structure that can be used by third
+  /// parties.
+  facebook::hermes::sampling_profiler::Profile dumpAsProfile();
+
   /// Dump the sampled stack to \p OS in the format expected by the
   /// Profiler.stop return type. See
   ///
@@ -280,6 +285,11 @@ class SamplingProfiler {
 
   /// Static wrapper for dumpTraceryTrace.
   static void dumpTraceryTraceGlobal(llvh::raw_ostream &OS);
+
+  /// Static wrapper for dumpAsProfile. Will dump in separate Profile for each
+  /// local sampling profiler instance.
+  static std::vector<facebook::hermes::sampling_profiler::Profile>
+  dumpAsProfilesGlobal();
 
   /// Enable and start profiling.
   static bool enable(double meanHzFreq = 100);

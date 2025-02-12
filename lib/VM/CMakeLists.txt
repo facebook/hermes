@@ -56,6 +56,7 @@ set(source_files
   RuntimeModule.cpp
   Profiler/TraceSerializer.cpp
   Profiler/CodeCoverageProfiler.cpp
+  Profiler/ProfileGenerator.cpp
   Profiler/SamplingProfiler.cpp
   Profiler/SamplingProfilerPosix.cpp
   Profiler/SamplingProfilerWindows.cpp
