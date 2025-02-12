@@ -22,7 +22,7 @@ namespace vm {
 
 #ifndef NDEBUG
 /* static */ void *CardTable::storageEnd(const void *ptr) {
-  return AlignedHeapSegment::storageEnd(ptr);
+  return FixedSizeHeapSegment::storageEnd(ptr);
 }
 #endif
 
