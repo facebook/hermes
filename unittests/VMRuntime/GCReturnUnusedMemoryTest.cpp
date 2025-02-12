@@ -32,7 +32,7 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
 
-  using SemiCell = EmptyCell<AlignedHeapSegment::maxSize() * 8 / 10>;
+  using SemiCell = EmptyCell<FixedSizeHeapSegment::maxSize() * 8 / 10>;
 
   llvh::ErrorOr<size_t> before = 0;
   {
