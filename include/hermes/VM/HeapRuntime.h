@@ -40,7 +40,8 @@ class HeapRuntime {
     if (!ptrOrError)
       hermes_fatal("Cannot initialize Runtime storage.", ptrOrError.getError());
     static_assert(
-        sizeof(RT) < AlignedHeapSegment::storageSize(), "Segments too small.");
+        sizeof(RT) < FixedSizeHeapSegment::storageSize(),
+        "Segments too small.");
     runtime_ = static_cast<RT *>(*ptrOrError);
   }
 

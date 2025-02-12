@@ -226,7 +226,7 @@ enum XorPtrKeyID {
 ///   Return the maximum amount of bytes holdable by this heap.
 ///     gcheapsize_t max() const;
 ///   Return the total amount of bytes of storage this GC will require.
-///   This will be a multiple of AlignedHeapSegment::storageSize().
+///   This will be a multiple of FixedSizeHeapSegment::storageSize().
 ///     gcheapsize_t storageFootprint() const;
 ///
 class GCBase {
