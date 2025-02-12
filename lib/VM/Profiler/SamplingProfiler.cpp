@@ -245,8 +245,6 @@ void SamplingProfiler::clear() {
   // Release all strong roots.
   domains_.clear();
   nativeFunctions_.clear();
-  // TODO: keep thread names that are still in use.
-  threadNames_.clear();
 }
 
 void SamplingProfiler::suspend(
