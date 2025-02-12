@@ -26,6 +26,7 @@ const ObjectVTable JSObject::vt{
     VTable(
         CellKind::JSObjectKind,
         cellSize<JSObject>(),
+        false,
         nullptr,
         nullptr,
         nullptr

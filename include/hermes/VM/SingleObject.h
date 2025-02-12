@@ -53,7 +53,7 @@ struct IsGCObject<SingleObject<kind>> {
 
 template <CellKind kind>
 const ObjectVTable SingleObject<kind>::vt = {
-    VTable(kind, cellSize<SingleObject<kind>>(), nullptr, nullptr),
+    VTable(kind, cellSize<SingleObject<kind>>()),
     SingleObject::_getOwnIndexedRangeImpl,
     SingleObject::_haveOwnIndexedImpl,
     SingleObject::_getOwnIndexedPropertyFlagsImpl,
