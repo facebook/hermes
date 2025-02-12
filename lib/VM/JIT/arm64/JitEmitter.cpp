@@ -2745,15 +2745,22 @@ void Emitter::coerceThisNS(FR frRes, FR frThis) {
   asmjit::Label contLab = newContLabel();
   HWReg hwThis = getOrAllocFRInGpX(frThis, true);
 
+  // Sync all registers. Note that we don't need to check for frRes == frThis
+  // here, because frThis is sync'd unconditionally below.
   syncAllFRTempExcept(frRes);
+  syncToFrame(frThis);
+
+  // Allocate a temporary register. This must not be the same as hwThis, but may
+  // be the same as hwRes.
+  HWReg hwTemp = allocTempGpX();
+  freeReg(hwTemp);
+
   // We don't free frRes so that if it is the same as frThis, the register is
   // simply persisted and we do not need to perform a move in the fast path.
   freeAllFRTempExcept(frRes);
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
-  HWReg hwTemp = allocTempGpX();
-  freeReg(hwTemp);
   // If the operand is an object, we are done, otherwise, go to the slow path.
   emit_sh_ljs_is_object(a, hwTemp.a64GpX(), hwThis.a64GpX());
   a.b_ne(slowPathLab);
