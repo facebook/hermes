@@ -388,11 +388,18 @@ class OurErrorHandler : public asmjit::ErrorHandler {
     }
 
     std::string formattedMsg{};
-    llvh::raw_string_ostream OS{formattedMsg};
-    OS << "AsmJit error: " << err << ": "
-       << asmjit::DebugUtils::errorAsString(err) << ": " << message;
-    OS.flush();
+    {
+      // Ensure we run any destructors for the ostream before longjmp.
+      llvh::raw_string_ostream OS{formattedMsg};
+      OS << "AsmJit error: " << err << ": "
+         << asmjit::DebugUtils::errorAsString(err) << ": " << message;
+      OS.flush();
+    }
 
+    // IMPORTANT: From here on, we MUST ensure that no destructors need to run.
+    // One exception: formattedMsg will have its destructor skipped, but we're
+    // moving out of it so in practice the std::string won't have anything to
+    // free, avoiding leaks.
     LLVM_DEBUG(llvh::dbgs() << formattedMsg << "\n");
     longjmpError_(std::move(formattedMsg));
   }
