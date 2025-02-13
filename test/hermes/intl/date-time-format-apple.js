@@ -39,6 +39,9 @@ print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'PST'}).fo
 print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'EET'}).format(date));
 // CHECK-NEXT: 5:45:00{{.+}}AM GMT+2
 
+print(new Intl.DateTimeFormat("en-US", { timeZone: "US/Eastern", timeZoneName: "short" }).resolvedOptions().timeZone);
+// CHECK-NEXT: US/Eastern
+
 try {
   print(new Intl.DateTimeFormat('en-US', { timeStyle: 'long', timeZone: 'XXX'}).format(date));
     print("Succeeded");
