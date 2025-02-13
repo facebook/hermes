@@ -10,6 +10,8 @@
 
 #include "hermes/VM/JSLib/DateUtil.h"
 
+#include "llvh/Config/config.h"
+
 namespace hermes {
 namespace vm {
 
@@ -93,7 +95,10 @@ class LocalTimeOffsetCache {
 
   /// Reset the standard local time offset and the DST cache.
   void reset() {
+    // Wasi doesn't provide tzset().
+    #ifdef HAVE_TZSET
     ::tzset();
+    #endif
     ltza_ = localTZA();
     caches_.fill(DSTCacheEntry{});
     candidate_ = caches_.data();
