@@ -138,6 +138,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Function *F = create->getFunctionCode();
   Module *M = F->getParent();
   IRBuilder builder(M);
+  auto *closureVarScope = llvh::dyn_cast<VariableScope>(create->getVarScope());
 
   // The only kind of function which does not expect a made `this` parameter in
   // a construct call is a derived class constructor.
@@ -156,9 +157,14 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
     /// values.
     bool isAlwaysClosure;
 
-    /// An instruction that is known to produce the scope of the closure at the
-    /// point where the closure is used.
-    Instruction *scope;
+    /// An instruction that is known to produce the scope of the closure, or one
+    /// of its descendents at the point where the closure used. May be null if
+    /// the scope is not known.
+    Instruction *knownScope;
+
+    /// The VariableScope associated with knownScope. May be null iff knownScope
+    /// is null.
+    VariableScope *knownVarScope;
   };
 
   // List of instructions whose result we know is the same closure created by
@@ -178,15 +184,20 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   IRBuilder::InstructionDestroyer destroyer{};
 
   worklist.push_back(
-      {create, true, llvh::dyn_cast<Instruction>(create->getScope())});
+      {create,
+       true,
+       llvh::dyn_cast<Instruction>(create->getScope()),
+       closureVarScope});
   while (!worklist.empty()) {
     // Instruction whose only possible closure value is the one being analyzed.
     Instruction *closureInst = worklist.back().maybeClosure;
     // Whether closureInst may have some non-closure value.
     bool isAlwaysClosure = worklist.back().isAlwaysClosure;
 
-    // Instruction whose result is known to be the scope of the closure.
-    auto *knownScope = worklist.pop_back_val().scope;
+    // Scope that is known to be either the scope of the closure or one of its
+    // descendents.
+    auto knownScope = worklist.back().knownScope;
+    auto knownVarScope = worklist.pop_back_val().knownVarScope;
 
     if (!visited.insert(closureInst).second) {
       // Already visited.
@@ -201,7 +212,18 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         }
         if (call->getCallee() == closureInst) {
-          registerCallsite(call, create, isAlwaysClosure, knownScope);
+          auto *callScope = knownScope;
+          // If the scope we have is not the actual scope of the function we are
+          // calling, then it must be one of its descendents. Emit a
+          // ResolveScopeInst to obtain the actual scope.
+          if (knownScope && knownVarScope != closureVarScope) {
+            auto [startScope, startVarScope] = getResolveScopeStart(
+                knownScope, knownVarScope, closureVarScope);
+            builder.setInsertionPoint(call);
+            callScope = builder.createResolveScopeInst(
+                closureVarScope, startVarScope, startScope);
+          }
+          registerCallsite(call, create, isAlwaysClosure, callScope);
         }
         continue;
       }
@@ -232,8 +254,20 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         // now be unused, but we avoid deleting any instructions in
         // FunctionAnalysis since we are iterating over the IR, so it will be
         // deleted by DCE.
-        if (knownScope)
-          closureUser->replaceAllUsesWith(knownScope);
+        if (knownScope) {
+          auto *replacement = knownScope;
+          // If the scope we have is not the actual scope of the function we are
+          // are trying to obtain the scope of, then it must be one of its
+          // descendents. Emit a ResolveScopeInst to obtain the actual scope.
+          if (knownVarScope != closureVarScope) {
+            auto [startScope, startVarScope] = getResolveScopeStart(
+                knownScope, knownVarScope, closureVarScope);
+            builder.setInsertionPoint(closureUser);
+            replacement = builder.createResolveScopeInst(
+                closureVarScope, startVarScope, startScope);
+          }
+          closureUser->replaceAllUsesWith(replacement);
+        }
 
         // Getting the closure scope does not leak the closure.
         continue;
@@ -273,7 +307,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
                 ->getType()
                 .canBeObject() &&
             "The result UnionNarrowTrusted of closure is not object");
-        worklist.push_back({closureUser, isAlwaysClosure, knownScope});
+        worklist.push_back(
+            {closureUser, isAlwaysClosure, knownScope, knownVarScope});
         continue;
       }
 
@@ -286,7 +321,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             CC->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (CC->getType().canBeObject()) {
-          worklist.push_back({closureUser, isAlwaysClosure, knownScope});
+          worklist.push_back(
+              {closureUser, isAlwaysClosure, knownScope, knownVarScope});
           continue;
         }
       }
@@ -297,7 +333,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             TII->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (TII->getType().canBeObject()) {
-          worklist.push_back({closureUser, isAlwaysClosure, knownScope});
+          worklist.push_back(
+              {closureUser, isAlwaysClosure, knownScope, knownVarScope});
           continue;
         }
       }
@@ -332,7 +369,9 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           worklist.push_back(
               {load,
                isAlwaysClosure && noOtherValues,
-               propagateScope ? load->getScope() : nullptr});
+               propagateScope ? load->getScope() : nullptr,
+               propagateScope ? load->getLoadVariable()->getParent()
+                              : nullptr});
         }
         continue;
       }
