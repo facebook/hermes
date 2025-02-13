@@ -100,7 +100,10 @@ ExecutionStatus Interpreter::caseCreateClass(
         CodeBlock *curCodeBlock =
             runtime.getCurrentFrame().getCalleeCodeBlock();
         auto *runtimeModule = curCodeBlock->getRuntimeModule();
-        auto envHandle = Handle<Environment>::vmcast(&O3REG(CreateBaseClass));
+
+        auto envHandle = O3REG(CreateBaseClass).isUndefined()
+            ? Runtime::makeNullHandle<Environment>()
+            : Handle<Environment>::vmcast(&O3REG(CreateBaseClass));
         // Derived classes get their own special CellKind.
         return super->isEmpty()
             ? JSFunction::create(

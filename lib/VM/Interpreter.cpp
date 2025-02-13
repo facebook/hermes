@@ -1809,7 +1809,9 @@ tailCall:
               JSFunction::createWithInferredParent(
                   runtime,
                   runtimeModule->getDomain(runtime),
-                  Handle<Environment>::vmcast(&O2REG(CreateClosure)),
+                  O2REG(CreateClosure).isUndefined()
+                      ? Runtime::makeNullHandle<Environment>()
+                      : Handle<Environment>::vmcast(&O2REG(CreateClosure)),
                   runtimeModule->getCodeBlockMayAllocate(idVal))
                   .getHermesValue());
       gcScope.flushToSmallCount(KEEP_HANDLES);
@@ -1824,7 +1826,9 @@ tailCall:
                 runtime,
                 curCodeBlock->getRuntimeModule(),
                 ip->iCreateGenerator.op3,
-                Handle<Environment>::vmcast(&O2REG(CreateGenerator)),
+                O2REG(CreateGenerator).isUndefined()
+                    ? Runtime::makeNullHandle<Environment>()
+                    : Handle<Environment>::vmcast(&O2REG(CreateGenerator)),
                 FRAME.getNativeArgs()));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;

@@ -941,13 +941,21 @@ class BaseCreateLexicalChildInst : public Instruction {
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  Instruction *getScope() const {
-    return cast<Instruction>(getOperand(ScopeIdx));
+  /// Get and set the enclosing scope of the function. Note that this may be
+  /// EmptySentinel if the function does not use its enclosing scope.
+  Value *getScope() const {
+    return getOperand(ScopeIdx);
   }
-  VariableScope *getVarScope() const {
-    return llvh::cast<VariableScope>(getOperand(VarScopeIdx));
+  void setScope(Value *scope) {
+    setOperand(scope, ScopeIdx);
   }
-  void setVarScope(VariableScope *scope) {
+
+  /// Get/set the enclosing VariableScope of the function. Note that this may be
+  /// EmptySentinel if the function does not use its enclosing scope.
+  Value *getVarScope() const {
+    return getOperand(VarScopeIdx);
+  }
+  void setVarScope(Value *scope) {
     setOperand(scope, VarScopeIdx);
   }
 

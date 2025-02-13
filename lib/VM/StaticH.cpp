@@ -621,7 +621,8 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
     Handle<NativeJSFunction> innerFunc = NativeJSFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        Handle<Environment>::vmcast(toPHV(env)),
+        env ? Handle<Environment>::vmcast(toPHV(env))
+            : Runtime::makeNullHandle<Environment>(),
         func,
         funcInfo,
         unit);
@@ -660,7 +661,6 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
     const SHUnit *unit,
     SHLegacyValue *homeObjectOut,
     SHLegacyValue *superClass) {
-  assert(!_sh_ljs_is_null(*env) && "create class cannot have null environment");
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
   auto classRes = createClass(
@@ -668,21 +668,14 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
       superClass ? Handle{toPHV(superClass)} : Runtime::getEmptyValue(),
       [&runtime, env, func, funcInfo, unit, superClass](
           Handle<JSObject> ctorParent) {
+        auto envHandle = env ? Handle<Environment>::vmcast(toPHV(env))
+                             : HandleRootOwner::makeNullHandle<Environment>();
         // Derived classes get their own special CellKind.
-        return superClass ? *NativeJSDerivedClass::create(
-                                runtime,
-                                ctorParent,
-                                Handle<Environment>::vmcast(toPHV(env)),
-                                func,
-                                funcInfo,
-                                unit)
-                          : *NativeJSFunction::create(
-                                runtime,
-                                ctorParent,
-                                Handle<Environment>::vmcast(toPHV(env)),
-                                func,
-                                funcInfo,
-                                unit);
+        return superClass
+            ? *NativeJSDerivedClass::create(
+                  runtime, ctorParent, envHandle, func, funcInfo, unit)
+            : *NativeJSFunction::create(
+                  runtime, ctorParent, envHandle, func, funcInfo, unit);
       });
   if (classRes == ExecutionStatus::EXCEPTION)
     _sh_throw_current(shr);

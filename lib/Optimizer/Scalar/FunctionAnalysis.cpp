@@ -177,7 +177,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
 
   IRBuilder::InstructionDestroyer destroyer{};
 
-  worklist.push_back({create, true, create->getScope()});
+  worklist.push_back(
+      {create, true, llvh::dyn_cast<Instruction>(create->getScope())});
   while (!worklist.empty()) {
     // Instruction whose only possible closure value is the one being analyzed.
     Instruction *closureInst = worklist.back().maybeClosure;

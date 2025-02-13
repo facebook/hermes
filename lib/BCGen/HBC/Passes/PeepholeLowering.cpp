@@ -58,6 +58,11 @@ class DoLower {
         return lowerStringConcat(llvh::cast<StringConcatInst>(I));
       case ValueKind::CallInstKind:
         return stripEnvFromCall(llvh::cast<CallInst>(I), builder_);
+      case ValueKind::CreateFunctionInstKind:
+      case ValueKind::CreateGeneratorInstKind:
+      case ValueKind::CreateClassInstKind:
+        return lowerTopLevelFunction(
+            llvh::cast<BaseCreateLexicalChildInst>(I), builder_);
       default:
         return nullptr;
     }
@@ -113,6 +118,15 @@ class DoLower {
         restOfStrings);
     concatRes->setType(Type::createString());
     return concatRes;
+  }
+
+  Value *lowerTopLevelFunction(
+      BaseCreateLexicalChildInst *BCLI,
+      IRBuilder &builder) {
+    if (!llvh::isa<EmptySentinel>(BCLI->getScope()))
+      return nullptr;
+    BCLI->setScope(builder.getLiteralUndefined());
+    return BCLI;
   }
 };
 

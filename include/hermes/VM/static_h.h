@@ -508,7 +508,7 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
     const SHUnit *unit);
 
 /// Create a generator object.
-/// \param env Should not be null.
+/// \param env NULL if there is no environment.
 /// \param funcInfo Should not be null.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_generator_object(
     SHRuntime *shr,

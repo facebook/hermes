@@ -892,7 +892,10 @@ bool Verifier::visitBaseCreateLexicalChildInst(
     const hermes::BaseCreateLexicalChildInst &Inst) {
   auto *scope = Inst.getScope();
   AssertIWithMsg(
-      Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
+      Inst,
+      llvh::isa<EmptySentinel>(scope) || scope->getType().isUndefinedType() ||
+          scope->getType().isEnvironmentType(),
+      "Wrong scope type");
   // Verify that any GetParentScope inside the function produces the same
   // VariableScope that the function is being created with.
   if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
