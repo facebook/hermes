@@ -39,7 +39,7 @@ print(e);
 // RA-NEXT:                 TryStartInst %BB1, %BB2
 // RA-NEXT:%BB1:
 // RA-NEXT:  {r2}      %6 = CatchInst (:any)
-// RA-NEXT:  {r1}      %7 = CreateScopeInst (:environment) %VS0: any, empty: any
+// RA-NEXT:  {r1}      %7 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // RA-NEXT:                 StoreFrameInst {r1} %7: environment, {r2} %6: any, [%VS0.e]: any
 // RA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %7: environment, %VS0: any, %local(): functionCode
 // RA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %2: object, "local": string

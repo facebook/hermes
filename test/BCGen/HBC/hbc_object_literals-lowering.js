@@ -53,7 +53,7 @@ function accessorObjectLiteral(func) {
 
 // IRGEN:function global(): undefined
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// IRGEN-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // IRGEN-NEXT:       DeclareGlobalVarInst "emitAllocObjectLiteral": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "nestedAllocObjectLiteral": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "numericPlaceholder": string

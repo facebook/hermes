@@ -25,7 +25,7 @@ function fib(n) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "fib": string
 // CHECK-NEXT:  {r1}      %1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {r0}      %2 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r0}      %2 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  {r0}      %3 = CreateFunctionInst (:object) {r0} %2: environment, %VS0: any, %fib(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %3: object, {r1} %1: object, "fib": string
 // CHECK-NEXT:  {np0}     %5 = HBCLoadConstInst (:undefined) undefined: undefined

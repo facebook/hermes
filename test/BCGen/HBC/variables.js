@@ -127,7 +127,7 @@ function daa(a) {
 
 // CHKOPT:function global(): any
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKOPT-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHKOPT-NEXT:       DeclareGlobalVarInst "a": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "bar": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "foo": string

@@ -28,7 +28,7 @@ function bar(a,b,c,d,e,f,g,h) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "bar": string
 // CHECK-NEXT:  {r1}      %3 = HBCGetGlobalObjectInst (:object)

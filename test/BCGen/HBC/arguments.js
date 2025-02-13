@@ -36,7 +36,7 @@ function check_phi_handling(x) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "count": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "select": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "build": string
@@ -57,13 +57,13 @@ function check_phi_handling(x) {
 // CHECK-NEXT:                 ReturnInst {np0} %17: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function count(): number
+// CHECK:function count(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {np0}     %0 = AllocStackInst (:undefined) $arguments: any
-// CHECK-NEXT:  {np1}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 StoreStackInst {np1} %1: undefined, {np0} %0: undefined
-// CHECK-NEXT:  {np0}     %3 = LoadStackInst (:undefined) {np0} %0: undefined
-// CHECK-NEXT:  {n0}      %4 = HBCGetArgumentsLengthInst (:number) {np0} %3: undefined
+// CHECK-NEXT:  {r0}      %0 = AllocStackInst (:undefined|object) $arguments: any
+// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r0} %0: undefined|object
+// CHECK-NEXT:  {r0}      %3 = LoadStackInst (:undefined|object) {r0} %0: undefined|object
+// CHECK-NEXT:  {n0}      %4 = HBCGetArgumentsLengthInst (:number) {r0} %3: undefined|object
 // CHECK-NEXT:                 ReturnInst {n0} %4: number
 // CHECK-NEXT:function_end
 

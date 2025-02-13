@@ -45,7 +45,7 @@ var obj = {
 
 // CHECK:Function<global>(1 params, 6 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
 // CHECK-NEXT:    NewObject         r5
 // CHECK-NEXT:    LoadConstString   r4, "b"
@@ -87,9 +87,9 @@ var obj = {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 6: line 10 col 1
-// CHECK-NEXT:    bc 27: line 10 col 11
-// CHECK-NEXT:    bc 44: line 10 col 11
-// CHECK-NEXT:    bc 59: line 10 col 11
-// CHECK-NEXT:    bc 67: line 10 col 9
+// CHECK-NEXT:    bc 3: line 10 col 1
+// CHECK-NEXT:    bc 24: line 10 col 11
+// CHECK-NEXT:    bc 41: line 10 col 11
+// CHECK-NEXT:    bc 56: line 10 col 11
+// CHECK-NEXT:    bc 64: line 10 col 9
 // CHECK-NEXT:  0x0013  end of debug source table

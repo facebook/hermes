@@ -75,7 +75,7 @@ function foo(x) {
 // CHKOPT-NEXT:                 DeclareGlobalVarInst "b": string
 // CHKOPT-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKOPT-NEXT:  {r1}      %3 = HBCGetGlobalObjectInst (:object)
-// CHKOPT-NEXT:  {r0}      %4 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKOPT-NEXT:  {r0}      %4 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHKOPT-NEXT:  {r0}      %5 = CreateFunctionInst (:object) {r0} %4: environment, %VS0: any, %foo(): functionCode
 // CHKOPT-NEXT:                 StorePropertyLooseInst {r0} %5: object, {r1} %3: object, "foo": string
 // CHKOPT-NEXT:  {np0}     %7 = HBCLoadConstInst (:undefined) undefined: undefined

@@ -32,7 +32,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKRA:function global(): any
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  {r1}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHKRA-NEXT:  {r1}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "checkNonStaticBuiltin": string
@@ -140,7 +140,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:1[9, 1]
 // CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateTopLevelEnvironment r2, 0
+// CHKBC-NEXT:    CreateFunctionEnvironment r2, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...
@@ -195,16 +195,16 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 6: line 12 col 1
-// CHKBC-NEXT:    bc 11: line 12 col 1
-// CHKBC-NEXT:    bc 16: line 12 col 1
-// CHKBC-NEXT:    bc 28: line 12 col 1
-// CHKBC-NEXT:    bc 39: line 12 col 1
-// CHKBC-NEXT:    bc 50: line 12 col 1
-// CHKBC-NEXT:    bc 56: line 26 col 1
-// CHKBC-NEXT:    bc 62: line 26 col 7
-// CHKBC-NEXT:    bc 75: line 26 col 10
-// CHKBC-NEXT:    bc 80: line 26 col 6
+// CHKBC-NEXT:    bc 3: line 12 col 1
+// CHKBC-NEXT:    bc 8: line 12 col 1
+// CHKBC-NEXT:    bc 13: line 12 col 1
+// CHKBC-NEXT:    bc 25: line 12 col 1
+// CHKBC-NEXT:    bc 36: line 12 col 1
+// CHKBC-NEXT:    bc 47: line 12 col 1
+// CHKBC-NEXT:    bc 53: line 26 col 1
+// CHKBC-NEXT:    bc 59: line 26 col 7
+// CHKBC-NEXT:    bc 72: line 26 col 10
+// CHKBC-NEXT:    bc 77: line 26 col 6
 // CHKBC-NEXT:  0x0022  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23
 // CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1

@@ -28,7 +28,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // LRA:function global(): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// LRA-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // LRA-NEXT:                 DeclareGlobalVarInst "foo1": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo2": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo3": string
@@ -136,7 +136,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // BCGEN:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// BCGEN-NEXT:    CreateTopLevelEnvironment r1, 0
+// BCGEN-NEXT:    CreateFunctionEnvironment r1, 0
 // BCGEN-NEXT:    DeclareGlobalVar  "foo1"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo2"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo3"
@@ -210,16 +210,16 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 13 col 1
-// BCGEN-NEXT:    bc 6: line 13 col 1
-// BCGEN-NEXT:    bc 11: line 13 col 1
-// BCGEN-NEXT:    bc 16: line 13 col 1
-// BCGEN-NEXT:    bc 21: line 13 col 1
-// BCGEN-NEXT:    bc 26: line 13 col 1
-// BCGEN-NEXT:    bc 38: line 13 col 1
-// BCGEN-NEXT:    bc 49: line 13 col 1
-// BCGEN-NEXT:    bc 60: line 13 col 1
-// BCGEN-NEXT:    bc 71: line 13 col 1
-// BCGEN-NEXT:    bc 82: line 13 col 1
+// BCGEN-NEXT:    bc 3: line 13 col 1
+// BCGEN-NEXT:    bc 8: line 13 col 1
+// BCGEN-NEXT:    bc 13: line 13 col 1
+// BCGEN-NEXT:    bc 18: line 13 col 1
+// BCGEN-NEXT:    bc 23: line 13 col 1
+// BCGEN-NEXT:    bc 35: line 13 col 1
+// BCGEN-NEXT:    bc 46: line 13 col 1
+// BCGEN-NEXT:    bc 57: line 13 col 1
+// BCGEN-NEXT:    bc 68: line 13 col 1
+// BCGEN-NEXT:    bc 79: line 13 col 1
 // BCGEN-NEXT:  0x0022  function idx 1, starts at line 13 col 1
 // BCGEN-NEXT:    bc 5: line 13 col 21
 // BCGEN-NEXT:  0x0029  function idx 2, starts at line 15 col 1

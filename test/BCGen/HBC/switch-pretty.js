@@ -102,7 +102,7 @@ function f(x) {
 
 // CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "g"
 // CHECK-NEXT:    DeclareGlobalVar  "f"
 // CHECK-NEXT:    GetGlobalObject   r3
@@ -265,10 +265,10 @@ function f(x) {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 6: line 10 col 1
-// CHECK-NEXT:    bc 11: line 10 col 1
-// CHECK-NEXT:    bc 23: line 10 col 1
-// CHECK-NEXT:    bc 34: line 10 col 1
+// CHECK-NEXT:    bc 3: line 10 col 1
+// CHECK-NEXT:    bc 8: line 10 col 1
+// CHECK-NEXT:    bc 20: line 10 col 1
+// CHECK-NEXT:    bc 31: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 2, starts at line 12 col 1
 // CHECK-NEXT:    bc 119: line 23 col 13
 // CHECK-NEXT:    bc 126: line 23 col 14

@@ -56,7 +56,7 @@ function foo() {
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<foo>
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -111,7 +111,7 @@ function foo() {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 18: line 10 col 1
+// CHECK-NEXT:    bc 15: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 15: line 14 col 21
 // CHECK-NEXT:    bc 21: line 14 col 27

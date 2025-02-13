@@ -37,7 +37,7 @@ foo(0,0,1);
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    CreateTopLevelEnvironment r4, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r4, 0
 // CHECK-NEXT:    CreateClosure     r4, r4, Function<foo>
 // CHECK-NEXT:    PutByIdStrict     r3, r4, 1, "foo"
 // CHECK-NEXT:    GetByIdShort      r3, r3, 1, "foo"
@@ -60,7 +60,7 @@ foo(0,0,1);
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 9 col 1
 // CHECK-NEXT:    bc 0: line 9 col 1
-// CHECK-NEXT:    bc 18: line 9 col 1
-// CHECK-NEXT:    bc 24: line 12 col 1
-// CHECK-NEXT:    bc 36: line 12 col 4
+// CHECK-NEXT:    bc 15: line 9 col 1
+// CHECK-NEXT:    bc 21: line 12 col 1
+// CHECK-NEXT:    bc 33: line 12 col 4
 // CHECK-NEXT:  0x0010  end of debug source table

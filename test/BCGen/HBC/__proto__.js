@@ -59,7 +59,7 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:1[4, 2]
 // CHECK-NEXT:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "staticProto"
 // CHECK-NEXT:    DeclareGlobalVar  "dynamicProto"
 // CHECK-NEXT:    GetGlobalObject   r3
@@ -99,10 +99,10 @@ function dynamicProto(func, getProto) {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// CHECK-NEXT:    bc 6: line 11 col 1
-// CHECK-NEXT:    bc 11: line 11 col 1
-// CHECK-NEXT:    bc 23: line 11 col 1
-// CHECK-NEXT:    bc 34: line 11 col 1
+// CHECK-NEXT:    bc 3: line 11 col 1
+// CHECK-NEXT:    bc 8: line 11 col 1
+// CHECK-NEXT:    bc 20: line 11 col 1
+// CHECK-NEXT:    bc 31: line 11 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 11 col 1
 // CHECK-NEXT:    bc 11: line 12 col 10
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 15 col 1

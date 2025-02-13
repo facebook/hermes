@@ -39,11 +39,11 @@ function fibonacci(num) {
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
-// CHECK-NEXT:[@ 7] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
-// CHECK-NEXT:[@ 13] CreateClosure 1<Reg8>, 1<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 18] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 24] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 26] Ret 0<Reg8>
+// CHECK-NEXT:[@ 7] CreateFunctionEnvironment 1<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 10] CreateClosure 1<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 15] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 21] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 23] Ret 0<Reg8>
 
 // CHECK:Function<fibonacci>(2 params, 15 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
@@ -72,7 +72,7 @@ function fibonacci(num) {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 18: line 10 col 1
+// CHECK-NEXT:    bc 15: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 6: line 11 col 3
 // CHECK-NEXT:    bc 12: line 13 col 10

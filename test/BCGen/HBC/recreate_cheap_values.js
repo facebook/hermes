@@ -23,7 +23,7 @@ function negzero(f) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "poszero": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "negzero": string
 // CHECK-NEXT:  {r2}      %3 = HBCGetGlobalObjectInst (:object)

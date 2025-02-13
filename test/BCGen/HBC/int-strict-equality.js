@@ -163,7 +163,7 @@ function test_could_be_int(func) {
 
 // CHKBC:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHKBC-NEXT:    CreateFunctionEnvironment r1, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_int"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"
@@ -244,14 +244,14 @@ function test_could_be_int(func) {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 6: line 12 col 1
-// CHKBC-NEXT:    bc 11: line 12 col 1
-// CHKBC-NEXT:    bc 16: line 12 col 1
-// CHKBC-NEXT:    bc 21: line 12 col 1
-// CHKBC-NEXT:    bc 33: line 12 col 1
-// CHKBC-NEXT:    bc 44: line 12 col 1
-// CHKBC-NEXT:    bc 55: line 12 col 1
-// CHKBC-NEXT:    bc 66: line 12 col 1
+// CHKBC-NEXT:    bc 3: line 12 col 1
+// CHKBC-NEXT:    bc 8: line 12 col 1
+// CHKBC-NEXT:    bc 13: line 12 col 1
+// CHKBC-NEXT:    bc 18: line 12 col 1
+// CHKBC-NEXT:    bc 30: line 12 col 1
+// CHKBC-NEXT:    bc 41: line 12 col 1
+// CHKBC-NEXT:    bc 52: line 12 col 1
+// CHKBC-NEXT:    bc 63: line 12 col 1
 // CHKBC-NEXT:  0x001c  function idx 2, starts at line 23 col 1
 // CHKBC-NEXT:    bc 11: line 25 col 7
 // CHKBC-NEXT:  0x0023  function idx 3, starts at line 34 col 1

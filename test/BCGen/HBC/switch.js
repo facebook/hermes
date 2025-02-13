@@ -116,7 +116,7 @@ function switch_neg(x) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "f": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "regress1": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "jump_table": string

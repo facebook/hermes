@@ -71,7 +71,7 @@ function require(modIdx) {
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "require"
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<require>
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "require"
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -142,7 +142,7 @@ function require(modIdx) {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 17 col 1
 // CHECK-NEXT:    bc 0: line 17 col 1
-// CHECK-NEXT:    bc 18: line 17 col 1
+// CHECK-NEXT:    bc 15: line 17 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 17 col 1
 // CHECK-NEXT:    bc 25: line 36 col 21
 // CHECK-NEXT:    bc 30: line 36 col 30

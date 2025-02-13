@@ -59,7 +59,7 @@ function foo() { return; }
 
 // CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "binary"
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    GetGlobalObject   r3
@@ -112,10 +112,10 @@ function foo() { return; }
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 6: line 10 col 1
-// CHECK-NEXT:    bc 11: line 10 col 1
-// CHECK-NEXT:    bc 23: line 10 col 1
-// CHECK-NEXT:    bc 34: line 10 col 1
+// CHECK-NEXT:    bc 3: line 10 col 1
+// CHECK-NEXT:    bc 8: line 10 col 1
+// CHECK-NEXT:    bc 20: line 10 col 1
+// CHECK-NEXT:    bc 31: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 2: line 11 col 11
 // CHECK-NEXT:    bc 9: line 11 col 14

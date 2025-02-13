@@ -46,7 +46,7 @@ function simple(x, y) {
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "simple"
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<simple>
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "simple"
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -73,7 +73,7 @@ function simple(x, y) {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 18: line 10 col 1
+// CHECK-NEXT:    bc 15: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 13: line 12 col 10
 // CHECK-NEXT:    bc 22: line 13 col 10

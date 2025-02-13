@@ -115,7 +115,7 @@ function obj7() {
 
 // IRGEN:function global(): undefined
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// IRGEN-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj1": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj2": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj3": string
@@ -362,7 +362,7 @@ function obj7() {
 // BCGEN-NEXT:3[46, 6]
 // BCGEN-NEXT:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// BCGEN-NEXT:    CreateTopLevelEnvironment r1, 0
+// BCGEN-NEXT:    CreateFunctionEnvironment r1, 0
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
@@ -456,20 +456,20 @@ function obj7() {
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// BCGEN-NEXT:    bc 6: line 11 col 1
-// BCGEN-NEXT:    bc 11: line 11 col 1
-// BCGEN-NEXT:    bc 16: line 11 col 1
-// BCGEN-NEXT:    bc 21: line 11 col 1
-// BCGEN-NEXT:    bc 26: line 11 col 1
-// BCGEN-NEXT:    bc 31: line 11 col 1
-// BCGEN-NEXT:    bc 36: line 11 col 1
-// BCGEN-NEXT:    bc 48: line 11 col 1
-// BCGEN-NEXT:    bc 59: line 11 col 1
-// BCGEN-NEXT:    bc 70: line 11 col 1
-// BCGEN-NEXT:    bc 81: line 11 col 1
-// BCGEN-NEXT:    bc 92: line 11 col 1
-// BCGEN-NEXT:    bc 103: line 11 col 1
-// BCGEN-NEXT:    bc 114: line 11 col 1
+// BCGEN-NEXT:    bc 3: line 11 col 1
+// BCGEN-NEXT:    bc 8: line 11 col 1
+// BCGEN-NEXT:    bc 13: line 11 col 1
+// BCGEN-NEXT:    bc 18: line 11 col 1
+// BCGEN-NEXT:    bc 23: line 11 col 1
+// BCGEN-NEXT:    bc 28: line 11 col 1
+// BCGEN-NEXT:    bc 33: line 11 col 1
+// BCGEN-NEXT:    bc 45: line 11 col 1
+// BCGEN-NEXT:    bc 56: line 11 col 1
+// BCGEN-NEXT:    bc 67: line 11 col 1
+// BCGEN-NEXT:    bc 78: line 11 col 1
+// BCGEN-NEXT:    bc 89: line 11 col 1
+// BCGEN-NEXT:    bc 100: line 11 col 1
+// BCGEN-NEXT:    bc 111: line 11 col 1
 // BCGEN-NEXT:  0x002e  function idx 3, starts at line 40 col 1
 // BCGEN-NEXT:    bc 8: line 41 col 10
 // BCGEN-NEXT:  0x0035  function idx 4, starts at line 58 col 1
