@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Hermes CDP",
   "dependencies": {
-    "ws": "^8.16.0",
+    "ws": "^8.17.1",
     "chrome-launcher": "^0.15.2",
     "chromium-edge-launcher": "^0.2.0"
   }
