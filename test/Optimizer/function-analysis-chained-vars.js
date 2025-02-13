@@ -77,6 +77,7 @@ function main() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS2.y]: object
-// CHECK-NEXT:  %2 = CallInst (:number) %1: object, %x(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
+// CHECK-NEXT:  %2 = ResolveScopeInst (:environment) %VS1: any, %VS2: any, %0: environment
+// CHECK-NEXT:  %3 = CallInst (:number) %1: object, %x(): functionCode, true: boolean, %2: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

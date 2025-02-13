@@ -350,11 +350,34 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           continue;
         }
 
-        // If the scope is the same as the scope we are storing into, we know
-        // that the scope of the closure will always just be a pointer back to
-        // the scope. We can therefore can propagate it by simply using the
-        // scope at the point it is loaded.
-        bool propagateScope = store->getScope() == knownScope;
+        // If the scope is a descendent of the scope we are storing into, we
+        // know that the enclosing scope of the closure will always be reachable
+        // from the scope that the closure is loaded from. We can therefore can
+        // propagate it by simply using the scope at the point it is loaded.
+        bool propagateScope = false;
+        if (knownScope) {
+          // Get the scope instruction that is closest to the closure scope in
+          // this function. Any descendent of this must also be a descendent of
+          // the closure scope.
+          Instruction *parent =
+              getResolveScopeStart(knownScope, knownVarScope, closureVarScope)
+                  .first;
+          Value *iterScope = store->getScope();
+          // Walk up the scope chain from the store scope, and see if we reach
+          // the same parent.
+          for (;;) {
+            if (iterScope == parent) {
+              // The store scope is a descendent of the closure scope, and can
+              // be used to reach it.
+              propagateScope = true;
+              break;
+            }
+            auto *CSI = llvh::dyn_cast<CreateScopeInst>(iterScope);
+            if (!CSI)
+              break;
+            iterScope = CSI->getParentScope();
+          }
+        }
 
         for (Instruction *varUser : var->getUsers()) {
           auto *load = llvh::dyn_cast<LoadFrameInst>(varUser);
