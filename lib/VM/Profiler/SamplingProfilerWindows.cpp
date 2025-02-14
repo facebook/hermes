@@ -192,7 +192,7 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   GetThreadContext(winProfiler->currentThread_, &context);
 
   // Walk the stack.
-  walkRuntimeStack(profiler);
+  walkRuntimeStack(profiler, SamplingProfiler::MayAllocate::No);
 
   // Resume the thread.
   prevSuspendCount = ResumeThread(winProfiler->currentThread_);

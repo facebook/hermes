@@ -70,12 +70,24 @@ void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
   }
 }
 
-void SamplingProfiler::walkRuntimeStack(
+uint32_t SamplingProfiler::walkRuntimeStack(
     StackTrace &sampleStorage,
-    InLoom inLoom) {
+    InLoom inLoom,
+    MayAllocate mayAllocate) {
+  unsigned numSkipped = 0;
+
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
   for (ConstStackFramePtr frame : runtime_.getStackFrames()) {
+    // Out of space in the pre-allocated buffer. If we are executing this in
+    // signal handler, truncate the stack trace to the most recent frames.
+    // Otherwise, grow the buffer.
+    if (sampleStorage.stack.size() == sampleStorage.stack.capacity() &&
+        mayAllocate == MayAllocate::No) {
+      ++numSkipped;
+      continue;
+    }
+
     StackFrame frameStorage;
     // Whether we successfully captured a stack frame or not.
     bool capturedFrame = true;
@@ -114,13 +126,11 @@ void SamplingProfiler::walkRuntimeStack(
     ip = frame.getSavedIP();
     if (capturedFrame) {
       sampleStorage.stack.push_back(std::move(frameStorage));
-      if (sampleStorage.stack.size() >= sampleStorage.stack.capacity()) {
-        break;
-      }
     }
   }
   sampleStorage.tid = oscompat::global_thread_id();
   sampleStorage.timeStamp = std::chrono::steady_clock::now();
+  return numSkipped;
 }
 
 SamplingProfiler::SamplingProfiler(Runtime &runtime) : runtime_{runtime} {
@@ -295,7 +305,7 @@ void SamplingProfiler::recordPreSuspendStack(
   leafFrame.suspendFrame = suspendExtraInfo;
 
   // Leaf frame slot has been used, filling from index 1.
-  walkRuntimeStack(preSuspendStackStorage_, InLoom::No);
+  walkRuntimeStack(preSuspendStackStorage_, InLoom::No, MayAllocate::Yes);
 }
 
 bool operator==(

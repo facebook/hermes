@@ -225,7 +225,8 @@ void SamplerPosix::profilingSignalHandler(int signo) {
       profilerInstance != nullptr &&
       "Why is SamplerPosix::instance_ not initialized yet?");
 
-  profilerInstance->walkRuntimeStack(localProfiler);
+  profilerInstance->walkRuntimeStack(
+      localProfiler, SamplingProfiler::MayAllocate::No);
 
   // Ensure that writes made in the handler are visible to the timer thread.
   profilerForSig_.store(nullptr);
@@ -410,7 +411,7 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
     // Do not register domains for Loom profiling, since we don't use them for
     // symbolication.
     localProfiler->walkRuntimeStack(
-        profilerInstance->sampleStorage_, InLoom::Yes);
+        profilerInstance->sampleStorage_, InLoom::Yes, MayAllocate::No);
     sampledStackDepth = profilerInstance->sampleStorage_.stack.size();
   } else {
     // TODO: log "GC in process" meta event.

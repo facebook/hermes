@@ -40,6 +40,11 @@ namespace sampling_profiler {
 
 Sampler::~Sampler() = default;
 
+Sampler::Sampler() {
+  // Reserve some initial space for samples
+  sampleStorage_.stack.reserve(50);
+}
+
 void Sampler::registerRuntime(SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
   profilers_.insert(profiler);
@@ -71,28 +76,41 @@ bool Sampler::sampleStack(SamplingProfiler *localProfiler) {
   if (localProfiler->suspendCount_ > 0) {
     // Sampling profiler is suspended. Copy pre-captured stack instead without
     // interrupting the VM thread.
-    sampleStorage_.stack.insert(
-        sampleStorage_.stack.begin(),
+    localProfiler->sampledStacks_.emplace_back(
+        localProfiler->preSuspendStackStorage_.tid,
+        localProfiler->preSuspendStackStorage_.timeStamp,
         localProfiler->preSuspendStackStorage_.stack.begin(),
         localProfiler->preSuspendStackStorage_.stack.end());
   } else {
+    size_t currCapacity = sampleStorage_.stack.capacity();
     // Ensure there are no allocations in the signal handler by keeping ample
     // reserved space.
     localProfiler->domains_.reserve(
-        localProfiler->domains_.size() + SamplingProfiler::kMaxStackDepth);
+        localProfiler->domains_.size() + currCapacity);
     size_t domainCapacityBefore = localProfiler->domains_.capacity();
     (void)domainCapacityBefore;
 
     // Ditto for native functions.
     localProfiler->nativeFunctions_.reserve(
-        localProfiler->nativeFunctions_.size() +
-        SamplingProfiler::kMaxStackDepth);
+        localProfiler->nativeFunctions_.size() + currCapacity);
     size_t nativeFunctionsCapacityBefore =
         localProfiler->nativeFunctions_.capacity();
     (void)nativeFunctionsCapacityBefore;
 
     if (!platformSuspendVMAndWalkStack(localProfiler)) {
       return false;
+    }
+
+    // The stack trace was truncated due to insufficient pre-allocated size in
+    // the buffer. Grow the buffer and discard current sample.
+    if (numSkippedFrames_ > 0) {
+      sampleStorage_.stack.reserve((numSkippedFrames_ + currCapacity) * 3 / 2);
+    } else {
+      localProfiler->sampledStacks_.emplace_back(
+          sampleStorage_.tid,
+          sampleStorage_.timeStamp,
+          sampleStorage_.stack.begin(),
+          sampleStorage_.stack.end());
     }
 
     assert(
@@ -105,17 +123,14 @@ bool Sampler::sampleStack(SamplingProfiler *localProfiler) {
         "Must not dynamically allocate in signal handler");
   }
 
-  localProfiler->sampledStacks_.emplace_back(
-      sampleStorage_.tid,
-      sampleStorage_.timeStamp,
-      sampleStorage_.stack.begin(),
-      sampleStorage_.stack.end());
-
   sampleStorage_.stack.clear();
+  numSkippedFrames_ = 0;
   return true;
 }
 
-void Sampler::walkRuntimeStack(SamplingProfiler *profiler) {
+void Sampler::walkRuntimeStack(
+    SamplingProfiler *profiler,
+    SamplingProfiler::MayAllocate mayAllocate) {
   assert(
       profiler->suspendCount_ == 0 &&
       "Shouldn't interrupt the VM thread when the sampling profiler is "
@@ -128,7 +143,8 @@ void Sampler::walkRuntimeStack(SamplingProfiler *profiler) {
       !curThreadRuntime.getHeap().inGC() &&
       "sampling profiler should be suspended before GC");
   (void)curThreadRuntime;
-  profiler->walkRuntimeStack(sampleStorage_, SamplingProfiler::InLoom::No);
+  numSkippedFrames_ = profiler->walkRuntimeStack(
+      sampleStorage_, SamplingProfiler::InLoom::No, mayAllocate);
 }
 
 void Sampler::timerLoop(double meanHzFreq) {

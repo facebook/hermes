@@ -114,12 +114,10 @@ class SamplingProfiler {
     ThreadId tid{0};
     /// Timestamp when the stack trace is taken.
     TimeStampType timeStamp;
-    /// Captured stack frames.
+    /// Captured stack frames, starting from the most recent frame.
     std::vector<StackFrame> stack;
 
-    explicit StackTrace(uint32_t preallocatedSize) {
-      stack.reserve(preallocatedSize);
-    }
+    explicit StackTrace() = default;
     explicit StackTrace(
         ThreadId tid,
         TimeStampType ts,
@@ -127,6 +125,8 @@ class SamplingProfiler {
         const std::vector<StackFrame>::iterator stackEnd)
         : tid(tid), timeStamp(ts), stack(stackStart, stackEnd) {}
   };
+
+  enum class MayAllocate { No, Yes };
 
   /// \return true if this SamplingProfiler belongs to the current running
   /// thread. The current thread can change (e.g. in the time between
@@ -168,9 +168,6 @@ class SamplingProfiler {
  private:
   friend struct sampling_profiler::Sampler;
 
-  /// Max size of sampleStorage_.
-  static const int kMaxStackDepth = 500;
-
   /// Protect data specific to a runtime, such as the sampled stacks,
   /// domains, and thread associated with the runtime.
   std::mutex runtimeDataLock_;
@@ -187,7 +184,7 @@ class SamplingProfiler {
   /// resume()d.
   uint32_t suspendCount_{0};
   /// JS stack captured at time of GC.
-  StackTrace preSuspendStackStorage_{kMaxStackDepth};
+  StackTrace preSuspendStackStorage_{};
 
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
@@ -227,11 +224,18 @@ class SamplingProfiler {
   enum class InLoom { No, Yes };
 
   /// Walk runtime stack frames and store in \p sampleStorage.
-  /// This function is called from signal handler so should obey all
-  /// rules of signal handler(no lock, no memory allocation etc...)
-  /// \param startIndex specifies the start index in \p sampleStorage to fill.
+  /// When this function is being invoked from signal handler, it should obey
+  /// all rules of signal handler(no lock, no memory allocation etc...)
+  /// \param sampleStorage references the buffer where stack frames will be
+  /// stored.
   /// \param inLoom specifies this function is being invoked in a Loom callback.
-  void walkRuntimeStack(StackTrace &sampleStorage, InLoom inLoom);
+  /// \param mayAllocate specifies whether this function may allocate memory.
+  /// \return the number of frames that aren't stored in \p sampleStorage
+  /// due to insufficient space.
+  uint32_t walkRuntimeStack(
+      StackTrace &sampleStorage,
+      InLoom inLoom,
+      MayAllocate mayAllocate);
 
  private:
   /// Record JS stack at time of suspension, caller must hold
