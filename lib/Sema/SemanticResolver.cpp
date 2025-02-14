@@ -38,7 +38,7 @@ std::string stringForSHBuiltinError(
 SemanticResolver::SemanticResolver(
     Context &astContext,
     sema::SemContext &semCtx,
-    const DeclarationFileListTy &ambientDecls,
+    const DeclarationFileListTy *ambientDecls,
     DeclCollectorMapTy *saveDecls,
     bool compile,
     bool typed)
@@ -2367,6 +2367,9 @@ void SemanticResolver::processAmbientDecls() {
       globalScope_ &&
       "global scope must be created when declaring ambient globals");
 
+  if (!ambientDecls_)
+    return;
+
   /// This visitor structs collects declarations within a single closure without
   /// descending into child closures.
   struct DeclHoisting {
@@ -2421,7 +2424,7 @@ void SemanticResolver::processAmbientDecls() {
     }
   };
 
-  for (auto *programNode : ambientDecls_) {
+  for (auto *programNode : *ambientDecls_) {
     DeclHoisting DH;
     programNode->visit(DH);
     // Create variable declarations for each of the hoisted variables.
