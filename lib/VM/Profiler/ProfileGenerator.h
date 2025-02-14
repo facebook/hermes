@@ -27,8 +27,6 @@ class ProfileGenerator {
   /// Emit Profile in a single struct.
   static facebook::hermes::sampling_profiler::Profile generate(
       const SamplingProfiler &sp,
-      uint32_t pid,
-      const SamplingProfiler::ThreadNamesMap &threadNames,
       const std::vector<SamplingProfiler::StackTrace> &sampledStacks);
 };
 

@@ -229,10 +229,9 @@ SamplingProfiler::dumpAsProfilesGlobal() {
 
 facebook::hermes::sampling_profiler::Profile SamplingProfiler::dumpAsProfile() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  auto pid = oscompat::process_id();
 
   facebook::hermes::sampling_profiler::Profile profile =
-      ProfileGenerator::generate(*this, pid, threadNames_, sampledStacks_);
+      ProfileGenerator::generate(*this, sampledStacks_);
 
   clear();
   return profile;

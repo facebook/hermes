@@ -131,18 +131,7 @@ static fhsp::ProfileSampleCallStackFrame *formatCallStackFrame(
 
 /* static */ fhsp::Profile ProfileGenerator::generate(
     const SamplingProfiler &sp,
-    uint32_t pid,
-    const SamplingProfiler::ThreadNamesMap &threadNames,
     const std::vector<SamplingProfiler::StackTrace> &sampledStacks) {
-  fhsp::Process process{pid};
-
-  assert(!threadNames.empty() && "Expected at least one Thread recorded");
-  // It is unclear why Hermes keeps map of threads for a local profiler.
-  // See D67453370 for more context, this map is expected to contain a single
-  // entry.
-  auto threadEntry = threadNames.begin();
-  fhsp::Thread thread{threadEntry->first, threadEntry->second};
-
   std::vector<fhsp::ProfileSample> samples;
   samples.reserve(sampledStacks.size());
   for (const SamplingProfiler::StackTrace &sampledStack : sampledStacks) {
@@ -154,10 +143,10 @@ static fhsp::ProfileSampleCallStackFrame *formatCallStackFrame(
       callFrames.emplace_back(formatCallStackFrame(frame, sp));
     }
 
-    samples.emplace_back(timestamp, callFrames);
+    samples.emplace_back(timestamp, sampledStack.tid, callFrames);
   }
 
-  return fhsp::Profile{process, thread, samples};
+  return fhsp::Profile{samples};
 }
 
 } // namespace vm

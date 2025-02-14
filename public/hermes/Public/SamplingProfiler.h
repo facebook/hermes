@@ -18,43 +18,6 @@ namespace facebook {
 namespace hermes {
 namespace sampling_profiler {
 
-/// Provides details about the Process where sampling occurred.
-struct HERMES_EXPORT Process {
- public:
-  explicit Process(uint64_t id) : id_(id) {}
-
-  /// \return id of the OS process, where sampling occurred.
-  uint64_t getId() const {
-    return id_;
-  }
-
- private:
-  /// OS-level id of the process.
-  uint64_t id_;
-};
-
-/// Provides details about the Thread where sampling occurred.
-struct HERMES_EXPORT Thread {
- public:
-  Thread(uint64_t id, const std::string &name) : id_(id), name_(name) {}
-
-  /// \return id of the OS thread, where sampling occurred.
-  uint64_t getId() const {
-    return id_;
-  }
-
-  /// \return name of the OS thread, where sampling occurred.
-  const std::string &getName() const {
-    return name_;
-  }
-
- private:
-  /// OS-level id of the thread.
-  uint64_t id_;
-  /// OS-level name of the thread.
-  std::string name_;
-};
-
 /// Represents a single frame inside the captured sample stack.
 /// Base struct for different kinds of frames.
 struct HERMES_EXPORT ProfileSampleCallStackFrame {
@@ -215,13 +178,21 @@ struct HERMES_EXPORT ProfileSample {
  public:
   ProfileSample(
       uint64_t timestamp,
+      uint64_t threadId,
       std::vector<ProfileSampleCallStackFrame *> callStack)
-      : timestamp_(timestamp), callStack_(std::move(callStack)) {}
+      : timestamp_(timestamp),
+        threadId_(threadId),
+        callStack_(std::move(callStack)) {}
 
   /// \return serialized unix timestamp in microseconds granularity. The
   /// moment when this sample was recorded.
   uint64_t getTimestamp() const {
     return timestamp_;
+  }
+
+  /// \return thread id where sample was recorded.
+  uint64_t getThreadId() const {
+    return threadId_;
   }
 
   /// \return a snapshot of the call stack. The first element of the vector is
@@ -233,6 +204,8 @@ struct HERMES_EXPORT ProfileSample {
  private:
   /// When the call stack snapshot was taken (μs).
   uint64_t timestamp_;
+  /// Thread id where sample was recorded.
+  uint64_t threadId_;
   /// Snapshot of the call stack. The first element of the vector is
   /// the lowest frame in the stack.
   std::vector<ProfileSampleCallStackFrame *> callStack_;
@@ -241,20 +214,8 @@ struct HERMES_EXPORT ProfileSample {
 /// Contains relevant information about the sampled trace from start to finish.
 struct HERMES_EXPORT Profile {
  public:
-  Profile(Process process, Thread thread, std::vector<ProfileSample> samples)
-      : process_(process),
-        thread_(std::move(thread)),
-        samples_(std::move(samples)) {}
-
-  /// \return details about the Process where sampling occurred.
-  const Process &getProcess() const {
-    return process_;
-  }
-
-  /// \return details about the Thread where sampling occurred.
-  const Thread &getThread() const {
-    return thread_;
-  }
+  explicit Profile(std::vector<ProfileSample> samples)
+      : samples_(std::move(samples)) {}
 
   /// \return list of recorded samples, should be chronologically sorted.
   const std::vector<ProfileSample> &getSamples() const {
@@ -262,10 +223,6 @@ struct HERMES_EXPORT Profile {
   }
 
  private:
-  /// Represents OS process where sampling occurred.
-  Process process_;
-  /// Represents OS thread where sampling occurred.
-  Thread thread_;
   /// List of recorded samples, should be chronologically sorted.
   std::vector<ProfileSample> samples_;
 };
