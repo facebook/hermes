@@ -601,6 +601,9 @@ function deserializeProperty() {
     shorthand: this.deserializeBoolean(),
   };
 }
+function deserializeClassLikeFirst() {
+  throw new Error('ClassLike' + ' should not appear in program buffer');
+}
 function deserializeClassDeclaration() {
   return {
     type: 'ClassDeclaration',
@@ -629,6 +632,9 @@ function deserializeClassExpression() {
   };
 }
 
+function deserializeClassLikeLast() {
+  throw new Error('ClassLike' + ' should not appear in program buffer');
+}
 function deserializeClassBody() {
   return {
     type: 'ClassBody',
@@ -648,6 +654,7 @@ function deserializeClassProperty() {
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
     typeAnnotation: this.deserializeNode(),
+    tsModifiers: this.deserializeNode(),
   };
 }
 
@@ -662,6 +669,7 @@ function deserializeClassPrivateProperty() {
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
     typeAnnotation: this.deserializeNode(),
+    tsModifiers: this.deserializeNode(),
   };
 }
 
@@ -2084,6 +2092,16 @@ function deserializeCoverTypedIdentifier() {
 function deserializeCoverLast() {
   throw new Error('Cover' + ' should not appear in program buffer');
 }
+function deserializeSHBuiltin() {
+  return {type: 'SHBuiltin', loc: this.addEmptyLoc()};
+}
+function deserializeImplicitCheckedCast() {
+  return {
+    type: 'ImplicitCheckedCast',
+    loc: this.addEmptyLoc(),
+    argument: this.deserializeNode(),
+  };
+}
 module.exports = [
   deserializeEmpty,
   deserializeMetadata,
@@ -2171,10 +2189,12 @@ module.exports = [
   deserializeTaggedTemplateExpression,
   deserializeTemplateElement,
   deserializeProperty,
+  deserializeClassLikeFirst,
   deserializeClassDeclaration,
 
   deserializeClassExpression,
 
+  deserializeClassLikeLast,
   deserializeClassBody,
   deserializeClassProperty,
 
@@ -2381,4 +2401,6 @@ module.exports = [
   deserializeCoverRestElement,
   deserializeCoverTypedIdentifier,
   deserializeCoverLast,
+  deserializeSHBuiltin,
+  deserializeImplicitCheckedCast,
 ];
