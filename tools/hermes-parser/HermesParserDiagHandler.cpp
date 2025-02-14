@@ -72,7 +72,7 @@ std::string HermesParserDiagHandler::formatDiagnostic(
       SourceErrorManager::buildSourceAndCaretLine(diag, sm_.getOutputOptions());
 
   // Do not include caret line for non-ASCII characters which may have width > 1
-  bool showCaret = isAllASCII(sourceLine.begin(), sourceLine.end());
+  bool showCaret = isAllASCII(sourceLine);
   if (!showCaret) {
     return (Twine(messageLine) + sourceLine).str();
   }
