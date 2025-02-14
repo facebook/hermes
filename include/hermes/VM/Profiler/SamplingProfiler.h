@@ -117,7 +117,9 @@ class SamplingProfiler {
     /// Captured stack frames.
     std::vector<StackFrame> stack;
 
-    explicit StackTrace(uint32_t preallocatedSize) : stack(preallocatedSize) {}
+    explicit StackTrace(uint32_t preallocatedSize) {
+      stack.reserve(preallocatedSize);
+    }
     explicit StackTrace(
         ThreadId tid,
         TimeStampType ts,
@@ -184,8 +186,6 @@ class SamplingProfiler {
   /// The counter of how many suspend calls are pending -- i.e., need to be
   /// resume()d.
   uint32_t suspendCount_{0};
-  /// The actual sampled stack depth in preSuspendStackStorage_.
-  uint32_t preSuspendStackDepth_{0};
   /// JS stack captured at time of GC.
   StackTrace preSuspendStackStorage_{kMaxStackDepth};
 
@@ -231,12 +231,7 @@ class SamplingProfiler {
   /// rules of signal handler(no lock, no memory allocation etc...)
   /// \param startIndex specifies the start index in \p sampleStorage to fill.
   /// \param inLoom specifies this function is being invoked in a Loom callback.
-  /// \return total number of stack frames captured in \p sampleStorage
-  /// including existing frames before \p startIndex.
-  uint32_t walkRuntimeStack(
-      StackTrace &sampleStorage,
-      InLoom inLoom,
-      uint32_t startIndex = 0);
+  void walkRuntimeStack(StackTrace &sampleStorage, InLoom inLoom);
 
  private:
   /// Record JS stack at time of suspension, caller must hold

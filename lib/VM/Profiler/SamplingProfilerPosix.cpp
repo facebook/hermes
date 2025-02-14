@@ -409,8 +409,9 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
         "Why is Sampler::instance_ not initialized yet?");
     // Do not register domains for Loom profiling, since we don't use them for
     // symbolication.
-    sampledStackDepth = localProfiler->walkRuntimeStack(
+    localProfiler->walkRuntimeStack(
         profilerInstance->sampleStorage_, InLoom::Yes);
+    sampledStackDepth = profilerInstance->sampleStorage_.stack.size();
   } else {
     // TODO: log "GC in process" meta event.
     sampledStackDepth = 0;
@@ -427,6 +428,7 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
     const StackFrame &stackFrame = profilerInstance->sampleStorage_.stack[i];
     localProfiler->collectStackForLoomCommon(stackFrame, frames, i);
   }
+  profilerInstance->sampleStorage_.stack.clear();
   *depth = sampledStackDepth;
   if (*depth == 0) {
     return StackCollectionRetcode::EMPTY_STACK;

@@ -71,10 +71,6 @@ struct Sampler {
   /// Whether profiler is enabled or not. Protected by profilerLock_.
   bool enabled_{false};
 
-  /// Threading: load/store of sampledStackDepth_ and sampleStorage_
-  /// are protected by samplingDoneSem_.
-  /// Actual sampled stack depth in sampleStorage_.
-  uint32_t sampledStackDepth_{0};
   /// Preallocated stack frames storage for signal handler(because
   /// allocating memory in signal handler is not allowed)
   /// This storage does not need to be protected by lock because accessing to

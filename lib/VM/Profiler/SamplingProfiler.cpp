@@ -70,18 +70,15 @@ void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
   }
 }
 
-uint32_t SamplingProfiler::walkRuntimeStack(
+void SamplingProfiler::walkRuntimeStack(
     StackTrace &sampleStorage,
-    InLoom inLoom,
-    uint32_t startIndex) {
-  unsigned count = startIndex;
-
+    InLoom inLoom) {
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
   for (ConstStackFramePtr frame : runtime_.getStackFrames()) {
+    StackFrame frameStorage;
     // Whether we successfully captured a stack frame or not.
     bool capturedFrame = true;
-    auto &frameStorage = sampleStorage.stack[count];
     // Check if it is pure JS frame.
     auto *calleeCodeBlock = frame.getCalleeCodeBlock();
     if (calleeCodeBlock != nullptr) {
@@ -116,15 +113,14 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     // Update ip to caller for next iteration.
     ip = frame.getSavedIP();
     if (capturedFrame) {
-      ++count;
-      if (count >= sampleStorage.stack.size()) {
+      sampleStorage.stack.push_back(std::move(frameStorage));
+      if (sampleStorage.stack.size() >= sampleStorage.stack.capacity()) {
         break;
       }
     }
   }
   sampleStorage.tid = oscompat::global_thread_id();
   sampleStorage.timeStamp = std::chrono::steady_clock::now();
-  return count;
 }
 
 SamplingProfiler::SamplingProfiler(Runtime &runtime) : runtime_{runtime} {
@@ -274,7 +270,7 @@ void SamplingProfiler::resume() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   assert(suspendCount_ > 0 && "resume() without suspend()");
   if (--suspendCount_ == 0) {
-    preSuspendStackDepth_ = 0;
+    preSuspendStackStorage_.stack.clear();
   }
 }
 
@@ -288,13 +284,18 @@ void SamplingProfiler::recordPreSuspendStack(
     suspendExtraInfo.gcFrame = &(*(retPair.first));
   }
 
+  assert(
+      preSuspendStackStorage_.stack.size() == 0 &&
+      "Pre-suspend stack storage should be empty before sampling.");
+
+  preSuspendStackStorage_.stack.resize(1);
+
   auto &leafFrame = preSuspendStackStorage_.stack[0];
   leafFrame.kind = StackFrame::FrameKind::SuspendFrame;
   leafFrame.suspendFrame = suspendExtraInfo;
 
   // Leaf frame slot has been used, filling from index 1.
-  preSuspendStackDepth_ =
-      walkRuntimeStack(preSuspendStackStorage_, InLoom::No, 1);
+  walkRuntimeStack(preSuspendStackStorage_, InLoom::No);
 }
 
 bool operator==(

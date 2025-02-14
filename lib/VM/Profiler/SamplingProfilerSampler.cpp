@@ -71,15 +71,10 @@ bool Sampler::sampleStack(SamplingProfiler *localProfiler) {
   if (localProfiler->suspendCount_ > 0) {
     // Sampling profiler is suspended. Copy pre-captured stack instead without
     // interrupting the VM thread.
-    if (localProfiler->preSuspendStackDepth_ > 0) {
-      sampleStorage_ = localProfiler->preSuspendStackStorage_;
-      sampledStackDepth_ = localProfiler->preSuspendStackDepth_;
-    } else {
-      // This suspension didn't record a stack trace. For example, a GC (like
-      // mallocGC) did not record JS stack.
-      // TODO: fix this for all cases.
-      sampledStackDepth_ = 0;
-    }
+    sampleStorage_.stack.insert(
+        sampleStorage_.stack.begin(),
+        localProfiler->preSuspendStackStorage_.stack.begin(),
+        localProfiler->preSuspendStackStorage_.stack.end());
   } else {
     // Ensure there are no allocations in the signal handler by keeping ample
     // reserved space.
@@ -110,14 +105,13 @@ bool Sampler::sampleStack(SamplingProfiler *localProfiler) {
         "Must not dynamically allocate in signal handler");
   }
 
-  assert(
-      sampledStackDepth_ <= sampleStorage_.stack.size() &&
-      "How can we sample more frames than storage?");
   localProfiler->sampledStacks_.emplace_back(
       sampleStorage_.tid,
       sampleStorage_.timeStamp,
       sampleStorage_.stack.begin(),
-      sampleStorage_.stack.begin() + sampledStackDepth_);
+      sampleStorage_.stack.end());
+
+  sampleStorage_.stack.clear();
   return true;
 }
 
@@ -134,8 +128,7 @@ void Sampler::walkRuntimeStack(SamplingProfiler *profiler) {
       !curThreadRuntime.getHeap().inGC() &&
       "sampling profiler should be suspended before GC");
   (void)curThreadRuntime;
-  sampledStackDepth_ =
-      profiler->walkRuntimeStack(sampleStorage_, SamplingProfiler::InLoom::No);
+  profiler->walkRuntimeStack(sampleStorage_, SamplingProfiler::InLoom::No);
 }
 
 void Sampler::timerLoop(double meanHzFreq) {
