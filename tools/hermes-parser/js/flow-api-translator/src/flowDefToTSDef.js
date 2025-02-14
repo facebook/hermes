@@ -1090,6 +1090,16 @@ const getTransforms = (
             | TSESTree.TSTypeAliasDeclaration
           ),
           TSESTree.ExportDefaultDeclaration,
+        ]
+      | [
+          (
+            | TSESTree.VariableDeclaration
+            | TSESTree.ClassDeclaration
+            | TSESTree.TSDeclareFunction
+            | TSESTree.TSTypeAliasDeclaration
+          ),
+          TSESTree.TSTypeAliasDeclaration,
+          TSESTree.ExportDefaultDeclaration,
         ] {
       if (node.default === true) {
         const declaration = node.declaration;
@@ -1307,6 +1317,29 @@ const getTransforms = (
                 ],
                 declare: true,
                 kind: 'const',
+              },
+              {
+                type: 'TSTypeAliasDeclaration',
+                declare: true,
+                id: {
+                  type: 'Identifier',
+                  decorators: [],
+                  name: SPECIFIER,
+                  optional: false,
+                  loc: DUMMY_LOC,
+                },
+                typeAnnotation: {
+                  type: 'TSTypeQuery',
+                  exprName: {
+                    type: 'Identifier',
+                    decorators: [],
+                    name: SPECIFIER,
+                    optional: false,
+                    loc: DUMMY_LOC,
+                  },
+                  loc: DUMMY_LOC,
+                },
+                loc: DUMMY_LOC,
               },
               {
                 type: 'ExportDefaultDeclaration',
