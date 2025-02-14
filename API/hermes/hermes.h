@@ -88,14 +88,6 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Dump sampled stack trace to the given stream.
   static void dumpSampledTraceToStream(std::ostream &stream);
 
-  /// Serialize the sampled stack to the format expected by DevTools'
-  /// Profiler.stop return type.
-  void sampledTraceToStreamInDevToolsFormat(std::ostream &stream);
-
-  /// Dump sampled stack trace for a given runtime to a data structure that can
-  /// be used by third parties.
-  sampling_profiler::Profile dumpSampledTraceToProfile();
-
   /// Dump sampled stack trace for all registered local sampling profiler
   /// instances to a data structure that can be used by third parties.
   static std::vector<sampling_profiler::Profile>
@@ -118,6 +110,17 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Disable code coverage profiler.
   static void disableCodeCoverageProfiler();
 
+  /// Define a destructor to serve as the key function.
+  ~HermesRuntime() override;
+
+  /// Serialize the sampled stack to the format expected by DevTools'
+  /// Profiler.stop return type.
+  virtual void sampledTraceToStreamInDevToolsFormat(std::ostream &stream) = 0;
+
+  /// Dump sampled stack trace for a given runtime to a data structure that can
+  /// be used by third parties.
+  virtual sampling_profiler::Profile dumpSampledTraceToProfile() = 0;
+
   // The base class declares most of the interesting methods.  This
   // just declares new methods which are specific to HermesRuntime.
   // The actual implementations of the pure virtual methods are
@@ -127,52 +130,52 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Load a new segment into the Runtime.
   /// The \param context must be a valid RequireContext retrieved from JS
   /// using `require.context`.
-  void loadSegment(
+  virtual void loadSegment(
       std::unique_ptr<const jsi::Buffer> buffer,
-      const jsi::Value &context);
+      const jsi::Value &context) = 0;
 
   /// Gets a guaranteed unique id for an Object (or, respectively, String
   /// or PropNameId), which is assigned at allocation time and is
   /// static throughout that object's (or string's, or PropNameID's)
   /// lifetime.
-  uint64_t getUniqueID(const jsi::Object &o) const;
-  uint64_t getUniqueID(const jsi::BigInt &s) const;
-  uint64_t getUniqueID(const jsi::String &s) const;
-  uint64_t getUniqueID(const jsi::PropNameID &pni) const;
-  uint64_t getUniqueID(const jsi::Symbol &sym) const;
+  virtual uint64_t getUniqueID(const jsi::Object &o) const = 0;
+  virtual uint64_t getUniqueID(const jsi::BigInt &s) const = 0;
+  virtual uint64_t getUniqueID(const jsi::String &s) const = 0;
+  virtual uint64_t getUniqueID(const jsi::PropNameID &pni) const = 0;
+  virtual uint64_t getUniqueID(const jsi::Symbol &sym) const = 0;
 
   /// Same as the other \c getUniqueID, except it can return 0 for some values.
   /// 0 means there is no ID associated with the value.
-  uint64_t getUniqueID(const jsi::Value &val) const;
+  virtual uint64_t getUniqueID(const jsi::Value &val) const = 0;
 
   /// From an ID retrieved from \p getUniqueID, go back to the object.
   /// NOTE: This is much slower in general than the reverse operation, and takes
   /// up more memory. Don't use this unless it's absolutely necessary.
   /// \return a jsi::Object if a matching object is found, else returns null.
-  jsi::Value getObjectForID(uint64_t id);
+  virtual jsi::Value getObjectForID(uint64_t id) = 0;
 
   /// Get a structure representing the execution history (currently just of
   /// GC, but will be generalized as necessary), to aid in debugging
   /// non-deterministic execution.
-  const ::hermes::vm::GCExecTrace &getGCExecTrace() const;
+  virtual const ::hermes::vm::GCExecTrace &getGCExecTrace() const = 0;
 
   /// Get IO tracking (aka HBC page access) info as a JSON string.
   /// See hermes::vm::Runtime::getIOTrackingInfoJSON() for conditions
   /// needed for there to be useful output.
-  std::string getIOTrackingInfoJSON();
+  virtual std::string getIOTrackingInfoJSON() = 0;
 
 #ifdef HERMESVM_PROFILER_BB
   /// Write the trace to the given stream.
-  void dumpBasicBlockProfileTrace(std::ostream &os) const;
+  virtual void dumpBasicBlockProfileTrace(std::ostream &os) const = 0;
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Write the opcode stats to the given stream.
-  void dumpOpcodeStats(std::ostream &os) const;
+  virtual void dumpOpcodeStats(std::ostream &os) const = 0;
 #endif
 
   /// \return a reference to the Debugger for this Runtime.
-  debugger::Debugger &getDebugger();
+  virtual debugger::Debugger &getDebugger() = 0;
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
@@ -184,19 +187,19 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
 
   /// Evaluate the given code in an unoptimized form,
   /// used for debugging.
-  void debugJavaScript(
+  virtual void debugJavaScript(
       const std::string &src,
       const std::string &sourceURL,
-      const DebugFlags &debugFlags);
+      const DebugFlags &debugFlags) = 0;
 #endif
 
   /// Register this runtime and thread for sampling profiler. Before using the
   /// runtime on another thread, invoke this function again from the new thread
   /// to make the sampling profiler target the new thread (and forget the old
   /// thread).
-  void registerForProfiling();
+  virtual void registerForProfiling() = 0;
   /// Unregister this runtime for sampling profiler.
-  void unregisterForProfiling();
+  virtual void unregisterForProfiling() = 0;
 
   /// Define methods to interrupt JS execution and set time limits.
   /// All JS compiled to bytecode via prepareJS, or evaluateJS, will support
@@ -207,14 +210,14 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
 
   /// Asynchronously terminates the current execution. This can be called on
   /// any thread.
-  void asyncTriggerTimeout();
+  virtual void asyncTriggerTimeout() = 0;
 
   /// Register this runtime for execution time limit monitoring, with a time
   /// limit of \p timeoutInMs milliseconds.
   /// See compilation notes above.
-  void watchTimeLimit(uint32_t timeoutInMs);
+  virtual void watchTimeLimit(uint32_t timeoutInMs) = 0;
   /// Unregister this runtime for execution time limit monitoring.
-  void unwatchTimeLimit();
+  virtual void unwatchTimeLimit() = 0;
 
   /// Same as \c evaluate JavaScript but with a source map, which will be
   /// applied to exception traces and debug information.
@@ -222,24 +225,24 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// This is an experimental Hermes-specific API. In the future it may be
   /// renamed, moved or combined with another API, but the provided
   /// functionality will continue to be available in some form.
-  jsi::Value evaluateJavaScriptWithSourceMap(
+  virtual jsi::Value evaluateJavaScriptWithSourceMap(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
-      const std::string &sourceURL);
+      const std::string &sourceURL) = 0;
 
   /// Associate the SHUnit returned by \p shUnitCreator with this runtime and
   /// run its initialization code. The unit will be freed when the runtime is
   /// destroyed.
-  jsi::Value evaluateSHUnit(SHUnit *(*shUnitCreator)());
+  virtual jsi::Value evaluateSHUnit(SHUnit *(*shUnitCreator)()) = 0;
 
   /// Retrieve the underlying SHRuntime.
-  SHRuntime *getSHRuntime() noexcept;
+  virtual SHRuntime *getSHRuntime() noexcept = 0;
 
   /// Returns the underlying low level Hermes VM runtime instance.
   /// This function is considered unsafe and unstable.
   /// Direct use of a vm::Runtime should be avoided as the lower level APIs are
   /// unsafe and they can change without notice.
-  ::hermes::vm::Runtime *getVMRuntimeUnsafe() const;
+  virtual ::hermes::vm::Runtime *getVMRuntimeUnsafe() const = 0;
 
  private:
   // Only HermesRuntimeImpl can subclass this.
@@ -247,7 +250,7 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   friend class HermesRuntimeImpl;
 
   friend struct ::HermesTestHelper;
-  size_t rootsListLengthForTests() const;
+  virtual size_t rootsListLengthForTests() const = 0;
 
   // Do not add any members here.  This ensures that there are no
   // object size inconsistencies.  All data should be in the impl

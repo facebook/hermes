@@ -157,6 +157,8 @@ void throwHermesNotCompiledWithSamplingProfilerSupport() {
 #endif // !HERMESVM_SAMPLING_PROFILER_AVAILABLE
 } // namespace
 
+HermesRuntime::~HermesRuntime() {}
+
 class HermesRuntimeImpl final : public HermesRuntime,
                                 private InstallHermesFatalErrorHandler,
                                 private jsi::Instrumentation {
@@ -1059,7 +1061,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
     return result;
   }
 
- protected:
   /// Helper function that is parameterized over the type of context being
   /// created.
   template <typename ContextType>
@@ -1076,7 +1077,48 @@ class HermesRuntimeImpl final : public HermesRuntime,
   template <typename... Args>
   LLVM_ATTRIBUTE_NORETURN void throwJSErrorWithMessage(Args &&...args);
 
- public:
+  /// Concrete declarations of HermesRuntime methods.
+  void sampledTraceToStreamInDevToolsFormat(std::ostream &stream) override;
+  sampling_profiler::Profile dumpSampledTraceToProfile() override;
+  void loadSegment(
+      std::unique_ptr<const jsi::Buffer> buffer,
+      const jsi::Value &context) override;
+  uint64_t getUniqueID(const jsi::Object &o) const override;
+  uint64_t getUniqueID(const jsi::BigInt &s) const override;
+  uint64_t getUniqueID(const jsi::String &s) const override;
+  uint64_t getUniqueID(const jsi::PropNameID &pni) const override;
+  uint64_t getUniqueID(const jsi::Symbol &sym) const override;
+  uint64_t getUniqueID(const jsi::Value &val) const override;
+  jsi::Value getObjectForID(uint64_t id) override;
+  const ::hermes::vm::GCExecTrace &getGCExecTrace() const override;
+  std::string getIOTrackingInfoJSON() override;
+#ifdef HERMESVM_PROFILER_BB
+  void dumpBasicBlockProfileTrace(std::ostream &os) const override;
+#endif
+#ifdef HERMESVM_PROFILER_OPCODE
+  void dumpOpcodeStats(std::ostream &os) const override;
+#endif
+  debugger::Debugger &getDebugger() override;
+#ifdef HERMES_ENABLE_DEBUGGER
+  void debugJavaScript(
+      const std::string &src,
+      const std::string &sourceURL,
+      const DebugFlags &debugFlags) override;
+#endif
+  void registerForProfiling() override;
+  void unregisterForProfiling() override;
+  void asyncTriggerTimeout() override;
+  void watchTimeLimit(uint32_t timeoutInMs) override;
+  void unwatchTimeLimit() override;
+  jsi::Value evaluateJavaScriptWithSourceMap(
+      const std::shared_ptr<const jsi::Buffer> &buffer,
+      const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
+      const std::string &sourceURL) override;
+  jsi::Value evaluateSHUnit(SHUnit *(*shUnitCreator)()) override;
+  SHRuntime *getSHRuntime() noexcept override;
+  ::hermes::vm::Runtime *getVMRuntimeUnsafe() const override;
+  size_t rootsListLengthForTests() const override;
+
   ManagedValues<vm::PinnedHermesValue> hermesValues_;
   ManagedValues<vm::WeakRoot<vm::JSObject>> weakHermesValues_;
   std::shared_ptr<::hermes::vm::Runtime> rt_;
@@ -1088,25 +1130,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
   /// Compilation flags used by prepareJavaScript().
   ::hermes::hbc::CompileFlags compileFlags_{};
 };
-
-namespace {
-
-inline HermesRuntimeImpl *impl(HermesRuntime *rt) {
-  // This is guaranteed safe because HermesRuntime is abstract so
-  // cannot be constructed, and the only instances created are
-  // HermesRuntimeImpl's created by the factory function.  It's kind
-  // of like pimpl, but different.
-
-  return static_cast<HermesRuntimeImpl *>(rt);
-}
-
-inline const HermesRuntimeImpl *impl(const HermesRuntime *rt) {
-  // See above comment
-
-  return static_cast<const HermesRuntimeImpl *>(rt);
-}
-
-} // namespace
 
 bool HermesRuntime::isHermesBytecode(const uint8_t *data, size_t len) {
   return hbc::BCProviderFromBuffer::isBytecodeStream(
@@ -1176,9 +1199,10 @@ void HermesRuntime::dumpSampledTraceToStream(std::ostream &stream) {
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
-void HermesRuntime::sampledTraceToStreamInDevToolsFormat(std::ostream &stream) {
+void HermesRuntimeImpl::sampledTraceToStreamInDevToolsFormat(
+    std::ostream &stream) {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  vm::SamplingProfiler *sp = impl(this)->runtime_.samplingProfiler.get();
+  vm::SamplingProfiler *sp = runtime_.samplingProfiler.get();
   if (!sp) {
     throw jsi::JSINativeException("Runtime not registered for profiling");
   }
@@ -1189,9 +1213,9 @@ void HermesRuntime::sampledTraceToStreamInDevToolsFormat(std::ostream &stream) {
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
-sampling_profiler::Profile HermesRuntime::dumpSampledTraceToProfile() {
+sampling_profiler::Profile HermesRuntimeImpl::dumpSampledTraceToProfile() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  vm::SamplingProfiler *sp = impl(this)->runtime_.samplingProfiler.get();
+  vm::SamplingProfiler *sp = runtime_.samplingProfiler.get();
   if (!sp) {
     throw jsi::JSINativeException("Runtime not registered for profiling");
   }
@@ -1279,7 +1303,7 @@ class BufferAdapter final : public ::hermes::Buffer {
 };
 } // namespace
 
-void HermesRuntime::loadSegment(
+void HermesRuntimeImpl::loadSegment(
     std::unique_ptr<const jsi::Buffer> buffer,
     const jsi::Value &context) {
   auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
@@ -1289,8 +1313,8 @@ void HermesRuntime::loadSegment(
     throw jsi::JSINativeException("Error evaluating javascript: " + ret.second);
   }
 
-  auto requireContext = vm::Handle<vm::RequireContext>::dyn_vmcast(
-      impl(this)->vmHandleFromValue(context));
+  auto requireContext =
+      vm::Handle<vm::RequireContext>::dyn_vmcast(vmHandleFromValue(context));
   if (!requireContext) {
     LOG_EXCEPTION_CAUSE("Error loading segment: Invalid context");
     throw jsi::JSINativeException("Error loading segment: Invalid context");
@@ -1298,47 +1322,44 @@ void HermesRuntime::loadSegment(
 
   vm::RuntimeModuleFlags flags;
   flags.persistent = true;
-  impl(this)->checkStatus(impl(this)->runtime_.loadSegment(
-      std::move(ret.first), requireContext, flags));
+  checkStatus(
+      runtime_.loadSegment(std::move(ret.first), requireContext, flags));
 }
 
-uint64_t HermesRuntime::getUniqueID(const jsi::Object &o) const {
-  return impl(this)->runtime_.getHeap().getObjectID(
-      static_cast<vm::GCCell *>(impl(this)->phv(o).getObject()));
+uint64_t HermesRuntimeImpl::getUniqueID(const jsi::Object &o) const {
+  return runtime_.getHeap().getObjectID(
+      static_cast<vm::GCCell *>(phv(o).getObject()));
 }
-uint64_t HermesRuntime::getUniqueID(const jsi::BigInt &s) const {
-  return impl(this)->runtime_.getHeap().getObjectID(
-      static_cast<vm::GCCell *>(impl(this)->phv(s).getBigInt()));
+uint64_t HermesRuntimeImpl::getUniqueID(const jsi::BigInt &s) const {
+  return runtime_.getHeap().getObjectID(
+      static_cast<vm::GCCell *>(phv(s).getBigInt()));
 }
-uint64_t HermesRuntime::getUniqueID(const jsi::String &s) const {
-  return impl(this)->runtime_.getHeap().getObjectID(
-      static_cast<vm::GCCell *>(impl(this)->phv(s).getString()));
+uint64_t HermesRuntimeImpl::getUniqueID(const jsi::String &s) const {
+  return runtime_.getHeap().getObjectID(
+      static_cast<vm::GCCell *>(phv(s).getString()));
 }
 
 // TODO(T111638575): PropNameID and Symbol can have the same unique ID. We
 // should either add a way to distinguish them, or explicitly state that the
 // unique ID may not be used to distinguish a PropNameID from a Value.
-uint64_t HermesRuntime::getUniqueID(const jsi::PropNameID &pni) const {
-  return impl(this)->runtime_.getHeap().getObjectID(
-      impl(this)->phv(pni).getSymbol());
+uint64_t HermesRuntimeImpl::getUniqueID(const jsi::PropNameID &pni) const {
+  return runtime_.getHeap().getObjectID(phv(pni).getSymbol());
 }
-uint64_t HermesRuntime::getUniqueID(const jsi::Symbol &sym) const {
-  return impl(this)->runtime_.getHeap().getObjectID(
-      impl(this)->phv(sym).getSymbol());
+uint64_t HermesRuntimeImpl::getUniqueID(const jsi::Symbol &sym) const {
+  return runtime_.getHeap().getObjectID(phv(sym).getSymbol());
 }
 
-uint64_t HermesRuntime::getUniqueID(const jsi::Value &val) const {
+uint64_t HermesRuntimeImpl::getUniqueID(const jsi::Value &val) const {
   vm::HermesValue hv = HermesRuntimeImpl::hvFromValue(val);
   // 0 is reserved as a non-ID.
-  return impl(this)->runtime_.getHeap().getSnapshotID(hv).getValueOr(0);
+  return runtime_.getHeap().getSnapshotID(hv).getValueOr(0);
 }
 
-jsi::Value HermesRuntime::getObjectForID(uint64_t id) {
-  vm::GCCell *ptr = static_cast<vm::GCCell *>(
-      impl(this)->runtime_.getHeap().getObjectForID(id));
+jsi::Value HermesRuntimeImpl::getObjectForID(uint64_t id) {
+  vm::GCCell *ptr =
+      static_cast<vm::GCCell *>(runtime_.getHeap().getObjectForID(id));
   if (ptr && vm::vmisa<vm::JSObject>(ptr)) {
-    return impl(this)->add<jsi::Object>(
-        vm::HermesValue::encodeObjectValue(ptr));
+    return add<jsi::Object>(vm::HermesValue::encodeObjectValue(ptr));
   }
   // If the ID doesn't map to a pointer, or that pointer isn't an object,
   // return null.
@@ -1347,22 +1368,21 @@ jsi::Value HermesRuntime::getObjectForID(uint64_t id) {
   return jsi::Value::null();
 }
 
-const ::hermes::vm::GCExecTrace &HermesRuntime::getGCExecTrace() const {
+const ::hermes::vm::GCExecTrace &HermesRuntimeImpl::getGCExecTrace() const {
   return static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.getGCExecTrace();
 }
 
-std::string HermesRuntime::getIOTrackingInfoJSON() {
+std::string HermesRuntimeImpl::getIOTrackingInfoJSON() {
   std::string buf;
   llvh::raw_string_ostream strstrm(buf);
-  static_cast<HermesRuntimeImpl *>(this)->runtime_.getIOTrackingInfoJSON(
-      strstrm);
+  runtime_.getIOTrackingInfoJSON(strstrm);
   strstrm.flush();
   return buf;
 }
 
 #ifdef HERMESVM_PROFILER_BB
-void HermesRuntime::dumpBasicBlockProfileTrace(std::ostream &stream) const {
+void HermesRuntimeImpl::dumpBasicBlockProfileTrace(std::ostream &stream) const {
   llvh::raw_os_ostream os(stream);
   static_cast<const HermesRuntimeImpl *>(this)
       ->runtime_.dumpBasicBlockProfileTrace(os);
@@ -1370,34 +1390,34 @@ void HermesRuntime::dumpBasicBlockProfileTrace(std::ostream &stream) const {
 #endif
 
 #ifdef HERMESVM_PROFILER_OPCODE
-void HermesRuntime::dumpOpcodeStats(std::ostream &stream) const {
+void HermesRuntimeImpl::dumpOpcodeStats(std::ostream &stream) const {
   llvh::raw_os_ostream os(stream);
   static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
 }
 #endif
 
-debugger::Debugger &HermesRuntime::getDebugger() {
-  return *(impl(this)->debugger_);
+debugger::Debugger &HermesRuntimeImpl::getDebugger() {
+  return *(debugger_);
 }
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-void HermesRuntime::debugJavaScript(
+void HermesRuntimeImpl::debugJavaScript(
     const std::string &src,
     const std::string &sourceURL,
     const DebugFlags &debugFlags) {
-  vm::Runtime &runtime = impl(this)->runtime_;
+  vm::Runtime &runtime = runtime_;
   vm::GCScope gcScope(runtime);
   vm::ExecutionStatus res =
-      runtime.run(src, sourceURL, impl(this)->compileFlags_).getStatus();
-  impl(this)->checkStatus(res);
+      runtime.run(src, sourceURL, compileFlags_).getStatus();
+  checkStatus(res);
 }
 
 #endif
 
-void HermesRuntime::registerForProfiling() {
+void HermesRuntimeImpl::registerForProfiling() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  vm::Runtime &runtime = impl(this)->runtime_;
+  vm::Runtime &runtime = runtime_;
   if (runtime.samplingProfiler) {
     runtime.samplingProfiler->setRuntimeThread();
   } else {
@@ -1408,75 +1428,71 @@ void HermesRuntime::registerForProfiling() {
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
-void HermesRuntime::unregisterForProfiling() {
+void HermesRuntimeImpl::unregisterForProfiling() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  if (!impl(this)->runtime_.samplingProfiler) {
+  if (!runtime_.samplingProfiler) {
     ::hermes::hermes_fatal(
         "unregistering HermesVM not registered for profiling is not allowed");
   }
-  impl(this)->runtime_.samplingProfiler.reset();
+  runtime_.samplingProfiler.reset();
 #else
   throwHermesNotCompiledWithSamplingProfilerSupport();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
-void HermesRuntime::asyncTriggerTimeout() {
-  impl(this)->runtime_.triggerTimeoutAsyncBreak();
+void HermesRuntimeImpl::asyncTriggerTimeout() {
+  runtime_.triggerTimeoutAsyncBreak();
 }
 
-void HermesRuntime::watchTimeLimit(uint32_t timeoutInMs) {
-  HermesRuntimeImpl &concrete = *impl(this);
-  vm::Runtime &runtime = concrete.runtime_;
-  auto &runtimeTimeLimitMonitor = runtime.timeLimitMonitor;
+void HermesRuntimeImpl::watchTimeLimit(uint32_t timeoutInMs) {
+  auto &runtimeTimeLimitMonitor = runtime_.timeLimitMonitor;
   if (!runtimeTimeLimitMonitor) {
     runtimeTimeLimitMonitor = ::hermes::vm::TimeLimitMonitor::getOrCreate();
   }
   runtimeTimeLimitMonitor->watchRuntime(
-      runtime, std::chrono::milliseconds(timeoutInMs));
+      runtime_, std::chrono::milliseconds(timeoutInMs));
 }
 
-void HermesRuntime::unwatchTimeLimit() {
-  vm::Runtime &runtime = impl(this)->runtime_;
+void HermesRuntimeImpl::unwatchTimeLimit() {
+  vm::Runtime &runtime = runtime_;
   if (auto &runtimeTimeLimitMonitor = runtime.timeLimitMonitor) {
     runtimeTimeLimitMonitor->unwatchRuntime(runtime);
   }
 }
 
-jsi::Value HermesRuntime::evaluateJavaScriptWithSourceMap(
+jsi::Value HermesRuntimeImpl::evaluateJavaScriptWithSourceMap(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
     const std::string &sourceURL) {
-  return impl(this)->evaluatePreparedJavaScript(
-      impl(this)->prepareJavaScriptWithSourceMap(
-          buffer, sourceMapBuf, sourceURL));
+  return evaluatePreparedJavaScript(
+      prepareJavaScriptWithSourceMap(buffer, sourceMapBuf, sourceURL));
 }
 
-jsi::Value HermesRuntime::evaluateSHUnit(SHUnitCreator shUnitCreator) {
-  vm::Runtime &runtime = impl(this)->runtime_;
+jsi::Value HermesRuntimeImpl::evaluateSHUnit(SHUnitCreator shUnitCreator) {
+  vm::Runtime &runtime = runtime_;
 
   SHLegacyValue resOrExc;
   if (_sh_unit_init_guarded(
           vm::getSHRuntime(runtime), shUnitCreator, &resOrExc)) {
-    return impl(this)->valueFromHermesValue(
-        vm::HermesValue::fromRaw(resOrExc.raw));
+    return valueFromHermesValue(vm::HermesValue::fromRaw(resOrExc.raw));
   } else {
     vm::GCScope gcScope{runtime};
     runtime.setThrownValue(vm::HermesValue::fromRaw(resOrExc.raw));
-    impl(this)->checkStatus(vm::ExecutionStatus::EXCEPTION);
+    checkStatus(vm::ExecutionStatus::EXCEPTION);
     LLVM_BUILTIN_UNREACHABLE;
   }
 }
 
-SHRuntime *HermesRuntime::getSHRuntime() noexcept {
-  return vm::getSHRuntime(impl(this)->runtime_);
+SHRuntime *HermesRuntimeImpl::getSHRuntime() noexcept {
+  return vm::getSHRuntime(runtime_);
 }
 
-::hermes::vm::Runtime *HermesRuntime::getVMRuntimeUnsafe() const {
-  return impl(this)->rt_.get();
+::hermes::vm::Runtime *HermesRuntimeImpl::getVMRuntimeUnsafe() const {
+  return rt_.get();
 }
 
-size_t HermesRuntime::rootsListLengthForTests() const {
-  return impl(this)->hermesValues_.sizeForTests();
+size_t HermesRuntimeImpl::rootsListLengthForTests() const {
+  return hermesValues_.sizeForTests();
 }
 
 namespace {
@@ -2781,7 +2797,7 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
 #ifdef HERMES_ENABLE_DEBUGGER
 /// Glue code enabling the Debugger to produce a jsi::Value from a HermesValue.
 jsi::Value debugger::Debugger::jsiValueFromHermesValue(vm::HermesValue hv) {
-  return impl(runtime_)->valueFromHermesValue(hv);
+  return static_cast<HermesRuntimeImpl *>(runtime_)->valueFromHermesValue(hv);
 }
 #endif
 
