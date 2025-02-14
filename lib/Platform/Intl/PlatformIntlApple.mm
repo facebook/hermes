@@ -271,50 +271,6 @@ ResolvedLocale resolveLocale(
   return result;
 }
 
-/// https://402.ecma-international.org/8.0/#sec-lookupsupportedlocales
-std::vector<std::u16string> lookupSupportedLocales(
-    const std::vector<std::u16string> &availableLocales,
-    const std::vector<std::u16string> &requestedLocales) {
-  // 1. Let subset be a new empty List.
-  std::vector<std::u16string> subset;
-  // 2. For each element locale of requestedLocales in List order, do
-  for (const std::u16string &locale : requestedLocales) {
-    // a. Let noExtensionsLocale be the String value that is locale with all
-    // Unicode locale extension sequences removed.
-    // We can skip this step, see the comment in lookupMatcher.
-    // b. Let availableLocale be BestAvailableLocale(availableLocales,
-    // noExtensionsLocale).
-    std::optional<std::u16string> availableLocale =
-        bestAvailableLocale(availableLocales, locale);
-    // c. If availableLocale is not undefined, append locale to the end of
-    // subset.
-    if (availableLocale) {
-      subset.push_back(locale);
-    }
-  }
-  // 3. Return subset.
-  return subset;
-}
-
-/// https://402.ecma-international.org/8.0/#sec-supportedlocales
-std::vector<std::u16string> supportedLocales(
-    const std::vector<std::u16string> &availableLocales,
-    const std::vector<std::u16string> &requestedLocales) {
-  // 1. Set options to ? CoerceOptionsToObject(options).
-  // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
-  //    "lookup", "best fit" », "best fit").
-  // 3. If matcher is "best fit", then
-  //   a. Let supportedLocales be BestFitSupportedLocales(availableLocales,
-  //      requestedLocales).
-  // 4. Else,
-  //   a. Let supportedLocales be LookupSupportedLocales(availableLocales,
-  //      requestedLocales).
-  // 5. Return CreateArrayFromList(supportedLocales).
-
-  // We do not implement a BestFitMatcher, so we can just use LookupMatcher.
-  return lookupSupportedLocales(availableLocales, requestedLocales);
-}
-
 /// https://402.ecma-international.org/8.0/#sec-canonicalizelocalelist
 vm::CallResult<std::vector<std::u16string>> canonicalizeLocaleList(
     vm::Runtime &runtime,
@@ -480,6 +436,60 @@ vm::CallResult<std::optional<uint8_t>> getNumberOption(
     return vm::ExecutionStatus::EXCEPTION;
   }
   return std::optional<uint8_t>(defaultNumber.getValue());
+}
+
+/// https://402.ecma-international.org/8.0/#sec-lookupsupportedlocales
+std::vector<std::u16string> lookupSupportedLocales(
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales) {
+  // 1. Let subset be a new empty List.
+  std::vector<std::u16string> subset;
+  // 2. For each element locale of requestedLocales in List order, do
+  for (const std::u16string &locale : requestedLocales) {
+    // a. Let noExtensionsLocale be the String value that is locale with all
+    // Unicode locale extension sequences removed.
+    // We can skip this step, see the comment in lookupMatcher.
+    // b. Let availableLocale be BestAvailableLocale(availableLocales,
+    // noExtensionsLocale).
+    std::optional<std::u16string> availableLocale =
+        bestAvailableLocale(availableLocales, locale);
+    // c. If availableLocale is not undefined, append locale to the end of
+    // subset.
+    if (availableLocale) {
+      subset.push_back(locale);
+    }
+  }
+  // 3. Return subset.
+  return subset;
+}
+
+/// https://402.ecma-international.org/8.0/#sec-supportedlocales
+vm::CallResult<std::vector<std::u16string>> supportedLocales(
+    vm::Runtime &runtime,
+    const std::vector<std::u16string> &availableLocales,
+    const std::vector<std::u16string> &requestedLocales,
+    const Options &options) {
+  // 1. Set options to ? CoerceOptionsToObject(options).
+  // 2. Let matcher be ? GetOption(options, "localeMatcher", "string", «
+  //    "lookup", "best fit" », "best fit").
+  auto matcherRes = getOptionString(
+      runtime,
+      options,
+      u"localeMatcher",
+      {u"lookup", u"best fit"},
+      u"best fit");
+  if (LLVM_UNLIKELY(matcherRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
+  // 3. If matcher is "best fit", then
+  //   a. Let supportedLocales be BestFitSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 4. Else,
+  //   a. Let supportedLocales be LookupSupportedLocales(availableLocales,
+  //      requestedLocales).
+  // 5. Return CreateArrayFromList(supportedLocales).
+
+  // We do not implement a BestFitMatcher, so we can just use LookupMatcher.
+  return lookupSupportedLocales(availableLocales, requestedLocales);
 }
 
 // Implementation of
@@ -985,7 +995,8 @@ vm::CallResult<std::vector<std::u16string>> Collator::supportedLocalesOf(
   if (LLVM_UNLIKELY(requestedLocalesRes == vm::ExecutionStatus::EXCEPTION))
     return vm::ExecutionStatus::EXCEPTION;
   // 3. Return ? SupportedLocales(availableLocales, requestedLocales, options)
-  return supportedLocales(availableLocales, *requestedLocalesRes);
+  return supportedLocales(
+      runtime, availableLocales, *requestedLocalesRes, options);
 }
 
 /// https://402.ecma-international.org/8.0/#sec-initializecollator
@@ -1061,21 +1072,43 @@ vm::ExecutionStatus CollatorApple::initialize(
     opt.emplace(u"kf", *caseFirstOpt);
   // 18. Let relevantExtensionKeys be %Collator%.[[RelevantExtensionKeys]].
   static constexpr std::u16string_view relevantExtensionKeys[] = {
-      u"co", u"kn", u"kf"};
+      u"co", u"kf", u"kn"};
+  static_assert(
+      isSorted(relevantExtensionKeys),
+      "keep relevantExtensionKeys sorted for canonical form");
   // 19. Let r be ResolveLocale(%Collator%.[[AvailableLocales]],
   // requestedLocales, opt,relevantExtensionKeys, localeData).
   auto r = resolveLocale(
       getAvailableLocales(), *requestedLocalesRes, opt, relevantExtensionKeys);
   // 20. Set collator.[[Locale]] to r.[[locale]].
   locale_ = std::move(r.locale);
-  // 21. Let collation be r.[[co]].
-  auto coIt = r.extensions.find(u"co");
-  // 22. If collation is null, let collation be "default".
-  // 23. Set collator.[[Collation]] to collation.
-  if (coIt == r.extensions.end())
+  // If usage is search, any specified collation option is dropped
+  // because in spec steps 5 - 6, when usage is search, the [[SearchLocaleData]]
+  // is to be used. The only way to specify to the collator that it should
+  // use the search collation rule is through the collation unicode extension
+  // in the data locale. Since only one collation unicode extension value can be
+  // specified in a locale, any specifiec collation option then needs to be
+  // dropped in favour of search.
+  if (usage_ == u"search") {
     collation_ = u"default";
-  else
-    collation_ = std::move(coIt->second);
+    // If locale_ has a collation unicode extension, remove it.
+    auto parsed = ParsedLocaleIdentifier::parse(locale_);
+    if (parsed.has_value()) {
+      auto nodeHandle = parsed->unicodeExtensionKeywords.extract(u"co");
+      if (!nodeHandle.empty()) {
+        locale_ = parsed->canonicalize();
+      }
+    }
+  } else {
+    // 21. Let collation be r.[[co]].
+    auto coIt = r.extensions.find(u"co");
+    // 22. If collation is null, let collation be "default".
+    // 23. Set collator.[[Collation]] to collation.
+    if (coIt == r.extensions.end())
+      collation_ = u"default";
+    else
+      collation_ = std::move(coIt->second);
+  }
   // 24. If relevantExtensionKeys contains "kn", then
   // a. Set collator.[[Numeric]] to ! SameValue(r.[[kn]], "true").
   auto knIt = r.extensions.find(u"kn");
@@ -1310,7 +1343,8 @@ vm::CallResult<std::vector<std::u16string>> DateTimeFormat::supportedLocalesOf(
   auto requestedLocales = getCanonicalLocales(runtime, locales);
   const std::vector<std::u16string> &availableLocales = getAvailableLocales();
   // 3. Return ? (availableLocales, requestedLocales, options).
-  return supportedLocales(availableLocales, requestedLocales.getValue());
+  return supportedLocales(
+      runtime, availableLocales, requestedLocales.getValue(), options);
 }
 
 // Implementation of
@@ -1395,7 +1429,10 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   // requestedLocales, opt, %DateTimeFormat%.[[RelevantExtensionKeys]],
   // localeData).
   static constexpr std::u16string_view relevantExtensionKeys[] = {
-      u"ca", u"nu", u"hc"};
+      u"ca", u"hc", u"nu"};
+  static_assert(
+      isSorted(relevantExtensionKeys),
+      "keep relevantExtensionKeys sorted for canonical form");
   auto r = resolveLocale(
       getAvailableLocales(), *requestedLocalesRes, opt, relevantExtensionKeys);
   // 18. Set dateTimeFormat.[[Locale]] to r.[[locale]].
@@ -2113,7 +2150,8 @@ vm::CallResult<std::vector<std::u16string>> NumberFormat::supportedLocalesOf(
   // 2. Let requestedLocales be ? CanonicalizeLocaleList(locales).
   auto requestedLocales = getCanonicalLocales(runtime, locales);
   // 3. Return ? (availableLocales, requestedLocales, options).
-  return supportedLocales(availableLocales, requestedLocales.getValue());
+  return supportedLocales(
+      runtime, availableLocales, requestedLocales.getValue(), options);
 }
 
 // https://402.ecma-international.org/8.0/#sec-setnumberformatunitoptions
@@ -2366,6 +2404,9 @@ vm::ExecutionStatus NumberFormatApple::initialize(
   // requestedLocales, opt, %NumberFormat%.[[RelevantExtensionKeys]],
   // localeData).
   static constexpr std::u16string_view relevantExtensionKeys[] = {u"nu"};
+  static_assert(
+      isSorted(relevantExtensionKeys),
+      "keep relevantExtensionKeys sorted for canonical form");
   auto r = resolveLocale(
       getAvailableLocales(), *requestedLocales, opt, relevantExtensionKeys);
   // 11. Set numberFormat.[[Locale]] to r.[[locale]].

@@ -53,3 +53,116 @@ jobs:
       run: |-
         cmake -S hermes -B build -DCMAKE_BUILD_TYPE=Debug
         cmake --build build --target check-hermes all -j 4
+  test-windows:
+    runs-on: windows-2019
+    steps:
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Run Hermes regression tests
+      run: |-
+        cmake -S hermes -B build -G 'Visual Studio 16 2019'
+        cmake --build build --target check-hermes -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
+  test-e2e:
+    runs-on: ubuntu-22.04
+    env:
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
+      HERMES_WS_DIR: /home/runner/work/hermes
+      REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
+    steps:
+    - name: Install Node
+      uses: actions/setup-node@v4.0.2
+    - name: Install JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: "temurin"
+        java-version: "17"
+    - name: Checkout Hermes
+      uses: actions/checkout@v4.1.0
+    - name: Checkout React Native
+      run: |-
+        cd "$HERMES_WS_DIR"
+        git clone --depth=1 https://github.com/facebook/react-native
+        cd react-native
+        yarn install
+        echo "console.log('Using Hermes: ' + (global.HermesInternal != null));" >> packages/rn-tester/js/RNTesterApp.android.js
+    - name: Run RNTester
+      uses: ReactiveCircus/android-emulator-runner@v2.30.1
+      with:
+        api-level: 29
+        ndk: 27.1.12297006
+        cmake: 3.22.1
+        script: |
+          cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
+          adb shell am start com.facebook.react.uiapp/.RNTesterActivity
+          timeout 30s adb logcat -e "Using Hermes: true" -m 1
+  test-e2e-intl:
+    runs-on: ubuntu-22.04
+    env:
+      HERMES_WS_DIR: /home/runner/work/hermes
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
+    steps:
+    - name: Checkout Hermes
+      uses: actions/checkout@v4.1.0
+    - name: Checkout Test262
+      run: |-
+        cd "$HERMES_WS_DIR"
+        git clone https://github.com/tc39/test262
+        cd test262
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Build Hermes Compiler
+      run: |-
+        cd "$HERMES_WS_DIR"
+        cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
+        cmake --build ./build -j 4 --target hermesc
+    - name: Run android tests
+      uses: ReactiveCircus/android-emulator-runner@v2.30.1
+      with:
+        api-level: 29
+        emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+  test-macos-test262:
+    runs-on: macos-latest
+    steps:
+    - uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: 15.4
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Setup dependencies
+      run: |-
+        brew install cmake ninja
+        # Check out test262 at a pinned revision to reduce flakiness
+        git clone https://github.com/tc39/test262
+        cd test262
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Run Hermes tests and test262 with Intl
+      run: |-
+        cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON
+        cmake --build ./build
+        cmake --build ./build --target check-hermes
+        python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
+  test-linux-test262:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Setup dependencies
+      run: |-
+        sudo apt update
+        sudo apt install -y git openssh-client cmake build-essential \
+            libreadline-dev libicu-dev zip python3
+        # Check out test262 at a pinned revision to reduce flakiness
+        git clone https://github.com/tc39/test262
+        cd test262
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Run test262 with Intl
+      run: |-
+        cmake -S hermes -B build -DHERMES_ENABLE_INTL=ON -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2
+        cmake --build ./build -j 4
+        # Not running Hermes test until more of Intl is built out:
+        # toLocaleLowerCase and toLocaleUpperCase are the two main ones.
+        # cmake --build ./build --target check-hermes -j 4
+        python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
