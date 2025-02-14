@@ -48,6 +48,9 @@ if(HERMES_ENABLE_DEBUGGER)
   set(CDP_DEPS hermesParser)
 endif()
 
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
+
 add_subdirectory(cdp)
 
 set(api_sources
