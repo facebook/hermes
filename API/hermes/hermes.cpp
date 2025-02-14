@@ -1211,15 +1211,6 @@ sampling_profiler::Profile HermesRuntimeImpl::dumpSampledTraceToProfile() {
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 }
 
-std::vector<sampling_profiler::Profile>
-HermesRuntime::dumpSampledTraceToProfilesGlobal() {
-#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  return ::hermes::vm::SamplingProfiler::dumpAsProfilesGlobal();
-#else
-  throwHermesNotCompiledWithSamplingProfilerSupport();
-#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
-}
-
 /*static*/ std::unordered_map<std::string, std::vector<std::string>>
 HermesRuntime::getExecutedFunctions() {
   std::unordered_map<

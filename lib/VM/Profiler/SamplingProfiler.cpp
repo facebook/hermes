@@ -208,20 +208,6 @@ void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
   clear();
 }
 
-std::vector<facebook::hermes::sampling_profiler::Profile>
-SamplingProfiler::dumpAsProfilesGlobal() {
-  auto globalProfiler = sampling_profiler::Sampler::get();
-  std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
-
-  std::vector<facebook::hermes::sampling_profiler::Profile> profiles;
-  for (auto *currentProfilerInstance : globalProfiler->profilers_) {
-    auto profileForCurrentInstance = currentProfilerInstance->dumpAsProfile();
-    profiles.push_back(std::move(profileForCurrentInstance));
-  }
-
-  return profiles;
-}
-
 facebook::hermes::sampling_profiler::Profile SamplingProfiler::dumpAsProfile() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
 
