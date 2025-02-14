@@ -578,31 +578,38 @@ endif()
 # to analyze the source code of the project.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple, Emscripten, and Android.
 if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID OR HERMES_UNICODE_LITE)
   set(ICU_FOUND 1)
 endif()
 
 if (NOT ICU_FOUND)
-  if (NOT ICU_ROOT)
-    set(FB_ICU_ROOT_A "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-5-glibc-2.23/9bc6787")
-    set(FB_ICU_ROOT_B "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/")
-    if(EXISTS ${FB_ICU_ROOT_A})
-      set(ICU_ROOT ${FB_ICU_ROOT_A})
-    elseif(EXISTS ${FB_ICU_ROOT_B})
-      set(ICU_ROOT ${FB_ICU_ROOT_B})
-    endif()
-  endif()
   set(CMAKE_FIND_LIBRARY_SUFFIXES_OLD "${CMAKE_FIND_LIBRARY_SUFFIXES}")
   if (HERMES_USE_STATIC_ICU)
     add_definitions(-DU_STATIC_IMPLEMENTATION)
     set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
   endif()
 
-  # FindICU uses ICU_ROOT variable as a hint
-  # Include 'uc' twice for static libraries that depend on each other.
-  find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+  if (HERMES_ENABLE_INTL)
+    # Attempt to locate a system-installed ICU. A minimum version of 65 is
+    # required because our ICU-based Intl implementation relies on APIs introduced
+    # in version 65.
+    # Include 'uc' twice for static libraries that depend on each other.
+    find_global_package(ICU 65 COMPONENTS uc i18n data uc)
+  else()
+    if (NOT ICU_ROOT)
+      set(FB_ICU_ROOT_A "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-5-glibc-2.23/9bc6787")
+      set(FB_ICU_ROOT_B "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/")
+      if(EXISTS ${FB_ICU_ROOT_A})
+        set(ICU_ROOT ${FB_ICU_ROOT_A})
+      elseif(EXISTS ${FB_ICU_ROOT_B})
+        set(ICU_ROOT ${FB_ICU_ROOT_B})
+      endif()
+    endif()
+    # FindICU uses ICU_ROOT variable as a hint
+    # Include 'uc' twice for static libraries that depend on each other.
+    find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+  endif()
 
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES_OLD}")
 
