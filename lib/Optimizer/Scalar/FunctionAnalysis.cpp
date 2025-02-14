@@ -232,16 +232,23 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         assert(
             CTI->getClosure() == closureInst &&
             "Closure must be closure argument to CreateThisInst");
-        if (isAlwaysClosure) {
-          if (funcExpectsThisInConstruct) {
-            CTI->setType(Type::createObject());
-          } else {
-            // If a function does not expect any `this`, then we can just remove
-            // the `CreateThis` altogether since it was just going to return
-            // undefined.
-            CTI->replaceAllUsesWith(builder.getLiteralUndefined());
+        if (funcExpectsThisInConstruct) {
+          // If the function must receive an object, then we know that the
+          // CreateThis will produce an object. Note that it may also throw, for
+          // instance if isAlwaysClosure is false, or if retrieving the
+          // .prototype property throws.
+          CTI->setType(Type::createObject());
+        } else {
+          // If a function does not expect any `this`, then we know that
+          // CreateThis will always produce undefined, or throw (as above).
+          CTI->replaceAllUsesWith(builder.getLiteralUndefined());
+          // If we know the closure operand is actually a closure, then we know
+          // CreateThis cannot throw, so we can remove it.
+          // TODO: Extend this to remove CreateThis even if it is not known to
+          //       be a closure, by detecting a subsequent call or speculative
+          //       inlining check that would throw instead.
+          if (isAlwaysClosure)
             destroyer.add(CTI);
-          }
         }
         // CreateThis leaks the closure because the created object can still
         // access the function via its parent's `.constructor` prototype.
