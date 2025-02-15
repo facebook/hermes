@@ -27,6 +27,13 @@
 #include <random>
 #include <thread>
 
+#if defined(_WINDOWS)
+#include <windows.h>
+// Must be included after windows.h
+#include <mmsystem.h>
+#include "llvh/ADT/ScopeExit.h"
+#endif
+
 namespace hermes {
 namespace vm {
 namespace sampling_profiler {
@@ -143,6 +150,14 @@ void Sampler::timerLoop(double meanHzFreq) {
   std::normal_distribution<> distribution{interval, interval / 2};
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
 
+#if defined(_WINDOWS)
+  // By default, timer resolution is approximately 64Hz on Windows, so if the
+  // meanHzFreq parameter is greater than 64, sampling will occur at a lower
+  // frequency than desired. Setting the period to 1 is the minimum useful
+  // value, resulting in timer resolution of roughly 1 millsecond.
+  timeBeginPeriod(1);
+  auto restorePeriod = llvh::make_scope_exit([] { timeEndPeriod(1); });
+#endif
   while (enabled_) {
     if (!sampleStacks()) {
       return;
