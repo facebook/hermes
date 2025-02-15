@@ -166,3 +166,5 @@ jobs:
         # toLocaleLowerCase and toLocaleUpperCase are the two main ones.
         # cmake --build ./build --target check-hermes -j 4
         python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
+
+
