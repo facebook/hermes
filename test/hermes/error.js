@@ -90,12 +90,8 @@ print(e);
 // CHECK-NEXT: 12345: 67890
 
 // Check exception case of accessing Error.stack from a different 'this'
-try {
-  new Error().__lookupGetter__("stack").call({});
-} catch (e) {
-  print(e.name);
-}
-//CHECK-NEXT: TypeError
+print(new Error().__lookupGetter__("stack").call({}));
+// CHECK-NEXT: undefined
 
 
 // Regression test: setting the stack while getting the message causes a null dereference.
