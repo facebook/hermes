@@ -177,6 +177,10 @@ set(link_libs
   dtoa
 )
 
+if (WIN32)
+  list(APPEND link_libs winmm)
+endif()
+
 if(HERMES_ENABLE_INTL)
   list(APPEND link_libs hermesPlatformIntl)
 endif()
