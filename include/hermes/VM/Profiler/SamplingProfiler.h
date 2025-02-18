@@ -192,6 +192,9 @@ class SamplingProfiler {
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
 
+  /// Thread ID of the currently registered thread.
+  ThreadId threadID_;
+
   /// Unique GC event extra info strings container.
   std::unordered_set<std::string> gcEventExtraInfoSet_;
 

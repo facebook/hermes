@@ -122,13 +122,14 @@ uint32_t SamplingProfiler::walkRuntimeStack(
       }
     }
   }
-  sampleStorage.tid = oscompat::global_thread_id();
+  sampleStorage.tid = threadID_;
   sampleStorage.timeStamp = std::chrono::steady_clock::now();
   return count;
 }
 
-SamplingProfiler::SamplingProfiler(Runtime &runtime) : runtime_{runtime} {
-  threadNames_[oscompat::global_thread_id()] = oscompat::thread_name();
+SamplingProfiler::SamplingProfiler(Runtime &runtime)
+    : threadID_{oscompat::global_thread_id()}, runtime_{runtime} {
+  threadNames_[threadID_] = oscompat::thread_name();
   sampling_profiler::Sampler::get()->registerRuntime(this);
 }
 
