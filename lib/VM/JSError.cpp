@@ -51,7 +51,11 @@ void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("domains", &self->domains_);
 }
 
-CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
+/// Given an object \p targetHandle which may be nullptr:
+/// 1. Look for [[CapturedError]] in the object or its prototype chain and
+///    return it a JSError.
+/// 2. Otherwise, return llvh::None.
+static llvh::Optional<Handle<JSError>> getErrorFromStackTarget(
     Runtime &runtime,
     Handle<JSObject> targetHandle) {
   MutableHandle<JSObject> mutHnd =
@@ -75,8 +79,7 @@ CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
 
     mutHnd.set(targetHandle->getParent(runtime));
   }
-  return runtime.raiseTypeError(
-      "Error.stack getter called with an invalid receiver");
+  return llvh::None;
 }
 
 CallResult<HermesValue>
@@ -84,11 +87,11 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
 
   auto targetHandle = args.dyncastThis<JSObject>();
-  auto errorHandleRes = JSError::getErrorFromStackTarget(runtime, targetHandle);
-  if (errorHandleRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto errorHandleOpt = getErrorFromStackTarget(runtime, targetHandle);
+  if (!errorHandleOpt.hasValue()) {
+    return HermesValue::encodeUndefinedValue();
   }
-  auto errorHandle = *errorHandleRes;
+  auto errorHandle = *errorHandleOpt;
   if (!errorHandle->stacktrace_) {
     // Stacktrace has not been set, we simply return empty string.
     // This is different from other VMs where stacktrace is created when
