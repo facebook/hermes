@@ -24,3 +24,16 @@ try {
 }
 // CHECK: Caught Error MyError: 1234
 // CHECK-NEXT:     at global{{.*}}
+
+
+function MyError2() {
+    this.message = "MyError2";
+}
+MyError2.prototype = Object.create(Error.prototype);
+try {
+    throw new MyError2();
+} catch (e) {
+    print("Caught", e, e.stack);
+}
+
+// CHECK-NEXT: Caught Error: MyError2 undefined

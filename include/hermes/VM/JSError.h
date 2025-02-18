@@ -205,15 +205,6 @@ class JSError final : public JSObject {
       Handle<JSError> selfHandle,
       size_t index,
       llvh::SmallVectorImpl<char16_t> &str);
-
-  /// Given an object \p targetHandle:
-  /// 1. If its [[CapturedError]] slot has a non-null handle, return it as a
-  ///    JSError.
-  /// 2. Otherwise, return \t targetHandle cast to JSError.
-  /// Throws if any cast or property access fails.
-  static CallResult<Handle<JSError>> getErrorFromStackTarget(
-      Runtime &runtime,
-      Handle<JSObject> targetHandle);
 };
 
 } // namespace vm

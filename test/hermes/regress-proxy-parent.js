@@ -15,22 +15,14 @@
 // Install stack trace information on Object.prototype.
 Error.captureStackTrace(Object.prototype);
 
-// Check that lookup on a regular proxy fails.
-try{
-  var p =  new Proxy(new Error(), {});
-  p.stack;
-} catch (e) {
-  print(e);
-}
-// CHECK: TypeError: Error.stack getter called with an invalid receiver
+// Check that lookup on a regular proxy returns undefined.
+var p =  new Proxy(new Error(), {});
+print(p.stack);
+// CHECK: undefined
 
 // Check that lookup on a callable proxy fails.
-try {
-  function foo(){}
-  foo.__proto__ = new Error();
-  var cp = new Proxy(foo, {});
-  cp.stack;
-} catch (e) {
-  print(e);
-}
-// CHECK-NEXT: TypeError: Error.stack getter called with an invalid receiver
+function foo(){}
+foo.__proto__ = new Error();
+var cp = new Proxy(foo, {});
+print(cp.stack);
+// CHECK-NEXT: undefined
