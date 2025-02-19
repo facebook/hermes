@@ -482,6 +482,7 @@ void SamplingProfiler::setRuntimeThread() {
   std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
   profiler->currentThread_ = pthread_self();
   threadID_ = oscompat::global_thread_id();
+  threadNames_[threadID_] = oscompat::thread_name();
 }
 
 } // namespace vm
