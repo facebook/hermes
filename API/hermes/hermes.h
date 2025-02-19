@@ -88,11 +88,6 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Dump sampled stack trace to the given stream.
   static void dumpSampledTraceToStream(std::ostream &stream);
 
-  /// Dump sampled stack trace for all registered local sampling profiler
-  /// instances to a data structure that can be used by third parties.
-  static std::vector<sampling_profiler::Profile>
-  dumpSampledTraceToProfilesGlobal();
-
   /// Return the executed JavaScript function info.
   /// This information holds the segmentID, Virtualoffset and sourceURL.
   /// This information is needed specifically to be able to symbolicate non-CJS

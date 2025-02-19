@@ -285,11 +285,6 @@ class SamplingProfiler {
   /// Static wrapper for dumpTraceryTrace.
   static void dumpTraceryTraceGlobal(llvh::raw_ostream &OS);
 
-  /// Static wrapper for dumpAsProfile. Will dump in separate Profile for each
-  /// local sampling profiler instance.
-  static std::vector<facebook::hermes::sampling_profiler::Profile>
-  dumpAsProfilesGlobal();
-
   /// Enable and start profiling.
   static bool enable(double meanHzFreq = 100);
 
