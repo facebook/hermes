@@ -39,6 +39,18 @@ GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc) : HVType{hv} {
 
 template <typename HVType>
 template <typename NeedsBarriers>
+GCHermesValueBase<HVType>::GCHermesValueBase(
+    HVType hv,
+    GC &gc,
+    const GCCell *owningObj)
+    : HVType{hv} {
+  assert(!hv.isPointer() || hv.getPointer());
+  if (NeedsBarriers::value)
+    gc.constructorWriteBarrierForLargeObj(owningObj, this, hv);
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
 GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t)
     : HVType{hv} {
   assert(!hv.isPointer());
@@ -58,6 +70,22 @@ inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
   assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
   if (NeedsBarriers::value)
     gc.writeBarrier(this, hv);
+  HVType::setNoBarrier(hv);
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+inline void
+GCHermesValueBase<HVType>::set(HVType hv, GC &gc, const GCCell *owningObj) {
+  if (hv.isPointer()) {
+    HERMES_SLOW_ASSERT(
+        gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
+        "Setting an invalid pointer into a GCHermesValue");
+  }
+  assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
+  if constexpr (NeedsBarriers::value) {
+    gc.writeBarrierForLargeObj(owningObj, this, hv);
+  }
   HVType::setNoBarrier(hv);
 }
 
@@ -182,7 +210,8 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
     GCHermesValueBase<HVType> *first,
     GCHermesValueBase<HVType> *last,
     GCHermesValueBase<HVType> *result,
-    GC &gc) {
+    GC &gc,
+    const GCCell *owningObj) {
 #ifndef NDEBUG
   uintptr_t fromFirst = reinterpret_cast<uintptr_t>(first),
             fromLast = reinterpret_cast<uintptr_t>(last);
@@ -194,7 +223,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
       "Uninitialized range cannot overlap with an initialized one.");
 #endif
 
-  gc.constructorWriteBarrierRange(result, last - first);
+  gc.constructorWriteBarrierRange(owningObj, result, last - first);
   // memcpy is fine for an uninitialized copy.
   std::memcpy(
       reinterpret_cast<void *>(result), first, (last - first) * sizeof(HVType));
