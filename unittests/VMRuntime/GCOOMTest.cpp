@@ -34,10 +34,10 @@ static void exceedMaxHeap(
     GCConfig::Builder baseConfig = kTestGCConfigBaseBuilder) {
   static constexpr size_t kSegments = 10;
   static constexpr size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * kSegments;
+      FixedSizeHeapSegment::maxSize() * kSegments;
   // Only one of these cells will fit into a segment, with the maximum amount of
   // space wasted in the segment.
-  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
+  using AwkwardCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 2 + 1>;
 
   auto runtime =
       DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint, baseConfig));
