@@ -1964,10 +1964,10 @@ static std::u16string returnTypeOfDate(const char16_t &c16) {
 // https://402.ecma-international.org/8.0/#sec-formatdatetimetoparts
 std::vector<Part> DateTimeFormatApple::formatToParts(double x) noexcept {
   // NOTE: We dont have access to localeData.patterns. Instead we use
-  // NSDateFormatter's foramt string, and break it into components.
+  // NSDateFormatter's format string, and break it into components.
   // 1. Let parts be ? PartitionDateTimePattern(dateTimeFormat, x).
   auto fmt = nsStringToU16String(nsDateFormatter_.dateFormat);
-  std::unique(fmt.begin(), fmt.end());
+  (void)std::unique(fmt.begin(), fmt.end());
   auto formattedDate = format(x);
   // 2. Let result be ArrayCreate(0).
   std::vector<Part> result;
