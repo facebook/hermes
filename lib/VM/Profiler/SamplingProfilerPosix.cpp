@@ -484,6 +484,7 @@ void SamplingProfiler::setRuntimeThread() {
   auto profiler = static_cast<sampling_profiler::SamplingProfilerPosix *>(this);
   std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
   profiler->currentThread_ = pthread_self();
+  threadID_ = oscompat::global_thread_id();
 }
 
 } // namespace vm
