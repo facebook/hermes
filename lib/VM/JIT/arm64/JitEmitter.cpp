@@ -229,23 +229,6 @@ void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
   a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
 }
 
-/// For a register \p out, emit a bool HermesValue with the corrsponding \p val.
-void emit_sh_ljs_const_bool(a64::Assembler &a, const a64::GpX xOut, bool val) {
-  static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
-  // We know that the ETag for bool as a 0 in its lowest bit, and is therefore a
-  // shifted 16 bit value. We can exploit this to use movk to set the tag.
-  static_assert(HERMESVALUE_VERSION == 1);
-  static_assert(
-      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
-      "Boolean tag must be 16 bits.");
-  if (val) {
-    a.mov(xOut, 1);
-    a.movk(xOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
-  } else {
-    a.movz(xOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
-  }
-}
-
 /// For a register containing a pointer to a GCCell, retrieve its CellKind (a
 /// single byte) and store it in \p wOut.
 /// \p wOut and \p xIn may refer to the same register.
@@ -3639,18 +3622,18 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
   if (typesToCheck.count() > 1)
     matchLab = a.newLabel();
 
-  // First, initialize xRes as follows:
+  // First, initialize xRes if necessary:
   // * If there are multiple bits set, initialize it to the value we would
   //   produce on a match. This is false if inverted and true otherwise.
-  // * If there's only one bit set, initialize it to false so it can be easily
-  //   toggled with cinc. Incrementing it will set it to true.
+  // * If there's only one bit set, leave it uninitialized, since we will
+  //   overwrite the value in the individual cases with cset.
   //
   // Checks are done as follows:
   // * If there are multiple bits set, then matchLab is valid,
   //   so if the tag matches the bit, branch to matchLab.
   //   If the tag doesn't match, then fall through to the next check.
   // * If there's only one bit set, then matchLab is NOT valid,
-  //   so emit cinc with the appropriate condition code and we're done.
+  //   so emit cset with the appropriate condition code and we're done.
   //
   // In this way, single-bit checks (both inverted and not) are fast,
   // and multiple-bit checks are correct.
@@ -3665,15 +3648,13 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     if (matchLab.isValid())
       a.b(cond, matchLab);
     else
-      a.cinc(xRes, xRes, !invert ? cond : a64::negateCond(cond));
+      a.cset(xRes, !invert ? cond : a64::negateCond(cond));
   };
 
-  static_assert(
-      HERMESVALUE_VERSION == 1,
-      "bool must be a tag with a low bit that indicates the bool value");
-  // As described above, initialize it to false if it is inverted or there is
-  // only a single case.
-  emit_sh_ljs_const_bool(a, xRes, matchLab.isValid() && !invert);
+  // As described above, if there are multiple cases, initialize it to the value
+  // it should have on a successful match.
+  if (matchLab.isValid())
+    a.mov(xRes, invert ? 0 : 1);
 
   if (typesToCheck.hasUndefined()) {
     emit_sh_ljs_is_undefined(a, xTemp, xInputTemp);
@@ -3717,8 +3698,7 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
       a.b_ne(objectDoneLab);
     } else {
       // No more tags to check. Decide the result here and go to the end.
-      if (invert)
-        a.cinc(xRes, xRes, a64::CondCode::kNE);
+      a.mov(xRes, invert ? 1 : 0);
       a.b_ne(objectDoneLab);
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
@@ -3741,8 +3721,7 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
       a.b_ne(functionDoneLab);
     } else {
       // No more tags to check. Decide the result here and go to the end.
-      if (invert)
-        a.cinc(xRes, xRes, a64::CondCode::kNE);
+      a.mov(xRes, invert ? 1 : 0);
       a.b_ne(functionDoneLab);
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
@@ -3764,6 +3743,9 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     // match.
     a.bind(matchLab);
   }
+
+  // xRes contains either 0 or 1 at this point, turn it into a bool HermesValue.
+  emit_sh_ljs_bool(a, xRes);
 }
 
 void Emitter::switchImm(
