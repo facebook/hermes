@@ -10,6 +10,7 @@
 
 #include <hermes/Public/HermesExport.h>
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
