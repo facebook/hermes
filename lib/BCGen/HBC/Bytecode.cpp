@@ -24,12 +24,10 @@ BytecodeModule::~BytecodeModule() {
   // VariableScopes as much as possible.
   functions_.clear();
 
-#ifndef HERMESVM_LEAN
   // Clean up any other parts of the IR that are no longer used.
   if (bcProviderFromSrc_) {
     bcProviderFromSrc_->getModule()->resetForMoreCompilation();
   }
-#endif
 }
 
 void BytecodeModule::setFunction(

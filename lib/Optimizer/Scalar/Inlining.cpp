@@ -352,7 +352,7 @@ static Value *inlineFunction(
           operandMap[&I] = callScope;
         } else {
           operandMap[&I] = builder.createGetClosureScopeInst(
-              GPS->getVariableScope(), CI->getCallee());
+              GPS->getVariableScope(), F, CI->getCallee());
         }
         continue;
       }

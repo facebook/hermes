@@ -64,13 +64,13 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_uint_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_could_be_int": string
-// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test_int_int(): functionCode
+// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_int_int(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_int_int": string
-// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test_int_uint(): functionCode
+// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_int_uint(): functionCode
 // CHKIR-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_int_uint": string
-// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test_uint_uint(): functionCode
+// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_uint_uint(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_uint_uint": string
-// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test_could_be_int(): functionCode
+// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_could_be_int(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_could_be_int": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
@@ -163,13 +163,13 @@ function test_could_be_int(func) {
 
 // CHKBC:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHKBC-NEXT:    CreateFunctionEnvironment r1, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_int"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_could_be_int"
-// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_int>
 // CHKBC-NEXT:    GetGlobalObject   r3
+// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_int>
 // CHKBC-NEXT:    PutByIdLoose      r3, r2, 1, "test_int_int"
 // CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_uint>
 // CHKBC-NEXT:    PutByIdLoose      r3, r2, 2, "test_int_uint"
@@ -195,8 +195,8 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:Offset in debug table: source 0x001c, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r3, 1
 // CHKBC-NEXT:    ToInt32           r1, r3
-// CHKBC-NEXT:    LoadParam         r3, 2
 // CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    LoadParam         r3, 2
 // CHKBC-NEXT:    URshift           r0, r3, r0
 // CHKBC-NEXT:    JStrictEqual      L1, r1, r0
 // CHKBC-NEXT:    LoadConstUndefined r2
@@ -206,8 +206,8 @@ function test_could_be_int(func) {
 
 // CHKBC:Function<test_uint_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
-// CHKBC-NEXT:    LoadParam         r3, 1
 // CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    LoadParam         r3, 1
 // CHKBC-NEXT:    URshift           r1, r3, r0
 // CHKBC-NEXT:    LoadParam         r3, 2
 // CHKBC-NEXT:    URshift           r0, r3, r0
@@ -244,14 +244,14 @@ function test_could_be_int(func) {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 6: line 12 col 1
-// CHKBC-NEXT:    bc 11: line 12 col 1
-// CHKBC-NEXT:    bc 16: line 12 col 1
-// CHKBC-NEXT:    bc 21: line 12 col 1
-// CHKBC-NEXT:    bc 33: line 12 col 1
-// CHKBC-NEXT:    bc 44: line 12 col 1
-// CHKBC-NEXT:    bc 55: line 12 col 1
-// CHKBC-NEXT:    bc 66: line 12 col 1
+// CHKBC-NEXT:    bc 3: line 12 col 1
+// CHKBC-NEXT:    bc 8: line 12 col 1
+// CHKBC-NEXT:    bc 13: line 12 col 1
+// CHKBC-NEXT:    bc 18: line 12 col 1
+// CHKBC-NEXT:    bc 30: line 12 col 1
+// CHKBC-NEXT:    bc 41: line 12 col 1
+// CHKBC-NEXT:    bc 52: line 12 col 1
+// CHKBC-NEXT:    bc 63: line 12 col 1
 // CHKBC-NEXT:  0x001c  function idx 2, starts at line 23 col 1
 // CHKBC-NEXT:    bc 11: line 25 col 7
 // CHKBC-NEXT:  0x0023  function idx 3, starts at line 34 col 1

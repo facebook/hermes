@@ -29,7 +29,7 @@ function foo(a,b) {
 // CHECK-NEXT:; <stdin>:10:1
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:; <stdin>:10:1
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:; <stdin>:10:1
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:; <stdin>:10:1

@@ -53,16 +53,16 @@ print(bench(4e6, 100))
 // CHECK:Function<global>(1 params, 15 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "bench"
-// CHECK-NEXT:    CreateTopLevelEnvironment r3, 0
-// CHECK-NEXT:    CreateClosure     r4, r3, Function<bench>
 // CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    CreateFunctionEnvironment r4, 0
+// CHECK-NEXT:    CreateClosure     r4, r4, Function<bench>
 // CHECK-NEXT:    PutByIdStrict     r3, r4, 1, "bench"
 // CHECK-NEXT:    TryGetById        r4, r3, 1, "print"
 // CHECK-NEXT:    GetByIdShort      r3, r3, 2, "bench"
+// CHECK-NEXT:    LoadConstUInt8    r0, 100
+// CHECK-NEXT:    LoadConstInt      r1, 4000000
 // CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    LoadConstInt      r0, 4000000
-// CHECK-NEXT:    LoadConstUInt8    r1, 100
-// CHECK-NEXT:    Call3             r3, r3, r2, r0, r1
+// CHECK-NEXT:    Call3             r3, r3, r2, r1, r0
 // CHECK-NEXT:    Call2             r3, r4, r2, r3
 // CHECK-NEXT:    Ret               r3
 
@@ -108,11 +108,11 @@ print(bench(4e6, 100))
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 18: line 10 col 1
-// CHECK-NEXT:    bc 24: line 28 col 1
-// CHECK-NEXT:    bc 30: line 28 col 7
-// CHECK-NEXT:    bc 46: line 28 col 12
-// CHECK-NEXT:    bc 52: line 28 col 6
+// CHECK-NEXT:    bc 15: line 10 col 1
+// CHECK-NEXT:    bc 21: line 28 col 1
+// CHECK-NEXT:    bc 27: line 28 col 7
+// CHECK-NEXT:    bc 43: line 28 col 12
+// CHECK-NEXT:    bc 49: line 28 col 6
 // CHECK-NEXT:  0x0017  function idx 1, starts at line 12 col 1
 // CHECK-NEXT:    bc 3: line 14 col 10
 // CHECK-NEXT:    bc 9: line 15 col 10

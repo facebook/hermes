@@ -1725,8 +1725,11 @@ class InstrGen {
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_closure" << "(shr, &";
-    generateRegister(*inst.getScope());
+    os_ << " = _sh_ljs_create_closure" << "(shr, ";
+    if (llvh::isa<EmptySentinel>(inst.getScope()))
+      os_ << "NULL";
+    else
+      generateRegisterPtr(*inst.getScope());
     os_ << ", ";
     moduleGen_.nativeFunctionTable.generateFunctionLabel(
         inst.getFunctionCode(), os_);
@@ -1738,8 +1741,11 @@ class InstrGen {
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_generator_object" << "(shr, &";
-    generateRegister(*inst.getScope());
+    os_ << " = _sh_ljs_create_generator_object" << "(shr, ";
+    if (llvh::isa<EmptySentinel>(inst.getScope()))
+      os_ << "NULL";
+    else
+      generateRegisterPtr(*inst.getScope());
     os_ << ", ";
     moduleGen_.nativeFunctionTable.generateFunctionLabel(
         inst.getFunctionCode(), os_);
@@ -1753,7 +1759,10 @@ class InstrGen {
     generateRegister(inst);
     bool isBaseClass = llvh::isa<EmptySentinel>(inst.getSuperClass());
     os_ << " = _sh_ljs_create_class(shr,";
-    generateRegisterPtr(*inst.getScope());
+    if (llvh::isa<EmptySentinel>(inst.getScope()))
+      os_ << "NULL";
+    else
+      generateRegisterPtr(*inst.getScope());
     os_ << ", ";
     moduleGen_.nativeFunctionTable.generateFunctionLabel(
         inst.getFunctionCode(), os_);

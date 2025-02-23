@@ -62,7 +62,7 @@ $SHBuiltin.moduleFactory(10, function(global, require) {
 // CHECK:function global(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
@@ -74,9 +74,9 @@ $SHBuiltin.moduleFactory(10, function(global, require) {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %require: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.require]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %simple(): functionCode
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %testPhi(): functionCode
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %testStack(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %simple(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %testPhi(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %testStack(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.reqAlias]: any
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any, "simple": string, null: null, "testPhi": string, null: null, "testStack": string, null: null
 // CHECK-NEXT:       PrStoreInst %4: object, %8: object, 0: number, "simple": string, false: boolean

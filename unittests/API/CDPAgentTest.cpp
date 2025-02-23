@@ -62,10 +62,7 @@ T waitFor(
 
   callback(promise);
 
-  auto status = future.wait_for(std::chrono::milliseconds(2500));
-  if (status != std::future_status::ready) {
-    throw std::runtime_error("triggerInterrupt didn't get executed: " + reason);
-  }
+  future.wait();
   return future.get();
 }
 
@@ -130,7 +127,7 @@ class CDPAgentTest : public ::testing::Test {
   /// from the debugger. returns the message. throws on timeout.
   std::string waitForMessage(
       std::string context = "reply",
-      std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
+      std::optional<std::chrono::milliseconds> timeout = std::nullopt);
 
   /// check to see if a response or notification is immediately available.
   /// returns the message, or nullopt if no message is available.
@@ -361,11 +358,17 @@ void CDPAgentTest::waitForScheduledScripts() {
 
 std::string CDPAgentTest::waitForMessage(
     std::string context,
-    std::chrono::milliseconds timeout) {
+    std::optional<std::chrono::milliseconds> timeout) {
   std::unique_lock<std::mutex> lock(messageMutex_);
 
-  bool success = hasMessage_.wait_for(
-      lock, timeout, [this]() -> bool { return !messages_.empty(); });
+  bool success;
+  if (timeout.has_value()) {
+    success = hasMessage_.wait_for(
+        lock, timeout.value(), [this]() -> bool { return !messages_.empty(); });
+  } else {
+    hasMessage_.wait(lock, [this]() -> bool { return !messages_.empty(); });
+    success = true;
+  }
 
   if (!success) {
     throw std::runtime_error("timed out waiting for " + context);
@@ -394,7 +397,7 @@ std::optional<std::string> CDPAgentTest::tryGetMessage() {
 void CDPAgentTest::expectNothing() {
   std::string message;
   try {
-    message = waitForMessage();
+    message = waitForMessage("nothing", std::chrono::milliseconds(2500));
   } catch (...) {
     // if no values are received it times out with an exception
     // so we can say that we've succeeded at seeing nothing

@@ -39,9 +39,9 @@ function check_after_check() {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "check_after_store": string
 // CHECK-NEXT:       DeclareGlobalVarInst "check_after_check": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %check_after_store(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check_after_store(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "check_after_store": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %check_after_check(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check_after_check(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "check_after_check": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
@@ -58,7 +58,7 @@ function check_after_check() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.p]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.x]: any|empty
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %inner1(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %inner1(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.inner1]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: any|empty
 // CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
@@ -72,7 +72,7 @@ function check_after_check() {
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS2.x]: any|empty
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %inner2(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS2: any, %inner2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS2.inner2]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS2.x]: any|empty
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
@@ -139,9 +139,9 @@ function check_after_check() {
 // CHKOPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKOPT-NEXT:       DeclareGlobalVarInst "check_after_store": string
 // CHKOPT-NEXT:       DeclareGlobalVarInst "check_after_check": string
-// CHKOPT-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %check_after_store(): functionCode
+// CHKOPT-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check_after_store(): functionCode
 // CHKOPT-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "check_after_store": string
-// CHKOPT-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %check_after_check(): functionCode
+// CHKOPT-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check_after_check(): functionCode
 // CHKOPT-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "check_after_check": string
 // CHKOPT-NEXT:  %7 = AllocStackInst (:undefined) $?anon_0_ret: any
 // CHKOPT-NEXT:       StoreStackInst undefined: undefined, %7: undefined
@@ -158,7 +158,7 @@ function check_after_check() {
 // CHKOPT-NEXT:  %2 = LoadParamInst (:any) %p: any
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.p]: any
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.x]: empty|undefined|number
-// CHKOPT-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %inner1(): functionCode
+// CHKOPT-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %inner1(): functionCode
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.inner1]: object
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: empty|undefined|number
 // CHKOPT-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string
@@ -172,7 +172,7 @@ function check_after_check() {
 // CHKOPT-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHKOPT-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS2.x]: empty|number
-// CHKOPT-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %inner2(): functionCode
+// CHKOPT-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS2: any, %inner2(): functionCode
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS2.inner2]: object
 // CHKOPT-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS2.x]: empty|number
 // CHKOPT-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "inner": string

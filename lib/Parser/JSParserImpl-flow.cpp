@@ -2345,7 +2345,7 @@ Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
     if (!optType)
       return None;
 
-    if (check(TokenKind::identifier)) {
+    if (check(TokenKind::identifier, TokenKind::rw_this)) {
       // Validate the "implies" token was an identifier not a more complex type.
       if (auto *generic = dyn_cast<ESTree::GenericTypeAnnotationNode>(*optType);
           !(generic && !generic->_typeParameters)) {
@@ -2360,8 +2360,8 @@ Optional<ESTree::Node *> JSParserImpl::parseReturnTypeAnnotationFlow(
       ESTree::Node *id = setLocation(
           tok_,
           tok_,
-          new (context_)
-              ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+          new (context_) ESTree::IdentifierNode(
+              tok_->getResWordOrIdentifier(), nullptr, false));
       advance(JSLexer::GrammarContext::Type);
 
       //   implies IdentifierName is TypeAnnotation
@@ -4210,7 +4210,7 @@ JSParserImpl::parseMethodishTypeAnnotationFlow(
           start))
     return None;
 
-  auto optReturn = parseTypeAnnotationFlow();
+  auto optReturn = parseReturnTypeAnnotationFlow();
   if (!optReturn)
     return None;
 

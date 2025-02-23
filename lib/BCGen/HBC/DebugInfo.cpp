@@ -272,7 +272,6 @@ void DebugInfo::disassembleFilesAndOffsets(llvh::raw_ostream &OS) const {
      << "  end of debug source table\n\n";
 }
 
-#ifndef HERMESVM_LEAN
 void DebugInfo::populateSourceMap(
     SourceMapGenerator *sourceMap,
     std::vector<uint32_t> &&functionOffsets,
@@ -318,7 +317,6 @@ void DebugInfo::populateSourceMap(
   sourceMap->addMappingsLine(std::move(segments), segmentID);
   sourceMap->addFunctionOffsets(std::move(functionOffsets), segmentID);
 }
-#endif
 
 uint32_t DebugInfoGenerator::appendSourceLocations(
     const DebugSourceLocation &start,

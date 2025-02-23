@@ -44,13 +44,13 @@ function uniq(x, y, z) {
 // CHECK-NEXT:       DeclareGlobalVarInst "simpleWithBranch": string
 // CHECK-NEXT:       DeclareGlobalVarInst "beforeCond": string
 // CHECK-NEXT:       DeclareGlobalVarInst "uniq": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %simple(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "simple": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %simpleWithBranch(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleWithBranch(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "simpleWithBranch": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %beforeCond(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %beforeCond(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "beforeCond": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %uniq(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %uniq(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "uniq": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -297,7 +297,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(CacheNewObject)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -381,6 +380,11 @@ inline void JITContext::Compiler::emitMov(const inst::MovInst *inst) {
 
 inline void JITContext::Compiler::emitMovLong(const inst::MovLongInst *inst) {
   em_.mov(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitCacheNewObject(
+    const inst::CacheNewObjectInst *inst) {
+  // TODO: Implement CacheNewObject.
 }
 
 inline void JITContext::Compiler::emitToNumber(const inst::ToNumberInst *inst) {

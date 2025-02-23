@@ -36,34 +36,34 @@ function check_phi_handling(x) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "count": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "select": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "build": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "buffalobuffalo": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "check_phi_handling": string
-// CHECK-NEXT:  {r2}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %count(): functionCode
-// CHECK-NEXT:  {r1}      %7 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %6: object, {r1} %7: object, "count": string
-// CHECK-NEXT:  {r2}      %9 = CreateFunctionInst (:object) {r0} %0: environment, %select(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %9: object, {r1} %7: object, "select": string
-// CHECK-NEXT:  {r2}     %11 = CreateFunctionInst (:object) {r0} %0: environment, %build(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %11: object, {r1} %7: object, "build": string
-// CHECK-NEXT:  {r2}     %13 = CreateFunctionInst (:object) {r0} %0: environment, %buffalobuffalo(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %13: object, {r1} %7: object, "buffalobuffalo": string
-// CHECK-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {r0} %0: environment, %check_phi_handling(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r0} %15: object, {r1} %7: object, "check_phi_handling": string
+// CHECK-NEXT:  {r1}      %6 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r2}      %7 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %count(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %7: object, {r1} %6: object, "count": string
+// CHECK-NEXT:  {r2}      %9 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %select(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %9: object, {r1} %6: object, "select": string
+// CHECK-NEXT:  {r2}     %11 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %build(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %11: object, {r1} %6: object, "build": string
+// CHECK-NEXT:  {r2}     %13 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %buffalobuffalo(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %13: object, {r1} %6: object, "buffalobuffalo": string
+// CHECK-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %check_phi_handling(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %15: object, {r1} %6: object, "check_phi_handling": string
 // CHECK-NEXT:  {np0}    %17 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %17: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function count(): number
+// CHECK:function count(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {np0}     %0 = AllocStackInst (:undefined) $arguments: any
-// CHECK-NEXT:  {np1}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 StoreStackInst {np1} %1: undefined, {np0} %0: undefined
-// CHECK-NEXT:  {np0}     %3 = LoadStackInst (:undefined) {np0} %0: undefined
-// CHECK-NEXT:  {n0}      %4 = HBCGetArgumentsLengthInst (:number) {np0} %3: undefined
+// CHECK-NEXT:  {r0}      %0 = AllocStackInst (:undefined|object) $arguments: any
+// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r0} %0: undefined|object
+// CHECK-NEXT:  {r0}      %3 = LoadStackInst (:undefined|object) {r0} %0: undefined|object
+// CHECK-NEXT:  {n0}      %4 = HBCGetArgumentsLengthInst (:number) {r0} %3: undefined|object
 // CHECK-NEXT:                 ReturnInst {n0} %4: number
 // CHECK-NEXT:function_end
 
@@ -72,9 +72,9 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  {r1}      %0 = AllocStackInst (:undefined|object) $arguments: any
 // CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r1} %0: undefined|object
-// CHECK-NEXT:  {r0}      %3 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  {n0}      %4 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  {r0}      %5 = BinaryAddInst (:string|number) {r0} %3: any, {n0} %4: number
+// CHECK-NEXT:  {n0}      %3 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {r0}      %4 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  {r0}      %5 = BinaryAddInst (:string|number) {r0} %4: any, {n0} %3: number
 // CHECK-NEXT:  {r0}      %6 = HBCGetArgumentsPropByValLooseInst (:any) {r0} %5: string|number, {r1} %0: undefined|object
 // CHECK-NEXT:                 ReturnInst {r0} %6: any
 // CHECK-NEXT:function_end

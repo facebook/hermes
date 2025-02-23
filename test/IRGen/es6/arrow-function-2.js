@@ -33,9 +33,9 @@ function outer2() {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %outer1(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "outer1": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %outer2(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "outer2": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
@@ -56,9 +56,9 @@ function outer2() {
 // CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [%VS1.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS1.innerArrow1]: any
 // CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS1.innerArrow2]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %innerArrow1(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %VS1: any, %innerArrow1(): functionCode
 // CHECK-NEXT:        StoreFrameInst %3: environment, %9: object, [%VS1.innerArrow1]: any
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %3: environment, %innerArrow2(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %3: environment, %VS1: any, %innerArrow2(): functionCode
 // CHECK-NEXT:        StoreFrameInst %3: environment, %11: object, [%VS1.innerArrow2]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -75,9 +75,9 @@ function outer2() {
 // CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [%VS2.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS2.innerArrow4]: any
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %3: environment, %inner3(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %3: environment, %VS2: any, %inner3(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: environment, %8: object, [%VS2.inner3]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %3: environment, %innerArrow4(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %3: environment, %VS2: any, %innerArrow4(): functionCode
 // CHECK-NEXT:        StoreFrameInst %3: environment, %10: object, [%VS2.innerArrow4]: any
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -125,7 +125,7 @@ function outer2() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS6.nestedInnerArrow5]: any
 // CHECK-NEXT:  %3 = LoadFrameInst (:any) %0: environment, [%VS2.?anon_0_this]: any
 // CHECK-NEXT:       StorePropertyLooseInst 10: number, %3: any, "b": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %nestedInnerArrow5(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS6: any, %nestedInnerArrow5(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS6.nestedInnerArrow5]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

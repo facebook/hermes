@@ -64,13 +64,13 @@ function test4(f) {
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test4": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test1(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test1(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test2(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, globalObject: object, "test2": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test3(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test3(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, globalObject: object, "test3": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test4(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test4(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %11: object, globalObject: object, "test4": string
 // CHECK-NEXT:        ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -81,7 +81,7 @@ function test4(f) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %f(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.f]: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -94,7 +94,7 @@ function test4(f) {
 // CHECK:function test3(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"f3 1#"(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"f3 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
@@ -102,7 +102,7 @@ function test4(f) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:function_end

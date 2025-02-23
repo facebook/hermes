@@ -25,9 +25,9 @@ function bug2() {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "bug1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bug2": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %bug1(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bug1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "bug1": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %bug2(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bug2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "bug2": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -57,29 +57,8 @@ HERMES_SLOW_STATISTIC(
     NumGetByIdProtoHits,
     "NumGetByIdProtoHits: Number of property 'read by id' cache hits for the prototype");
 HERMES_SLOW_STATISTIC(
-    NumGetByIdCacheEvicts,
-    "NumGetByIdCacheEvicts: Number of property 'read by id' cache evictions");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdFastPaths,
-    "NumGetByIdFastPaths: Number of property 'read by id' fast paths");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdAccessor,
-    "NumGetByIdAccessor: Number of property 'read by id' accessors");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdProto,
-    "NumGetByIdProto: Number of property 'read by id' in the prototype chain");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdNotFound,
-    "NumGetByIdNotFound: Number of property 'read by id' not found");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdTransient,
-    "NumGetByIdTransient: Number of property 'read by id' of non-objects");
-HERMES_SLOW_STATISTIC(
     NumGetByIdDict,
     "NumGetByIdDict: Number of property 'read by id' of dictionaries");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdSlow,
-    "NumGetByIdSlow: Number of property 'read by id' slow path");
 
 HERMES_SLOW_STATISTIC(
     NumPutById,
@@ -87,15 +66,6 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumPutByIdCacheHits,
     "NumPutByIdCacheHits: Number of property 'write by id' cache hits");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdCacheEvicts,
-    "NumPutByIdCacheEvicts: Number of property 'write by id' cache evictions");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdFastPaths,
-    "NumPutByIdFastPaths: Number of property 'write by id' fast paths");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdTransient,
-    "NumPutByIdTransient: Number of property 'write by id' to non-objects");
 
 HERMES_SLOW_STATISTIC(
     NumNativeFunctionCalls,
@@ -282,224 +252,6 @@ CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     return runtime.raiseTypeErrorForValue(
         Handle<>(callTarget), " is not a function");
   }
-}
-
-inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id) {
-  if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
-    return createPseudoHandle(HermesValue::encodeTrustedNumberValue(
-        base->getString()->getStringLength()));
-  }
-  return createPseudoHandle(HermesValue::encodeEmptyValue());
-}
-
-CallResult<PseudoHandle<>> Interpreter::getByIdTransientWithReceiver_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id,
-    Handle<> receiver) {
-  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
-  // method did, but that section doesn't exist in ES9 anymore.
-  // Instead, the [[Get]] Receiver argument serves a similar purpose.
-
-  // Fast path: try to get primitive own property directly first.
-  PseudoHandle<> valOpt = tryGetPrimitiveOwnPropertyById(runtime, base, id);
-  if (!valOpt->isEmpty()) {
-    return valOpt;
-  }
-
-  // get the property descriptor from primitive prototype without
-  // boxing with vm::toObject().  This is where any properties will
-  // be.
-  CallResult<Handle<JSObject>> primitivePrototypeResult =
-      getPrimitivePrototype(runtime, base);
-  if (primitivePrototypeResult == ExecutionStatus::EXCEPTION) {
-    // If an exception is thrown, likely we are trying to read property on
-    // undefined/null. Passing over the name of the property
-    // so that we could emit more meaningful error messages.
-    return amendPropAccessErrorMsgWithPropName(runtime, base, "read", id);
-  }
-
-  return JSObject::getNamedWithReceiver_RJS(
-      *primitivePrototypeResult, runtime, id, receiver);
-}
-
-PseudoHandle<> Interpreter::getByValTransientFast(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> nameHandle) {
-  if (base->isString()) {
-    // Handle most common fast path -- array index property for string
-    // primitive.
-    // Since primitive string cannot have index like property we can
-    // skip ObjectFlags::fastIndexProperties checking and directly
-    // checking index storage from StringPrimitive.
-
-    OptValue<uint32_t> arrayIndex = toArrayIndexFastPath(*nameHandle);
-    // Get character directly from primitive if arrayIndex is within range.
-    // Otherwise we need to fall back to prototype lookup.
-    if (arrayIndex &&
-        arrayIndex.getValue() < base->getString()->getStringLength()) {
-      return createPseudoHandle(
-          runtime
-              .getCharacterString(base->getString()->at(arrayIndex.getValue()))
-              .getHermesValue());
-    }
-  }
-  return createPseudoHandle(HermesValue::encodeEmptyValue());
-}
-
-CallResult<PseudoHandle<>> Interpreter::getByValTransientWithReceiver_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> name,
-    Handle<> receiver) {
-  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
-  // method did, but that section doesn't exist in ES9 anymore.
-  // Instead, the [[Get]] Receiver argument serves a similar purpose.
-
-  // Optimization: check fast path first.
-  PseudoHandle<> fastRes = getByValTransientFast(runtime, base, name);
-  if (!fastRes->isEmpty()) {
-    return fastRes;
-  }
-
-  auto res = toObject(runtime, base);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-
-  return JSObject::getComputedWithReceiver_RJS(
-      runtime.makeHandle<JSObject>(res.getValue()), runtime, name, receiver);
-}
-
-static ExecutionStatus
-transientObjectPutErrorMessage(Runtime &runtime, Handle<> base, SymbolID id) {
-  // Emit an error message that looks like:
-  // "Cannot create property '%{id}' on ${typeof base} '${String(base)}'".
-  StringView propName = runtime.getIdentifierTable().getStringView(runtime, id);
-  Handle<StringPrimitive> baseType =
-      runtime.makeHandle(vmcast<StringPrimitive>(typeOf(runtime, base)));
-  StringView baseTypeAsString =
-      StringPrimitive::createStringView(runtime, baseType);
-  MutableHandle<StringPrimitive> valueAsString{runtime};
-  if (base->isSymbol()) {
-    // Special workaround for Symbol which can't be stringified.
-    auto str = symbolDescriptiveString(runtime, Handle<SymbolID>::vmcast(base));
-    if (str != ExecutionStatus::EXCEPTION) {
-      valueAsString = *str;
-    } else {
-      runtime.clearThrownValue();
-      valueAsString = StringPrimitive::createNoThrow(
-          runtime, "<<Exception occurred getting the value>>");
-    }
-  } else {
-    auto str = toString_RJS(runtime, base);
-    assert(
-        str != ExecutionStatus::EXCEPTION &&
-        "Primitives should be convertible to string without exceptions");
-    valueAsString = std::move(*str);
-  }
-  StringView valueAsStringPrintable =
-      StringPrimitive::createStringView(runtime, valueAsString);
-
-  SmallU16String<32> tmp1;
-  SmallU16String<32> tmp2;
-  return runtime.raiseTypeError(
-      TwineChar16("Cannot create property '") + propName + "' on " +
-      baseTypeAsString.getUTF16Ref(tmp1) + " '" +
-      valueAsStringPrintable.getUTF16Ref(tmp2) + "'");
-}
-
-ExecutionStatus Interpreter::putByIdTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id,
-    Handle<> value,
-    bool strictMode) {
-  // ES5.1 8.7.2 special [[Get]] internal method.
-  // TODO: avoid boxing primitives unless we are calling an accessor.
-
-  // 1. Let O be ToObject(base)
-  auto res = toObject(runtime, base);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    // If an exception is thrown, likely we are trying to convert
-    // undefined/null to an object. Passing over the name of the property
-    // so that we could emit more meaningful error messages.
-    return amendPropAccessErrorMsgWithPropName(runtime, base, "set", id);
-  }
-
-  auto O = runtime.makeHandle<JSObject>(res.getValue());
-
-  NamedPropertyDescriptor desc;
-  JSObject *propObj = JSObject::getNamedDescriptorUnsafe(O, runtime, id, desc);
-
-  // Is this a missing property, or a data property defined in the prototype
-  // chain? In both cases we would need to create an own property on the
-  // transient object, which is prohibited.
-  if (!propObj ||
-      (propObj != O.get() &&
-       (!desc.flags.accessor && !desc.flags.proxyObject))) {
-    if (strictMode) {
-      return transientObjectPutErrorMessage(runtime, base, id);
-    }
-    return ExecutionStatus::RETURNED;
-  }
-
-  // Modifying an own data property in a transient object is prohibited.
-  if (!desc.flags.accessor && !desc.flags.proxyObject) {
-    if (strictMode) {
-      return runtime.raiseTypeError(
-          "Cannot modify a property in a transient object");
-    }
-    return ExecutionStatus::RETURNED;
-  }
-
-  if (desc.flags.accessor) {
-    // This is an accessor.
-    auto *accessor = vmcast<PropertyAccessor>(
-        JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc)
-            .getObject(runtime));
-
-    // It needs to have a setter.
-    if (!accessor->setter) {
-      if (strictMode) {
-        return runtime.raiseTypeError("Cannot modify a read-only accessor");
-      }
-      return ExecutionStatus::RETURNED;
-    }
-
-    CallResult<PseudoHandle<>> setRes = Callable::executeCall1(
-        runtime.makeHandle(accessor->setter), runtime, base, *value);
-    if (setRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-  } else {
-    assert(desc.flags.proxyObject && "descriptor flags are impossible");
-    CallResult<bool> setRes = JSProxy::setNamed(
-        runtime.makeHandle(propObj), runtime, id, value, base);
-    if (setRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (!*setRes && strictMode) {
-      return runtime.raiseTypeError("transient proxy set returned false");
-    }
-  }
-  return ExecutionStatus::RETURNED;
-}
-
-ExecutionStatus Interpreter::putByValTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> name,
-    Handle<> value,
-    bool strictMode) {
-  auto idRes = valueToSymbolID(runtime, name);
-  if (idRes == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
-
-  return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
 }
 
 static CallResult<HiddenClass *> getHiddenClassForBuffer(
@@ -826,9 +578,12 @@ static inline const Inst *nextInstCall(const Inst *ip) {
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
-  if (LLVM_UNLIKELY(
-          newCodeBlock->lazyCompile(*this) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(newCodeBlock->isLazy())) {
+    if (LLVM_UNLIKELY(
+            newCodeBlock->compileLazyFunction(*this) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   }
 
 #if defined(HERMES_MEMORY_INSTRUMENTATION) || !defined(NDEBUG)
@@ -946,6 +701,25 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   runtime.invalidateCurrentIP();
 
 #endif // NDEBUG
+
+/// The ENCODE_HV_AS_SHV macro is intended to be used when we need to convert
+/// a HermesValue to a SmallHermesValue in interpreter code. It takes the
+/// HermesValue \p src and declares a new SmallHermesValue with name \p dst that
+/// contains the converted value. If boxed doubles are enabled, the conversion
+/// may allocate, and this will perform a CAPTURE_IP accordingly.
+#ifdef HERMESVM_BOXED_DOUBLES
+// When boxed doubles are enabled, encodeHermesValue may allocate when a double
+// is boxed, so we have to use CAPTURE_IP.
+#define ENCODE_HV_AS_SHV(dst, src) \
+  CAPTURE_IP_ASSIGN(               \
+      SmallHermesValue dst, SmallHermesValue::encodeHermesValue(src, runtime))
+#else
+// When boxed doubles are disabled, SmallHermesValue is identical to
+// HermesValue, but it is still technically a distinct type. So
+// encodeHermesValue is effectively just a cast.
+#define ENCODE_HV_AS_SHV(dst, src) \
+  SmallHermesValue dst = SmallHermesValue::encodeHermesValue(src, runtime);
+#endif
 
 /// \def DONT_CAPTURE_IP(expr)
 /// \param expr A call expression to a function external to the interpreter. The
@@ -1660,9 +1434,12 @@ tailCall:
 #endif
 
         CodeBlock *calleeBlock = func->getCodeBlock();
-        CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
+        if (LLVM_UNLIKELY(calleeBlock->isLazy())) {
+          CAPTURE_IP_ASSIGN(
+              auto res, calleeBlock->compileLazyFunction(runtime));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
         }
 
         if (auto jitPtr = runtime.jitContext_.compile(runtime, calleeBlock)) {
@@ -2032,7 +1809,9 @@ tailCall:
               JSFunction::createWithInferredParent(
                   runtime,
                   runtimeModule->getDomain(runtime),
-                  Handle<Environment>::vmcast(&O2REG(CreateClosure)),
+                  O2REG(CreateClosure).isUndefined()
+                      ? Runtime::makeNullHandle<Environment>()
+                      : Handle<Environment>::vmcast(&O2REG(CreateClosure)),
                   runtimeModule->getCodeBlockMayAllocate(idVal))
                   .getHermesValue());
       gcScope.flushToSmallCount(KEEP_HANDLES);
@@ -2047,7 +1826,9 @@ tailCall:
                 runtime,
                 curCodeBlock->getRuntimeModule(),
                 ip->iCreateGenerator.op3,
-                Handle<Environment>::vmcast(&O2REG(CreateGenerator)),
+                O2REG(CreateGenerator).isUndefined()
+                    ? Runtime::makeNullHandle<Environment>()
+                    : Handle<Environment>::vmcast(&O2REG(CreateGenerator)),
                 FRAME.getNativeArgs()));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
@@ -2238,198 +2019,91 @@ tailCall:
         DISPATCH;
       }
 
+#ifndef NDEBUG
+#define INC_NUMGETBYIDDICT                                               \
+  if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary()) \
+    ++NumGetByIdDict;
+#else
+#define INC_NUMGETBYIDDICT (void)NumGetByIdDict;
+#endif
+
+#define GET_BY_ID_IMPL(name)                                                  \
+  ++NumGetById;                                                               \
+  if (LLVM_LIKELY(O2REG(name).isObject())) {                                  \
+    auto *obj = vmcast<JSObject>(O2REG(name));                                \
+    auto cacheIdx = ip->i##name.op3;                                          \
+    auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);             \
+    CompressedPointer clazzPtr{obj->getClassGCPtr()};                         \
+    INC_NUMGETBYIDDICT;                                                       \
+    /* If we have a cache hit, reuse the cached offset and immediately return \
+     * the property. */                                                       \
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {                         \
+      ++NumGetByIdCacheHits;                                                  \
+      O1REG(name) =                                                           \
+          JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)   \
+              .unboxToHV(runtime);                                            \
+      ip = NEXTINST(name);                                                    \
+      DISPATCH;                                                               \
+    }                                                                         \
+    if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {                 \
+      /* Proxy, HostObject and lazy objects have special hidden classes, so   \
+       * they should never match the cached class. */                         \
+      assert(!obj->getFlags().proxyObject);                                   \
+      assert(!obj->getFlags().hostObject);                                    \
+      assert(!obj->getFlags().lazyObject);                                    \
+      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();         \
+      if (LLVM_LIKELY(parentGCPtr)) {                                         \
+        JSObject *parent = parentGCPtr.getNonNull(runtime);                   \
+        if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {      \
+          ++NumGetByIdProtoHits;                                              \
+          /* We've already checked that this isn't a Proxy. */                \
+          O1REG(name) = JSObject::getNamedSlotValueUnsafe(                    \
+                            parent, runtime, cacheEntry->slot)                \
+                            .unboxToHV(runtime);                              \
+          ip = NEXTINST(name);                                                \
+          DISPATCH;                                                           \
+        }                                                                     \
+      }                                                                       \
+    }                                                                         \
+  }                                                                           \
+  CAPTURE_IP_ASSIGN(                                                          \
+      ExecutionStatus res,                                                    \
+      doGetByIdSlowPath_RJS(                                                  \
+          runtime, frameRegs, ip, curCodeBlock, idVal, tryProp));             \
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))                       \
+    goto exception;                                                           \
+  gcScope.flushToSmallCount(KEEP_HANDLES);                                    \
+  ip = NEXTINST(name);                                                        \
+  DISPATCH;
+
       CASE(TryGetByIdLong) {
         tryProp = true;
         idVal = ip->iTryGetByIdLong.op4;
-        nextIP = NEXTINST(TryGetByIdLong);
-        goto getById;
+        GET_BY_ID_IMPL(TryGetByIdLong);
       }
       CASE(GetByIdLong) {
         tryProp = false;
         idVal = ip->iGetByIdLong.op4;
-        nextIP = NEXTINST(GetByIdLong);
-        goto getById;
+        GET_BY_ID_IMPL(GetByIdLong);
       }
       CASE(GetByIdShort) {
         tryProp = false;
         idVal = ip->iGetByIdShort.op4;
-        nextIP = NEXTINST(GetByIdShort);
-        goto getById;
+        GET_BY_ID_IMPL(GetByIdShort);
       }
       CASE(TryGetById) {
         tryProp = true;
         idVal = ip->iTryGetById.op4;
-        nextIP = NEXTINST(TryGetById);
-        goto getById;
+        GET_BY_ID_IMPL(TryGetById);
       }
       CASE(GetById) {
         tryProp = false;
         idVal = ip->iGetById.op4;
-        nextIP = NEXTINST(GetById);
+        GET_BY_ID_IMPL(GetById);
       }
-    getById: {
-      ++NumGetById;
-      // NOTE: it is safe to use OnREG(GetById) here because all instructions
-      // have the same layout: opcode, registers, non-register operands, i.e.
-      // they only differ in the width of the last "identifier" field.
-      if (LLVM_LIKELY(O2REG(GetById).isObject())) {
-        auto *obj = vmcast<JSObject>(O2REG(GetById));
-        auto cacheIdx = ip->iGetById.op3;
-        auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
 
-        CompressedPointer clazzPtr{obj->getClassGCPtr()};
-#ifndef NDEBUG
-        if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary())
-          ++NumGetByIdDict;
-#else
-        (void)NumGetByIdDict;
-#endif
-
-        // If we have a cache hit, reuse the cached offset and immediately
-        // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-          ++NumGetByIdCacheHits;
-          O1REG(GetById) =
-              JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
-                  .unboxToHV(runtime);
-          ip = nextIP;
-          DISPATCH;
-        }
-        // TODO(T206393003): if we ensure that lazy, proxy, host objects
-        // have special HC's, different from that of an empty object, and
-        // don't do proto caching for such objects, then we wouldn't have
-        // to do this check.
-        SHObjectFlags kLazyProxyOrHost;
-        kLazyProxyOrHost.bits = 0;
-        kLazyProxyOrHost.hostObject = 1;
-        kLazyProxyOrHost.lazyObject = 1;
-        kLazyProxyOrHost.proxyObject = 1;
-        if (LLVM_LIKELY(
-                cacheEntry->negMatchClazz == clazzPtr &&
-                !obj->hasFlagIn(kLazyProxyOrHost))) {
-          const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
-          if (LLVM_LIKELY(parentGCPtr)) {
-            JSObject *parent = parentGCPtr.getNonNull(runtime);
-            if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
-              ++NumGetByIdProtoHits;
-              // We've already checked that this isn't a Proxy.
-              O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
-                                   parent, runtime, cacheEntry->slot)
-                                   .unboxToHV(runtime);
-              ip = nextIP;
-              DISPATCH;
-            }
-          }
-        }
-        auto id = ID(idVal);
-        NamedPropertyDescriptor desc;
-        OptValue<bool> fastPathResult =
-            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
-        if (LLVM_LIKELY(
-                fastPathResult.hasValue() && fastPathResult.getValue()) &&
-            !desc.flags.accessor) {
-          ++NumGetByIdFastPaths;
-
-          // cacheIdx == 0 indicates no caching so don't update the cache in
-          // those cases.
-          HiddenClass *clazz =
-              vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-          if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
-              LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
-#ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
-              ++NumGetByIdCacheEvicts;
-#else
-            (void)NumGetByIdCacheEvicts;
-#endif
-            // Cache the class, id and property slot.
-            cacheEntry->clazz = clazzPtr;
-            cacheEntry->slot = desc.slot;
-          }
-
-          assert(
-              !obj->isProxyObject() &&
-              "tryGetOwnNamedDescriptorFast returned true on Proxy");
-          O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
-                               .unboxToHV(runtime);
-          ip = nextIP;
-          DISPATCH;
-        }
-
-#ifdef HERMES_SLOW_DEBUG
-        // Call to getNamedDescriptorUnsafe is safe because `id` is kept alive
-        // by the IdentifierTable.
-        CAPTURE_IP_ASSIGN(
-            JSObject * propObj,
-            JSObject::getNamedDescriptorUnsafe(
-                Handle<JSObject>::vmcast(&O2REG(GetById)), runtime, id, desc));
-        if (propObj) {
-          if (desc.flags.accessor)
-            ++NumGetByIdAccessor;
-          else if (propObj != vmcast<JSObject>(O2REG(GetById)))
-            ++NumGetByIdProto;
-        } else {
-          ++NumGetByIdNotFound;
-        }
-#else
-        (void)NumGetByIdAccessor;
-        (void)NumGetByIdProto;
-        (void)NumGetByIdNotFound;
-#endif
-#ifdef HERMES_SLOW_DEBUG
-        // It's possible that there might be a GC between the time
-        // savedClass is set and the time it is checked (to see if
-        // there was an eviction.  This GC could move the HiddenClass
-        // to which savedClass points, making it an invalid pointer.
-        // We don't dereference this pointer, we just compare it, so
-        // this won't cause a crash.  In this presumably rare case,
-        // the eviction count would be incorrect.  But the
-        // alternative, putting savedClass in a handle so it's a root,
-        // could change GC behavior might alter the program behavior
-        // in some cases: a HiddenClass might be live longer than it
-        // would have been.  We're choosing to go with the first
-        // problem as the lesser of two evils.
-        auto *savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
-            ? cacheEntry->clazz.get(runtime, runtime.getHeap())
-            : nullptr;
-#endif
-        ++NumGetByIdSlow;
-        // Getting properties is not affected by strictness, so just use false.
-        const auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
-        CAPTURE_IP(
-            resPH = JSObject::getNamed_RJS(
-                Handle<JSObject>::vmcast(&O2REG(GetById)),
-                runtime,
-                id,
-                !tryProp ? defaultPropOpFlags
-                         : defaultPropOpFlags.plusMustExist(),
-                cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry
-                                                           : nullptr));
-        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-#ifdef HERMES_SLOW_DEBUG
-        if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
-            cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
-          ++NumGetByIdCacheEvicts;
-        }
-#endif
-      } else {
-        ++NumGetByIdTransient;
-        assert(!tryProp && "TryGetById can only be used on the global object");
-        /* Slow path. */
-        CAPTURE_IP(
-            resPH = Interpreter::getByIdTransient_RJS(
-                runtime, Handle<>(&O2REG(GetById)), ID(idVal)));
-        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-      }
-      O1REG(GetById) = resPH->get();
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
+#undef INC_NUMGETBYIDDICT
+#undef GET_BY_ID_IMPL
 
       CASE(GetByIdWithReceiverLong) {
         if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
@@ -2447,30 +2121,13 @@ tailCall:
             ip = NEXTINST(GetByIdWithReceiverLong);
             DISPATCH;
           }
-          CAPTURE_IP(
-              resPH = JSObject::getNamedWithReceiver_RJS(
-                  Handle<JSObject>::vmcast(&O2REG(GetByIdWithReceiverLong)),
-                  runtime,
-                  ID(ip->iGetByIdWithReceiverLong.op5),
-                  Handle<>(&O4REG(GetByIdWithReceiverLong)),
-                  DEFAULT_PROP_OP_FLAGS(false),
-                  cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry
-                                                             : nullptr));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          CAPTURE_IP(
-              resPH = Interpreter::getByIdTransientWithReceiver_RJS(
-                  runtime,
-                  Handle<>(&O2REG(GetByIdWithReceiverLong)),
-                  ID(ip->iGetByIdWithReceiverLong.op5),
-                  Handle<>(&O4REG(GetByIdWithReceiverLong))));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
         }
-        O1REG(GetByIdWithReceiverLong) = resPH->getHermesValue();
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus res,
+            doGetByIdWithReceiverSlowPath_RJS(
+                runtime, frameRegs, ip, curCodeBlock));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+          goto exception;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(GetByIdWithReceiverLong);
         DISPATCH;
@@ -2534,9 +2191,7 @@ tailCall:
     putById: {
       ++NumPutById;
       if (LLVM_LIKELY(O1REG(PutByIdLoose).isObject())) {
-        CAPTURE_IP_ASSIGN(
-            SmallHermesValue shv,
-            SmallHermesValue::encodeHermesValue(O2REG(PutByIdLoose), runtime));
+        ENCODE_HV_AS_SHV(shv, O2REG(PutByIdLoose));
         auto *obj = vmcast<JSObject>(O1REG(PutByIdLoose));
         auto cacheIdx = ip->iPutByIdLoose.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
@@ -2551,124 +2206,27 @@ tailCall:
           ip = nextIP;
           DISPATCH;
         }
-        auto id = ID(idVal);
-        NamedPropertyDescriptor desc;
-        OptValue<bool> hasOwnProp =
-            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
-        if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
-            !desc.flags.accessor && desc.flags.writable &&
-            !desc.flags.internalSetter) {
-          ++NumPutByIdFastPaths;
-
-          // cacheIdx == 0 indicates no caching so don't update the cache in
-          // those cases.
-          HiddenClass *clazz =
-              vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-          if (LLVM_LIKELY(!clazz->isDictionary()) &&
-              LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
-#ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
-              ++NumPutByIdCacheEvicts;
-#else
-            (void)NumPutByIdCacheEvicts;
-#endif
-            // Cache the class and property slot.
-            cacheEntry->clazz = clazzPtr;
-            cacheEntry->slot = desc.slot;
-          }
-
-          // This must be valid because an own property was already found.
-          JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv);
-          ip = nextIP;
-          DISPATCH;
-        }
-        const PropOpFlags defaultPropOpFlags =
-            DEFAULT_PROP_OP_FLAGS(strictMode);
-        CAPTURE_IP_ASSIGN(
-            auto putRes,
-            JSObject::putNamed_RJS(
-                Handle<JSObject>::vmcast(&O1REG(PutByIdLoose)),
-                runtime,
-                id,
-                Handle<>(&O2REG(PutByIdLoose)),
-                !tryProp ? defaultPropOpFlags
-                         : defaultPropOpFlags.plusMustExist()));
-        if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-      } else {
-        ++NumPutByIdTransient;
-        assert(!tryProp && "TryPutById can only be used on the global object");
-        CAPTURE_IP_ASSIGN(
-            auto retStatus,
-            Interpreter::putByIdTransient_RJS(
-                runtime,
-                Handle<>(&O1REG(PutByIdLoose)),
-                ID(idVal),
-                Handle<>(&O2REG(PutByIdLoose)),
-                strictMode));
-        if (retStatus == ExecutionStatus::EXCEPTION) {
-          goto exception;
-        }
       }
+      CAPTURE_IP_ASSIGN(
+          ExecutionStatus res,
+          doPutByIdSlowPath_RJS(
+              runtime,
+              frameRegs,
+              ip,
+              curCodeBlock,
+              idVal,
+              strictMode,
+              tryProp));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+        goto exception;
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
     }
 
-      CASE(GetByVal) {
-        if (LLVM_LIKELY(O2REG(GetByVal).isObject())) {
-          CAPTURE_IP(
-              resPH = JSObject::getComputed_RJS(
-                  Handle<JSObject>::vmcast(&O2REG(GetByVal)),
-                  runtime,
-                  Handle<>(&O3REG(GetByVal))));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          // This is the "slow path".
-          CAPTURE_IP(
-              resPH = Interpreter::getByValTransient_RJS(
-                  runtime,
-                  Handle<>(&O2REG(GetByVal)),
-                  Handle<>(&O3REG(GetByVal))));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(GetByVal) = resPH->get();
-        ip = NEXTINST(GetByVal);
-        DISPATCH;
-      }
-      CASE(GetByValWithReceiver) {
-        if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
-          CAPTURE_IP(
-              resPH = JSObject::getComputedWithReceiver_RJS(
-                  Handle<JSObject>::vmcast(&O2REG(GetByValWithReceiver)),
-                  runtime,
-                  Handle<>(&O3REG(GetByValWithReceiver)),
-                  Handle<>(&O4REG(GetByValWithReceiver))));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          CAPTURE_IP(
-              resPH = Interpreter::getByValTransientWithReceiver_RJS(
-                  runtime,
-                  Handle<>(&O2REG(GetByValWithReceiver)),
-                  Handle<>(&O3REG(GetByValWithReceiver)),
-                  Handle<>(&O4REG(GetByValWithReceiver))));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(GetByValWithReceiver) = resPH->get();
-        ip = NEXTINST(GetByValWithReceiver);
-        DISPATCH;
-      }
+      CASE_OUTOFLINE(GetByVal);
+      CASE_OUTOFLINE(GetByValWithReceiver);
+
       CASE(GetByIndex) {
         if (LLVM_LIKELY(O2REG(GetByIndex).isObject())) {
           auto *obj = vmcast<JSObject>(O2REG(GetByIndex));
@@ -2705,72 +2263,16 @@ tailCall:
 
       CASE(PutByValLoose)
       CASE(PutByValStrict) {
-        bool strictMode = (ip->opCode == OpCode::PutByValStrict);
-        if (LLVM_LIKELY(O1REG(PutByValLoose).isObject())) {
-          auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
-          CAPTURE_IP_ASSIGN(
-              auto putRes,
-              JSObject::putComputed_RJS(
-                  Handle<JSObject>::vmcast(&O1REG(PutByValLoose)),
-                  runtime,
-                  Handle<>(&O2REG(PutByValLoose)),
-                  Handle<>(&O3REG(PutByValLoose)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          // This is the "slow path".
-          CAPTURE_IP_ASSIGN(
-              auto retStatus,
-              Interpreter::putByValTransient_RJS(
-                  runtime,
-                  Handle<>(&O1REG(PutByValLoose)),
-                  Handle<>(&O2REG(PutByValLoose)),
-                  Handle<>(&O3REG(PutByValLoose)),
-                  strictMode));
-          if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        }
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status, casePutByVal(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+          goto exception;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(PutByValLoose);
         DISPATCH;
       }
 
-      CASE(PutByValWithReceiver) {
-        auto defaultPropOpFlags =
-            DEFAULT_PROP_OP_FLAGS(ip->iPutByValWithReceiver.op5);
-        if (LLVM_LIKELY(O1REG(PutByValWithReceiver).isObject())) {
-          CAPTURE_IP_ASSIGN(
-              auto res,
-              JSObject::putComputedWithReceiver_RJS(
-                  Handle<JSObject>::vmcast(&O1REG(PutByValWithReceiver)),
-                  runtime,
-                  Handle<>(&O2REG(PutByValWithReceiver)),
-                  Handle<>(&O3REG(PutByValWithReceiver)),
-                  Handle<>(&O4REG(PutByValWithReceiver)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          CAPTURE_IP_ASSIGN(
-              auto retStatus,
-              Interpreter::putByValTransient_RJS(
-                  runtime,
-                  Handle<>(&O1REG(PutByValLoose)),
-                  Handle<>(&O2REG(PutByValLoose)),
-                  Handle<>(&O3REG(PutByValLoose)),
-                  ip->iPutByValWithReceiver.op5));
-          if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(PutByValWithReceiver);
-        DISPATCH;
-      }
+      CASE_OUTOFLINE(PutByValWithReceiver);
 
       CASE(DefineOwnByIndexL) {
         nextIP = NEXTINST(DefineOwnByIndexL);
@@ -3236,10 +2738,7 @@ tailCall:
       CASE(FastArrayStore) {
         double idx = O2REG(FastArrayStore).getNumber();
         uint32_t intIndex = _sh_tryfast_f64_to_u32_cvt(idx);
-        CAPTURE_IP_ASSIGN(
-            auto shv,
-            SmallHermesValue::encodeHermesValue(
-                O3REG(FastArrayStore), runtime));
+        ENCODE_HV_AS_SHV(shv, O3REG(FastArrayStore));
         auto *storage = vmcast<FastArray>(O1REG(FastArrayStore))
                             ->unsafeGetIndexedStorage(runtime);
 
@@ -3521,45 +3020,51 @@ tailCall:
       DISPATCH;
     }
       CASE(PutOwnBySlotIdxLong) {
-        nextIP = NEXTINST(PutOwnBySlotIdxLong);
-        idVal = ip->iPutOwnBySlotIdxLong.op3;
-        goto putOwnBySlotIdx;
+        assert(
+            O1REG(PutOwnBySlotIdxLong).isObject() &&
+            "Object argument of PutOwnBySlotIdx must be an object");
+        ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdxLong));
+        JSObject::setNamedSlotValueUnsafe(
+            vmcast<JSObject>(O1REG(PutOwnBySlotIdxLong)),
+            runtime,
+            ip->iPutOwnBySlotIdxLong.op3,
+            shv);
+        ip = NEXTINST(PutOwnBySlotIdxLong);
+        DISPATCH;
       }
       CASE(PutOwnBySlotIdx) {
-        nextIP = NEXTINST(PutOwnBySlotIdx);
-        idVal = ip->iPutOwnBySlotIdx.op3;
+        assert(
+            O1REG(PutOwnBySlotIdx).isObject() &&
+            "Object argument of PutOwnBySlotIdx must be an object");
+        ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdx));
+        JSObject::setNamedSlotValueUnsafe(
+            vmcast<JSObject>(O1REG(PutOwnBySlotIdx)),
+            runtime,
+            ip->iPutOwnBySlotIdx.op3,
+            shv);
+        ip = NEXTINST(PutOwnBySlotIdx);
+        DISPATCH;
       }
-    putOwnBySlotIdx: {
-      assert(
-          O1REG(PutOwnBySlotIdx).isObject() &&
-          "Object argument of PutOwnBySlotIdx must be an object");
-      CAPTURE_IP_ASSIGN(
-          SmallHermesValue shv,
-          SmallHermesValue::encodeHermesValue(O2REG(PutOwnBySlotIdx), runtime));
-      JSObject::setNamedSlotValueUnsafe(
-          vmcast<JSObject>(O1REG(PutOwnBySlotIdx)), runtime, idVal, shv);
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
 
       CASE(GetOwnBySlotIdxLong) {
-        nextIP = NEXTINST(GetOwnBySlotIdxLong);
-        idVal = ip->iGetOwnBySlotIdxLong.op3;
-        goto getOwnBySlotIdx;
+        O1REG(GetOwnBySlotIdxLong) =
+            JSObject::getNamedSlotValueUnsafe(
+                vmcast<JSObject>(O2REG(GetOwnBySlotIdxLong)),
+                runtime,
+                ip->iGetOwnBySlotIdxLong.op3)
+                .unboxToHV(runtime);
+        ip = NEXTINST(GetOwnBySlotIdxLong);
+        DISPATCH;
       }
       CASE(GetOwnBySlotIdx) {
-        nextIP = NEXTINST(GetOwnBySlotIdx);
-        idVal = ip->iGetOwnBySlotIdx.op3;
+        O1REG(GetOwnBySlotIdx) = JSObject::getNamedSlotValueUnsafe(
+                                     vmcast<JSObject>(O2REG(GetOwnBySlotIdx)),
+                                     runtime,
+                                     ip->iGetOwnBySlotIdx.op3)
+                                     .unboxToHV(runtime);
+        ip = NEXTINST(GetOwnBySlotIdx);
+        DISPATCH;
       }
-    getOwnBySlotIdx: {
-      O1REG(GetOwnBySlotIdx) =
-          JSObject::getNamedSlotValueUnsafe(
-              vmcast<JSObject>(O2REG(GetOwnBySlotIdx)), runtime, idVal)
-              .unboxToHV(runtime);
-      ip = nextIP;
-      DISPATCH;
-    }
 
       CASE_OUTOFLINE(DelByVal);
 

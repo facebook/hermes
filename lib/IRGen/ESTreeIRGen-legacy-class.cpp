@@ -525,16 +525,20 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
         if (!prop->_static)
           continue;
         Value *propKey;
+        Identifier nameHint;
         if (prop->_computed) {
           // use .at, since there should always be an entry for this node.
           Variable *fieldKeyVar = LC->classComputedFieldKeys.at(prop);
           auto *scope = emitResolveScopeInstIfNeeded(fieldKeyVar->getParent());
           propKey = Builder.createLoadFrameInst(scope, fieldKeyVar);
         } else {
+          if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
+            nameHint = Identifier::getFromPointer(id->_name);
+          }
           propKey =
               Builder.getLiteralString(propertyKeyAsString(buffer, prop->_key));
         }
-        Value *propValue = prop->_value ? genExpression(prop->_value)
+        Value *propValue = prop->_value ? genExpression(prop->_value, nameHint)
                                         : Builder.getLiteralUndefined();
         Builder.createDefineOwnPropertyInst(
             propValue, classVal, propKey, IRBuilder::PropEnumerable::Yes);
@@ -603,15 +607,19 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
         if (prop->_static)
           continue;
         Value *propKey;
+        Identifier nameHint;
         if (prop->_computed) {
           Variable *fieldKeyVar = LC->classComputedFieldKeys.at(prop);
           auto *scope = emitResolveScopeInstIfNeeded(fieldKeyVar->getParent());
           propKey = Builder.createLoadFrameInst(scope, fieldKeyVar);
         } else {
+          if (auto *ID = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
+            nameHint = Identifier::getFromPointer(ID->_name);
+          }
           propKey =
               Builder.getLiteralString(propertyKeyAsString(buffer, prop->_key));
         }
-        Value *propValue = prop->_value ? genExpression(prop->_value)
+        Value *propValue = prop->_value ? genExpression(prop->_value, nameHint)
                                         : Builder.getLiteralUndefined();
         Builder.createDefineOwnPropertyInst(
             propValue, thisParam, propKey, IRBuilder::PropEnumerable::Yes);

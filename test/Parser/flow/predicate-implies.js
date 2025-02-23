@@ -540,7 +540,35 @@ type T = (empty: mixed) => implies empty is number;
 // CHECK-NEXT:         "rest": null,
 // CHECK-NEXT:         "typeParameters": null
 // CHECK-NEXT:       }
-// CHECK-NEXT:     }
+// CHECK-NEXT:     },
+
+type T = () => implies this is number;
+// CHECK-NEXT: {
+// CHECK-NEXT:   "type": "TypeAlias",
+// CHECK-NEXT:   "id": {
+// CHECK-NEXT:     "type": "Identifier",
+// CHECK-NEXT:     "name": "T"
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "typeParameters": null,
+// CHECK-NEXT:   "right": {
+// CHECK-NEXT:     "type": "FunctionTypeAnnotation",
+// CHECK-NEXT:     "params": [],
+// CHECK-NEXT:     "this": null,
+// CHECK-NEXT:     "returnType": {
+// CHECK-NEXT:       "type": "TypePredicate",
+// CHECK-NEXT:       "parameterName": {
+// CHECK-NEXT:         "type": "Identifier",
+// CHECK-NEXT:         "name": "this"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "typeAnnotation": {
+// CHECK-NEXT:         "type": "NumberTypeAnnotation"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "kind": "implies"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "rest": null,
+// CHECK-NEXT:     "typeParameters": null
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
 
 // CHECK-NEXT:   ]
 // CHECK-NEXT: }

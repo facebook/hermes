@@ -72,7 +72,9 @@ createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
     return runtime.raiseTypeError(
         "Filename must end in .heapsnapshot or .heaptimeline");
   }
-  if (auto err = runtime.getHeap().createSnapshotToFile(fileName)) {
+  std::error_code err;
+  llvh::raw_fd_ostream os(fileName, err, llvh::sys::fs::FileAccess::FA_Write);
+  if (err) {
     // This isn't a TypeError, but no other built-in can express file errors,
     // so this will have to do.
     return runtime.raiseTypeError(
@@ -80,6 +82,9 @@ createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
         llvh::StringRef(fileName) +
         "\". System error: " + llvh::StringRef(err.message()));
   }
+  // Taking a snapshot always starts with garbage collection.
+  runtime.collect("snapshot");
+  runtime.getHeap().createSnapshot(os, true);
   return HermesValue::encodeUndefinedValue();
 #else // !defined(HERMES_MEMORY_INSTRUMENTATION)
   return runtime.raiseTypeError(
@@ -165,11 +170,8 @@ static void initTest262Harness(vm::Runtime &runtime) {
   vm::Handle<vm::JSObject> test262Obj =
       runtime.makeHandle(vm::JSObject::create(runtime));
 
-  vm::DefinePropertyFlags constantDPF =
-      vm::DefinePropertyFlags::getDefaultNewPropertyFlags();
-  constantDPF.enumerable = 0;
-  constantDPF.writable = 0;
-  constantDPF.configurable = 0;
+  vm::DefinePropertyFlags nonEnumerableDPF =
+      vm::DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Define $262.global
   auto global = runtime.getGlobal();
@@ -177,7 +179,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
       test262Obj,
       runtime,
       vm::Predefined::getSymbolID(vm::Predefined::global),
-      constantDPF,
+      nonEnumerableDPF,
       global));
 
   /// Try to get defined property on given JSObject \p selfHandle. If it does
@@ -204,7 +206,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
   /// Try to copy the defined property \p srcName on \p srcSelfHandle to
   /// \p tgtSelfHandle with given name \p tgtName. If \p srcName does not exist,
   /// do nothing.
-  auto tryCopyProperty = [&runtime, &constantDPF, &tryGetDefinedProperty](
+  auto tryCopyProperty = [&runtime, &nonEnumerableDPF, &tryGetDefinedProperty](
                              vm::Handle<vm::JSObject> srcSelfHandle,
                              vm::SymbolID srcName,
                              vm::Handle<vm::JSObject> tgtSelfHandle,
@@ -214,7 +216,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
       return;
 
     runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
-        tgtSelfHandle, runtime, tgtName, constantDPF, *prop));
+        tgtSelfHandle, runtime, tgtName, nonEnumerableDPF, *prop));
   };
 
   // Define $262.evalScript
@@ -242,7 +244,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
       global,
       runtime,
       vm::Predefined::getSymbolID(vm::Predefined::test262),
-      constantDPF,
+      nonEnumerableDPF,
       test262Obj));
 
   // Define global function alert()
@@ -455,7 +457,12 @@ bool executeHBCBytecodeImpl(
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
-    vm::SamplingProfiler::enable();
+    if (options.profilingOutFile.empty()) {
+      llvh::errs()
+          << "Please specify a profiling output file with -profiling-out\n";
+      return false;
+    }
+    vm::SamplingProfiler::enable(options.sampleProfilingFreq);
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
@@ -467,21 +474,6 @@ bool executeHBCBytecodeImpl(
       flags,
       sourceURL,
       vm::Runtime::makeNullHandle<vm::Environment>());
-
-#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  switch (options.sampleProfiling) {
-    case ExecuteOptions::SampleProfilingMode::None:
-      break;
-    case ExecuteOptions::SampleProfilingMode::Chrome:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
-      break;
-    case ExecuteOptions::SampleProfilingMode::Tracery:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpTraceryTrace(llvh::errs());
-      break;
-  }
-#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   bool threwException = status == vm::ExecutionStatus::EXCEPTION;
 
@@ -515,6 +507,29 @@ bool executeHBCBytecodeImpl(
       microtask::performCheckpoint(*runtime);
     }
   }
+
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
+  if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
+    assert(!options.profilingOutFile.empty() && "Must not be empty");
+    OutputStream fileOS;
+    if (!fileOS.open(options.profilingOutFile, llvh::sys::fs::F_Text))
+      return false;
+    switch (options.sampleProfiling) {
+      case ExecuteOptions::SampleProfilingMode::None:
+        llvm_unreachable("Cannot be none");
+      case ExecuteOptions::SampleProfilingMode::Chrome:
+        vm::SamplingProfiler::disable();
+        runtime->samplingProfiler->dumpChromeTrace(fileOS.os());
+        break;
+      case ExecuteOptions::SampleProfilingMode::Tracery:
+        vm::SamplingProfiler::disable();
+        runtime->samplingProfiler->dumpTraceryTrace(fileOS.os());
+        break;
+    }
+    if (!fileOS.close())
+      return false;
+  }
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
 #ifdef HERMESVM_PROFILER_OPCODE
   runtime->dumpOpcodeStats(llvh::outs());

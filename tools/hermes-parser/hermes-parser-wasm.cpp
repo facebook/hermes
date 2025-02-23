@@ -98,7 +98,7 @@ extern "C" ParseResult *hermesParse(
   serialize(*parsedJs, &context->getSourceErrorManager(), *result, tokens);
 
   // Run semantic validation after AST has been serialized
-  sema::SemContext semContext{};
+  sema::SemContext semContext{*context};
   resolveASTForParser(*context, semContext, *parsedJs);
 
   // Return first error if errors are detected during semantic validation

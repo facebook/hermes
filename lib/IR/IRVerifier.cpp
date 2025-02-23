@@ -248,6 +248,15 @@ bool Verifier::visitFunction(const Function &F) {
         "Only GetNewTargetInst may use the newTargetParam");
   }
 
+  for (Instruction *user : F.getUsers()) {
+    AssertIWithMsg(
+        (*user),
+        llvh::isa<BaseCallInst>(user) ||
+            llvh::isa<BaseCreateLexicalChildInst>(user) ||
+            llvh::isa<GetClosureScopeInst>(user),
+        "Function can only be an operand to certain instructions");
+  }
+
   FunctionState newFunctionState(this, F);
 
   // Verify all basic blocks are valid
@@ -548,10 +557,12 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   for (unsigned i = 0; i < Inst.getNumOperands(); i++) {
     auto Operand = Inst.getOperand(i);
     AssertIWithMsg(Inst, Operand != nullptr, "Invalid operand");
-    AssertIWithMsg(
-        Inst,
-        getUsersSetForValue(Operand).count(&Inst) == 1,
-        "This instruction is not in the User list of the operand");
+    if (Operand->tracksUsers()) {
+      AssertIWithMsg(
+          Inst,
+          getUsersSetForValue(Operand).count(&Inst) == 1,
+          "This instruction is not in the User list of the operand");
+    }
     if (llvh::isa<Variable>(Operand)) {
       AssertIWithMsg(
           Inst,
@@ -881,7 +892,10 @@ bool Verifier::visitBaseCreateLexicalChildInst(
     const hermes::BaseCreateLexicalChildInst &Inst) {
   auto *scope = Inst.getScope();
   AssertIWithMsg(
-      Inst, scope->getType().isEnvironmentType(), "Wrong scope type");
+      Inst,
+      llvh::isa<EmptySentinel>(scope) || scope->getType().isUndefinedType() ||
+          scope->getType().isEnvironmentType(),
+      "Wrong scope type");
   // Verify that any GetParentScope inside the function produces the same
   // VariableScope that the function is being created with.
   if (auto *BSI = llvh::dyn_cast<BaseScopeInst>(scope)) {
@@ -1363,6 +1377,16 @@ bool Verifier::visitGetParentScopeInst(const GetParentScopeInst &Inst) {
       Inst,
       Inst.getParentScopeParam() == Inst.getFunction()->getParentScopeParam(),
       "Using incorect parent scope parameter.");
+
+  for (auto *U : Inst.getFunction()->getUsers()) {
+    if (auto *BCLI = llvh::dyn_cast<BaseCreateLexicalChildInst>(U)) {
+      AssertIWithMsg(
+          Inst,
+          BCLI->getVarScope() == Inst.getVariableScope(),
+          "Scope result does not match function creation");
+      break;
+    }
+  }
   return true;
 }
 bool Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
@@ -1377,6 +1401,15 @@ bool Verifier::visitLIRResolveScopeInst(
 }
 bool Verifier::visitGetClosureScopeInst(
     const hermes::GetClosureScopeInst &Inst) {
+  for (auto *U : Inst.getFunctionCode()->getUsers()) {
+    if (auto *BCLI = llvh::dyn_cast<BaseCreateLexicalChildInst>(U)) {
+      AssertIWithMsg(
+          Inst,
+          BCLI->getVarScope() == Inst.getVariableScope(),
+          "Scope result does not match function creation");
+      return true;
+    }
+  }
   return true;
 }
 

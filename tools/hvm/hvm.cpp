@@ -15,9 +15,7 @@
 #include "llvh/Support/Signals.h"
 #include "llvh/Support/raw_ostream.h"
 
-#ifndef HERMESVM_LEAN
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#endif
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
@@ -41,7 +39,6 @@ static llvh::cl::opt<std::string> InputFilename(
     llvh::cl::Positional);
 
 // Lean VM doesn't include the disassembler.
-#ifndef HERMESVM_LEAN
 static llvh::cl::opt<bool> Disassemble(
     "d",
     llvh::cl::desc("Disassemble bytecode"));
@@ -50,7 +47,6 @@ static llvh::cl::opt<bool> PrettyDisassemble(
     "pretty-disassemble",
     llvh::cl::init(true),
     llvh::cl::desc("Pretty print the disassembled bytecode"));
-#endif
 
 static llvh::cl::opt<unsigned> Repeat(
     "Xrepeat",
@@ -100,7 +96,6 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<hbc::BCProvider> bytecode = std::move(ret.first);
 
-#ifndef HERMESVM_LEAN
   if (Disassemble) {
     hermes::hbc::BytecodeDisassembler disassembler(std::move(bytecode));
     disassembler.setOptions(
@@ -108,7 +103,6 @@ int main(int argc, char **argv) {
                           : hermes::hbc::DisassemblyOptions::None);
     disassembler.disassemble(llvh::outs());
   }
-#endif
 
   ExecuteOptions options;
   options.runtimeConfig =

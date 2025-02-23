@@ -325,7 +325,8 @@ ExecutionStatus Debugger::debuggerLoop(
   // Keep the evalResult alive, even if all other handles are flushed.
   static constexpr unsigned KEEP_HANDLES = 1;
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  SuspendSamplingProfilerRAII ssp{runtime_, "debugger"};
+  SuspendSamplingProfilerRAII ssp{
+      runtime_, SamplingProfiler::SuspendFrameInfo::Kind::Debugger};
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
   while (true) {
     GCScopeMarkerRAII marker{runtime_};
@@ -1310,7 +1311,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
 
   OptValue<hbc::DebugSearchResult> locationOpt{};
 
-#ifndef HERMESVM_LEAN
   // If we could have lazy code blocks, compile them before we try to resolve.
   // Eagerly compile code blocks that may contain the location.
   // This is done using a search in which we enumerate all CodeBlocks in the
@@ -1368,7 +1368,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
         // The code block probably contains the breakpoint we want to set.
         // First, we compile it.
         if (LLVM_UNLIKELY(
-                codeBlock->lazyCompile(runtime_) ==
+                codeBlock->compileLazyFunction(runtime_) ==
                 ExecutionStatus::EXCEPTION)) {
           // TODO: how to better handle this?
           runtime_.clearThrownValue();
@@ -1389,7 +1389,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       }
     }
   }
-#endif
 
   // Iterate backwards through runtime modules, under the assumption that
   // modules at the end of the list were added more recently, and are more

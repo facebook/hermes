@@ -20,7 +20,7 @@ function test0() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test0": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %test0(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "test0": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

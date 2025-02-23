@@ -22,7 +22,5 @@ target_link_libraries(HermesBCGenTests
  hermesHBCBackend
  hermesBackend
  hermesFrontend
- hermesSupport
  hermesOptimizer
- dtoa
  )

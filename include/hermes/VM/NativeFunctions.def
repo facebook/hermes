@@ -153,10 +153,7 @@ NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
 NATIVE_FUNCTION(hermesBuiltinThrowReferenceError)
 NATIVE_FUNCTION(hermesBuiltinGetTemplateObject)
 
-#ifdef HERMESVM_EXCEPTION_ON_OOM
 NATIVE_FUNCTION(hermesInternalGetCallStack)
-#endif // HERMESVM_EXCEPTION_ON_OOM
-
 NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
 NATIVE_FUNCTION(hermesInternalGetEpilogues)
 NATIVE_FUNCTION(hermesInternalGetFunctionLocation)

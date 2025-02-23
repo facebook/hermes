@@ -31,10 +31,10 @@
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: undefined|object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
 // CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, %4: any, "foo": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %x(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %x(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.x]: undefined|object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -10,10 +10,11 @@
 #include "hermes/VM/Runtime.h"
 
 #include "hermes/BCGen/HBC/BCProvider.h"
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Platform/Logging.h"
+#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AlignedHeapSegment.h"
@@ -23,12 +24,15 @@
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/HeapRuntime.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSMapImpl.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PredefinedStringIDs.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
@@ -42,10 +46,6 @@
 #include "hermes/InternalJavaScript/internal_unit.h"
 #else
 #include "hermes/InternalJavaScript/InternalBytecode.h"
-#endif
-
-#ifndef HERMESVM_LEAN
-#include "hermes/Support/MemoryBuffer.h"
 #endif
 
 #include "llvh/ADT/Hashing.h"
@@ -398,6 +398,34 @@ Runtime::Runtime(
           "Could not possibly grow larger than the limit");
       clazz = *addResult->first;
       rootClazzes_[i] = clazz.getHermesValue();
+    }
+
+    // Create a separate hierarchy of hidden classes for lazy objects, Proxy and
+    // HostObject, for lazy objects so that they never
+    // compare equal to ordinary objects.
+    clazz = vmcast<HiddenClass>(
+        ignoreAllocationFailure(HiddenClass::createRoot(*this)));
+
+    // For lazy objects, they should just use this empty HiddenClass until they
+    // are actually populated.
+    lazyObjectClass = clazz;
+
+    for (unsigned i = 1; i <= std::max(
+                                  {JSObject::numOverlapSlots<JSProxy>(),
+                                   JSObject::numOverlapSlots<JSCallableProxy>(),
+                                   JSObject::numOverlapSlots<HostObject>()});
+         ++i) {
+      auto addResult = HiddenClass::reserveSlot(clazz, *this);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      clazz = *addResult->first;
+      if (i == JSObject::numOverlapSlots<JSProxy>())
+        proxyClass = clazz;
+      if (i == JSObject::numOverlapSlots<JSCallableProxy>())
+        callableProxyClass = clazz;
+      if (i == JSObject::numOverlapSlots<HostObject>())
+        hostObjectClass = clazz;
     }
   }
 
@@ -997,9 +1025,6 @@ CallResult<HermesValue> Runtime::run(
     llvh::StringRef code,
     llvh::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
-#ifdef HERMESVM_LEAN
-  return raiseEvalUnsupported(code);
-#else
   std::unique_ptr<hermes::Buffer> buffer;
   if (compileFlags.lazy) {
     buffer.reset(new hermes::OwnedMemoryBuffer(
@@ -1009,24 +1034,18 @@ CallResult<HermesValue> Runtime::run(
         new hermes::OwnedMemoryBuffer(llvh::MemoryBuffer::getMemBuffer(code)));
   }
   return run(std::move(buffer), sourceURL, compileFlags);
-#endif
 }
 
 CallResult<HermesValue> Runtime::run(
     std::unique_ptr<hermes::Buffer> code,
     llvh::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
-#ifdef HERMESVM_LEAN
-  auto buffer = code.get();
-  return raiseEvalUnsupported(llvh::StringRef(
-      reinterpret_cast<const char *>(buffer->data()), buffer->size()));
-#else
-  std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
+  std::unique_ptr<hbc::BCProvider> bytecode;
   {
     PerfSection loading("Loading new JavaScript code");
     loading.addArg("url", sourceURL);
-    auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        std::move(code), sourceURL, /* sourceMap */ nullptr, compileFlags);
+    auto bytecode_err = hbc::createBCProviderFromSrc(
+        std::move(code), sourceURL, /* sourceMap */ {}, compileFlags);
     if (!bytecode_err.first) {
       return raiseSyntaxError(TwineChar16(bytecode_err.second));
     }
@@ -1039,7 +1058,6 @@ CallResult<HermesValue> Runtime::run(
     rmflags.persistent = true;
   return runBytecode(
       std::move(bytecode), rmflags, sourceURL, makeNullHandle<Environment>());
-#endif
 }
 
 CallResult<HermesValue> Runtime::runBytecode(
@@ -1067,17 +1085,12 @@ CallResult<HermesValue> Runtime::runBytecode(
   }
 
   if (flags.persistent) {
-#ifndef HERMESVM_LEAN
     // Persistent flag can't be true if the BCProvider doesn't support it.
-    if (auto *providerFromSrc =
-            llvh::dyn_cast<hbc::BCProviderFromSrc>(bytecode.get())) {
-      if (LLVM_UNLIKELY(!providerFromSrc->allowPersistent())) {
-        const char *msg = "Cannot enable persistent mode for lazy compilation";
-        hermesLog("Hermes", "%s", msg);
-        hermes_fatal(msg);
-      }
+    if (LLVM_UNLIKELY(!bytecode->allowPersistent())) {
+      const char *msg = "Cannot enable persistent mode for lazy compilation";
+      hermesLog("Hermes", "%s", msg);
+      hermes_fatal(msg);
     }
-#endif
 
     persistentBCProviders_.push_back(bytecode);
     if (bytecodeWarmupPercent_ > 0) {
@@ -2127,6 +2140,46 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
 std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   NoAllocScope noAlloc(*this);
   std::string res;
+
+  /// Try adding the function name and source location into res for the native
+  /// frame. Return false if no valid source location or calleeHV is not a
+  /// NativeJSFunction.
+  auto tryAddNativeFrame = [&res, this](
+                               HermesValue calleeHV, const SHLocals *locals) {
+    if (!locals || locals->src_location_idx == 0)
+      return false;
+    const SHUnit *unit = locals->unit;
+    // If unit is nonnull then we have a valid location and can use the
+    // fields in loc. Otherwise, it is an unknown location.
+    if (!unit)
+      return false;
+
+    if (!vmisa<NativeJSFunction>(calleeHV))
+      return false;
+    auto *callee = vmcast<NativeJSFunction>(calleeHV);
+    auto nameIndex = callee->getFunctionInfo()->name_index;
+    assert(
+        nameIndex < unit->num_symbols &&
+        "out of bound access on symbols table");
+    SymbolID nameSym = SymbolID::unsafeCreate(unit->symbols[nameIndex]);
+    auto name = identifierTable_.convertSymbolToUTF8(nameSym);
+
+    uint32_t curLocIdx = locals->src_location_idx;
+    assert(
+        curLocIdx < unit->source_locations_size &&
+        "out of bound access on source locations table");
+    SHSrcLoc curLoc = unit->source_locations[curLocIdx];
+    assert(
+        curLoc.filename_idx < unit->num_symbols &&
+        "out of bound access on symbols table");
+    auto fnameSym = SymbolID::unsafeCreate(unit->symbols[curLoc.filename_idx]);
+    auto fname = identifierTable_.convertSymbolToUTF8(fnameSym);
+    res += name + ": " + fname + ":" + std::to_string(curLoc.line) + ":" +
+        std::to_string(curLoc.column) + "\n";
+
+    return true;
+  };
+
   // Note that the order of iteration is youngest (leaf) frame to oldest.
   for (auto frame : getStackFrames()) {
     auto codeBlock = frame->getCalleeCodeBlock();
@@ -2152,7 +2205,10 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
       }
       res += "\n";
     } else {
-      res += "<Native code>\n";
+      if (!tryAddNativeFrame(
+              frame.getCalleeClosureOrCBRef(), frame.getSHLocals())) {
+        res += "<Native code>\n";
+      }
     }
     // Get the ip of the caller frame -- which will then be correct for the
     // next iteration.
@@ -2166,7 +2222,8 @@ void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
   if (samplingProfiler) {
     switch (kind) {
       case GCEventKind::CollectionStart:
-        samplingProfiler->suspend(extraInfo);
+        samplingProfiler->suspend(
+            SamplingProfiler::SuspendFrameInfo::Kind::GC, extraInfo);
         break;
       case GCEventKind::CollectionEnd:
         samplingProfiler->resume();

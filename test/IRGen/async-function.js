@@ -42,15 +42,15 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:       DeclareGlobalVarInst "simpleAwait": string
 // CHECK-NEXT:       DeclareGlobalVarInst "nonSimpleArrayDestructuring": string
 // CHECK-NEXT:       DeclareGlobalVarInst "simpleAsyncFE": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %simpleReturn(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleReturn(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "simpleReturn": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %simpleAwait(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleAwait(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "simpleAwait": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %nonSimpleArrayDestructuring(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %nonSimpleArrayDestructuring(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "nonSimpleArrayDestructuring": string
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %11: any
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %simpleAsyncFE(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleAsyncFE(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "simpleAsyncFE": string
 // CHECK-NEXT:  %15 = LoadStackInst (:any) %11: any
 // CHECK-NEXT:        ReturnInst %15: any
@@ -65,7 +65,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %4 = CreateScopeInst (:environment) %VS1: any, %3: environment
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %?anon_0_simpleReturn(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %VS1: any, %?anon_0_simpleReturn(): functionCode
 // CHECK-NEXT:  %6 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %7 = CallInst (:any) %6: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %7: any
@@ -80,7 +80,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %4 = CreateScopeInst (:environment) %VS2: any, %3: environment
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %?anon_0_simpleAwait(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %VS2: any, %?anon_0_simpleAwait(): functionCode
 // CHECK-NEXT:  %6 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %7 = CallInst (:any) %6: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %7: any
@@ -95,7 +95,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %4 = CreateScopeInst (:environment) %VS3: any, %3: environment
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %?anon_0_nonSimpleArrayDestructuring(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %VS3: any, %?anon_0_nonSimpleArrayDestructuring(): functionCode
 // CHECK-NEXT:  %6 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %7 = CallInst (:any) %6: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %7: any
@@ -110,7 +110,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  %2 = CoerceThisNSInst (:object) %1: any
 // CHECK-NEXT:  %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %4 = CreateScopeInst (:environment) %VS4: any, %3: environment
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %?anon_0_simpleAsyncFE(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %4: environment, %VS4: any, %?anon_0_simpleAsyncFE(): functionCode
 // CHECK-NEXT:  %6 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %7 = CallInst (:any) %6: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object, %2: object, %0: object
 // CHECK-NEXT:       ReturnInst %7: any
@@ -120,7 +120,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simpleReturn?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS1: any, %?anon_0_simpleReturn?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -128,7 +128,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simpleAwait?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS2: any, %?anon_0_simpleAwait?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -136,7 +136,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_nonSimpleArrayDestructuring?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS3: any, %?anon_0_nonSimpleArrayDestructuring?inner(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object
@@ -146,7 +146,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %?anon_0_simpleAsyncFE?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS4: any, %?anon_0_simpleAsyncFE?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 

@@ -508,7 +508,7 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
     const SHUnit *unit);
 
 /// Create a generator object.
-/// \param env Should not be null.
+/// \param env NULL if there is no environment.
 /// \param funcInfo Should not be null.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_generator_object(
     SHRuntime *shr,
@@ -801,8 +801,7 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array_with_buffer(
 /// \p newTarget is the new.target value in the function.
 /// \p shapeTableIndex is the index into the shape table where the serialized
 ///   keys for this operation are stored.
-/// \return \p thisArg.
-SHERMES_EXPORT SHLegacyValue _sh_ljs_cache_new_object(
+SHERMES_EXPORT void _sh_ljs_cache_new_object(
     SHRuntime *shr,
     SHUnit *unit,
     SHLegacyValue *thisArg,

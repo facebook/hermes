@@ -1155,6 +1155,7 @@ class JSParserImpl {
 #if HERMES_PARSE_TS
     return parseTypeAnnotationTS(wrappedStart);
 #endif
+    llvm_unreachable("Must be parsing types");
   }
 
   Optional<ESTree::Node *> parseReturnTypeAnnotation(
@@ -1169,6 +1170,19 @@ class JSParserImpl {
 #if HERMES_PARSE_TS
     return parseTypeAnnotationTS(wrappedStart);
 #endif
+    llvm_unreachable("Must be parsing types");
+  }
+
+  Optional<ESTree::Node *> parseTypeArguments() {
+    assert(context_.getParseFlow() || context_.getParseTS());
+#if HERMES_PARSE_FLOW
+    if (context_.getParseFlow())
+      return parseTypeArgsFlow();
+#endif
+#if HERMES_PARSE_TS
+    return parseTSTypeArguments();
+#endif
+    llvm_unreachable("Must be parsing types");
   }
 #endif
 

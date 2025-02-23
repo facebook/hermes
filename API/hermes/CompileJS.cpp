@@ -7,8 +7,7 @@
 
 #include "CompileJS.h"
 
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
-#include "hermes/Optimizer/PassManager/Pipeline.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
 
@@ -55,28 +54,30 @@ bool compileJS(
   flags.emitAsyncBreakCheck = compileJSOptions.emitAsyncBreakCheck;
   flags.inlineMaxSize = compileJSOptions.inlineMaxSize;
 
-  std::unique_ptr<hermes::SourceMap> sourceMap{};
-  // parse the source map if one was provided
+  // If there is a source map, ensure that it is null terminated, copying it if
+  // needed.
+  std::string smCopy;
+  llvh::StringRef smRef;
   if (sourceMapBuf.has_value()) {
-    hermes::SourceErrorManager sm;
-    sourceMap = hermes::SourceMapParser::parse(
-        llvh::StringRef{sourceMapBuf->data(), sourceMapBuf->size()}, {}, sm);
-    if (!sourceMap) {
-      return false;
+    if (sourceMapBuf->back() != '\0') {
+      smCopy = *sourceMapBuf;
+      smRef = {smCopy.data(), smCopy.size() + 1};
+    } else {
+      smRef = {sourceMapBuf->data(), sourceMapBuf->size()};
     }
   }
 
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
-  auto res = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+  auto res = hbc::createBCProviderFromSrc(
       std::make_unique<hermes::Buffer>((const uint8_t *)str.data(), str.size()),
       sourceURL,
-      std::move(sourceMap),
+      smRef,
       flags,
       "global",
       diagHandler ? diagHandlerAdapter : nullptr,
       diagHandler,
-      compileJSOptions.optimize ? runFullOptimizationPasses : nullptr);
+      compileJSOptions.optimize ? hbc::fullOptimizationPipeline : nullptr);
   if (!res.first)
     return false;
 
@@ -85,6 +86,9 @@ bool compileJS(
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = compileJSOptions.optimize;
 
+  assert(
+      res.first->getBytecodeModule() &&
+      "BCProviderFromSrc must have a bytecode module");
   hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
       llvh::SHA1::hash(llvh::makeArrayRef(

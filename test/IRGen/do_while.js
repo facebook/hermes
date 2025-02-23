@@ -47,13 +47,13 @@ function for_while_do_mixed_test(cond) {
 // CHECK-NEXT:       DeclareGlobalVarInst "do_while_break_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "do_while_continue_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "for_while_do_mixed_test": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %simple_do_while_test(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_do_while_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "simple_do_while_test": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %do_while_break_test(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %do_while_break_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "do_while_break_test": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %do_while_continue_test(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %do_while_continue_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "do_while_continue_test": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %for_while_do_mixed_test(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %for_while_do_mixed_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "for_while_do_mixed_test": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any

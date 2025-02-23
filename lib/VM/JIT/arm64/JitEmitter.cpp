@@ -21,8 +21,8 @@
 
 #define DEBUG_TYPE "jit"
 
-#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
-#error JIT does not support compressed pointers or boxed doubles yet
+#if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
+#error JIT does not support non-contiguous heap with compressed pointers
 #endif
 
 namespace hermes::vm::arm64 {
@@ -229,23 +229,6 @@ void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
   a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
 }
 
-/// For a register \p out, emit a bool HermesValue with the corrsponding \p val.
-void emit_sh_ljs_const_bool(a64::Assembler &a, const a64::GpX xOut, bool val) {
-  static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
-  // We know that the ETag for bool as a 0 in its lowest bit, and is therefore a
-  // shifted 16 bit value. We can exploit this to use movk to set the tag.
-  static_assert(HERMESVALUE_VERSION == 1);
-  static_assert(
-      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
-      "Boolean tag must be 16 bits.");
-  if (val) {
-    a.mov(xOut, 1);
-    a.movk(xOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
-  } else {
-    a.movz(xOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
-  }
-}
-
 /// For a register containing a pointer to a GCCell, retrieve its CellKind (a
 /// single byte) and store it in \p wOut.
 /// \p wOut and \p xIn may refer to the same register.
@@ -317,6 +300,53 @@ void emit_double_is_uint32(
   a.fcmp(dTemp, dInput);
 }
 
+/// Given a compressed pointer in \p xInOut, decompress it and place the result
+/// in \p xInOut.
+void emit_sh_cp_decode(a64::Assembler &a, const a64::GpX &xInOut) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.cmp(xInOut, 0);
+  a.add(xInOut, xRuntime, xInOut);
+  a.csel(xInOut, a64::xzr, xInOut, a64::CondCode::kEQ);
+#endif
+}
+
+/// Given a compressed pointer in \p xInOut that is known to be non-null,
+/// decompress it and place the result in \p xInOut.
+void emit_sh_cp_decode_non_null(a64::Assembler &a, const a64::GpX &xInOut) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.add(xInOut, xRuntime, xInOut);
+#endif
+}
+
+/// Load a compressed pointer from \p mem and decompress it into \p dest.
+void emit_load_and_sh_cp_decode(
+    a64::Assembler &a,
+    const a64::GpX &dest,
+    const a64::Mem &mem) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.ldr(dest.w(), mem);
+  emit_sh_cp_decode(a, dest);
+#else
+  a.ldr(dest, mem);
+  (void)emit_sh_cp_decode;
+#endif
+}
+
+/// Load a compressed pointer that is known to be non-null from \p mem and
+/// decompress it into \p dest.
+void emit_load_and_sh_cp_decode_non_null(
+    a64::Assembler &a,
+    const a64::GpX &dest,
+    const a64::Mem &mem) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.ldr(dest.w(), mem);
+  emit_sh_cp_decode_non_null(a, dest);
+#else
+  a.ldr(dest, mem);
+  (void)emit_sh_cp_decode_non_null;
+#endif
+}
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
   std::function<void(std::string &&message)> const longjmpError_;
@@ -341,11 +371,18 @@ class OurErrorHandler : public asmjit::ErrorHandler {
     }
 
     std::string formattedMsg{};
-    llvh::raw_string_ostream OS{formattedMsg};
-    OS << "AsmJit error: " << err << ": "
-       << asmjit::DebugUtils::errorAsString(err) << ": " << message;
-    OS.flush();
+    {
+      // Ensure we run any destructors for the ostream before longjmp.
+      llvh::raw_string_ostream OS{formattedMsg};
+      OS << "AsmJit error: " << err << ": "
+         << asmjit::DebugUtils::errorAsString(err) << ": " << message;
+      OS.flush();
+    }
 
+    // IMPORTANT: From here on, we MUST ensure that no destructors need to run.
+    // One exception: formattedMsg will have its destructor skipped, but we're
+    // moving out of it so in practice the std::string won't have anything to
+    // free, avoiding leaks.
     LLVM_DEBUG(llvh::dbgs() << formattedMsg << "\n");
     longjmpError_(std::move(formattedMsg));
   }
@@ -710,7 +747,7 @@ void Emitter::frameSetup(
        }});
 
   comment("// xFrame");
-  a.ldr(xFrame, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
+  a.ldr(xFrame, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
 
   // If the function has a prohibitInvoke flag, we need to check if it has been
   // called correctly.
@@ -771,7 +808,7 @@ void Emitter::frameSetup(
 
   // Compute the remaining available stack space:
   // runtime.registerStackEnd_ - runtime.stackPointer_
-  a.ldr(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, registerStackEnd_)));
+  a.ldr(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::registerStackEnd));
   a.sub(a64::x0, a64::x0, xFrame);
   // Check if we need more registers than remain.
   size_t totalRegsToAlloc = numFrameRegs + hbc::StackFrameLayout::FirstLocal;
@@ -790,8 +827,8 @@ void Emitter::frameSetup(
   }
 
   // Advance the register stack.
-  a.str(a64::x0, a64::Mem(xRuntime, offsetof(Runtime, stackPointer_)));
-  a.str(xFrame, a64::Mem(xRuntime, offsetof(Runtime, currentFrame_)));
+  a.str(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
+  a.str(xFrame, a64::Mem(xRuntime, RuntimeOffsets::currentFrame));
 
   // Fill it with undefined.
   a.mov(a64::x0, _sh_ljs_undefined().raw);
@@ -945,7 +982,7 @@ void Emitter::callThunk(void *fn, const char *name) {
 void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   // Save the current IP in the runtime.
   getBytecodeIP(a64::x16);
-  a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+  a.str(a64::x16, a64::Mem(xRuntime, RuntimeOffsets::currentIP));
 
   // Call the passed function.
   callThunk(fn, name);
@@ -953,7 +990,7 @@ void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
   if (emitAsserts_) {
     // Invalidate the current IP to make sure it is set before the next call.
     a.mov(a64::x16, Runtime::kInvalidCurrentIP);
-    a.str(a64::x16, a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+    a.str(a64::x16, a64::Mem(xRuntime, RuntimeOffsets::currentIP));
   }
 }
 
@@ -2021,8 +2058,25 @@ void Emitter::fastArrayLength(FR frRes, FR frArr) {
   freeReg(temp);
   emit_sh_ljs_get_pointer(a, temp.a64GpX(), hwArr.a64GpX());
 
+#ifdef HERMESVM_BOXED_DOUBLES
+  // If boxed doubles are enabled, load the size from the ArrayStorage, where it
+  // is stored as an integer.
+  emit_load_and_sh_cp_decode_non_null(
+      a,
+      temp.a64GpX(),
+      a64::Mem(temp.a64GpX(), offsetof(SHFastArray, indexedStorage)));
+  a.ldr(
+      temp.a64GpX().w(),
+      a64::Mem(temp.a64GpX(), offsetof(SHArrayStorage, size)));
+  HWReg hwRes = getOrAllocFRInVecD(frRes, false);
+  a.ucvtf(hwRes.a64VecD(), temp.a64GpX().w());
+#else
+  // If boxed doubles are disabled, we can just load the size from the length
+  // property of the FastArray.
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
   movHWFromMem(hwRes, a64::Mem(temp.a64GpX(), offsetof(SHFastArray, length)));
+#endif
+
   frUpdatedWithHW(frRes, hwRes);
 }
 
@@ -2032,6 +2086,22 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
       frRes.index(),
       frArr.index(),
       frIdx.index());
+#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
+  syncAllFRTempExcept(frRes != frArr && frRes != frIdx ? frRes : FR());
+  syncAllFRTempExcept({});
+  syncToFrame(frArr);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frArr);
+  movHWFromFR(HWReg::vecD(0), frIdx);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, double idx),
+      _sh_fastarray_load);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+#else
   asmjit::Label slowPathLab = newSlowPathLabel();
   // We allocate a temporary register to compute the address instead of using
   // the result register in case the result has a VecD allocated for it.
@@ -2102,6 +2172,7 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
          EMIT_RUNTIME_CALL(em, void (*)(SHRuntime *), _sh_throw_array_oob);
          // Call does not return.
        }});
+#endif
 }
 
 void Emitter::fastArrayStore(FR frArr, FR frIdx, FR frVal) {
@@ -2254,10 +2325,12 @@ void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
   // get pointer.
   emit_sh_ljs_get_pointer(a, xTmp1, xTmp1);
   // xTmp1 = closure->environment
-  a.ldr(xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
+  emit_load_and_sh_cp_decode_non_null(
+      a, xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
   for (; level; --level) {
     // xTmp1 = env->parent.
-    a.ldr(xTmp1, a64::Mem(xTmp1, offsetof(SHEnvironment, parentEnvironment)));
+    emit_load_and_sh_cp_decode_non_null(
+        a, xTmp1, a64::Mem(xTmp1, offsetof(SHEnvironment, parentEnvironment)));
   }
   // encode object.
   emit_sh_ljs_object(a, xTmp1);
@@ -2277,7 +2350,8 @@ void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
   auto hwRes = getOrAllocFRInGpX(frRes, false);
   // Use the result register as a scratch register for computing the address.
   emit_sh_ljs_get_pointer(a, hwRes.a64GpX(), hwClosure.a64GpX());
-  movHWFromMem(hwRes, a64::Mem(hwRes.a64GpX(), ofs));
+  emit_load_and_sh_cp_decode_non_null(
+      a, hwRes.a64GpX(), a64::Mem(hwRes.a64GpX(), ofs));
   // The result is a pointer, so add the object tag.
   emit_sh_ljs_object(a, hwRes.a64GpX());
   frUpdatedWithHW(frRes, hwRes);
@@ -2661,15 +2735,22 @@ void Emitter::coerceThisNS(FR frRes, FR frThis) {
   asmjit::Label contLab = newContLabel();
   HWReg hwThis = getOrAllocFRInGpX(frThis, true);
 
+  // Sync all registers. Note that we don't need to check for frRes == frThis
+  // here, because frThis is sync'd unconditionally below.
   syncAllFRTempExcept(frRes);
+  syncToFrame(frThis);
+
+  // Allocate a temporary register. This must not be the same as hwThis, but may
+  // be the same as hwRes.
+  HWReg hwTemp = allocTempGpX();
+  freeReg(hwTemp);
+
   // We don't free frRes so that if it is the same as frThis, the register is
   // simply persisted and we do not need to perform a move in the fast path.
   freeAllFRTempExcept(frRes);
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
-  HWReg hwTemp = allocTempGpX();
-  freeReg(hwTemp);
   // If the operand is an object, we are done, otherwise, go to the slow path.
   emit_sh_ljs_is_object(a, hwTemp.a64GpX(), hwThis.a64GpX());
   a.b_ne(slowPathLab);
@@ -2904,8 +2985,10 @@ void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
   // xTmp contains the unencoded pointer value.
-  a.ldr(xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  emit_load_and_sh_cp_decode(
+      a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
   // Check whether it is nullptr and set flags.
+  // TODO: Combine this null check with the one in emit_load_and_sh_cp_decode.
   a.cmp(xTmp, 0);
   // xRes contains the encoded pointer.
   emit_sh_ljs_object2(a, xRes, xTmp);
@@ -2924,7 +3007,8 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
-  a.ldr(xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_load_and_sh_cp_decode_non_null(
+      a, xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
   emit_sh_ljs_object(a, xRes);
 
   frUpdatedWithHW(frRes, hwRes);
@@ -3077,7 +3161,14 @@ void Emitter::getByIdImpl(
   // All temporaries will potentially be clobbered by the slow path.
   syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
 
-  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
+  constexpr bool canHaveFastPath =
+#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
+      false;
+#else
+      true;
+#endif
+
+  if (canHaveFastPath && cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
     // Label for indirect property access.
     asmjit::Label indirectLab = a.newLabel();
     slowPathLab = a.newLabel();
@@ -3130,9 +3221,6 @@ void Emitter::getByIdImpl(
     // xTemp1 is the pointer to the object.
     emit_sh_ljs_get_pointer(a, xTemp1, hwSourceGpx.a64GpX());
 
-#ifdef HERMESVM_COMPRESSED_POINTERS
-#error Compressed pointers not implemented
-#endif
     // xTemp2 is the hidden class.
     a.ldr(xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
 
@@ -3534,18 +3622,18 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
   if (typesToCheck.count() > 1)
     matchLab = a.newLabel();
 
-  // First, initialize xRes as follows:
+  // First, initialize xRes if necessary:
   // * If there are multiple bits set, initialize it to the value we would
   //   produce on a match. This is false if inverted and true otherwise.
-  // * If there's only one bit set, initialize it to false so it can be easily
-  //   toggled with cinc. Incrementing it will set it to true.
+  // * If there's only one bit set, leave it uninitialized, since we will
+  //   overwrite the value in the individual cases with cset.
   //
   // Checks are done as follows:
   // * If there are multiple bits set, then matchLab is valid,
   //   so if the tag matches the bit, branch to matchLab.
   //   If the tag doesn't match, then fall through to the next check.
   // * If there's only one bit set, then matchLab is NOT valid,
-  //   so emit cinc with the appropriate condition code and we're done.
+  //   so emit cset with the appropriate condition code and we're done.
   //
   // In this way, single-bit checks (both inverted and not) are fast,
   // and multiple-bit checks are correct.
@@ -3560,15 +3648,13 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     if (matchLab.isValid())
       a.b(cond, matchLab);
     else
-      a.cinc(xRes, xRes, !invert ? cond : a64::negateCond(cond));
+      a.cset(xRes, !invert ? cond : a64::negateCond(cond));
   };
 
-  static_assert(
-      HERMESVALUE_VERSION == 1,
-      "bool must be a tag with a low bit that indicates the bool value");
-  // As described above, initialize it to false if it is inverted or there is
-  // only a single case.
-  emit_sh_ljs_const_bool(a, xRes, matchLab.isValid() && !invert);
+  // As described above, if there are multiple cases, initialize it to the value
+  // it should have on a successful match.
+  if (matchLab.isValid())
+    a.mov(xRes, invert ? 0 : 1);
 
   if (typesToCheck.hasUndefined()) {
     emit_sh_ljs_is_undefined(a, xTemp, xInputTemp);
@@ -3612,8 +3698,7 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
       a.b_ne(objectDoneLab);
     } else {
       // No more tags to check. Decide the result here and go to the end.
-      if (invert)
-        a.cinc(xRes, xRes, a64::CondCode::kNE);
+      a.mov(xRes, invert ? 1 : 0);
       a.b_ne(objectDoneLab);
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
@@ -3636,8 +3721,7 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
       a.b_ne(functionDoneLab);
     } else {
       // No more tags to check. Decide the result here and go to the end.
-      if (invert)
-        a.cinc(xRes, xRes, a64::CondCode::kNE);
+      a.mov(xRes, invert ? 1 : 0);
       a.b_ne(functionDoneLab);
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
@@ -3659,6 +3743,9 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
     // match.
     a.bind(matchLab);
   }
+
+  // xRes contains either 0 or 1 at this point, turn it into a bool HermesValue.
+  emit_sh_ljs_bool(a, xRes);
 }
 
 void Emitter::switchImm(
@@ -4291,7 +4378,7 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   // Save the current IP in both the SavedIP slot and the runtime.
   getBytecodeIP(savedIPReg.a64GpX());
   frUpdatedWithHW(savedIPArg, savedIPReg, FRType::OtherNonPtr);
-  a.str(savedIPReg.a64GpX(), a64::Mem(xRuntime, offsetof(Runtime, currentIP_)));
+  a.str(savedIPReg.a64GpX(), a64::Mem(xRuntime, RuntimeOffsets::currentIP));
 
   FR savedCodeBlockArg = FR{nRegs + hbc::StackFrameLayout::SavedCodeBlock};
   // TODO: We should be able to directly store xzr.
@@ -5101,6 +5188,7 @@ void Emitter::bitBinOp(
     FR frRes,
     FR frLeft,
     FR frRight,
+    bool unsignedRes,
     const char *name,
     SHLegacyValue (*slowCall)(
         SHRuntime *shr,
@@ -5162,7 +5250,10 @@ void Emitter::bitBinOp(
 
   // Invoke the fast path, and move the result back as a 32 bit integer.
   fast(a, hwTempLGpX.a64GpX(), hwTempLGpX.a64GpX(), hwTempRGpX.a64GpX());
-  a.scvtf(hwRes.a64VecD(), hwTempLGpX.a64GpX().w());
+  if (unsignedRes)
+    a.ucvtf(hwRes.a64VecD(), hwTempLGpX.a64GpX().w());
+  else
+    a.scvtf(hwRes.a64VecD(), hwTempLGpX.a64GpX().w());
 
   a.bind(contLab);
 

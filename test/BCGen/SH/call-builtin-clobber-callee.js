@@ -19,10 +19,10 @@ function test_call_after_builtin() {
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call_after_builtin": string
-// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %test_call_after_builtin(): functionCode
-// CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:                 StorePropertyLooseInst {loc1} %2: object, {loc0} %3: object, "test_call_after_builtin": string
+// CHECK-NEXT:  {loc1}    %1 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {loc0}    %2 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {loc0}    %3 = CreateFunctionInst (:object) {loc0} %2: environment, %VS0: any, %test_call_after_builtin(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {loc0} %3: object, {loc1} %1: object, "test_call_after_builtin": string
 // CHECK-NEXT:  {np0}     %5 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %5: undefined
 // CHECK-NEXT:function_end
@@ -35,7 +35,7 @@ function test_call_after_builtin() {
 // CHECK-NEXT:  {loc0}    %1 = TryLoadGlobalPropertyInst (:any) {loc0} %0: object, "print": string
 // CHECK-NEXT:  {loc1}    %2 = HBCAllocObjectFromBufferInst (:object) "valueOf": string, null: null
 // CHECK-NEXT:  {loc2}    %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  {loc2}    %4 = CreateFunctionInst (:object) {loc2} %3: environment, %valueOf(): functionCode
+// CHECK-NEXT:  {loc2}    %4 = CreateFunctionInst (:object) {loc2} %3: environment, %VS0: any, %valueOf(): functionCode
 // CHECK-NEXT:                 PrStoreInst {loc2} %4: object, {loc1} %2: object, 0: number, "valueOf": string, false: boolean
 // CHECK-NEXT:  {stack[0]}  %6 = HBCLoadConstInst (:number) 3: number
 // CHECK-NEXT:  {stack[4]}  %7 = ImplicitMovInst (:undefined) undefined: undefined

@@ -1633,8 +1633,6 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         ogCollectionStats_->setEndTime();
         ogCollectionStats_->setAfterSize(segmentFootprint());
         concurrentPhase_ = Phase::None;
-        if (!backgroundThread)
-          checkTripwireAndSubmitStats();
       }
       break;
     default:

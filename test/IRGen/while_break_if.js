@@ -50,17 +50,17 @@ fail2:
 // CHECK-NEXT:       DeclareGlobalVarInst "break_label": string
 // CHECK-NEXT:       DeclareGlobalVarInst "continue_label": string
 // CHECK-NEXT:       DeclareGlobalVarInst "nested_label": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "bar": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %continue_test(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %continue_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "continue_test": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %break_test(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %break_test(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "break_test": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %break_label(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %break_label(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "break_label": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %continue_label(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %continue_label(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "continue_label": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %nested_label(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %nested_label(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "nested_label": string
 // CHECK-NEXT:  %19 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %19: any

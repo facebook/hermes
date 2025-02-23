@@ -910,7 +910,6 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       false,
       true);
 
-#ifndef __APPLE__
   defineMethod(
       runtime,
       prototype,
@@ -918,7 +917,6 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       nullptr,
       intlDateTimeFormatPrototypeFormatToParts,
       1);
-#endif
 
   defineMethod(
       runtime,

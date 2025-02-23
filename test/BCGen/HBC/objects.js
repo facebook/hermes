@@ -50,12 +50,12 @@ function foo(p) {
 // CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 3<UInt32>
-// CHECK-NEXT:[@ 5] CreateTopLevelEnvironment 1<Reg8>, 0<UInt32>
-// CHECK-NEXT:[@ 11] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 16] GetGlobalObject 1<Reg8>
-// CHECK-NEXT:[@ 18] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 3<UInt16>
-// CHECK-NEXT:[@ 24] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 26] Ret 0<Reg8>
+// CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
+// CHECK-NEXT:[@ 7] CreateFunctionEnvironment 1<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 10] CreateClosure 1<Reg8>, 1<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 15] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 3<UInt16>
+// CHECK-NEXT:[@ 21] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 23] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 5 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
@@ -84,7 +84,7 @@ function foo(p) {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
-// CHECK-NEXT:    bc 18: line 10 col 1
+// CHECK-NEXT:    bc 15: line 10 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 12: line 12 col 9
 // CHECK-NEXT:    bc 18: line 13 col 10

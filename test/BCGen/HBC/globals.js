@@ -15,8 +15,8 @@ y = x;
 //CHECK-LABEL:Function<global>{{.*}}:
 //CHECK-NEXT: Offset in debug table: source 0x0000, lexical 0x0000
 //CHECK-NEXT:     DeclareGlobalVar  "x"
-//CHECK-NEXT:     LoadConstUInt8    r0, 5
 //CHECK-NEXT:     GetGlobalObject   r2
+//CHECK-NEXT:     LoadConstUInt8    r0, 5
 //CHECK-NEXT:     PutByIdStrict     r2, r0, 1, "x"
 //CHECK-NEXT:     TryGetById        r4, r2, 1, "foo"
 //CHECK-NEXT:     GetByIdShort      r3, r2, 2, "x"
@@ -29,8 +29,8 @@ y = x;
 //CHKNONSTRICT-LABEL:Function<global>{{.*}}:
 //CHKNONSTRICT-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 //CHKNONSTRICT-NEXT:     DeclareGlobalVar  "x"
-//CHKNONSTRICT-NEXT:     LoadConstUInt8    r0, 5
 //CHKNONSTRICT-NEXT:     GetGlobalObject   r2
+//CHKNONSTRICT-NEXT:     LoadConstUInt8    r0, 5
 //CHKNONSTRICT-NEXT:     PutByIdLoose      r2, r0, 1, "x"
 //CHKNONSTRICT-NEXT:     TryGetById        r4, r2, 1, "foo"
 //CHKNONSTRICT-NEXT:     GetByIdShort      r3, r2, 2, "x"

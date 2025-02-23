@@ -122,7 +122,8 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
     llvh::raw_string_ostream resStream(res);
     SourceErrorManager sm;
     sourceMapGen.outputAsJSON(resStream);
-    auto sourceMap = SourceMapParser::parse(res, /* baseDir */ "", sm);
+    llvh::MemoryBufferRef smBuf(res, "");
+    auto sourceMap = SourceMapParser::parse(smBuf, /* baseDir */ "", sm);
     assert(
         sm.getErrorCount() == 0 && "source map generation or parsing failed");
     return sourceMap;

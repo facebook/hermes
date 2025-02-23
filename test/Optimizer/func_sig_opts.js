@@ -69,17 +69,17 @@ function test_async() {
 // CHECK-NEXT:       DeclareGlobalVarInst "test_rest_arguments": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_generator": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_async": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %main(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, globalObject: object, "main": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %return_types(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %return_types(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, globalObject: object, "return_types": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test_unused_and_duplicate_params(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_unused_and_duplicate_params(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %11: object, globalObject: object, "test_unused_and_duplicate_params": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %test_rest_arguments(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_rest_arguments(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %13: object, globalObject: object, "test_rest_arguments": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %test_generator(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_generator(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %15: object, globalObject: object, "test_generator": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %test_async(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_async(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %17: object, globalObject: object, "test_async": string
 // CHECK-NEXT:        ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -88,8 +88,8 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %p: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %3: object, %1: any, "p": string
 // CHECK-NEXT:  %5 = CallInst (:number) %2: object, %foo(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 1: number, 2: number
 // CHECK-NEXT:  %6 = CallInst (:string|number|bigint) %3: object, %bar(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 2: number
@@ -100,7 +100,7 @@ function test_async() {
 // CHECK:function return_types(p: any): number
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %builder(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %builder(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:number) %1: object, %builder(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %3 = CallInst (:number) %1: object, %builder(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
 // CHECK-NEXT:  %4 = FAddInst (:number) %2: number, %3: number
@@ -113,10 +113,10 @@ function test_async() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %foo2(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.foo2]: object
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar1(): functionCode
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %bar2(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar1(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar2(): functionCode
 // CHECK-NEXT:  %6 = AllocArrayInst (:object) 2: number
 // CHECK-NEXT:       DefineOwnPropertyInst %4: object, %6: object, 0: number, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst %5: object, %6: object, 1: number, true: boolean
@@ -126,7 +126,7 @@ function test_async() {
 // CHECK:function test_rest_arguments(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %baz(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %baz(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:any) %1: object, %baz(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, 100: number
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
@@ -134,7 +134,7 @@ function test_async() {
 // CHECK:function test_generator(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %gen(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %gen(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:object) %1: object, %gen(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
@@ -142,7 +142,7 @@ function test_async() {
 // CHECK:function test_async(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %asyncFn(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %asyncFn(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:any) %1: object, %asyncFn(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined, 1: number
 // CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
@@ -210,7 +210,7 @@ function test_async() {
 // CHECK-NEXT:  %2 = LoadParamInst (:number) %x: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS2.x]: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS2.generator_state]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %gen?inner(): functionCode
+// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %VS2: any, %gen?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
@@ -219,7 +219,7 @@ function test_async() {
 // CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
 // CHECK-NEXT:  %1 = LoadParamInst (:undefined) %<this>: undefined
 // CHECK-NEXT:  %2 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %2: environment, %?anon_0_asyncFn(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %2: environment, %VS0: any, %?anon_0_asyncFn(): functionCode
 // CHECK-NEXT:  %4 = GetBuiltinClosureInst (:object) [HermesBuiltin.spawnAsync]: number
 // CHECK-NEXT:  %5 = CallInst (:any) %4: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: object, %1: undefined, %0: object
 // CHECK-NEXT:       ReturnInst %5: any
@@ -283,7 +283,7 @@ function test_async() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS3.generator_state]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %?anon_0_asyncFn?inner(): functionCode
+// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %VS3: any, %?anon_0_asyncFn?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 

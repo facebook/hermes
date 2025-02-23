@@ -71,29 +71,29 @@ function neg() {
 // CHKIR-NEXT:        DeclareGlobalVarInst "xor": string
 // CHKIR-NEXT:        DeclareGlobalVarInst "not": string
 // CHKIR-NEXT:        DeclareGlobalVarInst "neg": string
-// CHKIR-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %add(): functionCode
+// CHKIR-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %add(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "add": string
-// CHKIR-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %shl(): functionCode
+// CHKIR-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %shl(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "shl": string
-// CHKIR-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %asr(): functionCode
+// CHKIR-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %asr(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "asr": string
-// CHKIR-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %div(): functionCode
+// CHKIR-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %VS0: any, %div(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %19: object, globalObject: object, "div": string
-// CHKIR-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %mul(): functionCode
+// CHKIR-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %VS0: any, %mul(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %21: object, globalObject: object, "mul": string
-// CHKIR-NEXT:  %23 = CreateFunctionInst (:object) %0: environment, %rem(): functionCode
+// CHKIR-NEXT:  %23 = CreateFunctionInst (:object) %0: environment, %VS0: any, %rem(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %23: object, globalObject: object, "rem": string
-// CHKIR-NEXT:  %25 = CreateFunctionInst (:object) %0: environment, %sub(): functionCode
+// CHKIR-NEXT:  %25 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sub(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %25: object, globalObject: object, "sub": string
-// CHKIR-NEXT:  %27 = CreateFunctionInst (:object) %0: environment, %and(): functionCode
+// CHKIR-NEXT:  %27 = CreateFunctionInst (:object) %0: environment, %VS0: any, %and(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %27: object, globalObject: object, "and": string
-// CHKIR-NEXT:  %29 = CreateFunctionInst (:object) %0: environment, %or(): functionCode
+// CHKIR-NEXT:  %29 = CreateFunctionInst (:object) %0: environment, %VS0: any, %or(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %29: object, globalObject: object, "or": string
-// CHKIR-NEXT:  %31 = CreateFunctionInst (:object) %0: environment, %xor(): functionCode
+// CHKIR-NEXT:  %31 = CreateFunctionInst (:object) %0: environment, %VS0: any, %xor(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %31: object, globalObject: object, "xor": string
-// CHKIR-NEXT:  %33 = CreateFunctionInst (:object) %0: environment, %not(): functionCode
+// CHKIR-NEXT:  %33 = CreateFunctionInst (:object) %0: environment, %VS0: any, %not(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %33: object, globalObject: object, "not": string
-// CHKIR-NEXT:  %35 = CreateFunctionInst (:object) %0: environment, %neg(): functionCode
+// CHKIR-NEXT:  %35 = CreateFunctionInst (:object) %0: environment, %VS0: any, %neg(): functionCode
 // CHKIR-NEXT:        StorePropertyLooseInst %35: object, globalObject: object, "neg": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end

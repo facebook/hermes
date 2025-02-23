@@ -21,6 +21,24 @@ Example usage:
 .utils/test_runner.py  external/esprima/test_fixtures -b ./build/bin
 ```
 
+Use `--compile-args` and `--vm-args` if you want to apply extra compliler or VM
+flags to run the testsuite. By default, we use the below flags for test262 and
+the CVE testsuite:
+```sh
+# For hermes compiler
+-test262 -fno-static-builtins -Xes6-block-scoping -Xenable-tdz
+# For hermes VM (running the bytecode)
+-Xes6-promise -Xes6-proxy -Xhermes-internal-test-methods -Xmicrotask-queue
+```
+
+For mjsunit, we pass an additional flag to hermes compiler: `-Xes6-class`.
+
+Since esprima testsuite includes only AST tests, we simply use `-dump-ast`. For
+flow testsuite, we use additionally below flags:
+```sh
+-parse-flow -Xparse-component-syntax -parse-jsx -Xinclude-empty-ast-nodes -Xparse-flow-match
+```
+
 ## Skiplist
 
 Run with flag `--test-skiplist` to force running tests that are included in the

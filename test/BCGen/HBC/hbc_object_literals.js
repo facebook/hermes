@@ -115,7 +115,7 @@ function obj7() {
 
 // IRGEN:function global(): undefined
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// IRGEN-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj1": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj2": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj3": string
@@ -123,21 +123,21 @@ function obj7() {
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj5": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj6": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "obj7": string
-// IRGEN-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %obj1(): functionCode
-// IRGEN-NEXT:  %9 = HBCGetGlobalObjectInst (:object)
-// IRGEN-NEXT:        StorePropertyLooseInst %8: object, %9: object, "obj1": string
-// IRGEN-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %obj2(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %11: object, %9: object, "obj2": string
-// IRGEN-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %obj3(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %13: object, %9: object, "obj3": string
-// IRGEN-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %obj4(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %15: object, %9: object, "obj4": string
-// IRGEN-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %obj5(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %17: object, %9: object, "obj5": string
-// IRGEN-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %obj6(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %19: object, %9: object, "obj6": string
-// IRGEN-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %obj7(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %21: object, %9: object, "obj7": string
+// IRGEN-NEXT:  %8 = HBCGetGlobalObjectInst (:object)
+// IRGEN-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj1(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %9: object, %8: object, "obj1": string
+// IRGEN-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj2(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %11: object, %8: object, "obj2": string
+// IRGEN-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj3(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %13: object, %8: object, "obj3": string
+// IRGEN-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj4(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %15: object, %8: object, "obj4": string
+// IRGEN-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj5(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %17: object, %8: object, "obj5": string
+// IRGEN-NEXT:  %19 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj6(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %19: object, %8: object, "obj6": string
+// IRGEN-NEXT:  %21 = CreateFunctionInst (:object) %0: environment, %VS0: any, %obj7(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %21: object, %8: object, "obj7": string
 // IRGEN-NEXT:  %23 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:        ReturnInst %23: undefined
 // IRGEN-NEXT:function_end
@@ -148,7 +148,7 @@ function obj7() {
 // IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 3: number, "d": string, true: boolean
 // IRGEN-NEXT:  %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// IRGEN-NEXT:  %4 = CreateFunctionInst (:object) %3: environment, %f(): functionCode
+// IRGEN-NEXT:  %4 = CreateFunctionInst (:object) %3: environment, %VS0: any, %f(): functionCode
 // IRGEN-NEXT:       PrStoreInst %4: object, %0: object, 5: number, "f": string, false: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
@@ -362,7 +362,7 @@ function obj7() {
 // BCGEN-NEXT:3[46, 6]
 // BCGEN-NEXT:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// BCGEN-NEXT:    CreateTopLevelEnvironment r1, 0
+// BCGEN-NEXT:    CreateFunctionEnvironment r1, 0
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
@@ -370,8 +370,8 @@ function obj7() {
 // BCGEN-NEXT:    DeclareGlobalVar  "obj5"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj6"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj7"
-// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj1>
 // BCGEN-NEXT:    GetGlobalObject   r3
+// BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj1>
 // BCGEN-NEXT:    PutByIdLoose      r3, r2, 1, "obj1"
 // BCGEN-NEXT:    CreateClosure     r2, r1, Function<obj2>
 // BCGEN-NEXT:    PutByIdLoose      r3, r2, 2, "obj2"
@@ -456,20 +456,20 @@ function obj7() {
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// BCGEN-NEXT:    bc 6: line 11 col 1
-// BCGEN-NEXT:    bc 11: line 11 col 1
-// BCGEN-NEXT:    bc 16: line 11 col 1
-// BCGEN-NEXT:    bc 21: line 11 col 1
-// BCGEN-NEXT:    bc 26: line 11 col 1
-// BCGEN-NEXT:    bc 31: line 11 col 1
-// BCGEN-NEXT:    bc 36: line 11 col 1
-// BCGEN-NEXT:    bc 48: line 11 col 1
-// BCGEN-NEXT:    bc 59: line 11 col 1
-// BCGEN-NEXT:    bc 70: line 11 col 1
-// BCGEN-NEXT:    bc 81: line 11 col 1
-// BCGEN-NEXT:    bc 92: line 11 col 1
-// BCGEN-NEXT:    bc 103: line 11 col 1
-// BCGEN-NEXT:    bc 114: line 11 col 1
+// BCGEN-NEXT:    bc 3: line 11 col 1
+// BCGEN-NEXT:    bc 8: line 11 col 1
+// BCGEN-NEXT:    bc 13: line 11 col 1
+// BCGEN-NEXT:    bc 18: line 11 col 1
+// BCGEN-NEXT:    bc 23: line 11 col 1
+// BCGEN-NEXT:    bc 28: line 11 col 1
+// BCGEN-NEXT:    bc 33: line 11 col 1
+// BCGEN-NEXT:    bc 45: line 11 col 1
+// BCGEN-NEXT:    bc 56: line 11 col 1
+// BCGEN-NEXT:    bc 67: line 11 col 1
+// BCGEN-NEXT:    bc 78: line 11 col 1
+// BCGEN-NEXT:    bc 89: line 11 col 1
+// BCGEN-NEXT:    bc 100: line 11 col 1
+// BCGEN-NEXT:    bc 111: line 11 col 1
 // BCGEN-NEXT:  0x002e  function idx 3, starts at line 40 col 1
 // BCGEN-NEXT:    bc 8: line 41 col 10
 // BCGEN-NEXT:  0x0035  function idx 4, starts at line 58 col 1

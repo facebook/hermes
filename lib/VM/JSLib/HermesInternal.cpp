@@ -415,7 +415,6 @@ hermesInternalDrainJobs(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-#ifdef HERMESVM_EXCEPTION_ON_OOM
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
 CallResult<HermesValue>
@@ -423,7 +422,6 @@ hermesInternalGetCallStack(void *, Runtime &runtime, NativeArgs args) {
   std::string stack = runtime.getCallStackNoAlloc();
   return StringPrimitive::create(runtime, ASCIIRef(stack.data(), stack.size()));
 }
-#endif // HERMESVM_EXCEPTION_ON_OOM
 
 /// \return the code block associated with \p callableHandle if it is a
 /// (possibly bound) JS function, or nullptr otherwise.
@@ -820,11 +818,8 @@ Handle<JSObject> createHermesInternalObject(
     defineInternMethodAndSymbol("isProxy", hermesInternalIsProxy);
     defineInternMethodAndSymbol("isLazy", hermesInternalIsLazy);
     defineInternMethod(P::drainJobs, hermesInternalDrainJobs);
+    defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
   }
-
-#ifdef HERMESVM_EXCEPTION_ON_OOM
-  defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
-#endif // HERMESVM_EXCEPTION_ON_OOM
 
   JSObject::preventExtensions(*intern);
 

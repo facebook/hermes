@@ -31,7 +31,7 @@ function outer(a, b) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -39,7 +39,7 @@ function outer(a, b) {
 // CHECK:function outer(a: any, b: any): string|number
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f3(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f3(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:string|number) %1: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 10: number
 // CHECK-NEXT:  %3 = BinaryAddInst (:string|number) 1734: number, %2: string|number
 // CHECK-NEXT:  %4 = CallInst (:string|number) %1: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 100: number

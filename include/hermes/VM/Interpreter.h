@@ -266,6 +266,24 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
+  static ExecutionStatus caseGetByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus caseGetByValWithReceiver(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus casePutByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus casePutByValWithReceiver(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
   /// Interpreter implementation for creating a RegExp object. Unlike the other
   /// out-of-line cases, this takes a CodeBlock* and does not return an
   /// ExecutionStatus.
@@ -274,11 +292,6 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       CodeBlock *curCodeBlock,
       const inst::Inst *ip);
-
-  static ExecutionStatus casePutByValWithReceiver(
-      Runtime &runtime,
-      PinnedHermesValue *frameRegs,
-      const Inst *ip);
 
   /// \return the `this` to be used for a construct call on \p callee, with \p
   /// newTarget as the new.target. We need to take special care when \p callee

@@ -81,27 +81,27 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       DeclareGlobalVarInst "spreadObjectLiteral": string
 // CHECK-NEXT:        DeclareGlobalVarInst "accessorObjectLiteral1": string
 // CHECK-NEXT:        DeclareGlobalVarInst "accessorObjectLiteral2": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %simpleObjectLiteral(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleObjectLiteral(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "simpleObjectLiteral": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %emitAllocObjectLiteral(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %emitAllocObjectLiteral(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "emitAllocObjectLiteral": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %nestedAllocObjectLiteral(): functionCode
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %VS0: any, %nestedAllocObjectLiteral(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "nestedAllocObjectLiteral": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %duplicatedObjectLiteral(): functionCode
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %VS0: any, %duplicatedObjectLiteral(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "duplicatedObjectLiteral": string
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %emptyObjectLiteral(): functionCode
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %VS0: any, %emptyObjectLiteral(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "emptyObjectLiteral": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %protoObjectLiteral1(): functionCode
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %VS0: any, %protoObjectLiteral1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "protoObjectLiteral1": string
-// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %0: environment, %protoObjectLiteral2(): functionCode
+// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %0: environment, %VS0: any, %protoObjectLiteral2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %24: object, globalObject: object, "protoObjectLiteral2": string
-// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %0: environment, %computedObjectLiteral(): functionCode
+// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %0: environment, %VS0: any, %computedObjectLiteral(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %26: object, globalObject: object, "computedObjectLiteral": string
-// CHECK-NEXT:  %28 = CreateFunctionInst (:object) %0: environment, %spreadObjectLiteral(): functionCode
+// CHECK-NEXT:  %28 = CreateFunctionInst (:object) %0: environment, %VS0: any, %spreadObjectLiteral(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %28: object, globalObject: object, "spreadObjectLiteral": string
-// CHECK-NEXT:  %30 = CreateFunctionInst (:object) %0: environment, %accessorObjectLiteral1(): functionCode
+// CHECK-NEXT:  %30 = CreateFunctionInst (:object) %0: environment, %VS0: any, %accessorObjectLiteral1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %30: object, globalObject: object, "accessorObjectLiteral1": string
-// CHECK-NEXT:  %32 = CreateFunctionInst (:object) %0: environment, %accessorObjectLiteral2(): functionCode
+// CHECK-NEXT:  %32 = CreateFunctionInst (:object) %0: environment, %VS0: any, %accessorObjectLiteral2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %32: object, globalObject: object, "accessorObjectLiteral2": string
 // CHECK-NEXT:  %34 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %34: any
@@ -287,7 +287,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       DefineNewOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       DefineNewOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %"get c"(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS11: any, %"get c"(): functionCode
 // CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %4: object, "c": string, true: boolean
 // CHECK-NEXT:       DefineNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object

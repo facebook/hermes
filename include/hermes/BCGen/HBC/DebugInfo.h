@@ -230,7 +230,6 @@ class DebugInfo {
     disassembleFilesAndOffsets(OS);
   }
 
-#ifndef HERMESVM_LEAN
   /// Populate the given source map \p sourceMap with debug information.
   /// Each opcode with line and column information is mapped to its absolute
   /// offset in the bytecode file. To determine these absolute offsets, the
@@ -240,7 +239,6 @@ class DebugInfo {
       SourceMapGenerator *sourceMap,
       std::vector<uint32_t> &&functionOffsets,
       uint32_t segmentID) const;
-#endif
 };
 
 class DebugInfoGenerator {

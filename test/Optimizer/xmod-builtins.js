@@ -37,9 +37,9 @@ var x1 = $SHBuiltin.import(100, "x", x0);
 // CHECK-NEXT:       DeclareGlobalVarInst "x0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "x1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %7 = CallInst (:number) %6: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StorePropertyLooseInst 7: number, globalObject: object, "x0": string
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) globalObject: object, "x0": string

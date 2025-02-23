@@ -27,7 +27,7 @@ function check1() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "check1": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %check1(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "check1": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
@@ -43,7 +43,7 @@ function check1() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.x]: any|empty
 // CHECK-NEXT:       StoreFrameInst %1: environment, empty: empty, [%VS1.y]: any|empty
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %inner(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %inner(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.inner]: any
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "glob": string
 // CHECK-NEXT:  %7 = ThrowIfInst (:any) empty: empty, type(empty)
@@ -75,7 +75,7 @@ function check1() {
 // CHKDIS-NEXT:%BB0:
 // CHKDIS-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKDIS-NEXT:       DeclareGlobalVarInst "check1": string
-// CHKDIS-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %check1(): functionCode
+// CHKDIS-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check1(): functionCode
 // CHKDIS-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "check1": string
 // CHKDIS-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKDIS-NEXT:       StoreStackInst undefined: undefined, %4: any
@@ -91,7 +91,7 @@ function check1() {
 // CHKDIS-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHKDIS-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: any
 // CHKDIS-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.y]: any
-// CHKDIS-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %inner(): functionCode
+// CHKDIS-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %inner(): functionCode
 // CHKDIS-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.inner]: any
 // CHKDIS-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "glob": string
 // CHKDIS-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any

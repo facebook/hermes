@@ -169,6 +169,9 @@ struct ExecuteOptions {
   /// If not None, run sampling profiler and dump the result.
   SampleProfilingMode sampleProfiling{SampleProfilingMode::None};
 
+  /// Sampling profiler frequency.
+  double sampleProfilingFreq{100};
+
   /// Start tracking heap objects before executing bytecode.
   bool heapTimeline{false};
 };

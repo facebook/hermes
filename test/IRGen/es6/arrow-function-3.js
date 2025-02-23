@@ -19,7 +19,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
@@ -43,7 +43,7 @@ function foo(x = () => this) {
 // CHECK-NEXT:  %9 = BinaryStrictlyNotEqualInst (:any) %8: any, undefined: undefined
 // CHECK-NEXT:        CondBranchInst %9: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %3: environment, %x(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %3: environment, %VS1: any, %x(): functionCode
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %13 = PhiInst (:any) %8: any, %BB0, %11: object, %BB1

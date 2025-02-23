@@ -786,11 +786,15 @@ class GetClosureScopeInst : public BaseScopeInst {
   GetClosureScopeInst(const GetClosureScopeInst &) = delete;
   void operator=(const GetClosureScopeInst &) = delete;
 
-  enum { ClosureIdx = BaseScopeInst::LAST_IDX };
+  enum { FunctionCodeIdx = BaseScopeInst::LAST_IDX, ClosureIdx };
 
  public:
-  explicit GetClosureScopeInst(VariableScope *varScope, Value *closure)
+  explicit GetClosureScopeInst(
+      VariableScope *varScope,
+      Function *F,
+      Value *closure)
       : BaseScopeInst(ValueKind::GetClosureScopeInstKind, varScope) {
+    pushOperand(F);
     pushOperand(closure);
   }
   explicit GetClosureScopeInst(
@@ -798,8 +802,11 @@ class GetClosureScopeInst : public BaseScopeInst {
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
 
-  Value *getClosure() {
+  Value *getClosure() const {
     return cast<Instruction>(getOperand(ClosureIdx));
+  }
+  Function *getFunctionCode() const {
+    return cast<Function>(getOperand(FunctionCodeIdx));
   }
 
   SideEffect getSideEffectImpl() const {
@@ -918,22 +925,38 @@ class BaseCreateLexicalChildInst : public Instruction {
   explicit BaseCreateLexicalChildInst(
       ValueKind kind,
       Instruction *scope,
+      VariableScope *varScope,
       Function *code)
       : Instruction(kind) {
     pushOperand(scope);
+    pushOperand(varScope);
     pushOperand(code);
   }
 
  public:
-  enum { ScopeIdx, FunctionCodeIdx, LAST_IDX };
+  enum { ScopeIdx, VarScopeIdx, FunctionCodeIdx, LAST_IDX };
 
   explicit BaseCreateLexicalChildInst(
       const BaseCreateLexicalChildInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
-  Instruction *getScope() const {
-    return cast<Instruction>(getOperand(ScopeIdx));
+  /// Get and set the enclosing scope of the function. Note that this may be
+  /// EmptySentinel if the function does not use its enclosing scope.
+  Value *getScope() const {
+    return getOperand(ScopeIdx);
+  }
+  void setScope(Value *scope) {
+    setOperand(scope, ScopeIdx);
+  }
+
+  /// Get/set the enclosing VariableScope of the function. Note that this may be
+  /// EmptySentinel if the function does not use its enclosing scope.
+  Value *getVarScope() const {
+    return getOperand(VarScopeIdx);
+  }
+  void setVarScope(Value *scope) {
+    setOperand(scope, VarScopeIdx);
   }
 
   Function *getFunctionCode() const {
@@ -965,8 +988,9 @@ class BaseCreateCallableInst : public BaseCreateLexicalChildInst {
   explicit BaseCreateCallableInst(
       ValueKind kind,
       Instruction *scope,
+      VariableScope *varScope,
       Function *code)
-      : BaseCreateLexicalChildInst(kind, scope, code) {
+      : BaseCreateLexicalChildInst(kind, scope, varScope, code) {
     setType(*getInherentTypeImpl());
   }
 
@@ -991,8 +1015,15 @@ class CreateFunctionInst : public BaseCreateCallableInst {
   void operator=(const CreateFunctionInst &) = delete;
 
  public:
-  explicit CreateFunctionInst(Instruction *scope, Function *code)
-      : BaseCreateCallableInst(ValueKind::CreateFunctionInstKind, scope, code) {
+  explicit CreateFunctionInst(
+      Instruction *scope,
+      VariableScope *varScope,
+      Function *code)
+      : BaseCreateCallableInst(
+            ValueKind::CreateFunctionInstKind,
+            scope,
+            varScope,
+            code) {
     assert(
         (llvh::isa<NormalFunction>(code) ||
          llvh::isa<GeneratorFunction>(code) ||
@@ -1020,7 +1051,11 @@ class CreateClassInst : public BaseCreateCallableInst {
       Function *code,
       Value *superClass,
       AllocStackInst *homeObjectOutput)
-      : BaseCreateCallableInst(ValueKind::CreateClassInstKind, scope, code) {
+      : BaseCreateCallableInst(
+            ValueKind::CreateClassInstKind,
+            scope,
+            scope->getVariableScope(),
+            code) {
     assert(
         (llvh::isa<NormalFunction>(code)) &&
         "Only NormalFunction supported by CreateClassInst");
@@ -4629,10 +4664,14 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
   void operator=(const CreateGeneratorInst &) = delete;
 
  public:
-  explicit CreateGeneratorInst(Instruction *scope, NormalFunction *genFunction)
+  explicit CreateGeneratorInst(
+      Instruction *scope,
+      VariableScope *varScope,
+      NormalFunction *genFunction)
       : BaseCreateLexicalChildInst(
             ValueKind::CreateGeneratorInstKind,
             scope,
+            varScope,
             genFunction) {
     setType(*getInherentTypeImpl());
   }

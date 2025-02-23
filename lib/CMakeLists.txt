@@ -153,7 +153,7 @@ target_link_libraries(hermesvmlean_a PUBLIC
   LLVHSupport_obj
   ${BOOST_CONTEXT_LIB}
   dtoa_obj
-  hermesapiLean_obj
+  hermesapi_obj
   hermesADT_obj
   hermesFrontEndDefs_obj # needed by JIT
   hermesHBCBackendLean_obj
@@ -166,7 +166,7 @@ target_link_libraries(hermesvmlean_a PUBLIC
   hermesPublic_obj
   hermesRegex_obj
   hermesSupport_obj
-  hermesVMRuntimeLean_obj
+  hermesVMRuntime_obj
   zip_obj
   )
 

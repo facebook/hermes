@@ -12,6 +12,8 @@ exports[`flowDefToTSDef export/declare/default/identifier/type 1`] = `
  */
 
 declare const $$EXPORT_DEFAULT_DECLARATION$$: string;
+declare type $$EXPORT_DEFAULT_DECLARATION$$ =
+  typeof $$EXPORT_DEFAULT_DECLARATION$$;
 export default $$EXPORT_DEFAULT_DECLARATION$$;
 "
 `;

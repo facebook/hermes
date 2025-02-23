@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -Wno-direct-eval -sample-profiling=chrome %s
-// RUN: %hermes -O -Wno-direct-eval -sample-profiling=chrome -emit-binary -out %t.hbc %s && %hermes %t.hbc
+// RUN: %hermes -O -Wno-direct-eval -sample-profiling=chrome -profiling-out=%t.cpuprofile %s
 
 // NOTE: This test is here to check that the sampling profiler can play nicely
 // with the multiple domains.

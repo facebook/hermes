@@ -38,7 +38,7 @@ std::string stringForSHBuiltinError(
 SemanticResolver::SemanticResolver(
     Context &astContext,
     sema::SemContext &semCtx,
-    const DeclarationFileListTy &ambientDecls,
+    const DeclarationFileListTy *ambientDecls,
     DeclCollectorMapTy *saveDecls,
     bool compile,
     bool typed)
@@ -1459,9 +1459,11 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
 
   FoundDirectives directives{};
 
-  // Arrow functions have their bodies turned into BlockStatement before visit.
-  auto *blockBody = llvh::cast<BlockStatementNode>(body);
-  directives = scanDirectives(blockBody->_body);
+  // Arrow functions have their bodies turned into BlockStatement before visit,
+  // but only in compile_ mode.
+  auto *blockBody = llvh::dyn_cast<BlockStatementNode>(body);
+  if (blockBody)
+    directives = scanDirectives(blockBody->_body);
 
   // Set the strictness if necessary.
   if (directives.useStrictNode)
@@ -1480,7 +1482,7 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     validateDeclarationName(Decl::Kind::FunctionExprName, id);
   }
 
-  if (blockBody->isLazyFunctionBody) {
+  if (blockBody && blockBody->isLazyFunctionBody) {
     // Don't descend into lazy functions, don't create a scope.
     // But do record the surrounding scope in the FunctionInfo.
     assert(node->getSemInfo() && "semInfo must be set in first pass");
@@ -1964,7 +1966,7 @@ bool SemanticResolver::extractDeclaredIdentsFromID(
   }
 
   if (auto *param = llvh::dyn_cast<ComponentParameterNode>(node)) {
-    return extractDeclaredIdentsFromID(param->_name, idents);
+    return extractDeclaredIdentsFromID(param->_local, idents);
   }
 
   sm_.error(node->getSourceRange(), "invalid destructuring target");
@@ -2389,6 +2391,9 @@ void SemanticResolver::processAmbientDecls() {
       globalScope_ &&
       "global scope must be created when declaring ambient globals");
 
+  if (!ambientDecls_)
+    return;
+
   /// This visitor structs collects declarations within a single closure without
   /// descending into child closures.
   struct DeclHoisting {
@@ -2443,7 +2448,7 @@ void SemanticResolver::processAmbientDecls() {
     }
   };
 
-  for (auto *programNode : ambientDecls_) {
+  for (auto *programNode : *ambientDecls_) {
     DeclHoisting DH;
     programNode->visit(DH);
     // Create variable declarations for each of the hoisted variables.

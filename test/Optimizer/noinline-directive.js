@@ -49,7 +49,7 @@ function outer(a) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -58,8 +58,8 @@ function outer(a) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %fooNoInline(): functionCode
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %fooNoInlineLast(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %fooNoInline(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %fooNoInlineLast(): functionCode
 // CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %1: any, 5: number
 // CHECK-NEXT:  %5 = CallInst (:string|number) %2: object, %fooNoInline(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, %1: any
 // CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %4: string|number, %5: string|number

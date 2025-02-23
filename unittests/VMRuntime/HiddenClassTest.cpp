@@ -7,7 +7,9 @@
 
 #include "hermes/VM/HiddenClass.h"
 
-#include "hermes/VM/ArrayStorage.h"
+#include "hermes/VM/HostModel.h"
+#include "hermes/VM/JSCallableProxy.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Runtime.h"
 
 #include "VMRuntimeTestHelpers.h"
@@ -553,6 +555,22 @@ TEST_F(HiddenClassTest, ReservedSlots) {
     ASSERT_RETURNED(addRes);
     EXPECT_EQ(i, addRes->second);
   }
+
+  // Verify that the saved HiddenClasses for Proxies and HostObjects are
+  // different from the equivalent "normal" HiddenClasses.
+  EXPECT_NE(
+      *runtime.proxyClass,
+      *runtime.getHiddenClassForPrototype(
+          nullptr, JSObject::numOverlapSlots<JSProxy>()));
+  EXPECT_NE(
+      *runtime.callableProxyClass,
+      *runtime.getHiddenClassForPrototype(
+          nullptr, JSObject::numOverlapSlots<JSCallableProxy>()));
+  EXPECT_NE(
+      *runtime.hostObjectClass,
+      *runtime.getHiddenClassForPrototype(
+          runtime.objectPrototypeRawPtr,
+          JSObject::numOverlapSlots<HostObject>()));
 }
 
 } // namespace

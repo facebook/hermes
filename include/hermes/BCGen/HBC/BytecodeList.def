@@ -668,7 +668,7 @@ DEFINE_OPCODE_5(CreateDerivedClassLongIndex, Reg8, Reg8, Reg8, Reg8, UInt32)
 
 /// Create a closure.
 /// Arg1 is the register in which to store the closure.
-/// Arg2 is the current environment.
+/// Arg2 is the parent environment of the closure, or undefined.
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
@@ -821,7 +821,7 @@ DEFINE_OPCODE_5(SwitchImm, Reg8, UInt32, Addr32, UInt32, UInt32)
 
 /// Create a generator.
 /// Arg1 is the register in which to store the generator.
-/// Arg2 is the current environment.
+/// Arg2 is the parent environment of the generator, or undefined.
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateGenerator, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateGeneratorLongIndex, Reg8, Reg8, UInt32)

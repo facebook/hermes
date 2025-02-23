@@ -43,9 +43,9 @@ class SemanticResolver
   /// Keywords we will be checking for.
   hermes::sema::Keywords kw_;
 
-  /// A list of parsed files containing global ambient declarations that should
-  /// be inserted in the global scope.
-  const DeclarationFileListTy &ambientDecls_;
+  /// If not null, a list of parsed files containing global ambient declarations
+  /// that should be inserted in the global scope.
+  const DeclarationFileListTy *ambientDecls_;
 
   /// A set of names that are restricted in the global scope.
   /// https://262.ecma-international.org/14.0/#sec-hasrestrictedglobalproperty
@@ -115,7 +115,7 @@ class SemanticResolver
   explicit SemanticResolver(
       Context &astContext,
       sema::SemContext &semCtx,
-      const DeclarationFileListTy &ambientDecls,
+      const DeclarationFileListTy *ambientDecls,
       DeclCollectorMapTy *saveDecls,
       bool compile,
       bool typed = false);
@@ -123,7 +123,7 @@ class SemanticResolver
   explicit SemanticResolver(
       Context &astContext,
       sema::SemContext &semCtx,
-      const DeclarationFileListTy &ambientDecls,
+      const DeclarationFileListTy *ambientDecls,
       bool compile)
       : SemanticResolver(astContext, semCtx, ambientDecls, nullptr, compile) {}
 

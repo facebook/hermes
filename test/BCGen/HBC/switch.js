@@ -116,69 +116,69 @@ function switch_neg(x) {
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "f": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "regress1": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "jump_table": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "string_switch": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "switch_uint32": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "switch_neg": string
-// CHECK-NEXT:  {r2}      %7 = CreateFunctionInst (:object) {r0} %0: environment, %f(): functionCode
-// CHECK-NEXT:  {r1}      %8 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %7: object, {r1} %8: object, "f": string
-// CHECK-NEXT:  {r2}     %10 = CreateFunctionInst (:object) {r0} %0: environment, %regress1(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %10: object, {r1} %8: object, "regress1": string
-// CHECK-NEXT:  {r2}     %12 = CreateFunctionInst (:object) {r0} %0: environment, %jump_table(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %12: object, {r1} %8: object, "jump_table": string
-// CHECK-NEXT:  {r2}     %14 = CreateFunctionInst (:object) {r0} %0: environment, %string_switch(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %14: object, {r1} %8: object, "string_switch": string
-// CHECK-NEXT:  {r2}     %16 = CreateFunctionInst (:object) {r0} %0: environment, %switch_uint32(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %16: object, {r1} %8: object, "switch_uint32": string
-// CHECK-NEXT:  {r0}     %18 = CreateFunctionInst (:object) {r0} %0: environment, %switch_neg(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r0} %18: object, {r1} %8: object, "switch_neg": string
+// CHECK-NEXT:  {r1}      %7 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r2}      %8 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %f(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %8: object, {r1} %7: object, "f": string
+// CHECK-NEXT:  {r2}     %10 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %regress1(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %10: object, {r1} %7: object, "regress1": string
+// CHECK-NEXT:  {r2}     %12 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %jump_table(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %12: object, {r1} %7: object, "jump_table": string
+// CHECK-NEXT:  {r2}     %14 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %string_switch(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %14: object, {r1} %7: object, "string_switch": string
+// CHECK-NEXT:  {r2}     %16 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %switch_uint32(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r2} %16: object, {r1} %7: object, "switch_uint32": string
+// CHECK-NEXT:  {r0}     %18 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %switch_neg(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %18: object, {r1} %7: object, "switch_neg": string
 // CHECK-NEXT:  {np0}    %20 = HBCLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %20: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(x: any): string
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:                 BranchInst %BB10
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  {r0}      %2 = HBCLoadConstInst (:string) "regular": string
-// CHECK-NEXT:                 ReturnInst {r0} %2: string
+// CHECK-NEXT:  {r0}      %1 = HBCLoadConstInst (:string) "regular": string
+// CHECK-NEXT:                 ReturnInst {r0} %1: string
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  {r0}      %4 = HBCLoadConstInst (:string) "multicase": string
-// CHECK-NEXT:                 ReturnInst {r0} %4: string
+// CHECK-NEXT:  {r0}      %3 = HBCLoadConstInst (:string) "multicase": string
+// CHECK-NEXT:                 ReturnInst {r0} %3: string
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  {r0}      %6 = HBCLoadConstInst (:string) "fall": string
-// CHECK-NEXT:  {r1}      %7 = MovInst (:string) {r0} %6: string
+// CHECK-NEXT:  {r0}      %5 = HBCLoadConstInst (:string) "fall": string
+// CHECK-NEXT:  {r1}      %6 = MovInst (:string) {r0} %5: string
 // CHECK-NEXT:                 BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  {r1}      %9 = PhiInst (:string) {r1} %7: string, %BB3, {r1} %17: string, %BB6
-// CHECK-NEXT:  {r0}     %10 = HBCLoadConstInst (:string) "through": string
-// CHECK-NEXT:  {r0}     %11 = HBCStringConcatInst (:string) {r1} %9: string, {r0} %10: string
-// CHECK-NEXT:                 ReturnInst {r0} %11: string
+// CHECK-NEXT:  {r1}      %8 = PhiInst (:string) {r1} %6: string, %BB3, {r1} %16: string, %BB6
+// CHECK-NEXT:  {r0}      %9 = HBCLoadConstInst (:string) "through": string
+// CHECK-NEXT:  {r0}     %10 = HBCStringConcatInst (:string) {r1} %8: string, {r0} %9: string
+// CHECK-NEXT:                 ReturnInst {r0} %10: string
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  {r0}     %13 = HBCLoadConstInst (:string) "default": string
-// CHECK-NEXT:                 ReturnInst {r0} %13: string
+// CHECK-NEXT:  {r0}     %12 = HBCLoadConstInst (:string) "default": string
+// CHECK-NEXT:                 ReturnInst {r0} %12: string
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  {r1}     %15 = HBCLoadConstInst (:string) "": string
-// CHECK-NEXT:  {n0}     %16 = HBCLoadConstInst (:number) 4: number
-// CHECK-NEXT:  {r1}     %17 = MovInst (:string) {r1} %15: string
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %16: number, {r0} %0: any, %BB4, %BB5
+// CHECK-NEXT:  {r1}     %14 = HBCLoadConstInst (:string) "": string
+// CHECK-NEXT:  {n0}     %15 = HBCLoadConstInst (:number) 4: number
+// CHECK-NEXT:  {r1}     %16 = MovInst (:string) {r1} %14: string
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %15: number, {r0} %24: any, %BB4, %BB5
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  {n0}     %19 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %19: number, {r0} %0: any, %BB3, %BB6
+// CHECK-NEXT:  {n0}     %18 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %18: number, {r0} %24: any, %BB3, %BB6
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  {n0}     %21 = HBCLoadConstInst (:number) 2: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %21: number, {r0} %0: any, %BB2, %BB7
+// CHECK-NEXT:  {n0}     %20 = HBCLoadConstInst (:number) 2: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %20: number, {r0} %24: any, %BB2, %BB7
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  {n0}     %23 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %23: number, {r0} %0: any, %BB2, %BB8
+// CHECK-NEXT:  {n0}     %22 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %22: number, {r0} %24: any, %BB2, %BB8
 // CHECK-NEXT:%BB10:
+// CHECK-NEXT:  {r0}     %24 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  {n0}     %25 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %25: number, {r0} %0: any, %BB1, %BB9
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %25: number, {r0} %24: any, %BB1, %BB9
 // CHECK-NEXT:function_end
 
 // CHECK:function regress1(w: any): any [noReturn]
@@ -247,29 +247,29 @@ function switch_neg(x) {
 
 // CHECK:function string_switch(x: any): undefined|number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r1}      %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:                 BranchInst %BB7
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  {np0}     %2 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 ReturnInst {np0} %2: undefined
+// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:                 ReturnInst {np0} %1: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  {n0}      %4 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:                 ReturnInst {n0} %4: number
+// CHECK-NEXT:  {n0}      %3 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:                 ReturnInst {n0} %3: number
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  {n0}      %6 = HBCLoadConstInst (:number) 2: number
-// CHECK-NEXT:                 ReturnInst {n0} %6: number
+// CHECK-NEXT:  {n0}      %5 = HBCLoadConstInst (:number) 2: number
+// CHECK-NEXT:                 ReturnInst {n0} %5: number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  {n0}      %8 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:                 ReturnInst {n0} %8: number
+// CHECK-NEXT:  {n0}      %7 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:                 ReturnInst {n0} %7: number
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  {r0}     %10 = HBCLoadConstInst (:string) "c": string
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {r0} %10: string, {r1} %0: any, %BB4, %BB1
+// CHECK-NEXT:  {r0}      %9 = HBCLoadConstInst (:string) "c": string
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {r0} %9: string, {r1} %13: any, %BB4, %BB1
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  {r0}     %12 = HBCLoadConstInst (:string) "b": string
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {r0} %12: string, {r1} %0: any, %BB3, %BB5
+// CHECK-NEXT:  {r0}     %11 = HBCLoadConstInst (:string) "b": string
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {r0} %11: string, {r1} %13: any, %BB3, %BB5
 // CHECK-NEXT:%BB7:
+// CHECK-NEXT:  {r1}     %13 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  {r0}     %14 = HBCLoadConstInst (:string) "a": string
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {r0} %14: string, {r1} %0: any, %BB2, %BB6
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {r0} %14: string, {r1} %13: any, %BB2, %BB6
 // CHECK-NEXT:function_end
 
 // CHECK:function switch_uint32(x: any): number
@@ -286,39 +286,39 @@ function switch_neg(x) {
 
 // CHECK:function switch_neg(x: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:                 BranchInst %BB11
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  {n0}      %2 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:                 ReturnInst {n0} %2: number
+// CHECK-NEXT:  {n0}      %1 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:                 ReturnInst {n0} %1: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  {n0}      %4 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:                 ReturnInst {n0} %4: number
+// CHECK-NEXT:  {n0}      %3 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:                 ReturnInst {n0} %3: number
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  {n0}      %6 = HBCLoadConstInst (:number) -9: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %6: number, {r0} %0: any, %BB2, %BB1
+// CHECK-NEXT:  {n0}      %5 = HBCLoadConstInst (:number) -9: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %5: number, {r0} %21: any, %BB2, %BB1
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  {n0}      %8 = HBCLoadConstInst (:number) -8: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %8: number, {r0} %0: any, %BB2, %BB3
+// CHECK-NEXT:  {n0}      %7 = HBCLoadConstInst (:number) -8: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %7: number, {r0} %21: any, %BB2, %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  {n0}     %10 = HBCLoadConstInst (:number) -7: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %10: number, {r0} %0: any, %BB2, %BB4
+// CHECK-NEXT:  {n0}      %9 = HBCLoadConstInst (:number) -7: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %9: number, {r0} %21: any, %BB2, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  {n0}     %12 = HBCLoadConstInst (:number) -6: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %12: number, {r0} %0: any, %BB2, %BB5
+// CHECK-NEXT:  {n0}     %11 = HBCLoadConstInst (:number) -6: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %11: number, {r0} %21: any, %BB2, %BB5
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  {n0}     %14 = HBCLoadConstInst (:number) -5: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %14: number, {r0} %0: any, %BB2, %BB6
+// CHECK-NEXT:  {n0}     %13 = HBCLoadConstInst (:number) -5: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %13: number, {r0} %21: any, %BB2, %BB6
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  {n0}     %16 = HBCLoadConstInst (:number) -4: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %16: number, {r0} %0: any, %BB2, %BB7
+// CHECK-NEXT:  {n0}     %15 = HBCLoadConstInst (:number) -4: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %15: number, {r0} %21: any, %BB2, %BB7
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  {n0}     %18 = HBCLoadConstInst (:number) -3: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %18: number, {r0} %0: any, %BB2, %BB8
+// CHECK-NEXT:  {n0}     %17 = HBCLoadConstInst (:number) -3: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %17: number, {r0} %21: any, %BB2, %BB8
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  {n0}     %20 = HBCLoadConstInst (:number) -2: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %20: number, {r0} %0: any, %BB2, %BB9
+// CHECK-NEXT:  {n0}     %19 = HBCLoadConstInst (:number) -2: number
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %19: number, {r0} %21: any, %BB2, %BB9
 // CHECK-NEXT:%BB11:
+// CHECK-NEXT:  {r0}     %21 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  {n0}     %22 = HBCLoadConstInst (:number) -1: number
-// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %22: number, {r0} %0: any, %BB2, %BB10
+// CHECK-NEXT:                 CmpBrStrictlyEqualInst {n0} %22: number, {r0} %21: any, %BB2, %BB10
 // CHECK-NEXT:function_end

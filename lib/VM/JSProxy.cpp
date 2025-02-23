@@ -96,8 +96,7 @@ PseudoHandle<JSProxy> JSProxy::create(Runtime &runtime) {
       // Proxy should not have an observable prototype, so we just set it to
       // null.
       Runtime::makeNullHandle<JSObject>(),
-      runtime.getHiddenClassForPrototype(
-          nullptr, JSObject::numOverlapSlots<JSProxy>()));
+      runtime.proxyClass);
 
   proxy->flags_.proxyObject = true;
 

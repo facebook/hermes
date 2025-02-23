@@ -19,23 +19,13 @@ namespace hermes {
 /// parses.
 class SourceMapParser {
  public:
-  /// Parse input \p sourceMap and return parsed SourceMap.
+  /// Parse input \p sourceMap and return parsed SourceMap. \p sourceMap must
+  /// have a past-the-end null terminator.
   /// On failure if malformed, prints an error message and returns nullptr.
   static std::unique_ptr<SourceMap> parse(
       llvh::MemoryBufferRef sourceMap,
       llvh::StringRef baseDir,
       SourceErrorManager &sm);
-
-  /// Parse input \p sourceMapContent and return parsed SourceMap.
-  /// Set the filename of the map file to "<source map>".
-  /// On failure if malformed, prints an error message and returns nullptr.
-  static std::unique_ptr<SourceMap> parse(
-      llvh::StringRef sourceMapContent,
-      llvh::StringRef baseDir,
-      SourceErrorManager &sm) {
-    return parse(
-        llvh::MemoryBufferRef(sourceMapContent, "<source map>"), baseDir, sm);
-  }
 
  private:
   SourceMapParser() = delete;

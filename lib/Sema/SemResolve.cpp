@@ -169,7 +169,7 @@ bool resolveAST(
   SemanticResolver resolver{
       astContext,
       semCtx,
-      ambientDecls,
+      &ambientDecls,
       flowContext ? &declCollectorMap : nullptr,
       true,
       flowContext != nullptr};
@@ -197,7 +197,12 @@ bool resolveASTLazy(
     bool parentHadSuperBinding) {
   PerfSection validation("Resolving JavaScript lazy AST");
   // Resolve the entire AST.
-  SemanticResolver resolver{astContext, semCtx, {}, nullptr, true};
+  SemanticResolver resolver{
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      /* saveDecls */ nullptr,
+      /* compile */ true};
   return resolver.runLazy(root, semInfo, parentHadSuperBinding);
 }
 
@@ -209,7 +214,12 @@ bool resolveASTInScope(
     bool parentHadSuperBinding) {
   PerfSection validation("Resolving JavaScript AST");
   // Resolve the entire AST.
-  SemanticResolver resolver{astContext, semCtx, {}, nullptr, true};
+  SemanticResolver resolver{
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      /* saveDecls */ nullptr,
+      /* compile */ true};
   return resolver.runInScope(root, semInfo, parentHadSuperBinding);
 }
 
@@ -221,7 +231,11 @@ bool resolveCommonJSAST(
   PerfSection validation("Resolving JavaScript CommonJS Module AST");
   DeclCollectorMapTy declCollectorMap{};
   SemanticResolver resolver{
-      astContext, semCtx, {}, flowContext ? &declCollectorMap : nullptr, true};
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      flowContext ? &declCollectorMap : nullptr,
+      /* compile */ true};
   if (!resolver.runCommonJSModule(root))
     return false;
 
@@ -276,7 +290,12 @@ bool resolveASTForParser(
     Context &astContext,
     SemContext &semCtx,
     ESTree::Node *root) {
-  SemanticResolver resolver{astContext, semCtx, {}, nullptr, false};
+  SemanticResolver resolver{
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      /* saveDecls */ nullptr,
+      /* compile */ false};
   return resolver.run(llvh::cast<ESTree::ProgramNode>(root));
 }
 

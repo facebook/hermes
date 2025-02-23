@@ -17,6 +17,7 @@
 
 #include "llvh/Support/Compiler.h"
 
+#include "ProfileGenerator.h"
 #include "SamplingProfilerSampler.h"
 #include "TraceSerializer.h"
 
@@ -72,15 +73,24 @@ void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
 uint32_t SamplingProfiler::walkRuntimeStack(
     StackTrace &sampleStorage,
     InLoom inLoom,
-    uint32_t startIndex) {
-  unsigned count = startIndex;
+    MayAllocate mayAllocate) {
+  unsigned numSkipped = 0;
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
   for (ConstStackFramePtr frame : runtime_.getStackFrames()) {
+    // Out of space in the pre-allocated buffer. If we are executing this in
+    // signal handler, truncate the stack trace to the most recent frames.
+    // Otherwise, grow the buffer.
+    if (sampleStorage.stack.size() == sampleStorage.stack.capacity() &&
+        mayAllocate == MayAllocate::No) {
+      ++numSkipped;
+      continue;
+    }
+
+    StackFrame frameStorage;
     // Whether we successfully captured a stack frame or not.
     bool capturedFrame = true;
-    auto &frameStorage = sampleStorage.stack[count];
     // Check if it is pure JS frame.
     auto *calleeCodeBlock = frame.getCalleeCodeBlock();
     if (calleeCodeBlock != nullptr) {
@@ -115,19 +125,17 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     // Update ip to caller for next iteration.
     ip = frame.getSavedIP();
     if (capturedFrame) {
-      ++count;
-      if (count >= sampleStorage.stack.size()) {
-        break;
-      }
+      sampleStorage.stack.push_back(std::move(frameStorage));
     }
   }
-  sampleStorage.tid = oscompat::global_thread_id();
+  sampleStorage.tid = threadID_;
   sampleStorage.timeStamp = std::chrono::steady_clock::now();
-  return count;
+  return numSkipped;
 }
 
-SamplingProfiler::SamplingProfiler(Runtime &runtime) : runtime_{runtime} {
-  threadNames_[oscompat::global_thread_id()] = oscompat::thread_name();
+SamplingProfiler::SamplingProfiler(Runtime &runtime)
+    : threadID_{oscompat::global_thread_id()}, runtime_{runtime} {
+  threadNames_[threadID_] = oscompat::thread_name();
   sampling_profiler::Sampler::get()->registerRuntime(this);
 }
 
@@ -206,6 +214,16 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   clear();
 }
 
+facebook::hermes::sampling_profiler::Profile SamplingProfiler::dumpAsProfile() {
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
+
+  facebook::hermes::sampling_profiler::Profile profile =
+      ProfileGenerator::generate(*this, sampledStacks_);
+
+  clear();
+  return profile;
+}
+
 bool SamplingProfiler::enable(double meanHzFreq) {
   return sampling_profiler::Sampler::get()->enable(meanHzFreq);
 }
@@ -219,26 +237,28 @@ void SamplingProfiler::clear() {
   // Release all strong roots.
   domains_.clear();
   nativeFunctions_.clear();
-  // TODO: keep thread names that are still in use.
-  threadNames_.clear();
 }
 
-void SamplingProfiler::suspend(std::string_view extraInfo) {
+void SamplingProfiler::suspend(
+    SuspendFrameInfo::Kind reason,
+    llvh::StringRef gcSuspendDetails) {
   // Need to check whether the profiler is enabled without holding the
   // runtimeDataLock_. Otherwise, we'd have a lock inversion.
   bool enabled = sampling_profiler::Sampler::get()->enabled();
 
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  if (++suspendCount_ > 1 || extraInfo.empty()) {
-    // If there are multiple nested suspend calls use a default "suspended"
-    // label for the suspend entry in the call stack. Also use the default
-    // when no extra info is provided.
-    extraInfo = "suspended";
+  if (++suspendCount_ > 1) {
+    // If there are multiple nested suspend calls use a default "multiple" frame
+    // kind for the suspend entry in the call stack.
+    reason = SuspendFrameInfo::Kind::Multiple;
+  } else if (reason == SuspendFrameInfo::Kind::GC && gcSuspendDetails.empty()) {
+    // If no GC reason was provided, use a default "suspend" value.
+    gcSuspendDetails = "suspend";
   }
 
   // Only record the stack trace for the first suspend() call.
   if (LLVM_UNLIKELY(enabled && suspendCount_ == 1)) {
-    recordPreSuspendStack(extraInfo);
+    recordPreSuspendStack(reason, gcSuspendDetails);
   }
 }
 
@@ -246,22 +266,32 @@ void SamplingProfiler::resume() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   assert(suspendCount_ > 0 && "resume() without suspend()");
   if (--suspendCount_ == 0) {
-    preSuspendStackDepth_ = 0;
+    preSuspendStackStorage_.stack.clear();
   }
 }
 
-void SamplingProfiler::recordPreSuspendStack(std::string_view extraInfo) {
-  std::pair<std::unordered_set<std::string>::iterator, bool> retPair =
-      suspendEventExtraInfoSet_.emplace(extraInfo);
-  SuspendFrameInfo suspendExtraInfo = &(*(retPair.first));
+void SamplingProfiler::recordPreSuspendStack(
+    SuspendFrameInfo::Kind reason,
+    llvh::StringRef gcFrame) {
+  SuspendFrameInfo suspendExtraInfo{reason, nullptr};
+  if (reason == SuspendFrameInfo::Kind::GC) {
+    std::pair<std::unordered_set<std::string>::iterator, bool> retPair =
+        gcEventExtraInfoSet_.emplace(gcFrame);
+    suspendExtraInfo.gcFrame = &(*(retPair.first));
+  }
+
+  assert(
+      preSuspendStackStorage_.stack.size() == 0 &&
+      "Pre-suspend stack storage should be empty before sampling.");
+
+  preSuspendStackStorage_.stack.resize(1);
 
   auto &leafFrame = preSuspendStackStorage_.stack[0];
   leafFrame.kind = StackFrame::FrameKind::SuspendFrame;
   leafFrame.suspendFrame = suspendExtraInfo;
 
   // Leaf frame slot has been used, filling from index 1.
-  preSuspendStackDepth_ =
-      walkRuntimeStack(preSuspendStackStorage_, InLoom::No, 1);
+  walkRuntimeStack(preSuspendStackStorage_, InLoom::No, MayAllocate::Yes);
 }
 
 bool operator==(
@@ -280,7 +310,8 @@ bool operator==(
       return left.nativeFrame == right.nativeFrame;
 
     case SamplingProfiler::StackFrame::FrameKind::SuspendFrame:
-      return left.suspendFrame == right.suspendFrame;
+      return left.suspendFrame.kind == right.suspendFrame.kind &&
+          left.suspendFrame.gcFrame == right.suspendFrame.gcFrame;
 
     default:
       llvm_unreachable("Unknown frame kind");

@@ -374,8 +374,8 @@ Effects | Does not read or write to memory.
 GetClosureScopeInst | _
 --- | --- |
 Description | Retrieve the scope from the given closure.
-Example | %0 = GetClosureScopeInst %varScope, %closure
-Arguments | %varScope is the VariableScope that describes the resulting scope. %closure is the closure from which to read the scope.
+Example | %0 = GetClosureScopeInst %varScope, %function, %closure
+Arguments | %varScope is the VariableScope that describes the resulting scope. %function is the IR function that the closure operand is known to refer to. %closure is the closure from which to read the scope.
 Semantics | The instruction returns the scope stored in the given closure.
 Effects | Does not read or write to memory.
 
@@ -384,8 +384,8 @@ Effects | Does not read or write to memory.
 CreateFunctionInst | _
 --- | --- |
 Description | Constructs a new function into the current scope from its code representation.
-Example | %0 = CreateFunction %scope, %function
-Arguments | %function is the function that represents the code of the generated closure. %scope is the surrounding environment.
+Example | %0 = CreateFunction %scope, %varScope, %function
+Arguments | %function is the function that represents the code of the generated closure. %scope is the surrounding environment. %varScope is the VariableScope that describes %scope.
 Semantics | The instruction creates a new closure that may access the lexical scope of the current function
 Effects | Does not read or write to memory.
 
@@ -394,8 +394,8 @@ Effects | Does not read or write to memory.
 CreateClassInst | _
 --- | --- |
 Description | Constructs a new class into the current scope from its constructor code representation.
-Example | %0 = CreateClassInst %scope, %function, %superClass, %homeObjectOutput
-Arguments | %function is the function that represents the code of the constructor. %scope is the surrounding environment. %superClass is the class to inherit from; in base classes this is an empty sentinel value. %homeObjectOutput is an out parameter which will contain the home object (.prototype) of the class.
+Example | %0 = CreateClassInst %scope, %varScope, %function, %superClass, %homeObjectOutput
+Arguments | %function is the function that represents the code of the constructor. %scope is the surrounding environment. %varScope is the VariableScope that describes %scope. %superClass is the class to inherit from; in base classes this is an empty sentinel value. %homeObjectOutput is an out parameter which will contain the home object (.prototype) of the class.
 Semantics | The instruction creates a new class that may access the lexical scope of the current function, and an inherit from a given super class. (ES2023 15.7.14) This results in the creation of 2 objects: the class function object itself, and the "home" object. The home object is where methods are put. The home object can be found on the .prototype of the class, and the class can be found on the .constructor of the home object.
 Effects | Writes to stack memory. May execute JS if it's a derived class.
 
@@ -834,8 +834,8 @@ Effects | Does not read or write memory (it potentially creates a new object)
 CreateGenerator | _
 --- | --- |
 Description | Constructs a new GeneratorInnerFunction from its code representation, and wraps it in a Generator object.
-Example | %0 = CreateGenerator %function,
-Arguments | %function is the function that represents the code of the generator's inner function.
+Example | %0 = CreateFunction %scope, %varScope, %function
+Arguments | %function is the function that represents the code of the generator's inner function. %scope is the surrounding environment. %varScope is the VariableScope that describes %scope.
 Semantics | Creates a new GeneratorInnerFunction closure that may access the environment and wraps it in a generator
 Effects | Does not read or write to memory (creates a new object).
 

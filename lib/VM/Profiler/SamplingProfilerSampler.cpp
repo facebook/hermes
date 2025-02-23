@@ -27,11 +27,23 @@
 #include <random>
 #include <thread>
 
+#if defined(_WINDOWS)
+#include <windows.h>
+// Must be included after windows.h
+#include <mmsystem.h>
+#include "llvh/ADT/ScopeExit.h"
+#endif
+
 namespace hermes {
 namespace vm {
 namespace sampling_profiler {
 
 Sampler::~Sampler() = default;
+
+Sampler::Sampler() {
+  // Reserve some initial space for samples
+  sampleStorage_.stack.reserve(50);
+}
 
 void Sampler::registerRuntime(SamplingProfiler *profiler) {
   std::lock_guard<std::mutex> lockGuard(profilerLock_);
@@ -64,33 +76,41 @@ bool Sampler::sampleStack(SamplingProfiler *localProfiler) {
   if (localProfiler->suspendCount_ > 0) {
     // Sampling profiler is suspended. Copy pre-captured stack instead without
     // interrupting the VM thread.
-    if (localProfiler->preSuspendStackDepth_ > 0) {
-      sampleStorage_ = localProfiler->preSuspendStackStorage_;
-      sampledStackDepth_ = localProfiler->preSuspendStackDepth_;
-    } else {
-      // This suspension didn't record a stack trace. For example, a GC (like
-      // mallocGC) did not record JS stack.
-      // TODO: fix this for all cases.
-      sampledStackDepth_ = 0;
-    }
+    localProfiler->sampledStacks_.emplace_back(
+        localProfiler->preSuspendStackStorage_.tid,
+        localProfiler->preSuspendStackStorage_.timeStamp,
+        localProfiler->preSuspendStackStorage_.stack.begin(),
+        localProfiler->preSuspendStackStorage_.stack.end());
   } else {
+    size_t currCapacity = sampleStorage_.stack.capacity();
     // Ensure there are no allocations in the signal handler by keeping ample
     // reserved space.
     localProfiler->domains_.reserve(
-        localProfiler->domains_.size() + SamplingProfiler::kMaxStackDepth);
+        localProfiler->domains_.size() + currCapacity);
     size_t domainCapacityBefore = localProfiler->domains_.capacity();
     (void)domainCapacityBefore;
 
     // Ditto for native functions.
     localProfiler->nativeFunctions_.reserve(
-        localProfiler->nativeFunctions_.size() +
-        SamplingProfiler::kMaxStackDepth);
+        localProfiler->nativeFunctions_.size() + currCapacity);
     size_t nativeFunctionsCapacityBefore =
         localProfiler->nativeFunctions_.capacity();
     (void)nativeFunctionsCapacityBefore;
 
     if (!platformSuspendVMAndWalkStack(localProfiler)) {
       return false;
+    }
+
+    // The stack trace was truncated due to insufficient pre-allocated size in
+    // the buffer. Grow the buffer and discard current sample.
+    if (numSkippedFrames_ > 0) {
+      sampleStorage_.stack.reserve((numSkippedFrames_ + currCapacity) * 3 / 2);
+    } else {
+      localProfiler->sampledStacks_.emplace_back(
+          sampleStorage_.tid,
+          sampleStorage_.timeStamp,
+          sampleStorage_.stack.begin(),
+          sampleStorage_.stack.end());
     }
 
     assert(
@@ -103,18 +123,14 @@ bool Sampler::sampleStack(SamplingProfiler *localProfiler) {
         "Must not dynamically allocate in signal handler");
   }
 
-  assert(
-      sampledStackDepth_ <= sampleStorage_.stack.size() &&
-      "How can we sample more frames than storage?");
-  localProfiler->sampledStacks_.emplace_back(
-      sampleStorage_.tid,
-      sampleStorage_.timeStamp,
-      sampleStorage_.stack.begin(),
-      sampleStorage_.stack.begin() + sampledStackDepth_);
+  sampleStorage_.stack.clear();
+  numSkippedFrames_ = 0;
   return true;
 }
 
-void Sampler::walkRuntimeStack(SamplingProfiler *profiler) {
+void Sampler::walkRuntimeStack(
+    SamplingProfiler *profiler,
+    SamplingProfiler::MayAllocate mayAllocate) {
   assert(
       profiler->suspendCount_ == 0 &&
       "Shouldn't interrupt the VM thread when the sampling profiler is "
@@ -127,8 +143,8 @@ void Sampler::walkRuntimeStack(SamplingProfiler *profiler) {
       !curThreadRuntime.getHeap().inGC() &&
       "sampling profiler should be suspended before GC");
   (void)curThreadRuntime;
-  sampledStackDepth_ =
-      profiler->walkRuntimeStack(sampleStorage_, SamplingProfiler::InLoom::No);
+  numSkippedFrames_ = profiler->walkRuntimeStack(
+      sampleStorage_, SamplingProfiler::InLoom::No, mayAllocate);
 }
 
 void Sampler::timerLoop(double meanHzFreq) {
@@ -143,6 +159,14 @@ void Sampler::timerLoop(double meanHzFreq) {
   std::normal_distribution<> distribution{interval, interval / 2};
   std::unique_lock<std::mutex> uniqueLock(profilerLock_);
 
+#if defined(_WINDOWS)
+  // By default, timer resolution is approximately 64Hz on Windows, so if the
+  // meanHzFreq parameter is greater than 64, sampling will occur at a lower
+  // frequency than desired. Setting the period to 1 is the minimum useful
+  // value, resulting in timer resolution of roughly 1 millsecond.
+  timeBeginPeriod(1);
+  auto restorePeriod = llvh::make_scope_exit([] { timeEndPeriod(1); });
+#endif
   while (enabled_) {
     if (!sampleStacks()) {
       return;

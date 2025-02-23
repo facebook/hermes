@@ -366,9 +366,9 @@ CreateClassInst *IRBuilder::createCreateClassInst(
 }
 
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(
-    Instruction *scope,
+    BaseScopeInst *scope,
     Function *code) {
-  auto CFI = new CreateFunctionInst(scope, code);
+  auto CFI = new CreateFunctionInst(scope, scope->getVariableScope(), code);
   insert(CFI);
   return CFI;
 }
@@ -409,8 +409,9 @@ LIRResolveScopeInst *IRBuilder::createLIRResolveScopeInst(
 
 GetClosureScopeInst *IRBuilder::createGetClosureScopeInst(
     VariableScope *scope,
+    Function *F,
     Value *closure) {
-  auto *GCSI = new GetClosureScopeInst(scope, closure);
+  auto *GCSI = new GetClosureScopeInst(scope, F, closure);
   insert(GCSI);
   return GCSI;
 }
@@ -950,9 +951,9 @@ SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
 }
 
 CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
-    Instruction *scope,
+    BaseScopeInst *scope,
     NormalFunction *innerFn) {
-  auto *I = new CreateGeneratorInst(scope, innerFn);
+  auto *I = new CreateGeneratorInst(scope, scope->getVariableScope(), innerFn);
   insert(I);
   return I;
 }

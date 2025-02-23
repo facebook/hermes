@@ -39,9 +39,9 @@ function test2(p1, p2) {
 // OPT-CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// OPT-CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// OPT-CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // OPT-CHECK-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// OPT-CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test2(): functionCode
 // OPT-CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "test2": string
 // OPT-CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "foo": string
 // OPT-CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
@@ -77,9 +77,9 @@ function test2(p1, p2) {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test2(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "test2": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any

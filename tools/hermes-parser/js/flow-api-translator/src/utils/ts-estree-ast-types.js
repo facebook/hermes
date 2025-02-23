@@ -455,6 +455,7 @@ export type Expression =
   | TSAsExpression
   | TSInstantiationExpression
   | TSNonNullExpression
+  | TSQualifiedName
   | TSTypeAssertion
   | UnaryExpression
   | UpdateExpression
@@ -772,6 +773,7 @@ export type LeftHandSideExpression =
   | ThisExpression
   | TSAsExpression
   | TSNonNullExpression
+  | TSQualifiedName
   | TSTypeAssertion;
 export interface LineComment extends BaseToken {
   +type: 'Line';

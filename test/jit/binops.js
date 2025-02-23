@@ -22,3 +22,11 @@ function addS(b) {
 
 print("addS", addS("B"));
 // CHECK-NEXT: addS aBc
+
+function ushr0(a) {
+  return a >>> 0;
+}
+print(ushr0(-2000000000));
+// CHECK-NEXT: 2294967296
+print(ushr0(3000000000));
+// CHECK-NEXT: 3000000000

@@ -1084,10 +1084,6 @@ class GCBase {
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  /// Creates a snapshot of the heap and writes it to the given \p fileName.
-  /// \return An error code on failure, else an empty error code.
-  std::error_code createSnapshotToFile(const std::string &fileName);
-
   /// An edges counter array for each root section. The counter is uninitialized
   /// if a root section is not visited yet.
   using SavedNumRootEdges = std::array<

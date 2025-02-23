@@ -29,11 +29,11 @@
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       DefineOwnPropertyInst 3: number, %3: object, "x": string, true: boolean
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:       DefineOwnGetterSetterInst %5: object, undefined: undefined, %3: object, "y": string, true: boolean
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %" 1#"(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 1#"(): functionCode
 // CHECK-NEXT:       DefineOwnGetterSetterInst undefined: undefined, %7: object, %3: object, "y": string, true: boolean
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %" 2#"(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 2#"(): functionCode
 // CHECK-NEXT:        DefineOwnPropertyInst %9: object, %3: object, "z": string, true: boolean
 // CHECK-NEXT:        StoreStackInst %3: object, %1: any
 // CHECK-NEXT:  %12 = LoadStackInst (:any) %1: any

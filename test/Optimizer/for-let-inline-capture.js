@@ -33,9 +33,9 @@ function foo_body_escaping_capture(sink) {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo_inline_captures": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo_body_escaping_capture": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %foo_inline_captures(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_inline_captures(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo_inline_captures": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %foo_body_escaping_capture(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo_body_escaping_capture(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "foo_body_escaping_capture": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -81,7 +81,7 @@ function foo_body_escaping_capture(sink) {
 // CHECK-NEXT:  %10 = FLessThanInst (:boolean) %9: number, 10: number
 // CHECK-NEXT:        CondBranchInst %10: boolean, %BB3, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %5: environment, %f(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %5: environment, %VS1: any, %f(): functionCode
 // CHECK-NEXT:  %13 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: object
 // CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: number

@@ -139,13 +139,11 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
   uint32_t readCacheSize = sizeComputer(header.highestReadCacheIndex());
   uint32_t writeCacheSize = sizeComputer(header.highestWriteCacheIndex());
 
-#ifndef HERMESVM_LEAN
   bool isCodeBlockLazy = !bytecode;
   if (isCodeBlockLazy) {
     readCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
     writeCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
   }
-#endif
 
   auto allocSize =
       totalSizeToAlloc<ReadPropertyCacheEntry, WritePropertyCacheEntry>(
@@ -211,8 +209,7 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocationForFunction()
       ->getLocationForFunction(*debugLocsOffset);
 }
 
-#ifndef HERMESVM_LEAN
-ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
+ExecutionStatus CodeBlock::compileLazyFunction(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");
   auto *provider = runtimeModule_->getBytecode();
 
@@ -244,23 +241,15 @@ bool CodeBlock::coordsInLazyFunction(SMLoc loc) const {
 }
 
 std::vector<uint32_t> CodeBlock::getVariableCounts() const {
-  auto *provider =
-      llvh::dyn_cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
-  if (!provider) {
-    return std::vector<uint32_t>({0});
-  }
-  return hbc::getVariableCounts(provider, functionID_);
+  return hbc::getVariableCounts(runtimeModule_->getBytecode(), functionID_);
 }
 
 llvh::StringRef CodeBlock::getVariableNameAtDepth(
     uint32_t depth,
     uint32_t variableIndex) const {
-  auto *provider =
-      llvh::cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
   return hbc::getVariableNameAtDepth(
-      provider, functionID_, depth, variableIndex);
+      runtimeModule_->getBytecode(), functionID_, depth, variableIndex);
 }
-#endif
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   // Note that for the case of lazy compilation, the function sources had been

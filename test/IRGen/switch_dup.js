@@ -32,9 +32,9 @@ function foo2(x) {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo1": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo2": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %foo1(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo1": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %foo2(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "foo2": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any

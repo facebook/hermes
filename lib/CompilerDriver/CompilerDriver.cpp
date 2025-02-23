@@ -850,6 +850,7 @@ ESTree::NodePtr parseJS(
     return parsedAST;
   }
 
+#if HERMES_PARSE_TS
   // Convert TS AST to Flow AST as an intermediate step until we have a
   // separate TS type checker.
   if (flowContext && context->getParseTS()) {
@@ -859,6 +860,7 @@ ESTree::NodePtr parseJS(
       return nullptr;
     }
   }
+#endif
 
   // If we are executing in typed mode and not script, then wrap the program.
   if (shouldWrapInIIFE) {
@@ -1165,7 +1167,11 @@ std::shared_ptr<Context> createContext(
 #endif
 
   // If no type parser is specified, use flow by default.
-  if (cl::Typed && !cl::ParseFlow && !cl::ParseTS)
+  if (cl::Typed && !cl::ParseFlow
+#if HERMES_PARSE_TS
+      && !cl::ParseTS
+#endif
+  )
     cl::ParseFlow = true;
 
 #if HERMES_PARSE_FLOW
@@ -1769,6 +1775,7 @@ CompileResult generateBytecodeForExecution(
       return BackendError;
     }
 
+    assert(BM && "BytecodeModule should not be null if no errors");
     result.bytecodeProvider = hbc::BCProviderFromSrc::createFromBytecodeModule(
         std::move(BM), std::move(compilationData));
   } else {

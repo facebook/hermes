@@ -23,7 +23,7 @@ function foo(param = a || b) {}
 // CHECK-NEXT:       DeclareGlobalVarInst "a": string
 // CHECK-NEXT:       DeclareGlobalVarInst "b": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %6: any

@@ -43,8 +43,8 @@ var z = 0.0;
 // CHECK-NEXT:    DeclareGlobalVar  "x"
 // CHECK-NEXT:    DeclareGlobalVar  "y"
 // CHECK-NEXT:    DeclareGlobalVar  "z"
-// CHECK-NEXT:    LoadConstDouble   r0, 3.14
 // CHECK-NEXT:    GetGlobalObject   r2
+// CHECK-NEXT:    LoadConstDouble   r0, 3.14
 // CHECK-NEXT:    PutByIdLoose      r2, r0, 1, "w"
 // CHECK-NEXT:    LoadConstDouble   r0, -0.00056
 // CHECK-NEXT:    PutByIdLoose      r2, r0, 2, "x"

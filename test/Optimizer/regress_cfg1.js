@@ -25,7 +25,7 @@ f();
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %f(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f": string
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "f": string
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined

@@ -48,17 +48,17 @@ function test5() {
 // CHECK-NEXT:       DeclareGlobalVarInst "test3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test4": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test5": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test0(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test0": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test1(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test1": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test2(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test2": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %test3(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "test3": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %test4(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "test4": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %test5(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test5(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "test5": string
 // CHECK-NEXT:  %19 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %19: any

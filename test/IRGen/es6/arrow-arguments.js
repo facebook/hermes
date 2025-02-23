@@ -54,11 +54,11 @@ function bar() {
 // CHECK-NEXT:       DeclareGlobalVarInst "normal": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %normal(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %normal(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "normal": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, globalObject: object, "bar": string
 // CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %11: any
@@ -92,7 +92,7 @@ function bar() {
 // CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [%VS2.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, %0: object, [%VS2.?anon_2_arguments]: object
 // CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS2.arrow1]: any
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %arrow1(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %3: environment, %VS2: any, %arrow1(): functionCode
 // CHECK-NEXT:        StoreFrameInst %3: environment, %9: object, [%VS2.arrow1]: any
 // CHECK-NEXT:  %11 = LoadFrameInst (:object) %3: environment, [%VS2.?anon_2_arguments]: object
 // CHECK-NEXT:  %12 = LoadPropertyInst (:any) %11: object, 0: number
@@ -108,7 +108,7 @@ function bar() {
 // CHECK-NEXT:  %0 = CreateArgumentsStrictInst (:object)
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %2: environment, %inner(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %2: environment, %VS3: any, %inner(): functionCode
 // CHECK-NEXT:       StoreFrameInst %2: environment, %3: object, [%VS3.inner]: any
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, 0: number
 // CHECK-NEXT:       StorePropertyStrictInst %5: any, globalObject: object, "dummy": string
@@ -126,7 +126,7 @@ function bar() {
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %0: environment, [%VS2.?anon_2_arguments]: object
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) %3: object, 1: number
 // CHECK-NEXT:       StorePropertyStrictInst %4: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %arrow2(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS4: any, %arrow2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS4.arrow2]: any
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS4.arrow2]: any
 // CHECK-NEXT:       ReturnInst %8: any
@@ -148,7 +148,7 @@ function bar() {
 // CHECK-NEXT:  %9 = LoadFrameInst (:object) %3: environment, [%VS5.?anon_2_arguments]: object
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: object, 0: number
 // CHECK-NEXT:        StorePropertyStrictInst %10: any, globalObject: object, "dummy": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %3: environment, %arrow3(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %3: environment, %VS5: any, %arrow3(): functionCode
 // CHECK-NEXT:        StoreFrameInst %3: environment, %12: object, [%VS5.arrow3]: any
 // CHECK-NEXT:  %14 = LoadFrameInst (:any) %3: environment, [%VS5.arrow3]: any
 // CHECK-NEXT:        ReturnInst %14: any

@@ -74,17 +74,17 @@ function escapingFuncCall() {
 // CHECK-NEXT:       DeclareGlobalVarInst "numericProperties": string
 // CHECK-NEXT:       DeclareGlobalVarInst "escapingRet": string
 // CHECK-NEXT:       DeclareGlobalVarInst "escapingFuncCall": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %sink(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "sink": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %simple(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "simple": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %loadsAndStores(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %loadsAndStores(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "loadsAndStores": string
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %numericProperties(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %numericProperties(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "numericProperties": string
-// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %escapingRet(): functionCode
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %escapingRet(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "escapingRet": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %escapingFuncCall(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %escapingFuncCall(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "escapingFuncCall": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

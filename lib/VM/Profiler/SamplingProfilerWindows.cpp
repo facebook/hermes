@@ -192,7 +192,7 @@ bool Sampler::platformSuspendVMAndWalkStack(SamplingProfiler *profiler) {
   GetThreadContext(winProfiler->currentThread_, &context);
 
   // Walk the stack.
-  walkRuntimeStack(profiler);
+  walkRuntimeStack(profiler, SamplingProfiler::MayAllocate::No);
 
   // Resume the thread.
   prevSuspendCount = ResumeThread(winProfiler->currentThread_);
@@ -222,6 +222,8 @@ void SamplingProfiler::setRuntimeThread() {
   std::lock_guard<std::mutex> lock(profiler->runtimeDataLock_);
   CloseHandle(profiler->currentThread_);
   profiler->currentThread_ = openCurrentThread();
+  threadID_ = oscompat::global_thread_id();
+  threadNames_[threadID_] = oscompat::thread_name();
 }
 
 } // namespace vm

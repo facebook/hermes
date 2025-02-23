@@ -621,11 +621,11 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
     Handle<NativeJSFunction> innerFunc = NativeJSFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        Handle<Environment>::vmcast(toPHV(env)),
+        env ? Handle<Environment>::vmcast(toPHV(env))
+            : Runtime::makeNullHandle<Environment>(),
         func,
         funcInfo,
-        unit,
-        0);
+        unit);
     auto generatorFunction = runtime.makeHandle(vmcast<NativeJSFunction>(
         runtime.getCurrentFrame().getCalleeClosureUnsafe()));
     assert(
@@ -661,7 +661,6 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
     const SHUnit *unit,
     SHLegacyValue *homeObjectOut,
     SHLegacyValue *superClass) {
-  assert(!_sh_ljs_is_null(*env) && "create class cannot have null environment");
   Runtime &runtime = getRuntime(shr);
   GCScopeMarkerRAII marker{runtime};
   auto classRes = createClass(
@@ -669,23 +668,14 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
       superClass ? Handle{toPHV(superClass)} : Runtime::getEmptyValue(),
       [&runtime, env, func, funcInfo, unit, superClass](
           Handle<JSObject> ctorParent) {
+        auto envHandle = env ? Handle<Environment>::vmcast(toPHV(env))
+                             : HandleRootOwner::makeNullHandle<Environment>();
         // Derived classes get their own special CellKind.
-        return superClass ? *NativeJSDerivedClass::create(
-                                runtime,
-                                ctorParent,
-                                Handle<Environment>::vmcast(toPHV(env)),
-                                func,
-                                funcInfo,
-                                unit,
-                                0)
-                          : *NativeJSFunction::create(
-                                runtime,
-                                ctorParent,
-                                Handle<Environment>::vmcast(toPHV(env)),
-                                func,
-                                funcInfo,
-                                unit,
-                                0);
+        return superClass
+            ? *NativeJSDerivedClass::create(
+                  runtime, ctorParent, envHandle, func, funcInfo, unit)
+            : *NativeJSFunction::create(
+                  runtime, ctorParent, envHandle, func, funcInfo, unit);
       });
   if (classRes == ExecutionStatus::EXCEPTION)
     _sh_throw_current(shr);
@@ -707,8 +697,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
                  : Runtime::makeNullHandle<Environment>(),
              func,
              funcInfo,
-             unit,
-             0)
+             unit)
       .getHermesValue();
 }
 
@@ -1012,6 +1001,25 @@ static inline HermesValue getByIdWithReceiver_RJS(
       return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
           .unboxToHV(runtime);
     }
+
+    // See if it's a proto cache hit.
+    if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {
+      // Proxy, HostObject and lazy objects have special hidden classes, so they
+      // should never match the cached class.
+      assert(!obj->getFlags().proxyObject);
+      assert(!obj->getFlags().hostObject);
+      assert(!obj->getFlags().lazyObject);
+      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
+      if (LLVM_LIKELY(parentGCPtr)) {
+        JSObject *parent = parentGCPtr.getNonNull(runtime);
+        if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
+          return JSObject::getNamedSlotValueUnsafe(
+                     parent, runtime, cacheEntry->slot)
+              .unboxToHV(runtime);
+        }
+      }
+    }
+
     NamedPropertyDescriptor desc;
     OptValue<bool> fastPathResult =
         JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, symID, desc);
@@ -1040,26 +1048,6 @@ static inline HermesValue getByIdWithReceiver_RJS(
           "tryGetOwnNamedDescriptorFast returned true on Proxy");
       return JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
           .unboxToHV(runtime);
-    }
-
-    // The cache may also be populated via the prototype of the object.
-    // This value is only reliable if the fast path was a definite
-    // not-found.
-    if (cacheEntry && fastPathResult.hasValue() && !fastPathResult.getValue() &&
-        LLVM_LIKELY(!obj->isProxyObject())) {
-      JSObject *parent = obj->getParent(runtime);
-      // TODO: This isLazy check is because a lazy object is reported as
-      // having no properties and therefore cannot contain the property.
-      // This check does not belong here, it should be merged into
-      // tryGetOwnNamedDescriptorFast().
-      if (parent && cacheEntry->clazz == parent->getClassGCPtr() &&
-          LLVM_LIKELY(!obj->isLazy())) {
-        //++NumGetByIdProtoHits;
-        // We've already checked that this isn't a Proxy.
-        return JSObject::getNamedSlotValueUnsafe(
-                   parent, runtime, cacheEntry->slot)
-            .unboxToHV(runtime);
-      }
     }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -1559,20 +1547,17 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
-static Handle<HiddenClass> getHiddenClassForBuffer(
-    SHRuntime *shr,
+static HiddenClass *addBufferPropertiesToHiddenClass(
+    Runtime &runtime,
     SHUnit *unit,
-    uint32_t shapeTableIndex) {
-  Runtime &runtime = getRuntime(shr);
-
-  auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
-      &unit->object_literal_class_cache[shapeTableIndex]);
-  if (*cacheEntry)
-    return runtime.makeHandle(cacheEntry->get(runtime, runtime.getHeap()));
-
-  MutableHandle<HiddenClass> clazz =
-      runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
-          *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()));
+    const SHShapeTableEntry *info,
+    HiddenClass *rootClazz) {
+  struct : Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<> tmpHandleKey;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.clazz = rootClazz;
 
   struct {
     void addProperty(SymbolID sym) {
@@ -1599,34 +1584,19 @@ static Handle<HiddenClass> getHiddenClassForBuffer(
       llvm_unreachable("Object literal key cannot be a bool.");
     }
 
-    MutableHandle<HiddenClass> &clazz;
-    MutableHandle<> tmpHandleKey;
+    PinnedValue<HiddenClass> &clazz;
+    PinnedValue<> &tmpHandleKey;
     Runtime &runtime;
     SHUnit *unit;
     GCScopeMarkerRAII marker;
-  } v{clazz,
-      MutableHandle<>{runtime},
-      runtime,
-      unit,
-      GCScopeMarkerRAII{runtime}};
+  } v{lv.clazz, lv.tmpHandleKey, runtime, unit, GCScopeMarkerRAII{runtime}};
 
   llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
-  const SHShapeTableEntry &info = unit->obj_shape_table[shapeTableIndex];
 
   SerializedLiteralParser::parse(
-      keyBuffer.slice(info.key_buffer_offset), info.num_props, v);
+      keyBuffer.slice(info->key_buffer_offset), info->num_props, v);
 
-  if (LLVM_LIKELY(!clazz->isDictionary())) {
-    assert(
-        info.num_props == clazz->getNumProperties() &&
-        "numLiterals should match hidden class property count.");
-    assert(
-        clazz->getNumProperties() < 256 &&
-        "cached hidden class should have property count less than 256");
-    cacheEntry->set(runtime, clazz.get());
-  }
-
-  return {clazz};
+  return *lv.clazz;
 }
 
 extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
@@ -1635,15 +1605,54 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
   Runtime &runtime = getRuntime(shr);
-  GCScopeMarkerRAII marker{runtime};
+  NoLeakHandleScope marker{runtime};
+
+  HiddenClass *clazz;
+  auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
+      &unit->object_literal_class_cache[shapeTableIndex]);
+  if (*cacheEntry) {
+    // There is a already a cached entry for this shape, we can just use that.
+    clazz = cacheEntry->getNonNull(runtime, runtime.getHeap());
+  } else {
+    // There is no cached entry, construct the class from scratch and try to
+    // cache it.
+    const SHShapeTableEntry *shapeInfo =
+        &unit->obj_shape_table[shapeTableIndex];
+
+    if (shapeInfo->num_props > HiddenClass::maxNumProperties()) {
+      (void)runtime.raiseRangeError(
+          TwineChar16("Object has more than ") +
+          HiddenClass::maxNumProperties() + " properties");
+      _sh_throw_current(shr);
+    }
+
+    clazz = addBufferPropertiesToHiddenClass(
+        runtime,
+        unit,
+        shapeInfo,
+        *runtime.getHiddenClassForPrototype(
+            *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()));
+    assert(
+        shapeInfo->num_props == clazz->getNumProperties() &&
+        "numLiterals should match hidden class property count.");
+    // Dictionary mode classes cannot be cached since they can change as the
+    // resulting object is modified.
+    if (LLVM_LIKELY(!clazz->isDictionary()))
+      cacheEntry->set(runtime, clazz);
+  }
+
+  struct : Locals {
+    PinnedValue<HiddenClass> clazz;
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  Handle<HiddenClass> clazz =
-      getHiddenClassForBuffer(shr, unit, shapeTableIndex);
-  auto numProps = clazz->getNumProperties();
-  Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime, clazz));
+  lv.clazz = clazz;
+  auto numProps = lv.clazz->getNumProperties();
+  lv.obj = JSObject::create(runtime, lv.clazz);
 
   struct {
     void visitStringID(StringID id) {
@@ -1666,18 +1675,18 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
       JSObject::setNamedSlotValueUnsafe(*obj, runtime, i++, shv);
     }
 
-    Handle<JSObject> obj;
+    PinnedValue<JSObject> &obj;
     Runtime &runtime;
     SHUnit *unit;
     size_t i;
-  } v{obj, runtime, unit, 0};
+  } v{lv.obj, runtime, unit, 0};
 
   llvh::ArrayRef literalValBuffer{
       unit->literal_val_buffer, unit->literal_val_buffer_size};
   SerializedLiteralParser::parse(
       literalValBuffer.slice(valBufferOffset), numProps, v);
 
-  return obj.getHermesValue();
+  return lv.obj.getHermesValue();
 }
 
 extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint) {
@@ -1762,14 +1771,12 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   return arr;
 }
 
-extern "C" SHLegacyValue _sh_ljs_cache_new_object(
+extern "C" void _sh_ljs_cache_new_object(
     SHRuntime *shr,
     SHUnit *unit,
     SHLegacyValue *thisArg,
     SHLegacyValue *newTarget,
-    uint32_t shapeTableIndex) {
-  return *thisArg;
-}
+    uint32_t shapeTableIndex) {}
 
 extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
@@ -1868,16 +1875,36 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
       PinnedValue<> tmp;
       PinnedValue<JSObject> propObj;
       PinnedValue<SymbolID> tmpPropNameStorage;
+      PinnedValue<HiddenClass> cachedClass;
     } lv;
     LocalsRAII lraii{runtime, &lv};
     GCScopeMarkerRAII marker{runtime};
     uint32_t idx = toPHV(indexVal)->getNumber();
     uint32_t size = toPHV(sizeVal)->getNumber();
+    // If there's a class at index 2, it means we have a cached class.
+    uint32_t startIdx = 0;
+    uint32_t numObjProps = 0;
+    if (LLVM_LIKELY(size > 2)) {
+      lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(runtime, 2));
+      if (lv.cachedClass.get()) {
+        startIdx = arr->at(runtime, 0).getNumberAs<uint32_t>();
+        numObjProps = arr->at(runtime, 1).getNumberAs<uint32_t>();
+      }
+    }
+
     MutableHandle<JSObject> propObj{lv.propObj};
     MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
     // Loop until we find a property which is present.
     while (idx < size) {
       lv.tmp = arr->at(runtime, idx);
+      // If there's no caching, lv.cachedClass is nullptr and the comparison
+      // will fail.
+      if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&
+          LLVM_LIKELY(lv.cachedClass.get() == obj->getClass(runtime))) {
+        // Cached.
+        propObj = obj;
+        break;
+      }
       if (lv.tmp->isSymbol()) {
         // NOTE: This call is safe because we immediately discard desc,
         // so it can't outlive the SymbolID.

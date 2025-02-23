@@ -33,8 +33,9 @@ SHLegacyValue _sh_ljs_create_bytecode_closure(
   return JSFunction::createWithInferredParent(
              runtime,
              runtimeModule->getDomain(runtime),
-             env ? Handle<Environment>::vmcast(toPHV(env))
-                 : Runtime::makeNullHandle<Environment>(),
+             _sh_ljs_is_undefined(*env)
+                 ? Runtime::makeNullHandle<Environment>()
+                 : Handle<Environment>::vmcast(toPHV(env)),
              runtimeModule->getCodeBlockMayAllocate(functionID))
       .getHermesValue();
 }

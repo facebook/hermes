@@ -49,7 +49,7 @@ function require(modIdx) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "require": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %require(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %require(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "require": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -62,14 +62,14 @@ function require(modIdx) {
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %modFact0(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %modFact0(): functionCode
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "require": string
 // CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "mod": string
 // CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "exports": string
 // CHECK-NEXT:  %8 = CallInst (:any) %4: object, %modFact0(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined, undefined: undefined, %5: any, %6: any, %7: any
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %modFact1(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %modFact1(): functionCode
 // CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "require": string
 // CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "mod": string
 // CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "exports": string
@@ -81,7 +81,7 @@ function require(modIdx) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %exports: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, %1: any, "bar": string
 // CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end

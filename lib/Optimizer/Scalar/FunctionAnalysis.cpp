@@ -138,6 +138,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   Function *F = create->getFunctionCode();
   Module *M = F->getParent();
   IRBuilder builder(M);
+  auto *closureVarScope = llvh::dyn_cast<VariableScope>(create->getVarScope());
 
   // The only kind of function which does not expect a made `this` parameter in
   // a construct call is a derived class constructor.
@@ -156,9 +157,14 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
     /// values.
     bool isAlwaysClosure;
 
-    /// An instruction that is known to produce the scope of the closure at the
-    /// point where the closure is used.
-    Instruction *scope;
+    /// An instruction that is known to produce the scope of the closure, or one
+    /// of its descendents at the point where the closure used. May be null if
+    /// the scope is not known.
+    Instruction *knownScope;
+
+    /// The VariableScope associated with knownScope. May be null iff knownScope
+    /// is null.
+    VariableScope *knownVarScope;
   };
 
   // List of instructions whose result we know is the same closure created by
@@ -177,15 +183,21 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
 
   IRBuilder::InstructionDestroyer destroyer{};
 
-  worklist.push_back({create, true, create->getScope()});
+  worklist.push_back(
+      {create,
+       true,
+       llvh::dyn_cast<Instruction>(create->getScope()),
+       closureVarScope});
   while (!worklist.empty()) {
     // Instruction whose only possible closure value is the one being analyzed.
     Instruction *closureInst = worklist.back().maybeClosure;
     // Whether closureInst may have some non-closure value.
     bool isAlwaysClosure = worklist.back().isAlwaysClosure;
 
-    // Instruction whose result is known to be the scope of the closure.
-    auto *knownScope = worklist.pop_back_val().scope;
+    // Scope that is known to be either the scope of the closure or one of its
+    // descendents.
+    auto knownScope = worklist.back().knownScope;
+    auto knownVarScope = worklist.pop_back_val().knownVarScope;
 
     if (!visited.insert(closureInst).second) {
       // Already visited.
@@ -200,7 +212,18 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
         }
         if (call->getCallee() == closureInst) {
-          registerCallsite(call, create, isAlwaysClosure, knownScope);
+          auto *callScope = knownScope;
+          // If the scope we have is not the actual scope of the function we are
+          // calling, then it must be one of its descendents. Emit a
+          // ResolveScopeInst to obtain the actual scope.
+          if (knownScope && knownVarScope != closureVarScope) {
+            auto [startScope, startVarScope] = getResolveScopeStart(
+                knownScope, knownVarScope, closureVarScope);
+            builder.setInsertionPoint(call);
+            callScope = builder.createResolveScopeInst(
+                closureVarScope, startVarScope, startScope);
+          }
+          registerCallsite(call, create, isAlwaysClosure, callScope);
         }
         continue;
       }
@@ -209,16 +232,23 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         assert(
             CTI->getClosure() == closureInst &&
             "Closure must be closure argument to CreateThisInst");
-        if (isAlwaysClosure) {
-          if (funcExpectsThisInConstruct) {
-            CTI->setType(Type::createObject());
-          } else {
-            // If a function does not expect any `this`, then we can just remove
-            // the `CreateThis` altogether since it was just going to return
-            // undefined.
-            CTI->replaceAllUsesWith(builder.getLiteralUndefined());
+        if (funcExpectsThisInConstruct) {
+          // If the function must receive an object, then we know that the
+          // CreateThis will produce an object. Note that it may also throw, for
+          // instance if isAlwaysClosure is false, or if retrieving the
+          // .prototype property throws.
+          CTI->setType(Type::createObject());
+        } else {
+          // If a function does not expect any `this`, then we know that
+          // CreateThis will always produce undefined, or throw (as above).
+          CTI->replaceAllUsesWith(builder.getLiteralUndefined());
+          // If we know the closure operand is actually a closure, then we know
+          // CreateThis cannot throw, so we can remove it.
+          // TODO: Extend this to remove CreateThis even if it is not known to
+          //       be a closure, by detecting a subsequent call or speculative
+          //       inlining check that would throw instead.
+          if (isAlwaysClosure)
             destroyer.add(CTI);
-          }
         }
         // CreateThis leaks the closure because the created object can still
         // access the function via its parent's `.constructor` prototype.
@@ -231,8 +261,20 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
         // now be unused, but we avoid deleting any instructions in
         // FunctionAnalysis since we are iterating over the IR, so it will be
         // deleted by DCE.
-        if (knownScope)
-          closureUser->replaceAllUsesWith(knownScope);
+        if (knownScope) {
+          auto *replacement = knownScope;
+          // If the scope we have is not the actual scope of the function we are
+          // are trying to obtain the scope of, then it must be one of its
+          // descendents. Emit a ResolveScopeInst to obtain the actual scope.
+          if (knownVarScope != closureVarScope) {
+            auto [startScope, startVarScope] = getResolveScopeStart(
+                knownScope, knownVarScope, closureVarScope);
+            builder.setInsertionPoint(closureUser);
+            replacement = builder.createResolveScopeInst(
+                closureVarScope, startVarScope, startScope);
+          }
+          closureUser->replaceAllUsesWith(replacement);
+        }
 
         // Getting the closure scope does not leak the closure.
         continue;
@@ -272,7 +314,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
                 ->getType()
                 .canBeObject() &&
             "The result UnionNarrowTrusted of closure is not object");
-        worklist.push_back({closureUser, isAlwaysClosure, knownScope});
+        worklist.push_back(
+            {closureUser, isAlwaysClosure, knownScope, knownVarScope});
         continue;
       }
 
@@ -285,7 +328,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             CC->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (CC->getType().canBeObject()) {
-          worklist.push_back({closureUser, isAlwaysClosure, knownScope});
+          worklist.push_back(
+              {closureUser, isAlwaysClosure, knownScope, knownVarScope});
           continue;
         }
       }
@@ -296,7 +340,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             TII->getCheckedValue()->getType().canBeObject() &&
             "closure type is not object");
         if (TII->getType().canBeObject()) {
-          worklist.push_back({closureUser, isAlwaysClosure, knownScope});
+          worklist.push_back(
+              {closureUser, isAlwaysClosure, knownScope, knownVarScope});
           continue;
         }
       }
@@ -312,11 +357,34 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           continue;
         }
 
-        // If the scope is the same as the scope we are storing into, we know
-        // that the scope of the closure will always just be a pointer back to
-        // the scope. We can therefore can propagate it by simply using the
-        // scope at the point it is loaded.
-        bool propagateScope = store->getScope() == knownScope;
+        // If the scope is a descendent of the scope we are storing into, we
+        // know that the enclosing scope of the closure will always be reachable
+        // from the scope that the closure is loaded from. We can therefore can
+        // propagate it by simply using the scope at the point it is loaded.
+        bool propagateScope = false;
+        if (knownScope) {
+          // Get the scope instruction that is closest to the closure scope in
+          // this function. Any descendent of this must also be a descendent of
+          // the closure scope.
+          Instruction *parent =
+              getResolveScopeStart(knownScope, knownVarScope, closureVarScope)
+                  .first;
+          Value *iterScope = store->getScope();
+          // Walk up the scope chain from the store scope, and see if we reach
+          // the same parent.
+          for (;;) {
+            if (iterScope == parent) {
+              // The store scope is a descendent of the closure scope, and can
+              // be used to reach it.
+              propagateScope = true;
+              break;
+            }
+            auto *CSI = llvh::dyn_cast<CreateScopeInst>(iterScope);
+            if (!CSI)
+              break;
+            iterScope = CSI->getParentScope();
+          }
+        }
 
         for (Instruction *varUser : var->getUsers()) {
           auto *load = llvh::dyn_cast<LoadFrameInst>(varUser);
@@ -331,7 +399,9 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           worklist.push_back(
               {load,
                isAlwaysClosure && noOtherValues,
-               propagateScope ? load->getScope() : nullptr});
+               propagateScope ? load->getScope() : nullptr,
+               propagateScope ? load->getLoadVariable()->getParent()
+                              : nullptr});
         }
         continue;
       }
@@ -375,6 +445,15 @@ void analyzeFunctionCallsites(Function *F) {
       assert(
           call->getTarget() == F &&
           "invalid use of Function as operand of call");
+      continue;
+    }
+
+    if (auto *GCSI = llvh::dyn_cast<GetClosureScopeInst>(user)) {
+      // Ignore uses in GetClosureScopeInst.
+      (void)GCSI;
+      assert(
+          GCSI->getFunctionCode() == F &&
+          "invalid use of Function as operand of GetClosureScopeInst");
       continue;
     }
 

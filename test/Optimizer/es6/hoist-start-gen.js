@@ -23,7 +23,7 @@ function *foo() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
@@ -37,7 +37,7 @@ function *foo() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.idx]: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.generator_state]: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.exception_handler_idx]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %foo?inner(): functionCode
+// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %VS1: any, %foo?inner(): functionCode
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 

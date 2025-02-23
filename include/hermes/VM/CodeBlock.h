@@ -214,16 +214,13 @@ class CodeBlock final : private llvh::TrailingObjects<
   }
 
   /// Checks whether this function is lazily compiled.
-#ifndef HERMESVM_LEAN
   bool isLazy() const {
     return !bytecode_;
   }
-  ExecutionStatus lazyCompile(Runtime &runtime) {
-    if (LLVM_LIKELY(!isLazy()))
-      return ExecutionStatus::RETURNED;
-    return lazyCompileImpl(runtime);
-  }
-  ExecutionStatus lazyCompileImpl(Runtime &runtime);
+
+  /// Compile this function, which must be lazy.
+  /// \pre isLazy() is true.
+  ExecutionStatus compileLazyFunction(Runtime &runtime);
 
   /// \pre isLazy() is true.
   /// \return whether the coordinates are in the lazy function.
@@ -239,21 +236,6 @@ class CodeBlock final : private llvh::TrailingObjects<
   /// \return the name of the Variable at a given index at the given depth.
   llvh::StringRef getVariableNameAtDepth(uint32_t depth, uint32_t variableIndex)
       const;
-#else
-  bool isLazy() const {
-    return false;
-  }
-  ExecutionStatus lazyCompile(Runtime &runtime) {
-    return ExecutionStatus::RETURNED;
-  }
-  std::vector<uint32_t> getVariableCounts() const {
-    hermes_fatal("unavailable in lean VM");
-  }
-
-  llvh::StringRef getVariableNameAtDepth(uint32_t, uint32_t) const {
-    hermes_fatal("unavailable in lean VM");
-  }
-#endif
 
 #if HERMESVM_JIT
   /// \return true if JIT is disabled for this function.

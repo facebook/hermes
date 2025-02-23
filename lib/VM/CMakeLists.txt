@@ -56,6 +56,7 @@ set(source_files
   RuntimeModule.cpp
   Profiler/TraceSerializer.cpp
   Profiler/CodeCoverageProfiler.cpp
+  Profiler/ProfileGenerator.cpp
   Profiler/SamplingProfiler.cpp
   Profiler/SamplingProfilerPosix.cpp
   Profiler/SamplingProfilerWindows.cpp
@@ -184,10 +185,5 @@ endif()
 add_hermes_library(hermesVMRuntime ${source_files}
         LINK_OBJLIBS hermesPublic hermesapi
         LINK_LIBS ${JITLIBS})
-
-add_hermes_library(hermesVMRuntimeLean ${source_files}
-        LINK_OBJLIBS hermesPublic hermesapiLean
-        LINK_LIBS ${JITLIBS})
-target_compile_definitions(hermesVMRuntimeLean_obj PUBLIC HERMESVM_LEAN)
 
 add_subdirectory(Instrumentation)

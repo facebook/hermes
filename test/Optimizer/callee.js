@@ -57,13 +57,13 @@ function load_store_multiple_test() {
 // CHECK-NEXT:       DeclareGlobalVarInst "ctor_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "load_store_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "load_store_multiple_test": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %fuzz(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %fuzz(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "fuzz": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %ctor_test(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %ctor_test(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %7: object, globalObject: object, "ctor_test": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %load_store_test(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %load_store_test(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, globalObject: object, "load_store_test": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %load_store_multiple_test(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %load_store_multiple_test(): functionCode
 // CHECK-NEXT:        StorePropertyStrictInst %11: object, globalObject: object, "load_store_multiple_test": string
 // CHECK-NEXT:        ReturnInst "use strict": string
 // CHECK-NEXT:function_end
@@ -71,7 +71,7 @@ function load_store_multiple_test() {
 // CHECK:function fuzz(): number
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:  %2 = CallInst (:number) %1: object, %foo(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 12: number
 // CHECK-NEXT:       ReturnInst 12: number
 // CHECK-NEXT:function_end
@@ -79,7 +79,7 @@ function load_store_multiple_test() {
 // CHECK:function ctor_test(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %"foo 1#"(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"foo 1#"(): functionCode
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
 // CHECK-NEXT:  %3 = CallInst (:any) %1: object, %"foo 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
 // CHECK-NEXT:       ReturnInst %2: object
@@ -91,8 +91,8 @@ function load_store_multiple_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %ping(): functionCode
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %k(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %ping(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %k(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS1.k]: object
 // CHECK-NEXT:  %5 = CallInst (:number) %2: object, %ping(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst 123: number
@@ -104,9 +104,9 @@ function load_store_multiple_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %"foo 2#"(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS2: any, %"foo 2#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS2.foo]: object
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %bar(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS2: any, %bar(): functionCode
 // CHECK-NEXT:  %5 = CallInst (:number) %4: object, %bar(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
