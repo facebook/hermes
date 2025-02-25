@@ -588,6 +588,13 @@ static opt<bool> ReusePropCache(
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
+static CLFlag ReorderRegisters(
+    'f',
+    "reorder-registers",
+    true,
+    "reorder registers for better JIT performance",
+    CompilerCategory);
+
 static opt<unsigned> InlineMaxSize(
     "Xinline-max-size",
     cl::init(1),
@@ -2059,6 +2066,7 @@ CompileResult processSourceFiles(
       cl::OutputSourceMap || cl::DebugInfoLevel == cl::DebugLevel::g0;
 
   genOptions.stripFunctionNames = cl::StripFunctionNames;
+  genOptions.reorderRegisters = cl::ReorderRegisters;
 
   // If the dump target is None, return bytecode in an executable form.
   if (cl::DumpTarget == Execute) {
