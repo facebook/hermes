@@ -112,32 +112,29 @@ function switch_neg(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "f": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "regress1": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "jump_table": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "string_switch": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "switch_uint32": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "switch_neg": string
-// CHECK-NEXT:  {r1}      %7 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {r2}      %8 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %f(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %8: object, {r1} %7: object, "f": string
-// CHECK-NEXT:  {r2}     %10 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %regress1(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %10: object, {r1} %7: object, "regress1": string
-// CHECK-NEXT:  {r2}     %12 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %jump_table(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %12: object, {r1} %7: object, "jump_table": string
-// CHECK-NEXT:  {r2}     %14 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %string_switch(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %14: object, {r1} %7: object, "string_switch": string
-// CHECK-NEXT:  {r2}     %16 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %switch_uint32(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %16: object, {r1} %7: object, "switch_uint32": string
-// CHECK-NEXT:  {r0}     %18 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %switch_neg(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r0} %18: object, {r1} %7: object, "switch_neg": string
-// CHECK-NEXT:  {np0}    %20 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 ReturnInst {np0} %20: undefined
+// CHECK-NEXT:  {r1}      %6 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %7 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r0}      %8 = CreateFunctionInst (:object) {np0} %7: undefined, empty: any, %f(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %8: object, {r1} %6: object, "f": string
+// CHECK-NEXT:  {r0}     %10 = CreateFunctionInst (:object) {np0} %7: undefined, empty: any, %regress1(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %10: object, {r1} %6: object, "regress1": string
+// CHECK-NEXT:  {r0}     %12 = CreateFunctionInst (:object) {np0} %7: undefined, empty: any, %jump_table(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %12: object, {r1} %6: object, "jump_table": string
+// CHECK-NEXT:  {r0}     %14 = CreateFunctionInst (:object) {np0} %7: undefined, empty: any, %string_switch(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %14: object, {r1} %6: object, "string_switch": string
+// CHECK-NEXT:  {r0}     %16 = CreateFunctionInst (:object) {np0} %7: undefined, empty: any, %switch_uint32(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %16: object, {r1} %6: object, "switch_uint32": string
+// CHECK-NEXT:  {r0}     %18 = CreateFunctionInst (:object) {np0} %7: undefined, empty: any, %switch_neg(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %18: object, {r1} %6: object, "switch_neg": string
+// CHECK-NEXT:                 ReturnInst {np0} %7: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(x: any): string

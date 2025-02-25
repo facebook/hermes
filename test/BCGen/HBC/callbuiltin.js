@@ -28,32 +28,29 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKRA:scope %VS0 []
-
 // CHKRA:function global(): any
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  {r1}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "checkNonStaticBuiltin": string
-// CHKRA-NEXT:  {r0}      %4 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  {r2}      %5 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
-// CHKRA-NEXT:                 StorePropertyLooseInst {r2} %5: object, {r0} %4: object, "foo": string
-// CHKRA-NEXT:  {r2}      %7 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %shadows(): functionCode
-// CHKRA-NEXT:                 StorePropertyLooseInst {r2} %7: object, {r0} %4: object, "shadows": string
-// CHKRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %checkNonStaticBuiltin(): functionCode
-// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %4: object, "checkNonStaticBuiltin": string
-// CHKRA-NEXT:  {r1}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %4: object, "print": string
-// CHKRA-NEXT:  {r2}     %12 = LoadPropertyInst (:any) {r0} %4: object, "foo": string
-// CHKRA-NEXT:  {np0}    %13 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHKRA-NEXT:  {r0}     %14 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
-// CHKRA-NEXT:  {r4}     %15 = ImplicitMovInst (:undefined) {np0} %13: undefined
-// CHKRA-NEXT:  {r3}     %16 = ImplicitMovInst (:object) {r0} %14: object
-// CHKRA-NEXT:  {r0}     %17 = HBCCallNInst (:any) {r2} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %13: undefined, {r0} %14: object
-// CHKRA-NEXT:  {r4}     %18 = ImplicitMovInst (:undefined) {np0} %13: undefined
-// CHKRA-NEXT:  {r3}     %19 = ImplicitMovInst (:any) {r0} %17: any
-// CHKRA-NEXT:  {r0}     %20 = HBCCallNInst (:any) {r1} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %13: undefined, {r0} %17: any
-// CHKRA-NEXT:                 ReturnInst {r0} %20: any
+// CHKRA-NEXT:  {r0}      %3 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {np0}     %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r1}      %5 = CreateFunctionInst (:object) {np0} %4: undefined, empty: any, %foo(): functionCode
+// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %5: object, {r0} %3: object, "foo": string
+// CHKRA-NEXT:  {r1}      %7 = CreateFunctionInst (:object) {np0} %4: undefined, empty: any, %shadows(): functionCode
+// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %7: object, {r0} %3: object, "shadows": string
+// CHKRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {np0} %4: undefined, empty: any, %checkNonStaticBuiltin(): functionCode
+// CHKRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %3: object, "checkNonStaticBuiltin": string
+// CHKRA-NEXT:  {r1}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %3: object, "print": string
+// CHKRA-NEXT:  {r2}     %12 = LoadPropertyInst (:any) {r0} %3: object, "foo": string
+// CHKRA-NEXT:  {r0}     %13 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
+// CHKRA-NEXT:  {r4}     %14 = ImplicitMovInst (:undefined) {np0} %4: undefined
+// CHKRA-NEXT:  {r3}     %15 = ImplicitMovInst (:object) {r0} %13: object
+// CHKRA-NEXT:  {r0}     %16 = HBCCallNInst (:any) {r2} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %4: undefined, {r0} %13: object
+// CHKRA-NEXT:  {r4}     %17 = ImplicitMovInst (:undefined) {np0} %4: undefined
+// CHKRA-NEXT:  {r3}     %18 = ImplicitMovInst (:any) {r0} %16: any
+// CHKRA-NEXT:  {r0}     %19 = HBCCallNInst (:any) {r1} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %4: undefined, {r0} %16: any
+// CHKRA-NEXT:                 ReturnInst {r0} %19: any
 // CHKRA-NEXT:function_end
 
 // CHKRA:function foo(x: any): any
@@ -140,20 +137,19 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:1[9, 1]
 // CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateFunctionEnvironment r2, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...
 // CHKBC-NEXT:    GetGlobalObject   r1
-// CHKBC-NEXT:    CreateClosure     r3, r2, Function<foo>
-// CHKBC-NEXT:    PutByIdLoose      r1, r3, 1, "foo"
-// CHKBC-NEXT:    CreateClosure     r3, r2, Function<shadows>
-// CHKBC-NEXT:    PutByIdLoose      r1, r3, 2, "shadows"
-// CHKBC-NEXT:    CreateClosure     r2, r2, Function<checkNonStaticBuiltin>
+// CHKBC-NEXT:    LoadConstUndefined r0
+// CHKBC-NEXT:    CreateClosure     r2, r0, Function<foo>
+// CHKBC-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHKBC-NEXT:    CreateClosure     r2, r0, Function<shadows>
+// CHKBC-NEXT:    PutByIdLoose      r1, r2, 2, "shadows"
+// CHKBC-NEXT:    CreateClosure     r2, r0, Function<checkNonStaticBuiltin>
 // CHKBC-NEXT:    PutByIdLoose      r1, r2, 3, "checkNonStaticBui"...
 // CHKBC-NEXT:    TryGetById        r2, r1, 1, "print"
 // CHKBC-NEXT:    GetByIdShort      r3, r1, 2, "foo"
-// CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    NewObjectWithBuffer r1, 0, 0
 // CHKBC-NEXT:    Call2             r1, r3, r0, r1
 // CHKBC-NEXT:    Call2             r1, r2, r0, r1
@@ -195,16 +191,16 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 3: line 12 col 1
-// CHKBC-NEXT:    bc 8: line 12 col 1
-// CHKBC-NEXT:    bc 13: line 12 col 1
-// CHKBC-NEXT:    bc 25: line 12 col 1
-// CHKBC-NEXT:    bc 36: line 12 col 1
-// CHKBC-NEXT:    bc 47: line 12 col 1
-// CHKBC-NEXT:    bc 53: line 26 col 1
-// CHKBC-NEXT:    bc 59: line 26 col 7
-// CHKBC-NEXT:    bc 72: line 26 col 10
-// CHKBC-NEXT:    bc 77: line 26 col 6
+// CHKBC-NEXT:    bc 0: line 12 col 1
+// CHKBC-NEXT:    bc 5: line 12 col 1
+// CHKBC-NEXT:    bc 10: line 12 col 1
+// CHKBC-NEXT:    bc 24: line 12 col 1
+// CHKBC-NEXT:    bc 35: line 12 col 1
+// CHKBC-NEXT:    bc 46: line 12 col 1
+// CHKBC-NEXT:    bc 52: line 26 col 1
+// CHKBC-NEXT:    bc 58: line 26 col 7
+// CHKBC-NEXT:    bc 69: line 26 col 10
+// CHKBC-NEXT:    bc 74: line 26 col 6
 // CHKBC-NEXT:  0x0022  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23
 // CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1

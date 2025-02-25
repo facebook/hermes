@@ -60,14 +60,11 @@ function foo(fn, x) {
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// OPT:scope %VS0 []
-
 // OPT:function global(): undefined
 // OPT-NEXT:%BB0:
-// OPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-NEXT:       DeclareGlobalVarInst "foo": string
-// OPT-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// OPT-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// OPT-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// OPT-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // OPT-NEXT:       ReturnInst undefined: undefined
 // OPT-NEXT:function_end
 

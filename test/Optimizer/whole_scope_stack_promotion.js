@@ -25,35 +25,32 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
-// CHECK-NEXT:       StorePropertyLooseInst %1: object, %2: any, "foo": string
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
+// CHECK-NEXT:       StorePropertyLooseInst %0: object, %1: any, "foo": string
 // CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [x: number]
+// CHECK:scope %VS0 [x: number]
 
 // CHECK:function foo(sink: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %sink: any
-// CHECK-NEXT:       StoreFrameInst %0: environment, 10: number, [%VS1.x]: number
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %" 2#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, 10: number, [%VS0.x]: number
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %" 2#"(): functionCode
 // CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: object
-// CHECK-NEXT:  %5 = LoadFrameInst (:number) %0: environment, [%VS1.x]: number
+// CHECK-NEXT:  %5 = LoadFrameInst (:number) %0: environment, [%VS0.x]: number
 // CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 2#"(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [%VS1.x]: number
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:number) %0: environment, [%VS0.x]: number
 // CHECK-NEXT:  %2 = FAddInst (:number) %1: number, 1: number
-// CHECK-NEXT:       StoreFrameInst %0: environment, %2: number, [%VS1.x]: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, %2: number, [%VS0.x]: number
 // CHECK-NEXT:       ReturnInst %1: number
 // CHECK-NEXT:function_end

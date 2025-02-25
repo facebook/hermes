@@ -57,17 +57,16 @@ function foo() { return; }
 // CHECK-NEXT:i1[ASCII, 6..11] #A5D4F6F9: binary
 // CHECK-NEXT:i2[ASCII, 12..14] #9290584E: foo
 
-// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "binary"
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    CreateClosure     r2, r1, Function<binary>
-// CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "binary"
-// CHECK-NEXT:    CreateClosure     r1, r1, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r3, r1, 2, "foo"
+// CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<binary>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "binary"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "foo"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<binary>(1 params, 13 registers, 1 numbers, 1 non-pointers):
@@ -112,10 +111,10 @@ function foo() { return; }
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 3: line 10 col 1
-// CHECK-NEXT:    bc 8: line 10 col 1
-// CHECK-NEXT:    bc 20: line 10 col 1
-// CHECK-NEXT:    bc 31: line 10 col 1
+// CHECK-NEXT:    bc 0: line 10 col 1
+// CHECK-NEXT:    bc 5: line 10 col 1
+// CHECK-NEXT:    bc 19: line 10 col 1
+// CHECK-NEXT:    bc 30: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 2: line 11 col 11
 // CHECK-NEXT:    bc 9: line 11 col 14

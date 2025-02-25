@@ -55,23 +55,20 @@ function test_could_be_int(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKIR:scope %VS0 []
-
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_int": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_uint_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_could_be_int": string
-// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_int_int(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_int_int": string
-// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_int_uint(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_int_uint": string
-// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_uint_uint(): functionCode
-// CHKIR-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_uint_uint": string
-// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_could_be_int(): functionCode
-// CHKIR-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_could_be_int": string
+// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %test_int_int(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_int_int": string
+// CHKIR-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %test_int_uint(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_int_uint": string
+// CHKIR-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %test_uint_uint(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_uint_uint": string
+// CHKIR-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %test_could_be_int(): functionCode
+// CHKIR-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_could_be_int": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 
@@ -161,23 +158,22 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:i3[ASCII, 31..42] #B424DF91: test_int_int
 // CHKBC-NEXT:i4[ASCII, 42..58] #7CF5E44C: test_could_be_int
 
-// CHKBC:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
+// CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateFunctionEnvironment r1, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_int"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_could_be_int"
-// CHKBC-NEXT:    GetGlobalObject   r3
-// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_int>
-// CHKBC-NEXT:    PutByIdLoose      r3, r2, 1, "test_int_int"
-// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_int_uint>
-// CHKBC-NEXT:    PutByIdLoose      r3, r2, 2, "test_int_uint"
-// CHKBC-NEXT:    CreateClosure     r2, r1, Function<test_uint_uint>
-// CHKBC-NEXT:    PutByIdLoose      r3, r2, 3, "test_uint_uint"
-// CHKBC-NEXT:    CreateClosure     r1, r1, Function<test_could_be_int>
-// CHKBC-NEXT:    PutByIdLoose      r3, r1, 4, "test_could_be_int"
+// CHKBC-NEXT:    GetGlobalObject   r2
 // CHKBC-NEXT:    LoadConstUndefined r0
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_int_int>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 1, "test_int_int"
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_int_uint>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 2, "test_int_uint"
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_uint_uint>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 3, "test_uint_uint"
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_could_be_int>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 4, "test_could_be_int"
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<test_int_int>(3 params, 4 registers, 2 numbers, 1 non-pointers):
@@ -244,14 +240,14 @@ function test_could_be_int(func) {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 3: line 12 col 1
-// CHKBC-NEXT:    bc 8: line 12 col 1
-// CHKBC-NEXT:    bc 13: line 12 col 1
-// CHKBC-NEXT:    bc 18: line 12 col 1
-// CHKBC-NEXT:    bc 30: line 12 col 1
-// CHKBC-NEXT:    bc 41: line 12 col 1
-// CHKBC-NEXT:    bc 52: line 12 col 1
-// CHKBC-NEXT:    bc 63: line 12 col 1
+// CHKBC-NEXT:    bc 0: line 12 col 1
+// CHKBC-NEXT:    bc 5: line 12 col 1
+// CHKBC-NEXT:    bc 10: line 12 col 1
+// CHKBC-NEXT:    bc 15: line 12 col 1
+// CHKBC-NEXT:    bc 29: line 12 col 1
+// CHKBC-NEXT:    bc 40: line 12 col 1
+// CHKBC-NEXT:    bc 51: line 12 col 1
+// CHKBC-NEXT:    bc 62: line 12 col 1
 // CHKBC-NEXT:  0x001c  function idx 2, starts at line 23 col 1
 // CHKBC-NEXT:    bc 11: line 25 col 7
 // CHKBC-NEXT:  0x0023  function idx 3, starts at line 34 col 1

@@ -27,18 +27,15 @@ return [dotProduct, Vec2D];
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dotProduct(): functionCode
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Vec2D(): functionCode
-// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
-// CHECK-NEXT:  %5 = AllocFastArrayInst (:object) 2: number
-// CHECK-NEXT:       FastArrayPushInst %1: object, %5: object
-// CHECK-NEXT:       FastArrayPushInst %2: object, %5: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %dotProduct(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %Vec2D(): functionCode
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
+// CHECK-NEXT:  %4 = AllocFastArrayInst (:object) 2: number
+// CHECK-NEXT:       FastArrayPushInst %0: object, %4: object
+// CHECK-NEXT:       FastArrayPushInst %1: object, %4: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

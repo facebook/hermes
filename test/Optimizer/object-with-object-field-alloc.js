@@ -36,7 +36,7 @@ new Foo();
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.?O.prototype]: object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %O(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %3: object, "prototype": string
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any

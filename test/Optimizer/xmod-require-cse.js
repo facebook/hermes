@@ -31,20 +31,17 @@ print($SHBuiltin.moduleFactory(
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "fakeRequire": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %fakeRequire(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "fakeRequire": string
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
-// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "fakeRequire": string
-// CHECK-NEXT:  %7 = CallInst (:string|number|bigint) %5: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined, %6: any
-// CHECK-NEXT:  %8 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: string|number|bigint
-// CHECK-NEXT:       ReturnInst %8: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %fakeRequire(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "fakeRequire": string
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) globalObject: object, "fakeRequire": string
+// CHECK-NEXT:  %6 = CallInst (:string|number|bigint) %4: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined, %5: any
+// CHECK-NEXT:  %7 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: string|number|bigint
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
 // CHECK:function fakeRequire(n: any): null|object

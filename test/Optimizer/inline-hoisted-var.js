@@ -31,7 +31,7 @@
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, %3: any, "foo": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %x(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %x(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: environment, %5: object, [%VS0.x]: undefined|object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

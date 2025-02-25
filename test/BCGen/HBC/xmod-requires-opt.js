@@ -70,16 +70,14 @@ function require(modIdx) {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "require"
-// CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    CreateFunctionEnvironment r1, 0
-// CHECK-NEXT:    CreateClosure     r1, r1, Function<require>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "require"
+// CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    CreateClosure     r2, r0, Function<require>
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "require"
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<require>(2 params, 19 registers, 1 numbers, 1 non-pointers):
+// CHECK:Function<require>(2 params, 18 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:    LoadConstZero     r0
 // CHECK-NEXT:    JStrictEqual      L1, r0, r2
@@ -89,34 +87,36 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r9, r2, 1, "require"
-// CHECK-NEXT:    TryGetById        r8, r2, 2, "mod"
+// CHECK-NEXT:    GetByIdShort      r8, r2, 1, "require"
+// CHECK-NEXT:    TryGetById        r7, r2, 2, "mod"
 // CHECK-NEXT:    TryGetById        r2, r2, 3, "exports"
-// CHECK-NEXT:    CreateClosure     r4, r3, Function<modFact1>
-// CHECK-NEXT:    LoadConstUndefined r11
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    CreateClosure     r3, r1, Function<modFact1>
 // CHECK-NEXT:    LoadConstUndefined r10
-// CHECK-NEXT:    Mov               r7, r2
-// CHECK-NEXT:    Call              r4, r4, 5
+// CHECK-NEXT:    LoadConstUndefined r9
+// CHECK-NEXT:    Mov               r6, r2
+// CHECK-NEXT:    Call              r3, r3, 5
 // CHECK-NEXT:    Ret               r2
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r9, r2, 1, "require"
-// CHECK-NEXT:    TryGetById        r8, r2, 2, "mod"
+// CHECK-NEXT:    GetByIdShort      r8, r2, 1, "require"
+// CHECK-NEXT:    TryGetById        r7, r2, 2, "mod"
 // CHECK-NEXT:    TryGetById        r2, r2, 3, "exports"
-// CHECK-NEXT:    CreateClosure     r3, r3, Function<modFact0>
-// CHECK-NEXT:    LoadConstUndefined r11
+// CHECK-NEXT:    LoadConstUndefined r1
+// CHECK-NEXT:    CreateClosure     r3, r1, Function<modFact0>
 // CHECK-NEXT:    LoadConstUndefined r10
-// CHECK-NEXT:    Mov               r7, r2
+// CHECK-NEXT:    LoadConstUndefined r9
+// CHECK-NEXT:    Mov               r6, r2
 // CHECK-NEXT:    Call              r3, r3, 5
 // CHECK-NEXT:    Ret               r2
 
-// CHECK:Function<modFact0>(5 params, 2 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<modFact0>(5 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0027, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r1, 4
-// CHECK-NEXT:    GetParentEnvironment r0, 0
-// CHECK-NEXT:    CreateClosure     r0, r0, Function<bar>
-// CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "bar"
-// CHECK-NEXT:    Ret               r1
+// CHECK-NEXT:    LoadParam         r2, 4
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<bar>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "bar"
+// CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<modFact1>(5 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
@@ -142,18 +142,18 @@ function require(modIdx) {
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 17 col 1
 // CHECK-NEXT:    bc 0: line 17 col 1
-// CHECK-NEXT:    bc 15: line 17 col 1
+// CHECK-NEXT:    bc 14: line 17 col 1
 // CHECK-NEXT:  0x000a  function idx 1, starts at line 17 col 1
-// CHECK-NEXT:    bc 25: line 36 col 21
-// CHECK-NEXT:    bc 30: line 36 col 30
-// CHECK-NEXT:    bc 36: line 36 col 35
-// CHECK-NEXT:    bc 54: line 36 col 9
-// CHECK-NEXT:    bc 62: line 28 col 21
-// CHECK-NEXT:    bc 67: line 28 col 30
-// CHECK-NEXT:    bc 73: line 28 col 35
-// CHECK-NEXT:    bc 91: line 28 col 9
+// CHECK-NEXT:    bc 22: line 36 col 21
+// CHECK-NEXT:    bc 27: line 36 col 30
+// CHECK-NEXT:    bc 33: line 36 col 35
+// CHECK-NEXT:    bc 53: line 36 col 9
+// CHECK-NEXT:    bc 61: line 28 col 21
+// CHECK-NEXT:    bc 66: line 28 col 30
+// CHECK-NEXT:    bc 72: line 28 col 35
+// CHECK-NEXT:    bc 92: line 28 col 9
 // CHECK-NEXT:  0x0027  function idx 2, starts at line 22 col 7
-// CHECK-NEXT:    bc 11: line 26 col 21
+// CHECK-NEXT:    bc 10: line 26 col 21
 // CHECK-NEXT:  0x002e  function idx 3, starts at line 33 col 7
 // CHECK-NEXT:    bc 8: line 34 col 28
 // CHECK-NEXT:    bc 15: line 34 col 35

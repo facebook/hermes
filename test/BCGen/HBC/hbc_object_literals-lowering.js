@@ -49,29 +49,26 @@ function accessorObjectLiteral(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// IRGEN:scope %VS0 []
-
 // IRGEN:function global(): undefined
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // IRGEN-NEXT:       DeclareGlobalVarInst "emitAllocObjectLiteral": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "nestedAllocObjectLiteral": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "numericPlaceholder": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "estimateBestNumElement": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "accessorObjectLiteral": string
-// IRGEN-NEXT:  %6 = HBCGetGlobalObjectInst (:object)
-// IRGEN-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %emitAllocObjectLiteral(): functionCode
-// IRGEN-NEXT:       StorePropertyLooseInst %7: object, %6: object, "emitAllocObjectLiteral": string
-// IRGEN-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %nestedAllocObjectLiteral(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %9: object, %6: object, "nestedAllocObjectLiteral": string
-// IRGEN-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %numericPlaceholder(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %11: object, %6: object, "numericPlaceholder": string
-// IRGEN-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %estimateBestNumElement(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %13: object, %6: object, "estimateBestNumElement": string
-// IRGEN-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %accessorObjectLiteral(): functionCode
-// IRGEN-NEXT:        StorePropertyLooseInst %15: object, %6: object, "accessorObjectLiteral": string
-// IRGEN-NEXT:  %17 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:        ReturnInst %17: undefined
+// IRGEN-NEXT:  %5 = HBCGetGlobalObjectInst (:object)
+// IRGEN-NEXT:  %6 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:  %7 = CreateFunctionInst (:object) %6: undefined, empty: any, %emitAllocObjectLiteral(): functionCode
+// IRGEN-NEXT:       StorePropertyLooseInst %7: object, %5: object, "emitAllocObjectLiteral": string
+// IRGEN-NEXT:  %9 = CreateFunctionInst (:object) %6: undefined, empty: any, %nestedAllocObjectLiteral(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %9: object, %5: object, "nestedAllocObjectLiteral": string
+// IRGEN-NEXT:  %11 = CreateFunctionInst (:object) %6: undefined, empty: any, %numericPlaceholder(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %11: object, %5: object, "numericPlaceholder": string
+// IRGEN-NEXT:  %13 = CreateFunctionInst (:object) %6: undefined, empty: any, %estimateBestNumElement(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %13: object, %5: object, "estimateBestNumElement": string
+// IRGEN-NEXT:  %15 = CreateFunctionInst (:object) %6: undefined, empty: any, %accessorObjectLiteral(): functionCode
+// IRGEN-NEXT:        StorePropertyLooseInst %15: object, %5: object, "accessorObjectLiteral": string
+// IRGEN-NEXT:        ReturnInst %6: undefined
 // IRGEN-NEXT:function_end
 
 // IRGEN:function emitAllocObjectLiteral(func: any): object
@@ -113,11 +110,10 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, "test-str": string
 // IRGEN-NEXT:  %1 = HBCLoadConstInst (:string) "c": string
 // IRGEN-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:  %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// IRGEN-NEXT:  %4 = CreateFunctionInst (:object) %3: environment, %VS0: any, %"get c"(): functionCode
-// IRGEN-NEXT:       DefineOwnGetterSetterInst %4: object, %2: undefined, %0: object, %1: string, true: boolean
-// IRGEN-NEXT:  %6 = HBCLoadConstInst (:null) null: null
-// IRGEN-NEXT:       DefineNewOwnPropertyInst %6: null, %0: object, "d": string, true: boolean
+// IRGEN-NEXT:  %3 = CreateFunctionInst (:object) %2: undefined, empty: any, %"get c"(): functionCode
+// IRGEN-NEXT:       DefineOwnGetterSetterInst %3: object, %2: undefined, %0: object, %1: string, true: boolean
+// IRGEN-NEXT:  %5 = HBCLoadConstInst (:null) null: null
+// IRGEN-NEXT:       DefineNewOwnPropertyInst %5: null, %0: object, "d": string, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 

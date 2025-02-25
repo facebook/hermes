@@ -29,23 +29,20 @@ print(bench(4e6, 100))
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHINT:scope %VS0 []
-
 // CHINT:function global(): any
 // CHINT-NEXT:%BB0:
 // CHINT-NEXT:            %0            = DeclareGlobalVarInst "bench": string
-// CHINT-NEXT:  {loc0}    %1 [2...7)    = HBCGetGlobalObjectInst (:object)
-// CHINT-NEXT:  {loc1}    %2 [3...4)    = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHINT-NEXT:  {loc1}    %3 [4...5)    = CreateFunctionInst (:object) %2: environment, %VS0: any, %bench(): functionCode
-// CHINT-NEXT:            %4            = StorePropertyStrictInst %3: object, %1: object, "bench": string
-// CHINT-NEXT:  {loc1}    %5 [6...12)   = TryLoadGlobalPropertyInst (:any) %1: object, "print": string
-// CHINT-NEXT:  {loc0}    %6 [7...11)   = LoadPropertyInst (:any) %1: object, "bench": string
-// CHINT-NEXT:  {np2}     %7 [8...11)   = HBCLoadConstInst (:number) 100: number
-// CHINT-NEXT:  {np1}     %8 [9...11)   = HBCLoadConstInst (:number) 4000000: number
-// CHINT-NEXT:  {np0}     %9 [10...12)  = HBCLoadConstInst (:undefined) undefined: undefined
-// CHINT-NEXT:  {loc0}   %10 [11...12)  = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, %9: undefined, %9: undefined, %8: number, %7: number
-// CHINT-NEXT:  {loc0}   %11 [12...13)  = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, %9: undefined, %9: undefined, %10: any
-// CHINT-NEXT:           %12            = ReturnInst %11: any
+// CHINT-NEXT:  {loc0}    %1 [2...6)    = HBCGetGlobalObjectInst (:object)
+// CHINT-NEXT:  {loc1}    %2 [3...4)    = CreateFunctionInst (:object) empty: any, empty: any, %bench(): functionCode
+// CHINT-NEXT:            %3            = StorePropertyStrictInst %2: object, %1: object, "bench": string
+// CHINT-NEXT:  {loc1}    %4 [5...11)   = TryLoadGlobalPropertyInst (:any) %1: object, "print": string
+// CHINT-NEXT:  {loc0}    %5 [6...10)   = LoadPropertyInst (:any) %1: object, "bench": string
+// CHINT-NEXT:  {np2}     %6 [7...10)   = HBCLoadConstInst (:number) 100: number
+// CHINT-NEXT:  {np1}     %7 [8...10)   = HBCLoadConstInst (:number) 4000000: number
+// CHINT-NEXT:  {np0}     %8 [9...11)   = HBCLoadConstInst (:undefined) undefined: undefined
+// CHINT-NEXT:  {loc0}    %9 [10...11)  = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, %8: undefined, %8: undefined, %7: number, %6: number
+// CHINT-NEXT:  {loc0}   %10 [11...12)  = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, %8: undefined, %8: undefined, %9: any
+// CHINT-NEXT:           %11            = ReturnInst %10: any
 // CHINT-NEXT:function_end
 
 // CHINT:function bench(lc: any, fc: any): string|number
@@ -96,23 +93,20 @@ print(bench(4e6, 100))
 // CHINT-NEXT:           %39            = ReturnInst %38: string|number
 // CHINT-NEXT:function_end
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "bench": string
 // CHECK-NEXT:  {loc0}    %1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {loc1}    %2 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  {loc1}    %3 = CreateFunctionInst (:object) {loc1} %2: environment, %VS0: any, %bench(): functionCode
-// CHECK-NEXT:                 StorePropertyStrictInst {loc1} %3: object, {loc0} %1: object, "bench": string
-// CHECK-NEXT:  {loc1}    %5 = TryLoadGlobalPropertyInst (:any) {loc0} %1: object, "print": string
-// CHECK-NEXT:  {loc0}    %6 = LoadPropertyInst (:any) {loc0} %1: object, "bench": string
-// CHECK-NEXT:  {np2}     %7 = HBCLoadConstInst (:number) 100: number
-// CHECK-NEXT:  {np1}     %8 = HBCLoadConstInst (:number) 4000000: number
-// CHECK-NEXT:  {np0}     %9 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {loc0}   %10 = CallInst (:any) {loc0} %6: any, empty: any, false: boolean, empty: any, {np0} %9: undefined, {np0} %9: undefined, {np1} %8: number, {np2} %7: number
-// CHECK-NEXT:  {loc0}   %11 = CallInst (:any) {loc1} %5: any, empty: any, false: boolean, empty: any, {np0} %9: undefined, {np0} %9: undefined, {loc0} %10: any
-// CHECK-NEXT:                 ReturnInst {loc0} %11: any
+// CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) empty: any, empty: any, %bench(): functionCode
+// CHECK-NEXT:                 StorePropertyStrictInst {loc1} %2: object, {loc0} %1: object, "bench": string
+// CHECK-NEXT:  {loc1}    %4 = TryLoadGlobalPropertyInst (:any) {loc0} %1: object, "print": string
+// CHECK-NEXT:  {loc0}    %5 = LoadPropertyInst (:any) {loc0} %1: object, "bench": string
+// CHECK-NEXT:  {np2}     %6 = HBCLoadConstInst (:number) 100: number
+// CHECK-NEXT:  {np1}     %7 = HBCLoadConstInst (:number) 4000000: number
+// CHECK-NEXT:  {np0}     %8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {loc0}    %9 = CallInst (:any) {loc0} %5: any, empty: any, false: boolean, empty: any, {np0} %8: undefined, {np0} %8: undefined, {np1} %7: number, {np2} %6: number
+// CHECK-NEXT:  {loc0}   %10 = CallInst (:any) {loc1} %4: any, empty: any, false: boolean, empty: any, {np0} %8: undefined, {np0} %8: undefined, {loc0} %9: any
+// CHECK-NEXT:                 ReturnInst {loc0} %10: any
 // CHECK-NEXT:function_end
 
 // CHECK:function bench(lc: any, fc: any): string|number

@@ -39,18 +39,17 @@ function bar() {
 // CHECK-NEXT:i2[ASCII, 9..11] #9290584E: foo
 // CHECK-NEXT:i3[ASCII, 12..12] #0001E7F9: x
 
-// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:[@ 0] CreateFunctionEnvironment 1<Reg8>, 0<UInt8>
-// CHECK-NEXT:[@ 3] DeclareGlobalVar 2<UInt32>
-// CHECK-NEXT:[@ 8] DeclareGlobalVar 1<UInt32>
-// CHECK-NEXT:[@ 13] GetGlobalObject 3<Reg8>
-// CHECK-NEXT:[@ 15] CreateClosure 2<Reg8>, 1<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 20] PutByIdLoose 3<Reg8>, 2<Reg8>, 1<UInt8>, 2<UInt16>
-// CHECK-NEXT:[@ 26] CreateClosure 1<Reg8>, 1<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 31] PutByIdLoose 3<Reg8>, 1<Reg8>, 2<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 37] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 39] Ret 0<Reg8>
+// CHECK-NEXT:[@ 0] DeclareGlobalVar 2<UInt32>
+// CHECK-NEXT:[@ 5] DeclareGlobalVar 1<UInt32>
+// CHECK-NEXT:[@ 10] GetGlobalObject 2<Reg8>
+// CHECK-NEXT:[@ 12] LoadConstUndefined 0<Reg8>
+// CHECK-NEXT:[@ 14] CreateClosure 1<Reg8>, 0<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 19] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 25] CreateClosure 1<Reg8>, 0<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 30] PutByIdLoose 2<Reg8>, 1<Reg8>, 2<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 36] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
@@ -79,10 +78,10 @@ function bar() {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 3: line 10 col 1
-// CHECK-NEXT:    bc 8: line 10 col 1
-// CHECK-NEXT:    bc 20: line 10 col 1
-// CHECK-NEXT:    bc 31: line 10 col 1
+// CHECK-NEXT:    bc 0: line 10 col 1
+// CHECK-NEXT:    bc 5: line 10 col 1
+// CHECK-NEXT:    bc 19: line 10 col 1
+// CHECK-NEXT:    bc 30: line 10 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 5: line 11 col 10
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 14 col 1

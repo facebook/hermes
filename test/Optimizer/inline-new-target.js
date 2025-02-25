@@ -33,17 +33,14 @@ function outer2(){
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): string
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
 // CHECK-NEXT:       DeclareGlobalVarInst "outer2": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "outer": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer2(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "outer2": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %outer(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %outer2(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "outer2": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
@@ -52,14 +49,14 @@ function outer2(){
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [foo: object]
+// CHECK:scope %VS0 [foo: object]
 
 // CHECK:function outer2(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS1: any, %foo(): functionCode
-// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS1.foo]: object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %bar(): functionCode
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.foo]: object
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:  %4 = CreateThisInst (:object) %3: object, empty: any
 // CHECK-NEXT:  %5 = CallInst (:object) %3: object, %bar(): functionCode, true: boolean, %0: environment, undefined: undefined, %4: object
 // CHECK-NEXT:       ReturnInst %5: object
@@ -73,8 +70,8 @@ function outer2(){
 
 // CHECK:function bar(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS1.foo]: object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS0.foo]: object
 // CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
