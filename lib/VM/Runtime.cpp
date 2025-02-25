@@ -1071,7 +1071,7 @@ CallResult<HermesValue> Runtime::runBytecode(
 
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
 
-  if (bytecode->getBytecodeOptions().staticBuiltins && !builtinsFrozen_) {
+  if (bytecode->getBytecodeOptions().getStaticBuiltins() && !builtinsFrozen_) {
     if (assertBuiltinsUnmodified() == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1079,7 +1079,7 @@ CallResult<HermesValue> Runtime::runBytecode(
     assert(builtinsFrozen_ && "Builtins must be frozen by now.");
   }
 
-  if (bytecode->getBytecodeOptions().hasAsync && !hasES6Promise_) {
+  if (bytecode->getBytecodeOptions().getHasAsync() && !hasES6Promise_) {
     return raiseTypeError(
         "Cannot execute a bytecode having async functions when Promise is disabled.");
   }

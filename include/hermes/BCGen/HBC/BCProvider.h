@@ -50,20 +50,21 @@ class RuntimeFunctionHeader {
     assert(isLarge());
   }
 
-#define HEADER_FIELD_ACCESSOR(api_type, store_type, name, bits) \
-  api_type name() const {                                       \
+#define HEADER_FIELD_ACCESSOR(_, storage, api_type, name, bits) \
+  api_type get##name() const {                                  \
     if (LLVM_UNLIKELY(isLarge()))                               \
-      return asLarge()->name;                                   \
+      return asLarge()->get##name();                            \
     else                                                        \
-      return asSmall()->name;                                   \
+      return asSmall()->get##name();                            \
   }
-  FUNC_HEADER_FIELDS(HEADER_FIELD_ACCESSOR)
-  HEADER_FIELD_ACCESSOR(
-      hbc::FunctionHeaderFlag,
-      hbc::FunctionHeaderFlag,
-      flags,
-      8)
+  FUNC_HEADER_FIELDS(HEADER_FIELD_ACCESSOR, HEADER_FIELD_ACCESSOR)
 #undef HEADER_FIELD_ACCESSOR
+  hbc::FunctionHeaderFlag getFlags() const {
+    if (LLVM_UNLIKELY(isLarge()))
+      return asLarge()->flags;
+    else
+      return asSmall()->flags;
+  }
 
  private:
   bool isLarge() const {
@@ -445,7 +446,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     const hbc::SmallFuncHeader &smallHeader = functionHeaders_[functionID];
-    if (LLVM_UNLIKELY(smallHeader.flags.overflowed)) {
+    if (LLVM_UNLIKELY(smallHeader.flags.getOverflowed())) {
       auto large = reinterpret_cast<const hbc::FunctionHeader *>(
           bufferPtr_ + smallHeader.getLargeHeaderOffset());
       return RuntimeFunctionHeader(large);
@@ -470,18 +471,20 @@ class BCProviderFromBuffer final : public BCProviderBase {
   StringTableEntry getStringTableEntry(uint32_t index) const override {
     auto &smallHeader = stringTableEntries_[index];
     if (LLVM_UNLIKELY(smallHeader.isOverflowed())) {
-      auto overflow = overflowStringTableEntries_[smallHeader.offset];
+      auto overflow = overflowStringTableEntries_[smallHeader.getOffset()];
       StringTableEntry entry(
-          overflow.offset, overflow.length, smallHeader.isUTF16);
+          overflow.offset, overflow.length, smallHeader.getIsUTF16());
       return entry;
     }
     StringTableEntry entry(
-        smallHeader.offset, smallHeader.length, smallHeader.isUTF16);
+        smallHeader.getOffset(),
+        smallHeader.getLength(),
+        smallHeader.getIsUTF16());
     return entry;
   }
 
   const uint8_t *getBytecode(uint32_t functionID) const override {
-    return bufferPtr_ + getFunctionHeader(functionID).offset();
+    return bufferPtr_ + getFunctionHeader(functionID).getOffset();
   }
 
   llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(

@@ -301,7 +301,7 @@ bool BytecodeFileFields<Mutable>::populateFromBuffer(
     }
     void visitCJSModuleTable() {
       align(buf);
-      if (h->options.cjsModulesStaticallyResolved) {
+      if (h->options.getCjsModulesStaticallyResolved()) {
         // Modules have been statically resolved.
         f.cjsModuleTableStatic = castArrayRef<std::pair<uint32_t, uint32_t>>(
             buf, h->cjsModuleCount, end);
@@ -346,7 +346,7 @@ uint32_t BCProviderBase::getVirtualOffsetForFunction(
   assert(functionID < functionCount_ && "Invalid functionID");
   uint32_t virtualOffset = 0;
   for (uint32_t i = 0; i < functionID; ++i) {
-    virtualOffset += getFunctionHeader(i).bytecodeSizeInBytes();
+    virtualOffset += getFunctionHeader(i).getBytecodeSizeInBytes();
   }
   return virtualOffset;
 }
@@ -650,7 +650,7 @@ BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
 
   const auto &smallHeader = functionHeaders_[functionID];
   // Small headers do not contain exception handlers or debug info.
-  if (!smallHeader.flags.overflowed)
+  if (!smallHeader.flags.getOverflowed())
     return {{}, nullptr};
 
   buf += smallHeader.getLargeHeaderOffset();
@@ -660,7 +660,7 @@ BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
 
   // Deserialize exception table.
   llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> exceptionTable{};
-  if (flags.hasExceptionHandler) {
+  if (flags.getHasExceptionHandler()) {
     align(buf);
     const auto *exceptionHeader =
         castData<hbc::ExceptionHandlerTableHeader>(buf);
@@ -670,7 +670,7 @@ BCProviderFromBuffer::getExceptionTableAndDebugOffsets(
 
   // Deserialize debug offsets.
   const hbc::DebugOffsets *debugOffsets = nullptr;
-  if (flags.hasDebugInfo) {
+  if (flags.getHasDebugInfo()) {
     align(buf);
     debugOffsets = castData<hbc::DebugOffsets>(buf);
   }
@@ -717,11 +717,12 @@ void BCProviderFromBuffer::prefetch(llvh::ArrayRef<uint8_t> aref) {
   auto globalFunctionIndex = fileHeader->globalCodeIndex;
   auto functionHeaders = fields.functionHeaders.data();
   const SmallFuncHeader &globalSmall = functionHeaders[globalFunctionIndex];
-  RuntimeFunctionHeader global = globalSmall.flags.overflowed
+  RuntimeFunctionHeader global = globalSmall.flags.getOverflowed()
       ? RuntimeFunctionHeader(reinterpret_cast<const hbc::FunctionHeader *>(
             aref.data() + globalSmall.getLargeHeaderOffset()))
       : RuntimeFunctionHeader(&globalSmall);
-  prefetchRegion(aref.data() + global.offset(), global.bytecodeSizeInBytes());
+  prefetchRegion(
+      aref.data() + global.getOffset(), global.getBytecodeSizeInBytes());
 }
 
 bool BCProviderFromBuffer::bytecodeStreamSanityCheck(

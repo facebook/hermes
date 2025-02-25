@@ -29,7 +29,7 @@ static std::string getJSFunctionName(
     uint32_t funcId) {
   hbc::RuntimeFunctionHeader functionHeader =
       bcProvider->getFunctionHeader(funcId);
-  return bcProvider->getStringRefFromID(functionHeader.functionName()).str();
+  return bcProvider->getStringRefFromID(functionHeader.getFunctionName()).str();
 }
 
 static OptValue<hbc::DebugSourceLocation> getSourceLocation(

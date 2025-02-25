@@ -134,7 +134,7 @@ inline JITCompiledFunctionPtr JITContext::compile(
   if (LLVM_LIKELY(codeBlock->getDontJIT()))
     return nullptr;
 
-  uint32_t loopDepth = codeBlock->getFunctionHeader().loopDepth();
+  uint32_t loopDepth = codeBlock->getFunctionHeader().getLoopDepth();
   // It's possible that if the loop depth is too high, we will set the
   // execThreshold to 0 for this function, but that's OK because we want to JIT
   // it immediately.

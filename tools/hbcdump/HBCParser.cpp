@@ -212,7 +212,7 @@ HBCParser::generateFunctionChecksumMap() {
         doMD5Checksum(
             funcId,
             llvh::ArrayRef<uint8_t>(
-                bytecodeStart, functionHeader.bytecodeSizeInBytes()))
+                bytecodeStart, functionHeader.getBytecodeSizeInBytes()))
             .digest()
             .str();
   }

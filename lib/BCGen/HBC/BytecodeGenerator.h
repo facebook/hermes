@@ -112,7 +112,8 @@ class BytecodeModuleGenerator {
         options_(options),
         sourceMapGen_(sourceMapGen),
         baseBCProvider_(std::move(baseBCProvider)) {
-    bm_.getBytecodeOptionsMut().staticBuiltins = options_.staticBuiltinsEnabled;
+    bm_.getBytecodeOptionsMut().setStaticBuiltins(
+        options_.staticBuiltinsEnabled);
   }
 
   /// Consume the generator and write the generated code to the BytecodeModule.

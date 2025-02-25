@@ -135,7 +135,8 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
 
     // Set the actual non-lazy hidden class.
     Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
-        *inferredParent(runtime, (FuncKind)codeBlock->getHeaderFlags().kind),
+        *inferredParent(
+            runtime, (FuncKind)codeBlock->getHeaderFlags().getKind()),
         numOverlapSlots<JSFunction>());
     jsFun->setClassNoAllocPropStorageUnsafe(runtime, *newClass);
 
@@ -280,7 +281,8 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
 
 bool Callable::isGeneratorFunction(Callable *fn) {
   if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
-    return jsFun->getCodeBlock()->getHeaderFlags().kind == FuncKind::Generator;
+    return jsFun->getCodeBlock()->getHeaderFlags().getKind() ==
+        FuncKind::Generator;
   } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
     return nativeFun->getFunctionInfo()->kind == FuncKind::Generator;
   }
@@ -289,7 +291,7 @@ bool Callable::isGeneratorFunction(Callable *fn) {
 
 bool Callable::isAsyncFunction(Callable *fn) {
   if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
-    return jsFun->getCodeBlock()->getHeaderFlags().kind == FuncKind::Async;
+    return jsFun->getCodeBlock()->getHeaderFlags().getKind() == FuncKind::Async;
   } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
     return nativeFun->getFunctionInfo()->kind == FuncKind::Async;
   }
@@ -1386,7 +1388,7 @@ PseudoHandle<JSFunction> JSFunction::createWithInferredParent(
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
   auto parentHandle =
-      inferredParent(runtime, (FuncKind)codeBlock->getHeaderFlags().kind);
+      inferredParent(runtime, (FuncKind)codeBlock->getHeaderFlags().getKind());
   return create(runtime, domain, parentHandle, envHandle, codeBlock);
 }
 

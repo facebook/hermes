@@ -115,9 +115,9 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
 
   // Get the number of bits needed to encode the loop depth.
   // Avoid overflowing the FunctionHeader just for loop depth.
-#define DECLARE_BITFIELD(api_type, store_type, name, bits) \
-  [[maybe_unused]] constexpr uint32_t name##Width = bits;
-  FUNC_HEADER_FIELDS(DECLARE_BITFIELD)
+#define DECLARE_BITFIELD(_, storage, api_type, name, bits) \
+  [[maybe_unused]] constexpr uint32_t f##name##Width = bits;
+  FUNC_HEADER_FIELDS(DECLARE_BITFIELD, DECLARE_BITFIELD)
 #undef DECLARE_BITFIELD
 
   FunctionHeader header{
@@ -125,7 +125,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       F->getExpectedParamCountIncludingThis(),
       std::min(
           RA.getMaxLoopDepth(),
-          llvh::maskTrailingOnes<uint32_t>(loopDepthWidth)),
+          llvh::maskTrailingOnes<uint32_t>(fLoopDepthWidth)),
       funcGen.frameSize_,
       RA.getMaxRegisterUsage(RegClass::Number),
       RA.getMaxRegisterUsage(RegClass::NonPtr),
@@ -133,10 +133,10 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       funcGen.highestReadCacheIndex_,
       funcGen.highestWriteCacheIndex_};
 
-  header.flags.prohibitInvoke = computeProhibitInvoke(F->getProhibitInvoke());
-  header.flags.kind = computeFuncKind(F->getKind());
-  header.flags.strictMode = F->isStrictMode();
-  header.flags.hasExceptionHandler = funcGen.exceptionHandlers_.size();
+  header.flags.setProhibitInvoke(computeProhibitInvoke(F->getProhibitInvoke()));
+  header.flags.setKind(computeFuncKind(F->getKind()));
+  header.flags.setStrictMode(F->isStrictMode());
+  header.flags.setHasExceptionHandler(funcGen.exceptionHandlers_.size());
 
   auto bcFunc = std::make_unique<BytecodeFunction>(
       std::move(funcGen.opcodes_),
@@ -221,7 +221,9 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   auto [it, inserted] = functionIDMap_.insert({F, bm_.getNumFunctions()});
   if (inserted) {
     bm_.addFunction();
-    bm_.getBytecodeOptionsMut().hasAsync |= llvh::isa<AsyncFunction>(F);
+    auto &optionsMut = bm_.getBytecodeOptionsMut();
+    optionsMut.setHasAsync(
+        (uint8_t)optionsMut.getHasAsync() | llvh::isa<AsyncFunction>(F));
   }
   return it->second;
 }
@@ -436,7 +438,7 @@ void BytecodeModuleGenerator::collectStrings() {
 
 bool BytecodeModuleGenerator::generateAddedFunctions() {
   BytecodeOptions &bytecodeOptions = bm_.getBytecodeOptionsMut();
-  bytecodeOptions.cjsModulesStaticallyResolved = M_->getCJSModulesResolved();
+  bytecodeOptions.setCjsModulesStaticallyResolved(M_->getCJSModulesResolved());
 
   M_->assignIndexToVariables();
 

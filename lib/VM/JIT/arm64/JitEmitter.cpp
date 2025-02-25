@@ -751,7 +751,7 @@ void Emitter::frameSetup(
 
   // If the function has a prohibitInvoke flag, we need to check if it has been
   // called correctly.
-  auto prohibitInvoke = codeBlock_->getHeaderFlags().prohibitInvoke;
+  auto prohibitInvoke = codeBlock_->getHeaderFlags().getProhibitInvoke();
   if (prohibitInvoke != ProhibitInvoke::None) {
     // Load new.target.
     a.ldur(
