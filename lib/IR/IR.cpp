@@ -580,6 +580,17 @@ VariableScope::VariableScope(VariableScope *parentScope)
     parentScope->children_.push_back(*this);
 }
 
+void VariableScope::setParentScope(VariableScope *newParent) {
+  // If there is an existing parent, remove this from the children list first.
+  if (parentScope_)
+    parentScope_->children_.remove(*this);
+
+  // Set the new parent, and update its children list.
+  parentScope_ = newParent;
+  if (newParent)
+    newParent->children_.push_back(*this);
+}
+
 void VariableScope::removeFromScopeChain() {
   // Update all children to now be children of the parent.
   for (auto &child : children_)

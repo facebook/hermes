@@ -43,39 +43,37 @@ function load_dedup(foo){
 
 // CHECK:function load_only_capture(leak: any, foreach: any, n: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %leak: any
-// CHECK-NEXT:  %3 = LoadParamInst (:any) %n: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.i]: number
-// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) 0: number, %3: any
-// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %leak: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %n: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS1.i]: number
+// CHECK-NEXT:  %4 = BinaryLessThanInst (:boolean) 0: number, %2: any
+// CHECK-NEXT:       CondBranchInst %4: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = PhiInst (:number) 0: number, %BB0, %10: number, %BB1
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %""(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %8: object, %2: any, "k": string
-// CHECK-NEXT:  %10 = FAddInst (:number) %7: number, 1: number
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: number, [%VS1.i]: number
-// CHECK-NEXT:  %12 = BinaryLessThanInst (:boolean) %10: number, %3: any
-// CHECK-NEXT:        CondBranchInst %12: boolean, %BB1, %BB2
+// CHECK-NEXT:  %6 = PhiInst (:number) 0: number, %BB0, %9: number, %BB1
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS1: any, %""(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, %1: any, "k": string
+// CHECK-NEXT:  %9 = FAddInst (:number) %6: number, 1: number
+// CHECK-NEXT:        StoreFrameInst %0: environment, %9: number, [%VS1.i]: number
+// CHECK-NEXT:  %11 = BinaryLessThanInst (:boolean) %9: number, %2: any
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = PhiInst (:number) 0: number, %BB0, %10: number, %BB1
-// CHECK-NEXT:        ReturnInst %14: number
+// CHECK-NEXT:  %13 = PhiInst (:number) 0: number, %BB0, %9: number, %BB1
+// CHECK-NEXT:        ReturnInst %13: number
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS2 [foo: any, x: any]
 
 // CHECK:function load_dedup(foo: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %foo: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.foo]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.x]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS2: any, %bar(): functionCode
-// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS2.x]: any
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS2: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %foo: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS2.foo]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS2.x]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS2: any, %bar(): functionCode
+// CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [%VS2.x]: any
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:arrow ""(): number

@@ -165,7 +165,7 @@ function daa(a) {
 
 // CHKOPT:function daa(a: any): object
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS1: any, %parentScope: environment
+// CHKOPT-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
 // CHKOPT-NEXT:  %1 = HBCLoadConstInst (:number) 1: number
 // CHKOPT-NEXT:  %2 = LoadParamInst (:any) %a: any
 // CHKOPT-NEXT:  %3 = BinaryAddInst (:string|number) %2: any, %1: number

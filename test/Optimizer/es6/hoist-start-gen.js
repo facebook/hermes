@@ -32,13 +32,12 @@ function *foo() {
 
 // CHECK:function foo(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.idx]: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.generator_state]: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.exception_handler_idx]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %VS1: any, %foo?inner(): functionCode
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS1.idx]: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS1.generator_state]: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS1.exception_handler_idx]: number
+// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS1: any, %foo?inner(): functionCode
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:generator inner foo?inner(action: number, value: any): any

@@ -40,14 +40,13 @@
 
 // CHECK:function foo(sink: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %sink: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 10: number, [%VS1.x]: number
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %" 2#"(): functionCode
-// CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
-// CHECK-NEXT:  %6 = LoadFrameInst (:number) %1: environment, [%VS1.x]: number
-// CHECK-NEXT:       ReturnInst %6: number
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %sink: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, 10: number, [%VS1.x]: number
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %" 2#"(): functionCode
+// CHECK-NEXT:  %4 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: object
+// CHECK-NEXT:  %5 = LoadFrameInst (:number) %0: environment, [%VS1.x]: number
+// CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
 
 // CHECK:arrow " 2#"(): number

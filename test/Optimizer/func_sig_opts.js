@@ -111,16 +111,15 @@ function test_async() {
 
 // CHECK:function test_unused_and_duplicate_params(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo2(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.foo2]: object
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar1(): functionCode
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar2(): functionCode
-// CHECK-NEXT:  %6 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:       DefineOwnPropertyInst %4: object, %6: object, 0: number, true: boolean
-// CHECK-NEXT:       DefineOwnPropertyInst %5: object, %6: object, 1: number, true: boolean
-// CHECK-NEXT:       ReturnInst %6: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS1: any, %foo2(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS1.foo2]: object
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %bar1(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS1: any, %bar2(): functionCode
+// CHECK-NEXT:  %5 = AllocArrayInst (:object) 2: number
+// CHECK-NEXT:       DefineOwnPropertyInst %3: object, %5: object, 0: number, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst %4: object, %5: object, 1: number, true: boolean
+// CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
 // CHECK:function test_rest_arguments(): any
@@ -205,13 +204,12 @@ function test_async() {
 
 // CHECK:function gen(x: number): object [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS2.x]: number
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS2.generator_state]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %VS2: any, %gen?inner(): functionCode
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS2: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:number) %x: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: number, [%VS2.x]: number
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS2.generator_state]: number
+// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS2: any, %gen?inner(): functionCode
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:function asyncFn(): any [allCallsitesKnownInStrictMode]
@@ -278,13 +276,12 @@ function test_async() {
 
 // CHECK:function ?anon_0_asyncFn(x: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS3.generator_state]: number
-// CHECK-NEXT:  %5 = CreateGeneratorInst (:object) %1: environment, %VS3: any, %?anon_0_asyncFn?inner(): functionCode
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS3: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS3.x]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS3.generator_state]: number
+// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS3: any, %?anon_0_asyncFn?inner(): functionCode
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:generator inner ?anon_0_asyncFn?inner(action: number, value: any): any

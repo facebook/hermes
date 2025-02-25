@@ -134,13 +134,12 @@ function postponed_store_in_use_block(x) {
 
 // CHECK:function load_x_is_captured(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, 4: number, [%VS1.x]: number
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"foo 4#"(): functionCode
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, %"foo 4#"(): functionCode, true: boolean, %1: environment, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %5 = LoadFrameInst (:number) %1: environment, [%VS1.x]: number
-// CHECK-NEXT:       ReturnInst %5: number
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, 4: number, [%VS1.x]: number
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS1: any, %"foo 4#"(): functionCode
+// CHECK-NEXT:  %3 = CallInst (:undefined) %2: object, %"foo 4#"(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %4 = LoadFrameInst (:number) %0: environment, [%VS1.x]: number
+// CHECK-NEXT:       ReturnInst %4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function load_x_captured_as_load(): number
@@ -186,12 +185,11 @@ function postponed_store_in_use_block(x) {
 
 // CHECK:function postponed_store_in_use_block(x: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.x]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS2: any, %""(): functionCode
-// CHECK-NEXT:  %5 = BinaryAddInst (:string|number) 0: number, %4: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS2: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS2.x]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS2: any, %""(): functionCode
+// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) 0: number, %3: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

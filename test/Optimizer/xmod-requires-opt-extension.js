@@ -70,19 +70,18 @@ $SHBuiltin.moduleFactory(10, function(global, require) {
 
 // CHECK:function ""(global: any, require: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %require: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.require]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %simple(): functionCode
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %testPhi(): functionCode
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %testStack(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.reqAlias]: any
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any, "simple": string, null: null, "testPhi": string, null: null, "testStack": string, null: null
-// CHECK-NEXT:       PrStoreInst %4: object, %8: object, 0: number, "simple": string, false: boolean
-// CHECK-NEXT:        PrStoreInst %5: object, %8: object, 1: number, "testPhi": string, false: boolean
-// CHECK-NEXT:        PrStoreInst %6: object, %8: object, 2: number, "testStack": string, false: boolean
-// CHECK-NEXT:        ReturnInst %8: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %require: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS1.require]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %simple(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS1: any, %testPhi(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS1: any, %testStack(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS1.reqAlias]: any
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any, "simple": string, null: null, "testPhi": string, null: null, "testStack": string, null: null
+// CHECK-NEXT:       PrStoreInst %3: object, %7: object, 0: number, "simple": string, false: boolean
+// CHECK-NEXT:       PrStoreInst %4: object, %7: object, 1: number, "testPhi": string, false: boolean
+// CHECK-NEXT:        PrStoreInst %5: object, %7: object, 2: number, "testStack": string, false: boolean
+// CHECK-NEXT:        ReturnInst %7: object
 // CHECK-NEXT:function_end
 
 // CHECK:function simple(): any

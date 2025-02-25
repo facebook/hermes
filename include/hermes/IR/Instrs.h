@@ -694,6 +694,9 @@ class CreateScopeInst : public BaseScopeInst {
   Value *getParentScope() const {
     return getOperand(ParentScopeIdx);
   }
+  void setParentScope(Value *parentScope) {
+    setOperand(parentScope, ParentScopeIdx);
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};

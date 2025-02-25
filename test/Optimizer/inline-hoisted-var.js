@@ -22,27 +22,24 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
-// CHECK:scope %VS1 [x: undefined|object]
+// CHECK:scope %VS0 [x: undefined|object]
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: undefined|object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
-// CHECK-NEXT:       StorePropertyLooseInst %3: object, %4: any, "foo": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %x(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.x]: undefined|object
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS0.x]: undefined|object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
+// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, %3: any, "foo": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %x(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: object, [%VS0.x]: undefined|object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS1.x]: undefined|object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS0.x]: undefined|object
 // CHECK-NEXT:  %2 = TypeOfIsInst (:boolean) %1: undefined|object, typeOfIs(Function)
 // CHECK-NEXT:       CondBranchInst %2: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:

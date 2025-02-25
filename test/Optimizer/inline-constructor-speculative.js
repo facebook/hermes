@@ -54,22 +54,21 @@ function foo(sink) {
 
 // CHECK:function foo(sink: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %sink: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.sink]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.MyCons]: undefined|object
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.MyClass]: undefined|object
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %newMyCons(): functionCode
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS1: any, %newMyClass(): functionCode
-// CHECK-NEXT:  %8 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: object
-// CHECK-NEXT:  %9 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: object
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %MyCons(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.MyCons]: undefined|object
-// CHECK-NEXT:  %12 = AllocStackInst (:object) $?anon_0_clsPrototype: any
-// CHECK-NEXT:  %13 = CreateClassInst (:object) %1: environment, %VS1: any, %MyClass(): functionCode, %10: object, %12: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS1.?MyClass]: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS1.MyClass]: undefined|object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %sink: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS1.sink]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.MyCons]: undefined|object
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.MyClass]: undefined|object
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS1: any, %newMyCons(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS1: any, %newMyClass(): functionCode
+// CHECK-NEXT:  %7 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object
+// CHECK-NEXT:  %8 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: object
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS1: any, %MyCons(): functionCode
+// CHECK-NEXT:        StoreFrameInst %0: environment, %9: object, [%VS1.MyCons]: undefined|object
+// CHECK-NEXT:  %11 = AllocStackInst (:object) $?anon_0_clsPrototype: any
+// CHECK-NEXT:  %12 = CreateClassInst (:object) %0: environment, %VS1: any, %MyClass(): functionCode, %9: object, %11: object
+// CHECK-NEXT:        StoreFrameInst %0: environment, %12: object, [%VS1.?MyClass]: object
+// CHECK-NEXT:        StoreFrameInst %0: environment, %12: object, [%VS1.MyClass]: undefined|object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

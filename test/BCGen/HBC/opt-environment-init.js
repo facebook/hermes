@@ -43,17 +43,16 @@ function foo(o) {
 
 // CHECK:function foo(o: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag]: undefined|boolean
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag1]: undefined|number
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag2]: undefined|number
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.cnt]: number
-// CHECK-NEXT:  %7 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.flag2]: undefined|number
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %VS1: any, %""(): functionCode
-// CHECK-NEXT:        ReturnInst %9: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %o: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.flag]: undefined|boolean
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.flag1]: undefined|number
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.flag2]: undefined|number
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS1.cnt]: number
+// CHECK-NEXT:  %6 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.flag2]: undefined|number
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS1: any, %""(): functionCode
+// CHECK-NEXT:       ReturnInst %8: object
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): number
@@ -103,7 +102,7 @@ function foo(o) {
 
 // CHKLIR:function foo(o: any): object
 // CHKLIR-NEXT:%BB0:
-// CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS1: any, %parentScope: environment
+// CHKLIR-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
 // CHKLIR-NEXT:  %1 = HBCLoadConstInst (:number) 0: number
 // CHKLIR-NEXT:       StoreFrameInst %0: environment, %1: number, [%VS1.cnt]: number
 // CHKLIR-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined

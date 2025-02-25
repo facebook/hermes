@@ -39,15 +39,14 @@ function main(p) {
 
 // CHECK:function main(p: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %p: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.p]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.k]: any
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.p]: any
-// CHECK-NEXT:       ReturnInst %4: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %p: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS1.p]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %bar(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS1.k]: any
+// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: any, [%VS1.p]: any
+// CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined

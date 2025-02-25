@@ -37,6 +37,7 @@ PASS(
     ScopeElimination,
     "scopeelimination",
     "Optimizations to eliminate unnecessary scopes")
+PASS(ScopeHoisting, "scopehoisting", "Move scopes up the scope chain")
 PASS(InstSimplify, "instsimplify", "Simplify instructions")
 PASS(SimpleStackPromotion, "simplestackpromotion", "Simple stack promotion")
 PASS(

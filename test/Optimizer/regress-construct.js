@@ -37,13 +37,12 @@ function main() {
 
 // CHECK:function main(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %y(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.y]: object
-// CHECK-NEXT:       StoreFrameInst %1: environment, null: null, [%VS1.x]: null|object
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %value(): functionCode
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS1: any, %y(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS1.y]: object
+// CHECK-NEXT:       StoreFrameInst %0: environment, null: null, [%VS1.x]: null|object
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS1: any, %value(): functionCode
+// CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
 // CHECK:function y(): undefined

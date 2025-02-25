@@ -1698,6 +1698,8 @@ class VariableScope
       public llvh::ilist_node<VariableScope, llvh::ilist_tag<Module>>,
       public llvh::ilist_node<VariableScope, llvh::ilist_tag<VariableScope>> {
   using VariableListType = llvh::SmallVector<Variable *, 8>;
+  using ChildListType =
+      llvh::simple_ilist<VariableScope, llvh::ilist_tag<VariableScope>>;
 
   /// The variables associated with this scope.
   VariableListType variables_;
@@ -1708,7 +1710,7 @@ class VariableScope
 
   /// The list of children of this VariableScope. This is necessary so we can
   /// update their parents if this scope is eliminated.
-  llvh::simple_ilist<VariableScope, llvh::ilist_tag<VariableScope>> children_;
+  ChildListType children_;
 
   /// The number of variables in this scope that are visible to the debugger.
   /// Defaulted to UINT32_MAX to indicate that it hasn't been assigned yet.
@@ -1724,6 +1726,11 @@ class VariableScope
   /// \returns a list of variables.
   llvh::ArrayRef<Variable *> getVariables() const {
     return variables_;
+  }
+
+  /// \returns a list of children.
+  ChildListType &getChildren() {
+    return children_;
   }
 
   /// \return the number of variables that are visible in this scope.
@@ -1743,6 +1750,9 @@ class VariableScope
   VariableScope *getParentScope() const {
     return parentScope_;
   }
+
+  /// Update the parent scope of this scope.
+  void setParentScope(VariableScope *parentScope);
 
   /// Remove this scope from the scope chain, by moving all of its children to
   /// instead be children of its parent.

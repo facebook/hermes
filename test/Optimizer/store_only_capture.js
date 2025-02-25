@@ -34,15 +34,14 @@ function store_dedup(foo){
 
 // CHECK:function store_dedup(foo: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %foo: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.foo]: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.x]: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %bar(): functionCode
-// CHECK-NEXT:  %6 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object
-// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
-// CHECK-NEXT:       ReturnInst %7: any
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %foo: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS1.foo]: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.x]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS1: any, %bar(): functionCode
+// CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %0: environment, [%VS1.x]: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
 // CHECK:function bar(): undefined

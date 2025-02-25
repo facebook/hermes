@@ -53,23 +53,22 @@ print(f());
 
 // CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.Foo]: undefined|object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %VS1: any, %f(): functionCode
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %O(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.O]: object
-// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.?O.prototype]: object
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %4: object, "prototype": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %VS1: any, %Foo(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.Foo]: undefined|object
-// CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.?Foo.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %11: object, %9: object, "prototype": string
-// CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %15 = CallInst [njsf] (:undefined) %3: object, %f(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
-// CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS1.Foo]: undefined|object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS1: any, %f(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %O(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %3: object, [%VS1.O]: object
+// CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: object, [%VS1.?O.prototype]: object
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, %3: object, "prototype": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS1: any, %Foo(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %8: object, [%VS1.Foo]: undefined|object
+// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:        StoreFrameInst %0: environment, %10: object, [%VS1.?Foo.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %10: object, %8: object, "prototype": string
+// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %14 = CallInst [njsf] (:undefined) %2: object, %f(): functionCode, true: boolean, %0: environment, undefined: undefined, 0: number
+// CHECK-NEXT:  %15 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

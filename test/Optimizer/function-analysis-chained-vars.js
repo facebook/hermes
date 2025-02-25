@@ -42,13 +42,12 @@ function main() {
 
 // CHECK:function main(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS1.i]: number
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %x(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.x]: object
-// CHECK-NEXT:  %6 = CallInst (:object) %2: object, %foo(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS1: any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS1: any, %foo(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS1.i]: number
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS1: any, %x(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %3: object, [%VS1.x]: object
+// CHECK-NEXT:  %5 = CallInst (:object) %1: object, %foo(): functionCode, true: boolean, %0: environment, undefined: undefined, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
