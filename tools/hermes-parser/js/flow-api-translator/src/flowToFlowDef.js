@@ -1170,7 +1170,10 @@ function convertClassMember(
         );
       }
 
-      if (member.value?.type === 'ArrowFunctionExpression') {
+      if (
+        member.value?.type === 'ArrowFunctionExpression' &&
+        member.typeAnnotation == null
+      ) {
         const [resultTypeAnnotation, deps] = convertAFunction(
           member.value,
           context,
