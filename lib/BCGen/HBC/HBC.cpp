@@ -195,12 +195,6 @@ static void compileLazyFunctionWorker(void *argPtr) {
     return;
   }
 
-  // promotedDecls is used immediately and relies on IdentifierNode,
-  // which is deallocated between invocations of lazy compilation.
-  // Therefore, it is necessary to clear promotedDecls when freeing the
-  // AST in order to avoid dangling pointers.
-  semCtx->clearPromotedDecls();
-
   Module *M = provider->getModule();
   assert(M && "missing IR data to compile");
   if (!hbc::generateBytecodeFunctionLazy(
