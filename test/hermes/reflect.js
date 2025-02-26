@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O0 -target=HBC -lazy %s | %FileCheck --match-full-lines %s
 
 function betterToString(value) {
   if (Array.isArray(value)) {

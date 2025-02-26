@@ -17,9 +17,11 @@ class PeepholeLowering {
   Function *const F_;
   IRBuilder builder_{F_};
   IRBuilder::InstructionDestroyer destroyer_{};
+  bool optimize_;
 
  public:
-  explicit PeepholeLowering(Function *F) : F_(F) {}
+  explicit PeepholeLowering(Function *F, bool optimize)
+      : F_(F), optimize_(optimize) {}
 
   bool run() {
     bool changed = false;
@@ -45,6 +47,11 @@ class PeepholeLowering {
   Value *peep(Instruction *I) {
     switch (I->getKind()) {
       case ValueKind::CoerceThisNSInstKind: {
+        // This transformation is purely an optimization to collapse a sequence
+        // of LoadParam + CoerceThisNS into a LoadThisNS, so skip it if
+        // optimizations are disabled.
+        if (!optimize_)
+          return nullptr;
         return lowerCoerceThisNSInst(
             llvh::cast<CoerceThisNSInst>(I), builder_, destroyer_);
       }
@@ -70,15 +77,18 @@ class PeepholeLowering {
 
 } // namespace
 
-Pass *createPeepholeLowering() {
+Pass *createPeepholeLowering(bool optimize) {
   class ThisPass : public FunctionPass {
+    bool optimize_;
+
    public:
-    explicit ThisPass() : FunctionPass("PeepholeLowering") {}
+    explicit ThisPass(bool optimize)
+        : FunctionPass("PeepholeLowering"), optimize_(optimize) {}
     bool runOnFunction(Function *F) override {
-      return PeepholeLowering(F).run();
+      return PeepholeLowering(F, optimize_).run();
     }
   };
-  return new ThisPass();
+  return new ThisPass(optimize);
 }
 
 } // namespace hermes::sh

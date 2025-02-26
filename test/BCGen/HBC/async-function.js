@@ -95,7 +95,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:Offset in debug table: source 0x0016, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    Mov               r5, r4
-// CHECK-NEXT:    LoadThisNS        r4
+// CHECK-NEXT:    LoadParam         r4, 0
+// CHECK-NEXT:    CoerceThisNS      r4, r4
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    CreateEnvironment r3, r3, 0
 // CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleReturn>
@@ -109,7 +110,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    Mov               r5, r4
-// CHECK-NEXT:    LoadThisNS        r4
+// CHECK-NEXT:    LoadParam         r4, 0
+// CHECK-NEXT:    CoerceThisNS      r4, r4
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    CreateEnvironment r3, r3, 0
 // CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleAwait>
@@ -123,7 +125,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    Mov               r5, r4
-// CHECK-NEXT:    LoadThisNS        r4
+// CHECK-NEXT:    LoadParam         r4, 0
+// CHECK-NEXT:    CoerceThisNS      r4, r4
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    CreateEnvironment r3, r3, 0
 // CHECK-NEXT:    CreateClosure     r3, r3, NCFunction<?anon_0_simpleAsyncFE>
@@ -481,11 +484,11 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    bc 41: line 10 col 1
 // CHECK-NEXT:    bc 59: line 19 col 19
 // CHECK-NEXT:  0x0016  function idx 1, starts at line 10 col 1
-// CHECK-NEXT:    bc 29: line 10 col 1
+// CHECK-NEXT:    bc 33: line 10 col 1
 // CHECK-NEXT:  0x001d  function idx 2, starts at line 14 col 1
-// CHECK-NEXT:    bc 29: line 14 col 1
+// CHECK-NEXT:    bc 33: line 14 col 1
 // CHECK-NEXT:  0x0024  function idx 3, starts at line 19 col 21
-// CHECK-NEXT:    bc 29: line 19 col 21
+// CHECK-NEXT:    bc 33: line 19 col 21
 // CHECK-NEXT:  0x002b  function idx 8, starts at line 14 col 1
 // CHECK-NEXT:    bc 169: line 15 col 11
 // CHECK-NEXT:    bc 337: line 15 col 11

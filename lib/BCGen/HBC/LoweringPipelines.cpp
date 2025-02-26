@@ -52,7 +52,7 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.
-  PM.addPass(new PeepholeLowering());
+  PM.addPass(createPeepholeLowering(options.optimizationEnabled));
   // LowerBuilinCalls needs to run before the rest of the lowering.
   PM.addPass(createLowerBuiltinCalls());
   // Turn Calls into CallNs.

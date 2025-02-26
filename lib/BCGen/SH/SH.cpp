@@ -2461,7 +2461,7 @@ bool lowerModuleIR(Module *M, bool optimize) {
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.
-  PM.addPass(sh::createPeepholeLowering());
+  PM.addPass(sh::createPeepholeLowering(optimize));
   // LowerBuiltinCalls needs to run before the rest of the lowering.
   PM.addPass(createLowerBuiltinCalls());
   PM.addPass(new LowerNumericProperties());
