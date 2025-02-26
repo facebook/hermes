@@ -412,6 +412,26 @@ describe('flowToFlowDef', () => {
            static foo: () => void;
          }`,
       );
+      await expectTranslate(
+        `export class A {
+           foo: (val: string) => number = (val: string) => { return 1 };
+           static foo: (val: string) => number = (val: string) => { return 1 };
+         }`,
+        `declare export class A {
+           foo: (val: string) => number;
+           static foo: (val: string) => number;
+         }`,
+      );
+      await expectTranslate(
+        `export class A {
+           foo = (val: string): number => { return 1 };
+           static foo = (val: string): number => { return 1 };
+         }`,
+        `declare export class A {
+           foo: (val: string) => number;
+           static foo: (val: string) => number;
+         }`,
+      );
     });
     it('method', async () => {
       await expectTranslate(
