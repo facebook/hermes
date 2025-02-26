@@ -106,7 +106,9 @@ void lowerAllocatedFunctionIR(
   PassManager PM("HBC LowerAllocatedFunctionIR");
   if (options.optimizationEnabled) {
     PM.addPass(new MovElimination(RA));
-    PM.addPass(new ReorderRegisters(RA));
+    if (options.reorderRegisters) {
+      PM.addPass(new ReorderRegisters(RA));
+    }
   }
   PM.addPass(new LowerStoreInstrs(RA));
   PM.addPass(new InitCallFrame(RA));

@@ -22,23 +22,20 @@ function test_builtin(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {loc0}    %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_new": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_builtin": string
-// CHECK-NEXT:  {loc1}    %4 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {loc2}    %5 = CreateFunctionInst (:object) {loc0} %0: environment, %VS0: any, %test_call(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {loc2} %5: object, {loc1} %4: object, "test_call": string
-// CHECK-NEXT:  {loc2}    %7 = CreateFunctionInst (:object) {loc0} %0: environment, %VS0: any, %test_new(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {loc2} %7: object, {loc1} %4: object, "test_new": string
-// CHECK-NEXT:  {loc0}    %9 = CreateFunctionInst (:object) {loc0} %0: environment, %VS0: any, %test_builtin(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {loc0} %9: object, {loc1} %4: object, "test_builtin": string
-// CHECK-NEXT:  {np0}    %11 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 ReturnInst {np0} %11: undefined
+// CHECK-NEXT:  {loc1}    %3 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {loc0}    %4 = CreateFunctionInst (:object) empty: any, empty: any, %test_call(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {loc0} %4: object, {loc1} %3: object, "test_call": string
+// CHECK-NEXT:  {loc0}    %6 = CreateFunctionInst (:object) empty: any, empty: any, %test_new(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {loc0} %6: object, {loc1} %3: object, "test_new": string
+// CHECK-NEXT:  {loc0}    %8 = CreateFunctionInst (:object) empty: any, empty: any, %test_builtin(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {loc0} %8: object, {loc1} %3: object, "test_builtin": string
+// CHECK-NEXT:  {np0}    %10 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:                 ReturnInst {np0} %10: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function test_call(bar: any): any

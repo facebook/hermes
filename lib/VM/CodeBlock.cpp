@@ -125,7 +125,7 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
 #ifdef HERMES_SLOW_DEBUG
   if (bytecode)
     validateInstructions(
-        {bytecode, header.bytecodeSizeInBytes()}, header.frameSize());
+        {bytecode, header.getBytecodeSizeInBytes()}, header.getFrameSize());
 #endif
 
   // Compute size needed for caching from the highest accessed indices.
@@ -136,8 +136,8 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
     return highest == 0 ? 0 : highest + 1;
   };
 
-  uint32_t readCacheSize = sizeComputer(header.highestReadCacheIndex());
-  uint32_t writeCacheSize = sizeComputer(header.highestWriteCacheIndex());
+  uint32_t readCacheSize = sizeComputer(header.getHighestReadCacheIndex());
+  uint32_t writeCacheSize = sizeComputer(header.getHighestWriteCacheIndex());
 
   bool isCodeBlockLazy = !bytecode;
   if (isCodeBlockLazy) {
@@ -165,11 +165,12 @@ int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
 
 SymbolID CodeBlock::getNameMayAllocate() const {
   return runtimeModule_->getSymbolIDFromStringIDMayAllocate(
-      functionHeader_.functionName());
+      functionHeader_.getFunctionName());
 }
 
 std::string CodeBlock::getNameString() const {
-  return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
+  return runtimeModule_->getStringFromStringID(
+      functionHeader_.getFunctionName());
 }
 
 OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {

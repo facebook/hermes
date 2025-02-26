@@ -13,13 +13,10 @@ return function foo(x: string, y: string): string[] {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:       ReturnInst %1: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(x: string, y: string): object [typed]

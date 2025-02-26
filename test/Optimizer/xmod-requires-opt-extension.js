@@ -57,38 +57,34 @@ $SHBuiltin.moduleFactory(10, function(global, require) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
-// CHECK-NEXT:       ReturnInst %1: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [require: any, reqAlias: any]
+// CHECK:scope %VS0 [require: any, reqAlias: any]
 
 // CHECK:function ""(global: any, require: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = LoadParamInst (:any) %require: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.require]: any
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %simple(): functionCode
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %testPhi(): functionCode
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %testStack(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.reqAlias]: any
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any, "simple": string, null: null, "testPhi": string, null: null, "testStack": string, null: null
-// CHECK-NEXT:       PrStoreInst %4: object, %8: object, 0: number, "simple": string, false: boolean
-// CHECK-NEXT:        PrStoreInst %5: object, %8: object, 1: number, "testPhi": string, false: boolean
-// CHECK-NEXT:        PrStoreInst %6: object, %8: object, 2: number, "testStack": string, false: boolean
-// CHECK-NEXT:        ReturnInst %8: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %require: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS0.require]: any
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %testPhi(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %testStack(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: any, [%VS0.reqAlias]: any
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any, "simple": string, null: null, "testPhi": string, null: null, "testStack": string, null: null
+// CHECK-NEXT:       PrStoreInst %3: object, %7: object, 0: number, "simple": string, false: boolean
+// CHECK-NEXT:       PrStoreInst %4: object, %7: object, 1: number, "testPhi": string, false: boolean
+// CHECK-NEXT:        PrStoreInst %5: object, %7: object, 2: number, "testStack": string, false: boolean
+// CHECK-NEXT:        ReturnInst %7: object
 // CHECK-NEXT:function_end
 
 // CHECK:function simple(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:any) %0: environment, [%VS1.require]: any
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:any) %0: environment, [%VS0.require]: any
 // CHECK-NEXT:  %2 = CallInst [metro-require] (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 17: number
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "x": string
 // CHECK-NEXT:       ReturnInst %3: any
@@ -96,14 +92,14 @@ $SHBuiltin.moduleFactory(10, function(global, require) {
 
 // CHECK:function testPhi(p: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %p: any
 // CHECK-NEXT:       CondBranchInst %1: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %0: environment, [%VS1.require]: any
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %0: environment, [%VS0.require]: any
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %0: environment, [%VS1.require]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %0: environment, [%VS0.require]: any
 // CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
 // CHECK-NEXT:  %7 = PhiInst (:any) %3: any, %BB1, %5: any, %BB2
@@ -114,10 +110,10 @@ $SHBuiltin.moduleFactory(10, function(global, require) {
 
 // CHECK:function testStack(p: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $req: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %p: any
-// CHECK-NEXT:  %3 = LoadFrameInst (:any) %0: environment, [%VS1.reqAlias]: any
+// CHECK-NEXT:  %3 = LoadFrameInst (:any) %0: environment, [%VS0.reqAlias]: any
 // CHECK-NEXT:       StoreStackInst %3: any, %1: any
 // CHECK-NEXT:       TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
@@ -129,7 +125,7 @@ $SHBuiltin.moduleFactory(10, function(global, require) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        CondBranchInst %2: any, %BB3, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = LoadFrameInst (:any) %0: environment, [%VS1.require]: any
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %0: environment, [%VS0.require]: any
 // CHECK-NEXT:        StoreStackInst %12: any, %1: any
 // CHECK-NEXT:        ThrowInst 3: number, %BB1
 // CHECK-NEXT:%BB4:

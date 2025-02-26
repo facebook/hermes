@@ -20,24 +20,20 @@ function main() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): string
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %main(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %main(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "main": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function main(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f(): functionCode
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
-// CHECK-NEXT:  %3 = CallInst (:undefined) %1: object, %f(): functionCode, true: boolean, empty: any, %1: object, %2: object
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %f(): functionCode
+// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, empty: any
+// CHECK-NEXT:  %2 = CallInst (:undefined) %0: object, %f(): functionCode, true: boolean, empty: any, %0: object, %1: object
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined

@@ -45,16 +45,15 @@ test_one(1,2,3)
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] GetGlobalObject 4<Reg8>
-// CHECK-NEXT:[@ 7] CreateFunctionEnvironment 5<Reg8>, 0<UInt8>
-// CHECK-NEXT:[@ 10] CreateClosure 5<Reg8>, 5<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 15] PutByIdLoose 4<Reg8>, 5<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 21] GetByIdShort 4<Reg8>, 4<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 26] LoadConstUInt8 0<Reg8>, 3<UInt8>
-// CHECK-NEXT:[@ 29] LoadConstUInt8 1<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 32] LoadConstUInt8 2<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 35] LoadConstUndefined 3<Reg8>
-// CHECK-NEXT:[@ 37] Call4 4<Reg8>, 4<Reg8>, 3<Reg8>, 2<Reg8>, 1<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 44] Ret 4<Reg8>
+// CHECK-NEXT:[@ 7] LoadConstUndefined 3<Reg8>
+// CHECK-NEXT:[@ 9] CreateClosure 5<Reg8>, 3<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 14] PutByIdLoose 4<Reg8>, 5<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 20] GetByIdShort 4<Reg8>, 4<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 25] LoadConstUInt8 0<Reg8>, 3<UInt8>
+// CHECK-NEXT:[@ 28] LoadConstUInt8 1<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 31] LoadConstUInt8 2<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 34] Call4 4<Reg8>, 4<Reg8>, 3<Reg8>, 2<Reg8>, 1<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 41] Ret 4<Reg8>
 
 // CHECK:Function<test_one>(3 params, 8 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
@@ -79,9 +78,9 @@ test_one(1,2,3)
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 14 col 1
 // CHECK-NEXT:    bc 0: line 14 col 1
-// CHECK-NEXT:    bc 15: line 14 col 1
-// CHECK-NEXT:    bc 21: line 20 col 1
-// CHECK-NEXT:    bc 37: line 20 col 9
+// CHECK-NEXT:    bc 14: line 14 col 1
+// CHECK-NEXT:    bc 20: line 20 col 1
+// CHECK-NEXT:    bc 34: line 20 col 9
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 14 col 1
 // CHECK-NEXT:    bc 6: line 15 col 3
 // CHECK-NEXT:    bc 14: line 15 col 3

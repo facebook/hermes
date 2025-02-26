@@ -69,6 +69,9 @@ struct BytecodeGenerationOptions {
   /// Strip all function names to reduce string table size.
   bool stripFunctionNames = false;
 
+  /// Whether to run the HBC ReorderRegisters pass.
+  bool reorderRegisters = true;
+
   /// Add this much garbage after each function body (relative to its size).
   unsigned padFunctionBodiesPercent = 0;
 

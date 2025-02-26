@@ -29,21 +29,18 @@ var x1 = $SHBuiltin.import(100, "x", x0);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "x0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "x1": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
-// CHECK-NEXT:  %7 = CallInst (:number) %6: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
+// CHECK-NEXT:  %6 = CallInst (:number) %5: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       StorePropertyLooseInst 7: number, globalObject: object, "x0": string
-// CHECK-NEXT:  %9 = LoadPropertyInst (:any) globalObject: object, "x0": string
-// CHECK-NEXT:        StorePropertyLooseInst %9: any, globalObject: object, "x1": string
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "x0": string
+// CHECK-NEXT:       StorePropertyLooseInst %8: any, globalObject: object, "x1": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

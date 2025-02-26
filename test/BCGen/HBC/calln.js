@@ -24,29 +24,26 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // Auto-generated content below. Please do not modify manually.
 
-// LRA:scope %VS0 []
-
 // LRA:function global(): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // LRA-NEXT:                 DeclareGlobalVarInst "foo1": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo2": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo3": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo4": string
 // LRA-NEXT:                 DeclareGlobalVarInst "foo5": string
-// LRA-NEXT:  {r2}      %6 = HBCGetGlobalObjectInst (:object)
-// LRA-NEXT:  {r1}      %7 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo1(): functionCode
-// LRA-NEXT:                 StorePropertyLooseInst {r1} %7: object, {r2} %6: object, "foo1": string
-// LRA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo2(): functionCode
-// LRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r2} %6: object, "foo2": string
-// LRA-NEXT:  {r1}     %11 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo3(): functionCode
-// LRA-NEXT:                 StorePropertyLooseInst {r1} %11: object, {r2} %6: object, "foo3": string
-// LRA-NEXT:  {r1}     %13 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo4(): functionCode
-// LRA-NEXT:                 StorePropertyLooseInst {r1} %13: object, {r2} %6: object, "foo4": string
-// LRA-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo5(): functionCode
-// LRA-NEXT:                 StorePropertyLooseInst {r0} %15: object, {r2} %6: object, "foo5": string
-// LRA-NEXT:  {np0}    %17 = HBCLoadConstInst (:undefined) undefined: undefined
-// LRA-NEXT:                 ReturnInst {np0} %17: undefined
+// LRA-NEXT:  {r1}      %5 = HBCGetGlobalObjectInst (:object)
+// LRA-NEXT:  {np0}     %6 = HBCLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %7 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo1(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %7: object, {r1} %5: object, "foo1": string
+// LRA-NEXT:  {r0}      %9 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo2(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %9: object, {r1} %5: object, "foo2": string
+// LRA-NEXT:  {r0}     %11 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo3(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %11: object, {r1} %5: object, "foo3": string
+// LRA-NEXT:  {r0}     %13 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo4(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %13: object, {r1} %5: object, "foo4": string
+// LRA-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo5(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %15: object, {r1} %5: object, "foo5": string
+// LRA-NEXT:                 ReturnInst {np0} %6: undefined
 // LRA-NEXT:function_end
 
 // LRA:function foo1(f: any): undefined
@@ -134,26 +131,25 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:i4[ASCII, 18..21] #D0BDA900: foo4
 // BCGEN-NEXT:i5[ASCII, 22..25] #D0BDAD11: foo5
 
-// BCGEN:Function<global>(1 params, 4 registers, 0 numbers, 1 non-pointers):
+// BCGEN:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// BCGEN-NEXT:    CreateFunctionEnvironment r1, 0
 // BCGEN-NEXT:    DeclareGlobalVar  "foo1"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo2"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo3"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo4"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo5"
-// BCGEN-NEXT:    GetGlobalObject   r3
-// BCGEN-NEXT:    CreateClosure     r2, r1, Function<foo1>
-// BCGEN-NEXT:    PutByIdLoose      r3, r2, 1, "foo1"
-// BCGEN-NEXT:    CreateClosure     r2, r1, Function<foo2>
-// BCGEN-NEXT:    PutByIdLoose      r3, r2, 2, "foo2"
-// BCGEN-NEXT:    CreateClosure     r2, r1, Function<foo3>
-// BCGEN-NEXT:    PutByIdLoose      r3, r2, 3, "foo3"
-// BCGEN-NEXT:    CreateClosure     r2, r1, Function<foo4>
-// BCGEN-NEXT:    PutByIdLoose      r3, r2, 4, "foo4"
-// BCGEN-NEXT:    CreateClosure     r1, r1, Function<foo5>
-// BCGEN-NEXT:    PutByIdLoose      r3, r1, 5, "foo5"
+// BCGEN-NEXT:    GetGlobalObject   r2
 // BCGEN-NEXT:    LoadConstUndefined r0
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo1>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "foo1"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo2>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "foo2"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo3>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "foo3"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo4>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "foo4"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo5>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 5, "foo5"
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo1>(2 params, 10 registers, 0 numbers, 1 non-pointers):
@@ -210,16 +206,16 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 13 col 1
-// BCGEN-NEXT:    bc 3: line 13 col 1
-// BCGEN-NEXT:    bc 8: line 13 col 1
-// BCGEN-NEXT:    bc 13: line 13 col 1
-// BCGEN-NEXT:    bc 18: line 13 col 1
-// BCGEN-NEXT:    bc 23: line 13 col 1
-// BCGEN-NEXT:    bc 35: line 13 col 1
-// BCGEN-NEXT:    bc 46: line 13 col 1
-// BCGEN-NEXT:    bc 57: line 13 col 1
-// BCGEN-NEXT:    bc 68: line 13 col 1
-// BCGEN-NEXT:    bc 79: line 13 col 1
+// BCGEN-NEXT:    bc 0: line 13 col 1
+// BCGEN-NEXT:    bc 5: line 13 col 1
+// BCGEN-NEXT:    bc 10: line 13 col 1
+// BCGEN-NEXT:    bc 15: line 13 col 1
+// BCGEN-NEXT:    bc 20: line 13 col 1
+// BCGEN-NEXT:    bc 34: line 13 col 1
+// BCGEN-NEXT:    bc 45: line 13 col 1
+// BCGEN-NEXT:    bc 56: line 13 col 1
+// BCGEN-NEXT:    bc 67: line 13 col 1
+// BCGEN-NEXT:    bc 78: line 13 col 1
 // BCGEN-NEXT:  0x0022  function idx 1, starts at line 13 col 1
 // BCGEN-NEXT:    bc 5: line 13 col 21
 // BCGEN-NEXT:  0x0029  function idx 2, starts at line 15 col 1

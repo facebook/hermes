@@ -244,8 +244,8 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
   // Any code emitted at the start gets treated as the first instruction.
   em_.emittingIP = (const inst::Inst *)codeBlock_->begin();
   em_.enter(
-      codeBlock_->getFunctionHeader().numberRegCount(),
-      codeBlock_->getFunctionHeader().nonPtrRegCount());
+      codeBlock_->getFunctionHeader().getNumberRegCount(),
+      codeBlock_->getFunctionHeader().getNonPtrRegCount());
 
   for (uint32_t bbIndex = 0, e = basicBlocks_.size() - 1; bbIndex < e;
        ++bbIndex) {

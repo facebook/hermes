@@ -29,26 +29,23 @@ new Foo();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
-// CHECK:scope %VS1 [?O.prototype: object]
+// CHECK:scope %VS0 [?O.prototype: object]
 
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.?O.prototype]: object
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %O(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %2: object, %4: object, "prototype": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %Foo(): functionCode
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %7: object, %6: object, "prototype": string
-// CHECK-NEXT:  %9 = HBCAllocObjectFromBufferInst (:object) "o0": string, 0: number, "o1": string, 0: number, "o2": string, 0: number
-// CHECK-NEXT:        TypedStoreParentInst %7: object, %9: object
-// CHECK-NEXT:  %11 = CallInst (:undefined) %6: object, %Foo(): functionCode, true: boolean, empty: any, %6: object, %9: object
-// CHECK-NEXT:  %12 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:        ReturnInst %12: undefined
+// CHECK-NEXT:  %1 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.?O.prototype]: object
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, %3: object, "prototype": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
+// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) "o0": string, 0: number, "o1": string, 0: number, "o2": string, 0: number
+// CHECK-NEXT:       TypedStoreParentInst %6: object, %8: object
+// CHECK-NEXT:  %10 = CallInst (:undefined) %5: object, %Foo(): functionCode, true: boolean, empty: any, %5: object, %8: object
+// CHECK-NEXT:  %11 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:        ReturnInst %11: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor O(): undefined [typed]
@@ -63,8 +60,8 @@ new Foo();
 // CHECK:base constructor Foo(): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = LoadFrameInst (:object) %1: environment, [%VS1.?O.prototype]: object
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = LoadFrameInst (:object) %1: environment, [%VS0.?O.prototype]: object
 // CHECK-NEXT:  %3 = HBCAllocObjectFromBufferInst (:object) "i": string, 0: number
 // CHECK-NEXT:       TypedStoreParentInst %2: object, %3: object
 // CHECK-NEXT:  %5 = HBCLoadConstInst (:number) 7: number

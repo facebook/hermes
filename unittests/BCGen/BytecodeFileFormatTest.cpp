@@ -60,7 +60,7 @@ std::string toHexString(T t) {
 
 TEST(BytecodeFileFormatTest, BytecodeOptionsLayout) {
   BytecodeOptions o;
-  o.staticBuiltins = 1;
+  o.setStaticBuiltins(true);
   EXPECT_EQ(o._flags, 1);
 }
 
@@ -72,33 +72,33 @@ TEST(BytecodeFileFormatTest, SmallStringTableEntryLayout) {
 
   SmallStringTableEntry e(StringTableEntry(0, 0, 0), 0);
 
-  e.isUTF16 = 0x1;
+  e.setIsUTF16(0x1);
   EXPECT_EQ(toHexString(e), "01 00 00 00");
-  e.offset = 0xFF;
+  e.setOffset(0xFF);
   EXPECT_EQ(toHexString(e), "ff 01 00 00");
-  e.offset = 0x7FFFFF;
+  e.setOffset(0x7FFFFF);
   EXPECT_EQ(toHexString(e), "ff ff ff 00");
-  e.length = 0xF;
+  e.setLength(0xF);
   EXPECT_EQ(toHexString(e), "ff ff ff 0f");
-  e.length = 0xFF;
+  e.setLength(0xFF);
   EXPECT_EQ(toHexString(e), "ff ff ff ff");
 }
 
 TEST(BytecodeFileFormatTest, FunctionHeaderFlagLayout) {
   FunctionHeaderFlag f;
 
-  f.prohibitInvoke = 1;
-  EXPECT_EQ(f.flags, 0x01);
-  f.prohibitInvoke = 3;
-  EXPECT_EQ(f.flags, 0x03);
-  f.strictMode = 1;
-  EXPECT_EQ(f.flags, 0x07);
-  f.hasExceptionHandler = 1;
-  EXPECT_EQ(f.flags, 0x0f);
-  f.hasDebugInfo = 1;
-  EXPECT_EQ(f.flags, 0x1f);
-  f.overflowed = 1;
-  EXPECT_EQ(f.flags, 0x3f);
+  f.setProhibitInvoke(1);
+  EXPECT_EQ(f._flags, 0x01);
+  f.setProhibitInvoke(3);
+  EXPECT_EQ(f._flags, 0x03);
+  f.setStrictMode(1);
+  EXPECT_EQ(f._flags, 0x07);
+  f.setHasExceptionHandler(1);
+  EXPECT_EQ(f._flags, 0x0f);
+  f.setHasDebugInfo(1);
+  EXPECT_EQ(f._flags, 0x1f);
+  f.setOverflowed(1);
+  EXPECT_EQ(f._flags, 0x3f);
 }
 
 TEST(BytecodeFileFormatTest, BracketInsnLayout) {

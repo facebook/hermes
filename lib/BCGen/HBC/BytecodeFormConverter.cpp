@@ -49,12 +49,6 @@ class BytecodeFormConverter {
       }
       return result;
     }
-
-    /// Adjust the given value \p value, in place.
-    template <typename T>
-    void operator()(T &value) {
-      value = apply(value);
-    }
   };
 
   /// The bytes containing the bytecode file contents.
@@ -81,8 +75,8 @@ class BytecodeFormConverter {
     for (uint32_t func = 0; func < bcProvider_->getFunctionCount(); ++func) {
       RuntimeFunctionHeader header = bcProvider_->getFunctionHeader(func);
       // Find the bytecode start and end for each function.
-      uint8_t *bytecodeStart = &bytes_[header.offset()];
-      uint8_t *bytecodeEnd = bytecodeStart + header.bytecodeSizeInBytes();
+      uint8_t *bytecodeStart = &bytes_[header.getOffset()];
+      uint8_t *bytecodeEnd = bytecodeStart + header.getBytecodeSizeInBytes();
       uint8_t *cursor = bytecodeStart;
       while (cursor < bytecodeEnd) {
         auto *ip = reinterpret_cast<inst::Inst *>(cursor);
@@ -118,10 +112,10 @@ class BytecodeFormConverter {
     // BytecodeFileFields.
     Adjuster overflowOffsetAdj;
     for (SmallFuncHeader &sfh : fields_.functionHeaders) {
-      if (sfh.flags.overflowed) {
+      if (sfh.flags.getOverflowed()) {
         FunctionHeader *fh = reinterpret_cast<FunctionHeader *>(
             &bytes_[sfh.getLargeHeaderOffset()]);
-        overflowOffsetAdj(fh->offset);
+        fh->setOffset(overflowOffsetAdj.apply(fh->getOffset()));
       }
     }
   }
@@ -130,7 +124,7 @@ class BytecodeFormConverter {
   void processFunctionHeaders() {
     Adjuster offsetAdj;
     for (SmallFuncHeader &sfh : fields_.functionHeaders) {
-      sfh.offset = offsetAdj.apply(sfh.offset);
+      sfh.setOffset(offsetAdj.apply(sfh.getOffset()));
     }
   }
 
@@ -138,7 +132,7 @@ class BytecodeFormConverter {
   void processStringTable() {
     Adjuster offsetAdj;
     for (SmallStringTableEntry &entry : fields_.stringTableEntries) {
-      entry.offset = offsetAdj.apply(entry.offset);
+      entry.setOffset(offsetAdj.apply(entry.getOffset()));
     }
   }
 

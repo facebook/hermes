@@ -40,20 +40,17 @@ function outer(a) {
 // CHECK-NEXT:       ThrowInst "Hello!": string, %BB1
 // CHECK-NEXT:function_end
 
-// CHK2:scope %VS0 []
-
 // CHK2:function outer(a: any): undefined
 // CHK2-NEXT:%BB0:
-// CHK2-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHK2-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %thrower(): functionCode
+// CHK2-NEXT:  %0 = CreateFunctionInst (:object) empty: any, %thrower(): functionCode
 // CHK2-NEXT:       TryStartInst %BB1, %BB2
 // CHK2-NEXT:%BB1:
-// CHK2-NEXT:  %3 = CatchInst (:any)
-// CHK2-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHK2-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: any
+// CHK2-NEXT:  %2 = CatchInst (:any)
+// CHK2-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHK2-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any
 // CHK2-NEXT:       ReturnInst undefined: undefined
 // CHK2-NEXT:%BB2:
-// CHK2-NEXT:  %7 = CallInst (:any) %1: object, %thrower(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
+// CHK2-NEXT:  %6 = CallInst (:any) %0: object, %thrower(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number
 // CHK2-NEXT:       UnreachableInst
 // CHK2-NEXT:function_end
 

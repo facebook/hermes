@@ -19,20 +19,17 @@ function negzero(f) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "poszero": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "negzero": string
-// CHECK-NEXT:  {r2}      %3 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %poszero(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r1} %4: object, {r2} %3: object, "poszero": string
-// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %negzero(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r0} %6: object, {r2} %3: object, "negzero": string
-// CHECK-NEXT:  {np0}     %8 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 ReturnInst {np0} %8: undefined
+// CHECK-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %poszero(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "poszero": string
+// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %negzero(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %6: object, {r1} %2: object, "negzero": string
+// CHECK-NEXT:                 ReturnInst {np0} %3: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function poszero(f: any): any

@@ -127,10 +127,10 @@ class CodeBlock final : private llvh::TrailingObjects<
   }
 
   uint32_t getParamCount() const {
-    return functionHeader_.paramCount();
+    return functionHeader_.getParamCount();
   }
   uint32_t getFrameSize() const {
-    return functionHeader_.frameSize();
+    return functionHeader_.getFrameSize();
   }
   uint32_t getFunctionID() const {
     return functionID_;
@@ -155,11 +155,11 @@ class CodeBlock final : private llvh::TrailingObjects<
   }
 
   hbc::FunctionHeaderFlag getHeaderFlags() const {
-    return functionHeader_.flags();
+    return functionHeader_.getFlags();
   }
 
   bool isStrictMode() const {
-    return functionHeader_.flags().strictMode;
+    return functionHeader_.getFlags().getStrictMode();
   }
 
   SymbolID getNameMayAllocate() const;
@@ -172,10 +172,10 @@ class CodeBlock final : private llvh::TrailingObjects<
     return bytecode_;
   }
   const_iterator end() const {
-    return bytecode_ + functionHeader_.bytecodeSizeInBytes();
+    return bytecode_ + functionHeader_.getBytecodeSizeInBytes();
   }
   llvh::ArrayRef<uint8_t> getOpcodeArray() const {
-    return {bytecode_, functionHeader_.bytecodeSizeInBytes()};
+    return {bytecode_, functionHeader_.getBytecodeSizeInBytes()};
   }
 
   /// \return true when \p inst is in this code block, false otherwise.

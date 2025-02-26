@@ -623,6 +623,9 @@ class BaseScopeInst : public Instruction {
   VariableScope *getVariableScope() const {
     return llvh::cast<VariableScope>(getOperand(VariableScopeIdx));
   }
+  void setVariableScope(VariableScope *scope) {
+    setOperand(scope, VariableScopeIdx);
+  }
 
   static llvh::Optional<Type> getInherentTypeImpl() {
     return Type::createEnvironment();
@@ -694,6 +697,9 @@ class CreateScopeInst : public BaseScopeInst {
   Value *getParentScope() const {
     return getOperand(ParentScopeIdx);
   }
+  void setParentScope(Value *parentScope) {
+    setOperand(parentScope, ParentScopeIdx);
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -734,6 +740,13 @@ class ResolveScopeInst : public BaseScopeInst {
   void setStartScope(VariableScope *startVarScope, Instruction *scope) {
     setOperand(startVarScope, StartVarScopeIdx);
     setOperand(scope, StartScopeIdx);
+  }
+
+  /// Set only the start variable scope. \c setStartScope should be preferred,
+  /// except in the rare case that the VariableScope describing the result of
+  /// the incoming scope instruction is known to have changed.
+  void setStartVarScope(VariableScope *startVarScope) {
+    setOperand(startVarScope, StartVarScopeIdx);
   }
 
   SideEffect getSideEffectImpl() const {

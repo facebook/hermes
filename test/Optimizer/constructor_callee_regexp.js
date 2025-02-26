@@ -20,24 +20,20 @@ function ctor_this_test() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): string
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "ctor_this_test": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %ctor_this_test(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "ctor_this_test": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %ctor_this_test(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "ctor_this_test": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function ctor_this_test(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %VS0: any, %use_this(): functionCode
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
-// CHECK-NEXT:  %3 = CallInst (:object) %1: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
-// CHECK-NEXT:       ReturnInst %3: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %use_this(): functionCode
+// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, empty: any
+// CHECK-NEXT:  %2 = CallInst (:object) %0: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %1: object, 12: number
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:function use_this(k: any): object

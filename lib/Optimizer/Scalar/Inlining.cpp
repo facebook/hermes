@@ -21,6 +21,9 @@
 #include "llvh/Support/Debug.h"
 
 STATISTIC(NumInlinedCalls, "Number of inlined calls");
+STATISTIC(
+    NumSpecInlinedCalls,
+    "Number of inlined calls that are speculatively inlined");
 
 namespace hermes {
 
@@ -635,6 +638,8 @@ bool Inlining::runOnModule(Module *M) {
 
         // Continue inserting in inlineBB.
         builder.setInsertionBlock(inlineBB);
+
+        ++NumSpecInlinedCalls;
       }
 
       auto *returnValue = inlineFunction(builder, FC, CI, nextBlock);

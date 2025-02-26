@@ -284,8 +284,8 @@ TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
           .first;
   ASSERT_TRUE(bytecodeDefault);
   ASSERT_TRUE(bytecodeStaticBuiltins);
-  EXPECT_FALSE(bytecodeDefault->getBytecodeOptions().staticBuiltins);
-  EXPECT_TRUE(bytecodeStaticBuiltins->getBytecodeOptions().staticBuiltins);
+  EXPECT_FALSE(bytecodeDefault->getBytecodeOptions().getStaticBuiltins());
+  EXPECT_TRUE(bytecodeStaticBuiltins->getBytecodeOptions().getStaticBuiltins());
 }
 
 TEST(HBCBytecodeGen, BytecodeOptionHasAsync) {
@@ -301,8 +301,8 @@ TEST(HBCBytecodeGen, BytecodeOptionHasAsync) {
           .first;
   ASSERT_TRUE(bytecodeNoAsync);
   ASSERT_TRUE(bytecodeHasAsync);
-  EXPECT_FALSE(bytecodeNoAsync->getBytecodeOptions().hasAsync);
-  EXPECT_TRUE(bytecodeHasAsync->getBytecodeOptions().hasAsync);
+  EXPECT_FALSE(bytecodeNoAsync->getBytecodeOptions().getHasAsync());
+  EXPECT_TRUE(bytecodeHasAsync->getBytecodeOptions().getHasAsync());
 }
 
 } // end anonymous namespace

@@ -447,11 +447,8 @@ function objectCond() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "add_sub_num": string
 // CHECK-NEXT:       DeclareGlobalVarInst "modulo_num": string
 // CHECK-NEXT:       DeclareGlobalVarInst "logic_ops_test": string
@@ -461,7 +458,7 @@ function objectCond() {
 // CHECK-NEXT:       DeclareGlobalVarInst "add_null": string
 // CHECK-NEXT:       DeclareGlobalVarInst "mul_null": string
 // CHECK-NEXT:       DeclareGlobalVarInst "left_shift_num": string
-// CHECK-NEXT:        DeclareGlobalVarInst "left_shift_null": string
+// CHECK-NEXT:       DeclareGlobalVarInst "left_shift_null": string
 // CHECK-NEXT:        DeclareGlobalVarInst "left_shift_undefined": string
 // CHECK-NEXT:        DeclareGlobalVarInst "right_shift_num": string
 // CHECK-NEXT:        DeclareGlobalVarInst "right_shift_null": string
@@ -485,73 +482,73 @@ function objectCond() {
 // CHECK-NEXT:        DeclareGlobalVarInst "if_inline": string
 // CHECK-NEXT:        DeclareGlobalVarInst "simplify_switch": string
 // CHECK-NEXT:        DeclareGlobalVarInst "objectCond": string
-// CHECK-NEXT:  %34 = CreateFunctionInst (:object) %0: environment, %VS0: any, %add_sub_num(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %34: object, globalObject: object, "add_sub_num": string
-// CHECK-NEXT:  %36 = CreateFunctionInst (:object) %0: environment, %VS0: any, %modulo_num(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %36: object, globalObject: object, "modulo_num": string
-// CHECK-NEXT:  %38 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logic_ops_test(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %38: object, globalObject: object, "logic_ops_test": string
-// CHECK-NEXT:  %40 = CreateFunctionInst (:object) %0: environment, %VS0: any, %add_str(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %40: object, globalObject: object, "add_str": string
-// CHECK-NEXT:  %42 = CreateFunctionInst (:object) %0: environment, %VS0: any, %add_empty_str(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %42: object, globalObject: object, "add_empty_str": string
-// CHECK-NEXT:  %44 = CreateFunctionInst (:object) %0: environment, %VS0: any, %add_empty_str_simplify(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %44: object, globalObject: object, "add_empty_str_simplify": string
-// CHECK-NEXT:  %46 = CreateFunctionInst (:object) %0: environment, %VS0: any, %add_null(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %46: object, globalObject: object, "add_null": string
-// CHECK-NEXT:  %48 = CreateFunctionInst (:object) %0: environment, %VS0: any, %mul_null(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %48: object, globalObject: object, "mul_null": string
-// CHECK-NEXT:  %50 = CreateFunctionInst (:object) %0: environment, %VS0: any, %left_shift_num(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %50: object, globalObject: object, "left_shift_num": string
-// CHECK-NEXT:  %52 = CreateFunctionInst (:object) %0: environment, %VS0: any, %left_shift_null(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %52: object, globalObject: object, "left_shift_null": string
-// CHECK-NEXT:  %54 = CreateFunctionInst (:object) %0: environment, %VS0: any, %left_shift_undefined(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %54: object, globalObject: object, "left_shift_undefined": string
-// CHECK-NEXT:  %56 = CreateFunctionInst (:object) %0: environment, %VS0: any, %right_shift_num(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %56: object, globalObject: object, "right_shift_num": string
-// CHECK-NEXT:  %58 = CreateFunctionInst (:object) %0: environment, %VS0: any, %right_shift_null(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %58: object, globalObject: object, "right_shift_null": string
-// CHECK-NEXT:  %60 = CreateFunctionInst (:object) %0: environment, %VS0: any, %right_shift_undefined(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %60: object, globalObject: object, "right_shift_undefined": string
-// CHECK-NEXT:  %62 = CreateFunctionInst (:object) %0: environment, %VS0: any, %right_shift_bool(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %62: object, globalObject: object, "right_shift_bool": string
-// CHECK-NEXT:  %64 = CreateFunctionInst (:object) %0: environment, %VS0: any, %unsigned_right_shift_bool(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %64: object, globalObject: object, "unsigned_right_shift_bool": string
-// CHECK-NEXT:  %66 = CreateFunctionInst (:object) %0: environment, %VS0: any, %unsigned_right_shift_compound_assgmt(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %66: object, globalObject: object, "unsigned_right_shift_compound_assgmt": string
-// CHECK-NEXT:  %68 = CreateFunctionInst (:object) %0: environment, %VS0: any, %unsigned_right_shift_num(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %68: object, globalObject: object, "unsigned_right_shift_num": string
-// CHECK-NEXT:  %70 = CreateFunctionInst (:object) %0: environment, %VS0: any, %add_undef(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %70: object, globalObject: object, "add_undef": string
-// CHECK-NEXT:  %72 = CreateFunctionInst (:object) %0: environment, %VS0: any, %comp_num(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %72: object, globalObject: object, "comp_num": string
-// CHECK-NEXT:  %74 = CreateFunctionInst (:object) %0: environment, %VS0: any, %equality(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %74: object, globalObject: object, "equality": string
-// CHECK-NEXT:  %76 = CreateFunctionInst (:object) %0: environment, %VS0: any, %arith(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %76: object, globalObject: object, "arith": string
-// CHECK-NEXT:  %78 = CreateFunctionInst (:object) %0: environment, %VS0: any, %undef_test(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %78: object, globalObject: object, "undef_test": string
-// CHECK-NEXT:  %80 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %80: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %82 = CreateFunctionInst (:object) %0: environment, %VS0: any, %strip_bang(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %82: object, globalObject: object, "strip_bang": string
-// CHECK-NEXT:  %84 = CreateFunctionInst (:object) %0: environment, %VS0: any, %turn_unary_plus_into_as_number(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %84: object, globalObject: object, "turn_unary_plus_into_as_number": string
-// CHECK-NEXT:  %86 = CreateFunctionInst (:object) %0: environment, %VS0: any, %turn_unary_plus_on_literal_into_result(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %86: object, globalObject: object, "turn_unary_plus_on_literal_into_result": string
-// CHECK-NEXT:  %88 = CreateFunctionInst (:object) %0: environment, %VS0: any, %turn_bitor_into_as_int32(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %88: object, globalObject: object, "turn_bitor_into_as_int32": string
-// CHECK-NEXT:  %90 = CreateFunctionInst (:object) %0: environment, %VS0: any, %unary_ops(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %90: object, globalObject: object, "unary_ops": string
-// CHECK-NEXT:  %92 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_phi(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %92: object, globalObject: object, "test_phi": string
-// CHECK-NEXT:  %94 = CreateFunctionInst (:object) %0: environment, %VS0: any, %if_inline(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %94: object, globalObject: object, "if_inline": string
-// CHECK-NEXT:  %96 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simplify_switch(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %96: object, globalObject: object, "simplify_switch": string
-// CHECK-NEXT:  %98 = CreateFunctionInst (:object) %0: environment, %VS0: any, %objectCond(): functionCode
-// CHECK-NEXT:        StorePropertyLooseInst %98: object, globalObject: object, "objectCond": string
-// CHECK-NEXT:         ReturnInst undefined: undefined
+// CHECK-NEXT:  %33 = CreateFunctionInst (:object) empty: any, empty: any, %add_sub_num(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %33: object, globalObject: object, "add_sub_num": string
+// CHECK-NEXT:  %35 = CreateFunctionInst (:object) empty: any, empty: any, %modulo_num(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %35: object, globalObject: object, "modulo_num": string
+// CHECK-NEXT:  %37 = CreateFunctionInst (:object) empty: any, empty: any, %logic_ops_test(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %37: object, globalObject: object, "logic_ops_test": string
+// CHECK-NEXT:  %39 = CreateFunctionInst (:object) empty: any, empty: any, %add_str(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %39: object, globalObject: object, "add_str": string
+// CHECK-NEXT:  %41 = CreateFunctionInst (:object) empty: any, empty: any, %add_empty_str(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %41: object, globalObject: object, "add_empty_str": string
+// CHECK-NEXT:  %43 = CreateFunctionInst (:object) empty: any, empty: any, %add_empty_str_simplify(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %43: object, globalObject: object, "add_empty_str_simplify": string
+// CHECK-NEXT:  %45 = CreateFunctionInst (:object) empty: any, empty: any, %add_null(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %45: object, globalObject: object, "add_null": string
+// CHECK-NEXT:  %47 = CreateFunctionInst (:object) empty: any, empty: any, %mul_null(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %47: object, globalObject: object, "mul_null": string
+// CHECK-NEXT:  %49 = CreateFunctionInst (:object) empty: any, empty: any, %left_shift_num(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %49: object, globalObject: object, "left_shift_num": string
+// CHECK-NEXT:  %51 = CreateFunctionInst (:object) empty: any, empty: any, %left_shift_null(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %51: object, globalObject: object, "left_shift_null": string
+// CHECK-NEXT:  %53 = CreateFunctionInst (:object) empty: any, empty: any, %left_shift_undefined(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %53: object, globalObject: object, "left_shift_undefined": string
+// CHECK-NEXT:  %55 = CreateFunctionInst (:object) empty: any, empty: any, %right_shift_num(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %55: object, globalObject: object, "right_shift_num": string
+// CHECK-NEXT:  %57 = CreateFunctionInst (:object) empty: any, empty: any, %right_shift_null(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %57: object, globalObject: object, "right_shift_null": string
+// CHECK-NEXT:  %59 = CreateFunctionInst (:object) empty: any, empty: any, %right_shift_undefined(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %59: object, globalObject: object, "right_shift_undefined": string
+// CHECK-NEXT:  %61 = CreateFunctionInst (:object) empty: any, empty: any, %right_shift_bool(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %61: object, globalObject: object, "right_shift_bool": string
+// CHECK-NEXT:  %63 = CreateFunctionInst (:object) empty: any, empty: any, %unsigned_right_shift_bool(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %63: object, globalObject: object, "unsigned_right_shift_bool": string
+// CHECK-NEXT:  %65 = CreateFunctionInst (:object) empty: any, empty: any, %unsigned_right_shift_compound_assgmt(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %65: object, globalObject: object, "unsigned_right_shift_compound_assgmt": string
+// CHECK-NEXT:  %67 = CreateFunctionInst (:object) empty: any, empty: any, %unsigned_right_shift_num(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %67: object, globalObject: object, "unsigned_right_shift_num": string
+// CHECK-NEXT:  %69 = CreateFunctionInst (:object) empty: any, empty: any, %add_undef(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %69: object, globalObject: object, "add_undef": string
+// CHECK-NEXT:  %71 = CreateFunctionInst (:object) empty: any, empty: any, %comp_num(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %71: object, globalObject: object, "comp_num": string
+// CHECK-NEXT:  %73 = CreateFunctionInst (:object) empty: any, empty: any, %equality(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %73: object, globalObject: object, "equality": string
+// CHECK-NEXT:  %75 = CreateFunctionInst (:object) empty: any, empty: any, %arith(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %75: object, globalObject: object, "arith": string
+// CHECK-NEXT:  %77 = CreateFunctionInst (:object) empty: any, empty: any, %undef_test(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %77: object, globalObject: object, "undef_test": string
+// CHECK-NEXT:  %79 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %79: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %81 = CreateFunctionInst (:object) empty: any, empty: any, %strip_bang(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %81: object, globalObject: object, "strip_bang": string
+// CHECK-NEXT:  %83 = CreateFunctionInst (:object) empty: any, empty: any, %turn_unary_plus_into_as_number(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %83: object, globalObject: object, "turn_unary_plus_into_as_number": string
+// CHECK-NEXT:  %85 = CreateFunctionInst (:object) empty: any, empty: any, %turn_unary_plus_on_literal_into_result(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %85: object, globalObject: object, "turn_unary_plus_on_literal_into_result": string
+// CHECK-NEXT:  %87 = CreateFunctionInst (:object) empty: any, empty: any, %turn_bitor_into_as_int32(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %87: object, globalObject: object, "turn_bitor_into_as_int32": string
+// CHECK-NEXT:  %89 = CreateFunctionInst (:object) empty: any, empty: any, %unary_ops(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %89: object, globalObject: object, "unary_ops": string
+// CHECK-NEXT:  %91 = CreateFunctionInst (:object) empty: any, empty: any, %test_phi(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %91: object, globalObject: object, "test_phi": string
+// CHECK-NEXT:  %93 = CreateFunctionInst (:object) empty: any, empty: any, %if_inline(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %93: object, globalObject: object, "if_inline": string
+// CHECK-NEXT:  %95 = CreateFunctionInst (:object) empty: any, empty: any, %simplify_switch(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %95: object, globalObject: object, "simplify_switch": string
+// CHECK-NEXT:  %97 = CreateFunctionInst (:object) empty: any, empty: any, %objectCond(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %97: object, globalObject: object, "objectCond": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function add_sub_num(x: any, y: any): undefined

@@ -22,27 +22,23 @@ function outer() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %outer(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "outer": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %outer(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [Point: object]
+// CHECK:scope %VS0 [Point: object]
 
 // CHECK:function outer(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS1: any, %Point(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS1.Point]: object
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %makePoint(): functionCode
-// CHECK-NEXT:       ReturnInst %4: object
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %Point(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.Point]: object
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %makePoint(): functionCode
+// CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function Point(x: any, y: any, z: any): undefined
@@ -61,11 +57,11 @@ function outer() {
 
 // CHECK:function makePoint(x: any, y: any, z: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %3 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:  %4 = LoadFrameInst (:object) %0: environment, [%VS1.Point]: object
+// CHECK-NEXT:  %4 = LoadFrameInst (:object) %0: environment, [%VS0.Point]: object
 // CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %1: any, %5: object, "x": string
 // CHECK-NEXT:       StorePropertyStrictInst %2: any, %5: object, "y": string

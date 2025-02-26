@@ -32,20 +32,17 @@ function test2(p1, p2) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// OPT-CHECK:scope %VS0 []
-
 // OPT-CHECK:function global(): any
 // OPT-CHECK-NEXT:%BB0:
-// OPT-CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "test2": string
-// OPT-CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
-// OPT-CHECK-NEXT:       StorePropertyStrictInst %3: object, globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test2(): functionCode
-// OPT-CHECK-NEXT:       StorePropertyStrictInst %5: object, globalObject: object, "test2": string
-// OPT-CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// OPT-CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
-// OPT-CHECK-NEXT:       ReturnInst %8: any
+// OPT-CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// OPT-CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "foo": string
+// OPT-CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %test2(): functionCode
+// OPT-CHECK-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "test2": string
+// OPT-CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// OPT-CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// OPT-CHECK-NEXT:       ReturnInst %7: any
 // OPT-CHECK-NEXT:function_end
 
 // OPT-CHECK:function foo(p1: any): any

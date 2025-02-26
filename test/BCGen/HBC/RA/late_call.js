@@ -24,20 +24,17 @@ function bar(a,b,c,d,e,f,g,h) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  {r1}      %3 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {r2}      %4 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r2} %4: object, {r1} %3: object, "foo": string
-// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {r0} %0: environment, %VS0: any, %bar(): functionCode
-// CHECK-NEXT:                 StorePropertyLooseInst {r0} %6: object, {r1} %3: object, "bar": string
-// CHECK-NEXT:  {np0}     %8 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 ReturnInst {np0} %8: undefined
+// CHECK-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %foo(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "foo": string
+// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %bar(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %6: object, {r1} %2: object, "bar": string
+// CHECK-NEXT:                 ReturnInst {np0} %3: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): number
