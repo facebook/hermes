@@ -10,6 +10,9 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
+#include "hermes/Support/Statistic.h"
+
+STATISTIC(ObjsEliminated, "Object allocations eliminated");
 
 namespace hermes {
 namespace {
@@ -214,6 +217,7 @@ bool tryPromoteObject(
 
     llvm_unreachable("Unhandled instruction");
   }
+  ObjsEliminated++;
   destroyer.add(alloc);
 
   return true;
