@@ -388,19 +388,80 @@ try { a.push(1); } catch (e) { print('caught', e.name) }
 
 print('reverse');
 // CHECK-LABEL: reverse
-var a = [1,2,3];
-print(a.reverse(), a);
-// CHECK-NEXT: 3,2,1 3,2,1
-print([1,2].reverse());
-// CHECK-NEXT: 2,1
-print('empty', [].reverse());
-// CHECK-NEXT: empty
-print([12,13,14,15,16,17,18].reverse());
-// CHECK-NEXT: 18,17,16,15,14,13,12
-print([,,,1].reverse());
-// CHECK-NEXT: 1,,,
-print([,,1,,5,7,,].reverse());
-// CHECK-NEXT: ,7,5,,1,,
+
+function testReverse(arr) {
+    function toWeirdArray(a) {
+        a = Array.from(a);
+        a.__proto__ = toWeirdArray.prototype;
+        return a;
+    }
+    toWeirdArray.prototype.__proto__ = Array.prototype;
+
+    function toBadArray(a) {
+        a = Array.from(a);
+        if (a.length < 2)
+            return a;
+        let elem = a[1];
+        delete a[1];
+        toBadArray.prototype[1] = elem;
+        a.__proto__ = toBadArray.prototype;
+        return a;
+    }
+    toBadArray.prototype.__proto__ = Array.prototype;
+
+    function toObj(a) {
+        return {...a, length: a.length};
+    }
+
+    print("input:", arr, "end");
+    print("array:", Array.from(arr).reverse(), "end");
+    print("obj:", JSON.stringify(Array.prototype.reverse.call(toObj(arr))));
+    print("weird array:", toWeirdArray(arr).reverse(), "end");
+    print("bad array:", toBadArray(arr).reverse(), "end");
+}
+
+testReverse([1,2,3]);
+// CHECK-NEXT: input: 1,2,3 end
+// CHECK-NEXT: array: 3,2,1 end
+// CHECK-NEXT: obj: {"0":3,"1":2,"2":1,"length":3}
+// CHECK-NEXT: weird array: 3,2,1 end
+// CHECK-NEXT: bad array: 3,2,1 end
+
+testReverse([1,2]);
+// CHECK-NEXT: input: 1,2 end
+// CHECK-NEXT: array: 2,1 end
+// CHECK-NEXT: obj: {"0":2,"1":1,"length":2}
+// CHECK-NEXT: weird array: 2,1 end
+// CHECK-NEXT: bad array: 2,1 end
+
+testReverse([]);
+// CHECK-NEXT: input:  end
+// CHECK-NEXT: array:  end
+// CHECK-NEXT: obj: {"length":0}
+// CHECK-NEXT: weird array:  end
+// CHECK-NEXT: bad array:  end
+
+testReverse([12,13,14,15,16,17,18]);
+// CHECK-NEXT: input: 12,13,14,15,16,17,18 end
+// CHECK-NEXT: array: 18,17,16,15,14,13,12 end
+// CHECK-NEXT: obj: {"0":18,"1":17,"2":16,"3":15,"4":14,"5":13,"6":12,"length":7}
+// CHECK-NEXT: weird array: 18,17,16,15,14,13,12 end
+// CHECK-NEXT: bad array: 18,17,16,15,14,13,12 end
+
+testReverse([,,,1]);
+// CHECK-NEXT: input: ,,,1 end
+// CHECK-NEXT: array: 1,,, end
+// CHECK-NEXT: obj: {"0":1,"length":4}
+// CHECK-NEXT: weird array: 1,,, end
+// CHECK-NEXT: bad array: 1,,, end
+
+testReverse([,,1,,5,7,,]);
+// CHECK-NEXT: input: ,,1,,5,7, end
+// CHECK-NEXT: array: ,7,5,,1,, end
+// CHECK-NEXT: obj: {"1":7,"2":5,"4":1,"length":7}
+// CHECK-NEXT: weird array: ,7,5,,1,, end
+// CHECK-NEXT: bad array: ,7,5,,1,, end
+
 var a = {};
 a[0] = 'a';
 a[1] = 'b';

@@ -363,7 +363,11 @@ static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
 /// at 0 and ends at the length of the array.
 ///
 /// \param arr the array to check for fast pathing.
-/// \param arrayClass the default HiddenClass of an array.
+/// \param arrayClass Optional: the default HiddenClass of an array. If set,
+///   check that arr has this hidden class. This is a very fast (but
+///   restrictive) way to check whether ".length" has been changed to be
+///   read-only. If the caller doesn't care, or has already checked, this can be
+///   nullptr.
 /// \param len the length of \p arr.
 ///
 /// \return whether we can use the fast path for Array methods on \p arr.
@@ -407,8 +411,8 @@ static bool arrayFastPathCheck(
           0))
     return false;
 
-  // Fast path assumes that 'length' hasn't been reconfigured.
-  if (LLVM_UNLIKELY(arr->getClass(runtime) != arrayClass))
+  // Optionally check that 'length' hasn't been reconfigured.
+  if (arrayClass && arr->getClass(runtime) != arrayClass)
     return false;
 
   // Fast path assumes that the array storage goes from 0 to len.
@@ -4021,6 +4025,26 @@ arrayPrototypeReduceRight(void *, Runtime &runtime, NativeArgs args) {
 /// ES10.0 22.1.3.23.
 CallResult<HermesValue>
 arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
+  // Fast path for a JSArray with a contiguous storage and no numeric props
+  // in the prototype.
+  if (auto *arr = llvh::dyn_vmcast<JSArray>(args.getThisArg())) {
+    NoAllocScope noAllocScope{runtime};
+    uint32_t len = JSArray::getLength(arr, runtime);
+    if (len <= 1)
+      return args.getThisArg();
+
+    if (arrayFastPathCheck(runtime, arr, nullptr, len)) {
+      auto *storage = arr->getIndexedStorage(runtime);
+      for (uint32_t l = 0, u = len - 1; l < u; ++l, --u) {
+        auto lowerValue = storage->at(runtime, l);
+        auto upperValue = storage->at(runtime, u);
+        storage->set(runtime, l, upperValue);
+        storage->set(runtime, u, lowerValue);
+      }
+      return args.getThisArg();
+    }
+  }
+
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
