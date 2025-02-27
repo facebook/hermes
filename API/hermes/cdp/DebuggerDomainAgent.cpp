@@ -556,7 +556,7 @@ void DebuggerDomainAgent::setBreakpoint(
 
   // Create the Hermes breakpoint
   std::optional<HermesBreakpointLocation> hermesBreakpoint =
-      createHermesBreakpont(
+      createHermesBreakpoint(
           static_cast<debugger::ScriptID>(scriptID), description);
   if (!hermesBreakpoint) {
     sendResponseToClient(m::makeErrorResponse(
@@ -808,7 +808,7 @@ DebuggerDomainAgent::createCDPBreakpoint(
 /// Attempt to create a breakpoint in the Hermes script identified by
 /// \p scriptID at the location described by \p description.
 std::optional<HermesBreakpointLocation>
-DebuggerDomainAgent::createHermesBreakpont(
+DebuggerDomainAgent::createHermesBreakpoint(
     debugger::ScriptID scriptID,
     const CDPBreakpointDescription &description) {
   // Convert the location description to a Hermes location
@@ -859,7 +859,7 @@ std::optional<HermesBreakpointLocation> DebuggerDomainAgent::applyBreakpoint(
     debugger::ScriptID scriptID) {
   // Create the Hermes breakpoint
   std::optional<HermesBreakpointLocation> hermesBreakpoint =
-      createHermesBreakpont(scriptID, breakpoint.description);
+      createHermesBreakpoint(scriptID, breakpoint.description);
   if (!hermesBreakpoint) {
     return {};
   }

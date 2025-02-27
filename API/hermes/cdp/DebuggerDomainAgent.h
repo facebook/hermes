@@ -169,7 +169,7 @@ class DebuggerDomainAgent : public DomainAgent {
       CDPBreakpointDescription &&description,
       std::optional<HermesBreakpoint> hermesBreakpoint = std::nullopt);
 
-  std::optional<HermesBreakpointLocation> createHermesBreakpont(
+  std::optional<HermesBreakpointLocation> createHermesBreakpoint(
       debugger::ScriptID scriptID,
       const CDPBreakpointDescription &description);
 
