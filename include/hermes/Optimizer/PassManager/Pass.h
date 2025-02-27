@@ -31,24 +31,24 @@ class Pass {
 
  private:
   /// Stores the kind of derived class.
-  const PassKind kind;
+  const PassKind kind_;
   /// The textual name of the pass.
-  llvh::StringRef name;
+  llvh::StringRef name_;
 
  public:
   /// Constructor. \p K indicates the kind of pass this is.
-  explicit Pass(Pass::PassKind K, llvh::StringRef name) : kind(K), name(name) {}
+  Pass(Pass::PassKind K, llvh::StringRef name) : kind_(K), name_(name) {}
 
   virtual ~Pass() = default;
 
   /// Returns the kind of the pass.
   PassKind getKind() const {
-    return kind;
+    return kind_;
   }
 
   /// Returns the textual name of the pass.
   llvh::StringRef getName() const {
-    return name;
+    return name_;
   }
 };
 
