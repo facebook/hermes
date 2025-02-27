@@ -13,7 +13,7 @@ exports[`flowDefToTSDef types/react/import 1`] = `
 
 import * as React from 'react';
 type T1 = React.ReactNode;
-type T2 = JSX.Element;
+type T2 = React.JSX.Element;
 type T3 = React.ReactElement<typeof Component>;
 type T4 = React.ElementRef<typeof Component>;
 type T5 = React.ComponentType<Props>;
@@ -21,7 +21,7 @@ type T6 = React.ComponentType<Props & React.RefAttributes<HTMLElement>>;
 type T7 = React.Context<Foo>;
 type T8 = React.ComponentType<Props>;
 type T9 = React.Fragment;
-type T10 = JSX.LibraryManagedAttributes<
+type T10 = React.JSX.LibraryManagedAttributes<
   typeof Component,
   React.ComponentProps<typeof Component>
 >;
