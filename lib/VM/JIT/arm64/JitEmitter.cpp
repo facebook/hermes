@@ -562,14 +562,7 @@ void Emitter::comment(const char *fmt, ...) {
   a.comment(buf);
 }
 
-JITCompiledFunctionPtr Emitter::addToRuntime(
-    asmjit::JitRuntime &jr,
-    llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
-  emitCatchTable(exceptionHandlers);
-  emitSlowPaths();
-  emitThunks();
-  emitROData();
-
+JITCompiledFunctionPtr Emitter::addToRuntime(asmjit::JitRuntime &jr) {
   code.detach(&a);
   JITCompiledFunctionPtr fn;
   asmjit::Error err = jr.add(&fn, &code);
@@ -917,7 +910,7 @@ void Emitter::frameSetup(
   }
 }
 
-void Emitter::leave() {
+void Emitter::leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
   comment("// leaveFrame");
   a.bind(returnLabel_);
   if (dumpJitCode_ & DumpJitCode::EntryExit) {
@@ -972,6 +965,11 @@ void Emitter::leave() {
   a.add(a64::sp, a64::sp, getStackSize());
 
   a.ret(a64::x30);
+
+  emitCatchTable(exceptionHandlers);
+  emitSlowPaths();
+  emitThunks();
+  emitROData();
 }
 
 void Emitter::callThunk(void *fn, const char *name) {

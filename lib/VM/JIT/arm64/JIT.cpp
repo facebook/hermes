@@ -261,8 +261,30 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
     handlers.push_back(&bbLabels_.at(ofsToBBIndex_.at(entry.target)));
   }
 
-  em_.leave();
-  codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr, handlers));
+  // Emit the leave before getting the codeSize so the measurement is accurate.
+  em_.leave(handlers);
+
+  size_t memoryLimit = jc_.memoryLimit_;
+  size_t usedSize =
+      jc_.impl_->jr.allocator()->statistics().usedSize() + em_.code.codeSize();
+
+  if (LLVM_UNLIKELY(usedSize > memoryLimit)) {
+    // Disable the JIT if we would go over the memory limit.
+    // The enabled_ check in the inline path remains fast,
+    // and the chances that someone else will reenable it are low.
+    // This does mean that if we are unable to JIT a large function,
+    // we won't potentially be able to JIT smaller functions later.
+    jc_.enabled_ = false;
+    return nullptr;
+  }
+
+  codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr));
+
+  if (LLVM_UNLIKELY(usedSize == memoryLimit)) {
+    // Disable compilation for the future because we've hit the limit,
+    // but this function is fine.
+    jc_.enabled_ = false;
+  }
 
   LLVM_DEBUG(
       llvh::outs() << "\n Bytecode:";

@@ -94,6 +94,9 @@ class JITContext {
   /// Set the flag to force jitting of all functions.
   void setForceJIT(bool force) {}
 
+  /// Set the memory limit for JIT'ed code in bytes.
+  void setMemoryLimit(uint32_t memoryLimit) {}
+
   /// Set the default threshold for function execution count before a function
   /// is compiled. On a per-function basis, the count may be altered based on
   /// internal heuristics.

@@ -145,6 +145,9 @@ struct ExecuteOptions {
   /// JIT compilation threshold.
   uint32_t jitThreshold{1 << 5};
 
+  /// JIT memory limit, after which no more code will be JIT'ed.
+  uint32_t jitMemoryLimit{32u << 20};
+
   /// Dump JIT'ed code.
   unsigned dumpJITCode{0};
 

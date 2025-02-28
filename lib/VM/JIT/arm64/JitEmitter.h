@@ -400,10 +400,7 @@ class Emitter {
       const std::function<void(std::string &&message)> &longjmpError);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
-  /// \param exceptionHandlers the labels for the exception handler table.
-  JITCompiledFunctionPtr addToRuntime(
-      asmjit::JitRuntime &jr,
-      llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
+  JITCompiledFunctionPtr addToRuntime(asmjit::JitRuntime &jr);
 
 #ifdef NDEBUG
   void assertPostInstructionInvariants() {}
@@ -422,7 +419,10 @@ class Emitter {
   /// Annotated with printf-style format.
   void comment(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-  void leave();
+  /// Emit the catch table, slow paths, thunks and RO data,
+  /// then reset the stack, end any try, and return.
+  /// \param exceptionHandlers the labels for the exception handler table.
+  void leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers);
   void newBasicBlock(const asmjit::Label &label);
 
   /// Abort execution.

@@ -232,6 +232,13 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::desc("default minimum number of invocations to JIT compile"),
       llvh::cl::init(1 << 5)};
 
+  llvh::cl::opt<uint32_t> JITMemoryLimit{
+      "Xjit-memory-limit",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("maximum size for JIT code (in bytes)"),
+      llvh::cl::init(32u << 20)};
+
   /// To get the value of this CLI option, use the method below.
   llvh::cl::opt<unsigned> DumpJITCode{
       "Xdump-jitcode",
