@@ -7,6 +7,8 @@
 
 #include "hermes/Support/StackExecutor.h"
 
+#include "llvh/Config/llvm-config.h"
+
 #if defined(HERMES_USE_BOOST_CONTEXT) && HERMES_USE_BOOST_CONTEXT
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
@@ -80,10 +82,10 @@ void executeInStack(StackExecutor &exec, void *arg, void (*func)(void *arg)) {
 
 } // namespace hermes
 
-#elif defined(__wasm__) && !defined(__EMSCRIPTEN_THREADS__)
+#elif !LLVM_ENABLE_THREADS
 namespace hermes {
 
-#pragma message("Warning: StackExecutor is no-op in Wasm without threads!")
+#pragma message("Warning: StackExecutor is no-op without threads!")
 
 class StackExecutor {
  public:
