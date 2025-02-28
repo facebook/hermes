@@ -303,7 +303,8 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
       });
 
   if (jc_.dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
-    llvh::outs() << "\nJIT successfully compiled FunctionID "
+    llvh::outs() << "\nJIT total memory usage (bytes): " << usedSize << "\n";
+    llvh::outs() << "JIT successfully compiled FunctionID "
                  << codeBlock_->getFunctionID() << ", '" << funcName_ << "'\n";
   }
 
