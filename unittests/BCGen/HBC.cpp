@@ -62,7 +62,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
 var arr = [1, true, false, null, null, 'abc']
 )";
   auto BM = bytecodeModuleForSource(src);
-  ASSERT_EQ(BM->getLiteralValueBufferSize(), 10u);
+  ASSERT_EQ(BM->getLiteralValueBufferSize(), 11u);
 }
 
 TEST(HBCBytecodeGen, ObjectBufferTest) {
@@ -72,7 +72,7 @@ var obj = {a:1, b:2, c:3};
   // Need to optimize to populate the object buffer.
   auto BM = bytecodeModuleForSource(
       src, BytecodeGenerationOptions::defaults(), /* optimize */ true);
-  ASSERT_EQ(BM->getObjectKeyBufferSize(), 4u);
+  ASSERT_EQ(BM->getObjectKeyBufferSize(), 7u);
   ASSERT_EQ(BM->getLiteralValueBufferSize(), 13u);
 }
 

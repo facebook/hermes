@@ -141,40 +141,28 @@ function obj7() {
 
 // IRGEN:function obj1(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, "hello": string, "b": string, 1: number, "c": string, null: null, "d": string, null: null, "e": string, true: boolean, "f": string, null: null, "g": string, 2: number
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, "hello": string, "b": string, 1: number, "c": string, null: null, "d": string, undefined: undefined, "e": string, true: boolean, "f": string, null: null, "g": string, 2: number
 // IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 3: number, "d": string, true: boolean
-// IRGEN-NEXT:  %3 = CreateFunctionInst (:object) %1: undefined, empty: any, %f(): functionCode
-// IRGEN-NEXT:       PrStoreInst %3: object, %0: object, 5: number, "f": string, false: boolean
+// IRGEN-NEXT:  %2 = CreateFunctionInst (:object) %1: undefined, empty: any, %f(): functionCode
+// IRGEN-NEXT:       PrStoreInst %2: object, %0: object, 5: number, "f": string, false: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj2(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, null: null, "b": string, null: null, "c": string, null: null, "d": string, null: null, "e": string, null: null, "r": string, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 0: number, "a": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 1: number, "b": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 2: number, "c": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 3: number, "d": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 4: number, "e": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 5: number, "r": string, true: boolean
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, undefined: undefined, "b": string, undefined: undefined, "c": string, undefined: undefined, "d": string, undefined: undefined, "e": string, undefined: undefined, "r": string, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj3(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj4(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, null: null, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
-// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
@@ -186,21 +174,13 @@ function obj7() {
 
 // IRGEN:function obj6(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, null: null, "a": string, 1: number, 3: number, null: null, "b": string, 2: number, 2: number, null: null, "c": string, 3: number
-// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 1: number, true: boolean
-// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 3: number, true: boolean
-// IRGEN-NEXT:       DefineOwnPropertyInst %1: undefined, %0: object, 2: number, true: boolean
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, undefined: undefined, "a": string, 1: number, 3: number, undefined: undefined, "b": string, 2: number, 2: number, undefined: undefined, "c": string, 3: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj7(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, 1: number, "a": string, null: null, 3: number, 2: number, "b": string, null: null, 2: number, 3: number, "c": string, null: null
-// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       StorePropertyLooseInst %1: undefined, %0: object, "a": string
-// IRGEN-NEXT:       StorePropertyLooseInst %1: undefined, %0: object, "b": string
-// IRGEN-NEXT:       StorePropertyLooseInst %1: undefined, %0: object, "c": string
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) 1: number, 1: number, "a": string, undefined: undefined, 3: number, 2: number, "b": string, undefined: undefined, 2: number, 3: number, "c": string, undefined: undefined
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
@@ -259,16 +239,16 @@ function obj7() {
 // BCGEN-NEXT:[String 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:null
-// BCGEN-NEXT:null
+// BCGEN-NEXT:undefined
 // BCGEN-NEXT:true
 // BCGEN-NEXT:null
 // BCGEN-NEXT:[int 2]
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
-// BCGEN-NEXT:null
+// BCGEN-NEXT:undefined
+// BCGEN-NEXT:undefined
+// BCGEN-NEXT:undefined
+// BCGEN-NEXT:undefined
+// BCGEN-NEXT:undefined
+// BCGEN-NEXT:undefined
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
@@ -281,13 +261,13 @@ function obj7() {
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:null
+// BCGEN-NEXT:undefined
 // BCGEN-NEXT:[int 1]
-// BCGEN-NEXT:null
+// BCGEN-NEXT:undefined
 // BCGEN-NEXT:[int 2]
-// BCGEN-NEXT:null
+// BCGEN-NEXT:undefined
 // BCGEN-NEXT:[int 3]
-// BCGEN-NEXT:null
+// BCGEN-NEXT:undefined
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
 // BCGEN-NEXT:[int 1]
@@ -353,9 +333,9 @@ function obj7() {
 // BCGEN-NEXT:[String 10]
 // BCGEN-NEXT:Object Shape Table:
 // BCGEN-NEXT:0[0, 7]
-// BCGEN-NEXT:1[8, 18]
-// BCGEN-NEXT:2[28, 13]
-// BCGEN-NEXT:3[46, 6]
+// BCGEN-NEXT:1[15, 18]
+// BCGEN-NEXT:2[53, 13]
+// BCGEN-NEXT:3[83, 6]
 // BCGEN-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
@@ -386,57 +366,33 @@ function obj7() {
 // BCGEN:Function<obj1>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:    NewObjectWithBuffer r2, 0, 0
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r0, 3
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<f>
 // BCGEN-NEXT:    PutOwnBySlotIdx   r2, r1, 5
 // BCGEN-NEXT:    Ret               r2
 
-// BCGEN:Function<obj2>(1 params, 2 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 1, 15
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 0
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 1
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 2
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 3
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 4
-// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r0, 5
-// BCGEN-NEXT:    Ret               r1
-
-// BCGEN:Function<obj3>(1 params, 2 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 83
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 1
-// BCGEN-NEXT:    Ret               r1
-
-// BCGEN:Function<obj4>(1 params, 2 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x0035, lexical 0x0000
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 2, 83
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 1
-// BCGEN-NEXT:    Ret               r1
-
-// BCGEN:Function<obj5>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 133
+// BCGEN:Function<obj2>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 1, 17
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<obj6>(1 params, 2 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x003c, lexical 0x0000
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 3, 65
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 1
-// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 3
-// BCGEN-NEXT:    DefineOwnByIndex  r1, r0, 2
-// BCGEN-NEXT:    Ret               r1
+// BCGEN:Function<obj3>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 2, 85
+// BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<obj7>(1 params, 2 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x004a, lexical 0x0000
-// BCGEN-NEXT:    NewObjectWithBuffer r1, 3, 66
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 1, "a"
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 2, "b"
-// BCGEN-NEXT:    PutByIdLoose      r1, r0, 3, "c"
-// BCGEN-NEXT:    Ret               r1
+// BCGEN:Function<obj4>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 2, 85
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj5>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 135
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj6>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 67
+// BCGEN-NEXT:    Ret               r0
+
+// BCGEN:Function<obj7>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// BCGEN-NEXT:    NewObjectWithBuffer r0, 3, 68
+// BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<f>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // BCGEN-NEXT:    LoadConstUndefined r0
@@ -464,16 +420,4 @@ function obj7() {
 // BCGEN-NEXT:    bc 88: line 11 col 1
 // BCGEN-NEXT:    bc 99: line 11 col 1
 // BCGEN-NEXT:    bc 110: line 11 col 1
-// BCGEN-NEXT:  0x002e  function idx 3, starts at line 40 col 1
-// BCGEN-NEXT:    bc 8: line 41 col 10
-// BCGEN-NEXT:  0x0035  function idx 4, starts at line 58 col 1
-// BCGEN-NEXT:    bc 8: line 59 col 10
-// BCGEN-NEXT:  0x003c  function idx 6, starts at line 89 col 1
-// BCGEN-NEXT:    bc 8: line 90 col 10
-// BCGEN-NEXT:    bc 12: line 90 col 10
-// BCGEN-NEXT:    bc 16: line 90 col 10
-// BCGEN-NEXT:  0x004a  function idx 7, starts at line 101 col 1
-// BCGEN-NEXT:    bc 8: line 102 col 10
-// BCGEN-NEXT:    bc 14: line 102 col 10
-// BCGEN-NEXT:    bc 20: line 102 col 10
-// BCGEN-NEXT:  0x0058  end of debug source table
+// BCGEN-NEXT:  0x002e  end of debug source table

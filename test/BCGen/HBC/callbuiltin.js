@@ -134,7 +134,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[String 10]
 // CHKBC-NEXT:Object Shape Table:
 // CHKBC-NEXT:0[0, 4]
-// CHKBC-NEXT:1[9, 1]
+// CHKBC-NEXT:1[12, 1]
 // CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"

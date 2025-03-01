@@ -95,13 +95,7 @@ function accessorObjectLiteral(func) {
 
 // IRGEN:function estimateBestNumElement(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 1: number, "b": string, 1: number, "c": string, 1: number, "d": string, 1: number, "e": string, 1: number, "f": string, null: null, "g": string, null: null, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, null: null, "m": string, null: null, "n": string, null: null, 1: number, 42: number, 2: number, 42: number
-// IRGEN-NEXT:  %1 = HBCLoadConstInst (:undefined) undefined: undefined
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 5: number, "f": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 6: number, "g": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 11: number, "l": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 12: number, "m": string, true: boolean
-// IRGEN-NEXT:       PrStoreInst %1: undefined, %0: object, 13: number, "n": string, true: boolean
+// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 1: number, "b": string, 1: number, "c": string, 1: number, "d": string, 1: number, "e": string, 1: number, "f": string, undefined: undefined, "g": string, undefined: undefined, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, undefined: undefined, "m": string, undefined: undefined, "n": string, undefined: undefined, 1: number, 42: number, 2: number, 42: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 

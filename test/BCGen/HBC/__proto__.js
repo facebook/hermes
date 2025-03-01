@@ -56,7 +56,7 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:[String 2]
 // CHECK-NEXT:Object Shape Table:
 // CHECK-NEXT:0[0, 3]
-// CHECK-NEXT:1[4, 2]
+// CHECK-NEXT:1[7, 2]
 // CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "staticProto"

@@ -312,6 +312,9 @@ static CallResult<HiddenClass *> getHiddenClassForBuffer(
     void visitNull() {
       llvm_unreachable("Keys cannot be null");
     }
+    void visitUndefined() {
+      llvm_unreachable("Keys cannot be undefined");
+    }
     void visitBool(bool b) {
       llvm_unreachable("Keys cannot be boolean");
     }
@@ -380,6 +383,10 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       static constexpr auto shv = SmallHermesValue::encodeNullValue();
       JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
     }
+    void visitUndefined() {
+      static constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
     void visitBool(bool b) {
       auto shv = SmallHermesValue::encodeBoolValue(b);
       JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
@@ -432,6 +439,10 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
     }
     void visitNull() {
       constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitUndefined() {
+      constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
       JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
     }
     void visitBool(bool b) {
