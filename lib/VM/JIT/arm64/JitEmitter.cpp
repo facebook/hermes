@@ -3293,14 +3293,6 @@ void Emitter::getByIdImpl(
     hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   }
 
-  comment(
-      "// %s r%u, r%u, cache %u, symID %u",
-      name,
-      frRes.index(),
-      frSource.index(),
-      cacheIdx,
-      symID);
-
   a.mov(a64::x0, xRuntime);
   loadFrameAddr(a64::x1, frSource);
   a.mov(a64::w2, symID);
