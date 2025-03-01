@@ -75,6 +75,7 @@ void ESTreeIRGen::genFunctionDeclaration(
   }
 
   Value *funcStorage = resolveIdentifier(id);
+  Value *funcStoragePromoted = resolveIdentifierPromoted(id);
   assert(funcStorage && "Function declaration storage must have been resolved");
 
   auto *newFuncParentScope = curFunction()->curScope->getVariableScope();
@@ -92,6 +93,8 @@ void ESTreeIRGen::genFunctionDeclaration(
       Builder.createCreateFunctionInst(curFunction()->curScope, newFunc);
 
   emitStore(newClosure, funcStorage, true);
+  if (funcStoragePromoted)
+    emitStore(newClosure, funcStoragePromoted, true);
 }
 
 Value *ESTreeIRGen::genFunctionExpression(
