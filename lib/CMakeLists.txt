@@ -36,6 +36,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/CacheNewObject.cpp
   IR/Analysis.cpp
   IR/IREval.cpp
+  LINK_OBJLIBS hermesFrontend
 )
 
 add_hermes_library(hermesFrontend
