@@ -243,3 +243,31 @@ print(arrayEquals([ 1, 2, 3 ].toReversed(), [ 3, 2, 1 ]));
 print(Array.prototype.toReversed.call({length : 3, 0 : 'a', 1 : 'b', 2 : 'c'})
           .toString())
 // CHECK-NEXT: c,b,a
+
+print('toReversed');
+// CHECK-LABEL: toReversed
+
+function testToReversed(arr) {
+    pr("input:", arr, "end");
+    pr("array:", arr.toReversed(), "end");
+    pr("obj:", Array.prototype.toReversed.call(toObj(arr)));
+    pr("weird array:", toWeirdArray(arr).toReversed(), "end");
+    pr("bad array:", toBadArray(arr).toReversed(), "end");
+}
+
+print(Array.prototype.toReversed.length);
+// CHECK-NEXT: 0
+
+testToReversed(["a", "b", "c", "d"]);
+// CHECK-NEXT: input: [a, b, c, d] end
+// CHECK-NEXT: array: [d, c, b, a] end
+// CHECK-NEXT: obj: [d, c, b, a] undefined
+// CHECK-NEXT: weird array: [d, c, b, a] end
+// CHECK-NEXT: bad array: [d, c, b, a] end
+
+testToReversed(["a", "b",,,]);
+// CHECK-NEXT: input: [a, b, <empty>, <empty>] end
+// CHECK-NEXT: array: [undefined, undefined, b, a] end
+// CHECK-NEXT: obj: [undefined, undefined, b, a] undefined
+// CHECK-NEXT: weird array: [undefined, undefined, b, a] end
+// CHECK-NEXT: bad array: [undefined, undefined, b, a] end

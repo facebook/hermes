@@ -4323,10 +4323,12 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
       // Otherwise, we must proceed to the slow path.
       if (!elm.isEmpty()) {
         lv.fromValue = elm.unboxToHV(runtime);
+        goto store;
       }
     }
+
     // Slow path
-    else {
+    {
       CallResult<PseudoHandle<>> propRes =
           JSObject::getComputed_RJS(lv.O, runtime, lv.from);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -4336,6 +4338,7 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
     }
 
     // 5d. Perform ! CreateDataPropertyOrThrow(A, Pk, fromValue).
+  store:;
     if (LLVM_UNLIKELY(
             JSObject::defineOwnComputedPrimitive(
                 lv.A,
