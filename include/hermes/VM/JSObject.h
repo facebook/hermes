@@ -275,6 +275,20 @@ struct ObjectVTable : public VTable {
 class JSObject : public GCCell {
   friend void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
+ protected:
+  /// Flags affecting the entire object.
+  SHObjectFlags flags_{};
+
+  /// The prototype of this object.
+  GCPointer<JSObject> parent_;
+
+  /// The dynamically derived "class" of the object, describing its fields in
+  /// order.
+  GCPointer<HiddenClass> clazz_{};
+
+  /// Storage for property values.
+  GCPointer<PropStorage> propStorage_{};
+
  public:
   /// A light-weight constructor which performs no GC allocations. Its purpose
   /// to make sure all fields are initialized according to C++ without writing
@@ -1484,19 +1498,6 @@ class JSObject : public GCCell {
       PropOpFlags opFlags);
 
  protected:
-  /// Flags affecting the entire object.
-  SHObjectFlags flags_{};
-
-  /// The prototype of this object.
-  GCPointer<JSObject> parent_;
-
-  /// The dynamically derived "class" of the object, describing its fields in
-  /// order.
-  GCPointer<HiddenClass> clazz_{};
-
-  /// Storage for property values.
-  GCPointer<PropStorage> propStorage_{};
-
   /// Storage for direct property slots.
   inline GCSmallHermesValue *directProps();
   inline const GCSmallHermesValue *directProps() const;
