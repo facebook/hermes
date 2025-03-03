@@ -99,8 +99,6 @@ LLVM_ATTRIBUTE_NOINLINE unsigned recursiveCall() {
 }
 
 void unboundedRecursion() {
-  if (!oscompat::thread_stack_bounds(0).first) // Unsupported on this platform
-    return;
   recursiveCall();
 }
 
@@ -109,14 +107,25 @@ volatile unsigned sum = 0;
 /// Ensure that we can read from the entire extent of the reported stack
 void manualStackScan() {
   auto [high, size] = oscompat::thread_stack_bounds(0);
-  if (!high) // Unsupported on this platform
-    return;
   const char *low = (const char *)high - size;
   for (const char *p = (const char *)high - 16; p > low; p -= 2048) {
     volatile char x = *((volatile const char *)p);
     sum += x;
   }
 }
+
+/// A simple check that if native stack checking is enabled, the returned stack
+/// bounds are sane. This should not be placed behind a platform ifdef, as it is
+/// intended to catch cases where native stack checking is enabled on a platform
+/// that doesn't support it.
+#ifdef HERMES_CHECK_NATIVE_STACK
+TEST(StackBoundsTest, SanityCheck) {
+  auto [high, size] = oscompat::thread_stack_bounds(0);
+  ASSERT_TRUE(size > 0);
+  ASSERT_TRUE(high != nullptr);
+  ASSERT_FALSE(isOverflowing());
+}
+#endif
 
 TEST(StackBoundsTest, manualStackScan_mainThread) {
   manualStackScan();
@@ -131,6 +140,18 @@ TEST(StackBoundsTest, manualStackScan_thread) {
 TEST(StackBoundsTest, unboundRecursion_thread) {
   std::thread t(unboundedRecursion);
   t.join();
+}
+
+TEST(StackBoundsTest, ThreadStackBounds) {
+  auto [high, size] = oscompat::thread_stack_bounds();
+  ASSERT_TRUE(size > 0);
+#ifdef __GNUC__
+  void *sp = __builtin_frame_address(0);
+#else
+  volatile char *var = 0;
+  void *sp = (void *)&var;
+#endif
+  ASSERT_FALSE((uintptr_t)high - (uintptr_t)sp > size);
 }
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
@@ -171,18 +192,6 @@ TEST(StackBoundsTest, unboundRecursion_thread64KGuard) {
     unboundedRecursion();
     return nullptr;
   });
-}
-
-TEST(StackBoundsTest, ThreadStackBounds) {
-  auto [high, size] = oscompat::thread_stack_bounds();
-  ASSERT_TRUE(size > 0);
-#ifdef __GNUC__
-  void *sp = __builtin_frame_address(0);
-#else
-  volatile char *var = 0;
-  void *sp = (void *)&var;
-#endif
-  ASSERT_FALSE((uintptr_t)high - (uintptr_t)sp > size);
 }
 
 #endif
