@@ -464,7 +464,8 @@ def testShouldRun(filename, content, unsupported_features):
             return TestContentParameters(
                 False, "Skipping test with with()", True, flags, strictModes
             )
-        if constMatcher.search(content):
+        # Skip tests that use 'const', except for Intl tests.
+        if not(fileInSkiplist(filename, INTL_TESTS)) and constMatcher.search(content):
             return TestContentParameters(
                 False, "Skipping test with 'const'", False, flags, strictModes
             )
@@ -669,9 +670,6 @@ def runTest(
 
         source, includes = generateSource(content, strictEnabled, suite, flags)
         source = source.encode("utf-8")
-        if "testIntl.js" in includes:
-            # No support for multiple Intl constructors in that file.
-            return (TestFlag.TEST_SKIPPED, "", 0)
 
         with open(js_source, "wb") as f:
             f.write(source)
