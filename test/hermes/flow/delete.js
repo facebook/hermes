@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %hermes -typed %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -exec -typed %s | %FileCheck --match-full-lines %s
 
 var obj: any = {a: 'a', b: 'b', '1': '1'};

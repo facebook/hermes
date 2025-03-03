@@ -5,8 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %shermes -O0 -exec %s | %FileCheck --match-full-lines %s
-// RUN: %shermes -O -exec %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -typed -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -typed -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -typed -O0 -exec %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -typed -O -exec %s | %FileCheck --match-full-lines %s
 
 print('equality');
 // CHECK-LABEL: equality

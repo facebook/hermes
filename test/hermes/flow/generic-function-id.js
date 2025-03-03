@@ -5,27 +5,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %hermes -O0 -typed %s | %FileCheck %s --match-full-lines
+// RUN: %hermes -typed %s | %FileCheck %s --match-full-lines
 // RUN: %shermes -O0 -typed -exec %s | %FileCheck %s --match-full-lines
 // RUN: %shermes -typed -exec %s | %FileCheck %s --match-full-lines
 
-let outer: A<number> | null = null;
-
-class B<T> {
-  constructor() {}
-  read(): void {
-    (globalThis.a as A<boolean>).foo();
-  }
+function id<T>(x: T): T {
+  return x;
 }
 
-class A<T> extends B<T> {
-  constructor() {
-    super();
-  }
-  foo(): void {
-    print('foo')
-  }
-}
-
-globalThis.a = new A<boolean>();
-new B<number>().read();
-// CHECK: foo
+print(id<number>(10));
+// CHECK: 10
+print(id<string>('abc'));
+// CHECK-NEXT: abc

@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// RUN: %hermes -typed %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 -typed %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -typed -exec %s | %FileCheck --match-full-lines %s
 // RUN: %shermes -O0 -typed -exec %s | %FileCheck --match-full-lines %s
 
