@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xforce-jit=0 -fno-inline -Xjit -Xjit-crash-on-error -Xdump-jitcode=2 %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermes -Xforce-jit=0 -fno-inline -Xjit -Xjit-crash-on-error -Xdump-jitcode=2 %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
 // Demonstrate the various JIT levels.
@@ -39,8 +39,6 @@ for (var i = 0; i < 50; ++i) {
   loop1(arr);
   loop2(arr);
 }
-
-// Auto-generated content below. Please do not modify manually.
 
 // CHECK:0
 // CHECK-NEXT:1
