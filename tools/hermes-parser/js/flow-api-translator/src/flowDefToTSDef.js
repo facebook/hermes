@@ -2069,6 +2069,24 @@ const getTransforms = (
           return unsupportedAnnotation(node, fullTypeName);
         }
 
+        case '$ArrayLike': {
+          // `$ArrayLike<T>` => `ArrayLike<T>`
+          return {
+            type: 'TSTypeReference',
+            loc: DUMMY_LOC,
+            typeName: {
+              type: 'Identifier',
+              loc: DUMMY_LOC,
+              name: 'ArrayLike',
+            },
+            typeParameters: {
+              type: 'TSTypeParameterInstantiation',
+              loc: DUMMY_LOC,
+              params: assertHasExactlyNTypeParameters(1),
+            },
+          };
+        }
+
         case '$Diff':
         case '$Rest': {
           // `$Diff<A, B>` => `Pick<A, Exclude<keyof A, keyof B>>`
