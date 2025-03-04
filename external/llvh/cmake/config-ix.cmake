@@ -213,6 +213,7 @@ check_symbol_exists(strerror string.h HAVE_STRERROR)
 check_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
 check_symbol_exists(strerror_s string.h HAVE_DECL_STRERROR_S)
 check_symbol_exists(setenv stdlib.h HAVE_SETENV)
+check_symbol_exists(tzset time.h HAVE_TZSET)
 if( PURE_WINDOWS )
   check_symbol_exists(_chsize_s io.h HAVE__CHSIZE_S)
 
