@@ -4702,37 +4702,6 @@ class CreateGeneratorInst : public BaseCreateLexicalChildInst {
   }
 };
 
-class StartGeneratorInst : public Instruction {
-  StartGeneratorInst(const StartGeneratorInst &) = delete;
-  void operator=(const StartGeneratorInst &) = delete;
-
- public:
-  explicit StartGeneratorInst()
-      : Instruction(ValueKind::StartGeneratorInstKind) {
-    setType(Type::createNoType());
-  }
-  explicit StartGeneratorInst(
-      const StartGeneratorInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  static bool hasOutput() {
-    return false;
-  }
-  static bool isTyped() {
-    return false;
-  }
-
-  SideEffect getSideEffectImpl() const {
-    return SideEffect::createUnknown().setFirstInBlock();
-  }
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::StartGeneratorInstKind;
-  }
-};
-
 class ResumeGeneratorInst : public Instruction {
   ResumeGeneratorInst(const ResumeGeneratorInst &) = delete;
   void operator=(const ResumeGeneratorInst &) = delete;

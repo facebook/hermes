@@ -595,8 +595,6 @@ class IRBuilder {
       BaseScopeInst *scope,
       NormalFunction *innerFn);
 
-  StartGeneratorInst *createStartGeneratorInst();
-
   ResumeGeneratorInst *createResumeGeneratorInst(AllocStackInst *isReturn);
 
   //--------------------------------------------------------------------------//

@@ -83,9 +83,6 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
     PM.addDCE();
   }
 
-  // Move StartGenerator instructions to the start of functions.
-  PM.addHoistStartGenerator();
-
   if (!PM.run(M))
     return;
   M->setLowered(true);

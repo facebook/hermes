@@ -342,13 +342,10 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     newFunctionContext.legacyClassContext = legacyClassContext;
 
     if (isGeneratorInnerFunction) {
-      // StartGeneratorInst
-      // ResumeGeneratorInst
-      // at the beginning of the function, to allow for the first .next()
-      // call.
+      // ResumeGeneratorInst at the beginning of the function, to allow for the
+      // first .next() call.
       auto *initGenBB = Builder.createBasicBlock(newFunction);
       Builder.setInsertionBlock(initGenBB);
-      Builder.createStartGeneratorInst();
       auto *prologueBB = Builder.createBasicBlock(newFunction);
       auto *prologueResumeIsReturn = Builder.createAllocStackInst(
           genAnonymousLabelName("isReturn_prologue"), Type::createBoolean());

@@ -154,143 +154,139 @@ var simpleAsyncFE = async function () {
 
 // CHECK:generator inner ?anon_0_simpleReturn?inner(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
-// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS5: any, %5: environment
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS5: any, %4: environment
 // CHECK-NEXT:       ReturnInst 1: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS6 [x: any]
 
 // CHECK:generator inner ?anon_0_simpleAwait?inner(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
-// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS6: any, %5: environment
-// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [%VS6.x]: any
-// CHECK-NEXT:  %8 = AllocStackInst (:boolean) $?anon_1_isReturn: any
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS6: any, %4: environment
+// CHECK-NEXT:       StoreFrameInst %5: environment, undefined: undefined, [%VS6.x]: any
+// CHECK-NEXT:  %7 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:       SaveAndYieldInst 2: number, false: boolean, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:        ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = ResumeGeneratorInst (:any) %8: boolean
-// CHECK-NEXT:  %12 = LoadStackInst (:boolean) %8: boolean
-// CHECK-NEXT:        CondBranchInst %12: boolean, %BB5, %BB4
+// CHECK-NEXT:  %10 = ResumeGeneratorInst (:any) %7: boolean
+// CHECK-NEXT:  %11 = LoadStackInst (:boolean) %7: boolean
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        StoreFrameInst %6: environment, %11: any, [%VS6.x]: any
-// CHECK-NEXT:  %15 = LoadFrameInst (:any) %6: environment, [%VS6.x]: any
-// CHECK-NEXT:        ReturnInst %15: any
+// CHECK-NEXT:        StoreFrameInst %5: environment, %10: any, [%VS6.x]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %5: environment, [%VS6.x]: any
+// CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        ReturnInst %11: any
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS7 [x: any]
 
 // CHECK:generator inner ?anon_0_nonSimpleArrayDestructuring?inner(?anon_2_param: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
-// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
-// CHECK-NEXT:  %6 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
-// CHECK-NEXT:  %7 = CreateScopeInst (:environment) %VS7: any, %6: environment
-// CHECK-NEXT:       StoreFrameInst %7: environment, undefined: undefined, [%VS7.x]: any
-// CHECK-NEXT:  %9 = LoadParamInst (:any) %?anon_2_param: any
-// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_3_iter: any
-// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_sourceOrNext: any
-// CHECK-NEXT:        StoreStackInst %9: any, %11: any
-// CHECK-NEXT:  %13 = IteratorBeginInst (:any) %11: any
-// CHECK-NEXT:        StoreStackInst %13: any, %10: any
-// CHECK-NEXT:  %15 = AllocStackInst (:any) $?anon_5_iterDone: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %15: any
-// CHECK-NEXT:  %17 = AllocStackInst (:any) $?anon_6_iterValue: any
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %17: any
+// CHECK-NEXT:  %4 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS7: any, %5: environment
+// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [%VS7.x]: any
+// CHECK-NEXT:  %8 = LoadParamInst (:any) %?anon_2_param: any
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_3_iter: any
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_4_sourceOrNext: any
+// CHECK-NEXT:        StoreStackInst %8: any, %10: any
+// CHECK-NEXT:  %12 = IteratorBeginInst (:any) %10: any
+// CHECK-NEXT:        StoreStackInst %12: any, %9: any
+// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_5_iterDone: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %14: any
+// CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_6_iterValue: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %16: any
 // CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:        ReturnInst %2: any
+// CHECK-NEXT:        ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %21 = ResumeGeneratorInst (:any) %5: boolean
-// CHECK-NEXT:  %22 = LoadStackInst (:boolean) %5: boolean
-// CHECK-NEXT:        CondBranchInst %22: boolean, %BB10, %BB9
+// CHECK-NEXT:  %20 = ResumeGeneratorInst (:any) %4: boolean
+// CHECK-NEXT:  %21 = LoadStackInst (:boolean) %4: boolean
+// CHECK-NEXT:        CondBranchInst %21: boolean, %BB10, %BB9
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %24 = LoadStackInst (:any) %11: any
-// CHECK-NEXT:  %25 = IteratorNextInst (:any) %10: any, %24: any
-// CHECK-NEXT:  %26 = LoadStackInst (:any) %10: any
-// CHECK-NEXT:  %27 = BinaryStrictlyEqualInst (:any) %26: any, undefined: undefined
-// CHECK-NEXT:        StoreStackInst %27: any, %15: any
-// CHECK-NEXT:        CondBranchInst %27: any, %BB6, %BB5
+// CHECK-NEXT:  %23 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:  %24 = IteratorNextInst (:any) %9: any, %23: any
+// CHECK-NEXT:  %25 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %26 = BinaryStrictlyEqualInst (:any) %25: any, undefined: undefined
+// CHECK-NEXT:        StoreStackInst %26: any, %14: any
+// CHECK-NEXT:        CondBranchInst %26: any, %BB6, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        StoreStackInst %25: any, %17: any
+// CHECK-NEXT:        StoreStackInst %24: any, %16: any
 // CHECK-NEXT:        BranchInst %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %32 = LoadStackInst (:any) %17: any
-// CHECK-NEXT:        StoreFrameInst %7: environment, %32: any, [%VS7.x]: any
-// CHECK-NEXT:  %34 = LoadStackInst (:any) %15: any
-// CHECK-NEXT:        CondBranchInst %34: any, %BB8, %BB7
+// CHECK-NEXT:  %31 = LoadStackInst (:any) %16: any
+// CHECK-NEXT:        StoreFrameInst %6: environment, %31: any, [%VS7.x]: any
+// CHECK-NEXT:  %33 = LoadStackInst (:any) %14: any
+// CHECK-NEXT:        CondBranchInst %33: any, %BB8, %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %36 = LoadStackInst (:any) %10: any
-// CHECK-NEXT:  %37 = IteratorCloseInst (:any) %36: any, false: boolean
+// CHECK-NEXT:  %35 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %36 = IteratorCloseInst (:any) %35: any, false: boolean
 // CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB8:
 // CHECK-NEXT:        SaveAndYieldInst undefined: undefined, false: boolean, %BB3
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %40 = LoadFrameInst (:any) %7: environment, [%VS7.x]: any
-// CHECK-NEXT:  %41 = AllocStackInst (:boolean) $?anon_8_isReturn: any
-// CHECK-NEXT:        SaveAndYieldInst %40: any, false: boolean, %BB11
+// CHECK-NEXT:  %39 = LoadFrameInst (:any) %6: environment, [%VS7.x]: any
+// CHECK-NEXT:  %40 = AllocStackInst (:boolean) $?anon_8_isReturn: any
+// CHECK-NEXT:        SaveAndYieldInst %39: any, false: boolean, %BB11
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:        ReturnInst %21: any
+// CHECK-NEXT:        ReturnInst %20: any
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %44 = ResumeGeneratorInst (:any) %41: boolean
-// CHECK-NEXT:  %45 = LoadStackInst (:boolean) %41: boolean
-// CHECK-NEXT:        CondBranchInst %45: boolean, %BB13, %BB12
+// CHECK-NEXT:  %43 = ResumeGeneratorInst (:any) %40: boolean
+// CHECK-NEXT:  %44 = LoadStackInst (:boolean) %40: boolean
+// CHECK-NEXT:        CondBranchInst %44: boolean, %BB13, %BB12
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:        StoreFrameInst %7: environment, %44: any, [%VS7.x]: any
-// CHECK-NEXT:  %48 = LoadFrameInst (:any) %7: environment, [%VS7.x]: any
-// CHECK-NEXT:        ReturnInst %48: any
+// CHECK-NEXT:        StoreFrameInst %6: environment, %43: any, [%VS7.x]: any
+// CHECK-NEXT:  %47 = LoadFrameInst (:any) %6: environment, [%VS7.x]: any
+// CHECK-NEXT:        ReturnInst %47: any
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:        ReturnInst %44: any
+// CHECK-NEXT:        ReturnInst %43: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS8 [x: any]
 
 // CHECK:generator inner ?anon_0_simpleAsyncFE?inner(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       StartGeneratorInst
-// CHECK-NEXT:  %1 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
-// CHECK-NEXT:  %2 = ResumeGeneratorInst (:any) %1: boolean
-// CHECK-NEXT:  %3 = LoadStackInst (:boolean) %1: boolean
-// CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
-// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS8: any, %5: environment
-// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [%VS8.x]: any
-// CHECK-NEXT:  %8 = AllocStackInst (:boolean) $?anon_1_isReturn: any
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS8: any, %4: environment
+// CHECK-NEXT:       StoreFrameInst %5: environment, undefined: undefined, [%VS8.x]: any
+// CHECK-NEXT:  %7 = AllocStackInst (:boolean) $?anon_1_isReturn: any
 // CHECK-NEXT:       SaveAndYieldInst 2: number, false: boolean, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:        ReturnInst %2: any
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = ResumeGeneratorInst (:any) %8: boolean
-// CHECK-NEXT:  %12 = LoadStackInst (:boolean) %8: boolean
-// CHECK-NEXT:        CondBranchInst %12: boolean, %BB5, %BB4
+// CHECK-NEXT:  %10 = ResumeGeneratorInst (:any) %7: boolean
+// CHECK-NEXT:  %11 = LoadStackInst (:boolean) %7: boolean
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:        StoreFrameInst %6: environment, %11: any, [%VS8.x]: any
-// CHECK-NEXT:  %15 = LoadFrameInst (:any) %6: environment, [%VS8.x]: any
-// CHECK-NEXT:        ReturnInst %15: any
+// CHECK-NEXT:        StoreFrameInst %5: environment, %10: any, [%VS8.x]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %5: environment, [%VS8.x]: any
+// CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:        ReturnInst %11: any
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end

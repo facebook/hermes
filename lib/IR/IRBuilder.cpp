@@ -958,12 +958,6 @@ CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
   return I;
 }
 
-StartGeneratorInst *IRBuilder::createStartGeneratorInst() {
-  auto *I = new StartGeneratorInst();
-  insert(I);
-  return I;
-}
-
 ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(
     AllocStackInst *isReturn) {
   auto *I = new ResumeGeneratorInst(isReturn);

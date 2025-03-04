@@ -1985,9 +1985,6 @@ class InstrGen {
   void generateHBCCallNInst(HBCCallNInst &inst) {
     unimplemented(inst);
   }
-  void generateStartGeneratorInst(StartGeneratorInst &inst) {
-    unimplemented(inst);
-  }
   void generateResumeGeneratorInst(ResumeGeneratorInst &inst) {
     unimplemented(inst);
   }

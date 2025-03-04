@@ -768,11 +768,7 @@ void LowerToStateMachine::lowerToSwitch(
   IRBuilder::InstructionDestroyer destroyer{};
   for (auto *BB : userBBs) {
     for (Instruction &I : *BB) {
-      if (auto *SGI = llvh::dyn_cast<StartGeneratorInst>(&I)) {
-        // We've already replicated the semantics of StartGeneratorInst, so
-        // remove it.
-        destroyer.add(SGI);
-      } else if (auto *YI = llvh::dyn_cast<SaveAndYieldInst>(&I)) {
+      if (auto *YI = llvh::dyn_cast<SaveAndYieldInst>(&I)) {
         // Return a value, and set switchIdx to jump to the next block
         // specified in the parameter of SaveAndYieldInst.
         auto *nextBB = YI->getNextBlock();

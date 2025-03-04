@@ -29,7 +29,6 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/Utils.cpp
   Optimizer/Scalar/FunctionAnalysis.cpp
   Optimizer/Scalar/Inlining.cpp
-  Optimizer/Scalar/HoistStartGenerator.cpp
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp
   Optimizer/Scalar/TDZDedup.cpp
   Optimizer/Scalar/StripDebugInsts.cpp

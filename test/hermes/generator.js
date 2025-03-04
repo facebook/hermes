@@ -143,8 +143,6 @@ show(it.return('MY RETVAL'));
 show(it.next());
 // CHECK-NEXT: MY RETVAL | true
 
-// Ensures that the StartGenerator instruction is moved to the start
-// of the function after optimizations.
 function *localsTry() {
   var x = 0;
   try {

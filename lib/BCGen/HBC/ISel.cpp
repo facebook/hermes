@@ -1316,11 +1316,6 @@ void HBCISel::generateCreateGeneratorInst(
     BCFGen_->emitCreateGeneratorLongIndex(output, env, code);
   }
 }
-void HBCISel::generateStartGeneratorInst(
-    StartGeneratorInst *Inst,
-    BasicBlock *next) {
-  llvm_unreachable("StartGeneratorInst should have been lowered");
-}
 void HBCISel::generateResumeGeneratorInst(
     ResumeGeneratorInst *Inst,
     BasicBlock *next) {

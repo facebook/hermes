@@ -211,7 +211,6 @@ DEF_VALUE(CreateThisInst, Instruction)
 DEF_VALUE(GetConstructedObjectInst, Instruction)
 
 DEF_VALUE(GetBuiltinClosureInst, Instruction)
-DEF_VALUE(StartGeneratorInst, Instruction)
 DEF_VALUE(ResumeGeneratorInst, Instruction)
 
 MARK_FIRST(BaseScopeInst, Instruction)

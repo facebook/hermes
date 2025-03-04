@@ -783,9 +783,6 @@ class TypeInferenceImpl {
   Type inferGetBuiltinClosureInst(GetBuiltinClosureInst *inst) {
     return *inst->getInherentType();
   }
-  Type inferStartGeneratorInst(StartGeneratorInst *inst) {
-    return Type::createNoType();
-  }
   Type inferResumeGeneratorInst(ResumeGeneratorInst *inst) {
     // Result of ResumeGeneratorInst is whatever the user passes to .next()
     // or .throw() to resume the generator, which we don't yet support

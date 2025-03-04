@@ -839,16 +839,6 @@ Arguments | %function is the function that represents the code of the generator'
 Semantics | Creates a new GeneratorInnerFunction closure that may access the environment and wraps it in a generator
 Effects | Does not read or write to memory (creates a new object).
 
-### StartGenerator
-
-StartGenerator | _
---- | --- |
-Description | Jump to the proper first instruction to execute in a GeneratorInnerFunction
-Example |  %0 = StartGenerator
-Arguments | None
-Semantics | Jumps to a BasicBlock which begins with a ResumeGenerator and sets the internal generator state to "executing", but does not handle next(), return(), or throw() as requested by the user.
-Effects | Reads and writes memory. Restores the stack based on saved state, and jumps to another BasicBlock
-
 ### SaveAndYield
 
 SaveAndYield | _
