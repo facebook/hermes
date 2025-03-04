@@ -31,7 +31,7 @@ using ::testing::MatchesRegex;
 namespace {
 
 // We make this not FixedSize, to allow direct allocation in the old generation.
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
 
 class TestCrashManager : public CrashManager {
  public:
@@ -107,8 +107,8 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   uint32_t numHeapSegmentsNumbered = 0;
   int32_t keyNum;
   for (const auto &[key, payload] : contextualCustomData) {
-    // Keeps track whether key represents an AlignedHeapSegment so that payload
-    // can be validated below.
+    // Keeps track whether key represents an FixedSizeHeapSegment so that
+    // payload can be validated below.
     bool validatePayload = false;
     if (key == ygSegmentName) {
       validatePayload = true;

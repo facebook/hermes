@@ -222,6 +222,11 @@ class MallocGC final : public GCBase {
       const override;
   bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const override;
+  bool needsWriteBarrierInCtor(const GCHermesValue *loc, HermesValue value)
+      const override;
+  bool needsWriteBarrierInCtor(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value) const override;
 #endif
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -235,14 +240,42 @@ class MallocGC final : public GCBase {
 
   void writeBarrier(const GCHermesValue *, HermesValue) {}
   void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
+  void
+  writeBarrierForLargeObj(const GCCell *, const GCHermesValue *, HermesValue) {}
+  void writeBarrierForLargeObj(
+      const GCCell *,
+      const GCSmallHermesValue *,
+      SmallHermesValue) {}
   void writeBarrier(const GCPointerBase *, const GCCell *) {}
+  void writeBarrierForLargeObj(
+      const GCCell *,
+      const GCPointerBase *,
+      const GCCell *) {}
   void constructorWriteBarrier(const GCHermesValue *, HermesValue) {}
   void constructorWriteBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *,
+      const GCSmallHermesValue *,
+      SmallHermesValue) {}
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *,
+      const GCHermesValue *,
+      HermesValue) {}
   void constructorWriteBarrier(const GCPointerBase *, const GCCell *) {}
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *,
+      const GCPointerBase *,
+      const GCCell *) {}
   void writeBarrierRange(const GCHermesValue *, uint32_t) {}
   void writeBarrierRange(const GCSmallHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void constructorWriteBarrierRange(
+      const GCCell *,
+      const GCHermesValue *,
+      uint32_t) {}
+  void constructorWriteBarrierRange(
+      const GCCell *,
+      const GCSmallHermesValue *,
+      uint32_t) {}
   void snapshotWriteBarrier(const GCHermesValue *) {}
   void snapshotWriteBarrier(const GCSmallHermesValue *) {}
   void snapshotWriteBarrier(const GCPointerBase *) {}

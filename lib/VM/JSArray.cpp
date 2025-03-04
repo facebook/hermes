@@ -372,6 +372,7 @@ const ObjectVTable Arguments::vt{
     VTable(
         CellKind::ArgumentsKind,
         cellSize<Arguments>(),
+        /* allowLargeAlloc */ false,
         nullptr,
         nullptr,
         nullptr
@@ -493,6 +494,7 @@ const ObjectVTable JSArray::vt{
     VTable(
         CellKind::JSArrayKind,
         cellSize<JSArray>(),
+        /* allowLargeAlloc */ false,
         nullptr,
         nullptr,
         nullptr
