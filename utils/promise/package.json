@@ -8,6 +8,6 @@
     "start": "yarn run rollup --config rollup.config.js index.js"
   },
   "devDependencies": {
-    "rollup": "~2.27.0"
+    "rollup": "~2.79.2"
   }
 }
