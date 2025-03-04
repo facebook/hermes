@@ -356,9 +356,9 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
 }
 
 #ifndef HERMESVM_GC_MALLOC
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
-  constexpr size_t kHeapSizeHint = AlignedHeapSegment::maxSize() * 10;
+  constexpr size_t kHeapSizeHint = FixedSizeHeapSegment::maxSize() * 10;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
   auto runtime = DummyRuntime::create(kGCConfig);

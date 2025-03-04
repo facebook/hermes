@@ -43,13 +43,14 @@ class StorageProvider {
   }
   /// Create a new segment memory space and give this memory the name \p name.
   /// \return A pointer to a block of memory that has
-  /// AlignedHeapSegment::storageSize() bytes, and is aligned on
-  /// AlignedHeapSegment::storageSize().
+  /// FixedSizeHeapSegment::storageSize() bytes, and is aligned on
+  /// FixedSizeHeapSegment::storageSize().
   llvh::ErrorOr<void *> newStorage(const char *name);
 
   /// Delete the given segment's memory space, and make it available for re-use.
   /// \post Nothing in the range [storage, storage +
-  /// AlignedHeapSegment::storageSize()) is valid memory to be read or written.
+  /// FixedSizeHeapSegment::storageSize()) is valid memory to be read or
+  /// written.
   void deleteStorage(void *storage);
 
   /// The number of storages this provider has allocated in its lifetime.
