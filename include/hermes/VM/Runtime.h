@@ -913,7 +913,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   }
 
   bool hasES6BlockScoping() const {
-    return hasES6Class_;
+    return hasES6BlockScoping_;
   }
 
   bool hasIntl() const {
