@@ -1569,9 +1569,13 @@ constexpr size_t JSObject::cellSizeJSObject() {
           directPropsOffset() +
               sizeof(GCSmallHermesValue) * DIRECT_PROPERTY_SLOTS,
       "unexpected padding");
+  // Check that any padding added due to alignment is less than an additional
+  // direct property slot. This ensures that we've maximized the direct property
+  // slots for the current object size.
   static_assert(
-      heapAlignSize(sizeof(JSObjectAndDirectProps)) ==
-          sizeof(JSObjectAndDirectProps),
+      heapAlignSize(sizeof(JSObjectAndDirectProps)) -
+              sizeof(JSObjectAndDirectProps) <
+          sizeof(GCSmallHermesValue),
       "Wasted direct slot due to alignment");
   return sizeof(JSObjectAndDirectProps);
 }
