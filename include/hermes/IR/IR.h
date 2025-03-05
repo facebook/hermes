@@ -848,23 +848,23 @@ class Parameter : public Value {
   }
 };
 
-/// This represents a JS function parameter, all of which are optional.
-class JSDynamicParam : public Value {
-  friend class Function;
-  friend class IRBuilder;
-  JSDynamicParam(const JSDynamicParam &) = delete;
-  void operator=(const JSDynamicParam &) = delete;
-
-  /// The function that contains this paramter.
-  Function *parent_;
+/// Supertype of the types below, to factor out common code.
+/// Note that ctor is protected; can't create one of these.
+class JSParam : public Value {
+  JSParam(const JSParam &) = delete;
+  void operator=(const JSParam &) = delete;
 
   /// The formal name of the parameter
   Identifier name_;
 
-  explicit JSDynamicParam(Function *parent, Identifier name)
-      : Value(ValueKind::JSDynamicParamKind), parent_(parent), name_(name) {
+ protected:
+  JSParam(ValueKind kind, Function *parent, Identifier name)
+      : Value(kind), name_(name), parent_(parent) {
     assert(parent_ && "Invalid parent");
   }
+
+  /// The function that contains this paramter.
+  Function *parent_;
 
  public:
   Context &getContext() const;
@@ -877,13 +877,42 @@ class JSDynamicParam : public Value {
   Identifier getName() const {
     return name_;
   }
+};
 
+/// This represents a JS function parameter, all of which are optional.
+class JSDynamicParam : public JSParam {
+  friend class Function;
+  friend class IRBuilder;
+  JSDynamicParam(const JSDynamicParam &) = delete;
+  void operator=(const JSDynamicParam &) = delete;
+
+  JSDynamicParam(Function *parent, Identifier name)
+      : JSParam(ValueKind::JSDynamicParamKind, parent, name) {}
+
+ public:
   /// Return the index of this parameter in the function's parameter list.
   /// "this" parameter is excluded from the list.
   uint32_t getIndexInParamList() const;
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::JSDynamicParamKind;
+  }
+};
+
+/// This represents one of the "special" JS function parameters: newTarget,
+/// or parentScope.
+class JSSpecialParam : public JSParam {
+  friend class Function;
+  friend class IRBuilder;
+  JSSpecialParam(const JSSpecialParam &) = delete;
+  void operator=(const JSSpecialParam &) = delete;
+
+  JSSpecialParam(Function *parent, Identifier name)
+      : JSParam(ValueKind::JSSpecialParamKind, parent, name) {}
+
+ public:
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::JSSpecialParamKind;
   }
 };
 
@@ -1834,9 +1863,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// params.
   bool jsThisAdded_ = false;
   /// Parameter used as an operand in GetNewTarget to easily find all users.
-  JSDynamicParam newTargetParam_;
+  JSSpecialParam newTargetParam_;
   /// Parameter used as an operand in GetParentScope to easily find all users.
-  JSDynamicParam parentScopeParam_;
+  JSSpecialParam parentScopeParam_;
   /// The user-specified original name of the function,
   /// or if not specified (e.g. anonymous), the inferred name.
   /// If there was no inference, an empty string.
@@ -1955,16 +1984,16 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   /// \return the new.target parameter.
-  JSDynamicParam *getNewTargetParam() {
+  JSSpecialParam *getNewTargetParam() {
     return &newTargetParam_;
   }
   /// \return the new.target parameter.
-  const JSDynamicParam *getNewTargetParam() const {
+  const JSSpecialParam *getNewTargetParam() const {
     return &newTargetParam_;
   }
 
   /// \return the parent scope parameter.
-  JSDynamicParam *getParentScopeParam() {
+  JSSpecialParam *getParentScopeParam() {
     return &parentScopeParam_;
   }
 

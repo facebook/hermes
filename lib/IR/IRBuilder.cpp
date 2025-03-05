@@ -375,7 +375,7 @@ CreateFunctionInst *IRBuilder::createCreateFunctionInst(
 
 GetParentScopeInst *IRBuilder::createGetParentScopeInst(
     VariableScope *scope,
-    JSDynamicParam *parentScopeParam) {
+    JSSpecialParam *parentScopeParam) {
   auto GPS = new GetParentScopeInst(scope, parentScopeParam);
   insert(GPS);
   return GPS;
@@ -969,7 +969,7 @@ HBCResolveParentEnvironmentInst *
 IRBuilder::createHBCResolveParentEnvironmentInst(
     VariableScope *scope,
     LiteralNumber *numLevels,
-    JSDynamicParam *parentScopeParam) {
+    JSSpecialParam *parentScopeParam) {
   auto *inst =
       new HBCResolveParentEnvironmentInst(scope, numLevels, parentScopeParam);
   insert(inst);
@@ -1019,7 +1019,7 @@ LoadParamInst *IRBuilder::createLoadParamInst(JSDynamicParam *param) {
 HBCCreateFunctionEnvironmentInst *
 IRBuilder::createHBCCreateFunctionEnvironmentInst(
     VariableScope *scope,
-    JSDynamicParam *parentScopeParam) {
+    JSSpecialParam *parentScopeParam) {
   auto *inst = new HBCCreateFunctionEnvironmentInst(scope, parentScopeParam);
   insert(inst);
   return inst;

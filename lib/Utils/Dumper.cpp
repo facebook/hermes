@@ -207,6 +207,9 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   } else if (auto P = dyn_cast<JSDynamicParam>(V)) {
     auto Name = P->getName();
     os_ << "%" << ctx.toString(Name);
+  } else if (auto P = dyn_cast<JSSpecialParam>(V)) {
+    auto Name = P->getName();
+    os_ << "%" << ctx.toString(Name);
   } else if (auto F = dyn_cast<Function>(V)) {
     os_ << "%" << quoteStr(ctx.toString(F->getInternalName())) << "()";
   } else if (auto VS = dyn_cast<VariableScope>(V)) {

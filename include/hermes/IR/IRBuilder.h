@@ -311,7 +311,7 @@ class IRBuilder {
 
   GetParentScopeInst *createGetParentScopeInst(
       VariableScope *scope,
-      JSDynamicParam *parentScopeParam);
+      JSSpecialParam *parentScopeParam);
 
   CreateScopeInst *createCreateScopeInst(
       VariableScope *scope,
@@ -604,7 +604,7 @@ class IRBuilder {
   HBCResolveParentEnvironmentInst *createHBCResolveParentEnvironmentInst(
       VariableScope *scope,
       LiteralNumber *numLevels,
-      JSDynamicParam *parentScopeParam);
+      JSSpecialParam *parentScopeParam);
 
   SwitchImmInst *createSwitchImmInst(
       Value *input,
@@ -620,7 +620,7 @@ class IRBuilder {
 
   HBCCreateFunctionEnvironmentInst *createHBCCreateFunctionEnvironmentInst(
       VariableScope *scope,
-      JSDynamicParam *parentScopeParam);
+      JSSpecialParam *parentScopeParam);
 
   LIRGetThisNSInst *createLIRGetThisNSInst();
 

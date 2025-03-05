@@ -47,6 +47,7 @@ DEF_VALUE(GlobalObjectProperty, Value)
 DEF_VALUE(Variable, Value)
 DEF_VALUE(Parameter, Value)
 DEF_VALUE(JSDynamicParam, Value)
+DEF_VALUE(JSSpecialParam, Value)
 DEF_VALUE(BasicBlock, Value)
 DEF_VALUE(VariableScope, Value)
 

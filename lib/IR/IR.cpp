@@ -804,7 +804,7 @@ Context &Instruction::getContext() const {
 Context &BasicBlock::getContext() const {
   return Parent->getContext();
 }
-Context &JSDynamicParam::getContext() const {
+Context &JSParam::getContext() const {
   return parent_->getContext();
 }
 

@@ -656,7 +656,7 @@ class GetParentScopeInst : public BaseScopeInst {
  public:
   explicit GetParentScopeInst(
       VariableScope *scope,
-      JSDynamicParam *parentScopeParam)
+      JSSpecialParam *parentScopeParam)
       : BaseScopeInst(ValueKind::GetParentScopeInstKind, scope) {
     pushOperand(parentScopeParam);
   }
@@ -665,8 +665,8 @@ class GetParentScopeInst : public BaseScopeInst {
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
 
-  JSDynamicParam *getParentScopeParam() const {
-    return cast<JSDynamicParam>(getOperand(ParentScopeParamIdx));
+  JSSpecialParam *getParentScopeParam() const {
+    return cast<JSSpecialParam>(getOperand(ParentScopeParamIdx));
   }
 
   SideEffect getSideEffectImpl() const {
@@ -3709,7 +3709,7 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
   explicit HBCResolveParentEnvironmentInst(
       VariableScope *scope,
       LiteralNumber *numLevels,
-      JSDynamicParam *parentScopeParam)
+      JSSpecialParam *parentScopeParam)
       : BaseScopeInst(ValueKind::HBCResolveParentEnvironmentInstKind, scope) {
     setType(*getInherentTypeImpl());
     pushOperand(numLevels);
@@ -3720,8 +3720,8 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
 
-  JSDynamicParam *getParentScopeParam() const {
-    return cast<JSDynamicParam>(getOperand(ParentScopeParamIdx));
+  JSSpecialParam *getParentScopeParam() const {
+    return cast<JSSpecialParam>(getOperand(ParentScopeParamIdx));
   }
 
   LiteralNumber *getNumLevels() const {
@@ -4050,7 +4050,7 @@ class HBCCreateFunctionEnvironmentInst : public BaseScopeInst {
 
   explicit HBCCreateFunctionEnvironmentInst(
       VariableScope *scope,
-      JSDynamicParam *parentScopeParam)
+      JSSpecialParam *parentScopeParam)
       : BaseScopeInst(ValueKind::HBCCreateFunctionEnvironmentInstKind, scope) {
     assert(
         scope->getVariables().size() <=
@@ -4064,8 +4064,8 @@ class HBCCreateFunctionEnvironmentInst : public BaseScopeInst {
       llvh::ArrayRef<Value *> operands)
       : BaseScopeInst(src, operands) {}
 
-  JSDynamicParam *getParentScopeParam() const {
-    return cast<JSDynamicParam>(getOperand(ParentScopeParamIdx));
+  JSSpecialParam *getParentScopeParam() const {
+    return cast<JSSpecialParam>(getOperand(ParentScopeParamIdx));
   }
 
   SideEffect getSideEffectImpl() const {
