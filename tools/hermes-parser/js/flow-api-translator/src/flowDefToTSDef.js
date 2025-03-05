@@ -1441,9 +1441,66 @@ const getTransforms = (
             }
           })();
 
-          return declarations.map(
-            ({declaration, exportKind}) =>
-              ({
+          const mappedDeclarations: Array<
+            | TSESTree.ExportNamedDeclaration
+            | Array<TSESTree.ExportNamedDeclaration>,
+          > = declarations.map(({declaration, exportKind}) => {
+            if (
+              declaration.type === 'VariableDeclaration' &&
+              declaration.declarations.length === 1
+            ) {
+              const ident = declaration.declarations[0].id;
+              if (ident.type === 'Identifier') {
+                const name = ident.name;
+                return [
+                  {
+                    type: 'ExportNamedDeclaration',
+                    loc: DUMMY_LOC,
+                    // flow does not currently support assertions
+                    assertions: [],
+                    declaration,
+                    exportKind,
+                    source: null,
+                    specifiers: [],
+                  },
+                  {
+                    type: 'ExportNamedDeclaration',
+                    declaration: {
+                      type: 'TSTypeAliasDeclaration',
+                      declare: true,
+                      id: {
+                        type: 'Identifier',
+                        decorators: [],
+                        name,
+                        optional: false,
+                        loc: DUMMY_LOC,
+                      },
+                      typeAnnotation: {
+                        type: 'TSTypeQuery',
+                        exprName: {
+                          type: 'Identifier',
+                          decorators: [],
+                          name,
+                          optional: false,
+                          loc: DUMMY_LOC,
+                        },
+                        loc: DUMMY_LOC,
+                      },
+                      loc: DUMMY_LOC,
+                    },
+                    source: null,
+                    loc: DUMMY_LOC,
+                    specifiers: [],
+                    exportKind: 'type',
+                    // flow does not currently support assertions
+                    assertions: [],
+                  },
+                ];
+              }
+            }
+
+            const exportNamedDeclaration: TSESTree.ExportNamedDeclarationWithoutSourceWithSingle =
+              {
                 type: 'ExportNamedDeclaration',
                 loc: DUMMY_LOC,
                 // flow does not currently support assertions
@@ -1452,8 +1509,11 @@ const getTransforms = (
                 exportKind,
                 source: null,
                 specifiers: [],
-              }: TSESTree.ExportNamedDeclarationWithoutSourceWithSingle),
-          );
+              };
+            return exportNamedDeclaration;
+          });
+
+          return mappedDeclarations.flat();
         } else {
           return ({
             type: 'ExportNamedDeclaration',
