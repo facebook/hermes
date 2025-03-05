@@ -212,7 +212,7 @@ class HermesValue : public HermesValueBase {
   }
 
   constexpr inline static HermesValue encodeBoolValue(bool val) {
-    return HermesValue((uint64_t)(val), ETag::Bool);
+    return HermesValue((uint64_t)(val) << kHV_BoolBitIdx, ETag::Bool);
   }
 
   inline static constexpr HermesValue encodeNullValue() {
@@ -373,7 +373,7 @@ class HermesValue : public HermesValueBase {
 
   inline bool getBool() const {
     assert(isBool());
-    return (bool)(this->raw & 0x1);
+    return _sh_ljs_get_bool(*this);
   }
 
   inline StringPrimitive *getString() const {

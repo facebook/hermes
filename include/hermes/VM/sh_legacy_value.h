@@ -189,6 +189,9 @@ static const uint64_t kHV_DataMask = (1ull << kHV_NumDataBits) - 1;
 static const unsigned kHV_ETagWidth = 4;
 static const unsigned kHV_ETagMask = (1 << kHV_ETagWidth) - 1;
 
+/// The value of a bool is encoded in the most significant bit after the ETag.
+static const unsigned kHV_BoolBitIdx = kHV_NumDataBits - 2;
+
 static inline SHLegacyValue _sh_ljs_encode_raw_tag(
     uint64_t val,
     enum HVTag tag) {
@@ -231,7 +234,8 @@ static inline SHLegacyValue _sh_ljs_native_uint32(uint32_t val) {
 }
 
 static inline SHLegacyValue _sh_ljs_bool(bool b) {
-  return _sh_ljs_encode_raw_etag(b, HVETag_Bool);
+  // Bool occupies the most significant bit after the ETag.
+  return _sh_ljs_encode_raw_etag((uint64_t)b << kHV_BoolBitIdx, HVETag_Bool);
 }
 
 static inline SHLegacyValue _sh_ljs_object(void *p) {
@@ -280,8 +284,8 @@ static inline bool _sh_ljs_is_string(SHLegacyValue v) {
 }
 
 static inline bool _sh_ljs_get_bool(SHLegacyValue v) {
-  // Clear the ETag and return the raw values that are left.
-  return (bool)(v.raw & 1);
+  // Bool occupies the most significant bit after the ETag.
+  return (bool)(v.raw & (1ull << kHV_BoolBitIdx));
 }
 static inline double _sh_ljs_get_double(SHLegacyValue v) {
   return v.f64;

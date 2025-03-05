@@ -219,12 +219,13 @@ void emit_sh_ljs_is_symbol(
 /// into a HermesValue boolean by adding the corresponding tag.
 void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
   static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
-  // We know that the ETag for bool as a 0 in its lowest bit, and is therefore a
-  // shifted 16 bit value. We can exploit this to use movk to set the tag.
+  // We know that the ETag for bool has a 0 in its lowest bit, and is therefore
+  // a shifted 16 bit value. We can exploit this to use movk to set the tag.
   static_assert(HERMESVALUE_VERSION == 1);
   static_assert(
       (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
       "Boolean tag must be 16 bits.");
+  a.lsl(inOut, inOut, kHV_BoolBitIdx);
   // Add the bool tag.
   a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
 }
@@ -5302,12 +5303,10 @@ void Emitter::jmpTrueFalse(
     a64::GpX xInput = hwInput.a64GpX();
 
     static_assert(
-        HERMESVALUE_VERSION == 1,
-        "bool is encoded as 32-bit value in the low bits");
-    if (onTrue)
-      a.cbnz(xInput.w(), target);
-    else
-      a.cbz(xInput.w(), target);
+        HERMESVALUE_VERSION == 1, "bool is encoded as a bit at kHV_BoolBitIdx");
+    // We don't use tbz/tbnz here because they have a very restricted range.
+    a.tst(xInput, 1ull << kHV_BoolBitIdx);
+    a.b(onTrue ? a64::CondCode::kNotZero : a64::CondCode::kZero, target);
   } else {
     // TODO: we should inline all of it.
     syncAllFRTempExcept({});
