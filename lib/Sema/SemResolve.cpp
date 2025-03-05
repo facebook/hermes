@@ -11,7 +11,6 @@
 #include "FlowChecker.h"
 #include "FlowTypesDumper.h"
 #include "SemanticResolver.h"
-#include "hermes/AST/ES6Class.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/Support/PerfSection.h"
 
@@ -160,9 +159,6 @@ bool resolveAST(
     flow::FlowContext *flowContext,
     ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls) {
-  if (astContext.getConvertES6Classes())
-    transformES6Classes(astContext, root);
-
   PerfSection validation("Resolving JavaScript global AST");
   // Resolve the entire AST.
   DeclCollectorMapTy declCollectorMap{};

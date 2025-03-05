@@ -98,7 +98,6 @@ static int executeHBCBytecodeFromCL(
           .withVMExperimentFlags(flags.VMExperimentFlags)
           .withES6Promise(flags.ES6Promise)
           .withES6Proxy(flags.ES6Proxy)
-          .withES6Class(flags.EvalES6Class)
           .withIntl(flags.Intl)
           .withMicrotaskQueue(flags.MicrotaskQueue)
           .withEnableSampleProfiling(
@@ -163,7 +162,6 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
       .withVMExperimentFlags(flags.VMExperimentFlags)
       .withES6Promise(flags.ES6Promise)
       .withES6Proxy(flags.ES6Proxy)
-      .withES6Class(flags.EvalES6Class)
       .withIntl(flags.Intl)
       .withMicrotaskQueue(flags.MicrotaskQueue)
       .withEnableHermesInternal(flags.EnableHermesInternal)
@@ -187,13 +185,6 @@ int main(int argc, char **argv) {
 
   llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
-
-  // If -Xeval-es6-class is not specified, but -Xes6-class is, copy the latter
-  // into the former.
-  if (flags.EvalES6Class.getNumOccurrences() == 0 &&
-      cl::ES6Class.getNumOccurrences()) {
-    flags.EvalES6Class.setValue(cl::ES6Class.getValue());
-  }
 
   if (cl::InputFilenames.size() == 0) {
     return repl(getReplRuntimeConfig());

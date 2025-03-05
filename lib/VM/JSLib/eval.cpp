@@ -41,7 +41,6 @@ CallResult<HermesValue> evalInEnvironment(
   compileFlags.emitAsyncBreakCheck = runtime.asyncBreakCheckInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
-  compileFlags.enableES6Classes = runtime.hasES6Class();
   compileFlags.enableES6BlockScoping = runtime.hasES6BlockScoping();
   compileFlags.requireSingleFunction = singleFunction;
 #ifdef HERMES_ENABLE_DEBUGGER

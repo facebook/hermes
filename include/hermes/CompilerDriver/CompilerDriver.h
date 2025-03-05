@@ -97,7 +97,6 @@ namespace cl {
 extern llvh::cl::opt<bool> BasicBlockProfiling;
 extern llvh::cl::opt<std::string> ProfilingOutFile;
 extern llvh::cl::opt<bool> EnableEval;
-extern llvh::cl::opt<bool> ES6Class;
 extern llvh::cl::opt<bool> VerifyIR;
 extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
 extern llvh::cl::list<std::string> InputFilenames;

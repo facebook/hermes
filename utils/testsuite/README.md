@@ -31,8 +31,6 @@ the CVE testsuite:
 -Xes6-promise -Xes6-proxy -Xhermes-internal-test-methods -Xmicrotask-queue
 ```
 
-For mjsunit, we pass an additional flag to hermes compiler: `-Xes6-class`.
-
 Since esprima testsuite includes only AST tests, we simply use `-dump-ast`. For
 flow testsuite, we use additionally below flags:
 ```sh

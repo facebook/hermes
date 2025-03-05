@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xes6-class %s | %FileCheck --match-full-lines %s
-// REQUIRES: es6_class
+// RUN: %hermes %s | %FileCheck --match-full-lines %s
 
 class Parent {
   static nonOverridenMethod() {

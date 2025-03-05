@@ -378,11 +378,6 @@ hermesInternalHasPromise(void *, Runtime &runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
-hermesInternalHasES6Class(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeBoolValue(runtime.hasES6Class());
-}
-
-CallResult<HermesValue>
 hermesInternalUseEngineQueue(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(runtime.hasMicrotaskQueue());
 }
@@ -762,7 +757,6 @@ Handle<JSObject> createHermesInternalObject(
   // present by the VM internals even under a security-sensitive environment
   // where HermesInternal might be explicitly disabled.
   defineInternMethod(P::hasPromise, hermesInternalHasPromise);
-  defineInternMethod(P::hasES6Class, hermesInternalHasES6Class);
   defineInternMethod(P::enqueueJob, hermesInternalEnqueueJob);
   defineInternMethod(
       P::setPromiseRejectionTrackingHook,

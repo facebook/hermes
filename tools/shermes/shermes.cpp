@@ -318,13 +318,6 @@ cl::opt<bool> ParseTS(
 const bool ParseTS = false;
 #endif
 
-cl::opt<bool> ES6Class{
-    "Xes6-class",
-    llvh::cl::Hidden,
-    llvh::cl::desc("Enable support for ES6 Class"),
-    llvh::cl::init(false),
-    llvh::cl::cat(CompilerCategory)};
-
 cl::opt<bool> ES6BlockScoping{
     "Xes6-block-scoping",
     llvh::cl::Hidden,
@@ -653,7 +646,6 @@ std::shared_ptr<Context> createContext() {
   }
   context->setStrictMode(cli::Typed || cli::StrictMode);
   context->setEnableEval(cli::EnableEval);
-  context->setConvertES6Classes(cli::ES6Class);
   context->setEnableES6BlockScoping(cli::ES6BlockScoping);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 

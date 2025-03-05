@@ -278,7 +278,6 @@ Runtime::Runtime(
       jitContext_(runtimeConfig.getEnableJIT()),
       hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
-      hasES6Class_(runtimeConfig.getES6Class()),
       hasES6BlockScoping_(runtimeConfig.getES6BlockScoping()),
       hasIntl_(runtimeConfig.getIntl()),
       hasArrayBuffer_(runtimeConfig.getArrayBuffer()),

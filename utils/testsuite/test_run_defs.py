@@ -285,7 +285,6 @@ class MjsunitSuite(Suite):
             args.test_file, SkipCategory.HANDLESAN_SKIP_LIST
         )
         extra_compile_vm_args = deepcopy(args.extra_compile_vm_args)
-        extra_compile_vm_args.compile_args += ["-Xes6-class"]
         compile_run_args = CompileRunArgs(
             full_test_name,
             test_case.strict_mode,

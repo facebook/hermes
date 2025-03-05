@@ -318,13 +318,6 @@ opt<std::string> ProfilingOutFile(
     "profiling-out",
     desc("File to write profiling info to"));
 
-opt<bool> ES6Class(
-    "Xes6-class",
-    init(false),
-    desc("Enable support for ES6 Class"),
-    Hidden,
-    cat(CompilerCategory));
-
 opt<bool> ES6BlockScoping(
     "Xes6-block-scoping",
     init(false),
@@ -1122,7 +1115,6 @@ std::shared_ptr<Context> createContext(
   // Default is non-strict mode, unless it is typed..
   context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
   context->setEnableEval(cl::EnableEval);
-  context->setConvertES6Classes(cl::ES6Class);
   context->setEnableES6BlockScoping(cl::ES6BlockScoping);
   context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());

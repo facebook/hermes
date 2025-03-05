@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xes6-class %s | %FileCheck %s
-// REQUIRES: es6_class
+// RUN: %hermes %s | %FileCheck %s
 
 try {
   eval(new Uint16Array(33880).join(-1));
