@@ -47,7 +47,7 @@ namespace {
 // time the HERMESVALUE_VERSION changes, and going through the JIT and updating
 // any relevant code.
 static_assert(
-    HERMESVALUE_VERSION == 1,
+    HERMESVALUE_VERSION == 2,
     "HermesValue version mismatch, JIT may need to be updated");
 
 void emit_sh_ljs_get_pointer(
@@ -57,7 +57,7 @@ void emit_sh_ljs_get_pointer(
   // See:
   // https://dinfuehr.github.io/blog/encoding-of-immediate-values-on-aarch64/
   static_assert(
-      HERMESVALUE_VERSION == 1,
+      HERMESVALUE_VERSION == 2,
       "kHV_DataMask is 0x000...1111... and can be encoded as a logical immediate");
   a.and_(xOut, xIn, kHV_DataMask);
 }
@@ -66,7 +66,7 @@ void emit_sh_ljs_get_pointer(
 /// The same register is used for input and output.
 void emit_sh_ljs_object(a64::Assembler &a, const a64::GpX &inOut) {
   static_assert(
-      HERMESVALUE_VERSION == 1,
+      HERMESVALUE_VERSION == 2,
       "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
   a.movk(inOut, (uint16_t)HVTag_Object, kHV_NumDataBits);
 }
@@ -79,7 +79,7 @@ void emit_sh_ljs_object2(
     const a64::GpX &xOut,
     const a64::GpX &xIn) {
   static_assert(
-      HERMESVALUE_VERSION == 1,
+      HERMESVALUE_VERSION == 2,
       "HVTag_Object << kHV_NumDataBits is 0x1111...0000... and can be encoded as a logical immediate");
   a.orr(xOut, xIn, (uint64_t)HVTag_Object << kHV_NumDataBits);
 }
@@ -188,7 +188,7 @@ void emit_sh_ljs_is_undefined(
     const a64::GpX &xInputReg) {
   // Get the tag bits by right shifting.
   static_assert(
-      HERMESVALUE_VERSION == 1,
+      HERMESVALUE_VERSION == 2,
       "HVETag_Undefined must be at kHV_NumDataBits - 1");
   static_assert(
       (int16_t)HVETag_Undefined == (int16_t)(-12) &&
@@ -208,7 +208,7 @@ void emit_sh_ljs_is_symbol(
     const a64::GpX &xInputReg) {
   // Get the tag bits by right shifting.
   static_assert(
-      HERMESVALUE_VERSION == 1, "HVETag_Symbol must be at kHV_NumDataBits - 1");
+      HERMESVALUE_VERSION == 2, "HVETag_Symbol must be at kHV_NumDataBits - 1");
   static_assert(
       (int16_t)HVETag_Symbol == (int16_t)(-9) && "HVETag_Symbol must be -9");
   a.asr(xTempReg, xInputReg, kHV_NumDataBits - 1);
@@ -221,7 +221,7 @@ void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
   static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
   // We know that the ETag for bool has a 0 in its lowest bit, and is therefore
   // a shifted 16 bit value. We can exploit this to use movk to set the tag.
-  static_assert(HERMESVALUE_VERSION == 1);
+  static_assert(HERMESVALUE_VERSION == 2);
   static_assert(
       (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
       "Boolean tag must be 16 bits.");
@@ -1748,7 +1748,7 @@ void Emitter::toNumber(FR frRes, FR frInput) {
   // Since HermesValue is NaN-boxed we know that all non-number values will be
   // NaN. So we can conveniently test for non-number values by checking for NaN
   // (which does not compare equal to itself).
-  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+  static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
   a.fcmp(hwInput.a64VecD(), hwInput.a64VecD());
   a.b_ne(slowPathLab);
   movHWFromHW<false>(hwRes, hwInput);
@@ -1801,7 +1801,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
   // Since HermesValue is NaN-boxed we know that all non-number values will be
   // NaN. So we can conveniently test for non-number values by checking for NaN
   // (which does not compare equal to itself).
-  static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+  static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
   a.fcmp(hwInput.a64VecD(), hwInput.a64VecD());
   a.b_ne(slowPathLab);
   movHWFromHW<false>(hwRes, hwInput);
@@ -2571,7 +2571,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
 
   // Fast path: if it's not an object, read from the frame.
   static_assert(
-      HERMESVALUE_VERSION == 1,
+      HERMESVALUE_VERSION == 2,
       "NativeUint32 is stored as the lower 32 bits of the raw HermesValue");
   a.ldur(
       hwTemp.a64GpX().w(),
@@ -3504,7 +3504,7 @@ void Emitter::jmpTypeOfIs(
   if (typesToCheck.hasNumber()) {
     --numRemainingTypes;
     static_assert(
-        HERMESVALUE_VERSION == 1,
+        HERMESVALUE_VERSION == 2,
         "HVTag_First must be the first after double limit");
     loadBits64InGp(
         xTemp, ((uint64_t)HVTag_First << kHV_NumDataBits), "doubleLim");
@@ -3673,7 +3673,7 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
   }
   if (typesToCheck.hasNumber()) {
     static_assert(
-        HERMESVALUE_VERSION == 1,
+        HERMESVALUE_VERSION == 2,
         "HVTag_First must be the first after double limit");
     loadBits64InGp(
         xTemp, ((uint64_t)HVTag_First << kHV_NumDataBits), "doubleLim");
@@ -4352,7 +4352,7 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   }
 
   static_assert(
-      HERMESVALUE_VERSION == 1,
+      HERMESVALUE_VERSION == 2,
       "Native pointers must be encoded without modification");
 
   FR previousFrameArg{nRegs + hbc::StackFrameLayout::PreviousFrame};
@@ -4468,7 +4468,7 @@ void Emitter::call(FR frRes, FR frCallee, uint32_t argc) {
       ntFrameArg, _sh_ljs_undefined().raw, FRType::UnknownNonPtr, "undefined");
 
   FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
-  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  static_assert(HERMESVALUE_VERSION == 2, "Native u32 must not need encoding");
   // The bytecode arg count includes "this", but the frame one does not, so
   // subtract 1.
   loadConstBits64(argcFrameArg, argc - 1, FRType::OtherNonPtr, "argCount");
@@ -4516,7 +4516,7 @@ void Emitter::callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args) {
   syncToFrame(ntFrameArg);
 
   FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
-  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  static_assert(HERMESVALUE_VERSION == 2, "Native u32 must not need encoding");
   // The bytecode arg count includes "this", but the frame one does not, so
   // subtract 1.
   loadConstBits64(
@@ -4589,7 +4589,7 @@ void Emitter::callWithNewTarget(
   }
 
   FR argcFrameArg{nRegs + hbc::StackFrameLayout::ArgCount};
-  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  static_assert(HERMESVALUE_VERSION == 2, "Native u32 must not need encoding");
   // The bytecode arg count includes "this", but the frame one does not, so
   // subtract 1.
   loadConstBits64(argcFrameArg, argc - 1, FRType::OtherNonPtr, "argCount");
@@ -4636,7 +4636,7 @@ void Emitter::callWithNewTargetLong(
   HWReg hwArgcArg = getOrAllocFRInGpX(argcFrameArg, false);
   frUpdatedWithHW(argcFrameArg, hwArgcArg, FRType::OtherNonPtr);
 
-  static_assert(HERMESVALUE_VERSION == 1, "Native u32 must not need encoding");
+  static_assert(HERMESVALUE_VERSION == 2, "Native u32 must not need encoding");
   a.fcvtzu(hwArgcArg.a64GpX(), hwArgc.a64VecD());
   // The bytecode arg count includes "this", but the frame one does not, so
   // subtract 1.
@@ -4731,7 +4731,7 @@ void Emitter::arithUnop(
     // Since HermesValue is NaN-boxed we know that all non-number values will be
     // NaN. So we can conveniently test for non-number values by checking for
     // NaN (which does not compare equal to itself).
-    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
     a.fcmp(hwInput.a64VecD(), hwInput.a64VecD());
     a.b_ne(slowPathLab);
   }
@@ -5030,7 +5030,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
     // NaN. So we can conveniently test for non-number values by checking for
     // NaN. We can do that with the VS condition code, which is set if either
     // operand to fcmp is NaN.
-    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
     a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
     a.b_vs(slowPathLab);
   }
@@ -5135,7 +5135,7 @@ void Emitter::arithBinOp(
     // NaN. So we can conveniently test for non-number values by checking for
     // NaN. We can do that with the VS condition code, which is set if either
     // operand to fcmp is NaN.
-    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
     a.fcmp(hwLeft.a64VecD(), hwRight.a64VecD());
     a.b_vs(slowPathLab);
   }
@@ -5303,7 +5303,7 @@ void Emitter::jmpTrueFalse(
     a64::GpX xInput = hwInput.a64GpX();
 
     static_assert(
-        HERMESVALUE_VERSION == 1, "bool is encoded as a bit at kHV_BoolBitIdx");
+        HERMESVALUE_VERSION == 2, "bool is encoded as a bit at kHV_BoolBitIdx");
     // We don't use tbz/tbnz here because they have a very restricted range.
     a.tst(xInput, 1ull << kHV_BoolBitIdx);
     a.b(onTrue ? a64::CondCode::kNotZero : a64::CondCode::kZero, target);
@@ -5453,7 +5453,7 @@ void Emitter::jCond(
     // NaN. So we can conveniently test for non-number values by checking for
     // NaN. We can do that with the VS condition code, which is set if either
     // operand to fcmp is NaN.
-    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
     a.b_vs(slowPathLab);
   }
 
@@ -5554,7 +5554,7 @@ void Emitter::compareImpl(
     // NaN. So we can conveniently test for non-number values by checking for
     // NaN. We can do that with the VS condition code, which is set if either
     // operand to fcmp is NaN.
-    static_assert(HERMESVALUE_VERSION == 1, "Non-numbers must be NaN");
+    static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
     a.b_vs(slowPathLab);
   }
 

@@ -119,8 +119,8 @@ extern "C" {
 /// Version of the HermesValue encoding format.
 /// Changing the format of HermesValue requires bumping this version number
 /// and fixing any code that relies on the layout of HermesValue.
-/// Updated: Aug 27, 2024
-#define HERMESVALUE_VERSION 1
+/// Updated: Feb 21, 2025
+#define HERMESVALUE_VERSION 2
 
 struct HermesValueBase {
   union {
