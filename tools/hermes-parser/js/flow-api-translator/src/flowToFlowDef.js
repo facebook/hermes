@@ -151,9 +151,9 @@ function transferProgramStatementProperties(
 }
 
 /**
- * Consume an abribray Flow AST and convert it into a Type defintion file.
+ * Consume an arbitrary Flow AST and convert it into a type definition file.
  *
- * To do this all runtime logic will be stripped and only Type that describe the module boundary will remain.
+ * To do this all runtime logic will be stripped and only types that describe the module boundary will remain.
  */
 export default function flowToFlowDef(
   ast: Program,
@@ -483,6 +483,15 @@ function convertExpressionToTypeAnnotation(
   }
 }
 
+function inheritComments<T: DetachedNode<ESNode>>(
+  fromNode: ESNode,
+  toNode: T,
+): T {
+  // $FlowFixMe[unclear-type]
+  (toNode: any).comments = (fromNode: any).comments;
+  return toNode;
+}
+
 function convertObjectExpression(
   expr: ObjectExpression,
   context: TranslationContext,
@@ -523,13 +532,16 @@ function convertObjectExpression(
 
           const [resultExpr, deps] = convertAFunction(prop.value, context);
           return [
-            t.ObjectTypeMethodSignature({
-              // $FlowFixMe[incompatible-call]
-              key: asDetachedNode<
-                Identifier | NumericLiteral | StringLiteral | Expression,
-              >(prop.key),
-              value: resultExpr,
-            }),
+            inheritComments(
+              prop,
+              t.ObjectTypeMethodSignature({
+                // $FlowFixMe[incompatible-call]
+                key: asDetachedNode<
+                  Identifier | NumericLiteral | StringLiteral | Expression,
+                >(prop.key),
+                value: resultExpr,
+              }),
+            ),
             deps,
           ];
         }
@@ -549,14 +561,17 @@ function convertObjectExpression(
           const kind = prop.kind;
           const [resultExpr, deps] = convertAFunction(prop.value, context);
           return [
-            t.ObjectTypeAccessorSignature({
-              // $FlowFixMe[incompatible-call]
-              key: asDetachedNode<
-                Identifier | NumericLiteral | StringLiteral | Expression,
-              >(prop.key),
-              kind,
-              value: resultExpr,
-            }),
+            inheritComments(
+              prop,
+              t.ObjectTypeAccessorSignature({
+                // $FlowFixMe[incompatible-call]
+                key: asDetachedNode<
+                  Identifier | NumericLiteral | StringLiteral | Expression,
+                >(prop.key),
+                kind,
+                value: resultExpr,
+              }),
+            ),
             deps,
           ];
         }
@@ -567,15 +582,18 @@ function convertObjectExpression(
         );
 
         return [
-          t.ObjectTypePropertySignature({
-            // $FlowFixMe[incompatible-call]
-            key: asDetachedNode<
-              Identifier | NumericLiteral | StringLiteral | Expression,
-            >(prop.key),
-            value: resultExpr,
-            optional: false,
-            variance: null,
-          }),
+          inheritComments(
+            prop,
+            t.ObjectTypePropertySignature({
+              // $FlowFixMe[incompatible-call]
+              key: asDetachedNode<
+                Identifier | NumericLiteral | StringLiteral | Expression,
+              >(prop.key),
+              value: resultExpr,
+              optional: false,
+              variance: null,
+            }),
+          ),
           deps,
         ];
       }

@@ -541,6 +541,22 @@ describe('flowToFlowDef', () => {
          declare export const bar: typeof foo;`,
       );
     });
+    it('with object type', async () => {
+      await expectTranslate(
+        `export const foo = {
+           /** Example documentation */
+           bar: 1,
+           /** This is useful */
+           baz(): number { return 123; }
+         };`,
+        `declare export const foo: {
+           /** Example documentation */
+           bar: 1,
+           /** This is useful */
+           baz(): number,
+         };`,
+      );
+    });
   });
   describe('EnumDeclaration', () => {
     it('basic', async () => {
