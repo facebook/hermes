@@ -3510,7 +3510,38 @@ const getTransforms = (
     },
     ObjectTypeIndexer(
       node: FlowESTree.ObjectTypeIndexer,
-    ): TSESTree.TSIndexSignature {
+    ): TSESTree.TSIndexSignature | TSESTree.TSPropertySignatureComputedName {
+      if (node.key.type === 'GenericTypeAnnotation') {
+        const ident =
+          node.key.id.type === 'Identifier' ? node.key.id : node.key.id.id;
+        return {
+          type: 'TSPropertySignature',
+          computed: true,
+          loc: DUMMY_LOC,
+          key: {
+            type: 'BinaryExpression',
+            operator: 'in',
+            loc: DUMMY_LOC,
+            left: {
+              type: 'Identifier',
+              name: node.id == null ? '$$Key$$' : node.id.name,
+              loc: DUMMY_LOC,
+            },
+            right: {
+              type: 'Identifier',
+              name: ident.name,
+              loc: DUMMY_LOC,
+            },
+          },
+          readonly: node.variance?.kind === 'plus',
+          static: node.static,
+          typeAnnotation: {
+            type: 'TSTypeAnnotation',
+            loc: DUMMY_LOC,
+            typeAnnotation: transformTypeAnnotationType(node.value),
+          },
+        };
+      }
       return {
         type: 'TSIndexSignature',
         loc: DUMMY_LOC,
