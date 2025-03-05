@@ -463,24 +463,12 @@ bool Verifier::visitBasicBlock(const BasicBlock &BB) {
                             << bbLabel(**I));
   }
 
-  // Indicates whether all the instructions in the block observed so far had
-  // FirstInBlock set.
-  bool visitingFirstInBlock = true;
   // Verify each instruction
   for (BasicBlock::const_iterator I = BB.begin(); I != BB.end(); I++) {
     AssertWithMsg(
         I->getParent() == &BB,
         "Instruction " << iLabel(*I) << "'s parent " << bbLabel(*I->getParent())
                        << " does not match " << bbLabel(BB));
-
-    // Check that FirstInBlock instructions are not preceded by other
-    // instructions.
-    bool firstInBlock = I->getSideEffect().getFirstInBlock();
-    visitingFirstInBlock &= firstInBlock;
-    AssertIWithMsg(
-        (*I),
-        visitingFirstInBlock || !firstInBlock,
-        "Unexpected FirstInBlock instruction.");
 
     // Use the instruction using the InstructionVisitor::visit();
     ReturnIfNot(verifyBeforeVisitInstruction(*I));
@@ -547,6 +535,22 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   } else {
     AssertIWithMsg(
         Inst, Inst.hasOutput(), "Instruction with type does not have output");
+  }
+
+  if (Inst.getSideEffect().getFirstInBlock()) {
+    if (llvh::isa<PhiInst>(&Inst)) {
+      // Phis must be first in block, but they may be preceded by other Phis.
+      AssertIWithMsg(
+          Inst,
+          !Inst.getPrevNode() || llvh::isa<PhiInst>(Inst.getPrevNode()),
+          "Phi can only be preceded by other Phis");
+    } else {
+      // All other FirstInBlock instructions must be first in the block.
+      AssertIWithMsg(
+          Inst,
+          !Inst.getPrevNode(),
+          "FirstInBlock instruction must be first in the block");
+    }
   }
 
   ReturnIfNot(verifyAttributes(&Inst));

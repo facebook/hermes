@@ -480,8 +480,8 @@ class SideEffect {
   /// provided JS. An instruction with \c ExecuteJS set must also have bits set
   /// for throwing and accessing the frame and heap.
   /// \c FirstInBlock implies that an instruction must be at the start of a
-  /// basic block. An instruction with \c FirstInBlock set must precede all
-  /// instructions that do not have it set.
+  /// basic block. An instruction with \c FirstInBlock set may only be preceded
+  /// by other instances of the same instruction.
   /// \c Idempotent implies that repeated execution of an instruction will not
   /// affect the state of the world or the result of the instruction. For
   /// example, two identical instructions that have \p Idempotent set may be
