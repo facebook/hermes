@@ -459,6 +459,10 @@ NATIVE_FUNCTION(intlDateTimeFormatFormat)
 NATIVE_FUNCTION(intlDateTimeFormatSupportedLocalesOf)
 NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatGetter)
 NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatToParts)
+#ifdef HERMES_INTL_FORMAT_RANGE
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatRange)
+NATIVE_FUNCTION(intlDateTimeFormatPrototypeFormatRangeToParts)
+#endif
 NATIVE_FUNCTION(intlDateTimeFormatPrototypeResolvedOptions)
 
 NATIVE_FUNCTION(intlNumberFormatConstructor)

@@ -26,8 +26,8 @@ function testServiceTypes(service) {
   assert(s.__proto__ === service.prototype);
 
   var snew = new service();
-  assert(s.constructor === service);
-  assert(s.__proto__ === service.prototype);
+  assert(snew.constructor === service);
+  assert(snew.__proto__ === service.prototype);
 
   // Verify that the type tag is not visible to JS.
   assert(Object.getOwnPropertySymbols(snew).length === 0);
@@ -40,8 +40,8 @@ function testServiceGetterTypes(service, getter) {
   assert(desc.put === undefined);
 }
 
-function testServiceMethodTypes(service) {
-  assert(service.prototype['resolvedOptions'].__proto__ === Function.prototype);
+function testServiceMethodTypes(service, method) {
+  assert(service.prototype[method].__proto__ === Function.prototype);
 }
 
 function testServiceCommon(service) {
@@ -84,14 +84,22 @@ testServiceMethodTypes(Intl.DateTimeFormat, 'formatToParts');
 testServiceMethodTypes(Intl.DateTimeFormat, 'resolvedOptions');
 assert(typeof Intl.DateTimeFormat().format() === 'string');
 testParts(Intl.DateTimeFormat().formatToParts());
+if (Intl.DateTimeFormat.prototype.formatRange) {
+  testServiceMethodTypes(Intl.DateTimeFormat, 'formatRange');
+  assert(typeof Intl.DateTimeFormat().formatRange(new Date(), new Date()) === 'string');
+}
+if (Intl.DateTimeFormat.prototype.formatRangeToParts) {
+  testServiceMethodTypes(Intl.DateTimeFormat, 'formatRangeToParts');
+  testParts(Intl.DateTimeFormat().formatRangeToParts(new Date(), new Date()));
+}
 
 testServiceTypes(Intl.NumberFormat);
 testServiceGetterTypes(Intl.NumberFormat, 'format');
-testServiceMethodTypes(Intl.NumberFormat, 'formatToParts');
 testServiceMethodTypes(Intl.NumberFormat, 'resolvedOptions');
 assert(typeof Intl.NumberFormat(12345.67).format() === 'string');
 // TODO: Apple Intl currently does not implement NumberFormat.formatToParts.
 if(Intl.NumberFormat.prototype.formatToParts){
+  testServiceMethodTypes(Intl.NumberFormat, 'formatToParts');
   testParts(Intl.NumberFormat(12345.67).formatToParts());
 }
 

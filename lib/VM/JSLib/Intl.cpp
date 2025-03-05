@@ -268,7 +268,6 @@ constexpr OptionData kDTFOptions[] = {
     {u"hour12", platform_intl::Option::Kind::Bool, 0},
     {u"hourCycle", platform_intl::Option::Kind::String, 0},
     {u"timeZone", platform_intl::Option::Kind::String, 0},
-    {u"formatMatcher", platform_intl::Option::Kind::String, 0},
     {u"weekday", platform_intl::Option::Kind::String, kDateRequired},
     {u"era", platform_intl::Option::Kind::String, 0},
     {u"year",
@@ -277,8 +276,8 @@ constexpr OptionData kDTFOptions[] = {
     {u"month",
      platform_intl::Option::Kind::String,
      kDateRequired | kDateDefault},
-    {u"dayPeriod", platform_intl::Option::Kind::String, 0},
     {u"day", platform_intl::Option::Kind::String, kDateRequired | kDateDefault},
+    {u"dayPeriod", platform_intl::Option::Kind::String, 0},
     {u"hour",
      platform_intl::Option::Kind::String,
      kTimeRequired | kTimeDefault},
@@ -288,10 +287,11 @@ constexpr OptionData kDTFOptions[] = {
     {u"second",
      platform_intl::Option::Kind::String,
      kTimeRequired | kTimeDefault},
+    {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
     {u"timeZoneName", platform_intl::Option::Kind::String, 0},
+    {u"formatMatcher", platform_intl::Option::Kind::String, 0},
     {u"dateStyle", platform_intl::Option::Kind::String, 0},
     {u"timeStyle", platform_intl::Option::Kind::String, 0},
-    {u"fractionalSecondDigits", platform_intl::Option::Kind::Number, 0},
 };
 
 constexpr OptionData kNumberFormatOptions[] = {
@@ -937,6 +937,24 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       intlDateTimeFormatPrototypeFormatToParts,
       1);
 
+#ifdef HERMES_INTL_FORMAT_RANGE
+  defineMethod(
+      runtime,
+      prototype,
+      Predefined::getSymbolID(Predefined::formatRange),
+      nullptr,
+      intlDateTimeFormatPrototypeFormatRange,
+      2);
+
+  defineMethod(
+      runtime,
+      prototype,
+      Predefined::getSymbolID(Predefined::formatRangeToParts),
+      nullptr,
+      intlDateTimeFormatPrototypeFormatRangeToParts,
+      2);
+#endif
+
   defineMethod(
       runtime,
       prototype,
@@ -1007,6 +1025,28 @@ CallResult<double> dateNowValue(Runtime &runtime, NativeArgs args) {
 
   return x;
 }
+
+#ifdef HERMES_INTL_FORMAT_RANGE
+CallResult<double> dateValue(Runtime &runtime, NativeArgs args, int argIndex) {
+  // ECMA 402 11.3.5 & 11.3.6
+  // 4.a. Let x be ? ToNumber(date).
+  CallResult<HermesValue> xRes =
+      toNumber_RJS(runtime, args.getArgHandle(argIndex));
+  if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 11.5.9 PartitionDateTimeRangePattern
+  // 1. Set x to TimeClip(x).
+  double x = timeClip(xRes->getNumber());
+  // 2. If x is NaN, throw a RangeError exception.
+  if (std::isnan(x)) {
+    return runtime.raiseRangeError("Invalid time value");
+  }
+
+  return x;
+}
+#endif
 
 } // namespace
 
@@ -1090,6 +1130,92 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatToParts(
   }
   return partsToJS(runtime, (*dateTimeFormatRes)->formatToParts(*dateRes));
 }
+
+#ifdef HERMES_INTL_FORMAT_RANGE
+CallResult<HermesValue> intlDateTimeFormatPrototypeFormatRange(
+    void *,
+    Runtime &runtime,
+    NativeArgs args) {
+  Handle<DecoratedObject> dateTimeFormatHandle =
+      args.dyncastThis<DecoratedObject>();
+
+  CallResult<platform_intl::DateTimeFormat *> dateTimeFormatRes =
+      verifyDecoration<platform_intl::DateTimeFormat>(
+          runtime,
+          dateTimeFormatHandle,
+          "Intl.DateTimeFormat.prototype.formatRange");
+  if (LLVM_UNLIKELY(dateTimeFormatRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // ECMA 402 11.3.5 & 11.3.6
+  // 1. Let dtf be this value.
+  // 2. Perform ? RequireInternalSlot(dtf, [[InitializedDateTimeFormat]]).
+  // 3. If startDate is undefined or endDate is undefined, throw a TypeError
+  // exception.
+  if (args.getArg(0).isUndefined() || args.getArg(1).isUndefined()) {
+    return runtime.raiseTypeError("Invalid time value");
+  }
+
+  CallResult<double> startDateRes = dateValue(runtime, args, 0);
+  if (LLVM_UNLIKELY(startDateRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  CallResult<double> endDateRes = dateValue(runtime, args, 1);
+  if (LLVM_UNLIKELY(endDateRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  CallResult<std::u16string> formatRangeRes =
+      (*dateTimeFormatRes)->formatRange(runtime, *startDateRes, *endDateRes);
+  if (LLVM_UNLIKELY(formatRangeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return StringPrimitive::createEfficient(runtime, std::move(*formatRangeRes));
+}
+
+CallResult<HermesValue> intlDateTimeFormatPrototypeFormatRangeToParts(
+    void *,
+    Runtime &runtime,
+    NativeArgs args) {
+  Handle<DecoratedObject> dateTimeFormatHandle =
+      args.dyncastThis<DecoratedObject>();
+
+  CallResult<platform_intl::DateTimeFormat *> dateTimeFormatRes =
+      verifyDecoration<platform_intl::DateTimeFormat>(
+          runtime,
+          dateTimeFormatHandle,
+          "Intl.DateTimeFormat.prototype.formatRangeToParts");
+  if (LLVM_UNLIKELY(dateTimeFormatRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // ECMA 402 11.3.5 & 11.3.6
+  // 1. Let dtf be this value.
+  // 2. Perform ? RequireInternalSlot(dtf, [[InitializedDateTimeFormat]]).
+  // 3. If startDate is undefined or endDate is undefined, throw a TypeError
+  // exception.
+  if (args.getArg(0).isUndefined() || args.getArg(1).isUndefined()) {
+    return runtime.raiseTypeError("Invalid time value");
+  }
+
+  CallResult<double> startDateRes = dateValue(runtime, args, 0);
+  if (LLVM_UNLIKELY(startDateRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  CallResult<double> endDateRes = dateValue(runtime, args, 1);
+  if (LLVM_UNLIKELY(endDateRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return partsToJS(
+      runtime,
+      (*dateTimeFormatRes)
+          ->formatRangeToParts(runtime, *startDateRes, *endDateRes));
+}
+#endif
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeResolvedOptions(
     void *,

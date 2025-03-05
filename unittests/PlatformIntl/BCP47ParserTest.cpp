@@ -48,11 +48,12 @@ TEST(BCP47Parser, LanguageIdTest) {
 
   // language + variant list
   {
-    auto res = *ParsedLocaleIdentifier::parse(u"und-variant-alphabet-subtag");
+    auto res =
+        *ParsedLocaleIdentifier::parse(u"und-variant-alphabet-12ab-subtag");
     EXPECT_EQ(u"und", res.languageIdentifier.languageSubtag);
     EXPECT_EQ(u"variant", *res.languageIdentifier.variantSubtagList.rbegin());
-    EXPECT_EQ(u"alphabet", *res.languageIdentifier.variantSubtagList.begin());
-    EXPECT_EQ(u"und-alphabet-subtag-variant", res.canonicalize());
+    EXPECT_EQ(u"12ab", *res.languageIdentifier.variantSubtagList.begin());
+    EXPECT_EQ(u"und-12ab-alphabet-subtag-variant", res.canonicalize());
   }
 }
 
@@ -119,7 +120,7 @@ TEST(BCP47Parser, ErrorTest) {
   EXPECT_FALSE(ParsedLocaleIdentifier::parse(u"en-t-xx-t-yy"));
   EXPECT_FALSE(ParsedLocaleIdentifier::parse(u"en-t-xx-u-xx-s-yy-t-ww"));
   EXPECT_FALSE(ParsedLocaleIdentifier::parse(u"en-scouse-fonipa-scouse"));
-  EXPECT_FALSE(ParsedLocaleIdentifier::parse(u"en-scouse-fonipa-scouse"));
+  EXPECT_FALSE(ParsedLocaleIdentifier::parse(u"en-scouse-fonipa-z234"));
   EXPECT_FALSE(ParsedLocaleIdentifier::parse(u"en-t-en-us-arab"));
   EXPECT_FALSE(ParsedLocaleIdentifier::parse(u"en-t-m0-foo-m0-bar"));
 }

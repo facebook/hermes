@@ -62,8 +62,8 @@ inline constexpr char16_t falseStr[] = u"false";
 
 namespace locale_matcher {
 inline constexpr char16_t lookup[] = u"lookup";
-inline constexpr char16_t best_fit[] = u"best fit";
-inline constexpr const char16_t *validLocaleMatchers[] = {lookup, best_fit};
+inline constexpr char16_t bestFit[] = u"best fit";
+inline constexpr const char16_t *validLocaleMatchers[] = {lookup, bestFit};
 } // namespace locale_matcher
 
 namespace case_first {
@@ -96,8 +96,8 @@ inline constexpr const char16_t *validNumerics[] = {trueStr, falseStr};
 
 namespace format_matcher {
 inline constexpr char16_t basic[] = u"basic";
-inline constexpr char16_t best_fit[] = u"best fit";
-inline constexpr const char16_t *validFormatMatchers[] = {basic, best_fit};
+inline constexpr char16_t bestFit[] = u"best fit";
+inline constexpr const char16_t *validFormatMatchers[] = {basic, bestFit};
 } // namespace format_matcher
 
 namespace hour_cycle {
@@ -171,6 +171,7 @@ namespace part_key {
 inline constexpr char16_t type[] = u"type";
 inline constexpr char16_t value[] = u"value";
 inline constexpr char16_t unit[] = u"unit";
+inline constexpr char16_t source[] = u"source";
 } // namespace part_key
 
 namespace part_type {

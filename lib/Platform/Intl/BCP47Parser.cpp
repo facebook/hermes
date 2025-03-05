@@ -46,7 +46,8 @@ bool isUnicodeRegionSubtag(const std::u16string &subtag) {
 bool isUnicodeVariantSubtag(const std::u16string &subtag) {
   // = (alphanum{5,8} | digit alphanum{3});
   return isCharType(subtag, 5, 8, &isASCIILetterOrDigit) ||
-      isCharType(subtag, 3, 3, &isASCIILetterOrDigit);
+      (subtag.size() == 4 && isASCIIDigit(subtag.front()) &&
+       isCharType(subtag.substr(1), 3, 3, &isASCIILetterOrDigit));
 }
 bool isUnicodeExtensionAttribute(const std::u16string &subtag) {
   // = alphanum{3,8};

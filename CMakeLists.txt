@@ -471,6 +471,9 @@ endif()
 
 if (HERMES_ENABLE_INTL)
   add_definitions(-DHERMES_ENABLE_INTL)
+  if (NOT (HERMES_IS_ANDROID OR APPLE))
+    add_definitions(-DHERMES_INTL_FORMAT_RANGE)
+  endif()
 endif()
 
 if (HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES)

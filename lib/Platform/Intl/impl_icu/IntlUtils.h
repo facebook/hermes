@@ -51,6 +51,22 @@ bool convertToBool(std::u16string_view str);
  */
 std::string toLowerASCII(std::string str);
 
+/**
+ * Converts all characters in given ASCII-only string to uppercase.
+ * The method only uppercase 'a'-'z' to 'A'-'Z'.
+ * @param str ASCII-only string to convert
+ * @return an uppercased string.
+ */
+std::u16string toUpperASCII(std::u16string str);
+
+/**
+ * Checks if given string starts with given prefix.
+ * @param str string to check
+ * @param prefix prefix to check
+ * @return true if str starts with prefix, false otherwise.
+ */
+bool startsWith(std::u16string_view str, std::u16string_view prefix);
+
 } // namespace impl_icu
 } // namespace platform_intl
 } // namespace hermes

@@ -148,6 +148,15 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
 
   std::u16string format(double jsTimeValue) noexcept;
   std::vector<Part> formatToParts(double jsTimeValue) noexcept;
+#ifdef HERMES_INTL_FORMAT_RANGE
+  vm::CallResult<std::u16string>
+  formatRange(vm::Runtime &runtime, double startDate, double endDate) noexcept;
+
+  vm::CallResult<std::vector<Part>> formatRangeToParts(
+      vm::Runtime &runtime,
+      double startDate,
+      double endDate) noexcept;
+#endif
 };
 
 class NumberFormat : public vm::DecoratedObject::Decoration {
