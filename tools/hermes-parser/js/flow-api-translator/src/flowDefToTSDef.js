@@ -1709,6 +1709,50 @@ const getTransforms = (
       // TODO - we could simulate this in a variety of ways
       // Examples - https://basarat.gitbook.io/typescript/main-1/nominaltyping
 
+      if (node.supertype == null && node.typeParameters == null) {
+        const name = `__${node.id.name}__`;
+        return {
+          type: 'TSTypeAliasDeclaration',
+          loc: DUMMY_LOC,
+          declare: true,
+          id: transform.Identifier(node.id, false),
+          typeAnnotation: {
+            type: 'TSIntersectionType',
+            types: [
+              {
+                type: 'TSSymbolKeyword',
+                loc: DUMMY_LOC,
+              },
+              {
+                type: 'TSTypeLiteral',
+                loc: DUMMY_LOC,
+                members: [
+                  {
+                    type: 'TSPropertySignature',
+                    computed: false,
+                    loc: DUMMY_LOC,
+                    key: {
+                      type: 'Identifier',
+                      name: name,
+                      loc: DUMMY_LOC,
+                    },
+                    typeAnnotation: {
+                      type: 'TSTypeAnnotation',
+                      loc: DUMMY_LOC,
+                      typeAnnotation: {
+                        type: 'TSStringKeyword',
+                        loc: DUMMY_LOC,
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+            loc: DUMMY_LOC,
+          },
+        };
+      }
+
       return {
         type: 'TSTypeAliasDeclaration',
         loc: DUMMY_LOC,
