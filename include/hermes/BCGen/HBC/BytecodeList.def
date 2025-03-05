@@ -417,6 +417,13 @@ ASSERT_MONOTONE_INCREASING(
     PutNewOwnNEById,
     PutNewOwnNEByIdLong)
 
+/// Define an object own property by string index.
+/// Arg1[stringtable[Arg4]] = Arg2.
+/// Arg3 is a cache index.
+DEFINE_OPCODE_4(DefineOwnById, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(DefineOwnByIdLong, Reg8, Reg8, UInt8, UInt32)
+OPERAND_STRING_ID(DefineOwnByIdLong, 4)
+
 /// Assign a value to a constant integer own property which will be created as
 /// enumerable. This is used (potentially in conjunction with
 /// NewArrayWithBuffer) for arr=[foo,bar] initializations.

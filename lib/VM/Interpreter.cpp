@@ -2238,6 +2238,66 @@ tailCall:
       CASE_OUTOFLINE(GetByVal);
       CASE_OUTOFLINE(GetByValWithReceiver);
 
+      CASE(DefineOwnById) {
+        assert(
+            O1REG(DefineOwnById).isObject() &&
+            "PutOwn requires object operand");
+        CAPTURE_IP_ASSIGN(
+            SmallHermesValue shv,
+            SmallHermesValue::encodeHermesValue(O2REG(DefineOwnById), runtime));
+        auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
+        auto cacheIdx = ip->iDefineOwnById.op3;
+        auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+        CompressedPointer clazzPtr{obj->getClassGCPtr()};
+        // If we have a cache hit, reuse the cached offset and immediately
+        // write the property.
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+          JSObject::setNamedSlotValueUnsafe(
+              obj, runtime, cacheEntry->slot, shv);
+          ip = NEXTINST(DefineOwnById);
+          DISPATCH;
+        }
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            defineOwnByIdSlowPath(runtime, shv, curCodeBlock, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(DefineOwnById);
+        DISPATCH;
+      }
+      CASE(DefineOwnByIdLong) {
+        assert(
+            O1REG(DefineOwnByIdLong).isObject() &&
+            "PutOwn requires object operand");
+        CAPTURE_IP_ASSIGN(
+            SmallHermesValue shv,
+            SmallHermesValue::encodeHermesValue(
+                O2REG(DefineOwnByIdLong), runtime));
+        auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
+        auto cacheIdx = ip->iDefineOwnByIdLong.op3;
+        auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+        CompressedPointer clazzPtr{obj->getClassGCPtr()};
+        // If we have a cache hit, reuse the cached offset and immediately
+        // write the property.
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+          JSObject::setNamedSlotValueUnsafe(
+              obj, runtime, cacheEntry->slot, shv);
+          ip = NEXTINST(DefineOwnByIdLong);
+          DISPATCH;
+        }
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            defineOwnByIdSlowPath(runtime, shv, curCodeBlock, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(DefineOwnByIdLong);
+        DISPATCH;
+      }
+
       CASE(GetByIndex) {
         if (LLVM_LIKELY(O2REG(GetByIndex).isObject())) {
           auto *obj = vmcast<JSObject>(O2REG(GetByIndex));

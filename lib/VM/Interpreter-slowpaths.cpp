@@ -159,6 +159,58 @@ ExecutionStatus Interpreter::caseDirectEval(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus Interpreter::defineOwnByIdSlowPath(
+    Runtime &runtime,
+    SmallHermesValue valueToStore,
+    CodeBlock *curCodeBlock,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  uint32_t idVal;
+  if (ip->opCode == inst::OpCode::DefineOwnByIdLong) {
+    idVal = ip->iDefineOwnByIdLong.op4;
+  } else {
+    assert(
+        ip->opCode == inst::OpCode::DefineOwnById &&
+        "unrecognized opcode in defineOwnById slow path");
+    idVal = ip->iDefineOwnById.op4;
+  }
+  auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
+  auto cacheIdx = ip->iDefineOwnById.op3;
+  auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
+  auto id = ID(idVal);
+  NamedPropertyDescriptor desc;
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
+  if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
+      !desc.flags.accessor && desc.flags.writable &&
+      !desc.flags.internalSetter) {
+    // We can only cache if this is not a dictionary and we have an
+    // enabled cache index.
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+    if (LLVM_LIKELY(!clazz->isDictionary()) &&
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+      cacheEntry->clazz = clazzPtr;
+      cacheEntry->slot = desc.slot;
+    }
+    // This must be valid because an own property was already found.
+    JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, valueToStore);
+    return ExecutionStatus::RETURNED;
+  }
+
+  auto putRes = JSObject::defineOwnProperty(
+      Handle<JSObject>::vmcast(&O1REG(PutByIdLoose)),
+      runtime,
+      id,
+      DefinePropertyFlags::getDefaultNewPropertyFlags(),
+      Handle<>(&O2REG(PutByIdLoose)),
+      DEFAULT_PROP_OP_FLAGS(true));
+  if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return ExecutionStatus::RETURNED;
+}
+
 ExecutionStatus Interpreter::caseDefineOwnByVal(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
