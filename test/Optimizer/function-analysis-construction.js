@@ -28,7 +28,7 @@ function main() {
 // CHECK:function main(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %f(): functionCode
-// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, empty: any
+// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, %0: object
 // CHECK-NEXT:  %2 = CallInst (:undefined) %0: object, %f(): functionCode, true: boolean, empty: any, undefined: undefined, %1: object
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end

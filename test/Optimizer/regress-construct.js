@@ -54,7 +54,7 @@ function main() {
 // CHECK-NEXT:       CondBranchInst %1: null|object, %BB2, %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %0: environment, [%VS0.y]: object
-// CHECK-NEXT:  %4 = CreateThisInst (:object) %3: object, empty: any
+// CHECK-NEXT:  %4 = CreateThisInst (:object) %3: object, %3: object
 // CHECK-NEXT:       StoreFrameInst %0: environment, %4: object, [%VS0.x]: null|object
 // CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:

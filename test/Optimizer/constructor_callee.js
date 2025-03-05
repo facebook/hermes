@@ -46,7 +46,7 @@ function ctor_load_store_test() {
 // CHECK:function ctor_this_test(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %use_this(): functionCode
-// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, empty: any
+// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, %0: object
 // CHECK-NEXT:  %2 = CallInst (:any) %0: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %1: object, 12: number
 // CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
@@ -83,7 +83,7 @@ function ctor_load_store_test() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:object) %0: environment, [%VS0.use_this]: object
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, empty: any
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: object, %1: object
 // CHECK-NEXT:  %3 = CallInst (:undefined) %1: object, %"use_this 1#"(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end

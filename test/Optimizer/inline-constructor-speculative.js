@@ -73,7 +73,7 @@ function foo(sink) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS0.MyCons]: undefined|object
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: undefined|object, empty: any
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: undefined|object, %1: undefined|object
 // CHECK-NEXT:  %3 = TypeOfIsInst (:boolean) %1: undefined|object, typeOfIs(Function)
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
@@ -88,7 +88,7 @@ function foo(sink) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS0.MyClass]: undefined|object
-// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: undefined|object, empty: any
+// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: undefined|object, %1: undefined|object
 // CHECK-NEXT:  %3 = CallInst (:object) %1: undefined|object, %MyClass(): functionCode, false: boolean, %0: environment, %1: undefined|object, undefined: undefined
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end

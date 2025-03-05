@@ -2026,11 +2026,7 @@ class InstrGen {
     os_ << " = _sh_ljs_create_this(shr, &";
     generateRegister(*inst.getClosure());
     os_ << ", &";
-    if (llvh::isa<EmptySentinel>(inst.getNewTarget())) {
-      generateRegister(*inst.getClosure());
-    } else {
-      generateRegister(*inst.getNewTarget());
-    }
+    generateRegister(*inst.getNewTarget());
     os_ << ", ";
     Module *M = F_.getParent();
     auto *protoStr =

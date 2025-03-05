@@ -2589,8 +2589,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     for (auto &arg : N->_arguments) {
       args.push_back(genExpression(&arg));
     }
-    auto *thisArg =
-        Builder.createCreateThisInst(callee, Builder.getEmptySentinel());
+    auto *thisArg = Builder.createCreateThisInst(callee, callee);
     auto *res = Builder.createCallInst(callee, callee, thisArg, args);
     return Builder.createGetConstructedObjectInst(thisArg, res);
   }

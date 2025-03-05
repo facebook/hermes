@@ -31,7 +31,7 @@ function ctor_this_test() {
 // CHECK:function ctor_this_test(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %use_this(): functionCode
-// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, empty: any
+// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, %0: object
 // CHECK-NEXT:  %2 = CallInst (:object) %0: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %1: object, 12: number
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end

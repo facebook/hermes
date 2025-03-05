@@ -1878,7 +1878,7 @@ void HBCISel::generateHBCReifyArgumentsStrictInst(
 void HBCISel::generateCreateThisInst(CreateThisInst *Inst, BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto closure = encodeValue(Inst->getClosure());
-  if (llvh::isa<EmptySentinel>(Inst->getNewTarget())) {
+  if (Inst->getNewTarget() == Inst->getClosure()) {
     BCFGen_->emitCreateThisForNew(
         output, closure, acquirePropertyReadCacheIndex(prototypeIdent_));
   } else {
