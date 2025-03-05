@@ -139,10 +139,6 @@ class SmallHermesValueAdaptor : protected HermesValue {
     HermesValue::unsafeUpdatePointer(ptr);
   }
 
-  static constexpr SmallHermesValueAdaptor
-  encodeHermesValue(HermesValue hv, GC &, PointerBase &) {
-    return SmallHermesValueAdaptor{hv};
-  }
   static constexpr SmallHermesValueAdaptor encodeHermesValue(
       HermesValue hv,
       Runtime &) {
@@ -152,10 +148,6 @@ class SmallHermesValueAdaptor : protected HermesValue {
       BigIntPrimitive *ptr,
       PointerBase *) {
     return SmallHermesValueAdaptor{HermesValue::encodeBigIntValue(ptr)};
-  }
-  static SmallHermesValueAdaptor
-  encodeNumberValue(double d, GC &, PointerBase &) {
-    return SmallHermesValueAdaptor{HermesValue::encodeTrustedNumberValue(d)};
   }
   static SmallHermesValueAdaptor encodeNumberValue(double d, Runtime &) {
     return SmallHermesValueAdaptor{HermesValue::encodeTrustedNumberValue(d)};
