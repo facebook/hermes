@@ -39,7 +39,7 @@
  * @stable ICU 4.2
  */
 #ifndef U_NO_THROW
-#define U_NO_THROW throw()
+#define U_NO_THROW noexcept
 #endif
 
 /** @} */
