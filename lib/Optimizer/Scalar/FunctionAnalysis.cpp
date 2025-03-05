@@ -181,7 +181,10 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   // to avoid going back and forth between the corresponding loads.
   llvh::SmallPtrSet<Instruction *, 2> visited{};
 
-  IRBuilder::InstructionDestroyer destroyer{};
+  // Instructions that are known to be dead and can be eliminated. This has to
+  // be a set because the same instructions may be visited multiple times during
+  // the user traversal below.
+  llvh::SmallPtrSet<Instruction *, 2> toDestroy{};
 
   worklist.push_back(
       {create,
@@ -248,7 +251,7 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
           //       be a closure, by detecting a subsequent call or speculative
           //       inlining check that would throw instead.
           if (isAlwaysClosure)
-            destroyer.add(CTI);
+            toDestroy.insert(CTI);
         }
         // CreateThis leaks the closure because the created object can still
         // access the function via its parent's `.constructor` prototype.
@@ -414,6 +417,10 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
     }
   }
+
+  // Delete instructions that are no longer needed.
+  for (auto *inst : toDestroy)
+    inst->eraseFromParent();
 }
 
 /// Find and register any callsites that can be found which call \p F.
