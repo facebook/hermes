@@ -927,23 +927,43 @@ void HBCISel::generateDefineOwnPropertyInst(
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
   Value *prop = Inst->getProperty();
-  bool isEnumerable = Inst->getIsEnumerable();
 
   // If the property is a LiteralNumber, the property is enumerable, and it is a
   // valid array index, it is coming from an array initialization and we will
   // emit it as DefineOwnByIndex.
   auto *numProp = llvh::dyn_cast<LiteralNumber>(prop);
-  if (numProp && isEnumerable) {
-    if (auto arrayIndex = numProp->convertToArrayIndex()) {
-      uint32_t index = arrayIndex.getValue();
-      if (index <= UINT8_MAX) {
-        BCFGen_->emitDefineOwnByIndex(objReg, valueReg, index);
-      } else {
-        BCFGen_->emitDefineOwnByIndexL(objReg, valueReg, index);
-      }
-
-      return;
+  if (numProp) {
+    assert(
+        Inst->getIsEnumerable() &&
+        "Non-enumerable properties with literal keys should be handled by LoadConstants");
+    uint32_t index = numProp->convertToArrayIndex().getValue();
+    if (index <= UINT8_MAX) {
+      BCFGen_->emitDefineOwnByIndex(objReg, valueReg, index);
+    } else {
+      BCFGen_->emitDefineOwnByIndexL(objReg, valueReg, index);
     }
+    return;
+  }
+
+  if (auto *Lit = llvh::dyn_cast<LiteralString>(prop)) {
+    assert(
+        Inst->getIsEnumerable() &&
+        "Non-enumerable properties with literal keys should be handled by LoadConstants");
+    auto id = BCFGen_->getIdentifierID(Lit);
+    if (id <= UINT16_MAX) {
+      BCFGen_->emitDefineOwnById(
+          objReg,
+          valueReg,
+          acquirePropertyWriteCacheIndex(Lit->getValue()),
+          id);
+    } else {
+      BCFGen_->emitDefineOwnByIdLong(
+          objReg,
+          valueReg,
+          acquirePropertyWriteCacheIndex(Lit->getValue()),
+          id);
+    }
+    return;
   }
 
   // It is a register operand.

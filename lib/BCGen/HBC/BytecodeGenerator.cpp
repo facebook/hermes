@@ -287,6 +287,7 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(LoadPropertyInst);
     CASE_WITH_PROP_IDX(LoadPropertyWithReceiverInst);
     CASE_WITH_PROP_IDX(DefineNewOwnPropertyInst);
+    CASE_WITH_PROP_IDX(DefineOwnPropertyInst);
     CASE_WITH_PROP_IDX(StorePropertyLooseInst);
     CASE_WITH_PROP_IDX(StorePropertyStrictInst);
     CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);

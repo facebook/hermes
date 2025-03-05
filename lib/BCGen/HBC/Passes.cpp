@@ -99,6 +99,12 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
         if (SOP->getIsEnumerable() && LN->convertToArrayIndex().hasValue())
           return true;
       }
+
+      // LiteralStrings are optimized, when they are enumerable.
+      if (llvh::isa<LiteralString>(Inst->getOperand(opIndex)) &&
+          SOP->getIsEnumerable()) {
+        return true;
+      }
     }
 
     // DefineOwnPropertyInst's isEnumerable is a boolean constant.
