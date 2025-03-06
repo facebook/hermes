@@ -176,33 +176,14 @@ void DebuggerDomainAgent::enable() {
   for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
     sendScriptParsedNotificationToClient(srcLoc);
 
-    // TODO: Add test for this once state persistence is implemented
-    // Notify the client about all breakpoints in this script
-    for (const auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
-      for (const HermesBreakpoint &hermesBreakpoint :
-           cdpBreakpoint.hermesBreakpoints) {
-        if (hermesBreakpoint.scriptID == srcLoc.fileId) {
-          // This should have been checked before storing the Hermes
-          // breakpoint in the CDP breakpoint.
-          assert(
-              hermesBreakpoint.breakpointID != debugger::kInvalidBreakpoint &&
-              "Invalid breakpoint");
-          debugger::BreakpointInfo breakpointInfo =
-              runtime_.getDebugger().getBreakpointInfo(
-                  hermesBreakpoint.breakpointID);
-          if (!breakpointInfo.resolved) {
-            // Resolved state changed between breakpoint creation and
-            // notification
-            assert(false && "Previously resolved breakpoint unresolved");
-            continue;
-          }
+    for (auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
+      assert(
+          cdpBreakpoint.hermesBreakpoints.empty() &&
+          "Unexpected linked internal breakpoint");
 
-          m::debugger::BreakpointResolvedNotification resolved;
-          resolved.breakpointId = std::to_string(cdpBreakpointID);
-          resolved.location =
-              m::debugger::makeLocation(breakpointInfo.resolvedLocation);
-          sendNotificationToClient(resolved);
-        }
+      if (srcLoc.fileName == cdpBreakpoint.description.url) {
+        applyBreakpointAndSendNotification(
+            cdpBreakpointID, cdpBreakpoint, srcLoc);
       }
     }
   }
@@ -234,6 +215,13 @@ void DebuggerDomainAgent::cleanUp() {
   // need that functionality, then we might need to track breakpoints set by
   // this client and only remove those.
   runtime_.getDebugger().deleteAllBreakpoints();
+
+  // Unlink all persisted CDPBreakpoints from their HermesBreakpoints, in case
+  // domain will be re-enabled. This is required, because all internal Hermes
+  // breakpoints were deleted above.
+  for (auto &[_, cdpBreakpoint] : cdpBreakpoints_) {
+    cdpBreakpoint.hermesBreakpoints.clear();
+  }
 
   if (debuggerEventCallbackId_ != kInvalidDebuggerEventCallbackID) {
     asyncDebugger_.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
@@ -765,14 +753,7 @@ void DebuggerDomainAgent::processNewLoadedScript() {
     // Apply existing breakpoints to the new script.
     for (auto &[id, breakpoint] : cdpBreakpoints_) {
       if (loc.fileName == breakpoint.description.url) {
-        auto breakpointInfo = applyBreakpoint(breakpoint, loc.fileId);
-        if (breakpointInfo) {
-          m::debugger::BreakpointResolvedNotification resolved;
-          resolved.breakpointId = std::to_string(id);
-          resolved.location =
-              m::debugger::makeLocation(breakpointInfo.value().location);
-          sendNotificationToClient(resolved);
-        }
+        applyBreakpointAndSendNotification(id, breakpoint, loc);
       }
     }
   }
@@ -851,21 +832,37 @@ DebuggerDomainAgent::createHermesBreakpoint(
   return HermesBreakpointLocation{breakpointID, info.resolvedLocation};
 }
 
+/// Applies a CDP breakpoint to a script. If successful, will send
+/// Debugger.breakpointResolved notification to client.
+void DebuggerDomainAgent::applyBreakpointAndSendNotification(
+    CDPBreakpointID cdpBreakpointID,
+    CDPBreakpoint &cdpBreakpoint,
+    const debugger::SourceLocation &srcLoc) {
+  auto hermesBreakpointLoc = applyBreakpoint(cdpBreakpoint, srcLoc.fileId);
+  if (hermesBreakpointLoc) {
+    m::debugger::BreakpointResolvedNotification resolved;
+    resolved.breakpointId = std::to_string(cdpBreakpointID);
+    resolved.location =
+        m::debugger::makeLocation(hermesBreakpointLoc.value().location);
+    sendNotificationToClient(resolved);
+  }
+}
+
 /// Apply a CDP breakpoint to a script, creating a Hermes breakpoint and
 /// associating it with the specified CDP breakpoint. Returns the newly-
 /// created Hermes breakpoint if successful, nullopt otherwise.
 std::optional<HermesBreakpointLocation> DebuggerDomainAgent::applyBreakpoint(
-    CDPBreakpoint &breakpoint,
+    CDPBreakpoint &cdpBreakpoint,
     debugger::ScriptID scriptID) {
   // Create the Hermes breakpoint
   std::optional<HermesBreakpointLocation> hermesBreakpoint =
-      createHermesBreakpoint(scriptID, breakpoint.description);
+      createHermesBreakpoint(scriptID, cdpBreakpoint.description);
   if (!hermesBreakpoint) {
     return {};
   }
 
   // Associate this Hermes breakpoint with the CDP breakpoint
-  breakpoint.hermesBreakpoints.push_back(
+  cdpBreakpoint.hermesBreakpoints.push_back(
       HermesBreakpoint{hermesBreakpoint.value().id, scriptID});
 
   return hermesBreakpoint;
