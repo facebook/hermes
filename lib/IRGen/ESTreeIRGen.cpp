@@ -395,6 +395,12 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
   // Free the allocated legacy class context.
   if (curFunction()->legacyClassContext)
     curFunction()->legacyClassContext.reset();
+
+  // promotedDecls is used immediately and relies on IdentifierNode,
+  // which is deallocated between invocations of lazy compilation.
+  // Therefore, it is necessary to clear promotedDecls when freeing the
+  // AST in order to avoid dangling pointers.
+  semCtx_.clearPromotedDecls();
   return compiledFunc;
 }
 
