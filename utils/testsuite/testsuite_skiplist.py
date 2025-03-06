@@ -1085,6 +1085,10 @@ SKIP_LIST = [
     "test262/test/built-ins/String/prototype/toLocaleLowerCase/special_casing_conditional.js",
     "test262/test/built-ins/String/prototype/toLowerCase/special_casing_conditional.js",
     # Intl
+    "test262/test/intl402/constructors-taint-Object-prototype.js",
+    "test262/test/intl402/constructors-taint-Object-prototype-2.js",
+    # language-tags-canonicalized.js requires mapping legacy subtag values to their modern equivalents.
+    "test262/test/intl402/language-tags-canonicalized.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/de-DE.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/default-options-object-prototype.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/en-US.js",
@@ -1098,44 +1102,46 @@ SKIP_LIST = [
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Azeri.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Turkish.js",
     "test262/test/intl402/String/prototype/toLocaleUpperCase/special_casing_Lithuanian.js",
+    "test262/test/intl402/DateTimeFormat/proto-from-ctor-realm.js",
     "test262/test/intl402/DateTimeFormat/subclassing.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-order-fractionalSecondDigits.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-order-dayPeriod.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-order.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-invalid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-throwing-getters-dayPeriod.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-order-timedate-style.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-valid.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-style-conflict.js",
+    "test262/test/intl402/DateTimeFormat/taint-Object-prototype-date-time-components.js",
+    # timezone-case-insensitive.js requires Intl.supportedValuesOf(), which is not supported yet.
+    "test262/test/intl402/DateTimeFormat/timezone-case-insensitive.js",
+    # timezone-not-canonicalized.js is a change coming from the Temporal proposal.
+    # Temporal proposal is not supported yet.
+    "test262/test/intl402/DateTimeFormat/timezone-not-canonicalized.js",
+    # temporal-*.js requires Temporal. Temporal proposal is not supported yet.
+    "test262/test/intl402/DateTimeFormat/prototype/format/temporal-objects-not-overlapping-options.js",
+    "test262/test/intl402/DateTimeFormat/prototype/format/temporal-objects-resolved-time-zone.js",
+    "test262/test/intl402/DateTimeFormat/prototype/format/temporal-zoneddatetime-not-supported.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-not-overlapping-options.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-objects-resolved-time-zone.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRange/temporal-zoneddatetime-not-supported.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-objects-not-overlapping-options.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-objects-resolved-time-zone.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/temporal-zoneddatetime-not-supported.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/temporal-objects-not-overlapping-options.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/temporal-objects-resolved-time-zone.js",
+    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/temporal-zoneddatetime-not-supported.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-fractionalSecondDigits.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-dayPeriod.js",
-    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
     "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/order-style.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year-zh.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/fractionalSecondDigits.js",
-    "test262/test/intl402/DateTimeFormat/prototype/format/timedatestyle-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
-    "test262/test/intl402/DateTimeFormat/prototype/format/fractionalSecondDigits.js",
-    "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js",
-    "test262/test/intl402/DateTimeFormat/constructor-options-numberingSystem-invalid.js",
-    # This test assumes that "year" has some default value. That is an implementation-defined behavior.
-    # In our case it remains undefined, which causes this test to fail.
-    "test262/test/intl402/DateTimeFormat/default-options-object-prototype.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year.js",
     "test262/test/intl402/DateTimeFormat/prototype/format/proleptic-gregorian-calendar.js",
-    "test262/test/intl402/DateTimeFormat/prototype/formatRange",
-    "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts",
-    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-basic.js",
-    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-change.js",
-    "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
-    "test262/test/intl402/DateTimeFormat/prototype/format/offset-timezone-gmt-same.js",
-    "test262/test/intl402/Date/prototype/throws-same-exceptions-as-DateTimeFormat.js",
+    # Following getCanonicalLocales/*.js require mapping legacy subtag values to their modern equivalents.
+    "test262/test/intl402/Intl/getCanonicalLocales/canonicalized-tags.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/complex-language-subtag-replacement.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/complex-region-subtag-replacement.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/preferred-grandfathered.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/preferred-variant.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/transformed-ext-canonical.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-calendar.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-col-strength.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-measurement-system.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-region.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-subdivision.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-timezone.js",
+    "test262/test/intl402/Intl/getCanonicalLocales/unicode-ext-canonicalize-yes-to-true.js",
     "test262/test/intl402/NumberFormat/prototype/formaToParts",
     "test262/test/intl402/NumberFormat/subclassing.js",
     "test262/test/intl402/NumberFormat/constructor-locales-hasproperty.js",
@@ -1968,20 +1974,83 @@ SKIP_LIST = [
 # Tests to skip on specific platforms. Keys are sys.platform values.
 PLATFORM_SKIP_LISTS = {
     "linux": [
-        # Intl features that are not yet supported on Linux.
+        # toLocaleLowerCase and toLocaleUpperCase are not yet supported on Linux.
         "test262/test/built-ins/String/prototype/toLocaleLowerCase",
         "test262/test/built-ins/String/prototype/toLocaleUpperCase",
+        # default-locale-is-supported.js, language-tags-*.js, and supportedLocalesOf-*.js
+        # require NumberFormat, which is not yet supported on Linux.
+        "test262/test/intl402/default-locale-is-supported.js",
+        "test262/test/intl402/language-tags-invalid.js",
+        "test262/test/intl402/language-tags-with-underscore.js",
+        "test262/test/intl402/supportedLocalesOf-consistent-with-resolvedOptions.js",
+        "test262/test/intl402/supportedLocalesOf-default-locale-and-zxx-locale.js",
+        "test262/test/intl402/supportedLocalesOf-duplicate-elements-removed.js",
+        "test262/test/intl402/supportedLocalesOf-empty-and-undefined.js",
+        "test262/test/intl402/supportedLocalesOf-locales-arg-coered-to-object.js",
+        "test262/test/intl402/supportedLocalesOf-locales-arg-empty-array.js",
+        "test262/test/intl402/supportedLocalesOf-taint-Array.js",
+        "test262/test/intl402/supportedLocalesOf-taint-Array-2.js",
+        "test262/test/intl402/supportedLocalesOf-test-option-localeMatcher.js",
+        "test262/test/intl402/supportedLocalesOf-unicode-extensions-ignored.js",
+        # date-same-returns-single-date.js and fractionalSecondDigits.js fail on older
+        # ICU version such as 66.1.
+        "test262/test/intl402/DateTimeFormat/prototype/formatRange/date-same-returns-single-date.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatRange/fractionalSecondDigits.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/date-same-returns-single-date.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/fractionalSecondDigits.js",
+        # Remove hourCycle-default.js the from skip list when the pinned test262 version
+        # is updated to include this bug fix for the test case:
+        # https://github.com/tc39/test262/commit/263ed65292870251b0fad54bccad507b1aa96e20
+        "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
+        # NumberFormat is not yet supported on Linux.
         "test262/test/intl402/Number/prototype/toLocaleString",
         "test262/test/intl402/NumberFormat",
+        # toLocaleLowerCase and toLocaleUpperCase are not yet supported on Linux.
         "test262/test/intl402/String/prototype/toLocaleLowerCase",
         "test262/test/intl402/String/prototype/toLocaleUpperCase",
-        "test262/test/intl402/DateTimeFormat/prototype/formatToParts",
     ],
     "darwin": [
         # Intl implementation issues on Apple.
         "test262/test/intl402/Collator/ignore-invalid-unicode-ext-values.js",
         "test262/test/intl402/Collator/unicode-ext-value-collation.js",
+        # dayPeriod option is not supported on Apple.
+        "test262/test/intl402/DateTimeFormat/constructor-options-dayPeriod-valid.js",
+        "test262/test/intl402/DateTimeFormat/constructor-options-fractionalSecondDigits-valid.js",
+        # numberingSystem option is not supported on Apple.
+        "test262/test/intl402/DateTimeFormat/constructor-options-numberingSystem-invalid.js",
+        # timezone-legacy-non-iana.js requires excluding non-IANA time zone link names
+        # such as PST, CST, IST. Adding this filtering to conform to spec risk breaking
+        # existing applications that use such names.
+        "test262/test/intl402/DateTimeFormat/timezone-legacy-non-iana.js",
+        # dayPeriod option is not supported on Apple.
+        "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-long-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-narrow-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/format/dayPeriod-short-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/format/fractionalSecondDigits.js",
+        # Support for offset time zone id, e.g. +01:00, has not been added on Apple.
+        "test262/test/intl402/DateTimeFormat/prototype/format/offset-timezone-gmt-same.js",
+        "test262/test/intl402/DateTimeFormat/prototype/format/timedatestyle-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatRange",
+        "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts",
+        # dayPeriod option is not supported on Apple.
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/fractionalSecondDigits.js",
+        # Support for offset time zone id, e.g. +01:00, has not been added on Apple.
         "test262/test/intl402/DateTimeFormat/prototype/formatToParts/offset-timezone-correct.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year-zh.js",
+        "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/basic.js",
+        "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-default.js",
+        "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/hourCycle-timeStyle.js",
+        # Support for offset time zone id, e.g. +01:00, has not been added on Apple.
+        "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-basic.js",
+        "test262/test/intl402/DateTimeFormat/prototype/resolvedOptions/offset-timezone-change.js",
+        "test262/test/intl402/NumberFormat/constructor-unit.js",
+        # numberingSystem option is not supported on Apple.
+        "test262/test/intl402/NumberFormat/prototype/format/numbering-systems.js",
+        "test262/test/intl402/NumberFormat/prototype/format/units.js",
     ],
 }
 

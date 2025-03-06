@@ -338,7 +338,7 @@ vm::CallResult<std::vector<std::u16string>> supportedLocales(
       options,
       constants::opt_name::localeMatcher,
       constants::opt_value::locale_matcher::validLocaleMatchers,
-      constants::opt_value::locale_matcher::best_fit);
+      constants::opt_value::locale_matcher::bestFit);
   if (LLVM_UNLIKELY(matcherRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }

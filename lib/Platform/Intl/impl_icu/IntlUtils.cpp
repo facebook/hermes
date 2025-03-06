@@ -7,6 +7,8 @@
 
 #include "IntlUtils.h"
 
+#include <cstdint>
+
 namespace hermes {
 namespace platform_intl {
 namespace impl_icu {
@@ -57,6 +59,21 @@ std::string toLowerASCII(std::string str) {
     }
   }
   return str;
+}
+
+std::u16string toUpperASCII(std::u16string str) {
+  constexpr std::uint16_t offset = 'a' - 'A';
+  for (char16_t &c : str) {
+    if (c >= u'a' && c <= u'z') {
+      c -= offset;
+    }
+  }
+  return str;
+}
+
+bool startsWith(std::u16string_view str, std::u16string_view prefix) {
+  return str.size() >= prefix.size() &&
+      std::equal(prefix.begin(), prefix.end(), str.begin());
 }
 
 } // namespace impl_icu

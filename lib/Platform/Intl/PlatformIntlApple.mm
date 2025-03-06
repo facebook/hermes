@@ -1484,6 +1484,16 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
   // 30. Let dataLocaleData be localeData.[[<dataLocale>]].
   // 31. Let matcher be ? GetOption(options, "formatMatcher", "string", «
   // "basic", "best fit" », "best fit").
+  // NOTE: Only best fit format matcher is implemented through use of NSDateFormatter.
+  // The formatMatcher option is read and checked for valid values.
+  auto formatMatcherRes = getOptionString(
+      runtime,
+      options,
+      u"formatMatcher",
+      {u"basic", u"best fit"},
+      u"best fit");
+  if (LLVM_UNLIKELY(formatMatcherRes == vm::ExecutionStatus::EXCEPTION))
+    return vm::ExecutionStatus::EXCEPTION;
   // 32. Let dateStyle be ? GetOption(options, "dateStyle", "string", « "full",
   // "long", "medium", "short" », undefined).
   static constexpr std::u16string_view dateStyles[] = {

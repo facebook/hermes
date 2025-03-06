@@ -24,13 +24,14 @@ if(HERMES_ENABLE_INTL)
   else()
     add_hermes_library(hermesPlatformIntl STATIC
         PlatformIntlICU.cpp
-        PlatformIntlShared.cpp
         impl_icu/Collator.cpp
+        impl_icu/DateTimeFormat.cpp
         impl_icu/IntlUtils.cpp
         impl_icu/LocaleConverter.cpp
         impl_icu/LocaleBCP47Object.cpp
         impl_icu/LocaleResolver.cpp
         impl_icu/OptionHelpers.cpp
+        impl_icu/NumberingSystem.cpp
         LINK_LIBS
         hermesBCP47Parser
         hermesPublic
