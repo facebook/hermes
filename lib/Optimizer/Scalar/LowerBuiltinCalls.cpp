@@ -248,7 +248,13 @@ static bool tryOptimizeKnownCallable(
 
   if (propLit->getValue() == builtins.applyID &&
       callInst->getNumArguments() == 3 &&
-      llvh::isa<CreateArgumentsInst>(callInst->getArgument(2))) {
+      llvh::isa<CreateArgumentsInst>(callInst->getArgument(2)) &&
+      callInst->getArgument(2)->hasOneUser()) {
+    // We require that the CreateArgumentsInst has only one user: this call.
+    // LoadProperty may invoke a getter on Object.prototype and leak arguments.
+    // Other calls must be validated to be safe as well.
+    // TODO: Handle more complex cases.
+
     // Add a fast path for "apply(thisVal, arguments)"
     // by splitting the basic block and trying to do a "fast apply" by copying
     // the arguments directly via HermesBuiltin_applyArguments.
