@@ -1792,6 +1792,55 @@ TEST_F(CDPAgentTest, DebuggerStepIntoBlackboxedRange) {
   waitForScheduledScripts();
 }
 
+TEST_F(CDPAgentTest, DebuggerStepIntoBlackboxedRangeWithBreakpoint) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(             // line 0
+    function addOne(val) {       // line 1 |
+      const val2 = val + 1;      // line 2 | [3] stop on this manual breakpoint
+      return val2;               // line 3 |
+    }                            // line 4 |
+
+    var a = 1 + 2;
+    debugger;                    // line 7 | [1] hit debugger statement, step over
+    var b = addOne(a);           // line 8 | [2] set blackboxed ranges, set manual breakpoint on line 2, step into
+    var c = b * b;
+  )");
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // [1] -line 7- hit debugger statement, step over to line 8
+  ensurePaused(waitForMessage(), "other", {{"global", 7, 1}});
+  sendAndCheckResponse("Debugger.stepOver", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"global", 8, 1}});
+
+  // [2] -line 8- set manual breakpoint on line 2
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 2);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(
+      waitForMessage("setBreakpointByUrl"), msgId++, {{2}});
+
+  // [2] -line 8- blackbox the lines for addOne
+  sendSetBlackboxedRangesAndCheckResponse(msgId++, scriptID, {{0, 0}, {5, 0}});
+
+  // [2] -line 8- step into, verify stopping on the manual breakpoint on line 2
+  sendAndCheckResponse("Debugger.stepInto", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  ensurePaused(waitForMessage(), "step", {{"addOne", 2, 2}, {"global", 8, 1}});
+
+  // resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+  waitForScheduledScripts();
+}
+
 TEST_F(CDPAgentTest, DebuggerStepOverInsideBlackboxedRange) {
   int msgId = 1;
 
@@ -2808,7 +2857,7 @@ TEST_F(CDPAgentTest, DebuggerBreakpointsPauseVMAfterDomainReload) {
   scheduleScript(R"(
     signalTest();
 
-    while (!shouldStop()) {}                        
+    while (!shouldStop()) {}
 
     const x = 1; // (line 5)
   )");

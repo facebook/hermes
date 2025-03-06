@@ -443,8 +443,8 @@ bool DebuggerDomainAgent::isTopFrameLocationBlackboxed() {
 
       auto locationHasManualBreakpoint =
           (loc.fileId == breakpointLoc.fileId &&
-           loc.line - 1 == breakpointLoc.line &&
-           loc.column - 1 == breakpointLoc.column);
+           loc.line == breakpointLoc.line &&
+           loc.column == breakpointLoc.column);
       // Locations with manual breakpoints are not considered blackboxed.
       // For example, if a user steps inside a blackboxed function, if any of
       // the next lines in that function have a manual breakpoint, we should
