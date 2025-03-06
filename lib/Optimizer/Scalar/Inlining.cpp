@@ -219,6 +219,14 @@ static std::pair<bool, size_t> canBeInlined(Function *F) {
                 << "': copies rest args\n");
             return {false, 0};
           }
+          if (cast<CallBuiltinInst>(&I)->getBuiltinIndex() ==
+              BuiltinMethod::HermesBuiltin_applyArguments) {
+            LLVM_DEBUG(
+                llvh::dbgs()
+                << "Cannot inline function '" << F->getInternalNameStr()
+                << "': applies arguments\n");
+            return {false, 0};
+          }
           break;
         default:
           break;
