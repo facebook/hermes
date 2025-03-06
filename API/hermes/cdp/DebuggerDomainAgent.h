@@ -266,8 +266,9 @@ class DebuggerDomainAgent : public DomainAgent {
   std::unordered_map<CDPBreakpointID, CDPBreakpoint> cdpBreakpoints_{};
 
   /// CDP breakpoint IDs are assigned by the DebuggerDomainAgent. Keep track of
-  /// the next available ID.
-  CDPBreakpointID nextBreakpointID_ = 1;
+  /// the next available ID. Starts with 100 to avoid confusion with Hermes
+  /// breakpoints IDs that start with 1.
+  CDPBreakpointID nextBreakpointID_ = 100;
 
   DomainState &state_;
 
