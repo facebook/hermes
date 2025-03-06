@@ -26,7 +26,7 @@ new A();
 // CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.<instElemInitFunc:A>]: object
 // CHECK-NEXT:  %3 = AllocStackInst (:object) $?anon_1_clsPrototype: any
 // CHECK-NEXT:  %4 = CreateClassInst (:object) %0: environment, %VS0: any, %A(): functionCode, empty: any, %3: object
-// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, empty: any
+// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, %4: object
 // CHECK-NEXT:  %6 = CallInst (:undefined) %4: object, %A(): functionCode, true: boolean, %0: environment, %4: object, %5: object
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
