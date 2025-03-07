@@ -33,8 +33,6 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/TDZDedup.cpp
   Optimizer/Scalar/StripDebugInsts.cpp
   Optimizer/Scalar/CacheNewObject.cpp
-  IR/Analysis.cpp
-  IR/IREval.cpp
   LINK_OBJLIBS hermesFrontend
 )
 
@@ -47,7 +45,9 @@ add_hermes_library(hermesFrontend
   IRGen/ESTreeIRGen-except.cpp
   IRGen/ESTreeIRGen-typed-class.cpp
   IRGen/ESTreeIRGen-legacy-class.cpp
+  IR/Analysis.cpp
   IR/IR.cpp
+  IR/IREval.cpp
   IR/CFG.cpp
   IR/IRBuilder.cpp
   IR/IRVerifier.cpp
