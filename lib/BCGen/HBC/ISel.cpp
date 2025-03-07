@@ -1304,10 +1304,16 @@ void HBCISel::generateThrowIfInst(
     hermes::ThrowIfInst *Inst,
     hermes::BasicBlock *next) {
   assert(
-      Inst->getInvalidTypes()->getData().isEmptyType() &&
-      "Only Empty supported");
-  BCFGen_->emitThrowIfEmpty(
-      encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
+      (Inst->getInvalidTypes()->getData().isEmptyType() ||
+       Inst->getInvalidTypes()->getData().isUninitType()) &&
+      "Only Empty/Undefined supported");
+  if (Inst->getInvalidTypes()->getData().isEmptyType()) {
+    BCFGen_->emitThrowIfEmpty(
+        encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
+  } else {
+    BCFGen_->emitThrowIfUndefined(
+        encodeValue(Inst), encodeValue(Inst->getCheckedValue()));
+  }
 }
 void HBCISel::generateThrowIfThisInitializedInst(
     hermes::ThrowIfThisInitializedInst *Inst,

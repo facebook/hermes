@@ -2879,8 +2879,12 @@ void Emitter::throwInst(FR frInput) {
   EMIT_RUNTIME_CALL(*this, void (*)(SHRuntime *, SHLegacyValue), _sh_throw);
 }
 
-void Emitter::throwIfEmpty(FR frRes, FR frInput) {
-  comment("// ThrowIfEmpty r%u, r%u", frRes.index(), frInput.index());
+void Emitter::throwIfEmptyUndefinedImpl(FR frRes, FR frInput, bool empty) {
+  comment(
+      "// %s r%u, r%u",
+      empty ? "ThrowIfEmpty" : "ThrowIfUndefined",
+      frRes.index(),
+      frInput.index());
 
   asmjit::Label slowPathLab = newSlowPathLabel();
 
@@ -2894,7 +2898,10 @@ void Emitter::throwIfEmpty(FR frRes, FR frInput) {
     freeAllFRTempExcept({});
   freeReg(hwTemp);
 
-  emit_sh_ljs_is_empty(a, hwTemp.a64GpX(), hwInput.a64GpX());
+  if (empty)
+    emit_sh_ljs_is_empty(a, hwTemp.a64GpX(), hwInput.a64GpX());
+  else
+    emit_sh_ljs_is_undefined(a, hwTemp.a64GpX(), hwInput.a64GpX());
   a.b_eq(slowPathLab);
 
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
@@ -2903,12 +2910,14 @@ void Emitter::throwIfEmpty(FR frRes, FR frInput) {
 
   slowPaths_.push_back(
       {.slowPathLab = slowPathLab,
+       .name = empty ? "ThrowIfEmpty" : "ThrowIfUndefined",
        .frRes = frRes,
        .frInput1 = frInput,
        .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
-             "// Slow path: ThrowIfEmpty r%u, r%u",
+             "// Slow path: %s r%u, r%u",
+             sl.name,
              sl.frRes.index(),
              sl.frInput1.index());
          em.a.bind(sl.slowPathLab);

@@ -640,6 +640,11 @@ DEFINE_OPCODE_1(Throw, Reg8)
 /// Arg2 is the value to check
 DEFINE_OPCODE_2(ThrowIfEmpty, Reg8, Reg8)
 
+/// If Arg2 is Undefined, throw ReferenceError, otherwise move it into Arg1.
+/// Arg1 is the destination of the return value
+/// Arg2 is the value to check
+DEFINE_OPCODE_2(ThrowIfUndefined, Reg8, Reg8)
+
 /// If Arg1 is not Empty, throw ReferenceError.
 /// Arg1 is the checked this of a derived constructor.
 DEFINE_OPCODE_1(ThrowIfThisInitialized, Reg8)

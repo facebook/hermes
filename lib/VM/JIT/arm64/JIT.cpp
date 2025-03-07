@@ -1185,6 +1185,10 @@ inline void JITContext::Compiler::emitThrowIfEmpty(
     const inst::ThrowIfEmptyInst *inst) {
   em_.throwIfEmpty(FR(inst->op1), FR(inst->op2));
 }
+inline void JITContext::Compiler::emitThrowIfUndefined(
+    const inst::ThrowIfUndefinedInst *inst) {
+  em_.throwIfUndefined(FR(inst->op1), FR(inst->op2));
+}
 
 inline void JITContext::Compiler::emitThrowIfThisInitialized(
     const inst::ThrowIfThisInitializedInst *inst) {

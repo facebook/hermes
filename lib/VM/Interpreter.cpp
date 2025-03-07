@@ -1672,6 +1672,19 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(ThrowIfUndefined) {
+        if (LLVM_UNLIKELY(O2REG(ThrowIfUndefined).isUndefined())) {
+          SLOW_DEBUG(
+              dbgs() << "Throwing ReferenceError for undefined variable");
+          CAPTURE_IP(runtime.raiseReferenceError(
+              "accessing an uninitialized variable"));
+          goto exception;
+        }
+        O1REG(ThrowIfUndefined) = O2REG(ThrowIfUndefined);
+        ip = NEXTINST(ThrowIfUndefined);
+        DISPATCH;
+      }
+
       CASE(ThrowIfThisInitialized) {
         if (LLVM_UNLIKELY(!O1REG(ThrowIfThisInitialized).isEmpty())) {
           SLOW_DEBUG(

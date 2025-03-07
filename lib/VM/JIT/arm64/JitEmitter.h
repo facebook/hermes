@@ -828,7 +828,12 @@ class Emitter {
 
   void debugger();
   void throwInst(FR frInput);
-  void throwIfEmpty(FR frRes, FR frInput);
+  void throwIfEmpty(FR frRes, FR frInput) {
+    throwIfEmptyUndefinedImpl(frRes, frInput, true);
+  }
+  void throwIfUndefined(FR frRes, FR frInput) {
+    throwIfEmptyUndefinedImpl(frRes, frInput, false);
+  }
   void throwIfThisInitialized(FR frInput);
 
   void createRegExp(
@@ -1207,6 +1212,8 @@ class Emitter {
       const char *shImplName);
 
   void reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name);
+
+  void throwIfEmptyUndefinedImpl(FR frRes, FR frInput, bool empty);
 }; // class Emitter
 
 } // namespace hermes::vm::arm64
