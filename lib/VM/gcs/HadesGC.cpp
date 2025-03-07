@@ -320,21 +320,26 @@ class HadesGC::CollectionStats final {
     assert(!std::exchange(usedDbg_, true) && "markUsed called twice");
   }
 
-  GCAnalyticsEvent getEvent() && {
+  InternalAnalyticsEvent getEvent() && {
     markUsed();
-    return GCAnalyticsEvent{
-        gc_.getName(),
-        gc_.getKindAsStr(),
-        collectionType_,
-        std::move(cause_),
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            endTime_ - beginTime_),
-        std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
-        /*allocated*/ BeforeAndAfter{allocatedBefore_, afterAllocatedBytes()},
-        /*size*/ BeforeAndAfter{sizeBefore_, sizeAfter_},
-        /*external*/ BeforeAndAfter{externalBefore_, afterExternalBytes()},
-        /*survivalRatio*/ survivalRatio(),
-        /*tags*/ std::move(tags_)};
+    auto wallTime = endTime_ - beginTime_;
+    return InternalAnalyticsEvent{
+        GCAnalyticsEvent{
+            gc_.getName(),
+            gc_.getKindAsStr(),
+            collectionType_,
+            std::move(cause_),
+            std::chrono::duration_cast<std::chrono::milliseconds>(wallTime),
+            std::chrono::duration_cast<std::chrono::milliseconds>(cpuDuration_),
+            /*allocated*/
+            BeforeAndAfter{allocatedBefore_, afterAllocatedBytes()},
+            /*size*/ BeforeAndAfter{sizeBefore_, sizeAfter_},
+            /*external*/ BeforeAndAfter{externalBefore_, afterExternalBytes()},
+            /*survivalRatio*/ survivalRatio(),
+            /*tags*/ std::move(tags_)},
+        /*durationSecs*/ std::chrono::duration<double>(wallTime).count(),
+        /*cpuDurationSecs*/
+        std::chrono::duration<double>(cpuDuration_).count()};
   }
 
  private:

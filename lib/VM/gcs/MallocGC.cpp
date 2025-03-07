@@ -361,25 +361,29 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 
   const auto cpuEnd = oscompat::thread_cpu_time();
   const auto wallEnd = steady_clock::now();
+  auto cpuTime = cpuEnd - cpuStart;
+  auto wallTime = wallEnd - wallStart;
 
-  GCAnalyticsEvent event{
-      getName(),
-      kGCName,
-      "full",
-      std::move(cause),
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          wallEnd - wallStart),
-      std::chrono::duration_cast<std::chrono::milliseconds>(cpuEnd - cpuStart),
-      /*allocated*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
-      // MallocGC only allocates memory as it is used so there is no distinction
-      // between the allocated bytes and the heap size.
-      /*size*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
-      // TODO: MallocGC doesn't yet support credit/debit external memory, so
-      // it has no data for these numbers.
-      /*external*/ BeforeAndAfter{externalBefore, externalBytes_},
-      /*survivalRatio*/
-      allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0,
-      /*tags*/ {}};
+  InternalAnalyticsEvent event{
+      GCAnalyticsEvent{
+          getName(),
+          kGCName,
+          "full",
+          std::move(cause),
+          std::chrono::duration_cast<std::chrono::milliseconds>(wallTime),
+          std::chrono::duration_cast<std::chrono::milliseconds>(cpuTime),
+          /*allocated*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
+          // MallocGC only allocates memory as it is used so there is no
+          // distinction between the allocated bytes and the heap size.
+          /*size*/ BeforeAndAfter{allocatedBefore, allocatedBytes_},
+          // TODO: MallocGC doesn't yet support credit/debit external memory, so
+          // it has no data for these numbers.
+          /*external*/ BeforeAndAfter{externalBefore, externalBytes_},
+          /*survivalRatio*/
+          allocatedBefore ? (allocatedBytes_ * 1.0) / allocatedBefore : 0,
+          /*tags*/ {}},
+      std::chrono::duration<double>(wallTime).count(),
+      std::chrono::duration<double>(cpuTime).count()};
 
   recordGCStats(event, /* onMutator */ true);
   checkTripwire(allocatedBytes_ + externalBytes_);

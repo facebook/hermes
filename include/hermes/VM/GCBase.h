@@ -1346,14 +1346,23 @@ class GCBase {
   /// Print the cumulative statistics.
   virtual void printStats(JSONEmitter &json);
 
+  /// Extended GCAnalyticsEvent with additional fields for internal use.
+  struct InternalAnalyticsEvent : public GCAnalyticsEvent {
+    /// Higher resolution execution time stats. These should be preferred for
+    /// internal use, but the old millisecond resolution fields are kept in the
+    /// public base class for backward compatibility.
+    double durationSecs;
+    double cpuDurationSecs;
+  };
+
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the overall cumulative stats struct.
-  void recordGCStats(const GCAnalyticsEvent &event, bool onMutator);
+  void recordGCStats(const InternalAnalyticsEvent &event, bool onMutator);
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the given cumulative stats struct.
   void recordGCStats(
-      const GCAnalyticsEvent &event,
+      const InternalAnalyticsEvent &event,
       CumulativeHeapStats *stats,
       bool onMutator);
 
