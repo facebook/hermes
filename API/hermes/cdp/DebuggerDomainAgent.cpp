@@ -437,24 +437,29 @@ bool DebuggerDomainAgent::isTopFrameLocationBlackboxed() {
   }
   debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
   if (breakpointsActive_) {
-    for (auto &[id, cdpBreakpoint] : cdpBreakpoints_) {
-      auto breakpointLoc =
-          runtime_.getDebugger().getBreakpointInfo(id).resolvedLocation;
+    for (const auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
+      for (const HermesBreakpoint &hermesBreakpoint :
+           cdpBreakpoint.hermesBreakpoints) {
+        auto breakpointLoc =
+            runtime_.getDebugger()
+                .getBreakpointInfo(hermesBreakpoint.breakpointID)
+                .resolvedLocation;
 
-      auto locationHasManualBreakpoint =
-          (loc.fileId == breakpointLoc.fileId &&
-           loc.line == breakpointLoc.line &&
-           loc.column == breakpointLoc.column);
-      // Locations with manual breakpoints are not considered blackboxed.
-      // For example, if a user steps inside a blackboxed function, if any of
-      // the next lines in that function have a manual breakpoint, we should
-      // respect them and stop on them rather than stepping over them. The same
-      // logic applies to explicit pauses. While they trigger stepping into
-      // until out of blackboxed ranges, or until the program continues
-      // execution if one of these steps lands on a line with a manual
-      // breakpoint, we should stop on it.
-      if (locationHasManualBreakpoint) {
-        return false;
+        auto locationHasManualBreakpoint =
+            (loc.fileId == breakpointLoc.fileId &&
+             loc.line == breakpointLoc.line &&
+             loc.column == breakpointLoc.column);
+        // Locations with manual breakpoints are not considered blackboxed.
+        // For example, if a user steps inside a blackboxed function, if any of
+        // the next lines in that function have a manual breakpoint, we should
+        // respect them and stop on them rather than stepping over them. The
+        // same logic applies to explicit pauses. While they trigger stepping
+        // into until out of blackboxed ranges, or until the program continues
+        // execution if one of these steps lands on a line with a manual
+        // breakpoint, we should stop on it.
+        if (locationHasManualBreakpoint) {
+          return false;
+        }
       }
     }
   }
