@@ -31,7 +31,7 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %dotProduct(): functionCode
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %Vec2D(): functionCode
-// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %2 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
 // CHECK-NEXT:  %4 = AllocFastArrayInst (:object) 2: number
 // CHECK-NEXT:       FastArrayPushInst %0: object, %4: object

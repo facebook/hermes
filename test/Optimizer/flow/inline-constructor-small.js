@@ -28,7 +28,7 @@ print(p1.x, p2.x);
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %Point(): functionCode
-// CHECK-NEXT:  %1 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %1 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "prototype": string
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number, 3: number

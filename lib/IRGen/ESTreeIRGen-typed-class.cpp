@@ -235,7 +235,7 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
     flow::ClassType *classType,
     Value *parent) {
   // TODO: should create a sealed object, etc.
-  AllocObjectLiteralInst::ObjectPropertyMap propMap{};
+  AllocTypedObjectInst::ObjectPropertyMap propMap{};
   propMap.resize(classType->getFieldNameMap().size());
 
   // Generate code for each field, place it in the propMap.
@@ -283,19 +283,7 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
     }
   }
 
-  // TODO: Have a specific instruction for allocating an object from a class
-  // that sets the parent, uses the prop map, etc.
-  Value *result;
-  if (propMap.empty()) {
-    result = Builder.createAllocObjectLiteralInst({}, parent);
-  } else {
-    result = Builder.createAllocObjectLiteralInst(propMap);
-    if (parent) {
-      // TODO: Ensure that parent is typed correctly as 'object'.
-      Builder.createTypedStoreParentInst(parent, result);
-    }
-  }
-  return result;
+  return Builder.createAllocTypedObjectInst(propMap, parent);
 }
 
 Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {

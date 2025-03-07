@@ -26,7 +26,7 @@ exports.next = next
 // CHECK-NEXT:  %0 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %next(): functionCode
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %Cls(): functionCode
-// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %3 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %0: object, "next": string
 // CHECK-NEXT:       ReturnInst undefined: undefined

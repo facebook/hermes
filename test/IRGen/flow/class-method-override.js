@@ -69,7 +69,7 @@ function foo(c: C, d: D){
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.C]: any
 // CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %override(): functionCode
 // CHECK-NEXT:  %11 = CreateFunctionInst (:object) %1: environment, %VS1: any, %override2(): functionCode
-// CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) empty: any, "override": string, %10: object, "override2": string, %11: object
+// CHECK-NEXT:  %12 = AllocTypedObjectInst (:object) empty: any, "override": string, %10: object, "override2": string, %11: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %12: object, %8: object, "prototype": string
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
@@ -79,8 +79,7 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %19 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
 // CHECK-NEXT:  %20 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"override 1#"(): functionCode
 // CHECK-NEXT:  %21 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"override2 1#"(): functionCode
-// CHECK-NEXT:  %22 = AllocObjectLiteralInst (:object) empty: any, "override": string, %20: object, "override2": string, %21: object
-// CHECK-NEXT:        TypedStoreParentInst %19: object, %22: object
+// CHECK-NEXT:  %22 = AllocTypedObjectInst (:object) %19: object, "override": string, %20: object, "override2": string, %21: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %22: object, [%VS1.?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %22: object, %17: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
