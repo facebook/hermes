@@ -77,7 +77,7 @@ export function mutateESTreeASTCommentsForPrettier(
       docblockComment.trailing = false;
     }
 
-    // If we have a first node in the program body, attache the comment to that
+    // If we have a first node in the program body, attach the comment to that
     // otherwise set it on the program.
     if (program.body.length > 0) {
       const firstStatement = program.body[0];
