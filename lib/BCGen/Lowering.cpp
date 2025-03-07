@@ -139,7 +139,7 @@ bool LowerAllocObjectLiteral::runOnFunction(Function *F) {
     // We need to increase the iterator before calling lowerAllocObjectBuffer.
     // Otherwise deleting the instruction will invalidate the iterator.
     for (auto it = BB.begin(), e = BB.end(); it != e;) {
-      if (auto *A = llvh::dyn_cast<AllocObjectLiteralInst>(&*it++)) {
+      if (auto *A = llvh::dyn_cast<BaseAllocObjectLiteralInst>(&*it++)) {
         changed |= lowerAllocObjectBuffer(A);
       }
     }
@@ -149,7 +149,7 @@ bool LowerAllocObjectLiteral::runOnFunction(Function *F) {
 }
 
 bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
-    AllocObjectLiteralInst *allocInst) {
+    BaseAllocObjectLiteralInst *allocInst) {
   Function *F = allocInst->getParent()->getParent();
   IRBuilder builder(F);
   uint32_t size = allocInst->getKeyValuePairCount();

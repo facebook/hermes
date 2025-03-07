@@ -1611,6 +1611,23 @@ class InstrGen {
     }
     os_ << ";\n";
   }
+  void generateAllocTypedObjectInst(AllocTypedObjectInst &inst) {
+    assert(
+        inst.getKeyValuePairCount() == 0 &&
+        "AllocTypedObjectInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    // TODO: Utilize sizeHint.
+    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
+      os_ << "_sh_ljs_new_object(shr)";
+    } else {
+      os_ << "_sh_ljs_new_object_with_parent(shr, &";
+      generateValue(*inst.getParentObject());
+      os_ << ")";
+    }
+    os_ << ";\n";
+  }
   void generateCreateArgumentsLooseInst(CreateArgumentsLooseInst &inst) {
     hermes_fatal("CreateArgumentsLooseInst should have been lowered.");
   }

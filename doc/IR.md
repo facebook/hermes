@@ -588,6 +588,16 @@ Arguments | %prop_map is a vector of (Literal*, value*) pairs which represents t
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.
 
+### AllocTypedObjectInst
+
+AllocTypedObjectInst | _
+--- | --- |
+Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Example |  %0 = AllocTypedObjectInst %parent, "prop1" : string, 10 : number
+Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values.
+Effects | Does not read or write to memory.
+
 ### AllocArrayInst
 
 AllocArrayInst | _

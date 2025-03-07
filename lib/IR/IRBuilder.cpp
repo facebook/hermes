@@ -1128,6 +1128,15 @@ AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
   return inst;
 }
 
+AllocTypedObjectInst *IRBuilder::createAllocTypedObjectInst(
+    const AllocTypedObjectInst::ObjectPropertyMap &propMap,
+    Value *parentObject) {
+  auto *inst = new AllocTypedObjectInst(
+      parentObject ? parentObject : getEmptySentinel(), propMap);
+  insert(inst);
+  return inst;
+}
+
 HBCCompareBranchInst *IRBuilder::createHBCCompareBranchInst(
     Value *left,
     Value *right,

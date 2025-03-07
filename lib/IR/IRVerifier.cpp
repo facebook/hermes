@@ -1436,6 +1436,11 @@ bool Verifier::visitAllocObjectLiteralInst(
   return true;
 }
 
+bool Verifier::visitAllocTypedObjectInst(
+    const hermes::AllocTypedObjectInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitHBCGetGlobalObjectInst(const HBCGetGlobalObjectInst &Inst) {
   // Nothing to verify at this point.
   return true;

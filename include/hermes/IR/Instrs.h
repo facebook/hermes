@@ -2179,6 +2179,9 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   static bool isTyped() {
     return false;
   }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
 
   SideEffect getSideEffectImpl() const {
     return {};
@@ -2202,19 +2205,20 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   }
 };
 
-class AllocObjectLiteralInst : public Instruction {
-  AllocObjectLiteralInst(const AllocObjectLiteralInst &) = delete;
-  void operator=(const AllocObjectLiteralInst &) = delete;
+class BaseAllocObjectLiteralInst : public Instruction {
+  BaseAllocObjectLiteralInst(const BaseAllocObjectLiteralInst &) = delete;
+  void operator=(const BaseAllocObjectLiteralInst &) = delete;
 
  public:
-  enum { ParentObjectIdx, FirstKeyIdx };
+  enum { ParentObjectIdx, FirstKeyIdx, _LastIdx };
 
   using ObjectPropertyMap = llvh::SmallVector<std::pair<Literal *, Value *>, 4>;
 
-  explicit AllocObjectLiteralInst(
+  explicit BaseAllocObjectLiteralInst(
+      ValueKind kind,
       Value *parentObject,
       const ObjectPropertyMap &propMap)
-      : Instruction(ValueKind::AllocObjectLiteralInstKind) {
+      : Instruction(kind) {
     setType(*getInherentTypeImpl());
     pushOperand(parentObject);
     for (size_t i = 0; i < propMap.size(); i++) {
@@ -2222,9 +2226,8 @@ class AllocObjectLiteralInst : public Instruction {
       pushOperand(propMap[i].second);
     }
   }
-
-  explicit AllocObjectLiteralInst(
-      const AllocObjectLiteralInst *src,
+  explicit BaseAllocObjectLiteralInst(
+      const BaseAllocObjectLiteralInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -2252,8 +2255,7 @@ class AllocObjectLiteralInst : public Instruction {
   }
 
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::AllocObjectLiteralInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseAllocObjectLiteralInst);
   }
 
   static unsigned getKeyOperandIdx(unsigned index) {
@@ -2266,6 +2268,66 @@ class AllocObjectLiteralInst : public Instruction {
 
   Value *getValue(unsigned index) const {
     return getOperand(2 * index + 1 + FirstKeyIdx);
+  }
+};
+
+class AllocObjectLiteralInst : public BaseAllocObjectLiteralInst {
+  AllocObjectLiteralInst(const AllocObjectLiteralInst &) = delete;
+  void operator=(const AllocObjectLiteralInst &) = delete;
+
+ public:
+  explicit AllocObjectLiteralInst(
+      Value *parentObject,
+      const ObjectPropertyMap &propMap)
+      : BaseAllocObjectLiteralInst(
+            ValueKind::AllocObjectLiteralInstKind,
+            parentObject,
+            propMap) {}
+  explicit AllocObjectLiteralInst(
+      const AllocObjectLiteralInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseAllocObjectLiteralInst(src, operands) {}
+
+  static bool isTyped() {
+    return false;
+  }
+  bool acceptsEmptyTypeImpl() const {
+    return false;
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocObjectLiteralInstKind;
+  }
+};
+
+class AllocTypedObjectInst : public BaseAllocObjectLiteralInst {
+  AllocTypedObjectInst(const AllocTypedObjectInst &) = delete;
+  void operator=(const AllocTypedObjectInst &) = delete;
+
+ public:
+  explicit AllocTypedObjectInst(
+      Value *parentObject,
+      const ObjectPropertyMap &propMap)
+      : BaseAllocObjectLiteralInst(
+            ValueKind::AllocTypedObjectInstKind,
+            parentObject,
+            propMap) {}
+  explicit AllocTypedObjectInst(
+      const AllocTypedObjectInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseAllocObjectLiteralInst(src, operands) {}
+
+  static bool isTyped() {
+    return true;
+  }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocTypedObjectInstKind;
   }
 };
 

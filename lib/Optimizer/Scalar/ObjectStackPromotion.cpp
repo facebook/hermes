@@ -26,7 +26,7 @@ namespace {
 /// \p stores are known to always execute without any other intervening users
 /// \p destroyer is used to eliminate instructions
 bool tryPromoteObject(
-    AllocObjectLiteralInst *alloc,
+    BaseAllocObjectLiteralInst *alloc,
     IRBuilder::InstructionDestroyer &destroyer) {
   IRBuilder builder(alloc->getFunction());
   auto numElems = alloc->getKeyValuePairCount();
@@ -226,11 +226,11 @@ bool tryPromoteObject(
 bool runObjectStackPromotion(Function *F) {
   bool changed = false;
   // Iterate over all instructions in the function and try to promote any
-  // AllocObjectLiteralInsts.
+  // BaseAllocObjectLiteralInsts.
   IRBuilder::InstructionDestroyer destroyer;
   for (auto &BB : *F)
     for (auto &I : BB)
-      if (auto *alloc = llvh::dyn_cast<AllocObjectLiteralInst>(&I))
+      if (auto *alloc = llvh::dyn_cast<BaseAllocObjectLiteralInst>(&I))
         changed |= tryPromoteObject(alloc, destroyer);
   return changed;
 }

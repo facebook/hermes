@@ -51,7 +51,7 @@ class LowerAllocObjectLiteral : public FunctionPass {
   bool runOnFunction(Function *F) override;
 
  private:
-  bool lowerAllocObjectBuffer(AllocObjectLiteralInst *allocInst);
+  bool lowerAllocObjectBuffer(BaseAllocObjectLiteralInst *allocInst);
 };
 
 /// Transform number-like string properties into a LiteralNumber.

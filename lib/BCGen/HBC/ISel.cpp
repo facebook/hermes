@@ -1169,6 +1169,20 @@ void HBCISel::generateAllocObjectLiteralInst(
     BCFGen_->emitNewObjectWithParent(result, parentReg);
   }
 }
+void HBCISel::generateAllocTypedObjectInst(
+    AllocTypedObjectInst *Inst,
+    BasicBlock *) {
+  auto result = encodeValue(Inst);
+  assert(
+      Inst->getKeyValuePairCount() == 0 &&
+      "AllocTypedObjectInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+  if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
+    BCFGen_->emitNewObject(result);
+  } else {
+    auto parentReg = encodeValue(Inst->getParentObject());
+    BCFGen_->emitNewObjectWithParent(result, parentReg);
+  }
+}
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   auto elementCount = Inst->getElementCount();

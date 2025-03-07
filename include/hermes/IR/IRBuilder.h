@@ -504,6 +504,10 @@ class IRBuilder {
       const AllocObjectLiteralInst::ObjectPropertyMap &propMap = {},
       Value *parentObject = nullptr);
 
+  AllocTypedObjectInst *createAllocTypedObjectInst(
+      const AllocTypedObjectInst::ObjectPropertyMap &propMap,
+      Value *parentObject);
+
   AllocFastArrayInst *createAllocFastArrayInst(LiteralNumber *sizeHint);
 
   AllocArrayInst *createAllocArrayInst(
