@@ -1398,23 +1398,18 @@ std::string HadesGC::getKindAsStr() const {
 }
 
 void HadesGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
-  {
-    // Wait for any existing collections to finish before starting a new one.
-    std::lock_guard<Mutex> lk{gcMutex_};
-    // Disable the YG promotion mode. A forced GC via collect will do a full
-    // collection immediately anyway, so there's no need to avoid collecting YG.
-    // This is especially important when the forced GC is a memory warning.
-    promoteYGToOG_ = false;
-    waitForCollectionToFinish(cause);
-  }
+  // Wait for any existing collections to finish before starting a new one.
+  std::lock_guard<Mutex> lk{gcMutex_};
+  // Disable the YG promotion mode. A forced GC via collect will do a full
+  // collection immediately anyway, so there's no need to avoid collecting YG.
+  // This is especially important when the forced GC is a memory warning.
+  promoteYGToOG_ = false;
+  waitForCollectionToFinish(cause);
   // This function should block until a collection finishes.
   // YG needs to be empty in order to do an OG collection.
   youngGenCollection(cause, /*forceOldGenCollection*/ true);
-  {
-    // Wait for the collection to complete.
-    std::lock_guard<Mutex> lk{gcMutex_};
-    waitForCollectionToFinish(cause);
-  }
+  // Wait for the collection to complete.
+  waitForCollectionToFinish(cause);
   // Start a second YG collection to complete any pending compaction.
   // Since YG is empty, this will only be evacuating the compactee.
   // Note that it's possible for this call to start another OG collection if the
@@ -2173,9 +2168,12 @@ bool HadesGC::needsWriteBarrier(const GCPointerBase *loc, GCCell *value) const {
 
 void *HadesGC::allocSlow(uint32_t sz) {
   AllocResult res;
-  // Failed to alloc in young gen, do a young gen collection.
-  youngGenCollection(
-      kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
+  {
+    auto lk = ensureBackgroundTaskPaused();
+    // Failed to alloc in young gen, do a young gen collection.
+    youngGenCollection(
+        kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
+  }
   res = youngGen().alloc(sz);
   if (res.success)
     return res.ptr;
@@ -2403,13 +2401,15 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
 void HadesGC::youngGenCollection(
     std::string cause,
     bool forceOldGenCollection) {
+  assert(gcMutex_ && "gcMutex_ must be held during YG collection");
+  assert(
+      gcMutex_.depth() == 1 &&
+      "gcMutex should be not reentered in YG collection");
+  // The YG is not parseable while a collection is occurring.
+  assert(!inGC() && "Cannot be in GC at the start of YG!");
   ygCollectionStats_ = std::make_unique<CollectionStats>(*this, cause, "young");
   ygCollectionStats_->beginCPUTimeSection();
   ygCollectionStats_->setBeginTime();
-  // Acquire the GC lock for the duration of the YG collection.
-  auto lk = ensureBackgroundTaskPaused();
-  // The YG is not parseable while a collection is occurring.
-  assert(!inGC() && "Cannot be in GC at the start of YG!");
   GCCycle cycle{*this, "GC Young Gen"};
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();

@@ -1099,6 +1099,7 @@ void *HadesGC::allocWork(uint32_t sz) {
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
   if (shouldSanitizeHandles()) {
+    auto lk = ensureBackgroundTaskPaused();
     // The best way to sanitize uses of raw pointers outside handles is to force
     // the entire heap to move, and ASAN poison the old heap. That is too
     // expensive to do, even with sampling, for Hades. It also doesn't test the
