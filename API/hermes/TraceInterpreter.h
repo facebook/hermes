@@ -61,6 +61,10 @@ class TraceInterpreter final {
     /// with the median totalTime.
     int reps{1};
 
+    /// If non-null, holds statistics for every garbage collection that occurs.
+    const std::vector<::hermes::vm::GCAnalyticsEvent> *gcAnalyticsEvents{
+        nullptr};
+
     /// If true, run a complete collection before printing stats. Useful for
     /// guaranteeing there's no garbage in heap size numbers.
     bool forceGCBeforeStats{false};

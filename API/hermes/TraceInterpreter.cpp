@@ -8,6 +8,7 @@
 #include <hermes/TraceInterpreter.h>
 
 #include <hermes/BCGen/HBC/BCProvider.h>
+#include <hermes/Support/JSONEmitter.h>
 #include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
@@ -1337,6 +1338,39 @@ std::string TraceInterpreter::printStats() {
   }
   std::string stats = rt_.instrumentation().getRecordedGCStats();
   ::hermes::vm::instrumentation::PerfEvents::endAndInsertStats(stats);
+
+  if (options_.gcAnalyticsEvents) {
+    llvh::raw_string_ostream os{stats};
+    os << "Collections:\n";
+    ::hermes::JSONEmitter json{os, /*pretty*/ true};
+    json.openArray();
+    for (const auto &event : *options_.gcAnalyticsEvents) {
+      json.openDict();
+      json.emitKeyValue("runtimeDescription", event.runtimeDescription);
+      json.emitKeyValue("gcKind", event.gcKind);
+      json.emitKeyValue("collectionType", event.collectionType);
+      json.emitKeyValue("cause", event.cause);
+      json.emitKeyValue("duration", event.duration.count());
+      json.emitKeyValue("cpuDuration", event.cpuDuration.count());
+      json.emitKeyValue("preAllocated", event.allocated.before);
+      json.emitKeyValue("postAllocated", event.allocated.after);
+      json.emitKeyValue("preSize", event.size.before);
+      json.emitKeyValue("postSize", event.size.after);
+      json.emitKeyValue("preExternal", event.external.before);
+      json.emitKeyValue("postExternal", event.external.after);
+      json.emitKeyValue("survivalRatio", event.survivalRatio);
+      json.emitKey("tags");
+      json.openArray();
+      for (const auto &tag : event.tags) {
+        json.emitValue(tag);
+      }
+      json.closeArray();
+      json.closeDict();
+    }
+    json.closeArray();
+    os << "\n";
+  }
+
 #ifdef HERMESVM_PROFILER_OPCODE
   stats += "\n";
   std::ostringstream os;

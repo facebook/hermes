@@ -851,33 +851,6 @@ void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue(
       "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
   json.closeDict();
-
-  json.emitKey("collections");
-  json.openArray();
-  for (const auto &event : analyticsEvents_) {
-    json.openDict();
-    json.emitKeyValue("runtimeDescription", event.runtimeDescription);
-    json.emitKeyValue("gcKind", event.gcKind);
-    json.emitKeyValue("collectionType", event.collectionType);
-    json.emitKeyValue("cause", event.cause);
-    json.emitKeyValue("duration", event.duration.count());
-    json.emitKeyValue("cpuDuration", event.cpuDuration.count());
-    json.emitKeyValue("preAllocated", event.allocated.before);
-    json.emitKeyValue("postAllocated", event.allocated.after);
-    json.emitKeyValue("preSize", event.size.before);
-    json.emitKeyValue("postSize", event.size.after);
-    json.emitKeyValue("preExternal", event.external.before);
-    json.emitKeyValue("postExternal", event.external.after);
-    json.emitKeyValue("survivalRatio", event.survivalRatio);
-    json.emitKey("tags");
-    json.openArray();
-    for (const auto &tag : event.tags) {
-      json.emitValue(tag);
-    }
-    json.closeArray();
-    json.closeDict();
-  }
-  json.closeArray();
 }
 
 void GCBase::recordGCStats(
@@ -900,9 +873,6 @@ void GCBase::recordGCStats(
     bool onMutator) {
   if (analyticsCallback_) {
     analyticsCallback_(event);
-  }
-  if (recordGcStats_) {
-    analyticsEvents_.push_back(event);
   }
   recordGCStats(event, &cumStats_, onMutator);
 }

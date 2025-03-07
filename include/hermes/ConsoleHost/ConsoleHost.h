@@ -157,6 +157,9 @@ struct ExecuteOptions {
   /// Emit asserts in JIT'ed code
   bool jitEmitAsserts{false};
 
+  /// If non-null, holds statistics for every garbage collection that occurs.
+  const std::vector<::hermes::vm::GCAnalyticsEvent> *gcAnalyticsEvents{nullptr};
+
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 

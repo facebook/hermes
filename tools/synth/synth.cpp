@@ -289,7 +289,15 @@ int main(int argc, char **argv) {
       llvh::EnableStatistics();
 #endif
 
-    options.gcConfigBuilder.withShouldRecordStats(shouldPrintGCStats);
+    std::vector<GCAnalyticsEvent> gcAnalyticsEvents;
+    if (shouldPrintGCStats) {
+      options.gcConfigBuilder.withShouldRecordStats(true);
+      options.gcAnalyticsEvents = &gcAnalyticsEvents;
+      options.gcConfigBuilder.withAnalyticsCallback(
+          [&gcAnalyticsEvents](const ::hermes::vm::GCAnalyticsEvent &event) {
+            gcAnalyticsEvents.push_back(event);
+          });
+    }
     if (minHeapSize) {
       options.gcConfigBuilder.withMinHeapSize(*minHeapSize);
     }

@@ -105,20 +105,31 @@ int main(int argc, char **argv) {
   }
 
   ExecuteOptions options;
+
+  auto gcConfigBuilder =
+      vm::GCConfig::Builder()
+          .withInitHeapSize(flags.InitHeapSize.bytes)
+          .withMaxHeapSize(flags.MaxHeapSize.bytes)
+          .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
+                                  .withSanitizeRate(flags.GCSanitizeRate)
+                                  .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                  .build())
+          .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+          .withName("hvm");
+
+  std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
+  if (flags.GCPrintStats) {
+    gcConfigBuilder.withShouldRecordStats(true);
+    options.gcAnalyticsEvents = &gcAnalyticsEvents;
+    gcConfigBuilder.withAnalyticsCallback(
+        [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
+          gcAnalyticsEvents.push_back(event);
+        });
+  }
+
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(vm::GCConfig::Builder()
-                            .withInitHeapSize(flags.InitHeapSize.bytes)
-                            .withMaxHeapSize(flags.MaxHeapSize.bytes)
-                            .withSanitizeConfig(
-                                vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(flags.GCSanitizeRate)
-                                    .withRandomSeed(flags.GCSanitizeRandomSeed)
-                                    .build())
-                            .withShouldRecordStats(flags.GCPrintStats)
-                            .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                            .withName("hvm")
-                            .build())
+          .withGCConfig(gcConfigBuilder.build())
           .withMaxNumRegisters(flags.MaxNumRegisters)
           .withES6Promise(flags.ES6Promise)
           .withES6Proxy(flags.ES6Proxy)

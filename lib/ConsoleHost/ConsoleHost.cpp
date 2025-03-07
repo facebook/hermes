@@ -38,13 +38,49 @@ quit(void *, vm::Runtime &runtime, vm::NativeArgs) {
   return runtime.raiseQuitError();
 }
 
-static void printStats(vm::Runtime &runtime, llvh::raw_ostream &os) {
+static void printStats(
+    vm::Runtime &runtime,
+    llvh::raw_ostream &os,
+    const std::vector<vm::GCAnalyticsEvent> *gcAnalyticsEvents) {
   std::string stats;
   {
     llvh::raw_string_ostream tmp{stats};
     runtime.printHeapStats(tmp);
   }
   vm::instrumentation::PerfEvents::endAndInsertStats(stats);
+
+  if (gcAnalyticsEvents) {
+    llvh::raw_string_ostream tmp{stats};
+    tmp << "Collections:\n";
+    ::hermes::JSONEmitter json{tmp, /*pretty*/ true};
+    json.openArray();
+    for (const auto &event : *gcAnalyticsEvents) {
+      json.openDict();
+      json.emitKeyValue("runtimeDescription", event.runtimeDescription);
+      json.emitKeyValue("gcKind", event.gcKind);
+      json.emitKeyValue("collectionType", event.collectionType);
+      json.emitKeyValue("cause", event.cause);
+      json.emitKeyValue("duration", event.duration.count());
+      json.emitKeyValue("cpuDuration", event.cpuDuration.count());
+      json.emitKeyValue("preAllocated", event.allocated.before);
+      json.emitKeyValue("postAllocated", event.allocated.after);
+      json.emitKeyValue("preSize", event.size.before);
+      json.emitKeyValue("postSize", event.size.after);
+      json.emitKeyValue("preExternal", event.external.before);
+      json.emitKeyValue("postExternal", event.external.after);
+      json.emitKeyValue("survivalRatio", event.survivalRatio);
+      json.emitKey("tags");
+      json.openArray();
+      for (const auto &tag : event.tags) {
+        json.emitValue(tag);
+      }
+      json.closeArray();
+      json.closeDict();
+    }
+    json.closeArray();
+    tmp << "\n";
+  }
+
   os << stats;
 }
 
@@ -551,7 +587,7 @@ bool executeHBCBytecodeImpl(
     if (options.forceGCBeforeStats) {
       runtime->collect("forced for stats");
     }
-    printStats(*runtime, llvh::errs());
+    printStats(*runtime, llvh::errs(), options.gcAnalyticsEvents);
   }
 
 #ifdef HERMESVM_PROFILER_BB
