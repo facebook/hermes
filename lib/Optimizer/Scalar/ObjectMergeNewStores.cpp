@@ -81,6 +81,10 @@ bool mergeStoresToObjectLiteral(
     DefineNewOwnPropertyInst *I = users[i];
     Literal *propKey = llvh::cast<Literal>(I->getProperty());
     auto *propVal = I->getStoredValue();
+    // If the key is an index-like string, normalize it to a number.
+    if (auto *LS = llvh::dyn_cast<LiteralString>(propKey))
+      if (auto idx = toArrayIndex(LS->getValue().str()))
+        propKey = builder.getLiteralNumber(*idx);
     hasSeenNumericKey |= llvh::isa<LiteralNumber>(propKey);
     if (auto *literalVal = llvh::dyn_cast<Literal>(propVal)) {
       propMap.push_back({propKey, literalVal});
