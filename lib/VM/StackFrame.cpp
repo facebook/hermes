@@ -29,7 +29,7 @@ void dumpStackFrame(
      << "\n"
      << "  SavedIP         : " << format_ptr(frame.getSavedIP()) << "\n"
      << "  SavedCodeBlock  : " << format_ptr(frame.getSavedCodeBlock()) << "\n"
-     << "  DebugEnvironment: " << frame.getDebugEnvironmentRef() << "\n"
+     << "  Environment     : " << frame.getEnvironmentRef() << "\n"
      << "  ArgCount        : " << frame.getArgCount() << "\n"
      << "  NewTarget       : " << frame.getNewTargetRef() << "\n"
      << "  CalleeClosure   : " << frame.getCalleeClosureOrCBRef() << "\n"
