@@ -70,6 +70,8 @@ add_subdirectory(cdp)
 # against the internal functionality they need.
 set(api_sources
   hermes.cpp
+  hermes_napi.cpp
+  MurmurHash.cpp
   DebuggerAPI.cpp
   AsyncDebuggerAPI.cpp
   RuntimeTaskRunner.cpp
@@ -99,7 +101,7 @@ add_hermes_library(traceInterpreter TraceInterpreter.cpp
   LINK_LIBS libhermes hermesInstrumentation synthTrace synthTraceParser)
 
 add_library(libhermes ${api_sources})
-target_link_libraries(libhermes PUBLIC jsi PRIVATE hermesVMRuntime ${INSPECTOR_DEPS})
+target_link_libraries(libhermes PUBLIC jsi hermesNapi PRIVATE hermesVMRuntime ${INSPECTOR_DEPS})
 target_link_options(libhermes PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 
 # Export the required header directory
@@ -110,7 +112,7 @@ set_target_properties(libhermes PROPERTIES OUTPUT_NAME hermes)
 
 # Create a lean version of libhermes in the same way.
 add_library(libhermes_lean ${api_sources})
-target_link_libraries(libhermes_lean PUBLIC jsi PRIVATE hermesVMRuntimeLean ${INSPECTOR_DEPS})
+target_link_libraries(libhermes_lean PUBLIC jsi hermesNapi PRIVATE hermesVMRuntimeLean ${INSPECTOR_DEPS})
 target_link_options(libhermes_lean PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 target_include_directories(libhermes_lean PUBLIC .. ../../public ${HERMES_JSI_DIR})
 set_target_properties(libhermes_lean PROPERTIES OUTPUT_NAME hermes_lean)
