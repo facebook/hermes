@@ -152,12 +152,40 @@ bool mergeNewStores(Function *F) {
   llvh::DenseMap<AllocObjectLiteralInst *, BlockUserMap> allocUsers;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
+      // Skip Phis for now, we will revisit them later.
+      if (llvh::isa<PhiInst>(&I))
+        continue;
       for (size_t i = 0; i < I.getNumOperands(); ++i) {
         if (auto *A = llvh::dyn_cast<AllocObjectLiteralInst>(I.getOperand(i))) {
           // For now, we only consider merging DefineNewOwnPropertyInsts that
           // are writing into an empty object to start.
           if (A->getKeyValuePairCount() == 0)
             tryAdd(A, &I, allocUsers[A][&BB]);
+        }
+      }
+    }
+  }
+
+  // Phi users of the object allocation are special, they are not necessarily
+  // dominated by the AllocObjectLiteralInst, but they do "leak" the object. To
+  // reflect this, if a Phi uses an AllocObjectLiteral, the block associated
+  // with it should terminate the traversal. Note that we only want this to
+  // happen after that block has been traversed, which is why we do it in a
+  // separate loop.
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      auto *phiInst = llvh::dyn_cast<PhiInst>(&I);
+      // If we have visited all the Phis, proceed to the next block.
+      if (!phiInst)
+        break;
+      for (unsigned i = 0, e = phiInst->getNumEntries(); i < e; ++i) {
+        auto [val, block] = phiInst->getEntry(i);
+        if (auto *AOL = llvh::dyn_cast<AllocObjectLiteralInst>(val)) {
+          auto it = allocUsers.find(AOL);
+          // If this is an object we are going to merge, it must not proceed
+          // past the block that feeds into the Phi.
+          if (it != allocUsers.end())
+            it->second[block].push_back(nullptr);
         }
       }
     }

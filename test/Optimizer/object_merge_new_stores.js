@@ -95,14 +95,11 @@ function objPhiUser(sink){
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %3 = PhiInst (:undefined|object) undefined: undefined, %BB0, %5: object, %BB1
 // CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: undefined|object
-// CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 1: number, %5: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 2: number, %5: object, "b": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 3: number, %5: object, "c": string, true: boolean
-// CHECK-NEXT:  %9 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        CondBranchInst %9: any, %BB1, %BB2
+// CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) empty: any, "a": string, 1: number, "b": string, 2: number, "c": string, 3: number
+// CHECK-NEXT:  %6 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): object [allCallsitesKnownInStrictMode]
