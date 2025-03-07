@@ -282,6 +282,11 @@ class Type {
     return bitmask_ && !(bitmask_ & ~PRIMITIVE_BITS);
   }
 
+  /// \return true if any of the types are primitive.
+  constexpr bool canBePrimitive() const {
+    return (bitmask_ & PRIMITIVE_BITS) != 0;
+  }
+
   /// \return true if the type is not referenced by a pointer in javascript.
   constexpr bool isNonPtr() const {
     // One or more of NONPTR_BITS must be set, and no other bit must be set.

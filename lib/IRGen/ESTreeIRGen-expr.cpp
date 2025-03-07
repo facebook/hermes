@@ -947,14 +947,27 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       auto optFieldLookup = classType->findField(propName);
       if (optFieldLookup) {
         size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
-        return MemberExpressionResult{
-            Builder.createPrLoadInst(
-                baseValue,
-                fieldIndex,
-                Builder.getLiteralString(propName),
-                flowTypeToIRType(optFieldLookup->getField()->type)),
-            nullptr,
-            baseValue};
+        Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
+        Instruction *inst;
+        if (irType.canBePrimitive()) {
+          // If the type can be a primitive, it will have a default value that
+          // doesn't need IDZ.
+          inst = Builder.createPrLoadInst(
+              baseValue,
+              fieldIndex,
+              Builder.getLiteralString(propName),
+              irType);
+        } else {
+          // IDZ needed for object types.
+          inst = Builder.createThrowIfInst(
+              Builder.createPrLoadInst(
+                  baseValue,
+                  fieldIndex,
+                  Builder.getLiteralString(propName),
+                  Type::unionTy(irType, Type::createUninit())),
+              Type::createUninit());
+        }
+        return MemberExpressionResult{inst, nullptr, baseValue};
       }
       // Failed to find a class field, check the home object for methods.
       auto optMethodLookup =

@@ -41,7 +41,7 @@ new Foo();
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
 // CHECK-NEXT:  %6 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
-// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) "o0": string, 0: number, "o1": string, 0: number, "o2": string, 0: number
+// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) "o0": string, uninit: uninit, "o1": string, uninit: uninit, "o2": string, uninit: uninit
 // CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: object, %6: object
 // CHECK-NEXT:  %10 = CallInst (:undefined) %5: object, %Foo(): functionCode, true: boolean, empty: any, %5: object, %8: object
 // CHECK-NEXT:  %11 = HBCLoadConstInst (:undefined) undefined: undefined

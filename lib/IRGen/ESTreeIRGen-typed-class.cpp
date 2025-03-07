@@ -277,9 +277,14 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
         continue;
       }
     } else {
+      // Class element is a field.
+      // Need to emit an IDZ check for types that can't have a primitive
+      // default.
+      Value *initValue = flowTypeToIRType(field.type).canBePrimitive()
+          ? getDefaultInitValue(field.type)
+          : Builder.getLiteralUninit();
       propMap[field.layoutSlotIR] = {
-          Builder.getLiteralString(field.name),
-          getDefaultInitValue(field.type)};
+          Builder.getLiteralString(field.name), initValue};
     }
   }
 

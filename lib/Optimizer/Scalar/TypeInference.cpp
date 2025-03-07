@@ -655,12 +655,13 @@ class TypeInferenceImpl {
     Type type = inst->getCheckedValue()->getType();
     assert(!type.isNoType() && "input to throwIfEmpty cannot be NoType");
 
-    if (LLVM_UNLIKELY(type.isEmptyType())) {
-      // We remove "Empty" from the possible types of inst, which would result
-      // in a "NoType" (i.e. TDZ is always going to throw), so instead we use
-      // the last "valid" type we know about. While this might seem "hacky", it
-      // eliminates a lot of complexity that would result from having to deal
-      // with unreachable code expressed via the type system (T134361858).
+    if (LLVM_UNLIKELY(type.isEmptyType() || type.isUninitType())) {
+      // We remove "Empty" and "Uninit" from the possible types of inst,
+      // which would result in a "NoType" (i.e. TDZ is always going to throw),
+      // so instead we use the last "valid" type we know about.
+      // While this might seem "hacky", it eliminates a lot of complexity that
+      // would result from having to deal with unreachable code expressed via
+      // the type system (T134361858).
       return inst->getSavedResultType();
     }
 

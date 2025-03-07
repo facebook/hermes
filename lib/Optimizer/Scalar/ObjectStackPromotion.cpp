@@ -141,7 +141,12 @@ bool tryPromoteObject(
   for (size_t i = 0; i < numElems; ++i) {
     auto *LS = llvh::dyn_cast<LiteralString>(alloc->getKey(i));
     auto name = LS ? LS->getValue() : numericPropName;
-    auto *loc = builder.createAllocStackInst(name, Type::createAnyType());
+    Type valueType = alloc->getValue(i)->getType();
+    auto *loc = builder.createAllocStackInst(
+        name,
+        valueType.canBeUninit()
+            ? Type::unionTy(Type::createAnyType(), Type::createUninit())
+            : Type::createAnyType());
     stackLocs.push_back(loc);
     builder.createStoreStackInst(alloc->getValue(i), loc);
   }
