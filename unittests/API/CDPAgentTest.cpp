@@ -2780,6 +2780,76 @@ TEST_F(CDPAgentTest, DebuggerRemoveBreakpoint) {
   waitForScheduledScripts();
 }
 
+TEST_F(CDPAgentTest, DebuggerBreakpointsSurviveDomainReload) {
+  int msgId = 1;
+
+  // Wait for a script to be run in the VM prior to Debugger.enable
+  scheduleScript(R"(
+    const a = 100;
+    const b = a + 1;
+  )");
+
+  // Verify that upon enable, we get notification of existing scripts
+  sendParameterlessRequest("Debugger.enable", msgId);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 1);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(
+      waitForMessage("setBreakpointByUrl"), msgId++, {{1}});
+
+  sendAndCheckResponse("Debugger.disable", msgId++);
+
+  sendParameterlessRequest("Debugger.enable", msgId);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(waitForMessage(), "Debugger.breakpointResolved");
+  ensureOkResponse(waitForMessage(), msgId++);
+}
+
+TEST_F(CDPAgentTest, DebuggerBreakpointsPauseVMAfterDomainReload) {
+  int msgId = 1;
+
+  scheduleScript(R"(
+    signalTest();
+
+    while (!shouldStop()) {}                        
+
+    const x = 1; // (line 5)
+  )");
+  // Wait for the script to start.
+  waitForTestSignal();
+
+  sendParameterlessRequest("Debugger.enable", msgId);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 5);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(
+      waitForMessage("setBreakpointByUrl"), msgId++, {{5}});
+
+  sendAndCheckResponse("Debugger.disable", msgId++);
+
+  sendParameterlessRequest("Debugger.enable", msgId);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(waitForMessage(), "Debugger.breakpointResolved");
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Allow the JavaScript code to continue running.
+  stopFlag_.store(true);
+
+  ensurePaused(waitForMessage(), "other", {{"global", 5, 0}});
+}
+
 TEST_F(CDPAgentTest, DebuggerRestoreState) {
   int msgId = 1;
 
