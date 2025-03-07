@@ -47,6 +47,12 @@ struct Flags : public cli::VMOnlyRuntimeFlags {
       llvh::cl::cat(GCCategory),
       llvh::cl::init(false)};
 
+  llvh::cl::opt<bool> GCPrintCollectionStats{
+      "gc-print-collection-stats",
+      llvh::cl::desc("Output statistics for each garbage collection at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
+
   llvh::cl::opt<unsigned> ExecutionTimeLimit{
       "time-limit",
       llvh::cl::desc(
@@ -87,13 +93,16 @@ static int executeHBCBytecodeFromCL(
           .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI);
 
   std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
-  if (flags.GCPrintStats || flags.GCBeforeStats) {
+  if (flags.GCPrintStats || flags.GCBeforeStats ||
+      flags.GCPrintCollectionStats) {
     gcConfigBuilder.withShouldRecordStats(true);
-    options.gcAnalyticsEvents = &gcAnalyticsEvents;
-    gcConfigBuilder.withAnalyticsCallback(
-        [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
-          gcAnalyticsEvents.push_back(event);
-        });
+    if (flags.GCPrintCollectionStats) {
+      options.gcAnalyticsEvents = &gcAnalyticsEvents;
+      gcConfigBuilder.withAnalyticsCallback(
+          [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
+            gcAnalyticsEvents.push_back(event);
+          });
+    }
   }
 
   options.runtimeConfig =

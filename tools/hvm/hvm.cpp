@@ -60,6 +60,12 @@ struct Flags : public cli::RuntimeFlags {
       llvh::cl::desc("Output summary garbage collection statistics at exit"),
       llvh::cl::cat(GCCategory),
       llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> GCPrintCollectionStats{
+      "gc-print-collection-stats",
+      llvh::cl::desc("Output statistics for each garbage collection at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
 };
 
 Flags flags{};
@@ -118,13 +124,15 @@ int main(int argc, char **argv) {
           .withName("hvm");
 
   std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
-  if (flags.GCPrintStats) {
+  if (flags.GCPrintStats || flags.GCPrintCollectionStats) {
     gcConfigBuilder.withShouldRecordStats(true);
-    options.gcAnalyticsEvents = &gcAnalyticsEvents;
-    gcConfigBuilder.withAnalyticsCallback(
-        [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
-          gcAnalyticsEvents.push_back(event);
-        });
+    if (flags.GCPrintCollectionStats) {
+      options.gcAnalyticsEvents = &gcAnalyticsEvents;
+      gcConfigBuilder.withAnalyticsCallback(
+          [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
+            gcAnalyticsEvents.push_back(event);
+          });
+    }
   }
 
   options.runtimeConfig =
