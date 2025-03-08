@@ -203,14 +203,14 @@ class HermesValue32 {
   /// types are distinguished using an additional bit found in the "ETag".
   enum class Tag : uint8_t {
     CompressedHV64,
-    Object,
-    BigInt,
     String,
+    BigInt,
+    Object,
     BoxedDouble,
     Symbol,
     _Last,
 
-    FirstPointer = Object,
+    FirstPointer = String,
     LastPointer = BoxedDouble,
   };
 

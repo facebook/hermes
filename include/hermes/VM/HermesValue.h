@@ -125,6 +125,9 @@ class HermesValue : public HermesValueBase {
   constexpr inline static HermesValue fromRaw(RawType raw) {
     return HermesValue(raw);
   }
+  constexpr inline static HermesValue fromTagAndValue(Tag tag, RawType value) {
+    return HermesValue(value, tag);
+  }
 
   /// Dump the contents to stderr.
   void dump(llvh::raw_ostream &stream = llvh::errs()) const;

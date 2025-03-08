@@ -34,23 +34,31 @@ void HermesValue32::setInGC(HermesValue32 hv, GC &gc) {
 
 HermesValue HermesValue32::unboxToHV(PointerBase &pb) const {
   auto tag = getTag();
+  // We check for CompressedHV64 and pointers first, because we know that they
+  // comprise the overwhelming majority of values.
   if (tag == Tag::CompressedHV64)
     return HermesValue::fromRaw(compressedHV64ToBits());
-  switch (tag) {
-    case Tag::Object:
-      return HermesValue::encodeObjectValue(getObject(pb));
-    case Tag::BigInt:
-      return HermesValue::encodeBigIntValue(getBigInt(pb));
-    case Tag::String:
-      return HermesValue::encodeStringValue(getString(pb));
-    case Tag::BoxedDouble:
-      return HermesValue::encodeTrustedNumberValue(
-          vmcast<BoxedDouble>(getPointer(pb))->get());
-    case Tag::Symbol:
-      return HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(getValue()));
-    default:
-      llvm_unreachable("No other tag");
+  if (tag <= Tag::Object) {
+    // This must be a pointer tag, since the only tag before the first pointer
+    // tag is CompressedHV64, which we have already checked for.
+    assert(tag == Tag::Object || tag == Tag::BigInt || tag == Tag::String);
+    auto toHV64Tag = [](Tag tag) {
+      // Compute the HV64 tag by applying an offset to the HV32 tag.
+      auto offs = (uint32_t)HermesValue::Tag::Str - (uint32_t)Tag::String;
+      return (HermesValue::Tag)(offs + (uint32_t)tag);
+    };
+    // Check that the calculation is correct.
+    static_assert(toHV64Tag(Tag::Object) == HermesValue::Tag::Object);
+    static_assert(toHV64Tag(Tag::BigInt) == HermesValue::Tag::BigInt);
+    static_assert(toHV64Tag(Tag::String) == HermesValue::Tag::Str);
+    return HermesValue::fromTagAndValue(
+        toHV64Tag(tag), (uint64_t)getPointer(pb));
   }
+  if (tag == Tag::Symbol)
+    return HermesValue::encodeSymbolValue(getSymbol());
+  assert(tag == Tag::BoxedDouble);
+  return HermesValue::encodeTrustedNumberValue(
+      vmcast<BoxedDouble>(getPointer(pb))->get());
 }
 
 HermesValue HermesValue32::toHV(PointerBase &pb) const {
@@ -92,24 +100,31 @@ double HermesValue32::getBoxedDouble(PointerBase &pb) const {
     encodeNumberValue(0.0, runtime);
 #endif
 
+  // We check for CompressedHV64 and pointers first, because we know that they
+  // comprise the overwhelming majority of values.
   if (hv.isNumberOrCompressible())
     return encodeCompressibleOrNumberHV64(hv, runtime);
 
-  switch (hv.getETag()) {
-    case HermesValue::ETag::Symbol:
-      return encodeSymbolValue(hv.getSymbol());
-    case HermesValue::ETag::Str1:
-    case HermesValue::ETag::Str2:
-      return encodeStringValue(hv.getString(), runtime);
-    case HermesValue::ETag::BigInt1:
-    case HermesValue::ETag::BigInt2:
-      return encodeBigIntValue(hv.getBigInt(), runtime);
-    case HermesValue::ETag::Object1:
-    case HermesValue::ETag::Object2:
-      return encodeObjectValue(static_cast<GCCell *>(hv.getObject()), runtime);
-    default:
-      llvm_unreachable("No other ETag");
+  if (hv.isPointer()) {
+    auto tag = hv.getTag();
+    // Make sure we have accounted for all the HV tags.
+    assert(
+        tag == HermesValue::Tag::Str || tag == HermesValue::Tag::BigInt ||
+        tag == HermesValue::Tag::Object);
+    auto toHV32Tag = [](HermesValue::Tag tag) {
+      // Compute the HV32 tag by applying an offset to the HV64 tag.
+      auto offs = (uint32_t)HermesValue::Tag::Str - (uint32_t)Tag::String;
+      return (Tag)((uint32_t)tag - offs);
+    };
+    // Check that the calculation is correct.
+    static_assert(toHV32Tag(HermesValue::Tag::Object) == Tag::Object);
+    static_assert(toHV32Tag(HermesValue::Tag::BigInt) == Tag::BigInt);
+    static_assert(toHV32Tag(HermesValue::Tag::Str) == Tag::String);
+    return encodePointerImpl(
+        (GCCell *)hv.getPointer(), toHV32Tag(tag), runtime);
   }
+  assert(hv.isSymbol() && "Must be a symbol");
+  return encodeSymbolValue(hv.getSymbol());
 }
 
 /* static */ HermesValue32 HermesValue32::encodeCompressibleOrNumberHV64(
