@@ -33,5 +33,8 @@ NAMED_PROP(ArrayBufferExternalFinalizer)
 NAMED_PROP(ExternalMemoryPressure)
 NAMED_PROP(TextEncoderType)
 
+/// A reserved symbol ID to use for the HC transition to the frozen state.
+NAMED_PROP(FreezeTransition)
+
 #undef PROP
 #undef NAMED_PROP

@@ -682,6 +682,17 @@ Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
 Handle<HiddenClass> HiddenClass::makeAllReadOnly(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
+  // Check whether we have already cached the final state of freezing this
+  // class.
+  if (LLVM_LIKELY(!selfHandle->isDictionary())) {
+    if (auto *hc = selfHandle->transitionMap_.lookup(
+            runtime,
+            Transition(
+                getSymbolID(Predefined::InternalPropertyFreezeTransition)))) {
+      return runtime.makeHandle(hc);
+    }
+  }
+
   if (!selfHandle->propertyMap_)
     initializeMissingPropertyMap(selfHandle, runtime);
 
@@ -720,6 +731,14 @@ Handle<HiddenClass> HiddenClass::makeAllReadOnly(
         assert(found && "property not found during enumeration");
         curHandle = *updateProperty(curHandle, runtime, *found, newFlags);
       });
+
+  // Cache the transition to the final read-only class.
+  if (!selfHandle->isDictionary()) {
+    selfHandle->transitionMap_.insertNew(
+        runtime,
+        Transition(getSymbolID(Predefined::InternalPropertyFreezeTransition)),
+        curHandle);
+  }
 
   return std::move(curHandle);
 }
