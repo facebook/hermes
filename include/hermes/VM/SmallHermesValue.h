@@ -209,15 +209,16 @@ class HermesValue32 {
     Symbol,
     BoolAndUndefined,
     EmptyAndNull,
-    _Last
+    _Last,
+
+    FirstPointer = Object,
+    LastPointer = BoxedDouble,
   };
 
   static_assert(
       static_cast<uint8_t>(Tag::_Last) <= (1 << kNumTagBits),
       "Cannot have more enum values than tag bits.");
 
-  static constexpr uint8_t kLastPointerTag =
-      static_cast<uint8_t>(Tag::BoxedDouble);
   static constexpr uint8_t kFirstExtendedTag =
       static_cast<uint8_t>(Tag::BoolAndUndefined);
 
@@ -342,7 +343,8 @@ class HermesValue32 {
 #endif
 
   bool isPointer() const {
-    return static_cast<uint8_t>(getTag()) <= kLastPointerTag;
+    auto tag = getTag();
+    return tag >= Tag::FirstPointer && tag <= Tag::LastPointer;
   }
   bool isObject() const {
     return getTag() == Tag::Object;
@@ -399,12 +401,7 @@ class HermesValue32 {
   }
   GCCell *getObject(PointerBase &pb) const {
     assert(isObject());
-    // Since object pointers are the most common type, we have them as the
-    // zero-tag and can decode them without needing to remove the tag.
-    static_assert(
-        static_cast<uint8_t>(Tag::Object) == 0,
-        "Object tag must be zero for fast path.");
-    return CompressedPointer::fromRaw(raw_).get(pb);
+    return getPointer(pb);
   }
 
   inline BigIntPrimitive *getBigInt(PointerBase &pb) const;
