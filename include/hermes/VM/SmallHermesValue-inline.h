@@ -33,34 +33,21 @@ void HermesValue32::setInGC(HermesValue32 hv, GC &gc) {
 }
 
 HermesValue HermesValue32::unboxToHV(PointerBase &pb) const {
-  switch (getETag()) {
-    case ETag::Object1:
-    case ETag::Object2:
+  auto tag = getTag();
+  if (tag == Tag::CompressedHV64)
+    return HermesValue::fromRaw(compressedHV64ToBits());
+  switch (tag) {
+    case Tag::Object:
       return HermesValue::encodeObjectValue(getObject(pb));
-    case ETag::BigInt1:
-    case ETag::BigInt2:
+    case Tag::BigInt:
       return HermesValue::encodeBigIntValue(getBigInt(pb));
-    case ETag::String1:
-    case ETag::String2:
+    case Tag::String:
       return HermesValue::encodeStringValue(getString(pb));
-    case ETag::BoxedDouble1:
-    case ETag::BoxedDouble2:
+    case Tag::BoxedDouble:
       return HermesValue::encodeTrustedNumberValue(
           vmcast<BoxedDouble>(getPointer(pb))->get());
-    case ETag::CompressedDouble1:
-    case ETag::CompressedDouble2:
-      return HermesValue::fromRaw(compressedDoubleToBits());
-    case ETag::Symbol1:
-    case ETag::Symbol2:
+    case Tag::Symbol:
       return HermesValue::encodeSymbolValue(SymbolID::unsafeCreate(getValue()));
-    case ETag::Bool:
-      return HermesValue::encodeBoolValue(getETagValue());
-    case ETag::Undefined:
-      return HermesValue::encodeUndefinedValue();
-    case ETag::Empty:
-      return HermesValue::encodeEmptyValue();
-    case ETag::Null:
-      return HermesValue::encodeNullValue();
     default:
       llvm_unreachable("No other tag");
   }
@@ -84,7 +71,7 @@ StringPrimitive *HermesValue32::getString(PointerBase &pb) const {
 
 double HermesValue32::getNumber(PointerBase &pb) const {
   assert(isNumber());
-  if (LLVM_LIKELY(getTag() == Tag::CompressedDouble))
+  if (LLVM_LIKELY(getTag() == Tag::CompressedHV64))
     return getCompressedDouble();
   return vmcast<BoxedDouble>(getPointer(pb))->get();
 }
@@ -104,15 +91,11 @@ double HermesValue32::getBoxedDouble(PointerBase &pb) const {
   if (!hv.isPointer())
     encodeNumberValue(0.0, runtime);
 #endif
+
+  if (hv.isNumberOrCompressible())
+    return encodeCompressibleOrNumberHV64(hv, runtime);
+
   switch (hv.getETag()) {
-    case HermesValue::ETag::Empty:
-      return encodeEmptyValue();
-    case HermesValue::ETag::Undefined:
-      return encodeUndefinedValue();
-    case HermesValue::ETag::Null:
-      return encodeNullValue();
-    case HermesValue::ETag::Bool:
-      return encodeBoolValue(hv.getBool());
     case HermesValue::ETag::Symbol:
       return encodeSymbolValue(hv.getSymbol());
     case HermesValue::ETag::Str1:
@@ -125,29 +108,32 @@ double HermesValue32::getBoxedDouble(PointerBase &pb) const {
     case HermesValue::ETag::Object2:
       return encodeObjectValue(static_cast<GCCell *>(hv.getObject()), runtime);
     default:
-      assert(
-          hv.isNumber() && "Native values are forbidden in SmallHermesValue");
-      return encodeNumberValue(hv, runtime);
+      llvm_unreachable("No other ETag");
   }
 }
 
-/* static */ HermesValue32 HermesValue32::encodeNumberValue(
+/* static */ HermesValue32 HermesValue32::encodeCompressibleOrNumberHV64(
     HermesValue hv,
     Runtime &runtime) {
-  assert(hv.isNumber() && "May only be called for Number values.");
-#ifndef HERMESVM_SANITIZE_HANDLES
   const uint64_t hvRaw = hv.getRaw();
+
+#ifdef HERMESVM_SANITIZE_HANDLES
+  // If Handle-San is enabled, always box doubles on the heap. This ensures that
+  // callers have to treat a HermesValue32 containing a number as a pointer.
+  if (!hv.isNumber())
+    return bitsToCompressedHV64(hvRaw);
+#else
   constexpr uint64_t kShiftAmount = 64 - kNumValueBits;
   // If hvRaw is the part that would go into the HV32 value, followed
   // by zeros (i.e., it's equal to a value of kNumValueBits bits
   // right-shifted to the top of the 64 bit value), then we can compress.
   // (Note: the double parens after LLVM_LIKELY below are for macro args.)
-  if (LLVM_LIKELY((llvh::isShiftedUInt<kNumValueBits, kShiftAmount>(hvRaw)))) {
-    const uint64_t hvHighVal = hvRaw >> kShiftAmount;
-    return fromTagAndValue(Tag::CompressedDouble, hvHighVal);
-  }
-  // Otherwise:
+  if (LLVM_LIKELY((llvh::isShiftedUInt<kNumValueBits, kShiftAmount>(hvRaw))))
+    return bitsToCompressedHV64(hvRaw);
+
+  assert(hv.isNumber() && "Must be compressible or number HV64");
 #endif
+
   return encodePointerImpl(
       BoxedDouble::create(hv.getNumber(), runtime), Tag::BoxedDouble, runtime);
 }
@@ -155,7 +141,8 @@ double HermesValue32::getBoxedDouble(PointerBase &pb) const {
 /* static */ HermesValue32 HermesValue32::encodeNumberValue(
     double d,
     Runtime &runtime) {
-  return encodeNumberValue(HermesValue::encodeTrustedNumberValue(d), runtime);
+  return encodeCompressibleOrNumberHV64(
+      HermesValue::encodeTrustedNumberValue(d), runtime);
 }
 
 /* static */ HermesValue32 HermesValue32::encodeObjectValue(

@@ -195,20 +195,19 @@ class HermesValue32 {
   using RawType = CompressedPointer::RawType;
   using SmiType = std::make_signed<RawType>::type;
 
+  static constexpr size_t kNumRawTypeBits = sizeof(RawType) * 8;
   static constexpr size_t kNumTagBits = LogHeapAlign;
-  static constexpr size_t kNumValueBits = 8 * sizeof(RawType) - kNumTagBits;
+  static constexpr size_t kNumValueBits = kNumRawTypeBits - kNumTagBits;
 
   /// A 3 bit tag describing the stored value. Tags that represent multiple
   /// types are distinguished using an additional bit found in the "ETag".
   enum class Tag : uint8_t {
+    CompressedHV64,
     Object,
     BigInt,
     String,
     BoxedDouble,
-    CompressedDouble,
     Symbol,
-    BoolAndUndefined,
-    EmptyAndNull,
     _Last,
 
     FirstPointer = Object,
@@ -218,36 +217,6 @@ class HermesValue32 {
   static_assert(
       static_cast<uint8_t>(Tag::_Last) <= (1 << kNumTagBits),
       "Cannot have more enum values than tag bits.");
-
-  static constexpr uint8_t kFirstExtendedTag =
-      static_cast<uint8_t>(Tag::BoolAndUndefined);
-
-  static constexpr size_t kNumETagBits = kNumTagBits + 1;
-  static constexpr size_t kNumETagValueBits = kNumValueBits - 1;
-
-  /// Define an "extended tag", occupying one extra bit. For types that use all
-  /// kNumValueBits bits, duplicate the enum value for both possible values of
-  /// the extra bit.
-  static constexpr uint8_t kETagOffset = 1 << kNumTagBits;
-  enum class ETag : uint8_t {
-    Object1 = static_cast<uint8_t>(Tag::Object),
-    Object2 = static_cast<uint8_t>(Tag::Object) + kETagOffset,
-    BigInt1 = static_cast<uint8_t>(Tag::BigInt),
-    BigInt2 = static_cast<uint8_t>(Tag::BigInt) + kETagOffset,
-    String1 = static_cast<uint8_t>(Tag::String),
-    String2 = static_cast<uint8_t>(Tag::String) + kETagOffset,
-    BoxedDouble1 = static_cast<uint8_t>(Tag::BoxedDouble),
-    BoxedDouble2 = static_cast<uint8_t>(Tag::BoxedDouble) + kETagOffset,
-    CompressedDouble1 = static_cast<uint8_t>(Tag::CompressedDouble),
-    CompressedDouble2 =
-        static_cast<uint8_t>(Tag::CompressedDouble) + kETagOffset,
-    Symbol1 = static_cast<uint8_t>(Tag::Symbol),
-    Symbol2 = static_cast<uint8_t>(Tag::Symbol) + kETagOffset,
-    Bool = static_cast<uint8_t>(Tag::BoolAndUndefined),
-    Undefined = static_cast<uint8_t>(Tag::BoolAndUndefined) + kETagOffset,
-    Empty = static_cast<uint8_t>(Tag::EmptyAndNull),
-    Null = static_cast<uint8_t>(Tag::EmptyAndNull) + kETagOffset,
-  };
 
   RawType raw_;
 
@@ -261,41 +230,19 @@ class HermesValue32 {
     assert(llvh::isUInt<kNumValueBits>(value) && "Value out of range.");
     return fromRaw((value << kNumTagBits) | static_cast<uint8_t>(tag));
   }
-  static constexpr HermesValue32 fromETagAndValue(ETag etag, RawType value) {
-    assert(
-        llvh::isUInt<kNumETagValueBits>(value) &&
-        "Value must fit in value bits.");
-    assert(
-        static_cast<uint8_t>(etag) % kETagOffset >= kFirstExtendedTag &&
-        "Not an extended type.");
-    return fromRaw((value << kNumETagBits) | static_cast<uint8_t>(etag));
-  }
 
   RawType getValue() const {
-    assert(
-        static_cast<uint8_t>(getTag()) < kFirstExtendedTag &&
-        "Values for ETags should use getETagValue.");
     return raw_ >> kNumTagBits;
-  }
-  RawType getETagValue() const {
-    assert(
-        static_cast<uint8_t>(getTag()) >= kFirstExtendedTag &&
-        "Not an extended type.");
-    return raw_ >> kNumETagBits;
   }
 
   double getCompressedDouble() const {
-    assert(getTag() == Tag::CompressedDouble && "Must be a compressed double.");
-    return llvh::BitsToDouble(compressedDoubleToBits());
+    assert(isInlinedDouble() && "Must be a compressed double.");
+    return llvh::BitsToDouble(compressedHV64ToBits());
   }
 
   Tag getTag() const {
     return static_cast<Tag>(
         raw_ & llvh::maskTrailingOnes<RawType>(kNumTagBits));
-  }
-  ETag getETag() const {
-    return static_cast<ETag>(
-        raw_ & llvh::maskTrailingOnes<RawType>(kNumETagBits));
   }
 
   /// Assert that the pointer can be encoded.
@@ -316,17 +263,27 @@ class HermesValue32 {
     return fromRaw(p | static_cast<RawType>(tag));
   }
 
-  /// Convert a compressed double to the "raw" form of a (64-bit) HermesValue.
-  uint64_t compressedDoubleToBits() const {
-    uint64_t res = getValue();
-    return res << (64 - kNumValueBits);
+  uint64_t compressedHV64ToBits() const {
+    static_assert((uint64_t)Tag::CompressedHV64 == 0, "Must have zero tag");
+    assert(getTag() == Tag::CompressedHV64 && "Must be a compressed HV64");
+    // The tag is guaranteed to be 0, so we can just shift to decompress.
+    return (uint64_t)raw_ << (64 - kNumRawTypeBits);
   }
 
-  /// Encode a HermesValue that is required to be a Number as a
-  /// HermesValue32.  "Compressible" number values will be stored inline,
-  /// and non-compressible doubles will be allocated on the heap. Always
-  /// treat this function as though it may allocate.
-  inline static HermesValue32 encodeNumberValue(
+  static constexpr HermesValue32 bitsToCompressedHV64(uint64_t bits) {
+    assert(
+        (llvh::isShiftedUInt<kNumValueBits, 64 - kNumValueBits>(bits)) &&
+        "Value out of range.");
+    static_assert((uint64_t)Tag::CompressedHV64 == 0, "Must have zero tag");
+    // The tag is guaranteed to be 0, so we can just shift to compress.
+    return fromRaw(bits >> (64 - kNumRawTypeBits));
+  }
+
+  /// Encode a HermesValue that is known to either be compressible or a number
+  /// as a HermesValue32. "Compressible" values will be stored inline, and
+  /// non-compressible doubles will be allocated on the heap. Always treat this
+  /// function as though it may allocate.
+  inline static HermesValue32 encodeCompressibleOrNumberHV64(
       HermesValue hv,
       Runtime &runtime);
 
@@ -358,10 +315,11 @@ class HermesValue32 {
   bool isNumber() const {
     Tag tag = getTag();
     // It's likely to be a CompressedDouble, so check it first.
-    return tag == Tag::CompressedDouble || tag == Tag::BoxedDouble;
+    return isInlinedDouble() || tag == Tag::BoxedDouble;
   }
   bool isInlinedDouble() const {
-    return getTag() == Tag::CompressedDouble;
+    return getTag() == Tag::CompressedHV64 &&
+        HermesValue::fromRaw(compressedHV64ToBits()).isNumber();
   }
   bool isBoxedDouble() const {
     return getTag() == Tag::BoxedDouble;
@@ -379,7 +337,8 @@ class HermesValue32 {
     return raw_ == encodeNullValue().raw_;
   }
   bool isBool() const {
-    return getETag() == ETag::Bool;
+    return raw_ == encodeBoolValue(false).raw_ ||
+        raw_ == encodeBoolValue(true).raw_;
   }
   RawType getRaw() const {
     return raw_;
@@ -421,7 +380,7 @@ class HermesValue32 {
   }
   bool getBool() const {
     assert(isBool());
-    return getETagValue();
+    return HermesValue::fromRaw(compressedHV64ToBits()).getBool();
   }
 
   inline void setInGC(HermesValue32 hv, GC &gc);
@@ -471,16 +430,16 @@ class HermesValue32 {
     return fromTagAndValue(Tag::Symbol, s.unsafeGetRaw());
   }
   static constexpr HermesValue32 encodeBoolValue(bool b) {
-    return fromETagAndValue(ETag::Bool, b);
+    return bitsToCompressedHV64(HermesValue::encodeBoolValue(b).getRaw());
   }
   static constexpr HermesValue32 encodeNullValue() {
-    return fromETagAndValue(ETag::Null, 0);
+    return bitsToCompressedHV64(HermesValue::encodeNullValue().getRaw());
   }
   static constexpr HermesValue32 encodeUndefinedValue() {
-    return fromETagAndValue(ETag::Undefined, 0);
+    return bitsToCompressedHV64(HermesValue::encodeUndefinedValue().getRaw());
   }
   static constexpr HermesValue32 encodeEmptyValue() {
-    return fromETagAndValue(ETag::Empty, 0);
+    return bitsToCompressedHV64(HermesValue::encodeEmptyValue().getRaw());
   }
 
  protected:

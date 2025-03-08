@@ -173,6 +173,12 @@ enum HVETag {
   HVETag_Object2 = HVTag_Object * 2 + 1,
 
   HVETag_FirstPointer = HVETag_Str1,
+
+  /// This represents the last tag that corresponds either to a number, or a
+  /// value that can be encoded entirely in its most significant 29 bits, with
+  /// the rest being 0. This is used by HermesValue32 to determine whether the
+  /// value should be considered for storage in "compressed HV64" form.
+  HVETag_LastNumberOrCompressible = HVETag_Bool,
 };
 
 /// Number of bits used in the high part to encode the sign, exponent and tag.

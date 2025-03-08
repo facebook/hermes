@@ -83,6 +83,8 @@ TEST_F(SmallHermesValueRuntimeTest, BoolTest) {
   auto TSHV = SmallHermesValue::encodeHermesValue(
       HermesValue::encodeBoolValue(true), runtime);
   EXPECT_FALSE(TSHV.isPointer());
+  EXPECT_TRUE(TSHV.isBool());
+  EXPECT_TRUE(TSHV.getBool());
   auto THV = TSHV.unboxToHV(runtime);
   EXPECT_TRUE(THV.isBool());
   EXPECT_TRUE(THV.getBool());
@@ -91,6 +93,8 @@ TEST_F(SmallHermesValueRuntimeTest, BoolTest) {
   auto FSHV = SmallHermesValue::encodeHermesValue(
       HermesValue::encodeBoolValue(false), runtime);
   EXPECT_FALSE(FSHV.isPointer());
+  EXPECT_TRUE(FSHV.isBool());
+  EXPECT_FALSE(FSHV.getBool());
   auto FHV = FSHV.unboxToHV(runtime);
   EXPECT_TRUE(FHV.isBool());
   EXPECT_FALSE(FHV.getBool());

@@ -87,6 +87,7 @@ class HermesValue : public HermesValueBase {
     Object2 = HVETag_Object2,
 
     FirstPointer = HVETag_FirstPointer,
+    LastNumberOrCompressible = HVETag_LastNumberOrCompressible,
   };
 
   /// Number of bits used in the high part to encode the sign, exponent and tag.
@@ -323,6 +324,13 @@ class HermesValue : public HermesValueBase {
   inline bool isDouble() const {
     return this->raw < ((uint64_t)Tag::First << kNumDataBits);
   }
+  /// Return true if this value is either to a number, or is encoded entirely in
+  /// its most significant 29 bits, with the rest being 0. This is used by
+  /// HermesValue32 to determine whether the value should be considered for
+  /// storage in "compressed HV64" form.
+  inline bool isNumberOrCompressible() const {
+    return (uint32_t)getETag() <= (uint32_t)ETag::LastNumberOrCompressible;
+  }
   inline bool isPointer() const {
     return this->raw >= ((uint64_t)Tag::FirstPointer << kNumDataBits);
   }
@@ -337,7 +345,7 @@ class HermesValue : public HermesValueBase {
     return (this->raw & kMask) == (encodeNaNValue().raw & kMask);
   }
 
-  inline RawType getRaw() const {
+  inline constexpr RawType getRaw() const {
     return this->raw;
   }
 
