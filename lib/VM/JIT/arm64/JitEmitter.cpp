@@ -319,32 +319,15 @@ void emit_sh_cp_decode_non_null(a64::Assembler &a, const a64::GpX &xInOut) {
 #endif
 }
 
-/// Load a compressed pointer from \p mem and decompress it into \p dest.
-void emit_load_and_sh_cp_decode(
+/// Load a compressed pointer from \p mem.
+void emit_load_cp(
     a64::Assembler &a,
     const a64::GpX &dest,
     const a64::Mem &mem) {
 #ifdef HERMESVM_COMPRESSED_POINTERS
   a.ldr(dest.w(), mem);
-  emit_sh_cp_decode(a, dest);
 #else
   a.ldr(dest, mem);
-  (void)emit_sh_cp_decode;
-#endif
-}
-
-/// Load a compressed pointer that is known to be non-null from \p mem and
-/// decompress it into \p dest.
-void emit_load_and_sh_cp_decode_non_null(
-    a64::Assembler &a,
-    const a64::GpX &dest,
-    const a64::Mem &mem) {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  a.ldr(dest.w(), mem);
-  emit_sh_cp_decode_non_null(a, dest);
-#else
-  a.ldr(dest, mem);
-  (void)emit_sh_cp_decode_non_null;
 #endif
 }
 
@@ -2060,10 +2043,11 @@ void Emitter::fastArrayLength(FR frRes, FR frArr) {
 #ifdef HERMESVM_BOXED_DOUBLES
   // If boxed doubles are enabled, load the size from the ArrayStorage, where it
   // is stored as an integer.
-  emit_load_and_sh_cp_decode_non_null(
+  emit_load_cp(
       a,
       temp.a64GpX(),
       a64::Mem(temp.a64GpX(), offsetof(SHFastArray, indexedStorage)));
+  emit_sh_cp_decode_non_null(a, temp.a64GpX());
   a.ldr(
       temp.a64GpX().w(),
       a64::Mem(temp.a64GpX(), offsetof(SHArrayStorage, size)));
@@ -2324,12 +2308,13 @@ void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
   // get pointer.
   emit_sh_ljs_get_pointer(a, xTmp1, xTmp1);
   // xTmp1 = closure->environment
-  emit_load_and_sh_cp_decode_non_null(
-      a, xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
+  emit_load_cp(a, xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
+  emit_sh_cp_decode_non_null(a, xTmp1);
   for (; level; --level) {
     // xTmp1 = env->parent.
-    emit_load_and_sh_cp_decode_non_null(
+    emit_load_cp(
         a, xTmp1, a64::Mem(xTmp1, offsetof(SHEnvironment, parentEnvironment)));
+    emit_sh_cp_decode_non_null(a, xTmp1);
   }
   // encode object.
   emit_sh_ljs_object(a, xTmp1);
@@ -2349,8 +2334,8 @@ void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
   auto hwRes = getOrAllocFRInGpX(frRes, false);
   // Use the result register as a scratch register for computing the address.
   emit_sh_ljs_get_pointer(a, hwRes.a64GpX(), hwClosure.a64GpX());
-  emit_load_and_sh_cp_decode_non_null(
-      a, hwRes.a64GpX(), a64::Mem(hwRes.a64GpX(), ofs));
+  emit_load_cp(a, hwRes.a64GpX(), a64::Mem(hwRes.a64GpX(), ofs));
+  emit_sh_cp_decode_non_null(a, hwRes.a64GpX());
   // The result is a pointer, so add the object tag.
   emit_sh_ljs_object(a, hwRes.a64GpX());
   frUpdatedWithHW(frRes, hwRes);
@@ -2993,8 +2978,8 @@ void Emitter::loadParentNoTraps(FR frRes, FR frObj) {
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xTmp, hwObj.a64GpX());
   // xTmp contains the unencoded pointer value.
-  emit_load_and_sh_cp_decode(
-      a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xTmp, a64::Mem(xTmp, offsetof(SHJSObject, parent)));
+  emit_sh_cp_decode(a, xTmp);
   // Check whether it is nullptr and set flags.
   // TODO: Combine this null check with the one in emit_load_and_sh_cp_decode.
   a.cmp(xTmp, 0);
@@ -3015,8 +3000,8 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   HWReg hwRes = getOrAllocFRInGpX(frRes, false);
   a64::GpX xRes = hwRes.a64GpX();
   emit_sh_ljs_get_pointer(a, xRes, hwObj.a64GpX());
-  emit_load_and_sh_cp_decode_non_null(
-      a, xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHJSObject, parent)));
+  emit_sh_cp_decode_non_null(a, xRes);
   emit_sh_ljs_object(a, xRes);
 
   frUpdatedWithHW(frRes, hwRes);
