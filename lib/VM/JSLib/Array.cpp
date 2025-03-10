@@ -4351,13 +4351,9 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
 /// ES14.0 23.1.3.33
 CallResult<HermesValue>
 arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
-  GCScope gcScope{runtime};
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> A;
-    PinnedValue<> pk;
-    PinnedValue<> from;
-    PinnedValue<> fromValue;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
@@ -4382,60 +4378,76 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(len32 != len)) {
     return runtime.raiseRangeError("invalid array length");
   }
-  auto ARes = JSArray::create(runtime, len32, len32);
+  auto ARes = JSArray::create(runtime, 0, 0);
   if (LLVM_UNLIKELY(ARes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.A = std::move(*ARes);
+  if (LLVM_UNLIKELY(
+          JSArray::setStorageEndIndex(lv.A, runtime, len32) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(lv.A, runtime, len32) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
-  // 4. Let k be 0.
-  double k = 0;
-  auto marker = gcScope.createMarker();
-  // 5. Repeat, while k < len,
-  while (k < len) {
-    gcScope.flushToMarker(marker);
+  // Fast Path: Input is a JSArray and arrayFastPathCheck passes.
+  if (jsArr && arrayFastPathCheck(runtime, jsArr.get(), nullptr, len32)) {
+    NoAllocScope noAllocScope{runtime};
+    auto *srcStorage = jsArr->getIndexedStorage(runtime);
+    auto *destStorage = lv.A->getIndexedStorage(runtime);
+    for (uint32_t to = 0, from = len32 - 1; to < len32; ++to, --from) {
+      SmallHermesValue fromValue = srcStorage->at(runtime, from);
+      destStorage->set(
+          runtime,
+          to,
+          LLVM_LIKELY(!fromValue.isEmpty())
+              ? fromValue
+              : SmallHermesValue::encodeUndefinedValue());
+    }
+    return lv.A.getHermesValue();
+  }
 
-    double from = len - k - 1;
-    // 5a. Let from be ! ToString(𝔽(len - k - 1)).
-    lv.from = HermesValue::encodeUntrustedNumberValue(from);
-
-    // 5b. Let Pk be ! ToString(𝔽(k)).
-    lv.pk = HermesValue::encodeTrustedNumberValue(k);
-
+  // Read a single element. This is a lambda to get around SmallHermesValue not
+  // having an assignment operator.
+  auto readElem =
+      [&runtime, &jsArr, &lv](uint32_t from) -> CallResult<SmallHermesValue> {
     // 5c. Let fromValue be ? Get(O, from).
     if (LLVM_LIKELY(jsArr)) {
-      const SmallHermesValue elm = jsArr->at(runtime, from);
+      auto elm = jsArr->at(runtime, from);
       // If the element is not empty, we can return it directly here.
       // Otherwise, we must proceed to the slow path.
-      if (!elm.isEmpty()) {
-        lv.fromValue = elm.unboxToHV(runtime);
-        goto store;
-      }
+      if (!elm.isEmpty())
+        return elm;
     }
 
     // Slow path
-    {
-      CallResult<PseudoHandle<>> propRes =
-          JSObject::getComputed_RJS(lv.O, runtime, lv.from);
-      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      lv.fromValue = std::move(*propRes);
-    }
-
-    // 5d. Perform ! CreateDataPropertyOrThrow(A, Pk, fromValue).
-  store:;
-    if (LLVM_UNLIKELY(
-            JSObject::defineOwnComputedPrimitive(
-                lv.A,
-                runtime,
-                lv.pk,
-                DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                lv.fromValue,
-                PropOpFlags().plusThrowOnError()) ==
-            ExecutionStatus::EXCEPTION)) {
+    GCScopeMarkerRAII marker{runtime};
+    // It is OK to have a PinnedValue here, because we are only storing a number
+    // in it.
+    PinnedValue fromV = HermesValue::encodeTrustedNumberValue(from);
+    CallResult<PseudoHandle<>> propRes =
+        JSObject::getComputed_RJS(lv.O, runtime, fromV);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
+    return SmallHermesValue::encodeHermesValue(
+        propRes->getHermesValue(), runtime);
+  };
+
+  // 4. Let k be 0.
+  uint32_t k = 0;
+  // 5. Repeat, while k < len,
+  while (k < len) {
+    uint32_t from = len - k - 1;
+    auto elem = readElem(from);
+    if (LLVM_UNLIKELY(elem == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    JSArray::unsafeSetExistingElementAt(lv.A.get(), runtime, k, *elem);
 
     // 5e. Set k to k + 1.
     ++k;
