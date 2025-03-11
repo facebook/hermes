@@ -1241,19 +1241,31 @@ class InstrGen {
     // If the property is a LiteralNumber, the property is enumerable, and it is
     // a valid array index, it is coming from an array initialization and we
     // will emit it as DefineOwnByIndex.
-    auto *numProp = llvh::dyn_cast<LiteralNumber>(prop);
-    if (numProp && isEnumerable) {
-      if (auto arrayIndex = numProp->convertToArrayIndex()) {
-        uint32_t index = arrayIndex.getValue();
-        os_ << "_sh_ljs_define_own_by_index(";
-        os_ << "shr, ";
-        generateRegisterPtr(*inst.getObject());
-        os_ << ", ";
-        os_ << index << ", ";
-        generateRegisterPtr(*inst.getStoredValue());
-        os_ << ");\n";
-        return;
-      }
+    if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
+      assert(
+          inst.getIsEnumerable() &&
+          "Non-enumerable properties with literal keys should be handled by LoadConstants");
+      auto arrayIndex = numProp->convertToArrayIndex();
+      uint32_t index = arrayIndex.getValue();
+      os_ << "_sh_ljs_define_own_by_index(";
+      os_ << "shr, ";
+      generateRegisterPtr(*inst.getObject());
+      os_ << ", ";
+      os_ << index << ", ";
+      generateRegisterPtr(*inst.getStoredValue());
+      os_ << ");\n";
+      return;
+    }
+
+    if (auto *LS = llvh::dyn_cast<LiteralString>(prop)) {
+      assert(
+          inst.getIsEnumerable() &&
+          "Non-enumerable properties with literal keys should be handled by LoadConstants");
+      os_ << "_sh_ljs_define_own_by_id(shr,&";
+      generateRegister(*inst.getObject());
+      os_ << ", ";
+      genStringConstWriteIC(LS, inst.getStoredValue()) << ");\n";
+      return;
     }
 
     if (isEnumerable)
