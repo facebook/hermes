@@ -1260,6 +1260,63 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
       reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 
+extern "C" void _sh_ljs_define_own_by_id(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID key,
+    SHLegacyValue *value,
+    SHWritePropertyCacheEntry *propCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  SymbolID symID = SymbolID::unsafeCreate(key);
+  auto *targetPHV = toPHV(target);
+  auto *valuePHV = toPHV(value);
+  auto *cacheEntry =
+      reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry);
+  assert(targetPHV->isObject() && "expected object operand");
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(*valuePHV, runtime);
+  auto *obj = vmcast<JSObject>(*targetPHV);
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
+  // If we have a cache hit, reuse the cached offset and immediately write to
+  // the property.
+  if (LLVM_LIKELY(cacheEntry && cacheEntry->clazz == clazzPtr)) {
+    JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
+    return;
+  }
+  NamedPropertyDescriptor desc;
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, symID, desc);
+  if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
+      !desc.flags.accessor && desc.flags.writable &&
+      !desc.flags.internalSetter) {
+    // cacheIdx == 0 indicates no caching so don't update the cache in
+    // those cases.
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+    if (LLVM_LIKELY(!clazz->isDictionary()) && LLVM_LIKELY(cacheEntry)) {
+      // Cache the class and property slot.
+      cacheEntry->clazz = clazzPtr;
+      cacheEntry->slot = desc.slot;
+    }
+
+    // This must be valid because an own property was already found.
+    JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv);
+    return;
+  }
+  CallResult<bool> putRes{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    putRes = JSObject::defineOwnProperty(
+        Handle<JSObject>::vmcast(targetPHV),
+        runtime,
+        symID,
+        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        Handle<>(valuePHV),
+        PropOpFlags().plusThrowOnError());
+  }
+  if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(getSHRuntime(runtime));
+}
+
 extern "C" void _sh_ljs_define_own_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,

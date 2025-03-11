@@ -607,6 +607,13 @@ static inline SHLegacyValue _sh_ljs_get_by_val_rjs(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key);
 
+/// Put an enumerable property by string id.
+SHERMES_EXPORT void _sh_ljs_define_own_by_id(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID key,
+    SHLegacyValue *value,
+    SHWritePropertyCacheEntry *cacheEntry);
 /// Put an enumerable property.
 SHERMES_EXPORT void _sh_ljs_define_own_by_val(
     SHRuntime *shr,
