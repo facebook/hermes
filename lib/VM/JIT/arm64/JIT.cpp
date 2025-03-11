@@ -320,8 +320,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(DefineOwnById)
-EMIT_UNIMPLEMENTED(DefineOwnByIdLong)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -739,6 +737,16 @@ inline void JITContext::Compiler::emitGetByIndex(
     const inst::GetByIndexInst *inst) {
   em_.getByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
 }
+
+#define EMIT_DEFINE_BY_ID(op)                                              \
+  inline void JITContext::Compiler::emit##op(const inst::op##Inst *inst) { \
+    auto idVal = ID(inst->op4);                                            \
+    auto cacheIdx = inst->op3;                                             \
+    em_.defineOwnById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);      \
+  }
+EMIT_DEFINE_BY_ID(DefineOwnById)
+EMIT_DEFINE_BY_ID(DefineOwnByIdLong)
+#undef EMIT_DEFINE_BY_ID
 
 inline void JITContext::Compiler::emitDefineOwnByIndex(
     const inst::DefineOwnByIndexInst *inst) {

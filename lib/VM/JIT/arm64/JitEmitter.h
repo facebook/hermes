@@ -726,6 +726,8 @@ class Emitter {
       "tryPutByIdStrict",
       _sh_ljs_try_put_by_id_strict_rjs);
 
+  void
+  defineOwnById(FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx);
   void defineOwnByIndex(FR frTarget, FR frValue, uint32_t key);
   void defineOwnByVal(FR frTarget, FR frValue, FR frKey, bool enumerable);
   void defineOwnGetterSetterByVal(

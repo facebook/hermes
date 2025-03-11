@@ -3919,6 +3919,45 @@ asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {
   return a.newNamedLabel(buf);
 }
 
+void Emitter::defineOwnById(
+    FR frTarget,
+    SHSymbolID symID,
+    FR frValue,
+    uint8_t cacheIdx) {
+  comment(
+      "// defineOwnById r%u, r%u, cache %u, symID %u",
+      frTarget.index(),
+      frValue.index(),
+      cacheIdx,
+      symID);
+
+  syncAllFRTempExcept({});
+  syncToFrame(frTarget);
+  syncToFrame(frValue);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  a.mov(a64::w2, symID);
+  loadFrameAddr(a64::x3, frValue);
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x4, 0);
+  } else {
+    a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsWritePropertyCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x4, a64::x4, sizeof(SHWritePropertyCacheEntry) * cacheIdx);
+  }
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(
+          SHRuntime *shr,
+          SHLegacyValue *target,
+          SHSymbolID key,
+          SHLegacyValue *value,
+          SHWritePropertyCacheEntry *cacheEntrySHRuntime),
+      _sh_ljs_define_own_by_id);
+}
+
 void Emitter::defineOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
   comment(
       "// putOwnByIdx r%u, r%u, %u", frTarget.index(), frValue.index(), key);
