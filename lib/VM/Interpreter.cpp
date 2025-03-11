@@ -2255,9 +2255,7 @@ tailCall:
         assert(
             O1REG(DefineOwnById).isObject() &&
             "PutOwn requires object operand");
-        CAPTURE_IP_ASSIGN(
-            SmallHermesValue shv,
-            SmallHermesValue::encodeHermesValue(O2REG(DefineOwnById), runtime));
+        ENCODE_HV_AS_SHV(shv, O2REG(DefineOwnById));
         auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
         auto cacheIdx = ip->iDefineOwnById.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
