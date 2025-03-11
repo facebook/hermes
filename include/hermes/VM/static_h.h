@@ -608,38 +608,38 @@ SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key);
 
 /// Put an enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_own_by_val(
+SHERMES_EXPORT void _sh_ljs_define_own_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value);
 /// Put a non-enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_own_ne_by_val(
+SHERMES_EXPORT void _sh_ljs_define_own_ne_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value);
 
-SHERMES_EXPORT void _sh_ljs_put_own_by_index(
+SHERMES_EXPORT void _sh_ljs_define_own_by_index(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t key,
     SHLegacyValue *value);
 
 /// Put an enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_new_own_by_id(
+SHERMES_EXPORT void _sh_ljs_define_new_own_by_id(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHSymbolID key,
     SHLegacyValue *value);
 /// Put a non-enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_new_own_ne_by_id(
+SHERMES_EXPORT void _sh_ljs_define_new_own_ne_by_id(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHSymbolID key,
     SHLegacyValue *value);
 
-SHERMES_EXPORT void _sh_ljs_put_own_getter_setter_by_val(
+SHERMES_EXPORT void _sh_ljs_define_own_getter_setter_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,

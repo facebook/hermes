@@ -1245,7 +1245,7 @@ class InstrGen {
     if (numProp && isEnumerable) {
       if (auto arrayIndex = numProp->convertToArrayIndex()) {
         uint32_t index = arrayIndex.getValue();
-        os_ << "_sh_ljs_put_own_by_index(";
+        os_ << "_sh_ljs_define_own_by_index(";
         os_ << "shr, ";
         generateRegisterPtr(*inst.getObject());
         os_ << ", ";
@@ -1257,9 +1257,9 @@ class InstrGen {
     }
 
     if (isEnumerable)
-      os_ << "_sh_ljs_put_own_by_val(";
+      os_ << "_sh_ljs_define_own_by_val(";
     else
-      os_ << "_sh_ljs_put_own_ne_by_val(";
+      os_ << "_sh_ljs_define_own_ne_by_val(";
 
     os_ << "shr, ";
     generateRegisterPtr(*inst.getObject());
@@ -1279,7 +1279,7 @@ class InstrGen {
           isEnumerable &&
           "No way to generate non-enumerable indexed DefineNewOwnPropertyInst.");
       uint32_t index = *numProp->convertToArrayIndex();
-      os_ << "_sh_ljs_put_own_by_index(";
+      os_ << "_sh_ljs_define_own_by_index(";
       os_ << "shr, ";
       generateRegisterPtr(*inst.getObject());
       os_ << ", ";
@@ -1290,9 +1290,9 @@ class InstrGen {
     }
 
     if (isEnumerable)
-      os_ << "_sh_ljs_put_new_own_by_id(";
+      os_ << "_sh_ljs_define_new_own_by_id(";
     else
-      os_ << "_sh_ljs_put_new_own_ne_by_id(";
+      os_ << "_sh_ljs_define_new_own_ne_by_id(";
 
     os_ << "shr, ";
     generateRegisterPtr(*inst.getObject());
@@ -1304,7 +1304,7 @@ class InstrGen {
   }
   void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
     os_.indent(2);
-    os_ << "_sh_ljs_put_own_getter_setter_by_val(";
+    os_ << "_sh_ljs_define_own_getter_setter_by_val(";
     os_ << "shr, ";
     generateRegisterPtr(*inst.getObject());
     os_ << ", ";

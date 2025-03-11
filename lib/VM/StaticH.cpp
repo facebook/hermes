@@ -1260,7 +1260,7 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
       reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 
-extern "C" void _sh_ljs_put_own_by_val(
+extern "C" void _sh_ljs_define_own_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
@@ -1280,7 +1280,7 @@ extern "C" void _sh_ljs_put_own_by_val(
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
 }
-extern "C" void _sh_ljs_put_own_ne_by_val(
+extern "C" void _sh_ljs_define_own_ne_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
@@ -1301,7 +1301,7 @@ extern "C" void _sh_ljs_put_own_ne_by_val(
     _sh_throw_current(shr);
 }
 
-extern "C" void _sh_ljs_put_own_by_index(
+extern "C" void _sh_ljs_define_own_by_index(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t key,
@@ -1324,7 +1324,7 @@ extern "C" void _sh_ljs_put_own_by_index(
 }
 
 /// Put an enumerable property.
-extern "C" void _sh_ljs_put_new_own_by_id(
+extern "C" void _sh_ljs_define_new_own_by_id(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t key,
@@ -1345,7 +1345,7 @@ extern "C" void _sh_ljs_put_new_own_by_id(
 }
 
 /// Put a non-enumerable property.
-extern "C" void _sh_ljs_put_new_own_ne_by_id(
+extern "C" void _sh_ljs_define_new_own_ne_by_id(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t key,
@@ -1366,7 +1366,7 @@ extern "C" void _sh_ljs_put_new_own_ne_by_id(
 }
 
 /// Put a non-enumerable property.
-extern "C" void _sh_ljs_put_own_getter_setter_by_val(
+extern "C" void _sh_ljs_define_own_getter_setter_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,

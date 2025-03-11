@@ -3935,7 +3935,7 @@ void Emitter::defineOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
   EMIT_RUNTIME_CALL(
       *this,
       void (*)(SHRuntime *, SHLegacyValue *, uint32_t, SHLegacyValue *),
-      _sh_ljs_put_own_by_index);
+      _sh_ljs_define_own_by_index);
 }
 
 void Emitter::defineOwnByVal(
@@ -3964,13 +3964,13 @@ void Emitter::defineOwnByVal(
         *this,
         void (*)(
             SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
-        _sh_ljs_put_own_by_val);
+        _sh_ljs_define_own_by_val);
   } else {
     EMIT_RUNTIME_CALL(
         *this,
         void (*)(
             SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
-        _sh_ljs_put_own_ne_by_val);
+        _sh_ljs_define_own_ne_by_val);
   }
 }
 
@@ -4011,7 +4011,7 @@ void Emitter::defineOwnGetterSetterByVal(
           SHLegacyValue *getter,
           SHLegacyValue *setter,
           bool enumerable),
-      _sh_ljs_put_own_getter_setter_by_val);
+      _sh_ljs_define_own_getter_setter_by_val);
 }
 
 void Emitter::putNewOwnById(
@@ -4043,7 +4043,7 @@ void Emitter::putNewOwnById(
             SHLegacyValue *target,
             SHSymbolID key,
             SHLegacyValue *value),
-        _sh_ljs_put_new_own_by_id);
+        _sh_ljs_define_new_own_by_id);
   } else {
     EMIT_RUNTIME_CALL(
         *this,
@@ -4052,7 +4052,7 @@ void Emitter::putNewOwnById(
             SHLegacyValue *target,
             SHSymbolID key,
             SHLegacyValue *value),
-        _sh_ljs_put_new_own_ne_by_id);
+        _sh_ljs_define_new_own_ne_by_id);
   }
 }
 
