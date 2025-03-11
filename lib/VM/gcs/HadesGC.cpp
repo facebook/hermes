@@ -892,10 +892,6 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
         !gc.inYoungGen(cell) &&
         "Shouldn't ever push a YG object onto the worklist");
     AlignedHeapSegment::setCellMarkBit(cell);
-    // There could be a race here: however, the mutator will never change a
-    // cell's kind after initialization. The GC thread might to a free cell, but
-    // only during sweeping, not concurrently with this operation. Therefore
-    // there's no need for any synchronization here.
     localWorklist_.push(cell);
   }
 
@@ -1498,9 +1494,7 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
   gcCallbacks_.unmarkSymbols();
 
   // Mark phase: discover all pointers that are live.
-  // This assignment will reset any leftover memory from the last collection. We
-  // leave the last marker alive to avoid a race condition with setting
-  // concurrentPhase_, oldGenMarker_ and the write barrier.
+  // Initialize the marking state.
   oldGenMarker_.reset(new MarkAcceptor{*this});
   {
     // Roots are marked before a marking thread is spun up, so that the root
