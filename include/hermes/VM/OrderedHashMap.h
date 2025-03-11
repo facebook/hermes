@@ -236,8 +236,8 @@ class OrderedHashMapBase {
   /// Number of alive entries in the storage.
   uint32_t size_{0};
 
-  /// Number of deleted entries in the storage. They will be wiped during
-  /// rehash.
+  /// Number of deleted entries in the storage. The count will be reset during
+  /// rehash and clear.
   uint32_t deletedCount_{0};
 
   /// Hash a HermesValue to an index to our hash table.

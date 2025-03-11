@@ -445,6 +445,7 @@ void OrderedHashMapBase<BucketType, Derived>::clear(Runtime &runtime) {
   firstIterationEntry_.set(runtime, lastIterationEntry_, runtime.getHeap());
   firstIterationEntry_.getNonNull(runtime)->prevIterationEntry.setNull(
       runtime.getHeap());
+  deletedCount_ = 0;
   size_ = 0;
 }
 
