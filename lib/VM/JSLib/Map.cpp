@@ -265,7 +265,7 @@ mapPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.clear");
   }
-  selfHandle->clear(runtime);
+  JSMap::clear(selfHandle, runtime);
   return HermesValue::encodeUndefinedValue();
 }
 

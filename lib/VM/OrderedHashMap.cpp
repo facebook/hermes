@@ -415,38 +415,41 @@ BucketType *OrderedHashMapBase<BucketType, Derived>::iteratorNext(
 }
 
 template <typename BucketType, typename Derived>
-void OrderedHashMapBase<BucketType, Derived>::clear(Runtime &runtime) {
-  assertInitialized();
-  if (!firstIterationEntry_) {
+void OrderedHashMapBase<BucketType, Derived>::clear(
+    Handle<Derived> self,
+    Runtime &runtime) {
+  self->assertInitialized();
+  if (!self->firstIterationEntry_) {
     // Empty set.
     return;
   }
 
   // Clear the hash table.
-  for (unsigned i = 0; i < capacity_; ++i) {
-    auto shv = hashTable_.getNonNull(runtime)->at(runtime, i);
+  for (unsigned i = 0; i < self->capacity_; ++i) {
+    auto shv = self->hashTable_.getNonNull(runtime)->at(runtime, i);
     // Delete every element reachable from the hash table.
     if (shv.isObject()) {
       vmcast<BucketType>(shv.getObject(runtime))->markDeleted(runtime);
     }
     // Clear every element in the hash table.
-    hashTable_.getNonNull(runtime)->setNonPtr(
+    self->hashTable_.getNonNull(runtime)->setNonPtr(
         runtime, i, SmallHermesValue::encodeEmptyValue());
   }
   // Resize the hash table to the initial size.
   SegmentedArraySmall::resizeWithinCapacity(
-      hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
-  capacity_ = INITIAL_CAPACITY;
+      self->hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
+  self->capacity_ = INITIAL_CAPACITY;
 
   // After clearing, we will still keep the last deleted entry
   // in case there is an iterator out there
   // pointing to the middle of the iteration chain. We need it to be
   // able to merge back eventually.
-  firstIterationEntry_.set(runtime, lastIterationEntry_, runtime.getHeap());
-  firstIterationEntry_.getNonNull(runtime)->prevIterationEntry.setNull(
+  self->firstIterationEntry_.set(
+      runtime, self->lastIterationEntry_, runtime.getHeap());
+  self->firstIterationEntry_.getNonNull(runtime)->prevIterationEntry.setNull(
       runtime.getHeap());
-  deletedCount_ = 0;
-  size_ = 0;
+  self->deletedCount_ = 0;
+  self->size_ = 0;
 }
 
 template class OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>;

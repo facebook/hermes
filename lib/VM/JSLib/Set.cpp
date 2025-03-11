@@ -328,7 +328,7 @@ setPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.clear");
   }
-  selfHandle->clear(runtime);
+  JSSet::clear(selfHandle, runtime);
   return HermesValue::encodeUndefinedValue();
 }
 
