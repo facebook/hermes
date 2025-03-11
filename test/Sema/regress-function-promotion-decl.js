@@ -28,11 +28,12 @@ function func() {
 // CHECK-NEXT:            Decl %d.2 'inner' Var
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.4 'foo' Let
+// CHECK-NEXT:                Decl %d.4 'inner' ScopedFunction
+// CHECK-NEXT:                Decl %d.5 'foo' Let
 // CHECK-NEXT:                hoistedFunction inner
 // CHECK-NEXT:        Func loose
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    FunctionDeclaration
@@ -45,4 +46,4 @@ function func() {
 // CHECK-NEXT:                VariableDeclaration
 // CHECK-NEXT:                    VariableDeclarator
 // CHECK-NEXT:                        NumericLiteral
-// CHECK-NEXT:                        Id 'foo' [D:E:%d.4 'foo']
+// CHECK-NEXT:                        Id 'foo' [D:E:%d.5 'foo']
