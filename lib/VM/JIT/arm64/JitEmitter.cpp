@@ -2295,34 +2295,30 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
 void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
   comment("// GetParentEnvironment r%u, %u", frRes.index(), level);
 
-  HWReg hwTmp1 = allocTempGpX();
-  a64::GpX xTmp1 = hwTmp1.a64GpX();
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  a64::GpX xRes = hwRes.a64GpX();
+  frUpdatedWithHW(frRes, hwRes);
 
   // Get current closure.
   a.ldur(
-      xTmp1,
+      xRes,
       a64::Mem(
           xFrame,
           (int)StackFrameLayout::CalleeClosureOrCB *
               (int)sizeof(SHLegacyValue)));
   // get pointer.
-  emit_sh_ljs_get_pointer(a, xTmp1, xTmp1);
-  // xTmp1 = closure->environment
-  emit_load_cp(a, xTmp1, a64::Mem(xTmp1, offsetof(SHCallable, environment)));
-  emit_sh_cp_decode_non_null(a, xTmp1);
+  emit_sh_ljs_get_pointer(a, xRes, xRes);
+  // xRes = closure->environment
+  emit_load_cp(a, xRes, a64::Mem(xRes, offsetof(SHCallable, environment)));
+  emit_sh_cp_decode_non_null(a, xRes);
   for (; level; --level) {
-    // xTmp1 = env->parent.
+    // xRes = env->parent.
     emit_load_cp(
-        a, xTmp1, a64::Mem(xTmp1, offsetof(SHEnvironment, parentEnvironment)));
-    emit_sh_cp_decode_non_null(a, xTmp1);
+        a, xRes, a64::Mem(xRes, offsetof(SHEnvironment, parentEnvironment)));
+    emit_sh_cp_decode_non_null(a, xRes);
   }
   // encode object.
-  emit_sh_ljs_object(a, xTmp1);
-
-  freeReg(hwTmp1);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, hwTmp1);
-  movHWFromHW<false>(hwRes, hwTmp1);
-  frUpdatedWithHW(frRes, hwRes);
+  emit_sh_ljs_object(a, xRes);
 }
 
 void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
