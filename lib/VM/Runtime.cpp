@@ -188,10 +188,10 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   NamedPropertyDescriptor desc;
   // Check writable and internalSetter flags since the cache slot is shared for
   // get/put.
-  if (LLVM_LIKELY(
-          JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc)) &&
-      !desc.flags.accessor && desc.flags.writable &&
-      !desc.flags.internalSetter) {
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc);
+  if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
+      desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class, id and property slot.
@@ -215,10 +215,10 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;
-  if (LLVM_LIKELY(
-          JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc)) &&
-      !desc.flags.accessor && desc.flags.writable &&
-      !desc.flags.internalSetter) {
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc);
+  if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
+      desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
     if (LLVM_LIKELY(!clazz->isDictionary())) {
       // Cache the class and property slot.
