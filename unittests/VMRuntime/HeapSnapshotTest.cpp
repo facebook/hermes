@@ -711,8 +711,8 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
   // The GC Heap can have at most two segments.
   const GCConfig testGCConfig =
       GCConfig::Builder(kTestGCConfigBaseBuilder)
-          .withInitHeapSize(AlignedHeapSegment::kSize)
-          .withMaxHeapSize(AlignedHeapSegment::kSize * 2)
+          .withInitHeapSize(FixedSizeHeapSegment::kSize)
+          .withMaxHeapSize(FixedSizeHeapSegment::kSize * 2)
           .build();
   bool triggeredTripwire = false;
   auto runtime = DummyRuntime::create(
@@ -727,7 +727,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
                   })
                   .build())
           .build());
-  using LargeCell = EmptyCell<AlignedHeapSegment::maxSize() / 2>;
+  using LargeCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 2>;
   DummyRuntime &rt = *runtime;
   GCScope scope{rt};
 
