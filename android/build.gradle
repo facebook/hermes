@@ -28,8 +28,8 @@ buildscript {
     // This is used as part of the Hermes build process
     hermesC = ""
     for (f in [
-        "${hermesHostBuild}/build/ImportHermesc.cmake",
-        "${hermesHostBuild}/build_release/ImportHermesc.cmake"]) {
+        "${hermesHostBuild}/build/ImportHostCompilers.cmake",
+        "${hermesHostBuild}/build_release/ImportHostCompilers.cmake"]) {
       if(file(f).exists()) hermesC = f;
     }
     assert hermesC != "" : "Hermes host build not found"

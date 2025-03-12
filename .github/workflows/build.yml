@@ -121,3 +121,35 @@ jobs:
         # toLocaleLowerCase and toLocaleUpperCase are the two main ones.
         # cmake --build ./build --target check-hermes
         python3 hermes/utils/test_runner.py --test-intl test262/test -b build/bin ${{ matrix.test_runner_flags }}
+
+  test-android-e2e-intl:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        abis: ["x86"]
+    runs-on: ${{ matrix.os }}
+    env:
+      HERMES_WS_DIR: /home/runner/work/hermes
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
+    steps:
+    - name: Checkout Hermes
+      uses: actions/checkout@v4.1.0
+    - name: Checkout Test262
+      run: |-
+        cd "$HERMES_WS_DIR"
+        git clone https://github.com/tc39/test262
+        cd test262
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Build Hermes Compiler
+      run: |-
+        cd "$HERMES_WS_DIR"
+        cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
+        cmake --build ./build -j 4 --target hermesc
+    - name: Run android tests
+      uses: ReactiveCircus/android-emulator-runner@v2
+      with:
+        api-level: 29
+        cmake: 3.22.1
+        emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=${{ matrix.abis }} :intltest:connectedAndroidTest --stacktrace --debug
