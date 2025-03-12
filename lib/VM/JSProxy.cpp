@@ -1428,7 +1428,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
                 if (LLVM_UNLIKELY(
                         JSMap::insert(lv.map, runtime, valHandle, valHandle) ==
                         ExecutionStatus::EXCEPTION))
-                  return ExecutionStatus::RETURNED;
+                  return ExecutionStatus::EXCEPTION;
                 JSArray::setElementAt(trapResult, runtime, index, valHandle);
                 return ExecutionStatus::RETURNED;
               }) == ExecutionStatus::EXCEPTION)) {
