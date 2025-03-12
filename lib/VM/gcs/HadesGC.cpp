@@ -423,8 +423,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     if (CompactionEnabled && gc.compactee_.contains(ptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
-          heapLoc);
+      FixedSizeHeapSegment::dirtyCardForAddress(heapLoc);
     }
     return ptr;
   }
@@ -441,8 +440,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     if (CompactionEnabled && gc.compactee_.contains(cptr)) {
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
-          heapLoc);
+      FixedSizeHeapSegment::dirtyCardForAddress(heapLoc);
     }
     return cptr;
   }
@@ -654,8 +652,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
-      FixedSizeHeapSegment::cardTableCovering(heapLoc)->dirtyCardForAddress(
-          heapLoc);
+      FixedSizeHeapSegment::dirtyCardForAddress(heapLoc);
     }
     if (AlignedHeapSegment::getCellMarkBit(cell)) {
       // Points to an already marked object, do nothing.
@@ -1962,8 +1959,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
   // then just dirty all the cards corresponding to it, and we can scan them for
   // pointers later. This is less precise but makes the write barrier faster.
 
-  FixedSizeHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
-      start, start + numHVs);
+  FixedSizeHeapSegment::dirtyCardsForAddressRange(start, start + numHVs);
 }
 
 void HadesGC::constructorWriteBarrierRangeSlow(
@@ -1972,8 +1968,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
   assert(
       FixedSizeHeapSegment::containedInSame(start, start + numHVs) &&
       "Range must start and end within a heap segment.");
-  FixedSizeHeapSegment::cardTableCovering(start)->dirtyCardsForAddressRange(
-      start, start + numHVs);
+  FixedSizeHeapSegment::dirtyCardsForAddressRange(start, start + numHVs);
 }
 
 void HadesGC::snapshotWriteBarrierRangeSlow(
@@ -2056,7 +2051,7 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
     // allocation.
     // Note that this *only* applies since the boundaries are updated separately
     // from the card table being marked itself.
-    FixedSizeHeapSegment::cardTableCovering(loc)->dirtyCardForAddress(loc);
+    FixedSizeHeapSegment::dirtyCardForAddress(loc);
   }
 }
 
@@ -2683,12 +2678,11 @@ template <bool CompactionEnabled>
 void HadesGC::scanDirtyCardsForSegment(
     EvacAcceptor<CompactionEnabled> &acceptor,
     FixedSizeHeapSegment &seg) {
-  const auto &cardTable = seg.cardTable();
   // Use level instead of end in case the OG segment is still in bump alloc
   // mode.
   const char *const origSegLevel = seg.level();
-  size_t from = cardTable.addressToIndex(seg.start());
-  const size_t to = cardTable.addressToIndex(origSegLevel - 1) + 1;
+  size_t from = seg.addressToCardIndex(seg.start());
+  const size_t to = seg.addressToCardIndex(origSegLevel - 1) + 1;
 
   // Do not scan unmarked objects in the OG if we are currently sweeping. We do
   // this for three reasons:
@@ -2702,21 +2696,21 @@ void HadesGC::scanDirtyCardsForSegment(
   //    safe to visit.
   const bool visitUnmarked = concurrentPhase_ != Phase::Sweep;
 
-  while (const auto oiBegin = cardTable.findNextDirtyCard(from, to)) {
+  while (const auto oiBegin = seg.findNextDirtyCard(from, to)) {
     const auto iBegin = *oiBegin;
 
-    const auto oiEnd = cardTable.findNextCleanCard(iBegin, to);
+    const auto oiEnd = seg.findNextCleanCard(iBegin, to);
     const auto iEnd = oiEnd ? *oiEnd : to;
 
     assert(
-        (iEnd == to || !cardTable.isCardForIndexDirty(iEnd)) &&
-        cardTable.isCardForIndexDirty(iEnd - 1) &&
+        (iEnd == to || !seg.isCardForIndexDirty(iEnd)) &&
+        seg.isCardForIndexDirty(iEnd - 1) &&
         "end should either be the end of the card table, or the first "
         "non-dirty card after a sequence of dirty cards");
     assert(iBegin < iEnd && "Indices must be apart by at least one");
 
-    const char *const begin = cardTable.indexToAddress(iBegin);
-    const char *const end = cardTable.indexToAddress(iEnd);
+    const char *const begin = seg.cardIndexToAddress(iBegin);
+    const char *const end = seg.cardIndexToAddress(iEnd);
     // Don't try to mark any cell past the original boundary of the segment.
     const void *const boundary = std::min(end, origSegLevel);
 
@@ -2786,7 +2780,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
     // prepare for a compaction. Note that we should clear the card tables if
     // the compaction is currently ongoing.
     if (!preparingCompaction)
-      seg.cardTable().clear();
+      seg.clearAllCards();
   }
 
   // No need to search dirty cards in the compactee segment if it is
@@ -3104,8 +3098,7 @@ void HadesGC::verifyCardTable() {
           gc.compactee_.evacContains(valuePtr);
       if (!gc.inYoungGen(locPtr) &&
           (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
-        assert(FixedSizeHeapSegment::cardTableCovering(locPtr)
-                   ->isCardForAddressDirty(locPtr));
+        assert(FixedSizeHeapSegment::isCardForAddressDirty(locPtr));
       }
     }
 
@@ -3129,7 +3122,7 @@ void HadesGC::verifyCardTable() {
   forAllObjs([this, &acceptor](GCCell *cell) { markCell(acceptor, cell); });
 
   for (const FixedSizeHeapSegment &seg : oldGen_) {
-    seg.cardTable().verifyBoundaries(seg.start(), seg.level());
+    seg.cardBoundaryTable().verifyBoundaries(seg.start(), seg.level());
   }
 }
 

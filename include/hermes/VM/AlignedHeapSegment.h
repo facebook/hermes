@@ -12,7 +12,7 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AdviseUnused.h"
 #include "hermes/VM/AllocResult.h"
-#include "hermes/VM/CardTableNC.h"
+#include "hermes/VM/CardBoundaryTable.h"
 #include "hermes/VM/HeapAlign.h"
 
 #include "llvh/Support/MathExtras.h"
@@ -38,27 +38,29 @@ class StorageProvider;
 /// below:
 ///
 /// +----------------------------------------+
-/// | (1) Card Table                         |
+/// | (1) Card Status Array                  |
 /// +----------------------------------------+
-/// | (2) Mark Bit Array                     |
+/// | (2) Card Boundary Table                |
 /// +----------------------------------------+
-/// | (3) Allocation Space                   |
+/// | (3) Mark Bit Array                     |
+/// +----------------------------------------+
+/// | (4) Allocation Space                   |
 /// |                                        |
 /// | ...                                    |
 /// |                                        |
 /// | (End)                                  |
 /// +----------------------------------------+
 ///
-/// The tables in (1), and (2) cover the contiguous allocation space (3) into
-/// which GCCells are bump allocated. They have fixed size computed from
+/// The tables in (1), (2) and (3) cover the contiguous allocation space (4)
+/// into which GCCells are bump allocated. They have fixed size computed from
 /// kSegmentUnitSize. For segments whose size is some non-unit multiple of
-/// kSegmentUnitSize, card table allocates its internal arrays separately
-/// instead. Only one GCCell is allowed in each such segment, so the inline
-/// Mark Bit Array is large enough. Any segment size smaller than
+/// kSegmentUnitSize, card status arrays are allocated separately instead. Only
+/// one GCCell is allowed in each such segment, so card boundary table is unused
+/// and the inline Mark Bit Array is large enough. Any segment size smaller than
 /// kSegmentUnitSize is not supported. The headers of all GCCells, in any
 /// segment type, must reside in the first region of kSegmentUnitSize. This
-/// invariant ensures that we can always get the card table from a valid GCCell
-/// pointer.
+/// invariant ensures that we can always get the card status and boundary table
+/// from a valid GCCell pointer.
 class AlignedHeapSegment {
  protected:
   /// The provider that created this segment. It will be used to properly
@@ -88,24 +90,94 @@ class AlignedHeapSegment {
         kSegmentUnitSize >> LogHeapAlign;
     /// BitArray for marking allocation region of a segment.
     using MarkBitArray = BitArray<kMarkBitArraySize>;
+    /// The size (and base-two log of the size) of cards used in the card table.
+    static constexpr size_t kLogCardSize =
+        CardBoundaryTable::kLogCardSize; // ==> 512-byte cards.
+    static constexpr size_t kCardSize = 1
+        << kLogCardSize; // ==> 512-byte cards.
+    /// The size of the maximum inline card table. CardStatus array larger
+    /// segment has larger size and is stored separately.
+    static constexpr size_t kInlineCardTableSize =
+        kSegmentUnitSize >> kLogCardSize;
 
     /// Set the protection mode of paddedGuardPage_ (if system page size allows
     /// it).
     void protectGuardPage(oscompat::ProtectMode mode);
 
+    /// Get the segment size from SHSegmentInfo. This is only used in debug code
+    /// or when clearing the entire card table.
+    size_t getSegmentSize() const {
+      return (size_t)prefixHeader_.segmentInfo_.shiftedSegmentSize
+          << HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+    }
+
    private:
     friend class FixedSizeHeapSegment;
     friend class AlignedHeapSegment;
 
+    enum class CardStatus : char { Clean = 0, Dirty = 1 };
+
+    /// Pass segment size to CardBoundaryTable constructor to allocate its data
+    /// separately if \p sz > kSegmentUnitSize.
+    Contents(size_t segmentSize) {
+      assert(
+          segmentSize && segmentSize % kSegmentUnitSize == 0 &&
+          "segmentSize must be a multiple of kSegmentUnitSize");
+
+      prefixHeader_.segmentInfo_.shiftedSegmentSize =
+          segmentSize >> HERMESVM_LOG_HEAP_SEGMENT_SIZE;
+      if (segmentSize == kSegmentUnitSize) {
+        prefixHeader_.cards_ = inlineCardsArray_;
+      } else {
+        size_t cardTableSize = segmentSize >> kLogCardSize;
+        // The card table must be initially all clean. CardStatus is clean by
+        // default, so AtomicIfConcurrentGC<CardStatus> is as well. Thus, the
+        // new array's entries are all clean with aggregate initialization.
+        prefixHeader_.cards_ =
+            (new AtomicIfConcurrentGC<CardStatus>[cardTableSize] {});
+      }
+    }
+
+    ~Contents() {
+      if (prefixHeader_.cards_ != inlineCardsArray_) {
+        delete[] prefixHeader_.cards_;
+      }
+    }
+
     /// Note that because of the Contents object, the first few bytes of the
     /// card table are unused, we instead use them to store a small
-    /// SHSegmentInfo struct.
-    CardTable cardTable_;
+    /// SHSegmentInfo struct and the outline cards_ pointer. Note that we can't
+    /// use an anonymous struct here because we need to get its size to compute
+    /// kFirstUsedIndex.
+    struct PrefixHeader {
+      SHSegmentInfo segmentInfo_;
+      AtomicIfConcurrentGC<CardStatus> *cards_{nullptr};
+    };
+
+    union {
+      PrefixHeader prefixHeader_;
+
+      /// The card table optimizes young gen collections by restricting the
+      /// amount of heap belonging to the old gen that must be scanned. The card
+      /// table expects to be constructed at the start of a segment's storage,
+      /// and covers the extent of that storage's memory. There are two cases:
+      /// 1. For FixedSizeHeapSegment, this inline array is large enough.
+      /// 2. For JumboHeapSegment, the CardStatus array is allocated separately.
+      /// In either case, the pointers to the CardStatus array is stored in the
+      /// above cards_ field. Any fast path should use a specialization for
+      /// FixedSizeHeapSegment, which uses this inline array directly.
+      AtomicIfConcurrentGC<CardStatus> inlineCardsArray_[kInlineCardTableSize];
+    };
+
+    /// Card boundary table, only used for FixedSizeHeapSegment.
+    /// JumboHeapSegment only has one GCCell and it always lives at the start of
+    /// allocation region.
+    CardBoundaryTable boundaryTable_;
 
     MarkBitArray markBitArray_;
 
-    static constexpr size_t kMetadataSize =
-        sizeof(cardTable_) + sizeof(MarkBitArray);
+    static constexpr size_t kMetadataSize = sizeof(inlineCardsArray_) +
+        sizeof(boundaryTable_) + sizeof(MarkBitArray);
     /// Padding to ensure that the guard page is aligned to a page boundary.
     static constexpr size_t kGuardPagePadding =
         llvh::alignTo<pagesize::kExpectedPageSize>(kMetadataSize) -
@@ -122,19 +194,42 @@ class AlignedHeapSegment {
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
     char allocRegion_[1];
+
+    /// Ensure that each index corresponds to a single byte, so that one card
+    /// byte is mapped to kCardSize heap bytes.
+    static_assert(
+        sizeof(inlineCardsArray_[0]) == 1,
+        "Validate assumption that card table entries are one byte");
+
+    /// The total space at the start of Contents taken up by the
+    /// metadata and guard page in the Contents struct.
+    static constexpr size_t kCardTableUnusedPrefixBytes =
+        Contents::kMetadataAndGuardSize / Contents::kCardSize;
+
+   public:
+    /// A prefix of every segment is occupied by auxiliary data structures:
+    /// 1. Card status array.
+    /// 2. Card boundary array.
+    /// 3. Mark bit array.
+    /// 4. Padding pages and guard pages.
+    /// Only the suffix of the card table that maps to the suffix of entire
+    /// segment that is used for allocation is ever used; the prefix that maps
+    /// to these auxiliary structures is not used. We repurpose this small space
+    /// to store other data, such as SHSegmentInfo and outline cards array
+    /// pointer. The actual first used index should take into account all these
+    /// structures. It's used as starting index for clearing/dirtying range of
+    /// bits. And this index must be larger than the size of prefix space that
+    /// we repurposed, to avoid corrupting it when clearing/dirtying bits.
+    static constexpr size_t kFirstUsedIndex = sizeof(PrefixHeader);
+
+    static_assert(
+        Contents::kFirstUsedIndex <= kCardTableUnusedPrefixBytes,
+        "The first used index in card table should be smaller than the total unused space");
   };
 
   static_assert(
       offsetof(Contents, paddedGuardPage_) == Contents::kMetadataSize,
       "Should not need padding after metadata.");
-
-  /// The total space at the start of the CardTable taken up by the metadata and
-  /// guard page in the Contents struct.
-  static constexpr size_t kCardTableUnusedPrefixBytes =
-      Contents::kMetadataAndGuardSize / CardTable::kHeapBytesPerCardByte;
-  static_assert(
-      sizeof(SHSegmentInfo) < kCardTableUnusedPrefixBytes,
-      "SHSegmentInfo does not fit in available unused CardTable space.");
 
   /// The offset from the beginning of a segment of the allocatable region.
   static constexpr size_t kOffsetOfAllocRegion{
@@ -171,43 +266,114 @@ class AlignedHeapSegment {
     return level_;
   }
 
-  /// Return a reference to the card table covering the memory region managed by
-  /// this segment.
-  CardTable &cardTable() const {
-    return contents()->cardTable_;
+  /// Returns the end card table index for this segment.
+  size_t getEndCardIndex() const {
+    return contents()->getSegmentSize() >> Contents::kLogCardSize;
   }
 
-  /// Given a \p cell lives in the memory region of some valid segment \c s,
-  /// returns a pointer to the CardTable covering the segment containing the
-  /// cell. Note that this takes a GCCell pointer in order to correctly get
-  /// the segment starting address for JumboHeapSegment.
-  ///
-  /// \pre There exists a currently alive heap in which \p cell is allocated.
-  static CardTable *cardTableCovering(const GCCell *cell) {
-    return &contents(alignedStorageStart(cell))->cardTable_;
+  /// Returns the card table index corresponding to a byte at the given address.
+  size_t addressToCardIndex(const void *addr) {
+    return addressToCardIndex(contents(), addr);
   }
 
-  /// Find the head of the first cell that extends into the card at index
-  /// \p cardIdx.
-  /// \return A cell such that
-  /// cell <= indexToAddress(cardIdx) < cell->nextCell().
-  GCCell *getFirstCellHead(size_t cardIdx) {
-    CardTable &cards = cardTable();
-    GCCell *cell = cards.firstObjForCard(cardIdx);
-    return cell;
+  /// Returns the address corresponding to the given card table index.
+  const char *cardIndexToAddress(size_t index) {
+    return cardIndexToAddress(contents(), index);
   }
 
-  /// Record the head of this cell so it can be found by the card scanner.
-  static void setCellHead(const GCCell *cellStart, const size_t sz) {
-    const char *start = reinterpret_cast<const char *>(cellStart);
-    const char *end = start + sz;
-    CardTable *cards = cardTableCovering(cellStart);
-    auto boundary = cards->nextBoundary(start);
-    // If this object crosses a card boundary, then update boundaries
-    // appropriately.
-    if (boundary.address() < end) {
-      cards->updateBoundaries(&boundary, start, end);
-    }
+  /// Make the card table entry for the given address dirty. his uses the cards_
+  /// pointer instead of the inline cards array, so technically works for both
+  /// small and large objects. But we should only use this for large objects
+  /// since it's less efficient. This specialization is important because it's
+  /// used in write barriers, which are performance critical functions.
+  /// \pre \p addr is required to be an address covered by the card table.
+  static void dirtyCardForAddressInLargeObj(
+      const GCCell *owningObj,
+      const void *addr) {
+    auto *segContents = contents(alignedStorageStart(owningObj));
+    size_t index = addressToCardIndex(segContents, addr);
+    segContents->prefixHeader_.cards_[index].store(
+        Contents::CardStatus::Dirty, std::memory_order_relaxed);
+  }
+  void dirtyCardForAddressInLargeObj(const void *addr) {
+    size_t index = addressToCardIndex(contents(), addr);
+    contents()->prefixHeader_.cards_[index].store(
+        Contents::CardStatus::Dirty, std::memory_order_relaxed);
+  }
+
+  /// Make the card table entries for cards that intersect the given address
+  /// range dirty. The range is a closed interval [low, high]. This works for
+  /// both small and large objects.
+  /// \pre \p low and \p high are required to be addresses covered by the card
+  /// table.
+  static void dirtyCardsForAddressRange(
+      const GCCell *owningObj,
+      const void *low,
+      const void *high) {
+    auto *segContents = contents(alignedStorageStart(owningObj));
+    high = reinterpret_cast<const char *>(high) + Contents::kCardSize - 1;
+    cleanOrDirtyRange(
+        segContents,
+        addressToCardIndex(segContents, low),
+        addressToCardIndex(segContents, high),
+        Contents::CardStatus::Dirty);
+  }
+  void dirtyCardsForAddressRange(const void *low, const void *high) {
+    high = reinterpret_cast<const char *>(high) + Contents::kCardSize - 1;
+    cleanOrDirtyRange(
+        contents(),
+        addressToCardIndex(low),
+        addressToCardIndex(high),
+        Contents::CardStatus::Dirty);
+  }
+
+  /// Returns whether the card table entry for the given address is dirty. This
+  /// works for both small and large objects (and is only used in debug code).
+  /// \pre \p addr is required to be an address covered by the card table.
+  static bool isCardForAddressDirty(const GCCell *owningObj, const void *addr) {
+    auto *segContents = contents(alignedStorageStart(owningObj));
+    auto index = addressToCardIndex(segContents, addr);
+    return segContents->prefixHeader_.cards_[index].load(
+               std::memory_order_relaxed) == Contents::CardStatus::Dirty;
+  }
+  bool isCardForAddressDirty(const void *addr) {
+    return isCardForIndexDirty(addressToCardIndex(addr));
+  }
+
+  /// Returns whether the card table entry for the given index is dirty. This
+  /// works for both small and large objects (and is only used in debug code).
+  /// \pre \p index is required to be a valid card table index.
+  bool isCardForIndexDirty(size_t index) {
+    return contents()->prefixHeader_.cards_[index].load(
+               std::memory_order_relaxed) == Contents::CardStatus::Dirty;
+  }
+
+  /// If there is a dirty card at or after \p fromIndex, at an index less than
+  /// \p endIndex, returns the index of the dirty card, else returns none.
+  OptValue<size_t> findNextDirtyCard(size_t fromIndex, size_t endIndex) const {
+    return findNextCardWithStatus(
+        Contents::CardStatus::Dirty, fromIndex, endIndex);
+  }
+
+  /// If there is a card at or after \p fromIndex, at an index less than
+  /// \p endIndex, returns the index of the clean card, else returns none.
+  OptValue<size_t> findNextCleanCard(size_t fromIndex, size_t endIndex) const {
+    return findNextCardWithStatus(
+        Contents::CardStatus::Clean, fromIndex, endIndex);
+  }
+
+  /// Clears the card table.
+  void clearAllCards() const {
+    cleanOrDirtyRange(
+        contents(),
+        Contents::kFirstUsedIndex,
+        getEndCardIndex(),
+        Contents::CardStatus::Clean);
+  }
+
+  /// \return The card boundary table.
+  CardBoundaryTable &cardBoundaryTable() const {
+    return contents()->boundaryTable_;
   }
 
   /// Return a reference to the mark bit array covering the memory region
@@ -259,6 +425,18 @@ class AlignedHeapSegment {
   }
 
  protected:
+  /// Return a pointer to the contents of the memory region managed by this
+  /// segment.
+  Contents *contents() const {
+    return reinterpret_cast<Contents *>(lowLim_);
+  }
+
+  /// Given the \p lowLim of some valid segment's memory region, returns a
+  /// pointer to the Contents laid out in the storage, assuming it exists.
+  static Contents *contents(void *lowLim) {
+    return reinterpret_cast<Contents *>(lowLim);
+  }
+
   AlignedHeapSegment() = default;
 
   /// Construct Contents() at the address of \p lowLim.
@@ -270,16 +448,70 @@ class AlignedHeapSegment {
   AlignedHeapSegment(AlignedHeapSegment &&);
   AlignedHeapSegment &operator=(AlignedHeapSegment &&);
 
-  /// Return a pointer to the contents of the memory region managed by this
-  /// segment.
-  Contents *contents() const {
-    return reinterpret_cast<Contents *>(lowLim_);
+  /// Returns the card table index corresponding to a byte at the given
+  /// address.
+  /// \pre \p addr must be within the bounds of the segment owning this card
+  /// table or at most 1 card after it, that is to say
+  ///
+  ///    segment.lowLim() <= addr < segment.hiLim() + kCardSize
+  ///
+  /// Note that we allow the extra card after the segment in order to simplify
+  /// the logic for callers that are using this function to generate an open
+  /// interval of card indices. See \c dirtyCardsForAddressRange for an
+  /// example of how this is used.
+  static size_t addressToCardIndex(Contents *segContents, const void *addr)
+      LLVM_NO_SANITIZE("null") {
+    auto addrPtr = reinterpret_cast<const char *>(addr);
+    auto *base = reinterpret_cast<char *>(segContents);
+    assert(
+        base <= addrPtr &&
+        addrPtr <
+            (base + segContents->getSegmentSize() + Contents::kCardSize) &&
+        "address is required to be within range.");
+    return (addrPtr - base) >> Contents::kLogCardSize;
   }
 
-  /// Given the \p lowLim of some valid segment's memory region, returns a
-  /// pointer to the Contents laid out in the storage, assuming it exists.
-  static Contents *contents(void *lowLim) {
-    return reinterpret_cast<Contents *>(lowLim);
+  /// Returns the address corresponding to the given card table index.
+  ///
+  /// \pre \p index is bounded:
+  ///
+  ///     0 <= index <= getEndCardIndex()
+  static const char *cardIndexToAddress(Contents *segContents, size_t index) {
+    assert(
+        index <= (segContents->getSegmentSize() >> Contents::kLogCardSize) &&
+        "index must be within the index range");
+    auto *base = reinterpret_cast<char *>(segContents);
+    const char *res = base + (index << Contents::kLogCardSize);
+    assert(
+        base <= res && res <= (base + segContents->getSegmentSize()) &&
+        "result must be within the covered range");
+    return res;
+  }
+
+  /// Clean or dirty the cards within the given range.
+  static void cleanOrDirtyRange(
+      Contents *segContents,
+      size_t from,
+      size_t to,
+      Contents::CardStatus cleanOrDirty) {
+    for (size_t index = from; index < to; index++) {
+      segContents->prefixHeader_.cards_[index].store(
+          cleanOrDirty, std::memory_order_relaxed);
+    }
+  }
+
+  /// \return the index of the first card in the range [fromIndex, endIndex)
+  /// with value \p status, or none if one does not exist.
+  OptValue<size_t> findNextCardWithStatus(
+      Contents::CardStatus status,
+      size_t fromIndex,
+      size_t endIndex) const {
+    for (size_t idx = fromIndex; idx < endIndex; idx++)
+      if (contents()->prefixHeader_.cards_[idx].load(
+              std::memory_order_relaxed) == status)
+        return idx;
+
+    return llvh::None;
   }
 
  private:
@@ -308,14 +540,15 @@ class AlignedHeapSegment {
 /// JumboHeapSegment has custom storage size that must be a multiple of
 /// kSegmentUnitSize. Each such segment can only allocate a single object that
 /// occupies the entire allocation space. Therefore, the inline MarkBitArray is
-/// large enough, while CardTable needs to allocate its cards and boundaries
-/// arrays separately.
+/// large enough, while card status array needs to be allocated separately. The
+/// card boundary table is unused, since the GCCell always lives at the start
+/// of the allocation region.
 class JumboHeapSegment : public AlignedHeapSegment {};
 
-/// FixedSizeHeapSegment has fixed storage size kSegmentUnitSize. Its CardTable
-/// and MarkBitArray are stored inline right before the allocation space. This
-/// is used for all allocations in YoungGen and normal object allocations in
-/// OldGen.
+/// FixedSizeHeapSegment has fixed storage size kSegmentUnitSize. Its
+/// card status and boundary arrays and MarkBitArray are stored inline right
+/// before the allocation region. This is used for all allocations in YoungGen
+/// and normal object allocations in OldGen.
 class FixedSizeHeapSegment : public AlignedHeapSegment {
   /// The upper limit of the space that we can currently allocated into;
   /// this may be decreased when externally allocated memory is credited to
@@ -396,11 +629,64 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   /// space, returns {nullptr, false}.
   inline AllocResult alloc(uint32_t size);
 
-  /// Given a \p ptr into the memory region of some valid segment \c s, returns
-  /// a pointer to the CardTable covering the segment containing the pointer.
-  ///
-  /// \pre There exists a currently alive heap that claims to contain \c ptr.
-  inline static CardTable *cardTableCovering(const void *ptr);
+  /// Make the card table entry for the given address dirty. This uses the
+  /// inline cards array and hence more efficient that the version in the base
+  /// class. This specialization is important because it's used in write
+  /// barriers, which are performance critical functions.
+  /// \pre \p addr is required to be an address covered by the card table.
+  static void dirtyCardForAddress(const void *addr) {
+    auto *segContents = contents(storageStart(addr));
+    size_t index = addressToCardIndex(segContents, addr);
+    segContents->inlineCardsArray_[index].store(
+        Contents::CardStatus::Dirty, std::memory_order_relaxed);
+  }
+
+  /// Make the card table entries for cards that intersect the given address
+  /// range dirty. The range is a closed interval [low, high].
+  /// \pre \p low and \p high are required to be addresses covered by the card
+  /// table.
+  static void dirtyCardsForAddressRange(const void *low, const void *high) {
+    auto *segContents = contents(storageStart(low));
+    high = reinterpret_cast<const char *>(high) + Contents::kCardSize - 1;
+    cleanOrDirtyRange(
+        segContents,
+        addressToCardIndex(segContents, low),
+        addressToCardIndex(segContents, high),
+        Contents::CardStatus::Dirty);
+  }
+
+  /// Returns whether the card table entry for the given address is dirty.
+  /// \pre \p addr is required to be an address covered by the card table.
+  static bool isCardForAddressDirty(const void *addr) {
+    auto *segContents = contents(storageStart(addr));
+    return segContents->prefixHeader_
+               .cards_[addressToCardIndex(segContents, addr)]
+               .load(std::memory_order_relaxed) == Contents::CardStatus::Dirty;
+  }
+
+  /// Find the head of the first cell that extends into the card at index
+  /// \p cardIdx.
+  /// \return A cell such that
+  /// cell <= cardIndexToAddress(cardIdx) < cell->nextCell().
+  GCCell *getFirstCellHead(size_t cardIdx) {
+    GCCell *cell = contents()->boundaryTable_.firstObjForCard(
+        lowLim(), lowLim() + contents()->getSegmentSize(), cardIdx);
+    return cell;
+  }
+
+  /// Record the head of this cell so it can be found by the card scanner.
+  static void setCellHead(const GCCell *cellStart, const size_t sz) {
+    const char *start = reinterpret_cast<const char *>(cellStart);
+    const char *end = start + sz;
+    auto *segContents = contents(storageStart(cellStart));
+    auto &boundaryTable = segContents->boundaryTable_;
+    auto boundary = boundaryTable.nextBoundary(start);
+    // If this object crosses a card boundary, then update boundaries
+    // appropriately.
+    if (boundary.address() < end) {
+      boundaryTable.updateBoundaries(&boundary, start, end);
+    }
+  }
 
   /// The largest size the allocation region of an aligned heap segment could
   /// be.
@@ -523,11 +809,6 @@ AllocResult FixedSizeHeapSegment::alloc(uint32_t size) {
 
   auto *cell = reinterpret_cast<GCCell *>(cellPtr);
   return {cell, true};
-}
-
-/* static */ CardTable *FixedSizeHeapSegment::cardTableCovering(
-    const void *ptr) {
-  return &FixedSizeHeapSegment::contents(storageStart(ptr))->cardTable_;
 }
 
 /* static */ constexpr size_t FixedSizeHeapSegment::maxSize() {

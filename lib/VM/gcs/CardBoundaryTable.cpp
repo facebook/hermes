@@ -7,7 +7,7 @@
 
 #define DEBUG_TYPE "gc"
 
-#include "hermes/VM/CardTableNC.h"
+#include "hermes/VM/CardBoundaryTable.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 
 #include "hermes/Support/OSCompat.h"
@@ -20,63 +20,16 @@
 namespace hermes {
 namespace vm {
 
-void CardTable::dirtyCardsForAddressRange(const void *low, const void *high) {
-  // If high is in the middle of some card, ensure that we dirty that card.
-  high = reinterpret_cast<const char *>(high) + kCardSize - 1;
-  dirtyRange(addressToIndex(low), addressToIndex(high));
-}
-
-OptValue<size_t> CardTable::findNextCardWithStatus(
-    CardStatus status,
-    size_t fromIndex,
-    size_t endIndex) const {
-  for (size_t idx = fromIndex; idx < endIndex; idx++)
-    if (cards_[idx].load(std::memory_order_relaxed) == status)
-      return idx;
-
-  return llvh::None;
-}
-
-void CardTable::clear() {
-  cleanRange(kFirstUsedIndex, getEndIndex());
-}
-
-void CardTable::updateAfterCompaction(const void *newLevel) {
-  const char *newLevelPtr = static_cast<const char *>(newLevel);
-  size_t firstCleanCardIndex = addressToIndex(newLevelPtr + kCardSize - 1);
-  assert(
-      firstCleanCardIndex <= getEndIndex() &&
-      firstCleanCardIndex >= kFirstUsedIndex && "Invalid index.");
-  // Dirty the occupied cards (below the level), and clean the cards above the
-  // level.
-  dirtyRange(kFirstUsedIndex, firstCleanCardIndex);
-  cleanRange(firstCleanCardIndex, getEndIndex());
-}
-
-void CardTable::cleanRange(size_t from, size_t to) {
-  cleanOrDirtyRange(from, to, CardStatus::Clean);
-}
-
-void CardTable::dirtyRange(size_t from, size_t to) {
-  cleanOrDirtyRange(from, to, CardStatus::Dirty);
-}
-
-void CardTable::cleanOrDirtyRange(
-    size_t from,
-    size_t to,
-    CardStatus cleanOrDirty) {
-  for (size_t index = from; index < to; index++) {
-    cards_[index].store(cleanOrDirty, std::memory_order_relaxed);
-  }
-}
-
-void CardTable::updateBoundaries(
-    CardTable::Boundary *boundary,
+void CardBoundaryTable::updateBoundaries(
+    CardBoundaryTable::Boundary *boundary,
     const char *start,
     const char *end) {
   assert(boundary != nullptr && "Need a boundary cursor");
   assert(
-      base() <= start && end <= storageEnd(base()) &&
+      FixedSizeHeapSegment::containedInSame(start, end - 1) &&
+      "The boundary range must be covered by the same segment");
+  assert(
+      storageStart(start) <= start && end <= storageEnd(start) &&
       "Precondition: [start, end) must be covered by this table.");
   assert(
       boundary->index() == addressToIndex(boundary->address()) &&
@@ -113,7 +66,10 @@ void CardTable::updateBoundaries(
   }
 }
 
-GCCell *CardTable::firstObjForCard(unsigned index) const {
+GCCell *CardBoundaryTable::firstObjForCard(
+    const char *lowLim,
+    const char *hiLim,
+    unsigned index) const {
   int8_t val = boundaries_[index];
 
   // If val is negative, it means skip backwards some number of cards.
@@ -124,42 +80,24 @@ GCCell *CardTable::firstObjForCard(unsigned index) const {
     val = boundaries_[index];
   }
 
-  char *boundary = const_cast<char *>(indexToAddress(index));
+  char *boundary = const_cast<char *>(indexToAddress(lowLim, index));
   char *resPtr = boundary - (val << LogHeapAlign);
   return reinterpret_cast<GCCell *>(resPtr);
 }
 
-#ifdef HERMES_EXTRA_DEBUG
-static void
-protectBoundaryTableWork(void *table, size_t sz, oscompat::ProtectMode mode) {
-  assert((reinterpret_cast<uintptr_t>(table) % oscompat::page_size()) == 0);
-  assert((sz % oscompat::page_size()) == 0);
-  bool res = oscompat::vm_protect(table, sz, mode);
-  (void)res;
-  assert(res);
-}
-
-void CardTable::protectBoundaryTable() {
-  protectBoundaryTableWork(
-      &boundaries_[0], getEndIndex(), oscompat::ProtectMode::None);
-}
-
-void CardTable::unprotectBoundaryTable() {
-  protectBoundaryTableWork(
-      &boundaries_[0], getEndIndex(), oscompat::ProtectMode::ReadWrite);
-}
-#endif // HERMES_EXTRA_DEBUG
-
 #ifdef HERMES_SLOW_DEBUG
-void CardTable::verifyBoundaries(char *start, char *level) const {
+void CardBoundaryTable::verifyBoundaries(char *start, char *level) const {
   // Start should be card-aligned.
   assert(isCardAligned(start));
-  for (unsigned index = addressToIndex(start); index < getEndIndex(); index++) {
-    const char *boundary = indexToAddress(index);
+  auto *lowLim = storageStart(start);
+  auto *hiLim = storageEnd(start);
+  size_t endIndex = (hiLim - lowLim) >> kLogCardSize;
+  for (unsigned index = addressToIndex(start); index < endIndex; index++) {
+    const char *boundary = indexToAddress(lowLim, index);
     if (level <= boundary) {
       break;
     }
-    GCCell *cell = firstObjForCard(index);
+    GCCell *cell = firstObjForCard(lowLim, hiLim, index);
     // Should be a valid cell.
     assert(
         cell->isValid() &&
