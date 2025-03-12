@@ -45,7 +45,10 @@ HermesValue HermesValue32::unboxToHV(PointerBase &pb) const {
     auto toHV64Tag = [](Tag tag) {
       // Compute the HV64 tag by applying an offset to the HV32 tag.
       auto offs = (uint32_t)HermesValue::Tag::Str - (uint32_t)Tag::String;
-      return (HermesValue::Tag)(offs + (uint32_t)tag);
+      // Note that we can use | here instead of + here because we know that the
+      // HV32 pointer tags are only 2 bits, and the two low bits of offs are 0.
+      // At least on arm64, this meaningfully improves the generated code.
+      return (HermesValue::Tag)(offs | (uint32_t)tag);
     };
     // Check that the calculation is correct.
     static_assert(toHV64Tag(Tag::Object) == HermesValue::Tag::Object);
