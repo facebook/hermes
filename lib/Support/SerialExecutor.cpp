@@ -5,6 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "llvh/Config/llvm-config.h"
+
+#if LLVM_ENABLE_THREADS
+
 #include <cassert>
 #include <utility>
 
@@ -114,3 +118,5 @@ void *SerialExecutor::threadMain(void *p) {
 }
 
 } // namespace hermes
+
+#endif
