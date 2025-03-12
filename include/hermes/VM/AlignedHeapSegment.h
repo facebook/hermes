@@ -12,20 +12,17 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AdviseUnused.h"
 #include "hermes/VM/AllocResult.h"
-#include "hermes/VM/AllocSource.h"
 #include "hermes/VM/CardTableNC.h"
-#include "hermes/VM/GCBase.h"
-#include "hermes/VM/GCCell.h"
 #include "hermes/VM/HeapAlign.h"
 
 #include "llvh/Support/MathExtras.h"
 
 #include <cstdint>
-#include <vector>
 
 namespace hermes {
 namespace vm {
 
+class GCCell;
 class StorageProvider;
 
 #ifndef HERMESVM_LOG_HEAP_SEGMENT_SIZE
@@ -191,30 +188,6 @@ class AlignedHeapSegment {
           0,
       "Guard page must be aligned to likely page size");
 
-  class HeapCellIterator : public llvh::iterator_facade_base<
-                               HeapCellIterator,
-                               std::forward_iterator_tag,
-                               GCCell *> {
-   public:
-    HeapCellIterator(GCCell *cell) : cell_(cell) {}
-
-    bool operator==(const HeapCellIterator &R) const {
-      return cell_ == R.cell_;
-    }
-
-    GCCell *const &operator*() const {
-      return cell_;
-    }
-
-    HeapCellIterator &operator++() {
-      cell_ = cell_->nextCell();
-      return *this;
-    }
-
-   private:
-    GCCell *cell_{nullptr};
-  };
-
   /// Returns the index of the segment containing \p lowLim, which is required
   /// to be the start of its containing segment.  (This can allow extra
   /// efficiency, in cases where the segment start has already been computed.)
@@ -333,9 +306,6 @@ class AlignedHeapSegment {
   /// Returns the address at which the next allocation, if any, will occur.
   inline char *level() const;
 
-  /// Returns an iterator range corresponding to the cells in this segment.
-  inline llvh::iterator_range<HeapCellIterator> cells();
-
   /// Returns whether \p a and \p b are contained in the same
   /// AlignedHeapSegment.
   inline static bool containedInSame(const void *a, const void *b);
@@ -425,7 +395,6 @@ class AlignedHeapSegment {
 
 AllocResult AlignedHeapSegment::alloc(uint32_t size) {
   assert(lowLim() != nullptr && "Cannot allocate in a null segment");
-  assert(size >= sizeof(GCCell) && "cell must be larger than GCCell");
   assert(isSizeHeapAligned(size) && "size must be heap aligned");
 
   char *cellPtr; // Initialized in the if below.
@@ -543,13 +512,6 @@ char *AlignedHeapSegment::end() const {
 
 char *AlignedHeapSegment::level() const {
   return level_;
-}
-
-llvh::iterator_range<AlignedHeapSegment::HeapCellIterator>
-AlignedHeapSegment::cells() {
-  return {
-      HeapCellIterator(reinterpret_cast<GCCell *>(start())),
-      HeapCellIterator(reinterpret_cast<GCCell *>(level()))};
 }
 
 /* static */
