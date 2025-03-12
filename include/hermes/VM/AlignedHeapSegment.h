@@ -159,11 +159,6 @@ class AlignedHeapSegment {
     return lowLim_;
   }
 
-  /// Returns the address that is the upper bound of the segment.
-  char *hiLim() const {
-    return lowLim_ + kSegmentUnitSize;
-  }
-
   /// Returns the address at which the first allocation in this segment would
   /// occur.
   /// Disable UB sanitization because 'this' may be null during the tests.
@@ -263,16 +258,14 @@ class AlignedHeapSegment {
     segInfo->index = index;
   }
 
-#ifndef NDEBUG
-  /// Set the contents of the segment to a dead value.
-  void clear();
-#endif
-
  protected:
   AlignedHeapSegment() = default;
 
   /// Construct Contents() at the address of \p lowLim.
-  AlignedHeapSegment(StorageProvider *provider, void *lowLim);
+  AlignedHeapSegment(
+      StorageProvider *provider,
+      void *lowLim,
+      size_t segmentSize);
 
   AlignedHeapSegment(AlignedHeapSegment &&);
   AlignedHeapSegment &operator=(AlignedHeapSegment &&);
@@ -341,7 +334,7 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   /// Mask for isolating the storage being pointed into by a pointer.
   static constexpr size_t kHighMask{~kLowMask};
 
-  /// Returns the storage size, in bytes, of an \c FixedSizeHeapSegment.
+  /// Returns the storage size, in bytes, of a \c FixedSizeHeapSegment.
   static constexpr size_t storageSize() {
     return kSize;
   }
@@ -538,7 +531,7 @@ AllocResult FixedSizeHeapSegment::alloc(uint32_t size) {
 }
 
 /* static */ constexpr size_t FixedSizeHeapSegment::maxSize() {
-  return storageSize() - offsetof(Contents, allocRegion_);
+  return storageSize() - kOffsetOfAllocRegion;
 }
 
 size_t FixedSizeHeapSegment::size() const {

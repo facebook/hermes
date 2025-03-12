@@ -44,18 +44,22 @@ void AlignedHeapSegment::Contents::protectGuardPage(
   }
 }
 
-AlignedHeapSegment::AlignedHeapSegment(StorageProvider *provider, void *lowLim)
+AlignedHeapSegment::AlignedHeapSegment(
+    StorageProvider *provider,
+    void *lowLim,
+    size_t segmentSize)
     : provider_(provider), lowLim_(reinterpret_cast<char *>(lowLim)) {
   // Storage end must be page-aligned so that markUnused below stays in
   // segment.
   assert(
-      reinterpret_cast<uintptr_t>(hiLim()) % oscompat::page_size() == 0 &&
+      ((reinterpret_cast<uintptr_t>(lowLim) + segmentSize) %
+       oscompat::page_size()) == 0 &&
       "The higher limit must be page aligned");
   new (contents()) Contents();
   contents()->protectGuardPage(oscompat::ProtectMode::None);
 
 #ifndef NDEBUG
-  clear();
+  clearRange(start(), static_cast<char *>(lowLim_) + segmentSize);
 #endif
 }
 
@@ -81,12 +85,13 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   if (lowLim() == nullptr) {
     return;
   }
+  size_t segmentSize = cardTable().getSegmentSize();
   contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
   contents()->~Contents();
-  __asan_unpoison_memory_region(start(), hiLim() - start());
+  __asan_unpoison_memory_region(start(), segmentSize - kOffsetOfAllocRegion);
 
   if (provider_) {
-    provider_->deleteStorage(lowLim_, kSegmentUnitSize);
+    provider_->deleteStorage(lowLim_, segmentSize);
   }
 }
 
@@ -104,7 +109,7 @@ llvh::ErrorOr<FixedSizeHeapSegment> FixedSizeHeapSegment::create(
 FixedSizeHeapSegment::FixedSizeHeapSegment(
     StorageProvider *provider,
     void *lowLim)
-    : AlignedHeapSegment(provider, lowLim) {}
+    : AlignedHeapSegment(provider, lowLim, kSize) {}
 
 void FixedSizeHeapSegment::markUnused(char *start, char *end) {
   assert(
@@ -176,10 +181,6 @@ bool FixedSizeHeapSegment::dbgContainsLevel(const void *lvl) const {
 bool FixedSizeHeapSegment::validPointer(const void *p) const {
   return start() <= p && p < level() &&
       static_cast<const GCCell *>(p)->isValid();
-}
-
-void AlignedHeapSegment::clear() {
-  clearRange(start(), hiLim());
 }
 
 /* static */ void FixedSizeHeapSegment::checkUnwritten(char *start, char *end) {
