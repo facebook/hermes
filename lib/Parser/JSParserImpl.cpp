@@ -67,6 +67,7 @@ void JSParserImpl::initializeIdentifiers() {
   packageIdent_ = lexer_.getIdentifier("package");
   privateIdent_ = lexer_.getIdentifier("private");
   protectedIdent_ = lexer_.getIdentifier("protected");
+  prototypeIdent_ = lexer_.getIdentifier("prototype");
   publicIdent_ = lexer_.getIdentifier("public");
   staticIdent_ = lexer_.getIdentifier("static");
   methodIdent_ = lexer_.getIdentifier("method");
@@ -89,7 +90,6 @@ void JSParserImpl::initializeIdentifiers() {
   keyofIdent_ = lexer_.getIdentifier("keyof");
   declareIdent_ = lexer_.getIdentifier("declare");
   protoIdent_ = lexer_.getIdentifier("proto");
-  prototypeIdent_ = lexer_.getIdentifier("prototype");
   opaqueIdent_ = lexer_.getIdentifier("opaque");
   plusIdent_ = lexer_.getIdentifier("plus");
   minusIdent_ = lexer_.getIdentifier("minus");

@@ -255,11 +255,15 @@ static opt<bool> Pretty(
     desc("Pretty print JSON, JS or disassembled bytecode"),
     cat(CompilerCategory));
 
+#if HERMES_PARSE_FLOW
 static opt<bool> Typed(
     "typed",
     init(false),
     desc("Enable typed mode"),
     cat(CompilerCategory));
+#else
+static constexpr bool Typed = false;
+#endif
 
 cl::opt<bool> Script(
     "script",
@@ -1165,6 +1169,7 @@ std::shared_ptr<Context> createContext(
   }
 #endif
 
+#if HERMES_PARSE_FLOW
   // If no type parser is specified, use flow by default.
   if (cl::Typed && !cl::ParseFlow
 #if HERMES_PARSE_TS
@@ -1173,7 +1178,6 @@ std::shared_ptr<Context> createContext(
   )
     cl::ParseFlow = true;
 
-#if HERMES_PARSE_FLOW
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
   }

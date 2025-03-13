@@ -1959,9 +1959,11 @@ bool SemanticResolver::extractDeclaredIdentsFromID(
     return containsExpr;
   }
 
+#if HERMES_PARSE_FLOW
   if (auto *param = llvh::dyn_cast<ComponentParameterNode>(node)) {
     return extractDeclaredIdentsFromID(param->_local, idents);
   }
+#endif
 
   sm_.error(node->getSourceRange(), "invalid destructuring target");
   return false;

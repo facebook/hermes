@@ -794,6 +794,7 @@ ESTree::NodePtr parseJS(
     return parsedAST;
   }
 
+#if HERMES_PARSE_FLOW && HERMES_PARSE_TS
   // Convert TS AST to Flow AST as an intermediate step until we have a
   // separate TS type checker.
   if (flowContext && context->getParseTS()) {
@@ -802,6 +803,7 @@ ESTree::NodePtr parseJS(
       return nullptr;
     }
   }
+#endif
 
   // If we are executing in typed mode and not script, then wrap the program.
   if (shouldWrapInIIFE) {

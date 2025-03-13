@@ -34,6 +34,7 @@
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/SaveAndRestore.h"
 
+#if HERMES_PARSE_FLOW
 #define DEBUG_TYPE "FlowChecker"
 
 namespace hermes {
@@ -972,3 +973,5 @@ Type *FlowChecker::resolveGenericTypeAlias(
 
 } // namespace flow
 } // namespace hermes
+
+#endif // HERMES_PARSE_FLOW

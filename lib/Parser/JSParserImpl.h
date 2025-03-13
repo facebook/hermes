@@ -276,6 +276,7 @@ class JSParserImpl {
   UniqueString *packageIdent_;
   UniqueString *privateIdent_;
   UniqueString *protectedIdent_;
+  UniqueString *prototypeIdent_;
   UniqueString *publicIdent_;
   UniqueString *staticIdent_;
   UniqueString *methodIdent_;
@@ -298,7 +299,6 @@ class JSParserImpl {
   UniqueString *keyofIdent_;
   UniqueString *declareIdent_;
   UniqueString *protoIdent_;
-  UniqueString *prototypeIdent_;
   UniqueString *opaqueIdent_;
   UniqueString *plusIdent_;
   UniqueString *minusIdent_;

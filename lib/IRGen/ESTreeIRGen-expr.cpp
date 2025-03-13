@@ -216,6 +216,7 @@ Value *ESTreeIRGen::_genExpressionImpl(
         flowTypeToIRType(flowContext_.getNodeTypeOrAny(ICK)));
   }
 
+#if HERMES_PARSE_FLOW
   if (auto *TC = llvh::dyn_cast<ESTree::TypeCastExpressionNode>(expr)) {
     return Builder.createCheckedTypeCastInst(
         genExpression(TC->_expression, nameHint),
@@ -226,6 +227,7 @@ Value *ESTreeIRGen::_genExpressionImpl(
         genExpression(TC->_expression, nameHint),
         flowTypeToIRType(flowContext_.getNodeTypeOrAny(TC)));
   }
+#endif
 
   Builder.getModule()->getContext().getSourceErrorManager().error(
       expr->getSourceRange(), Twine("Invalid expression encountered"));

@@ -24,6 +24,7 @@
 
 #include "FlowChecker.h"
 
+#if HERMES_PARSE_FLOW
 #define DEBUG_TYPE "FlowChecker"
 
 namespace hermes {
@@ -1978,3 +1979,5 @@ void FlowChecker::visitExpression(
 
 } // namespace flow
 } // namespace hermes
+
+#endif // HERMES_PARSE_FLOW

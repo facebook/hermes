@@ -18,6 +18,8 @@
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Support/StackExecutor.h"
 
+#if HERMES_PARSE_FLOW
+
 namespace hermes {
 namespace flow {
 
@@ -963,4 +965,5 @@ Type *FlowChecker::processObjectTypeAnnotation(
 } // namespace flow
 } // namespace hermes
 
-#endif
+#endif // HERMES_PARSE_FLOW
+#endif // HERMES_SEMA_FLOWCHECKER_H

@@ -48,9 +48,12 @@ class ASTPrinter {
     os_ << "\n";
   }
 
+#if HERMES_PARSE_FLOW
   bool shouldVisit(ESTree::TypeAnnotationNode *V) {
     return false;
   }
+#endif
+
   bool shouldVisit(ESTree::Node *V) {
     // If current parent node has been linearized, skip visiting children node.
     return !parentLinearized_;
@@ -172,6 +175,7 @@ bool resolveAST(
   if (!resolver.run(root))
     return false;
 
+#if HERMES_PARSE_FLOW
   if (flowContext) {
     flow::FlowChecker checker(
         astContext, semCtx, *flowContext, declCollectorMap, true);
@@ -181,6 +185,7 @@ bool resolveAST(
     if (!lowerAST(astContext, semCtx, *flowContext, programNode))
       return false;
   }
+#endif
 
   return true;
 }

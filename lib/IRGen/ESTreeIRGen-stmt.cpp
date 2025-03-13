@@ -212,8 +212,10 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return genExportAllDeclaration(exportDecl);
   }
 
+#if HERMES_PARSE_FLOW
   if (llvh::isa<ESTree::TypeAliasNode>(stmt))
     return;
+#endif
 
   if (auto *classDecl = llvh::dyn_cast<ESTree::ClassDeclarationNode>(stmt)) {
     return genClassDeclaration(classDecl);

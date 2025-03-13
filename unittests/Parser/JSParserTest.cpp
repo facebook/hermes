@@ -21,7 +21,7 @@ using namespace hermes;
 namespace {
 
 /// Utility for asserting the type of the first expression in a program.
-void assertFirstExpressionType(
+[[maybe_unused]] void assertFirstExpressionType(
     llvh::Optional<ESTree::ProgramNode *> parsed,
     std::function<bool(const hermes::ESTree::NodePtr &)> isType) {
   ASSERT_TRUE(parsed.hasValue());
@@ -195,6 +195,7 @@ TEST(JSParserTest, TestUnterminatedBOMInDirective) {
   EXPECT_EQ(sm.getErrorCount(), 2);
 }
 
+#if HERMES_PARSE_FLOW
 TEST(JSParserTest, TestAmbiguousCallFlowSyntax) {
   // In regular Flow mode, call expressions with type arguments are parsed
   Context context1;
@@ -242,6 +243,7 @@ TEST(JSParserTest, TestAmbiguousNewFlowSyntax) {
       parsed2,
       llvh::isa<ESTree::BinaryExpressionNode, hermes::ESTree::NodePtr>);
 }
+#endif
 
 TEST(JSParserTest, TestStoredTokens) {
   Context context;
