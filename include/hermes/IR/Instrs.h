@@ -1855,6 +1855,7 @@ class DefineNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
     assert(
         object->getType().isObjectType() &&
         "object operand must be known to be an object");
+    assert(isEnumerable->getValue() && "isEnumerable should be true");
   }
 
   explicit DefineNewOwnPropertyInst(

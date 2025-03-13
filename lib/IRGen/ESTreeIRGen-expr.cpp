@@ -1594,10 +1594,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
               IRBuilder::PropEnumerable::Yes);
         } else {
           Builder.createDefineNewOwnPropertyInst(
-              Builder.getLiteralNull(),
-              Obj,
-              Key,
-              IRBuilder::PropEnumerable::Yes);
+              Builder.getLiteralNull(), Obj, Key);
         }
         propValue->state = PropertyValue::Placeholder;
       }
@@ -1658,8 +1655,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         Builder.createDefineOwnPropertyInst(
             value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       } else {
-        Builder.createDefineNewOwnPropertyInst(
-            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
+        Builder.createDefineNewOwnPropertyInst(value, Obj, Key);
       }
       propValue->state = PropertyValue::IRGenerated;
     } else {

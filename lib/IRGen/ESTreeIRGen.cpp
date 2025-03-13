@@ -1095,8 +1095,7 @@ void ESTreeIRGen::emitRestProperty(
         Builder.createAllocObjectLiteralInst({}, Builder.getLiteralNull());
 
     for (Literal *key : literalExcludedItems)
-      Builder.createDefineNewOwnPropertyInst(
-          zeroValue, excludedObj, key, IRBuilder::PropEnumerable::Yes);
+      Builder.createDefineNewOwnPropertyInst(zeroValue, excludedObj, key);
 
     for (Value *key : computedExcludedItems) {
       Builder.createStorePropertyInst(zeroValue, excludedObj, key);

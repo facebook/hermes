@@ -978,12 +978,9 @@ void HBCISel::generateDefineNewOwnPropertyInst(
   auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
   auto prop = Inst->getProperty();
-  bool isEnumerable = Inst->getIsEnumerable();
+  assert(Inst->getIsEnumerable() && "must be enumerable");
 
   if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
-    assert(
-        isEnumerable &&
-        "No way to generate non-enumerable indexed DefineNewOwnPropertyInst.");
     uint32_t index = *numProp->convertToArrayIndex();
     if (index <= UINT8_MAX) {
       BCFGen_->emitDefineOwnByIndex(objReg, valueReg, index);
@@ -996,20 +993,12 @@ void HBCISel::generateDefineNewOwnPropertyInst(
   auto strProp = cast<LiteralString>(prop);
   auto id = BCFGen_->getIdentifierID(strProp);
 
-  if (isEnumerable) {
-    if (id > UINT16_MAX) {
-      BCFGen_->emitPutNewOwnByIdLong(objReg, valueReg, id);
-    } else if (id > UINT8_MAX) {
-      BCFGen_->emitPutNewOwnById(objReg, valueReg, id);
-    } else {
-      BCFGen_->emitPutNewOwnByIdShort(objReg, valueReg, id);
-    }
+  if (id > UINT16_MAX) {
+    BCFGen_->emitPutNewOwnByIdLong(objReg, valueReg, id);
+  } else if (id > UINT8_MAX) {
+    BCFGen_->emitPutNewOwnById(objReg, valueReg, id);
   } else {
-    if (id > UINT16_MAX) {
-      BCFGen_->emitPutNewOwnNEByIdLong(objReg, valueReg, id);
-    } else {
-      BCFGen_->emitPutNewOwnNEById(objReg, valueReg, id);
-    }
+    BCFGen_->emitPutNewOwnByIdShort(objReg, valueReg, id);
   }
 }
 

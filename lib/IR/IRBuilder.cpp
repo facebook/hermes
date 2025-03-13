@@ -651,13 +651,9 @@ DefineOwnPropertyInst *IRBuilder::createDefineOwnPropertyInst(
 DefineNewOwnPropertyInst *IRBuilder::createDefineNewOwnPropertyInst(
     Value *storedValue,
     Value *object,
-    Literal *property,
-    PropEnumerable isEnumerable) {
+    Literal *property) {
   auto *inst = new DefineNewOwnPropertyInst(
-      storedValue,
-      object,
-      property,
-      getLiteralBool(isEnumerable == PropEnumerable::Yes));
+      storedValue, object, property, getLiteralBool(true));
   insert(inst);
   return inst;
 }

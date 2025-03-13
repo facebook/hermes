@@ -1054,6 +1054,10 @@ bool Verifier::visitDefineNewOwnPropertyInst(
         llvh::isa<LiteralString>(Inst.getProperty()),
         "DefineNewOwnPropertyInst::Property must be a string or number literal");
   }
+  AssertIWithMsg(
+      Inst,
+      Inst.getIsEnumerable(),
+      "DefineNewOwnPropertyInst::IsEnumerable must be true");
   return true;
 }
 

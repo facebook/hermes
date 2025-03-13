@@ -460,8 +460,7 @@ class IRBuilder {
   DefineNewOwnPropertyInst *createDefineNewOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      Literal *property,
-      PropEnumerable isEnumerable);
+      Literal *property);
 
   DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,
