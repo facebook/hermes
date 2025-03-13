@@ -1380,48 +1380,6 @@ extern "C" void _sh_ljs_define_own_by_index(
     _sh_throw_current(shr);
 }
 
-/// Put an enumerable property.
-extern "C" void _sh_ljs_define_new_own_by_id(
-    SHRuntime *shr,
-    SHLegacyValue *target,
-    uint32_t key,
-    SHLegacyValue *value) {
-  Runtime &runtime = getRuntime(shr);
-  ExecutionStatus cr{ExecutionStatus::EXCEPTION};
-  {
-    GCScopeMarkerRAII marker{runtime};
-    cr = JSObject::defineNewOwnProperty(
-        Handle<JSObject>::vmcast(toPHV(target)),
-        runtime,
-        SymbolID::unsafeCreate(key),
-        PropertyFlags::defaultNewNamedPropertyFlags(),
-        Handle<>(toPHV(value)));
-  }
-  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
-    _sh_throw_current(shr);
-}
-
-/// Put a non-enumerable property.
-extern "C" void _sh_ljs_define_new_own_ne_by_id(
-    SHRuntime *shr,
-    SHLegacyValue *target,
-    uint32_t key,
-    SHLegacyValue *value) {
-  Runtime &runtime = getRuntime(shr);
-  ExecutionStatus cr{ExecutionStatus::EXCEPTION};
-  {
-    GCScopeMarkerRAII marker{runtime};
-    cr = JSObject::defineNewOwnProperty(
-        Handle<JSObject>::vmcast(toPHV(target)),
-        runtime,
-        SymbolID::unsafeCreate(key),
-        PropertyFlags::nonEnumerablePropertyFlags(),
-        Handle<>(toPHV(value)));
-  }
-  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
-    _sh_throw_current(shr);
-}
-
 /// Put a non-enumerable property.
 extern "C" void _sh_ljs_define_own_getter_setter_by_val(
     SHRuntime *shr,

@@ -633,19 +633,6 @@ SHERMES_EXPORT void _sh_ljs_define_own_by_index(
     uint32_t key,
     SHLegacyValue *value);
 
-/// Put an enumerable property.
-SHERMES_EXPORT void _sh_ljs_define_new_own_by_id(
-    SHRuntime *shr,
-    SHLegacyValue *target,
-    SHSymbolID key,
-    SHLegacyValue *value);
-/// Put a non-enumerable property.
-SHERMES_EXPORT void _sh_ljs_define_new_own_ne_by_id(
-    SHRuntime *shr,
-    SHLegacyValue *target,
-    SHSymbolID key,
-    SHLegacyValue *value);
-
 SHERMES_EXPORT void _sh_ljs_define_own_getter_setter_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
