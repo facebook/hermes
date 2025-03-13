@@ -574,77 +574,47 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   }
 };
 
-/// A worklist of cells that need to be marked by the GC. The mutator enqueues
-/// work from the write barrier, and marking drains it.
-/// TODO: Consider moving to something lock free and/or fixed size to improve
-///       performance.
-class MarkWorklist {
-  /// A fixed size local buffer that the mutator can push elements onto without
-  /// needing to acquire the lock. This allows us to batch writes before
-  /// acquiring the lock and pushing them onto worklist_.
-  static constexpr size_t kChunkSize = 128;
-  std::array<GCCell *, kChunkSize> pushChunk_;
-
-  /// The index in pushChunk_ at which the next element will be written.
-  unsigned chunkIndex_{0};
-
-  /// Mutex protecting worklist_, allowing it to be accessed from the GC thread.
-  Mutex mtx_;
-
-  /// The list of objects for the GC to mark.
-  /// Use a SmallVector of size 0 since it is more aggressive with PODs
-  llvh::SmallVector<GCCell *, 0> worklist_;
-
- public:
-  /// Adds an element to the end of the queue.
-  void enqueue(GCCell *cell) {
-    if (LLVM_UNLIKELY(chunkIndex_ == pushChunk_.size())) {
-      // Once the chunk is full, move it to the pull chunks.
-      flushPushChunk();
-    }
-    pushChunk_[chunkIndex_++] = cell;
+void HadesGC::MarkWorklist::enqueue(GCCell *cell) {
+  if (LLVM_UNLIKELY(chunkIndex_ == pushChunk_.size())) {
+    // Once the chunk is full, move it to the pull chunks.
+    flushPushChunk();
   }
+  pushChunk_[chunkIndex_++] = cell;
+}
 
-  /// Empty and return the current worklist
-  llvh::SmallVector<GCCell *, 0> drain() {
-    llvh::SmallVector<GCCell *, 0> cells;
-    // Move the list (in O(1) time) to a local variable, and then release the
-    // lock. This unblocks the mutator faster.
-    std::lock_guard<Mutex> lk{mtx_};
-    std::swap(cells, worklist_);
-    assert(worklist_.empty() && "worklist isn't cleared out");
-    // Keep the previously allocated size to minimise allocations
-    worklist_.reserve(cells.size());
-    return cells;
-  }
+llvh::SmallVector<GCCell *, 0> HadesGC::MarkWorklist::drain() {
+  llvh::SmallVector<GCCell *, 0> cells;
+  // Move the list (in O(1) time) to a local variable, and then release the
+  // lock. This unblocks the mutator faster.
+  std::lock_guard<Mutex> lk{mtx_};
+  std::swap(cells, worklist_);
+  assert(worklist_.empty() && "worklist isn't cleared out");
+  // Keep the previously allocated size to minimise allocations
+  worklist_.reserve(cells.size());
+  return cells;
+}
 
-  /// While the world is stopped, move the push chunk to the list of pull chunks
-  /// to finish draining the mark worklist.
-  /// WARN: This can only be called by the mutator.
-  void flushPushChunk() {
-    std::lock_guard<Mutex> lk{mtx_};
-    worklist_.insert(
-        worklist_.end(), pushChunk_.data(), pushChunk_.data() + chunkIndex_);
-    // Reset the level and refill the same buffer.
-    chunkIndex_ = 0;
-  }
+void HadesGC::MarkWorklist::flushPushChunk() {
+  std::lock_guard<Mutex> lk{mtx_};
+  worklist_.insert(
+      worklist_.end(), pushChunk_.data(), pushChunk_.data() + chunkIndex_);
+  // Reset the level and refill the same buffer.
+  chunkIndex_ = 0;
+}
 
 #ifndef NDEBUG
-  /// WARN: This can only be called from the mutator.
-  bool empty() {
-    std::lock_guard<Mutex> lk{mtx_};
-    return chunkIndex_ == 0 && worklist_.empty();
-  }
+bool HadesGC::MarkWorklist::empty() {
+  std::lock_guard<Mutex> lk{mtx_};
+  return chunkIndex_ == 0 && worklist_.empty();
+}
 #endif
-};
 
 class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
+  HadesGC &gc;
+  PointerBase &pointerBase_;
+
  public:
-  MarkAcceptor(HadesGC &gc)
-      : gc{gc},
-        pointerBase_{gc.getPointerBase()},
-        markedSymbols_{gc.gcCallbacks_.getSymbolsEnd()},
-        writeBarrierMarkedSymbols_{gc.gcCallbacks_.getSymbolsEnd()} {}
+  MarkAcceptor(HadesGC &gc) : gc{gc}, pointerBase_{gc.getPointerBase()} {}
 
   void acceptHeap(GCCell *cell, const void *heapLoc) {
     assert(cell && "Cannot pass null pointer to acceptHeap");
@@ -718,12 +688,12 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
 
   void acceptSym(SymbolID sym) {
     const uint32_t idx = sym.unsafeGetIndex();
-    if (sym.isInvalid() || idx >= markedSymbols_.size()) {
+    if (sym.isInvalid() || idx >= gc.markState_->markedSymbols.size()) {
       // Ignore symbols that aren't valid or are pointing outside of the range
       // when the collection began.
       return;
     }
-    markedSymbols_[idx] = true;
+    gc.markState_->markedSymbols[idx] = true;
   }
 
   void accept(const RootSymbolID &sym) override {
@@ -733,157 +703,6 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     acceptSym(concurrentRead<SymbolID>(sym));
   }
 
-  /// Interface for symbols marked by a write barrier.
-  void markSymbol(SymbolID sym) {
-    assert(
-        !gc.calledByBackgroundThread() &&
-        "Write barrier invoked by background thread.");
-    const uint32_t idx = sym.unsafeGetIndex();
-    if (sym.isInvalid() || idx >= writeBarrierMarkedSymbols_.size()) {
-      // Ignore symbols that aren't valid or are pointing outside of the range
-      // when the collection began.
-      return;
-    }
-    writeBarrierMarkedSymbols_[idx] = true;
-  }
-
-  /// Set the drain rate that'll be used for any future calls to drain APIs.
-  void setDrainRate(size_t rate) {
-    assert(!kConcurrentGC && "Drain rate is only used by incremental GC.");
-    byteDrainRate_ = rate;
-  }
-
-  /// \return the total number of bytes marked so far.
-  uint64_t markedBytes() const {
-    return markedBytes_;
-  }
-
-  /// Drain the mark stack of cells to be processed.
-  /// \post localWorklist is empty. Any flushed values in the global worklist at
-  /// the start of the call are drained.
-  void drainAllWork() {
-    // This should only be called from the mutator. This means no write barriers
-    // should occur, and there's no need to check the global worklist more than
-    // once.
-    drainSomeWork(std::numeric_limits<size_t>::max());
-    assert(localWorklist_.empty() && "Some work left that wasn't completed");
-  }
-
-  /// Drains some of the worklist, using a drain rate specified by
-  /// \c setDrainRate or kConcurrentMarkLimit.
-  /// \return true if there is any remaining work in the local worklist.
-  bool drainSomeWork() {
-    // See the comment in setDrainRate for why the drain rate isn't used for
-    // concurrent collections.
-    constexpr size_t kConcurrentMarkLimit = 8192;
-    return drainSomeWork(kConcurrentGC ? kConcurrentMarkLimit : byteDrainRate_);
-  }
-
-  /// Drain some of the work to be done for marking.
-  /// \param markLimit Only mark up to this many bytes from the local
-  /// worklist.
-  ///   NOTE: This does *not* guarantee that the marker thread
-  ///   has upper bounds on the amount of work it does before reading from the
-  ///   global worklist. Any individual cell can be quite large (such as an
-  ///   ArrayStorage).
-  /// \return true if there is any remaining work in the local worklist.
-  bool drainSomeWork(const size_t markLimit) {
-    assert(gc.gcMutex_ && "Must hold the GC lock while accessing mark bits.");
-    // Pull any new items off the global worklist.
-    auto cells = globalWorklist_.drain();
-    for (GCCell *cell : cells) {
-      assert(
-          cell->isValid() && "Invalid cell received off the global worklist");
-      assert(
-          !gc.inYoungGen(cell) &&
-          "Shouldn't ever traverse a YG object in this loop");
-      HERMES_SLOW_ASSERT(
-          gc.dbgContains(cell) && "Non-heap cell found in global worklist");
-      if (!AlignedHeapSegment::getCellMarkBit(cell)) {
-        // Cell has not yet been marked.
-        push(cell);
-      }
-    }
-
-    size_t numMarkedBytes = 0;
-    assert(markLimit && "markLimit must be non-zero!");
-    while (!localWorklist_.empty() && numMarkedBytes < markLimit) {
-      GCCell *const cell = localWorklist_.top();
-      localWorklist_.pop();
-      assert(cell->isValid() && "Invalid cell in marking");
-      assert(
-          AlignedHeapSegment::getCellMarkBit(cell) &&
-          "Discovered unmarked object");
-      assert(
-          !gc.inYoungGen(cell) &&
-          "Shouldn't ever traverse a YG object in this loop");
-      HERMES_SLOW_ASSERT(
-          gc.dbgContains(cell) && "Non-heap object discovered during marking");
-      const auto sz = cell->getAllocatedSize();
-      numMarkedBytes += sz;
-      gc.markCell(*this, cell);
-    }
-    markedBytes_ += numMarkedBytes;
-    return !localWorklist_.empty();
-  }
-
-  bool isLocalWorklistEmpty() const {
-    return localWorklist_.empty();
-  }
-
-  MarkWorklist &globalWorklist() {
-    return globalWorklist_;
-  }
-
-  /// Merge the symbols marked by the MarkAcceptor and by the write barrier,
-  /// then return a reference to it.
-  /// WARN: This should only be called when the mutator is paused, as
-  /// otherwise there is a race condition between reading this and a symbol
-  /// write barrier getting executed.
-  llvh::BitVector &markedSymbols() {
-    assert(gc.gcMutex_ && "Cannot call markedSymbols without a lock");
-    markedSymbols_ |= writeBarrierMarkedSymbols_;
-    // No need to clear writeBarrierMarkedSymbols_, or'ing it again won't change
-    // the bit vector.
-    return markedSymbols_;
-  }
-
- private:
-  HadesGC &gc;
-  PointerBase &pointerBase_;
-
-  /// A worklist local to the marking thread, that is only pushed onto by the
-  /// marking thread. If this is empty, the global worklist must be consulted
-  /// to ensure that pointers modified in write barriers are handled.
-  std::stack<GCCell *, std::vector<GCCell *>> localWorklist_;
-
-  /// A worklist that other threads may add to as objects to be marked and
-  /// considered alive. These objects will *not* have their mark bits set,
-  /// because the mutator can't be modifying mark bits at the same time as the
-  /// marker thread.
-  MarkWorklist globalWorklist_;
-
-  /// markedSymbols_ represents which symbols have been proven live so far in
-  /// a collection. True means that it is live, false means that it could
-  /// possibly be garbage. The SymbolID's internal value is used as the index
-  /// into this vector. Once the collection is finished, this vector is passed
-  /// to IdentifierTable so that it can free symbols. If any new symbols are
-  /// allocated after the collection began, assume they are live.
-  llvh::BitVector markedSymbols_;
-
-  /// A vector the same size as markedSymbols_ that will collect all symbols
-  /// marked by write barriers. Merge this with markedSymbols_ to have complete
-  /// information about marked symbols. Kept separate to avoid synchronization.
-  llvh::BitVector writeBarrierMarkedSymbols_;
-
-  /// The number of bytes to drain per call to drainSomeWork. A higher rate
-  /// means more objects will be marked.
-  /// Only used by incremental collections.
-  size_t byteDrainRate_{0};
-
-  /// The number of bytes that have been marked so far.
-  uint64_t markedBytes_{0};
-
   void push(GCCell *cell) {
     assert(
         !AlignedHeapSegment::getCellMarkBit(cell) &&
@@ -892,9 +711,10 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
         !gc.inYoungGen(cell) &&
         "Shouldn't ever push a YG object onto the worklist");
     AlignedHeapSegment::setCellMarkBit(cell);
-    localWorklist_.push(cell);
+    gc.markState_->localWorklist.push(cell);
   }
 
+ private:
   template <typename T>
   T concurrentReadImpl(const T &valRef) {
     using Storage =
@@ -943,6 +763,47 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     return kConcurrentGC ? concurrentReadImpl<T>(ref) : ref;
   }
 };
+
+bool HadesGC::incrementalMark(size_t markLimit) {
+  assert(gcMutex_ && "Must hold the GC lock while accessing mark bits.");
+  MarkAcceptor acceptor(*this);
+
+  // Pull any new items off the global worklist.
+  auto cells = markState_->globalWorklist.drain();
+  for (GCCell *cell : cells) {
+    assert(cell->isValid() && "Invalid cell received off the global worklist");
+    assert(
+        !inYoungGen(cell) &&
+        "Shouldn't ever traverse a YG object in this loop");
+    HERMES_SLOW_ASSERT(
+        dbgContains(cell) && "Non-heap cell found in global worklist");
+    if (!AlignedHeapSegment::getCellMarkBit(cell)) {
+      // Cell has not yet been marked.
+      acceptor.push(cell);
+    }
+  }
+
+  size_t numMarkedBytes = 0;
+  assert(markLimit && "markLimit must be non-zero!");
+  while (!markState_->localWorklist.empty() && numMarkedBytes < markLimit) {
+    GCCell *const cell = markState_->localWorklist.top();
+    markState_->localWorklist.pop();
+    assert(cell->isValid() && "Invalid cell in marking");
+    assert(
+        AlignedHeapSegment::getCellMarkBit(cell) &&
+        "Discovered unmarked object");
+    assert(
+        !inYoungGen(cell) &&
+        "Shouldn't ever traverse a YG object in this loop");
+    HERMES_SLOW_ASSERT(
+        dbgContains(cell) && "Non-heap object discovered during marking");
+    const auto sz = cell->getAllocatedSize();
+    numMarkedBytes += sz;
+    markCell(acceptor, cell);
+  }
+  markState_->markedBytes += numMarkedBytes;
+  return !markState_->localWorklist.empty();
+}
 
 /// Mark weak roots separately from the MarkAcceptor since this is done while
 /// the world is stopped.
@@ -1499,11 +1360,12 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 
   // Mark phase: discover all pointers that are live.
   // Initialize the marking state.
-  oldGenMarker_.reset(new MarkAcceptor{*this});
+  markState_.emplace(gcCallbacks_.getSymbolsEnd());
   {
+    MarkAcceptor acceptor(*this);
     // Roots are marked before a marking thread is spun up, so that the root
     // marking is atomic.
-    DroppingAcceptor<MarkAcceptor> nameAcceptor{*oldGenMarker_};
+    DroppingAcceptor<MarkAcceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, /*markLongLived*/ true);
     // Do not call markWeakRoots here, as weak roots can only be cleared
     // after liveness is known.
@@ -1538,7 +1400,7 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
     // incremental work without actually using multiple threads.
 
     // Initialize the drain rate.
-    oldGenMarker_->setDrainRate(getDrainRate());
+    updateDrainRate();
     return;
   }
   ogCollectionStats_->endCPUTimeSection();
@@ -1604,14 +1466,18 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
   switch (concurrentPhase_) {
     case Phase::None:
       break;
-    case Phase::Mark:
+    case Phase::Mark: {
       if (!kConcurrentGC && ygCollectionStats_)
         ygCollectionStats_->addCollectionType("marking");
       // Drain some work from the mark worklist. If the work has finished
       // completely, move on to CompleteMarking.
-      if (!oldGenMarker_->drainSomeWork())
+      constexpr size_t kConcurrentMarkLimit = 8192;
+      size_t markLimit =
+          kConcurrentGC ? kConcurrentMarkLimit : markState_->byteDrainRate;
+      if (!incrementalMark(markLimit))
         concurrentPhase_ = Phase::CompleteMarking;
       break;
+    }
     case Phase::CompleteMarking:
       // Background task should exit, the mutator will restart it after the STW
       // pause.
@@ -1711,7 +1577,7 @@ void HadesGC::finalizeCompactee() {
 }
 
 void HadesGC::updateOldGenThreshold() {
-  const double markedBytes = oldGenMarker_->markedBytes();
+  const double markedBytes = markState_->markedBytes;
   const double preAllocated = ogCollectionStats_->beforeAllocatedBytes();
   assert(markedBytes <= preAllocated && "Cannot mark more than was allocated");
   const double postAllocated = oldGen_.allocatedBytes();
@@ -1758,9 +1624,10 @@ void HadesGC::updateOldGenThreshold() {
 
 void HadesGC::markWeakMapEntrySlots() {
   bool newlyMarkedValue;
+  MarkAcceptor acceptor{*this};
   do {
     newlyMarkedValue = false;
-    weakMapEntrySlots_.forEach([this](WeakMapEntrySlot &slot) {
+    weakMapEntrySlots_.forEach([this, &acceptor](WeakMapEntrySlot &slot) {
       if (!slot.key || !slot.owner)
         return;
       GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
@@ -1772,10 +1639,11 @@ void HadesGC::markWeakMapEntrySlots() {
       // be marked (unless there are other strong refs to the value).
       if (!AlignedHeapSegment::getCellMarkBit(cell))
         return;
-      oldGenMarker_->accept(slot.mappedValue);
+      acceptor.accept(slot.mappedValue);
     });
-    newlyMarkedValue = !oldGenMarker_->isLocalWorklistEmpty();
-    oldGenMarker_->drainAllWork();
+    newlyMarkedValue = !markState_->localWorklist.empty();
+    // Drain everything there is to mark.
+    incrementalMark(std::numeric_limits<size_t>::max());
   } while (newlyMarkedValue);
 
   // If either a key or its owning map is dead, set the mapped value to Empty.
@@ -1801,35 +1669,35 @@ void HadesGC::completeMarking() {
   ogMarkingBarriers_ = false;
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
-  oldGenMarker_->globalWorklist().flushPushChunk();
+  markState_->globalWorklist.flushPushChunk();
   {
+    MarkAcceptor acceptor{*this};
     // Remark any roots that may have changed without executing barriers.
-    DroppingAcceptor<MarkAcceptor> nameAcceptor{*oldGenMarker_};
+    DroppingAcceptor<MarkAcceptor> nameAcceptor{acceptor};
     gcCallbacks_.markRootsForCompleteMarking(nameAcceptor);
   }
   // Drain the marking queue.
-  oldGenMarker_->drainAllWork();
+  incrementalMark(std::numeric_limits<size_t>::max());
   assert(
-      oldGenMarker_->globalWorklist().empty() &&
-      "Marking worklist wasn't drained");
+      markState_->globalWorklist.empty() && "Marking worklist wasn't drained");
   markWeakMapEntrySlots();
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.
   compactee_.evacStart = compactee_.start;
   compactee_.evacStartCP = compactee_.startCP;
   assert(
-      oldGenMarker_->globalWorklist().empty() &&
-      "Marking worklist wasn't drained");
+      markState_->globalWorklist.empty() && "Marking worklist wasn't drained");
   // Reset weak roots to null after full reachability has been
   // determined.
   MarkWeakRootsAcceptor acceptor{*this};
   markWeakRoots(acceptor, /*markLongLived*/ true);
 
   // Now free symbols and weak refs.
-  gcCallbacks_.freeSymbols(oldGenMarker_->markedSymbols());
+  markState_->markedSymbols |= markState_->writeBarrierMarkedSymbols;
+  gcCallbacks_.freeSymbols(markState_->markedSymbols);
 
-  // Nothing needs oldGenMarker_ from this point onward.
-  oldGenMarker_.reset();
+  // Nothing needs markState_ from this point onward.
+  markState_.reset();
 }
 
 void HadesGC::finalizeAll() {
@@ -1995,7 +1863,7 @@ void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
     HERMES_SLOW_ASSERT(
         dbgContains(oldValue) &&
         "Non-heap pointer encountered in snapshotWriteBarrier");
-    oldGenMarker_->globalWorklist().enqueue(oldValue);
+    markState_->globalWorklist.enqueue(oldValue);
   }
 }
 
@@ -2008,7 +1876,7 @@ void HadesGC::snapshotWriteBarrierInternal(CompressedPointer oldValue) {
     HERMES_SLOW_ASSERT(
         dbgContains(ptr) &&
         "Non-heap pointer encountered in snapshotWriteBarrier");
-    oldGenMarker_->globalWorklist().enqueue(ptr);
+    markState_->globalWorklist.enqueue(ptr);
   }
 }
 
@@ -2034,7 +1902,11 @@ void HadesGC::snapshotWriteBarrierInternal(SymbolID symbol) {
   HERMES_SLOW_ASSERT(
       ogMarkingBarriers_ &&
       "snapshotWriteBarrier should only be called while the OG is marking");
-  oldGenMarker_->markSymbol(symbol);
+  const uint32_t idx = symbol.unsafeGetIndex();
+  // Ignore symbols that are invalid or were allocated after marking started.
+  if (symbol.isInvalid() || idx >= markState_->writeBarrierMarkedSymbols.size())
+    return;
+  markState_->writeBarrierMarkedSymbols[idx] = true;
 }
 
 void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
@@ -2981,10 +2853,10 @@ bool HadesGC::inOldGen(const void *p) const {
 void HadesGC::yieldToOldGen() {
   assert(inGC() && "Must be in GC when yielding to old gen");
   if (!kConcurrentGC && concurrentPhase_ != Phase::None) {
-    // If there is an ongoing collection, update the drain rate before
+    // If there is an ongoing collection, update the drain rate befor
     // collecting.
     if (concurrentPhase_ == Phase::Mark)
-      oldGenMarker_->setDrainRate(getDrainRate());
+      updateDrainRate();
 
     constexpr uint32_t kYGIncrementalCollectBudget = kTargetMaxPauseMs / 2;
     const auto initialPhase = concurrentPhase_;
@@ -3003,7 +2875,7 @@ void HadesGC::yieldToOldGen() {
   }
 }
 
-size_t HadesGC::getDrainRate() {
+void HadesGC::updateDrainRate() {
   // Concurrent collections don't need to use the drain rate because they
   // only yield the lock periodically to be interrupted, but otherwise will
   // continuously churn through work regardless of the rate.
@@ -3025,7 +2897,7 @@ size_t HadesGC::getDrainRate() {
   // In case the allocation rate is extremely low, set a lower bound to ensure
   // the collection eventually ends.
   constexpr uint64_t byteDrainRateMin = 8192;
-  return std::max(drainRate, byteDrainRateMin);
+  markState_->byteDrainRate = std::max(drainRate, byteDrainRateMin);
 }
 
 void HadesGC::addSegmentExtentToCrashManager(

@@ -27,6 +27,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <stack>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -645,6 +646,44 @@ class HadesGC final : public GCBase {
   };
 
  private:
+  /// A worklist of cells that need to be marked by the GC. The mutator enqueues
+  /// work from the write barrier, and marking drains it.
+  /// TODO: Consider moving to something lock free and/or fixed size to improve
+  ///       performance.
+  class MarkWorklist {
+    /// A fixed size local buffer that the mutator can push elements onto
+    /// without needing to acquire the lock. This allows us to batch writes
+    /// before acquiring the lock and pushing them onto worklist_.
+    static constexpr size_t kChunkSize = 128;
+    std::array<GCCell *, kChunkSize> pushChunk_;
+
+    /// The index in pushChunk_ at which the next element will be written.
+    unsigned chunkIndex_{0};
+
+    /// Mutex protecting worklist_, allowing it to be accessed from the GC
+    /// thread.
+    Mutex mtx_;
+
+    /// The list of objects for the GC to mark.
+    /// Use a SmallVector of size 0 since it is more aggressive with PODs
+    llvh::SmallVector<GCCell *, 0> worklist_;
+
+   public:
+    /// Adds an element to the end of the queue.
+    void enqueue(GCCell *cell);
+
+    /// Empty and return the current worklist
+    llvh::SmallVector<GCCell *, 0> drain();
+
+    /// While the world is stopped, move the push chunk to the list of pull
+    /// chunks to finish draining the mark worklist. WARN: This can only be
+    /// called by the mutator.
+    void flushPushChunk();
+
+    /// WARN: This can only be called from the mutator.
+    bool empty();
+  };
+
   /// The maximum number of bytes that the heap can hold. Once this amount has
   /// been filled up, OOM will occur.
   const uint64_t maxHeapSize_;
@@ -719,9 +758,49 @@ class HadesGC final : public GCBase {
   /// order to reduce synchronisation requirements for write barriers.
   bool ogMarkingBarriers_{false};
 
-  /// Used by the write barrier to add items to the worklist.
-  /// Protected by gcMutex_.
-  std::unique_ptr<MarkAcceptor> oldGenMarker_;
+  /// State that needs to be maintained while we are marking the old gen.
+  struct MarkState {
+    /// A worklist local to the marking thread, that is only pushed onto by the
+    /// marking thread. If this is empty, the global worklist must be consulted
+    /// to ensure that pointers modified in write barriers are handled.
+    std::stack<GCCell *, std::vector<GCCell *>> localWorklist;
+
+    /// A worklist that other threads may add to as objects to be marked and
+    /// considered alive. These objects will *not* have their mark bits set,
+    /// because the mutator can't be modifying mark bits at the same time as the
+    /// marker thread.
+    MarkWorklist globalWorklist;
+
+    /// markedSymbols_ represents which symbols have been proven live so far in
+    /// a collection. True means that it is live, false means that it could
+    /// possibly be garbage. The SymbolID's internal value is used as the index
+    /// into this vector. Once the collection is finished, this vector is passed
+    /// to IdentifierTable so that it can free symbols. If any new symbols are
+    /// allocated after the collection began, assume they are live.
+    llvh::BitVector markedSymbols;
+
+    /// A vector the same size as markedSymbols_ that will collect all symbols
+    /// marked by write barriers. Merge this with markedSymbols_ to have
+    /// complete information about marked symbols. Kept separate to avoid
+    /// synchronization.
+    llvh::BitVector writeBarrierMarkedSymbols;
+
+    /// The number of bytes to drain per call to drainSomeWork. A higher rate
+    /// means more objects will be marked.
+    /// Only used by incremental collections.
+    size_t byteDrainRate{0};
+
+    /// The number of bytes that have been marked so far.
+    uint64_t markedBytes{0};
+
+    explicit MarkState(size_t numSymbols)
+        : markedSymbols(numSymbols), writeBarrierMarkedSymbols(numSymbols) {}
+  };
+
+  /// Store the mark state as an optional so it is convenient to create and
+  /// destroy it at the start and end of marking. This field and all of its
+  /// contents should only be accessed or modified when gcMutex_ is held.
+  llvh::Optional<MarkState> markState_;
 
   /// This provides the background thread for doing marking and sweeping
   /// concurrently with the mutator.
@@ -932,6 +1011,16 @@ class HadesGC final : public GCBase {
   /// whether this call was made from the background thread.
   void incrementalCollect(bool backgroundThread);
 
+  /// Drain some of the work to be done for marking.
+  /// \param markLimit Only mark up to this many bytes from the local
+  /// worklist.
+  ///   NOTE: This does *not* guarantee that the marker thread
+  ///   has upper bounds on the amount of work it does before reading from the
+  ///   global worklist. Any individual cell can be quite large (such as an
+  ///   ArrayStorage).
+  /// \return true if there is any remaining work in the local worklist.
+  bool incrementalMark(size_t markLimit);
+
   /// Iterate the list of `weakMapEntrySlots_`, for each non-free slot, if
   /// both the key and the owner are marked, mark the mapped value.
   /// Note that this may further cause other values to be marked, so we need to
@@ -1039,10 +1128,10 @@ class HadesGC final : public GCBase {
   /// collection.
   void yieldToOldGen();
 
-  /// \return A number of bytes that should be drained on a per-YG basis to
-  ///   help ensure an incremental collection will finish before the next one is
-  ///   needed.
-  size_t getDrainRate();
+  /// Set the drain rate in markState to the number of bytes that should be
+  /// drained on a per-YG basis to help ensure an incremental collection will
+  /// finish before the next one is needed.
+  void updateDrainRate();
 
   /// Adds the start address of the segment to the CrashManager's custom data.
   /// \param extraName append this to the name of the segment. Must be
