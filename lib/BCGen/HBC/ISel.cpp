@@ -992,13 +992,18 @@ void HBCISel::generateDefineNewOwnPropertyInst(
 
   auto strProp = cast<LiteralString>(prop);
   auto id = BCFGen_->getIdentifierID(strProp);
-
-  if (id > UINT16_MAX) {
-    BCFGen_->emitPutNewOwnByIdLong(objReg, valueReg, id);
-  } else if (id > UINT8_MAX) {
-    BCFGen_->emitPutNewOwnById(objReg, valueReg, id);
+  if (id <= UINT16_MAX) {
+    BCFGen_->emitDefineOwnById(
+        objReg,
+        valueReg,
+        acquirePropertyWriteCacheIndex(strProp->getValue()),
+        id);
   } else {
-    BCFGen_->emitPutNewOwnByIdShort(objReg, valueReg, id);
+    BCFGen_->emitDefineOwnByIdLong(
+        objReg,
+        valueReg,
+        acquirePropertyWriteCacheIndex(strProp->getValue()),
+        id);
   }
 }
 
