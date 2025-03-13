@@ -773,20 +773,6 @@ inline void JITContext::Compiler::emitDefineOwnGetterSetterByVal(
       (bool)inst->op5);
 }
 
-#define EMIT_PUT_NEW_OWN_BY_ID(name, enumerable)                               \
-  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
-    em_.putNewOwnById(                                                         \
-        FR(inst->op1), FR(inst->op2), ID(inst->op3), enumerable);              \
-  }
-
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnById, true)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnByIdLong, true)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnByIdShort, true)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnNEById, false)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnNEByIdLong, false)
-
-#undef EMIT_PUT_NEW_OWN_BY_ID
-
 #define EMIT_OWN_BY_SLOT_IDX(name, op)                                         \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
     em_.op(FR(inst->op1), FR(inst->op2), inst->op3);                           \

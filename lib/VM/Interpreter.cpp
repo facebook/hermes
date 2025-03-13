@@ -3064,43 +3064,6 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(PutNewOwnByIdShort) {
-        nextIP = NEXTINST(PutNewOwnByIdShort);
-        idVal = ip->iPutNewOwnByIdShort.op3;
-        goto putOwnById;
-      }
-      CASE(PutNewOwnNEByIdLong)
-      CASE(PutNewOwnByIdLong) {
-        nextIP = NEXTINST(PutNewOwnByIdLong);
-        idVal = ip->iPutNewOwnByIdLong.op3;
-        goto putOwnById;
-      }
-      CASE(PutNewOwnNEById)
-      CASE(PutNewOwnById) {
-        nextIP = NEXTINST(PutNewOwnById);
-        idVal = ip->iPutNewOwnById.op3;
-      }
-    putOwnById: {
-      assert(
-          O1REG(PutNewOwnById).isObject() &&
-          "Object argument of PutNewOwnById must be an object");
-      CAPTURE_IP_ASSIGN(
-          auto res,
-          JSObject::defineNewOwnProperty(
-              Handle<JSObject>::vmcast(&O1REG(PutNewOwnById)),
-              runtime,
-              ID(idVal),
-              ip->opCode <= OpCode::PutNewOwnByIdLong
-                  ? PropertyFlags::defaultNewNamedPropertyFlags()
-                  : PropertyFlags::nonEnumerablePropertyFlags(),
-              Handle<>(&O2REG(PutNewOwnById))));
-      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-        goto exception;
-      }
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
       CASE(PutOwnBySlotIdxLong) {
         assert(
             O1REG(PutOwnBySlotIdxLong).isObject() &&

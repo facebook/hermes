@@ -4072,48 +4072,6 @@ void Emitter::defineOwnGetterSetterByVal(
       _sh_ljs_define_own_getter_setter_by_val);
 }
 
-void Emitter::putNewOwnById(
-    FR frTarget,
-    FR frValue,
-    SHSymbolID key,
-    bool enumerable) {
-  comment(
-      "// PutNewOwn%sById r%u, r%u, %u",
-      enumerable ? "NE" : "",
-      frTarget.index(),
-      frValue.index(),
-      key);
-
-  syncAllFRTempExcept({});
-  syncToFrame(frTarget);
-  syncToFrame(frValue);
-  freeAllFRTempExcept({});
-
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frTarget);
-  a.mov(a64::w2, key);
-  loadFrameAddr(a64::x3, frValue);
-  if (enumerable) {
-    EMIT_RUNTIME_CALL(
-        *this,
-        void (*)(
-            SHRuntime *shr,
-            SHLegacyValue *target,
-            SHSymbolID key,
-            SHLegacyValue *value),
-        _sh_ljs_define_new_own_by_id);
-  } else {
-    EMIT_RUNTIME_CALL(
-        *this,
-        void (*)(
-            SHRuntime *shr,
-            SHLegacyValue *target,
-            SHSymbolID key,
-            SHLegacyValue *value),
-        _sh_ljs_define_new_own_ne_by_id);
-  }
-}
-
 void Emitter::getOwnBySlotIdx(FR frRes, FR frTarget, uint32_t slotIdx) {
   comment(
       "// GetOwnBySlotIdx r%u, r%u, %u",
