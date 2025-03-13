@@ -94,6 +94,15 @@ void HadesGC::OldGen::addCellToFreelist(
   segBucket->head =
       CompressedPointer::encodeNonNull(cell, gc_.getPointerBase());
 
+#ifndef NDEBUG
+  if (oldHead) {
+    // If there is an existing cell in the list, check that it belongs to the
+    // same bucket.
+    auto *ofc = vmcast<FreelistCell>(oldHead.getNonNull(gc_.pointerBase_));
+    assert(getFreelistBucket(sz) == getFreelistBucket(ofc->getAllocatedSize()));
+  }
+#endif
+
   // If this SegmentBucket was not already in the freelist, add it.
   if (!oldHead) {
     uint32_t bucket = getFreelistBucket(sz);
@@ -2955,6 +2964,66 @@ void HadesGC::checkWellFormed() {
           !slot.owner && "Reachable entry should have not have Empty value.");
     }
   });
+
+  oldGen_.verifyFreelists();
+}
+
+void HadesGC::OldGen::verifyFreelists() {
+  assert(gc_.gcMutex_ && "gcMutex_ must be held to traverse freelists");
+  // Records every SegmentBucket that has a valid freelist. This is used to
+  // ensure that a SegmentBucket is chained into the freelist for a bucket if
+  // and only if it is valid.
+  llvh::DenseSet<const SegmentBucket *> occupiedSegBuckets;
+
+  for (size_t seg = 0; seg < segments_.size(); seg++) {
+    // Records every free cell encountered while traversing the freelists. This
+    // is used to ensure that a FreelistCell is always found in a freelist.
+    llvh::DenseSet<const FreelistCell *> freeCells;
+
+    const auto &segBuckets = segmentBuckets_[seg];
+    for (size_t bucket = 0; bucket < kNumFreelistBuckets; bucket++) {
+      if (!segBuckets[bucket].head)
+        continue;
+      // Record that this segment has cells for this bucket.
+      occupiedSegBuckets.insert(&segBuckets[bucket]);
+      auto *cell = vmcast<FreelistCell>(
+          segBuckets[bucket].head.getNonNull(gc_.pointerBase_));
+      while (cell) {
+        // Record each cell in the freelist.
+        assert(freeCells.insert(cell).second && "Duplicate free cell");
+        // Check that the cell is in the right bucket.
+        assert(getFreelistBucket(cell->getAllocatedSize()) == bucket);
+        cell = vmcast_or_null<FreelistCell>(cell->next_.get(gc_.pointerBase_));
+      }
+    }
+
+    auto *cell = (GCCell *)segments_[seg].start();
+    auto *end = (GCCell *)segments_[seg].level();
+    while (cell < end) {
+      if (FreelistCell *fcell = dyn_vmcast<FreelistCell>(cell))
+        assert(freeCells.erase(fcell) && "Free cell not in list");
+      cell = cell->nextCell();
+    }
+    assert(freeCells.empty() && "Free cells in list not in segment");
+  }
+  for (size_t bucket = 0; bucket < kNumFreelistBuckets; bucket++) {
+    auto *prevBucketPtr = &buckets_[bucket];
+    auto *bucketPtr = buckets_[bucket].next;
+    // Element in freelistBucketBitArray_ must be set if and only if the
+    // corresponding bucket is non-empty.
+    assert(freelistBucketBitArray_.at(bucket) == !!bucketPtr);
+
+    while (bucketPtr) {
+      // Erase the found bucket from the set so we can assert that all occupied
+      // buckets were found in the freelist.
+      bool isErased = occupiedSegBuckets.erase(bucketPtr);
+      assert(isErased && "Found unoccupied bucket in freelist");
+      assert(bucketPtr->prev == prevBucketPtr && "Prev ptr mismatch");
+      prevBucketPtr = bucketPtr;
+      bucketPtr = bucketPtr->next;
+    }
+  }
+  assert(occupiedSegBuckets.empty() && "Occupied bucket not in freelists");
 }
 
 void HadesGC::verifyCardTable() {

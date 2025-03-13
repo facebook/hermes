@@ -483,6 +483,11 @@ class HadesGC final : public GCBase {
     /// \return The number of bytes of native memory in use by this OldGen.
     size_t getMemorySize() const;
 
+#ifdef HERMES_SLOW_DEBUG
+    /// Check that the freelists are well-formed.
+    void verifyFreelists();
+#endif
+
    private:
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
