@@ -289,7 +289,10 @@ class Emitter {
   /// Whether to emit asserts in the JIT'ed code.
   bool const emitAsserts_;
 
+#ifndef ASMJIT_NO_LOGGING
   std::unique_ptr<asmjit::Logger> logger_{};
+#endif
+
   std::unique_ptr<asmjit::ErrorHandler> errorHandler_;
   asmjit::Error expectedError_ = asmjit::kErrorOk;
 
@@ -856,6 +859,15 @@ class Emitter {
     auto ofs = (fr.index() + hbc::StackFrameLayout::FirstLocal) *
         sizeof(SHLegacyValue);
     return a64::Mem(xFrame, ofs);
+  }
+
+  /// Return true if we are logging, false otherwise.
+  bool hasLogger() {
+#ifndef ASMJIT_NO_LOGGING
+    return logger_ != nullptr;
+#else
+    return false;
+#endif
   }
 
   /// Load an arbitrary bit pattern into a Gp.

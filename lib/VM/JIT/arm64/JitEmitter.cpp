@@ -389,6 +389,7 @@ class OurErrorHandler : public asmjit::ErrorHandler {
     expectedError_ = asmjit::kErrorOk;        \
   } while (0)
 
+#ifndef ASMJIT_NO_LOGGING
 class OurLogger : public asmjit::Logger {
   ASMJIT_API asmjit::Error _log(const char *data, size_t size) noexcept
       override {
@@ -398,6 +399,7 @@ class OurLogger : public asmjit::Logger {
     return asmjit::kErrorOk;
   }
 };
+#endif
 
 } // unnamed namespace
 
@@ -460,20 +462,21 @@ Emitter::Emitter(
       emitAsserts_(emitAsserts),
       frameRegs_(numFrameRegs),
       codeBlock_(codeBlock) {
-  if (dumpJitCode_ & DumpJitCode::Code)
-    logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
-  if (logger_) {
-    logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
-    logger_->addFlags(asmjit::FormatFlags::kHexImms);
-  }
-
   errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(
       new OurErrorHandler(expectedError_, longjmpError));
 
   code.init(jitRT.environment(), jitRT.cpuFeatures());
   code.setErrorHandler(errorHandler_.get());
-  if (logger_)
+
+#ifndef ASMJIT_NO_LOGGING
+  if (dumpJitCode_ & DumpJitCode::Code) {
+    logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
+    logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
+    logger_->addFlags(asmjit::FormatFlags::kHexImms);
     code.setLogger(logger_.get());
+  }
+#endif
+
   code.attach(&a);
 
   roDataLabel_ = a.newNamedLabel("RO_DATA");
@@ -536,7 +539,7 @@ void Emitter::enter(uint32_t numCount, uint32_t npCount) {
 }
 
 void Emitter::comment(const char *fmt, ...) {
-  if (!logger_)
+  if (!hasLogger())
     return;
   va_list args;
   va_start(args, fmt);
@@ -4269,7 +4272,7 @@ int32_t Emitter::reserveData(
   roData_.resize(dataOfs + dsize);
 
   // If logging is enabled, generate data descriptors.
-  if (logger_) {
+  if (hasLogger()) {
     // Optional padding descriptor.
     if (dataOfs != oldSize) {
       int32_t gap = (int32_t)(dataOfs - oldSize);
@@ -4371,7 +4374,7 @@ void Emitter::emitThunks() {
 
 void Emitter::emitROData() {
   a.bind(roDataLabel_);
-  if (!logger_) {
+  if (!hasLogger()) {
     a.embed(roData_.data(), roData_.size());
   } else {
     int32_t ofs = 0;
