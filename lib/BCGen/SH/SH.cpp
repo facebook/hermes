@@ -1284,12 +1284,9 @@ class InstrGen {
   void generateDefineNewOwnPropertyInst(DefineNewOwnPropertyInst &inst) {
     os_.indent(2);
     auto prop = inst.getProperty();
-    bool isEnumerable = inst.getIsEnumerable();
+    assert(inst.getIsEnumerable() && "enumerable must be true.");
 
     if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
-      assert(
-          isEnumerable &&
-          "No way to generate non-enumerable indexed DefineNewOwnPropertyInst.");
       uint32_t index = *numProp->convertToArrayIndex();
       os_ << "_sh_ljs_define_own_by_index(";
       os_ << "shr, ";
@@ -1301,18 +1298,13 @@ class InstrGen {
       return;
     }
 
-    if (isEnumerable)
-      os_ << "_sh_ljs_define_new_own_by_id(";
-    else
-      os_ << "_sh_ljs_define_new_own_ne_by_id(";
-
-    os_ << "shr, ";
-    generateRegisterPtr(*inst.getObject());
+    auto *LS = cast<LiteralString>(prop);
+    os_ << "_sh_ljs_define_own_by_id(shr,&";
+    generateRegister(*inst.getObject());
     os_ << ", ";
-    auto *propStr = cast<LiteralString>(prop);
-    genStringConst(propStr) << ", ";
+    genStringConst(LS) << ", ";
     generateRegisterPtr(*inst.getStoredValue());
-    os_ << ");\n";
+    os_ << ", NULL);\n";
   }
   void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
     os_.indent(2);
