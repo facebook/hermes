@@ -317,7 +317,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
     _sh_longjmp(errorJmpBuf_, 1);                                              \
   }
 
-EMIT_UNIMPLEMENTED(GetEnvironment)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 
@@ -955,6 +954,11 @@ inline void JITContext::Compiler::emitCreateEnvironment(
 inline void JITContext::Compiler::emitGetParentEnvironment(
     const inst::GetParentEnvironmentInst *inst) {
   em_.getParentEnvironment(FR(inst->op1), inst->op2);
+}
+
+inline void JITContext::Compiler::emitGetEnvironment(
+    const inst::GetEnvironmentInst *inst) {
+  em_.getEnvironment(FR(inst->op1), FR(inst->op2), inst->op3);
 }
 
 inline void JITContext::Compiler::emitGetClosureEnvironment(

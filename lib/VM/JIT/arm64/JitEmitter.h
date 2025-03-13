@@ -776,6 +776,7 @@ class Emitter {
   void createFunctionEnvironment(FR frRes, uint32_t size);
   void createEnvironment(FR frRes, FR frParent, uint32_t size);
   void getParentEnvironment(FR frRes, uint32_t level);
+  void getEnvironment(FR frRes, FR frSource, uint32_t level);
   void getClosureEnvironment(FR frRes, FR frClosure);
   void loadFromEnvironment(FR frRes, FR frEnv, uint32_t slot);
   void storeToEnvironment(bool np, FR frEnv, uint32_t slot, FR frValue);

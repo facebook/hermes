@@ -2321,6 +2321,26 @@ void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
   emit_sh_ljs_object(a, xRes);
 }
 
+void Emitter::getEnvironment(FR frRes, FR frSource, uint32_t level) {
+  comment(
+      "// GetEnvironment r%u, r%u, %u", frRes.index(), frSource.index(), level);
+
+  HWReg hwSource = getOrAllocFRInGpX(frSource, true);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  frUpdatedWithHW(frRes, hwRes);
+  a64::GpX xRes = hwRes.a64GpX();
+
+  emit_sh_ljs_get_pointer(a, xRes, hwSource.a64GpX());
+  for (; level; --level) {
+    // xRes = env->parent.
+    emit_load_cp(
+        a, xRes, a64::Mem(xRes, offsetof(SHEnvironment, parentEnvironment)));
+    emit_sh_cp_decode_non_null(a, xRes);
+  }
+  // encode object.
+  emit_sh_ljs_object(a, xRes);
+}
+
 void Emitter::getClosureEnvironment(FR frRes, FR frClosure) {
   comment(
       "// GetClosureEnvironment r%u, r%u", frRes.index(), frClosure.index());
