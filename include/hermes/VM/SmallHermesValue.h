@@ -195,6 +195,14 @@ class HermesValue32 {
   using RawType = CompressedPointer::RawType;
   using SmiType = std::make_signed<RawType>::type;
 
+  RawType raw_;
+
+ public:
+  /// Version of the HermesValue32 encoding format.
+  /// Changing the format of HermesValue32 requires bumping this version number
+  /// and fixing any code that relies on the layout of HermesValue32.
+  /// Updated: Mar 11, 2025
+  static constexpr size_t kVersion = 1;
   static constexpr size_t kNumRawTypeBits = sizeof(RawType) * 8;
   static constexpr size_t kNumTagBits = LogHeapAlign;
   static constexpr size_t kNumValueBits = kNumRawTypeBits - kNumTagBits;
@@ -214,11 +222,10 @@ class HermesValue32 {
     LastPointer = BoxedDouble,
   };
 
+ private:
   static_assert(
       static_cast<uint8_t>(Tag::_Last) <= (1 << kNumTagBits),
       "Cannot have more enum values than tag bits.");
-
-  RawType raw_;
 
   static constexpr HermesValue32 fromRaw(RawType raw) {
     return HermesValue32(raw);
