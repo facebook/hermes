@@ -59,6 +59,7 @@
 #include "llvh/ADT/DenseMap.h"
 #endif
 
+#include <cstring>
 #include <future>
 
 #ifdef __EMSCRIPTEN__
@@ -1209,7 +1210,18 @@ Handle<JSObject> Runtime::runInternalJavaScript() {
     return makeHandle<JSObject>(HermesValue::fromRaw(resOrExc.raw));
   hermes_fatal("Error evaluating internal unit.");
 #else
-  auto module = getInternalBytecode();
+  llvh::ArrayRef<uint8_t> module = getInternalBytecode();
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  // If the debugger is enabled we need to be able to set breakpoints in
+  // internal bytecode. Copy it into the heap to allow mutating it.
+  // Copy module into internalBytecodeCopy_ and use that instead.
+  internalBytecodeCopy_.reset(
+      static_cast<uint8_t *>(checkedMalloc(module.size())));
+  std::memcpy(internalBytecodeCopy_.get(), module.data(), module.size());
+  module = {internalBytecodeCopy_.get(), module.size()};
+#endif
+
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
           std::make_unique<Buffer>(module.data(), module.size()));

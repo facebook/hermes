@@ -1348,6 +1348,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   }
 
   Debugger debugger_{*this};
+
+  /// A copy of the internal bytecode made so that we can set breakpoints in it
+  /// to allow for debugging.
+  std::unique_ptr<uint8_t, llvh::FreeDeleter> internalBytecodeCopy_;
 #endif
 
   /// Use an 8MB stack, which is the default size on mac and linux.
