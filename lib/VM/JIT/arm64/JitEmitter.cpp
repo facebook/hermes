@@ -332,8 +332,10 @@ void emit_load_cp(
 }
 
 /// Load a SmallHermesValue from \p mem.
-[[maybe_unused]] void
-emit_load_shv(a64::Assembler &a, const a64::GpX &dest, const a64::Mem &mem) {
+void emit_load_shv(
+    a64::Assembler &a,
+    const a64::GpX &dest,
+    const a64::Mem &mem) {
 #ifdef HERMESVM_COMPRESSED_POINTERS
   a.ldr(dest.w(), mem);
 #else
@@ -344,7 +346,7 @@ emit_load_shv(a64::Assembler &a, const a64::GpX &dest, const a64::Mem &mem) {
 /// Given a SmallHermesValue in \p xInOut, decompress it into a HermesValue and
 /// place the result in \p xInOut. Jump to \p doneLab if decoding is done early
 /// (but not in the fall-through case).
-[[maybe_unused]] void emit_sh_shv_decode(
+void emit_sh_shv_decode(
     a64::Assembler &a,
     const a64::GpX &xInOut,
     const asmjit::Label &doneLab) {
@@ -3276,14 +3278,7 @@ void Emitter::getByIdImpl(
   // All temporaries will potentially be clobbered by the slow path.
   syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
 
-  constexpr bool canHaveFastPath =
-#if defined(HERMESVM_COMPRESSED_POINTERS) || defined(HERMESVM_BOXED_DOUBLES)
-      false;
-#else
-      true;
-#endif
-
-  if (canHaveFastPath && cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
+  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
     // Label for indirect property access.
     asmjit::Label indirectLab = a.newLabel();
     slowPathLab = a.newLabel();
@@ -3337,12 +3332,13 @@ void Emitter::getByIdImpl(
     emit_sh_ljs_get_pointer(a, xTemp1, hwSourceGpx.a64GpX());
 
     // xTemp2 is the hidden class.
-    a.ldr(xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
+    emit_load_cp(a, xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
 
     // xTemp3 points to the start of read property cache.
     a.ldr(xTemp3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
     // xTemp4 = cacheEntry->clazz.
-    a.ldr(
+    emit_load_cp(
+        a,
         xTemp4,
         a64::Mem(
             xTemp3,
@@ -3365,11 +3361,16 @@ void Emitter::getByIdImpl(
     a.cmp(xTemp4.w(), HERMESVM_DIRECT_PROPERTY_SLOTS);
     a.b_hs(indirectLab);
 
+    // Shift by 2 or 3 bits depending on whether properties are 4 or 8 bytes.
+    constexpr size_t kPropShiftAmt = sizeof(SHGCSmallHermesValue) == 4 ? 2 : 3;
     // Load from a direct slot.
     a.add(xTemp3, xTemp1, offsetof(SHJSObjectAndDirectProps, directProps));
-    a.ldr(
+    emit_load_shv(
+        a,
         hwRes.a64GpX(),
-        a64::Mem(xTemp3, xTemp4, a64::Shift(a64::ShiftOp::kLSL, 3)));
+        a64::Mem(
+            xTemp3, xTemp4, a64::Shift(a64::ShiftOp::kLSL, kPropShiftAmt)));
+    emit_sh_shv_decode(a, hwRes.a64GpX(), contLab);
 
     a.b(contLab);
 
@@ -3379,16 +3380,21 @@ void Emitter::getByIdImpl(
     // xTemp4 is the slot
 
     // xTemp1 = xTemp1->propStorage
-    a.ldr(xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, propStorage)));
+    emit_load_cp(
+        a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, propStorage)));
+    emit_sh_cp_decode_non_null(a, xTemp1);
     constexpr ssize_t ofs = offsetof(SHArrayStorageSmall, storage) -
         HERMESVM_DIRECT_PROPERTY_SLOTS * sizeof(SHGCSmallHermesValue);
     if constexpr (ofs < 0)
       a.sub(xTemp1, xTemp1, -ofs);
     else
       a.add(xTemp1, xTemp1, ofs);
-    a.ldr(
+    emit_load_shv(
+        a,
         hwRes.a64GpX(),
-        a64::Mem(xTemp1, xTemp4, a64::Shift(a64::ShiftOp::kLSL, 3)));
+        a64::Mem(
+            xTemp1, xTemp4, a64::Shift(a64::ShiftOp::kLSL, kPropShiftAmt)));
+    emit_sh_shv_decode(a, hwRes.a64GpX(), contLab);
     a.b(contLab);
 
     a.bind(slowPathLab);
