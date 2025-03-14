@@ -44,6 +44,8 @@ struct RuntimeOffsets {
 
   /// Can't use offsetof here because KindAndSize uses bitfields.
   static constexpr uint32_t kindAndSizeKind = KindAndSize::kNumSizeBits / 8;
+
+  static constexpr uint32_t boxedDoubleValue = offsetof(BoxedDouble, value_);
 };
 
 #pragma GCC diagnostic pop
