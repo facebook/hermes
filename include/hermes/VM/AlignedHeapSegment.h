@@ -641,20 +641,6 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
         Contents::CardStatus::Dirty, std::memory_order_relaxed);
   }
 
-  /// Make the card table entries for cards that intersect the given address
-  /// range dirty. The range is a closed interval [low, high].
-  /// \pre \p low and \p high are required to be addresses covered by the card
-  /// table.
-  static void dirtyCardsForAddressRange(const void *low, const void *high) {
-    auto *segContents = contents(storageStart(low));
-    high = reinterpret_cast<const char *>(high) + Contents::kCardSize - 1;
-    cleanOrDirtyRange(
-        segContents,
-        addressToCardIndex(segContents, low),
-        addressToCardIndex(segContents, high),
-        Contents::CardStatus::Dirty);
-  }
-
   /// Find the head of the first cell that extends into the card at index
   /// \p cardIdx.
   /// \return A cell such that
