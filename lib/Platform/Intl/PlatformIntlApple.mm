@@ -1462,8 +1462,15 @@ vm::ExecutionStatus DateTimeFormatApple::initialize(
     timeZone = timeZoneIt->second.getString();
     // b. If the result of IsValidTimeZoneName(timeZone) is false, then
     if (!isValidTimeZoneName(timeZone)) {
-      // i. Throw a RangeError exception.
-      return runtime.raiseRangeError("Incorrect timeZone information provided");
+      if ([[NSTimeZone alloc] initWithName:u16StringToNSString(timeZone)] !=
+          nil) {
+        validTimeZoneNames().update(timeZone);
+      } else {
+        // i. Throw a RangeError exception.
+        return runtime.raiseRangeError(
+            vm::TwineChar16("Incorrect timeZone information provided: ") +
+            vm::TwineChar16(timeZone.c_str()));
+      }
     }
     // c. Let timeZone be CanonicalizeTimeZoneName(timeZone).
     timeZone = canonicalizeTimeZoneName(timeZone);
