@@ -45,8 +45,8 @@ template <typename HVType>
 class SegmentedArrayBase final : public VariableSizeRuntimeCell,
                                  private llvh::TrailingObjects<
                                      SegmentedArrayBase<HVType>,
-                                     GCHermesValueBase<HVType>> {
-  using GCHVType = GCHermesValueBase<HVType>;
+                                     GCHermesValueBaseImpl<HVType>> {
+  using GCHVType = GCHermesValueBaseImpl<HVType>;
 
  public:
   /// A segment is just a blob of raw memory with a fixed size.
@@ -401,8 +401,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
  private:
   static const VTable vt;
 
-  friend llvh::
-      TrailingObjects<SegmentedArrayBase<HVType>, GCHermesValueBase<HVType>>;
+  friend llvh::TrailingObjects<SegmentedArrayBase<HVType>, GCHVType>;
   friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend void SegmentedArrayBuildMeta(
       const GCCell *cell,

@@ -515,22 +515,23 @@ bool MallocGC::dbgContains(const void *p) const {
   return isValid;
 }
 
-bool MallocGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
-    const {
+bool MallocGC::needsWriteBarrier(
+    const GCHermesValueBase *loc,
+    HermesValue value) const {
   return false;
 }
 bool MallocGC::needsWriteBarrierInCtor(
-    const GCHermesValue *loc,
+    const GCHermesValueBase *loc,
     HermesValue value) const {
   return false;
 }
 bool MallocGC::needsWriteBarrier(
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueBase *loc,
     SmallHermesValue value) const {
   return false;
 }
 bool MallocGC::needsWriteBarrierInCtor(
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueBase *loc,
     SmallHermesValue value) const {
   return false;
 }

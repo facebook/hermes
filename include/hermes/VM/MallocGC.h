@@ -216,16 +216,17 @@ class MallocGC final : public GCBase {
   bool validPointer(const void *p) const override;
   bool dbgContains(const void *p) const override;
 
-  bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+  bool needsWriteBarrier(const GCHermesValueBase *loc, HermesValue value)
       const override;
-  bool needsWriteBarrier(const GCSmallHermesValue *loc, SmallHermesValue value)
-      const override;
+  bool needsWriteBarrier(
+      const GCSmallHermesValueBase *loc,
+      SmallHermesValue value) const override;
   bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const override;
-  bool needsWriteBarrierInCtor(const GCHermesValue *loc, HermesValue value)
+  bool needsWriteBarrierInCtor(const GCHermesValueBase *loc, HermesValue value)
       const override;
   bool needsWriteBarrierInCtor(
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueBase *loc,
       SmallHermesValue value) const override;
 #endif
 
@@ -240,11 +241,13 @@ class MallocGC final : public GCBase {
 
   void writeBarrier(const GCHermesValue *, HermesValue) {}
   void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
-  void
-  writeBarrierForLargeObj(const GCCell *, const GCHermesValue *, HermesValue) {}
   void writeBarrierForLargeObj(
       const GCCell *,
-      const GCSmallHermesValue *,
+      const GCHermesValueInLargeObj *,
+      HermesValue) {}
+  void writeBarrierForLargeObj(
+      const GCCell *,
+      const GCSmallHermesValueInLargeObj *,
       SmallHermesValue) {}
   void writeBarrier(const GCPointerBase *, const GCCell *) {}
   void writeBarrierForLargeObj(
@@ -255,11 +258,11 @@ class MallocGC final : public GCBase {
   void constructorWriteBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
   void constructorWriteBarrierForLargeObj(
       const GCCell *,
-      const GCSmallHermesValue *,
+      const GCSmallHermesValueInLargeObj *,
       SmallHermesValue) {}
   void constructorWriteBarrierForLargeObj(
       const GCCell *,
-      const GCHermesValue *,
+      const GCHermesValueInLargeObj *,
       HermesValue) {}
   void constructorWriteBarrier(const GCPointerBase *, const GCCell *) {}
   void constructorWriteBarrierForLargeObj(
@@ -270,18 +273,18 @@ class MallocGC final : public GCBase {
   void writeBarrierRange(const GCSmallHermesValue *, uint32_t) {}
   void constructorWriteBarrierRange(
       const GCCell *,
-      const GCHermesValue *,
+      const GCHermesValueBase *,
       uint32_t) {}
   void constructorWriteBarrierRange(
       const GCCell *,
-      const GCSmallHermesValue *,
+      const GCSmallHermesValueBase *,
       uint32_t) {}
-  void snapshotWriteBarrier(const GCHermesValue *) {}
-  void snapshotWriteBarrier(const GCSmallHermesValue *) {}
+  void snapshotWriteBarrier(const GCHermesValueBase *) {}
+  void snapshotWriteBarrier(const GCSmallHermesValueBase *) {}
   void snapshotWriteBarrier(const GCPointerBase *) {}
   void snapshotWriteBarrier(const GCSymbolID *) {}
-  void snapshotWriteBarrierRange(const GCHermesValue *, uint32_t) {}
-  void snapshotWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void snapshotWriteBarrierRange(const GCHermesValueBase *, uint32_t) {}
+  void snapshotWriteBarrierRange(const GCSmallHermesValueBase *, uint32_t) {}
   void weakRefReadBarrier(HermesValue) {}
   void weakRefReadBarrier(GCCell *) {}
 

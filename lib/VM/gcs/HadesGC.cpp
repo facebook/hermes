@@ -523,7 +523,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void accept(GCHermesValue &hv) override {
+  void accept(GCHermesValueBase &hv) override {
     if (hv.isPointer()) {
       GCCell *forwardedPtr =
           acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hv);
@@ -531,7 +531,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void accept(GCSmallHermesValue &hv) override {
+  void accept(GCSmallHermesValueBase &hv) override {
     if (hv.isPointer()) {
       CompressedPointer forwardedPtr = acceptHeap(hv.getPointer(), &hv);
       hv.setInGC(hv.updatePointer(forwardedPtr), gc);
@@ -688,7 +688,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
       acceptHeap(cp.getNonNull(pointerBase_), &ptr);
   }
 
-  void accept(GCHermesValue &hvRef) override {
+  void accept(GCHermesValueBase &hvRef) override {
     HermesValue hv = concurrentRead<HermesValue>(hvRef);
     if (hv.isPointer()) {
       acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hvRef);
@@ -715,7 +715,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     }
   }
 
-  void accept(GCSmallHermesValue &hvRef) override {
+  void accept(GCSmallHermesValueBase &hvRef) override {
     const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
     if (hv.isPointer()) {
       acceptHeap(hv.getPointer(pointerBase_), &hvRef);
@@ -1822,7 +1822,7 @@ void HadesGC::writeBarrierSlow(const GCHermesValue *loc, HermesValue value) {
 
 void HadesGC::writeBarrierSlowForLargeObj(
     const GCCell *owningObj,
-    const GCHermesValue *loc,
+    const GCHermesValueInLargeObj *loc,
     HermesValue value) {
   if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(*loc);
@@ -1848,7 +1848,7 @@ void HadesGC::writeBarrierSlow(
 
 void HadesGC::writeBarrierSlowForLargeObj(
     const GCCell *owningObj,
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueInLargeObj *loc,
     SmallHermesValue value) {
   if (ogMarkingBarriers_) {
     snapshotWriteBarrierInternal(*loc);
@@ -1892,7 +1892,7 @@ void HadesGC::constructorWriteBarrierSlow(
 
 void HadesGC::constructorWriteBarrierSlowForLargeObj(
     const GCCell *owningObj,
-    const GCHermesValue *loc,
+    const GCHermesValueInLargeObj *loc,
     HermesValue value) {
   // A constructor never needs to execute a SATB write barrier, since its
   // previous value was definitely not live.
@@ -1916,7 +1916,7 @@ void HadesGC::constructorWriteBarrierSlow(
 
 void HadesGC::constructorWriteBarrierSlowForLargeObj(
     const GCCell *owningObj,
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueInLargeObj *loc,
     SmallHermesValue value) {
   // A constructor never needs to execute a SATB write barrier, since its
   // previous value was definitely not live.
@@ -1929,7 +1929,7 @@ void HadesGC::constructorWriteBarrierSlowForLargeObj(
 
 void HadesGC::constructorWriteBarrierRangeSlow(
     const GCCell *owningObj,
-    const GCHermesValue *start,
+    const GCHermesValueBase *start,
     uint32_t numHVs) {
   assert(
       reinterpret_cast<const char *>(owningObj) <=
@@ -1950,7 +1950,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
 
 void HadesGC::constructorWriteBarrierRangeSlow(
     const GCCell *owningObj,
-    const GCSmallHermesValue *start,
+    const GCSmallHermesValueBase *start,
     uint32_t numHVs) {
   assert(
       reinterpret_cast<const char *>(owningObj) <=
@@ -1965,7 +1965,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
 }
 
 void HadesGC::snapshotWriteBarrierRangeSlow(
-    const GCHermesValue *start,
+    const GCHermesValueBase *start,
     uint32_t numHVs) {
   for (uint32_t i = 0; i < numHVs; ++i) {
     snapshotWriteBarrierInternal(start[i]);
@@ -1973,7 +1973,7 @@ void HadesGC::snapshotWriteBarrierRangeSlow(
 }
 
 void HadesGC::snapshotWriteBarrierRangeSlow(
-    const GCSmallHermesValue *start,
+    const GCSmallHermesValueBase *start,
     uint32_t numHVs) {
   for (uint32_t i = 0; i < numHVs; ++i) {
     snapshotWriteBarrierInternal(start[i]);
@@ -2148,7 +2148,7 @@ bool HadesGC::dbgContains(const void *p) const {
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
 
-bool HadesGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+bool HadesGC::needsWriteBarrier(const GCHermesValueBase *loc, HermesValue value)
     const {
   // Values in the YG never need a barrier.
   if (inYoungGen(loc))
@@ -2162,7 +2162,7 @@ bool HadesGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
   return false;
 }
 bool HadesGC::needsWriteBarrierInCtor(
-    const GCHermesValue *loc,
+    const GCHermesValueBase *loc,
     HermesValue value) const {
   // Values in the YG never need a barrier.
   if (inYoungGen(loc))
@@ -2173,7 +2173,7 @@ bool HadesGC::needsWriteBarrierInCtor(
   return false;
 }
 bool HadesGC::needsWriteBarrier(
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueBase *loc,
     SmallHermesValue value) const {
   // Values in the YG never need a barrier.
   if (inYoungGen(loc))
@@ -2187,7 +2187,7 @@ bool HadesGC::needsWriteBarrier(
   return false;
 }
 bool HadesGC::needsWriteBarrierInCtor(
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueBase *loc,
     SmallHermesValue value) const {
   // Values in the YG never need a barrier.
   if (inYoungGen(loc))
@@ -3288,11 +3288,11 @@ void HadesGC::verifyCardTable() {
       acceptHelper(ptr.get(gc.getPointerBase()), &ptr);
     }
 
-    void accept(GCHermesValue &hv) override {
+    void accept(GCHermesValueBase &hv) override {
       if (hv.isPointer())
         acceptHelper(hv.getPointer(), &hv);
     }
-    void accept(GCSmallHermesValue &hv) override {
+    void accept(GCSmallHermesValueBase &hv) override {
       if (hv.isPointer())
         acceptHelper(hv.getPointer(gc.getPointerBase()), &hv);
     }

@@ -185,23 +185,23 @@ enum XorPtrKeyID {
 ///         const GCSmallHermesValue *start, uint32_t
 ///         numHVs);
 ///     void constructorWriteBarrierRange(
-///         const GCHermesValue *start,
+///         const GCHermesValueBase *start,
 ///         uint32_t numHVs);
 ///     void constructorWriteBarrierRange(
-///         const GCSmallHermesValue *start,
+///         const GCSmallHermesValueBase *start,
 ///         uint32_t numHVs);
 ///
 ///   The given loc or region is about to be overwritten, but the new value is
 ///   not important. Perform any necessary barriers.
-///     void snapshotWriteBarrier(const GCHermesValue *loc);
-///     void snapshotWriteBarrier(const GCSmallHermesValue *loc);
+///     void snapshotWriteBarrier(const GCHermesValueBase *loc);
+///     void snapshotWriteBarrier(const GCSmallHermesValueBase *loc);
 ///     void snapshotWriteBarrier(const GCPointerBase *loc);
 ///     void snapshotWriteBarrier(const GCSymboldID *symbol);
 ///     void snapshotWriteBarrierRange(
-///         const GCHermesValue *start,
+///         const GCHermesValueBase *start,
 ///         uint32_t numHVs);
 ///     void snapshotWriteBarrierRange(
-///         const GCSmallHermesValue *start,
+///         const GCSmallHermesValueBase *start,
 ///         uint32_t numHVs);
 ///
 ///   The above barriers may have a variant with "ForLargeObj" suffix, which is
@@ -1077,18 +1077,19 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
-  virtual bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
-      const = 0;
   virtual bool needsWriteBarrier(
-      const GCSmallHermesValue *loc,
+      const GCHermesValueBase *loc,
+      HermesValue value) const = 0;
+  virtual bool needsWriteBarrier(
+      const GCSmallHermesValueBase *loc,
       SmallHermesValue value) const = 0;
   virtual bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const = 0;
   virtual bool needsWriteBarrierInCtor(
-      const GCHermesValue *loc,
+      const GCHermesValueBase *loc,
       HermesValue value) const = 0;
   virtual bool needsWriteBarrierInCtor(
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueBase *loc,
       SmallHermesValue value) const = 0;
   /// \}
 #endif
@@ -1166,11 +1167,11 @@ class GCBase {
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
   void writeBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCHermesValue *loc,
+      const GCHermesValueInLargeObj *loc,
       HermesValue value);
   void writeBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueInLargeObj *loc,
       SmallHermesValue value);
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
   void writeBarrierForLargeObj(
@@ -1183,11 +1184,11 @@ class GCBase {
       SmallHermesValue value);
   void constructorWriteBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCHermesValue *loc,
+      const GCHermesValueInLargeObj *loc,
       HermesValue value);
   void constructorWriteBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueInLargeObj *loc,
       SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
   void constructorWriteBarrierForLargeObj(
@@ -1198,19 +1199,21 @@ class GCBase {
   void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
   void constructorWriteBarrierRange(
       const GCCell *owningObj,
-      const GCHermesValue *start,
+      const GCHermesValueBase *start,
       uint32_t numHVs);
   void constructorWriteBarrierRange(
       const GCCell *owningObj,
-      const GCSmallHermesValue *start,
+      const GCSmallHermesValueBase *start,
       uint32_t numHVs);
-  void snapshotWriteBarrier(const GCHermesValue *loc);
-  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
+  void snapshotWriteBarrier(const GCHermesValueBase *loc);
+  void snapshotWriteBarrier(const GCSmallHermesValueBase *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
   void snapshotWriteBarrier(const GCSymbolID *symbol);
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
   void snapshotWriteBarrierRange(
-      const GCSmallHermesValue *start,
+      const GCHermesValueBase *start,
+      uint32_t numHVs);
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValueBase *start,
       uint32_t numHVs);
   void weakRefReadBarrier(HermesValue value);
   void weakRefReadBarrier(GCCell *value);
