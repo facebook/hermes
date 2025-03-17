@@ -13,6 +13,7 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/GCBase-inline.h"
+#include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
@@ -1819,6 +1820,20 @@ void HadesGC::writeBarrierSlow(const GCHermesValue *loc, HermesValue value) {
   relocationWriteBarrier(loc, value.getPointer());
 }
 
+void HadesGC::writeBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCHermesValue *loc,
+    HermesValue value) {
+  if (ogMarkingBarriers_) {
+    snapshotWriteBarrierInternal(*loc);
+  }
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, static_cast<GCCell *>(value.getPointer()));
+}
+
 void HadesGC::writeBarrierSlow(
     const GCSmallHermesValue *loc,
     SmallHermesValue value) {
@@ -1831,12 +1846,37 @@ void HadesGC::writeBarrierSlow(
   relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
 }
 
+void HadesGC::writeBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) {
+  if (ogMarkingBarriers_) {
+    snapshotWriteBarrierInternal(*loc);
+  }
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, value.getPointer(getPointerBase()));
+}
+
 void HadesGC::writeBarrierSlow(const GCPointerBase *loc, const GCCell *value) {
   if (*loc && ogMarkingBarriers_)
     snapshotWriteBarrierInternal(*loc);
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
   relocationWriteBarrier(loc, value);
+}
+
+void HadesGC::writeBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCPointerBase *loc,
+    const GCCell *value) {
+  if (*loc && ogMarkingBarriers_)
+    snapshotWriteBarrierInternal(*loc);
+  // Always do the non-snapshot write barrier in order for YG to be able to
+  // scan cards.
+  relocationWriteBarrierForLargeObj(owningObj, loc, value);
 }
 
 void HadesGC::constructorWriteBarrierSlow(
@@ -1850,6 +1890,19 @@ void HadesGC::constructorWriteBarrierSlow(
   relocationWriteBarrier(loc, value.getPointer());
 }
 
+void HadesGC::constructorWriteBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCHermesValue *loc,
+    HermesValue value) {
+  // A constructor never needs to execute a SATB write barrier, since its
+  // previous value was definitely not live.
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, static_cast<GCCell *>(value.getPointer()));
+}
+
 void HadesGC::constructorWriteBarrierSlow(
     const GCSmallHermesValue *loc,
     SmallHermesValue value) {
@@ -1859,6 +1912,19 @@ void HadesGC::constructorWriteBarrierSlow(
     return;
   }
   relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
+}
+
+void HadesGC::constructorWriteBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) {
+  // A constructor never needs to execute a SATB write barrier, since its
+  // previous value was definitely not live.
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, value.getPointer(getPointerBase()));
 }
 
 void HadesGC::constructorWriteBarrierRangeSlow(
@@ -1983,6 +2049,27 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
     // Note that this *only* applies since the boundaries are updated separately
     // from the card table being marked itself.
     FixedSizeHeapSegment::dirtyCardForAddress(loc);
+  }
+}
+
+void HadesGC::relocationWriteBarrierForLargeObj(
+    const GCCell *owningObj,
+    const void *loc,
+    const GCCell *value) {
+  assert(!inYoungGen(loc) && "Pre-condition from other callers");
+  // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
+  // pointers. But do dirty cards for compactee->yg pointers, since compaction
+  // may not happen in the next YG.
+  if (AlignedHeapSegment::containedInSameSegment(owningObj, value)) {
+    return;
+  }
+  if (inYoungGen(value) || compactee_.contains(value)) {
+    // Only dirty a card if it's an old-to-young or old-to-compactee pointer.
+    // This is fine to do since the GC never modifies card tables outside of
+    // allocation.
+    // Note that this *only* applies since the boundaries are updated separately
+    // from the card table being marked itself.
+    AlignedHeapSegment::dirtyCardForAddressInLargeObj(owningObj, loc);
   }
 }
 
@@ -3017,6 +3104,63 @@ std::pair<const char *, const char *> HadesGC::getSegmentAddrRange(
       iter != unitSegmentAddrMap_.end() &&
       "Given addr is not in any valid segment.");
   return iter->getSecond();
+}
+
+void HadesGC::assertWriteBarrierForNormalObj(const void *loc) {
+  if (currentCellKindAndSize_) {
+    // If currentCellKindAndSize_ is set, the owning object is still being
+    // constructed, use currentCellKindAndSize_ instead of trying to find its
+    // owning object.
+    assert(
+        !VTable::getVTable(currentCellKindAndSize_->first)->allowLargeAlloc &&
+        "This write barrier should not be called on GCCells that support large allocation");
+  } else {
+    // Normal objects should always be allocated in a FixedSizeHeapSegment.
+    auto [start, end] = getSegmentAddrRange(loc);
+    assert(
+        ((end - start) == FixedSizeHeapSegment::kSize) &&
+        "This write barrier does not work for GCCells larger than the size of FixedSizeHeapSegment");
+
+    // Don't run the check with concurrent GC. Because when the background
+    // thread is sweeping, it may merge freed cells and poison memory outside of
+    // FreeListCell, which may be accessed by findObjectContaining() when
+    // visiting next cell.
+    if constexpr (!kConcurrentGC) {
+      // The above check ensures that this loc must be within a
+      // FixedSizeHeapSegment, so it's safe to access its card table.
+      auto *obj = FixedSizeHeapSegment::findObjectContaining(loc);
+      assert(
+          !VTable::getVTable(obj->getKind())->allowLargeAlloc &&
+          "This write barrier only works for GCCells that do not support large allocation");
+    }
+  }
+}
+
+void HadesGC::assertWriteBarrierForLargeObj(
+    const GCCell *owningObj,
+    const void *loc) {
+  if (currentCellKindAndSize_) {
+    // If currentCellKindAndSize_ is set, the owning object is still being
+    // constructed, use currentCellKindAndSize_ instead of the kind and size of
+    // owningObj.
+    assert(
+        VTable::getVTable(currentCellKindAndSize_->first)->allowLargeAlloc &&
+        "This write barrier should only be called on GCCells that support large allocation");
+    assert(
+        owningObj <= loc &&
+        loc < (reinterpret_cast<const char *>(owningObj) +
+               currentCellKindAndSize_->second) &&
+        "The owning object must contain the given heap location");
+  } else {
+    assert(
+        VTable::getVTable(owningObj->getKind())->allowLargeAlloc &&
+        "This write barrier should only be called on GCCells that support large allocation");
+    assert(
+        owningObj <= loc &&
+        loc < (reinterpret_cast<const char *>(owningObj) +
+               owningObj->getAllocatedSize()) &&
+        "The owning object must contain the given heap location");
+  }
 }
 
 void HadesGC::checkWellFormed() {

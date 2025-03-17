@@ -407,6 +407,17 @@ class AlignedHeapSegment {
     return (cp - base) >> LogHeapAlign;
   }
 
+  /// Return true if objects \p a and \p b live in the same segment. This is
+  /// used to check if a pointer field in an object points to another object in
+  /// the same segment (so that we don't need to dirty the cards -- we only need
+  /// to dirty cards that might contain old-to-young pointers, which must cross
+  /// segments). This also works for large segments, since there is only one
+  /// cell in those segments (i.e., \p a and \p b would be the same).
+  static bool containedInSameSegment(const GCCell *a, const GCCell *b) {
+    return (reinterpret_cast<uintptr_t>(a) ^ reinterpret_cast<uintptr_t>(b)) <
+        kSegmentUnitSize;
+  }
+
   /// Returns the index of the segment containing \p lowLim, which is required
   /// to be the start of its containing segment.  (This can allow extra
   /// efficiency, in cases where the segment start has already been computed.)
