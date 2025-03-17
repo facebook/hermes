@@ -732,6 +732,13 @@ class HadesGC final : public GCBase {
   /// Protected by gcMutex_.
   OldGen oldGen_;
 
+#ifndef NDEBUG
+  /// Map an address aligned to AlignedHeapSegment::kSegmentUnitSize to the
+  /// start and end address of its owning segment.
+  llvh::DenseMap<const char *, std::pair<const char *, const char *>>
+      unitSegmentAddrMap_;
+#endif
+
   /// Whoever holds this lock is permitted to modify data structures around the
   /// GC. This includes mark bits, free lists, etc.
   Mutex gcMutex_;
@@ -1155,6 +1162,9 @@ class HadesGC final : public GCBase {
   void removeSegmentExtentFromCrashManager(const std::string &extraName);
 
 #ifdef HERMES_SLOW_DEBUG
+  /// Return the start/end address of the segment that contains \p addr.
+  std::pair<const char *, const char *> getSegmentAddrRange(const void *addr);
+
   /// Checks the heap to make sure all cells are valid.
   void checkWellFormed();
 

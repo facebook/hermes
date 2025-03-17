@@ -1611,6 +1611,9 @@ void HadesGC::finalizeCompactee() {
   // allocated in the compactee.
   oldGen_.incrementAllocatedBytes(-preAllocated);
 
+#ifndef NDEBUG
+  unitSegmentAddrMap_.erase(compactee_.segment->lowLim());
+#endif
   const size_t segIdx = AlignedHeapSegment::getSegmentIndexFromStart(
       compactee_.segment->lowLim());
   segmentIndices_.push_back(segIdx);
@@ -2855,6 +2858,13 @@ llvh::ErrorOr<FixedSizeHeapSegment> HadesGC::createSegment() {
   }
   gcCallbacks_.registerHeapSegment(segIdx, seg.lowLim());
   addSegmentExtentToCrashManager(seg, std::to_string(segIdx));
+#ifndef NDEBUG
+  auto inserted =
+      unitSegmentAddrMap_.try_emplace(seg.lowLim(), seg.lowLim(), seg.hiLim());
+  assert(
+      inserted.second &&
+      "One segment with the same start address exists in unitSegmentAddrMap_");
+#endif
   seg.markBitArray().set();
   return llvh::ErrorOr<FixedSizeHeapSegment>(std::move(seg));
 }
@@ -2998,6 +3008,16 @@ void HadesGC::removeSegmentExtentFromCrashManager(
 }
 
 #ifdef HERMES_SLOW_DEBUG
+std::pair<const char *, const char *> HadesGC::getSegmentAddrRange(
+    const void *addr) {
+  auto *alignedAddr = reinterpret_cast<const char *>(llvh::alignDown(
+      reinterpret_cast<uintptr_t>(addr), AlignedHeapSegment::kSegmentUnitSize));
+  auto iter = unitSegmentAddrMap_.find(alignedAddr);
+  assert(
+      iter != unitSegmentAddrMap_.end() &&
+      "Given addr is not in any valid segment.");
+  return iter->getSecond();
+}
 
 void HadesGC::checkWellFormed() {
   CheckHeapWellFormedAcceptor acceptor(*this);
