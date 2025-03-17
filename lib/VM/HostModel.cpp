@@ -20,6 +20,7 @@ const CallableVTable FinalizableNativeFunction::vt{
         VTable(
             CellKind::FinalizableNativeFunctionKind,
             cellSize<FinalizableNativeFunction>(),
+            /* allowLargeAlloc */ false,
             FinalizableNativeFunction::_finalizeImpl),
         FinalizableNativeFunction::_getOwnIndexedRangeImpl,
         FinalizableNativeFunction::_haveOwnIndexedImpl,
@@ -81,6 +82,7 @@ const ObjectVTable HostObject::vt{
     VTable(
         CellKind::HostObjectKind,
         cellSize<HostObject>(),
+        /* allowLargeAlloc */ false,
         HostObject::_finalizeImpl),
     HostObject::_getOwnIndexedRangeImpl,
     HostObject::_haveOwnIndexedImpl,

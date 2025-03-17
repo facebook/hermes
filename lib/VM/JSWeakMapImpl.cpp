@@ -206,6 +206,7 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
     VTable(
         C,
         cellSize<JSWeakMapImpl>(),
+        /* allowLargeAlloc */ false,
         JSWeakMapImpl::_finalizeImpl,
         JSWeakMapImpl::_mallocSizeImpl,
         nullptr

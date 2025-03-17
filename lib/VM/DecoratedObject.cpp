@@ -22,6 +22,7 @@ const ObjectVTable DecoratedObject::vt{
     VTable(
         CellKind::DecoratedObjectKind,
         cellSize<DecoratedObject>(),
+        /* allowLargeAlloc */ false,
         DecoratedObject::_finalizeImpl,
         DecoratedObject::_mallocSizeImpl),
     DecoratedObject::_getOwnIndexedRangeImpl,

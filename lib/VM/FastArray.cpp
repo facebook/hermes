@@ -28,6 +28,7 @@ const ObjectVTable FastArray::vt{
     VTable(
         CellKind::FastArrayKind,
         cellSize<FastArray>(),
+        /* allowLargeAlloc */ false,
         nullptr,
         nullptr,
         nullptr
