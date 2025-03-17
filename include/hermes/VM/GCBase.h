@@ -1084,6 +1084,12 @@ class GCBase {
       SmallHermesValue value) const = 0;
   virtual bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCHermesValue *loc,
+      HermesValue value) const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value) const = 0;
   /// \}
 #endif
 
