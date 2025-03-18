@@ -338,6 +338,8 @@ static CallResult<HiddenClass *> getHiddenClassForBuffer(
   assert(
       shapeInfo.numProps == lv.clazz->getNumProperties() &&
       "numLiterals should match hidden class property count.");
+  // Dictionary mode classes cannot be cached since they can change as the
+  // resulting object is modified.
   if (LLVM_LIKELY(!lv.clazz->isDictionary())) {
     runtimeModule->tryCacheLiteralHiddenClass(
         runtime, shapeTableIndex, *lv.clazz);

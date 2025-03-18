@@ -188,7 +188,7 @@ ExecutionStatus Interpreter::defineOwnByIdSlowPath(
     // We can only cache if this is not a dictionary and we have an
     // enabled cache index.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-    if (LLVM_LIKELY(!clazz->isDictionary()) &&
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
         LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
@@ -1695,7 +1695,7 @@ ExecutionStatus doPutByIdSlowPath_RJS(
     // cacheIdx == 0 indicates no caching so don't update the cache in
     // those cases.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-    if (LLVM_LIKELY(!clazz->isDictionary()) &&
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
         LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
 #ifdef HERMES_SLOW_DEBUG
       if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)

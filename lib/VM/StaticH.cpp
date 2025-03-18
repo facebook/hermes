@@ -800,7 +800,8 @@ static inline void putById_RJS(
       // cacheIdx == 0 indicates no caching so don't update the cache in
       // those cases.
       HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-      if (LLVM_LIKELY(!clazz->isDictionary()) && LLVM_LIKELY(cacheEntry)) {
+      if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
+          LLVM_LIKELY(cacheEntry)) {
 #ifdef HERMES_SLOW_DEBUG
         // if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
         //   ++NumPutByIdCacheEvicts;
@@ -1292,7 +1293,7 @@ extern "C" void _sh_ljs_define_own_by_id(
     // cacheIdx == 0 indicates no caching so don't update the cache in
     // those cases.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-    if (LLVM_LIKELY(!clazz->isDictionary()) && LLVM_LIKELY(cacheEntry)) {
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) && LLVM_LIKELY(cacheEntry)) {
       // Cache the class and property slot.
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;

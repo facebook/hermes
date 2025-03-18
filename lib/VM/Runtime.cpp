@@ -194,7 +194,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
       desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
-    if (LLVM_LIKELY(!clazz->isDictionary())) {
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache())) {
       // Cache the class, id and property slot.
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
@@ -221,7 +221,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
       desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
-    if (LLVM_LIKELY(!clazz->isDictionary())) {
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache())) {
       // Cache the class and property slot.
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
