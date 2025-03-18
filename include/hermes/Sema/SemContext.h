@@ -76,6 +76,18 @@ class Decl {
     /// but not outside it.
     ClassExprName,
 
+    // ==== Private name declarations ===
+    /// This name defines a field.
+    PrivateField,
+    /// This name defines a method.
+    PrivateMethod,
+    /// This name defines only a getter.
+    PrivateGetter,
+    /// This name defines only a setter.
+    PrivateSetter,
+    /// This name defines both a getter and setter.
+    PrivateGetterSetter,
+
     // ==== Var-like declarations ===
 
     /// "var" in function scope.
@@ -88,13 +100,15 @@ class Decl {
     UndeclaredGlobalProperty,
   };
 
-  /// Certain identifiers must be treated differently by later parts
-  /// of the program.
-  /// Indicate if this identifier is specially treated "arguments" or "eval".
+  /// Certain identifiers must be treated differently by later parts of the
+  /// program, e.g. this identifier is specially treated "arguments" or "eval".
+  /// Can also store information on a private name decl static level.
   enum class Special : uint8_t {
     NotSpecial,
     Arguments,
     Eval,
+    /// Can only be set for a private method or accessor.
+    PrivateStatic,
   };
 
   /// \return true if this declaration kind obeys the TDZ.
@@ -124,6 +138,11 @@ class Decl {
   static bool isKindNotReassignable(Kind kind) {
     return kind == Kind::Const || kind == Kind::ClassExprName ||
         kind == Kind::Import;
+  }
+
+  /// \return true if this declaration kind is a private name.
+  static bool isKindPrivateName(Kind kind) {
+    return kind >= Kind::PrivateField && kind <= Kind::PrivateGetterSetter;
   }
 
   /// Identifier that is declared.

@@ -343,6 +343,12 @@ class Context {
     return stringTable_.getIdentifier(str);
   }
 
+  /// Get or create a new identifier for the string value of a private name \p
+  /// str. The method copies the content of the string.
+  Identifier getPrivateNameIdentifier(UniqueString *str) {
+    return getIdentifier(llvh::Twine("#") + str->str());
+  }
+
   /// Return the textual representation of the identifier.
   llvh::StringRef toString(Identifier iden) {
     return iden.str();

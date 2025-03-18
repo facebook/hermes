@@ -506,6 +506,11 @@ void SemContextDumper::printDecl(llvh::raw_ostream &os, const Decl *d) {
     CASE(Parameter)
     CASE(GlobalProperty)
     CASE(UndeclaredGlobalProperty)
+    CASE(PrivateField)
+    CASE(PrivateMethod)
+    CASE(PrivateGetter)
+    CASE(PrivateSetter)
+    CASE(PrivateGetterSetter)
   }
   os << s;
 #undef CASE
@@ -518,6 +523,7 @@ void SemContextDumper::printDecl(llvh::raw_ostream &os, const Decl *d) {
     switch (d->special) {
       CASE(Arguments)
       CASE(Eval)
+      CASE(PrivateStatic)
       case Decl::Special::NotSpecial:
         break;
     }

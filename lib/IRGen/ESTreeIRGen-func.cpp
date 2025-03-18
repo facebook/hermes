@@ -900,6 +900,12 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
         break;
       }
 
+      case sema::Decl::Kind::PrivateField:
+      case sema::Decl::Kind::PrivateMethod:
+      case sema::Decl::Kind::PrivateGetter:
+      case sema::Decl::Kind::PrivateSetter:
+      case sema::Decl::Kind::PrivateGetterSetter:
+        // Private names are handled separately.
       case sema::Decl::Kind::Parameter:
         // Skip parameters, they are handled separately.
         continue;

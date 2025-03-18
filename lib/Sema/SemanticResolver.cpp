@@ -301,6 +301,12 @@ void SemanticResolver::visit(
     sm_.error(identifier->getSourceRange(), "invalid use of $SHBuiltin");
   }
 
+  // Identifiers belonging to a PrivateNameNode are validated in the
+  // PrivateNameNode visitor.
+  if (llvh::isa<PrivateNameNode>(parent)) {
+    return;
+  }
+
   resolveIdentifier(identifier, false);
 }
 
@@ -895,18 +901,13 @@ void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
 }
 
 void SemanticResolver::visit(PrivateNameNode *node) {
-  if (compile_)
-    sm_.error(node->getSourceRange(), "private properties are not supported");
+  resolvePrivateName(llvh::cast<IdentifierNode>(node->_id));
   visitESTreeChildren(*this, node);
 }
 
 void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
-  if (compile_)
-    sm_.error(node->getSourceRange(), "private properties are not supported");
   // Only visit the init expression, since it needs to be resolved.
   if (node->_value) {
-    sm_.error(
-        node->getSourceRange(), "property initialization is not supported yet");
     if (0) {
       // TODO: visit the properties in the context of a synthetic method.
       visitESTreeNode(*this, node->_value, node);
@@ -1796,6 +1797,46 @@ Decl *SemanticResolver::resolveIdentifier(
   return decl;
 }
 
+Decl *SemanticResolver::declarePrivateName(
+    IdentifierNode *identifier,
+    Decl::Kind kind,
+    bool isStatic) {
+  Identifier privateNameStr =
+      astContext_.getPrivateNameIdentifier(identifier->_name);
+  auto *decl = semCtx_.newDeclInScope(
+      privateNameStr.getUnderlyingPointer(),
+      kind,
+      curScope_,
+      isStatic ? Decl::Special::PrivateStatic : Decl::Special::NotSpecial);
+  auto res = bindingTable_.try_emplace(
+      privateNameStr.getUnderlyingPointer(), Binding{decl, identifier});
+  (void)res;
+  assert(res.second && "cannot re-declare a private name in the same scope.");
+  semCtx_.setBothDecl(identifier, decl);
+  return decl;
+}
+
+Decl *SemanticResolver::resolvePrivateName(IdentifierNode *identifier) {
+  if (sema::Decl *decl = semCtx_.getExpressionDecl(identifier))
+    return decl;
+
+  // If we find the binding, assign the associated declaration and return it.
+  Identifier privateNameStr =
+      astContext_.getPrivateNameIdentifier(identifier->_name);
+  if (Binding *binding =
+          bindingTable_.find(privateNameStr.getUnderlyingPointer())) {
+    semCtx_.setExpressionDecl(identifier, binding->decl);
+    return binding->decl;
+  }
+
+  // Failed to resolve.
+  sm_.error(
+      identifier->getSourceRange(),
+      Twine("the private name \"#") + identifier->_name->str() +
+          "\" was not declared in any enclosing class");
+  return nullptr;
+}
+
 Decl *SemanticResolver::checkIdentifierResolved(
     ESTree::IdentifierNode *identifier) {
   // If identifier already resolved or unresolvable,
@@ -1866,6 +1907,11 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
     bool isStatic = false;
     bool isGetter = false;
     bool isSetter = false;
+    /// In the case of a pair of accessors defined with the same name, we should
+    /// reuse the same decl to define the declaration & expression decl of the
+    /// second accessor. This field stores that original decl for the second
+    /// accessor to find later.
+    Decl *originalNameDecl;
   };
 
   // Map a private name to accessor information.
@@ -1885,6 +1931,8 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
       if (!privateDeclarations.try_emplace(id->_name, PrivateAccessorInfo{})
                .second) {
         sm_.error(id->getSourceRange(), defaultDupErrMsg);
+      } else {
+        declarePrivateName(id, Decl::Kind::PrivateField);
       }
       continue;
     }
@@ -1898,6 +1946,8 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
         if (!privateDeclarations.try_emplace(id->_name, PrivateAccessorInfo{})
                  .second) {
           sm_.error(id->getSourceRange(), defaultDupErrMsg);
+        } else {
+          declarePrivateName(id, Decl::Kind::PrivateMethod, method->_static);
         }
         continue;
       }
@@ -1905,10 +1955,17 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
           (methKind == kw_.identSet || methKind == kw_.identGet) &&
           "unrecognized method kind.");
       bool isSetter = methKind == kw_.identSet;
-      PrivateAccessorInfo curInfo{true, method->_static, !isSetter, isSetter};
+      PrivateAccessorInfo curInfo{
+          true, method->_static, !isSetter, isSetter, nullptr};
       auto [iter, success] = privateDeclarations.insert({id->_name, curInfo});
       // If we successfully inserted, there's no possibility for an error.
       if (success) {
+        // Save the decl made here for reuse later in the case of a pair of
+        // accessors.
+        iter->second.originalNameDecl = declarePrivateName(
+            id,
+            isSetter ? Decl::Kind::PrivateSetter : Decl::Kind::PrivateGetter,
+            method->_static);
         continue;
       }
       // There is already an private declaration of this identifier. The only
@@ -1934,6 +1991,9 @@ void SemanticResolver::collectDeclaredPrivateIdentifiers(
       // and getter.
       existingInfo.isGetter = true;
       existingInfo.isSetter = true;
+      existingInfo.originalNameDecl->kind = Decl::Kind::PrivateGetterSetter;
+      // Make sure to bind this id node to the correct decl.
+      semCtx_.setBothDecl(id, existingInfo.originalNameDecl);
     }
   }
 }

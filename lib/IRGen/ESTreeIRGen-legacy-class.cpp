@@ -156,6 +156,12 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       if (method->_kind == kw_.identConstructor) {
         continue;
       }
+      if (llvh::isa<ESTree::PrivateNameNode>(method->_key)) {
+        Builder.getModule()->getContext().getSourceErrorManager().error(
+            method->_key->getSourceRange(),
+            Twine("private properties are not supported"));
+        return nullptr;
+      }
       Value *key;
       Identifier nameHint{};
       if (method->_computed) {
@@ -195,6 +201,13 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
             Builder.createToPropertyKeyInst(genExpression(prop->_key)),
             fieldKeyVar);
       }
+    }
+    if (auto *privateProp =
+            llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&classElement)) {
+      Builder.getModule()->getContext().getSourceErrorManager().error(
+          privateProp->getSourceRange(),
+          Twine("private properties are not supported"));
+      return nullptr;
     }
   }
 

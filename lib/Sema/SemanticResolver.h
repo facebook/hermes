@@ -192,7 +192,8 @@ class SemanticResolver
 
   /// A private identifier is declared via a field, method, or accessor
   /// definition. This will report errors in any illegally duplicated private
-  /// identifiers.
+  /// identifiers. Also add the private names to the binding table and associate
+  /// `Decl`s with the corresponding private name IdentifierNodes.
   void collectDeclaredPrivateIdentifiers(ESTree::ClassLikeNode *node);
   void visit(ESTree::ProgramNode *node);
 
@@ -389,6 +390,24 @@ class SemanticResolver
   /// Assigns the associated declaration if it exists.
   /// \return the declaration, `nullptr` if unresolvable or failed to resolve.
   Decl *checkIdentifierResolved(ESTree::IdentifierNode *identifier);
+
+  /// Create a new declaration of a private name in the current scope.
+  /// \pre An IdentifierNode which has the same _name field has not been
+  /// declared in this same LexicalScope.
+  /// \param identifier the AST node containing the name
+  /// \param kind the kind of decl to be created.
+  /// \param isStatic is only valid for methods / accessors.
+  /// \return the newly created decl.
+  Decl *declarePrivateName(
+      ESTree::IdentifierNode *identifier,
+      Decl::Kind kind,
+      bool isStatic = false);
+
+  /// Resolve an identifier for a private name to a declaration and record the
+  /// resolution. Emit an error for undeclared private names.
+  /// \return null when no private name declaration could be found for \p
+  /// identifier; at which point an error has been raised.
+  Decl *resolvePrivateName(ESTree::IdentifierNode *identifier);
 
   /// Declare all declarations optionally associated with \p scopeNode
   /// by the DeclCollector in the current scope.
