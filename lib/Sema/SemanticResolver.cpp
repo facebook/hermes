@@ -906,11 +906,31 @@ void SemanticResolver::visit(PrivateNameNode *node) {
 }
 
 void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
-  // Only visit the init expression, since it needs to be resolved.
+  // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
-    if (0) {
-      // TODO: visit the properties in the context of a synthetic method.
-      visitESTreeNode(*this, node->_value, node);
+    // We visit the initializer expression in the context of a synthesized
+    // method that performs the initializations.
+    // Field initializers can always reference super.
+    llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, true};
+    llvh::SaveAndRestore<bool> oldForbidAwait{forbidAwaitExpression_, true};
+    // ES14.0 15.7.1
+    // It is a Syntax Error if Initializer is present and ContainsArguments of
+    // Initializer is true.
+    llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
+    FunctionContext funcCtx(
+        *this,
+        node->_static
+            ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
+            : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo());
+    visitESTreeNode(*this, node->_value, node);
+  } else if (!typed_) {
+    // Create the these initializers even if no value initializer is present, in
+    // untyped mode. Typed classes don't need these initializers since we know
+    // the exact shape and construct it up front.
+    if (node->_static) {
+      curClassContext_->getOrCreateStaticElementsInitFunctionInfo();
+    } else {
+      curClassContext_->getOrCreateInstanceElementsInitFunctionInfo();
     }
   }
 }
