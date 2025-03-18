@@ -775,6 +775,7 @@ int main(int argc, char **argv) {
 
   hermes::vm::RuntimeConfig config =
       hermes::vm::RuntimeConfig::Builder()
+          .withMicrotaskQueue(true)
           .withCompilationMode(options.compilationMode)
           .build();
 
