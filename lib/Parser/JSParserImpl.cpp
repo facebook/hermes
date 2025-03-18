@@ -1109,11 +1109,14 @@ JSParserImpl::parseVariableStatement(Param param) {
 
 Optional<ESTree::PrivateNameNode *> JSParserImpl::parsePrivateName() {
   assert(check(TokenKind::private_identifier));
+  auto *privateIdent = tok_->getPrivateIdentifier();
   ESTree::Node *ident = setLocation(
       tok_,
       tok_,
-      new (context_)
-          ESTree::IdentifierNode(tok_->getPrivateIdentifier(), nullptr, false));
+      new (context_) ESTree::IdentifierNode(privateIdent, nullptr, false));
+  if (privateIdent == constructorIdent_) {
+    error(ident->getSourceRange(), "Private names cannot be '#constructor'");
+  }
   SMLoc start = advance(JSLexer::GrammarContext::AllowDiv).Start;
   return setLocation(
       start, ident, new (context_) ESTree::PrivateNameNode(ident));
@@ -5088,6 +5091,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       return None;
     }
     if (isPrivate) {
+      if (llvh::cast<ESTree::IdentifierNode>(prop)->_name ==
+          constructorIdent_) {
+        error(prop->getSourceRange(), "Private names cannot be '#constructor'");
+      }
       if (accessibility) {
         error(
             startRange,

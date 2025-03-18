@@ -871,8 +871,10 @@ void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
   ClassContext classCtx(*this, node);
+  // Declare a new scope where we will put private names.
+  ScopeRAII scope{*this, node};
+  collectDeclaredPrivateIdentifiers(node);
   if (ESTree::IdentifierNode *ident = getClassID(node)) {
-    ScopeRAII scope{*this, node};
     // If there is a name, declare it.
     if (validateDeclarationName(Decl::Kind::ClassExprName, ident)) {
       Decl *decl = semCtx_.newDeclInScope(
@@ -1059,6 +1061,36 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
     }
   }
 
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticResolver::visit(
+    ESTree::MemberExpressionNode *node,
+    ESTree::Node *parent) {
+  if (llvh::isa<PrivateNameNode>(node->_property)) {
+    // The following conditions are forbidden by the grammar but it's harder to
+    // enforce in the parser.
+    if (llvh::isa<SuperNode>(node->_object)) {
+      sm_.error(
+          node->getSourceRange(), "Cannot lookup private names on super.");
+    }
+    if (auto *op = llvh::dyn_cast<UnaryExpressionNode>(parent);
+        op && op->_operator == kw_.identDelete) {
+      sm_.error(node->getSourceRange(), "Cannot `delete` with a private name.");
+    }
+  }
+  visitESTreeChildren(*this, node);
+}
+
+void SemanticResolver::visit(
+    ESTree::OptionalMemberExpressionNode *node,
+    ESTree::Node *parent) {
+  // `delete o?.#privateName` is not allowed.
+  if (auto *op = llvh::dyn_cast<UnaryExpressionNode>(parent); op &&
+      op->_operator == kw_.identDelete &&
+      llvh::isa<PrivateNameNode>(node->_property)) {
+    sm_.error(parent->getSourceRange(), "Cannot `delete` with a private name.");
+  }
   visitESTreeChildren(*this, node);
 }
 
@@ -1821,6 +1853,88 @@ void SemanticResolver::processPromotedFuncDecls(
     validateAndDeclareIdentifier(kind, ident);
     functionContext()->promotedFuncDecls.try_emplace(
         ident->_name, semCtx_.getDeclarationDecl(ident));
+  }
+}
+
+void SemanticResolver::collectDeclaredPrivateIdentifiers(
+    ESTree::ClassLikeNode *node) {
+  /// Information about a private accessor.
+  struct PrivateAccessorInfo {
+    /// The rest of the fields in the struct are only meaningful if isAccessor
+    /// is true. Fields & methods will have this as false.
+    bool isAccessor = false;
+    bool isStatic = false;
+    bool isGetter = false;
+    bool isSetter = false;
+  };
+
+  // Map a private name to accessor information.
+  llvh::DenseMap<const UniqueString *, PrivateAccessorInfo> privateDeclarations;
+
+  const char *defaultDupErrMsg = "Duplicate private identifier declaration.";
+  for (ESTree::Node &elm : getClassBody(node)->_body) {
+    // Declare and validate the class private names. Enforce the rules laid out
+    // in ES2024 15.7.1 Early Errors: It is a Syntax Error if declared private
+    // names contains any duplicate entries, unless the name is used once for a
+    // getter and once for a setter and in no other entries, and the getter and
+    // setter are either both static or both non-static.
+    if (auto *prop = llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&elm)) {
+      auto *id = llvh::cast<IdentifierNode>(prop->_key);
+      // If we did not complete the insert, that means something already exists
+      // with this identifier. Fields are not allowed to be duplicated at all.
+      if (!privateDeclarations.try_emplace(id->_name, PrivateAccessorInfo{})
+               .second) {
+        sm_.error(id->getSourceRange(), defaultDupErrMsg);
+      }
+      continue;
+    }
+    if (auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&elm)) {
+      auto *privateName = llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key);
+      if (!privateName)
+        continue;
+      auto id = llvh::cast<IdentifierNode>(privateName->_id);
+      UniqueString *methKind = method->_kind;
+      if (methKind == kw_.identMethod) {
+        if (!privateDeclarations.try_emplace(id->_name, PrivateAccessorInfo{})
+                 .second) {
+          sm_.error(id->getSourceRange(), defaultDupErrMsg);
+        }
+        continue;
+      }
+      assert(
+          (methKind == kw_.identSet || methKind == kw_.identGet) &&
+          "unrecognized method kind.");
+      bool isSetter = methKind == kw_.identSet;
+      PrivateAccessorInfo curInfo{true, method->_static, !isSetter, isSetter};
+      auto [iter, success] = privateDeclarations.insert({id->_name, curInfo});
+      // If we successfully inserted, there's no possibility for an error.
+      if (success) {
+        continue;
+      }
+      // There is already an private declaration of this identifier. The only
+      // way this can be legal is if it is also an accessor which is the
+      // complement accessor kind of what we are trying to define here, with the
+      // same static-ness. E.g., if we are trying to define a static getter,
+      // then the only accepted duplicate is a static setter.
+      auto &existingInfo = iter->second;
+      if ((!existingInfo.isAccessor) ||
+          (curInfo.isSetter && existingInfo.isSetter) ||
+          (curInfo.isGetter && existingInfo.isGetter)) {
+        sm_.error(id->getSourceRange(), defaultDupErrMsg);
+        continue;
+      }
+      if (curInfo.isStatic != existingInfo.isStatic) {
+        sm_.error(
+            id->getSourceRange(),
+            "static and non-static private accessor with the same name");
+        continue;
+      }
+      // We can only survive through one duplicate declaration on the same
+      // name. After this, we know this private name has both a setter
+      // and getter.
+      existingInfo.isGetter = true;
+      existingInfo.isSetter = true;
+    }
   }
 }
 

@@ -190,6 +190,10 @@ class SemanticResolver
     visitESTreeChildren(*this, node);
   }
 
+  /// A private identifier is declared via a field, method, or accessor
+  /// definition. This will report errors in any illegally duplicated private
+  /// identifiers.
+  void collectDeclaredPrivateIdentifiers(ESTree::ClassLikeNode *node);
   void visit(ESTree::ProgramNode *node);
 
   void visit(ESTree::FunctionDeclarationNode *funcDecl, ESTree::Node *parent);
@@ -254,6 +258,9 @@ class SemanticResolver
   void visit(ESTree::SuperNode *node, ESTree::Node *parent);
 
   void visit(ESTree::CallExpressionNode *node);
+
+  void visit(ESTree::MemberExpressionNode *node, ESTree::Node *parent);
+  void visit(ESTree::OptionalMemberExpressionNode *node, ESTree::Node *parent);
 
   void visit(ESTree::SpreadElementNode *node, ESTree::Node *parent);
 
