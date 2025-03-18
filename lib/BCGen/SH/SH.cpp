@@ -2170,6 +2170,8 @@ class InstrGen {
         return "_sh_ljs_is_symbol";
       case Type::Environment:
         hermes_fatal("cannot check for environment type");
+      case Type::PrivateName:
+        hermes_fatal("cannot check for PrivateName type");
       case Type::FunctionCode:
         hermes_fatal("cannot check for functionCode type");
       case Type::Object:

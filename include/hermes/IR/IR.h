@@ -72,6 +72,11 @@ class Type {
     // ES2024 4.4.32 Symbol type (not the symbol object)
     Symbol,
     Environment,
+    // ES2024 6.2.12 Private Names. We currently happen to use symbols at
+    // runtime to represent private names, but conceptually private names are a
+    // different entity, and for example certain private operations can only
+    // operate on this type.
+    PrivateName,
     /// Function code (IR Function value), not a closure.
     FunctionCode,
     Object,
@@ -96,8 +101,12 @@ class Type {
         "bigint",
         "symbol",
         "environment",
+        "privateName",
         "functionCode",
         "object"};
+    static_assert(
+        LAST_TYPE == (sizeof(names) / sizeof(char *)),
+        "Not all types have a defined string representation");
     return names[idx];
   }
 
@@ -111,7 +120,7 @@ class Type {
   // special internal types that are never mixed with other types.
   static constexpr uint16_t TYPE_ANY_EMPTY_UNINIT_MASK =
       ((1u << TypeKind::LAST_TYPE) - 1) & ~BIT_TO_VAL(Environment) &
-      ~BIT_TO_VAL(FunctionCode);
+      ~BIT_TO_VAL(PrivateName) & ~BIT_TO_VAL(FunctionCode);
   // All of the above types except "empty" and "uninit".
   static constexpr uint16_t TYPE_ANY_MASK =
       TYPE_ANY_EMPTY_UNINIT_MASK & ~BIT_TO_VAL(Empty) & ~BIT_TO_VAL(Uninit);
@@ -203,6 +212,9 @@ class Type {
   static constexpr Type createEnvironment() {
     return Type(BIT_TO_VAL(Environment));
   }
+  static constexpr Type createPrivateName() {
+    return Type(BIT_TO_VAL(PrivateName));
+  }
   static constexpr Type createFunctionCode() {
     return Type(BIT_TO_VAL(FunctionCode));
   }
@@ -250,6 +262,9 @@ class Type {
   }
   constexpr bool isEnvironmentType() const {
     return IS_VAL(Environment);
+  }
+  constexpr bool isPrivateNameType() const {
+    return IS_VAL(PrivateName);
   }
   constexpr bool isFunctionCodeType() const {
     return IS_VAL(FunctionCode);
