@@ -1954,10 +1954,11 @@ void HBCISel::generateCacheNewObjectInst(
     hermes::CacheNewObjectInst *Inst,
     hermes::BasicBlock *next) {
   auto thisReg = encodeValue(Inst->getThis());
+  auto newTargetReg = encodeValue(Inst->getNewTarget());
 
   auto bufIndex =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  BCFGen_->emitCacheNewObject(thisReg, bufIndex.shapeTableIdx);
+  BCFGen_->emitCacheNewObject(thisReg, newTargetReg, bufIndex.shapeTableIdx);
 }
 
 void HBCISel::generateCreateClassInst(CreateClassInst *Inst, BasicBlock *next) {

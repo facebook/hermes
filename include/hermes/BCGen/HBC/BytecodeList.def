@@ -137,8 +137,9 @@ DEFINE_OPCODE_2(FastArrayAppend, Reg8, Reg8)
 
 /// Perform a lookup on the new object cache.
 /// Arg1 = the 'this' value to lookup
-/// Arg2 = the index in the shape table.
-DEFINE_OPCODE_2(CacheNewObject, Reg8, UInt32)
+/// Arg2 = the new target to determine whether it is a constructor call
+/// Arg3 = the index in the shape table.
+DEFINE_OPCODE_3(CacheNewObject, Reg8, Reg8, UInt32)
 
 /// Arg1 = Arg2 (Register copy)
 DEFINE_OPCODE_2(Mov, Reg8, Reg8)
