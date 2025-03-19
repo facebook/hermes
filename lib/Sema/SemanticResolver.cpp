@@ -1088,7 +1088,7 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
 void SemanticResolver::visit(
     ESTree::MemberExpressionNode *node,
     ESTree::Node *parent) {
-  if (llvh::isa<PrivateNameNode>(node->_property)) {
+  if (auto *name = llvh::dyn_cast<PrivateNameNode>(node->_property)) {
     // The following conditions are forbidden by the grammar but it's harder to
     // enforce in the parser.
     if (llvh::isa<SuperNode>(node->_object)) {
@@ -1099,6 +1099,33 @@ void SemanticResolver::visit(
         op && op->_operator == kw_.identDelete) {
       sm_.error(node->getSourceRange(), "Cannot `delete` with a private name.");
     }
+    if (!astContext_.getCodeGenerationSettings().test262) {
+      sema::Decl *decl =
+          resolvePrivateName(llvh::cast<IdentifierNode>(name->_id));
+      assert(decl && "private name node has missing decl");
+      if (auto *assign = llvh::dyn_cast<AssignmentExpressionNode>(parent);
+          assign && assign->_left == node) {
+        // Validate stores of a private name are using a name that is eligible
+        // for stores.
+        if (decl->kind == Decl::Kind::PrivateGetter) {
+          sm_.error(
+              parent->getSourceRange(),
+              "Cannot store to a private name that only defines a getter.");
+        } else if (decl->kind == Decl::Kind::PrivateMethod) {
+          sm_.error(
+              parent->getSourceRange(),
+              "Cannot store to a private name that defines a method.");
+        }
+      } else {
+        // Validate loads of a private name are using a name that is eligible
+        // for loads.
+        if (decl->kind == Decl::Kind::PrivateSetter) {
+          sm_.error(
+              node->getSourceRange(),
+              "Cannot load from a private name that only defines a setter.");
+        }
+      }
+    }
   }
   visitESTreeChildren(*this, node);
 }
@@ -1106,11 +1133,38 @@ void SemanticResolver::visit(
 void SemanticResolver::visit(
     ESTree::OptionalMemberExpressionNode *node,
     ESTree::Node *parent) {
-  // `delete o?.#privateName` is not allowed.
-  if (auto *op = llvh::dyn_cast<UnaryExpressionNode>(parent); op &&
-      op->_operator == kw_.identDelete &&
-      llvh::isa<PrivateNameNode>(node->_property)) {
-    sm_.error(parent->getSourceRange(), "Cannot `delete` with a private name.");
+  if (auto *name = llvh::dyn_cast<PrivateNameNode>(node->_property)) {
+    // `delete o?.#privateName` is not allowed.
+    if (auto *op = llvh::dyn_cast<UnaryExpressionNode>(parent);
+        op && op->_operator == kw_.identDelete) {
+      sm_.error(
+          parent->getSourceRange(), "Cannot `delete` with a private name.");
+    }
+    if (!astContext_.getCodeGenerationSettings().test262) {
+      sema::Decl *decl =
+          resolvePrivateName(llvh::cast<IdentifierNode>(name->_id));
+      assert(decl && "private name node has missing decl");
+      if (auto *assign = llvh::dyn_cast<AssignmentExpressionNode>(parent);
+          assign && assign->_left == node) {
+        // Validate stores of a private name.
+        if (decl->kind == Decl::Kind::PrivateGetter) {
+          sm_.error(
+              parent->getSourceRange(),
+              "Cannot store to a private name that only defines a getter.");
+        } else if (decl->kind == Decl::Kind::PrivateMethod) {
+          sm_.error(
+              parent->getSourceRange(),
+              "Cannot store to a private name that defines a method.");
+        }
+      } else {
+        // Validate loads of a private name.
+        if (decl->kind == Decl::Kind::PrivateSetter) {
+          sm_.error(
+              node->getSourceRange(),
+              "Cannot load from a private name that only defines a setter.");
+        }
+      }
+    }
   }
   visitESTreeChildren(*this, node);
 }
