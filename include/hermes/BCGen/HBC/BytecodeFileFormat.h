@@ -262,7 +262,8 @@ static_assert(
   /* third word, with flags below */                    \
   F(uint8_t, b1, uint32_t, FrameSize, 8)                \
   F(uint8_t, b2, uint8_t, HighestReadCacheIndex, 8)     \
-  F(uint8_t, b3, uint8_t, HighestWriteCacheIndex, 8)
+  F(uint8_t, b3, uint8_t, HighestWriteCacheIndex, 7)    \
+  N(HighestWriteCacheIndex, b3, uint8_t, NumCacheNewObject, 1)
 
 /**
  * Metadata of a function.
@@ -292,7 +293,8 @@ struct FunctionHeader {
       uint32_t nonPtrRegCount,
       uint32_t functionNameID,
       uint8_t hiRCacheIndex,
-      uint8_t hiWCacheIndex) {
+      uint8_t hiWCacheIndex,
+      uint8_t numCacheNewObject) {
     setOffset(0);
     setParamCount(paramCount);
     setLoopDepth(loopDepth);
@@ -303,6 +305,7 @@ struct FunctionHeader {
     setFrameSize(frameSize);
     setHighestReadCacheIndex(hiRCacheIndex);
     setHighestWriteCacheIndex(hiWCacheIndex);
+    setNumCacheNewObject(numCacheNewObject);
   }
 };
 

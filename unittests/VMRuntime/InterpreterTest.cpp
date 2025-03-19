@@ -349,7 +349,7 @@ L1:
   SimpleBytecodeBuilder BMG;
   BytecodeInstructionGenerator instGen;
   emit(instGen, 1);
-  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 255, 255);
+  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
   auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
 
   Handle<JSFunction> factFn = runtime.makeHandle(JSFunction::create(
@@ -466,7 +466,7 @@ TEST_F(InterpreterTest, TestJmpBuiltinIs) {
   SimpleBytecodeBuilder BMG;
   BytecodeInstructionGenerator instGen;
   emit(instGen, 1);
-  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 255, 255);
+  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
   auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
 
   ASSERT_EQ(

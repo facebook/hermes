@@ -795,12 +795,14 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array_with_buffer(
 /// \p newTarget is the new.target value in the function.
 /// \p shapeTableIndex is the index into the shape table where the serialized
 ///   keys for this operation are stored.
+/// \p cacheEntry is the cache entry for this operation.
 SHERMES_EXPORT void _sh_ljs_cache_new_object(
     SHRuntime *shr,
     SHUnit *unit,
     SHLegacyValue *thisArg,
     SHLegacyValue *newTarget,
-    uint32_t shapeTableIndex);
+    uint32_t shapeTableIndex,
+    void **cacheEntry);
 
 /// \return a newly created fast array with the given \p capacity.
 SHERMES_EXPORT SHLegacyValue

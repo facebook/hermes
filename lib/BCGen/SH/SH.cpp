@@ -1737,7 +1737,7 @@ class InstrGen {
     os_ << ", ";
     generateRegisterPtr(*inst.getNewTarget());
     os_ << ", ";
-    os_ << buffIdx << ");\n";
+    os_ << buffIdx << ", NULL);\n";
   }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);

@@ -131,7 +131,8 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       RA.getMaxRegisterUsage(RegClass::NonPtr),
       nameID,
       funcGen.highestReadCacheIndex_,
-      funcGen.highestWriteCacheIndex_};
+      funcGen.highestWriteCacheIndex_,
+      funcGen.numCacheNewObject_};
 
   header.flags.setProhibitInvoke(computeProhibitInvoke(F->getProhibitInvoke()));
   header.flags.setKind(computeFuncKind(F->getKind()));

@@ -1803,7 +1803,8 @@ extern "C" void _sh_ljs_cache_new_object(
     SHUnit *unit,
     SHLegacyValue *thisArg,
     SHLegacyValue *newTarget,
-    uint32_t shapeTableIndex) {}
+    uint32_t shapeTableIndex,
+    void **cacheEntry) {}
 
 extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
