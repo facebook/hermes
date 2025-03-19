@@ -15,6 +15,7 @@ namespace vm {
 const VTable NativeState::vt{
     CellKind::NativeStateKind,
     cellSize<NativeState>(),
+    /* allowLargeAlloc */ false,
     _finalizeImpl,
 };
 

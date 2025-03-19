@@ -407,6 +407,17 @@ class AlignedHeapSegment {
     return (cp - base) >> LogHeapAlign;
   }
 
+  /// Return true if objects \p a and \p b live in the same segment. This is
+  /// used to check if a pointer field in an object points to another object in
+  /// the same segment (so that we don't need to dirty the cards -- we only need
+  /// to dirty cards that might contain old-to-young pointers, which must cross
+  /// segments). This also works for large segments, since there is only one
+  /// cell in those segments (i.e., \p a and \p b would be the same).
+  static bool containedInSameSegment(const GCCell *a, const GCCell *b) {
+    return (reinterpret_cast<uintptr_t>(a) ^ reinterpret_cast<uintptr_t>(b)) <
+        kSegmentUnitSize;
+  }
+
   /// Returns the index of the segment containing \p lowLim, which is required
   /// to be the start of its containing segment.  (This can allow extra
   /// efficiency, in cases where the segment start has already been computed.)
@@ -641,29 +652,6 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
         Contents::CardStatus::Dirty, std::memory_order_relaxed);
   }
 
-  /// Make the card table entries for cards that intersect the given address
-  /// range dirty. The range is a closed interval [low, high].
-  /// \pre \p low and \p high are required to be addresses covered by the card
-  /// table.
-  static void dirtyCardsForAddressRange(const void *low, const void *high) {
-    auto *segContents = contents(storageStart(low));
-    high = reinterpret_cast<const char *>(high) + Contents::kCardSize - 1;
-    cleanOrDirtyRange(
-        segContents,
-        addressToCardIndex(segContents, low),
-        addressToCardIndex(segContents, high),
-        Contents::CardStatus::Dirty);
-  }
-
-  /// Returns whether the card table entry for the given address is dirty.
-  /// \pre \p addr is required to be an address covered by the card table.
-  static bool isCardForAddressDirty(const void *addr) {
-    auto *segContents = contents(storageStart(addr));
-    return segContents->prefixHeader_
-               .cards_[addressToCardIndex(segContents, addr)]
-               .load(std::memory_order_relaxed) == Contents::CardStatus::Dirty;
-  }
-
   /// Find the head of the first cell that extends into the card at index
   /// \p cardIdx.
   /// \return A cell such that
@@ -770,6 +758,16 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
 
   /// Checks that dead values are present in the [start, end) range.
   static void checkUnwritten(char *start, char *end);
+#endif
+
+#ifdef HERMES_SLOW_DEBUG
+  /// Find the object containing \p loc.
+  static GCCell *findObjectContaining(const void *loc) {
+    auto *lowLim = static_cast<char *>(storageStart(loc));
+    auto *hiLim = lowLim + kSize;
+    return contents(lowLim)->boundaryTable_.findObjectContaining(
+        lowLim, hiLim, loc);
+  }
 #endif
 
  private:
