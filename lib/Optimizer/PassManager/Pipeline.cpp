@@ -50,6 +50,10 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // Add the optimization passes.
 
   PM.addLowerGeneratorFunction();
+  // CacheNewObject benefits from running early because it needs new.target,
+  // which may be eliminated by later passes. It also currently only works on
+  // the `this` parameter, so it should run before inlining.
+  PM.addCacheNewObject();
   // We need to fold constant strings before staticrequire.
   PM.addInstSimplify();
   PM.addResolveStaticRequire();
@@ -105,8 +109,6 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.addAuditor();
 
   PM.addTypeInference();
-
-  PM.addCacheNewObject();
 
   // Run the optimizations.
   PM.run(&M);

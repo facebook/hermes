@@ -135,6 +135,10 @@ static void insertCacheInstruction(
   IRBuilder builder{func};
 
   builder.setInsertionPointAfter(thisParam);
+  // We technically cannot reliably obtain the new target during optimization,
+  // as it may have been optimized to undefined if it is unused. For
+  // CacheNewObject, this would not cause a correctness problem, but it would
+  // prevent the optimization from kicking in at runtime.
   GetNewTargetInst *newTargetInst =
       builder.createGetNewTargetInst(func->getNewTargetParam());
   builder.createCacheNewObjectInst(thisParam, newTargetInst, keys);
