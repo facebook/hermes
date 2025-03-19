@@ -302,6 +302,10 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
       // operands, with keys starting first.
       return idx % 2 == 0;
 
+    case ValueKind::CacheNewObjectInstKind:
+      // The keys of CacheNewObject are identifiers.
+      return idx >= CacheNewObjectInst::FirstKeyIdx;
+
     default:
       return false;
   }
