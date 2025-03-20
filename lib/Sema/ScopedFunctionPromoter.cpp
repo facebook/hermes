@@ -264,8 +264,7 @@ Decl::Kind ScopedFunctionPromoter::extractDeclaredIdents(
 
   if (auto *catchClause = llvh::dyn_cast<CatchClauseNode>(node)) {
     resolver_.extractDeclaredIdentsFromID(catchClause->_param, idents);
-    if (auto *id =
-            llvh::dyn_cast_or_null<IdentifierNode>(catchClause->_param)) {
+    if (llvh::dyn_cast_or_null<IdentifierNode>(catchClause->_param)) {
       return Decl::Kind::ES5Catch;
     } else {
       return Decl::Kind::Catch;

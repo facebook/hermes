@@ -265,7 +265,7 @@ void MetroRequireImpl::resolveMetroModule(Function *moduleFactoryFunction) {
         for (auto *stackLocUser : stackLoc->getUsers()) {
           if (auto *loadStack = llvh::dyn_cast<LoadStackInst>(stackLocUser)) {
             uses.push_back(loadStack);
-          } else if (auto *def = llvh::dyn_cast<StoreStackInst>(stackLocUser)) {
+          } else if (llvh::dyn_cast<StoreStackInst>(stackLocUser)) {
             numStores++;
           } else {
             allLoadsOrStores = false;
