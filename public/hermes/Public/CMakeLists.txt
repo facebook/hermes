@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 set(HERMES_ENABLE_RTTI ON)
-add_hermes_library(hermesPublic rtti.cpp)
+add_hermes_library(hermesPublic rtti.cpp rtti_common.cpp)
 target_include_directories(hermesPublic_obj PUBLIC ../../)
 
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/public/hermes/Public" DESTINATION include/hermes

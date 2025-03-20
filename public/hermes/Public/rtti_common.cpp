@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Public/GCTripwireContext.h"
-#include "hermes/Public/JSOutOfMemoryError.h"
+#include "hermes/Public/CrashManager.h"
 
 /// This file provides "key functions" for types in the API that have virtual
 /// methods. This ensures that the type information for these types is only
@@ -15,7 +14,7 @@
 
 namespace hermes {
 namespace vm {
-GCTripwireContext::~GCTripwireContext() {}
-JSOutOfMemoryError::~JSOutOfMemoryError() {}
+CrashManager::~CrashManager() {}
+NopCrashManager::~NopCrashManager() {}
 } // namespace vm
 } // namespace hermes
