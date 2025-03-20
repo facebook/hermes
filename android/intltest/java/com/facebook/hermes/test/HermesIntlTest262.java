@@ -63,6 +63,7 @@ public class HermesIntlTest262 {
 
   @Test
   public void test262Intl() throws IOException {
+    Log.v(LOG_TAG, "Enter test262Intl");
     Set<String> skipList = getSkipList();
     Stack<String> testFiles = new Stack<>();
     testFiles.push("test262/test");
@@ -71,6 +72,7 @@ public class HermesIntlTest262 {
     ArrayList<String> ranTests = new ArrayList<>();
     HashMap<String, String> failedTests = new HashMap<>();
 
+    Log.v(LOG_TAG, "Start run test loop");
     while (!testFiles.isEmpty()) {
       String path = testFiles.pop();
       String[] contents = assets.list(path);
