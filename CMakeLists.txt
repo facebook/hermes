@@ -658,6 +658,14 @@ else()
   message(FATAL_ERROR "Unable to find jsi.")
 endif()
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../hermes_common)
+  set(HERMES_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../hermes_common)
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../../hermes_common)
+  set(HERMES_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../hermes_common)
+else()
+  set(HERMES_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
+
 include_directories(
   external/llvh/include
   external/llvh/gen/include
