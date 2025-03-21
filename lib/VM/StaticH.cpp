@@ -18,6 +18,7 @@
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/ModuleExportsCache-inline.h"
 #include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/SerializedLiteralOperations.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringBuilder.h"
@@ -1563,61 +1564,6 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
-static HiddenClass *addBufferPropertiesToHiddenClass(
-    Runtime &runtime,
-    SHUnit *unit,
-    const SHShapeTableEntry *info,
-    HiddenClass *rootClazz) {
-  struct : Locals {
-    PinnedValue<HiddenClass> clazz;
-    PinnedValue<> tmpHandleKey;
-  } lv;
-  LocalsRAII lraii{runtime, &lv};
-  lv.clazz = rootClazz;
-
-  struct {
-    void addProperty(SymbolID sym) {
-      auto addResult = HiddenClass::addProperty(
-          clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
-      clazz = addResult->first;
-      marker.flush();
-    }
-
-    void visitStringID(StringID id) {
-      auto sym = SymbolID::unsafeCreate(unit->symbols[id]);
-      addProperty(sym);
-    }
-    void visitNumber(double d) {
-      tmpHandleKey = HermesValue::encodeTrustedNumberValue(d);
-      // Note that this handle is released in addProperty.
-      Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
-      addProperty(*symHandle);
-    }
-    void visitNull() {
-      llvm_unreachable("Object literal key cannot be null.");
-    }
-    void visitUndefined() {
-      llvm_unreachable("Object literal key cannot be undefined.");
-    }
-    void visitBool(bool) {
-      llvm_unreachable("Object literal key cannot be a bool.");
-    }
-
-    PinnedValue<HiddenClass> &clazz;
-    PinnedValue<> &tmpHandleKey;
-    Runtime &runtime;
-    SHUnit *unit;
-    GCScopeMarkerRAII marker;
-  } v{lv.clazz, lv.tmpHandleKey, runtime, unit, GCScopeMarkerRAII{runtime}};
-
-  llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
-
-  SerializedLiteralParser::parse(
-      keyBuffer.slice(info->key_buffer_offset), info->num_props, v);
-
-  return *lv.clazz;
-}
-
 extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
@@ -1645,12 +1591,18 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
       _sh_throw_current(shr);
     }
 
+    llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
+    keyBuffer = keyBuffer.slice(shapeInfo->key_buffer_offset);
+
     clazz = addBufferPropertiesToHiddenClass(
         runtime,
-        unit,
-        shapeInfo,
+        keyBuffer,
+        shapeInfo->num_props,
         *runtime.getHiddenClassForPrototype(
-            *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()));
+            *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()),
+        [unit](StringID id) {
+          return SymbolID::unsafeCreate(unit->symbols[id]);
+        });
     assert(
         shapeInfo->num_props == clazz->getNumProperties() &&
         "numLiterals should match hidden class property count.");

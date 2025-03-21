@@ -32,6 +32,7 @@
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/RuntimeModule-inline.h"
+#include "hermes/VM/SerializedLiteralOperations.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
@@ -254,116 +255,62 @@ CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
   }
 }
 
-static CallResult<HiddenClass *> getHiddenClassForBuffer(
-    Runtime &runtime,
-    CodeBlock *curCodeBlock,
-    unsigned shapeTableIndex) {
-  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
-
-  if (auto clazz = runtimeModule->findCachedLiteralHiddenClass(
-          runtime, shapeTableIndex)) {
-    return clazz;
-  }
-
-  struct : public Locals {
-    PinnedValue<HiddenClass> clazz;
-    PinnedValue<> tmpKey;
-  } lv;
-  LocalsRAII lraii(runtime, &lv);
-
-  lv.clazz = *runtime.getHiddenClassForPrototype(
-      *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
-
-  ShapeTableEntry shapeInfo = curCodeBlock->getRuntimeModule()
-                                  ->getBytecode()
-                                  ->getObjectShapeTable()[shapeTableIndex];
-
-  // Ensure that the hidden class does not start out with any properties, so we
-  // just need to check the shape table entry.
-  assert(lv.clazz->getNumProperties() == 0);
-  if (shapeInfo.numProps > HiddenClass::maxNumProperties()) {
-    return runtime.raiseRangeError(
-        TwineChar16("Object has more than ") + HiddenClass::maxNumProperties() +
-        " properties");
-  }
-
-  GCScopeMarkerRAII marker{runtime};
-  // Set up the visitor to populate keys in the hidden class.
-  struct {
-    void visitStringID(StringID id) {
-      SymbolID sym = ID(id);
-      auto addResult = HiddenClass::addProperty(
-          clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
-      clazz = addResult->first;
-      marker.flush();
-    }
-    void visitNumber(double d) {
-      tmpHandleKey = HermesValue::encodeTrustedNumberValue(d);
-      // valueToSymbolID cannot fail because the key is known to be uint32.
-      Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
-      auto addResult = HiddenClass::addProperty(
-          clazz,
-          runtime,
-          *symHandle,
-          PropertyFlags::defaultNewNamedPropertyFlags());
-      clazz = addResult->first;
-      marker.flush();
-    }
-    void visitNull() {
-      llvm_unreachable("Keys cannot be null");
-    }
-    void visitUndefined() {
-      llvm_unreachable("Keys cannot be undefined");
-    }
-    void visitBool(bool b) {
-      llvm_unreachable("Keys cannot be boolean");
-    }
-
-    PinnedValue<HiddenClass> &clazz;
-    PinnedValue<> &tmpHandleKey;
-    GCScopeMarkerRAII &marker;
-    Runtime &runtime;
-    CodeBlock *curCodeBlock;
-  } v{lv.clazz, lv.tmpKey, marker, runtime, curCodeBlock};
-
-  // Visit each literal in the buffer and add it as a property.
-  SerializedLiteralParser::parse(
-      curCodeBlock->getRuntimeModule()
-          ->getBytecode()
-          ->getObjectKeyBuffer()
-          .slice(shapeInfo.keyBufferOffset),
-      shapeInfo.numProps,
-      v);
-
-  assert(
-      shapeInfo.numProps == lv.clazz->getNumProperties() &&
-      "numLiterals should match hidden class property count.");
-  // Dictionary mode classes cannot be cached since they can change as the
-  // resulting object is modified.
-  if (LLVM_LIKELY(!lv.clazz->isDictionary())) {
-    runtimeModule->tryCacheLiteralHiddenClass(
-        runtime, shapeTableIndex, *lv.clazz);
-  }
-  return *lv.clazz;
-}
-
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
     unsigned shapeTableIndex,
     unsigned valBufferOffset) {
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+
+  HiddenClass *clazz;
+  if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
+          runtime, shapeTableIndex)) {
+    clazz = cachedClazz;
+  } else {
+    const auto *shapeInfo =
+        &runtimeModule->getBytecode()->getObjectShapeTable()[shapeTableIndex];
+    auto *rootClazz = *runtime.getHiddenClassForPrototype(
+        *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+
+    // Ensure that the hidden class does not start out with any properties, so
+    // we just need to check the shape table entry.
+    assert(rootClazz->getNumProperties() == 0);
+    if (shapeInfo->numProps > HiddenClass::maxNumProperties()) {
+      return runtime.raiseRangeError(
+          TwineChar16("Object has more than ") +
+          HiddenClass::maxNumProperties() + " properties");
+    }
+
+    auto keyBuffer = runtimeModule->getBytecode()->getObjectKeyBuffer().slice(
+        shapeInfo->keyBufferOffset);
+
+    clazz = addBufferPropertiesToHiddenClass(
+        runtime,
+        keyBuffer,
+        shapeInfo->numProps,
+        rootClazz,
+        [runtimeModule](StringID id) {
+          return runtimeModule->getSymbolIDMustExist(id);
+        });
+
+    assert(
+        shapeInfo->numProps == clazz->getNumProperties() &&
+        "numLiterals should match hidden class property count.");
+    // Dictionary mode classes cannot be cached since they can change as the
+    // resulting object is modified.
+    if (LLVM_LIKELY(!clazz->isDictionary())) {
+      runtimeModule->tryCacheLiteralHiddenClass(
+          runtime, shapeTableIndex, clazz);
+    }
+  }
+
   struct : public Locals {
     PinnedValue<JSObject> obj;
     PinnedValue<HiddenClass> clazz;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
-  auto hcRes = getHiddenClassForBuffer(runtime, curCodeBlock, shapeTableIndex);
-  if (LLVM_UNLIKELY(hcRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  lv.clazz = *hcRes;
+  lv.clazz = clazz;
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
