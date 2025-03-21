@@ -1,3 +1,26 @@
+## 0.27.0
+
+### `hermes-parser`
+* Fix bug in one-sided "this" type guard
+* Fix methodish type annotation to accept a type guard return annotation
+
+### `flow-api-translator`
+* Retain comments attached to properties of object literal types
+* Generate equivalent type export for declare const exports in Flow to TS translation
+* Generate branded primitives instead of unknown type for opaque types without super type and type parameters
+* Generate proper object indexer for union types
+* Allow TS interfaces to extend qualified identifiers, Translate `$ArrayLike` to `ArrayLike`
+* Use `React.JSX` namespace instead of JSX
+* Declare export type along with the exported value of that type in TS generated defs
+* Change handling declaration export for classes from flow defs to TS defs
+* Support iterator conversion
+* Support for Symbol member expression in class method definition
+* Allow TS classes to extend qualified identifiers
+* Generate typeof for member expression in export object
+* Fix arrow function syntax for class properties
+* Allow usage of `typeof` with spread operator
+* Fix export syntax for object expressions
+
 ## 0.26.0
 
 ### `hermes-parser`
