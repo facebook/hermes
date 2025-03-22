@@ -1717,11 +1717,38 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
   static_assert(
       count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
-  GCSmallHermesValue::uninitialized_fill(
-      self->directProps() + numOverlapSlots<T>(),
-      self->directProps() + DIRECT_PROPERTY_SLOTS,
-      SmallHermesValue::encodeUndefinedValue(),
-      runtime.getHeap());
+
+  // Initialize the direct property slots to undefined. We have observed that
+  // using a loop here can result in inefficient code on some platforms
+  // (including calls to memset) so we manually unroll it with a switch.
+  switch (numOverlapSlots<T>()) {
+    case 0:
+      new (&self->directProps()[0]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 1:
+      new (&self->directProps()[1]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 2:
+      new (&self->directProps()[2]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 3:
+      new (&self->directProps()[3]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 4:
+      new (&self->directProps()[4]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 5:
+      static_assert(
+          DIRECT_PROPERTY_SLOTS == 5,
+          "Must update this switch if we add or remove direct properties");
+      break;
+  }
+
   return self;
 }
 
