@@ -343,7 +343,7 @@ HiddenClass *RuntimeModule::findCachedLiteralHiddenClass(
       runtime, runtime.getHeap());
 }
 
-void RuntimeModule::tryCacheLiteralHiddenClass(
+void RuntimeModule::setCachedLiteralHiddenClass(
     Runtime &runtime,
     unsigned shapeTableIndex,
     HiddenClass *clazz) {

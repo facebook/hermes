@@ -350,11 +350,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       Runtime &runtime,
       uint32_t shapeTableIndex) const;
 
-  /// Try to cache the shareable hidden class for a given shape. Caching will be
-  /// skipped if shapeTableIndex exceeds the bounds of the cache.
+  /// Set the cached hidden class for a given shape.
   /// \param shapeTableIndex is the ID of an object literal shape.
   /// \param clazz the hidden class to cache.
-  void tryCacheLiteralHiddenClass(
+  void setCachedLiteralHiddenClass(
       Runtime &runtime,
       unsigned shapeTableIndex,
       HiddenClass *clazz);

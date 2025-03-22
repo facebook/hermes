@@ -1771,7 +1771,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     // Dictionary mode classes cannot be cached since they can change as the
     // resulting object is modified.
     if (LLVM_LIKELY(!clazz->isDictionary())) {
-      runtimeModule->tryCacheLiteralHiddenClass(
+      runtimeModule->setCachedLiteralHiddenClass(
           runtime, shapeTableIndex, clazz);
     }
   }
