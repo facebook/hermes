@@ -7,6 +7,7 @@
 
 #define DEBUG_TYPE "vm"
 #include "JSLib/JSLibInternal.h"
+#include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
@@ -16,6 +17,7 @@
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime-inline.h"
 #include "hermes/VM/RuntimeModule-inline.h"
+#include "hermes/VM/SerializedLiteralOperations.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
@@ -1723,6 +1725,168 @@ ExecutionStatus doPutByIdSlowPath_RJS(
     return ExecutionStatus::EXCEPTION;
   }
   return ExecutionStatus::RETURNED;
+}
+
+CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    unsigned shapeTableIndex,
+    unsigned valBufferOffset) {
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+
+  HiddenClass *clazz;
+  if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
+          runtime, shapeTableIndex)) {
+    clazz = cachedClazz;
+  } else {
+    const auto *shapeInfo =
+        &runtimeModule->getBytecode()->getObjectShapeTable()[shapeTableIndex];
+    auto *rootClazz = *runtime.getHiddenClassForPrototype(
+        *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+
+    // Ensure that the hidden class does not start out with any properties, so
+    // we just need to check the shape table entry.
+    assert(rootClazz->getNumProperties() == 0);
+    if (shapeInfo->numProps > HiddenClass::maxNumProperties()) {
+      return runtime.raiseRangeError(
+          TwineChar16("Object has more than ") +
+          HiddenClass::maxNumProperties() + " properties");
+    }
+
+    auto keyBuffer = runtimeModule->getBytecode()->getObjectKeyBuffer().slice(
+        shapeInfo->keyBufferOffset);
+
+    clazz = addBufferPropertiesToHiddenClass(
+        runtime,
+        keyBuffer,
+        shapeInfo->numProps,
+        rootClazz,
+        [runtimeModule](StringID id) {
+          return runtimeModule->getSymbolIDMustExist(id);
+        });
+
+    assert(
+        shapeInfo->numProps == clazz->getNumProperties() &&
+        "numLiterals should match hidden class property count.");
+    // Dictionary mode classes cannot be cached since they can change as the
+    // resulting object is modified.
+    if (LLVM_LIKELY(!clazz->isDictionary())) {
+      runtimeModule->tryCacheLiteralHiddenClass(
+          runtime, shapeTableIndex, clazz);
+    }
+  }
+
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.clazz = clazz;
+  // Create a new object using the built-in constructor or cached hidden class.
+  // Note that the built-in constructor is empty, so we don't actually need to
+  // call it.
+  lv.obj = JSObject::create(runtime, lv.clazz).get();
+  auto numLiterals = lv.clazz->getNumProperties();
+
+  // Set up the visitor to populate property values in the object.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitNull() {
+      static constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitUndefined() {
+      static constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+
+    Handle<JSObject> obj;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    size_t propIndex;
+  } v{lv.obj, runtime, curCodeBlock->getRuntimeModule(), 0};
+
+  // Visit each value in the given buffer, and set it in the object.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getLiteralValueBuffer()
+          .slice(valBufferOffset),
+      numLiterals,
+      v);
+
+  return createPseudoHandle(lv.obj.getHermesValue());
+}
+
+CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    unsigned numElements,
+    unsigned numLiterals,
+    unsigned bufferIndex) {
+  // Create a new array using the built-in constructor, and initialize
+  // the elements from a literal array buffer.
+  auto arrRes = JSArray::create(runtime, numElements, numElements);
+  if (arrRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Resize the array storage in advance.
+  Handle<JSArray> arr = runtime.makeHandle(std::move(*arrRes));
+  JSArray::setStorageEndIndex(arr, runtime, numElements);
+
+  // Set up the visitor to populate literal elements in the array.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNull() {
+      constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitUndefined() {
+      constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+
+    Handle<JSArray> arr;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    JSArray::size_type i;
+  } v{arr, runtime, curCodeBlock->getRuntimeModule(), 0};
+
+  // Visit each serialized value in the given buffer.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getLiteralValueBuffer()
+          .slice(bufferIndex),
+      numLiterals,
+      v);
+
+  return createPseudoHandle(HermesValue::encodeObjectValue(*arr));
 }
 
 } // namespace vm
