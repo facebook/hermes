@@ -504,13 +504,11 @@ ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetAsyncIteratorSlow(
   auto *syncIteratorMethod =
       Builder.createLoadPropertyInst(obj, emitIteratorSymbol());
 
-  auto *wrapper = Builder.createLoadPropertyInst(
-      Builder.getGlobalObject(), "HermesAsyncIteratorsInternal");
-  wrapper = Builder.createLoadPropertyInst(
-      wrapper, "_makeAsyncIterator");
+  auto *makeAsyncIterator = Builder.createGetBuiltinClosureInst(
+      BuiltinMethod::HermesBuiltin_makeAsyncIterator);
 
   auto *iterator = Builder.createCallInst(
-      wrapper,
+      makeAsyncIterator,
       Builder.getLiteralUndefined(),
       Builder.getLiteralUndefined(),
       {obj, asyncIteratorMethod, syncIteratorMethod});
