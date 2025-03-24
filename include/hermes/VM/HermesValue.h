@@ -129,8 +129,10 @@ class HermesValue : public HermesValueBase {
     return HermesValue(value, tag);
   }
 
-  /// Dump the contents to stderr.
-  void dump(llvh::raw_ostream &stream = llvh::errs()) const;
+  /// Dump the contents with \n.
+  void dump(llvh::raw_ostream &stream) const;
+  /// Dump the contents to stderr with \n.
+  void dump() const;
 
   inline Tag getTag() const {
     return (Tag)((int64_t)this->raw >> kNumDataBits);
@@ -627,7 +629,14 @@ struct GCHermesValueUtil {
       PinnedHermesValue *result);
 };
 
-llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv);
+/// Dump a SHLegacyValue to \p OS.
+llvh::raw_ostream &dumpHermesValue(llvh::raw_ostream &OS, SHLegacyValue lhv);
+/// Dump a SHLegacyValue to llvh::errs() with \n.
+void dumpHermesValue(SHLegacyValue lhv);
+
+inline llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue lhv) {
+  return dumpHermesValue(OS, lhv);
+}
 
 } // end namespace vm
 } // end namespace hermes
