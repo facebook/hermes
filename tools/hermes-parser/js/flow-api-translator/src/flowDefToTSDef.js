@@ -2765,8 +2765,8 @@ const getTransforms = (
               },
             };
           }
-          // React.ElementRef<typeof Component> -> React.ElementRef<typeof Component>
-          // React$ElementRef<typeof Component> -> React.ElementRef<typeof Component>
+          // React.ElementRef<typeof Component> -> React.ComponentRef<typeof Component>
+          // React$ElementRef<typeof Component> -> React.ComponentRef<typeof Component>
           case 'React$ElementRef':
           case 'React.ElementRef':
             return {
@@ -2779,7 +2779,7 @@ const getTransforms = (
                 right: {
                   type: 'Identifier',
                   loc: DUMMY_LOC,
-                  name: `ElementRef`,
+                  name: `ComponentRef`,
                 },
               },
               typeParameters: {
