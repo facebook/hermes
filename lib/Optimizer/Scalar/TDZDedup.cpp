@@ -176,9 +176,9 @@ bool TDZDedupContext::processNode(StackNode *SN) {
     // If ThrowIf has no users, we will attempt to destroy the load too, to
     // save work in other passes.
     if (!TIE->hasUsers()) {
-      if (TIE->getCheckedValue()->hasOneUser() &&
-          (llvh::isa<LoadFrameInst>(TIE->getCheckedValue()) ||
-           llvh::isa<LoadStackInst>(TIE->getCheckedValue()))) {
+      if ((llvh::isa<LoadFrameInst>(TIE->getCheckedValue()) ||
+           llvh::isa<LoadStackInst>(TIE->getCheckedValue())) &&
+          TIE->getCheckedValue()->hasOneUser()) {
         destroyer.add(llvh::cast<Instruction>(TIE->getCheckedValue()));
       }
     } else {

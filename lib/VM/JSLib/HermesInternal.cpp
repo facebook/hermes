@@ -374,12 +374,7 @@ hermesInternalIsProxy(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 hermesInternalHasPromise(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeBoolValue(runtime.hasES6Promise());
-}
-
-CallResult<HermesValue>
-hermesInternalHasES6Class(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeBoolValue(runtime.hasES6Class());
+  return HermesValue::encodeBoolValue(true);
 }
 
 CallResult<HermesValue>
@@ -415,7 +410,6 @@ hermesInternalDrainJobs(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-#ifdef HERMESVM_EXCEPTION_ON_OOM
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
 CallResult<HermesValue>
@@ -423,7 +417,6 @@ hermesInternalGetCallStack(void *, Runtime &runtime, NativeArgs args) {
   std::string stack = runtime.getCallStackNoAlloc();
   return StringPrimitive::create(runtime, ASCIIRef(stack.data(), stack.size()));
 }
-#endif // HERMESVM_EXCEPTION_ON_OOM
 
 /// \return the code block associated with \p callableHandle if it is a
 /// (possibly bound) JS function, or nullptr otherwise.
@@ -764,7 +757,6 @@ Handle<JSObject> createHermesInternalObject(
   // present by the VM internals even under a security-sensitive environment
   // where HermesInternal might be explicitly disabled.
   defineInternMethod(P::hasPromise, hermesInternalHasPromise);
-  defineInternMethod(P::hasES6Class, hermesInternalHasES6Class);
   defineInternMethod(P::enqueueJob, hermesInternalEnqueueJob);
   defineInternMethod(
       P::setPromiseRejectionTrackingHook,
@@ -820,11 +812,8 @@ Handle<JSObject> createHermesInternalObject(
     defineInternMethodAndSymbol("isProxy", hermesInternalIsProxy);
     defineInternMethodAndSymbol("isLazy", hermesInternalIsLazy);
     defineInternMethod(P::drainJobs, hermesInternalDrainJobs);
+    defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
   }
-
-#ifdef HERMESVM_EXCEPTION_ON_OOM
-  defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
-#endif // HERMESVM_EXCEPTION_ON_OOM
 
   JSObject::preventExtensions(*intern);
 

@@ -63,14 +63,11 @@ class PinnedHermesValue;
   /* Whether to emit async break check instructions in eval code */    \
   F(constexpr, bool, AsyncBreakCheckInEval, true)                      \
                                                                        \
-  /* Support for ES6 Promise. */                                       \
-  F(constexpr, bool, ES6Promise, true)                                 \
-                                                                       \
   /* Support for ES6 Proxy. */                                         \
   F(constexpr, bool, ES6Proxy, true)                                   \
                                                                        \
-  /* Support for ES6 Class. */                                         \
-  F(constexpr, bool, ES6Class, false)                                  \
+  /* Support for ES6 block scoping. */                                 \
+  F(constexpr, bool, ES6BlockScoping, false)                           \
                                                                        \
   /* Support for ECMA-402 Intl APIs. */                                \
   F(constexpr, bool, Intl, true)                                       \

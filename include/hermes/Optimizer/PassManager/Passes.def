@@ -25,24 +25,40 @@ PASS(CSE, "cse", "Common subexpression elimination")
 PASS(CodeMotion, "codemotion", "Code Motion")
 PASS(Mem2Reg, "mem2reg", "Construct SSA")
 PASS(SimpleMem2Reg, "simplemem2reg", "Simple SSA construction")
-PASS(LowerGeneratorFunction, "lowergeneratorfunction", "Lower generator functions")
-PASS(FrameLoadStoreOpts, "frameloadstoreopts", "Eliminate loads/stores to the frame")
-PASS(ScopeElimination, "scopeelimination", "Optimizations to eliminate unnecessary scopes")
+PASS(
+    LowerGeneratorFunction,
+    "lowergeneratorfunction",
+    "Lower generator functions")
+PASS(
+    FrameLoadStoreOpts,
+    "frameloadstoreopts",
+    "Eliminate loads/stores to the frame")
+PASS(
+    ScopeElimination,
+    "scopeelimination",
+    "Optimizations to eliminate unnecessary scopes")
+PASS(ScopeHoisting, "scopehoisting", "Move scopes up the scope chain")
 PASS(InstSimplify, "instsimplify", "Simplify instructions")
 PASS(SimpleStackPromotion, "simplestackpromotion", "Simple stack promotion")
-PASS(ObjectStackPromotion, "objectstackpromotion", "Promote non-escaping objects to the stack")
-PASS(ObjectMergeNewStores, "objectmergenewstores", "Merge StoreNewOwnPropertyInsts into AllocObjectLiteral")
+PASS(
+    ObjectStackPromotion,
+    "objectstackpromotion",
+    "Promote non-escaping objects to the stack")
+PASS(
+    ObjectMergeNewStores,
+    "objectmergenewstores",
+    "Merge DefineNewOwnPropertyInsts into AllocObjectLiteral")
 PASS(SimplifyCFG, "simplifycfg", "Simplify CFG")
 PASS(TypeInference, "typeinference", "Type inference")
 PASS(FunctionAnalysis, "functionanalysis", "Function analysis")
 PASS(Inlining, "inlining", "Inlining")
 PASS(ResolveStaticRequire, "staticrequire", "Resolve static require")
-PASS(
-    HoistStartGenerator,
-    "hoiststartgenerator",
-    "Move StartGenerator to start of function")
+PASS(MetroRequire, "metrorequire", "Optimize Metro require calls")
 PASS(Auditor, "auditor", "Auditor")
 PASS(TDZDedup, "tdzdedup", "TDZ Deduplication")
 PASS(StripDebugInsts, "stripdebug", "Strip debug instructions")
+PASS(LowerBuiltinCalls, "lowerbuiltincalls", "Lower builtin calls")
+PASS(LowerBuiltinCallsOptimized, "lowerbuiltincallsoptimized", "Lower builtin calls (with optimizations)")
+PASS(CacheNewObject, "cachenewobject", "Insert CacheNewObject instructions")
 
 #undef PASS

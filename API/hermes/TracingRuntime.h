@@ -47,6 +47,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::Object global() override;
 
   jsi::Object createObject() override;
+  jsi::Object createObjectWithPrototype(const jsi::Value &prototype) override;
   jsi::Object createObject(std::shared_ptr<jsi::HostObject> ho) override;
 
   // Note that the NativeState methods do not need to be traced since they
@@ -58,13 +59,31 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   jsi::String createStringFromAscii(const char *str, size_t length) override;
   jsi::String createStringFromUtf8(const uint8_t *utf8, size_t length) override;
+  jsi::String createStringFromUtf16(const char16_t *utf16, size_t length)
+      override;
   std::string utf8(const jsi::PropNameID &) override;
 
   jsi::PropNameID createPropNameIDFromAscii(const char *str, size_t length)
       override;
   jsi::PropNameID createPropNameIDFromUtf8(const uint8_t *utf8, size_t length)
       override;
+  jsi::PropNameID createPropNameIDFromUtf16(
+      const char16_t *utf16,
+      size_t length) override;
   std::string utf8(const jsi::String &) override;
+
+  std::u16string utf16(const jsi::PropNameID &) override;
+  std::u16string utf16(const jsi::String &) override;
+
+  void getStringData(
+      const jsi::String &str,
+      void *ctx,
+      void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) override;
+
+  void getPropNameIdData(
+      const jsi::PropNameID &sym,
+      void *ctx,
+      void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) override;
 
   std::string symbolToString(const jsi::Symbol &) override;
 
@@ -88,6 +107,10 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       const jsi::Object &obj,
       const jsi::PropNameID &name,
       const jsi::Value &value) override;
+
+  void setPrototypeOf(const jsi::Object &object, const jsi::Value &prototype)
+      override;
+  jsi::Value getPrototypeOf(const jsi::Object &object) override;
 
   jsi::Array getPropertyNames(const jsi::Object &o) override;
 

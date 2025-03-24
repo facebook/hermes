@@ -27,6 +27,7 @@
 #include <future>
 #include <memory>
 #include <mutex>
+#include <stack>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -76,7 +77,7 @@ class HadesGC final : public GCBase {
   static constexpr uint32_t maxAllocationSizeImpl() {
     // The largest allocation allowable in Hades is the max size a single
     // segment supports.
-    return AlignedHeapSegment::maxSize();
+    return FixedSizeHeapSegment::maxSize();
   }
 
   static constexpr uint32_t minAllocationSizeImpl() {
@@ -297,7 +298,7 @@ class HadesGC final : public GCBase {
 
   /// \return true if the pointer lives in the young generation.
   bool inYoungGen(const void *p) const override {
-    return youngGen_.lowLim() == AlignedHeapSegment::storageStart(p);
+    return youngGen_.lowLim() == FixedSizeHeapSegment::storageStart(p);
   }
   bool inYoungGen(CompressedPointer p) const {
     return p.getSegmentStart() == youngGenCP_;
@@ -361,12 +362,12 @@ class HadesGC final : public GCBase {
   /// Call \p callback on every non-freelist cell allocated in this segment.
   template <typename CallbackFunction>
   static void forAllObjsInSegment(
-      AlignedHeapSegment &seg,
+      FixedSizeHeapSegment &seg,
       CallbackFunction callback);
   /// Only call the callback on cells without forwarding pointers.
   template <typename CallbackFunction>
   static void forCompactedObjsInSegment(
-      AlignedHeapSegment &seg,
+      FixedSizeHeapSegment &seg,
       CallbackFunction callback,
       PointerBase &base);
 
@@ -374,21 +375,21 @@ class HadesGC final : public GCBase {
    public:
     explicit OldGen(HadesGC &gc);
 
-    std::deque<AlignedHeapSegment>::iterator begin();
-    std::deque<AlignedHeapSegment>::iterator end();
-    std::deque<AlignedHeapSegment>::const_iterator begin() const;
-    std::deque<AlignedHeapSegment>::const_iterator end() const;
+    std::deque<FixedSizeHeapSegment>::iterator begin();
+    std::deque<FixedSizeHeapSegment>::iterator end();
+    std::deque<FixedSizeHeapSegment>::const_iterator begin() const;
+    std::deque<FixedSizeHeapSegment>::const_iterator end() const;
 
     size_t numSegments() const;
 
-    AlignedHeapSegment &operator[](size_t i);
+    FixedSizeHeapSegment &operator[](size_t i);
 
     /// Take ownership of the given segment.
-    void addSegment(AlignedHeapSegment seg);
+    void addSegment(FixedSizeHeapSegment seg);
 
     /// Remove the last segment from the OG.
     /// \return the segment that was removed.
-    AlignedHeapSegment popSegment();
+    FixedSizeHeapSegment popSegment();
 
     /// Indicate that OG should target having a size of \p targetSizeBytes.
     void setTargetSizeBytes(size_t targetSizeBytes);
@@ -482,6 +483,11 @@ class HadesGC final : public GCBase {
     /// \return The number of bytes of native memory in use by this OldGen.
     size_t getMemorySize() const;
 
+#ifdef HERMES_SLOW_DEBUG
+    /// Check that the freelists are well-formed.
+    void verifyFreelists();
+#endif
+
    private:
     /// The freelist buckets are split into two sections. In the "small"
     /// section, there is one bucket for each size, in multiples of heapAlign.
@@ -507,7 +513,7 @@ class HadesGC final : public GCBase {
     static constexpr size_t kMinSizeForLargeBlock = 1
         << kLogMinSizeForLargeBlock;
     static constexpr size_t kNumLargeFreelistBuckets =
-        llvh::detail::ConstantLog2<AlignedHeapSegment::maxSize()>::value -
+        llvh::detail::ConstantLog2<FixedSizeHeapSegment::maxSize()>::value -
         kLogMinSizeForLargeBlock + 1;
     static constexpr size_t kNumFreelistBuckets =
         kNumSmallFreelistBuckets + kNumLargeFreelistBuckets;
@@ -578,7 +584,7 @@ class HadesGC final : public GCBase {
 
     /// Use a std::deque instead of a std::vector so that references into it
     /// remain valid across a push_back.
-    std::deque<AlignedHeapSegment> segments_;
+    std::deque<FixedSizeHeapSegment> segments_;
 
     /// See \c targetSizeBytes() above.
     ExponentialMovingAverage targetSizeBytes_{0, 0};
@@ -645,6 +651,44 @@ class HadesGC final : public GCBase {
   };
 
  private:
+  /// A worklist of cells that need to be marked by the GC. The mutator enqueues
+  /// work from the write barrier, and marking drains it.
+  /// TODO: Consider moving to something lock free and/or fixed size to improve
+  ///       performance.
+  class MarkWorklist {
+    /// A fixed size local buffer that the mutator can push elements onto
+    /// without needing to acquire the lock. This allows us to batch writes
+    /// before acquiring the lock and pushing them onto worklist_.
+    static constexpr size_t kChunkSize = 128;
+    std::array<GCCell *, kChunkSize> pushChunk_;
+
+    /// The index in pushChunk_ at which the next element will be written.
+    unsigned chunkIndex_{0};
+
+    /// Mutex protecting worklist_, allowing it to be accessed from the GC
+    /// thread.
+    Mutex mtx_;
+
+    /// The list of objects for the GC to mark.
+    /// Use a SmallVector of size 0 since it is more aggressive with PODs
+    llvh::SmallVector<GCCell *, 0> worklist_;
+
+   public:
+    /// Adds an element to the end of the queue.
+    void enqueue(GCCell *cell);
+
+    /// Empty and return the current worklist
+    llvh::SmallVector<GCCell *, 0> drain();
+
+    /// While the world is stopped, move the push chunk to the list of pull
+    /// chunks to finish draining the mark worklist. WARN: This can only be
+    /// called by the mutator.
+    void flushPushChunk();
+
+    /// WARN: This can only be called from the mutator.
+    bool empty();
+  };
+
   /// The maximum number of bytes that the heap can hold. Once this amount has
   /// been filled up, OOM will occur.
   const uint64_t maxHeapSize_;
@@ -660,9 +704,9 @@ class HadesGC final : public GCBase {
   /// Keeps the storage provider alive until after the GC is fully destructed.
   std::shared_ptr<StorageProvider> provider_;
 
-  /// youngGen is a bump-pointer space, so it can re-use AlignedHeapSegment.
+  /// youngGen is a bump-pointer space, so it can re-use FixedSizeHeapSegment.
   /// Protected by gcMutex_.
-  AlignedHeapSegment youngGen_;
+  FixedSizeHeapSegment youngGen_;
   AssignableCompressedPointer youngGenCP_;
 
   /// List of cells in YG that have finalizers. Iterate through this to clean
@@ -672,7 +716,7 @@ class HadesGC final : public GCBase {
 
   /// Since YG collection times are the primary driver of pause times, it is
   /// useful to have a knob to reduce the effective size of the YG. This number
-  /// is the fraction of AlignedHeapSegment::maxSize() that we should use for
+  /// is the fraction of FixedSizeHeapSegment::maxSize() that we should use for
   /// the YG.. Note that we only set the YG size using this at the end of the
   /// first real YG, since doing it for direct promotions would waste OG memory
   /// without a pause time benefit.
@@ -719,9 +763,49 @@ class HadesGC final : public GCBase {
   /// order to reduce synchronisation requirements for write barriers.
   bool ogMarkingBarriers_{false};
 
-  /// Used by the write barrier to add items to the worklist.
-  /// Protected by gcMutex_.
-  std::unique_ptr<MarkAcceptor> oldGenMarker_;
+  /// State that needs to be maintained while we are marking the old gen.
+  struct MarkState {
+    /// A worklist local to the marking thread, that is only pushed onto by the
+    /// marking thread. If this is empty, the global worklist must be consulted
+    /// to ensure that pointers modified in write barriers are handled.
+    std::stack<GCCell *, std::vector<GCCell *>> localWorklist;
+
+    /// A worklist that other threads may add to as objects to be marked and
+    /// considered alive. These objects will *not* have their mark bits set,
+    /// because the mutator can't be modifying mark bits at the same time as the
+    /// marker thread.
+    MarkWorklist globalWorklist;
+
+    /// markedSymbols_ represents which symbols have been proven live so far in
+    /// a collection. True means that it is live, false means that it could
+    /// possibly be garbage. The SymbolID's internal value is used as the index
+    /// into this vector. Once the collection is finished, this vector is passed
+    /// to IdentifierTable so that it can free symbols. If any new symbols are
+    /// allocated after the collection began, assume they are live.
+    llvh::BitVector markedSymbols;
+
+    /// A vector the same size as markedSymbols_ that will collect all symbols
+    /// marked by write barriers. Merge this with markedSymbols_ to have
+    /// complete information about marked symbols. Kept separate to avoid
+    /// synchronization.
+    llvh::BitVector writeBarrierMarkedSymbols;
+
+    /// The number of bytes to drain per call to drainSomeWork. A higher rate
+    /// means more objects will be marked.
+    /// Only used by incremental collections.
+    size_t byteDrainRate{0};
+
+    /// The number of bytes that have been marked so far.
+    uint64_t markedBytes{0};
+
+    explicit MarkState(size_t numSymbols)
+        : markedSymbols(numSymbols), writeBarrierMarkedSymbols(numSymbols) {}
+  };
+
+  /// Store the mark state as an optional so it is convenient to create and
+  /// destroy it at the start and end of marking. This field and all of its
+  /// contents should only be accessed or modified when gcMutex_ is held.
+  llvh::Optional<MarkState> markState_;
 
   /// This provides the background thread for doing marking and sweeping
   /// concurrently with the mutator.
@@ -772,7 +856,7 @@ class HadesGC final : public GCBase {
     /// \return true if the pointer lives in the segment that is being marked or
     /// evacuated for compaction.
     bool contains(const void *p) const {
-      return start == AlignedHeapSegment::storageStart(p);
+      return start == FixedSizeHeapSegment::storageStart(p);
     }
     bool contains(CompressedPointer p) const {
       return p.getSegmentStart() == startCP;
@@ -781,7 +865,7 @@ class HadesGC final : public GCBase {
     /// \return true if the pointer lives in the segment that is currently being
     /// evacuated for compaction.
     bool evacContains(const void *p) const {
-      return evacStart == AlignedHeapSegment::storageStart(p);
+      return evacStart == FixedSizeHeapSegment::storageStart(p);
     }
     bool evacContains(CompressedPointer p) const {
       return p.getSegmentStart() == evacStartCP;
@@ -829,7 +913,7 @@ class HadesGC final : public GCBase {
     /// The segment being compacted. This should be removed from the OG right
     /// after it is identified, and freed entirely once the compaction is
     /// complete.
-    std::shared_ptr<AlignedHeapSegment> segment;
+    std::shared_ptr<FixedSizeHeapSegment> segment;
   } compactee_;
 
   /// The number of compactions this GC has performed.
@@ -932,6 +1016,16 @@ class HadesGC final : public GCBase {
   /// whether this call was made from the background thread.
   void incrementalCollect(bool backgroundThread);
 
+  /// Drain some of the work to be done for marking.
+  /// \param markLimit Only mark up to this many bytes from the local
+  /// worklist.
+  ///   NOTE: This does *not* guarantee that the marker thread
+  ///   has upper bounds on the amount of work it does before reading from the
+  ///   global worklist. Any individual cell can be quite large (such as an
+  ///   ArrayStorage).
+  /// \return true if there is any remaining work in the local worklist.
+  bool incrementalMark(size_t markLimit);
+
   /// Iterate the list of `weakMapEntrySlots_`, for each non-free slot, if
   /// both the key and the owner are marked, mark the mapped value.
   /// Note that this may further cause other values to be marked, so we need to
@@ -964,7 +1058,7 @@ class HadesGC final : public GCBase {
   template <bool CompactionEnabled>
   void scanDirtyCardsForSegment(
       EvacAcceptor<CompactionEnabled> &acceptor,
-      AlignedHeapSegment &segment);
+      FixedSizeHeapSegment &segment);
 
   /// Find all pointers from OG into the YG/compactee during a YG collection.
   /// This is done quickly through use of write barriers that detect the
@@ -1011,19 +1105,19 @@ class HadesGC final : public GCBase {
   uint64_t heapFootprint() const;
 
   /// Accessor for the YG.
-  AlignedHeapSegment &youngGen() {
+  FixedSizeHeapSegment &youngGen() {
     return youngGen_;
   }
-  const AlignedHeapSegment &youngGen() const {
+  const FixedSizeHeapSegment &youngGen() const {
     return youngGen_;
   }
 
   /// Create a new segment (to be used by either YG or OG).
-  llvh::ErrorOr<AlignedHeapSegment> createSegment();
+  llvh::ErrorOr<FixedSizeHeapSegment> createSegment();
 
   /// Set a given segment as the YG segment.
   /// \return the previous YG segment.
-  AlignedHeapSegment setYoungGen(AlignedHeapSegment seg);
+  FixedSizeHeapSegment setYoungGen(FixedSizeHeapSegment seg);
 
   /// Get/set the current number of external bytes used by the YG.
   size_t getYoungGenExternalBytes() const;
@@ -1039,16 +1133,16 @@ class HadesGC final : public GCBase {
   /// collection.
   void yieldToOldGen();
 
-  /// \return A number of bytes that should be drained on a per-YG basis to
-  ///   help ensure an incremental collection will finish before the next one is
-  ///   needed.
-  size_t getDrainRate();
+  /// Set the drain rate in markState to the number of bytes that should be
+  /// drained on a per-YG basis to help ensure an incremental collection will
+  /// finish before the next one is needed.
+  void updateDrainRate();
 
   /// Adds the start address of the segment to the CrashManager's custom data.
   /// \param extraName append this to the name of the segment. Must be
   ///   non-empty.
   void addSegmentExtentToCrashManager(
-      const AlignedHeapSegment &seg,
+      const FixedSizeHeapSegment &seg,
       const std::string &extraName);
 
   /// Deletes a segment from the CrashManager's custom data.
@@ -1099,6 +1193,7 @@ void *HadesGC::allocWork(uint32_t sz) {
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
   if (shouldSanitizeHandles()) {
+    auto lk = ensureBackgroundTaskPaused();
     // The best way to sanitize uses of raw pointers outside handles is to force
     // the entire heap to move, and ASAN poison the old heap. That is too
     // expensive to do, even with sampling, for Hades. It also doesn't test the

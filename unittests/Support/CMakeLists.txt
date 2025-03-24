@@ -11,6 +11,7 @@ set(SupportSources
   ConversionsTest.cpp
   CtorConfigTest.cpp
   Base64Test.cpp
+  BitFieldTest.cpp
   HashStringTest.cpp
   HermesSafeMathTest.cpp
   JSONEmitterTest.cpp
@@ -23,6 +24,7 @@ set(SupportSources
   SerialExecutorTest.cpp
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
+  StackBoundsTest.cpp
   StatsAccumulatorTest.cpp
   StringSetVectorTest.cpp
   UnicodeTest.cpp

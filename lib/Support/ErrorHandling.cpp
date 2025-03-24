@@ -29,6 +29,8 @@ const std::error_category &oom_category() {
           return "Effective OOM";
         case OOMError::SuperSegmentAlloc:
           return "Allocation occurred that was larger than a heap segment";
+        case OOMError::TooLargeSegmentRequest:
+          return "Requesting a heap segment that is too large to create";
         case OOMError::CopyableVectorCapacityIntegerOverflow:
           return "CopyableVector capacity integer overflow";
         case OOMError::TestVMLimitReached:

@@ -139,10 +139,22 @@ public:
     return std::distance(begin(), end());
   }
 
-  reference front() { return *begin(); }
-  const_reference front() const { return *begin(); }
-  reference back() { return *rbegin(); }
-  const_reference back() const { return *rbegin(); }
+  reference front() {
+    assert(!empty());
+    return *begin();
+  }
+  const_reference front() const {
+    assert(!empty());
+    return *begin();
+  }
+  reference back() {
+    assert(!empty());
+    return *rbegin();
+  }
+  const_reference back() const {
+    assert(!empty());
+    return *rbegin();
+  }
 
   /// Insert a node at the front; never copies.
   void push_front(reference Node) { insert(begin(), Node); }
@@ -151,10 +163,16 @@ public:
   void push_back(reference Node) { insert(end(), Node); }
 
   /// Remove the node at the front; never deletes.
-  void pop_front() { erase(begin()); }
+  void pop_front() {
+    assert(!empty());
+    erase(begin());
+  }
 
   /// Remove the node at the back; never deletes.
-  void pop_back() { erase(--end()); }
+  void pop_back() {
+    assert(!empty());
+    erase(--end());
+  }
 
   /// Swap with another list in place using std::swap.
   void swap(simple_ilist &X) { std::swap(*this, X); }

@@ -140,6 +140,11 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 /// include non-enumerable keys, too.  The keys included will only be of the
 /// types specified by the above flags.
 ///
+/// \name KeepSymbols
+/// Normally, when returning a list of keys, Symbols are converted to
+/// Strings, but if this flag is set, even uniqued Symbols are returned as
+/// Symbols.
+///
 /// Either or both of IncludeSymbols and IncludeNonSymbols may be
 /// specified.  If neither is specified, this may cause an assertion
 /// failure if assertions are enabled.
@@ -147,7 +152,8 @@ HERMES_VM__DECLARE_FLAGS_CLASS(PropOpFlags, HERMES_VM__LIST_PropOpFlags);
 #define HERMES_VM__LIST_OwnKeysFlags(FLAG) \
   FLAG(IncludeSymbols)                     \
   FLAG(IncludeNonSymbols)                  \
-  FLAG(IncludeNonEnumerable)
+  FLAG(IncludeNonEnumerable)               \
+  FLAG(KeepSymbols)
 
 HERMES_VM__DECLARE_FLAGS_CLASS(OwnKeysFlags, HERMES_VM__LIST_OwnKeysFlags);
 
@@ -269,6 +275,20 @@ struct ObjectVTable : public VTable {
 class JSObject : public GCCell {
   friend void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
+ protected:
+  /// Flags affecting the entire object.
+  SHObjectFlags flags_{};
+
+  /// The prototype of this object.
+  GCPointer<JSObject> parent_;
+
+  /// The dynamically derived "class" of the object, describing its fields in
+  /// order.
+  GCPointer<HiddenClass> clazz_{};
+
+  /// Storage for property values.
+  GCPointer<PropStorage> propStorage_{};
+
  public:
   /// A light-weight constructor which performs no GC allocations. Its purpose
   /// to make sure all fields are initialized according to C++ without writing
@@ -378,6 +398,11 @@ class JSObject : public GCCell {
   template <typename T>
   static inline T *initDirectPropStorage(Runtime &runtime, T *self);
 
+  /// \return the full ObjectFlags associated with this object.
+  SHObjectFlags getFlags() const {
+    return flags_;
+  }
+
   /// ES9 9.1 O.[[Extensible]] internal slot
   bool isExtensible() const {
     return !flags_.noExtend;
@@ -398,6 +423,13 @@ class JSObject : public GCCell {
     return flags_.proxyObject;
   }
 
+  /// Returns whether the object has any of properties set in \p flags.
+  /// \p flags should have only the flags set, not the objectID.
+  bool hasFlagIn(SHObjectFlags flags) const {
+    assert(flags.objectID == 0);
+    return flags_.bits & flags.bits;
+  }
+
   /// \return true if this object has fast indexed storage, meaning no property
   ///   checks need to be made when reading an indexed value.
   bool hasFastIndexProperties() const {
@@ -406,9 +438,14 @@ class JSObject : public GCCell {
 
   /// \return the `__proto__` internal property, which may be nullptr.
   JSObject *getParent(PointerBase &runtime) const {
+    return parent_.get(runtime);
+  }
+
+  /// \return the `__proto__` internal property, which may be nullptr.
+  const GCPointer<JSObject> &getParentGCPtr() const {
     assert(
         !flags_.proxyObject && "getParent cannot be used with proxy objects");
-    return parent_.get(runtime);
+    return parent_;
   }
 
   /// \return the hidden class of this object.
@@ -419,6 +456,18 @@ class JSObject : public GCCell {
   /// \return the hidden class of this object.
   const GCPointer<HiddenClass> &getClassGCPtr() const {
     return clazz_;
+  }
+
+  /// Set the hidden class of this object to \p clazz. This does not allocate
+  /// indirect property storage, and must only be used when the current and new
+  /// hidden classes do not have more properties than the direct storage. Note
+  /// that if used incorrectly, this can create completely invalid objects.
+  void setClassNoAllocPropStorageUnsafe(Runtime &runtime, HiddenClass *clazz) {
+    // Check that there is no prop storage already allocated, and the new class
+    // does not require it.
+    assert(!propStorage_);
+    assert(clazz->getNumProperties() <= DIRECT_PROPERTY_SLOTS);
+    clazz_.set(runtime, clazz, runtime.getHeap());
   }
 
   /// \return the object ID. Assign one if not yet exist. This ID can be used
@@ -907,7 +956,7 @@ class JSObject : public GCCell {
       Runtime &runtime,
       SymbolID name,
       PropOpFlags opFlags = PropOpFlags(),
-      PropertyCacheEntry *cacheEntry = nullptr);
+      ReadPropertyCacheEntry *cacheEntry = nullptr);
 
   /// Like getNamed, but with a \c receiver.  The receiver is
   /// generally only relevant when JavaScript code is executed.  If an
@@ -921,7 +970,7 @@ class JSObject : public GCCell {
       SymbolID name,
       Handle<> receiver,
       PropOpFlags opFlags = PropOpFlags(),
-      PropertyCacheEntry *cacheEntry = nullptr);
+      ReadPropertyCacheEntry *cacheEntry = nullptr);
 
   // getNamedOrIndexed accesses a property with a SymbolIDs which may be
   // index-like.
@@ -1032,7 +1081,8 @@ class JSObject : public GCCell {
   /// Calls ObjectVTable::getOwnIndexed.
   static HermesValue
   getOwnIndexed(PseudoHandle<JSObject> self, Runtime &runtime, uint32_t index) {
-    return self->getVT()->getOwnIndexed(std::move(self), runtime, index);
+    const auto *vtable = self->getVT();
+    return vtable->getOwnIndexed(std::move(self), runtime, index);
   }
 
   /// Calls ObjectVTable::setOwnIndexed.
@@ -1448,19 +1498,6 @@ class JSObject : public GCCell {
       PropOpFlags opFlags);
 
  protected:
-  /// Flags affecting the entire object.
-  SHObjectFlags flags_{};
-
-  /// The prototype of this object.
-  GCPointer<JSObject> parent_;
-
-  /// The dynamically derived "class" of the object, describing its fields in
-  /// order.
-  GCPointer<HiddenClass> clazz_{};
-
-  /// Storage for property values.
-  GCPointer<PropStorage> propStorage_{};
-
   /// Storage for direct property slots.
   inline GCSmallHermesValue *directProps();
   inline const GCSmallHermesValue *directProps() const;
@@ -1532,9 +1569,13 @@ constexpr size_t JSObject::cellSizeJSObject() {
           directPropsOffset() +
               sizeof(GCSmallHermesValue) * DIRECT_PROPERTY_SLOTS,
       "unexpected padding");
+  // Check that any padding added due to alignment is less than an additional
+  // direct property slot. This ensures that we've maximized the direct property
+  // slots for the current object size.
   static_assert(
-      heapAlignSize(sizeof(JSObjectAndDirectProps)) ==
-          sizeof(JSObjectAndDirectProps),
+      heapAlignSize(sizeof(JSObjectAndDirectProps)) -
+              sizeof(JSObjectAndDirectProps) <
+          sizeof(GCSmallHermesValue),
       "Wasted direct slot due to alignment");
   return sizeof(JSObjectAndDirectProps);
 }
@@ -1551,6 +1592,10 @@ void JSObject::staticAsserts() {
 /// \return an array that contains all enumerable properties of obj (including
 /// those of its prototype etc.) at the indices [beginIndex, endIndex) (any
 /// other part of the array is implementation-defined).
+/// The elements of the array will be one of the following:
+/// * a SymbolID (uniqued) representing a string key
+/// * a StringPrimitive of a string property
+/// * a Number which corresponds to an array index
 /// \param[out] beginIndex beginning of the range of indices storing names
 /// \param[out] endIndex end (exclusive) of the range of indices storing names
 CallResult<Handle<BigStorage>> getForInPropertyNames(
@@ -1672,11 +1717,38 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
   static_assert(
       count <= DIRECT_PROPERTY_SLOTS,
       "smallPropStorage size must fit in direct properties");
-  GCSmallHermesValue::uninitialized_fill(
-      self->directProps() + numOverlapSlots<T>(),
-      self->directProps() + DIRECT_PROPERTY_SLOTS,
-      SmallHermesValue::encodeUndefinedValue(),
-      runtime.getHeap());
+
+  // Initialize the direct property slots to undefined. We have observed that
+  // using a loop here can result in inefficient code on some platforms
+  // (including calls to memset) so we manually unroll it with a switch.
+  switch (numOverlapSlots<T>()) {
+    case 0:
+      new (&self->directProps()[0]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 1:
+      new (&self->directProps()[1]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 2:
+      new (&self->directProps()[2]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 3:
+      new (&self->directProps()[3]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 4:
+      new (&self->directProps()[4]) GCHermesValueBase(
+          SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
+      [[fallthrough]];
+    case 5:
+      static_assert(
+          DIRECT_PROPERTY_SLOTS == 5,
+          "Must update this switch if we add or remove direct properties");
+      break;
+  }
+
   return self;
 }
 
@@ -1969,7 +2041,7 @@ inline CallResult<PseudoHandle<>> JSObject::getNamed_RJS(
     Runtime &runtime,
     SymbolID name,
     PropOpFlags opFlags,
-    PropertyCacheEntry *cacheEntry) {
+    ReadPropertyCacheEntry *cacheEntry) {
   return getNamedWithReceiver_RJS(
       selfHandle, runtime, name, selfHandle, opFlags, cacheEntry);
 }

@@ -390,6 +390,14 @@ jsi::Object TracingRuntime::createObject() {
   return obj;
 }
 
+jsi::Object TracingRuntime::createObjectWithPrototype(
+    const jsi::Value &prototype) {
+  auto obj = RD::createObjectWithPrototype(prototype);
+  trace_.emplace_back<SynthTrace::CreateObjectWithPrototypeRecord>(
+      getTimeSinceStart(), defObjectID(obj), useTraceValue(prototype));
+  return obj;
+}
+
 jsi::Object TracingRuntime::createObject(std::shared_ptr<jsi::HostObject> ho) {
   class TracingHostObject : public jsi::DecoratedHostObject {
    public:
@@ -556,6 +564,15 @@ jsi::String TracingRuntime::createStringFromUtf8(
   return res;
 };
 
+jsi::String TracingRuntime::createStringFromUtf16(
+    const char16_t *utf16,
+    size_t length) {
+  jsi::String res = RD::createStringFromUtf16(utf16, length);
+  trace_.emplace_back<SynthTrace::CreateStringRecord>(
+      getTimeSinceStart(), defObjectID(res), utf16, length);
+  return res;
+}
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromAscii(
     const char *str,
     size_t length) {
@@ -571,6 +588,15 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromUtf8(
   jsi::PropNameID res = RD::createPropNameIDFromUtf8(utf8, length);
   trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
       getTimeSinceStart(), defObjectID(res), utf8, length);
+  return res;
+}
+
+jsi::PropNameID TracingRuntime::createPropNameIDFromUtf16(
+    const char16_t *utf16,
+    size_t length) {
+  jsi::PropNameID res = RD::createPropNameIDFromUtf16(utf16, length);
+  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+      getTimeSinceStart(), defObjectID(res), utf16, length);
   return res;
 }
 
@@ -597,10 +623,86 @@ std::string TracingRuntime::symbolToString(const jsi::Symbol &sym) {
   return res;
 }
 
+std::u16string TracingRuntime::utf16(const jsi::String &str) {
+  std::u16string res = RD::utf16(str);
+  trace_.emplace_back<SynthTrace::Utf16Record>(
+      getTimeSinceStart(), SynthTrace::encodeString(useObjectID(str)), res);
+  return res;
+}
+
+std::u16string TracingRuntime::utf16(const jsi::PropNameID &name) {
+  std::u16string res = RD::utf16(name);
+  trace_.emplace_back<SynthTrace::Utf16Record>(
+      getTimeSinceStart(),
+      SynthTrace::encodePropNameID(useObjectID(name)),
+      res);
+  return res;
+}
+
+void TracingRuntime::getStringData(
+    const jsi::String &str,
+    void *ctx,
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) {
+  struct Context {
+    void *ctx;
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num);
+    std::u16string buffer;
+  } context = {ctx, cb, u""};
+
+  RD::getStringData(
+      str, &context, [](void *ctx, bool ascii, const void *data, size_t num) {
+        // Save the string content passed into the callback
+        auto *context = (Context *)ctx;
+        if (ascii) {
+          context->buffer.append((const char *)data, (const char *)data + num);
+        } else {
+          context->buffer.append((const char16_t *)data, num);
+        }
+
+        // Invoke the original callback provided by the user
+        context->cb(context->ctx, ascii, data, num);
+      });
+
+  trace_.emplace_back<SynthTrace::GetStringDataRecord>(
+      getTimeSinceStart(),
+      SynthTrace::encodeString(useObjectID(str)),
+      std::move(context.buffer));
+}
+
+void TracingRuntime::getPropNameIdData(
+    const jsi::PropNameID &sym,
+    void *ctx,
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num)) {
+  struct Context {
+    void *ctx;
+    void (*cb)(void *ctx, bool ascii, const void *data, size_t num);
+    std::u16string buffer;
+  } context = {ctx, cb, u""};
+
+  RD::getPropNameIdData(
+      sym, &context, [](void *ctx, bool ascii, const void *data, size_t num) {
+        // Save the string content passed into the callback
+        auto *context = (Context *)ctx;
+        if (ascii) {
+          context->buffer.append((const char *)data, (const char *)data + num);
+        } else {
+          context->buffer.append((const char16_t *)data, num);
+        }
+
+        // Invoke the original callback provided by the user
+        context->cb(context->ctx, ascii, data, num);
+      });
+
+  trace_.emplace_back<SynthTrace::GetStringDataRecord>(
+      getTimeSinceStart(),
+      SynthTrace::encodePropNameID(useObjectID(sym)),
+      std::move(context.buffer));
+}
+
 jsi::PropNameID TracingRuntime::createPropNameIDFromString(
     const jsi::String &str) {
   jsi::PropNameID res = RD::createPropNameIDFromString(str);
-  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+  trace_.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
       getTimeSinceStart(),
       defObjectID(res),
       SynthTrace::encodeString(useObjectID(str)));
@@ -610,7 +712,7 @@ jsi::PropNameID TracingRuntime::createPropNameIDFromString(
 jsi::PropNameID TracingRuntime::createPropNameIDFromSymbol(
     const jsi::Symbol &sym) {
   jsi::PropNameID res = RD::createPropNameIDFromSymbol(sym);
-  trace_.emplace_back<SynthTrace::CreatePropNameIDRecord>(
+  trace_.emplace_back<SynthTrace::CreatePropNameIDWithValueRecord>(
       getTimeSinceStart(),
       defObjectID(res),
       SynthTrace::encodeSymbol(useObjectID(sym)));
@@ -651,6 +753,16 @@ jsi::Value TracingRuntime::getProperty(
   trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
       getTimeSinceStart(), defTraceValue(value));
   return value;
+}
+
+jsi::Value TracingRuntime::getPrototypeOf(const jsi::Object &object) {
+  trace_.emplace_back<SynthTrace::GetPrototypeRecord>(
+      getTimeSinceStart(), useObjectID(object));
+
+  auto prototype = RD::getPrototypeOf(object);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(prototype));
+  return prototype;
 }
 
 bool TracingRuntime::hasProperty(
@@ -711,6 +823,14 @@ void TracingRuntime::setPropertyValue(
 #endif
       useTraceValue(value));
   RD::setPropertyValue(obj, name, value);
+}
+
+void TracingRuntime::setPrototypeOf(
+    const jsi::Object &object,
+    const jsi::Value &prototype) {
+  trace_.emplace_back<SynthTrace::SetPrototypeRecord>(
+      getTimeSinceStart(), useObjectID(object), useTraceValue(prototype));
+  RD::setPrototypeOf(object, prototype);
 }
 
 jsi::Array TracingRuntime::getPropertyNames(const jsi::Object &o) {

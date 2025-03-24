@@ -230,10 +230,12 @@ void LowerToStateMachine::setupScopes() {
   // means we must change the operand to the CreateGeneratorInst with this new
   // scope.
   auto *existingScopeOperand = llvh::cast<BaseScopeInst>(CGI_->getScope());
-  auto *newScope = builder_.createCreateScopeInst(
-      builder_.createVariableScope(existingScopeOperand->getVariableScope()),
-      existingScopeOperand);
+  auto *newVarScope =
+      builder_.createVariableScope(existingScopeOperand->getVariableScope());
+  auto *newScope =
+      builder_.createCreateScopeInst(newVarScope, existingScopeOperand);
   CGI_->setOperand(newScope, CreateGeneratorInst::ScopeIdx);
+  CGI_->setVarScope(newVarScope);
   newOuterScope_ = newScope;
   movePastFirstInBlock(builder_, &inner_->front());
   getParentOuterScope_ = builder_.createGetParentScopeInst(
@@ -766,11 +768,7 @@ void LowerToStateMachine::lowerToSwitch(
   IRBuilder::InstructionDestroyer destroyer{};
   for (auto *BB : userBBs) {
     for (Instruction &I : *BB) {
-      if (auto *SGI = llvh::dyn_cast<StartGeneratorInst>(&I)) {
-        // We've already replicated the semantics of StartGeneratorInst, so
-        // remove it.
-        destroyer.add(SGI);
-      } else if (auto *YI = llvh::dyn_cast<SaveAndYieldInst>(&I)) {
+      if (auto *YI = llvh::dyn_cast<SaveAndYieldInst>(&I)) {
         // Return a value, and set switchIdx to jump to the next block
         // specified in the parameter of SaveAndYieldInst.
         auto *nextBB = YI->getNextBlock();

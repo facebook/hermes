@@ -22,6 +22,8 @@
 namespace hermes {
 namespace vm {
 
+template <typename HVType>
+class ArrayStorageBase;
 class CodeBlock;
 class Runtime;
 
@@ -78,6 +80,8 @@ union RuntimeModuleFlags {
 /// linked list which can be walked to perform memory management tasks.
 class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
  private:
+  friend struct RuntimeOffsets;
+
   friend StringID detail::mapStringMayAllocate(
       RuntimeModule &module,
       const char *str);
@@ -135,6 +139,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   /// A map from template object ids to template objects.
   llvh::DenseMap<uint32_t, JSObject *> templateMap_;
+
+  /// Indexed by module id: the exports of each module.  isEmpty means
+  /// the module has not yet been initialized.
+  ArrayStorageBase<HermesValue> *moduleExports_{nullptr};
 
   /// Registers the created RuntimeModule with \p domain, resulting in
   /// \p domain owning it. The RuntimeModule will be freed when the
@@ -347,11 +355,10 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       Runtime &runtime,
       uint32_t shapeTableIndex) const;
 
-  /// Try to cache the shareable hidden class for a given shape. Caching will be
-  /// skipped if shapeTableIndex exceeds the bounds of the cache.
+  /// Set the cached hidden class for a given shape.
   /// \param shapeTableIndex is the ID of an object literal shape.
   /// \param clazz the hidden class to cache.
-  void tryCacheLiteralHiddenClass(
+  void setCachedLiteralHiddenClass(
       Runtime &runtime,
       unsigned shapeTableIndex,
       HiddenClass *clazz);
@@ -385,6 +392,16 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
     auto numObjShapes = bcProvider_->getObjectShapeTable().size();
     objectLiteralHiddenClasses_.resize(numObjShapes);
   }
+
+  /// Returns the module export for module \p modIndex.  This will be
+  /// empty if that module has not yet been initialized.
+  inline HermesValue getModuleExport(uint32_t modIndex) const;
+
+  /// Attempts to set the module export for module \p modIndex to \p modExport.
+  /// This may fail if \p modIndex is outside current capacity
+  /// of the cache, and attempts to reallocate it fail.  If that occurs,
+  /// the array size will remain unchanged.
+  void setModuleExport(Runtime &runtime, uint32_t modIndex, Handle<> modExport);
 
  private:
   /// Import the string table from the supplied module.

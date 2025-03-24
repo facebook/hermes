@@ -102,6 +102,12 @@ struct VMOnlyRuntimeFlags {
               "Dump profile in Tracery format")),
       llvh::cl::cat(RuntimeCategory)};
 
+  llvh::cl::opt<double> SampleProfilingFreq{
+      "sample-profiling-freq",
+      llvh::cl::init(100),
+      llvh::cl::desc("Sampling profiler frequency (in Hz)"),
+      llvh::cl::cat(RuntimeCategory)};
+
   llvh::cl::opt<MemorySize, false, MemorySizeParser> MaxHeapSize{
       "gc-max-heap",
       llvh::cl::desc("Max heap size.  Format: <unsigned>{K,M,G}{iB}"),
@@ -114,23 +120,10 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::init(vm::RuntimeConfig::getDefaultMaxNumRegisters())};
 
-  llvh::cl::opt<bool> ES6Promise{
-      "Xes6-promise",
-      llvh::cl::desc("Enable support for ES6 Promise"),
-      llvh::cl::init(vm::RuntimeConfig::getDefaultES6Promise()),
-      llvh::cl::cat(RuntimeCategory)};
-
   llvh::cl::opt<bool> ES6Proxy{
       "Xes6-proxy",
       llvh::cl::desc("Enable support for ES6 Proxy"),
       llvh::cl::init(vm::RuntimeConfig::getDefaultES6Proxy()),
-      llvh::cl::cat(RuntimeCategory)};
-
-  llvh::cl::opt<bool> EvalES6Class{
-      "Xeval-es6-class",
-      llvh::cl::Hidden,
-      llvh::cl::desc("Enable support for ES6 Class"),
-      llvh::cl::init(vm::RuntimeConfig::getDefaultES6Class()),
       llvh::cl::cat(RuntimeCategory)};
 
   llvh::cl::opt<bool> Intl{
@@ -214,9 +207,24 @@ struct VMOnlyRuntimeFlags {
   llvh::cl::opt<bool> ForceJIT{
       "Xforce-jit",
       llvh::cl::Hidden,
+      llvh::cl::ZeroOrMore,
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("force JIT compilation of every function"),
       llvh::cl::init(false)};
+
+  llvh::cl::opt<uint32_t> JITThreshold{
+      "Xjit-threshold",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("default minimum number of invocations to JIT compile"),
+      llvh::cl::init(1 << 5)};
+
+  llvh::cl::opt<uint32_t> JITMemoryLimit{
+      "Xjit-memory-limit",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("maximum size for JIT code (in bytes)"),
+      llvh::cl::init(32u << 20)};
 
   /// To get the value of this CLI option, use the method below.
   llvh::cl::opt<unsigned> DumpJITCode{
@@ -233,6 +241,21 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::desc("crash on any JIT compilation error"),
       llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> JITEmitAsserts{
+      "Xjit-emit-asserts",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+#ifdef NDEBUG
+      llvh::cl::desc(
+          "(default false) Whether assertions in JIT compiled code are enabled"),
+      llvh::cl::init(false),
+#else
+      llvh::cl::desc(
+          "(default true) Whether assertions in JIT compiled code are enabled"),
+      llvh::cl::init(true)
+#endif
+  };
 };
 
 /// All command line runtime options relevant to the VM, including options

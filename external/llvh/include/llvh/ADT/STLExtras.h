@@ -62,6 +62,26 @@ using ValueOfRange = typename std::remove_reference<decltype(
 //     Extra additions to <type_traits>
 //===----------------------------------------------------------------------===//
 
+namespace detail {
+template <class, template <class...> class Op, class... Args> struct detector {
+  using value_t = std::false_type;
+};
+template <template <class...> class Op, class... Args>
+struct detector<std::void_t<Op<Args...>>, Op, Args...> {
+  using value_t = std::true_type;
+};
+} // end namespace detail
+
+/// Detects if a given trait holds for some set of arguments 'Args'.
+/// For example, the given trait could be used to detect if a given type
+/// has a copy assignment operator:
+///   template<class T>
+///   using has_copy_assign_t = decltype(std::declval<T&>()
+///                                                 = std::declval<const T&>());
+///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
+template <template <class...> class Op, class... Args>
+using is_detected = typename detail::detector<void, Op, Args...>::value_t;
+
 template <typename T>
 struct negation : std::integral_constant<bool, !bool(T::value)> {};
 
@@ -1095,11 +1115,51 @@ OutputIt copy(R &&Range, OutputIt Out) {
   return std::copy(adl_begin(Range), adl_end(Range), Out);
 }
 
-/// Wrapper function around std::find to detect if an element exists
-/// in a container.
+namespace detail {
+template <typename Range, typename Element>
+using check_has_member_contains_t =
+    decltype(std::declval<Range &>().contains(std::declval<const Element &>()));
+
+template <typename Range, typename Element>
+static constexpr bool HasMemberContains =
+    is_detected<check_has_member_contains_t, Range, Element>::value;
+
+template <typename Range, typename Element>
+using check_has_member_find_t =
+    decltype(std::declval<Range &>().find(std::declval<const Element &>()) !=
+             std::declval<Range &>().end());
+
+template <typename Range, typename Element>
+static constexpr bool HasMemberFind =
+    is_detected<check_has_member_find_t, Range, Element>::value;
+
+} // namespace detail
+
+/// Returns true if \p Element is found in \p Range. Delegates the check to
+/// either `.contains(Element)`, `.find(Element)`, or `std::find`, in this
+/// order of preference. This is intended as the canonical way to check if an
+/// element exists in a range in generic code or range type that does not
+/// expose a `.contains(Element)` member.
 template <typename R, typename E>
 bool is_contained(R &&Range, const E &Element) {
-  return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
+  if constexpr (detail::HasMemberContains<R, E>)
+    return Range.contains(Element);
+  else if constexpr (detail::HasMemberFind<R, E>)
+    return Range.find(Element) != Range.end();
+  else
+    return std::find(adl_begin(Range), adl_end(Range), Element) !=
+           adl_end(Range);
+}
+
+/// Returns true iff \p Element exists in \p Set. This overload takes \p Set as
+/// an initializer list and is `constexpr`-friendly.
+template <typename T, typename E>
+constexpr bool is_contained(std::initializer_list<T> Set, const E &Element) {
+  // TODO: Use std::find when we switch to C++20.
+  for (const T &V : Set)
+    if (V == Element)
+      return true;
+  return false;
 }
 
 /// Wrapper function around std::count to count the number of times an element

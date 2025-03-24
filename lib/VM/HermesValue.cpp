@@ -65,9 +65,6 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
       }
       return OS << ']';
     }
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      return OS << "[NativeValue " << hv.getNativeUInt32() << "]";
     case HermesValue::ETag::Symbol:
       return OS << "[Symbol "
                 << (hv.getSymbol().isNotUniqued() ? "(External)" : "(Internal)")

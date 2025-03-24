@@ -126,16 +126,6 @@ void GCBase::runtimeWillExecute() {
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
-  std::error_code code;
-  llvh::raw_fd_ostream os(fileName, code, llvh::sys::fs::FileAccess::FA_Write);
-  if (code) {
-    return code;
-  }
-  createSnapshot(os, true);
-  return std::error_code{};
-}
-
 namespace {
 
 constexpr HeapSnapshot::NodeID objectIDForRootSection(
@@ -692,7 +682,17 @@ void GCBase::checkTripwire(size_t dataSize) {
     Ctx(GCBase *gc) : gc_(gc) {}
 
     std::error_code createSnapshotToFile(const std::string &path) override {
-      return gc_->createSnapshotToFile(path);
+      std::error_code code;
+      llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
+      if (code) {
+        return code;
+      }
+      // We currently cannot call collect() to perform a full collection here
+      // because this is typically called while gcMutex_ is already held. While
+      // we could refactor it to work, it is unlikely to provide much value
+      // since the tripwire is invoked shortly after a collection anyway.
+      gc_->createSnapshot(os, true);
+      return std::error_code{};
     }
 
     std::error_code createSnapshot(std::ostream &os, bool captureNumericValue)
@@ -851,58 +851,28 @@ void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue(
       "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
   json.closeDict();
-
-  json.emitKey("collections");
-  json.openArray();
-  for (const auto &event : analyticsEvents_) {
-    json.openDict();
-    json.emitKeyValue("runtimeDescription", event.runtimeDescription);
-    json.emitKeyValue("gcKind", event.gcKind);
-    json.emitKeyValue("collectionType", event.collectionType);
-    json.emitKeyValue("cause", event.cause);
-    json.emitKeyValue("duration", event.duration.count());
-    json.emitKeyValue("cpuDuration", event.cpuDuration.count());
-    json.emitKeyValue("preAllocated", event.allocated.before);
-    json.emitKeyValue("postAllocated", event.allocated.after);
-    json.emitKeyValue("preSize", event.size.before);
-    json.emitKeyValue("postSize", event.size.after);
-    json.emitKeyValue("preExternal", event.external.before);
-    json.emitKeyValue("postExternal", event.external.after);
-    json.emitKeyValue("survivalRatio", event.survivalRatio);
-    json.emitKey("tags");
-    json.openArray();
-    for (const auto &tag : event.tags) {
-      json.emitValue(tag);
-    }
-    json.closeArray();
-    json.closeDict();
-  }
-  json.closeArray();
 }
 
 void GCBase::recordGCStats(
-    const GCAnalyticsEvent &event,
+    const InternalAnalyticsEvent &event,
     CumulativeHeapStats *stats,
     bool onMutator) {
   // Hades OG collections do not block the mutator, and so do not contribute to
   // the max pause time or the total execution time.
   if (onMutator)
-    stats->gcWallTime.record(
-        std::chrono::duration<double>(event.duration).count());
-  stats->gcCPUTime.record(
-      std::chrono::duration<double>(event.cpuDuration).count());
+    stats->gcWallTime.record(event.durationSecs);
+  stats->gcCPUTime.record(event.cpuDurationSecs);
   stats->finalHeapSize = event.size.after;
   stats->usedBefore.record(event.allocated.before);
   stats->usedAfter.record(event.allocated.after);
   stats->numCollections++;
 }
 
-void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
+void GCBase::recordGCStats(
+    const InternalAnalyticsEvent &event,
+    bool onMutator) {
   if (analyticsCallback_) {
     analyticsCallback_(event);
-  }
-  if (recordGcStats_) {
-    analyticsEvents_.push_back(event);
   }
   recordGCStats(event, &cumStats_, onMutator);
 }
@@ -1833,8 +1803,6 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
         hvType = "Undefined";
       } else if (hv.isEmpty()) {
         hvType = "Empty";
-      } else if (hv.isNativeValue()) {
-        hvType = "NativeValue";
       } else {
         assert(false && "Should be no other hermes values");
       }

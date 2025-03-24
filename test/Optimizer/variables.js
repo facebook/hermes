@@ -17,14 +17,11 @@ function foo(p1, p2, p3) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// OPT-CHECK:scope %VS0 []
-
 // OPT-CHECK:function global(): undefined
 // OPT-CHECK-NEXT:%BB0:
-// OPT-CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// OPT-CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
-// OPT-CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// OPT-CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// OPT-CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // OPT-CHECK-NEXT:       ReturnInst undefined: undefined
 // OPT-CHECK-NEXT:function_end
 
@@ -45,7 +42,7 @@ function foo(p1, p2, p3) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any

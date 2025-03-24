@@ -36,7 +36,7 @@ class B extends A {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
@@ -54,19 +54,18 @@ class B extends A {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.A]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.B]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %A(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %A(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.A]: any
-// CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %8 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.?A.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %8: object, %6: object, "prototype": string
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.A]: any
 // CHECK-NEXT:  %12 = CheckedTypeCastInst (:object) %11: any, type(object)
-// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %1: environment, %B(): functionCode
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %1: environment, %VS1: any, %B(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS1.B]: any
 // CHECK-NEXT:  %15 = LoadFrameInst (:object) %1: environment, [%VS1.?A.prototype]: object
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) empty: any, "f": string, %16: object
-// CHECK-NEXT:        TypedStoreParentInst %15: object, %17: object
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %1: environment, %VS1: any, %f(): functionCode
+// CHECK-NEXT:  %17 = AllocTypedObjectInst (:object) %15: object, "f": string, %16: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.?B.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %17: object, %13: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
@@ -74,7 +73,7 @@ class B extends A {
 
 // CHECK:scope %VS2 [x: any]
 
-// CHECK:constructor A(x: number): any [typed]
+// CHECK:base constructor A(x: number): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -89,7 +88,7 @@ class B extends A {
 
 // CHECK:scope %VS3 [x: any]
 
-// CHECK:constructor B(x: number): any [typed]
+// CHECK:derived constructor B(x: number): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

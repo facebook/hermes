@@ -35,6 +35,7 @@ function parse(originalText: string): Program {
   const result = hermesParserParse(textToParse, {
     allowReturnOutsideFunction: true,
     enableExperimentalComponentSyntax: true,
+    enableExperimentalFlowMatchSyntax: true,
     flow: 'all',
     sourceType: 'module',
     tokens: true,

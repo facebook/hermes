@@ -248,6 +248,16 @@ Arguments | %value is the value to be stored. %address is the reference to stack
 Semantics | The the instruction saves a value to memory. The address must be a valid stack allocation.
 Effects | Writes to memory.
 
+### ToPropertyKeyInst
+
+ToPropertyKeyInst | _
+--- | --- |
+Description | Converts a JavaScript value into a property key.
+Example |  %1 = ToPropertyKeyInst %input
+Arguments | The value to cast.
+Semantics | Implements ES15 7.1.19 ToPropertyKey ( argument ).
+Effects | May execute.
+
 ### AsNumberInst
 
 AsNumberInst | _
@@ -309,6 +319,16 @@ Arguments | %x and %y are the operands of the binary operation, %BB1 is the 'Tru
 Semantics | Performs a numeric comparison on the two doubles. If the condition is evaluated as 'True' the program jumps to the 'True' block. Otherwise the program jumps to the 'False' block.
 Effects | Does not read or write to memory.
 
+### HBCCmpBrTypeOfIsInst
+
+HBCCmpBrTypeOfIsInst | _
+--- | --- |
+Description | Compare the type of a value against known types and branch.
+Example |  %0 = HBCCmpBrTypeOfIsInst %val, %types, %trueBlock, %falseBlock
+Arguments | %val is the argument to the typeof comparison, %types is a TypeOfIsTypes (see Typeof.h), %trueBlock and %falseBlock are the targets
+Semantics | Branch to true if the type of %val matches the bit in %types, false otherwise.
+Effects | Does not read or write memory.
+
 ### GetParentScopeInst
 
 GetParentScopeInst | _
@@ -354,8 +374,8 @@ Effects | Does not read or write to memory.
 GetClosureScopeInst | _
 --- | --- |
 Description | Retrieve the scope from the given closure.
-Example | %0 = GetClosureScopeInst %varScope, %closure
-Arguments | %varScope is the VariableScope that describes the resulting scope. %closure is the closure from which to read the scope.
+Example | %0 = GetClosureScopeInst %varScope, %function, %closure
+Arguments | %varScope is the VariableScope that describes the resulting scope. %function is the IR function that the closure operand is known to refer to. %closure is the closure from which to read the scope.
 Semantics | The instruction returns the scope stored in the given closure.
 Effects | Does not read or write to memory.
 
@@ -364,10 +384,20 @@ Effects | Does not read or write to memory.
 CreateFunctionInst | _
 --- | --- |
 Description | Constructs a new function into the current scope from its code representation.
-Example | %0 = CreateFunction %scope, %function
-Arguments | %function is the function that represents the code of the generated closure. %scope is the surrounding environment.
+Example | %0 = CreateFunction %scope, %varScope, %function
+Arguments | %function is the function that represents the code of the generated closure. %scope is the surrounding environment. %varScope is the VariableScope that describes %scope.
 Semantics | The instruction creates a new closure that may access the lexical scope of the current function
 Effects | Does not read or write to memory.
+
+### CreateClassInst
+
+CreateClassInst | _
+--- | --- |
+Description | Constructs a new class into the current scope from its constructor code representation.
+Example | %0 = CreateClassInst %scope, %varScope, %function, %superClass, %homeObjectOutput
+Arguments | %function is the function that represents the code of the constructor. %scope is the surrounding environment. %varScope is the VariableScope that describes %scope. %superClass is the class to inherit from; in base classes this is an empty sentinel value. %homeObjectOutput is an out parameter which will contain the home object (.prototype) of the class.
+Semantics | The instruction creates a new class that may access the lexical scope of the current function, and an inherit from a given super class. (ES2023 15.7.14) This results in the creation of 2 objects: the class function object itself, and the "home" object. The home object is where methods are put. The home object can be found on the .prototype of the class, and the class can be found on the .constructor of the home object.
+Effects | Writes to stack memory. May execute JS if it's a derived class.
 
 ### BinaryOperatorInst
 
@@ -395,7 +425,7 @@ CreateThisInst | _
 --- | --- |
 Description | Creates the object to be used as the `this` parameter of a construct call.
 Example | %0 = CreateThisInst %closure, %newtarget
-Arguments | %closure is the closure that will be invoked as a constructor, %newtarget is the new.target value to use for the call.
+Arguments | %closure is the closure that will be invoked as a constructor, it may be any value, and the instruction will throw if it is not a valid callable. %newtarget is the new.target value to use for the call, it must either be the same value as %closure, or a valid callable.
 Semantics | The instruction is responsible for preparing the `this` parameter of a construct call. In normal cases, this means creating an object with its parent set to the .prototype of %newtarget. However, there are some functions which are responsible for making their own this. In these cases, this instruction returns undefined.
 Effects | May read and write memory.
 
@@ -457,6 +487,16 @@ Arguments | %object is the global object. %property is the name of the field, wh
 Semantics | Similar to LoadPropertyInst, but throw if the field doesn't exist.
 Effects | May read and write memory or throw.
 
+### LoadPropertyWithReceiverInst
+
+LoadPropertyWithReceiverInst | _
+--- | --- |
+Description | Loads the value of a field from a JavaScript object.
+Example |  %0 = LoadPropertyWithReceiverInst %object, %property, %receiver
+Arguments | %object is the object to load from. %property is the name of the field. %receiver is receiver of the operation.
+Semantics | The instruction implements ES2024 6.2.5.5 GetValue. This is used for `super` references.
+Effects | May read and write memory or throw.
+
 ### DeletePropertyInst
 
 DeletePropertyInst | _
@@ -477,6 +517,17 @@ Arguments | %value is the value to be stored. %object is the object where the fi
 Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation PutValue (ES5.1. sec 8.7.2) is then applied to the returned Reference.
 Effects | May read and write memory or throw.
 
+
+### StorePropertyWithReceiverInst
+
+StorePropertyWithReceiverInst | _
+--- | --- |
+Description | Stores a value to field in a JavaScript object, with a specified receiver object.
+Example |   %4 = StorePropertyWithReceiverInst %value, %object, %property, %receiver, %isStrict
+Arguments | %value is the value to be stored. %object is the object where the field %property will be created or modified. %receiver will be the receiver operand when invoking the `[[Set]] ` internal method. If %isStrict is true, the operation will fail if there is an incompatible property descriptor found during the attempted store..
+Semantics | This follows the same semantics as StorePropertyInst, except the receiver is explicitly specified.
+Effects | May read and write memory or throw.
+
 ### TryStoreGlobalPropertyInst
 
 TryStoreGlobalPropertyInst | _
@@ -487,32 +538,32 @@ Arguments | %value is the value to be stored. %object is the global object, wher
 Semantics | Similar to StorePropertyInst, but throw if the field doesn't exist.
 Effects | May read and write memory or throw.
 
-### StoreOwnPropertyInst
+### DefineOwnPropertyInst
 
-StoreOwnPropertyInst | _
+DefineOwnPropertyInst | _
 --- | --- |
-Description | Stores a value to an *own property* of JavaScript object.
-Example |   %4 = StoreOwnPropertyInst %value, %object, %property, %enumerable : boolean
-Arguments | %value is the value to be stored. %object is the object where the field with name %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
-Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
+Description | Define an *own property* of JavaScript object. Will throw if the property write was not successful (e.g. trying to store to a non-writable property.)
+Example |   %4 = DefineOwnPropertyInst %value, %object : object, %property, %enumerable : boolean
+Arguments | %value is the value to be stored. %object *must* be of an object type; it's the object where the field with name %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
+Semantics | Implements ES15 7.3.8 DefinePropertyOrThrow. The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
-### StoreNewOwnPropertyInst
+### DefineNewOwnPropertyInst
 
-StoreNewOwnPropertyInst | _
+DefineNewOwnPropertyInst | _
 --- | --- |
 Description | Create a new *own property* in what is known to be a JavaScript object.
-Example |   `%4 = StoreNewOwnPropertyInst %value, %object, %property, %enumerable : boolean`
+Example |   `%4 = DefineNewOwnPropertyInst %value, %object, %property, %enumerable : boolean`
 Arguments | *%value* is the value to be stored. *%object*, which must be an object, is where the field with name *%property* will be created. *%property* must be a string or index-like number literal, otherwise it is impossible to guarantee that it is new. *%enumerable* determines whether the new property will be created as enumerable or not.
 Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
-### StoreGetterSetterInst
+### DefineOwnGetterSetterInst
 
-StoreGetterSetterInst | _
+DefineOwnGetterSetterInst | _
 --- | --- |
 Description | Associates a pair of getter and setter with an *own* field in a JavaScript object, replacing the previous value.
-Example |   %4 = StoreGetterSetterInst %getter, %setter, %object, %property, %enumerable
+Example |   %4 = DefineOwnGetterSetterInst %getter, %setter, %object, %property, %enumerable
 Arguments | %getter is a getter accessor, or undefined. %setter is a setter accessor, or undefined. %object is the object where the field %property will be created or modified. %enumerable determines whether a new property will be created as enumerable or not.
 Semantics | The instruction follows the rules of JavaScript property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain. It replaces both accessors even if one or both of the parameters are undefined.
 Effects | May read and write memory.
@@ -535,6 +586,16 @@ Description | Allocates a new JavaScript object on the heap. During lowering pas
 Example |  %0 = AllocObjectLiteralInst "prop1" : string, 10 : number
 Arguments | %prop_map is a vector of (Literal*, value*) pairs which represents the properties and their keys in the object literal.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
+Effects | Does not read or write to memory.
+
+### AllocTypedObjectInst
+
+AllocTypedObjectInst | _
+--- | --- |
+Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Example |  %0 = AllocTypedObjectInst %parent, "prop1" : string, 10 : number
+Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values.
 Effects | Does not read or write to memory.
 
 ### AllocArrayInst
@@ -575,6 +636,16 @@ Description | The JS `typeof` operator
 Example |  %0 = TypeOfInst %val
 Arguments | %val is the value whose type we want to obtain.
 Semantics | Obtains a string representing the type of the operand.
+Effects | Does not read or write to memory.
+
+### TypeOfIsInst
+
+TypeOfIsInst | _
+--- | --- |
+Description | Compare the type of a value against known types
+Example |  %0 = TypeOfIsInst %val, %types
+Arguments | %val is the value whose type we want to compare, %types is the TypeOfIsTypes (see Typeof.h) to compare against.
+Semantics | Returns true if the type of %val matches the bit in the TypeOfIsTypes, false otherwise.
 Effects | Does not read or write to memory.
 
 ### CreateArgumentsInst
@@ -677,6 +748,16 @@ Arguments | The active catch block and the destination block to branch to.
 Semantics | This is a nop, used only for tracking the end of try blocks.
 Effects | Technically this instruction itself does not touch memory, however we mark it as may write to prevent optimizations going pass this instruction.
 
+### BranchIfBuiltinInst
+
+BranchIfBuiltinInst | _
+--- | --- |
+Description | Check if a value is the same as a known builtin value.
+Example | %0 = BranchIfBuiltin %builtinNumber, %arg, %trueDest, %falseDest
+Arguments | The builtin number, the value to check, and the blocks to branch to.
+Semantics | Branch to %trueDest if %arg is the same pointer as the builtin with %builtinNumber, else branch to %falseDest.
+Effects | None
+
 ### PhiInst
 
 PhiInst | _
@@ -738,6 +819,16 @@ Arguments | %value is the value to check. %rejectedTypesUnion is a union of type
 Semantics | It is used to implement ES6 TDZ functionality. Variables declared with `let` are *poisoned* with *empty* until they are initialized.
 Effects | Potentially throws an exception. Has no other side effects.
 
+### ThrowIfThisInitializedInst
+
+ThrowIfThisInitializedInst | _
+--- | --- |
+Description | Check whether the value of `this` in a derived class constructor is already initialized. If so, throw.
+Example |  %_ = ThrowIfThisInitializedInst %thisVal
+Arguments | %thisVal is the value to check.
+Semantics | This is used to guard against double-initialization of `this`, which happens by invoking `super()` multiple times.
+Effects | Potentially throws an exception. Has no other side effects.
+
 ### CoerceThisNS
 
 CoerceThisNS | _
@@ -753,20 +844,10 @@ Effects | Does not read or write memory (it potentially creates a new object)
 CreateGenerator | _
 --- | --- |
 Description | Constructs a new GeneratorInnerFunction from its code representation, and wraps it in a Generator object.
-Example | %0 = CreateGenerator %function,
-Arguments | %function is the function that represents the code of the generator's inner function.
+Example | %0 = CreateFunction %scope, %varScope, %function
+Arguments | %function is the function that represents the code of the generator's inner function. %scope is the surrounding environment. %varScope is the VariableScope that describes %scope.
 Semantics | Creates a new GeneratorInnerFunction closure that may access the environment and wraps it in a generator
 Effects | Does not read or write to memory (creates a new object).
-
-### StartGenerator
-
-StartGenerator | _
---- | --- |
-Description | Jump to the proper first instruction to execute in a GeneratorInnerFunction
-Example |  %0 = StartGenerator
-Arguments | None
-Semantics | Jumps to a BasicBlock which begins with a ResumeGenerator and sets the internal generator state to "executing", but does not handle next(), return(), or throw() as requested by the user.
-Effects | Reads and writes memory. Restores the stack based on saved state, and jumps to another BasicBlock
 
 ### SaveAndYield
 
@@ -835,6 +916,16 @@ Example |  %0 = IteratorClose %iterator %ignoreInnerException
 Arguments | %iterator is the index or the iterator. %ignoreInnerException is a boolean literal.
 Semantics | If %iterator is an iterator, calls `.return()` on it to close it. Otherwise, this is a no-op. If `.return()` throws, the exception is ignored when %ignoreInnerException is true.
 Effects | May read and write memory, may throw or execute.
+
+### CacheNewObject
+
+CacheNewObject | _
+--- | --- |
+Description | Optimization which allows us to create an object with the proper layout for construction.
+Example |  CacheNewObject %this, %newTarget, %value0, %value1, ...
+Arguments | %this is the this parameter we want to populate with the optimized hidden class, and the %values are names of keys in the object, which will be stored in the key buffer.
+Semantics | Populates the "this" parameter with a cached hidden class which is to be used for storing properties to during construction if possible, otherwise just passes the original %this through. The values are the field names which are used to create the hidden class in memory. Checks new.target, doesn't do anything if it's undefined.
+Effects | May read or write from memory when caching.
 
 ### UnreachableInst
 

@@ -404,6 +404,9 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     } else if (method == "setBlackboxedRanges") {
       debuggerAgent_->setBlackboxedRanges(
           static_cast<m::debugger::SetBlackboxedRangesRequest &>(*command));
+    } else if (method == "setBlackboxPatterns") {
+      debuggerAgent_->setBlackboxPatterns(
+          static_cast<m::debugger::SetBlackboxPatternsRequest &>(*command));
     } else if (method == "setPauseOnExceptions") {
       debuggerAgent_->setPauseOnExceptions(
           static_cast<m::debugger::SetPauseOnExceptionsRequest &>(*command));

@@ -142,11 +142,23 @@ struct ExecuteOptions {
   /// Force JIT on all functions.
   bool forceJIT{false};
 
+  /// JIT compilation threshold.
+  uint32_t jitThreshold{1 << 5};
+
+  /// JIT memory limit, after which no more code will be JIT'ed.
+  uint32_t jitMemoryLimit{32u << 20};
+
   /// Dump JIT'ed code.
   unsigned dumpJITCode{0};
 
   /// Fatally crash on any JIT compilation error.
   bool jitCrashOnError{false};
+
+  /// Emit asserts in JIT'ed code
+  bool jitEmitAsserts{false};
+
+  /// If non-null, holds statistics for every garbage collection that occurs.
+  const std::vector<::hermes::vm::GCAnalyticsEvent> *gcAnalyticsEvents{nullptr};
 
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
@@ -162,6 +174,9 @@ struct ExecuteOptions {
 
   /// If not None, run sampling profiler and dump the result.
   SampleProfilingMode sampleProfiling{SampleProfilingMode::None};
+
+  /// Sampling profiler frequency.
+  double sampleProfilingFreq{100};
 
   /// Start tracking heap objects before executing bytecode.
   bool heapTimeline{false};

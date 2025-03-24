@@ -58,4 +58,3 @@ Hermes plans to target ECMAScript 2015 (ES6), with some carefully considered exc
 - `arguments` changes in non-strict mode will not sync with named parameters
 - `Function.prototype.toString` cannot show source because Hermes executes from bytecode
 - `Promise` is implemented by pre-compiling [the JS polyfill from RN](https://github.com/facebook/hermes/blob/HEAD/utils/promise/index.js) as the [internal bytecode](https://github.com/facebook/hermes/blob/HEAD/lib/InternalBytecode/01-Promise.js) to preserve the current interoperation, hence its conformance to the spec is up to conformance of the polyfill.
-  - In case you want to bring in your own Promise and opt-out Hermes', you can turn it off by passing `-Xes6-promise=0` in CLI or setting `withES6Promise(false)` in the runtime configs.

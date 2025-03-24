@@ -20,7 +20,7 @@ namespace hbc {
 namespace {
 
 class BytecodeSerializer {
-  friend void visitBytecodeSegmentsInOrder<BytecodeSerializer>(
+  friend void hermes::hbc::visitBytecodeSegmentsInOrder<BytecodeSerializer>(
       BytecodeSerializer &);
 
   /// Output Stream
@@ -120,7 +120,8 @@ class BytecodeSerializer {
 // ============================ File ============================
 void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
   bytecodeModule_ = &BM;
-  uint32_t cjsModuleCount = BM.getBytecodeOptions().cjsModulesStaticallyResolved
+  uint32_t cjsModuleCount =
+      BM.getBytecodeOptions().getCjsModulesStaticallyResolved()
       ? BM.getCJSModuleTableStatic().size()
       : BM.getCJSModuleTable().size();
   BytecodeFileHeader header{
@@ -187,7 +188,7 @@ void BytecodeSerializer::serializeFunctionTable(BytecodeModule &BM) {
   for (auto &entry : BM.getFunctionTable()) {
     if (options_.stripDebugInfoSection) {
       // Change flag on the actual BF, so it's seen by serializeFunctionInfo.
-      entry->mutableFlags().hasDebugInfo = false;
+      entry->mutableFlags().setHasDebugInfo(false);
     }
     FunctionHeader header = entry->getHeader();
 
@@ -257,7 +258,7 @@ void BytecodeSerializer::serializeFunctionSourceTable(BytecodeModule &BM) {
 
 // ==================== Exception Handler Table =====================
 void BytecodeSerializer::serializeExceptionHandlerTable(BytecodeFunction &BF) {
-  if (!BF.getHeader().flags.hasExceptionHandler)
+  if (!BF.getHeader().flags.getHasExceptionHandler())
     return;
 
   pad(INFO_ALIGNMENT);
@@ -269,7 +270,7 @@ void BytecodeSerializer::serializeExceptionHandlerTable(BytecodeFunction &BF) {
 
 // ========================= Buffers ==========================
 void BytecodeSerializer::serializeDebugOffsets(BytecodeFunction &BF) {
-  if (!BF.getHeader().flags.hasDebugInfo) {
+  if (!BF.getHeader().flags.getHasDebugInfo()) {
     return;
   }
 
@@ -334,7 +335,8 @@ void BytecodeSerializer::serializeFunctionInfo(BytecodeFunction &BF) {
   FunctionHeader header = BF.getHeader();
   // We only need function info if the function has exceptions, debug info, or
   // its header does not fit in a small header. Otherwise, we can skip it.
-  if (!header.flags.hasExceptionHandler && !header.flags.hasDebugInfo &&
+  if (!header.flags.getHasExceptionHandler() &&
+      !header.flags.getHasDebugInfo() &&
       SmallFuncHeader::canFitInSmallHeader(header))
     return;
 

@@ -14,41 +14,35 @@ function test_call_after_builtin() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "test_call_after_builtin": string
-// CHECK-NEXT:  {loc0}    %1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) {loc0} %1: environment, %test_call_after_builtin(): functionCode
-// CHECK-NEXT:  {loc0}    %3 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:                 StorePropertyLooseInst {loc1} %2: object, {loc0} %3: object, "test_call_after_builtin": string
-// CHECK-NEXT:  {np0}     %5 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:                 ReturnInst {np0} %5: undefined
+// CHECK-NEXT:  {loc1}    %1 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {loc0}    %2 = CreateFunctionInst (:object) empty: any, empty: any, %test_call_after_builtin(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {loc0} %2: object, {loc1} %1: object, "test_call_after_builtin": string
+// CHECK-NEXT:  {np0}     %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:                 ReturnInst {np0} %4: undefined
 // CHECK-NEXT:function_end
-
-// CHECK:scope %VS0 []
 
 // CHECK:function test_call_after_builtin(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc0}    %0 = HBCGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {loc0}    %1 = TryLoadGlobalPropertyInst (:any) {loc0} %0: object, "print": string
 // CHECK-NEXT:  {loc1}    %2 = HBCAllocObjectFromBufferInst (:object) "valueOf": string, null: null
-// CHECK-NEXT:  {loc2}    %3 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  {loc2}    %4 = CreateFunctionInst (:object) {loc2} %3: environment, %valueOf(): functionCode
-// CHECK-NEXT:                 PrStoreInst {loc2} %4: object, {loc1} %2: object, 0: number, "valueOf": string, false: boolean
-// CHECK-NEXT:  {stack[0]}  %6 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:  {stack[4]}  %7 = ImplicitMovInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {stack[3]}  %8 = ImplicitMovInst (:empty) empty: empty
-// CHECK-NEXT:  {stack[2]}  %9 = ImplicitMovInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {stack[1]} %10 = MovInst (:object) {loc1} %2: object
-// CHECK-NEXT:  {stack[1]} %11 = CallBuiltinInst (:number) [HermesBuiltin.exponentiationOperator]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, {stack[1]} %10: object, {stack[0]} %6: number
-// CHECK-NEXT:  {np0}    %12 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {stack[4]} %13 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {stack[3]} %14 = MovInst (:any) {loc0} %1: any
-// CHECK-NEXT:  {stack[2]} %15 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {loc0}   %16 = CallInst (:any) {stack[3]} %14: any, empty: any, false: boolean, empty: any, {np0} %12: undefined, {stack[2]} %15: undefined, {stack[1]} %11: number
-// CHECK-NEXT:                 ReturnInst {np0} %12: undefined
+// CHECK-NEXT:  {loc2}    %3 = CreateFunctionInst (:object) empty: any, empty: any, %valueOf(): functionCode
+// CHECK-NEXT:                 PrStoreInst {loc2} %3: object, {loc1} %2: object, 0: number, "valueOf": string, false: boolean
+// CHECK-NEXT:  {stack[0]}  %5 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:  {stack[4]}  %6 = ImplicitMovInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {stack[3]}  %7 = ImplicitMovInst (:empty) empty: empty
+// CHECK-NEXT:  {stack[2]}  %8 = ImplicitMovInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {stack[1]}  %9 = MovInst (:object) {loc1} %2: object
+// CHECK-NEXT:  {stack[1]} %10 = CallBuiltinInst (:number) [HermesBuiltin.exponentiationOperator]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, {stack[1]} %9: object, {stack[0]} %5: number
+// CHECK-NEXT:  {np0}    %11 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {stack[4]} %12 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {stack[3]} %13 = MovInst (:any) {loc0} %1: any
+// CHECK-NEXT:  {stack[2]} %14 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {loc0}   %15 = CallInst (:any) {stack[3]} %13: any, empty: any, false: boolean, empty: any, {np0} %11: undefined, {stack[2]} %14: undefined, {stack[1]} %10: number
+// CHECK-NEXT:                 ReturnInst {np0} %11: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:arrow valueOf(): number

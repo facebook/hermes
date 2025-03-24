@@ -27,18 +27,15 @@ return [dotProduct, Vec2D];
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %dotProduct(): functionCode
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %Vec2D(): functionCode
-// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %3: object, %2: object, "prototype": string
-// CHECK-NEXT:  %5 = AllocFastArrayInst (:object) 2: number
-// CHECK-NEXT:       FastArrayPushInst %1: object, %5: object
-// CHECK-NEXT:       FastArrayPushInst %2: object, %5: object
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %dotProduct(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %Vec2D(): functionCode
+// CHECK-NEXT:  %2 = AllocTypedObjectInst (:object) empty: any
+// CHECK-NEXT:       StorePropertyStrictInst %2: object, %1: object, "prototype": string
+// CHECK-NEXT:  %4 = AllocFastArrayInst (:object) 2: number
+// CHECK-NEXT:       FastArrayPushInst %0: object, %4: object
+// CHECK-NEXT:       FastArrayPushInst %1: object, %4: object
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -56,15 +53,12 @@ return [dotProduct, Vec2D];
 // CHECK-NEXT:       ReturnInst %8: number
 // CHECK-NEXT:function_end
 
-// CHECK:constructor Vec2D(x: number, y: number): undefined [typed]
+// CHECK:base constructor Vec2D(x: number, y: number): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %y: number
-// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "Math": string
-// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: any, "sqrt": string
-// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: any, 10: number
-// CHECK-NEXT:  %5 = CheckedTypeCastInst (:number) %4: any, type(number)
-// CHECK-NEXT:       PrStoreInst %5: number, %0: object, 0: number, "x": string, true: boolean
+// CHECK-NEXT:  %2 = CallBuiltinInst (:number) [Math.sqrt]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 10: number
+// CHECK-NEXT:       PrStoreInst %2: number, %0: object, 0: number, "x": string, true: boolean
 // CHECK-NEXT:       PrStoreInst %1: number, %0: object, 1: number, "y": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

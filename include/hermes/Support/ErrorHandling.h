@@ -37,6 +37,8 @@ enum class OOMError : int {
   Effective,
   // When an allocation is requested that is larger than a heap segment.
   SuperSegmentAlloc,
+  // When requesting a segment that is too large to create.
+  TooLargeSegmentRequest,
   // When a CopyableVector's capacity overflows what an integer can hold.
   CopyableVectorCapacityIntegerOverflow,
   // This happens when a unit test attempts to allocate more storages

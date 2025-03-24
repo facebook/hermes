@@ -18,6 +18,7 @@ namespace vm {
 /// integers.
 class BoxedDouble final : public GCCell {
   friend void BoxedDoubleBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend RuntimeOffsets;
 
   static const VTable vt;
 

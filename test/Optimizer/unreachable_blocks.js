@@ -30,22 +30,19 @@ bar();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:       DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "foo": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %bar(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "bar": string
-// CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "foo": string
-// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %9 = LoadPropertyInst (:any) globalObject: object, "bar": string
-// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        ReturnInst %10: any
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %bar(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "bar": string
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "bar": string
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined

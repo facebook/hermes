@@ -7,19 +7,131 @@
 
 #define DEBUG_TYPE "vm"
 #include "JSLib/JSLibInternal.h"
+#include "hermes/BCGen/SerializedLiteralParser.h"
+#include "hermes/Support/Statistic.h"
 #include "hermes/VM/BigIntPrimitive.h"
+#include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime-inline.h"
+#include "hermes/VM/RuntimeModule-inline.h"
+#include "hermes/VM/SerializedLiteralOperations.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
 
 #include "Interpreter-internal.h"
 
+HERMES_SLOW_STATISTIC(
+    NumGetByIdCacheEvicts,
+    "NumGetByIdCacheEvicts: Number of property 'read by id' cache evictions");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdFastPaths,
+    "NumGetByIdFastPaths: Number of property 'read by id' fast paths");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdAccessor,
+    "NumGetByIdAccessor: Number of property 'read by id' accessors");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdProto,
+    "NumGetByIdProto: Number of property 'read by id' in the prototype chain");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdNotFound,
+    "NumGetByIdNotFound: Number of property 'read by id' not found");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdTransient,
+    "NumGetByIdTransient: Number of property 'read by id' of non-objects");
+HERMES_SLOW_STATISTIC(
+    NumGetByIdSlow,
+    "NumGetByIdSlow: Number of property 'read by id' slow path");
+
+HERMES_SLOW_STATISTIC(
+    NumPutByIdCacheEvicts,
+    "NumPutByIdCacheEvicts: Number of property 'write by id' cache evictions");
+HERMES_SLOW_STATISTIC(
+    NumPutByIdFastPaths,
+    "NumPutByIdFastPaths: Number of property 'write by id' fast paths");
+HERMES_SLOW_STATISTIC(
+    NumPutByIdTransient,
+    "NumPutByIdTransient: Number of property 'write by id' to non-objects");
+
 namespace hermes {
 namespace vm {
+
+ExecutionStatus Interpreter::caseCreateClass(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs) {
+  const Inst *ip = runtime.getCurrentIP();
+  GCScopeMarkerRAII mark{runtime};
+  /// Obtain the function index and value of the super class based on the IP.
+  auto funcIdxAndSuper = [ip, frameRegs]() -> std::pair<uint32_t, Handle<>> {
+    // We use toRValue here because the accesses into the ip fields will not
+    // always be byte aligned. By default, the std::pair we construct would take
+    // a reference to the integer field we are trying to read off of the ip. In
+    // the process, the "packed" attribute is lost and it would throw an error
+    // in sanitization mode when trying to read. Don't allow it to take a
+    // reference by converting it to an rvalue.
+    switch (ip->opCode) {
+      case inst::OpCode::CreateBaseClass:
+        return {toRValue(ip->iCreateBaseClass.op4), Runtime::getEmptyValue()};
+      case inst::OpCode::CreateBaseClassLongIndex:
+        return {
+            toRValue(ip->iCreateBaseClassLongIndex.op4),
+            Runtime::getEmptyValue()};
+      case inst::OpCode::CreateDerivedClass:
+        return {
+            toRValue(ip->iCreateDerivedClass.op5),
+            Handle<>{&O4REG(CreateDerivedClass)}};
+      case inst::OpCode::CreateDerivedClassLongIndex:
+        return {
+            toRValue(ip->iCreateDerivedClassLongIndex.op5),
+            Handle<>{&O4REG(CreateDerivedClassLongIndex)}};
+      default:
+        llvm_unreachable("called caseCreateClass on a non-CreateClass opcode");
+    }
+  }();
+
+  auto classRes = createClass(
+      runtime,
+      funcIdxAndSuper.second,
+      [&runtime,
+       frameRegs,
+       ip,
+       funcIdx = funcIdxAndSuper.first,
+       super = funcIdxAndSuper.second](Handle<JSObject> ctorParent) {
+        CodeBlock *curCodeBlock =
+            runtime.getCurrentFrame().getCalleeCodeBlock();
+        auto *runtimeModule = curCodeBlock->getRuntimeModule();
+
+        auto envHandle = O3REG(CreateBaseClass).isUndefined()
+            ? Runtime::makeNullHandle<Environment>()
+            : Handle<Environment>::vmcast(&O3REG(CreateBaseClass));
+        // Derived classes get their own special CellKind.
+        return super->isEmpty()
+            ? JSFunction::create(
+                  runtime,
+                  runtimeModule->getDomain(runtime),
+                  ctorParent,
+                  envHandle,
+                  runtimeModule->getCodeBlockMayAllocate(funcIdx))
+                  .get()
+            : JSDerivedClass::create(
+                  runtime,
+                  runtimeModule->getDomain(runtime),
+                  ctorParent,
+                  envHandle,
+                  runtimeModule->getCodeBlockMayAllocate(funcIdx))
+                  .get();
+      });
+  if (LLVM_UNLIKELY(classRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  O2REG(CreateBaseClass) = HermesValue::encodeObjectValue(classRes->second);
+  // Write the result last in case it is the same register as the prototype.
+  O1REG(CreateBaseClass) = HermesValue::encodeObjectValue(classRes->first);
+  return ExecutionStatus::RETURNED;
+}
 
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime &runtime,
@@ -49,22 +161,75 @@ ExecutionStatus Interpreter::caseDirectEval(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus Interpreter::casePutOwnByVal(
+ExecutionStatus Interpreter::defineOwnByIdSlowPath(
+    Runtime &runtime,
+    SmallHermesValue valueToStore,
+    CodeBlock *curCodeBlock,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  uint32_t idVal;
+  if (ip->opCode == inst::OpCode::DefineOwnByIdLong) {
+    idVal = ip->iDefineOwnByIdLong.op4;
+  } else {
+    assert(
+        ip->opCode == inst::OpCode::DefineOwnById &&
+        "unrecognized opcode in defineOwnById slow path");
+    idVal = ip->iDefineOwnById.op4;
+  }
+  auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
+  auto cacheIdx = ip->iDefineOwnById.op3;
+  auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
+  auto id = ID(idVal);
+  NamedPropertyDescriptor desc;
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
+  if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
+      !desc.flags.accessor && desc.flags.writable &&
+      !desc.flags.internalSetter) {
+    // We can only cache if this is not a dictionary and we have an
+    // enabled cache index.
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+      cacheEntry->clazz = clazzPtr;
+      cacheEntry->slot = desc.slot;
+    }
+    // This must be valid because an own property was already found.
+    JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, valueToStore);
+    return ExecutionStatus::RETURNED;
+  }
+
+  auto putRes = JSObject::defineOwnProperty(
+      Handle<JSObject>::vmcast(&O1REG(PutByIdLoose)),
+      runtime,
+      id,
+      DefinePropertyFlags::getDefaultNewPropertyFlags(),
+      Handle<>(&O2REG(PutByIdLoose)),
+      DEFAULT_PROP_OP_FLAGS(true));
+  if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::caseDefineOwnByVal(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
   return JSObject::defineOwnComputed(
-             Handle<JSObject>::vmcast(&O1REG(PutOwnByVal)),
+             Handle<JSObject>::vmcast(&O1REG(DefineOwnByVal)),
              runtime,
-             Handle<>(&O3REG(PutOwnByVal)),
-             ip->iPutOwnByVal.op4
+             Handle<>(&O3REG(DefineOwnByVal)),
+             ip->iDefineOwnByVal.op4
                  ? DefinePropertyFlags::getDefaultNewPropertyFlags()
                  : DefinePropertyFlags::getNewNonEnumerableFlags(),
-             Handle<>(&O2REG(PutOwnByVal)))
+             Handle<>(&O2REG(DefineOwnByVal)),
+             PropOpFlags().plusThrowOnError())
       .getStatus();
 }
 
-ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
+ExecutionStatus Interpreter::caseDefineOwnGetterSetterByVal(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const inst::Inst *ip) {
@@ -72,29 +237,29 @@ ExecutionStatus Interpreter::casePutOwnGetterSetterByVal(
   dpFlags.setConfigurable = 1;
   dpFlags.configurable = 1;
   dpFlags.setEnumerable = 1;
-  dpFlags.enumerable = ip->iPutOwnGetterSetterByVal.op5;
+  dpFlags.enumerable = ip->iDefineOwnGetterSetterByVal.op5;
 
   MutableHandle<Callable> getter(runtime);
   MutableHandle<Callable> setter(runtime);
-  if (LLVM_LIKELY(!O3REG(PutOwnGetterSetterByVal).isUndefined())) {
+  if (LLVM_LIKELY(!O3REG(DefineOwnGetterSetterByVal).isUndefined())) {
     dpFlags.setGetter = 1;
-    getter = vmcast<Callable>(O3REG(PutOwnGetterSetterByVal));
+    getter = vmcast<Callable>(O3REG(DefineOwnGetterSetterByVal));
   }
-  if (LLVM_LIKELY(!O4REG(PutOwnGetterSetterByVal).isUndefined())) {
+  if (LLVM_LIKELY(!O4REG(DefineOwnGetterSetterByVal).isUndefined())) {
     dpFlags.setSetter = 1;
-    setter = vmcast<Callable>(O4REG(PutOwnGetterSetterByVal));
+    setter = vmcast<Callable>(O4REG(DefineOwnGetterSetterByVal));
   }
   assert(
       (dpFlags.setSetter || dpFlags.setGetter) &&
-      "No accessor set in PutOwnGetterSetterByVal");
+      "No accessor set in DefineOwnGetterSetterByVal");
 
   auto accessor = runtime.makeHandle<PropertyAccessor>(
       PropertyAccessor::create(runtime, getter, setter));
 
   return JSObject::defineOwnComputed(
-             Handle<JSObject>::vmcast(&O1REG(PutOwnGetterSetterByVal)),
+             Handle<JSObject>::vmcast(&O1REG(DefineOwnGetterSetterByVal)),
              runtime,
-             Handle<>(&O2REG(PutOwnGetterSetterByVal)),
+             Handle<>(&O2REG(DefineOwnGetterSetterByVal)),
              dpFlags,
              accessor)
       .getStatus();
@@ -240,32 +405,396 @@ ExecutionStatus Interpreter::caseGetPNameList(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const Inst *ip) {
-  if (O2REG(GetPNameList).isUndefined() || O2REG(GetPNameList).isNull()) {
+  if (LLVM_UNLIKELY(O2REG(GetPNameList).isUndefined()) ||
+      LLVM_UNLIKELY(O2REG(GetPNameList).isNull())) {
     // Set the iterator to be undefined value.
     O1REG(GetPNameList) = HermesValue::encodeUndefinedValue();
     return ExecutionStatus::RETURNED;
   }
 
-  // Convert to object and store it back to the register.
-  auto res = toObject(runtime, Handle<>(&O2REG(GetPNameList)));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(!vmisa<JSObject>(O2REG(GetPNameList)))) {
+    // Convert to object and store it back to the register.
+    auto res = toObject(runtime, Handle<>(&O2REG(GetPNameList)));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    O2REG(GetPNameList) = res.getValue();
   }
-  O2REG(GetPNameList) = res.getValue();
 
-  auto obj = runtime.makeMutableHandle(vmcast<JSObject>(res.getValue()));
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.obj = vmcast<JSObject>(O2REG(GetPNameList));
   uint32_t beginIndex;
   uint32_t endIndex;
+  MutableHandle<JSObject> obj{lv.obj};
   auto cr = getForInPropertyNames(runtime, obj, beginIndex, endIndex);
-  if (cr == ExecutionStatus::EXCEPTION) {
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arr = *cr;
+  Handle<BigStorage> arr = *cr;
   O3REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(beginIndex);
   O4REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(endIndex);
   // Write the result last in case it is the same register as one of the in/out
   // operands.
   O1REG(GetPNameList) = arr.getHermesValue();
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::caseGetNextPName(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  struct : public Locals {
+    PinnedValue<> tmp;
+    PinnedValue<JSObject> propObj;
+    PinnedValue<SymbolID> tmpPropNameStorage;
+    PinnedValue<HiddenClass> cachedClass;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  assert(
+      vmisa<BigStorage>(O2REG(GetNextPName)) &&
+      "GetNextPName's second op must be BigStorage");
+  auto obj = Handle<JSObject>::vmcast(&O3REG(GetNextPName));
+  auto arr = Handle<BigStorage>::vmcast(&O2REG(GetNextPName));
+  uint32_t idx = O4REG(GetNextPName).getNumber();
+  uint32_t size = O5REG(GetNextPName).getNumber();
+
+  // If there's a class at index 2, it means we have a cached class.
+  uint32_t startIdx = 0;
+  uint32_t numObjProps = 0;
+  if (LLVM_LIKELY(size > 2)) {
+    lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(runtime, 2));
+    if (lv.cachedClass.get()) {
+      startIdx = arr->at(runtime, 0).getNumberAs<uint32_t>();
+      numObjProps = arr->at(runtime, 1).getNumberAs<uint32_t>();
+    }
+  }
+
+  MutableHandle<JSObject> propObj{lv.propObj};
+  MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
+  // Loop until we find a property which is present.
+  while (LLVM_LIKELY(idx < size)) {
+    lv.tmp = arr->at(runtime, idx);
+    // If there's no caching, lv.cachedClass is nullptr and the comparison will
+    // fail.
+    if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&
+        LLVM_LIKELY(lv.cachedClass.get() == obj->getClass(runtime))) {
+      // Cached.
+      propObj = obj;
+      break;
+    }
+    if (lv.tmp->isSymbol()) {
+      // NOTE: This call is safe because we immediately discard desc,
+      // so it can't outlive the SymbolID.
+      NamedPropertyDescriptor desc;
+      propObj = JSObject::getNamedDescriptorUnsafe(
+          obj, runtime, lv.tmp->getSymbol(), desc);
+    } else {
+      assert(
+          (lv.tmp->isNumber() || lv.tmp->isString()) &&
+          "GetNextPName must be symbol, string, number");
+      ComputedPropertyDescriptor desc;
+      ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
+          obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
+      if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
+    if (LLVM_LIKELY(propObj))
+      break;
+    ++idx;
+  }
+  if (LLVM_LIKELY(idx < size)) {
+    // We must return the property as a string
+    if (lv.tmp->isNumber()) {
+      auto strRes = numberToStringPrimitive(runtime, lv.tmp->getNumber());
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      lv.tmp = strRes->getHermesValue();
+    } else if (LLVM_LIKELY(lv.tmp->isSymbol())) {
+      // for-in enumeration only returns numbers and strings.
+      // In most cases (i.e. non-Proxy), we keep the symbol around instead
+      // and convert here, so that the above getNamedDescriptor call is faster.
+      // Proxy has a filter so that it only returns Strings here.
+      // So we don't have to check isUniqued and can convert to string
+      // unconditionally.
+      assert(
+          lv.tmp->getSymbol().isUniqued() &&
+          "Symbol primitives (non-uniqued) can't be used in for-in, "
+          "not even by Proxy");
+      lv.tmp = HermesValue::encodeStringValue(
+          runtime.getStringPrimFromSymbolID(lv.tmp->getSymbol()));
+    }
+    O4REG(GetNextPName) = HermesValue::encodeTrustedNumberValue(idx + 1);
+    // Write the result last in case it is the same register as O4REG.
+    O1REG(GetNextPName) = lv.tmp.get();
+  } else {
+    O1REG(GetNextPName) = HermesValue::encodeUndefinedValue();
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+PseudoHandle<JSRegExp> Interpreter::createRegExp(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    SymbolID patternID,
+    SymbolID flagsID,
+    uint32_t regexpID) {
+  GCScopeMarkerRAII marker{runtime};
+
+  struct : public Locals {
+    PinnedValue<JSRegExp> re;
+    PinnedValue<StringPrimitive> pattern;
+    PinnedValue<StringPrimitive> flags;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  // Create the RegExp object.
+  lv.re = JSRegExp::create(runtime);
+  // Initialize the regexp.
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+  lv.pattern = runtime.getStringPrimFromSymbolID(patternID);
+  lv.flags = runtime.getStringPrimFromSymbolID(flagsID);
+  auto bytecode = runtimeModule->getRegExpBytecodeFromRegExpID(regexpID);
+  JSRegExp::initialize(lv.re, runtime, lv.pattern, lv.flags, bytecode);
+
+  return createPseudoHandle(*lv.re);
+}
+
+void Interpreter::caseCreateRegExp(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    CodeBlock *curCodeBlock,
+    const inst::Inst *ip) {
+  O1REG(CreateRegExp) =
+      Interpreter::createRegExp(
+          runtime,
+          curCodeBlock,
+          curCodeBlock->getRuntimeModule()->getSymbolIDFromStringIDMayAllocate(
+              ip->iCreateRegExp.op2),
+          curCodeBlock->getRuntimeModule()->getSymbolIDFromStringIDMayAllocate(
+              ip->iCreateRegExp.op3),
+          ip->iCreateRegExp.op4)
+          .getHermesValue();
+}
+
+ExecutionStatus Interpreter::caseDelByVal(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  const PropOpFlags defaultPropOpFlags =
+      DEFAULT_PROP_OP_FLAGS(ip->iDelByVal.op4 != 0);
+  if (LLVM_LIKELY(O2REG(DelByVal).isObject())) {
+    auto status = JSObject::deleteComputed(
+        Handle<JSObject>::vmcast(&O2REG(DelByVal)),
+        runtime,
+        Handle<>(&O3REG(DelByVal)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
+  } else {
+    // This is the "slow path".
+    auto res = toObject(runtime, Handle<>(&O2REG(DelByVal)));
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    struct : Locals {
+      PinnedValue<> obj;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+
+    lv.obj = res.getValue();
+    auto status = JSObject::deleteComputed(
+        Handle<JSObject>::vmcast(&lv.obj),
+        runtime,
+        Handle<>(&O3REG(DelByVal)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+PseudoHandle<> Interpreter::getByValTransientFast(
+    Runtime &runtime,
+    Handle<> base,
+    Handle<> nameHandle) {
+  if (base->isString()) {
+    // Handle most common fast path -- array index property for string
+    // primitive.
+    // Since primitive string cannot have index like property we can
+    // skip ObjectFlags::fastIndexProperties checking and directly
+    // checking index storage from StringPrimitive.
+
+    OptValue<uint32_t> arrayIndex = toArrayIndexFastPath(*nameHandle);
+    // Get character directly from primitive if arrayIndex is within range.
+    // Otherwise we need to fall back to prototype lookup.
+    if (arrayIndex &&
+        arrayIndex.getValue() < base->getString()->getStringLength()) {
+      return createPseudoHandle(
+          runtime
+              .getCharacterString(base->getString()->at(arrayIndex.getValue()))
+              .getHermesValue());
+    }
+  }
+  return createPseudoHandle(HermesValue::encodeEmptyValue());
+}
+
+CallResult<PseudoHandle<>> Interpreter::getByValTransientWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<> base,
+    Handle<> name,
+    Handle<> receiver) {
+  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
+  // method did, but that section doesn't exist in ES9 anymore.
+  // Instead, the [[Get]] Receiver argument serves a similar purpose.
+
+  // Optimization: check fast path first.
+  PseudoHandle<> fastRes = getByValTransientFast(runtime, base, name);
+  if (!fastRes->isEmpty()) {
+    return fastRes;
+  }
+
+  auto res = toObject(runtime, base);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
+  return JSObject::getComputedWithReceiver_RJS(
+      runtime.makeHandle<JSObject>(res.getValue()), runtime, name, receiver);
+}
+
+ExecutionStatus Interpreter::caseGetByVal(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  CallResult<PseudoHandle<HermesValue>> resPH{ExecutionStatus::EXCEPTION};
+  if (LLVM_LIKELY(O2REG(GetByVal).isObject())) {
+    resPH = JSObject::getComputed_RJS(
+        Handle<JSObject>::vmcast(&O2REG(GetByVal)),
+        runtime,
+        Handle<>(&O3REG(GetByVal)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    // This is the "slow path".
+    resPH = Interpreter::getByValTransient_RJS(
+        runtime, Handle<>(&O2REG(GetByVal)), Handle<>(&O3REG(GetByVal)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  O1REG(GetByVal) = resPH->get();
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::caseGetByValWithReceiver(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  CallResult<PseudoHandle<HermesValue>> resPH{ExecutionStatus::EXCEPTION};
+  if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
+    resPH = JSObject::getComputedWithReceiver_RJS(
+        Handle<JSObject>::vmcast(&O2REG(GetByValWithReceiver)),
+        runtime,
+        Handle<>(&O3REG(GetByValWithReceiver)),
+        Handle<>(&O4REG(GetByValWithReceiver)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    resPH = Interpreter::getByValTransientWithReceiver_RJS(
+        runtime,
+        Handle<>(&O2REG(GetByValWithReceiver)),
+        Handle<>(&O3REG(GetByValWithReceiver)),
+        Handle<>(&O4REG(GetByValWithReceiver)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  O1REG(GetByValWithReceiver) = resPH->get();
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::putByValTransient_RJS(
+    Runtime &runtime,
+    Handle<> base,
+    Handle<> name,
+    Handle<> value,
+    bool strictMode) {
+  auto idRes = valueToSymbolID(runtime, name);
+  if (idRes == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+
+  return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
+}
+
+ExecutionStatus Interpreter::casePutByVal(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  bool strictMode = (ip->opCode == inst::OpCode::PutByValStrict);
+  if (LLVM_LIKELY(O1REG(PutByValLoose).isObject())) {
+    auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+    auto putRes = JSObject::putComputed_RJS(
+        Handle<JSObject>::vmcast(&O1REG(PutByValLoose)),
+        runtime,
+        Handle<>(&O2REG(PutByValLoose)),
+        Handle<>(&O3REG(PutByValLoose)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    // This is the "slow path".
+    auto retStatus = Interpreter::putByValTransient_RJS(
+        runtime,
+        Handle<>(&O1REG(PutByValLoose)),
+        Handle<>(&O2REG(PutByValLoose)),
+        Handle<>(&O3REG(PutByValLoose)),
+        strictMode);
+    if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::casePutByValWithReceiver(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::Inst *ip) {
+  auto defaultPropOpFlags =
+      DEFAULT_PROP_OP_FLAGS(ip->iPutByValWithReceiver.op5);
+  if (LLVM_LIKELY(O1REG(PutByValWithReceiver).isObject())) {
+    auto res = JSObject::putComputedWithReceiver_RJS(
+        Handle<JSObject>::vmcast(&O1REG(PutByValWithReceiver)),
+        runtime,
+        Handle<>(&O2REG(PutByValWithReceiver)),
+        Handle<>(&O3REG(PutByValWithReceiver)),
+        Handle<>(&O4REG(PutByValWithReceiver)),
+        defaultPropOpFlags);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    auto retStatus = Interpreter::putByValTransient_RJS(
+        runtime,
+        Handle<>(&O1REG(PutByValLoose)),
+        Handle<>(&O2REG(PutByValLoose)),
+        Handle<>(&O3REG(PutByValLoose)),
+        ip->iPutByValWithReceiver.op5);
+    if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
   return ExecutionStatus::RETURNED;
 }
 
@@ -295,7 +824,7 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     // Callables that make their own this should be given undefined in a
     // construct call.
     return HermesValue::encodeUndefinedValue();
-  } else if (cellKind >= CellKind::CallableKind_first) {
+  } else if (cellKind >= CellKind::CallableUnknownMakesThisKind_first) {
     correctNewTarget = vmcast<Callable>(*newTarget);
     while (auto *bound = dyn_vmcast<BoundFunction>(calleeFunc)) {
       calleeFunc = bound->getTarget(runtime);
@@ -308,7 +837,7 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     cellKind = calleeFunc->getKind();
     // Repeat the checks, now against the target.
     if (cellKind >= CellKind::CallableExpectsThisKind_first) {
-      correctNewTarget = vmcast<Callable>(calleeFunc);
+      // Do nothing, correctNewTarget is already set up correctly.
     } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
       return HermesValue::encodeUndefinedValue();
     } else {
@@ -520,9 +1049,13 @@ constexpr auto &BigIntOper<doDec> = BigIntPrimitive::dec;
 
 } // namespace
 
-template <auto Oper>
-CallResult<HermesValue>
-doOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+template <auto Oper, typename InstType>
+ExecutionStatus doOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  Handle<> lhs(&REG(inst->op2));
+  Handle<> rhs(&REG(inst->op3));
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -538,27 +1071,46 @@ doOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeTrustedNumberValue(Oper(left, res->getDouble()));
+    REG(inst->op1) =
+        HermesValue::encodeTrustedNumberValue(Oper(left, res->getDouble()));
+    return ExecutionStatus::RETURNED;
   }
-  return doBigIntBinOp(
+  res = doBigIntBinOp(
       runtime, BigIntOper<Oper>, runtime.makeHandle(res->getBigInt()), rhs);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doDiv>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doDiv>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::DivInst *inst);
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doMod>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doMod>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::ModInst *inst);
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doMul>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doMul>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::MulInst *inst);
 
-template CallResult<HermesValue>
-doOperSlowPath_RJS<doSub>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doOperSlowPath_RJS<doSub>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::SubInst *inst);
 
-template <auto Oper>
-CallResult<HermesValue>
-doBitOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+template <auto Oper, typename InstType>
+ExecutionStatus doBitOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  Handle<> lhs(&REG(inst->op2));
+  Handle<> rhs(&REG(inst->op3));
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -570,25 +1122,40 @@ doBitOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
       return ExecutionStatus::EXCEPTION;
     }
     const int32_t left = res->getNumberAs<int32_t>();
-    res = toInt32_RJS(runtime, std::move(rhs));
+    res = toInt32_RJS(runtime, rhs);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeTrustedNumberValue(
+    REG(inst->op1) = HermesValue::encodeTrustedNumberValue(
         Oper(left, res->getNumberAs<int32_t>()));
+    return ExecutionStatus::RETURNED;
   }
-  return doBigIntBinOp(
-      runtime, BigIntOper<Oper>, runtime.makeHandle(res->getBigInt()), rhs);
+  res = doBigIntBinOp(
+      runtime,
+      BigIntOper<Oper>,
+      runtime.makeHandle(res->getBigInt()),
+      Handle<>(rhs));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue>
-doBitOperSlowPath_RJS<doBitAnd>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doBitOperSlowPath_RJS<doBitAnd>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::BitAndInst *ip);
 
-template CallResult<HermesValue>
-doBitOperSlowPath_RJS<doBitOr>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doBitOperSlowPath_RJS<doBitOr>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::BitOrInst *ip);
 
-template CallResult<HermesValue>
-doBitOperSlowPath_RJS<doBitXor>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template ExecutionStatus doBitOperSlowPath_RJS<doBitXor>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::BitXorInst *ip);
 
 namespace {
 /// ToIntegral maps the \param Oper shift operation (on Number) to the function
@@ -608,9 +1175,13 @@ template <>
 inline constexpr auto &ToIntegral<doURshift> = toUInt32_RJS;
 } // namespace
 
-template <auto Oper>
-CallResult<HermesValue>
-doShiftOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
+template <auto Oper, typename InstType>
+ExecutionStatus doShiftOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  Handle<> lhs(&REG(inst->op2));
+  Handle<> rhs(&REG(inst->op3));
   CallResult<HermesValue> res =
       toPrimitive_RJS(runtime, std::move(lhs), PreferredType::NUMBER);
 
@@ -629,32 +1200,43 @@ doShiftOperSlowPath_RJS(Runtime &runtime, Handle<> lhs, Handle<> rhs) {
       return ExecutionStatus::EXCEPTION;
     }
     auto rnum = static_cast<uint32_t>(res->getNumber()) & 0x1f;
-    return HermesValue::encodeTrustedNumberValue((*Oper)(lnum, rnum));
+    REG(inst->op1) = HermesValue::encodeTrustedNumberValue((*Oper)(lnum, rnum));
+    return ExecutionStatus::RETURNED;
   }
-  return doBigIntBinOp(
+  res = doBigIntBinOp(
       runtime,
       BigIntOper<Oper>,
       runtime.makeHandle(res->getBigInt()),
       std::move(rhs));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue>
-doShiftOperSlowPath_RJS<doLShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
-
-template CallResult<HermesValue>
-doShiftOperSlowPath_RJS<doRShift>(Runtime &runtime, Handle<> lhs, Handle<> rhs);
-
-template CallResult<HermesValue> doShiftOperSlowPath_RJS<doURshift>(
+template ExecutionStatus doShiftOperSlowPath_RJS<doLShift>(
     Runtime &runtime,
-    Handle<> lhs,
-    Handle<> rhs);
+    PinnedHermesValue *frameRegs,
+    const inst::LShiftInst *inst);
 
-template <auto Oper>
-CallResult<HermesValue> doIncDecOperSlowPath_RJS(
+template ExecutionStatus doShiftOperSlowPath_RJS<doRShift>(
     Runtime &runtime,
-    Handle<> src) {
-  CallResult<HermesValue> res =
-      toPrimitive_RJS(runtime, std::move(src), PreferredType::NUMBER);
+    PinnedHermesValue *frameRegs,
+    const inst::RShiftInst *inst);
+
+template ExecutionStatus doShiftOperSlowPath_RJS<doURshift>(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const inst::URshiftInst *inst);
+
+template <auto Oper, typename InstType>
+ExecutionStatus doIncDecOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst) {
+  CallResult<HermesValue> res = toPrimitive_RJS(
+      runtime, Handle<>(&REG(inst->op2)), PreferredType::NUMBER);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -664,49 +1246,647 @@ CallResult<HermesValue> doIncDecOperSlowPath_RJS(
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return HermesValue::encodeTrustedNumberValue(Oper(res->getNumber()));
+    REG(inst->op1) =
+        HermesValue::encodeTrustedNumberValue(Oper(res->getNumber()));
+    return ExecutionStatus::RETURNED;
   }
 
-  return BigIntOper<Oper>(runtime, runtime.makeHandle(res->getBigInt()));
+  res = BigIntOper<Oper>(runtime, runtime.makeHandle(res->getBigInt()));
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  REG(inst->op1) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-template CallResult<HermesValue> doIncDecOperSlowPath_RJS<doInc>(
+template ExecutionStatus doIncDecOperSlowPath_RJS<doInc>(
     Runtime &runtime,
-    Handle<> src);
+    PinnedHermesValue *frameRegs,
+    const inst::IncInst *inst);
 
-template CallResult<HermesValue> doIncDecOperSlowPath_RJS<doDec>(
+template ExecutionStatus doIncDecOperSlowPath_RJS<doDec>(
     Runtime &runtime,
-    Handle<> src);
+    PinnedHermesValue *frameRegs,
+    const inst::DecInst *inst);
 
-CallResult<HermesValue> doBitNotSlowPath_RJS(Runtime &runtime, Handle<> src) {
+ExecutionStatus doBitNotSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
   // Try converting src to a numeric.
-  auto numRes = toNumeric_RJS(runtime, src);
+  auto numRes = toNumeric_RJS(runtime, Handle<>(&O2REG(BitNot)));
   if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   // Test for BigInt since it is cheaper than testing for number. If it is a
   // number, truncate it and perform bitwise not.
-  if (LLVM_LIKELY(!numRes->isBigInt()))
-    return HermesValue::encodeTrustedNumberValue(
+  if (LLVM_LIKELY(!numRes->isBigInt())) {
+    O1REG(BitNot) = HermesValue::encodeTrustedNumberValue(
         ~hermes::truncateToInt32(numRes->getNumber()));
+    return ExecutionStatus::RETURNED;
+  }
 
   // The result is a BigInt, perform a BigInt bitwise not.
   auto bigint = runtime.makeHandle(numRes->getBigInt());
-  return BigIntPrimitive::unaryNOT(runtime, bigint);
+  auto res = BigIntPrimitive::unaryNOT(runtime, bigint);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(BitNot) = *res;
+  return ExecutionStatus::RETURNED;
 }
 
-CallResult<HermesValue> doNegateSlowPath_RJS(Runtime &runtime, Handle<> src) {
+ExecutionStatus doNegateSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
   // Try converting src to a numeric.
-  auto numRes = toNumeric_RJS(runtime, src);
+  auto numRes = toNumeric_RJS(runtime, Handle<>(&O2REG(Negate)));
   if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   // Test for BigInt since it is cheaper than testing for number. If it is a
   // number, negate it and return.
-  if (LLVM_LIKELY(!numRes->isBigInt()))
-    return HermesValue::encodeTrustedNumberValue(-numRes->getNumber());
+  if (LLVM_LIKELY(!numRes->isBigInt())) {
+    O1REG(Negate) = HermesValue::encodeTrustedNumberValue(-numRes->getNumber());
+    return ExecutionStatus::RETURNED;
+  }
 
   // The result is a BigInt, perform a BigInt unary minus.
   auto bigint = runtime.makeHandle(numRes->getBigInt());
-  return BigIntPrimitive::unaryMinus(runtime, bigint);
+  auto res = BigIntPrimitive::unaryMinus(runtime, bigint);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(Negate) = *res;
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus doCallRequireSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    RuntimeModule *runtimeModule) {
+  uint32_t modIndex = ip->iCallRequire.op3;
+
+  // The value should be a Callable, or else we raise an error (as
+  // Interpreter::handleCallSlowPath does).
+  const auto requireFunc = Handle<>(&O2REG(CallRequire));
+  auto requireFuncCallable = Handle<Callable>::dyn_vmcast(requireFunc);
+  if (LLVM_UNLIKELY(!requireFuncCallable)) {
+    return runtime.raiseTypeErrorForValue(requireFunc, " is not a function");
+  }
+
+  CallResult<PseudoHandle<>> modExport = Callable::executeCall1(
+      requireFuncCallable,
+      runtime,
+      HandleRootOwner::getUndefinedValue(),
+      HermesValue::encodeTrustedNumberValue(modIndex));
+  if (LLVM_UNLIKELY(modExport == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(CallRequire) = modExport->get();
+  runtimeModule->setModuleExport(
+      runtime, modIndex, Handle<>(&O1REG(CallRequire)));
+  // Whether or not the caching above succeeded, write the module export
+  // to the return register.
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus doGetByIdSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock,
+    uint32_t idVal,
+    bool tryProp) {
+  auto id = ID(idVal);
+  // NOTE: it is safe to use OnREG(GetById) here because all instructions
+  // have the same layout: opcode, registers, non-register operands, i.e.
+  // they only differ in the width of the last "identifier" field.
+  if (LLVM_UNLIKELY(!O2REG(GetById).isObject())) {
+    ++NumGetByIdTransient;
+    assert(!tryProp && "TryGetById can only be used on the global object");
+    /* Slow path. */
+    auto resPH = Interpreter::getByIdTransient_RJS(
+        runtime, Handle<>(&O2REG(GetById)), id);
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    O1REG(GetById) = resPH->get();
+    return ExecutionStatus::RETURNED;
+  }
+
+  auto *obj = vmcast<JSObject>(O2REG(GetById));
+  auto cacheIdx = ip->iGetById.op3;
+  auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
+
+  NamedPropertyDescriptor desc;
+  OptValue<bool> fastPathResult =
+      JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
+  if (LLVM_LIKELY(fastPathResult.hasValue() && fastPathResult.getValue()) &&
+      !desc.flags.accessor) {
+    ++NumGetByIdFastPaths;
+
+    // cacheIdx == 0 indicates no caching so don't update the cache in
+    // those cases.
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+#ifdef HERMES_SLOW_DEBUG
+      if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
+        ++NumGetByIdCacheEvicts;
+#else
+      (void)NumGetByIdCacheEvicts;
+#endif
+      // Cache the class, id and property slot.
+      cacheEntry->clazz = clazzPtr;
+      cacheEntry->slot = desc.slot;
+    }
+
+    assert(
+        !obj->isProxyObject() &&
+        "tryGetOwnNamedDescriptorFast returned true on Proxy");
+    O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
+                         .unboxToHV(runtime);
+    return ExecutionStatus::RETURNED;
+  }
+
+#ifdef HERMES_SLOW_DEBUG
+  // Call to getNamedDescriptorUnsafe is safe because `id` is kept alive
+  // by the IdentifierTable.
+  JSObject *propObj = JSObject::getNamedDescriptorUnsafe(
+      Handle<JSObject>::vmcast(&O2REG(GetById)), runtime, id, desc);
+  if (propObj) {
+    if (desc.flags.accessor)
+      ++NumGetByIdAccessor;
+    else if (propObj != vmcast<JSObject>(O2REG(GetById)))
+      ++NumGetByIdProto;
+  } else {
+    ++NumGetByIdNotFound;
+  }
+#else
+  (void)NumGetByIdAccessor;
+  (void)NumGetByIdProto;
+  (void)NumGetByIdNotFound;
+#endif
+#ifdef HERMES_SLOW_DEBUG
+  // It's possible that there might be a GC between the time
+  // savedClass is set and the time it is checked (to see if
+  // there was an eviction.  This GC could move the HiddenClass
+  // to which savedClass points, making it an invalid pointer.
+  // We don't dereference this pointer, we just compare it, so
+  // this won't cause a crash.  In this presumably rare case,
+  // the eviction count would be incorrect.  But the
+  // alternative, putting savedClass in a handle so it's a root,
+  // could change GC behavior might alter the program behavior
+  // in some cases: a HiddenClass might be live longer than it
+  // would have been.  We're choosing to go with the first
+  // problem as the lesser of two evils.
+  auto *savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
+      ? cacheEntry->clazz.get(runtime, runtime.getHeap())
+      : nullptr;
+#endif
+  ++NumGetByIdSlow;
+  // Getting properties is not affected by strictness, so just use false.
+  const auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(false);
+  auto resPH = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(&O2REG(GetById)),
+      runtime,
+      id,
+      !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
+      cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry : nullptr);
+  if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+#ifdef HERMES_SLOW_DEBUG
+  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
+      cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
+    ++NumGetByIdCacheEvicts;
+  }
+#endif
+
+  O1REG(GetById) = resPH->get();
+  return ExecutionStatus::RETURNED;
+}
+
+inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
+    Runtime &runtime,
+    Handle<> base,
+    SymbolID id) {
+  if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
+    return createPseudoHandle(HermesValue::encodeTrustedNumberValue(
+        base->getString()->getStringLength()));
+  }
+  return createPseudoHandle(HermesValue::encodeEmptyValue());
+}
+
+CallResult<PseudoHandle<>> Interpreter::getByIdTransientWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<> base,
+    SymbolID id,
+    Handle<> receiver) {
+  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
+  // method did, but that section doesn't exist in ES9 anymore.
+  // Instead, the [[Get]] Receiver argument serves a similar purpose.
+
+  // Fast path: try to get primitive own property directly first.
+  PseudoHandle<> valOpt = tryGetPrimitiveOwnPropertyById(runtime, base, id);
+  if (!valOpt->isEmpty()) {
+    return valOpt;
+  }
+
+  // get the property descriptor from primitive prototype without
+  // boxing with vm::toObject().  This is where any properties will
+  // be.
+  CallResult<Handle<JSObject>> primitivePrototypeResult =
+      getPrimitivePrototype(runtime, base);
+  if (primitivePrototypeResult == ExecutionStatus::EXCEPTION) {
+    // If an exception is thrown, likely we are trying to read property on
+    // undefined/null. Passing over the name of the property
+    // so that we could emit more meaningful error messages.
+    return amendPropAccessErrorMsgWithPropName(runtime, base, "read", id);
+  }
+
+  return JSObject::getNamedWithReceiver_RJS(
+      *primitivePrototypeResult, runtime, id, receiver);
+}
+
+ExecutionStatus doGetByIdWithReceiverSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock) {
+  if (LLVM_UNLIKELY(!O2REG(GetByIdWithReceiverLong).isObject())) {
+    auto resPH = Interpreter::getByIdTransientWithReceiver_RJS(
+        runtime,
+        Handle<>(&O2REG(GetByIdWithReceiverLong)),
+        ID(ip->iGetByIdWithReceiverLong.op5),
+        Handle<>(&O4REG(GetByIdWithReceiverLong)));
+    if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    O1REG(GetByIdWithReceiverLong) = resPH->getHermesValue();
+    return ExecutionStatus::RETURNED;
+  }
+  auto cacheIdx = ip->iGetByIdWithReceiverLong.op3;
+  auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
+  auto resPH = JSObject::getNamedWithReceiver_RJS(
+      Handle<JSObject>::vmcast(&O2REG(GetByIdWithReceiverLong)),
+      runtime,
+      ID(ip->iGetByIdWithReceiverLong.op5),
+      Handle<>(&O4REG(GetByIdWithReceiverLong)),
+      DEFAULT_PROP_OP_FLAGS(false),
+      cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry : nullptr);
+  if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  O1REG(GetByIdWithReceiverLong) = resPH->getHermesValue();
+  return ExecutionStatus::RETURNED;
+}
+
+static ExecutionStatus
+transientObjectPutErrorMessage(Runtime &runtime, Handle<> base, SymbolID id) {
+  // Emit an error message that looks like:
+  // "Cannot create property '%{id}' on ${typeof base} '${String(base)}'".
+  StringView propName = runtime.getIdentifierTable().getStringView(runtime, id);
+  Handle<StringPrimitive> baseType =
+      runtime.makeHandle(vmcast<StringPrimitive>(typeOf(runtime, base)));
+  StringView baseTypeAsString =
+      StringPrimitive::createStringView(runtime, baseType);
+  MutableHandle<StringPrimitive> valueAsString{runtime};
+  if (base->isSymbol()) {
+    // Special workaround for Symbol which can't be stringified.
+    auto str = symbolDescriptiveString(runtime, Handle<SymbolID>::vmcast(base));
+    if (str != ExecutionStatus::EXCEPTION) {
+      valueAsString = *str;
+    } else {
+      runtime.clearThrownValue();
+      valueAsString = StringPrimitive::createNoThrow(
+          runtime, "<<Exception occurred getting the value>>");
+    }
+  } else {
+    auto str = toString_RJS(runtime, base);
+    assert(
+        str != ExecutionStatus::EXCEPTION &&
+        "Primitives should be convertible to string without exceptions");
+    valueAsString = std::move(*str);
+  }
+  StringView valueAsStringPrintable =
+      StringPrimitive::createStringView(runtime, valueAsString);
+
+  SmallU16String<32> tmp1;
+  SmallU16String<32> tmp2;
+  return runtime.raiseTypeError(
+      TwineChar16("Cannot create property '") + propName + "' on " +
+      baseTypeAsString.getUTF16Ref(tmp1) + " '" +
+      valueAsStringPrintable.getUTF16Ref(tmp2) + "'");
+}
+
+ExecutionStatus Interpreter::putByIdTransient_RJS(
+    Runtime &runtime,
+    Handle<> base,
+    SymbolID id,
+    Handle<> value,
+    bool strictMode) {
+  // ES5.1 8.7.2 special [[Get]] internal method.
+  // TODO: avoid boxing primitives unless we are calling an accessor.
+
+  // 1. Let O be ToObject(base)
+  auto res = toObject(runtime, base);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    // If an exception is thrown, likely we are trying to convert
+    // undefined/null to an object. Passing over the name of the property
+    // so that we could emit more meaningful error messages.
+    return amendPropAccessErrorMsgWithPropName(runtime, base, "set", id);
+  }
+
+  auto O = runtime.makeHandle<JSObject>(res.getValue());
+
+  NamedPropertyDescriptor desc;
+  JSObject *propObj = JSObject::getNamedDescriptorUnsafe(O, runtime, id, desc);
+
+  // Is this a missing property, or a data property defined in the prototype
+  // chain? In both cases we would need to create an own property on the
+  // transient object, which is prohibited.
+  if (!propObj ||
+      (propObj != O.get() &&
+       (!desc.flags.accessor && !desc.flags.proxyObject))) {
+    if (strictMode) {
+      return transientObjectPutErrorMessage(runtime, base, id);
+    }
+    return ExecutionStatus::RETURNED;
+  }
+
+  // Modifying an own data property in a transient object is prohibited.
+  if (!desc.flags.accessor && !desc.flags.proxyObject) {
+    if (strictMode) {
+      return runtime.raiseTypeError(
+          "Cannot modify a property in a transient object");
+    }
+    return ExecutionStatus::RETURNED;
+  }
+
+  if (desc.flags.accessor) {
+    // This is an accessor.
+    auto *accessor = vmcast<PropertyAccessor>(
+        JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc)
+            .getObject(runtime));
+
+    // It needs to have a setter.
+    if (!accessor->setter) {
+      if (strictMode) {
+        return runtime.raiseTypeError("Cannot modify a read-only accessor");
+      }
+      return ExecutionStatus::RETURNED;
+    }
+
+    CallResult<PseudoHandle<>> setRes = Callable::executeCall1(
+        runtime.makeHandle(accessor->setter), runtime, base, *value);
+    if (setRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    assert(desc.flags.proxyObject && "descriptor flags are impossible");
+    CallResult<bool> setRes = JSProxy::setNamed(
+        runtime.makeHandle(propObj), runtime, id, value, base);
+    if (setRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (!*setRes && strictMode) {
+      return runtime.raiseTypeError("transient proxy set returned false");
+    }
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus doPutByIdSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock,
+    uint32_t idVal,
+    bool strictMode,
+    bool tryProp) {
+  auto id = ID(idVal);
+  if (LLVM_UNLIKELY(!O1REG(PutByIdLoose).isObject())) {
+    ++NumPutByIdTransient;
+    assert(!tryProp && "TryPutById can only be used on the global object");
+    auto retStatus = Interpreter::putByIdTransient_RJS(
+        runtime,
+        Handle<>(&O1REG(PutByIdLoose)),
+        ID(idVal),
+        Handle<>(&O2REG(PutByIdLoose)),
+        strictMode);
+    if (retStatus == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return ExecutionStatus::RETURNED;
+  }
+
+  auto shv = SmallHermesValue::encodeHermesValue(O2REG(PutByIdLoose), runtime);
+  auto *obj = vmcast<JSObject>(O1REG(PutByIdLoose));
+  auto cacheIdx = ip->iPutByIdLoose.op3;
+  auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+  CompressedPointer clazzPtr{obj->getClassGCPtr()};
+
+  NamedPropertyDescriptor desc;
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc);
+  if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
+      !desc.flags.accessor && desc.flags.writable &&
+      !desc.flags.internalSetter) {
+    ++NumPutByIdFastPaths;
+
+    // cacheIdx == 0 indicates no caching so don't update the cache in
+    // those cases.
+    HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+#ifdef HERMES_SLOW_DEBUG
+      if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
+        ++NumPutByIdCacheEvicts;
+#else
+      (void)NumPutByIdCacheEvicts;
+#endif
+      // Cache the class and property slot.
+      cacheEntry->clazz = clazzPtr;
+      cacheEntry->slot = desc.slot;
+    }
+
+    // This must be valid because an own property was already found.
+    JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv);
+    return ExecutionStatus::RETURNED;
+  }
+  const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
+  auto putRes = JSObject::putNamed_RJS(
+      Handle<JSObject>::vmcast(&O1REG(PutByIdLoose)),
+      runtime,
+      id,
+      Handle<>(&O2REG(PutByIdLoose)),
+      !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist());
+  if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    unsigned shapeTableIndex,
+    unsigned valBufferOffset) {
+  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+
+  HiddenClass *clazz;
+  if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
+          runtime, shapeTableIndex)) {
+    clazz = cachedClazz;
+  } else {
+    const auto *shapeInfo =
+        &runtimeModule->getBytecode()->getObjectShapeTable()[shapeTableIndex];
+    auto *rootClazz = *runtime.getHiddenClassForPrototype(
+        *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+
+    // Ensure that the hidden class does not start out with any properties, so
+    // we just need to check the shape table entry.
+    assert(rootClazz->getNumProperties() == 0);
+    if (shapeInfo->numProps > HiddenClass::maxNumProperties()) {
+      return runtime.raiseRangeError(
+          TwineChar16("Object has more than ") +
+          HiddenClass::maxNumProperties() + " properties");
+    }
+
+    auto keyBuffer = runtimeModule->getBytecode()->getObjectKeyBuffer().slice(
+        shapeInfo->keyBufferOffset);
+
+    clazz = addBufferPropertiesToHiddenClass(
+        runtime,
+        keyBuffer,
+        shapeInfo->numProps,
+        rootClazz,
+        [runtimeModule](StringID id) {
+          return runtimeModule->getSymbolIDMustExist(id);
+        });
+
+    assert(
+        shapeInfo->numProps == clazz->getNumProperties() &&
+        "numLiterals should match hidden class property count.");
+    // Dictionary mode classes cannot be cached since they can change as the
+    // resulting object is modified.
+    if (LLVM_LIKELY(!clazz->isDictionary())) {
+      runtimeModule->setCachedLiteralHiddenClass(
+          runtime, shapeTableIndex, clazz);
+    }
+  }
+
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.clazz = clazz;
+  // Create a new object using the built-in constructor or cached hidden class.
+  // Note that the built-in constructor is empty, so we don't actually need to
+  // call it.
+  lv.obj = JSObject::create(runtime, lv.clazz).get();
+  auto numLiterals = lv.clazz->getNumProperties();
+
+  // Set up the visitor to populate property values in the object.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitNull() {
+      static constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitUndefined() {
+      static constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSObject::setNamedSlotValueUnsafe(*obj, runtime, propIndex++, shv);
+    }
+
+    Handle<JSObject> obj;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    size_t propIndex;
+  } v{lv.obj, runtime, curCodeBlock->getRuntimeModule(), 0};
+
+  // Visit each value in the given buffer, and set it in the object.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getLiteralValueBuffer()
+          .slice(valBufferOffset),
+      numLiterals,
+      v);
+
+  return createPseudoHandle(lv.obj.getHermesValue());
+}
+
+CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    unsigned numElements,
+    unsigned numLiterals,
+    unsigned bufferIndex) {
+  // Create a new array using the built-in constructor, and initialize
+  // the elements from a literal array buffer.
+  auto arrRes = JSArray::create(runtime, numElements, numElements);
+  if (arrRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Resize the array storage in advance.
+  Handle<JSArray> arr = runtime.makeHandle(std::move(*arrRes));
+  JSArray::setStorageEndIndex(arr, runtime, numElements);
+
+  // Set up the visitor to populate literal elements in the array.
+  struct {
+    void visitStringID(StringID id) {
+      auto shv = SmallHermesValue::encodeStringValue(
+          runtimeModule->getStringPrimFromStringIDMayAllocate(id), runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNumber(double d) {
+      auto shv = SmallHermesValue::encodeNumberValue(d, runtime);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitNull() {
+      constexpr auto shv = SmallHermesValue::encodeNullValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitUndefined() {
+      constexpr auto shv = SmallHermesValue::encodeUndefinedValue();
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+    void visitBool(bool b) {
+      auto shv = SmallHermesValue::encodeBoolValue(b);
+      JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, shv);
+    }
+
+    Handle<JSArray> arr;
+    Runtime &runtime;
+    RuntimeModule *runtimeModule;
+    JSArray::size_type i;
+  } v{arr, runtime, curCodeBlock->getRuntimeModule(), 0};
+
+  // Visit each serialized value in the given buffer.
+  SerializedLiteralParser::parse(
+      curCodeBlock->getRuntimeModule()
+          ->getBytecode()
+          ->getLiteralValueBuffer()
+          .slice(bufferIndex),
+      numLiterals,
+      v);
+
+  return createPseudoHandle(HermesValue::encodeObjectValue(*arr));
 }
 
 } // namespace vm

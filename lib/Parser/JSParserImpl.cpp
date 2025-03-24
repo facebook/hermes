@@ -67,6 +67,7 @@ void JSParserImpl::initializeIdentifiers() {
   packageIdent_ = lexer_.getIdentifier("package");
   privateIdent_ = lexer_.getIdentifier("private");
   protectedIdent_ = lexer_.getIdentifier("protected");
+  prototypeIdent_ = lexer_.getIdentifier("prototype");
   publicIdent_ = lexer_.getIdentifier("public");
   staticIdent_ = lexer_.getIdentifier("static");
   methodIdent_ = lexer_.getIdentifier("method");
@@ -89,7 +90,6 @@ void JSParserImpl::initializeIdentifiers() {
   keyofIdent_ = lexer_.getIdentifier("keyof");
   declareIdent_ = lexer_.getIdentifier("declare");
   protoIdent_ = lexer_.getIdentifier("proto");
-  prototypeIdent_ = lexer_.getIdentifier("prototype");
   opaqueIdent_ = lexer_.getIdentifier("opaque");
   plusIdent_ = lexer_.getIdentifier("plus");
   minusIdent_ = lexer_.getIdentifier("minus");
@@ -126,6 +126,10 @@ void JSParserImpl::initializeIdentifiers() {
   rendersMaybeOperator_ = lexer_.getIdentifier("renders?");
   rendersStarOperator_ = lexer_.getIdentifier("renders*");
   hookIdent_ = lexer_.getIdentifier("hook");
+
+  // Flow match expressions and statements
+  matchIdent_ = lexer_.getIdentifier("match");
+  underscoreIdent_ = lexer_.getIdentifier("_");
 #endif
 
 #if HERMES_PARSE_TS
@@ -586,9 +590,6 @@ bool JSParserImpl::parseFormalParameters(
     Param param,
     ESTree::NodeList &paramList) {
   assert(check(TokenKind::l_paren) && "FormalParameters must start with '('");
-
-  llvh::SaveAndRestore oldFormalParams{isFormalParams_, true};
-
   // (
   SMLoc lparenLoc = advance().Start;
 
@@ -683,6 +684,10 @@ Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
     case TokenKind::rw_break:
       _RET(parseBreakStatement());
     case TokenKind::rw_return:
+      if (!param.has(ParamReturn) && !context_.allowReturnOutsideFunction()) {
+        // Illegal location for a return statement, but we can keep parsing.
+        error(tok_->getSourceRange(), "'return' not in a function");
+      }
       _RET(parseReturnStatement());
     case TokenKind::rw_with:
       _RET(parseWithStatement(param.get(ParamReturn)));
@@ -696,6 +701,16 @@ Optional<ESTree::Node *> JSParserImpl::parseStatement(Param param) {
       _RET(parseDebuggerStatement());
 
     default:
+#if HERMES_PARSE_FLOW
+      if (context_.getParseFlow() && context_.getParseFlowMatch() &&
+          LLVM_UNLIKELY(checkMaybeFlowMatch())) {
+        auto optMatch = tryParseMatchStatementFlow(param.get(ParamReturn));
+        if (!optMatch)
+          return None;
+        if (*optMatch)
+          return *optMatch;
+      }
+#endif
       _RET(parseExpressionOrLabelledStatement(param.get(ParamReturn)));
   }
 
@@ -718,11 +733,7 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
     bool paramAwait,
     JSLexer::GrammarContext grammarContext,
     bool parseDirectives) {
-  // Disable lazy compilation in formal parameters,
-  // because initializer expressions capture a different environment than the
-  // environment the function body names are added to, and it would add some
-  // complexity to optimize a use case that's never actually encountered.
-  if (pass_ == LazyParse && !eagerly && !isFormalParams_) {
+  if (pass_ == LazyParse && !eagerly) {
     auto startLoc = tok_->getStartLoc();
     assert(
         preParsed_->functionInfo.count(startLoc) == 1 &&
@@ -1098,11 +1109,14 @@ JSParserImpl::parseVariableStatement(Param param) {
 
 Optional<ESTree::PrivateNameNode *> JSParserImpl::parsePrivateName() {
   assert(check(TokenKind::private_identifier));
+  auto *privateIdent = tok_->getPrivateIdentifier();
   ESTree::Node *ident = setLocation(
       tok_,
       tok_,
-      new (context_)
-          ESTree::IdentifierNode(tok_->getPrivateIdentifier(), nullptr, false));
+      new (context_) ESTree::IdentifierNode(privateIdent, nullptr, false));
+  if (privateIdent == constructorIdent_) {
+    error(ident->getSourceRange(), "Private names cannot be '#constructor'");
+  }
   SMLoc start = advance(JSLexer::GrammarContext::AllowDiv).Start;
   return setLocation(
       start, ident, new (context_) ESTree::PrivateNameNode(ident));
@@ -2354,6 +2368,12 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
         // assume that the function uses 'arguments'.
         mayContainArrowFunctionsUsingArguments_ = true;
       }
+#if HERMES_PARSE_FLOW
+      if (context_.getParseFlow() && context_.getParseFlowMatch() &&
+          checkMaybeFlowMatch()) {
+        return parseMatchCallOrMatchExpressionFlow();
+      }
+#endif
       auto *res = setLocation(
           tok_,
           tok_,
@@ -3622,8 +3642,7 @@ Optional<ESTree::Node *> JSParserImpl::parseCallExpression(
       // but roll back if it just ended up being a comparison operator.
       SourceErrorManager::SaveAndSuppressMessages suppress{
           &sm_, Subsystem::Parser};
-      auto optTypeArgs =
-          context_.getParseTS() ? parseTSTypeArguments() : parseTypeArgsFlow();
+      auto optTypeArgs = parseTypeArguments();
       if (optTypeArgs && check(TokenKind::l_paren)) {
         // Call expression with type arguments.
         typeArgs = *optTypeArgs;
@@ -3770,8 +3789,7 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
     // but roll back if it just ended up being a comparison operator.
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
-    auto optTypeArgs =
-        context_.getParseTS() ? parseTSTypeArguments() : parseTypeArgsFlow();
+    auto optTypeArgs = parseTypeArguments();
     if (optTypeArgs) {
       // New expression with type arguments.
       typeArgs = *optTypeArgs;
@@ -3826,8 +3844,13 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
   if (!optExpr)
     return None;
-  auto *expr = optExpr.getValue();
 
+  return parseLeftHandSideExpressionTail(startLoc, optExpr.getValue());
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpressionTail(
+    SMLoc startLoc,
+    ESTree::Node *expr) {
   bool optional = checkAndEat(TokenKind::questiondot);
   bool seenOptionalChain = optional ||
       (expr->getParens() == 0 &&
@@ -3846,8 +3869,7 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
     // Suppress messages from the parser while still displaying lexer messages.
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
-    auto optTypeArgs =
-        context_.getParseTS() ? parseTSTypeArguments() : parseTypeArgsFlow();
+    auto optTypeArgs = parseTypeArguments();
     if (optTypeArgs && check(TokenKind::l_paren)) {
       // Call expression with type arguments.
       typeArgs = *optTypeArgs;
@@ -4104,34 +4126,37 @@ Optional<ESTree::Node *> JSParserImpl::parseBinaryExpression(Param param) {
           new (context_) ESTree::LogicalExpressionNode(left, right, opIdent));
 #if HERMES_PARSE_TS || HERMES_PARSE_FLOW
     } else if (LLVM_UNLIKELY(opKind == TokenKind::as_operator)) {
+#if HERMES_PARSE_TS
       if (context_.getParseTS()) {
         return setLocation(
             startLoc,
             endLoc,
             new (context_) ESTree::TSAsExpressionNode(left, right));
-      } else {
-        assert(context_.getParseFlow() && "must be parsing types");
-        if (auto *gen =
-                llvh::dyn_cast<ESTree::GenericTypeAnnotationNode>(right);
-            gen && !gen->_typeParameters && gen->getParens() == 0) {
-          if (auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(gen->_id)) {
-            if (ident->_name == constIdent_ && !ident->_optional &&
-                !ident->_typeAnnotation) {
-              // Special case for `x as const`,
-              // which only is used when the `const` type has no parens
-              // (otherwise, it's just a GenericTypeAnnotationNode).
-              return setLocation(
-                  startLoc,
-                  endLoc,
-                  new (context_) ESTree::AsConstExpressionNode(left));
-            }
+      }
+#endif
+#if HERMES_PARSE_FLOW
+      assert(context_.getParseFlow() && "must be parsing types");
+      if (auto *gen = llvh::dyn_cast<ESTree::GenericTypeAnnotationNode>(right);
+          gen && !gen->_typeParameters && gen->getParens() == 0) {
+        if (auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(gen->_id)) {
+          if (ident->_name == constIdent_ && !ident->_optional &&
+              !ident->_typeAnnotation) {
+            // Special case for `x as const`,
+            // which only is used when the `const` type has no parens
+            // (otherwise, it's just a GenericTypeAnnotationNode).
+            return setLocation(
+                startLoc,
+                endLoc,
+                new (context_) ESTree::AsConstExpressionNode(left));
           }
         }
-        return setLocation(
-            startLoc,
-            endLoc,
-            new (context_) ESTree::AsExpressionNode(left, right));
       }
+      return setLocation(
+          startLoc,
+          endLoc,
+          new (context_) ESTree::AsExpressionNode(left, right));
+#endif
+      llvm_unreachable("Must be parsing types");
 #endif
     } else {
       return setLocation(
@@ -4680,114 +4705,11 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
   // It is a Syntax Error if PrototypePropertyNameList of ClassElementList
   // contains more than one occurrence of  "constructor".
   ESTree::Node *constructor = nullptr;
-
   ESTree::NodeList body{};
   while (!check(TokenKind::r_brace)) {
-    bool isStatic = false;
-    SMRange startRange = tok_->getSourceRange();
-
-    bool declare = false;
-    bool readonly = false;
-    ESTree::NodeLabel accessibility = nullptr;
-
-#if HERMES_PARSE_FLOW
-    if (context_.getParseFlow() && check(declareIdent_)) {
-      // Check for "declare" class properties.
-      auto optNext = lexer_.lookahead1(llvh::None);
-      if (optNext.hasValue() &&
-          (*optNext == TokenKind::rw_static ||
-           *optNext == TokenKind::identifier || *optNext == TokenKind::plus ||
-           *optNext == TokenKind::minus)) {
-        declare = true;
-        advance();
-      }
-    }
-#endif
-
-#if HERMES_PARSE_TS
-    if (context_.getParseTS()) {
-      // In TS, modifiers may appear in this order: accessibility - static -
-      // readonly. And all of them can be used as identifier.
-      if (checkN(
-              TokenKind::rw_private,
-              TokenKind::rw_protected,
-              TokenKind::rw_public)) {
-        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
-          accessibility = tok_->getResWordIdentifier();
-          advance();
-        }
-      }
-
-      if (check(TokenKind::rw_static)) {
-        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
-          isStatic = true;
-          advance();
-        }
-      }
-
-      if (check(readonlyIdent_)) {
-        if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
-          readonly = true;
-          advance();
-        }
-      }
-    }
-#endif
-
-    switch (tok_->getKind()) {
-      case TokenKind::semi:
-        advance();
-        break;
-
-      case TokenKind::rw_static:
-        if (context_.getParseTS() && (readonly || isStatic)) {
-          // Don't advance() when `readonly` or `static` is already seen,
-          // so the current one can be regarded as an identifier.
-          // `static` modifier cannot come after `readonly` in TS.
-        } else {
-          // static MethodDefinition
-          // static FieldDefinition
-          isStatic = true;
-          advance();
-        }
-        LLVM_FALLTHROUGH;
-      default: {
-        // ClassElement
-        auto optElem = parseClassElement(
-            isStatic, startRange, declare, readonly, accessibility);
-        if (!optElem)
-          return None;
-        if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
-          if (method->_kind == constructorIdent_) {
-            if (constructor) {
-              // Cannot have duplicate constructors, but report the error
-              // and move on to parse the rest of the class.
-              error(
-                  method->getSourceRange(), "duplicate constructors in class");
-              sm_.note(
-                  constructor->getSourceRange(),
-                  "first constructor definition",
-                  Subsystem::Parser);
-            } else {
-              constructor = method;
-            }
-          }
-        } else if (auto *prop = dyn_cast<ESTree::ClassPropertyNode>(*optElem)) {
-          if (auto *propId = dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
-            if (propId->_name == constructorIdent_) {
-              error(prop->getSourceRange(), "invalid class property name");
-            }
-          } else if (
-              auto *propStr = dyn_cast<ESTree::StringLiteralNode>(prop->_key)) {
-            if (propStr->_value == constructorIdent_) {
-              error(prop->getSourceRange(), "invalid class property name");
-            }
-          }
-        }
-
-        body.push_back(**optElem);
-      }
-    }
+    auto optElem = parseClassBodyImpl(body, constructor, false);
+    if (!optElem)
+      return None;
   }
 
   if (!need(
@@ -4802,6 +4724,117 @@ Optional<ESTree::ClassBodyNode *> JSParserImpl::parseClassBody(SMLoc startLoc) {
       braceLoc,
       advance().End,
       new (context_) ESTree::ClassBodyNode(std::move(body)));
+}
+
+bool JSParserImpl::parseClassBodyImpl(
+    ESTree::NodeList &body,
+    ESTree::Node *&constructor,
+    bool eagerly) {
+  bool isStatic = false;
+  SMRange startRange = tok_->getSourceRange();
+
+  bool declare = false;
+  bool readonly = false;
+  ESTree::NodeLabel accessibility = nullptr;
+
+#if HERMES_PARSE_FLOW
+  if (context_.getParseFlow() && check(declareIdent_)) {
+    // Check for "declare" class properties.
+    auto optNext = lexer_.lookahead1(llvh::None);
+    if (optNext.hasValue() &&
+        (*optNext == TokenKind::rw_static ||
+         *optNext == TokenKind::identifier || *optNext == TokenKind::plus ||
+         *optNext == TokenKind::minus)) {
+      declare = true;
+      advance();
+    }
+  }
+#endif
+
+#if HERMES_PARSE_TS
+  if (context_.getParseTS()) {
+    // In TS, modifiers may appear in this order: accessibility - static -
+    // readonly. And all of them can be used as identifier.
+    if (checkN(
+            TokenKind::rw_private,
+            TokenKind::rw_protected,
+            TokenKind::rw_public)) {
+      if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+        accessibility = tok_->getResWordIdentifier();
+        advance();
+      }
+    }
+
+    if (check(TokenKind::rw_static)) {
+      if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+        isStatic = true;
+        advance();
+      }
+    }
+
+    if (check(readonlyIdent_)) {
+      if (canFollowModifierTS(lexer_.lookahead1(llvh::None))) {
+        readonly = true;
+        advance();
+      }
+    }
+  }
+#endif
+
+  switch (tok_->getKind()) {
+    case TokenKind::semi:
+      advance();
+      break;
+
+    case TokenKind::rw_static:
+      if (context_.getParseTS() && (readonly || isStatic)) {
+        // Don't advance() when `readonly` or `static` is already seen,
+        // so the current one can be regarded as an identifier.
+        // `static` modifier cannot come after `readonly` in TS.
+      } else {
+        // static MethodDefinition
+        // static FieldDefinition
+        isStatic = true;
+        advance();
+      }
+      LLVM_FALLTHROUGH;
+    default: {
+      // ClassElement
+      auto optElem = parseClassElement(
+          isStatic, startRange, declare, readonly, accessibility, eagerly);
+      if (!optElem)
+        return false;
+      if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
+        if (method->_kind == constructorIdent_) {
+          if (constructor) {
+            // Cannot have duplicate constructors, but report the error
+            // and move on to parse the rest of the class.
+            error(method->getSourceRange(), "duplicate constructors in class");
+            sm_.note(
+                constructor->getSourceRange(),
+                "first constructor definition",
+                Subsystem::Parser);
+          } else {
+            constructor = method;
+          }
+        }
+      } else if (auto *prop = dyn_cast<ESTree::ClassPropertyNode>(*optElem)) {
+        if (auto *propId = dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
+          if (propId->_name == constructorIdent_) {
+            error(prop->getSourceRange(), "invalid class property name");
+          }
+        } else if (
+            auto *propStr = dyn_cast<ESTree::StringLiteralNode>(prop->_key)) {
+          if (propStr->_value == constructorIdent_) {
+            error(prop->getSourceRange(), "invalid class property name");
+          }
+        }
+      }
+
+      body.push_back(**optElem);
+    }
+  }
+  return true;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseClassElement(
@@ -4918,6 +4951,42 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     }
   } else if (checkAndEat(TokenKind::star)) {
     special = SpecialKind::Generator;
+  } else if (isStatic && checkAndEat(TokenKind::l_brace)) {
+    // This is a static block.
+    // ES14.0 15.7
+    // ClassStaticBlock :
+    //   static { ClassStaticBlockBody }
+    //          ^
+    SMLoc braceLoc = tok_->getStartLoc();
+    ESTree::NodeList body;
+
+    {
+      // ClassStaticBlockStatementList :
+      //   StatementList[~Yield, +Await, ~Return]opt
+      //   ^
+      llvh::SaveAndRestore oldParamYield{paramYield_, false};
+      llvh::SaveAndRestore oldParamAwait{paramAwait_, true};
+      if (!parseStatementList(
+              Param{},
+              TokenKind::r_brace,
+              /* parseDirectives */ false,
+              AllowImportExport::No,
+              body)) {
+        return None;
+      }
+    }
+    if (!eat(
+            TokenKind::r_brace,
+            JSLexer::GrammarContext::AllowRegExp,
+            "at end of static block",
+            "static block starts here",
+            braceLoc))
+      return None;
+
+    return setLocation(
+        startLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::StaticBlockNode(std::move(body)));
   } else if (isStatic && staticIsPropertyName()) {
     // This is the name of the property/method.
     // We've already parsed 'static', but it must be used as the
@@ -4998,6 +5067,12 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     if (checkAndEat(TokenKind::equal)) {
       // ClassElementName Initializer[opt]
       //                  ^
+      // NOTE: This is technically non-compliant, but having yield/await in the
+      // field initializer doesn't make sense.
+      // See https://github.com/tc39/ecma262/issues/3333
+      // Do [~Yield, +Await, ~Return] as suggested and error in resolution.
+      llvh::SaveAndRestore<bool> saveParamYield{paramYield_, false};
+      llvh::SaveAndRestore<bool> saveParamAwait{paramAwait_, true};
       auto optValue = parseAssignmentExpression();
       if (!optValue)
         return None;
@@ -5016,6 +5091,10 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       return None;
     }
     if (isPrivate) {
+      if (llvh::cast<ESTree::IdentifierNode>(prop)->_name ==
+          constructorIdent_) {
+        error(prop->getSourceRange(), "Private names cannot be '#constructor'");
+      }
       if (accessibility) {
         error(
             startRange,
@@ -7061,6 +7140,22 @@ Optional<ESTree::NodePtr> JSParserImpl::parseLazyFunction(
         assert(false && "Expected a getter/setter function");
         return None;
       }
+    }
+
+    case ESTree::NodeKind::MethodDefinition: {
+      ESTree::Node *constructor = nullptr;
+      ESTree::NodeList body{};
+      bool success = parseClassBodyImpl(body, constructor, true);
+      (void)success;
+      assert(
+          success && body.size() == 1 &&
+          "Unexpected parseClassBodyImpl result");
+      auto *node = &*body.begin();
+      if (auto *prop = dyn_cast<ESTree::MethodDefinitionNode>(node)) {
+        return prop->_value;
+      }
+      assert(false && "Expected MethodDefinitionNode");
+      return None;
     }
 
     default:

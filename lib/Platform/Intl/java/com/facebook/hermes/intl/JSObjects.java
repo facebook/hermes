@@ -61,11 +61,11 @@ public class JSObjects {
   }
 
   public static Object newBoolean() {
-    return new Boolean(false);
+    return Boolean.FALSE;
   }
 
   public static Object newBoolean(boolean b) {
-    return new Boolean(b);
+    return b;
   }
 
   public static Object newBoolean(String str) {
@@ -81,7 +81,7 @@ public class JSObjects {
   }
 
   public static Object newNumber(double d) {
-    return new Double(d);
+    return d;
   }
 
   public static double getJavaDouble(Object object) {
@@ -100,6 +100,7 @@ public class JSObjects {
     return object instanceof HashMap;
   }
 
+  @SuppressWarnings("unchecked")
   public static Map<String, Object> getJavaMap(Object object) {
     return (HashMap<String, Object>) object;
   }
@@ -108,6 +109,7 @@ public class JSObjects {
     return new HashMap<String, Object>();
   }
 
+  @SuppressWarnings("unchecked")
   public static Object Get(Object options, String property) {
     HashMap<String, Object> javaObject = (HashMap<String, Object>) options;
     if (javaObject.containsKey(property)) {
@@ -119,6 +121,7 @@ public class JSObjects {
     }
   }
 
+  @SuppressWarnings("unchecked")
   public static void Put(Object options, String property, Object value) {
     HashMap<String, Object> javaObject = (HashMap<String, Object>) options;
     javaObject.put(property, value);

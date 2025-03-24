@@ -125,7 +125,7 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
 #ifdef HERMES_SLOW_DEBUG
   if (bytecode)
     validateInstructions(
-        {bytecode, header.bytecodeSizeInBytes()}, header.frameSize());
+        {bytecode, header.getBytecodeSizeInBytes()}, header.getFrameSize());
 #endif
 
   // Compute size needed for caching from the highest accessed indices.
@@ -136,27 +136,26 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
     return highest == 0 ? 0 : highest + 1;
   };
 
-  uint32_t readCacheSize = sizeComputer(header.highestReadCacheIndex());
-  uint32_t cacheSize =
-      readCacheSize + sizeComputer(header.highestWriteCacheIndex());
+  uint32_t readCacheSize = sizeComputer(header.getHighestReadCacheIndex());
+  uint32_t writeCacheSize = sizeComputer(header.getHighestWriteCacheIndex());
 
-#ifndef HERMESVM_LEAN
   bool isCodeBlockLazy = !bytecode;
   if (isCodeBlockLazy) {
     readCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
-    cacheSize = 2 * readCacheSize;
+    writeCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
   }
-#endif
 
-  auto allocSize = totalSizeToAlloc<PropertyCacheEntry>(cacheSize);
+  auto allocSize =
+      totalSizeToAlloc<ReadPropertyCacheEntry, WritePropertyCacheEntry>(
+          readCacheSize, writeCacheSize);
   void *mem = checkedMalloc(allocSize);
   return std::unique_ptr<CodeBlock>(new (mem) CodeBlock(
       runtimeModule,
       header,
       bytecode,
       functionID,
-      cacheSize,
-      /* writePropCacheOffset */ readCacheSize));
+      readCacheSize,
+      writeCacheSize));
 }
 
 int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
@@ -166,11 +165,12 @@ int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
 
 SymbolID CodeBlock::getNameMayAllocate() const {
   return runtimeModule_->getSymbolIDFromStringIDMayAllocate(
-      functionHeader_.functionName());
+      functionHeader_.getFunctionName());
 }
 
 std::string CodeBlock::getNameString() const {
-  return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
+  return runtimeModule_->getStringFromStringID(
+      functionHeader_.getFunctionName());
 }
 
 OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
@@ -210,12 +210,17 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocationForFunction()
       ->getLocationForFunction(*debugLocsOffset);
 }
 
-#ifndef HERMESVM_LEAN
-ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
+ExecutionStatus CodeBlock::compileLazyFunction(Runtime &runtime) {
   assert(isLazy() && "Laziness has not been checked");
   auto *provider = runtimeModule_->getBytecode();
 
-  auto [success, errMsg] = hbc::compileLazyFunction(provider, functionID_);
+  bool success;
+  llvh::StringRef errMsg;
+  executeInStack(
+      runtime.getStackExecutor(), [&success, &errMsg, &provider, this]() {
+        std::tie(success, errMsg) =
+            hbc::compileLazyFunction(provider, functionID_);
+      });
   if (!success) {
     // Raise a SyntaxError to be consistent with eval().
     return runtime.raiseSyntaxError(llvh::StringRef{errMsg});
@@ -237,23 +242,15 @@ bool CodeBlock::coordsInLazyFunction(SMLoc loc) const {
 }
 
 std::vector<uint32_t> CodeBlock::getVariableCounts() const {
-  auto *provider =
-      llvh::dyn_cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
-  if (!provider) {
-    return std::vector<uint32_t>({0});
-  }
-  return hbc::getVariableCounts(provider, functionID_);
+  return hbc::getVariableCounts(runtimeModule_->getBytecode(), functionID_);
 }
 
 llvh::StringRef CodeBlock::getVariableNameAtDepth(
     uint32_t depth,
     uint32_t variableIndex) const {
-  auto *provider =
-      llvh::cast<hbc::BCProviderFromSrc>(runtimeModule_->getBytecode());
   return hbc::getVariableNameAtDepth(
-      provider, functionID_, depth, variableIndex);
+      runtimeModule_->getBytecode(), functionID_, depth, variableIndex);
 }
-#endif
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   // Note that for the case of lazy compilation, the function sources had been
@@ -294,7 +291,16 @@ void CodeBlock::markCachedHiddenClasses(
     Runtime &runtime,
     WeakRootAcceptor &acceptor) {
   for (auto &prop :
-       llvh::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
+       llvh::makeMutableArrayRef(readPropertyCache(), readPropertyCacheSize_)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
+    if (prop.negMatchClazz) {
+      acceptor.acceptWeak(prop.negMatchClazz);
+    }
+  }
+  for (auto &prop : llvh::makeMutableArrayRef(
+           writePropertyCache(), writePropertyCacheSize_)) {
     if (prop.clazz) {
       acceptor.acceptWeak(prop.clazz);
     }

@@ -481,7 +481,13 @@ class NativeJSFunction : public Callable {
     return CellKind::NativeJSFunctionKind;
   }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::NativeJSFunctionKind;
+    switch (cell->getKind()) {
+      case CellKind::NativeJSFunctionKind:
+      case CellKind::NativeJSDerivedClassKind:
+        return true;
+      default:
+        return false;
+    }
   }
 
   NativeJSFunctionPtr getFunctionPtr() const {
@@ -529,15 +535,12 @@ class NativeJSFunction : public Callable {
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param funcInfo pointer to the information describing the function.
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit,
-      unsigned additionalSlotCount = 0);
+      const SHUnit *unit);
 
   /// Create an instance of NativeJSFunction.
   /// \param parentHandle object to use as [[Prototype]].
@@ -545,16 +548,13 @@ class NativeJSFunction : public Callable {
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param funcInfo pointer to the information describing the function.
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
   static Handle<NativeJSFunction> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit,
-      unsigned additionalSlotCount = 0);
+      const SHUnit *unit);
 
   /// Create a Function with the prototype property set to new Object(). The
   /// parent is inferred by the kind of the function.
@@ -562,38 +562,12 @@ class NativeJSFunction : public Callable {
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
   /// \param funcInfo pointer to the information describing the function.
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
   static Handle<NativeJSFunction> createWithInferredParent(
       Runtime &runtime,
       Handle<Environment> parentEnvHandle,
       NativeJSFunctionPtr functionPtr,
       const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit,
-      unsigned additionalSlotCount = 0);
-
-  /// \return the value in an additional slot.
-  /// \param index must be less than the \c additionalSlotCount passed to
-  /// the create method.
-  static SmallHermesValue getAdditionalSlotValue(
-      NativeJSFunction *self,
-      Runtime &runtime,
-      unsigned index) {
-    return JSObject::getInternalProperty(
-        self, runtime, numOverlapSlots<NativeJSFunction>() + index);
-  }
-
-  /// Set the value in an additional slot.
-  /// \param index must be less than the \c additionalSlotCount passed to
-  /// the create method.
-  static void setAdditionalSlotValue(
-      NativeJSFunction *self,
-      Runtime &runtime,
-      unsigned index,
-      SmallHermesValue value) {
-    JSObject::setInternalProperty(
-        self, runtime, numOverlapSlots<NativeJSFunction>() + index, value);
-  }
+      const SHUnit *unit);
 
  public:
   NativeJSFunction(
@@ -638,6 +612,47 @@ class NativeJSFunction : public Callable {
         offsetof(NativeJSFunction, functionPtr_) ==
         offsetof(SHNativeJSFunction, functionPtr));
   }
+};
+
+/// This is a specific kind of NativeJSFunction: a derived class. Derived means
+/// that the class was declared with the "extends" keyword.
+class NativeJSDerivedClass : public NativeJSFunction {
+  static constexpr auto kHasFinalizer = HasFinalizer::No;
+
+ public:
+  NativeJSDerivedClass(
+      Runtime &runtime,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<Environment> environment,
+      NativeJSFunctionPtr functionPtr,
+      const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit)
+      : NativeJSFunction(
+            runtime,
+            parent,
+            clazz,
+            environment,
+            functionPtr,
+            funcInfo,
+            unit) {}
+  static const CallableVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::NativeJSDerivedClassKind;
+  }
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::NativeJSDerivedClassKind;
+  }
+
+  /// Create an instance of NativeJSDerivedClass.
+  static Handle<NativeJSDerivedClass> create(
+      Runtime &runtime,
+      Handle<JSObject> parentHandle,
+      Handle<Environment> parentEnvHandle,
+      NativeJSFunctionPtr functionPtr,
+      const SHNativeFuncInfo *funcInfo,
+      const SHUnit *unit);
 };
 
 /// A pointer to native function.
@@ -710,8 +725,8 @@ class NativeFunction : public Callable {
           Runtime::StackOverflowKind::NativeStack);
     }
 
-    auto newFrame = runtime.setCurrentFrameToTopOfStack();
     runtime.saveCallerIPInStackFrame();
+    auto newFrame = runtime.setCurrentFrameToTopOfStack();
     // Allocate the "reserved" registers in the new frame.
     if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
             StackFrameLayout::CalleeExtraRegistersAtStart,
@@ -1000,6 +1015,7 @@ class NativeConstructor final : public NativeFunction {
 class JSFunction : public Callable {
   using Super = Callable;
   friend void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend struct RuntimeOffsets;
 
   /// CodeBlock to execute when called.
   CodeBlock *codeBlock_;
@@ -1118,6 +1134,144 @@ class JSFunction : public Callable {
 #endif
 };
 
+/// This is a specific kind of JSFunction: a derived class. Derived means that
+/// the class was declared with the "extends" keyword.
+class JSDerivedClass : public JSFunction {
+  static constexpr auto kHasFinalizer = HasFinalizer::No;
+
+ public:
+  JSDerivedClass(
+      Runtime &runtime,
+      Handle<Domain> domain,
+      Handle<JSObject> parent,
+      Handle<HiddenClass> clazz,
+      Handle<Environment> environment,
+      CodeBlock *codeBlock)
+      : JSFunction(runtime, domain, parent, clazz, environment, codeBlock) {}
+  static const CallableVTable vt;
+
+  static constexpr CellKind getCellKind() {
+    return CellKind::JSDerivedClassKind;
+  }
+  static bool classof(const GCCell *cell) {
+    return cell->getKind() == CellKind::JSDerivedClassKind;
+  }
+  /// Create an instance of JSDerivedClass.
+  static PseudoHandle<JSDerivedClass> create(
+      Runtime &runtime,
+      Handle<Domain> domain,
+      Handle<JSObject> parentHandle,
+      Handle<Environment> envHandle,
+      CodeBlock *codeBlock);
+};
+
+/// ES2023 15.7.14 ClassDefinitionEvaluation
+/// \p superHandle contains the value of the super class. If this is a base
+///    class, it is empty.
+/// \p makeClassCons is a function that will be invoked to actually create the
+///    class constructor. It is given the parent of the class constructor and
+///    should use it to set the parent of the created callable. This is factored
+///    out so that this function can be shared between the native and BC
+///    backends, which create different callable types.
+/// \return <class callable, home object>. The home object is the class'
+///    .prototype property.
+template <typename MakeClassConstructor>
+static CallResult<std::pair<Callable *, JSObject *>> createClass(
+    Runtime &runtime,
+    Handle<> superHandle,
+    MakeClassConstructor makeClassCons) {
+  struct : public Locals {
+    PinnedValue<JSObject> protoParent;
+    PinnedValue<JSObject> ctorParent;
+    PinnedValue<Callable> F;
+    PinnedValue<JSObject> homeObject;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // ES2023 15.7.14 RS: ClassDefinitionEvaluation
+  // 7. If ClassHeritageopt is not present, then
+  if (superHandle->isEmpty()) {
+    //   a. Let protoParent be %Object.prototype%.
+    lv.protoParent = runtime.objectPrototype;
+    //   b. Let constructorParent be %Function.prototype%.
+    lv.ctorParent = runtime.functionPrototype;
+  } else {
+    // 8. Else,
+    //   f. If superclass is null, then
+    if (superHandle->isNull()) {
+      //     i. Let protoParent be null.
+      lv.protoParent = Runtime::makeNullHandle<JSObject>();
+      //     ii. Let constructorParent be %Function.prototype%.
+      lv.ctorParent = runtime.functionPrototype;
+    } else {
+      //   g. Else if IsConstructor(superclass) is false, throw a TypeError
+      //      exception.
+      CallResult<bool> isCtorRes = isConstructor(runtime, superHandle.get());
+      if (LLVM_UNLIKELY(isCtorRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (!*isCtorRes) {
+        return runtime.raiseTypeErrorForValue(
+            superHandle, " is not a constructor");
+      }
+      //   h. Else,
+      auto superObj = Handle<JSObject>::vmcast(superHandle);
+      //     i. Let protoParent be ? Get(superclass, "prototype").
+      CallResult<PseudoHandle<>> protoParentRes = JSObject::getNamed_RJS(
+          superObj, runtime, Predefined::getSymbolID(Predefined::prototype));
+      if (LLVM_UNLIKELY(protoParentRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      PseudoHandle<> protoParentPH = std::move(*protoParentRes);
+      //     ii. If protoParent is not an Object and protoParent is not
+      //         null, throw a TypeError exception.
+      if (protoParentPH->isNull()) {
+        lv.protoParent = Runtime::makeNullHandle<JSObject>();
+      } else if (
+          auto *protoParentObj = dyn_vmcast<JSObject>(protoParentPH.get())) {
+        lv.protoParent = protoParentObj;
+      } else {
+        return runtime.raiseTypeErrorForValue(
+            "Base class .prototype ",
+            runtime.makeHandle(std::move(protoParentPH)),
+            " is neither null nor an object");
+      }
+      //     iii. Let constructorParent be superclass.
+      lv.ctorParent = superObj.get();
+    }
+  }
+
+  lv.homeObject = JSObject::create(runtime, lv.protoParent);
+  lv.F = makeClassCons(lv.ctorParent);
+
+  // 16. Perform MakeConstructor(F, false, proto).
+  auto ctorProp = DefinePropertyFlags::getNewNonEnumerableFlags();
+  ctorProp.writable = 0;
+  ctorProp.configurable = 0;
+  CallResult<bool> makeConstructorRes = JSObject::defineOwnProperty(
+      lv.F,
+      runtime,
+      Predefined::getSymbolID(Predefined::prototype),
+      ctorProp,
+      lv.homeObject);
+  if (LLVM_UNLIKELY(makeConstructorRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(*makeConstructorRes && "failed to add F.protoype");
+
+  // 18. Perform CreateMethodProperty(proto, "constructor", F).
+  CallResult<bool> createMethodRes = JSObject::defineOwnProperty(
+      lv.homeObject,
+      runtime,
+      Predefined::getSymbolID(Predefined::constructor),
+      DefinePropertyFlags::getNewNonEnumerableFlags(),
+      lv.F);
+  if (LLVM_UNLIKELY(createMethodRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  assert(*createMethodRes && "failed to add proto.constructor");
+  return std::make_pair(lv.F.get(), *lv.homeObject);
+}
 } // namespace vm
 } // namespace hermes
 

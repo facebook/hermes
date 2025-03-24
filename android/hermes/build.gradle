@@ -19,6 +19,7 @@ android {
 
     externalNativeBuild {
       cmake {
+        arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
         arguments "-DHERMES_IS_ANDROID=True"
         arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"

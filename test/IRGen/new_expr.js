@@ -32,11 +32,11 @@ function test_simple_call() {
 // CHECK-NEXT:       DeclareGlobalVarInst "Car": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_simple_new": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_simple_call": string
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %Car(): functionCode
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Car(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "Car": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %test_simple_new(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_simple_new(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_simple_new": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %test_simple_call(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_simple_call(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_simple_call": string
 // CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
@@ -71,7 +71,7 @@ function test_simple_call() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.ctor]: any
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "Car": string
-// CHECK-NEXT:  %4 = CreateThisInst (:any) %3: any, empty: any
+// CHECK-NEXT:  %4 = CreateThisInst (:any) %3: any, %3: any
 // CHECK-NEXT:  %5 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, %3: any, %4: any, "Eagle": string, 1993: number
 // CHECK-NEXT:  %6 = GetConstructedObjectInst (:object) %4: any, %5: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS2.ctor]: any

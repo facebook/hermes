@@ -40,15 +40,15 @@ function test_hex_printable() {
 // CHECK-NEXT:       DeclareGlobalVarInst "test_slash": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_hex": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_hex_printable": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %test_newline(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_newline(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_newline": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %test_quote(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_quote(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_quote": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %test_slash(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_slash(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_slash": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %test_hex(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_hex(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "test_hex": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %test_hex_printable(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_hex_printable(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "test_hex_printable": string
 // CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %16: any

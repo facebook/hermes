@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates. All Rights Reserved.
-// @generated SignedSource<<c5d806e6bc7d2a1f696a1cf32e7e06cb>>
+// @generated SignedSource<<b6f23d499b731c057a44576d724cde32>>
 
 #include "MessageTypes.h"
 
@@ -97,6 +97,8 @@ std::unique_ptr<Request> Request::fromJson(const std::string &str) {
       {"Debugger.pause", tryMake<debugger::PauseRequest>},
       {"Debugger.removeBreakpoint", tryMake<debugger::RemoveBreakpointRequest>},
       {"Debugger.resume", tryMake<debugger::ResumeRequest>},
+      {"Debugger.setBlackboxPatterns",
+       tryMake<debugger::SetBlackboxPatternsRequest>},
       {"Debugger.setBlackboxedRanges",
        tryMake<debugger::SetBlackboxedRangesRequest>},
       {"Debugger.setBreakpoint", tryMake<debugger::SetBreakpointRequest>},
@@ -885,6 +887,51 @@ JSONValue *debugger::ResumeRequest::toJsonVal(JSONFactory &factory) const {
 }
 
 void debugger::ResumeRequest::accept(RequestHandler &handler) const {
+  handler.handle(*this);
+}
+
+debugger::SetBlackboxPatternsRequest::SetBlackboxPatternsRequest()
+    : Request("Debugger.setBlackboxPatterns") {}
+
+std::unique_ptr<debugger::SetBlackboxPatternsRequest>
+debugger::SetBlackboxPatternsRequest::tryMake(const JSONObject *obj) {
+  std::unique_ptr<debugger::SetBlackboxPatternsRequest> req =
+      std::make_unique<debugger::SetBlackboxPatternsRequest>();
+  TRY_ASSIGN(req->id, obj, "id");
+  TRY_ASSIGN(req->method, obj, "method");
+
+  JSONValue *v = obj->get("params");
+  if (v == nullptr) {
+    return nullptr;
+  }
+  auto convertResult = valueFromJson<JSONObject *>(v);
+  if (!convertResult) {
+    return nullptr;
+  }
+  auto *params = *convertResult;
+  TRY_ASSIGN(req->patterns, params, "patterns");
+  TRY_ASSIGN(req->skipAnonymous, params, "skipAnonymous");
+  return req;
+}
+
+JSONValue *debugger::SetBlackboxPatternsRequest::toJsonVal(
+    JSONFactory &factory) const {
+  llvh::SmallVector<JSONFactory::Prop, 2> paramsProps;
+  put(paramsProps, "patterns", patterns, factory);
+  put(paramsProps, "skipAnonymous", skipAnonymous, factory);
+
+  llvh::SmallVector<JSONFactory::Prop, 1> props;
+  put(props, "id", id, factory);
+  put(props, "method", method, factory);
+  put(props,
+      "params",
+      factory.newObject(paramsProps.begin(), paramsProps.end()),
+      factory);
+  return factory.newObject(props.begin(), props.end());
+}
+
+void debugger::SetBlackboxPatternsRequest::accept(
+    RequestHandler &handler) const {
   handler.handle(*this);
 }
 
@@ -2739,12 +2786,13 @@ debugger::ScriptParsedNotification::tryMake(const JSONObject *obj) {
   TRY_ASSIGN(notif->hasSourceURL, params, "hasSourceURL");
   TRY_ASSIGN(notif->isModule, params, "isModule");
   TRY_ASSIGN(notif->length, params, "length");
+  TRY_ASSIGN(notif->scriptLanguage, params, "scriptLanguage");
   return notif;
 }
 
 JSONValue *debugger::ScriptParsedNotification::toJsonVal(
     JSONFactory &factory) const {
-  llvh::SmallVector<JSONFactory::Prop, 13> paramsProps;
+  llvh::SmallVector<JSONFactory::Prop, 14> paramsProps;
   put(paramsProps, "scriptId", scriptId, factory);
   put(paramsProps, "url", url, factory);
   put(paramsProps, "startLine", startLine, factory);
@@ -2759,6 +2807,7 @@ JSONValue *debugger::ScriptParsedNotification::toJsonVal(
   put(paramsProps, "hasSourceURL", hasSourceURL, factory);
   put(paramsProps, "isModule", isModule, factory);
   put(paramsProps, "length", length, factory);
+  put(paramsProps, "scriptLanguage", scriptLanguage, factory);
 
   llvh::SmallVector<JSONFactory::Prop, 1> props;
   put(props, "method", method, factory);

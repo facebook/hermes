@@ -27,13 +27,13 @@ struct GCLazySegmentNCTest : public ::testing::Test {};
 
 using GCLazySegmentNCDeathTest = GCLazySegmentNCTest;
 
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
 
-constexpr size_t kHeapSizeHint = AlignedHeapSegment::maxSize() * 10;
+constexpr size_t kHeapSizeHint = FixedSizeHeapSegment::maxSize() * 10;
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
-constexpr size_t kHeapVA = AlignedHeapSegment::storageSize() * 10;
+constexpr size_t kHeapVA = FixedSizeHeapSegment::storageSize() * 10;
 constexpr size_t kHeapVALimited =
-    kHeapVA / 2 + AlignedHeapSegment::storageSize() - 1;
+    kHeapVA / 2 + FixedSizeHeapSegment::storageSize() - 1;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {

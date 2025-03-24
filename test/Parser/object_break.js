@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc -dump-transformed-ast %s 2>&1 ) | %FileCheck %s
+// RUN: (! %hermes %s 2>&1 ) | %FileCheck %s
 
 //CHECK: error: 'break' not within a loop or a switch
 {
@@ -14,5 +14,5 @@
       break;
       }
       })
-  return 2
+    2;
 }

@@ -329,6 +329,14 @@ CallResult<HermesValue> StringPrimitive::slice(
 
   SafeUInt32 safeLen(length);
 
+  // Special case for 1-character strings, some of which are cached in the
+  // runtime.
+  if (length == 1) {
+    char16_t ch = str->isASCII() ? str->castToASCIIPointer()[start]
+                                 : str->castToUTF16Pointer()[start];
+    return runtime.getCharacterString(ch).getHermesValue();
+  }
+
   auto builder =
       StringBuilder::createStringBuilder(runtime, safeLen, str->isASCII());
   if (builder == ExecutionStatus::EXCEPTION) {

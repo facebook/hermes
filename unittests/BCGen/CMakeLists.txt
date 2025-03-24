@@ -21,8 +21,4 @@ add_hermes_unittest(HermesBCGenTests
 target_link_libraries(HermesBCGenTests
  hermesHBCBackend
  hermesBackend
- hermesFrontend
- hermesSupport
- hermesOptimizer
- dtoa
  )

@@ -19,7 +19,7 @@ def resourceResolver(dir, resource):
         output_path = os.path.join(dir, resource)
         if not os.path.exists(os.path.dirname(output_path)):
             os.makedirs(os.path.dirname(output_path))
-        ref = resources.files(__name__).joinpath('test-suites').joinpath(resource)
+        ref = resources.files(__package__).joinpath('test-suites').joinpath(resource)
         with open(output_path, "w+b") as dst, ref.open('rb') as src:
             shutil.copyfileobj(src, dst)
             resourceResolver.cachedFiles[resource] = dst.name

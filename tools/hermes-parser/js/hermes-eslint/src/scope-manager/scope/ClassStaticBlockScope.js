@@ -10,7 +10,7 @@
 
 'use strict';
 
-import type {Expression} from 'hermes-estree';
+import type {StaticBlock} from 'hermes-estree';
 import type {ClassScope} from './ClassScope';
 import type {ScopeManager} from '../ScopeManager';
 
@@ -19,7 +19,7 @@ import {ScopeType} from './ScopeType';
 
 class ClassStaticBlockScope extends ScopeBase<
   typeof ScopeType.ClassStaticBlock,
-  Expression,
+  StaticBlock,
   ClassScope,
 > {
   declare +type: typeof ScopeType.ClassStaticBlock;

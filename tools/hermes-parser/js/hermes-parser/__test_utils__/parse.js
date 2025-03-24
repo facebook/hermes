@@ -65,15 +65,19 @@ export function parseForSnapshot(
     babel,
     preserveRange,
     enableExperimentalComponentSyntax,
+    enableExperimentalFlowMatchSyntax,
   }: {
     preserveRange?: boolean,
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
+    enableExperimentalFlowMatchSyntax?: boolean,
   } = {},
 ): mixed {
   const parseOpts = {
     enableExperimentalComponentSyntax:
       enableExperimentalComponentSyntax ?? true,
+    enableExperimentalFlowMatchSyntax:
+      enableExperimentalFlowMatchSyntax ?? false,
   };
   if (babel === true) {
     return cleanASTForSnapshot(
@@ -115,16 +119,20 @@ export async function printForSnapshot(
   {
     babel,
     enableExperimentalComponentSyntax,
+    enableExperimentalFlowMatchSyntax,
     reactRuntimeTarget,
   }: {
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
+    enableExperimentalFlowMatchSyntax?: boolean,
     reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
   } = {},
 ): Promise<string> {
   const parseOpts = {
     enableExperimentalComponentSyntax:
       enableExperimentalComponentSyntax ?? true,
+    enableExperimentalFlowMatchSyntax:
+      enableExperimentalFlowMatchSyntax ?? false,
     reactRuntimeTarget,
   };
   if (babel === true) {

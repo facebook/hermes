@@ -76,27 +76,27 @@ function helloWorld() {
 // CHECK-NEXT:       DeclareGlobalVarInst "dup2": string
 // CHECK-NEXT:        DeclareGlobalVarInst "dup3": string
 // CHECK-NEXT:        DeclareGlobalVarInst "helloWorld": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %dummy(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dummy(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "dummy": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %emptyString(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %emptyString(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "emptyString": string
-// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %oneString(): functionCode
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %VS0: any, %oneString(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "oneString": string
-// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %oneSub(): functionCode
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %VS0: any, %oneSub(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "oneSub": string
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %dup(): functionCode
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dup(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "dup": string
-// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %notDup(): functionCode
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %VS0: any, %notDup(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "notDup": string
-// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %0: environment, %memberExpr(): functionCode
+// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %0: environment, %VS0: any, %memberExpr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %24: object, globalObject: object, "memberExpr": string
-// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %0: environment, %callExpr(): functionCode
+// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %0: environment, %VS0: any, %callExpr(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %26: object, globalObject: object, "callExpr": string
-// CHECK-NEXT:  %28 = CreateFunctionInst (:object) %0: environment, %dup2(): functionCode
+// CHECK-NEXT:  %28 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dup2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %28: object, globalObject: object, "dup2": string
-// CHECK-NEXT:  %30 = CreateFunctionInst (:object) %0: environment, %dup3(): functionCode
+// CHECK-NEXT:  %30 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dup3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %30: object, globalObject: object, "dup3": string
-// CHECK-NEXT:  %32 = CreateFunctionInst (:object) %0: environment, %helloWorld(): functionCode
+// CHECK-NEXT:  %32 = CreateFunctionInst (:object) %0: environment, %VS0: any, %helloWorld(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %32: object, globalObject: object, "helloWorld": string
 // CHECK-NEXT:  %34 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %34: any
@@ -190,7 +190,7 @@ function helloWorld() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS7.obj]: any
 // CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "dummy": string
-// CHECK-NEXT:       StoreNewOwnPropertyInst %4: any, %3: object, "func": string, true: boolean
+// CHECK-NEXT:       DefineNewOwnPropertyInst %4: any, %3: object, "func": string, true: boolean
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS7.obj]: any
 // CHECK-NEXT:  %7 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS7.obj]: any
@@ -205,7 +205,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %func(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS8: any, %func(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS8.func]: any
 // CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
 // CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS8.func]: any
@@ -260,7 +260,7 @@ function helloWorld() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS8: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS12: any, %0: environment
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %""(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS12: any, %""(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 

@@ -7,11 +7,6 @@ set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 add_hermes_tool(hdb hdb.cpp LINK_LIBS hermesvm_a)
 
-set_target_properties(hdb PROPERTIES
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED ON
-  )
-
 install(TARGETS hdb
   RUNTIME DESTINATION bin
 )

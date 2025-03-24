@@ -139,7 +139,7 @@ bool LowerAllocObjectLiteral::runOnFunction(Function *F) {
     // We need to increase the iterator before calling lowerAllocObjectBuffer.
     // Otherwise deleting the instruction will invalidate the iterator.
     for (auto it = BB.begin(), e = BB.end(); it != e;) {
-      if (auto *A = llvh::dyn_cast<AllocObjectLiteralInst>(&*it++)) {
+      if (auto *A = llvh::dyn_cast<BaseAllocObjectLiteralInst>(&*it++)) {
         changed |= lowerAllocObjectBuffer(A);
       }
     }
@@ -149,7 +149,7 @@ bool LowerAllocObjectLiteral::runOnFunction(Function *F) {
 }
 
 bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
-    AllocObjectLiteralInst *allocInst) {
+    BaseAllocObjectLiteralInst *allocInst) {
   Function *F = allocInst->getParent()->getParent();
   IRBuilder builder(F);
   uint32_t size = allocInst->getKeyValuePairCount();
@@ -188,7 +188,7 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
         // So, if we have encountered a numeric property, we cannot store
         // directly into a slot.
         if (isNumericKey) {
-          builder.createStoreOwnPropertyInst(
+          builder.createDefineOwnPropertyInst(
               propVal, allocInst, propKey, IRBuilder::PropEnumerable::Yes);
         } else {
           // For non-numeric keys, StorePropertyInst is more efficient because
@@ -259,15 +259,15 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvh::isa<StorePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StorePropertyInst::PropertyIdx);
-      } else if (llvh::isa<BaseStoreOwnPropertyInst>(&Inst)) {
+      } else if (llvh::isa<BaseDefineOwnPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
-            builder, Inst, StoreOwnPropertyInst::PropertyIdx);
+            builder, Inst, DefineOwnPropertyInst::PropertyIdx);
       } else if (llvh::isa<DeletePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, DeletePropertyInst::PropertyIdx);
-      } else if (llvh::isa<StoreGetterSetterInst>(&Inst)) {
+      } else if (llvh::isa<DefineOwnGetterSetterInst>(&Inst)) {
         changed |= stringToNumericProperty(
-            builder, Inst, StoreGetterSetterInst::PropertyIdx);
+            builder, Inst, DefineOwnGetterSetterInst::PropertyIdx);
       } else if (llvh::isa<AllocObjectLiteralInst>(&Inst)) {
         auto allocInst = cast<AllocObjectLiteralInst>(&Inst);
         for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
@@ -290,11 +290,18 @@ static llvh::SmallVector<Value *, 4> getArgumentsWithoutThis(CallInst *CI) {
 
 bool LowerCalls::runOnFunction(Function *F) {
   IRBuilder::InstructionDestroyer destroyer;
+  const Module *mod = F->getParent();
   IRBuilder builder(F);
   bool changed = false;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
       if (auto *CI = llvh::dyn_cast<CallInst>(&I)) {
+        if (CI->getAttributes(mod).isMetroRequire) {
+          // We'll convert calls with this attribute to a specific
+          // bytecode later.
+          continue;
+        }
+
         unsigned argCount = CI->getNumArguments();
         if (argCount > UINT8_MAX) {
           builder.setLocation(CI->getLocation());
@@ -364,7 +371,7 @@ bool LimitAllocArray::runOnFunction(Function *F) {
               inst->getOperand(i)->getKind() == ValueKind::LiteralUndefinedKind;
           if (seenUnserializable) {
             e--;
-            builder.createStoreOwnPropertyInst(
+            builder.createDefineOwnPropertyInst(
                 inst->getOperand(i),
                 inst,
                 builder.getLiteralNumber(ind),
@@ -386,7 +393,7 @@ bool LimitAllocArray::runOnFunction(Function *F) {
       // 0 to totalElems.
       for (unsigned i = inst->getElementCount() - 1; i >= maxSize_; i--) {
         int operandOffset = AllocArrayInst::ElementStartIdx + i;
-        builder.createStoreOwnPropertyInst(
+        builder.createDefineOwnPropertyInst(
             inst->getOperand(operandOffset),
             inst,
             builder.getLiteralNumber(i),
@@ -482,6 +489,20 @@ bool LowerCondBranch::runOnFunction(Function *F) {
       destroyer.add(cbInst);
       if (!fcompare->hasUsers())
         destroyer.add(fcompare);
+      changed = true;
+    } else if (auto *typeOfIs = llvh::dyn_cast<TypeOfIsInst>(cond)) {
+      builder.setInsertionPoint(cbInst);
+      builder.setLocation(cbInst->getLocation());
+      auto *cmpBranch = builder.createHBCCmpBrTypeOfIsInst(
+          typeOfIs->getArgument(),
+          typeOfIs->getTypes(),
+          cbInst->getTrueDest(),
+          cbInst->getFalseDest());
+
+      cbInst->replaceAllUsesWith(cmpBranch);
+      destroyer.add(cbInst);
+      if (!typeOfIs->hasUsers())
+        destroyer.add(typeOfIs);
       changed = true;
     } else {
       continue;

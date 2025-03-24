@@ -21,15 +21,19 @@ class Cls {
 // CHECK-NEXT:Func loose
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'Cls' Class
-// CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.2 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.2 'Cls' ClassExprName
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.3
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.4
+// CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
+// CHECK-NEXT:    Func strict
+// CHECK-NEXT:        Scope %s.5
 
 // CHECK:Program Scope %s.1
-// CHECK-NEXT:    ClassDeclaration
-// CHECK-NEXT:        Id 'Cls' [D:E:%d.1 'Cls']
+// CHECK-NEXT:    ClassDeclaration Scope %s.2
+// CHECK-NEXT:        Id 'Cls' [D:%d.1 E:%d.2 'Cls']
 // CHECK-NEXT:        ClassBody
 // CHECK-NEXT:            ClassProperty
 // CHECK-NEXT:                Id 'a'

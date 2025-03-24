@@ -27,9 +27,9 @@ var func2 = () => { return 11; }
 // CHECK-NEXT:       DeclareGlobalVarInst "func2": string
 // CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_2_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %8: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %2: environment, %func1(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %2: environment, %VS0: any, %func1(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "func1": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %2: environment, %func2(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %2: environment, %VS0: any, %func2(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "func2": string
 // CHECK-NEXT:  %14 = LoadStackInst (:any) %8: any
 // CHECK-NEXT:        ReturnInst %14: any

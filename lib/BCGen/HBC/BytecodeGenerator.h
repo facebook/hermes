@@ -63,6 +63,9 @@ class BytecodeModuleGenerator {
   /// This map is populated before instruction selection.
   LiteralBufferBuilder::LiteralOffsetMapTy literalOffsetMap_{};
 
+  /// The debug ID cache for the module.
+  FileAndSourceMapIdCache &debugIdCache_;
+
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
 
@@ -98,16 +101,19 @@ class BytecodeModuleGenerator {
   BytecodeModuleGenerator(
       BytecodeModule &bcModule,
       Module *M,
+      FileAndSourceMapIdCache &debugIdCache,
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults(),
       SourceMapGenerator *sourceMapGen = nullptr,
       std::unique_ptr<BCProviderBase> baseBCProvider = nullptr)
       : bm_(bcModule),
         M_(M),
         debugInfoGenerator_(bm_.getDebugInfo()),
+        debugIdCache_(debugIdCache),
         options_(options),
         sourceMapGen_(sourceMapGen),
         baseBCProvider_(std::move(baseBCProvider)) {
-    bm_.getBytecodeOptionsMut().staticBuiltins = options_.staticBuiltinsEnabled;
+    bm_.getBytecodeOptionsMut().setStaticBuiltins(
+        options_.staticBuiltinsEnabled);
   }
 
   /// Consume the generator and write the generated code to the BytecodeModule.
@@ -294,6 +300,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// Highest accessed property cache indices in this function.
   uint8_t highestReadCacheIndex_{0};
   uint8_t highestWriteCacheIndex_{0};
+
+  /// Number of cache new object entries for this function.
+  uint8_t numCacheNewObject_{0};
 
   /// The jump table for this function (if any)
   /// this vector consists of jump table for each SwitchImm instruction,
@@ -488,6 +497,18 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
     }
   }
 
+  /// \return true if the jump instruction at \p loc is a long jump with a
+  /// corresponding short variant.
+  bool hasShortJumpVariant(offset_t loc) const {
+    switch (opcodes_[loc]) {
+#define DEFINE_JUMP_LONG_VARIANT(shortName, longName) case longName##Op:
+#include "hermes/BCGen/HBC/BytecodeList.def"
+      return true;
+      default:
+        return false;
+    }
+  }
+
   /// \return the size of the frame.
   uint32_t getFrameSize() const {
     return frameSize_;
@@ -504,6 +525,13 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     this->highestWriteCacheIndex_ = sz;
+  }
+
+  void setNumCacheNewObject(uint8_t sz) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    this->numCacheNewObject_ = sz;
   }
 
   /// Set the jump table for this function, if any.

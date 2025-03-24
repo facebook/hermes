@@ -24,35 +24,30 @@
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:undefined) %1: object, %""(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:undefined) %0: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function ""(): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:number|bigint) %1: object, %foo(): functionCode, true: boolean, %0: environment, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %4 = TypeOfInst (:string) %2: number|bigint
-// CHECK-NEXT:  %5 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: string, %2: number|bigint
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:number|bigint) %0: object, %foo(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %3 = TypeOfInst (:string) %1: number|bigint
+// CHECK-NEXT:  %4 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: string, %1: number|bigint
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): number|bigint [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %o(): functionCode
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %" 1#"(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, %1: object, "valueOf": string
-// CHECK-NEXT:  %4 = UnaryMinusInst (:number|bigint) %1: object
-// CHECK-NEXT:       ReturnInst %4: number|bigint
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %o(): functionCode
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %" 1#"(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, %0: object, "valueOf": string
+// CHECK-NEXT:  %3 = UnaryMinusInst (:number|bigint) %0: object
+// CHECK-NEXT:       ReturnInst %3: number|bigint
 // CHECK-NEXT:function_end
 
 // CHECK:function o(): undefined

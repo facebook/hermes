@@ -1778,6 +1778,63 @@
     "KeyofTypeAnnotation": [
       "argument"
     ],
+    "MatchArrayPattern": [
+      "elements",
+      "rest"
+    ],
+    "MatchAsPattern": [
+      "pattern",
+      "target"
+    ],
+    "MatchBindingPattern": [
+      "id"
+    ],
+    "MatchExpression": [
+      "argument",
+      "cases"
+    ],
+    "MatchExpressionCase": [
+      "pattern",
+      "body",
+      "guard"
+    ],
+    "MatchIdentifierPattern": [
+      "id"
+    ],
+    "MatchLiteralPattern": [
+      "literal"
+    ],
+    "MatchMemberPattern": [
+      "base",
+      "property"
+    ],
+    "MatchObjectPattern": [
+      "properties",
+      "rest"
+    ],
+    "MatchObjectPatternProperty": [
+      "key",
+      "pattern"
+    ],
+    "MatchOrPattern": [
+      "patterns"
+    ],
+    "MatchRestPattern": [
+      "argument"
+    ],
+    "MatchStatement": [
+      "argument",
+      "cases"
+    ],
+    "MatchStatementCase": [
+      "pattern",
+      "body",
+      "guard"
+    ],
+    "MatchUnaryPattern": [
+      "argument"
+    ],
+    "MatchWildcardPattern": [],
     "ObjectTypeMappedTypeProperty": [
       "keyTparam",
       "propType",
@@ -5485,7 +5542,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return parent.type === "ArrayTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType");
       case "ComponentTypeAnnotation":
       case "FunctionTypeAnnotation": {
-        if (node.type === "ComponentTypeAnnotation" && node.rendersType == null) {
+        if (node.type === "ComponentTypeAnnotation" && (node.rendersType === null || node.rendersType === void 0)) {
           return false;
         }
         if (path.match(
@@ -8252,7 +8309,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (currentIdx === locStart(node)) {
       return false;
     }
-    const length = text.length;
+    const {
+      length
+    } = text;
     while (currentIdx < length) {
       if (text[currentIdx] === ",") {
         break;
@@ -8974,7 +9033,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function printTypeParameter(path, options2, print3) {
     const { node, parent } = path;
-    const parts = [node.type === "TSTypeParameter" && node.const ? "const " : ""];
+    const parts = [node.const ? "const " : ""];
     const name = node.type === "TSTypeParameter" ? print3("name") : node.name;
     if (parent.type === "TSMappedType") {
       if (parent.readonly) {
@@ -10645,101 +10704,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return parts;
   }
 
-  // src/language-js/print/enum.js
-  function printEnumMembers(path, print3, options2) {
-    return printObject(path, options2, print3);
-  }
-  function printEnumMember(path, print3) {
-    const { node } = path;
-    let idDoc = print3("id");
-    if (node.computed) {
-      idDoc = ["[", idDoc, "]"];
-    }
-    let initializerDoc = "";
-    if (node.initializer) {
-      initializerDoc = print3("initializer");
-    }
-    if (node.init) {
-      initializerDoc = print3("init");
-    }
-    if (!initializerDoc) {
-      return idDoc;
-    }
-    return [idDoc, " = ", initializerDoc];
-  }
-  function printEnumBody(path, print3, options2) {
-    const { node } = path;
-    let type;
-    if (node.type === "EnumSymbolBody" || node.explicitType) {
-      switch (node.type) {
-        case "EnumBooleanBody":
-          type = "boolean";
-          break;
-        case "EnumNumberBody":
-          type = "number";
-          break;
-        case "EnumBigIntBody":
-          type = "bigint";
-          break;
-        case "EnumStringBody":
-          type = "string";
-          break;
-        case "EnumSymbolBody":
-          type = "symbol";
-          break;
-      }
-    }
-    return [type ? `of ${type} ` : "", printEnumMembers(path, print3, options2)];
-  }
-  function printEnumDeclaration(path, print3, options2) {
-    const { node } = path;
-    return [
-      printDeclareToken(path),
-      node.const ? "const " : "",
-      "enum ",
-      print3("id"),
-      " ",
-      node.type === "TSEnumDeclaration" ? printEnumMembers(path, print3, options2) : print3("body")
-    ];
-  }
-
-  // src/language-js/print/interface.js
-  function printInterface(path, options2, print3) {
-    const { node } = path;
-    const parts = [printDeclareToken(path), "interface"];
-    const partsGroup = [];
-    const extendsParts = [];
-    if (node.type !== "InterfaceTypeAnnotation") {
-      partsGroup.push(" ", print3("id"), print3("typeParameters"));
-    }
-    const shouldIndentOnlyHeritageClauses2 = node.typeParameters && !hasComment(
-      node.typeParameters,
-      CommentCheckFlags.Trailing | CommentCheckFlags.Line
-    );
-    if (is_non_empty_array_default(node.extends)) {
-      extendsParts.push(
-        shouldIndentOnlyHeritageClauses2 ? ifBreak(" ", line, {
-          groupId: getTypeParametersGroupId(node.typeParameters)
-        }) : line,
-        "extends ",
-        (node.extends.length === 1 ? identity : indent)(
-          join([",", line], path.map(print3, "extends"))
-        )
-      );
-    }
-    if (hasComment(node.id, CommentCheckFlags.Trailing) || is_non_empty_array_default(node.extends)) {
-      if (shouldIndentOnlyHeritageClauses2) {
-        parts.push(group([...partsGroup, indent(extendsParts)]));
-      } else {
-        parts.push(group(indent([...partsGroup, ...extendsParts])));
-      }
-    } else {
-      parts.push(...partsGroup, ...extendsParts);
-    }
-    parts.push(" ", print3("body"));
-    return group(parts);
-  }
-
   // src/language-js/print/component.js
   function printComponent(path, options2, print3) {
     const {
@@ -10837,6 +10801,64 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return printed;
   }
 
+  // src/language-js/print/enum.js
+  function printEnumMembers(path, print3, options2) {
+    return printObject(path, options2, print3);
+  }
+  function printEnumMember(path, print3) {
+    const { node } = path;
+    let idDoc = print3("id");
+    if (node.computed) {
+      idDoc = ["[", idDoc, "]"];
+    }
+    let initializerDoc = "";
+    if (node.initializer) {
+      initializerDoc = print3("initializer");
+    }
+    if (node.init) {
+      initializerDoc = print3("init");
+    }
+    if (!initializerDoc) {
+      return idDoc;
+    }
+    return [idDoc, " = ", initializerDoc];
+  }
+  function printEnumBody(path, print3, options2) {
+    const { node } = path;
+    let type;
+    if (node.type === "EnumSymbolBody" || node.explicitType) {
+      switch (node.type) {
+        case "EnumBooleanBody":
+          type = "boolean";
+          break;
+        case "EnumNumberBody":
+          type = "number";
+          break;
+        case "EnumBigIntBody":
+          type = "bigint";
+          break;
+        case "EnumStringBody":
+          type = "string";
+          break;
+        case "EnumSymbolBody":
+          type = "symbol";
+          break;
+      }
+    }
+    return [type ? `of ${type} ` : "", printEnumMembers(path, print3, options2)];
+  }
+  function printEnumDeclaration(path, print3, options2) {
+    const { node } = path;
+    return [
+      printDeclareToken(path),
+      node.const ? "const " : "",
+      "enum ",
+      print3("id"),
+      " ",
+      node.type === "TSEnumDeclaration" ? printEnumMembers(path, print3, options2) : print3("body")
+    ];
+  }
+
   // src/language-js/print/hook.js
   function printHook(path, options2, print3) {
     const { node } = path;
@@ -10905,6 +10927,143 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     parts.push(parametersDoc, returnTypeDoc);
     return group(parts);
+  }
+
+  // src/language-js/print/interface.js
+  function printInterface(path, options2, print3) {
+    const { node } = path;
+    const parts = [printDeclareToken(path), "interface"];
+    const partsGroup = [];
+    const extendsParts = [];
+    if (node.type !== "InterfaceTypeAnnotation") {
+      partsGroup.push(" ", print3("id"), print3("typeParameters"));
+    }
+    const shouldIndentOnlyHeritageClauses2 = node.typeParameters && !hasComment(
+      node.typeParameters,
+      CommentCheckFlags.Trailing | CommentCheckFlags.Line
+    );
+    if (is_non_empty_array_default(node.extends)) {
+      extendsParts.push(
+        shouldIndentOnlyHeritageClauses2 ? ifBreak(" ", line, {
+          groupId: getTypeParametersGroupId(node.typeParameters)
+        }) : line,
+        "extends ",
+        (node.extends.length === 1 ? identity : indent)(
+          join([",", line], path.map(print3, "extends"))
+        )
+      );
+    }
+    if (hasComment(node.id, CommentCheckFlags.Trailing) || is_non_empty_array_default(node.extends)) {
+      if (shouldIndentOnlyHeritageClauses2) {
+        parts.push(group([...partsGroup, indent(extendsParts)]));
+      } else {
+        parts.push(group(indent([...partsGroup, ...extendsParts])));
+      }
+    } else {
+      parts.push(...partsGroup, ...extendsParts);
+    }
+    parts.push(" ", print3("body"));
+    return group(parts);
+  }
+
+  // src/language-js/print/match.js
+  function printMatch(path, options2, print3) {
+    const { node } = path;
+    return [
+      group(["match (", indent([softline, print3("argument")]), softline, ")"]),
+      " {",
+      node.cases.length > 0 ? indent([
+        hardline,
+        join(
+          hardline,
+          path.map(
+            ({ node: node2, isLast }) => [
+              print3(),
+              !isLast && isNextLineEmpty2(node2, options2) ? hardline : ""
+            ],
+            "cases"
+          )
+        )
+      ]) : "",
+      hardline,
+      "}"
+    ];
+  }
+  function printMatchCase(path, options2, print3) {
+    const { node } = path;
+    const comment = hasComment(node, CommentCheckFlags.Dangling) ? [" ", printDanglingComments(path, options2)] : [];
+    const body = node.type === "MatchStatementCase" ? [" ", print3("body")] : indent([line, print3("body"), ","]);
+    return [
+      print3("pattern"),
+      node.guard ? [" if ", print3("guard")] : "",
+      group([":", comment, body])
+    ];
+  }
+  function printMatchPattern(path, option, print3) {
+    const { node, parent } = path;
+    switch (node.type) {
+      case "MatchOrPattern": {
+        const parts = join([" |", line], path.map(print3, "patterns"));
+        if (parent.type === "MatchAsPattern") {
+          return ["(", parts, ")"];
+        }
+        return group(parts);
+      }
+      case "MatchAsPattern":
+        return [print3("pattern"), " as ", print3("target")];
+      case "MatchWildcardPattern":
+        return ["_"];
+      case "MatchLiteralPattern":
+        return print3("literal");
+      case "MatchUnaryPattern":
+        return [node.operator, print3("argument")];
+      case "MatchIdentifierPattern":
+        return print3("id");
+      case "MatchMemberPattern": {
+        const property = node.property.type === "Identifier" ? [".", print3("property")] : ["[", indent([softline, print3("property")]), softline, "]"];
+        return group([print3("base"), property]);
+      }
+      case "MatchBindingPattern":
+        return [node.kind, " ", print3("id")];
+      case "MatchObjectPattern": {
+        const properties = path.map(print3, "properties");
+        if (node.rest) {
+          properties.push(print3("rest"));
+        }
+        return group([
+          "{",
+          indent([softline, join([",", line], properties)]),
+          node.rest ? "" : ifBreak(","),
+          softline,
+          "}"
+        ]);
+      }
+      case "MatchArrayPattern": {
+        const elements = path.map(print3, "elements");
+        if (node.rest) {
+          elements.push(print3("rest"));
+        }
+        return group([
+          "[",
+          indent([softline, join([",", line], elements)]),
+          node.rest ? "" : ifBreak(","),
+          softline,
+          "]"
+        ]);
+      }
+      case "MatchObjectPatternProperty":
+        if (node.shorthand) {
+          return print3("pattern");
+        }
+        return group([print3("key"), ":", indent([line, print3("pattern")])]);
+      case "MatchRestPattern": {
+        const parts = ["..."];
+        if (node.argument) {
+          parts.push(print3("argument"));
+        }
+        return parts;
+      }
+    }
   }
 
   // src/language-js/print/flow.js
@@ -11129,6 +11288,25 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "AsConstExpression":
       case "SatisfiesExpression":
         return printBinaryCastExpression(path, options2, print3);
+      case "MatchExpression":
+      case "MatchStatement":
+        return printMatch(path, options2, print3);
+      case "MatchExpressionCase":
+      case "MatchStatementCase":
+        return printMatchCase(path, options2, print3);
+      case "MatchOrPattern":
+      case "MatchAsPattern":
+      case "MatchWildcardPattern":
+      case "MatchLiteralPattern":
+      case "MatchUnaryPattern":
+      case "MatchIdentifierPattern":
+      case "MatchMemberPattern":
+      case "MatchBindingPattern":
+      case "MatchObjectPattern":
+      case "MatchObjectPatternProperty":
+      case "MatchRestPattern":
+      case "MatchArrayPattern":
+        return printMatchPattern(path, options2, print3);
     }
   }
 

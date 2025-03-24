@@ -7,6 +7,10 @@
 
 #include "DebuggerDomainAgent.h"
 
+#include <hermes/Regex/Executor.h>
+#include <hermes/Regex/Regex.h>
+#include <hermes/Regex/RegexTraits.h>
+#include <hermes/Support/UTF8.h>
 #include <hermes/cdp/RemoteObjectConverters.h>
 
 namespace facebook {
@@ -78,40 +82,88 @@ void DebuggerDomainAgent::handleDebuggerEvent(
       asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
       break;
     case DebuggerEventType::Exception:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kException);
+      if (isTopFrameLocationBlackboxed()) {
+        asyncDebugger_.resumeFromPaused(
+            explicitPausePending_ ? AsyncDebugCommand::StepInto
+                                  : AsyncDebugCommand::Continue);
+      } else {
+        setPaused(PausedNotificationReason::kException);
+      }
       break;
     case DebuggerEventType::Resumed:
       if (paused_) {
-        paused_ = false;
-        objTable_->releaseObjectGroup(BacktraceObjectGroup);
-        sendNotificationToClient(m::debugger::ResumedNotification{});
+        setUnpaused();
       }
       break;
     case DebuggerEventType::Breakpoint:
       if (breakpointsActive_) {
-        paused_ = true;
-        sendPausedNotificationToClient(PausedNotificationReason::kOther);
+        setPaused(PausedNotificationReason::kOther);
       } else {
-        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
+        asyncDebugger_.resumeFromPaused(
+            explicitPausePending_ ? AsyncDebugCommand::StepInto
+                                  : AsyncDebugCommand::Continue);
       }
       break;
     case DebuggerEventType::DebuggerStatement:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kOther);
+      if (isTopFrameLocationBlackboxed()) {
+        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
+      } else {
+        setPaused(PausedNotificationReason::kOther);
+      }
       break;
     case DebuggerEventType::StepFinish:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kStep);
+      if (isTopFrameLocationBlackboxed()) {
+        // If we land on a blackboxed frame via a user command that is either
+        // "step over" or "step out" we step out of the blackboxed frame.
+        // In all the other cases (explicit pause / step into / unknown command)
+        // we execute a step into (that usually results in subsequent step
+        // intos) to stop on the next non-blackboxed line.
+        // If the blackboxed function calls any functions in a non-blackboxed
+        // range, it would eventually stop on first such a function.
+        // If the blackboxed function doesn't call any non-blackboxed functions,
+        // it would keep on stepping into until it exits the blackboxed function
+        // itself, effectively acting like a step out.
+        auto nextStep = lastUserStepRequest_.has_value() &&
+                (*lastUserStepRequest_ == LastUserStepRequest::StepOver ||
+                 *lastUserStepRequest_ == LastUserStepRequest::StepOut)
+            ? AsyncDebugCommand::StepOut
+            : AsyncDebugCommand::StepInto;
+
+        asyncDebugger_.resumeFromPaused(nextStep);
+      } else {
+        PausedNotificationReason pauseReason = explicitPausePending_
+            ? PausedNotificationReason::kOther
+            : PausedNotificationReason::kStep;
+        setPaused(pauseReason);
+      }
       break;
     case DebuggerEventType::ExplicitPause:
-      paused_ = true;
-      sendPausedNotificationToClient(PausedNotificationReason::kOther);
+      if (isTopFrameLocationBlackboxed()) {
+        // an explicit pause should eventually stop execution on the next
+        // non-blackboxed line, so we can just continue to step into here
+        // until we hit a non-blackboxed line
+        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepInto);
+      } else {
+        setPaused(PausedNotificationReason::kOther);
+      }
       break;
     default:
       assert(false && "unknown DebuggerEventType");
       asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
   }
+}
+
+void DebuggerDomainAgent::setPaused(
+    PausedNotificationReason pausedNotificationReason) {
+  paused_ = true;
+  explicitPausePending_ = false;
+  sendPausedNotificationToClient(pausedNotificationReason);
+}
+
+void DebuggerDomainAgent::setUnpaused() {
+  paused_ = false;
+  objTable_->releaseObjectGroup(BacktraceObjectGroup);
+  sendNotificationToClient(m::debugger::ResumedNotification{});
 }
 
 void DebuggerDomainAgent::enable() {
@@ -124,33 +176,14 @@ void DebuggerDomainAgent::enable() {
   for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
     sendScriptParsedNotificationToClient(srcLoc);
 
-    // TODO: Add test for this once state persistence is implemented
-    // Notify the client about all breakpoints in this script
-    for (const auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
-      for (const HermesBreakpoint &hermesBreakpoint :
-           cdpBreakpoint.hermesBreakpoints) {
-        if (hermesBreakpoint.scriptID == srcLoc.fileId) {
-          // This should have been checked before storing the Hermes
-          // breakpoint in the CDP breakpoint.
-          assert(
-              hermesBreakpoint.breakpointID != debugger::kInvalidBreakpoint &&
-              "Invalid breakpoint");
-          debugger::BreakpointInfo breakpointInfo =
-              runtime_.getDebugger().getBreakpointInfo(
-                  hermesBreakpoint.breakpointID);
-          if (!breakpointInfo.resolved) {
-            // Resolved state changed between breakpoint creation and
-            // notification
-            assert(false && "Previously resolved breakpoint unresolved");
-            continue;
-          }
+    for (auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
+      assert(
+          cdpBreakpoint.hermesBreakpoints.empty() &&
+          "Unexpected linked internal breakpoint");
 
-          m::debugger::BreakpointResolvedNotification resolved;
-          resolved.breakpointId = std::to_string(cdpBreakpointID);
-          resolved.location =
-              m::debugger::makeLocation(breakpointInfo.resolvedLocation);
-          sendNotificationToClient(resolved);
-        }
+      if (srcLoc.fileName == cdpBreakpoint.description.url) {
+        applyBreakpointAndSendNotification(
+            cdpBreakpointID, cdpBreakpoint, srcLoc);
       }
     }
   }
@@ -167,8 +200,7 @@ void DebuggerDomainAgent::enable() {
   // Check to see if debugger is currently paused. There could be multiple debug
   // clients and the program could have already been paused.
   if (asyncDebugger_.isWaitingForCommand()) {
-    paused_ = true;
-    sendPausedNotificationToClient(PausedNotificationReason::kOther);
+    setPaused(PausedNotificationReason::kOther);
   }
 }
 
@@ -183,6 +215,13 @@ void DebuggerDomainAgent::cleanUp() {
   // need that functionality, then we might need to track breakpoints set by
   // this client and only remove those.
   runtime_.getDebugger().deleteAllBreakpoints();
+
+  // Unlink all persisted CDPBreakpoints from their HermesBreakpoints, in case
+  // domain will be re-enabled. This is required, because all internal Hermes
+  // breakpoints were deleted above.
+  for (auto &[_, cdpBreakpoint] : cdpBreakpoints_) {
+    cdpBreakpoint.hermesBreakpoints.clear();
+  }
 
   if (debuggerEventCallbackId_ != kInvalidDebuggerEventCallbackID) {
     asyncDebugger_.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
@@ -208,6 +247,8 @@ void DebuggerDomainAgent::pause(const m::debugger::PauseRequest &req) {
     return;
   }
 
+  explicitPausePending_ = true;
+
   runtime_.getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
@@ -226,6 +267,8 @@ void DebuggerDomainAgent::stepInto(const m::debugger::StepIntoRequest &req) {
     return;
   }
 
+  lastUserStepRequest_ = LastUserStepRequest::StepInto;
+
   asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepInto);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
@@ -234,6 +277,8 @@ void DebuggerDomainAgent::stepOut(const m::debugger::StepOutRequest &req) {
   if (!checkDebuggerPaused(req)) {
     return;
   }
+
+  lastUserStepRequest_ = LastUserStepRequest::StepOut;
 
   asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOut);
   sendResponseToClient(m::makeOkResponse(req.id));
@@ -244,16 +289,181 @@ void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
     return;
   }
 
+  lastUserStepRequest_ = LastUserStepRequest::StepOver;
+
   asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOver);
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+static inline bool blackboxRangeComparator(
+    const std::pair<int, int> &a,
+    const std::pair<int, int> &b) {
+  if (a.first != b.first)
+    return a.first < b.first;
+  return a.second < b.second;
+}
+
+void DebuggerDomainAgent::setBlackboxPatterns(
+    const m::debugger::SetBlackboxPatternsRequest &req) {
+  blackboxAnonymousScripts_ = req.skipAnonymous.value_or(false);
+
+  if (req.patterns.empty()) {
+    compiledBlackboxPatternRegex_ = std::nullopt;
+    sendResponseToClient(m::makeOkResponse(req.id));
+    return;
+  }
+
+  std::string combinedPattern = "(";
+  for (auto &pattern : req.patterns) {
+    combinedPattern.append(pattern + "|");
+  }
+  combinedPattern.back() = ')';
+
+  // We expect req.patterns to be encoded as UTF-8 in accordance with RFC-8259
+  // See comment in CDPAgent::handleCommand
+  std::vector<char16_t> combinedPatternUTF16;
+  ::hermes::convertUTF8WithSurrogatesToUTF16(
+      std::back_inserter(combinedPatternUTF16),
+      combinedPattern.data(),
+      combinedPattern.data() + combinedPattern.size());
+
+  ::hermes::regex::Regex<::hermes::regex::UTF16RegexTraits> blackboxPatternRegex{
+      combinedPatternUTF16,
+      // Use empty regex flags (not ignore case, not multiline). See
+      // https://source.chromium.org/chromium/chromium/src/+/41d42cec13ea567f461d98dfb04d641e30d6bb5b:v8/src/inspector/v8-debugger-agent-impl.cc;l=1726-1727;
+      {}};
+
+  // We expect the client to handle the regex validation on patterns before
+  // sending it to us.
+  // If it's not valid, we respond with an error allowing the client to handle
+  // that situation.
+  if (!blackboxPatternRegex.valid()) {
+    sendResponseToClient(m::makeErrorResponse(
+        req.id, m::ErrorCode::InvalidParams, "Invalid regex pattern"));
+    return;
+  }
+
+  compiledBlackboxPatternRegex_ = blackboxPatternRegex.compile();
+
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
 void DebuggerDomainAgent::setBlackboxedRanges(
     const m::debugger::SetBlackboxedRangesRequest &req) {
-  sendResponseToClient(m::makeErrorResponse(
-      req.id,
-      m::ErrorCode::MethodNotFound,
-      "setBlackboxedRanges is not implemented yet"));
+  auto scriptID = std::stoull(req.scriptId);
+
+  if (req.positions.empty()) {
+    blackboxedRanges_.erase(scriptID);
+    sendResponseToClient(m::makeOkResponse(req.id));
+    return;
+  }
+
+  auto blackboxedRanges = std::vector<std::pair<int, int>>();
+  for (auto &position : req.positions) {
+    blackboxedRanges.push_back(std::pair<int, int>(
+        /* cdp line and column numbers are 0 based */
+        position.lineNumber + 1,
+        position.columnNumber + 1));
+  }
+
+  assert(std::is_sorted(
+      blackboxedRanges.begin(),
+      blackboxedRanges.end(),
+      blackboxRangeComparator));
+
+  blackboxedRanges_[scriptID] = std::move(blackboxedRanges);
+
+  sendResponseToClient(m::makeOkResponse(req.id));
+}
+
+bool DebuggerDomainAgent::isLocationBlackboxed(
+    ScriptID scriptID,
+    std::string scriptName,
+    int lineNumber,
+    int columnNumber) {
+  if (blackboxAnonymousScripts_ && scriptName.empty()) {
+    return true;
+  }
+
+  if (compiledBlackboxPatternRegex_.has_value()) {
+    // We expect scriptName to be encoded as UTF-8 in accordance with RFC-8259
+    // See comment in CDPAgent::handleCommand
+    std::vector<char16_t> scriptNameUTF16;
+    ::hermes::convertUTF8WithSurrogatesToUTF16(
+        std::back_inserter(scriptNameUTF16),
+        scriptName.data(),
+        scriptName.data() + scriptName.size());
+
+    uint32_t searchStart = 0;
+    std::vector<::hermes::regex::CapturedRange> captures{};
+    ::hermes::regex::MatchRuntimeResult matchResult =
+        ::hermes::regex::searchWithBytecode(
+            *compiledBlackboxPatternRegex_,
+            scriptNameUTF16.data(),
+            searchStart,
+            scriptNameUTF16.size(),
+            &captures,
+            ::hermes::regex::constants::MatchFlagType::matchDefault);
+    if (matchResult == ::hermes::regex::MatchRuntimeResult::Match) {
+      return true;
+    }
+  }
+
+  if (blackboxedRanges_.count(scriptID) == 0) {
+    return false;
+  }
+
+  auto const &positions = blackboxedRanges_.at(scriptID);
+
+  auto locationPosition = std::lower_bound(
+      positions.begin(),
+      positions.end(),
+      std::make_pair(lineNumber, columnNumber),
+      blackboxRangeComparator);
+
+  // Since locationPosition is the first position that is *_NOT BEFORE_* the
+  // passed location, for a location that falls within a blackboxed range, that
+  // position's index would be odd. See the comment for blackboxedRanges_
+  // For example, for blackboxedRanges_ [[1,1],[4,4]], the location [2,2]
+  // would be correctly blackboxed because locationPosition would hold [4,4]
+  // which is on index 1
+  return std::distance(positions.begin(), locationPosition) % 2 == 1;
+}
+
+bool DebuggerDomainAgent::isTopFrameLocationBlackboxed() {
+  auto stackTrace = runtime_.getDebugger().getProgramState().getStackTrace();
+  if (stackTrace.callFrameCount() < 1) {
+    return false;
+  }
+  debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
+  if (breakpointsActive_) {
+    for (const auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
+      for (const HermesBreakpoint &hermesBreakpoint :
+           cdpBreakpoint.hermesBreakpoints) {
+        auto breakpointLoc =
+            runtime_.getDebugger()
+                .getBreakpointInfo(hermesBreakpoint.breakpointID)
+                .resolvedLocation;
+
+        auto locationHasManualBreakpoint =
+            (loc.fileId == breakpointLoc.fileId &&
+             loc.line == breakpointLoc.line &&
+             loc.column == breakpointLoc.column);
+        // Locations with manual breakpoints are not considered blackboxed.
+        // For example, if a user steps inside a blackboxed function, if any of
+        // the next lines in that function have a manual breakpoint, we should
+        // respect them and stop on them rather than stepping over them. The
+        // same logic applies to explicit pauses. While they trigger stepping
+        // into until out of blackboxed ranges, or until the program continues
+        // execution if one of these steps lands on a line with a manual
+        // breakpoint, we should stop on it.
+        if (locationHasManualBreakpoint) {
+          return false;
+        }
+      }
+    }
+  }
+  return isLocationBlackboxed(loc.fileId, loc.fileName, loc.line, loc.column);
 }
 
 void DebuggerDomainAgent::setPauseOnExceptions(
@@ -339,7 +549,7 @@ void DebuggerDomainAgent::setBreakpoint(
 
   // Create the Hermes breakpoint
   std::optional<HermesBreakpointLocation> hermesBreakpoint =
-      createHermesBreakpont(
+      createHermesBreakpoint(
           static_cast<debugger::ScriptID>(scriptID), description);
   if (!hermesBreakpoint) {
     sendResponseToClient(m::makeErrorResponse(
@@ -443,10 +653,9 @@ void DebuggerDomainAgent::removeBreakpoint(
 
 void DebuggerDomainAgent::setBreakpointsActive(
     const m::debugger::SetBreakpointsActiveRequest &req) {
-  if (!enabled_) {
-    sendResponseToClient(m::makeOkResponse(req.id));
-    return;
-  }
+  // We don't check for `enabled_` here because V8 allows
+  // `setBreakpointsActive` to be called while debugger is disabled:
+  // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=562-563;drc=db2ef55b78602346f67f7f015ec6ebb9e554d228
   breakpointsActive_ = req.active;
   sendResponseToClient(m::makeOkResponse(req.id));
 }
@@ -517,6 +726,9 @@ void DebuggerDomainAgent::sendScriptParsedNotificationToClient(
   note.scriptId = std::to_string(srcLoc.fileId);
   note.url = srcLoc.fileName;
   note.executionContextId = executionContextID_;
+  // Either JavaScript or WebAssembly. See:
+  // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=1875-1882
+  note.scriptLanguage = "JavaScript";
   std::string sourceMappingUrl =
       runtime_.getDebugger().getSourceMappingUrl(srcLoc.fileId);
   if (!sourceMappingUrl.empty()) {
@@ -546,14 +758,7 @@ void DebuggerDomainAgent::processNewLoadedScript() {
     // Apply existing breakpoints to the new script.
     for (auto &[id, breakpoint] : cdpBreakpoints_) {
       if (loc.fileName == breakpoint.description.url) {
-        auto breakpointInfo = applyBreakpoint(breakpoint, loc.fileId);
-        if (breakpointInfo) {
-          m::debugger::BreakpointResolvedNotification resolved;
-          resolved.breakpointId = std::to_string(id);
-          resolved.location =
-              m::debugger::makeLocation(breakpointInfo.value().location);
-          sendNotificationToClient(resolved);
-        }
+        applyBreakpointAndSendNotification(id, breakpoint, loc);
       }
     }
   }
@@ -589,7 +794,7 @@ DebuggerDomainAgent::createCDPBreakpoint(
 /// Attempt to create a breakpoint in the Hermes script identified by
 /// \p scriptID at the location described by \p description.
 std::optional<HermesBreakpointLocation>
-DebuggerDomainAgent::createHermesBreakpont(
+DebuggerDomainAgent::createHermesBreakpoint(
     debugger::ScriptID scriptID,
     const CDPBreakpointDescription &description) {
   // Convert the location description to a Hermes location
@@ -632,21 +837,37 @@ DebuggerDomainAgent::createHermesBreakpont(
   return HermesBreakpointLocation{breakpointID, info.resolvedLocation};
 }
 
+/// Applies a CDP breakpoint to a script. If successful, will send
+/// Debugger.breakpointResolved notification to client.
+void DebuggerDomainAgent::applyBreakpointAndSendNotification(
+    CDPBreakpointID cdpBreakpointID,
+    CDPBreakpoint &cdpBreakpoint,
+    const debugger::SourceLocation &srcLoc) {
+  auto hermesBreakpointLoc = applyBreakpoint(cdpBreakpoint, srcLoc.fileId);
+  if (hermesBreakpointLoc) {
+    m::debugger::BreakpointResolvedNotification resolved;
+    resolved.breakpointId = std::to_string(cdpBreakpointID);
+    resolved.location =
+        m::debugger::makeLocation(hermesBreakpointLoc.value().location);
+    sendNotificationToClient(resolved);
+  }
+}
+
 /// Apply a CDP breakpoint to a script, creating a Hermes breakpoint and
 /// associating it with the specified CDP breakpoint. Returns the newly-
 /// created Hermes breakpoint if successful, nullopt otherwise.
 std::optional<HermesBreakpointLocation> DebuggerDomainAgent::applyBreakpoint(
-    CDPBreakpoint &breakpoint,
+    CDPBreakpoint &cdpBreakpoint,
     debugger::ScriptID scriptID) {
   // Create the Hermes breakpoint
   std::optional<HermesBreakpointLocation> hermesBreakpoint =
-      createHermesBreakpont(scriptID, breakpoint.description);
+      createHermesBreakpoint(scriptID, cdpBreakpoint.description);
   if (!hermesBreakpoint) {
     return {};
   }
 
   // Associate this Hermes breakpoint with the CDP breakpoint
-  breakpoint.hermesBreakpoints.push_back(
+  cdpBreakpoint.hermesBreakpoints.push_back(
       HermesBreakpoint{hermesBreakpoint.value().id, scriptID});
 
   return hermesBreakpoint;

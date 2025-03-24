@@ -42,6 +42,7 @@
 #include "hermes/Support/Warning.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
+#include "hermes/VM/JIT/Config.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/Debug.h"
@@ -254,11 +255,15 @@ static opt<bool> Pretty(
     desc("Pretty print JSON, JS or disassembled bytecode"),
     cat(CompilerCategory));
 
+#if HERMES_PARSE_FLOW
 static opt<bool> Typed(
     "typed",
     init(false),
     desc("Enable typed mode"),
     cat(CompilerCategory));
+#else
+static constexpr bool Typed = false;
+#endif
 
 cl::opt<bool> Script(
     "script",
@@ -317,10 +322,17 @@ opt<std::string> ProfilingOutFile(
     "profiling-out",
     desc("File to write profiling info to"));
 
-opt<bool> ES6Class(
-    "Xes6-class",
+opt<bool> ES6BlockScoping(
+    "Xes6-block-scoping",
     init(false),
-    desc("Enable support for ES6 Class"),
+    desc("Enable support for ES6 block scoping"),
+    Hidden,
+    cat(CompilerCategory));
+
+opt<bool> MetroRequireOpt(
+    "Xmetro-require",
+    init(true),
+    desc("Optimize Metro require calls."),
     Hidden,
     cat(CompilerCategory));
 
@@ -457,6 +469,12 @@ static opt<bool> DumpBetweenPasses(
     desc("Print IR after every optimization pass"),
     cat(CompilerCategory));
 
+static opt<bool> Colors(
+    "colors",
+    init(false),
+    desc("Use colors in some dumps"),
+    cat(CompilerCategory));
+
 #ifndef NDEBUG
 
 static opt<bool> LexerOnly(
@@ -494,6 +512,13 @@ static opt<bool> ParseFlow(
 static opt<bool> ParseFlowComponentSyntax(
     "Xparse-component-syntax",
     desc("Parse Component syntax"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
+
+static opt<bool> ParseFlowMatch(
+    "Xparse-flow-match",
+    desc("Parse Flow match statements and expressions"),
     init(false),
     Hidden,
     cat(CompilerCategory));
@@ -559,6 +584,13 @@ static opt<bool> ReusePropCache(
 
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
+
+static CLFlag ReorderRegisters(
+    'f',
+    "reorder-registers",
+    true,
+    "reorder registers for better JIT performance",
+    CompilerCategory);
 
 static opt<unsigned> InlineMaxSize(
     "Xinline-max-size",
@@ -772,6 +804,10 @@ ESTree::NodePtr parseJS(
     mode = parser::LazyParse;
   }
 
+  bool shouldWrapInIIFE = cl::Typed && !cl::Script;
+  if (shouldWrapInIIFE)
+    context->setAllowReturnOutsideFunction(true);
+
   Optional<ESTree::ProgramNode *> parsedJs;
 
   {
@@ -818,6 +854,7 @@ ESTree::NodePtr parseJS(
     return parsedAST;
   }
 
+#if HERMES_PARSE_TS
   // Convert TS AST to Flow AST as an intermediate step until we have a
   // separate TS type checker.
   if (flowContext && context->getParseTS()) {
@@ -827,9 +864,10 @@ ESTree::NodePtr parseJS(
       return nullptr;
     }
   }
+#endif
 
   // If we are executing in typed mode and not script, then wrap the program.
-  if (cl::Typed && !cl::Script) {
+  if (shouldWrapInIIFE) {
     parsedAST = wrapInIIFE(context, llvh::cast<ESTree::ProgramNode>(parsedAST));
     // In case this API decides it can fail in the future, check for a
     // nullptr.
@@ -1044,6 +1082,7 @@ std::shared_ptr<Context> createContext(
       cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
   codeGenOpts.verifyIRBetweenPasses = cl::VerifyIR;
+  codeGenOpts.colors = cl::Colors;
   codeGenOpts.dumpFunctions.insert(
       cl::DumpFunctions.begin(), cl::DumpFunctions.end());
   codeGenOpts.noDumpFunctions.insert(
@@ -1080,7 +1119,8 @@ std::shared_ptr<Context> createContext(
   // Default is non-strict mode, unless it is typed..
   context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
   context->setEnableEval(cl::EnableEval);
-  context->setConvertES6Classes(cl::ES6Class);
+  context->setEnableES6BlockScoping(cl::ES6BlockScoping);
+  context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
@@ -1129,15 +1169,20 @@ std::shared_ptr<Context> createContext(
   }
 #endif
 
+#if HERMES_PARSE_FLOW
   // If no type parser is specified, use flow by default.
-  if (cl::Typed && !cl::ParseFlow && !cl::ParseTS)
+  if (cl::Typed && !cl::ParseFlow
+#if HERMES_PARSE_TS
+      && !cl::ParseTS
+#endif
+  )
     cl::ParseFlow = true;
 
-#if HERMES_PARSE_FLOW
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
   }
   context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
+  context->setParseFlowMatch(cl::ParseFlowMatch);
 #endif
 
 #if HERMES_PARSE_TS
@@ -1733,6 +1778,7 @@ CompileResult generateBytecodeForExecution(
       return BackendError;
     }
 
+    assert(BM && "BytecodeModule should not be null if no errors");
     result.bytecodeProvider = hbc::BCProviderFromSrc::createFromBytecodeModule(
         std::move(BM), std::move(compilationData));
   } else {
@@ -2016,6 +2062,7 @@ CompileResult processSourceFiles(
       cl::OutputSourceMap || cl::DebugInfoLevel == cl::DebugLevel::g0;
 
   genOptions.stripFunctionNames = cl::StripFunctionNames;
+  genOptions.reorderRegisters = cl::ReorderRegisters;
 
   // If the dump target is None, return bytecode in an executable form.
   if (cl::DumpTarget == Execute) {
@@ -2146,6 +2193,9 @@ void printHermesVersion(
 #endif
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
       << "    Unicode RegExp Property Escapes\n"
+#endif
+#if HERMESVM_JIT
+      << "    JIT\n"
 #endif
       << "    Zip file input\n";
   }

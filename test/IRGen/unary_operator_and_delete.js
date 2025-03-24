@@ -34,9 +34,9 @@ delete_test()
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "unary_operator_test": string
 // CHECK-NEXT:       DeclareGlobalVarInst "delete_test": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %unary_operator_test(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %unary_operator_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "unary_operator_test": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %delete_test(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %delete_test(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "delete_test": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any

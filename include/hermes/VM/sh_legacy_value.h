@@ -78,13 +78,13 @@
 /// more bits by relying on the 8-byte alignment of all our allocations and
 /// shifting the values to the right. That is still not needed however.
 ///
-/// Native Pointer Encoding
+/// Native Pointer/Value Encoding
 /// ================
-/// We also have limited support for storing a native pointer in a HermesValue.
-/// When doing so, we do not associate a tag with the native pointer and instead
-/// require that the pointer is a valid non-NaN double bit-for-bit. It is the
-/// caller's responsibility to keep track of where these native pointers are
-/// stored.
+/// We also have limited support for storing a native pointer or 32 bit "native"
+/// uint32 in a HermesValue. When doing so, we do not associate a tag with the
+/// native value and instead require that the value is a valid non-NaN double
+/// bit-for-bit. It is the caller's responsibility to keep track of where these
+/// native values are stored.
 ///
 /// Native pointers cannot be NaN-boxed because on platforms where the ARM
 /// memory tagging extension is enabled, the top byte may also have bits set
@@ -96,6 +96,10 @@
 /// Fortunately, since the native pointers will appear as doubles to anything
 /// other than the code that created them, anything that scans HermesValues
 /// (e.g. the GC or heap snapshots), will simply ignore them.
+///
+/// Unlike native pointers, native uint32 may be NaN-boxed since they can fit in
+/// the low bits of a NaN, but since we always know where they are, it is more
+/// efficient to avoid tagging them.
 
 #ifndef HERMES_SH_LEGACY_VALUE_H
 #define HERMES_SH_LEGACY_VALUE_H
@@ -105,6 +109,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "hermes/Support/sh_tryfast_fp_cvt.h"
 #include "hermes/VM/sh_config.h"
 
 #ifdef __cplusplus
@@ -114,8 +119,8 @@ extern "C" {
 /// Version of the HermesValue encoding format.
 /// Changing the format of HermesValue requires bumping this version number
 /// and fixing any code that relies on the layout of HermesValue.
-/// Updated: Aug 27, 2024
-#define HERMESVALUE_VERSION 1
+/// Updated: Feb 21, 2025
+#define HERMESVALUE_VERSION 2
 
 struct HermesValueBase {
   union {
@@ -137,7 +142,7 @@ enum HVTag {
   HVTag_EmptyInvalid = HVTag_First,
   HVTag_UndefinedNull,
   HVTag_BoolSymbol,
-  HVTag_NativeValue,
+  HVTag_Unused,
   /// Pointer tags start here.
   HVTag_FirstPointer,
   HVTag_Str = HVTag_FirstPointer,
@@ -160,8 +165,6 @@ enum HVETag {
   HVETag_Null = HVTag_UndefinedNull * 2 + 1,
   HVETag_Bool = HVTag_BoolSymbol * 2,
   HVETag_Symbol = HVTag_BoolSymbol * 2 + 1,
-  HVETag_Native1 = HVTag_NativeValue * 2,
-  HVETag_Native2 = HVTag_NativeValue * 2 + 1,
   HVETag_Str1 = HVTag_Str * 2,
   HVETag_Str2 = HVTag_Str * 2 + 1,
   HVETag_BigInt1 = HVTag_BigInt * 2,
@@ -170,6 +173,12 @@ enum HVETag {
   HVETag_Object2 = HVTag_Object * 2 + 1,
 
   HVETag_FirstPointer = HVETag_Str1,
+
+  /// This represents the last tag that corresponds either to a number, or a
+  /// value that can be encoded entirely in its most significant 29 bits, with
+  /// the rest being 0. This is used by HermesValue32 to determine whether the
+  /// value should be considered for storage in "compressed HV64" form.
+  HVETag_LastNumberOrCompressible = HVETag_Bool,
 };
 
 /// Number of bits used in the high part to encode the sign, exponent and tag.
@@ -185,6 +194,9 @@ static const uint64_t kHV_DataMask = (1ull << kHV_NumDataBits) - 1;
 
 static const unsigned kHV_ETagWidth = 4;
 static const unsigned kHV_ETagMask = (1 << kHV_ETagWidth) - 1;
+
+/// The value of a bool is encoded in the most significant bit after the ETag.
+static const unsigned kHV_BoolBitIdx = kHV_NumDataBits - 2;
 
 static inline SHLegacyValue _sh_ljs_encode_raw_tag(
     uint64_t val,
@@ -221,12 +233,15 @@ static inline SHLegacyValue _sh_ljs_native_pointer(void *p) {
   return (SHLegacyValue){(uintptr_t)p};
 }
 
+/// Encode a 32-bit unsigned integer bit-for-bit as a HermesValue. We know that
+/// the resulting value will always be a valid non-NaN double.
 static inline SHLegacyValue _sh_ljs_native_uint32(uint32_t val) {
-  return _sh_ljs_encode_raw_tag((uint64_t)val, HVTag_NativeValue);
+  return (SHLegacyValue){val};
 }
 
 static inline SHLegacyValue _sh_ljs_bool(bool b) {
-  return _sh_ljs_encode_raw_etag(b, HVETag_Bool);
+  // Bool occupies the most significant bit after the ETag.
+  return _sh_ljs_encode_raw_etag((uint64_t)b << kHV_BoolBitIdx, HVETag_Bool);
 }
 
 static inline SHLegacyValue _sh_ljs_object(void *p) {
@@ -255,6 +270,9 @@ static inline bool _sh_ljs_is_empty(SHLegacyValue v) {
 static inline bool _sh_ljs_is_bool(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Bool;
 }
+static inline bool _sh_ljs_is_symbol(SHLegacyValue v) {
+  return _sh_ljs_get_etag(v) == HVETag_Symbol;
+}
 static inline bool _sh_ljs_is_object(SHLegacyValue v) {
   return _sh_ljs_get_tag(v) == HVTag_Object;
 }
@@ -272,8 +290,8 @@ static inline bool _sh_ljs_is_string(SHLegacyValue v) {
 }
 
 static inline bool _sh_ljs_get_bool(SHLegacyValue v) {
-  // Clear the ETag and return the raw values that are left.
-  return (bool)(v.raw & 1);
+  // Bool occupies the most significant bit after the ETag.
+  return (bool)(v.raw & (1ull << kHV_BoolBitIdx));
 }
 static inline double _sh_ljs_get_double(SHLegacyValue v) {
   return v.f64;
@@ -286,45 +304,119 @@ static inline void *_sh_ljs_get_native_pointer(SHLegacyValue v) {
   return (void *)(uintptr_t)v.raw;
 }
 
+/// Get a native uint32 value stored in the SHLegacyValue. This must only be
+/// used in instances where the caller knows the type of this value, since
+/// there is no corresponding tag (it just looks like a double).
+static inline uint32_t _sh_ljs_get_native_uint32(SHLegacyValue v) {
+  return v.raw;
+}
+
+/// Test whether the value is a non-NaN number. Since we use
+/// NaN-boxing, this just checks if the parameter is NaN, which can have
+/// some performance advantages over _sh_ljs_is_double():
+///  1. Checking for NaN is typically a single instruction.
+///  2. The operation is done in a floating point register, which may avoid
+///     some moves if other users of the value are floating point operations.
+static inline bool _sh_ljs_is_non_nan_number(SHLegacyValue v) {
+  double d = v.f64;
+  // NaN is the only double value that does not compare equal to itself.
+  return d == d;
+}
+
+/// If the value is a number that can be efficiently truncated to a 32 bit
+/// number, return true and store the result in \p res. Otherwise, return
+/// false and leave \p res in an unspecified state.
+static inline bool _sh_ljs_tryfast_truncate_to_int32(
+    SHLegacyValue v,
+    int32_t *res) {
+// If we are compiling with ARM v8.3 or above, there is a special instruction
+// to do the conversion.
+#ifdef __ARM_FEATURE_JCVT
+  if (!_sh_ljs_is_non_nan_number(v))
+    return false;
+  *res = __builtin_arm_jcvt(v.f64);
+  return true;
+#endif
+
+  // Since we use NaN-boxing for non-number values, we know that any
+  // non-number values will fail the attempted conversion to int32. So we can
+  // simply attempt the conversion without checking for numbers.
+  if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
+    int64_t fast = _sh_tryfast_f64_to_i64_cvt(v.f64);
+    *res = (int32_t)fast;
+    return (double)fast == v.f64;
+  } else {
+    *res = _sh_tryfast_f64_to_i32_cvt(v.f64);
+    return (double)*res == v.f64;
+  }
+}
+
+/// Test whether the given HermesValues are both non-NaN number values.
+/// Since we use NaN-boxing, this just checks if either parameter is NaN, which
+/// can have some performance advantages over _sh_ljs_is_double():
+///  1. This can typically be done with a single comparison if the
+///     architecture provides a condition code that is set if either
+///     operand to a comparison is NaN (e.g. VS on ARM).
+///  2. The operation is done in a floating point register, which may avoid
+///     some moves if other users of the value are floating point operations.
+static inline bool _sh_ljs_are_both_non_nan_numbers(
+    SHLegacyValue a,
+    SHLegacyValue b) {
+  // We do not use isunordered() here because it may produce a call on some
+  // compilers (e.g. MSVC). Instead, we use a builtin when it is available, or
+  // fall back to checking each operand for NaN if it is not.
+#ifdef __has_builtin
+#if __has_builtin(__builtin_isunordered)
+  return !__builtin_isunordered(a.f64, b.f64);
+#endif
+#endif
+  return _sh_ljs_is_non_nan_number(a) && _sh_ljs_is_non_nan_number(b);
+}
+
 /// Flags associated with an object.
-typedef struct SHObjectFlags {
-  /// New properties cannot be added.
-  uint32_t noExtend : 1;
+typedef union {
+  struct {
+    /// New properties cannot be added.
+    uint32_t noExtend : 1;
 
-  /// \c Object.seal() has been invoked on this object, marking all properties
-  /// as non-configurable. When \c Sealed is set, \c NoExtend is always set too.
-  uint32_t sealed : 1;
+    /// \c Object.seal() has been invoked on this object, marking all properties
+    /// as non-configurable. When \c Sealed is set, \c NoExtend is always set
+    /// too.
+    uint32_t sealed : 1;
 
-  /// \c Object.freeze() has been invoked on this object, marking all properties
-  /// as non-configurable and non-writable. When \c Frozen is set, \c Sealed and
-  /// must \c NoExtend are always set too.
-  uint32_t frozen : 1;
+    /// \c Object.freeze() has been invoked on this object, marking all
+    /// properties as non-configurable and non-writable. When \c Frozen is set,
+    /// \c Sealed and must \c NoExtend are always set too.
+    uint32_t frozen : 1;
 
-  /// This object has indexed storage. This flag will not change at runtime, it
-  /// is set at construction and its value never changes. It is not a state.
-  uint32_t indexedStorage : 1;
+    /// This object has indexed storage. This flag will not change at runtime,
+    /// it is set at construction and its value never changes. It is not a
+    /// state.
+    uint32_t indexedStorage : 1;
 
-  /// This flag is set to true when \c IndexedStorage is true and
-  /// \c class->hasIndexLikeProperties are false. It allows our fast paths to do
-  /// a simple bit check.
-  uint32_t fastIndexProperties : 1;
+    /// This flag is set to true when \c IndexedStorage is true and
+    /// \c class->hasIndexLikeProperties are false. It allows our fast paths to
+    /// do a simple bit check.
+    uint32_t fastIndexProperties : 1;
 
-  /// This flag indicates this is a special object whose properties are
-  /// managed by C++ code, and not via the standard property storage
-  /// mechanisms.
-  uint32_t hostObject : 1;
+    /// This flag indicates this is a special object whose properties are
+    /// managed by C++ code, and not via the standard property storage
+    /// mechanisms.
+    uint32_t hostObject : 1;
 
-  /// this is lazily created object that must be initialized before it can be
-  /// used. Note that lazy objects must have no properties defined on them,
-  uint32_t lazyObject : 1;
+    /// this is lazily created object that must be initialized before it can be
+    /// used. Note that lazy objects must have no properties defined on them,
+    uint32_t lazyObject : 1;
 
-  /// This flag indicates this is a proxy exotic Object
-  uint32_t proxyObject : 1;
+    /// This flag indicates this is a proxy exotic Object
+    uint32_t proxyObject : 1;
 
-  /// A non-zero object id value, assigned lazily. It is 0 before it is
-  /// assigned. If an object started out as lazy, the objectID is the lazy
-  /// object index used to identify when it gets initialized.
-  uint32_t objectID : 24;
+    /// A non-zero object id value, assigned lazily. It is 0 before it is
+    /// assigned. If an object started out as lazy, the objectID is the lazy
+    /// object index used to identify when it gets initialized.
+    uint32_t objectID : 24;
+  };
+  uint32_t bits;
 } SHObjectFlags;
 
 #ifdef __cplusplus

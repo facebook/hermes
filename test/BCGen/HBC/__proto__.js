@@ -56,33 +56,32 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:[String 2]
 // CHECK-NEXT:Object Shape Table:
 // CHECK-NEXT:0[0, 3]
-// CHECK-NEXT:1[4, 2]
-// CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK-NEXT:1[7, 2]
+// CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r2, 0
 // CHECK-NEXT:    DeclareGlobalVar  "staticProto"
 // CHECK-NEXT:    DeclareGlobalVar  "dynamicProto"
-// CHECK-NEXT:    CreateClosure     r0, r2, Function<staticProto>
-// CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r0, 1, "staticProto"
-// CHECK-NEXT:    CreateClosure     r2, r2, Function<dynamicProto>
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 2, "dynamicProto"
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    GetGlobalObject   r2
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<staticProto>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "staticProto"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<dynamicProto>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "dynamicProto"
+// CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<staticProto>(1 params, 12 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<staticProto>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
-// CHECK-NEXT:    LoadConstNull     r2
-// CHECK-NEXT:    Mov               r3, r1
-// CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.silentSetPrototypeOf", 3
+// CHECK-NEXT:    LoadConstNull     r3
+// CHECK-NEXT:    Mov               r4, r1
+// CHECK-NEXT:    CallBuiltin       r2, "HermesBuiltin.silentSetPrototypeOf", 3
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<dynamicProto>(3 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
 // CHECK-NEXT:    NewObjectWithBuffer r2, 1, 13
-// CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    Call1             r1, r1, r0
 // CHECK-NEXT:    PutOwnBySlotIdx   r2, r1, 0
 // CHECK-NEXT:    LoadParam         r1, 2
@@ -99,10 +98,10 @@ function dynamicProto(func, getProto) {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// CHECK-NEXT:    bc 6: line 11 col 1
-// CHECK-NEXT:    bc 11: line 11 col 1
-// CHECK-NEXT:    bc 23: line 11 col 1
-// CHECK-NEXT:    bc 34: line 11 col 1
+// CHECK-NEXT:    bc 0: line 11 col 1
+// CHECK-NEXT:    bc 5: line 11 col 1
+// CHECK-NEXT:    bc 19: line 11 col 1
+// CHECK-NEXT:    bc 30: line 11 col 1
 // CHECK-NEXT:  0x0010  function idx 1, starts at line 11 col 1
 // CHECK-NEXT:    bc 11: line 12 col 10
 // CHECK-NEXT:  0x0017  function idx 2, starts at line 15 col 1

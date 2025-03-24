@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/Passes/OptParentEnvironment.h"
 #include "hermes/BCGen/HBC/Passes/PeepholeLowering.h"
 #include "hermes/BCGen/HBC/Passes/ReorderRegisters.h"
-#include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
@@ -33,38 +32,46 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   // LowerGeneratorFunction produces ThrowTypeErrorInst, so it should run before
   // PeepholeLowering.
   PM.addLowerGeneratorFunction();
+
+  // Scope lowering must run before OptParentEnvironment because it operates on
+  // LIRResolveScopeInst.
+  PM.addPass(createLowerScopes());
+
+  if (options.optimizationEnabled) {
+    // TODO(T204084366): TypeInference must run before OptEnvironmentInit,
+    // because the latter will remove stores that may affect the inferred type.
+    PM.addTypeInference();
+    // OptEnvironmentInit needs to run before LoadConstants and
+    // OptParentEnvironment.
+    PM.addPass(createOptEnvironmentInit());
+    // OptParentEnvironment needs to run before PeepholeLowering because the
+    // latter modifies the parent scope of closures.
+    PM.addPass(createOptParentEnvironment());
+  }
+
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.
-  PM.addPass(new PeepholeLowering());
-  PM.addPass(createLowerScopes());
+  PM.addPass(createPeepholeLowering(options.optimizationEnabled));
   // LowerBuilinCalls needs to run before the rest of the lowering.
-  PM.addPass(new LowerBuiltinCalls());
+  PM.addPass(createLowerBuiltinCalls());
+  // Turn Calls into CallNs.
   PM.addPass(new LowerCalls());
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
   PM.addPass(new LowerNumericProperties());
   // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
-  // AllocObjectInst, StoreNewOwnPropertyInst and StorePropertyInst.
+  // AllocObjectInst, DefineNewOwnPropertyInst and StorePropertyInst.
   PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
   PM.addPass(new DedupReifyArguments());
   PM.addPass(new LowerSwitchIntoJumpTables());
   PM.addPass(new SwitchLowering());
-  if (options.optimizationEnabled) {
-    // TODO(T204084366): TypeInference must run before OptEnvironmentInit,
-    // because the latter will remove stores that may affect the inferred type.
-    PM.addTypeInference();
-    // OptEnvironmentInit needs to run before LowerConstants.
-    PM.addPass(createOptEnvironmentInit());
-  }
   PM.addPass(new LoadConstants());
   if (options.optimizationEnabled) {
-    PM.addPass(createOptParentEnvironment());
     // Reduce comparison and conditional jump to single comparison jump
     PM.addPass(new LowerCondBranch());
-    // Turn Calls into CallNs.
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
     // Eliminate common HBCLoadConstInsts.
@@ -75,9 +82,6 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
     // Drop unused LoadParamInsts.
     PM.addDCE();
   }
-
-  // Move StartGenerator instructions to the start of functions.
-  PM.addHoistStartGenerator();
 
   if (!PM.run(M))
     return;
@@ -99,7 +103,9 @@ void lowerAllocatedFunctionIR(
   PassManager PM("HBC LowerAllocatedFunctionIR");
   if (options.optimizationEnabled) {
     PM.addPass(new MovElimination(RA));
-    PM.addPass(new ReorderRegisters(RA));
+    if (options.reorderRegisters) {
+      PM.addPass(new ReorderRegisters(RA));
+    }
   }
   PM.addPass(new LowerStoreInstrs(RA));
   PM.addPass(new InitCallFrame(RA));

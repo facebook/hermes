@@ -6,6 +6,8 @@
  */
 
 #include "hermes/BCGen/RegAlloc.h"
+
+#include "LivenessRegAllocIRPrinter.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -28,7 +30,23 @@ llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
   if (!reg.isValid()) {
     OS << "Null";
   } else {
-    OS << "Reg" << reg.getIndex();
+    switch (reg.getClass()) {
+      case RegClass::NoOutput:
+        OS << "empty";
+        break;
+      case RegClass::Number:
+        OS << "n";
+        break;
+      case RegClass::NonPtr:
+        OS << "np";
+        break;
+      case RegClass::Other:
+        OS << "r";
+        break;
+      case RegClass::_last:
+        hermes_fatal("Invalid register class");
+    }
+    OS << reg.getIndexInClass();
   }
 
   return OS;
@@ -52,8 +70,26 @@ llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
   return OS;
 }
 
+/// \return the register class of the instruction \p I.
+RegClass RegisterAllocator::getRegClass(Instruction *inst) {
+  if (!inst->hasOutput())
+    return RegClass::NoOutput;
+  // Treat all registers when there's a try as a pointer.
+  // We need the JIT to store them in the stack frame so that stores persist
+  // after longjmp back to handle exceptions, and the setjmp will be at the
+  // start of the function.
+  if (hasTry_)
+    return RegClass::Other;
+  Type t = inst->getType();
+  if (t.isNumberType())
+    return RegClass::Number;
+  if (t.isNonPtr())
+    return RegClass::NonPtr;
+  return RegClass::Other;
+}
+
 bool RegisterFile::isUsed(Register r) {
-  return !registers.test(r.getIndex());
+  return !registers(r.getClass()).test(r.getIndexInClass());
 }
 
 bool RegisterFile::isFree(Register r) {
@@ -64,50 +100,70 @@ void RegisterFile::killRegister(Register reg) {
   LLVM_DEBUG(dbgs() << "-- Releasing the register " << reg << "\n");
 
   assert(isUsed(reg) && "Killing an unused register!");
-  registers.set(reg.getIndex());
+  registers(reg.getClass()).set(reg.getIndexInClass());
   assert(isFree(reg) && "Error freeing register!");
+}
+
+void RegisterFile::convertTypeSpecificRegsToOther() {
+  size_t toAdd = 0;
+  static_assert((int)RegClass::NoOutput == 0, "NoOutput must be 0");
+  static_assert(
+      (int)RegClass::Other == (int)RegClass::_last - 1,
+      "Other must be the last class");
+  for (size_t i = 1; i < (size_t)RegClass::Other; ++i) {
+    // All non-Other registers are type-specific.
+    toAdd += registers_[i].count();
+    registers_[i].clear();
+  }
+  size_t newSize = toAdd + registers(RegClass::Other).size();
+  // None of the new registers are free, they're all pulled from the other
+  // classes, but it doesn't really matter because this function is only called
+  // after RegAlloc is done.
+  registers(RegClass::Other).resize(newSize, false);
 }
 
 void RegisterFile::verify() {}
 
 void RegisterFile::dump() {
   llvh::outs() << "\n";
-  for (unsigned i = 0; i < registers.size(); i++) {
-    llvh::outs() << (int)!registers.test(i);
+  for (size_t c = 0; c < (size_t)RegClass::_last; ++c) {
+    for (size_t i = 0, e = registers((RegClass)c).size(); i < e; ++i) {
+      llvh::outs() << (int)!registers((RegClass)c).test(i);
+    }
   }
   llvh::outs() << "\n";
 }
 
-Register RegisterFile::allocateRegister() {
+Register RegisterFile::allocateRegister(RegClass regClass) {
   // We first check for the 'all' case because we usually have a small number of
   // active bits (<64), so this operation is actually faster than the linear
   // scan.
-  if (registers.none()) {
+  if (registers(regClass).none()) {
     // If all bits are set, create a new register and return it.
-    unsigned numRegs = registers.size();
-    registers.resize(numRegs + 1, false);
-    Register R = Register(numRegs);
+    unsigned numRegs = registers(regClass).size();
+    registers(regClass).resize(numRegs + 1, false);
+    Register R = Register(regClass, numRegs);
     assert(isUsed(R) && "Error allocating a new register.");
     LLVM_DEBUG(dbgs() << "-- Creating the new register " << R << "\n");
     return R;
   }
 
   // Search for a free register to use.
-  int i = registers.find_first();
+  int i = registers(regClass).find_first();
   assert(i >= 0 && "Unexpected failure to allocate a register");
-  Register R(i);
+  Register R(regClass, (RegIndex)i);
   LLVM_DEBUG(dbgs() << "-- Assigning the free register " << R << "\n");
   assert(isFree(R) && "Error finding a free register");
-  registers.reset(i);
+  registers(regClass).reset(i);
   return R;
 }
 
-Register RegisterFile::tailAllocateConsecutive(unsigned n) {
+Register RegisterFile::tailAllocateConsecutive(RegClass regClass, unsigned n) {
   assert(n > 0 && "Can't request zero registers");
 
-  int lastUsed = registers.size() - 1;
+  int lastUsed = registers(regClass).size() - 1;
   while (lastUsed >= 0) {
-    if (!registers.test(lastUsed))
+    if (!registers(regClass).test(lastUsed))
       break;
 
     lastUsed--;
@@ -117,13 +173,23 @@ Register RegisterFile::tailAllocateConsecutive(unsigned n) {
 
   LLVM_DEBUG(
       dbgs() << "-- Found the last set bit at offset " << lastUsed << "\n");
-  registers.resize(std::max(registers.size(), firstClear + n), true);
-  registers.reset(firstClear, firstClear + n);
+  registers(regClass).resize(
+      std::max(registers(regClass).size(), firstClear + n), true);
+  registers(regClass).reset(firstClear, firstClear + n);
 
   LLVM_DEBUG(
       dbgs() << "-- Allocated tail consecutive registers of length " << n
-             << ", starting at " << Register(firstClear) << "\n");
-  return Register(firstClear);
+             << ", starting at " << Register(regClass, firstClear) << "\n");
+  return Register(regClass, firstClear);
+}
+
+RegisterAllocator::RegisterAllocator(Function *func) : F(func) {
+  for (auto &BB : *F) {
+    if (llvh::isa<TryStartInst>(BB.getTerminator())) {
+      hasTry_ = true;
+      break;
+    }
+  }
 }
 
 /// \returns true if the PHI node has an external user (that requires a
@@ -513,12 +579,16 @@ void RegisterAllocator::coalesce(
 }
 
 void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
+  // Only use RegClass::Other in this pass for now.
+  // TODO: Extend this in the future to have multiple register classes,
+  // which will require extra state in freeBlockLocals.
+
   // Make sure Phis and related Movs get the same register
   for (auto *bb : order) {
     for (auto &inst : *bb) {
       handleInstruction(&inst);
       if (auto *phi = llvh::dyn_cast<PhiInst>(&inst)) {
-        auto reg = file.allocateRegister();
+        auto reg = file.allocateRegister(RegClass::Other);
         updateRegister(phi, reg);
         for (int i = 0, e = phi->getNumEntries(); i < e; i++) {
           updateRegister(phi->getEntry(i).first, reg);
@@ -538,7 +608,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
   llvh::SmallVector<Register, 8> freeBlockLocals;
 
   // A dummy register used for all instructions that have no users.
-  Register deadReg = file.allocateRegister();
+  Register deadReg = file.allocateRegister(RegClass::Other);
 
   // Iterate in reverse, so we can cheaply determine whether an instruction
   // is local, and assign it a register accordingly.
@@ -548,7 +618,8 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
         // If this is using a local register, we know the register is free after
         // we visit the definition.
         auto reg = getRegister(&inst);
-        auto idx = reg.getIndex();
+        assert(reg.getClass() == RegClass::Other);
+        auto idx = reg.getIndexInClass();
         if (idx < blockLocals.size() && blockLocals.test(idx))
           freeBlockLocals.push_back(reg);
       } else {
@@ -568,7 +639,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
 
         if (op->getParent() != bb) {
           // Live across blocks, allocate a global regigster.
-          updateRegister(op, file.allocateRegister());
+          updateRegister(op, file.allocateRegister(RegClass::Other));
           continue;
         }
 
@@ -583,10 +654,11 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
         }
 
         // No free local register, allocate another one.
-        Register reg = file.allocateRegister();
-        if (blockLocals.size() <= reg.getIndex())
-          blockLocals.resize(reg.getIndex() + 1);
-        blockLocals.set(reg.getIndex());
+        Register reg = file.allocateRegister(RegClass::Other);
+        assert(reg.getClass() == RegClass::Other);
+        if (blockLocals.size() <= reg.getIndexInClass())
+          blockLocals.resize(reg.getIndexInClass() + 1);
+        blockLocals.set(reg.getIndexInClass());
         updateRegister(op, reg);
       }
     }
@@ -738,7 +810,7 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
 
     // Allocate a register for the live interval that we are currently handling.
     if (!isAllocated(inst)) {
-      Register R = file.allocateRegister();
+      Register R = file.allocateRegister(getRegClass(inst));
       updateRegister(inst, R);
     }
 
@@ -858,54 +930,23 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
   } // for each block.
 }
 
-struct LivenessRegAllocIRPrinter : irdumper::IRPrinter {
-  RegisterAllocator &allocator;
-
-  explicit LivenessRegAllocIRPrinter(
-      RegisterAllocator &RA,
-      llvh::raw_ostream &ost,
-      bool escape = false)
-      : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
-
-  bool printInstructionDestination(Instruction *I) override {
-    const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
-
-    if (!allocator.isAllocated(I)) {
-      os_ << "$???";
-    } else {
-      os_ << "$" << allocator.getRegister(I);
-    }
-
-    if (codeGenOpts.dumpRegisterInterval) {
-      os_ << " ";
-      if (allocator.hasInstructionNumber(I)) {
-        auto idx = allocator.getInstructionNumber(I);
-        Interval &ivl = allocator.getInstructionInterval(I);
-        os_ << "@" << idx << " " << ivl << "\t";
-      } else {
-        os_ << "          \t";
-      }
-    }
-    return true;
-  }
-
-  void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    if (allocator.isAllocated(V)) {
-      os_ << "$" << allocator.getRegister(V);
-    } else {
-      IRPrinter::printValueLabel(I, V, opIndex);
-    }
-  }
-};
-
 void RegisterAllocator::dump() {
-  LivenessRegAllocIRPrinter Printer(*this, llvh::outs());
+  LivenessRegAllocIRPrinter<RegisterAllocator, RegClass> Printer(
+      *this, llvh::outs());
   Printer.visitFunction(*F);
 }
 
 Register RegisterAllocator::getRegister(Value *I) {
   assert(isAllocated(I) && "Instruction is not allocated!");
   return allocated[I];
+}
+
+hermes::OptValue<Register> RegisterAllocator::getOptionalRegister(
+    Value *I) const {
+  if (auto it = allocated.find(I); it != allocated.end())
+    return it->second;
+  else
+    return llvh::None;
 }
 
 void RegisterAllocator::updateRegister(Value *I, Register R) {
@@ -916,13 +957,15 @@ bool RegisterAllocator::isAllocated(Value *I) {
   return allocated.count(I);
 }
 
-Register RegisterAllocator::reserve(unsigned count) {
-  return file.tailAllocateConsecutive(count);
+Register RegisterAllocator::reserve(RegClass regClass, unsigned count) {
+  return file.tailAllocateConsecutive(regClass, count);
 }
 
-Register RegisterAllocator::reserve(ArrayRef<Value *> values) {
+Register RegisterAllocator::reserve(
+    RegClass regClass,
+    ArrayRef<Value *> values) {
   assert(!values.empty() && "Can't reserve zero registers");
-  Register first = file.tailAllocateConsecutive(values.size());
+  Register first = file.tailAllocateConsecutive(regClass, values.size());
 
   Register T = first;
   for (auto *v : values) {
@@ -952,12 +995,16 @@ unsigned RegisterAllocator::getInstructionNumber(Instruction *I) {
   return newIdx;
 }
 
+void RegisterAllocator::convertTypeSpecificRegsToOther() {
+  file.convertTypeSpecificRegsToOther();
+}
+
 unsigned llvh::DenseMapInfo<Register>::getHashValue(Register Val) {
-  return Val.getIndex();
+  return Val.value_;
 }
 
 bool llvh::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
-  return LHS.getIndex() == RHS.getIndex();
+  return LHS == RHS;
 }
 
 #undef DEBUG_TYPE

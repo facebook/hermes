@@ -63,23 +63,23 @@ C_STRING((function() {
   function prettyPrintPromise(value, visited) {
     var internalColor = colors.cyan;
     var internals = "";
-    switch(value['_i']) {
+    switch(value['_y']) {
       case 0:
         internals = "<pending>";
         break;
       case 1:
         internals = "<fulfilled: " + colors.reset +
-            prettyPrintRec(value['_j'], visited) +
+            prettyPrintRec(value['_z'], visited) +
             internalColor + ">";
         break;
       case 2:
         internals = "<rejected: " + colors.reset +
-            prettyPrintRec(value['_j'], visited) +
+            prettyPrintRec(value['_z'], visited) +
             internalColor + ">";
         break;
       case 3:
         // the case of an "adopted" promise; print the adoptee promise instead.
-        return prettyPrintPromise(value['_j'], visited);
+        return prettyPrintPromise(value['_z'], visited);
       default:
         break;
     };
@@ -87,7 +87,7 @@ C_STRING((function() {
 
     var elements = [];
     var propNames = Object.getOwnPropertyNames(value);
-    var internalNames = ['_h', '_i', '_j', '_k'];
+    var internalNames = ['_x', '_y', '_z', '_A'];
     for (var i = 0; i < propNames.length; ++i) {
       var prop = propNames[i];
       // hide internal properties.

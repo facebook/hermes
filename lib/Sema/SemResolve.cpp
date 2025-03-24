@@ -11,7 +11,6 @@
 #include "FlowChecker.h"
 #include "FlowTypesDumper.h"
 #include "SemanticResolver.h"
-#include "hermes/AST/ES6Class.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/Support/PerfSection.h"
 
@@ -49,9 +48,12 @@ class ASTPrinter {
     os_ << "\n";
   }
 
+#if HERMES_PARSE_FLOW
   bool shouldVisit(ESTree::TypeAnnotationNode *V) {
     return false;
   }
+#endif
+
   bool shouldVisit(ESTree::Node *V) {
     // If current parent node has been linearized, skip visiting children node.
     return !parentLinearized_;
@@ -160,21 +162,20 @@ bool resolveAST(
     flow::FlowContext *flowContext,
     ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls) {
-  if (astContext.getConvertES6Classes())
-    transformES6Classes(astContext, root);
-
   PerfSection validation("Resolving JavaScript global AST");
   // Resolve the entire AST.
   DeclCollectorMapTy declCollectorMap{};
   SemanticResolver resolver{
       astContext,
       semCtx,
-      ambientDecls,
+      &ambientDecls,
       flowContext ? &declCollectorMap : nullptr,
-      true};
+      true,
+      flowContext != nullptr};
   if (!resolver.run(root))
     return false;
 
+#if HERMES_PARSE_FLOW
   if (flowContext) {
     flow::FlowChecker checker(
         astContext, semCtx, *flowContext, declCollectorMap, true);
@@ -184,6 +185,7 @@ bool resolveAST(
     if (!lowerAST(astContext, semCtx, *flowContext, programNode))
       return false;
   }
+#endif
 
   return true;
 }
@@ -196,7 +198,12 @@ bool resolveASTLazy(
     bool parentHadSuperBinding) {
   PerfSection validation("Resolving JavaScript lazy AST");
   // Resolve the entire AST.
-  SemanticResolver resolver{astContext, semCtx, {}, nullptr, true};
+  SemanticResolver resolver{
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      /* saveDecls */ nullptr,
+      /* compile */ true};
   return resolver.runLazy(root, semInfo, parentHadSuperBinding);
 }
 
@@ -208,7 +215,12 @@ bool resolveASTInScope(
     bool parentHadSuperBinding) {
   PerfSection validation("Resolving JavaScript AST");
   // Resolve the entire AST.
-  SemanticResolver resolver{astContext, semCtx, {}, nullptr, true};
+  SemanticResolver resolver{
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      /* saveDecls */ nullptr,
+      /* compile */ true};
   return resolver.runInScope(root, semInfo, parentHadSuperBinding);
 }
 
@@ -220,7 +232,11 @@ bool resolveCommonJSAST(
   PerfSection validation("Resolving JavaScript CommonJS Module AST");
   DeclCollectorMapTy declCollectorMap{};
   SemanticResolver resolver{
-      astContext, semCtx, {}, flowContext ? &declCollectorMap : nullptr, true};
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      flowContext ? &declCollectorMap : nullptr,
+      /* compile */ true};
   if (!resolver.runCommonJSModule(root))
     return false;
 
@@ -275,7 +291,12 @@ bool resolveASTForParser(
     Context &astContext,
     SemContext &semCtx,
     ESTree::Node *root) {
-  SemanticResolver resolver{astContext, semCtx, {}, nullptr, false};
+  SemanticResolver resolver{
+      astContext,
+      semCtx,
+      /* ambientDecls */ nullptr,
+      /* saveDecls */ nullptr,
+      /* compile */ false};
   return resolver.run(llvh::cast<ESTree::ProgramNode>(root));
 }
 

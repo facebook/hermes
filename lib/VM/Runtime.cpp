@@ -10,10 +10,11 @@
 #include "hermes/VM/Runtime.h"
 
 #include "hermes/BCGen/HBC/BCProvider.h"
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Platform/Logging.h"
+#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/AlignedHeapSegment.h"
@@ -23,12 +24,15 @@
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/HeapRuntime.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSMapImpl.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PredefinedStringIDs.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
@@ -44,10 +48,6 @@
 #include "hermes/InternalJavaScript/InternalBytecode.h"
 #endif
 
-#ifndef HERMESVM_LEAN
-#include "hermes/Support/MemoryBuffer.h"
-#endif
-
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/Debug.h"
@@ -59,6 +59,7 @@
 #include "llvh/ADT/DenseMap.h"
 #endif
 
+#include <cstring>
 #include <future>
 
 #ifdef __EMSCRIPTEN__
@@ -86,7 +87,7 @@ static constexpr uint32_t kMaxSupportedNumRegisters =
 /// The minimum stack gap allowed from RuntimeConfig.
 static constexpr uint32_t kMinSupportedNativeStackGap =
 #if LLVM_ADDRESS_SANITIZER_BUILD
-    512 * 1024;
+    256 * 1024;
 #else
     64 * 1024;
 #endif
@@ -159,7 +160,7 @@ std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
   uint64_t maxHeapSize = runtimeConfig.getGCConfig().getMaxHeapSize();
   // Allow some extra segments for the runtime, and as a buffer for the GC.
   uint64_t providerSize = std::min<uint64_t>(
-      1ULL << 32, maxHeapSize + AlignedHeapSegment::storageSize() * 4);
+      1ULL << 32, maxHeapSize + FixedSizeHeapSegment::storageSize() * 4);
   std::shared_ptr<StorageProvider> sp =
       StorageProvider::contiguousVAProvider(providerSize);
   auto rt = HeapRuntime<Runtime>::create(sp);
@@ -177,7 +178,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
     Handle<JSObject> obj,
     PropCacheID id) {
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
-  auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
+  auto *cacheEntry = &fixedReadPropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
@@ -188,12 +189,12 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   NamedPropertyDescriptor desc;
   // Check writable and internalSetter flags since the cache slot is shared for
   // get/put.
-  if (LLVM_LIKELY(
-          JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc)) &&
-      !desc.flags.accessor && desc.flags.writable &&
-      !desc.flags.internalSetter) {
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc);
+  if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
+      desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
-    if (LLVM_LIKELY(!clazz->isDictionary())) {
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache())) {
       // Cache the class, id and property slot.
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
@@ -208,19 +209,19 @@ ExecutionStatus Runtime::putNamedThrowOnError(
     PropCacheID id,
     SmallHermesValue shv) {
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
-  auto *cacheEntry = &fixedPropCache_[static_cast<int>(id)];
+  auto *cacheEntry = &fixedWritePropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     JSObject::setNamedSlotValueUnsafe(*obj, *this, cacheEntry->slot, shv);
     return ExecutionStatus::RETURNED;
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
   NamedPropertyDescriptor desc;
-  if (LLVM_LIKELY(
-          JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc)) &&
-      !desc.flags.accessor && desc.flags.writable &&
-      !desc.flags.internalSetter) {
+  OptValue<bool> hasOwnProp =
+      JSObject::tryGetOwnNamedDescriptorFast(*obj, *this, sym, desc);
+  if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
+      desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
-    if (LLVM_LIKELY(!clazz->isDictionary())) {
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache())) {
       // Cache the class and property slot.
       cacheEntry->clazz = clazzPtr;
       cacheEntry->slot = desc.slot;
@@ -252,7 +253,12 @@ void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
       reinterpret_cast<char *>(lowLim) - (idx << AlignedHeapSegment::kLogSize);
   segmentMap[idx] = bias;
 #endif
-  assert(lowLim == AlignedHeapSegment::storageStart(lowLim) && "Precondition");
+  // Ideally we need to assert that lowLim is the start address of the segment,
+  // but the approach for computing segment start address does not work for
+  // JumboHeapSegment.
+  assert(
+      (uintptr_t)(lowLim) % AlignedHeapSegment::kSegmentUnitSize == 0 &&
+      "Segment start address should be aligned to kSegmentUnitSize");
   AlignedHeapSegment::setSegmentIndexFromStart(lowLim, idx);
 }
 
@@ -276,9 +282,8 @@ Runtime::Runtime(
           std::move(provider),
           runtimeConfig.getVMExperimentFlags()),
       jitContext_(runtimeConfig.getEnableJIT()),
-      hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
-      hasES6Class_(runtimeConfig.getES6Class()),
+      hasES6BlockScoping_(runtimeConfig.getES6BlockScoping()),
       hasIntl_(runtimeConfig.getIntl()),
       hasArrayBuffer_(runtimeConfig.getArrayBuffer()),
       hasMicrotaskQueue_(runtimeConfig.getMicrotaskQueue()),
@@ -297,6 +302,8 @@ Runtime::Runtime(
       overflowGuard_(StackOverflowGuard::depthCounterGuard(
           Runtime::MAX_NATIVE_CALL_FRAME_DEPTH)),
 #endif
+      builtins_(static_cast<Callable **>(
+          checkedCalloc(BuiltinMethod::_count, sizeof(Callable *)))),
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
       codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(*this)),
@@ -396,6 +403,34 @@ Runtime::Runtime(
       clazz = *addResult->first;
       rootClazzes_[i] = clazz.getHermesValue();
     }
+
+    // Create a separate hierarchy of hidden classes for lazy objects, Proxy and
+    // HostObject, for lazy objects so that they never
+    // compare equal to ordinary objects.
+    clazz = vmcast<HiddenClass>(
+        ignoreAllocationFailure(HiddenClass::createRoot(*this)));
+
+    // For lazy objects, they should just use this empty HiddenClass until they
+    // are actually populated.
+    lazyObjectClass = clazz;
+
+    for (unsigned i = 1; i <= std::max(
+                                  {JSObject::numOverlapSlots<JSProxy>(),
+                                   JSObject::numOverlapSlots<JSCallableProxy>(),
+                                   JSObject::numOverlapSlots<HostObject>()});
+         ++i) {
+      auto addResult = HiddenClass::reserveSlot(clazz, *this);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      clazz = *addResult->first;
+      if (i == JSObject::numOverlapSlots<JSProxy>())
+        proxyClass = clazz;
+      if (i == JSObject::numOverlapSlots<JSCallableProxy>())
+        callableProxyClass = clazz;
+      if (i == JSObject::numOverlapSlots<HostObject>())
+        hostObjectClass = clazz;
+    }
   }
 
   global_ = JSObject::create(*this, makeNullHandle<JSObject>());
@@ -426,7 +461,7 @@ Runtime::Runtime(
   codeCoverageProfiler_->restore();
 
   // Populate JS builtins returned from internal bytecode to the builtins table.
-  initJSBuiltins(builtins_, jsBuiltinsObj);
+  initJSBuiltins(jsBuiltinsObj);
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (runtimeConfig.getEnableSampleProfiling())
@@ -592,8 +627,8 @@ void Runtime::markRoots(
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Builtins);
     acceptor.beginRootSection(RootAcceptor::Section::Builtins);
-    for (Callable *&f : builtins_)
-      acceptor.acceptPtr(f);
+    for (size_t i = 0; i < BuiltinMethod::_count; ++i)
+      acceptor.acceptPtr(builtins_[i]);
     acceptor.endRootSection();
   }
 
@@ -684,7 +719,10 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
   // dead from runtimeModuleList_, before marking long-lived WeakRoots in them.
   markDomainRefInRuntimeModules(acceptor);
   if (markLongLived) {
-    for (auto &entry : fixedPropCache_) {
+    for (auto &entry : fixedWritePropCache_) {
+      acceptor.acceptWeak(entry.clazz);
+    }
+    for (auto &entry : fixedReadPropCache_) {
       acceptor.acceptWeak(entry.clazz);
     }
     for (auto &rm : runtimeModuleList_)
@@ -797,6 +835,14 @@ void Runtime::removeRuntimeModule(RuntimeModule *rm) {
 }
 
 #ifndef NDEBUG
+void Runtime::assertTopCodeBlockContainsIP(const inst::Inst *ip) const {
+  // Check that if the topmost function is currently a JSFunction, then the IP
+  // is in that function.
+  if (currentFrame_ != StackFramePtr(registerStackStart_))
+    if (auto *codeBlock = currentFrame_.getCalleeCodeBlock())
+      assert(codeBlock->contains(ip) && "IP not in CodeBlock");
+}
+
 void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Do array capacity histogram.
   // Map from array size to number of arrays that are that size.
@@ -983,9 +1029,6 @@ CallResult<HermesValue> Runtime::run(
     llvh::StringRef code,
     llvh::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
-#ifdef HERMESVM_LEAN
-  return raiseEvalUnsupported(code);
-#else
   std::unique_ptr<hermes::Buffer> buffer;
   if (compileFlags.lazy) {
     buffer.reset(new hermes::OwnedMemoryBuffer(
@@ -995,24 +1038,18 @@ CallResult<HermesValue> Runtime::run(
         new hermes::OwnedMemoryBuffer(llvh::MemoryBuffer::getMemBuffer(code)));
   }
   return run(std::move(buffer), sourceURL, compileFlags);
-#endif
 }
 
 CallResult<HermesValue> Runtime::run(
     std::unique_ptr<hermes::Buffer> code,
     llvh::StringRef sourceURL,
     const hbc::CompileFlags &compileFlags) {
-#ifdef HERMESVM_LEAN
-  auto buffer = code.get();
-  return raiseEvalUnsupported(llvh::StringRef(
-      reinterpret_cast<const char *>(buffer->data()), buffer->size()));
-#else
-  std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
+  std::unique_ptr<hbc::BCProvider> bytecode;
   {
     PerfSection loading("Loading new JavaScript code");
     loading.addArg("url", sourceURL);
-    auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        std::move(code), sourceURL, /* sourceMap */ nullptr, compileFlags);
+    auto bytecode_err = hbc::createBCProviderFromSrc(
+        std::move(code), sourceURL, /* sourceMap */ {}, compileFlags);
     if (!bytecode_err.first) {
       return raiseSyntaxError(TwineChar16(bytecode_err.second));
     }
@@ -1025,7 +1062,6 @@ CallResult<HermesValue> Runtime::run(
     rmflags.persistent = true;
   return runBytecode(
       std::move(bytecode), rmflags, sourceURL, makeNullHandle<Environment>());
-#endif
 }
 
 CallResult<HermesValue> Runtime::runBytecode(
@@ -1039,7 +1075,7 @@ CallResult<HermesValue> Runtime::runBytecode(
 
   auto globalFunctionIndex = bytecode->getGlobalFunctionIndex();
 
-  if (bytecode->getBytecodeOptions().staticBuiltins && !builtinsFrozen_) {
+  if (bytecode->getBytecodeOptions().getStaticBuiltins() && !builtinsFrozen_) {
     if (assertBuiltinsUnmodified() == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1047,23 +1083,13 @@ CallResult<HermesValue> Runtime::runBytecode(
     assert(builtinsFrozen_ && "Builtins must be frozen by now.");
   }
 
-  if (!flags.ignoreES6PromiseChecks && bytecode->getBytecodeOptions().hasAsync && !hasES6Promise_) {
-    return raiseTypeError(
-        "Cannot execute a bytecode having async functions when Promise is disabled.");
-  }
-
   if (flags.persistent) {
-#ifndef HERMESVM_LEAN
     // Persistent flag can't be true if the BCProvider doesn't support it.
-    if (auto *providerFromSrc =
-            llvh::dyn_cast<hbc::BCProviderFromSrc>(bytecode.get())) {
-      if (LLVM_UNLIKELY(!providerFromSrc->allowPersistent())) {
-        const char *msg = "Cannot enable persistent mode for lazy compilation";
-        hermesLog("Hermes", "%s", msg);
-        hermes_fatal(msg);
-      }
+    if (LLVM_UNLIKELY(!bytecode->allowPersistent())) {
+      const char *msg = "Cannot enable persistent mode for lazy compilation";
+      hermesLog("Hermes", "%s", msg);
+      hermes_fatal(msg);
     }
-#endif
 
     persistentBCProviders_.push_back(bytecode);
     if (bytecodeWarmupPercent_ > 0) {
@@ -1178,7 +1204,18 @@ Handle<JSObject> Runtime::runInternalJavaScript() {
     return makeHandle<JSObject>(HermesValue::fromRaw(resOrExc.raw));
   hermes_fatal("Error evaluating internal unit.");
 #else
-  auto module = getInternalBytecode();
+  llvh::ArrayRef<uint8_t> module = getInternalBytecode();
+
+#ifdef HERMES_ENABLE_DEBUGGER
+  // If the debugger is enabled we need to be able to set breakpoints in
+  // internal bytecode. Copy it into the heap to allow mutating it.
+  // Copy module into internalBytecodeCopy_ and use that instead.
+  internalBytecodeCopy_.reset(
+      static_cast<uint8_t *>(checkedMalloc(module.size())));
+  std::memcpy(internalBytecodeCopy_.get(), module.data(), module.size());
+  module = {internalBytecodeCopy_.get(), module.size()};
+#endif
+
   std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcResult =
       hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
           std::make_unique<Buffer>(module.data(), module.size()));
@@ -1737,8 +1774,6 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
 void Runtime::initNativeBuiltins() {
   GCScopeMarkerRAII gcScope{*this};
 
-  builtins_.resize(BuiltinMethod::_count);
-
   (void)forEachPublicNativeBuiltin([this](
                                        unsigned methodIndex,
                                        bool /*frozen*/,
@@ -1752,12 +1787,13 @@ void Runtime::initNativeBuiltins() {
     assert(
         vmisa<NativeFunction>(cr->get()) &&
         "getNamed() of builtin method must be a NativeFunction");
-    builtins_[methodIndex] = vmcast<NativeFunction>(cr->get());
+    registerBuiltin(
+        (BuiltinMethod::Enum)methodIndex, vmcast<NativeFunction>(cr->get()));
     return ExecutionStatus::RETURNED;
   });
 
   // Now add the private native builtins.
-  createHermesBuiltins(*this, builtins_);
+  createHermesBuiltins(*this);
 #ifndef NDEBUG
   // Make sure native builtins are all defined.
   for (unsigned i = 0; i < BuiltinMethod::_firstJS; ++i) {
@@ -1781,9 +1817,7 @@ static const struct JSBuiltin {
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 
-void Runtime::initJSBuiltins(
-    llvh::MutableArrayRef<Callable *> builtins,
-    Handle<JSObject> jsBuiltinsObj) {
+void Runtime::initJSBuiltins(Handle<JSObject> jsBuiltinsObj) {
   for (const JSBuiltin &jsBuiltin : jsBuiltins) {
     auto symID = jsBuiltin.symID;
     auto builtinIndex = jsBuiltin.builtinIndex;
@@ -1794,7 +1828,7 @@ void Runtime::initJSBuiltins(
     assert(getRes == ExecutionStatus::RETURNED && "Failed to get JS builtin.");
     Callable *jsFunc = vmcast<Callable>(getRes->getHermesValue());
 
-    builtins[builtinIndex] = jsFunc;
+    registerBuiltin((BuiltinMethod::Enum)builtinIndex, jsFunc);
   }
 }
 
@@ -1831,7 +1865,7 @@ ExecutionStatus Runtime::assertBuiltinsUnmodified() {
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto currentBuiltin = dyn_vmcast<NativeFunction>(std::move(cr->get()));
+    auto currentBuiltin = dyn_vmcast<NativeFunction>(cr->get());
     if (!currentBuiltin || currentBuiltin != builtins_[methodIndex]) {
       return raiseTypeError(
           TwineChar16{
@@ -1964,13 +1998,17 @@ uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
     }
     default:
       assert(!value->isPointer() && "Unhandled pointer type");
-      if (value->isNumber() && value->getNumber() == 0) {
+      if (value->isNumber()) {
+        // We need to check for NaNs because they may differ in the sign bit,
+        // but they should have the same hash value.
+        if (LLVM_UNLIKELY(value->isNaN()))
+          return llvh::hash_value(HermesValue::encodeNaNValue().getRaw());
         // To normalize -0 to 0.
-        return 0;
-      } else {
-        // For everything else, we just take advantage of HermesValue.
-        return llvh::hash_value(value->getRaw());
+        if (value->getNumber() == 0)
+          return 0;
       }
+      // For everything else, we just take advantage of HermesValue.
+      return llvh::hash_value(value->getRaw());
   }
 }
 
@@ -2000,7 +2038,7 @@ void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
     if (auto *closure = dyn_vmcast<Callable>(sf.getCalleeClosureOrCBRef())) {
       OS << cellKindStr(closure->getKind()) << " ";
     }
-    if (auto *cb = sf.getCalleeCodeBlock(*this)) {
+    if (auto *cb = sf.getCalleeCodeBlock()) {
       OS << formatSymbolID(cb->getNameMayAllocate()) << " ";
     }
     dumpStackFrame(sf, OS, next);
@@ -2113,9 +2151,49 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
 std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
   NoAllocScope noAlloc(*this);
   std::string res;
+
+  /// Try adding the function name and source location into res for the native
+  /// frame. Return false if no valid source location or calleeHV is not a
+  /// NativeJSFunction.
+  auto tryAddNativeFrame = [&res, this](
+                               HermesValue calleeHV, const SHLocals *locals) {
+    if (!locals || locals->src_location_idx == 0)
+      return false;
+    const SHUnit *unit = locals->unit;
+    // If unit is nonnull then we have a valid location and can use the
+    // fields in loc. Otherwise, it is an unknown location.
+    if (!unit)
+      return false;
+
+    if (!vmisa<NativeJSFunction>(calleeHV))
+      return false;
+    auto *callee = vmcast<NativeJSFunction>(calleeHV);
+    auto nameIndex = callee->getFunctionInfo()->name_index;
+    assert(
+        nameIndex < unit->num_symbols &&
+        "out of bound access on symbols table");
+    SymbolID nameSym = SymbolID::unsafeCreate(unit->symbols[nameIndex]);
+    auto name = identifierTable_.convertSymbolToUTF8(nameSym);
+
+    uint32_t curLocIdx = locals->src_location_idx;
+    assert(
+        curLocIdx < unit->source_locations_size &&
+        "out of bound access on source locations table");
+    SHSrcLoc curLoc = unit->source_locations[curLocIdx];
+    assert(
+        curLoc.filename_idx < unit->num_symbols &&
+        "out of bound access on symbols table");
+    auto fnameSym = SymbolID::unsafeCreate(unit->symbols[curLoc.filename_idx]);
+    auto fname = identifierTable_.convertSymbolToUTF8(fnameSym);
+    res += name + ": " + fname + ":" + std::to_string(curLoc.line) + ":" +
+        std::to_string(curLoc.column) + "\n";
+
+    return true;
+  };
+
   // Note that the order of iteration is youngest (leaf) frame to oldest.
   for (auto frame : getStackFrames()) {
-    auto codeBlock = frame->getCalleeCodeBlock(*this);
+    auto codeBlock = frame->getCalleeCodeBlock();
     if (codeBlock) {
       res += codeBlock->getNameString();
       // Default to the function entrypoint, this
@@ -2138,7 +2216,10 @@ std::string Runtime::getCallStackNoAlloc(const Inst *ip) {
       }
       res += "\n";
     } else {
-      res += "<Native code>\n";
+      if (!tryAddNativeFrame(
+              frame.getCalleeClosureOrCBRef(), frame.getSHLocals())) {
+        res += "<Native code>\n";
+      }
     }
     // Get the ip of the caller frame -- which will then be correct for the
     // next iteration.
@@ -2152,7 +2233,8 @@ void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
   if (samplingProfiler) {
     switch (kind) {
       case GCEventKind::CollectionStart:
-        samplingProfiler->suspend(extraInfo);
+        samplingProfiler->suspend(
+            SamplingProfiler::SuspendFrameInfo::Kind::GC, extraInfo);
         break;
       case GCEventKind::CollectionEnd:
         samplingProfiler->resume();
@@ -2181,7 +2263,7 @@ Runtime::getCurrentInterpreterLocation(const inst::Inst *ip) {
   const CodeBlock *codeBlock = nullptr;
   for (auto frameIt = callFrames.begin(); frameIt != callFrames.end();
        ++frameIt) {
-    codeBlock = frameIt->getCalleeCodeBlock(*this);
+    codeBlock = frameIt->getCalleeCodeBlock();
     if (codeBlock) {
       break;
     } else {

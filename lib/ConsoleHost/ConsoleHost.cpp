@@ -38,13 +38,49 @@ quit(void *, vm::Runtime &runtime, vm::NativeArgs) {
   return runtime.raiseQuitError();
 }
 
-static void printStats(vm::Runtime &runtime, llvh::raw_ostream &os) {
+static void printStats(
+    vm::Runtime &runtime,
+    llvh::raw_ostream &os,
+    const std::vector<vm::GCAnalyticsEvent> *gcAnalyticsEvents) {
   std::string stats;
   {
     llvh::raw_string_ostream tmp{stats};
     runtime.printHeapStats(tmp);
   }
   vm::instrumentation::PerfEvents::endAndInsertStats(stats);
+
+  if (gcAnalyticsEvents) {
+    llvh::raw_string_ostream tmp{stats};
+    tmp << "Collections:\n";
+    ::hermes::JSONEmitter json{tmp, /*pretty*/ true};
+    json.openArray();
+    for (const auto &event : *gcAnalyticsEvents) {
+      json.openDict();
+      json.emitKeyValue("runtimeDescription", event.runtimeDescription);
+      json.emitKeyValue("gcKind", event.gcKind);
+      json.emitKeyValue("collectionType", event.collectionType);
+      json.emitKeyValue("cause", event.cause);
+      json.emitKeyValue("duration", event.duration.count());
+      json.emitKeyValue("cpuDuration", event.cpuDuration.count());
+      json.emitKeyValue("preAllocated", event.allocated.before);
+      json.emitKeyValue("postAllocated", event.allocated.after);
+      json.emitKeyValue("preSize", event.size.before);
+      json.emitKeyValue("postSize", event.size.after);
+      json.emitKeyValue("preExternal", event.external.before);
+      json.emitKeyValue("postExternal", event.external.after);
+      json.emitKeyValue("survivalRatio", event.survivalRatio);
+      json.emitKey("tags");
+      json.openArray();
+      for (const auto &tag : event.tags) {
+        json.emitValue(tag);
+      }
+      json.closeArray();
+      json.closeDict();
+    }
+    json.closeArray();
+    tmp << "\n";
+  }
+
   os << stats;
 }
 
@@ -72,7 +108,9 @@ createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
     return runtime.raiseTypeError(
         "Filename must end in .heapsnapshot or .heaptimeline");
   }
-  if (auto err = runtime.getHeap().createSnapshotToFile(fileName)) {
+  std::error_code err;
+  llvh::raw_fd_ostream os(fileName, err, llvh::sys::fs::FileAccess::FA_Write);
+  if (err) {
     // This isn't a TypeError, but no other built-in can express file errors,
     // so this will have to do.
     return runtime.raiseTypeError(
@@ -80,6 +118,9 @@ createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
         llvh::StringRef(fileName) +
         "\". System error: " + llvh::StringRef(err.message()));
   }
+  // Taking a snapshot always starts with garbage collection.
+  runtime.collect("snapshot");
+  runtime.getHeap().createSnapshot(os, true);
   return HermesValue::encodeUndefinedValue();
 #else // !defined(HERMES_MEMORY_INSTRUMENTATION)
   return runtime.raiseTypeError(
@@ -165,11 +206,8 @@ static void initTest262Harness(vm::Runtime &runtime) {
   vm::Handle<vm::JSObject> test262Obj =
       runtime.makeHandle(vm::JSObject::create(runtime));
 
-  vm::DefinePropertyFlags constantDPF =
-      vm::DefinePropertyFlags::getDefaultNewPropertyFlags();
-  constantDPF.enumerable = 0;
-  constantDPF.writable = 0;
-  constantDPF.configurable = 0;
+  vm::DefinePropertyFlags nonEnumerableDPF =
+      vm::DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Define $262.global
   auto global = runtime.getGlobal();
@@ -177,7 +215,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
       test262Obj,
       runtime,
       vm::Predefined::getSymbolID(vm::Predefined::global),
-      constantDPF,
+      nonEnumerableDPF,
       global));
 
   /// Try to get defined property on given JSObject \p selfHandle. If it does
@@ -204,7 +242,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
   /// Try to copy the defined property \p srcName on \p srcSelfHandle to
   /// \p tgtSelfHandle with given name \p tgtName. If \p srcName does not exist,
   /// do nothing.
-  auto tryCopyProperty = [&runtime, &constantDPF, &tryGetDefinedProperty](
+  auto tryCopyProperty = [&runtime, &nonEnumerableDPF, &tryGetDefinedProperty](
                              vm::Handle<vm::JSObject> srcSelfHandle,
                              vm::SymbolID srcName,
                              vm::Handle<vm::JSObject> tgtSelfHandle,
@@ -214,7 +252,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
       return;
 
     runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
-        tgtSelfHandle, runtime, tgtName, constantDPF, *prop));
+        tgtSelfHandle, runtime, tgtName, nonEnumerableDPF, *prop));
   };
 
   // Define $262.evalScript
@@ -242,7 +280,7 @@ static void initTest262Harness(vm::Runtime &runtime) {
       global,
       runtime,
       vm::Predefined::getSymbolID(vm::Predefined::test262),
-      constantDPF,
+      nonEnumerableDPF,
       test262Obj));
 
   // Define global function alert()
@@ -258,8 +296,15 @@ void installConsoleBindings(
     ConsoleHostContext &ctx,
     vm::StatSamplingThread *statSampler,
     const std::string *filename) {
+  vm::GCScopeMarkerRAII marker{runtime};
   vm::DefinePropertyFlags normalDPF =
       vm::DefinePropertyFlags::getNewNonEnumerableFlags();
+
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSObject> console;
+    vm::PinnedValue<> print;
+  } lv;
+  vm::LocalsRAII lraii{runtime, &lv};
 
   auto defineGlobalFunc = [&](vm::SymbolID name,
                               vm::NativeFunctionPtr functionPtr,
@@ -327,6 +372,27 @@ void installConsoleBindings(
       &ctx,
       1);
 
+  lv.console = vm::JSObject::create(runtime);
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      runtime.getGlobal(),
+      runtime,
+      runtime
+          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
+              runtime, llvh::createASCIIRef("console")))
+          .get(),
+      normalDPF,
+      lv.console));
+  lv.print = runtime.ignoreAllocationFailure(vm::JSObject::getNamed_RJS(
+      runtime.getGlobal(),
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::print)));
+  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
+      lv.console,
+      runtime,
+      vm::Predefined::getSymbolID(vm::Predefined::log),
+      normalDPF,
+      lv.print));
+
   initTest262Harness(runtime);
 }
 
@@ -370,8 +436,11 @@ bool executeHBCBytecodeImpl(
 
   // TODO: surely this should use RuntimeConfig?
   runtime->getJITContext().setForceJIT(options.forceJIT);
+  runtime->getJITContext().setMemoryLimit(options.jitMemoryLimit);
+  runtime->getJITContext().setDefaultExecThreshold(options.jitThreshold);
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
+  runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);
 
   if (options.timeLimit > 0) {
     runtime->timeLimitMonitor = vm::TimeLimitMonitor::getOrCreate();
@@ -425,7 +494,12 @@ bool executeHBCBytecodeImpl(
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
-    vm::SamplingProfiler::enable();
+    if (options.profilingOutFile.empty()) {
+      llvh::errs()
+          << "Please specify a profiling output file with -profiling-out\n";
+      return false;
+    }
+    vm::SamplingProfiler::enable(options.sampleProfilingFreq);
   }
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
@@ -437,21 +511,6 @@ bool executeHBCBytecodeImpl(
       flags,
       sourceURL,
       vm::Runtime::makeNullHandle<vm::Environment>());
-
-#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
-  switch (options.sampleProfiling) {
-    case ExecuteOptions::SampleProfilingMode::None:
-      break;
-    case ExecuteOptions::SampleProfilingMode::Chrome:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpChromeTrace(llvh::errs());
-      break;
-    case ExecuteOptions::SampleProfilingMode::Tracery:
-      vm::SamplingProfiler::disable();
-      runtime->samplingProfiler->dumpTraceryTrace(llvh::errs());
-      break;
-  }
-#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
   bool threwException = status == vm::ExecutionStatus::EXCEPTION;
 
@@ -486,6 +545,29 @@ bool executeHBCBytecodeImpl(
     }
   }
 
+#if HERMESVM_SAMPLING_PROFILER_AVAILABLE
+  if (options.sampleProfiling != ExecuteOptions::SampleProfilingMode::None) {
+    assert(!options.profilingOutFile.empty() && "Must not be empty");
+    OutputStream fileOS;
+    if (!fileOS.open(options.profilingOutFile, llvh::sys::fs::F_Text))
+      return false;
+    switch (options.sampleProfiling) {
+      case ExecuteOptions::SampleProfilingMode::None:
+        llvm_unreachable("Cannot be none");
+      case ExecuteOptions::SampleProfilingMode::Chrome:
+        vm::SamplingProfiler::disable();
+        runtime->samplingProfiler->dumpChromeTrace(fileOS.os());
+        break;
+      case ExecuteOptions::SampleProfilingMode::Tracery:
+        vm::SamplingProfiler::disable();
+        runtime->samplingProfiler->dumpTraceryTrace(fileOS.os());
+        break;
+    }
+    if (!fileOS.close())
+      return false;
+  }
+#endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
+
 #ifdef HERMESVM_PROFILER_OPCODE
   runtime->dumpOpcodeStats(llvh::outs());
 #endif
@@ -505,7 +587,7 @@ bool executeHBCBytecodeImpl(
     if (options.forceGCBeforeStats) {
       runtime->collect("forced for stats");
     }
-    printStats(*runtime, llvh::errs());
+    printStats(*runtime, llvh::errs(), options.gcAnalyticsEvents);
   }
 
 #ifdef HERMESVM_PROFILER_BB

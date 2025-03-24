@@ -142,6 +142,8 @@ NATIVE_FUNCTION(hermesBuiltinCopyDataProperties)
 NATIVE_FUNCTION(hermesBuiltinCopyRestArgs)
 NATIVE_FUNCTION(hermesBuiltinArraySpread)
 NATIVE_FUNCTION(hermesBuiltinApply)
+NATIVE_FUNCTION(hermesBuiltinApplyArguments)
+NATIVE_FUNCTION(hermesBuiltinApplyWithNewTarget)
 NATIVE_FUNCTION(hermesBuiltinEnsureObject)
 NATIVE_FUNCTION(hermesBuiltinGetMethod)
 NATIVE_FUNCTION(hermesBuiltinExponentiate)
@@ -151,10 +153,7 @@ NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
 NATIVE_FUNCTION(hermesBuiltinThrowReferenceError)
 NATIVE_FUNCTION(hermesBuiltinGetTemplateObject)
 
-#ifdef HERMESVM_EXCEPTION_ON_OOM
 NATIVE_FUNCTION(hermesInternalGetCallStack)
-#endif // HERMESVM_EXCEPTION_ON_OOM
-
 NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
 NATIVE_FUNCTION(hermesInternalGetEpilogues)
 NATIVE_FUNCTION(hermesInternalGetFunctionLocation)
@@ -163,7 +162,6 @@ NATIVE_FUNCTION(hermesInternalGetRuntimeProperties)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
 NATIVE_FUNCTION(hermesInternalIsProxy)
 NATIVE_FUNCTION(hermesInternalHasPromise)
-NATIVE_FUNCTION(hermesInternalHasES6Class)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
 

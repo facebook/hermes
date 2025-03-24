@@ -2372,6 +2372,52 @@ static OptValue<uint32_t> splitMatch(
   return llvh::None;
 }
 
+/// String.prototype.split() fast path when the separator is the empty string.
+static CallResult<HermesValue> splitEmptySep(
+    Runtime &runtime,
+    Handle<StringPrimitive> S,
+    Handle<JSArray> A,
+    uint32_t lim) {
+  uint32_t len = std::min(S->getStringLength(), lim);
+
+  // Resize the array storage: one element per character.
+  if (LLVM_UNLIKELY(
+          JSArray::setStorageEndIndex(A, runtime, len) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Update the .length property correspondingly.
+  if (LLVM_UNLIKELY(
+          JSArray::setLengthProperty(A, runtime, len) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  if (S->isASCII()) {
+    // ASCII path with zero allocations!
+    NoAllocScope noAlloc{runtime};
+    JSArray *arr = A.get();
+    const char *asciiPtr = S->getStringRef<char>().data();
+
+    for (uint32_t i = 0; i != len; ++asciiPtr, ++i) {
+      auto str = SmallHermesValue::encodeStringValue(
+          runtime.getCharacterString((uint8_t)*asciiPtr).get(), runtime);
+      JSArray::unsafeSetExistingElementAt(arr, runtime, i, str);
+    }
+  } else {
+    // UTF16 path with allocations.
+    GCScopeMarkerRAII marker{runtime};
+    for (uint32_t i = 0; i != len; ++i) {
+      marker.flush();
+      auto str = SmallHermesValue::encodeStringValue(
+          runtime.getCharacterString(S->at(i)).get(), runtime);
+      JSArray::unsafeSetExistingElementAt(A.get(), runtime, i, str);
+    }
+  }
+
+  return A.getHermesValue();
+}
+
 // ES11 21.1.3.20 String.prototype.split ( separator, limit )
 CallResult<HermesValue>
 stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
@@ -2448,7 +2494,7 @@ stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
 
   // 9. Let R be ? ToString(separator).
   // The pattern which we want to separate on.
-  auto sepRes = toString_RJS(runtime, args.getArgHandle(0));
+  auto sepRes = toString_RJS(runtime, separator);
   if (LLVM_UNLIKELY(sepRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2489,6 +2535,11 @@ stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     // e. Return A.
     return A.getHermesValue();
+  }
+
+  // Special case for .split('').
+  if (R->getStringLength() == 0) {
+    return splitEmptySep(runtime, S, A, lim);
   }
 
   // 17. Let q be p.

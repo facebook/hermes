@@ -226,7 +226,7 @@ enum XorPtrKeyID {
 ///   Return the maximum amount of bytes holdable by this heap.
 ///     gcheapsize_t max() const;
 ///   Return the total amount of bytes of storage this GC will require.
-///   This will be a multiple of AlignedHeapSegment::storageSize().
+///   This will be a multiple of FixedSizeHeapSegment::storageSize().
 ///     gcheapsize_t storageFootprint() const;
 ///
 class GCBase {
@@ -1084,10 +1084,6 @@ class GCBase {
   LLVM_ATTRIBUTE_NORETURN void oom(std::error_code reason);
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  /// Creates a snapshot of the heap and writes it to the given \p fileName.
-  /// \return An error code on failure, else an empty error code.
-  std::error_code createSnapshotToFile(const std::string &fileName);
-
   /// An edges counter array for each root section. The counter is uninitialized
   /// if a root section is not visited yet.
   using SavedNumRootEdges = std::array<
@@ -1350,14 +1346,23 @@ class GCBase {
   /// Print the cumulative statistics.
   virtual void printStats(JSONEmitter &json);
 
+  /// Extended GCAnalyticsEvent with additional fields for internal use.
+  struct InternalAnalyticsEvent : public GCAnalyticsEvent {
+    /// Higher resolution execution time stats. These should be preferred for
+    /// internal use, but the old millisecond resolution fields are kept in the
+    /// public base class for backward compatibility.
+    double durationSecs;
+    double cpuDurationSecs;
+  };
+
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the overall cumulative stats struct.
-  void recordGCStats(const GCAnalyticsEvent &event, bool onMutator);
+  void recordGCStats(const InternalAnalyticsEvent &event, bool onMutator);
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the given cumulative stats struct.
   void recordGCStats(
-      const GCAnalyticsEvent &event,
+      const InternalAnalyticsEvent &event,
       CumulativeHeapStats *stats,
       bool onMutator);
 
@@ -1430,9 +1435,6 @@ class GCBase {
   /// Callback called once for each GC event that wants to be logged. Can be
   /// null if no analytics are requested.
   std::function<void(const GCAnalyticsEvent &)> analyticsCallback_;
-
-  /// Capture all analytics events to print stats at the end.
-  std::vector<GCAnalyticsEvent> analyticsEvents_;
 
   /// Whether to output GC statistics at the end of execution.
   bool recordGcStats_{false};

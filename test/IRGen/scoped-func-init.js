@@ -30,7 +30,7 @@ function foo() {
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "init": string
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "f": string
 // CHKLOOSE-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLOOSE-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHKLOOSE-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHKLOOSE-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo": string
 // CHKLOOSE-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKLOOSE-NEXT:       StoreStackInst undefined: undefined, %6: any
@@ -38,7 +38,7 @@ function foo() {
 // CHKLOOSE-NEXT:       ReturnInst %8: any
 // CHKLOOSE-NEXT:function_end
 
-// CHKLOOSE:scope %VS1 [f: any]
+// CHKLOOSE:scope %VS1 [f: any, f#1: any]
 
 // CHKLOOSE:function foo(): any
 // CHKLOOSE-NEXT:%BB0:
@@ -47,8 +47,9 @@ function foo() {
 // CHKLOOSE-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.f]: any
 // CHKLOOSE-NEXT:  %3 = LoadFrameInst (:any) %1: environment, [%VS1.f]: any
 // CHKLOOSE-NEXT:       StorePropertyLooseInst %3: any, globalObject: object, "init": string
-// CHKLOOSE-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHKLOOSE-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS1: any, %f(): functionCode
 // CHKLOOSE-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.f]: any
+// CHKLOOSE-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.f#1]: any
 // CHKLOOSE-NEXT:       ReturnInst undefined: undefined
 // CHKLOOSE-NEXT:function_end
 
@@ -69,7 +70,7 @@ function foo() {
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "init": string
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "f": string
 // CHKSTRICT-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKSTRICT-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHKSTRICT-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHKSTRICT-NEXT:       StorePropertyStrictInst %4: object, globalObject: object, "foo": string
 // CHKSTRICT-NEXT:  %6 = AllocStackInst (:any) $?anon_0_ret: any
 // CHKSTRICT-NEXT:       StoreStackInst undefined: undefined, %6: any
@@ -85,7 +86,7 @@ function foo() {
 // CHKSTRICT-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHKSTRICT-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "f": string
 // CHKSTRICT-NEXT:       StorePropertyStrictInst %2: any, globalObject: object, "init": string
-// CHKSTRICT-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHKSTRICT-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %f(): functionCode
 // CHKSTRICT-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.f]: any
 // CHKSTRICT-NEXT:       ReturnInst undefined: undefined
 // CHKSTRICT-NEXT:function_end

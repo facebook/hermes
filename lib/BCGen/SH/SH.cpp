@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LiteralBufferBuilder.h"
-#include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
@@ -475,22 +474,28 @@ class InstrGen {
  public:
   /// \p os is the output stream
   /// \p ra is the pre-ran register allocator for the current function
+  /// \p tryIDs is a map from TryStartInst to a unique ID for the try/catch.
   InstrGen(
       llvh::raw_ostream &os,
       sh::SHRegisterAllocator &ra,
       const llvh::DenseMap<BasicBlock *, unsigned> &bbMap,
       Function &F,
       ModuleGen &moduleGen,
-      uint32_t &nextCacheIdx,
-      const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths)
+      uint32_t &nextWriteCacheIdx,
+      uint32_t &nextReadCacheIdx,
+      const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs)
       : os_(os),
         ra_(ra),
         bbMap_(bbMap),
         F_(F),
         nativeContext_(F.getContext().getNativeContext()),
         moduleGen_(moduleGen),
-        nextCacheIdx_(nextCacheIdx),
-        bbTryDepths_(bbTryDepths) {}
+        nextWriteCacheIdx_(nextWriteCacheIdx),
+        nextReadCacheIdx_(nextReadCacheIdx),
+        tryIDs_(tryIDs) {
+    if (!tryIDs_.empty())
+      enclosingTrys_ = *findEnclosingTrysPerBlock(&F_);
+  }
 
   /// Converts Instruction \p I into valid C code and outputs it through the
   /// ostream.
@@ -528,12 +533,18 @@ class InstrGen {
   /// The state for the module currently being emitted.
   ModuleGen &moduleGen_;
 
-  /// Starts out at 0 and increments every time a cache index is used
-  uint32_t &nextCacheIdx_;
+  /// These starts at 0 and increments every time a cache index is used
+  uint32_t &nextWriteCacheIdx_;
+  uint32_t &nextReadCacheIdx_;
 
-  /// A map from basic blocks to their number of enclosing try statements
-  /// (if non-zero).
-  const llvh::DenseMap<BasicBlock *, size_t> &bbTryDepths_;
+  /// Map from TryStart to an ID for the try/catch.
+  /// Set the tryState to the ID when entering the try, restore it when leaving.
+  const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs_;
+
+  /// Map from BasicBlock to the TryStartInst that encloses it, nullptr if none.
+  /// If empty, there's no try in the entire function.
+  /// If there is any try in the function, this will have an entry for every BB.
+  llvh::DenseMap<BasicBlock *, TryStartInst *> enclosingTrys_{};
 
   void unimplemented(Instruction &inst) {
     std::string err{"Unimplemented "};
@@ -575,19 +586,31 @@ class InstrGen {
     os_ << "get_symbols(shUnit)[" << moduleGen_.stringTable.add(str) << ']';
     return genStringComment(str);
   }
+
   /// Generate a string constant, followed by an optional value (if non-null),
   /// and a cache index. This must be used when
   /// passing parameters to API functions that will use the cache index.
-  llvh::raw_ostream &genStringConstIC(
-      LiteralString *LS,
-      Value *optValue = nullptr) {
+  /// First function is common part, second and third are specializations for
+  /// read and write cache entries.
+  void genStringConstICCommon(LiteralString *LS, Value *optValue) {
     genStringConst(LS);
     if (optValue) {
       os_ << ", ";
       generateRegisterPtr(*optValue);
     }
     os_ << ", ";
-    return genIC(LS);
+  }
+  llvh::raw_ostream &genStringConstWriteIC(
+      LiteralString *LS,
+      Value *optValue = nullptr) {
+    genStringConstICCommon(LS, optValue);
+    return genWriteIC(LS);
+  }
+  llvh::raw_ostream &genStringConstReadIC(
+      LiteralString *LS,
+      Value *optValue = nullptr) {
+    genStringConstICCommon(LS, optValue);
+    return genReadIC(LS);
   }
 
   /// Generate a cache index. This must be used when passing parameters to API
@@ -596,8 +619,11 @@ class InstrGen {
   /// optimization controlled by OptimizationSettings::reusePropCache: that
   /// different instructions accessing the same property probably are for
   /// objects of the same hidden class, and should get the same offset.
-  llvh::raw_ostream &genIC(LiteralString *LS) {
-    return os_ << "get_prop_cache(shUnit) + " << nextCacheIdx_++;
+  llvh::raw_ostream &genWriteIC(LiteralString *LS) {
+    return os_ << "get_write_prop_cache(shUnit) + " << nextWriteCacheIdx_++;
+  }
+  llvh::raw_ostream &genReadIC(LiteralString *LS) {
+    return os_ << "get_read_prop_cache(shUnit) + " << nextReadCacheIdx_++;
   }
 
   /// Helper to generate a value in a register,
@@ -696,6 +722,14 @@ class InstrGen {
     generateRegisterPtr(*inst.getSingleOperand());
     os_ << ");\n";
   }
+  void generateToPropertyKeyInst(ToPropertyKeyInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_to_property_key(shr, ";
+    generateRegisterPtr(*inst.getSingleOperand());
+    os_ << ");\n";
+  }
   void generateAsNumberInst(AsNumberInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -752,6 +786,13 @@ class InstrGen {
     os_ << " = _sh_ljs_typeof(shr, ";
     generateRegisterPtr(*inst.getArgument());
     os_ << ");\n";
+  }
+  void generateTypeOfIsInst(TypeOfIsInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = _sh_ljs_bool(_sh_ljs_typeof_is(";
+    generateValue(*inst.getArgument());
+    os_ << ", " << inst.getTypes()->getData().getRaw() << "));\n";
   }
   void generateUnaryOperatorInst(UnaryOperatorInst &inst) {
     os_.indent(2);
@@ -1121,6 +1162,19 @@ class InstrGen {
     os_ << ";\n";
   }
 
+  void generateStorePropertyWithReceiverInst(
+      StorePropertyWithReceiverInst &inst) {
+    os_ << "_sh_ljs_put_by_val_with_receiver_rjs(shr,&";
+    generateRegister(*inst.getObject());
+    os_ << ", &";
+    generateRegister(*inst.getProperty());
+    os_ << ", &";
+    generateRegister(*inst.getStoredValue());
+    os_ << ", &";
+    generateRegister(*inst.getReceiver());
+    os_ << ", " << inst.getIsStrict();
+    os_ << ");\n";
+  }
   void generateStorePropertyInstImpl(StorePropertyInst &inst, bool strictMode) {
     os_.indent(2);
     if (auto *LS = llvh::dyn_cast<LiteralString>(inst.getProperty())) {
@@ -1131,7 +1185,7 @@ class InstrGen {
       os_ << "(shr,&";
       generateRegister(*inst.getObject());
       os_ << ", ";
-      genStringConstIC(LS, inst.getStoredValue()) << ");\n";
+      genStringConstWriteIC(LS, inst.getStoredValue()) << ");\n";
       return;
     }
 
@@ -1168,7 +1222,7 @@ class InstrGen {
     os_ << ", ";
     auto prop = inst.getProperty();
     auto *propStr = cast<LiteralString>(prop);
-    genStringConstIC(propStr, inst.getStoredValue()) << ");\n";
+    genStringConstWriteIC(propStr, inst.getStoredValue()) << ");\n";
   }
   void generateTryStoreGlobalPropertyLooseInst(
       TryStoreGlobalPropertyLooseInst &inst) {
@@ -1179,53 +1233,21 @@ class InstrGen {
     generateTryStoreGlobalPropertyInstImpl(inst, true);
   }
 
-  void generateStoreOwnPropertyInst(StoreOwnPropertyInst &inst) {
+  void generateDefineOwnPropertyInst(DefineOwnPropertyInst &inst) {
     os_.indent(2);
     auto prop = inst.getProperty();
     bool isEnumerable = inst.getIsEnumerable();
 
     // If the property is a LiteralNumber, the property is enumerable, and it is
     // a valid array index, it is coming from an array initialization and we
-    // will emit it as PutByIndex.
-    auto *numProp = llvh::dyn_cast<LiteralNumber>(prop);
-    if (numProp && isEnumerable) {
-      if (auto arrayIndex = numProp->convertToArrayIndex()) {
-        uint32_t index = arrayIndex.getValue();
-        os_ << "_sh_ljs_put_own_by_index(";
-        os_ << "shr, ";
-        generateRegisterPtr(*inst.getObject());
-        os_ << ", ";
-        os_ << index << ", ";
-        generateRegisterPtr(*inst.getStoredValue());
-        os_ << ");\n";
-        return;
-      }
-    }
-
-    if (isEnumerable)
-      os_ << "_sh_ljs_put_own_by_val(";
-    else
-      os_ << "_sh_ljs_put_own_ne_by_val(";
-
-    os_ << "shr, ";
-    generateRegisterPtr(*inst.getObject());
-    os_ << ", ";
-    generateRegisterPtr(*prop);
-    os_ << ", ";
-    generateRegisterPtr(*inst.getStoredValue());
-    os_ << ");\n";
-  }
-  void generateStoreNewOwnPropertyInst(StoreNewOwnPropertyInst &inst) {
-    os_.indent(2);
-    auto prop = inst.getProperty();
-    bool isEnumerable = inst.getIsEnumerable();
-
+    // will emit it as DefineOwnByIndex.
     if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
       assert(
-          isEnumerable &&
-          "No way to generate non-enumerable indexed StoreNewOwnPropertyInst.");
-      uint32_t index = *numProp->convertToArrayIndex();
-      os_ << "_sh_ljs_put_own_by_index(";
+          inst.getIsEnumerable() &&
+          "Non-enumerable properties with literal keys should be handled by LoadConstants");
+      auto arrayIndex = numProp->convertToArrayIndex();
+      uint32_t index = arrayIndex.getValue();
+      os_ << "_sh_ljs_define_own_by_index(";
       os_ << "shr, ";
       generateRegisterPtr(*inst.getObject());
       os_ << ", ";
@@ -1235,22 +1257,58 @@ class InstrGen {
       return;
     }
 
+    if (auto *LS = llvh::dyn_cast<LiteralString>(prop)) {
+      assert(
+          inst.getIsEnumerable() &&
+          "Non-enumerable properties with literal keys should be handled by LoadConstants");
+      os_ << "_sh_ljs_define_own_by_id(shr,&";
+      generateRegister(*inst.getObject());
+      os_ << ", ";
+      genStringConstWriteIC(LS, inst.getStoredValue()) << ");\n";
+      return;
+    }
+
     if (isEnumerable)
-      os_ << "_sh_ljs_put_new_own_by_id(";
+      os_ << "_sh_ljs_define_own_by_val(";
     else
-      os_ << "_sh_ljs_put_new_own_ne_by_id(";
+      os_ << "_sh_ljs_define_own_ne_by_val(";
 
     os_ << "shr, ";
     generateRegisterPtr(*inst.getObject());
     os_ << ", ";
-    auto *propStr = cast<LiteralString>(prop);
-    genStringConst(propStr) << ", ";
+    generateRegisterPtr(*prop);
+    os_ << ", ";
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
-  void generateStoreGetterSetterInst(StoreGetterSetterInst &inst) {
+  void generateDefineNewOwnPropertyInst(DefineNewOwnPropertyInst &inst) {
     os_.indent(2);
-    os_ << "_sh_ljs_put_own_getter_setter_by_val(";
+    auto prop = inst.getProperty();
+    assert(inst.getIsEnumerable() && "enumerable must be true.");
+
+    if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
+      uint32_t index = *numProp->convertToArrayIndex();
+      os_ << "_sh_ljs_define_own_by_index(";
+      os_ << "shr, ";
+      generateRegisterPtr(*inst.getObject());
+      os_ << ", ";
+      os_ << index << ", ";
+      generateRegisterPtr(*inst.getStoredValue());
+      os_ << ");\n";
+      return;
+    }
+
+    auto *LS = cast<LiteralString>(prop);
+    os_ << "_sh_ljs_define_own_by_id(shr,&";
+    generateRegister(*inst.getObject());
+    os_ << ", ";
+    genStringConst(LS) << ", ";
+    generateRegisterPtr(*inst.getStoredValue());
+    os_ << ", NULL);\n";
+  }
+  void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_ljs_define_own_getter_setter_by_val(";
     os_ << "shr, ";
     generateRegisterPtr(*inst.getObject());
     os_ << ", ";
@@ -1269,18 +1327,6 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
     auto prop = inst.getProperty();
-    if (auto *propStr = llvh::dyn_cast<LiteralString>(prop)) {
-      if (strictMode)
-        os_ << "_sh_ljs_del_by_id_strict(";
-      else
-        os_ << "_sh_ljs_del_by_id_loose(";
-
-      os_ << "shr, ";
-      generateRegisterPtr(*inst.getObject());
-      os_ << ", ";
-      genStringConst(propStr) << ");\n";
-      return;
-    }
 
     if (strictMode)
       os_ << "_sh_ljs_del_by_val_strict(";
@@ -1307,7 +1353,7 @@ class InstrGen {
       os_ << "_sh_ljs_get_by_id_rjs(shr,&";
       generateRegister(*inst.getObject());
       os_ << ",";
-      genStringConstIC(LS) << ");\n";
+      genStringConstReadIC(LS) << ");\n";
       return;
     }
     // If the prop is an index-like constant, generate the special bytecode.
@@ -1326,6 +1372,29 @@ class InstrGen {
     generateRegister(*inst.getProperty());
     os_ << ");\n";
   }
+  void generateLoadPropertyWithReceiverInst(
+      LoadPropertyWithReceiverInst &inst) {
+    os_.indent(2);
+    generateValue(inst);
+    os_ << " = ";
+    auto prop = inst.getProperty();
+    if (auto *LS = llvh::dyn_cast<LiteralString>(prop)) {
+      os_ << "_sh_ljs_get_by_id_with_receiver_rjs(shr, &";
+      generateRegister(*inst.getObject());
+      os_ << ", &";
+      generateRegister(*inst.getReceiver());
+      os_ << ", ";
+      genStringConstReadIC(LS) << ");\n";
+      return;
+    }
+    os_ << "_sh_ljs_get_by_val_with_receiver_rjs(shr, &";
+    generateRegister(*inst.getObject());
+    os_ << ", &";
+    generateRegister(*inst.getProperty());
+    os_ << ", &";
+    generateRegister(*inst.getReceiver());
+    os_ << ");\n";
+  }
   void generateTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -1334,7 +1403,7 @@ class InstrGen {
     os_ << "_sh_ljs_try_get_by_id_rjs(shr,&";
     generateRegister(*inst.getObject());
     os_ << ", ";
-    genStringConstIC(LS) << ");\n";
+    genStringConstReadIC(LS) << ");\n";
   }
   void generateLoadParentNoTrapsInst(LoadParentNoTrapsInst &inst) {
     os_.indent(2);
@@ -1546,6 +1615,23 @@ class InstrGen {
     }
     os_ << ";\n";
   }
+  void generateAllocTypedObjectInst(AllocTypedObjectInst &inst) {
+    assert(
+        inst.getKeyValuePairCount() == 0 &&
+        "AllocTypedObjectInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    // TODO: Utilize sizeHint.
+    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
+      os_ << "_sh_ljs_new_object(shr)";
+    } else {
+      os_ << "_sh_ljs_new_object_with_parent(shr, &";
+      generateValue(*inst.getParentObject());
+      os_ << ")";
+    }
+    os_ << ";\n";
+  }
   void generateCreateArgumentsLooseInst(CreateArgumentsLooseInst &inst) {
     hermes_fatal("CreateArgumentsLooseInst should have been lowered.");
   }
@@ -1553,11 +1639,13 @@ class InstrGen {
     hermes_fatal("CreateArgumentsStrictInst should have been lowered.");
   }
   void generateCatchInst(CatchInst &inst) {
+    // Restore the tryState to the state of the Try enclosing this block.
+    TryStartInst *enclosing = enclosingTrys_.at(inst.getParent());
+    uint32_t stateToRestore = enclosing ? tryIDs_.at(enclosing) : 0;
+    os_ << "  tryState = " << stateToRestore << ";\n";
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_catch(shr, (SHLocals*)&locals, frame, "
-        << (ra_.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
-        << ");\n";
+    os_ << " = _sh_get_clear_thrown_value(shr);\n";
   }
   void generateDebuggerInst(DebuggerInst &inst) {
     hermes_fatal("DebuggerInst should have been deleted.");
@@ -1592,11 +1680,24 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateTryEndInst(TryEndInst &inst) {
-    os_ << "  _sh_end_try(shr, &jmpBuf"
-        << bbTryDepths_.lookup(inst.getBranchDest()) << ");\n";
+    // Restore the tryState to the state of the Try enclosing the catch.
+    TryStartInst *enclosing = enclosingTrys_.at(inst.getBranchDest());
+    uint32_t stateToRestore = enclosing ? tryIDs_.at(enclosing) : 0;
+    os_ << "  tryState = " << stateToRestore << ";\n";
     os_ << "  goto ";
     generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);
-    os_ << ";";
+    os_ << ";\n";
+  }
+  void generateBranchIfBuiltinInst(BranchIfBuiltinInst &inst) {
+    os_ << "  if (_sh_ljs_get_builtin_closure(shr, "
+        << (uint32_t)inst.getBuiltinIndex() << ").raw == ";
+    generateValue(*inst.getArgument());
+    os_ << ".raw) goto ";
+    generateBasicBlockLabel(inst.getTrueBlock(), os_, bbMap_);
+    os_ << ";\n";
+    os_ << "else goto ";
+    generateBasicBlockLabel(inst.getFalseBlock(), os_, bbMap_);
+    os_ << ";\n";
   }
   void generateGetNewTargetInst(GetNewTargetInst &inst) {
     os_.indent(2);
@@ -1625,6 +1726,19 @@ class InstrGen {
     os_ << ", " << boolStr(inst.getIgnoreInnerException());
     os_ << ");\n";
   }
+  void generateCacheNewObjectInst(CacheNewObjectInst &inst) {
+    // TODO: Implement this properly when we have a proper cache.
+    // For now, emit the call with just the shape table index.
+    auto buffIdx = moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst)
+                       .shapeTableIdx;
+    os_.indent(2);
+    os_ << "_sh_ljs_cache_new_object(shr, shUnit, ";
+    generateRegisterPtr(*inst.getThis());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getNewTarget());
+    os_ << ", ";
+    os_ << buffIdx << ", NULL);\n";
+  }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);
     os_ << "_sh_unreachable();\n";
@@ -1632,8 +1746,11 @@ class InstrGen {
   void generateCreateFunctionInst(CreateFunctionInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_closure" << "(shr, &";
-    generateRegister(*inst.getScope());
+    os_ << " = _sh_ljs_create_closure" << "(shr, ";
+    if (llvh::isa<EmptySentinel>(inst.getScope()))
+      os_ << "NULL";
+    else
+      generateRegisterPtr(*inst.getScope());
     os_ << ", ";
     moduleGen_.nativeFunctionTable.generateFunctionLabel(
         inst.getFunctionCode(), os_);
@@ -1645,8 +1762,11 @@ class InstrGen {
   void generateCreateGeneratorInst(CreateGeneratorInst &inst) {
     os_.indent(2);
     generateRegister(inst);
-    os_ << " = _sh_ljs_create_generator_object" << "(shr, &";
-    generateRegister(*inst.getScope());
+    os_ << " = _sh_ljs_create_generator_object" << "(shr, ";
+    if (llvh::isa<EmptySentinel>(inst.getScope()))
+      os_ << "NULL";
+    else
+      generateRegisterPtr(*inst.getScope());
     os_ << ", ";
     moduleGen_.nativeFunctionTable.generateFunctionLabel(
         inst.getFunctionCode(), os_);
@@ -1655,12 +1775,41 @@ class InstrGen {
         << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
         << "]" << ", shUnit);\n";
   }
+  void generateCreateClassInst(CreateClassInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    bool isBaseClass = llvh::isa<EmptySentinel>(inst.getSuperClass());
+    os_ << " = _sh_ljs_create_class(shr,";
+    if (llvh::isa<EmptySentinel>(inst.getScope()))
+      os_ << "NULL";
+    else
+      generateRegisterPtr(*inst.getScope());
+    os_ << ", ";
+    moduleGen_.nativeFunctionTable.generateFunctionLabel(
+        inst.getFunctionCode(), os_);
+    os_ << ", ";
+    os_ << "&s_function_info_table["
+        << moduleGen_.nativeFunctionTable.getIndex(inst.getFunctionCode())
+        << "]";
+    os_ << ", (SHUnit *)shUnit, ";
+    generateRegisterPtr(*inst.getHomeObjectOutput());
+    os_ << ", ";
+    if (isBaseClass) {
+      os_ << "NULL";
+    } else {
+      generateRegisterPtr(*inst.getSuperClass());
+    }
+    os_ << ");\n";
+  }
   void generateBranchInst(BranchInst &inst) {
     os_ << "  goto ";
     generateBasicBlockLabel(inst.getBranchDest(), os_, bbMap_);
     os_ << ";";
   }
   void generateReturnInst(ReturnInst &inst) {
+    if (!tryIDs_.empty()) {
+      os_ << "  _sh_end_try(shr, &jmpBuf);\n";
+    }
     os_ << "  _sh_leave(shr, &locals.head, frame);\n  return ";
     generateValue(*inst.getValue());
     os_ << ";\n";
@@ -1739,15 +1888,16 @@ class InstrGen {
     os_ << ";\n";
   }
   void generateTryStartInst(TryStartInst &inst) {
-    os_ << "  if(_sh_try(shr, &jmpBuf" << bbTryDepths_.lookup(inst.getParent())
-        << ") == 0) goto ";
-    generateBasicBlockLabel(inst.getTryBody(), os_, bbMap_);
-    os_ << ";\n";
+    uint32_t stateToEnter = tryIDs_.at(&inst);
+    os_.indent(2) << "tryState = " << stateToEnter << ";\n";
     os_ << "  goto ";
-    generateBasicBlockLabel(inst.getCatchTarget(), os_, bbMap_);
+    generateBasicBlockLabel(inst.getTryBody(), os_, bbMap_);
     os_ << ";\n";
   }
   void generateHBCCompareBranchInst(HBCCompareBranchInst &inst) {
+    unimplemented(inst);
+  }
+  void generateHBCCmpBrTypeOfIsInst(HBCCmpBrTypeOfIsInst &inst) {
     unimplemented(inst);
   }
   void generateSwitchImmInst(SwitchImmInst &inst) {
@@ -1807,6 +1957,18 @@ class InstrGen {
         generateValue(*inst.getCallee());
         os_ << "))->functionPtr(shr);\n";
       }
+    } else if (inst.getAttributes(inst.getModule()).isMetroRequire) {
+      auto *litNum = llvh::cast<LiteralNumber>(inst.getArgument(1));
+      assert(
+          litNum->isUInt32Representible() &&
+          "Or should not have been optimized.");
+      uint32_t modId = litNum->asUInt32();
+
+      os_.indent(2);
+      generateRegister(inst);
+      os_ << " = _sh_ljs_callRequire(shr, &shUnit->moduleExports, ";
+      generateRegisterPtr(*inst.getCallee());
+      os_ << ", " << modId << ");\n";
     } else {
       os_.indent(2);
       generateRegister(inst);
@@ -1814,6 +1976,7 @@ class InstrGen {
           << ");\n";
     }
   }
+
   void generateGetBuiltinClosureInst(GetBuiltinClosureInst &inst) {
     os_.indent(2);
     generateRegister(inst);
@@ -1841,9 +2004,6 @@ class InstrGen {
     unimplemented(inst);
   }
   void generateHBCCallNInst(HBCCallNInst &inst) {
-    unimplemented(inst);
-  }
-  void generateStartGeneratorInst(StartGeneratorInst &inst) {
     unimplemented(inst);
   }
   void generateResumeGeneratorInst(ResumeGeneratorInst &inst) {
@@ -1882,20 +2042,17 @@ class InstrGen {
         << hbc::StackFrameLayout::ThisArg << "]);\n";
   }
   void generateCreateThisInst(CreateThisInst &inst) {
-    assert(
-        llvh::isa<EmptySentinel>(inst.getNewTarget()) &&
-        "CreateThis currently only supported for `new`");
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_create_this(shr, &";
     generateRegister(*inst.getClosure());
     os_ << ", &";
-    generateRegister(*inst.getClosure());
+    generateRegister(*inst.getNewTarget());
     os_ << ", ";
     Module *M = F_.getParent();
     auto *protoStr =
         M->getLiteralString(M->getContext().getIdentifier("prototype"));
-    genIC(protoStr);
+    genReadIC(protoStr);
     os_ << ");\n";
   }
   void generateHBCGetArgumentsPropByValLooseInst(
@@ -2009,8 +2166,12 @@ class InstrGen {
         return "_sh_ljs_is_double";
       case Type::BigInt:
         return "_sh_ljs_is_bigint";
+      case Type::Symbol:
+        return "_sh_ljs_is_symbol";
       case Type::Environment:
         hermes_fatal("cannot check for environment type");
+      case Type::PrivateName:
+        hermes_fatal("cannot check for PrivateName type");
       case Type::FunctionCode:
         hermes_fatal("cannot check for functionCode type");
       case Type::Object:
@@ -2115,6 +2276,12 @@ class InstrGen {
         ra_.getRegister(&inst),
         ra_.getRegister(inst.getCheckedValue()),
         "_sh_throw_empty(shr)");
+  }
+  void generateThrowIfThisInitializedInst(ThrowIfThisInitializedInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_ljs_throw_if_this_initialized(shr, ";
+    generateRegister(*inst.getDerivedClassCheckedThis());
+    os_ << ");\n";
   }
   void generateLIRDeadValueInst(LIRDeadValueInst &inst) {
     os_.indent(2);
@@ -2310,9 +2477,9 @@ bool lowerModuleIR(Module *M, bool optimize) {
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.
-  PM.addPass(sh::createPeepholeLowering());
+  PM.addPass(sh::createPeepholeLowering(optimize));
   // LowerBuiltinCalls needs to run before the rest of the lowering.
-  PM.addPass(new LowerBuiltinCalls());
+  PM.addPass(createLowerBuiltinCalls());
   PM.addPass(new LowerNumericProperties());
   PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new hbc::LowerArgumentsArray());
@@ -2365,7 +2532,8 @@ void generateFunction(
     Function &F,
     hermes::sh::LineDirectiveEmitter &OS,
     ModuleGen &moduleGen,
-    uint32_t &nextCacheIdx,
+    uint32_t &nextWriteCacheIdx,
+    uint32_t &nextReadCacheIdx,
     BytecodeGenerationOptions options) {
   auto PO = hermes::postOrderAnalysis(&F);
 
@@ -2406,9 +2574,18 @@ void generateFunction(
 
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;
+  // Map from TryStart to an ID for that try/catch.
+  llvh::DenseMap<TryStartInst *, uint32_t> tryIDs{};
+  // Start counting at 1 because 0 is reserved for blocks without a try.
+  uint32_t tryIDCounter = 1;
+
   for (auto &B : order) {
     bbMap[B] = bbCounter;
     bbCounter++;
+    if (auto *tryStart = llvh::dyn_cast<TryStartInst>(B->getTerminator())) {
+      tryIDs.try_emplace(tryStart, tryIDCounter);
+      ++tryIDCounter;
+    }
   }
 
   auto &srcMgr = F.getContext().getSourceErrorManager();
@@ -2416,10 +2593,8 @@ void generateFunction(
   srcMgr.dumpCoords(OS, F.getSourceRange().Start);
   OS << '\n';
 
-  // Compute the try nesting depth of each basic block.
-  auto [bbTryDepths, maxTryDepth] = getBlockTryDepths(&F);
-
-  InstrGen instrGen(OS, RA, bbMap, F, moduleGen, nextCacheIdx, bbTryDepths);
+  InstrGen instrGen(
+      OS, RA, bbMap, F, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, tryIDs);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
@@ -2495,9 +2670,22 @@ void generateFunction(
     OS << "  SHLegacyValue np" << i << " = _sh_ljs_undefined();\n";
   }
 
-  // Initialize SHJmpBufs for the maximum possible try nesting depth.
-  for (size_t i = 0; i < maxTryDepth; ++i)
-    OS << "  SHJmpBuf jmpBuf" << i << ";\n";
+  // Initialize SHJmpBuf and emit the setjmp for the function-level try.
+  // Every caught exception will jump to this _sh_try and be handled in the
+  // switch statement under L_catch.
+  // NOTE: We don't mark SHJmpBuf as volatile here because the jmp_buf will not
+  // be stored in registers in practice, and setjmp doesn't take a volatile
+  // parameter.
+  // Set up tryState to 0 to indicate that we are not in a try block.
+  // It's updated to the enclosing try's ID when we enter a try block,
+  // and restored in Catch or TryEnd.
+  if (!tryIDs.empty()) {
+    OS << R"(
+  SHJmpBuf jmpBuf;
+  volatile uint32_t tryState = 0;
+  if (__builtin_expect(_sh_try(shr, &jmpBuf), 0) != 0) goto L_catch;
+)";
+  }
 
   if (emitNativeTraces) {
     // Setup the frame to reference this SHLocals.
@@ -2572,6 +2760,37 @@ void generateFunction(
       instrGen.generate(I);
     }
   }
+
+  if (!tryIDs.empty()) {
+    OS << R"(
+L_catch:
+  if (tryState == 0) {
+    _sh_end_try(shr, &jmpBuf);
+    _sh_throw_current(shr);
+  }
+  )";
+    OS << "_sh_catch_no_pop(shr, (SHLocals*)&locals, frame, "
+       << (RA.getMaxArgumentRegisters() + hbc::StackFrameLayout::FirstLocal)
+       << ");\n";
+
+    OS << R"(
+  switch (tryState) {
+    default:
+      abort();
+)";
+
+    // For each of the try blocks, generate a case statement that will jump to
+    // the catch block for that try.
+    for (const auto &[tryStart, id] : tryIDs) {
+      OS << "    case " << id << ":\n";
+      OS << "      goto ";
+      generateBasicBlockLabel(tryStart->getCatchTarget(), OS, bbMap);
+      OS << ";\n";
+    }
+
+    OS << "  }\n";
+  }
+
   OS.disableLineDirectives();
   OS << "}\n";
 }
@@ -2659,7 +2878,8 @@ void generateModule(
 
   // TODO: Share cache indices where the property name is the same and
   // -reuse-prop-cache is passed in.
-  uint32_t nextCacheIdx = 0;
+  uint32_t nextWriteCacheIdx = 0;
+  uint32_t nextReadCacheIdx = 0;
   ModuleGen moduleGen{M, options.optimizationEnabled};
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
@@ -2678,7 +2898,8 @@ void generateModule(
     OS << R"(
 static uint32_t unit_index;
 static inline SHSymbolID* get_symbols(SHUnit *);
-static inline SHPropertyCacheEntry* get_prop_cache(SHUnit *);
+static inline SHWritePropertyCacheEntry* get_write_prop_cache(SHUnit *);
+static inline SHReadPropertyCacheEntry* get_read_prop_cache(SHUnit *);
 static const SHSrcLoc s_source_locations[];
 static SHNativeFuncInfo s_function_info_table[];
 )";
@@ -2699,7 +2920,8 @@ static SHNativeFuncInfo s_function_info_table[];
   M->assignIndexToVariables();
 
   for (auto &F : *M)
-    generateFunction(F, OS, moduleGen, nextCacheIdx, options);
+    generateFunction(
+        F, OS, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, options);
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);
@@ -2717,17 +2939,21 @@ static SHNativeFuncInfo s_function_info_table[];
     OS << "struct UnitData {\n"
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
-       << "  SHPropertyCacheEntry prop_cache_data[" << nextCacheIdx << "];\n;"
-       << "  SHCompressedPointer object_literal_class_cache["
+       << "  SHWritePropertyCacheEntry write_prop_cache_data["
+       << nextWriteCacheIdx << "];\n;"
+       << "  SHReadPropertyCacheEntry read_prop_cache_data[" << nextReadCacheIdx
+       << "];\n;" << "  SHCompressedPointer object_literal_class_cache["
        << moduleGen.literalBuffers.objShapeTable.size() << "];\n};\n"
-       << "SHUnit *CREATE_THIS_UNIT(SHRuntime *shr) {\n"
+       << "SHUnit *CREATE_THIS_UNIT(void) {\n"
        << "  struct UnitData *unit_data = calloc(sizeof(struct UnitData), 1);\n"
        << "  *unit_data = (struct UnitData){.unit = {.index = &unit_index,"
        << ".num_symbols =" << moduleGen.stringTable.size()
-       << ", .num_prop_cache_entries = " << nextCacheIdx
+       << ", .num_write_prop_cache_entries = " << nextWriteCacheIdx
+       << ", .num_read_prop_cache_entries = " << nextReadCacheIdx
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
        << ".strings = s_strings, .symbols = unit_data->symbol_data,"
-       << ".prop_cache = unit_data->prop_cache_data,"
+       << ".write_prop_cache = unit_data->write_prop_cache_data,"
+       << ".read_prop_cache = unit_data->read_prop_cache_data,"
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
@@ -2747,8 +2973,11 @@ SHSymbolID *get_symbols(SHUnit *unit) {
   return ((struct UnitData *)unit)->symbol_data;
 }
 
-SHPropertyCacheEntry *get_prop_cache(SHUnit *unit) {
-  return ((struct UnitData *)unit)->prop_cache_data;
+SHWritePropertyCacheEntry *get_write_prop_cache(SHUnit *unit) {
+  return ((struct UnitData *)unit)->write_prop_cache_data;
+}
+SHReadPropertyCacheEntry *get_read_prop_cache(SHUnit *unit) {
+  return ((struct UnitData *)unit)->read_prop_cache_data;
 }
 )";
     if (options.emitMain) {

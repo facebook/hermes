@@ -20,7 +20,7 @@ function foo(x) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
@@ -50,26 +50,23 @@ function foo(x) {
 // CHECK-NEXT:  %15 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %13: object, %12: any, %14: number
 // CHECK-NEXT:        StoreStackInst %15: number, %4: number
 // CHECK-NEXT:  %17 = LoadStackInst (:number) %4: number
-// CHECK-NEXT:        StoreOwnPropertyInst 3: number, %13: object, %17: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 3: number, %13: object, %17: number, true: boolean
 // CHECK-NEXT:  %19 = LoadStackInst (:number) %4: number
 // CHECK-NEXT:  %20 = FAddInst (:number) %19: number, 1: number
 // CHECK-NEXT:        StoreStackInst %20: number, %4: number
 // CHECK-NEXT:  %22 = LoadStackInst (:number) %4: number
-// CHECK-NEXT:        StoreOwnPropertyInst 4: number, %13: object, %22: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 4: number, %13: object, %22: number, true: boolean
 // CHECK-NEXT:  %24 = LoadStackInst (:number) %4: number
 // CHECK-NEXT:  %25 = FAddInst (:number) %24: number, 1: number
 // CHECK-NEXT:        StoreStackInst %25: number, %4: number
 // CHECK-NEXT:        ReturnInst %13: object
 // CHECK-NEXT:function_end
 
-// OPT:scope %VS0 []
-
 // OPT:function global(): undefined
 // OPT-NEXT:%BB0:
-// OPT-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // OPT-NEXT:       DeclareGlobalVarInst "foo": string
-// OPT-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
-// OPT-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// OPT-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// OPT-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
 // OPT-NEXT:       ReturnInst undefined: undefined
 // OPT-NEXT:function_end
 
@@ -78,8 +75,8 @@ function foo(x) {
 // OPT-NEXT:  %0 = LoadParamInst (:any) %x: any
 // OPT-NEXT:  %1 = AllocArrayInst (:object) 4: number, 1: number, 2: number
 // OPT-NEXT:  %2 = CallBuiltinInst (:number) [HermesBuiltin.arraySpread]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %1: object, %0: any, 2: number
-// OPT-NEXT:       StoreOwnPropertyInst 3: number, %1: object, %2: number, true: boolean
+// OPT-NEXT:       DefineOwnPropertyInst 3: number, %1: object, %2: number, true: boolean
 // OPT-NEXT:  %4 = FAddInst (:number) %2: number, 1: number
-// OPT-NEXT:       StoreOwnPropertyInst 4: number, %1: object, %4: number, true: boolean
+// OPT-NEXT:       DefineOwnPropertyInst 4: number, %1: object, %4: number, true: boolean
 // OPT-NEXT:       ReturnInst %1: object
 // OPT-NEXT:function_end

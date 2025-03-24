@@ -326,6 +326,14 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   }
 
   /// Increase the size by one and set the new element to \p value.
+  ///
+  /// \param[in,out] self The SegmentedArrayBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated
+  /// SegmentedArrayBase if allocation is required. Caller needs to take the
+  /// updated handle value after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param value The value to append to the SegmentedArray. If this is a
+  /// SegmentedArraySmall, the value will be encoded into a SmallHermesValue.
   static ExecutionStatus push_back(
       MutableHandle<SegmentedArrayBase> &self,
       Runtime &runtime,
@@ -334,6 +342,13 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   /// Change the size of the storage to \p newSize. This can increase the size
   /// (in which case the new elements will be initialized to empty), or decrease
   /// the size.
+  ///
+  /// \param[in,out] self The SegmentedArrayBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated
+  /// SegmentedArrayBase if allocation is required. Caller needs to take the
+  /// updated handle value after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param newSize The new size of the SegmentedArray.
   static ExecutionStatus resize(
       MutableHandle<SegmentedArrayBase> &self,
       Runtime &runtime,
@@ -345,6 +360,13 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   /// every existing element is copied rightward, a linear time procedure.
   /// If the capacity is not sufficient, then the performance will be the same
   /// as \c resize.
+  ///
+  /// \param[in,out] self The SegmentedArrayBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated
+  /// SegmentedArrayBase if allocation is required. Caller needs to take the
+  /// updated handle value after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param newSize The new size of the SegmentedArray.
   static ExecutionStatus resizeLeft(
       MutableHandle<SegmentedArrayBase> &self,
       Runtime &runtime,
@@ -548,6 +570,13 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   /// Grow the SegmentedArray by the given \p amount, extending to the right and
   /// adding empty values. If size + \p amount is more than capacity can hold, a
   /// re-allocation will occur.
+  ///
+  /// \param[in,out] self The SegmentedArrayBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated
+  /// SegmentedArrayBase if allocation is required. Caller needs to take the
+  /// updated handle value after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param amount The amount to increase size by.
   static ExecutionStatus growRight(
       MutableHandle<SegmentedArrayBase> &self,
       Runtime &runtime,
@@ -557,6 +586,13 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
   /// This operation is slower than \p growRight, because it needs to shift all
   /// existing elements \p amount spaces to the right to make room for the new
   /// empty values.
+  ///
+  /// \param[in,out] self The SegmentedArrayBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated
+  /// SegmentedArrayBase if allocation is required. Caller needs to take the
+  /// updated handle value after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param amount The amount to increase size by.
   static ExecutionStatus growLeft(
       MutableHandle<SegmentedArrayBase> &self,
       Runtime &runtime,

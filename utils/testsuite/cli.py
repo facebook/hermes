@@ -17,6 +17,7 @@ from collections import defaultdict
 from typing import Awaitable, Dict, List, Optional
 
 from . import utils
+from .hermes import ExtraCompileVMArgs
 from .progress import (
     ProgressBar,
     SimpleProgressBar,
@@ -40,6 +41,16 @@ except TypeError:
     # simply set it to the directory of current file as a fallback (it's unclear
     # whether this will always work).
     RESOURCE_ROOT = Path(os.path.dirname(__file__))
+
+
+def strip_nargs(value: str):
+    """
+    Strip the leading/trailing whitespaces in values passed to nargs.
+
+    Adding leading/trailing whitespaces is a common workaround to pass argument
+    values with '-' in it (otherwise, argparse will treat it as another flag).
+    """
+    return value.strip()
 
 
 def create_parser():
@@ -105,6 +116,22 @@ def create_parser():
     )
     parser.add_argument(
         "--opt", dest="opt", action="store_true", help="Enable compiler optimizations"
+    )
+    parser.add_argument(
+        "--compile-args",
+        dest="extra_compile_args",
+        nargs="+",
+        default=[],
+        type=strip_nargs,
+        help="Extra compiler arguments, separated by whitespace",
+    )
+    parser.add_argument(
+        "--vm-args",
+        dest="extra_vm_args",
+        nargs="+",
+        default=[],
+        type=strip_nargs,
+        help="Extra VM arguments, separated by whitespace",
     )
     parser.add_argument(
         "-d",
@@ -250,6 +277,7 @@ async def run(
     lazy: bool,
     shermes: bool,
     opt: bool,
+    extra_compile_vm_args: ExtraCompileVMArgs,
     timeout: int,
     verbose: bool,
 ) -> int:
@@ -309,6 +337,7 @@ async def run(
         skip_categories = [
             SkipCategory.SKIP_LIST,
             SkipCategory.MANUAL_SKIP_LIST,
+            SkipCategory.PLATFORM_SKIP_LIST,
         ]
         if lazy:
             skip_categories.append(SkipCategory.LAZY_SKIP_LIST)
@@ -344,6 +373,7 @@ async def run(
             lazy,
             shermes,
             opt,
+            extra_compile_vm_args,
             timeout,
         )
         tasks.append(suite.run_test(test_run_args))
@@ -445,6 +475,11 @@ async def main() -> int:
     ) as skip_list_cfg_path:
         skipped_paths_features = SkippedPathsOrFeatures(os.fspath(skip_list_cfg_path))
 
+    # Consumes all extra flags.
+    extra_compile_vm_args = ExtraCompileVMArgs(
+        compile_args=args.extra_compile_args, vm_args=args.extra_vm_args
+    )
+
     exit_code = await run(
         args.paths,
         args.binary_directory,
@@ -456,6 +491,7 @@ async def main() -> int:
         args.lazy,
         args.shermes,
         args.opt,
+        extra_compile_vm_args,
         args.timeout,
         args.verbose,
     )

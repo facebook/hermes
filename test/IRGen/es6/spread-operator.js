@@ -19,7 +19,7 @@ function foo(a, b, c) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
@@ -41,10 +41,10 @@ function foo(a, b, c) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.c]: any
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.a]: any
-// CHECK-NEXT:        StoreNewOwnPropertyInst %9: any, %8: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst %9: any, %8: object, "a": string, true: boolean
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.b]: any
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: object, %11: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.c]: any
-// CHECK-NEXT:        StoreOwnPropertyInst %13: any, %8: object, "c": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %13: any, %8: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %8: object
 // CHECK-NEXT:function_end

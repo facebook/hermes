@@ -24,6 +24,7 @@
 
 #include "FlowChecker.h"
 
+#if HERMES_PARSE_FLOW
 #define DEBUG_TYPE "FlowChecker"
 
 namespace hermes {
@@ -1277,8 +1278,7 @@ class FlowChecker::ExprVisitor {
       if (auto *methodCallee =
               llvh::dyn_cast<ESTree::MemberExpressionNode>(node->_callee)) {
         Type *thisArgType = nullptr;
-        if (auto *superNode =
-                llvh::dyn_cast<ESTree::SuperNode>(methodCallee->_object)) {
+        if (llvh::isa<ESTree::SuperNode>(methodCallee->_object)) {
           // 'super' calls implicitly pass the current class as 'this'.
           if (!outer_.curClassContext_->classType) {
             outer_.sm_.error(
@@ -1296,8 +1296,7 @@ class FlowChecker::ExprVisitor {
               methodCallee->getSourceRange(), "ft: 'this' type mismatch");
           return;
         }
-      } else if (
-          auto *superNode = llvh::dyn_cast<ESTree::SuperNode>(node->_callee)) {
+      } else if (llvh::isa<ESTree::SuperNode>(node->_callee)) {
         // 'super' calls implicitly pass the current class as 'this'.
         if (!outer_.curClassContext_->classType) {
           outer_.sm_.error(
@@ -1345,6 +1344,18 @@ class FlowChecker::ExprVisitor {
     }
     if (builtin->_name == outer_.kw_.identExternC) {
       checkSHBuiltinExternC(call);
+      return;
+    }
+    if (builtin->_name == outer_.kw_.identModuleFactory) {
+      checkSHBuiltinModuleFactory(call);
+      return;
+    }
+    if (builtin->_name == outer_.kw_.identExport) {
+      checkSHBuiltinExport(call);
+      return;
+    }
+    if (builtin->_name == outer_.kw_.identImport) {
+      checkSHBuiltinImport(call);
       return;
     }
 
@@ -1590,6 +1601,40 @@ class FlowChecker::ExprVisitor {
         funcInfo->getReturnType(), funcInfo->getParams(), signature);
 
     outer_.setNodeType(call, outer_.flowContext_.createType(nativeFuncInfo));
+  }
+
+  void checkSHBuiltinModuleFactory(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    assert(
+        call->_arguments.size() == 2 &&
+        "Ensured by checks in SemanticResolver.");
+    auto argsIter = call->_arguments.begin();
+    // Skip to the second argument.
+    argsIter++;
+
+    auto *modFactoryFunctionArg = &(*argsIter);
+    // The type of the call is the type of the second (function) argument.
+    outer_.setNodeType(call, outer_.getNodeTypeOrAny(modFactoryFunctionArg));
+  }
+
+  void checkSHBuiltinExport(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    // The type of the call is void.
+    outer_.setNodeType(call, outer_.flowContext_.getVoid());
+  }
+
+  void checkSHBuiltinImport(ESTree::CallExpressionNode *call) {
+    visitESTreeChildren(*this, call, nullptr);
+    assert(
+        call->_arguments.size() == 3 &&
+        "Ensured by checks in SemanticResolver.");
+    auto argsIter = call->_arguments.begin();
+    argsIter++;
+    argsIter++;
+
+    auto *importExp = &(*argsIter);
+    // The type of the call is the type of the third argument.
+    outer_.setNodeType(call, outer_.getNodeTypeOrAny(importExp));
   }
 
   /// Extract the options from the options object literal. On error print an
@@ -1896,10 +1941,17 @@ class FlowChecker::ExprVisitor {
       auto [argTypeNarrow, cf] = tryNarrowType(argType, expectedType);
 
       if (!cf.canFlow) {
-        outer_.sm_.error(
-            arg->getSourceRange(),
-            "ft: " + calleeName + " parameter '" + param.first.str() +
-                "' type mismatch");
+        if (param.first.isValid()) {
+          outer_.sm_.error(
+              arg->getSourceRange(),
+              "ft: " + calleeName + " parameter '" + param.first.str() +
+                  "' type mismatch");
+        } else {
+          outer_.sm_.error(
+              arg->getSourceRange(),
+              "ft: " + calleeName + " parameter #" + llvh::Twine(argIndex + 1) +
+                  " type mismatch");
+        }
         return false;
       }
       // If a cast is needed, replace the argument with the cast.
@@ -1927,3 +1979,5 @@ void FlowChecker::visitExpression(
 
 } // namespace flow
 } // namespace hermes
+
+#endif // HERMES_PARSE_FLOW

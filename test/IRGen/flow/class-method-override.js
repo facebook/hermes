@@ -45,7 +45,7 @@ function foo(c: C, d: D){
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
@@ -63,24 +63,23 @@ function foo(c: C, d: D){
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.exports]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.C]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.D]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %foo(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.foo]: any
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %C(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.C]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %override(): functionCode
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %1: environment, %override2(): functionCode
-// CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) empty: any, "override": string, %10: object, "override2": string, %11: object
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %override(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %1: environment, %VS1: any, %override2(): functionCode
+// CHECK-NEXT:  %12 = AllocTypedObjectInst (:object) empty: any, "override": string, %10: object, "override2": string, %11: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %12: object, %8: object, "prototype": string
 // CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS1.C]: any
 // CHECK-NEXT:  %16 = CheckedTypeCastInst (:object) %15: any, type(object)
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %D(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %VS1: any, %D(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.D]: any
 // CHECK-NEXT:  %19 = LoadFrameInst (:object) %1: environment, [%VS1.?C.prototype]: object
-// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %1: environment, %"override 1#"(): functionCode
-// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %1: environment, %"override2 1#"(): functionCode
-// CHECK-NEXT:  %22 = AllocObjectLiteralInst (:object) empty: any, "override": string, %20: object, "override2": string, %21: object
-// CHECK-NEXT:        TypedStoreParentInst %19: object, %22: object
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"override 1#"(): functionCode
+// CHECK-NEXT:  %21 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"override2 1#"(): functionCode
+// CHECK-NEXT:  %22 = AllocTypedObjectInst (:object) %19: object, "override": string, %20: object, "override2": string, %21: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %22: object, [%VS1.?D.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %22: object, %17: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
@@ -142,7 +141,7 @@ function foo(c: C, d: D){
 
 // CHECK:scope %VS6 []
 
-// CHECK:constructor D(): any [typed]
+// CHECK:derived constructor D(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment

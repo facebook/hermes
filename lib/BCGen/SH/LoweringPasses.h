@@ -32,7 +32,7 @@ Pass *createLowerCalls(SHRegisterAllocator &RA);
 Pass *createRecreateCheapValues(SHRegisterAllocator &RA);
 
 /// Perform simple peephole lowering.
-Pass *createPeepholeLowering();
+Pass *createPeepholeLowering(bool optimize);
 } // namespace hermes::sh
 
 #endif

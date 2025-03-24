@@ -27,17 +27,14 @@ function test_two(x,y,z) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
 // CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %test_one(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "test_one": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test_two(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_two": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %test_two(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_two": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

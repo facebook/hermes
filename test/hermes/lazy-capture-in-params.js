@@ -25,3 +25,37 @@
   print(paramsFunc());
   // CHECK: outside
 })();
+
+(function arrowCapture() {
+  var x = 'outside';
+  var paramsFunc;
+
+  function foo(
+    _ = (paramsFunc = () => {
+      // Capture the outer 'x'
+      return x;
+    })
+  ) {
+    let x = 'inside';
+  }
+  foo();
+
+  print(paramsFunc());
+  // CHECK: outside
+})();
+
+(function setCapture() {
+  var x = 'outside';
+  var probeParams;
+
+  var obj = {
+    set a(_ = probeParams = function() { return x; }) {
+      var x = 'inside';
+    }
+  };
+  // Force default params on setter to trigger.
+  obj.a = undefined;
+
+  print(probeParams());
+  // CHECK: outside
+})();

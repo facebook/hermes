@@ -236,7 +236,7 @@ def print_categories(unicode_data_lines):
 
 def get_assigned_codepoints(unicode_data_lines):
     """Gather intervals for all assigned Unicode codepoints."""
-    cp_begin = 0
+    cp_begin = None
     cp_end = None
 
     def empty_buf():

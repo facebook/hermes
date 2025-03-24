@@ -5,10 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// Restore the run line to this form once D58649571 has landed (and eliminated a
-// stray warning.
-// RAN: (%shermes %s -ferror-limit=100 2>&1 ) | %FileCheck --match-full-lines --implicit-check-not "{{error|warning}}:" %s
-// RUN: (%shermes %s -ferror-limit=100 2>&1 ) | %FileCheck --match-full-lines --implicit-check-not "error:" %s
+// RUN: (%shermes %s -dump-sema -ferror-limit=100 2>&1 ) | %FileCheck --match-full-lines --implicit-check-not "{{error|warning}}:" %s
 
 function doubleDirective() {
     'inline'

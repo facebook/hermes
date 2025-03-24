@@ -201,6 +201,9 @@ class InstSimplifyImpl {
     if (t.isStringType()) {
       return builder_.getLiteralString("string");
     }
+    if (t.isSymbolType()) {
+      return builder_.getLiteralString("symbol");
+    }
     // Type is either multiple things or object. We cannot distinguish object
     // from closure yet, so give up.
     return nullptr;
@@ -308,6 +311,47 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
+  /// Simplify an equality/inequality comparison between a typeof and a string.
+  /// \param str the string to compare the typeof result with.
+  /// \param typeofInst the typeof instruction to run.
+  /// \param invert whether to check for inequality instead of equality.
+  /// \return a TypeOfIsInst that replaces the strict equality/inequality.
+  Value *
+  simplifyTypeOfCheck(LiteralString *str, TypeOfInst *typeofInst, bool invert) {
+    TypeOfIsTypes types;
+    llvh::StringRef strRef = str->getValue().str();
+    if (strRef == "undefined") {
+      types = TypeOfIsTypes{}.withUndefined(true);
+    } else if (strRef == "object") {
+      // TypeOfIs supports null and object separately.
+      // typeof null is "object", so we have to put both.
+      types = TypeOfIsTypes{}.withNull(true).withObject(true);
+    } else if (strRef == "string") {
+      types = TypeOfIsTypes{}.withString(true);
+    } else if (strRef == "symbol") {
+      types = TypeOfIsTypes{}.withSymbol(true);
+    } else if (strRef == "boolean") {
+      types = TypeOfIsTypes{}.withBoolean(true);
+    } else if (strRef == "number") {
+      types = TypeOfIsTypes{}.withNumber(true);
+    } else if (strRef == "bigint") {
+      types = TypeOfIsTypes{}.withBigint(true);
+    } else if (strRef == "function") {
+      types = TypeOfIsTypes{}.withFunction(true);
+    } else {
+      // All other strings are not going to be returned by typeof.
+      // true if the operator is !==, false if it is ===.
+      return builder_.getLiteralBool(invert);
+    }
+
+    if (invert) {
+      types = types.invert();
+    }
+
+    return builder_.createTypeOfIsInst(
+        typeofInst->getArgument(), builder_.getLiteralTypeOfIsTypes(types));
+  }
+
   Value *simplifyBinOp(BinaryOperatorInst *binary) {
     Value *lhs = binary->getLeftHandSide();
     Value *rhs = binary->getRightHandSide();
@@ -363,6 +407,14 @@ class InstSimplifyImpl {
           return builder_.createBinaryOperatorInst(
               lhs, rhs, ValueKind::BinaryStrictlyEqualInstKind);
         }
+
+        // ~(null|undefined) == null|undefined is always false.
+        if ((Type::intersectTy(leftTy, kNullOrUndef).isNoType() &&
+             rightTy.isSubsetOf(kNullOrUndef)) ||
+            (Type::intersectTy(rightTy, kNullOrUndef).isNoType() &&
+             leftTy.isSubsetOf(kNullOrUndef))) {
+          return builder_.getLiteralBool(false);
+        }
         break;
 
       case ValueKind::BinaryNotEqualInstKind: // !=
@@ -377,6 +429,14 @@ class InstSimplifyImpl {
           return builder_.createBinaryOperatorInst(
               lhs, rhs, ValueKind::BinaryStrictlyNotEqualInstKind);
         }
+
+        // ~(null|undefined) != null|undefined is always true.
+        if ((Type::intersectTy(leftTy, kNullOrUndef).isNoType() &&
+             rightTy.isSubsetOf(kNullOrUndef)) ||
+            (Type::intersectTy(rightTy, kNullOrUndef).isNoType() &&
+             leftTy.isSubsetOf(kNullOrUndef))) {
+          return builder_.getLiteralBool(true);
+        }
         break;
 
       case ValueKind::BinaryStrictlyEqualInstKind: // ===
@@ -386,10 +446,8 @@ class InstSimplifyImpl {
         }
 
         // Operands of different types can't be strictly equal.
-        if (leftTy.isPrimitive() && rightTy.isPrimitive()) {
-          if (Type::intersectTy(leftTy, rightTy).isNoType()) {
-            return builder_.getLiteralBool(false);
-          }
+        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
+          return builder_.getLiteralBool(false);
         }
         break;
 
@@ -397,6 +455,10 @@ class InstSimplifyImpl {
         // Identical operands can't be non-equal.
         if (identicalForEquality) {
           return builder_.getLiteralBool(false);
+        }
+        // Operands of different types can't be strictly equal.
+        if (Type::intersectTy(leftTy, rightTy).isNoType()) {
+          return builder_.getLiteralBool(true);
         }
         break;
 
@@ -458,6 +520,27 @@ class InstSimplifyImpl {
 
       default:
         break;
+    }
+
+    // If the typeof is one side of an (in)equality and the other side is a
+    // string literal, we can use TypeOfIs directly.
+    bool isEquality = kind == ValueKind::BinaryEqualInstKind ||
+        kind == ValueKind::BinaryStrictlyEqualInstKind;
+    bool isInequality = kind == ValueKind::BinaryNotEqualInstKind ||
+        kind == ValueKind::BinaryStrictlyNotEqualInstKind;
+    if (isEquality || isInequality) {
+      if (llvh::isa<TypeOfInst>(lhs) && llvh::isa<LiteralString>(rhs)) {
+        return simplifyTypeOfCheck(
+            llvh::cast<LiteralString>(rhs),
+            llvh::cast<TypeOfInst>(lhs),
+            isInequality);
+      }
+      if (llvh::isa<TypeOfInst>(rhs) && llvh::isa<LiteralString>(lhs)) {
+        return simplifyTypeOfCheck(
+            llvh::cast<LiteralString>(lhs),
+            llvh::cast<TypeOfInst>(rhs),
+            isInequality);
+      }
     }
 
     if (Instruction *typed = simplifyTypedBinaryExpression(binary))
@@ -593,7 +676,13 @@ class InstSimplifyImpl {
     auto opTy = GCOI->getConstructorReturnValue()->getType();
     if (opTy.isObjectType())
       return GCOI->getConstructorReturnValue();
-    if (!opTy.canBeObject())
+    // Ideally, all we would need to check is that opTy cannot be an object.
+    // However, there might be cases where we have inferred the return type of
+    // ConstructorReturnValue, and have not yet inferred that ThisValue is an
+    // object. In that case, it would be invalid to replace
+    // GetConstructedObject, which is of type object, with ThisValue, which is
+    // not of type object.
+    if (!opTy.canBeObject() && GCOI->getThisValue()->getType().isObjectType())
       return GCOI->getThisValue();
     return nullptr;
   }

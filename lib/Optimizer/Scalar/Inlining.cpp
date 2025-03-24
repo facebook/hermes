@@ -21,6 +21,9 @@
 #include "llvh/Support/Debug.h"
 
 STATISTIC(NumInlinedCalls, "Number of inlined calls");
+STATISTIC(
+    NumSpecInlinedCalls,
+    "Number of inlined calls that are speculatively inlined");
 
 namespace hermes {
 
@@ -216,6 +219,14 @@ static std::pair<bool, size_t> canBeInlined(Function *F) {
                 << "': copies rest args\n");
             return {false, 0};
           }
+          if (cast<CallBuiltinInst>(&I)->getBuiltinIndex() ==
+              BuiltinMethod::HermesBuiltin_applyArguments) {
+            LLVM_DEBUG(
+                llvh::dbgs()
+                << "Cannot inline function '" << F->getInternalNameStr()
+                << "': applies arguments\n");
+            return {false, 0};
+          }
           break;
         default:
           break;
@@ -352,7 +363,7 @@ static Value *inlineFunction(
           operandMap[&I] = callScope;
         } else {
           operandMap[&I] = builder.createGetClosureScopeInst(
-              GPS->getVariableScope(), CI->getCallee());
+              GPS->getVariableScope(), F, CI->getCallee());
         }
         continue;
       }
@@ -511,7 +522,6 @@ bool Inlining::runOnModule(Module *M) {
   IRBuilder builder(M);
 
   // Literal strings for speculative inlining.
-  auto *functionLS = builder.getLiteralString("function");
   auto *nonFunctionErrorLS =
       builder.getLiteralString("Trying to call a non-function");
 
@@ -626,15 +636,18 @@ bool Inlining::runOnModule(Module *M) {
         auto *inlineBB = builder.createBasicBlock(intoFunction);
 
         // Check if typeof callee === 'function', and throw a type error if not.
-        auto *typeCheck = builder.createTypeOfInst(CI->getCallee());
-        auto *typeCheckResult = builder.createBinaryOperatorInst(
-            typeCheck, functionLS, ValueKind::BinaryStrictlyEqualInstKind);
+        auto *typeCheckResult = builder.createTypeOfIsInst(
+            CI->getCallee(),
+            builder.getLiteralTypeOfIsTypes(
+                TypeOfIsTypes{}.withFunction(true)));
         builder.createCondBranchInst(typeCheckResult, inlineBB, throwBB);
         builder.setInsertionBlock(throwBB);
         builder.createThrowTypeErrorInst(nonFunctionErrorLS);
 
         // Continue inserting in inlineBB.
         builder.setInsertionBlock(inlineBB);
+
+        ++NumSpecInlinedCalls;
       }
 
       auto *returnValue = inlineFunction(builder, FC, CI, nextBlock);

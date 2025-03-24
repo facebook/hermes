@@ -15,12 +15,7 @@
 namespace hermes {
 namespace hbc {
 
-class PeepholeLowering : public FunctionPass {
- public:
-  explicit PeepholeLowering() : FunctionPass("PeepholeLowering") {}
-
-  bool runOnFunction(Function *F) override;
-};
+Pass *createPeepholeLowering(bool optimize);
 
 } // namespace hbc
 } // namespace hermes

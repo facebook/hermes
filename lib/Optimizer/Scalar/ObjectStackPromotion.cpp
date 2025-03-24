@@ -10,6 +10,9 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
+#include "hermes/Support/Statistic.h"
+
+STATISTIC(ObjsEliminated, "Object allocations eliminated");
 
 namespace hermes {
 namespace {
@@ -23,7 +26,7 @@ namespace {
 /// \p stores are known to always execute without any other intervening users
 /// \p destroyer is used to eliminate instructions
 bool tryPromoteObject(
-    AllocObjectLiteralInst *alloc,
+    BaseAllocObjectLiteralInst *alloc,
     IRBuilder::InstructionDestroyer &destroyer) {
   IRBuilder builder(alloc->getFunction());
   auto numElems = alloc->getKeyValuePairCount();
@@ -108,7 +111,7 @@ bool tryPromoteObject(
       continue;
     }
 
-    if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(U)) {
+    if (auto *SOP = llvh::dyn_cast<DefineOwnPropertyInst>(U)) {
       if (SOP->getStoredValue() == alloc)
         return false;
       if (!isInLayout(SOP->getProperty()))
@@ -138,7 +141,12 @@ bool tryPromoteObject(
   for (size_t i = 0; i < numElems; ++i) {
     auto *LS = llvh::dyn_cast<LiteralString>(alloc->getKey(i));
     auto name = LS ? LS->getValue() : numericPropName;
-    auto *loc = builder.createAllocStackInst(name, Type::createAnyType());
+    Type valueType = alloc->getValue(i)->getType();
+    auto *loc = builder.createAllocStackInst(
+        name,
+        valueType.canBeUninit()
+            ? Type::unionTy(Type::createAnyType(), Type::createUninit())
+            : Type::createAnyType());
     stackLocs.push_back(loc);
     builder.createStoreStackInst(alloc->getValue(i), loc);
   }
@@ -204,7 +212,7 @@ bool tryPromoteObject(
       continue;
     }
 
-    if (auto *SOP = llvh::dyn_cast<StoreOwnPropertyInst>(U)) {
+    if (auto *SOP = llvh::dyn_cast<DefineOwnPropertyInst>(U)) {
       auto *replace = builder.createStoreStackInst(
           SOP->getStoredValue(),
           stackLocOfPropKey(llvh::cast<Literal>(SOP->getProperty())));
@@ -214,6 +222,7 @@ bool tryPromoteObject(
 
     llvm_unreachable("Unhandled instruction");
   }
+  ObjsEliminated++;
   destroyer.add(alloc);
 
   return true;
@@ -222,11 +231,11 @@ bool tryPromoteObject(
 bool runObjectStackPromotion(Function *F) {
   bool changed = false;
   // Iterate over all instructions in the function and try to promote any
-  // AllocObjectLiteralInsts.
+  // BaseAllocObjectLiteralInsts.
   IRBuilder::InstructionDestroyer destroyer;
   for (auto &BB : *F)
     for (auto &I : BB)
-      if (auto *alloc = llvh::dyn_cast<AllocObjectLiteralInst>(&I))
+      if (auto *alloc = llvh::dyn_cast<BaseAllocObjectLiteralInst>(&I))
         changed |= tryPromoteObject(alloc, destroyer);
   return changed;
 }

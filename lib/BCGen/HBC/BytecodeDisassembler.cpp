@@ -66,7 +66,7 @@ static void dumpFunctionName(
     unsigned funcId,
     const RuntimeFunctionHeader &functionHeader,
     DisassemblyOptions options) {
-  switch (functionHeader.flags().prohibitInvoke) {
+  switch (functionHeader.getFlags().getProhibitInvoke()) {
     case ProhibitInvoke::Call:
       OS << "Constructor";
       break;
@@ -79,7 +79,7 @@ static void dumpFunctionName(
   }
 
   auto functionName =
-      bcProvider.getStringRefFromID(functionHeader.functionName());
+      bcProvider.getStringRefFromID(functionHeader.getFunctionName());
   OS << "<" << functionName << ">";
   if ((options & DisassemblyOptions::IncludeFunctionIds) ==
       DisassemblyOptions::IncludeFunctionIds) {
@@ -109,12 +109,6 @@ namespace {
 std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
   std::string rBracket{"]"};
   switch (tag) {
-    case SLG::ByteStringTag: {
-      uint8_t val = llvh::support::endian::read<uint8_t, 1>(
-          buff + *ind, llvh::support::endianness::little);
-      *ind += 1;
-      return std::string("[String ") + std::to_string(val) + rBracket;
-    }
     case SLG::ShortStringTag: {
       uint16_t val = llvh::support::endian::read<uint16_t, 1>(
           buff + *ind, llvh::support::endianness::little);
@@ -141,6 +135,8 @@ std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
     }
     case SLG::NullTag:
       return "null";
+    case SLG::UndefinedTag:
+      return "undefined";
     case SLG::TrueTag:
       return "true";
     case SLG::FalseTag:
@@ -183,9 +179,9 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  Function source count: "
      << bcProvider_->getFunctionSourceTable().size() << "\n";
   OS << "  Bytecode options:\n";
-  OS << "    staticBuiltins: " << bcopts.staticBuiltins << "\n";
+  OS << "    staticBuiltins: " << bcopts.getStaticBuiltins() << "\n";
   OS << "    cjsModulesStaticallyResolved: "
-     << bcopts.cjsModulesStaticallyResolved << "\n";
+     << bcopts.getCjsModulesStaticallyResolved() << "\n";
   OS << "\n";
 }
 
@@ -473,7 +469,7 @@ void BytecodeVisitor::visitInstructionsInFunction(unsigned funcId) {
   RuntimeFunctionHeader functionHeader = bcProvider_->getFunctionHeader(funcId);
   const uint8_t *bytecodeStart = bcProvider_->getBytecode(funcId);
   const uint8_t *bytecodeEnd =
-      bytecodeStart + functionHeader.bytecodeSizeInBytes();
+      bytecodeStart + functionHeader.getBytecodeSizeInBytes();
 
   beforeStart(funcId, bytecodeStart);
   visitInstructionsInBody(
@@ -966,7 +962,7 @@ BytecodeSectionWalker::BytecodeSectionWalker(
 
   // Iterate to find the first function that actually has info allocated for it.
   for (const auto &header : bcProvider->getSmallFunctionHeaders()) {
-    if (header.flags.overflowed) {
+    if (header.flags.getOverflowed()) {
       firstFuncInfoStart = bytecodeStart + header.getLargeHeaderOffset();
       break;
     }
@@ -1134,7 +1130,7 @@ class ObjdumpDisassembleVisitor : public BytecodeVisitor {
 
   void beforeStart(unsigned funcId, const uint8_t *bytecodeStart) override {
     funcId_ = funcId;
-    funcOffset_ = bcProvider_->getFunctionHeader(funcId).offset();
+    funcOffset_ = bcProvider_->getFunctionHeader(funcId).getOffset();
     bytecodeStart_ = bytecodeStart;
     os_ << "\n"
         << llvh::format_hex_no_prefix(funcOffset_, 16) << " <_" << funcId
@@ -1259,14 +1255,15 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
         bcProvider_->getFunctionHeader(funcId);
 
     dumpFunctionName(OS, *bcProvider_, funcId, functionHeader, options_);
-    OS << "(" << functionHeader.paramCount() << " params, "
-       << functionHeader.frameSize() << " registers, "
-       << functionHeader.numberRegCount() << " numbers, "
-       << functionHeader.nonPtrRegCount() << " non-pointers" << ")";
+    OS << "(" << functionHeader.getParamCount() << " params, "
+       << functionHeader.getFrameSize() << " registers, "
+       << functionHeader.getNumberRegCount() << " numbers, "
+       << functionHeader.getNonPtrRegCount() << " non-pointers" << ")";
     OS << ":\n";
 
     auto *funcDebugOffsets = bcProvider_->getDebugOffsets(funcId);
-    if (functionHeader.flags().hasDebugInfo && funcDebugOffsets != nullptr) {
+    if (functionHeader.getFlags().getHasDebugInfo() &&
+        funcDebugOffsets != nullptr) {
       OS << "Offset in debug table: source ";
       uint32_t debugSourceOffset = funcDebugOffsets->sourceLocations;
       if (debugSourceOffset == DebugOffsets::NO_OFFSET) {

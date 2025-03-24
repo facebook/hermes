@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xes6-promise %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O0 -Xes6-promise %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -lazy -Xes6-promise %s | %FileCheck --match-full-lines %s
+// RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
 
 print('async arrow function');
 // CHECK-LABEL: async arrow function

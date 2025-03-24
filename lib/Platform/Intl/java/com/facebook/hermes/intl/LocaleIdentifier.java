@@ -872,7 +872,7 @@ public class LocaleIdentifier {
     }
 
     ArrayList<String> otherExtensions = new ArrayList<>();
-    parsedLocaleIdentifier.otherExtensionsMap.put(new Character(singleton), otherExtensions);
+    parsedLocaleIdentifier.otherExtensionsMap.put(Character.valueOf(singleton), otherExtensions);
 
     while (nextSubtag.isOtherExtension()) {
 

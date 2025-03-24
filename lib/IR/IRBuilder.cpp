@@ -300,6 +300,17 @@ TryEndInst *IRBuilder::createTryEndInst(
   return I;
 }
 
+BranchIfBuiltinInst *IRBuilder::createBranchIfBuiltinInst(
+    BuiltinMethod::Enum builtinIndex,
+    Value *argument,
+    BasicBlock *catchBlock,
+    BasicBlock *branchBlock) {
+  auto *I = new BranchIfBuiltinInst(
+      getLiteralBuiltinIdx(builtinIndex), argument, catchBlock, branchBlock);
+  insert(I);
+  return I;
+}
+
 AllocStackInst *IRBuilder::createAllocStackInst(
     const llvh::Twine &varName,
     Type type) {
@@ -312,6 +323,12 @@ AllocStackInst *IRBuilder::createAllocStackInst(Identifier varName, Type type) {
   AHI->setType(type);
   insert(AHI);
   return AHI;
+}
+
+ToPropertyKeyInst *IRBuilder::createToPropertyKeyInst(Value *val) {
+  auto *ANI = new ToPropertyKeyInst(val);
+  insert(ANI);
+  return ANI;
 }
 
 AsNumberInst *IRBuilder::createAsNumberInst(Value *val) {
@@ -338,17 +355,27 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
+CreateClassInst *IRBuilder::createCreateClassInst(
+    BaseScopeInst *scope,
+    Function *code,
+    Value *superClass,
+    AllocStackInst *homeObjectOutput) {
+  auto CC = new CreateClassInst(scope, code, superClass, homeObjectOutput);
+  insert(CC);
+  return CC;
+}
+
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(
-    Instruction *scope,
+    BaseScopeInst *scope,
     Function *code) {
-  auto CFI = new CreateFunctionInst(scope, code);
+  auto CFI = new CreateFunctionInst(scope, scope->getVariableScope(), code);
   insert(CFI);
   return CFI;
 }
 
 GetParentScopeInst *IRBuilder::createGetParentScopeInst(
     VariableScope *scope,
-    JSDynamicParam *parentScopeParam) {
+    JSSpecialParam *parentScopeParam) {
   auto GPS = new GetParentScopeInst(scope, parentScopeParam);
   insert(GPS);
   return GPS;
@@ -382,8 +409,9 @@ LIRResolveScopeInst *IRBuilder::createLIRResolveScopeInst(
 
 GetClosureScopeInst *IRBuilder::createGetClosureScopeInst(
     VariableScope *scope,
+    Function *F,
     Value *closure) {
-  auto *GCSI = new GetClosureScopeInst(scope, closure);
+  auto *GCSI = new GetClosureScopeInst(scope, F, closure);
   insert(GCSI);
   return GCSI;
 }
@@ -489,6 +517,15 @@ LoadPropertyInst *IRBuilder::createLoadPropertyInst(
   return LPI;
 }
 
+LoadPropertyWithReceiverInst *IRBuilder::createLoadPropertyWithReceiverInst(
+    Value *object,
+    Value *property,
+    Value *receiver) {
+  auto LPI = new LoadPropertyWithReceiverInst(object, property, receiver);
+  insert(LPI);
+  return LPI;
+}
+
 TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
     LiteralString *property) {
   auto *inst = new TryLoadGlobalPropertyInst(getGlobalObject(), property);
@@ -522,6 +559,22 @@ DeletePropertyStrictInst *IRBuilder::createDeletePropertyStrictInst(
   auto DPI = new DeletePropertyStrictInst(object, property);
   insert(DPI);
   return DPI;
+}
+
+StorePropertyWithReceiverInst *IRBuilder::createStorePropertyWithReceiverInst(
+    Value *storedValue,
+    Value *object,
+    Value *property,
+    Value *receiver,
+    StoreStrict isStrict) {
+  auto SPI = new StorePropertyWithReceiverInst(
+      storedValue,
+      object,
+      property,
+      receiver,
+      getLiteralBool(isStrict == StoreStrict::Yes));
+  insert(SPI);
+  return SPI;
 }
 
 StorePropertyInst *IRBuilder::createStorePropertyInst(
@@ -582,12 +635,12 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
   return createTryStoreGlobalPropertyInst(storedValue, property->getName());
 }
 
-StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
+DefineOwnPropertyInst *IRBuilder::createDefineOwnPropertyInst(
     Value *storedValue,
     Value *object,
     Value *property,
     PropEnumerable isEnumerable) {
-  auto SPI = new StoreOwnPropertyInst(
+  auto SPI = new DefineOwnPropertyInst(
       storedValue,
       object,
       property,
@@ -595,27 +648,23 @@ StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
   insert(SPI);
   return SPI;
 }
-StoreNewOwnPropertyInst *IRBuilder::createStoreNewOwnPropertyInst(
+DefineNewOwnPropertyInst *IRBuilder::createDefineNewOwnPropertyInst(
     Value *storedValue,
     Value *object,
-    Literal *property,
-    PropEnumerable isEnumerable) {
-  auto *inst = new StoreNewOwnPropertyInst(
-      storedValue,
-      object,
-      property,
-      getLiteralBool(isEnumerable == PropEnumerable::Yes));
+    Literal *property) {
+  auto *inst = new DefineNewOwnPropertyInst(
+      storedValue, object, property, getLiteralBool(true));
   insert(inst);
   return inst;
 }
 
-StoreGetterSetterInst *IRBuilder::createStoreGetterSetterInst(
+DefineOwnGetterSetterInst *IRBuilder::createDefineOwnGetterSetterInst(
     Value *storedGetter,
     Value *storedSetter,
     Value *object,
     Value *property,
     PropEnumerable isEnumerable) {
-  auto *SGSI = new StoreGetterSetterInst(
+  auto *SGSI = new DefineOwnGetterSetterInst(
       storedGetter,
       storedSetter,
       object,
@@ -749,6 +798,13 @@ ThrowIfInst *IRBuilder::createThrowIfInst(
   return inst;
 }
 
+ThrowIfThisInitializedInst *IRBuilder::createThrowIfThisInitializedInst(
+    Value *subclassCheckedThis) {
+  auto *inst = new ThrowIfThisInitializedInst(subclassCheckedThis);
+  insert(inst);
+  return inst;
+}
+
 HBCGetGlobalObjectInst *IRBuilder::createHBCGetGlobalObjectInst() {
   auto inst = new HBCGetGlobalObjectInst();
   insert(inst);
@@ -766,6 +822,14 @@ CreateRegExpInst *IRBuilder::createRegExpInst(
 
 TypeOfInst *IRBuilder::createTypeOfInst(Value *input) {
   auto *inst = new TypeOfInst(input);
+  insert(inst);
+  return inst;
+}
+
+TypeOfIsInst *IRBuilder::createTypeOfIsInst(
+    Value *input,
+    LiteralTypeOfIsTypes *types) {
+  auto *inst = new TypeOfIsInst(input, types);
   insert(inst);
   return inst;
 }
@@ -883,15 +947,9 @@ SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
 }
 
 CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
-    Instruction *scope,
+    BaseScopeInst *scope,
     NormalFunction *innerFn) {
-  auto *I = new CreateGeneratorInst(scope, innerFn);
-  insert(I);
-  return I;
-}
-
-StartGeneratorInst *IRBuilder::createStartGeneratorInst() {
-  auto *I = new StartGeneratorInst();
+  auto *I = new CreateGeneratorInst(scope, scope->getVariableScope(), innerFn);
   insert(I);
   return I;
 }
@@ -907,7 +965,7 @@ HBCResolveParentEnvironmentInst *
 IRBuilder::createHBCResolveParentEnvironmentInst(
     VariableScope *scope,
     LiteralNumber *numLevels,
-    JSDynamicParam *parentScopeParam) {
+    JSSpecialParam *parentScopeParam) {
   auto *inst =
       new HBCResolveParentEnvironmentInst(scope, numLevels, parentScopeParam);
   insert(inst);
@@ -957,7 +1015,7 @@ LoadParamInst *IRBuilder::createLoadParamInst(JSDynamicParam *param) {
 HBCCreateFunctionEnvironmentInst *
 IRBuilder::createHBCCreateFunctionEnvironmentInst(
     VariableScope *scope,
-    JSDynamicParam *parentScopeParam) {
+    JSSpecialParam *parentScopeParam) {
   auto *inst = new HBCCreateFunctionEnvironmentInst(scope, parentScopeParam);
   insert(inst);
   return inst;
@@ -1027,7 +1085,7 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
     BuiltinMethod::Enum builtinIndex,
     ArrayRef<Value *> arguments) {
   auto *inst = new CallBuiltinInst(
-      getLiteralNumber(builtinIndex),
+      getLiteralBuiltinIdx(builtinIndex),
       getEmptySentinel(),
       getLiteralBool(false),
       getEmptySentinel(),
@@ -1039,7 +1097,7 @@ CallBuiltinInst *IRBuilder::createCallBuiltinInst(
 
 GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
     BuiltinMethod::Enum builtinIndex) {
-  auto *inst = new GetBuiltinClosureInst(getLiteralNumber(builtinIndex));
+  auto *inst = new GetBuiltinClosureInst(getLiteralBuiltinIdx(builtinIndex));
   insert(inst);
   return inst;
 }
@@ -1066,6 +1124,15 @@ AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
   return inst;
 }
 
+AllocTypedObjectInst *IRBuilder::createAllocTypedObjectInst(
+    const AllocTypedObjectInst::ObjectPropertyMap &propMap,
+    Value *parentObject) {
+  auto *inst = new AllocTypedObjectInst(
+      parentObject ? parentObject : getEmptySentinel(), propMap);
+  insert(inst);
+  return inst;
+}
+
 HBCCompareBranchInst *IRBuilder::createHBCCompareBranchInst(
     Value *left,
     Value *right,
@@ -1074,6 +1141,16 @@ HBCCompareBranchInst *IRBuilder::createHBCCompareBranchInst(
     BasicBlock *falseBlock) {
   auto *inst =
       new HBCCompareBranchInst(kind, left, right, trueBlock, falseBlock);
+  insert(inst);
+  return inst;
+}
+
+HBCCmpBrTypeOfIsInst *IRBuilder::createHBCCmpBrTypeOfIsInst(
+    Value *arg,
+    LiteralTypeOfIsTypes *types,
+    BasicBlock *trueBlock,
+    BasicBlock *falseBlock) {
+  auto *inst = new HBCCmpBrTypeOfIsInst(arg, types, trueBlock, falseBlock);
   insert(inst);
   return inst;
 }
@@ -1098,6 +1175,15 @@ IteratorCloseInst *IRBuilder::createIteratorCloseInst(
     bool ignoreInnerException) {
   auto *I =
       new IteratorCloseInst(iterator, getLiteralBool(ignoreInnerException));
+  insert(I);
+  return I;
+}
+
+CacheNewObjectInst *IRBuilder::createCacheNewObjectInst(
+    Value *thisParameter,
+    Value *newTarget,
+    llvh::ArrayRef<LiteralString *> keys) {
+  auto *I = new CacheNewObjectInst(thisParameter, newTarget, keys);
   insert(I);
   return I;
 }
@@ -1288,6 +1374,8 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
     Value *capturedNewTarget,
     Variable *capturedArguments,
     Variable *homeObject,
+    Variable *classCtxConstructor,
+    Variable *classCtxInitFuncVar,
     VariableScope *parentVarScope) {
   auto *inst = new LazyCompilationDataInst(
       std::move(data),
@@ -1296,6 +1384,10 @@ LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
       homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
+      classCtxConstructor ? static_cast<Value *>(classCtxConstructor)
+                          : getEmptySentinel(),
+      classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
+                          : getEmptySentinel(),
       parentVarScope);
   insert(inst);
   return inst;
@@ -1307,6 +1399,8 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
     Value *capturedNewTarget,
     Variable *capturedArguments,
     Variable *homeObject,
+    Variable *classCtxConstructor,
+    Variable *classCtxInitFuncVar,
     VariableScope *funcVarScope) {
   auto *inst = new EvalCompilationDataInst(
       std::move(data),
@@ -1315,6 +1409,10 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
       capturedArguments ? static_cast<Value *>(capturedArguments)
                         : getEmptySentinel(),
       homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
+      classCtxConstructor ? static_cast<Value *>(classCtxConstructor)
+                          : getEmptySentinel(),
+      classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
+                          : getEmptySentinel(),
       funcVarScope);
   insert(inst);
   return inst;

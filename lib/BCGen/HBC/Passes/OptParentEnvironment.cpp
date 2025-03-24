@@ -17,6 +17,36 @@
 namespace hermes {
 namespace hbc {
 
+/// Check if the CreateScopeInst \p CSI found in Function \p F can be replaced
+/// with a CreateFunctionEnvironment instruction, which is smaller.
+static bool canUseCreateFunctionEnvironment(Function *F, CreateScopeInst *CSI) {
+  // Check if the number of variables will fit in the instruction.
+  if (CSI->getVariableScope()->getVariables().size() >
+      HBCCreateFunctionEnvironmentInst::kMaxScopeSize)
+    return false;
+
+  // Check if the parent is the parent of this function.
+  if (llvh::isa<GetParentScopeInst>(CSI->getParentScope()))
+    return true;
+
+  // If the scope has a parent, it must be provided.
+  if (!llvh::isa<EmptySentinel>(CSI->getParentScope()))
+    return false;
+
+  // If the scope has no parent, we can use this instruction if the function
+  // also has no parent.
+  for (auto *U : F->getUsers()) {
+    if (auto *BCLI = llvh::dyn_cast<BaseCreateLexicalChildInst>(U)) {
+      assert(F == BCLI->getFunctionCode() && "No other valid user");
+      return llvh::isa<EmptySentinel>(BCLI->getScope());
+    }
+  }
+
+  // The function is never created, so it is either the top level function, or
+  // dead. Either way, it has no parent.
+  return true;
+}
+
 /// Optimize scope creation and resolution that operate on the parent
 /// environment of the current function to smaller HBC instructions that read
 /// the parent environment implicitly. This means that the resulting
@@ -29,11 +59,7 @@ static bool runOptParentEnvironment(Function *F) {
   for (auto &BB : *F) {
     for (auto &I : BB) {
       if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(&I)) {
-        // Check that the parent is the parent of this function, and that the
-        // size will fit in the HBCCreateFunctionEnvironment instruction.
-        if (!llvh::isa<GetParentScopeInst>(CSI->getParentScope()) ||
-            CSI->getVariableScope()->getVariables().size() >
-                HBCCreateFunctionEnvironmentInst::kMaxScopeSize)
+        if (!canUseCreateFunctionEnvironment(F, CSI))
           continue;
 
         // Convert the CreateScopeInst to HBCCreateFunctionEnvironmentInst.

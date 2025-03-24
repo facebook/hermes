@@ -8,8 +8,10 @@
 #ifndef HERMES_AST_TS2FLOW_H
 #define HERMES_AST_TS2FLOW_H
 
+#include "hermes/AST/Config.h"
 #include "hermes/AST/ESTree.h"
 
+#if HERMES_PARSE_TS && HERMES_PARSE_FLOW
 namespace hermes {
 
 /// Converts the given TypeScript AST to Flow AST.
@@ -22,5 +24,6 @@ ESTree::ProgramNode *convertTSToFlow(
     ESTree::ProgramNode *program);
 
 } // namespace hermes
+#endif
 
 #endif

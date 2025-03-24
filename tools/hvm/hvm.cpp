@@ -15,9 +15,7 @@
 #include "llvh/Support/Signals.h"
 #include "llvh/Support/raw_ostream.h"
 
-#ifndef HERMESVM_LEAN
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#endif
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
@@ -41,7 +39,6 @@ static llvh::cl::opt<std::string> InputFilename(
     llvh::cl::Positional);
 
 // Lean VM doesn't include the disassembler.
-#ifndef HERMESVM_LEAN
 static llvh::cl::opt<bool> Disassemble(
     "d",
     llvh::cl::desc("Disassemble bytecode"));
@@ -50,7 +47,6 @@ static llvh::cl::opt<bool> PrettyDisassemble(
     "pretty-disassemble",
     llvh::cl::init(true),
     llvh::cl::desc("Pretty print the disassembled bytecode"));
-#endif
 
 static llvh::cl::opt<unsigned> Repeat(
     "Xrepeat",
@@ -62,6 +58,12 @@ struct Flags : public cli::RuntimeFlags {
   llvh::cl::opt<bool> GCPrintStats{
       "gc-print-stats",
       llvh::cl::desc("Output summary garbage collection statistics at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
+
+  llvh::cl::opt<bool> GCPrintCollectionStats{
+      "gc-print-collection-stats",
+      llvh::cl::desc("Output statistics for each garbage collection at exit"),
       llvh::cl::cat(GCCategory),
       llvh::cl::init(false)};
 };
@@ -100,7 +102,6 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<hbc::BCProvider> bytecode = std::move(ret.first);
 
-#ifndef HERMESVM_LEAN
   if (Disassemble) {
     hermes::hbc::BytecodeDisassembler disassembler(std::move(bytecode));
     disassembler.setOptions(
@@ -108,27 +109,37 @@ int main(int argc, char **argv) {
                           : hermes::hbc::DisassemblyOptions::None);
     disassembler.disassemble(llvh::outs());
   }
-#endif
 
   ExecuteOptions options;
+
+  auto gcConfigBuilder =
+      vm::GCConfig::Builder()
+          .withInitHeapSize(flags.InitHeapSize.bytes)
+          .withMaxHeapSize(flags.MaxHeapSize.bytes)
+          .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
+                                  .withSanitizeRate(flags.GCSanitizeRate)
+                                  .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                  .build())
+          .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+          .withName("hvm");
+
+  std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
+  if (flags.GCPrintStats || flags.GCPrintCollectionStats) {
+    gcConfigBuilder.withShouldRecordStats(true);
+    if (flags.GCPrintCollectionStats) {
+      options.gcAnalyticsEvents = &gcAnalyticsEvents;
+      gcConfigBuilder.withAnalyticsCallback(
+          [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
+            gcAnalyticsEvents.push_back(event);
+          });
+    }
+  }
+
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(vm::GCConfig::Builder()
-                            .withInitHeapSize(flags.InitHeapSize.bytes)
-                            .withMaxHeapSize(flags.MaxHeapSize.bytes)
-                            .withSanitizeConfig(
-                                vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(flags.GCSanitizeRate)
-                                    .withRandomSeed(flags.GCSanitizeRandomSeed)
-                                    .build())
-                            .withShouldRecordStats(flags.GCPrintStats)
-                            .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                            .withName("hvm")
-                            .build())
+          .withGCConfig(gcConfigBuilder.build())
           .withMaxNumRegisters(flags.MaxNumRegisters)
-          .withES6Promise(flags.ES6Promise)
           .withES6Proxy(flags.ES6Proxy)
-          .withES6Class(flags.EvalES6Class)
           .withIntl(flags.Intl)
           .withMicrotaskQueue(flags.MicrotaskQueue)
           .withTrackIO(flags.TrackBytecodeIO)

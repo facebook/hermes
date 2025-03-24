@@ -35,6 +35,7 @@ extern "C" ParseResult *hermesParse(
     size_t sourceSize,
     bool detectFlow,
     bool enableExperimentalComponentSyntax,
+    bool enableExperimentalFlowMatchSyntax,
     bool tokens,
     bool allowReturnOutsideFunction) {
   std::unique_ptr<ParseResult> result = std::make_unique<ParseResult>();
@@ -63,6 +64,7 @@ extern "C" ParseResult *hermesParse(
       : ParseFlowSetting::ALL;
   context->setParseFlow(parseFlowSetting);
   context->setParseFlowComponentSyntax(enableExperimentalComponentSyntax);
+  context->setParseFlowMatch(enableExperimentalFlowMatchSyntax);
   context->setParseJSX(true);
   context->setUseCJSModules(true);
   context->setAllowReturnOutsideFunction(allowReturnOutsideFunction);
@@ -96,7 +98,7 @@ extern "C" ParseResult *hermesParse(
   serialize(*parsedJs, &context->getSourceErrorManager(), *result, tokens);
 
   // Run semantic validation after AST has been serialized
-  sema::SemContext semContext{};
+  sema::SemContext semContext{*context};
   resolveASTForParser(*context, semContext, *parsedJs);
 
   // Return first error if errors are detected during semantic validation

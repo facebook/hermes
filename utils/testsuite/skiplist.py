@@ -5,6 +5,7 @@
 
 import json
 import os
+import sys
 from enum import Enum, unique
 from pathlib import Path
 from typing import cast, Dict, List, Optional, Pattern, Sequence, Tuple, Union
@@ -23,6 +24,7 @@ class SkipCategory(Enum):
     UNSUPPORTED_FEATURES = "unsupported_features"
     PERMANENT_UNSUPPORTED_FEATURES = "permanent_unsupported_features"
     INTL_TESTS = "intl_tests"
+    PLATFORM_SKIP_LIST = "platform_skip_list"
 
 
 SKIPCAT_TO_RETCODE = {
@@ -33,6 +35,8 @@ SKIPCAT_TO_RETCODE = {
     SkipCategory.UNSUPPORTED_FEATURES: TestResultCode.TEST_SKIPPED,
     SkipCategory.PERMANENT_UNSUPPORTED_FEATURES: TestResultCode.TEST_PERMANENTLY_SKIPPED,
     SkipCategory.INTL_TESTS: TestResultCode.TEST_SKIPPED,
+    SkipCategory.PERMANENT_SKIP_LIST: TestResultCode.TEST_SKIPPED,
+    SkipCategory.PLATFORM_SKIP_LIST: TestResultCode.TEST_SKIPPED,
 }
 """Mapping from a skip category to result code."""
 
@@ -46,6 +50,18 @@ class SkippedPathsOrFeatures(object):
         with open(config_path, "rb") as f:
             self.paths_features: SkippedPathsOrFeaturesDict = json.load(f)
             self.config_path = config_path
+
+    def get_skiplist_for_cat(self, skip_cat: SkipCategory) -> List[SkippedPathItem]:
+        """
+        Get the skip list for given category. For PLATFORM_SKIP_LIST, get the
+        list for the host platform.
+        """
+        if skip_cat == SkipCategory.PLATFORM_SKIP_LIST:
+            platform_skip_list: Dict[str, List[SkippedPathItem]] = (
+                self.paths_features.get(skip_cat.value, {})
+            )
+            return platform_skip_list.get(sys.platform, [])
+        return self.paths_features.get(skip_cat.value, [])
 
     def should_skip_cat(
         self, test_or_feature: Union[str, Pattern[str]], skip_cat: SkipCategory
@@ -68,7 +84,7 @@ class SkippedPathsOrFeatures(object):
                 return True
             return False
 
-        values: List[SkippedPathItem] = self.paths_features.get(skip_cat.value, [])
+        values: List[SkippedPathItem] = self.get_skiplist_for_cat(skip_cat)
         for value in values:
             if isinstance(value, dict):
                 for p in value.get("paths", []):

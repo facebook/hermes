@@ -144,7 +144,8 @@ class UsageCounter : public BytecodeVisitor {
     emitter_.emitKeyValue("virtualOffset", virtualOffsets_[currentFuncId_]);
     emitter_.emitKeyValue(
         "bytecodeSize",
-        bcProvider_->getFunctionHeader(currentFuncId_).bytecodeSizeInBytes());
+        bcProvider_->getFunctionHeader(currentFuncId_)
+            .getBytecodeSizeInBytes());
     emitter_.closeDict();
   }
 
@@ -162,7 +163,7 @@ class UsageCounter : public BytecodeVisitor {
     opcodeStart_ = (uintptr_t)bytecodeStart;
     opcodeEnd_ = llvh::alignAddr(
         bytecodeStart +
-            bcProvider_->getFunctionHeader(funcId).bytecodeSizeInBytes(),
+            bcProvider_->getFunctionHeader(funcId).getBytecodeSizeInBytes(),
         sizeof(uint32_t));
     functionEnd_ = opcodeEnd_;
 
@@ -232,14 +233,14 @@ class UsageCounter : public BytecodeVisitor {
     // We always have a small header, and sometimes a large one too.
     appendRecord(
         "headers:function:small", currentFuncId_, sizeof(SmallFuncHeader));
-    if (header.flags().overflowed) {
+    if (header.getFlags().getOverflowed()) {
       appendRecord(
           "headers:function:large", currentFuncId_, sizeof(FunctionHeader));
     }
 
-    countStringLiteral(header.functionName());
+    countStringLiteral(header.getFunctionName());
 
-    if (header.flags().hasExceptionHandler) {
+    if (header.getFlags().getHasExceptionHandler()) {
       // Exception tables are not deduplicated by function.
       appendRecord(
           "headers:exceptions",
@@ -252,9 +253,9 @@ class UsageCounter : public BytecodeVisitor {
     }
 
     appendRecord(
-        "bytecode:instructions", header.offset(), opcodeEnd_ - opcodeStart_);
+        "bytecode:instructions", header.getOffset(), opcodeEnd_ - opcodeStart_);
     appendRecord(
-        "bytecode:tables:jump", header.offset(), functionEnd_ - opcodeEnd_);
+        "bytecode:tables:jump", header.getOffset(), functionEnd_ - opcodeEnd_);
 
     countDebugInfo();
 
@@ -327,13 +328,6 @@ class UsageCounter : public BytecodeVisitor {
 
     unsigned bundleOffset = (uintptr_t)(*ind + buff - bundleStart_);
     switch (tag) {
-      case SLG::ByteStringTag: {
-        uint8_t val = llvh::support::endian::read<uint8_t, 1>(
-            buff + *ind, llvh::support::endianness::little);
-        appendRecord("data:literalbuffer:bytestring", bundleOffset, 1);
-        countStringLiteral(val);
-        *ind += 1;
-      } break;
       case SLG::ShortStringTag: {
         uint16_t val = llvh::support::endian::read<uint16_t, 1>(
             buff + *ind, llvh::support::endianness::little);
@@ -357,6 +351,7 @@ class UsageCounter : public BytecodeVisitor {
         *ind += 4;
       } break;
       case SLG::NullTag:
+      case SLG::UndefinedTag:
       case SLG::TrueTag:
       case SLG::FalseTag:
         break;
@@ -495,7 +490,7 @@ llvh::DenseMap<unsigned, unsigned> getVirtualOffsets(
   for (unsigned i = 0, e = bc->getFunctionCount(); i < e; i++) {
     auto header = bc->getFunctionHeader(i);
     map[i] = virtualOffset;
-    virtualOffset += header.bytecodeSizeInBytes();
+    virtualOffset += header.getBytecodeSizeInBytes();
   }
   return map;
 }

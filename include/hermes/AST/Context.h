@@ -70,6 +70,9 @@ struct OptimizationSettings {
   /// Attempt to resolve CommonJS require() calls at compile time.
   bool staticRequire{false};
 
+  /// If true, optimize Metro require calls into bytecodes.
+  bool metroRequireOpt{false};
+
   /// Whether to use old Mem2Reg pass instead of SimpleMem2Reg. This may produce
   /// better code for irreducible CFGs.
   bool useLegacyMem2Reg{false};
@@ -223,14 +226,20 @@ class Context {
   /// If true, allow parsing component syntax when also using Flow syntax.
   bool parseFlowComponentSyntax_{false};
 
+  /// If true, allow parsing match statements and expressions when
+  /// also using Flow syntax.
+  bool parseFlowMatch_{false};
+
   /// Whether to parse Flow type syntax.
   ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
   /// Whether to parse TypeScript syntax.
   bool parseTS_{false};
 
-  /// Whether to convert ES6 classes to ES5 functions
-  bool convertES6Classes_{false};
+  /// Whether to enable support for ES6 block scoping.
+  /// TODO: This is intended to provide a temporary way to configure block
+  ///       scoping until we have debugger support for it.
+  bool enableES6BlockScoping_{false};
 
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
@@ -334,6 +343,12 @@ class Context {
     return stringTable_.getIdentifier(str);
   }
 
+  /// Get or create a new identifier for the string value of a private name \p
+  /// str. The method copies the content of the string.
+  Identifier getPrivateNameIdentifier(UniqueString *str) {
+    return getIdentifier(llvh::Twine("#") + str->str());
+  }
+
   /// Return the textual representation of the identifier.
   llvh::StringRef toString(Identifier iden) {
     return iden.str();
@@ -398,6 +413,13 @@ class Context {
     return parseFlowComponentSyntax_;
   }
 
+  void setParseFlowMatch(bool parseFlowMatch) {
+    parseFlowMatch_ = parseFlowMatch;
+  }
+  bool getParseFlowMatch() const {
+    return parseFlowMatch_;
+  }
+
   void setParseTS(bool parseTS) {
     parseTS_ = parseTS;
   }
@@ -405,16 +427,12 @@ class Context {
     return parseTS_;
   }
 
-  void setConvertES6Classes(bool convertES6Classes) {
-    convertES6Classes_ = convertES6Classes;
+  void setEnableES6BlockScoping(bool enableES6BlockScoping) {
+    enableES6BlockScoping_ = enableES6BlockScoping;
   }
 
-  bool getConvertES6Classes() const {
-#ifndef HERMES_FACEBOOK_BUILD
-    return convertES6Classes_;
-#else
-    return false;
-#endif
+  bool getEnableES6BlockScoping() const {
+    return enableES6BlockScoping_;
   }
 
   /// \return true if either TS or Flow is being parsed.
@@ -468,6 +486,14 @@ class Context {
 
   bool getStaticBuiltinOptimization() const {
     return optimizationSettings_.staticBuiltins;
+  }
+
+  void setMetroRequireOpt(bool metroRequireOpt) {
+    optimizationSettings_.metroRequireOpt = metroRequireOpt;
+  }
+
+  bool getMetroRequireOpt() const {
+    return optimizationSettings_.metroRequireOpt;
   }
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {

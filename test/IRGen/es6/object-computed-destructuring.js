@@ -34,7 +34,7 @@ var {} = x;
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %9: any, "a": string
 // CHECK-NEXT:        StorePropertyLooseInst %10: any, globalObject: object, "b": string
 // CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %12: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst 0: number, %12: object, "a": string, true: boolean
 // CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %15 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %14: object, %9: any, %12: object
 // CHECK-NEXT:        StorePropertyLooseInst %15: any, globalObject: object, "rest": string
@@ -46,7 +46,7 @@ var {} = x;
 // CHECK-NEXT:  %22 = LoadPropertyInst (:any) %17: any, "c": string
 // CHECK-NEXT:        StorePropertyLooseInst %22: any, globalObject: object, "d": string
 // CHECK-NEXT:  %24 = AllocObjectLiteralInst (:object) null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %24: object, "c": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst 0: number, %24: object, "c": string, true: boolean
 // CHECK-NEXT:        StorePropertyLooseInst 0: number, %24: object, %19: any
 // CHECK-NEXT:  %27 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %28 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %27: object, %17: any, %24: object

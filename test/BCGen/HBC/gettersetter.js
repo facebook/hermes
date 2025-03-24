@@ -43,25 +43,24 @@ var obj = {
 // CHECK-NEXT:s7[ASCII, 21..25]: set b
 // CHECK-NEXT:i8[ASCII, 26..28] #DC53DBCF: obj
 
-// CHECK:Function<global>(1 params, 5 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 5 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r3, 0
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
-// CHECK-NEXT:    NewObject         r2
-// CHECK-NEXT:    CreateClosure     r0, r3, Function<get b>
-// CHECK-NEXT:    CreateClosure     r1, r3, Function<set b>
-// CHECK-NEXT:    LoadConstString   r4, "b"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r2, r4, r0, r1, 1
-// CHECK-NEXT:    CreateClosure     r0, r3, Function<get c>
-// CHECK-NEXT:    LoadConstUndefined r4
-// CHECK-NEXT:    LoadConstString   r1, "c"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r2, r1, r0, r4, 1
-// CHECK-NEXT:    CreateClosure     r1, r3, Function<set d>
-// CHECK-NEXT:    LoadConstString   r3, "d"
-// CHECK-NEXT:    PutOwnGetterSetterByVal r2, r3, r4, r1, 1
-// CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "obj"
-// CHECK-NEXT:    Ret               r4
+// CHECK-NEXT:    NewObject         r4
+// CHECK-NEXT:    LoadConstString   r3, "b"
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    CreateClosure     r2, r0, Function<set b>
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<get b>
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r4, r3, r1, r2, 1
+// CHECK-NEXT:    LoadConstString   r2, "c"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<get c>
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r4, r2, r1, r0, 1
+// CHECK-NEXT:    LoadConstString   r2, "d"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<set d>
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r4, r2, r0, r1, 1
+// CHECK-NEXT:    GetGlobalObject   r1
+// CHECK-NEXT:    PutByIdLoose      r1, r4, 1, "obj"
+// CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<get b>(1 params, 1 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -87,9 +86,9 @@ var obj = {
 
 // CHECK:Debug source table:
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
-// CHECK-NEXT:    bc 6: line 10 col 1
-// CHECK-NEXT:    bc 27: line 10 col 11
-// CHECK-NEXT:    bc 44: line 10 col 11
-// CHECK-NEXT:    bc 59: line 10 col 11
-// CHECK-NEXT:    bc 67: line 10 col 9
+// CHECK-NEXT:    bc 0: line 10 col 1
+// CHECK-NEXT:    bc 23: line 10 col 11
+// CHECK-NEXT:    bc 38: line 10 col 11
+// CHECK-NEXT:    bc 53: line 10 col 11
+// CHECK-NEXT:    bc 61: line 10 col 9
 // CHECK-NEXT:  0x0013  end of debug source table

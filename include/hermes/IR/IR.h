@@ -13,6 +13,8 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTree.h"
 #include "hermes/AST/NativeContext.h"
+#include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
 
@@ -67,7 +69,14 @@ class Type {
     String,
     Number,
     BigInt,
+    // ES2024 4.4.32 Symbol type (not the symbol object)
+    Symbol,
     Environment,
+    // ES2024 6.2.12 Private Names. We currently happen to use symbols at
+    // runtime to represent private names, but conceptually private names are a
+    // different entity, and for example certain private operations can only
+    // operate on this type.
+    PrivateName,
     /// Function code (IR Function value), not a closure.
     FunctionCode,
     Object,
@@ -90,9 +99,14 @@ class Type {
         "string",
         "number",
         "bigint",
+        "symbol",
         "environment",
+        "privateName",
         "functionCode",
         "object"};
+    static_assert(
+        LAST_TYPE == (sizeof(names) / sizeof(char *)),
+        "Not all types have a defined string representation");
     return names[idx];
   }
 
@@ -106,14 +120,14 @@ class Type {
   // special internal types that are never mixed with other types.
   static constexpr uint16_t TYPE_ANY_EMPTY_UNINIT_MASK =
       ((1u << TypeKind::LAST_TYPE) - 1) & ~BIT_TO_VAL(Environment) &
-      ~BIT_TO_VAL(FunctionCode);
+      ~BIT_TO_VAL(PrivateName) & ~BIT_TO_VAL(FunctionCode);
   // All of the above types except "empty" and "uninit".
   static constexpr uint16_t TYPE_ANY_MASK =
       TYPE_ANY_EMPTY_UNINIT_MASK & ~BIT_TO_VAL(Empty) & ~BIT_TO_VAL(Uninit);
 
   static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
-      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean);
+      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean) | BIT_TO_VAL(Symbol);
 
   static constexpr uint16_t NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
@@ -168,6 +182,9 @@ class Type {
   static constexpr Type createString() {
     return Type(BIT_TO_VAL(String));
   }
+  static constexpr Type createSymbol() {
+    return Type(BIT_TO_VAL(Symbol));
+  }
   static constexpr Type createObject() {
     return Type(BIT_TO_VAL(Object));
   }
@@ -194,6 +211,9 @@ class Type {
   }
   static constexpr Type createEnvironment() {
     return Type(BIT_TO_VAL(Environment));
+  }
+  static constexpr Type createPrivateName() {
+    return Type(BIT_TO_VAL(PrivateName));
   }
   static constexpr Type createFunctionCode() {
     return Type(BIT_TO_VAL(FunctionCode));
@@ -237,8 +257,14 @@ class Type {
   constexpr bool isBigIntType() const {
     return IS_VAL(BigInt);
   }
+  constexpr bool isSymbolType() const {
+    return IS_VAL(Symbol);
+  }
   constexpr bool isEnvironmentType() const {
     return IS_VAL(Environment);
+  }
+  constexpr bool isPrivateNameType() const {
+    return IS_VAL(PrivateName);
   }
   constexpr bool isFunctionCodeType() const {
     return IS_VAL(FunctionCode);
@@ -271,6 +297,11 @@ class Type {
     return bitmask_ && !(bitmask_ & ~PRIMITIVE_BITS);
   }
 
+  /// \return true if any of the types are primitive.
+  constexpr bool canBePrimitive() const {
+    return (bitmask_ & PRIMITIVE_BITS) != 0;
+  }
+
   /// \return true if the type is not referenced by a pointer in javascript.
   constexpr bool isNonPtr() const {
     // One or more of NONPTR_BITS must be set, and no other bit must be set.
@@ -301,6 +332,11 @@ class Type {
   /// \returns true if this type can represent a bigint value.
   constexpr bool canBeBigInt() const {
     return canBeType(Type::createBigInt());
+  }
+
+  /// \returns true if this type can represent a symbol value.
+  constexpr bool canBeSymbol() const {
+    return canBeType(Type::createSymbol());
   }
 
   /// \returns true if this type can represent a number value.
@@ -464,8 +500,8 @@ class SideEffect {
   /// provided JS. An instruction with \c ExecuteJS set must also have bits set
   /// for throwing and accessing the frame and heap.
   /// \c FirstInBlock implies that an instruction must be at the start of a
-  /// basic block. An instruction with \c FirstInBlock set must precede all
-  /// instructions that do not have it set.
+  /// basic block. An instruction with \c FirstInBlock set may only be preceded
+  /// by other instances of the same instruction.
   /// \c Idempotent implies that repeated execution of an instruction will not
   /// affect the state of the world or the result of the instruction. For
   /// example, two identical instructions that have \p Idempotent set may be
@@ -701,6 +737,9 @@ class Value {
   /// Run a Value's destructor and deallocate its memory.
   static void destroy(Value *V);
 
+  /// \return true if this instruction tracks its users.
+  inline bool tracksUsers() const;
+
   /// \return the users of the value.
   const UseListTy &getUsers() const;
 
@@ -829,23 +868,23 @@ class Parameter : public Value {
   }
 };
 
-/// This represents a JS function parameter, all of which are optional.
-class JSDynamicParam : public Value {
-  friend class Function;
-  friend class IRBuilder;
-  JSDynamicParam(const JSDynamicParam &) = delete;
-  void operator=(const JSDynamicParam &) = delete;
-
-  /// The function that contains this paramter.
-  Function *parent_;
+/// Supertype of the types below, to factor out common code.
+/// Note that ctor is protected; can't create one of these.
+class JSParam : public Value {
+  JSParam(const JSParam &) = delete;
+  void operator=(const JSParam &) = delete;
 
   /// The formal name of the parameter
   Identifier name_;
 
-  explicit JSDynamicParam(Function *parent, Identifier name)
-      : Value(ValueKind::JSDynamicParamKind), parent_(parent), name_(name) {
+ protected:
+  JSParam(ValueKind kind, Function *parent, Identifier name)
+      : Value(kind), name_(name), parent_(parent) {
     assert(parent_ && "Invalid parent");
   }
+
+  /// The function that contains this paramter.
+  Function *parent_;
 
  public:
   Context &getContext() const;
@@ -858,13 +897,42 @@ class JSDynamicParam : public Value {
   Identifier getName() const {
     return name_;
   }
+};
 
+/// This represents a JS function parameter, all of which are optional.
+class JSDynamicParam : public JSParam {
+  friend class Function;
+  friend class IRBuilder;
+  JSDynamicParam(const JSDynamicParam &) = delete;
+  void operator=(const JSDynamicParam &) = delete;
+
+  JSDynamicParam(Function *parent, Identifier name)
+      : JSParam(ValueKind::JSDynamicParamKind, parent, name) {}
+
+ public:
   /// Return the index of this parameter in the function's parameter list.
   /// "this" parameter is excluded from the list.
   uint32_t getIndexInParamList() const;
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::JSDynamicParamKind;
+  }
+};
+
+/// This represents one of the "special" JS function parameters: newTarget,
+/// or parentScope.
+class JSSpecialParam : public JSParam {
+  friend class Function;
+  friend class IRBuilder;
+  JSSpecialParam(const JSSpecialParam &) = delete;
+  void operator=(const JSSpecialParam &) = delete;
+
+  JSSpecialParam(Function *parent, Identifier name)
+      : JSParam(ValueKind::JSSpecialParamKind, parent, name) {}
+
+ public:
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::JSSpecialParamKind;
   }
 };
 
@@ -1228,8 +1296,16 @@ class LiteralWrapper : public Literal, public llvh::FoldingSetNode {
   }
 };
 
+using LiteralBuiltinIdx = LiteralWrapper<
+    BuiltinMethod::Enum,
+    ValueKind::LiteralBuiltinIdxKind,
+    Type::createNumber>;
 using LiteralIRType =
     LiteralWrapper<Type, ValueKind::LiteralIRTypeKind, Type::createNull>;
+using LiteralTypeOfIsTypes = LiteralWrapper<
+    TypeOfIsTypes,
+    ValueKind::LiteralTypeOfIsTypesKind,
+    Type::createNull>;
 using LiteralNativeSignature =
     LiteralWrapper<NativeSignature *, ValueKind::LiteralNativeSignatureKind>;
 using LiteralNativeExtern = LiteralWrapper<
@@ -1671,6 +1747,8 @@ class VariableScope
       public llvh::ilist_node<VariableScope, llvh::ilist_tag<Module>>,
       public llvh::ilist_node<VariableScope, llvh::ilist_tag<VariableScope>> {
   using VariableListType = llvh::SmallVector<Variable *, 8>;
+  using ChildListType =
+      llvh::simple_ilist<VariableScope, llvh::ilist_tag<VariableScope>>;
 
   /// The variables associated with this scope.
   VariableListType variables_;
@@ -1681,7 +1759,7 @@ class VariableScope
 
   /// The list of children of this VariableScope. This is necessary so we can
   /// update their parents if this scope is eliminated.
-  llvh::simple_ilist<VariableScope, llvh::ilist_tag<VariableScope>> children_;
+  ChildListType children_;
 
   /// The number of variables in this scope that are visible to the debugger.
   /// Defaulted to UINT32_MAX to indicate that it hasn't been assigned yet.
@@ -1697,6 +1775,11 @@ class VariableScope
   /// \returns a list of variables.
   llvh::ArrayRef<Variable *> getVariables() const {
     return variables_;
+  }
+
+  /// \returns a list of children.
+  ChildListType &getChildren() {
+    return children_;
   }
 
   /// \return the number of variables that are visible in this scope.
@@ -1716,6 +1799,9 @@ class VariableScope
   VariableScope *getParentScope() const {
     return parentScope_;
   }
+
+  /// Update the parent scope of this scope.
+  void setParentScope(VariableScope *parentScope);
 
   /// Remove this scope from the scope chain, by moving all of its children to
   /// instead be children of its parent.
@@ -1749,7 +1835,8 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   enum class DefinitionKind {
     ES5Function,
-    ES6Constructor,
+    ES6BaseConstructor,
+    ES6DerivedConstructor,
     ES6Arrow,
     ES6Method,
     // This corresponds to the synthetic function we create in IRGen, which is
@@ -1796,9 +1883,9 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// params.
   bool jsThisAdded_ = false;
   /// Parameter used as an operand in GetNewTarget to easily find all users.
-  JSDynamicParam newTargetParam_;
+  JSSpecialParam newTargetParam_;
   /// Parameter used as an operand in GetParentScope to easily find all users.
-  JSDynamicParam parentScopeParam_;
+  JSSpecialParam parentScopeParam_;
   /// The user-specified original name of the function,
   /// or if not specified (e.g. anonymous), the inferred name.
   /// If there was no inference, an empty string.
@@ -1917,16 +2004,16 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
 
   /// \return the new.target parameter.
-  JSDynamicParam *getNewTargetParam() {
+  JSSpecialParam *getNewTargetParam() {
     return &newTargetParam_;
   }
   /// \return the new.target parameter.
-  const JSDynamicParam *getNewTargetParam() const {
+  const JSSpecialParam *getNewTargetParam() const {
     return &newTargetParam_;
   }
 
   /// \return the parent scope parameter.
-  JSDynamicParam *getParentScopeParam() {
+  JSSpecialParam *getParentScopeParam() {
     return &parentScopeParam_;
   }
 
@@ -1986,6 +2073,13 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// bypassing the heuristics that normally determine that.
   bool getNoInline() const {
     return customDirectives_.noInline;
+  }
+
+  /// Set the function to be noInline.  Useful for certain cases, to
+  /// preserve information useful for optimizations that would be erased
+  /// by inlining.
+  void setNoInline() {
+    customDirectives_.noInline = true;
   }
 
   OptValue<uint32_t> getStatementCount() const {
@@ -2217,6 +2311,16 @@ struct ilist_alloc_traits<::hermes::VariableScope> {
 
 namespace hermes {
 
+class LowerBuiltinCallsContext;
+
+/// Shared state between optimization passes.
+class OptimizationContext {
+ public:
+  /// Used by LowerBuiltinCalls to cache information about identifiers and
+  /// builtin IDs.
+  std::shared_ptr<LowerBuiltinCallsContext> lowerBuiltinCallsContext = nullptr;
+};
+
 class Module : public Value {
   Module(const Module &) = delete;
   void operator=(const Module &) = delete;
@@ -2284,7 +2388,9 @@ class Module : public Value {
   ValueOFS<LiteralBigInt> literalBigInts_{};
   ValueOFS<LiteralString> literalStrings_{};
   ValueOFS<GlobalObjectProperty> globalProperties_{};
+  ValueOFS<LiteralBuiltinIdx> literalBuiltinIdxs_{};
   ValueOFS<LiteralIRType> literalIRTypes_{};
+  ValueOFS<LiteralTypeOfIsTypes> literalTypeOfIsTypes_{};
   ValueOFS<LiteralNativeSignature> nativeSignatures_{};
   ValueOFS<LiteralNativeExtern> nativeExterns_{};
 
@@ -2322,6 +2428,9 @@ class Module : public Value {
   /// If empty, this has not been generated yet.
   CJSModuleUseGraph cjsModuleUseGraph_{};
 
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> jsModuleFactoryFunctions_;
+
   struct HashRawStrings {
     std::size_t operator()(const RawStringList &rawStrings) const {
       return llvh::hash_combine_range(rawStrings.begin(), rawStrings.end());
@@ -2337,6 +2446,9 @@ class Module : public Value {
 
   /// Set to true when generator functions have been lowered.
   bool areGeneratorsLowered_{false};
+
+  /// Extra data to be shared between optimization passes.
+  OptimizationContext optContext_{};
 
  public:
   explicit Module(std::shared_ptr<Context> ctx)
@@ -2405,6 +2517,13 @@ class Module : public Value {
     return variableScopes_;
   }
 
+  OptimizationContext &getOptimizationContext() {
+    return optContext_;
+  }
+  const OptimizationContext &getOptimizationContext() const {
+    return optContext_;
+  }
+
   /// Assign index to all Variables in all VariableScopes.
   void assignIndexToVariables() {
     for (VariableScope &varScope : variableScopes_)
@@ -2428,7 +2547,13 @@ class Module : public Value {
   LiteralBool *getLiteralBool(bool value);
 
   /// Create a new literal representing an IR type.
+  LiteralBuiltinIdx *getLiteralBuiltinIdx(BuiltinMethod::Enum builtinIdx);
+
+  /// Create a new literal representing an IR type.
   LiteralIRType *getLiteralIRType(Type value);
+
+  /// Create a new literal representing TypeOfIsTypes.
+  LiteralTypeOfIsTypes *getLiteralTypeOfIsTypes(TypeOfIsTypes value);
 
   /// Create a new LiteralNativeSignature.
   LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *data);
@@ -2522,6 +2647,14 @@ class Module : public Value {
     cjsModulesResolved_ = cjsModulesResolved;
   }
 
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> &jsModuleFactoryFunctions() {
+    return jsModuleFactoryFunctions_;
+  }
+  const llvh::DenseSet<Function *> &jsModuleFactoryFunctions() const {
+    return jsModuleFactoryFunctions_;
+  }
+
   /// \return the set of functions which are used by the modules in the segment
   /// specified by \p segment. Order is unspecified, so the return value
   /// should not be used for iteration, only for checking membership.
@@ -2609,6 +2742,12 @@ class Module : public Value {
 /// The hash of a Type is the hash of its opaque value.
 static inline llvh::hash_code hash_value(Type V) {
   return V.hash();
+}
+
+inline bool Value::tracksUsers() const {
+  // We do not track users of literals because we never need to enumerate them
+  // and they can be very costly to maintain.
+  return !llvh::isa<Literal>(this);
 }
 
 inline Function *Instruction::getFunction() const {

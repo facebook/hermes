@@ -14,6 +14,7 @@
 #include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
+#include "hermes/Support/BitField.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/SHA1.h"
 #include "hermes/Support/StringTableEntry.h"
@@ -49,13 +50,14 @@ enum class BytecodeForm {
 
 /// Storing information about the bytecode, needed when it is loaded by the
 /// runtime.
-union BytecodeOptions {
-  struct {
-    bool staticBuiltins : 1;
-    bool cjsModulesStaticallyResolved : 1;
-    bool hasAsync : 1;
-  };
-  uint8_t _flags;
+struct BytecodeOptions {
+  HERMES_FIRST_BITFIELD(uint8_t, flags, bool, StaticBuiltins, 1);
+  HERMES_NEXT_BITFIELD(
+      StaticBuiltins,
+      flags,
+      bool,
+      CjsModulesStaticallyResolved,
+      1);
 
   BytecodeOptions() : _flags(0) {}
 };
@@ -169,22 +171,15 @@ struct BytecodeFileFooter {
 /// OverflowStringTableEntry for the entries whose length or offset doesn't fit
 /// into the bitfields.
 struct SmallStringTableEntry {
-  // isUTF16 and isIdentifier cannot be bool because C++ spec allows padding
-  // at type boundaries.
-  // Regardless of LLVM_PACKED_START,
-  // * GCC and CLANG never adds padding at type boundaries.
-  // * MSVC always add padding at type boundaries.
-  // * In addition, in MSVC, for each list of continuous fields with the same
-  //   types, they always occupy a multiple of the type's normal size.
-  uint32_t isUTF16 : 1;
-  uint32_t offset : 23;
-  uint32_t length : 8;
+  HERMES_FIRST_BITFIELD(uint32_t, data, bool, IsUTF16, 1);
+  HERMES_NEXT_BITFIELD(IsUTF16, data, uint32_t, Offset, 23);
+  HERMES_NEXT_BITFIELD(Offset, data, uint32_t, Length, 8);
 
   static constexpr uint32_t INVALID_OFFSET = (1 << 23);
   static constexpr uint32_t INVALID_LENGTH = (1 << 8) - 1;
 
   bool isOverflowed() const {
-    return length == INVALID_LENGTH;
+    return getLength() == INVALID_LENGTH;
   }
 
   /// Construct a small entry from 'entry'. If any fields overflow, then set
@@ -192,15 +187,15 @@ struct SmallStringTableEntry {
   SmallStringTableEntry(
       const StringTableEntry &entry,
       uint32_t overflowOffset) {
-    isUTF16 = entry.isUTF16();
+    setIsUTF16(entry.isUTF16());
     if (entry.getOffset() < INVALID_OFFSET &&
         entry.getLength() < INVALID_LENGTH) {
-      offset = entry.getOffset();
-      length = entry.getLength();
+      setOffset(entry.getOffset());
+      setLength(entry.getLength());
     } else {
       assert(overflowOffset < INVALID_OFFSET);
-      offset = overflowOffset;
-      length = INVALID_LENGTH;
+      setOffset(overflowOffset);
+      setLength(INVALID_LENGTH);
     }
   }
 };
@@ -219,29 +214,26 @@ struct OverflowStringTableEntry {
       : offset(offset), length(length) {}
 };
 
-union FunctionHeaderFlag {
-  struct {
-    /// Which kinds of calls are prohibited, constructed from enum
-    /// ProhibitInvoke.
-    uint8_t prohibitInvoke : 2;
-    bool strictMode : 1;
-    bool hasExceptionHandler : 1;
-    bool hasDebugInfo : 1;
-    bool overflowed : 1;
-    uint8_t kind : 2;
-  };
-  uint8_t flags;
+struct FunctionHeaderFlag {
+  /// Which kinds of calls are prohibited, constructed from enum
+  /// ProhibitInvoke.
+  HERMES_FIRST_BITFIELD(uint8_t, flags, uint8_t, ProhibitInvoke, 2);
+  HERMES_NEXT_BITFIELD(ProhibitInvoke, flags, bool, StrictMode, 1);
+  HERMES_NEXT_BITFIELD(StrictMode, flags, bool, HasExceptionHandler, 1);
+  HERMES_NEXT_BITFIELD(HasExceptionHandler, flags, bool, HasDebugInfo, 1);
+  HERMES_NEXT_BITFIELD(HasDebugInfo, flags, bool, Overflowed, 1);
+  HERMES_NEXT_BITFIELD(Overflowed, flags, uint8_t, Kind, 2);
 
   FunctionHeaderFlag() {
-    flags = 0;
-    kind = FuncKind::Normal;
-    prohibitInvoke = ProhibitInvoke::None;
+    _flags = 0;
+    setKind(FuncKind::Normal);
+    setProhibitInvoke(ProhibitInvoke::None);
   }
 
   /// \return true if the specified kind of invocation is prohibited by the
   /// flags.
   bool isCallProhibited(bool construct) const {
-    return prohibitInvoke == (uint8_t)construct;
+    return getProhibitInvoke() == (uint8_t)construct;
   }
 };
 
@@ -250,31 +242,42 @@ static_assert(
     sizeof(FunctionHeaderFlag) == 1,
     "FunctionHeaderFlag should take up 1 byte total");
 
-/// FUNC_HEADER_FIELDS is a macro for defining function header fields.
-/// The args are API type, small storage type, name, and bit length.
-/// The types can be different if the overflow supports a longer value than the
-/// small storage type does.
-#define FUNC_HEADER_FIELDS(V)                    \
-  /* first word */                               \
-  V(uint32_t, uint32_t, offset, 25)              \
-  V(uint32_t, uint32_t, paramCount, 7)           \
-  /* second word */                              \
-  V(uint32_t, uint32_t, bytecodeSizeInBytes, 14) \
-  V(uint32_t, uint32_t, functionName, 8)         \
-  V(uint32_t, uint32_t, numberRegCount, 5)       \
-  V(uint32_t, uint32_t, nonPtrRegCount, 5)       \
-  /* third word, with flags below */             \
-  V(uint32_t, uint8_t, frameSize, 8)             \
-  V(uint8_t, uint8_t, highestReadCacheIndex, 8)  \
-  V(uint8_t, uint8_t, highestWriteCacheIndex, 8)
+/// FUNC_HEADER_FIELDS is a macro for defining function header fields. It
+/// takes two macros as arguments:
+///   F(storageType, storageName, apiType, name, bits)
+/// for the first field in a "word", and
+///   N(prevField, storageName, apiType, name, bits)
+/// for the following fields.
+#define FUNC_HEADER_FIELDS(F, N)                        \
+  /* first word */                                      \
+  F(uint32_t, w1, uint32_t, Offset, 25)                 \
+  N(Offset, w1, uint32_t, ParamCount, 5)                \
+  N(ParamCount, w1, uint32_t, LoopDepth, 2)             \
+  /* second word */                                     \
+  F(uint32_t, w2, uint32_t, BytecodeSizeInBytes, 14)    \
+  N(BytecodeSizeInBytes, w2, uint32_t, FunctionName, 8) \
+  N(FunctionName, w2, uint32_t, NumberRegCount, 5)      \
+  N(NumberRegCount, w2, uint32_t, NonPtrRegCount, 5)    \
+  /* third word, with flags below */                    \
+  F(uint8_t, b1, uint32_t, FrameSize, 8)                \
+  F(uint8_t, b2, uint8_t, HighestReadCacheIndex, 8)     \
+  F(uint8_t, b3, uint8_t, HighestWriteCacheIndex, 7)    \
+  N(HighestWriteCacheIndex, b3, uint8_t, NumCacheNewObject, 1)
 
 /**
  * Metadata of a function.
  */
 struct FunctionHeader {
 // Use api type here since FunctionHeader stores the full type.
-#define DECLARE_FIELD(api_type, store_type, name, bits) api_type name;
-  FUNC_HEADER_FIELDS(DECLARE_FIELD)
+#define DECLARE_FIELD(_, storage, api_type, name, bits) \
+  api_type _##name;                                     \
+  api_type get##name() const {                          \
+    return _##name;                                     \
+  }                                                     \
+  void set##name(api_type value) {                      \
+    _##name = value;                                    \
+  }
+  FUNC_HEADER_FIELDS(DECLARE_FIELD, DECLARE_FIELD)
 #undef DECLARE_FIELD
 
   FunctionHeaderFlag flags{};
@@ -283,21 +286,26 @@ struct FunctionHeader {
   FunctionHeader(
       uint32_t size,
       uint32_t paramCount,
+      uint32_t loopDepth,
       uint32_t frameSize,
       uint32_t numberRegCount,
       uint32_t nonPtrRegCount,
       uint32_t functionNameID,
       uint8_t hiRCacheIndex,
-      uint8_t hiWCacheIndex)
-      : offset(0),
-        paramCount(paramCount),
-        bytecodeSizeInBytes(size),
-        functionName(functionNameID),
-        numberRegCount(numberRegCount),
-        nonPtrRegCount(nonPtrRegCount),
-        frameSize(frameSize),
-        highestReadCacheIndex(hiRCacheIndex),
-        highestWriteCacheIndex(hiWCacheIndex) {}
+      uint8_t hiWCacheIndex,
+      uint8_t numCacheNewObject) {
+    setOffset(0);
+    setParamCount(paramCount);
+    setLoopDepth(loopDepth);
+    setBytecodeSizeInBytes(size);
+    setFunctionName(functionNameID);
+    setNumberRegCount(numberRegCount);
+    setNonPtrRegCount(nonPtrRegCount);
+    setFrameSize(frameSize);
+    setHighestReadCacheIndex(hiRCacheIndex);
+    setHighestWriteCacheIndex(hiWCacheIndex);
+    setNumCacheNewObject(numCacheNewObject);
+  }
 };
 
 /// Compact version of FunctionHeader. Fits most functions.
@@ -310,11 +318,8 @@ struct FunctionHeader {
 /// uint32_t if you want them packed next to each other.
 
 struct SmallFuncHeader {
-// Use the store_type since SmallFuncHeader attempts to minimize storage.
-#define DECLARE_BITFIELD(api_type, store_type, name, bits) \
-  store_type name : bits;
-  FUNC_HEADER_FIELDS(DECLARE_BITFIELD)
-#undef DECLARE_BITFIELD
+  // Use the store_type since SmallFuncHeader attempts to minimize storage.
+  FUNC_HEADER_FIELDS(HERMES_FIRST_BITFIELD, HERMES_NEXT_BITFIELD)
 
   FunctionHeaderFlag flags{};
 
@@ -323,10 +328,11 @@ struct SmallFuncHeader {
     assert(canFitInSmallHeader(large) && "header does not fit");
     std::memset(this, 0, sizeof(SmallFuncHeader)); // Avoid leaking junk.
 
-#define COPY_FIELD(api_type, store_type, name, bits) name = large.name;
+#define COPY_FIELD(_, storage, api_type, name, bits) \
+  set##name(large.get##name());
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"
-    FUNC_HEADER_FIELDS(COPY_FIELD)
+    FUNC_HEADER_FIELDS(COPY_FIELD, COPY_FIELD)
 #pragma GCC diagnostic pop
 #undef COPY_FIELD
 
@@ -337,10 +343,10 @@ struct SmallFuncHeader {
   /// \p largeHeaderOffset.
   SmallFuncHeader(uint32_t largeHeaderOffset) {
     std::memset(this, 0, sizeof(SmallFuncHeader)); // Avoid leaking junk.
-    flags.overflowed = true;
+    flags.setOverflowed(true);
     // Can use any fields to store the large offset; pick two big ones.
-    offset = largeHeaderOffset & 0xffffff;
-    functionName = (largeHeaderOffset >> 24) & 0xff;
+    setOffset(largeHeaderOffset & 0xffffff);
+    setFunctionName((largeHeaderOffset >> 24) & 0xff);
     assert(
         getLargeHeaderOffset() == largeHeaderOffset &&
         "offset encoding is wrong");
@@ -349,10 +355,10 @@ struct SmallFuncHeader {
   /// Check if the fields in \p large will fit in a small header.
   /// \return true if it will fit, or false if any of the fields would overflow.
   static bool canFitInSmallHeader(const FunctionHeader &large) {
-#define CHECK_FIELD(api_type, store_type, name, bits) \
-  if (large.name > (1U << bits) - 1)                  \
+#define CHECK_FIELD(_, storage, api_type, name, bits) \
+  if (large.get##name() > (1U << bits) - 1)           \
     return false;
-    FUNC_HEADER_FIELDS(CHECK_FIELD)
+    FUNC_HEADER_FIELDS(CHECK_FIELD, CHECK_FIELD)
 #undef CHECK_FIELD
     return true;
   }
@@ -360,10 +366,14 @@ struct SmallFuncHeader {
   /// Get the offset of the large header from a small header that is known to
   /// have overflowed.
   uint32_t getLargeHeaderOffset() const {
-    assert(flags.overflowed);
-    return (functionName << 24) | offset;
+    assert(flags.getOverflowed());
+    return (getFunctionName() << 24) | getOffset();
   }
 };
+
+static_assert(
+    sizeof(SmallFuncHeader) == 12,
+    "SmallFuncHeader should take up 12 bytes total");
 
 // Sizes of file headers are tuned for good cache line packing.
 // If you change their size, try to avoid headers crossing cache lines.
@@ -378,8 +388,11 @@ struct ExceptionHandlerTableHeader {
 /// We need HBCExceptionHandlerInfo other than using ExceptionHandlerInfo
 /// directly because we don't need depth in HBC.
 struct HBCExceptionHandlerInfo {
+  /// Start offset of the try, inclusive.
   uint32_t start;
+  /// End offset of the try, exclusive.
   uint32_t end;
+  /// Handler offset.
   uint32_t target;
 };
 

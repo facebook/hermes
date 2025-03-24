@@ -26,7 +26,7 @@ function foo(param) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %foo(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
@@ -45,9 +45,9 @@ function foo(param) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.obj]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       StoreNewOwnPropertyInst 2: number, %6: object, "1": string, true: boolean
+// CHECK-NEXT:       DefineNewOwnPropertyInst 2: number, %6: object, "1": string, true: boolean
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.param]: any
-// CHECK-NEXT:       StoreNewOwnPropertyInst %8: any, %6: object, "key": string, true: boolean
+// CHECK-NEXT:       DefineNewOwnPropertyInst %8: any, %6: object, "key": string, true: boolean
 // CHECK-NEXT:        StoreFrameInst %1: environment, %6: object, [%VS1.obj]: any
 // CHECK-NEXT:  %11 = AllocArrayInst (:object) 4: number, 1: number, 2: number, 3: number, 4: number
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.foo]: any

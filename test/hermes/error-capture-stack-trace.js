@@ -161,7 +161,7 @@ print(target.stack);
 var dummy = {};
 Error.captureStackTrace(dummy);
 const stackGetter = Object.getOwnPropertyDescriptor(dummy, 'stack').get;
-try { stackGetter.apply({});   } catch (e) { print(e); }
-//CHECK: TypeError: Error.stack getter called with an invalid receiver
-try { stackGetter.apply(null); } catch (e) { print(e); }
-//CHECK: TypeError: Error.stack getter called with an invalid receiver
+print(stackGetter.apply({}));
+//CHECK: undefined
+print(stackGetter.apply(null));
+//CHECK: undefined

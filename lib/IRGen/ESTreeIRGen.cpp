@@ -9,6 +9,7 @@
 
 #include "hermes/IR/IRUtils.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringSet.h"
 #include "llvh/Support/Debug.h"
@@ -74,7 +75,8 @@ void LReference::emitStore(Value *value) {
           llvh::cast<ESTree::MemberExpressionNode>(ast_),
           value,
           base_,
-          property_);
+          property_,
+          thisValue_);
     case Kind::VarOrGlobal:
       irgen_->emitStore(value, base_, declInit_);
       return;
@@ -117,6 +119,38 @@ ESTreeIRGen::ESTreeIRGen(
       Root(root),
       Builder(Mod),
       identDefaultExport_(Builder.createIdentifier("?default")) {}
+
+llvh::StringRef ESTreeIRGen::propertyKeyAsString(
+    llvh::SmallVectorImpl<char> &storage,
+    ESTree::Node *Key) {
+  // Handle String Literals.
+  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
+  if (auto *Lit = llvh::dyn_cast<ESTree::StringLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
+    return Lit->_value->str();
+  }
+
+  // Handle identifiers as if they are String Literals.
+  if (auto *Iden = llvh::dyn_cast<ESTree::IdentifierNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
+    return Iden->_name->str();
+  }
+
+  // Handle Number Literals.
+  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
+  if (auto *Lit = llvh::dyn_cast<ESTree::NumericLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
+    storage.resize(NUMBER_TO_STRING_BUF_SIZE);
+    auto len = numberToString(Lit->_value, storage.data(), storage.size());
+    return llvh::StringRef(storage.begin(), len);
+  }
+
+  llvm_unreachable("Don't know this kind of property key");
+  return llvh::StringRef();
+}
 
 void ESTreeIRGen::doIt(llvh::StringRef topLevelFunctionName) {
   LLVM_DEBUG(llvh::dbgs() << "Processing top level program.\n");
@@ -216,6 +250,13 @@ Function *ESTreeIRGen::doItInScope(EvalCompilationDataInst *evalDataInst) {
   curFunction()->capturedState.thisVal = evalDataInst->getCapturedThis();
   curFunction()->capturedState.homeObject = evalDataInst->getHomeObject();
 
+  // If there was class context, restore it.
+  if (evalDataInst->getClsConstructor()) {
+    curFunction()->legacyClassContext = std::make_shared<LegacyClassContext>(
+        evalDataInst->getClsConstructor(),
+        evalDataInst->getClsInstElemInitFunc());
+  }
+
   emitFunctionPrologue(
       Program,
       Builder.createBasicBlock(newFunc),
@@ -290,6 +331,19 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
       lazyDataInst->getCapturedNewTarget(),
       lazyDataInst->getCapturedArguments(),
       homeObj};
+
+  // If there was class context, restore it.
+  if (lazyDataInst->getClsConstructor()) {
+    curFunction()->legacyClassContext = std::make_shared<LegacyClassContext>(
+        lazyDataInst->getClsConstructor(),
+        lazyDataInst->getClsInstaneElemInitFunc());
+  }
+
+  auto freeClsCtx = llvh::make_scope_exit([this]() {
+    if (curFunction()->legacyClassContext)
+      curFunction()->legacyClassContext.reset();
+  });
+
   Function *compiledFunc;
   if (auto *arrow = llvh::dyn_cast<ESTree::ArrowFunctionExpressionNode>(Root)) {
     if (arrow->_async) {
@@ -338,6 +392,15 @@ Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
   // because we store the error message in BytecodeFunction and reuse it,
   // ensuring we never use the information in lazyFunc ever again.
 
+  // Free the allocated legacy class context.
+  if (curFunction()->legacyClassContext)
+    curFunction()->legacyClassContext.reset();
+
+  // promotedDecls is used immediately and relies on IdentifierNode,
+  // which is deallocated between invocations of lazy compilation.
+  // Therefore, it is necessary to clear promotedDecls when freeing the
+  // AST in order to avoid dangling pointers.
+  semCtx_.clearPromotedDecls();
   return compiledFunc;
 }
 
@@ -398,10 +461,32 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   /// Create lref for member expression (ex: o.f).
   if (auto *ME = llvh::dyn_cast<ESTree::MemberExpressionNode>(node)) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for member expression.\n");
-    Value *obj = genExpression(ME->_object);
+
+    Value *obj;
+    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
+      auto *homeObjectVar = curFunction()->capturedState.homeObject;
+      auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+      Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+      obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+    } else {
+      obj = genExpression(ME->_object);
+    }
+
     Value *prop = genMemberExpressionProperty(ME);
+    Value *thisVal = nullptr;
+    // `thisVal` should only be set for `super` references.
+    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
+      thisVal = genThisExpression();
+    }
     return LReference(
-        LReference::Kind::Member, this, false, ME, obj, prop, sourceLoc);
+        LReference::Kind::Member,
+        this,
+        false,
+        ME,
+        obj,
+        prop,
+        sourceLoc,
+        thisVal);
   }
 
   /// Create lref for identifiers  (ex: a).
@@ -1036,8 +1121,7 @@ void ESTreeIRGen::emitRestProperty(
         Builder.createAllocObjectLiteralInst({}, Builder.getLiteralNull());
 
     for (Literal *key : literalExcludedItems)
-      Builder.createStoreNewOwnPropertyInst(
-          zeroValue, excludedObj, key, IRBuilder::PropEnumerable::Yes);
+      Builder.createDefineNewOwnPropertyInst(zeroValue, excludedObj, key);
 
     for (Value *key : computedExcludedItems) {
       Builder.createStorePropertyInst(zeroValue, excludedObj, key);
@@ -1226,6 +1310,18 @@ Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
     return startScope;
   return Builder.createResolveScopeInst(
       targetVarScope, startVarScope, startScope);
+}
+
+VariableScope *FunctionContext::getOrCreateInnerVariableScope(
+    ESTree::Node *node) {
+  auto [it, inserted] = innerScopes_.try_emplace(node, nullptr);
+  if (inserted)
+    it->second =
+        irGen_->Builder.createVariableScope(curScope->getVariableScope());
+  assert(
+      it->second->getParentScope() == curScope->getVariableScope() &&
+      "Inner scope created from multiple contexts");
+  return it->second;
 }
 
 void ESTreeIRGen::drainCompilationQueue() {

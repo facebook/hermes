@@ -61,7 +61,7 @@ declare module 'glob' {
    */
   declare type CallBack = (err: ?Error, matches: Array<string>) => void;
 
-  declare class Glob extends events$EventEmitter {
+  declare class Glob {
     constructor(pattern: string): this;
     constructor(pattern: string, callback: CallBack): this;
     constructor(pattern: string, options: Options, callback: CallBack): this;

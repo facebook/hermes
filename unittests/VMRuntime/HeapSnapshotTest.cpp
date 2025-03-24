@@ -8,12 +8,14 @@
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 
 #include "hermes/VM/HeapSnapshot.h"
+#include "EmptyCell.h"
 #include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/Compiler.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
@@ -617,9 +619,9 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       cellKindStr(dummy->getKind()),
       gc.getObjectID(dummy.get()),
       blockSize,
-      // One edge to the second dummy, 4 for primitive singletons, and a WeakRef
+      // One edge to the second dummy, 5 for primitive singletons, and a WeakRef
       // to self.
-      6};
+      7};
   Node undefinedNode{
       HeapSnapshot::NodeType::Object,
       "undefined",
@@ -644,6 +646,12 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       gc.getIDTracker().getNumberID(dummy->hvDouble.getNumber()),
       0,
       0};
+  Node nativeValueNode{
+      HeapSnapshot::NodeType::Number,
+      "",
+      gc.getIDTracker().getNumberID(dummy->hvNative.getNumber()),
+      0,
+      0};
   Node falseNode{
       HeapSnapshot::NodeType::Object,
       "false",
@@ -656,13 +664,15 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
       gc.getObjectID(dummy->other),
       blockSize,
       // No edges except for the primitive singletons and the WeakRef to self.
-      5};
+      6};
 
   // Common edges.
   Edge trueEdge =
       Edge(HeapSnapshot::EdgeType::Internal, "HermesBool", trueNode.id);
   Edge numberEdge =
       Edge(HeapSnapshot::EdgeType::Internal, "HermesDouble", numberNode.id);
+  Edge nativeValueEdge = Edge(
+      HeapSnapshot::EdgeType::Internal, "HermesNative", nativeValueNode.id);
   Edge undefinedEdge = Edge(
       HeapSnapshot::EdgeType::Internal, "HermesUndefined", undefinedNode.id);
   Edge nullEdge =
@@ -678,6 +688,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               trueEdge,
               numberEdge,
               undefinedEdge,
+              nativeValueEdge,
               nullEdge,
               Edge{HeapSnapshot::EdgeType::Weak, "weak", firstDummy.id}}));
 
@@ -689,9 +700,64 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               trueEdge,
               numberEdge,
               undefinedEdge,
+              nativeValueEdge,
               nullEdge,
               Edge{HeapSnapshot::EdgeType::Weak, "weak", secondDummy.id}}));
 }
+
+#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+// This test relies on the implementation details of Hades GC.
+TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
+  // The GC Heap can have at most two segments.
+  const GCConfig testGCConfig =
+      GCConfig::Builder(kTestGCConfigBaseBuilder)
+          .withInitHeapSize(FixedSizeHeapSegment::kSize)
+          .withMaxHeapSize(FixedSizeHeapSegment::kSize * 2)
+          .build();
+  bool triggeredTripwire = false;
+  auto runtime = DummyRuntime::create(
+      testGCConfig.rebuild()
+          .withTripwireConfig(
+              GCTripwireConfig::Builder()
+                  .withLimit(0)
+                  .withCallback([&triggeredTripwire](GCTripwireContext &ctx) {
+                    std::ostringstream stream;
+                    ctx.createSnapshot(stream, true);
+                    triggeredTripwire = true;
+                  })
+                  .build())
+          .build());
+  using LargeCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 2>;
+  DummyRuntime &rt = *runtime;
+  GCScope scope{rt};
+
+  // Create a cell in OG and make it dead. It won't be freed until Sweep phase.
+  auto cell1 = rt.makeMutableHandle(LargeCell::createLongLived(rt));
+  cell1.set(nullptr);
+
+  // Create two cells to make YG full. Make them dead so that they won't be
+  // evacuated in next YG collection.
+  auto cell2 = rt.makeMutableHandle(LargeCell::create(rt));
+  auto cell3 = rt.makeMutableHandle(LargeCell::create(rt));
+  cell2.set(nullptr);
+  cell3.set(nullptr);
+  // Trigger a YG collection, which starts an OG collection.
+  [[maybe_unused]] auto cell4 = rt.makeHandle(LargeCell::create(rt));
+
+  // Add a small cell, so that it won't trigger YG collection due to HadesGC
+  // updating YG effectiveEnd.
+  [[maybe_unused]] auto cell5 =
+      rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
+  // Create another cell, this should trigger YG again, and wait for OG to
+  // finish in the middle of YG. Both cell4 and cell5 need to be moved to OG,
+  // but OG won't have enough space. So it'll wait for OG collection to finish,
+  // which frees cell1. If the tripwire callback is called at this point, it'll
+  // crash since YG has moved one object and its KindAndSize is no longer valid
+  // (it stores the forwarding pointer instead).
+  rt.makeHandle(LargeCell::create(rt));
+  EXPECT_TRUE(triggeredTripwire);
+}
+#endif
 
 TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   bool triggeredTripwire = false;
@@ -729,7 +795,7 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
       "DummyObject",
       dummyID,
       dummy->getAllocatedSize(),
-      5};
+      6};
   EXPECT_EQ(dummyNode, expected);
 }
 
@@ -1474,9 +1540,9 @@ objects[0];
       R"#(
 (root)(0) @ (0):0:0
 global(1) @ test.js(2):2:1
-global(10) @ test.js(2):15:2
-A(11) @ test.js(2):4:4
-B(4) @ test.js(2):7:15)#");
+global(11) @ test.js(2):15:2
+A(12) @ test.js(2):4:4
+B(5) @ test.js(2):7:15)#");
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

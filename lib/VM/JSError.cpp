@@ -51,7 +51,11 @@ void JSErrorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addField("domains", &self->domains_);
 }
 
-CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
+/// Given an object \p targetHandle which may be nullptr:
+/// 1. Look for [[CapturedError]] in the object or its prototype chain and
+///    return it a JSError.
+/// 2. Otherwise, return llvh::None.
+static llvh::Optional<Handle<JSError>> getErrorFromStackTarget(
     Runtime &runtime,
     Handle<JSObject> targetHandle) {
   MutableHandle<JSObject> mutHnd =
@@ -75,8 +79,7 @@ CallResult<Handle<JSError>> JSError::getErrorFromStackTarget(
 
     mutHnd.set(targetHandle->getParent(runtime));
   }
-  return runtime.raiseTypeError(
-      "Error.stack getter called with an invalid receiver");
+  return llvh::None;
 }
 
 CallResult<HermesValue>
@@ -84,11 +87,11 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope(runtime);
 
   auto targetHandle = args.dyncastThis<JSObject>();
-  auto errorHandleRes = JSError::getErrorFromStackTarget(runtime, targetHandle);
-  if (errorHandleRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
+  auto errorHandleOpt = getErrorFromStackTarget(runtime, targetHandle);
+  if (!errorHandleOpt.hasValue()) {
+    return HermesValue::encodeUndefinedValue();
   }
-  auto errorHandle = *errorHandleRes;
+  auto errorHandle = *errorHandleOpt;
   if (!errorHandle->stacktrace_) {
     // Stacktrace has not been set, we simply return empty string.
     // This is different from other VMs where stacktrace is created when
@@ -446,7 +449,7 @@ ExecutionStatus JSError::recordStackTrace(
   if (!skipTopFrame) {
     if (frames.begin() == frames.end()) {
       stack->emplace_back(BytecodeStackTraceInfo(nullptr, 0));
-    } else if (auto *codeBlock = frames.begin()->getCalleeCodeBlock(runtime)) {
+    } else if (auto *codeBlock = frames.begin()->getCalleeCodeBlock()) {
       stack->emplace_back(BytecodeStackTraceInfo(
           codeBlock, codeBlock->getOffsetOf(runtime.getCurrentIP())));
       if (LLVM_UNLIKELY(addDomain(codeBlock) == ExecutionStatus::EXCEPTION)) {
@@ -477,9 +480,12 @@ ExecutionStatus JSError::recordStackTrace(
       // frame because it is always available, whereas the SavedCodeBlock is
       // unavailable if the interpreter makes a call indirectly (e.g. through a
       // getter/setter) or in BoundFunction calls.
-      codeBlock = prev->getCalleeCodeBlock(runtime);
+      codeBlock = prev->getCalleeCodeBlock();
       locals = prev->getSHLocals();
     }
+    // Assert that if the caller is a JSFunction, the IP was saved. But to be
+    // defensive, we still check it below.
+    assert(!codeBlock || savedIP);
     if (codeBlock && savedIP) {
       stack->emplace_back(
           BytecodeStackTraceInfo(codeBlock, codeBlock->getOffsetOf(savedIP)));
@@ -755,8 +761,8 @@ void JSError::appendBytecodeFrame(
             location->filenameId);
     convertUTF8WithSurrogatesToUTF16(
         std::back_inserter(stack),
-        &*utf8Filename.begin(),
-        &*utf8Filename.end());
+        utf8Filename.data(),
+        utf8Filename.data() + utf8Filename.size());
   } else {
     auto sourceURL = runtimeModule->getSourceURL();
     stack.append(sourceURL.empty() ? "unknown" : sourceURL);

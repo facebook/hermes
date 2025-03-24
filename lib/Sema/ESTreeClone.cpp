@@ -172,7 +172,7 @@ class Cloner {
       clonedNodesMaps_.emplace_back();
       curNewFunction_ = semContext_.prepareClonedFunction(
           oldInfo, curNewFunction_, curNewScope_);
-      oldScope = oldInfo->getFunctionScope();
+      oldScope = oldInfo->getFunctionBodyScope();
     } else if (auto *scopeDec = getDecoration<ScopeDecorationBase>(oldNode);
                scopeDec && scopeDec->getScope()) {
       LLVM_DEBUG(
@@ -231,7 +231,7 @@ class Cloner {
     // DeclCollector can use the mapping both for cloning the scope node and
     // for cloning the decl node.
     llvh::DenseMap<ESTree::Node *, ESTree::Node *> clonedNodesForFunc{};
-    if (auto *func = llvh::dyn_cast<FunctionLikeNode>(oldNode)) {
+    if (llvh::isa<FunctionLikeNode>(oldNode)) {
       clonedNodesForFunc = clonedNodesMaps_.pop_back_val();
       clonedNodesForFunc[oldNode] = newNode;
     }

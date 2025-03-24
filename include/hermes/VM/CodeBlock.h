@@ -34,9 +34,13 @@ class CodeBlock;
 typedef HermesValue (*JITCompiledFunctionPtr)(Runtime *runtime);
 
 /// A sequence of instructions representing the body of a function.
-class CodeBlock final
-    : private llvh::TrailingObjects<CodeBlock, PropertyCacheEntry> {
+class CodeBlock final : private llvh::TrailingObjects<
+                            CodeBlock,
+                            ReadPropertyCacheEntry,
+                            WritePropertyCacheEntry> {
   friend TrailingObjects;
+  friend struct RuntimeOffsets;
+
   /// Points to the runtime module with the information required for this code
   /// block.
   RuntimeModule *const runtimeModule_;
@@ -72,27 +76,31 @@ class CodeBlock final
   uint32_t numInstalledBreakpoints_ = 0;
 #endif
 
-  /// Total size of the property cache.
-  const uint32_t propertyCacheSize_;
-
-  /// Offset of the write property cache, which occurs after the read property
-  /// cache.
-  const uint32_t writePropCacheOffset_;
+  /// Total size of the property caches.
+  const uint32_t readPropertyCacheSize_;
+  const uint32_t writePropertyCacheSize_;
 
   CodeBlock(
       RuntimeModule *runtimeModule,
       hbc::RuntimeFunctionHeader header,
       const uint8_t *bytecode,
       uint32_t functionID,
-      uint32_t cacheSize,
-      uint32_t writePropCacheOffset)
+      uint32_t readCacheSize,
+      uint32_t writeCacheSize)
       : runtimeModule_(runtimeModule),
         functionHeader_(header),
         bytecode_(bytecode),
         functionID_(functionID),
-        propertyCacheSize_(cacheSize),
-        writePropCacheOffset_(writePropCacheOffset) {
-    std::uninitialized_fill_n(propertyCache(), cacheSize, PropertyCacheEntry{});
+        readPropertyCacheSize_(readCacheSize),
+        writePropertyCacheSize_(writeCacheSize) {
+    std::uninitialized_fill_n(
+        readPropertyCache(), readCacheSize, ReadPropertyCacheEntry{});
+    std::uninitialized_fill_n(
+        writePropertyCache(), writeCacheSize, WritePropertyCacheEntry{});
+  }
+
+  size_t numTrailingObjects(OverloadToken<ReadPropertyCacheEntry>) const {
+    return readPropertyCacheSize_;
   }
 
  public:
@@ -109,20 +117,20 @@ class CodeBlock final
 
   using const_iterator = const uint8_t *;
 
-  /// \return the base pointer of the property cache.
-  PropertyCacheEntry *propertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>();
+  /// \return the base pointers of the property caches.
+  ReadPropertyCacheEntry *readPropertyCache() {
+    return getTrailingObjects<ReadPropertyCacheEntry>();
   }
 
-  PropertyCacheEntry *writePropertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>() + writePropCacheOffset_;
+  WritePropertyCacheEntry *writePropertyCache() {
+    return getTrailingObjects<WritePropertyCacheEntry>();
   }
 
   uint32_t getParamCount() const {
-    return functionHeader_.paramCount();
+    return functionHeader_.getParamCount();
   }
   uint32_t getFrameSize() const {
-    return functionHeader_.frameSize();
+    return functionHeader_.getFrameSize();
   }
   uint32_t getFunctionID() const {
     return functionID_;
@@ -147,11 +155,11 @@ class CodeBlock final
   }
 
   hbc::FunctionHeaderFlag getHeaderFlags() const {
-    return functionHeader_.flags();
+    return functionHeader_.getFlags();
   }
 
   bool isStrictMode() const {
-    return functionHeader_.flags().strictMode;
+    return functionHeader_.getFlags().getStrictMode();
   }
 
   SymbolID getNameMayAllocate() const;
@@ -164,10 +172,10 @@ class CodeBlock final
     return bytecode_;
   }
   const_iterator end() const {
-    return bytecode_ + functionHeader_.bytecodeSizeInBytes();
+    return bytecode_ + functionHeader_.getBytecodeSizeInBytes();
   }
   llvh::ArrayRef<uint8_t> getOpcodeArray() const {
-    return {bytecode_, functionHeader_.bytecodeSizeInBytes()};
+    return {bytecode_, functionHeader_.getBytecodeSizeInBytes()};
   }
 
   /// \return true when \p inst is in this code block, false otherwise.
@@ -206,16 +214,13 @@ class CodeBlock final
   }
 
   /// Checks whether this function is lazily compiled.
-#ifndef HERMESVM_LEAN
   bool isLazy() const {
     return !bytecode_;
   }
-  ExecutionStatus lazyCompile(Runtime &runtime) {
-    if (LLVM_LIKELY(!isLazy()))
-      return ExecutionStatus::RETURNED;
-    return lazyCompileImpl(runtime);
-  }
-  ExecutionStatus lazyCompileImpl(Runtime &runtime);
+
+  /// Compile this function, which must be lazy.
+  /// \pre isLazy() is true.
+  ExecutionStatus compileLazyFunction(Runtime &runtime);
 
   /// \pre isLazy() is true.
   /// \return whether the coordinates are in the lazy function.
@@ -231,21 +236,6 @@ class CodeBlock final
   /// \return the name of the Variable at a given index at the given depth.
   llvh::StringRef getVariableNameAtDepth(uint32_t depth, uint32_t variableIndex)
       const;
-#else
-  bool isLazy() const {
-    return false;
-  }
-  ExecutionStatus lazyCompile(Runtime &runtime) {
-    return ExecutionStatus::RETURNED;
-  }
-  std::vector<uint32_t> getVariableCounts() const {
-    hermes_fatal("unavailable in lean VM");
-  }
-
-  llvh::StringRef getVariableNameAtDepth(uint32_t, uint32_t) const {
-    hermes_fatal("unavailable in lean VM");
-  }
-#endif
 
 #if HERMESVM_JIT
   /// \return true if JIT is disabled for this function.
@@ -313,16 +303,14 @@ class CodeBlock final
   void clearExecutionCount() {}
 #endif
 
-  inline PropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
-    assert(idx < writePropCacheOffset_ && "idx out of ReadCache bound");
-    return &propertyCache()[idx];
+  inline ReadPropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
+    assert(idx < readPropertyCacheSize_ && "idx out of ReadCache bound");
+    return &readPropertyCache()[idx];
   }
 
-  inline PropertyCacheEntry *getWriteCacheEntry(uint8_t idx) {
-    assert(
-        writePropCacheOffset_ + idx < propertyCacheSize_ &&
-        "idx out of WriteCache bound");
-    return &propertyCache()[writePropCacheOffset_ + idx];
+  inline WritePropertyCacheEntry *getWriteCacheEntry(uint8_t idx) {
+    assert(idx < writePropertyCacheSize_ && "idx out of WriteCache bound");
+    return &writePropertyCache()[idx];
   }
 
   // Mark all hidden classes in the property cache as roots.
@@ -345,7 +333,8 @@ class CodeBlock final
   /// \return an estimate of the size of additional memory used by this
   /// CodeBlock.
   size_t additionalMemorySize() const {
-    return propertyCacheSize_ * sizeof(PropertyCacheEntry);
+    return (readPropertyCacheSize_ * sizeof(ReadPropertyCacheEntry)) +
+        (writePropertyCacheSize_ * sizeof(WritePropertyCacheEntry));
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER

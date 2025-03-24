@@ -1164,6 +1164,7 @@ TEST(JSLexerTest, AtSignTest) {
   }
 }
 
+#if HERMES_PARSE_JSX
 TEST(JSLexerTest, JSXTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
@@ -1182,6 +1183,7 @@ TEST(JSLexerTest, JSXTest) {
   ASSERT_EQ(TokenKind::jsx_text, lex.advanceInJSXChild()->getKind());
   EXPECT_STREQ("qwerty", lex.getCurToken()->getJSXTextRaw()->c_str());
 }
+#endif
 
 TEST(JSLexerTest, StoreCommentsTest) {
   JSLexer::Allocator alloc;

@@ -60,7 +60,7 @@ function f(i: number): number {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %1: any
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %""(): functionCode
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = CallInst [njsf] (:any) %3: object, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object
 // CHECK-NEXT:       StoreStackInst %5: any, %1: any
@@ -80,40 +80,39 @@ function f(i: number): number {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.B]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.C0]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.C1]: any
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %f(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS1.f]: any
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %<instance_members_initializer:A>(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %1: environment, %VS1: any, %<instance_members_initializer:A>(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.<fieldInitFuncVar:A>]: object
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %A(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %1: environment, %VS1: any, %A(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS1.A]: any
-// CHECK-NEXT:  %14 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %14 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %14: object, [%VS1.?A.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %14: object, %12: object, "prototype": string
-// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %<instance_members_initializer:B>(): functionCode
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %VS1: any, %<instance_members_initializer:B>(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS1.<fieldInitFuncVar:B>]: object
-// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %1: environment, %B(): functionCode
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %1: environment, %VS1: any, %B(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %19: object, [%VS1.B]: any
-// CHECK-NEXT:  %21 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %21 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %21: object, [%VS1.?B.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %21: object, %19: object, "prototype": string
-// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %1: environment, %<instance_members_initializer:C0>(): functionCode
+// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %1: environment, %VS1: any, %<instance_members_initializer:C0>(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %24: object, [%VS1.<fieldInitFuncVar:C0>]: object
-// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %1: environment, %C0(): functionCode
+// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %1: environment, %VS1: any, %C0(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %26: object, [%VS1.C0]: any
-// CHECK-NEXT:  %28 = CreateFunctionInst (:object) %1: environment, %m(): functionCode
-// CHECK-NEXT:  %29 = AllocObjectLiteralInst (:object) empty: any, "m": string, %28: object
+// CHECK-NEXT:  %28 = CreateFunctionInst (:object) %1: environment, %VS1: any, %m(): functionCode
+// CHECK-NEXT:  %29 = AllocTypedObjectInst (:object) empty: any, "m": string, %28: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %29: object, [%VS1.?C0.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %29: object, %26: object, "prototype": string
 // CHECK-NEXT:  %32 = LoadFrameInst (:any) %1: environment, [%VS1.C0]: any
 // CHECK-NEXT:  %33 = CheckedTypeCastInst (:object) %32: any, type(object)
-// CHECK-NEXT:  %34 = CreateFunctionInst (:object) %1: environment, %<instance_members_initializer:C1>(): functionCode
+// CHECK-NEXT:  %34 = CreateFunctionInst (:object) %1: environment, %VS1: any, %<instance_members_initializer:C1>(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %34: object, [%VS1.<fieldInitFuncVar:C1>]: object
-// CHECK-NEXT:  %36 = CreateFunctionInst (:object) %1: environment, %C1(): functionCode
+// CHECK-NEXT:  %36 = CreateFunctionInst (:object) %1: environment, %VS1: any, %C1(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %36: object, [%VS1.C1]: any
 // CHECK-NEXT:  %38 = LoadFrameInst (:object) %1: environment, [%VS1.?C0.prototype]: object
 // CHECK-NEXT:  %39 = PrLoadInst (:object) %38: object, 0: number, "m": string
-// CHECK-NEXT:  %40 = AllocObjectLiteralInst (:object) empty: any, "m": string, %39: object
-// CHECK-NEXT:        TypedStoreParentInst %38: object, %40: object
+// CHECK-NEXT:  %40 = AllocTypedObjectInst (:object) %38: object, "m": string, %39: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %40: object, [%VS1.?C1.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %40: object, %36: object, "prototype": string
 // CHECK-NEXT:        ReturnInst undefined: undefined
@@ -129,26 +128,25 @@ function f(i: number): number {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: number, [%VS2.i]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.A]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.a]: any
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %"<instance_members_initializer:A> 1#"(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS2: any, %"<instance_members_initializer:A> 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS2.<fieldInitFuncVar:A>]: object
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %"A 1#"(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS2: any, %"A 1#"(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS2.A]: any
-// CHECK-NEXT:  %10 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %10 = AllocTypedObjectInst (:object) empty: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS2.?A.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %10: object, %8: object, "prototype": string
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS2.A]: any
 // CHECK-NEXT:  %14 = CheckedTypeCastInst (:object) %13: any, type(object)
 // CHECK-NEXT:  %15 = LoadFrameInst (:object) %1: environment, [%VS2.?A.prototype]: object
 // CHECK-NEXT:  %16 = UnionNarrowTrustedInst (:object) %15: object
-// CHECK-NEXT:  %17 = AllocObjectLiteralInst (:object) empty: any, "x": string, undefined: undefined
-// CHECK-NEXT:        TypedStoreParentInst %16: object, %17: object
-// CHECK-NEXT:  %19 = CallInst (:any) %14: object, %"A 1#"(): functionCode, true: boolean, empty: any, %14: object, %17: object
+// CHECK-NEXT:  %17 = AllocTypedObjectInst (:object) %16: object, "x": string, undefined: undefined
+// CHECK-NEXT:  %18 = CallInst (:any) %14: object, %"A 1#"(): functionCode, true: boolean, empty: any, %14: object, %17: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS2.a]: any
-// CHECK-NEXT:  %21 = LoadFrameInst (:any) %1: environment, [%VS2.a]: any
-// CHECK-NEXT:  %22 = CheckedTypeCastInst (:object) %21: any, type(object)
-// CHECK-NEXT:  %23 = PrLoadInst (:any) %22: object, 0: number, "x": string
-// CHECK-NEXT:  %24 = CheckedTypeCastInst (:number) %23: any, type(number)
-// CHECK-NEXT:        ReturnInst %24: number
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [%VS2.a]: any
+// CHECK-NEXT:  %21 = CheckedTypeCastInst (:object) %20: any, type(object)
+// CHECK-NEXT:  %22 = PrLoadInst (:any) %21: object, 0: number, "x": string
+// CHECK-NEXT:  %23 = CheckedTypeCastInst (:number) %22: any, type(number)
+// CHECK-NEXT:        ReturnInst %23: number
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS3 []
@@ -164,7 +162,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS4 []
 
-// CHECK:constructor A(): any [typed]
+// CHECK:base constructor A(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -194,7 +192,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS6 []
 
-// CHECK:constructor B(): any [typed]
+// CHECK:base constructor B(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -259,7 +257,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS11 []
 
-// CHECK:constructor C1(): any [typed]
+// CHECK:derived constructor C1(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
@@ -290,7 +288,7 @@ function f(i: number): number {
 
 // CHECK:scope %VS13 []
 
-// CHECK:constructor "A 1#"(): any [typed]
+// CHECK:base constructor "A 1#"(): any [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment

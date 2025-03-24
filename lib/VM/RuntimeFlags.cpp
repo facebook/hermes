@@ -34,9 +34,7 @@ vm::RuntimeConfig buildRuntimeConfig(const RuntimeFlags &flags) {
       .withOptimizedEval(flags.OptimizedEval)
       .withAsyncBreakCheckInEval(flags.EmitAsyncBreakCheck)
       .withVMExperimentFlags(flags.VMExperimentFlags)
-      .withES6Promise(flags.ES6Promise)
       .withES6Proxy(flags.ES6Proxy)
-      .withES6Class(flags.EvalES6Class)
       .withIntl(flags.Intl)
       .withMicrotaskQueue(flags.MicrotaskQueue)
       .withEnableSampleProfiling(

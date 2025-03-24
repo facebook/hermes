@@ -39,21 +39,18 @@ userBreakpointAfter(1);
 // Test there being 'debugger' statement afterwards
 debuggerStmtAfter(1);
 
-// Pause on debugger statement. Setup all the breakpoints we need.
-// CHECK: Break on 'debugger' statement in global: {{.*}}:34:1
-// CHECK-NEXT: Set breakpoint 1 at {{.*}}:14:7
-// CHECK-NEXT: Set breakpoint 2 at {{.*}}:19:10
-// CHECK-NEXT: Set breakpoint 3 at {{.*}}:25:7
-// CHECK-NEXT: Continuing execution
+// Auto-generated content below. Please do not modify manually.
 
-// Verify that user breakpoint directly after still gets triggered:
-// CHECK-NEXT: Break on breakpoint 1 in get x: {{.*}}:14:7
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: Break on breakpoint 2 in userBreakpointAfter: {{.*}}:19:10
-// CHECK-NEXT: Continuing execution
-
-// Verify that debugger statement directly after still gets triggered:
-// CHECK-NEXT: Break on breakpoint 3 in get x: {{.*}}:25:7
-// CHECK-NEXT: Continuing execution
-// CHECK-NEXT: Break on 'debugger' statement in debuggerStmtAfter: {{.*}}:30:3
-// CHECK-NEXT: Continuing execution
+// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:34:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-ret-afterwards.js[2]:14:7
+// CHECK-NEXT:Set breakpoint 2 at {{.*}}debugger-opcode-on-ret-afterwards.js[2]:19:10
+// CHECK-NEXT:Set breakpoint 3 at {{.*}}debugger-opcode-on-ret-afterwards.js[2]:25:7
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 1 in get x: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:14:7
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 2 in userBreakpointAfter: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:19:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 3 in get x: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:25:7
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on 'debugger' statement in debuggerStmtAfter: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:30:3
+// CHECK-NEXT:Continuing execution

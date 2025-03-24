@@ -44,8 +44,8 @@ extern "C" HermesSourceMap *hermes_source_map_parse(
   SourceErrorManager sm;
   SimpleDiagHandlerRAII handler(sm);
 
-  auto sourceMap =
-      SourceMapParser::parse(llvh::StringRef(source, len - 1), {}, sm);
+  llvh::MemoryBufferRef mbref(llvh::StringRef{source, len - 1}, "<source map>");
+  auto sourceMap = SourceMapParser::parse(mbref, {}, sm);
   // Defensive programming.
   if (!sourceMap && !handler.haveErrors())
     sm.error(SMLoc{}, "internal error");

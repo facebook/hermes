@@ -60,7 +60,7 @@ typedef struct SHNativeFuncInfo {
 
 /// Type of a function that allocates and returns a new SHUnit ready to be used
 /// with a runtime.
-typedef SHUnit *(*SHUnitCreator)();
+typedef SHUnit *(*SHUnitCreator)(void);
 
 /// SHUnit describes a compilation unit.
 ///
@@ -82,8 +82,9 @@ typedef struct SHUnit {
 
   /// Number of symbols (strings).
   uint32_t num_symbols;
-  /// Size of the property cache.
-  uint32_t num_prop_cache_entries;
+  /// Sizes of the property caches.
+  uint32_t num_read_prop_cache_entries;
+  uint32_t num_write_prop_cache_entries;
 
   /// Pool of ASCII strings.
   const char *ascii_pool;
@@ -103,9 +104,14 @@ typedef struct SHUnit {
   /// Symbols populated by the init code from strings above. This pointer is
   /// initialized by the owner of the struct and typically points into BSS.
   SHSymbolID *symbols;
-  /// Property cache. Points to an array with `num_prop_cache_entries` elements.
-  /// Must be zeroed initially.
-  SHPropertyCacheEntry *prop_cache;
+  /// Write Property cache. Points to an array with
+  /// `num_write_prop_cache_entries` elements.  Must be zeroed
+  /// initially.
+  SHWritePropertyCacheEntry *write_prop_cache;
+  /// Read Property cache. Points to an array with
+  /// `num_read_prop_cache_entries` elements.  Must be zeroed
+  /// initially.
+  SHReadPropertyCacheEntry *read_prop_cache;
 
   /// Object key buffer.
   const unsigned char *obj_key_buffer;
@@ -126,6 +132,11 @@ typedef struct SHUnit {
   /// NOTE: These should always be treated as WeakRoots, which means a read
   /// barrier is needed to safely read out the value.
   SHCompressedPointer *object_literal_class_cache;
+
+  /// The module exports cache: a map from non-negative integer module indexes
+  /// to the export of the module.  An empty value indicates that the module has
+  /// not yet been initialized.
+  SHArrayStorage *moduleExports;
 
   /// List of source locations.
   const SHSrcLoc *source_locations;
@@ -323,9 +334,22 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
     SHLegacyValue *callee,
     SHLegacyValue *newTarget,
-    SHPropertyCacheEntry *propCacheEntry);
+    SHReadPropertyCacheEntry *propCacheEntry);
 
-#define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _setjmp((jbuf)->buf))
+#ifndef _WINDOWS
+// Use _setjmp and _longjmp outside Windows, to avoid saving and restoring the
+// signal mask, which is costly and may interfere with signal mask manipulation
+// by non-Hermes code.
+#define _sh_setjmp _setjmp
+#define _sh_longjmp _longjmp
+#else
+// Windows does not provide _setjmp and _longjmp, so use setjmp and longjmp
+// instead.
+#define _sh_setjmp setjmp
+#define _sh_longjmp longjmp
+#endif
+
+#define _sh_try(shr, jbuf) (_sh_push_try(shr, jbuf), _sh_setjmp((jbuf)->buf))
 
 /// Push the given \p buf onto the exception handler stack.
 static inline void _sh_push_try(SHRuntime *shr, SHJmpBuf *buf) {
@@ -349,6 +373,21 @@ SHERMES_EXPORT SHLegacyValue _sh_catch(
     SHLocals *locals,
     SHLegacyValue *frame,
     uint32_t stackSize);
+/// Like _sh_catch, but doesn't update shCurJmpBuf because that's handled at the
+/// function-level by running _sh_end_try before returning or throwing out of
+/// the function, and does not clear/return the thrown value.
+///
+/// \param frame the value that should be set to the current frame
+///     (Runtime::currentFrame_).
+/// \param stackSize <tt>frame + stackSize</tt> will be the new value of the
+///     register stack pointer.
+SHERMES_EXPORT void _sh_catch_no_pop(
+    SHRuntime *shr,
+    SHLocals *locals,
+    SHLegacyValue *frame,
+    uint32_t stackSize);
+/// Clear the thrown value and return it.
+SHERMES_EXPORT SHLegacyValue _sh_get_clear_thrown_value(SHRuntime *shr);
 SHERMES_EXPORT void _sh_throw_current(SHRuntime *shr) __attribute__((noreturn));
 SHERMES_EXPORT void _sh_throw(SHRuntime *shr, SHLegacyValue value)
     __attribute__((noreturn));
@@ -361,9 +400,27 @@ SHERMES_EXPORT void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message)
 SHERMES_EXPORT void _sh_throw_type_error_ascii(
     SHRuntime *shr,
     const char *message) __attribute__((noreturn));
+SHERMES_EXPORT void _sh_throw_reference_error_ascii(
+    SHRuntime *shr,
+    const char *message) __attribute__((noreturn));
 
 /// Throw a ReferenceError for accessing uninitialized variable.
 SHERMES_EXPORT void _sh_throw_empty(SHRuntime *shr) __attribute__((noreturn));
+
+/// Throws a ReferenceError for double-initialization of `this`.
+__attribute__((noreturn)) static inline void _sh_throw_this_already_initialized(
+    SHRuntime *shr) {
+  _sh_throw_reference_error_ascii(shr, "Cannot call super constructor twice");
+}
+
+/// Throw a ReferenceError if the given derived class constructor's checked this
+/// is already initialized.
+static inline void _sh_ljs_throw_if_this_initialized(
+    SHRuntime *shr,
+    SHLegacyValue checkedThis) {
+  if (!_sh_ljs_is_empty(checkedThis))
+    _sh_throw_this_already_initialized(shr);
+}
 
 /// Performs a function call. The new frame is at the top of the stack.
 /// Arguments, this, and callee must be populated.
@@ -380,6 +437,17 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_call_builtin(
 
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_builtin_closure(SHRuntime *shr, uint32_t builtinMethodID);
+
+/// Semantically equivalent to calling \p requireFunc with the argument
+/// \p modIndex.  Assumes that \p requireFunc is the metro require function,
+/// and may cache the result for a given \p modIndex.
+/// The \p cacheData argument is currently unused, but will be used in a
+/// later diff to provide caching.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_callRequire(
+    SHRuntime *shr,
+    SHArrayStorage **exportCache,
+    SHLegacyValue *requireFunc,
+    uint32_t modIndex);
 
 /// Create a new environment with the specified \p size and \p parentEnv (which
 /// may be null if this is a top level environment).
@@ -440,7 +508,7 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_closure(
     const SHUnit *unit);
 
 /// Create a generator object.
-/// \param env Should not be null.
+/// \param env NULL if there is no environment.
 /// \param funcInfo Should not be null.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_create_generator_object(
     SHRuntime *shr,
@@ -448,6 +516,18 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_generator_object(
     SHLegacyValue (*func)(SHRuntime *),
     const SHNativeFuncInfo *funcInfo,
     const SHUnit *unit);
+
+/// Create a class.
+/// \param env Should not be null.
+/// \param funcInfo Should not be null.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_create_class(
+    SHRuntime *shr,
+    const SHLegacyValue *env,
+    SHLegacyValue (*func)(SHRuntime *),
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit,
+    SHLegacyValue *homeObjectOut,
+    SHLegacyValue *superClass);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr);
 SHERMES_EXPORT void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);
@@ -457,25 +537,25 @@ SHERMES_EXPORT void _sh_ljs_put_by_id_loose_rjs(
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry);
+    SHWritePropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_put_by_id_strict_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry);
+    SHWritePropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_try_put_by_id_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry);
+    SHWritePropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_try_put_by_id_strict_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
-    SHPropertyCacheEntry *propCacheEntry);
+    SHWritePropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT void _sh_ljs_put_by_val_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -486,60 +566,74 @@ SHERMES_EXPORT void _sh_ljs_put_by_val_strict_rjs(
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value);
+SHERMES_EXPORT void _sh_ljs_put_by_val_with_receiver_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value,
+    SHLegacyValue *receiver,
+    bool isStrict);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    SHPropertyCacheEntry *propCacheEntry);
+    SHReadPropertyCacheEntry *propCacheEntry);
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
     SHSymbolID symID,
-    SHPropertyCacheEntry *propCacheEntry);
-SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_val_rjs(
+    SHReadPropertyCacheEntry *propCacheEntry);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *receiver,
+    SHSymbolID symID,
+    SHReadPropertyCacheEntry *propCacheEntry);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_val_with_receiver_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,
-    SHLegacyValue *key);
+    SHLegacyValue *key,
+    SHLegacyValue *receiver);
+static inline SHLegacyValue _sh_ljs_get_by_val_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *source,
+    SHLegacyValue *key) {
+  return _sh_ljs_get_by_val_with_receiver_rjs(shr, source, key, source);
+}
 
 /// Get a property from the given object \p source given a valid array index
 /// \p key.
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key);
 
+/// Put an enumerable property by string id.
+SHERMES_EXPORT void _sh_ljs_define_own_by_id(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHSymbolID key,
+    SHLegacyValue *value,
+    SHWritePropertyCacheEntry *cacheEntry);
 /// Put an enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_own_by_val(
+SHERMES_EXPORT void _sh_ljs_define_own_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value);
 /// Put a non-enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_own_ne_by_val(
+SHERMES_EXPORT void _sh_ljs_define_own_ne_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
     SHLegacyValue *value);
 
-SHERMES_EXPORT void _sh_ljs_put_own_by_index(
+SHERMES_EXPORT void _sh_ljs_define_own_by_index(
     SHRuntime *shr,
     SHLegacyValue *target,
     uint32_t key,
     SHLegacyValue *value);
 
-/// Put an enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_new_own_by_id(
-    SHRuntime *shr,
-    SHLegacyValue *target,
-    SHSymbolID key,
-    SHLegacyValue *value);
-/// Put a non-enumerable property.
-SHERMES_EXPORT void _sh_ljs_put_new_own_ne_by_id(
-    SHRuntime *shr,
-    SHLegacyValue *target,
-    SHSymbolID key,
-    SHLegacyValue *value);
-
-SHERMES_EXPORT void _sh_ljs_put_own_getter_setter_by_val(
+SHERMES_EXPORT void _sh_ljs_define_own_getter_setter_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key,
@@ -572,6 +666,9 @@ _sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags);
 /// \param size  the size of the string \c value.
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_create_bigint(SHRuntime *shr, const uint8_t *value, uint32_t size);
+
+SHERMES_EXPORT SHLegacyValue
+_sh_ljs_to_property_key(SHRuntime *shr, const SHLegacyValue *val);
 
 SHERMES_EXPORT double _sh_ljs_to_double_rjs(
     SHRuntime *shr,
@@ -666,6 +763,7 @@ SHERMES_EXPORT SHLegacyValue
 _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v);
+SHERMES_EXPORT bool _sh_ljs_typeof_is(SHLegacyValue val, uint16_t types);
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object(SHRuntime *shr);
 SHERMES_EXPORT SHLegacyValue
@@ -692,6 +790,19 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array_with_buffer(
     uint32_t numElements,
     uint32_t numLiterals,
     uint32_t bufferIndex);
+
+/// \p thisArg is "this" parameter to the function.
+/// \p newTarget is the new.target value in the function.
+/// \p shapeTableIndex is the index into the shape table where the serialized
+///   keys for this operation are stored.
+/// \p cacheEntry is the cache entry for this operation.
+SHERMES_EXPORT void _sh_ljs_cache_new_object(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *thisArg,
+    SHLegacyValue *newTarget,
+    uint32_t shapeTableIndex,
+    void **cacheEntry);
 
 /// \return a newly created fast array with the given \p capacity.
 SHERMES_EXPORT SHLegacyValue
@@ -744,10 +855,12 @@ SHERMES_EXPORT void _sh_ljs_iterator_close_rjs(
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_direct_eval(SHRuntime *shr, SHLegacyValue *evalText, bool strictCaller);
 
-/// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail.
+/// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail. Note
+/// that we only do this for unsigned integers, because signed mod can produce
+/// -0, which requires special handling.
 /// \return the double representing the result of the JS mod operation on the
 ///   two integers.
-static inline double _sh_mod_int32(int32_t a, int32_t b) {
+static inline double _sh_mod_uint32(uint32_t a, uint32_t b) {
   if (b == 0) {
     // Avoid the divide-by-zero and return NaN directly.
     return nan("");
@@ -756,15 +869,14 @@ static inline double _sh_mod_int32(int32_t a, int32_t b) {
 }
 
 __attribute__((const)) static inline double _sh_mod_double(double a, double b) {
-  // This is technically "undefined behavior", but we do this casting to quickly
-  // check for integers in Conversions.h as well.
-  int32_t aInt = (int32_t)a;
-  int32_t bInt = (int32_t)b;
+  uint32_t aUint, bUint;
+  bool aIsUint = sh_tryfast_f64_to_u32(a, aUint);
+  bool bIsUint = sh_tryfast_f64_to_u32(b, bUint);
 
-  // If both numbers are integers, use the fast path.
+  // If both numbers are unsigned integers, use the fast path.
   // `-0` must be handled specially, so just check `a != 0` for simplicity.
-  if (a != 0 && (double)aInt == a && (double)bInt == b) {
-    return _sh_mod_int32(aInt, bInt);
+  if (a != 0 && aIsUint && bIsUint) {
+    return _sh_mod_uint32(aUint, bUint);
   }
 
   // Actually have to do the double operation.

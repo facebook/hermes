@@ -31,9 +31,9 @@ function simple_test1() {
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test0": string
 // CHECK-NEXT:       DeclareGlobalVarInst "simple_test1": string
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %simple_test0(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_test0(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "simple_test0": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %simple_test1(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_test1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "simple_test1": string
 // CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any

@@ -43,31 +43,27 @@ function outer(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): string
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %outer(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any): string|number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadParamInst (:any) %a: any
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %fooNoInline(): functionCode
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %fooNoInlineLast(): functionCode
-// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %1: any, 5: number
-// CHECK-NEXT:  %5 = CallInst (:string|number) %2: object, %fooNoInline(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, %1: any
-// CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %4: string|number, %5: string|number
-// CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %1: any, 50: number
-// CHECK-NEXT:  %8 = BinaryAddInst (:string|number) %6: string|number, %7: string|number
-// CHECK-NEXT:  %9 = CallInst (:string|number) %3: object, %fooNoInlineLast(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, %1: any
-// CHECK-NEXT:  %10 = BinaryAddInst (:string|number) %8: string|number, %9: string|number
-// CHECK-NEXT:        ReturnInst %10: string|number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %fooNoInline(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %fooNoInlineLast(): functionCode
+// CHECK-NEXT:  %3 = BinaryAddInst (:string|number) %0: any, 5: number
+// CHECK-NEXT:  %4 = CallInst (:string|number) %1: object, %fooNoInline(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, %0: any
+// CHECK-NEXT:  %5 = BinaryAddInst (:string|number) %3: string|number, %4: string|number
+// CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %0: any, 50: number
+// CHECK-NEXT:  %7 = BinaryAddInst (:string|number) %5: string|number, %6: string|number
+// CHECK-NEXT:  %8 = CallInst (:string|number) %2: object, %fooNoInlineLast(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, %0: any
+// CHECK-NEXT:  %9 = BinaryAddInst (:string|number) %7: string|number, %8: string|number
+// CHECK-NEXT:        ReturnInst %9: string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function fooNoInline(x: any): string|number [allCallsitesKnownInStrictMode]

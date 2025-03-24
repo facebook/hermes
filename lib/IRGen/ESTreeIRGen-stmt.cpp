@@ -212,8 +212,10 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
     return genExportAllDeclaration(exportDecl);
   }
 
+#if HERMES_PARSE_FLOW
   if (llvh::isa<ESTree::TypeAliasNode>(stmt))
     return;
+#endif
 
   if (auto *classDecl = llvh::dyn_cast<ESTree::ClassDeclarationNode>(stmt)) {
     return genClassDeclaration(classDecl);
@@ -294,7 +296,25 @@ void ESTreeIRGen::genWhileLoop(ESTree::WhileStatementNode *loop) {
   genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
   // Generate the body.
   Builder.setInsertionBlock(bodyBlock);
+
+  // Save the outer scope in case we create an inner scope.
+  auto *outerScope = curFunction()->curScope;
+
+  // If the body captures, create an inner scope for it. Note that unlike for
+  // loops, we don't care whether the test expression captures, since the loop
+  // does not create variables visible in the test expression.
+  if (Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(loop->_body)) {
+    auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
+    auto *bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
+    curFunction()->curScope = bodyScope;
+  }
+
   genStatement(loop->_body);
+
+  // Restore the outer scope.
+  curFunction()->curScope = outerScope;
+
   // After executing the content of the body, jump to the post test block.
   Builder.createBranchInst(postTestBlock);
   Builder.setInsertionBlock(postTestBlock);
@@ -322,7 +342,22 @@ void ESTreeIRGen::genDoWhileLoop(ESTree::DoWhileStatementNode *loop) {
   Builder.createBranchInst(bodyBlock);
   // Generate the body.
   Builder.setInsertionBlock(bodyBlock);
+
+  // Save the outer scope in case we create an inner scope.
+  auto *outerScope = curFunction()->curScope;
+
+  if (Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(loop->_body)) {
+    auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
+    auto *bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
+    curFunction()->curScope = bodyScope;
+  }
+
   genStatement(loop->_body);
+
+  // Restore the outer scope.
+  curFunction()->curScope = outerScope;
+
   // After executing the content of the body, jump to the post test block.
   Builder.createBranchInst(postTestBlock);
   Builder.setInsertionBlock(postTestBlock);
@@ -378,23 +413,27 @@ bool ESTreeIRGen::treeDoesNotCapture(ESTree::Node *tree) {
 void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   // IS this a "scoped" for loop?
   // TODO: check if any of the declared variables are captured.
-  if (loop->_init) {
+  bool enableBlockScoping = Mod->getContext().getEnableES6BlockScoping();
+  if (enableBlockScoping && loop->_init) {
     if (auto *VD =
             llvh::dyn_cast<ESTree::VariableDeclarationNode>(loop->_init)) {
       if (VD->_kind != kw_.identVar) {
         bool testExprCaptures = !treeDoesNotCapture(loop->_test);
         bool updateExprCaptures = !treeDoesNotCapture(loop->_update);
+        bool initExprCaptures = !treeDoesNotCapture(loop->_init);
 
-        // Invoke the scoped loop generation only if something is potentially
-        // captured in the loop.
-        if (testExprCaptures || updateExprCaptures ||
-            !treeDoesNotCapture(loop->_body)) {
-          genScopedForLoop(loop, testExprCaptures, updateExprCaptures);
+        // Invoke the scoped loop generation only if the init, test, or update
+        // capture.
+        if (testExprCaptures || updateExprCaptures || initExprCaptures) {
+          genScopedForLoop(loop);
           return;
         }
       }
     }
   }
+
+  bool createInnerScopes =
+      enableBlockScoping && !treeDoesNotCapture(loop->_body);
 
   // Create the basic blocks that make the while structure.
   Function *function = Builder.getInsertionBlock()->getParent();
@@ -402,12 +441,76 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   BasicBlock *exitBlock = Builder.createBasicBlock(function);
   BasicBlock *postTestBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
+  BasicBlock *startingBlock = Builder.getInsertionBlock();
 
   // Initialize the goto labels.
   curFunction()->initLabel(loop, exitBlock, updateBlock);
 
+  // A mapping between an outer variable and its inner version in the loop body
+  // scope. This is only used if we create an inner scope.
+  struct VarMapping {
+    sema::Decl *decl;
+    Variable *outerVar;
+    Variable *innerVar;
+    VarMapping(sema::Decl *decl, Variable *outerVar, Variable *innerVar)
+        : decl(decl), outerVar(outerVar), innerVar(innerVar) {}
+  };
+  llvh::SmallVector<VarMapping, 2> vars{};
+
+  // Record the enclosing scope, in case we create an inner scope.
+  auto *outerScope = curFunction()->curScope;
+  // Keep track of the scope to use when emitting the body, which is just the
+  // enclosing scope if no additional scope is created.
+  auto *bodyScope = outerScope;
+
+  // If we are creating an inner scope, emit the variables directly in the body.
+  if (createInnerScopes) {
+    // Generate a scope for the body.
+    Builder.setInsertionBlock(bodyBlock);
+    auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
+    bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
+    curFunction()->curScope = bodyScope;
+  }
+
   // Declarations created by the init statement.
   emitScopeDeclarations(loop->getScope());
+
+  // If we are creating an inner scope, create a copy of each variable in the
+  // outer scope. The inner scope is used only during the body of the loop,
+  // while the outer vars hold the value between iterations, and during the
+  // init, test, and update.
+  if (createInnerScopes) {
+    // Restore the starting scope and block for emitting the outer vars.
+    curFunction()->curScope = outerScope;
+    Builder.setInsertionBlock(startingBlock);
+
+    for (auto *decl : loop->getScope()->decls) {
+      assert(
+          !decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
+      Variable *innerVar = llvh::cast<Variable>(getDeclData(decl));
+      // Create a copy of the variable.
+      Variable *outerVar = Builder.createVariable(
+          outerScope->getVariableScope(),
+          decl->name,
+          innerVar->getType(),
+          /* hidden */ false);
+
+      // Mirror the TDZ and const-ness of the inner var.
+      outerVar->setIsConst(innerVar->getIsConst());
+      outerVar->setObeysTDZ(innerVar->getObeysTDZ());
+      // Make sure the outer var is initialized.
+      Builder.createStoreFrameInst(
+          outerScope,
+          outerVar->getObeysTDZ() ? (Value *)Builder.getLiteralEmpty()
+                                  : Builder.getLiteralUndefined(),
+          outerVar);
+      vars.emplace_back(decl, outerVar, innerVar);
+
+      // Set the decl data to the outer var since we will evaluate the init
+      // statement next.
+      setDeclData(decl, outerVar);
+    }
+  }
 
   // Generate IR for the loop initialization.
   // The init field can be a variable declaration or any expression.
@@ -428,6 +531,15 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
 
   // Generate the update sequence of 'for' loops.
   Builder.setInsertionBlock(updateBlock);
+
+  // Before performing the update, write the inner vars back to the outer. Note
+  // that we have to do this in the update block rather than at the end of the
+  // body so it runs even if there is a "continue".
+  for (const auto &var : vars) {
+    Value *val = Builder.createLoadFrameInst(bodyScope, var.innerVar);
+    Builder.createStoreFrameInst(outerScope, val, var.outerVar);
+  }
+
   if (loop->_update)
     genExpression(loop->_update);
 
@@ -448,19 +560,32 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   // different statement count.
   // TODO: Determine if they should each also incrementStatementCount.
   Builder.setInsertionBlock(bodyBlock);
+  curFunction()->curScope = bodyScope;
+  for (const auto &var : vars) {
+    // Copy the outer var into the inner one. We can load directly from the
+    // outer var since it is never empty in the body, but we have to use
+    // emitStore for the inner var so it gets inserted in initializedTDZVars.
+    Value *val = Builder.createLoadFrameInst(outerScope, var.outerVar);
+    emitStore(val, var.innerVar, /* declInit */ true);
+
+    // Set the decl data to the inner var for the body.
+    setDeclData(var.decl, var.innerVar);
+  }
+
   genStatement(loop->_body);
   Builder.createBranchInst(updateBlock);
+
+  // Restore the outer scope before returning.
+  curFunction()->curScope = outerScope;
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
 }
 
-void ESTreeIRGen::genScopedForLoop(
-    ESTree::ForStatementNode *loop,
-    bool testExprCaptures,
-    bool updateExprCaptures) {
+void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // A scoped for-loop has "interesting" semantics. The declared variables live
   // in a new scope for every iteration (so they can be captured). Additionally:
+  // - the init statement executes in its own scope.
   // - the test condition executes in the current iteration's scope.
   // - the update condition executes in the next iteration's scope.
   //
@@ -469,92 +594,56 @@ void ESTreeIRGen::genScopedForLoop(
   // expression in the beginning of the second iteration. But that would explode
   // the code size. So we use a flag.
   //
-  //      let/const oldVars = loop->init()
+  //      Scope s = createScope
+  //        declare loopVars in s
+  //        loop->init(loopVars)
+  //        stackLocs = s
   //      var first = true;
   // loopBlock:
   //      Scope s = createScope
-  //        declare newVars in s
-  //        newVars = oldVars
+  //        declare loopVars in s
+  //        loopVars = stackLocs
   //        if !first
-  //            loop->update(newVars)
-  //        if !loop->test(newVars)
+  //            loop->update(loopVars)
+  //        if !loop->test(loopVars)
   //            goto exitBlock
-  //        loop->body(newVars)
+  //        loop->body(loopVars)
   //  updateBlock:
-  //        oldVars(ignoring constness) = newVars
+  //        stackLocs = loopVars
   //        first = false
   //      end s
   //      goto loopBlock
 
-  // Clearly, this structure is awful for optimization, so we try to improve it.
-  //
-  // OPTIMIZATION1:
-  // If the update expression doesn't capture anything, it can be emitted in the
-  // current iteration scope instead of the next one.
-  //      let/const oldVars = loop->init()
-  // loopBlock:
-  //      Scope s = createScope
-  //        declare newVars in s
-  //        newVars = oldVars
-  //        if !loop->test(newVars)
-  //            goto exitBlock
-  //        loop->body(newVars)
-  //  updateBlock:
-  //        oldVars(ignoring constness) = newVars
-  //      end s
-  //      loop->update(oldVars)
-  //      goto loopBlock
-  //
-  // OPTIMIZATION2:
-  // If both the test and update expression doesn't capture anything:
-  //      let/const oldVars = loop->init()
-  //      if !loop->test(oldVars)
-  //        goto exitBlock
-  // loopBlock:
-  //      Scope s = createScope
-  //        declare newVars in s
-  //        newVars = oldVars
-  //        loop->body(newVars)
-  //  updateBlock:
-  //        oldVars(ignoring constness) = newVars
-  //      end s
-  //      loop->update(oldVars)
-  //      if loop->test(oldVars)
-  //          goto loopBlock
-  //      goto loopBlock
-  // exitBlock:
-
-  bool testOrUpdateCapture = testExprCaptures | updateExprCaptures;
-
   // Create the basic blocks that make the while structure.
   Function *function = Builder.getInsertionBlock()->getParent();
-  BasicBlock *dontExitBlock = nullptr;
-  if (!testOrUpdateCapture && loop->_test) {
-    dontExitBlock = Builder.createBasicBlock(function);
-  }
   BasicBlock *loopBlock = Builder.createBasicBlock(function);
-  BasicBlock *firstIterBlock = nullptr;
-  BasicBlock *notFirstIterBlock = nullptr;
-  if (updateExprCaptures) {
-    firstIterBlock = Builder.createBasicBlock(function);
-    notFirstIterBlock = Builder.createBasicBlock(function);
-  }
+  BasicBlock *firstIterBlock = Builder.createBasicBlock(function);
+  BasicBlock *notFirstIterBlock = Builder.createBasicBlock(function);
   BasicBlock *bodyBlock = Builder.createBasicBlock(function);
   BasicBlock *updateBlock = Builder.createBasicBlock(function);
   BasicBlock *exitBlock = Builder.createBasicBlock(function);
-  // A mapping between an "old" variable and its "new" version in the loop body
-  // scope.
+  // A mapping between a variable and the stack location used to hold its value
+  // between iterations.
   struct VarMapping {
     sema::Decl *decl;
-    Variable *oldVar;
-    Variable *newVar;
-    VarMapping(sema::Decl *decl, Variable *oldVar, Variable *newVar)
-        : decl(decl), oldVar(oldVar), newVar(newVar) {}
+    Variable *var;
+    AllocStackInst *stackLoc;
+    VarMapping(sema::Decl *decl, Variable *var, AllocStackInst *stackLoc)
+        : decl(decl), var(var), stackLoc(stackLoc) {}
   };
   llvh::SmallVector<VarMapping, 2> vars{};
 
   // Initialize the goto labels.
   curFunction()->initLabel(loop, exitBlock, updateBlock);
+
+  auto *outerScope = curFunction()->curScope;
+
+  // Create an inner scope for the loop.
+  auto *loopVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
+
+  // Create the scope for the init statement.
+  auto *initScope = Builder.createCreateScopeInst(loopVarScope, outerScope);
+  curFunction()->curScope = initScope;
 
   // Declarations created by the init statement.
   emitScopeDeclarations(loop->getScope());
@@ -565,27 +654,38 @@ void ESTreeIRGen::genScopedForLoop(
       "A scoped for-loop must have an init declaration");
   genStatement(loop->_init);
 
-  if (!testOrUpdateCapture && loop->_test) {
-    // Branch out of the loop if the condition is false.
-    genExpressionBranch(loop->_test, dontExitBlock, exitBlock, nullptr);
-    Builder.setInsertionBlock(dontExitBlock);
+  Builder.setLocation(loop->_init->getDebugLoc());
+
+  // Create and initialize a copy of each loop variable on the stack
+  for (auto *decl : loop->getScope()->decls) {
+    assert(!decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
+    Variable *loopVar = llvh::cast<Variable>(getDeclData(decl));
+    auto *stackLoc =
+        Builder.createAllocStackInst(decl->name, loopVar->getType());
+    Builder.createStoreStackInst(
+        Builder.createLoadFrameInst(initScope, loopVar), stackLoc);
+    vars.emplace_back(decl, loopVar, stackLoc);
   }
 
-  Builder.setLocation(loop->_init->getDebugLoc());
   // Create the "first" flag and set it to true.
-  AllocStackInst *firstStack = nullptr;
-  if (updateExprCaptures) {
-    firstStack = Builder.createAllocStackInst(
-        genAnonymousLabelName("first"), Type::createBoolean());
-    Builder.createStoreStackInst(Builder.getLiteralBool(true), firstStack);
-  }
+  AllocStackInst *firstStack = Builder.createAllocStackInst(
+      genAnonymousLabelName("first"), Type::createBoolean());
+  Builder.createStoreStackInst(Builder.getLiteralBool(true), firstStack);
   Builder.createBranchInst(loopBlock);
 
   // The loop starts here.
   Builder.setInsertionBlock(loopBlock);
   Builder.setLocation(loop->_body->getDebugLoc());
-  // TODO: create a scope.
-  auto *curScope = curFunction()->curScope;
+
+  // Create a scope for the loop body.
+  auto *bodyScope = Builder.createCreateScopeInst(loopVarScope, outerScope);
+  curFunction()->curScope = bodyScope;
+
+  // Restore the vars from the stack locations.
+  for (const auto &var : vars) {
+    Builder.createStoreFrameInst(
+        bodyScope, Builder.createLoadStackInst(var.stackLoc), var.var);
+  }
 
   // Declare the new variables in the new scope and copy the declared variables
   // into the new ones. Change the decls to resolve to the "new" variables, so
@@ -594,52 +694,24 @@ void ESTreeIRGen::genScopedForLoop(
       loop->getScope() && !loop->getScope()->decls.empty() &&
       "for-loop scope can't be empty if there is a scoped init");
 
-  IRBuilder::ScopedLocationChange slc(
-      Builder,
-      loop->_init ? loop->_init->getDebugLoc() : loop->_body->getDebugLoc());
-  for (auto *decl : loop->getScope()->decls) {
-    assert(!decl->isKindGlobal(decl->kind) && "for(;;) can't declare globals");
-    Variable *oldVar = llvh::cast<Variable>(getDeclData(decl));
-    // Create a copy of the variable. Note that it doesn't need TDZ, since we
-    // are initializing it here.
-    Variable *newVar = Builder.createVariable(
-        curFunction()->curScope->getVariableScope(),
-        decl->name,
-        Type::subtractTy(oldVar->getType(), Type::createEmpty()),
-        /* hidden */ false);
+  // if first...
+  Builder.createCondBranchInst(
+      Builder.createLoadStackInst(firstStack),
+      firstIterBlock,
+      notFirstIterBlock);
 
-    vars.emplace_back(decl, oldVar, newVar);
-
-    // Note that we are using a direct load/store, which doesn't check TDZ. If
-    // our thinking is correct, all variables declared in the for(;;) must have
-    // been initialized.
-    Value *val = Builder.createLoadFrameInst(curScope, oldVar);
-    if (val->getType().canBeEmpty())
-      val = Builder.createUnionNarrowTrustedInst(val, newVar->getType());
-    Builder.createStoreFrameInst(curScope, val, newVar);
-
-    // Update the declaration to resolve to the new variable.
-    setDeclData(decl, newVar);
-  }
-
-  if (updateExprCaptures) {
-    // if first...
-    Builder.createCondBranchInst(
-        Builder.createLoadStackInst(firstStack),
-        firstIterBlock,
-        notFirstIterBlock);
-
-    // emit the update.
+  // emit the update.
+  Builder.setInsertionBlock(notFirstIterBlock);
+  if (loop->_update) {
     Builder.setLocation(loop->_update->getDebugLoc());
-    Builder.setInsertionBlock(notFirstIterBlock);
     genExpression(loop->_update);
-
-    Builder.createBranchInst(firstIterBlock);
-    Builder.setInsertionBlock(firstIterBlock);
   }
+
+  Builder.createBranchInst(firstIterBlock);
+  Builder.setInsertionBlock(firstIterBlock);
 
   // Branch out of the loop if the condition is false.
-  if (testOrUpdateCapture && loop->_test)
+  if (loop->_test)
     genExpressionBranch(loop->_test, bodyBlock, exitBlock, nullptr);
   else
     Builder.createBranchInst(bodyBlock);
@@ -650,37 +722,41 @@ void ESTreeIRGen::genScopedForLoop(
   Builder.createBranchInst(updateBlock);
 
   Builder.setInsertionBlock(updateBlock);
-  // Copy the new vars back into the old ones.
-  for (const auto &mapping : vars) {
-    Builder.createStoreFrameInst(
-        curScope,
-        Builder.createLoadFrameInst(curScope, mapping.newVar),
-        mapping.oldVar);
-    // Update the declaration to resolve to the old variable.
-    setDeclData(mapping.decl, mapping.oldVar);
+  // Copy the updated values into their stack locations.
+  for (const auto &var : vars) {
+    Builder.createStoreStackInst(
+        Builder.createLoadFrameInst(bodyScope, var.var), var.stackLoc);
   }
 
   // Set "first" to false.
-  if (updateExprCaptures)
-    Builder.createStoreStackInst(Builder.getLiteralBool(false), firstStack);
-
-  if (!updateExprCaptures && loop->_update) {
-    genExpression(loop->_update);
-  }
+  Builder.createStoreStackInst(Builder.getLiteralBool(false), firstStack);
 
   // Loop.
-  if (!testOrUpdateCapture && loop->_test) {
-    FunctionContext::AllowRecompileRAII allowRecompile(*curFunction());
-    genExpressionBranch(loop->_test, loopBlock, exitBlock, nullptr);
-  } else {
-    Builder.createBranchInst(loopBlock);
-  }
+  Builder.createBranchInst(loopBlock);
+
+  // Restore the outer scope before returning.
+  curFunction()->curScope = outerScope;
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
 }
 
 void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
+  auto *outerScope = curFunction()->curScope;
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(ForInStmt);
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *initScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(ForInStmt), outerScope);
+    curFunction()->curScope = initScope;
+  }
+
   emitScopeDeclarations(ForInStmt->getScope());
 
   // The state of the enumerator. Notice that the instruction writes to the
@@ -776,6 +852,13 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   // variable.
   auto propertyStringRepr = Builder.createLoadStackInst(propertyStorage);
 
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope->getVariableScope(), outerScope);
+    curFunction()->curScope = innerScope;
+  }
+
   // The left hand side of For-In statements can be any lhs expression
   // ("PutValue"). Example:
   //  1. for (x.y in [1,2,3])
@@ -789,6 +872,9 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 
   Builder.createBranchInst(getNextBlock);
 
+  // Restore the outer scope for subsequent code.
+  curFunction()->curScope = outerScope;
+
   Builder.setInsertionBlock(exitBlock);
 }
 
@@ -796,6 +882,21 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   if (auto *type = llvh::dyn_cast<flow::ArrayType>(
           flowContext_.getNodeTypeOrAny(forOfStmt->_right)->info)) {
     return genForOfFastArrayStatement(forOfStmt, type);
+  }
+
+  auto *outerScope = curFunction()->curScope;
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(forOfStmt);
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *initScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
+    curFunction()->curScope = initScope;
   }
 
   emitScopeDeclarations(forOfStmt->getScope());
@@ -822,6 +923,13 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 
   Builder.setInsertionBlock(bodyBlock);
+
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope->getVariableScope(), outerScope);
+    curFunction()->curScope = innerScope;
+  }
 
   emitTryCatchScaffolding(
       getNextBlock,
@@ -863,6 +971,9 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
         emitIteratorClose(iteratorRecord, true);
         Builder.createThrowInst(catchReg);
       });
+
+  // Restore the outer scope for subsequent code.
+  curFunction()->curScope = outerScope;
 
   Builder.setInsertionBlock(exitBlock);
 }
@@ -942,6 +1053,23 @@ void ESTreeIRGen::genAsyncForOfStatement(
 void ESTreeIRGen::genForOfFastArrayStatement(
     ESTree::ForOfStatementNode *forOfStmt,
     flow::ArrayType *type) {
+  auto *outerScope = curFunction()->curScope;
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      (!treeDoesNotCapture(forOfStmt->_body) ||
+       !treeDoesNotCapture(forOfStmt->_left) ||
+       !treeDoesNotCapture(forOfStmt->_right));
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
+    curFunction()->curScope = innerScope;
+  }
+
   emitScopeDeclarations(forOfStmt->getScope());
 
   auto *function = Builder.getInsertionBlock()->getParent();
@@ -972,6 +1100,14 @@ void ESTreeIRGen::genForOfFastArrayStatement(
   Builder.createCondBranchInst(cond, bodyBlock, exitBlock);
 
   Builder.setInsertionBlock(bodyBlock);
+
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope->getVariableScope(), outerScope);
+    curFunction()->curScope = innerScope;
+  }
+
   // Load the element from the array.
   auto *nextValue = Builder.createFastArrayLoadInst(
       exprValue,
@@ -1002,6 +1138,9 @@ void ESTreeIRGen::genForOfFastArrayStatement(
       Builder.createFastArrayLengthInst(exprValue));
   Builder.createCondBranchInst(cond2, bodyBlock, exitBlock);
 
+  // Restore the outer scope for subsequent code.
+  curFunction()->curScope = outerScope;
+
   Builder.setInsertionBlock(exitBlock);
 }
 
@@ -1019,6 +1158,13 @@ void ESTreeIRGen::genReturnStatement(ESTree::ReturnStatementNode *RetStmt) {
 
   genFinallyBeforeControlChange(
       curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
+
+  if (curFunction()->hasLegacyClassContext() &&
+      curFunction()->getSemInfo()->constructorKind ==
+          sema::FunctionInfo::ConstructorKind::Derived) {
+    Value = genLegacyDerivedConstructorRet(RetStmt, Value);
+  }
+
   Builder.createReturnInst(Value);
 
   // Code that comes after 'return' is dead code. Let's create a new un-linked

@@ -25,6 +25,7 @@ struct LiteralOffset {
   /// Index into the shape table. Unused for array instructions.
   uint32_t shapeTableIdx;
   /// Byte offset into the value buffer.
+  /// Unused for CacheNewObject instructions.
   uint32_t valueBufferOffset;
 };
 

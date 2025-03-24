@@ -47,6 +47,12 @@ struct Flags : public cli::VMOnlyRuntimeFlags {
       llvh::cl::cat(GCCategory),
       llvh::cl::init(false)};
 
+  llvh::cl::opt<bool> GCPrintCollectionStats{
+      "gc-print-collection-stats",
+      llvh::cl::desc("Output statistics for each garbage collection at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
+
   llvh::cl::opt<unsigned> ExecutionTimeLimit{
       "time-limit",
       llvh::cl::desc(
@@ -63,25 +69,45 @@ Flags flags;
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
-  auto recStats = (flags.GCPrintStats || flags.GCBeforeStats);
+#if !HERMESVM_JIT
+  if (flags.DumpJITCode || flags.EnableJIT || flags.ForceJIT) {
+    llvh::errs() << "JIT is not enabled in this build\n";
+    return EXIT_FAILURE;
+  }
+#endif
+
   ExecuteOptions options;
+
+  auto gcConfigBuilder =
+      vm::GCConfig::Builder()
+          .withMinHeapSize(flags.MinHeapSize.bytes)
+          .withInitHeapSize(flags.InitHeapSize.bytes)
+          .withMaxHeapSize(flags.MaxHeapSize.bytes)
+          .withOccupancyTarget(flags.OccupancyTarget)
+          .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
+                                  .withSanitizeRate(flags.GCSanitizeRate)
+                                  .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                  .build())
+          .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+          .withAllocInYoung(flags.GCAllocYoung)
+          .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI);
+
+  std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
+  if (flags.GCPrintStats || flags.GCBeforeStats ||
+      flags.GCPrintCollectionStats) {
+    gcConfigBuilder.withShouldRecordStats(true);
+    if (flags.GCPrintCollectionStats) {
+      options.gcAnalyticsEvents = &gcAnalyticsEvents;
+      gcConfigBuilder.withAnalyticsCallback(
+          [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
+            gcAnalyticsEvents.push_back(event);
+          });
+    }
+  }
+
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(vm::GCConfig::Builder()
-                            .withMinHeapSize(flags.MinHeapSize.bytes)
-                            .withInitHeapSize(flags.InitHeapSize.bytes)
-                            .withMaxHeapSize(flags.MaxHeapSize.bytes)
-                            .withOccupancyTarget(flags.OccupancyTarget)
-                            .withSanitizeConfig(
-                                vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(flags.GCSanitizeRate)
-                                    .withRandomSeed(flags.GCSanitizeRandomSeed)
-                                    .build())
-                            .withShouldRecordStats(recStats)
-                            .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                            .withAllocInYoung(flags.GCAllocYoung)
-                            .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI)
-                            .build())
+          .withGCConfig(gcConfigBuilder.build())
           .withMaxNumRegisters(flags.MaxNumRegisters)
           .withEnableJIT(flags.DumpJITCode || flags.EnableJIT || flags.ForceJIT)
           .withEnableEval(cl::EnableEval)
@@ -89,9 +115,7 @@ static int executeHBCBytecodeFromCL(
           .withOptimizedEval(cl::OptimizedEval)
           .withAsyncBreakCheckInEval(cl::EmitAsyncBreakCheck)
           .withVMExperimentFlags(flags.VMExperimentFlags)
-          .withES6Promise(flags.ES6Promise)
           .withES6Proxy(flags.ES6Proxy)
-          .withES6Class(flags.EvalES6Class)
           .withIntl(flags.Intl)
           .withMicrotaskQueue(flags.MicrotaskQueue)
           .withEnableSampleProfiling(
@@ -110,11 +134,15 @@ static int executeHBCBytecodeFromCL(
   options.stopAfterInit = false;
   options.timeLimit = flags.ExecutionTimeLimit;
   options.forceJIT = flags.ForceJIT;
+  options.jitThreshold = flags.JITThreshold;
+  options.jitMemoryLimit = flags.JITMemoryLimit;
   options.dumpJITCode = flags.DumpJITCode;
   options.jitCrashOnError = flags.JITCrashOnError;
+  options.jitEmitAsserts = flags.JITEmitAsserts;
   options.stopAfterInit = flags.StopAfterInit;
   options.forceGCBeforeStats = flags.GCBeforeStats;
   options.sampleProfiling = flags.SampleProfiling;
+  options.sampleProfilingFreq = flags.SampleProfilingFreq;
   options.heapTimeline = flags.HeapTimeline;
 
   bool success;
@@ -147,12 +175,9 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
                                 .withSanitizeRate(flags.GCSanitizeRate)
                                 .withRandomSeed(flags.GCSanitizeRandomSeed)
                                 .build())
-                        .withShouldRecordStats(flags.GCPrintStats)
                         .build())
       .withVMExperimentFlags(flags.VMExperimentFlags)
-      .withES6Promise(flags.ES6Promise)
       .withES6Proxy(flags.ES6Proxy)
-      .withES6Class(flags.EvalES6Class)
       .withIntl(flags.Intl)
       .withMicrotaskQueue(flags.MicrotaskQueue)
       .withEnableHermesInternal(flags.EnableHermesInternal)
@@ -176,13 +201,6 @@ int main(int argc, char **argv) {
 
   llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
-
-  // If -Xeval-es6-class is not specified, but -Xes6-class is, copy the latter
-  // into the former.
-  if (flags.EvalES6Class.getNumOccurrences() == 0 &&
-      cl::ES6Class.getNumOccurrences()) {
-    flags.EvalES6Class.setValue(cl::ES6Class.getValue());
-  }
 
   if (cl::InputFilenames.size() == 0) {
     return repl(getReplRuntimeConfig());

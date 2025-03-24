@@ -91,15 +91,16 @@ class JITContext::Compiler {
       : jc_(jc),
         em_(jc.impl_->jr,
             jc.getDumpJITCode(),
+            jc.getEmitAsserts(),
             codeBlock,
-            codeBlock->propertyCache(),
+            codeBlock->readPropertyCache(),
             codeBlock->writePropertyCache(),
             // TODO: is getFrameSize() the right thing to call?
             codeBlock->getFrameSize(),
             [this](std::string &&message) {
               otherErrorMessage_ = std::move(message);
               error_ = Error::Other;
-              _longjmp(errorJmpBuf_, 1);
+              _sh_longjmp(errorJmpBuf_, 1);
             }),
         codeBlock_(codeBlock),
         funcStart_((const char *)codeBlock->begin()) {}
@@ -186,7 +187,7 @@ JITCompiledFunctionPtr JITContext::compileImpl(
 }
 
 JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
-  if (_setjmp(errorJmpBuf_) == 0) {
+  if (_sh_setjmp(errorJmpBuf_) == 0) {
     return compileCodeBlockImpl();
   } else {
     // We arrive here on error.
@@ -243,16 +244,47 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
   // Any code emitted at the start gets treated as the first instruction.
   em_.emittingIP = (const inst::Inst *)codeBlock_->begin();
   em_.enter(
-      codeBlock_->getFunctionHeader().numberRegCount(),
-      codeBlock_->getFunctionHeader().nonPtrRegCount());
+      codeBlock_->getFunctionHeader().getNumberRegCount(),
+      codeBlock_->getFunctionHeader().getNonPtrRegCount());
 
   for (uint32_t bbIndex = 0, e = basicBlocks_.size() - 1; bbIndex < e;
        ++bbIndex) {
     compileBB(bbIndex);
   }
 
-  em_.leave();
+  auto excTable =
+      codeBlock_->getRuntimeModule()->getBytecode()->getExceptionTable(
+          codeBlock_->getFunctionID());
+  llvh::SmallVector<const asmjit::Label *, 4> handlers{};
+  handlers.reserve(excTable.size());
+  for (const auto &entry : excTable) {
+    handlers.push_back(&bbLabels_.at(ofsToBBIndex_.at(entry.target)));
+  }
+
+  // Emit the leave before getting the codeSize so the measurement is accurate.
+  em_.leave(handlers);
+
+  size_t memoryLimit = jc_.memoryLimit_;
+  size_t usedSize =
+      jc_.impl_->jr.allocator()->statistics().usedSize() + em_.code.codeSize();
+
+  if (LLVM_UNLIKELY(usedSize > memoryLimit)) {
+    // Disable the JIT if we would go over the memory limit.
+    // The enabled_ check in the inline path remains fast,
+    // and the chances that someone else will reenable it are low.
+    // This does mean that if we are unable to JIT a large function,
+    // we won't potentially be able to JIT smaller functions later.
+    jc_.enabled_ = false;
+    return nullptr;
+  }
+
   codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr));
+
+  if (LLVM_UNLIKELY(usedSize == memoryLimit)) {
+    // Disable compilation for the future because we've hit the limit,
+    // but this function is fine.
+    jc_.enabled_ = false;
+  }
 
   LLVM_DEBUG(
       llvh::outs() << "\n Bytecode:";
@@ -271,7 +303,8 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
       });
 
   if (jc_.dumpJITCode_ & (DumpJitCode::Code | DumpJitCode::CompileStatus)) {
-    llvh::outs() << "\nJIT successfully compiled FunctionID "
+    llvh::outs() << "\nJIT total memory usage (bytes): " << usedSize << "\n";
+    llvh::outs() << "JIT successfully compiled FunctionID "
                  << codeBlock_->getFunctionID() << ", '" << funcName_ << "'\n";
   }
 
@@ -281,11 +314,9 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 #define EMIT_UNIMPLEMENTED(name)                                               \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
     error_ = Error::UnsupportedInst;                                           \
-    _longjmp(errorJmpBuf_, 1);                                                 \
+    _sh_longjmp(errorJmpBuf_, 1);                                              \
   }
 
-EMIT_UNIMPLEMENTED(GetEnvironment)
-EMIT_UNIMPLEMENTED(Catch)
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 
@@ -371,6 +402,11 @@ inline void JITContext::Compiler::emitMov(const inst::MovInst *inst) {
 
 inline void JITContext::Compiler::emitMovLong(const inst::MovLongInst *inst) {
   em_.mov(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitCacheNewObject(
+    const inst::CacheNewObjectInst *inst) {
+  // TODO: Implement CacheNewObject.
 }
 
 inline void JITContext::Compiler::emitToNumber(const inst::ToNumberInst *inst) {
@@ -465,13 +501,9 @@ EMIT_JCOND(JLessN, jLessN, false)
 EMIT_JCOND(JNotLess, jLess, true)
 EMIT_JCOND(JNotLessN, jLessN, true)
 EMIT_JCOND(JGreaterEqual, jGreaterEqual, false)
-EMIT_JCOND(JGreaterEqualN, jGreaterEqualN, false)
 EMIT_JCOND(JNotGreaterEqual, jGreaterEqual, true)
-EMIT_JCOND(JNotGreaterEqualN, jGreaterEqualN, true)
 EMIT_JCOND(JGreater, jGreater, false)
-EMIT_JCOND(JGreaterN, jGreaterN, false)
 EMIT_JCOND(JNotGreater, jGreater, true)
-EMIT_JCOND(JNotGreaterN, jGreaterN, true)
 EMIT_JCOND(JEqual, jEqual, false)
 EMIT_JCOND(JNotEqual, jEqual, true)
 EMIT_JCOND(JStrictEqual, jStrictEqual, false)
@@ -512,6 +544,34 @@ inline void JITContext::Compiler::emitJmpUndefinedLong(
 EMIT_JMP_NO_COND(Jmp)
 
 #undef EMIT_JMP_NO_COND
+
+inline void JITContext::Compiler::emitJmpTypeOfIs(
+    const inst::JmpTypeOfIsInst *inst) {
+  em_.jmpTypeOfIs(
+      bbLabelFromInst(inst, inst->op1),
+      FR(inst->op2),
+      TypeOfIsTypes(inst->op3));
+}
+
+inline void JITContext::Compiler::emitTypeOfIs(const inst::TypeOfIsInst *inst) {
+  em_.typeOfIs(FR(inst->op1), FR(inst->op2), TypeOfIsTypes(inst->op3));
+}
+
+#define EMIT_JMP_BUILTIN_IS(name, invert)                                      \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.jmpBuiltinIs(                                                          \
+        invert,                                                                \
+        bbLabelFromInst(inst, inst->op1),                                      \
+        /* builtinIdx */ inst->op2,                                            \
+        FR(inst->op3));                                                        \
+  }
+
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIs, false)
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIsLong, false)
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIsNot, true)
+EMIT_JMP_BUILTIN_IS(JmpBuiltinIsNotLong, true)
+
+#undef EMIT_JMP_BUILTIN_IS
 
 inline void JITContext::Compiler::emitSwitchImm(
     const inst::SwitchImmInst *inst) {
@@ -575,6 +635,20 @@ inline void JITContext::Compiler::emitGetByIdShort(
   auto idVal = ID(inst->op4);
   auto cacheIdx = inst->op3;
   em_.getById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitGetByIdWithReceiverLong(
+    const inst::GetByIdWithReceiverLongInst *inst) {
+  auto idVal = ID(inst->op5);
+  auto cacheIdx = inst->op3;
+  em_.getByIdWithReceiver(
+      FR(inst->op1), idVal, FR(inst->op2), FR(inst->op4), cacheIdx);
+}
+
+inline void JITContext::Compiler::emitGetByValWithReceiver(
+    const inst::GetByValWithReceiverInst *inst) {
+  em_.getByValWithReceiver(
+      FR(inst->op1), FR(inst->op2), FR(inst->op3), FR(inst->op4));
 }
 
 inline void JITContext::Compiler::emitTryPutByIdLooseLong(
@@ -644,51 +718,9 @@ EMIT_BY_VAL(PutByValStrict, putByValStrict)
 
 #undef EMIT_BY_VAL
 
-#define EMIT_DEL_BY_ID(name, op)                                               \
-  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
-    em_.delById##op(FR(inst->op1), FR(inst->op2), ID(inst->op3));              \
-  }
-
-EMIT_DEL_BY_ID(DelByIdLoose, Loose)
-EMIT_DEL_BY_ID(DelByIdLooseLong, Loose)
-EMIT_DEL_BY_ID(DelByIdStrict, Strict)
-EMIT_DEL_BY_ID(DelByIdStrictLong, Strict)
-
-#undef EMIT_DEL_BY_ID
-
-#define EMIT_DEL_BY_VAL(name, op)                                              \
-  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
-    em_.delByVal##op(FR(inst->op1), FR(inst->op2), FR(inst->op3));             \
-  }
-
-EMIT_DEL_BY_VAL(DelByValLoose, Loose)
-EMIT_DEL_BY_VAL(DelByValStrict, Strict)
-
-#undef EMIT_DEL_BY_VAL
-
-inline void JITContext::Compiler::emitGetByIndex(
-    const inst::GetByIndexInst *inst) {
-  em_.getByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
-}
-
-inline void JITContext::Compiler::emitPutOwnByIndex(
-    const inst::PutOwnByIndexInst *inst) {
-  em_.putOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
-}
-
-inline void JITContext::Compiler::emitPutOwnByIndexL(
-    const inst::PutOwnByIndexLInst *inst) {
-  em_.putOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
-}
-
-inline void JITContext::Compiler::emitPutOwnByVal(
-    const inst::PutOwnByValInst *inst) {
-  em_.putOwnByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), (bool)inst->op4);
-}
-
-inline void JITContext::Compiler::emitPutOwnGetterSetterByVal(
-    const inst::PutOwnGetterSetterByValInst *inst) {
-  em_.putOwnGetterSetterByVal(
+inline void JITContext::Compiler::emitPutByValWithReceiver(
+    const inst::PutByValWithReceiverInst *inst) {
+  em_.putByValWithReceiver(
       FR(inst->op1),
       FR(inst->op2),
       FR(inst->op3),
@@ -696,19 +728,50 @@ inline void JITContext::Compiler::emitPutOwnGetterSetterByVal(
       (bool)inst->op5);
 }
 
-#define EMIT_PUT_NEW_OWN_BY_ID(name, enumerable)                               \
-  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
-    em_.putNewOwnById(                                                         \
-        FR(inst->op1), FR(inst->op2), ID(inst->op3), enumerable);              \
+inline void JITContext::Compiler::emitDelByVal(const inst::DelByValInst *inst) {
+  em_.delByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4);
+}
+
+inline void JITContext::Compiler::emitGetByIndex(
+    const inst::GetByIndexInst *inst) {
+  em_.getByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+}
+
+#define EMIT_DEFINE_BY_ID(op)                                              \
+  inline void JITContext::Compiler::emit##op(const inst::op##Inst *inst) { \
+    auto idVal = ID(inst->op4);                                            \
+    auto cacheIdx = inst->op3;                                             \
+    em_.defineOwnById(FR(inst->op1), idVal, FR(inst->op2), cacheIdx);      \
   }
+EMIT_DEFINE_BY_ID(DefineOwnById)
+EMIT_DEFINE_BY_ID(DefineOwnByIdLong)
+#undef EMIT_DEFINE_BY_ID
 
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnById, true)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnByIdLong, true)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnByIdShort, true)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnNEById, false)
-EMIT_PUT_NEW_OWN_BY_ID(PutNewOwnNEByIdLong, false)
+inline void JITContext::Compiler::emitDefineOwnByIndex(
+    const inst::DefineOwnByIndexInst *inst) {
+  em_.defineOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+}
 
-#undef EMIT_PUT_NEW_OWN_BY_ID
+inline void JITContext::Compiler::emitDefineOwnByIndexL(
+    const inst::DefineOwnByIndexLInst *inst) {
+  em_.defineOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
+}
+
+inline void JITContext::Compiler::emitDefineOwnByVal(
+    const inst::DefineOwnByValInst *inst) {
+  em_.defineOwnByVal(
+      FR(inst->op1), FR(inst->op2), FR(inst->op3), (bool)inst->op4);
+}
+
+inline void JITContext::Compiler::emitDefineOwnGetterSetterByVal(
+    const inst::DefineOwnGetterSetterByValInst *inst) {
+  em_.defineOwnGetterSetterByVal(
+      FR(inst->op1),
+      FR(inst->op2),
+      FR(inst->op3),
+      FR(inst->op4),
+      (bool)inst->op5);
+}
 
 #define EMIT_OWN_BY_SLOT_IDX(name, op)                                         \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
@@ -740,6 +803,10 @@ inline void JITContext::Compiler::emitTypedStoreParent(
 
 inline void JITContext::Compiler::emitRet(const inst::RetInst *inst) {
   em_.ret(FR(inst->op1));
+}
+
+inline void JITContext::Compiler::emitCatch(const inst::CatchInst *inst) {
+  em_.catchInst(FR(inst->op1));
 }
 
 inline void JITContext::Compiler::emitGetGlobalObject(
@@ -835,6 +902,14 @@ inline void JITContext::Compiler::emitCallWithNewTargetLong(
       /* argc */ FR(inst->op4));
 }
 
+inline void JITContext::Compiler::emitCallRequire(
+    const inst::CallRequireInst *inst) {
+  em_.callRequire(
+      FR(inst->op1),
+      /* callee */ FR(inst->op2),
+      /* modIndex */ inst->op3);
+}
+
 inline void JITContext::Compiler::emitGetBuiltinClosure(
     const inst::GetBuiltinClosureInst *inst) {
   em_.getBuiltinClosure(
@@ -865,6 +940,11 @@ inline void JITContext::Compiler::emitCreateEnvironment(
 inline void JITContext::Compiler::emitGetParentEnvironment(
     const inst::GetParentEnvironmentInst *inst) {
   em_.getParentEnvironment(FR(inst->op1), inst->op2);
+}
+
+inline void JITContext::Compiler::emitGetEnvironment(
+    const inst::GetEnvironmentInst *inst) {
+  em_.getEnvironment(FR(inst->op1), FR(inst->op2), inst->op3);
 }
 
 inline void JITContext::Compiler::emitGetClosureEnvironment(
@@ -907,6 +987,23 @@ EMIT_CREATE_CLOSURE(CreateClosure)
 EMIT_CREATE_CLOSURE(CreateClosureLongIndex)
 
 #undef EMIT_CREATE_CLOSURE
+
+#define EMIT_CREATE_BASE_CLASS(name)                                           \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.createBaseClass(FR(inst->op1), FR(inst->op2), FR(inst->op3));          \
+  }
+EMIT_CREATE_BASE_CLASS(CreateBaseClass)
+EMIT_CREATE_BASE_CLASS(CreateBaseClassLongIndex)
+#undef EMIT_CREATE_BASE_CLASS
+
+#define EMIT_CREATE_DERIVED_CLASS(name)                                        \
+  inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
+    em_.createDerivedClass(                                                    \
+        FR(inst->op1), FR(inst->op2), FR(inst->op3), FR(inst->op4));           \
+  }
+EMIT_CREATE_DERIVED_CLASS(CreateDerivedClass)
+EMIT_CREATE_DERIVED_CLASS(CreateDerivedClassLongIndex)
+#undef EMIT_CREATE_DERIVED_CLASS
 
 #define EMIT_CREATE_GENERATOR(name)                                            \
   inline void JITContext::Compiler::emit##name(const inst::name##Inst *inst) { \
@@ -996,6 +1093,11 @@ inline void JITContext::Compiler::emitGetNextPName(
       FR(inst->op5));
 }
 
+inline void JITContext::Compiler::emitToPropertyKey(
+    const inst::ToPropertyKeyInst *inst) {
+  em_.toPropertyKey(FR(inst->op1), FR(inst->op2));
+}
+
 inline void JITContext::Compiler::emitIteratorBegin(
     const inst::IteratorBeginInst *inst) {
   em_.iteratorBegin(FR(inst->op1), FR(inst->op2));
@@ -1043,6 +1145,12 @@ inline void JITContext::Compiler::emitCreateThisForNew(
   em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op2), cacheIdx);
 }
 
+inline void JITContext::Compiler::emitCreateThisForSuper(
+    const inst::CreateThisForSuperInst *inst) {
+  auto cacheIdx = inst->op4;
+  em_.createThis(FR(inst->op1), FR(inst->op2), FR(inst->op3), cacheIdx);
+}
+
 inline void JITContext::Compiler::emitSelectObject(
     const inst::SelectObjectInst *inst) {
   em_.selectObject(FR(inst->op1), FR(inst->op2), FR(inst->op3));
@@ -1074,6 +1182,15 @@ inline void JITContext::Compiler::emitThrow(const inst::ThrowInst *inst) {
 inline void JITContext::Compiler::emitThrowIfEmpty(
     const inst::ThrowIfEmptyInst *inst) {
   em_.throwIfEmpty(FR(inst->op1), FR(inst->op2));
+}
+inline void JITContext::Compiler::emitThrowIfUndefined(
+    const inst::ThrowIfUndefinedInst *inst) {
+  em_.throwIfUndefined(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitThrowIfThisInitialized(
+    const inst::ThrowIfThisInitializedInst *inst) {
+  em_.throwIfThisInitialized(FR(inst->op1));
 }
 
 inline void JITContext::Compiler::emitAddS(const inst::AddSInst *inst) {

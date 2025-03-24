@@ -112,6 +112,14 @@ function deserializeFunctionLikeLast() {
 function deserializeStatementFirst() {
   throw new Error('Statement' + ' should not appear in program buffer');
 }
+function deserializeMatchStatement() {
+  return {
+    type: 'MatchStatement',
+    loc: this.addEmptyLoc(),
+    argument: this.deserializeNode(),
+    cases: this.deserializeNodeList(),
+  };
+}
 function deserializeLoopStatementFirst() {
   throw new Error('LoopStatement' + ' should not appear in program buffer');
 }
@@ -172,6 +180,13 @@ function deserializeEmptyStatement() {
 function deserializeBlockStatement() {
   return {
     type: 'BlockStatement',
+    loc: this.addEmptyLoc(),
+    body: this.deserializeNodeList(),
+  };
+}
+function deserializeStaticBlock() {
+  return {
+    type: 'StaticBlock',
     loc: this.addEmptyLoc(),
     body: this.deserializeNodeList(),
   };
@@ -586,6 +601,9 @@ function deserializeProperty() {
     shorthand: this.deserializeBoolean(),
   };
 }
+function deserializeClassLikeFirst() {
+  throw new Error('ClassLike' + ' should not appear in program buffer');
+}
 function deserializeClassDeclaration() {
   return {
     type: 'ClassDeclaration',
@@ -614,6 +632,9 @@ function deserializeClassExpression() {
   };
 }
 
+function deserializeClassLikeLast() {
+  throw new Error('ClassLike' + ' should not appear in program buffer');
+}
 function deserializeClassBody() {
   return {
     type: 'ClassBody',
@@ -633,6 +654,7 @@ function deserializeClassProperty() {
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
     typeAnnotation: this.deserializeNode(),
+    tsModifiers: this.deserializeNode(),
   };
 }
 
@@ -647,6 +669,7 @@ function deserializeClassPrivateProperty() {
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
     typeAnnotation: this.deserializeNode(),
+    tsModifiers: this.deserializeNode(),
   };
 }
 
@@ -780,6 +803,126 @@ function deserializeAssignmentPattern() {
 }
 function deserializePatternLast() {
   throw new Error('Pattern' + ' should not appear in program buffer');
+}
+function deserializeMatchStatementCase() {
+  return {
+    type: 'MatchStatementCase',
+    loc: this.addEmptyLoc(),
+    pattern: this.deserializeNode(),
+    body: this.deserializeNode(),
+    guard: this.deserializeNode(),
+  };
+}
+function deserializeMatchExpression() {
+  return {
+    type: 'MatchExpression',
+    loc: this.addEmptyLoc(),
+    argument: this.deserializeNode(),
+    cases: this.deserializeNodeList(),
+  };
+}
+function deserializeMatchExpressionCase() {
+  return {
+    type: 'MatchExpressionCase',
+    loc: this.addEmptyLoc(),
+    pattern: this.deserializeNode(),
+    body: this.deserializeNode(),
+    guard: this.deserializeNode(),
+  };
+}
+function deserializeMatchPatternFirst() {
+  throw new Error('MatchPattern' + ' should not appear in program buffer');
+}
+function deserializeMatchWildcardPattern() {
+  return {type: 'MatchWildcardPattern', loc: this.addEmptyLoc()};
+}
+function deserializeMatchLiteralPattern() {
+  return {
+    type: 'MatchLiteralPattern',
+    loc: this.addEmptyLoc(),
+    literal: this.deserializeNode(),
+  };
+}
+function deserializeMatchUnaryPattern() {
+  return {
+    type: 'MatchUnaryPattern',
+    loc: this.addEmptyLoc(),
+    argument: this.deserializeNode(),
+    operator: this.deserializeString(),
+  };
+}
+function deserializeMatchIdentifierPattern() {
+  return {
+    type: 'MatchIdentifierPattern',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+  };
+}
+function deserializeMatchBindingPattern() {
+  return {
+    type: 'MatchBindingPattern',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    kind: this.deserializeString(),
+  };
+}
+function deserializeMatchObjectPattern() {
+  return {
+    type: 'MatchObjectPattern',
+    loc: this.addEmptyLoc(),
+    properties: this.deserializeNodeList(),
+    rest: this.deserializeNode(),
+  };
+}
+function deserializeMatchArrayPattern() {
+  return {
+    type: 'MatchArrayPattern',
+    loc: this.addEmptyLoc(),
+    elements: this.deserializeNodeList(),
+    rest: this.deserializeNode(),
+  };
+}
+function deserializeMatchOrPattern() {
+  return {
+    type: 'MatchOrPattern',
+    loc: this.addEmptyLoc(),
+    patterns: this.deserializeNodeList(),
+  };
+}
+function deserializeMatchAsPattern() {
+  return {
+    type: 'MatchAsPattern',
+    loc: this.addEmptyLoc(),
+    pattern: this.deserializeNode(),
+    target: this.deserializeNode(),
+  };
+}
+function deserializeMatchMemberPattern() {
+  return {
+    type: 'MatchMemberPattern',
+    loc: this.addEmptyLoc(),
+    base: this.deserializeNode(),
+    property: this.deserializeNode(),
+  };
+}
+function deserializeMatchPatternLast() {
+  throw new Error('MatchPattern' + ' should not appear in program buffer');
+}
+function deserializeMatchObjectPatternProperty() {
+  return {
+    type: 'MatchObjectPatternProperty',
+    loc: this.addEmptyLoc(),
+    key: this.deserializeNode(),
+    pattern: this.deserializeNode(),
+    shorthand: this.deserializeBoolean(),
+  };
+}
+function deserializeMatchRestPattern() {
+  return {
+    type: 'MatchRestPattern',
+    loc: this.addEmptyLoc(),
+    argument: this.deserializeNode(),
+  };
 }
 function deserializeJSXFirst() {
   throw new Error('JSX' + ' should not appear in program buffer');
@@ -1437,6 +1580,7 @@ function deserializeTypeParameter() {
     type: 'TypeParameter',
     loc: this.addEmptyLoc(),
     name: this.deserializeString(),
+    const: this.deserializeBoolean(),
     bound: this.deserializeNode(),
     variance: this.deserializeNode(),
     default: this.deserializeNode(),
@@ -1948,6 +2092,16 @@ function deserializeCoverTypedIdentifier() {
 function deserializeCoverLast() {
   throw new Error('Cover' + ' should not appear in program buffer');
 }
+function deserializeSHBuiltin() {
+  return {type: 'SHBuiltin', loc: this.addEmptyLoc()};
+}
+function deserializeImplicitCheckedCast() {
+  return {
+    type: 'ImplicitCheckedCast',
+    loc: this.addEmptyLoc(),
+    argument: this.deserializeNode(),
+  };
+}
 module.exports = [
   deserializeEmpty,
   deserializeMetadata,
@@ -1965,6 +2119,7 @@ module.exports = [
 
   deserializeFunctionLikeLast,
   deserializeStatementFirst,
+  deserializeMatchStatement,
   deserializeLoopStatementFirst,
   deserializeWhileStatement,
   deserializeDoWhileStatement,
@@ -1975,6 +2130,7 @@ module.exports = [
   deserializeDebuggerStatement,
   deserializeEmptyStatement,
   deserializeBlockStatement,
+  deserializeStaticBlock,
   deserializeBreakStatement,
   deserializeContinueStatement,
   deserializeThrowStatement,
@@ -2033,10 +2189,12 @@ module.exports = [
   deserializeTaggedTemplateExpression,
   deserializeTemplateElement,
   deserializeProperty,
+  deserializeClassLikeFirst,
   deserializeClassDeclaration,
 
   deserializeClassExpression,
 
+  deserializeClassLikeLast,
   deserializeClassBody,
   deserializeClassProperty,
 
@@ -2061,6 +2219,23 @@ module.exports = [
   deserializeRestElement,
   deserializeAssignmentPattern,
   deserializePatternLast,
+  deserializeMatchStatementCase,
+  deserializeMatchExpression,
+  deserializeMatchExpressionCase,
+  deserializeMatchPatternFirst,
+  deserializeMatchWildcardPattern,
+  deserializeMatchLiteralPattern,
+  deserializeMatchUnaryPattern,
+  deserializeMatchIdentifierPattern,
+  deserializeMatchBindingPattern,
+  deserializeMatchObjectPattern,
+  deserializeMatchArrayPattern,
+  deserializeMatchOrPattern,
+  deserializeMatchAsPattern,
+  deserializeMatchMemberPattern,
+  deserializeMatchPatternLast,
+  deserializeMatchObjectPatternProperty,
+  deserializeMatchRestPattern,
   deserializeJSXFirst,
   deserializeJSXIdentifier,
   deserializeJSXMemberExpression,
@@ -2226,4 +2401,6 @@ module.exports = [
   deserializeCoverRestElement,
   deserializeCoverTypedIdentifier,
   deserializeCoverLast,
+  deserializeSHBuiltin,
+  deserializeImplicitCheckedCast,
 ];

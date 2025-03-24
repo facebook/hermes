@@ -397,10 +397,105 @@ uint64_t global_thread_id() {
   return GetCurrentThreadId();
 }
 
-std::pair<const void *, size_t> thread_stack_bounds(unsigned) {
-  // Native stack checking unsupported on Windows.
-  return {nullptr, 0};
+namespace detail {
+
+std::pair<const void *, size_t> thread_stack_bounds_impl() {
+  // The stack is allocated in a single contiguous allocation, with different
+  // protections for the three different regions:
+  //
+  // high +--------------------+
+  //      |  committed memory  |
+  //      |                    |
+  //      +--------------------+
+  //      |  guard region      |
+  //      +--------------------+
+  //      |  reserved memory   |
+  //      |                    |
+  // low  +--------------------+
+  //
+  // This structure is maintained even when the stack is fully exhausted.
+  // Empirically, there is always at least one reserved page at the lowest
+  // address, followed by a guard region.
+  // So to determine the usable stack area, we need to determine the size of the
+  // overall allocation, and then subtract the size of the guard region and the
+  // permanently reserved page.
+  // https://learn.microsoft.com/en-us/windows/win32/procthread/thread-stack-size
+
+  // Create a dummy variable and initialize it so we know it must be in
+  // committed memory.
+  volatile char x = 0;
+
+  // Obtain the stack bounds by querying somewhere in the committed region.
+  MEMORY_BASIC_INFORMATION info;
+  VirtualQuery((void *)&x, &info, sizeof(info));
+
+  // The low bound of the stack is the base of the overall stack allocation.
+  // This is given by AllocationBase, which corresponds to the base address of
+  // the region allocated by VirtualAlloc that contains &x.
+  const void *stackLow = info.AllocationBase;
+  // The high bound of the stack is the high bound of the commmitted region.
+  const void *stackHigh = (char *)info.BaseAddress + info.RegionSize;
+
+  size_t sz = (const char *)stackHigh - (const char *)stackLow;
+
+  const size_t pageSz = page_size_real();
+
+  // If we fail to determine the actual size of the guard region, fall back to
+  // 12KB or one page, whichever is larger.
+  size_t guardSz = std::max<size_t>(12 * 1024, pageSz);
+
+  // Try up to two times to get the size of the guard region. Note that we have
+  // to try multiple times, because a call to VirtualQuery may use additional
+  // stack space, which in turn moves the stack.
+  for (size_t i = 0; i < 2; ++i) {
+    // First obtain the reserved memory region below the guard region.
+    VirtualQuery(stackLow, &info, sizeof(info));
+    assert(info.State == MEM_RESERVE && "Reserved memory not found");
+    auto reservedSz = info.RegionSize;
+
+    // The guard page is the region immediately above the reserved memory
+    // region, separating it from already committed stack memory.
+    VirtualQuery((const char *)stackLow + reservedSz, &info, sizeof(info));
+    // The region above the reserved region must always be committed, since it
+    // is either the guard region or committed memory (if VirtualQuery caused
+    // the stack to grow).
+    assert(info.State == MEM_COMMIT);
+
+    // Before we record the guard size, check that the reserved memory size has
+    // not changed due to stack growth.
+    auto estGuardSz = info.RegionSize;
+    [[maybe_unused]] auto guardProt = info.Protect;
+
+    VirtualQuery(stackLow, &info, sizeof(info));
+    assert(info.State == MEM_RESERVE && "Reserved memory not found");
+
+    // If the reserved region has not moved, then we know we had the right base
+    // for the guard region, so we are done.
+    if (info.RegionSize == reservedSz) {
+      assert(guardProt & PAGE_GUARD && "Guard region must be guard");
+      guardSz = estGuardSz;
+      break;
+    }
+  }
+
+  // Exclude the guard region from the overall size.
+  sz -= guardSz;
+
+  // We need to also exclude space that has been reserved for exception
+  // handling.
+  // https://devblogs.microsoft.com/oldnewthing/20200610-00/?p=103855
+  ULONG guarantee = 0;
+  SetThreadStackGuarantee(&guarantee);
+  sz -= guarantee;
+
+  // We know that there will always be at least one reserved page even when the
+  // stack is exhausted, subtract it.
+  sz -= pageSz;
+
+  return {stackHigh, sz};
 }
+
+} // namespace detail
 
 void set_thread_name(const char *name) {
   // Set the thread name for TSAN. It doesn't share the same name mapping as the

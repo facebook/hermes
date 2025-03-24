@@ -103,6 +103,16 @@ ESTREE_LAST(FunctionLike)
 
 ESTREE_FIRST(Statement, Base)
 
+#if HERMES_PARSE_FLOW
+
+ESTREE_NODE_2_ARGS(
+    MatchStatement, Statement,
+    NodePtr, argument, false, // Expression
+    NodeList, cases, false // [ MatchStatementCase ]
+)
+
+#endif
+
 ESTREE_FIRST(LoopStatement, Statement)
 ESTREE_NODE_2_ARGS(
     WhileStatement,
@@ -160,6 +170,7 @@ ESTREE_LAST(LoopStatement)
 ESTREE_NODE_0_ARGS(DebuggerStatement, Statement)
 ESTREE_NODE_0_ARGS(EmptyStatement, Statement)
 ESTREE_NODE_1_ARGS(BlockStatement, Statement, NodeList, body, false)
+ESTREE_NODE_1_ARGS(StaticBlock, Statement, NodeList, body, false)
 ESTREE_NODE_1_ARGS(BreakStatement, Statement, NodePtr, label, true)
 ESTREE_NODE_1_ARGS(ContinueStatement, Statement, NodePtr, label, true)
 ESTREE_NODE_1_ARGS(ThrowStatement, Statement, NodePtr, argument, false)
@@ -633,6 +644,99 @@ ESTREE_NODE_2_ARGS(
     NodePtr, right, false)         // Expression
 
 ESTREE_LAST(Pattern)
+
+// ================================================
+
+// Flow match =====================================
+
+#if HERMES_PARSE_FLOW
+
+// Match statement
+ESTREE_NODE_3_ARGS(
+    MatchStatementCase, Base,
+    NodePtr, pattern, false, // MatchPattern
+    NodePtr, body, false, // BlockStatement
+    NodePtr, guard, true // Expression | null
+)
+
+// Match expression
+ESTREE_NODE_2_ARGS(
+    MatchExpression, Base,
+    NodePtr, argument, false, // Expression
+    NodeList, cases, false // [ MatchExpressionCase ]
+)
+ESTREE_NODE_3_ARGS(
+    MatchExpressionCase, Base,
+    NodePtr, pattern, false, // MatchPattern
+    NodePtr, body, false, // Expression
+    NodePtr, guard, true // Expression | null
+)
+
+// Match patterns
+ESTREE_FIRST(MatchPattern, Base)
+
+ESTREE_NODE_0_ARGS(
+  MatchWildcardPattern, MatchPattern
+)
+ESTREE_NODE_1_ARGS(
+  MatchLiteralPattern, MatchPattern,
+  NodePtr, literal, false // Literal
+)
+ESTREE_NODE_2_ARGS(
+  MatchUnaryPattern, MatchPattern,
+  NodePtr, argument, false, // Literal
+  NodeLabel, operator, false // "-" | "+"
+)
+ESTREE_NODE_1_ARGS(
+  MatchIdentifierPattern, MatchPattern,
+  NodePtr, id, false // Identifier
+)
+ESTREE_NODE_2_ARGS(
+  MatchBindingPattern, MatchPattern,
+  NodePtr, id, false, // Identifier
+  NodeLabel, kind, false // "let" | "const"
+)
+ESTREE_NODE_2_ARGS(
+  MatchObjectPattern, MatchPattern,
+  NodeList, properties, false, // [ MatchObjectPatternProperty ]
+  NodePtr, rest, true // MatchRestPattern | null
+)
+ESTREE_NODE_2_ARGS(
+  MatchArrayPattern, MatchPattern,
+  NodeList, elements, false, // [ MatchPattern ]
+  NodePtr, rest, true // MatchRestPattern | null
+)
+ESTREE_NODE_1_ARGS(
+  MatchOrPattern, MatchPattern,
+  NodeList, patterns, false // [ MatchPattern ]
+)
+ESTREE_NODE_2_ARGS(
+  MatchAsPattern, MatchPattern,
+  NodePtr, pattern, false, // MatchPattern
+  NodePtr, target, false // Identifier | MatchBindingPattern
+)
+ESTREE_NODE_2_ARGS(
+  MatchMemberPattern, MatchPattern,
+  NodePtr, base, false, // MatchIdentifierPattern | MatchMemberPattern
+  NodePtr, property, false // Identifier | Literal
+)
+
+ESTREE_LAST(MatchPattern)
+
+// Match pattern auxiliary nodes
+ESTREE_NODE_3_ARGS(
+  MatchObjectPatternProperty, Base,
+  NodePtr, key, false, // Identifier | Literal
+  NodePtr, pattern, false, // MatchPattern
+  NodeBoolean, shorthand, false // boolean
+)
+ESTREE_NODE_1_ARGS(
+  MatchRestPattern, Base,
+  NodePtr, argument, true // MatchBindingPattern | null
+)
+
+#endif
+
 // ================================================
 
 // JSX ============================================
@@ -1007,14 +1111,16 @@ ESTREE_NODE_1_ARGS(
 ESTREE_NODE_1_ARGS(
     TypeParameterDeclaration, Flow,
     NodeList, params, false)
-ESTREE_NODE_5_ARGS(
+ESTREE_NODE_6_ARGS(
     TypeParameter, Flow,
     NodeLabel, name, false,
+    NodeBoolean, const, false,
     NodePtr, bound, true,
     NodePtr, variance, true,
     NodePtr, default, true,
     NodeBoolean, usesExtendsBound, false)
 ESTREE_IGNORE_IF_EMPTY(TypeParameter, usesExtendsBound)
+ESTREE_IGNORE_IF_EMPTY(TypeParameter, const)
 ESTREE_NODE_1_ARGS(
     TypeParameterInstantiation, Flow,
     NodeList, params, false)

@@ -15,7 +15,6 @@
 #include "hermes/VM/VMExperiments.h"
 #include "llvh/Support/SHA1.h"
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <hermes/CompileJS.h>
@@ -106,6 +105,28 @@ TEST_F(SynthTraceTest, PropNameIDUtf8) {
       *records[1]);
 }
 
+TEST_F(SynthTraceTest, PropNameIDUtf16) {
+  // 👍 in UTF8 encoding is 0xf0 0x9f 0x91 0x8d
+  const std::string utf8 = "hello\xf0\x9f\x91\x8d\n";
+  const jsi::PropNameID name = jsi::PropNameID::forUtf8(*rt, utf8);
+  name.utf16(*rt);
+
+  const SynthTrace::ObjectID objId = rt->useObjectID(name);
+
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreatePropNameIDRecord(
+          records[0]->time_, objId, (const uint8_t *)utf8.c_str(), utf8.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::Utf16Record(
+          records[1]->time_,
+          SynthTrace::encodePropNameID(objId),
+          u"hello\xd83d\xdc4d\n"),
+      *records[1]);
+}
+
 TEST_F(SynthTraceTest, StringUtf8) {
   const std::string ascii = "foo";
   const jsi::String name = jsi::String::createFromAscii(*rt, ascii);
@@ -123,6 +144,69 @@ TEST_F(SynthTraceTest, StringUtf8) {
       SynthTrace::Utf8Record(
           records[1]->time_, SynthTrace::encodeString(objId), utf8RetVal),
       *records[1]);
+}
+
+TEST_F(SynthTraceTest, StringUtf16) {
+  // 👍 in UTF8 encoding is 0xf0 0x9f 0x91 0x8d
+  const std::string utf8 = "hello\xf0\x9f\x91\x8d\n";
+
+  const jsi::String str = jsi::String::createFromUtf8(*rt, utf8);
+  str.utf16(*rt);
+
+  const SynthTrace::ObjectID objId = rt->useObjectID(str);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(2, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateStringRecord(
+          records[0]->time_, objId, (const uint8_t *)utf8.data(), utf8.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::Utf16Record(
+          records[1]->time_,
+          SynthTrace::encodeString(objId),
+          u"hello\xd83d\xdc4d\n"),
+      *records[1]);
+}
+
+TEST_F(SynthTraceTest, GetStringData) {
+  const std::string ascii = "foo";
+  // 👋 in UTF8 encoding is 0xf0 0x9f 0x91 0x8b
+  const std::string emoji = "hello\xf0\x9f\x91\x8b";
+
+  auto cb = [](bool ascii, const void *data, size_t num) {};
+
+  const jsi::String asciiStr = jsi::String::createFromAscii(*rt, ascii);
+  const SynthTrace::ObjectID asciiId = rt->useObjectID(asciiStr);
+  asciiStr.getStringData(*rt, cb);
+
+  const jsi::String emojiStr = jsi::String::createFromUtf8(*rt, emoji);
+  const SynthTrace::ObjectID emojiId = rt->useObjectID(emojiStr);
+  emojiStr.getStringData(*rt, cb);
+
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(4, records.size());
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateStringRecord(
+          records[0]->time_, asciiId, ascii.c_str(), ascii.size()),
+      *records[0]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::GetStringDataRecord(
+          records[1]->time_, SynthTrace::encodeString(asciiId), u"foo"),
+      *records[1]);
+
+  EXPECT_EQ_RECORD(
+      SynthTrace::CreateStringRecord(
+          records[2]->time_,
+          emojiId,
+          (const uint8_t *)emoji.data(),
+          emoji.size()),
+      *records[2]);
+  EXPECT_EQ_RECORD(
+      SynthTrace::GetStringDataRecord(
+          records[3]->time_,
+          SynthTrace::encodeString(emojiId),
+          u"hello\xd83d\xdc4b"),
+      *records[3]);
 }
 
 TEST_F(SynthTraceTest, SymbolToString) {
@@ -333,7 +417,7 @@ TEST_F(SynthTraceTest, GetProperty) {
       records[3]->time_, SynthTrace::encodeUndefined());
   EXPECT_EQ_RECORD(rtnExpect0, *records[3]);
   EXPECT_EQ_RECORD(
-      SynthTrace::CreatePropNameIDRecord(
+      SynthTrace::CreatePropNameIDWithValueRecord(
           records[4]->time_, aPropID, SynthTrace::encodeString(aStringID)),
       *records[4]);
   auto gprExpect1 = SynthTrace::GetPropertyRecord(
@@ -1296,6 +1380,7 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
 
     tracing::TraceInterpreter::ExecuteOptions options;
     options.useTraceConfig = true;
+    options.verificationEnabled = true;
     auto [_, rt] = tracing::TraceInterpreter::execFromMemoryBuffer(
         llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
         std::move(sources), // codeBufs
@@ -1373,6 +1458,15 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
     auto obj = jsi::Object(rt);
     obj.setProperty(rt, "bar", 5);
     rt.global().setProperty(rt, "foo", obj);
+
+    jsi::Object prototypeObj(rt);
+    prototypeObj.setProperty(rt, "someProperty", 123);
+    jsi::Value prototype(rt, prototypeObj);
+    jsi::Object child1 = jsi::Object::create(rt, prototype);
+    rt.global().setProperty(rt, "child1", child1);
+
+    jsi::Object child2 = jsi::Object::create(rt, jsi::Value::null());
+    rt.global().setProperty(rt, "child2", child2);
   }
   replay();
   {
@@ -1383,7 +1477,69 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
             .getProperty(rt, "bar")
             .asNumber(),
         5);
+
+    auto child1 = rt.global().getProperty(rt, "child1").asObject(rt);
+    EXPECT_EQ(child1.getProperty(rt, "someProperty").asNumber(), 123);
+
+    auto child2 = rt.global().getProperty(rt, "child2").asObject(rt);
+    EXPECT_TRUE(child2.getPrototype(rt).isNull());
   }
+}
+
+TEST_F(SynthTraceReplayTest, UTF16Replay) {
+  {
+    auto &rt = *traceRt;
+    // UTF-16 encoding for 👍 is 0xd83d 0xdc4d
+    jsi::String emoji = jsi::String::createFromUtf16(rt, u"\xd83d\xdc4d");
+    emoji.utf16(rt);
+
+    jsi::String loneHighSurrogate = jsi::String::createFromUtf16(rt, u"\xd83d");
+    loneHighSurrogate.utf16(rt);
+
+    jsi::String ascii = jsi::String::createFromUtf16(rt, u"hello");
+    ascii.utf16(rt);
+  }
+
+  // Since we have verification enabled, replay will check that the .utf16()
+  // calls were correctly recorded.
+  replay();
+}
+
+TEST_F(SynthTraceReplayTest, GetStringDataReplay) {
+  {
+    auto &rt = *traceRt;
+    auto cb = [](bool ascii, const void *data, size_t num) {};
+    // UTF-16 encoding for 👍 is 0xd83d 0xdc4d
+    jsi::String emoji = jsi::String::createFromUtf16(rt, u"\xd83d\xdc4d");
+    emoji.getStringData(rt, cb);
+
+    jsi::String loneHighSurrogate = jsi::String::createFromUtf16(rt, u"\xd83d");
+    loneHighSurrogate.getStringData(rt, cb);
+
+    jsi::String ascii = jsi::String::createFromUtf16(rt, u"hello");
+    ascii.getStringData(rt, cb);
+  }
+
+  replay();
+}
+
+TEST_F(SynthTraceReplayTest, GetPropNameIdDataReplay) {
+  {
+    auto &rt = *traceRt;
+    auto cb = [](bool ascii, const void *data, size_t num) {};
+    // UTF-16 encoding for 👍 is 0xd83d 0xdc4d
+    jsi::PropNameID emoji = jsi::PropNameID::forUtf16(rt, u"\xd83d\xdc4d");
+    emoji.getPropNameIdData(rt, cb);
+
+    jsi::PropNameID loneHighSurrogate =
+        jsi::PropNameID::forUtf16(rt, u"\xd83d");
+    loneHighSurrogate.getPropNameIdData(rt, cb);
+
+    jsi::PropNameID ascii = jsi::PropNameID::forUtf16(rt, u"hello");
+    ascii.getPropNameIdData(rt, cb);
+  }
+
+  replay();
 }
 
 TEST_F(SynthTraceRuntimeTest, WarmUpAndRepeatReplay) {
@@ -1544,6 +1700,50 @@ TEST_F(SynthTraceReplayTest, SetPropertyReplay) {
   }
 }
 
+TEST_F(SynthTraceReplayTest, SetPrototypeReplay) {
+  {
+    auto &rt = *traceRt;
+    jsi::Object prototypeObj(rt);
+    prototypeObj.setProperty(rt, "someProperty", 123);
+    jsi::Value prototype(rt, prototypeObj);
+
+    jsi::Object child1(rt);
+    child1.setPrototype(rt, prototype);
+    rt.global().setProperty(rt, "child1", child1);
+
+    auto prototype1 = child1.getPrototype(rt);
+    rt.global().setProperty(rt, "prototype1", prototype1);
+
+    jsi::Object child2(rt);
+    child2.setPrototype(rt, jsi::Value::null());
+    rt.global().setProperty(rt, "child2", child2);
+
+    auto prototype2 = child2.getPrototype(rt);
+    rt.global().setProperty(rt, "prototype2", prototype2);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto child1 = rt.global().getProperty(rt, "child1").getObject(rt);
+    EXPECT_EQ(child1.getProperty(rt, "someProperty").asNumber(), 123);
+    EXPECT_EQ(
+        child1.getPrototype(rt)
+            .getObject(rt)
+            .getProperty(rt, "someProperty")
+            .getNumber(),
+        123);
+
+    auto prototype1 = rt.global().getProperty(rt, "prototype1").getObject(rt);
+    EXPECT_EQ(prototype1.getProperty(rt, "someProperty").asNumber(), 123);
+
+    auto child2 = rt.global().getProperty(rt, "child2").getObject(rt);
+    EXPECT_TRUE(child2.getPrototype(rt).isNull());
+
+    auto prototype2 = rt.global().getProperty(rt, "prototype2");
+    EXPECT_TRUE(prototype2.isNull());
+  }
+}
+
 TEST_F(SynthTraceReplayTest, BigIntCreate) {
   {
     auto &rt = *traceRt;
@@ -1602,6 +1802,10 @@ TEST_F(SynthTraceReplayTest, PropNameIDUtf8) {
     auto &rt = *traceRt;
     jsi::PropNameID name = jsi::PropNameID::forAscii(rt, ascii);
     std::string ret = name.utf8(rt);
+
+    std::string utf8 = "hi👍";
+    jsi::String utf8prop = jsi::String::createFromUtf8(rt, ascii);
+    utf8prop.utf8(rt);
   }
   replay();
 }
@@ -1614,6 +1818,10 @@ TEST_F(SynthTraceReplayTest, StringUtf8) {
     auto &rt = *traceRt;
     jsi::String name = jsi::String::createFromAscii(rt, ascii);
     std::string ret = name.utf8(rt);
+
+    std::string utf8 = "hi👍";
+    jsi::String utf8String = jsi::String::createFromUtf8(rt, ascii);
+    utf8String.utf8(rt);
   }
   replay();
 }

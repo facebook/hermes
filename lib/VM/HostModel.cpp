@@ -103,11 +103,7 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
   auto parentHandle = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
   HostObject *hostObj = runtime.makeAFixed<HostObject, HasFinalizer::Yes>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<HostObject>()),
-      std::move(proxy));
+      runtime, parentHandle, runtime.hostObjectClass, std::move(proxy));
 
   hostObj->flags_.hostObject = true;
 

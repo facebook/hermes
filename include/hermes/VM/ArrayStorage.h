@@ -190,6 +190,14 @@ class ArrayStorageBase final
   }
 
   /// Append the given element to the end (increasing size by 1).
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param value The value to append to the ArrayStorage. If this is a
+  /// ArrayStorageSmall, the value will be encoded into a SmallHermesValue.
   static ExecutionStatus push_back(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
@@ -243,6 +251,13 @@ class ArrayStorageBase final
 
   /// Append the contents of the given ArrayStorage \p other to this
   /// ArrayStorage.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param other The ArrayStorage to append.
   static ExecutionStatus append(
       MutableHandle<ArrayStorageBase> &selfHandle,
       Runtime &runtime,
@@ -257,6 +272,13 @@ class ArrayStorageBase final
 
   /// Ensure that the capacity of the array is at least \p capacity,
   /// reallocating if needed.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param capacity The capacity to ensure is available.
   static ExecutionStatus ensureCapacity(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
@@ -265,6 +287,13 @@ class ArrayStorageBase final
   /// Change the size of the storage to \p newSize. This can increase the size
   /// (in which case the new elements will be initialized to empty), or decrease
   /// the size.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param newSize The new size of the ArrayStorage.
   static ExecutionStatus resize(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
@@ -278,6 +307,13 @@ class ArrayStorageBase final
   /// every existing element is copied rightward, a linear time procedure.
   /// If the capacity is not sufficient, then the performance will be the same
   /// as \c resize.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param newSize The new size of the ArrayStorage.
   static ExecutionStatus resizeLeft(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
@@ -319,6 +355,13 @@ class ArrayStorageBase final
 
   /// Append the given element to the end when the capacity has been exhausted
   /// and a reallocation is needed.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param value The value to append.
   static ExecutionStatus pushBackSlowPath(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
@@ -327,6 +370,13 @@ class ArrayStorageBase final
   /// Append the contents of the given ArrayStorage \p other to this
   /// ArrayStorage when the capacity has been exhausted and a reallocation is
   /// needed.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param other The ArrayStorage to append.
   static ExecutionStatus appendSlowPath(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
@@ -345,6 +395,16 @@ class ArrayStorageBase final
   /// \p minCapacity must be larger than \p toLast, and it is guaranteed that
   /// the array will have a capacity of at least \p minCapacity after this
   /// operation.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param minCapacity The minimum capacity the ArrayStorage will have.
+  /// \param fromFirst First element to be copied from.
+  /// \param toFirst Index where to copy the first element to.
+  /// \param toLast Index where to copy the last element to.
   static ExecutionStatus reallocateToLarger(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
@@ -368,6 +428,15 @@ class ArrayStorageBase final
   ///       position 'toFirst'.
   /// 3. Set all elements before `toFirst` and after the last copied element to
   ///   "empty".
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param fromFirst First element to be copied from.
+  /// \param toFirst Index where to copy the first element to.
+  /// \param toLast Index where to copy the last element to.
   static ExecutionStatus shift(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,

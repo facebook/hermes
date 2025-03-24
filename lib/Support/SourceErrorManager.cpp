@@ -428,9 +428,7 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   return {};
 }
 
-/// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the error
-/// output options.
-static std::pair<std::string, std::string> buildSourceAndCaretLine(
+std::pair<std::string, std::string> SourceErrorManager::buildSourceAndCaretLine(
     const llvh::SMDiagnostic &diag,
     SourceErrorOutputOptions opts) {
   // Decode our source line to UTF-32
@@ -606,7 +604,8 @@ static void printDiagnosticHelper(
 
   std::string sourceLine;
   std::string caretLine;
-  std::tie(sourceLine, caretLine) = buildSourceAndCaretLine(diag, opts);
+  std::tie(sourceLine, caretLine) =
+      SourceErrorManager::buildSourceAndCaretLine(diag, opts);
 
   // Check for non-ASCII characters, which may have a width > 1
   // If we find them, don't try to show the caret line

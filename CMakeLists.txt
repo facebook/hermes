@@ -42,14 +42,19 @@ if (POLICY CMP0026)
   cmake_policy(SET CMP0026 OLD)
 endif()
 
+# Require a build type
+if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL ""))
+    message(FATAL_ERROR "Please set CMAKE_BUILD_TYPE")
+endif()
+
 # Has to be set before `project` as per documentation
 # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
 set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
 
 if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(CMAKE_OSX_SYSROOT "macosx")
-  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
-  set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} "-target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target x86_64-arm64-apple-ios14.0-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include")
   set(CMAKE_THREAD_LIBS_INIT "-lpthread")
   set(CMAKE_HAVE_THREADS_LIBRARY 1)
   set(CMAKE_USE_WIN32_THREADS_INIT 0)
@@ -197,10 +202,6 @@ set(HERMES_ENABLE_FUZZILLI OFF CACHE BOOL
 set(HERMES_ENABLE_TOOLS ON CACHE BOOL
   "Enable CLI tools")
 
-# Enable bitcode
-set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
-  "Include bitcode with the framework")
-
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
@@ -225,13 +226,7 @@ set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
 set(HERMES_UNICODE_LITE OFF CACHE BOOL
   "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
-if(WIN32)
-  set(DEFAULT_HERMES_CHECK_NATIVE_STACK OFF)
-else()
-  set(DEFAULT_HERMES_CHECK_NATIVE_STACK ON)
-endif()
-
-set(HERMES_CHECK_NATIVE_STACK ${DEFAULT_HERMES_CHECK_NATIVE_STACK} CACHE BOOL
+set(HERMES_CHECK_NATIVE_STACK ON CACHE BOOL
   "Check the native stack for stack overflow")
 
 set(HERMES_ENABLE_DEBUGGER OFF CACHE BOOL
@@ -268,9 +263,6 @@ set(ANDROID_LINUX_PERF_PATH ""
 set(HERMES_MSVC_MP ON CACHE STRING
   "Enable /MP in MSVC for parallel builds")
 
-set(EMSCRIPTEN_FASTCOMP OFF CACHE BOOL
-  "Emscripten is using the fastcomp backend instead of the LLVM one")
-
 set(HERMES_ENABLE_INTL OFF CACHE BOOL
   "Enable JS Intl support (WIP)")
 
@@ -280,11 +272,8 @@ set(HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES ON CACHE BOOL
 set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
   "Enable the test suite")
 
-set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
+set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
-
-set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
-  "Whether to build a DWARF debugging symbols bundle")
 
 set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
 
@@ -303,6 +292,9 @@ set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
 # 2: JIT is enabled
 set(HERMESVM_ALLOW_JIT 0 CACHE STRING "JIT mode: 0 (off), 1 (auto) or 2 (force on)")
 
+set(HERMES_ALLOW_BOOST_CONTEXT 1 CACHE STRING
+   "Use Boost.Context fibers: 0 (off), 1 (auto) or 2 (force on)")
+
 # Used in the compiler, for various compilation statistics.
 set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
   "Enable gathering, printing of Statistics.")
@@ -316,17 +308,7 @@ if (HERMES_UNICODE_LITE)
 endif()
 
 if(HERMES_CHECK_NATIVE_STACK)
-  if (WIN32)
-    message(
-      FATAL_ERROR
-      "Native stack checking not supported on Windows"
-    )
-  endif()
   add_definitions(-DHERMES_CHECK_NATIVE_STACK)
-endif()
-
-if(HERMES_BUILD_APPLE_DSYM)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
@@ -335,11 +317,6 @@ endif()
 
 if (HERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
   add_definitions(-DHERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
-endif()
-
-# Enable debug mode by default
-if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 if (HERMES_STATIC_LINK)
@@ -535,6 +512,28 @@ if (HERMESVM_ALLOW_JIT)
   add_definitions(-DHERMESVM_ALLOW_JIT=${HERMESVM_ALLOW_JIT})
 endif ()
 
+if (HERMES_ALLOW_BOOST_CONTEXT EQUAL 0)
+    set(HERMES_USE_BOOST_CONTEXT 0)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 2)
+    set(HERMES_USE_BOOST_CONTEXT 1)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 1)
+    if (HERMES_ENABLE_ADDRESS_SANITIZER OR EMSCRIPTEN)
+        set(HERMES_USE_BOOST_CONTEXT 0)
+    else()
+        set(HERMES_USE_BOOST_CONTEXT 1)
+    endif()
+else ()
+    message(FATAL_ERROR "Invalid HERMES_ALLOW_BOOST_CONTEXT value ${HERMES_ALLOW_BOOST_CONTEXT}")
+endif ()
+# Use BOOST_CONTEXT_LIB to rever to boost_context as a dependency, regardless of
+# whether it is enabled.
+if (HERMES_USE_BOOST_CONTEXT)
+    set(BOOST_CONTEXT_LIB boost_context)
+else()
+    set(BOOST_CONTEXT_LIB )
+endif()
+add_definitions(-DHERMES_USE_BOOST_CONTEXT=${HERMES_USE_BOOST_CONTEXT})
+
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
   append("-fvisibility=hidden" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
@@ -559,38 +558,36 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   endif()
   # MSVC does not have strict aliasing so there is no need to support it.
   # Similar to GCC/Clang above, disable strict signed integer overflow.
-  append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+  # TODO: Investigate disabling strict signed integer overflow for MSVC
+  # append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
 # to analyze the source code of the project.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple, Emscripten, and Android.
 if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID OR HERMES_UNICODE_LITE)
   set(ICU_FOUND 1)
 endif()
 
 if (NOT ICU_FOUND)
-  if (NOT ICU_ROOT)
-    set(FB_ICU_ROOT_A "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-5-glibc-2.23/9bc6787")
-    set(FB_ICU_ROOT_B "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/")
-    if(EXISTS ${FB_ICU_ROOT_A})
-      set(ICU_ROOT ${FB_ICU_ROOT_A})
-    elseif(EXISTS ${FB_ICU_ROOT_B})
-      set(ICU_ROOT ${FB_ICU_ROOT_B})
-    endif()
-  endif()
   set(CMAKE_FIND_LIBRARY_SUFFIXES_OLD "${CMAKE_FIND_LIBRARY_SUFFIXES}")
   if (HERMES_USE_STATIC_ICU)
     add_definitions(-DU_STATIC_IMPLEMENTATION)
     set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
   endif()
 
-  # FindICU uses ICU_ROOT variable as a hint
-  # Include 'uc' twice for static libraries that depend on each other.
-  find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+  if (HERMES_ENABLE_INTL)
+    # Attempt to locate a system-installed ICU. A minimum version of 65 is
+    # required because our ICU-based Intl implementation relies on APIs introduced
+    # in version 65.
+    # Include 'uc' twice for static libraries that depend on each other.
+    find_global_package(ICU 65 COMPONENTS uc i18n data uc)
+  else()
+    # Include 'uc' twice for static libraries that depend on each other.
+    find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+  endif()
 
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES_OLD}")
 
@@ -687,6 +684,14 @@ else()
   message(FATAL_ERROR "Unable to find jsi.")
 endif()
 
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../hermes_common)
+  set(HERMES_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../hermes_common)
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../../hermes_common)
+  set(HERMES_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../hermes_common)
+else()
+  set(HERMES_COMMON_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
+
 include_directories(
   external/llvh/include
   external/llvh/gen/include
@@ -705,7 +710,13 @@ if(HERMES_IS_ANDROID)
   find_package(fbjni REQUIRED CONFIG)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  # MSVC requires c++20, because of the use of designated initializers in the codebase.
+  set(CMAKE_CXX_STANDARD 20)
+else()
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -782,7 +793,8 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
     hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
-    build_mode="$<IF:$<CONFIG:Debug>,dbg,opt>"
+    slow_debug=$<IF:$<CONFIG:Debug>,${HERMES_SLOW_DEBUG},OFF>
+    debug_options=$<IF:$<CONFIG:Debug>,ON,OFF>
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
     node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
     node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes

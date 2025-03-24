@@ -24,12 +24,10 @@ BytecodeModule::~BytecodeModule() {
   // VariableScopes as much as possible.
   functions_.clear();
 
-#ifndef HERMESVM_LEAN
   // Clean up any other parts of the IR that are no longer used.
   if (bcProviderFromSrc_) {
     bcProviderFromSrc_->getModule()->resetForMoreCompilation();
   }
-#endif
 }
 
 void BytecodeModule::setFunction(
@@ -53,7 +51,7 @@ void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
   uint32_t offset = 0;
   for (const auto &func : functions_) {
     functionOffsets.push_back(offset);
-    offset += func->getHeader().bytecodeSizeInBytes;
+    offset += func->getHeader().getBytecodeSizeInBytes();
   }
   debugInfo_.populateSourceMap(
       sourceMap, std::move(functionOffsets), segmentID_);
@@ -71,7 +69,7 @@ llvh::ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
   // The jump tables (if there are any) start at the nearest 4-byte boundary
   // from the end of the opcodes.
   uint32_t jumpTableStartIdx =
-      llvh::alignTo<sizeof(uint32_t)>(header_.bytecodeSizeInBytes);
+      llvh::alignTo<sizeof(uint32_t)>(header_.getBytecodeSizeInBytes());
 
   if (jumpTableStartIdx > opcodesAndJumpTables_.size()) {
     return {};

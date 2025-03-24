@@ -31,37 +31,37 @@ print(e);
 
 // RA:function global(): any
 // RA-NEXT:%BB0:
-// RA-NEXT:  $Reg1 = CreateScopeInst (:environment) %VS0: any, empty: any
-// RA-NEXT:  $Reg0 = DeclareGlobalVarInst "inner": string
-// RA-NEXT:  $Reg0 = DeclareGlobalVarInst "e": string
-// RA-NEXT:  $Reg2 = HBCLoadConstInst (:string) "global": string
-// RA-NEXT:  $Reg0 = HBCGetGlobalObjectInst (:object)
-// RA-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg0, "e": string
-// RA-NEXT:  $Reg2 = TryStartInst %BB1, %BB2
+// RA-NEXT:                 DeclareGlobalVarInst "inner": string
+// RA-NEXT:                 DeclareGlobalVarInst "e": string
+// RA-NEXT:  {r0}      %2 = HBCGetGlobalObjectInst (:object)
+// RA-NEXT:  {r1}      %3 = HBCLoadConstInst (:string) "global": string
+// RA-NEXT:                 StorePropertyLooseInst {r1} %3: string, {r0} %2: object, "e": string
+// RA-NEXT:                 TryStartInst %BB1, %BB2
 // RA-NEXT:%BB1:
-// RA-NEXT:  $Reg2 = CatchInst (:any)
-// RA-NEXT:  $Reg2 = StoreFrameInst $Reg1, $Reg2, [%VS0.e]: any
-// RA-NEXT:  $Reg1 = CreateFunctionInst (:object) $Reg1, %local(): functionCode
-// RA-NEXT:  $Reg1 = StorePropertyLooseInst $Reg1, $Reg0, "local": string
-// RA-NEXT:  $Reg3 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
-// RA-NEXT:  $Reg1 = TryLoadGlobalPropertyInst (:any) $Reg0, "local": string
-// RA-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
-// RA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2
-// RA-NEXT:  $Reg1 = HBCCallNInst (:any) $Reg3, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2, $Reg1
-// RA-NEXT:  $Reg1 = TryLoadGlobalPropertyInst (:any) $Reg0, "print": string
-// RA-NEXT:  $Reg0 = LoadPropertyInst (:any) $Reg0, "e": string
-// RA-NEXT:  $Reg0 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg2, $Reg0
-// RA-NEXT:  $Reg0 = ReturnInst $Reg0
+// RA-NEXT:  {r2}      %6 = CatchInst (:any)
+// RA-NEXT:  {r1}      %7 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
+// RA-NEXT:                 StoreFrameInst {r1} %7: environment, {r2} %6: any, [%VS0.e]: any
+// RA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %7: environment, %VS0: any, %local(): functionCode
+// RA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %2: object, "local": string
+// RA-NEXT:  {r3}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
+// RA-NEXT:  {r1}     %12 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "local": string
+// RA-NEXT:  {r2}     %13 = HBCLoadConstInst (:undefined) undefined: undefined
+// RA-NEXT:  {r1}     %14 = HBCCallNInst (:any) {r1} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined
+// RA-NEXT:  {r1}     %15 = HBCCallNInst (:any) {r3} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r1} %14: any
+// RA-NEXT:  {r1}     %16 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
+// RA-NEXT:  {r0}     %17 = LoadPropertyInst (:any) {r0} %2: object, "e": string
+// RA-NEXT:  {r0}     %18 = HBCCallNInst (:any) {r1} %16: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r0} %17: any
+// RA-NEXT:                 ReturnInst {r0} %18: any
 // RA-NEXT:%BB2:
-// RA-NEXT:  $Reg2 = HBCLoadConstInst (:string) "local": string
-// RA-NEXT:  $Reg2 = ThrowInst $Reg2, %BB1
+// RA-NEXT:  {r1}     %20 = HBCLoadConstInst (:string) "local": string
+// RA-NEXT:                 ThrowInst {r1} %20: string, %BB1
 // RA-NEXT:function_end
 
 // RA:scope %VS0 [e: any]
 
 // RA:function local(): any
 // RA-NEXT:%BB0:
-// RA-NEXT:  $Reg0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// RA-NEXT:  $Reg0 = LoadFrameInst (:any) $Reg0, [%VS0.e]: any
-// RA-NEXT:  $Reg0 = ReturnInst $Reg0
+// RA-NEXT:  {r0}      %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// RA-NEXT:  {r0}      %1 = LoadFrameInst (:any) {r0} %0: environment, [%VS0.e]: any
+// RA-NEXT:                 ReturnInst {r0} %1: any
 // RA-NEXT:function_end

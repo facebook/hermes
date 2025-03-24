@@ -12,6 +12,8 @@
 
 import type {
   DeclareVariable,
+  MatchAsPattern,
+  MatchBindingPattern,
   VariableDeclarator,
   VariableDeclaration,
   Identifier,
@@ -22,8 +24,8 @@ import {DefinitionBase} from './DefinitionBase';
 
 class VariableDefinition extends DefinitionBase<
   typeof DefinitionType.Variable,
-  DeclareVariable | VariableDeclarator,
-  DeclareVariable | VariableDeclaration,
+  DeclareVariable | VariableDeclarator | MatchBindingPattern | MatchAsPattern,
+  DeclareVariable | VariableDeclaration | MatchBindingPattern | MatchAsPattern,
   Identifier,
 > {
   declare +type: typeof DefinitionType.Variable;
@@ -31,7 +33,11 @@ class VariableDefinition extends DefinitionBase<
   constructor(
     name: Identifier,
     node: VariableDefinition['node'],
-    decl: DeclareVariable | VariableDeclaration,
+    decl:
+      | DeclareVariable
+      | VariableDeclaration
+      | MatchBindingPattern
+      | MatchAsPattern,
   ) {
     super(DefinitionType.Variable, name, node, decl);
   }

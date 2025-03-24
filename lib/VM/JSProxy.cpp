@@ -14,7 +14,7 @@
 #include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/PropertyAccessor.h"
 
-#include "llvh/ADT/SmallSet.h"
+#include "llvh/ADT/SetVector.h"
 
 namespace hermes {
 namespace vm {
@@ -62,7 +62,7 @@ findTrap(Handle<JSObject> selfHandle, Runtime &runtime, Predefined::Str name) {
         runtime.makeHandle(std::move(*trapVal)),
         " is not a Proxy trap function");
   }
-  return runtime.makeHandle<Callable>(std::move(trapVal->get()));
+  return runtime.makeHandle<Callable>(trapVal->get());
 }
 
 } // namespace detail
@@ -93,9 +93,10 @@ void JSProxyBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 PseudoHandle<JSProxy> JSProxy::create(Runtime &runtime) {
   JSProxy *proxy = runtime.makeAFixed<JSProxy>(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.objectPrototype),
-      runtime.getHiddenClassForPrototype(
-          runtime.objectPrototypeRawPtr, JSObject::numOverlapSlots<JSProxy>()));
+      // Proxy should not have an observable prototype, so we just set it to
+      // null.
+      Runtime::makeNullHandle<JSObject>(),
+      runtime.proxyClass);
 
   proxy->flags_.proxyObject = true;
 
@@ -1427,7 +1428,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
                 if (LLVM_UNLIKELY(
                         JSMap::insert(lv.map, runtime, valHandle, valHandle) ==
                         ExecutionStatus::EXCEPTION))
-                  return ExecutionStatus::RETURNED;
+                  return ExecutionStatus::EXCEPTION;
                 JSArray::setElementAt(trapResult, runtime, index, valHandle);
                 return ExecutionStatus::RETURNED;
               }) == ExecutionStatus::EXCEPTION)) {
@@ -1455,7 +1456,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 13. Assert: targetKeys contains no duplicate entries.
   // 14. Let targetConfigurableKeys be a new empty List.
   // 15. Let targetNonconfigurableKeys be a new empty List.
-  llvh::SmallSet<uint32_t, 8> nonConfigurable;
+  llvh::SmallSetVector<uint32_t, 8> nonConfigurable;
   MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 16. For each element key of targetKeys, do
   GCScopeMarkerRAII marker{runtime};

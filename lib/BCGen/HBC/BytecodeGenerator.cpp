@@ -8,10 +8,11 @@
 #include "BytecodeGenerator.h"
 
 #include "LoweringPipelines.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/HBC/Passes.h"
 #include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
-#include "hermes/BCGen/LowerBuiltinCalls.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/FrontEndDefs/Builtins.h"
@@ -95,7 +96,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     FileAndSourceMapIdCache &debugCache,
     SourceMapGenerator *sourceMapGen,
     DebugInfoGenerator &debugInfoGenerator) {
-  BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxRegisterUsage()};
+  BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxHVMRegisterUsage()};
 
   if (F->isLazy()) {
     // Move the Function out of the main function list.
@@ -112,20 +113,31 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
   assert(
       funcGen.complete_ && "ISel did not complete BytecodeFunctionGenerator");
 
+  // Get the number of bits needed to encode the loop depth.
+  // Avoid overflowing the FunctionHeader just for loop depth.
+#define DECLARE_BITFIELD(_, storage, api_type, name, bits) \
+  [[maybe_unused]] constexpr uint32_t f##name##Width = bits;
+  FUNC_HEADER_FIELDS(DECLARE_BITFIELD, DECLARE_BITFIELD)
+#undef DECLARE_BITFIELD
+
   FunctionHeader header{
       funcGen.bytecodeSize_,
       F->getExpectedParamCountIncludingThis(),
+      std::min(
+          RA.getMaxLoopDepth(),
+          llvh::maskTrailingOnes<uint32_t>(fLoopDepthWidth)),
       funcGen.frameSize_,
-      RA.getNumberRegCount(),
-      RA.getNonPtrRegCount(),
+      RA.getMaxRegisterUsage(RegClass::Number),
+      RA.getMaxRegisterUsage(RegClass::NonPtr),
       nameID,
       funcGen.highestReadCacheIndex_,
-      funcGen.highestWriteCacheIndex_};
+      funcGen.highestWriteCacheIndex_,
+      funcGen.numCacheNewObject_};
 
-  header.flags.prohibitInvoke = computeProhibitInvoke(F->getProhibitInvoke());
-  header.flags.kind = computeFuncKind(F->getKind());
-  header.flags.strictMode = F->isStrictMode();
-  header.flags.hasExceptionHandler = funcGen.exceptionHandlers_.size();
+  header.flags.setProhibitInvoke(computeProhibitInvoke(F->getProhibitInvoke()));
+  header.flags.setKind(computeFuncKind(F->getKind()));
+  header.flags.setStrictMode(F->isStrictMode());
+  header.flags.setHasExceptionHandler(funcGen.exceptionHandlers_.size());
 
   auto bcFunc = std::make_unique<BytecodeFunction>(
       std::move(funcGen.opcodes_),
@@ -210,7 +222,6 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   auto [it, inserted] = functionIDMap_.insert({F, bm_.getNumFunctions()});
   if (inserted) {
     bm_.addFunction();
-    bm_.getBytecodeOptionsMut().hasAsync |= llvh::isa<AsyncFunction>(F);
   }
   return it->second;
 }
@@ -272,7 +283,9 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(DeletePropertyLooseInst);
     CASE_WITH_PROP_IDX(DeletePropertyStrictInst);
     CASE_WITH_PROP_IDX(LoadPropertyInst);
-    CASE_WITH_PROP_IDX(StoreNewOwnPropertyInst);
+    CASE_WITH_PROP_IDX(LoadPropertyWithReceiverInst);
+    CASE_WITH_PROP_IDX(DefineNewOwnPropertyInst);
+    CASE_WITH_PROP_IDX(DefineOwnPropertyInst);
     CASE_WITH_PROP_IDX(StorePropertyLooseInst);
     CASE_WITH_PROP_IDX(StorePropertyStrictInst);
     CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);
@@ -286,6 +299,10 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
       // AllocObjectFromBuffer stores the keys and values as alternating
       // operands, with keys starting first.
       return idx % 2 == 0;
+
+    case ValueKind::CacheNewObjectInstKind:
+      // The keys of CacheNewObject are identifiers.
+      return idx >= CacheNewObjectInst::FirstKeyIdx;
 
     default:
       return false;
@@ -424,10 +441,7 @@ void BytecodeModuleGenerator::collectStrings() {
 
 bool BytecodeModuleGenerator::generateAddedFunctions() {
   BytecodeOptions &bytecodeOptions = bm_.getBytecodeOptionsMut();
-  bytecodeOptions.cjsModulesStaticallyResolved = M_->getCJSModulesResolved();
-
-  // Allow reusing the debug cache between functions
-  FileAndSourceMapIdCache debugCache{};
+  bytecodeOptions.setCjsModulesStaticallyResolved(M_->getCJSModulesResolved());
 
   M_->assignIndexToVariables();
 
@@ -495,7 +509,7 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
             *this,
             RA,
             options_,
-            debugCache,
+            debugIdCache_,
             sourceMapGen_,
             debugInfoGenerator_);
     if (!func)

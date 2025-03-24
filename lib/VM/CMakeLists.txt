@@ -45,6 +45,7 @@ set(source_files
   LimitedStorageProvider.cpp
   DecoratedObject.cpp
   HostModel.cpp
+  ModuleExportsCache.cpp
   NativeState.cpp
   Operations.cpp
   PredefinedStringIDs.cpp
@@ -55,6 +56,7 @@ set(source_files
   RuntimeModule.cpp
   Profiler/TraceSerializer.cpp
   Profiler/CodeCoverageProfiler.cpp
+  Profiler/ProfileGenerator.cpp
   Profiler/SamplingProfiler.cpp
   Profiler/SamplingProfilerPosix.cpp
   Profiler/SamplingProfilerWindows.cpp
@@ -136,14 +138,14 @@ if (${HERMESVM_GCKIND} STREQUAL "MALLOC")
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
   list(APPEND source_files
             gcs/AlignedHeapSegment.cpp
-            gcs/CardTableNC.cpp
+            gcs/CardBoundaryTable.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
   )
 elseif (${HERMESVM_GCKIND} STREQUAL "RUNTIME")
   list(APPEND source_files
           gcs/AlignedHeapSegment.cpp
-          gcs/CardTableNC.cpp gcs/FillerCell.cpp
+          gcs/CardBoundaryTable.cpp gcs/FillerCell.cpp
           gcs/HadesGC.cpp
   )
 else()
@@ -183,10 +185,5 @@ endif()
 add_hermes_library(hermesVMRuntime ${source_files}
         LINK_OBJLIBS hermesPublic hermesapi
         LINK_LIBS ${JITLIBS})
-
-add_hermes_library(hermesVMRuntimeLean ${source_files}
-        LINK_OBJLIBS hermesPublic hermesapiLean
-        LINK_LIBS ${JITLIBS})
-target_compile_definitions(hermesVMRuntimeLean_obj PUBLIC HERMESVM_LEAN)
 
 add_subdirectory(Instrumentation)

@@ -50,6 +50,7 @@ class IRBuilder {
   //--------------------------------------------------------------------------//
 
   enum class PropEnumerable { No = 0, Yes = 1 };
+  enum class StoreStrict { No = 0, Yes = 1 };
 
   Module *getModule() {
     return M;
@@ -187,8 +188,16 @@ class IRBuilder {
   /// Create a new literal null.
   LiteralNull *getLiteralNull();
 
+  LiteralBuiltinIdx *getLiteralBuiltinIdx(BuiltinMethod::Enum builtinIdx) {
+    return M->getLiteralBuiltinIdx(builtinIdx);
+  }
+
   LiteralIRType *getLiteralIRType(Type type) {
     return M->getLiteralIRType(type);
+  }
+
+  LiteralTypeOfIsTypes *getLiteralTypeOfIsTypes(TypeOfIsTypes types) {
+    return M->getLiteralTypeOfIsTypes(types);
   }
 
   /// Return the GlobalObject value.
@@ -280,6 +289,8 @@ class IRBuilder {
 
   AllocStackInst *createAllocStackInst(Identifier varName, Type type);
 
+  ToPropertyKeyInst *createToPropertyKeyInst(Value *val);
+
   AsNumberInst *createAsNumberInst(Value *val);
 
   AsNumericInst *createAsNumericInst(Value *val);
@@ -288,13 +299,19 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
+  CreateClassInst *createCreateClassInst(
+      BaseScopeInst *scope,
+      Function *code,
+      Value *superClass,
+      AllocStackInst *homeObjectOutput);
+
   CreateFunctionInst *createCreateFunctionInst(
-      Instruction *scope,
+      BaseScopeInst *scope,
       Function *code);
 
   GetParentScopeInst *createGetParentScopeInst(
       VariableScope *scope,
-      JSDynamicParam *parentScopeParam);
+      JSSpecialParam *parentScopeParam);
 
   CreateScopeInst *createCreateScopeInst(
       VariableScope *scope,
@@ -310,9 +327,8 @@ class IRBuilder {
       Instruction *startScope,
       LiteralNumber *numLevels);
 
-  GetClosureScopeInst *createGetClosureScopeInst(
-      VariableScope *scope,
-      Value *closure);
+  GetClosureScopeInst *
+  createGetClosureScopeInst(VariableScope *scope, Function *F, Value *closure);
 
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
@@ -381,6 +397,12 @@ class IRBuilder {
 
   TryEndInst *createTryEndInst(BasicBlock *catchBlock, BasicBlock *branchBlock);
 
+  BranchIfBuiltinInst *createBranchIfBuiltinInst(
+      BuiltinMethod::Enum builtinIndex,
+      Value *argument,
+      BasicBlock *catchBlock,
+      BasicBlock *branchBlock);
+
   DeletePropertyInst *createDeletePropertyInst(Value *object, Value *property);
   DeletePropertyLooseInst *createDeletePropertyLooseInst(
       Value *object,
@@ -390,10 +412,21 @@ class IRBuilder {
       Value *property);
 
   LoadPropertyInst *createLoadPropertyInst(Value *object, Value *property);
+  LoadPropertyWithReceiverInst *createLoadPropertyWithReceiverInst(
+      Value *object,
+      Value *property,
+      Value *receiver);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       LiteralString *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       GlobalObjectProperty *property);
+
+  StorePropertyWithReceiverInst *createStorePropertyWithReceiverInst(
+      Value *storedValue,
+      Value *object,
+      Value *property,
+      Value *receiver,
+      StoreStrict isStrict);
 
   StorePropertyInst *
   createStorePropertyInst(Value *storedValue, Value *object, Value *property);
@@ -419,18 +452,17 @@ class IRBuilder {
       Value *storedValue,
       LiteralString *property);
 
-  StoreOwnPropertyInst *createStoreOwnPropertyInst(
+  DefineOwnPropertyInst *createDefineOwnPropertyInst(
       Value *storedValue,
       Value *object,
       Value *property,
       PropEnumerable isEnumerable);
-  StoreNewOwnPropertyInst *createStoreNewOwnPropertyInst(
+  DefineNewOwnPropertyInst *createDefineNewOwnPropertyInst(
       Value *storedValue,
       Value *object,
-      Literal *property,
-      PropEnumerable isEnumerable);
+      Literal *property);
 
-  StoreGetterSetterInst *createStoreGetterSetterInst(
+  DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
       Value *object,
@@ -471,6 +503,10 @@ class IRBuilder {
       const AllocObjectLiteralInst::ObjectPropertyMap &propMap = {},
       Value *parentObject = nullptr);
 
+  AllocTypedObjectInst *createAllocTypedObjectInst(
+      const AllocTypedObjectInst::ObjectPropertyMap &propMap,
+      Value *parentObject);
+
   AllocFastArrayInst *createAllocFastArrayInst(LiteralNumber *sizeHint);
 
   AllocArrayInst *createAllocArrayInst(
@@ -494,11 +530,15 @@ class IRBuilder {
 
   ThrowIfInst *createThrowIfInst(Value *checkedValue, Type invalidTypes);
 
+  ThrowIfThisInitializedInst *createThrowIfThisInitializedInst(
+      Value *subclassCheckedThis);
+
   HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
   TypeOfInst *createTypeOfInst(Value *input);
+  TypeOfIsInst *createTypeOfIsInst(Value *input, LiteralTypeOfIsTypes *types);
 
   UnaryOperatorInst *createUnaryOperatorInst(
       Value *value,
@@ -555,10 +595,8 @@ class IRBuilder {
       BasicBlock *nextBlock);
 
   CreateGeneratorInst *createCreateGeneratorInst(
-      Instruction *scope,
+      BaseScopeInst *scope,
       NormalFunction *innerFn);
-
-  StartGeneratorInst *createStartGeneratorInst();
 
   ResumeGeneratorInst *createResumeGeneratorInst(AllocStackInst *isReturn);
 
@@ -569,7 +607,7 @@ class IRBuilder {
   HBCResolveParentEnvironmentInst *createHBCResolveParentEnvironmentInst(
       VariableScope *scope,
       LiteralNumber *numLevels,
-      JSDynamicParam *parentScopeParam);
+      JSSpecialParam *parentScopeParam);
 
   SwitchImmInst *createSwitchImmInst(
       Value *input,
@@ -585,7 +623,7 @@ class IRBuilder {
 
   HBCCreateFunctionEnvironmentInst *createHBCCreateFunctionEnvironmentInst(
       VariableScope *scope,
-      JSDynamicParam *parentScopeParam);
+      JSSpecialParam *parentScopeParam);
 
   LIRGetThisNSInst *createLIRGetThisNSInst();
 
@@ -630,6 +668,11 @@ class IRBuilder {
       ValueKind kind,
       BasicBlock *trueBlock,
       BasicBlock *falseBlock);
+  HBCCmpBrTypeOfIsInst *createHBCCmpBrTypeOfIsInst(
+      Value *arg,
+      LiteralTypeOfIsTypes *types,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock);
 
   IteratorBeginInst *createIteratorBeginInst(AllocStackInst *sourceOrNext);
 
@@ -640,6 +683,11 @@ class IRBuilder {
   IteratorCloseInst *createIteratorCloseInst(
       Value *iterator,
       bool ignoreInnerException);
+
+  CacheNewObjectInst *createCacheNewObjectInst(
+      Value *thisParameter,
+      Value *newTarget,
+      llvh::ArrayRef<LiteralString *> keys);
 
   UnreachableInst *createUnreachableInst();
 
@@ -709,6 +757,8 @@ class IRBuilder {
       Value *capturedNewTarget,
       Variable *capturedArguments,
       Variable *homeObject,
+      Variable *classCtxConstructor,
+      Variable *classCtxInitFuncVar,
       VariableScope *parentVarScope);
 
   EvalCompilationDataInst *createEvalCompilationDataInst(
@@ -717,6 +767,8 @@ class IRBuilder {
       Value *capturedNewTarget,
       Variable *capturedArguments,
       Variable *homeObject,
+      Variable *classCtxConstructor,
+      Variable *classCtxInitFuncVar,
       VariableScope *funcVarScope);
 
   /// This is an RAII object that saves and restores the source location of the

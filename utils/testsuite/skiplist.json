@@ -5,14 +5,10 @@
         "test262/test/built-ins/Function/prototype/toString/",
         "test262/test/language/block-scope/",
         "test262/test/language/expressions/async-generator/",
-        "test262/test/language/expressions/class/",
         "test262/test/language/expressions/dynamic-import/",
         "test262/test/language/expressions/import.meta/",
-        "test262/test/language/expressions/new.target/",
-        "test262/test/language/expressions/super/",
         "test262/test/language/module-code/",
         "test262/test/language/statements/async-generator/",
-        "test262/test/language/statements/class/",
         "test262/test/language/statements/let/",
         "mjsunit/debug-",
         "mjsunit/es6/debug-",
@@ -24,12 +20,6 @@
     },
     {
       "paths": [
-        "test262/test/language/computed-property-names/"
-      ],
-      "comment": "Most tests failed due to class, we should remove it once we have better support of class."
-    },
-    {
-      "paths": [
         "test262/test/language/expressions/async-arrow-function/rest-params-trailing-comma-early-error.js",
         "test262/test/language/expressions/async-arrow-function/escaped-async.js"
       ],
@@ -37,7 +27,13 @@
     },
     {
       "paths": [
-        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/fractionalSecondDigits.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-short-en.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/offset-timezone-correct.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year.js",
+        "test262/test/intl402/DateTimeFormat/prototype/formatToParts/related-year-zh.js",
         "test262/test/intl402/DateTimeFormat/prototype/formatRange/",
         "test262/test/intl402/DateTimeFormat/prototype/formatRangeToParts/",
         "test262/test/intl402/NumberFormat/prototype/formatToParts/"
@@ -52,6 +48,12 @@
         "mjsunit/math-floor-part3.js"
       ],
       "comment": "Timeout on Sandcastle, but can't reproduce on local testing. TODO: figure out why (T196875150)."
+    },
+    {
+      "paths": [
+        "mjsunit/regress/regress-crbug-451770.js"
+      ],
+      "comment": "Temporarily turn off in classes stack."
     },
     {
       "paths": [
@@ -70,11 +72,197 @@
     {
       "paths": [
         "test262/test/language/statements/debugger/statement.js",
-        "test262/test/language/expressions/arrow-function/throw-new.js",
-        "test262/test/language/expressions/object/method-definition/generator-invoke-ctor.js",
-        "test262/test/language/expressions/object/method-definition/name-invoke-ctor.js"
+        "mjsunit/es6/math-log1p.js"
+
       ],
       "comment": "These tests fail with shermes for now."
+    },
+    {
+      "paths": [
+        "test262/test/language/expressions/arrow-function/throw-new.js",
+        "test262/test/language/expressions/object/method-definition/generator-invoke-ctor.js",
+        "test262/test/language/expressions/object/method-definition/name-invoke-ctor.js",
+        "mjsunit/es6/arrow-functions.js",
+        "mjsunit/regress/regress-inline-arrow-as-construct.js",
+        "mjsunit/es6/generators-objects.js"
+      ],
+      "comment": "T213438202, native backend does not throw as expected on invalid constructor."
+    },
+    {
+      "paths": [
+        "test262/test/language/expressions/class/elements/syntax/valid/grammar-field-classelementname-initializer.js",
+        "test262/test/language/expressions/class/elements/syntax/valid/grammar-field-classelementname-initializer-alt.js",
+        "test262/test/language/expressions/class/elements/syntax/valid/grammar-field-accessor.js",
+        "test262/test/language/expressions/class/elements/syntax/valid/grammar-field-identifier-alt.js",
+        "test262/test/language/expressions/class/elements/syntax/valid/grammar-field-identifier.js",
+        "test262/test/language/expressions/class/elements/nested-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/same-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/new-sc-line-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/new-no-sc-line-method-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/equality-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/wrapped-in-sc-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/wrapped-in-sc-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/nested-comp-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/nested-static-string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/comp-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/fields-computed-name-static-propname-constructor.js",
+        "test262/test/language/computed-property-names/object/accessor/getter-super.js",
+        "test262/test/language/computed-property-names/object/accessor/setter-super.js",
+        "test262/test/language/expressions/class/elements/nested-string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/multiple-definitions-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/after-same-line-static-gen-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/after-same-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/multiple-stacked-definitions-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/same-line-method-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/new-sc-line-method-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/multiple-definitions-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/syntax/valid/grammar-field-classelementname-initializer.js",
+        "test262/test/language/statements/class/elements/syntax/valid/grammar-field-classelementname-initializer-alt.js",
+        "test262/test/language/expressions/class/elements/new-no-sc-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/syntax/valid/grammar-field-accessor.js",
+        "test262/test/language/expressions/class/elements/same-line-gen-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/syntax/valid/grammar-field-identifier-alt.js",
+        "test262/test/language/statements/class/elements/syntax/valid/grammar-field-identifier.js",
+        "test262/test/language/statements/class/elements/nested-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/static-method-non-configurable-err.js",
+        "test262/test/language/expressions/class/elements/after-same-line-gen-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/ternary-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/static-comp-name-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/new-sc-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/after-same-line-method-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/super-access-from-arrow-func-on-field.js",
+        "test262/test/language/expressions/class/elements/nested-static-comp-name-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/new-sc-line-gen-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/equality-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/nested-string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/multiple-definitions-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/after-same-line-static-gen-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/after-same-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/multiple-stacked-definitions-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/same-line-method-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/new-sc-line-method-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/multiple-definitions-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/new-no-sc-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/same-line-gen-rs-field-identifier.js",
+        "test262/test/language/statements/class/static-method-gen-non-configurable-err.js",
+        "test262/test/language/statements/class/async-meth-escaped-async.js",
+        "test262/test/language/expressions/class/elements/same-line-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/nested-arrow-fnc-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/regular-definitions-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/after-same-line-static-method-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/literal-name-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/arrow-fnc-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/after-same-line-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/typeof-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/after-same-line-gen-rs-field-identifier.js",
+        "test262/test/language/expressions/class/decorator/syntax/valid/decorator-call-expr-identifier-reference-yield.js",
+        "test262/test/language/expressions/class/decorator/syntax/valid/decorator-member-expr-decorator-member-expr.js",
+        "test262/test/language/expressions/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference.js",
+        "test262/test/language/expressions/class/decorator/syntax/valid/decorator-member-expr-identifier-reference.js",
+        "test262/test/language/expressions/class/decorator/syntax/valid/decorator-member-expr-identifier-reference-yield.js",
+        "test262/test/language/expressions/class/decorator/syntax/valid/decorator-call-expr-identifier-reference.js",
+        "test262/test/language/expressions/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference-yield.js",
+        "test262/test/language/expressions/class/decorator/syntax/class-valid/decorator-member-expr-private-identifier.js",
+        "test262/test/language/statements/class/elements/ternary-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/static-comp-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/new-sc-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/after-same-line-method-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/nested-static-literal-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/definition/setters-non-configurable-err.js",
+        "test262/test/language/statements/class/definition/getters-non-configurable-err.js",
+        "test262/test/language/expressions/class/elements/regular-definitions-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/static-literal-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/after-same-line-static-method-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/multiple-stacked-definitions-rs-field-identifier.js",
+        "test262/test/language/statements/class/syntax/escaped-static.js",
+        "test262/test/language/statements/class/syntax/class-body-method-definition-super-property.js",
+        "test262/test/language/expressions/class/elements/same-line-method-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/super-access-from-arrow-func-on-field.js",
+        "test262/test/language/statements/class/elements/nested-static-comp-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/new-sc-line-gen-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/same-line-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/nested-arrow-fnc-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/regular-definitions-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/after-same-line-static-method-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/arrow-fnc-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/nested-ternary-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/nested-typeof-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/decorator-call-expr-identifier-reference-yield.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/class-element-decorator-parenthesized-expr-identifier-reference.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/class-element-decorator-member-expr-identifier-reference.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/decorator-member-expr-decorator-member-expr.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/decorator-member-expr-identifier-reference.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/class-element-decorator-member-expr-decorator-member-expr.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/decorator-member-expr-identifier-reference-yield.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/decorator-call-expr-identifier-reference.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/decorator-parenthesized-expr-identifier-reference-yield.js",
+        "test262/test/language/statements/class/decorator/syntax/valid/class-element-decorator-call-expr-identifier-reference.js",
+        "test262/test/language/statements/class/decorator/syntax/class-valid/decorator-member-expr-private-identifier.js",
+        "test262/test/language/expressions/class/elements/new-sc-line-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/new-no-sc-line-method-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/static-string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/after-same-line-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/after-same-line-static-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/typeof-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/wrapped-in-sc-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/wrapped-in-sc-rs-field-identifier.js",
+        "test262/test/language/expressions/class/elements/nested-comp-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/nested-static-literal-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/nested-static-string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/comp-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/regular-definitions-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/static-literal-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/after-same-line-static-method-rs-field-identifier-initializer.js",
+        "test262/test/language/statements/class/elements/multiple-stacked-definitions-rs-field-identifier.js",
+        "test262/test/language/statements/class/elements/fields-computed-name-static-propname-prototype.js",
+        "test262/test/language/statements/class/elements/nested-ternary-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/nested-typeof-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/static-string-literal-name-init-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/after-same-line-static-gen-rs-field-identifier-initializer.js",
+        "test262/test/language/expressions/class/elements/static-field-init-with-this.js",
+        "test262/test/language/expressions/class/elements/derived-cls-direct-eval-contains-superproperty-2.js",
+        "test262/test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-1.js",
+        "test262/test/language/statements/class/elements/public-class-field-initialization-on-super-class-with-setter.js",
+        "test262/test/language/statements/class/elements/static-field-init-with-this.js",
+        "test262/test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-2.js",
+        "test262/test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-1.js",
+        "test262/test/language/expressions/object/fn-name-class.js",
+        "test262/test/language/expressions/class/elements/derived-cls-direct-eval-contains-superproperty-1.js",
+        "test262/test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-2.js",
+        "test262/test/language/expressions/class/elements/direct-eval-err-contains-arguments.js",
+        "test262/test/language/statements/class/subclass/builtin-objects/ArrayBuffer/regular-subclassing.js",
+        "test262/test/language/statements/class/definition/fn-name-accessor-get.js",
+        "test262/test/language/statements/class/definition/fn-name-gen-method.js",
+        "test262/test/language/statements/class/definition/fn-name-accessor-set.js",
+        "test262/test/language/statements/class/definition/fn-name-method.js",
+        "test262/test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js",
+        "test262/test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-1.js",
+        "test262/test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-2.js",
+        "test262/test/language/expressions/class/elements/nested-direct-eval-err-contains-arguments.js",
+        "test262/test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-1.js",
+        "test262/test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/direct-eval-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js",
+        "test262/test/language/statements/class/elements/nested-direct-eval-err-contains-arguments.js",
+        "test262/test/language/statements/class/elements/nested-derived-cls-direct-eval-contains-superproperty-1.js",
+        "test262/test/language/statements/class/elements/arrow-body-direct-eval-err-contains-arguments.js"
+      ],
+      "comment": "Classes failures- unicode escaping in identifiers, computed function names, SpeciesConstructor & direct eval."
+    },
+    {
+      "paths": [
+        "test/annexB/built-ins/RegExp/legacy-accessors/index/this-subclass-constructor.js",
+        "test/annexB/built-ins/RegExp/legacy-accessors/input/this-subclass-constructor.js",
+        "test/annexB/built-ins/RegExp/legacy-accessors/lastMatch/this-subclass-constructor.js",
+        "test/annexB/built-ins/RegExp/legacy-accessors/lastParen/this-subclass-constructor.js",
+        "test/annexB/built-ins/RegExp/legacy-accessors/leftContext/this-subclass-constructor.js",
+        "test/annexB/built-ins/RegExp/legacy-accessors/rightContext/this-subclass-constructor.js"
+      ],
+      "comment": "Noncompliant GetLegacyRegExpStaticProperty (T209498741)"
     }
   ],
   "skip_list": [
@@ -203,13 +391,6 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/arrow-function/scope-paramsbody-var-open.js",
-        "test262/test/language/expressions/object/scope-setter-paramsbody-var-open.js"
-      ],
-      "comment": "Failed in lazy mode, remove them once fix gets landed."
-    },
-    {
-      "paths": [
         "mjsunit/es6/math-cbrt.js"
       ],
       "comment": "The native ::cbrt() function gives different results with different compilers."
@@ -222,8 +403,6 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/arrow-function/dflt-params-ref-later.js",
-        "test262/test/language/expressions/arrow-function/dflt-params-ref-self.js",
         "test262/test/language/expressions/arrow-function/eval-var-scope-syntax-err.js"
       ],
       "comment": [
@@ -243,12 +422,6 @@
         "mjsunit/es6/block-let-declaration-sloppy.js"
       ],
       "comment": "These are rest failing tests in mjsunit that we may support soon."
-    },
-    {
-      "paths": [
-        "test262/test/language/rest-parameters/with-new-target.js"
-      ],
-      "comment": "This test fails for now since we don't have good class support"
     },
     {
       "paths": [
@@ -344,12 +517,9 @@
         "test262/test/built-ins/Promise/race/ctx-ctor-throws.js",
         "test262/test/built-ins/Promise/race/ctx-non-ctor.js",
         "test262/test/built-ins/Promise/race/ctx-non-object.js",
-        "test262/test/built-ins/Promise/race/invoke-resolve-error-close.js",
         "test262/test/built-ins/Promise/race/invoke-resolve-get-once-multiple-calls.js",
         "test262/test/built-ins/Promise/race/invoke-resolve-get-once-no-calls.js",
         "test262/test/built-ins/Promise/race/invoke-resolve-return.js",
-        "test262/test/built-ins/Promise/race/invoke-then-error-close.js",
-        "test262/test/built-ins/Promise/race/invoke-then-get-error-close.js",
         "test262/test/built-ins/Promise/race/name.js",
         "test262/test/built-ins/Promise/race/not-a-constructor.js",
         "test262/test/built-ins/Promise/race/prop-desc.js",
@@ -386,7 +556,18 @@
         "test262/test/built-ins/Promise/withResolvers/ctx-ctor.js",
         "test262/test/built-ins/Promise/withResolvers/promise.js",
         "test262/test/built-ins/Promise/withResolvers/resolvers.js",
-        "test262/test/built-ins/Promise/withResolvers/result.js"
+        "test262/test/built-ins/Promise/withResolvers/result.js",
+        "test/built-ins/Promise/all/ctx-ctor.js",
+        "test/built-ins/Promise/allSettled/ctx-ctor.js",
+        "test/built-ins/Promise/any/ctx-ctor.js",
+        "test/built-ins/Promise/prototype/then/capability-executor-called-twice.js",
+        "test/built-ins/Promise/prototype/then/capability-executor-not-callable.js",
+        "test/built-ins/Promise/race/ctx-ctor.js",
+        "test/built-ins/Promise/reject/ctx-ctor.js",
+        "test/built-ins/Promise/resolve/ctx-ctor.js",
+        "test/built-ins/Promise/race/invoke-resolve-error-close.js",
+        "test/built-ins/Promise/race/invoke-then-error-close.js",
+        "test/built-ins/Promise/race/invoke-then-get-error-close.js"
       ],
       "comment": "We support Promise but not every features of it."
     },
@@ -400,7 +581,6 @@
     {
       "paths": [
         "test262/test/language/expressions/object/method-definition/async-meth-escaped-async.js",
-        "test262/test/language/expressions/object/method-definition/early-errors-object-method-async-lineterminator.js",
         "test262/test/language/expressions/object/method-definition/escaped-get-e.js",
         "test262/test/language/expressions/object/method-definition/escaped-get-g.js",
         "test262/test/language/expressions/object/method-definition/escaped-get-t.js",
@@ -411,13 +591,8 @@
         "test262/test/language/expressions/object/method-definition/escaped-set.js",
         "test262/test/language/expressions/object/method-definition/fn-name-fn.js",
         "test262/test/language/expressions/object/method-definition/fn-name-gen.js",
-        "test262/test/language/expressions/object/method-definition/gen-meth-dflt-params-ref-later.js",
-        "test262/test/language/expressions/object/method-definition/gen-meth-dflt-params-ref-self.js",
         "test262/test/language/expressions/object/method-definition/gen-meth-eval-var-scope-syntax-err.js",
         "test262/test/language/expressions/object/method-definition/generator-name-prop-symbol.js",
-        "test262/test/language/expressions/object/method-definition/generator-super-prop-body.js",
-        "test262/test/language/expressions/object/method-definition/meth-dflt-params-ref-later.js",
-        "test262/test/language/expressions/object/method-definition/meth-dflt-params-ref-self.js",
         "test262/test/language/expressions/object/method-definition/meth-eval-var-scope-syntax-err.js",
         "test262/test/language/expressions/object/method-definition/name-name-prop-symbol.js"
       ],
@@ -492,10 +667,6 @@
     "mjsunit/regress/regress-2989.js",
     "mjsunit/regress/regress-crbug-157520.js",
     "test262/test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js",
-    "test262/test/language/expressions/arrow-function/lexical-super-call-from-within-constructor.js",
-    "test262/test/language/expressions/arrow-function/lexical-super-property-from-within-constructor.js",
-    "test262/test/language/expressions/arrow-function/lexical-super-property.js",
-    "test262/test/language/expressions/arrow-function/lexical-supercall-from-immediately-invoked-arrow.js",
     "test262/test/language/arguments-object/10.6-10-c-ii-1.js",
     "test262/test/language/arguments-object/S10.1.6_A1_T3.js",
     "test262/test/language/arguments-object/10.6-10-c-ii-2.js",
@@ -532,9 +703,7 @@
     "test262/test/built-ins/Object/seal/seal-asyncgeneratorfunction.js",
     "test262/test/language/comments/hashbang/function-constructor.js",
     "test262/test/language/expressions/optional-chaining/member-expression.js",
-    "test262/test/language/statements/for/head-init-async-of.js",
     "test262/test/language/statements/switch/scope-lex-async-generator.js",
-    "test262/test/language/statements/switch/scope-lex-class.js",
     "test262/test/language/expressions/function/named-strict-error-reassign-fn-name-in-body.js",
     "test262/test/language/expressions/function/named-strict-error-reassign-fn-name-in-body-in-arrow.js",
     "test262/test/language/expressions/generators/named-strict-error-reassign-fn-name-in-body.js",
@@ -546,28 +715,6 @@
     "test262/test/language/identifier-resolution/assign-to-global-undefined.js",
     "test262/test/language/statements/with/let-block-with-newline.js",
     "test262/test/language/statements/with/let-identifier-with-newline.js",
-    "test262/test/language/statements/for-of/head-const-bound-names-fordecl-tdz.js",
-    "test262/test/language/statements/for-of/head-const-fresh-binding-per-iteration.js",
-    "test262/test/language/statements/for-of/scope-body-lex-boundary.js",
-    "test262/test/language/statements/for-of/scope-head-lex-open.js",
-    "test262/test/language/statements/for-of/scope-head-lex-close.js",
-    "test262/test/language/statements/for-of/scope-body-lex-open.js",
-    "test262/test/language/statements/const/function-local-closure-get-before-initialization.js",
-    "test262/test/language/statements/const/global-use-before-initialization-in-prior-statement.js",
-    "test262/test/language/statements/const/block-local-use-before-initialization-in-prior-statement.js",
-    "test262/test/language/statements/const/function-local-use-before-initialization-in-declaration-statement.js",
-    "test262/test/language/statements/const/block-local-closure-get-before-initialization.js",
-    "test262/test/language/statements/const/global-use-before-initialization-in-declaration-statement.js",
-    "test262/test/language/statements/const/function-local-use-before-initialization-in-prior-statement.js",
-    "test262/test/language/statements/const/block-local-use-before-initialization-in-declaration-statement.js",
-    "test262/test/language/statements/const/global-closure-get-before-initialization.js",
-    "test262/test/language/statements/for-in/head-const-bound-names-fordecl-tdz.js",
-    "test262/test/language/statements/for-in/scope-body-lex-boundary.js",
-    "test262/test/language/statements/for-in/scope-head-lex-open.js",
-    "test262/test/language/statements/for-in/scope-head-lex-close.js",
-    "test262/test/language/statements/for-in/scope-body-lex-open.js",
-    "test262/test/language/statements/for/scope-body-lex-boundary.js",
-    "test262/test/language/statements/for/scope-body-lex-open.js",
     "mjsunit/arguments.js",
     "mjsunit/es6/array-copywithin.js",
     "mjsunit/es6/math-expm1.js",
@@ -652,10 +799,6 @@
     "mjsunit/es6/regexp-tostring.js",
     "test262/test/language/global-code/script-decl-lex-restricted-global.js",
     "test262/test/language/global-code/decl-lex-restricted-global.js",
-    "test262/test/language/statements/for-in/head-let-bound-names-fordecl-tdz.js",
-    "test262/test/language/statements/for-in/head-let-fresh-binding-per-iteration.js",
-    "test262/test/language/statements/for-of/head-let-bound-names-fordecl-tdz.js",
-    "test262/test/language/statements/for-of/head-let-fresh-binding-per-iteration.js",
     "test262/test/language/function-code/block-decl-strict.js",
     "test262/test/language/expressions/generators/scope-name-var-open-non-strict.js",
     "test262/test/language/statements/generators/scope-name-var-open-non-strict.js",
@@ -757,70 +900,18 @@
     "mjsunit/es6/classes-super.js",
     "mjsunit/es6/computed-property-names-classes.js",
     "mjsunit/es6/computed-property-names-super.js",
-    "test262/test/built-ins/Array/prototype/concat/Array.prototype.concat_non-array.js",
-    "test262/test/built-ins/Map/valid-keys.js",
-    "test262/test/built-ins/Set/valid-values.js",
-    "test262/test/built-ins/RegExp/named-groups/groups-object-subclass-sans.js",
-    "test262/test/built-ins/RegExp/named-groups/groups-object-subclass.js",
-    "test262/test/language/computed-property-names/class/",
-    "test262/test/language/computed-property-names/to-name-side-effects/numbers-class.js",
+    "test262/test/language/computed-property-names/class/static/generator-prototype.js",
+    "test262/test/language/computed-property-names/class/static/getter-prototype.js",
+    "test262/test/language/computed-property-names/class/static/method-prototype.js",
+    "test262/test/language/computed-property-names/class/static/setter-prototype.js",
     "test262/test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order.js",
     "test262/test/language/expressions/assignment/target-super-identifier-reference-null.js",
     "test262/test/language/expressions/assignment/target-super-computed-reference-null.js",
-    "test262/test/language/expressions/object/concise-generator.js",
-    "test262/test/language/expressions/object/method.js",
-    "test262/test/language/expressions/optional-chaining/super-property-optional-call.js",
-    "test262/test/language/expressions/optional-chaining/call-expression.js",
     "test262/test/language/expressions/object/getter-super-prop.js",
     "test262/test/language/expressions/object/setter-super-prop.js",
-    "test262/test/language/global-code/decl-lex-deletion.js",
     "test262/test/language/global-code/script-decl-var-collision.js",
-    "test262/test/language/global-code/decl-lex.js",
     "test262/test/language/global-code/script-decl-lex-lex.js",
     "test262/test/language/expressions/object/identifier-shorthand-let-invalid-strict-mode.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-args-trailing-comma-undefined.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-decl-gen-meth-static-args-trailing-comma-undefined.js",
-    "test262/test/language/arguments-object/cls-decl-meth-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-decl-meth-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-decl-meth-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-decl-meth-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-decl-meth-args-trailing-comma-undefined.js",
-    "test262/test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-decl-meth-static-args-trailing-comma-undefined.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-args-trailing-comma-undefined.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-expr-gen-meth-static-args-trailing-comma-undefined.js",
-    "test262/test/language/arguments-object/cls-expr-meth-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-expr-meth-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-expr-meth-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-expr-meth-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-expr-meth-args-trailing-comma-undefined.js",
-    "test262/test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-multiple.js",
-    "test262/test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-null.js",
-    "test262/test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-single-args.js",
-    "test262/test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-spread-operator.js",
-    "test262/test/language/arguments-object/cls-expr-meth-static-args-trailing-comma-undefined.js",
-    "test262/test/language/expressions/logical-assignment/lgcl-or-assignment-operator-namedevaluation-class-expression.js",
-    "test262/test/language/expressions/logical-assignment/lgcl-and-assignment-operator-namedevaluation-class-expression.js",
-    "test262/test/language/expressions/logical-assignment/lgcl-nullish-assignment-operator-namedevaluation-class-expression.js",
     "test262/test/built-ins/Function/prototype/Symbol.hasInstance/this-val-poisoned-prototype.js",
     "mjsunit/es6/spread-call-new-class.js",
     "mjsunit/es6/spread-call-super-property.js",
@@ -1066,14 +1157,6 @@
     "test262/test/built-ins/Object/seal/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/seal/proxy-with-defineProperty-handler.js",
     "test262/test/built-ins/Array/prototype/concat/is-concat-spreadable-get-order.js",
-    "test262/test/language/expressions/function/dflt-params-ref-later.js",
-    "test262/test/language/expressions/function/dflt-params-ref-self.js",
-    "test262/test/language/expressions/generators/dflt-params-ref-later.js",
-    "test262/test/language/expressions/generators/dflt-params-ref-self.js",
-    "test262/test/language/statements/function/dflt-params-ref-later.js",
-    "test262/test/language/statements/function/dflt-params-ref-self.js",
-    "test262/test/language/statements/generators/dflt-params-ref-later.js",
-    "test262/test/language/statements/generators/dflt-params-ref-self.js",
     "mjsunit/regress/regress-crbug-482998.js",
     "mjsunit/regress/regress-581.js",
     "mjsunit/regress/regress-685.js",
@@ -1089,8 +1172,6 @@
     "test262/test/intl402/BigInt/prototype/toLocaleString/returns-same-results-as-NumberFormat.js",
     "test262/test/intl402/BigInt/prototype/toLocaleString/throws-same-exceptions-as-NumberFormat.js",
     "test262/test/intl402/Collator/subclassing.js",
-    "test262/test/intl402/Collator/unicode-ext-value-collation.js",
-    "test262/test/intl402/Collator/ignore-invalid-unicode-ext-values.js",
     "test262/test/intl402/Collator/proto-from-ctor-realm.js",
     "test262/test/intl402/Collator/prototype/resolvedOptions/order.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/special_casing_Lithuanian.js",
@@ -1158,10 +1239,6 @@
     "test262/test/intl402/NumberFormat/throws-for-maximumFractionDigits-over-limit.js",
     "test262/test/language/identifiers/part-unicode-5.2.0-escaped.js",
     "test262/test/language/identifiers/part-unicode-5.2.0.js",
-    "test262/test/language/identifiers/part-unicode-15.0.0-escaped.js",
-    "test262/test/language/identifiers/part-unicode-15.0.0.js",
-    "test262/test/language/identifiers/start-unicode-15.0.0.js",
-    "test262/test/language/identifiers/start-unicode-15.0.0-escaped.js",
     "test262/test/language/literals/boolean/true-with-unicode.js",
     "test262/test/language/literals/null/null-with-unicode.js",
     "test262/test/language/literals/boolean/false-with-unicode.js",
@@ -1256,10 +1333,8 @@
     "test262/test/built-ins/RegExp/prototype/Symbol.replace/get-flags-err.js",
     "test262/test/built-ins/RegExp/prototype/Symbol.replace/get-unicode-error.js",
     "test262/test/built-ins/BigInt/constructor-coercion.js",
-    "test262/test/built-ins/RegExp/unicode_full_case_folding.js",
     "test262/test/built-ins/Array/length/define-own-prop-length-error.js",
     "test262/test/built-ins/Object/prototype/toString/symbol-tag-promise-builtin.js",
-    "test262/test/built-ins/TypedArray/prototype/set/array-arg-targetbuffer-detached-on-get-src-value-no-throw.js",
     "mjsunit/regress/regress-1132.js",
     "mjsunit/regress/regress-446389.js",
     "mjsunit/concurrent-initial-prototype-change.js",
@@ -1770,9 +1845,29 @@
         "flow/JSX/invalid_unpaired_gt.js",
         "flow/JSX/invalid_unpaired_rcurly.js",
         "types/render_types/renders_maybe.js",
-        "flow/dynamic_import/migrated_0005.js"
+        "flow/dynamic_import/migrated_0005.js",
+        "flow/types/tuples/variance.js",
+        "flow/types/tuples/labeled.js",
+        "flow/match/expression-no-final-case-separator.js",
+        "flow/match/statement.js"
       ],
       "comment": "Failing Flow tests"
+    },
+    {
+      "paths": [
+        "flow/types/type_params/class_const_params.js",
+        "flow/types/type_params/function_const_params.js"
+      ],
+      "comment": "Failing Flow tests - Type parameter tests"
+    },
+    {
+      "paths": [
+        "flow/bigint/valid-hex.js",
+        "flow/bigint/valid-octal-new.js",
+        "flow/bigint/numeric-separators.js",
+        "flow/bigint/valid-binary.js"
+      ],
+      "comment": "Failing Flow tests - BigInt"
     }
   ],
   "lazy_skip_list": [
@@ -2299,7 +2394,8 @@
     },
     {
       "paths": [
-        "flow/for_of_loops/for_async_of_escaped.js"
+        "flow/for_of_loops/for_async_of_escaped.js",
+        "test/language/expressions/new.target/escaped-target.js"
       ],
       "comment": "Escaped identifiers"
     },
@@ -2317,11 +2413,14 @@
     },
     {
       "paths": [
+        "test262/test/built-ins/Function/internals/Call/class-ctor.js",
+        "test262/test/language/statements/class/definition/this-access-restriction-2.js",
+        "test262/test/language/statements/class/subclass/default-constructor-2.js",
         "test262/test/language/statements/generators/invoke-as-constructor.js",
         "test262/test/language/expressions/generators/invoke-as-constructor.js",
         "test262/test/built-ins/AsyncFunction/instance-construct-throws.js"
       ],
-      "comment": "Constuctor calls on generator functions. No calls are currently checked in SH."
+      "comment": "No calls are currently checked in SH."
     },
     {
       "paths": [
@@ -3882,7 +3981,11 @@
         "test262/test/language/statements/with/unscopables-prop-get-err.js",
         "test262/test/staging/Temporal/UserCalendar/old/calendar-non-trivial-mergefields.js",
         "test262/test/staging/Temporal/UserCalendar/old/calendar-extra-fields.js",
-        "test262/test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js"
+        "test262/test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js",
+        "test262/test/language/expressions/super/prop-expr-obj-val-from-eval.js",
+        "test262/test/language/expressions/super/prop-dot-cls-val-from-eval.js",
+        "test262/test/language/expressions/super/prop-dot-obj-val-from-eval.js",
+        "test262/test/language/expressions/super/prop-expr-cls-val-from-eval.js"
       ],
       "comment": "These tests require `eval` or `with`."
     }
@@ -3932,16 +4035,12 @@
     "Symbol.unscopables",
     "async-iteration",
     "caller",
-    "class",
-    "class-fields-public",
     "class-fields-private",
     "class-fields-private-in",
-    "class-static-fields-public",
     "class-static-fields-private",
     "class-static-methods-private",
     "class-static-block",
     "class-methods-private",
-    "computed-property-names",
     "destructuring-binding",
     "dynamic-import",
     "error-cause",
@@ -3981,5 +4080,29 @@
   ],
   "intl_tests": [
     "test262/test/intl402"
-  ]
+  ],
+  "platform_skip_list": {
+    "linux": [
+      {
+        "paths": [
+          "test262/test/built-ins/String/prototype/toLocaleLowerCase/",
+          "test262/test/built-ins/String/prototype/toLocaleUpperCase/",
+          "test262/test/intl402/Number/prototype/toLocaleString/",
+          "test262/test/intl402/NumberFormat/",
+          "test262/test/intl402/String/prototype/toLocaleLowerCase/",
+          "test262/test/intl402/String/prototype/toLocaleUpperCase/"
+        ],
+        "comment": "Intl features that are not yet supported on Linux."
+      }
+    ],
+    "darwin": [
+      {
+        "paths": [
+          "test262/test/intl402/Collator/ignore-invalid-unicode-ext-values.js",
+          "test262/test/intl402/Collator/unicode-ext-value-collation.js"
+        ],
+        "comment": "Intl implementation issues on Apple."
+      }
+    ]
+  }
 }

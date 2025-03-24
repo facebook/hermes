@@ -25,26 +25,22 @@ function outer(a, b) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): string
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "outer": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %outer(): functionCode
-// CHECK-NEXT:       StorePropertyStrictInst %2: object, globalObject: object, "outer": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %outer(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %1: object, globalObject: object, "outer": string
 // CHECK-NEXT:       ReturnInst "use strict": string
 // CHECK-NEXT:function_end
 
 // CHECK:function outer(a: any, b: any): string|number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %f3(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:string|number) %1: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 10: number
-// CHECK-NEXT:  %3 = BinaryAddInst (:string|number) 1734: number, %2: string|number
-// CHECK-NEXT:  %4 = CallInst (:string|number) %1: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 100: number
-// CHECK-NEXT:  %5 = BinaryAddInst (:string|number) %3: string|number, %4: string|number
-// CHECK-NEXT:       ReturnInst %5: string|number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %f3(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:string|number) %0: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 10: number
+// CHECK-NEXT:  %2 = BinaryAddInst (:string|number) 1734: number, %1: string|number
+// CHECK-NEXT:  %3 = CallInst (:string|number) %0: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 100: number
+// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %2: string|number, %3: string|number
+// CHECK-NEXT:       ReturnInst %4: string|number
 // CHECK-NEXT:function_end
 
 // CHECK:function f3(x: number): string|number [allCallsitesKnownInStrictMode]

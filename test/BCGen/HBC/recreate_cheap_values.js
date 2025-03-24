@@ -19,42 +19,39 @@ function negzero(f) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg2 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "poszero": string
-// CHECK-NEXT:  $Reg1 = DeclareGlobalVarInst "negzero": string
-// CHECK-NEXT:  $Reg0 = CreateFunctionInst (:object) $Reg2, %poszero(): functionCode
-// CHECK-NEXT:  $Reg1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  $Reg0 = StorePropertyLooseInst $Reg0, $Reg1, "poszero": string
-// CHECK-NEXT:  $Reg2 = CreateFunctionInst (:object) $Reg2, %negzero(): functionCode
-// CHECK-NEXT:  $Reg2 = StorePropertyLooseInst $Reg2, $Reg1, "negzero": string
-// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
+// CHECK-NEXT:                 DeclareGlobalVarInst "poszero": string
+// CHECK-NEXT:                 DeclareGlobalVarInst "negzero": string
+// CHECK-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %poszero(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "poszero": string
+// CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %negzero(): functionCode
+// CHECK-NEXT:                 StorePropertyLooseInst {r0} %6: object, {r1} %2: object, "negzero": string
+// CHECK-NEXT:                 ReturnInst {np0} %3: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function poszero(f: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %f: any
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg0
-// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0, $Reg2, $Reg2
-// CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
+// CHECK-NEXT:  {n0}      %0 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r0}      %2 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:  {r3}      %3 = ImplicitMovInst (:undefined) {np0} %1: undefined
+// CHECK-NEXT:  {r2}      %4 = ImplicitMovInst (:number) {n0} %0: number
+// CHECK-NEXT:  {r1}      %5 = ImplicitMovInst (:number) {n0} %0: number
+// CHECK-NEXT:  {r0}      %6 = HBCCallNInst (:any) {r0} %2: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %1: undefined, {n0} %0: number, {n0} %0: number
+// CHECK-NEXT:                 ReturnInst {r0} %6: any
 // CHECK-NEXT:function_end
 
 // CHECK:function negzero(f: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg1 = LoadParamInst (:any) %f: any
-// CHECK-NEXT:  $Reg0 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  $Reg2 = HBCLoadConstInst (:number) -0: number
-// CHECK-NEXT:  $Reg5 = ImplicitMovInst (:undefined) $Reg0
-// CHECK-NEXT:  $Reg4 = ImplicitMovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg3 = ImplicitMovInst (:number) $Reg2
-// CHECK-NEXT:  $Reg2 = HBCCallNInst (:any) $Reg1, empty: any, false: boolean, empty: any, undefined: undefined, $Reg0, $Reg2, $Reg2
-// CHECK-NEXT:  $Reg2 = ReturnInst $Reg2
+// CHECK-NEXT:  {n0}      %0 = HBCLoadConstInst (:number) -0: number
+// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r0}      %2 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:  {r3}      %3 = ImplicitMovInst (:undefined) {np0} %1: undefined
+// CHECK-NEXT:  {r2}      %4 = ImplicitMovInst (:number) {n0} %0: number
+// CHECK-NEXT:  {r1}      %5 = ImplicitMovInst (:number) {n0} %0: number
+// CHECK-NEXT:  {r0}      %6 = HBCCallNInst (:any) {r0} %2: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %1: undefined, {n0} %0: number, {n0} %0: number
+// CHECK-NEXT:                 ReturnInst {r0} %6: any
 // CHECK-NEXT:function_end

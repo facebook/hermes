@@ -8,20 +8,47 @@
 #include "hermes/BCGen/HBC/HBC.h"
 
 #include "BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/IRGen/IRGen.h"
+#include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Sema/SemResolve.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 
-#include "llvh/Support/Threading.h"
 #include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "hbc-backend"
 
 namespace hermes {
 namespace hbc {
+
+void fullOptimizationPipeline(Module &M) {
+  hermes::runFullOptimizationPasses(M);
+}
+
+std::pair<std::unique_ptr<BCProvider>, std::string> createBCProviderFromSrc(
+    std::unique_ptr<Buffer> buffer,
+    llvh::StringRef sourceURL,
+    llvh::StringRef sourceMap,
+    const CompileFlags &compileFlags,
+    llvh::StringRef topLevelFunctionName,
+    SourceErrorManager::DiagHandlerTy diagHandler,
+    void *diagContext,
+    const std::function<void(Module &)> &runOptimizationPasses,
+    const BytecodeGenerationOptions &defaultBytecodeGenerationOptions) {
+  return BCProviderFromSrc::create(
+      std::move(buffer),
+      sourceURL,
+      sourceMap,
+      compileFlags,
+      topLevelFunctionName,
+      diagHandler,
+      diagContext,
+      runOptimizationPasses,
+      defaultBytecodeGenerationOptions);
+}
 
 std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Module *M,
@@ -32,10 +59,16 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
   auto bm = std::make_unique<BytecodeModule>();
+  FileAndSourceMapIdCache debugIdCache{};
 
   bool success =
       BytecodeModuleGenerator{
-          *bm, M, options, sourceMapGen, std::move(baseBCProvider)}
+          *bm,
+          M,
+          debugIdCache,
+          options,
+          sourceMapGen,
+          std::move(baseBCProvider)}
           .generate(entryPoint, segment);
 
   return success ? std::move(bm) : nullptr;
@@ -46,8 +79,9 @@ bool generateBytecodeFunctionLazy(
     Module *M,
     Function *lazyFunc,
     uint32_t lazyFuncID,
+    FileAndSourceMapIdCache &debugIdCache,
     const BytecodeGenerationOptions &options) {
-  return BytecodeModuleGenerator{bm, M, options, nullptr, nullptr}
+  return BytecodeModuleGenerator{bm, M, debugIdCache, options, nullptr, nullptr}
       .generateLazyFunctions(lazyFunc, lazyFuncID);
 }
 
@@ -57,9 +91,11 @@ std::unique_ptr<BytecodeModule> generateBytecodeModuleForEval(
     const BytecodeGenerationOptions &options) {
   PerfSection perf("Bytecode Generation");
   auto bm = std::make_unique<BytecodeModule>();
+  FileAndSourceMapIdCache debugIdCache{};
 
-  bool success = BytecodeModuleGenerator{*bm, M, options, nullptr, nullptr}
-                     .generateForEval(entryPoint);
+  bool success =
+      BytecodeModuleGenerator{*bm, M, debugIdCache, options, nullptr, nullptr}
+          .generateForEval(entryPoint);
 
   return success ? std::move(bm) : nullptr;
 }
@@ -166,6 +202,7 @@ static void compileLazyFunctionWorker(void *argPtr) {
           M,
           func,
           funcID,
+          provider->getFileAndSourceMapIdCache(),
           provider->getBytecodeGenerationOptions())) {
     data->success = false;
     data->error = outputManager.getErrorString();
@@ -226,7 +263,7 @@ static void compileEvalWorker(void *argPtr) {
   Context &context = F->getParent()->getContext();
 
   context.setEmitAsyncBreakCheck(data->compileFlags.emitAsyncBreakCheck);
-  context.setConvertES6Classes(data->compileFlags.enableES6Classes);
+  context.setEnableES6BlockScoping(data->compileFlags.enableES6BlockScoping);
   context.setDebugInfoSetting(
       data->compileFlags.debug ? DebugInfoSetting::ALL
                                : DebugInfoSetting::THROWING);
@@ -342,14 +379,9 @@ std::pair<bool, llvh::StringRef> compileLazyFunction(
     return {false, *errMsgOpt};
   }
 
-  // Run on a thread to prevent stack overflow if this is run from deep inside
-  // JS execution.
-
-  // Use an 8MB stack, which is the default size on mac and linux.
-  constexpr unsigned kStackSize = 1 << 23;
-
+  // Use this callback-style API to reduce conflicts with stable for now.
   LazyCompilationThreadData data{provider, funcID};
-  llvh::llvm_execute_on_thread(compileLazyFunctionWorker, &data, kStackSize);
+  compileLazyFunctionWorker(&data);
 
   if (data.success) {
     return std::make_pair(true, llvh::StringRef{});
@@ -405,28 +437,38 @@ bool coordsInLazyFunction(
       loc.getPointer() < F->getSourceRange().End.getPointer();
 }
 
-std::pair<std::unique_ptr<BCProviderFromSrc>, std::string> compileEvalModule(
+std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     std::unique_ptr<Buffer> src,
-    hbc::BCProviderFromSrc *provider,
+    hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags) {
-  // Run on a thread to prevent stack overflow if this is run from deep inside
-  // JS execution.
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
+  if (!providerFromSrc) {
+    return std::make_pair(
+        std::unique_ptr<BCProviderFromSrc>{},
+        "Code compiled without support for eval");
+  }
+  // Use this callback-style API to reduce conflicts with stable for now.
+  EvalThreadData data{
+      std::move(src), providerFromSrc, enclosingFuncID, compileFlags};
+  compileEvalWorker(&data);
 
-  // Use an 8MB stack, which is the default size on mac and linux.
-  constexpr unsigned kStackSize = 1 << 23;
-
-  EvalThreadData data{std::move(src), provider, enclosingFuncID, compileFlags};
-  llvh::llvm_execute_on_thread(compileEvalWorker, &data, kStackSize);
   return data.success
       ? std::make_pair(std::move(data.result), "")
       : std::make_pair(std::unique_ptr<BCProviderFromSrc>{}, data.error);
 }
 
 std::vector<uint32_t> getVariableCounts(
-    hbc::BCProviderFromSrc *provider,
+    hbc::BCProvider *provider,
     uint32_t funcID) {
-  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
+  if (!providerFromSrc) {
+    return std::vector<uint32_t>({0});
+  }
+
+  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
   hbc::BytecodeFunction &bcFunc = bcModule->getFunction(funcID);
   Function *F = bcFunc.getFunctionIR();
   if (!F) {
@@ -454,11 +496,14 @@ std::vector<uint32_t> getVariableCounts(
 }
 
 llvh::StringRef getVariableNameAtDepth(
-    hbc::BCProviderFromSrc *provider,
+    hbc::BCProvider *provider,
     uint32_t funcID,
     uint32_t depth,
     uint32_t variableIndex) {
-  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::cast<hbc::BCProviderFromSrc>(provider);
+
+  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
   hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
   Function *F = lazyFunc.getFunctionIR();
   assert(F && "no lazy IR for lazy function");

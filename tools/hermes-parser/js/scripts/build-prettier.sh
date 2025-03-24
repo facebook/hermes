@@ -11,7 +11,7 @@ XPLAT="$HG_ROOT/xplat"
 XPLAT_YARN="$XPLAT/third-party/yarn/yarn"
 
 REPO_URI="https://github.com/pieterv/prettier.git"
-HERMES_PARSER_JS="$XPLAT/hermes/tools/hermes-parser/js"
+HERMES_PARSER_JS="$XPLAT/static_h/tools/hermes-parser/js"
 HERMES_PARSER_DIST="$HERMES_PARSER_JS/hermes-parser/dist"
 PRETTIER_DIR="$HERMES_PARSER_JS/prettier-hermes-v2-backport"
 PLUGIN_DIR="$HERMES_PARSER_JS/prettier-plugin-hermes-parser"

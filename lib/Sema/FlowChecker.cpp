@@ -101,6 +101,7 @@
 #include "llvh/ADT/Twine.h"
 #include "llvh/Support/SaveAndRestore.h"
 
+#if HERMES_PARSE_FLOW
 #define DEBUG_TYPE "FlowChecker"
 
 namespace hermes {
@@ -879,9 +880,7 @@ void FlowChecker::visit(ESTree::CatchClauseNode *node) {
   ScopeRAII scope(*this);
   if (!resolveScopeTypesAndAnnotate(node, node->getScope()))
     return;
-  visitESTreeNode(*this, node->_param, node);
-  // Process body's declarations, skip visiting it, visit its children.
-  visitESTreeChildren(*this, node->_body);
+  visitESTreeChildren(*this, node);
 }
 
 void FlowChecker::visitFunctionLike(
@@ -901,7 +900,7 @@ void FlowChecker::visitFunctionLike(
   }
 
   if (!resolveScopeTypesAndAnnotate(
-          node, node->getSemInfo()->getFunctionScope()))
+          node, node->getSemInfo()->getFunctionBodyScope()))
     return;
   visitESTreeNode(*this, body, node);
   checkImplicitReturnType(node);
@@ -1218,7 +1217,7 @@ class FlowChecker::AnnotateScopeDecls {
               "ft: incompatible type for array pattern, expected tuple");
           continue;
         }
-      } else if (auto *obj = llvh::dyn_cast<ESTree::ObjectPatternNode>(node)) {
+      } else if (llvh::isa<ESTree::ObjectPatternNode>(node)) {
         outer.setNodeType(arr, outer.flowContext_.getAny());
         outer.sm_.warning(
             node->getSourceRange(),
@@ -1447,7 +1446,6 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
     case ESTree::NodeKind::NullableTypeAnnotation:
       return parseNullableTypeAnnotation(
           llvh::cast<ESTree::NullableTypeAnnotationNode>(node));
-    // TODO: function, etc.
     case ESTree::NodeKind::ArrayTypeAnnotation:
       return parseArrayTypeAnnotation(
           llvh::cast<ESTree::ArrayTypeAnnotationNode>(node));
@@ -1857,7 +1855,7 @@ ESTree::Node *FlowChecker::implicitCheckedCast(
 
 bool FlowChecker::validateAndBindTypeParameters(
     ESTree::TypeParameterDeclarationNode *params,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    SMRange errorRange,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::LexicalScope *scope) {
   size_t i = 0;
@@ -1893,7 +1891,7 @@ bool FlowChecker::validateAndBindTypeParameters(
   // Check that there aren't too many (or too few) type arguments provided.
   if (tooFewTypeArgs || i != typeArgTypes.size()) {
     sm_.error(
-        typeArgsNode->getSourceRange(),
+        errorRange,
         llvh::Twine("type argument mismatch, expected ") +
             llvh::Twine(params->_params.size()) + ", found " +
             llvh::Twine(typeArgTypes.size()));
@@ -1915,12 +1913,12 @@ sema::Decl *FlowChecker::specializeGeneric(
   }
 
   return specializeGenericWithParsedTypes(
-      oldDecl, typeArgsNode, typeArgTypes, scope);
+      oldDecl, typeArgsNode->getSourceRange(), typeArgTypes, scope);
 }
 
 sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
     sema::Decl *oldDecl,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
+    SMRange errorRange,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::LexicalScope *scope) {
   // Extract info from types.
@@ -1951,23 +1949,24 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
   };
 
   // Create specialization if it doesn't exist.
-  // TODO: Determine if the actual clone can be deferred to avoid potential
-  // stack overflow by cloning from deep in the AST.
   if (doClone) {
     LLVM_DEBUG(
         llvh::dbgs() << "Creating specialization for: " << oldDecl->name.str()
                      << "\n");
-    specialization = cloneNode(
-        astContext_,
-        semContext_,
-        declCollectorMap_,
-        generic.originalNode,
-        scope->parentFunction,
-        scope);
+    // Avoid stack overflow in the clone by executing in a separate stack.
+    executeInStack(
+        *stackExecutor_, [this, &generic, scope, &specialization]() -> void {
+          specialization = cloneNode(
+              astContext_,
+              semContext_,
+              declCollectorMap_,
+              generic.originalNode,
+              scope->parentFunction,
+              scope);
+        });
     if (!specialization) {
       sm_.error(
-          typeArgsNode->getSourceRange(),
-          "failed to create specialization for generic function");
+          errorRange, "failed to create specialization for generic function");
       return nullptr;
     }
     auto &nodeList = getNodeList(generic.parent);
@@ -1978,13 +1977,12 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
 
   // The new Decl for the specialization of the function declaration.
   sema::Decl *newDecl = nullptr;
-  if (auto *func =
-          llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
+  if (llvh::isa<ESTree::FunctionDeclarationNode>(specialization)) {
     newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
         llvh::cast<ESTree::FunctionDeclarationNode>(specialization)->_id));
   } else if (
-      auto *classDecl =
-          llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
+
+      llvh::isa<ESTree::ClassDeclarationNode>(specialization)) {
     newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
         llvh::cast<ESTree::ClassDeclarationNode>(specialization)->_id));
   }
@@ -2021,7 +2019,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
 
       ScopeRAII paramScope{*this};
       bool populated = validateAndBindTypeParameters(
-          typeParamsNode, typeArgsNode, typeArgTypes, oldDecl->scope);
+          typeParamsNode, errorRange, typeArgTypes, oldDecl->scope);
       if (!populated) {
         LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
         return nullptr;
@@ -2029,15 +2027,13 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
 
       if (auto *func =
               llvh::dyn_cast<ESTree::FunctionDeclarationNode>(specialization)) {
-        // TODO: Determine if the actual function typecheck can be deferred to
-        // avoid potential stack overflow by cloning from deep in the AST.
         typecheckGenericFunctionSpecialization(
-            func, typeArgsNode, typeArgTypes, oldDecl, newDecl);
+            func, typeArgTypes, oldDecl, newDecl);
       } else if (
           auto *classDecl =
               llvh::dyn_cast<ESTree::ClassDeclarationNode>(specialization)) {
         typecheckGenericClassSpecialization(
-            classDecl, typeArgsNode, typeArgTypes, oldDecl, newDecl);
+            classDecl, typeArgTypes, oldDecl, newDecl);
       }
     }
 
@@ -2066,7 +2062,6 @@ void FlowChecker::resolveCallToGenericFunctionSpecialization(
 
 void FlowChecker::typecheckGenericFunctionSpecialization(
     ESTree::FunctionDeclarationNode *specialization,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::Decl *oldDecl,
     sema::Decl *newDecl) {
@@ -2092,7 +2087,6 @@ void FlowChecker::typecheckGenericFunctionSpecialization(
 
 void FlowChecker::typecheckGenericClassSpecialization(
     ESTree::ClassDeclarationNode *specialization,
-    ESTree::TypeParameterInstantiationNode *typeArgsNode,
     llvh::ArrayRef<Type *> typeArgTypes,
     sema::Decl *oldDecl,
     sema::Decl *newDecl) {
@@ -2240,3 +2234,5 @@ UniqueString *FlowChecker::propertyKeyAsIdentifier(ESTree::Node *Key) {
 
 } // namespace flow
 } // namespace hermes
+
+#endif // HERMES_PARSE_FLOW

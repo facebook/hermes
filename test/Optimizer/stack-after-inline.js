@@ -18,14 +18,11 @@ function f1(num) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "f1": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %f1(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f1": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %f1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "f1": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

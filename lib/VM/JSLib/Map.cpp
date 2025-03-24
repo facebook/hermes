@@ -150,7 +150,11 @@ mapFromMapFastPath(Runtime &runtime, Handle<JSMap> target, Handle<JSMap> src) {
           Runtime &runtime, Handle<HashMapEntry> entry) -> ExecutionStatus {
         keyHandle = entry->key.unboxToHV(runtime);
         valueHandle = entry->value.unboxToHV(runtime);
-        JSMap::insert(target, runtime, keyHandle, valueHandle);
+        if (LLVM_UNLIKELY(
+                JSMap::insert(target, runtime, keyHandle, valueHandle) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
         return ExecutionStatus::RETURNED;
       });
 }
@@ -265,7 +269,7 @@ mapPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.clear");
   }
-  selfHandle->clear(runtime);
+  JSMap::clear(selfHandle, runtime);
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -359,7 +363,11 @@ mapPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
   auto key = keyHandle->isNumber() && keyHandle->getNumber() == 0
       ? HandleRootOwner::getZeroValue()
       : keyHandle;
-  JSMap::insert(selfHandle, runtime, key, args.getArgHandle(1));
+  if (LLVM_UNLIKELY(
+          JSMap::insert(selfHandle, runtime, key, args.getArgHandle(1)) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   return selfHandle.getHermesValue();
 }
 

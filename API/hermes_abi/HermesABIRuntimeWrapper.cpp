@@ -189,11 +189,11 @@ class HermesABIRuntimeWrapper : public Runtime {
       return managedPointer_;
     }
 
-    void invalidate() override {
+    void invalidate() noexcept override {
       dec();
     }
 
-    void inc() {
+    void inc() noexcept {
       // See comments in hermes_abi.cpp for why we use relaxed operations here.
       auto oldCount = refCount_.fetch_add(1, std::memory_order_relaxed);
       assert(oldCount && "Cannot resurrect a pointer");
@@ -201,7 +201,7 @@ class HermesABIRuntimeWrapper : public Runtime {
       (void)oldCount;
     }
 
-    void dec() {
+    void dec() noexcept {
       // See comments in hermes_abi.cpp for why we use relaxed operations here.
       auto oldCount = refCount_.fetch_sub(1, std::memory_order_relaxed);
       assert(oldCount > 0 && "Ref count underflow");

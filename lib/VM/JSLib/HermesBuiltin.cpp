@@ -80,7 +80,7 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
   auto it = frames.begin();
   if (LLVM_UNLIKELY(++it == frames.end()))
     return runtime.raiseTypeError("Cannot be called directly");
-  auto callerCB = it->getCalleeCodeBlock(runtime);
+  auto callerCB = it->getCalleeCodeBlock();
   if (LLVM_UNLIKELY(!callerCB)) {
     return runtime.raiseTypeError("Cannot be called from native code");
   }
@@ -671,6 +671,112 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
   return res->getHermesValue();
 }
 
+/// \code
+///   HermesBuiltin.applyArguments = function(fn, thisVal, newTarget) {}
+/// /endcode
+/// Faster version of Function.prototype.apply which copies the arguments
+/// from the caller to the callee.
+CallResult<HermesValue>
+hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
+  // Copy 'arguments' from the caller's stack, then call the callee.
+
+  Handle<Callable> fn = args.dyncastArg<Callable>(0);
+  if (LLVM_UNLIKELY(!fn)) {
+    return runtime.raiseTypeErrorForValue(
+        args.getArgHandle(0), " is not a function");
+  }
+
+  Handle<> newTarget = args.getArgHandle(2);
+  bool isConstructCall = !newTarget->isUndefined();
+  assert(
+      newTarget->isUndefined() ||
+      isConstructor(runtime, *newTarget) &&
+          "new.target can only be undefined or a constructor.");
+
+  Handle<> thisHandle = args.getArgHandle(1);
+
+  // Obtain the caller's stack frame.
+  auto frames = runtime.getStackFrames();
+  auto it = frames.begin();
+  ++it;
+  // Check for the extremely unlikely case where there is no caller frame.
+  if (LLVM_UNLIKELY(it == frames.end()))
+    return HermesValue::encodeUndefinedValue();
+
+  uint32_t argCount = it->getArgCount();
+
+  ScopedNativeCallFrame newFrame{
+      runtime,
+      argCount,
+      HermesValue::encodeObjectValue(*fn),
+      *newTarget,
+      *thisHandle};
+  if (LLVM_UNLIKELY(newFrame.overflowed())) {
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+  }
+
+  for (uint32_t i = 0; i < argCount; ++i) {
+    newFrame->getArgRef(i) = it->getArgRef(i);
+  }
+
+  if (isConstructCall) {
+    return Callable::construct(fn, runtime, thisHandle)
+        .toCallResultHermesValue();
+  } else {
+    return Callable::call(fn, runtime).toCallResultHermesValue();
+  }
+}
+
+/// \code
+///   HermesBuiltin.applyWithNewTarget = function(fn, argArray, thisVal,
+///   newTarget) {}
+/// /endcode
+/// Perform a construct call on fn, with newTarget being set as the new.target.
+/// This is only used in cases where the new.target is *not* implicitly set to
+/// fn, as in the case of a new call. Thus, a direct `super` call may result in
+/// this function being invoked.
+/// `argArray` must be a JSArray with no getters.
+CallResult<HermesValue>
+hermesBuiltinApplyWithNewTarget(void *, Runtime &runtime, NativeArgs args) {
+  assert(
+      args.getArgCount() == 4 &&
+      "builtinApplyWithNewTarget expected 4 arguments");
+  GCScopeMarkerRAII marker{runtime};
+
+  Handle<Callable> fn = args.dyncastArg<Callable>(0);
+  if (LLVM_UNLIKELY(!fn)) {
+    return runtime.raiseTypeErrorForValue(
+        args.getArgHandle(0), " is not a function");
+  }
+
+  Handle<JSArray> argArray = args.dyncastArg<JSArray>(1);
+  if (LLVM_UNLIKELY(!argArray)) {
+    return runtime.raiseTypeError("args must be an array");
+  }
+
+  uint32_t len = JSArray::getLength(*argArray, runtime);
+  auto thisVal = args.getArgHandle(2);
+  auto newTarget = args.getArgHandle(3);
+
+  ScopedNativeCallFrame newFrame{
+      runtime, len, HermesValue::encodeObjectValue(*fn), *newTarget, *thisVal};
+  if (LLVM_UNLIKELY(newFrame.overflowed()))
+    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
+
+  for (uint32_t i = 0; i < len; ++i) {
+    assert(!argArray->at(runtime, i).isEmpty() && "arg array must be dense");
+    HermesValue arg = argArray->at(runtime, i).unboxToHV(runtime);
+    newFrame->getArgRef(i) = LLVM_UNLIKELY(arg.isEmpty())
+        ? HermesValue::encodeUndefinedValue()
+        : arg;
+  }
+  auto res = Callable::construct(fn, runtime, thisVal);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getHermesValue();
+}
+
 /// HermesBuiltin.exportAll(exports, source) will copy exported named
 /// properties from `source` to `exports`, defining them on `exports` as
 /// non-configurable.
@@ -771,9 +877,7 @@ CallResult<HermesValue> hermesBuiltinInitRegexNamedGroups(
   return HermesValue::encodeUndefinedValue();
 }
 
-void createHermesBuiltins(
-    Runtime &runtime,
-    llvh::MutableArrayRef<Callable *> builtins) {
+void createHermesBuiltins(Runtime &runtime) {
   auto defineInternMethod = [&](BuiltinMethod::Enum builtinIndex,
                                 Predefined::Str symID,
                                 NativeFunctionPtr func,
@@ -787,8 +891,7 @@ void createHermesBuiltins(
         count,
         Runtime::makeNullHandle<JSObject>());
 
-    assert(builtins[builtinIndex] == nullptr && "builtin already defined");
-    builtins[builtinIndex] = *method;
+    runtime.registerBuiltin(builtinIndex, *method);
   };
 
   // HermesBuiltin function properties
@@ -836,6 +939,16 @@ void createHermesBuiltins(
       hermesBuiltinArraySpread,
       2);
   defineInternMethod(B::HermesBuiltin_apply, P::apply, hermesBuiltinApply, 2);
+  defineInternMethod(
+      B::HermesBuiltin_applyArguments,
+      P::apply,
+      hermesBuiltinApplyArguments,
+      2);
+  defineInternMethod(
+      B::HermesBuiltin_applyWithNewTarget,
+      P::applyWithNewTarget,
+      hermesBuiltinApplyWithNewTarget,
+      4);
   defineInternMethod(
       B::HermesBuiltin_exportAll, P::exportAll, hermesBuiltinExportAll);
   defineInternMethod(

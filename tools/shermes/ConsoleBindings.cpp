@@ -19,12 +19,26 @@ static void initTest262Bindings(facebook::hermes::HermesRuntime &hrt) {
   auto global = hrt.global();
   facebook::jsi::Object test262Obj{hrt};
 
+  // Get Object.defineProperty(), use it to define property below.
+  auto definePropertyFn = hrt.global()
+                              .getProperty(hrt, "Object")
+                              .asObject(hrt)
+                              .getProperty(hrt, "defineProperty")
+                              .asObject(hrt)
+                              .asFunction(hrt);
+
+  facebook::jsi::Object descriptor{hrt};
+  descriptor.setProperty(hrt, "enumerable", false);
+  auto valueProp = facebook::jsi::PropNameID::forAscii(hrt, "value");
+
   // Define $262.global.
-  test262Obj.setProperty(hrt, "global", global);
+  descriptor.setProperty(hrt, valueProp, global);
+  definePropertyFn.call(hrt, test262Obj, "global", descriptor);
 
   // Define $262.evalScript.
   auto evalFunc = global.getProperty(hrt, "eval");
-  test262Obj.setProperty(hrt, "evalScript", evalFunc);
+  descriptor.setProperty(hrt, valueProp, evalFunc);
+  definePropertyFn.call(hrt, test262Obj, "evalScript", descriptor);
 
   // Define $262.detachArrayBuffer.
   auto hermesInternalProp = global.getProperty(hrt, "HermesInternal");
@@ -33,16 +47,25 @@ static void initTest262Bindings(facebook::hermes::HermesRuntime &hrt) {
     auto detachArrayBufferFunc =
         hermesInternalObj.getProperty(hrt, "detachArrayBuffer");
     if (detachArrayBufferFunc.isObject()) {
-      test262Obj.setProperty(hrt, "detachArrayBuffer", detachArrayBufferFunc);
+      descriptor.setProperty(hrt, valueProp, detachArrayBufferFunc);
+      definePropertyFn.call(hrt, test262Obj, "detachArrayBuffer", descriptor);
     }
   }
 
   // Define global object $262.
-  global.setProperty(hrt, "$262", test262Obj);
+  descriptor.setProperty(hrt, valueProp, test262Obj);
+  definePropertyFn.call(hrt, global, "$262", descriptor);
 
   // Define global function alert().
   auto printFunc = global.getProperty(hrt, "print");
-  global.setProperty(hrt, "alert", printFunc);
+  descriptor.setProperty(hrt, valueProp, printFunc);
+  definePropertyFn.call(hrt, global, "alert", descriptor);
+
+  // Define console.log.
+  facebook::jsi::Object consoleObj{hrt};
+  definePropertyFn.call(hrt, consoleObj, "log", descriptor);
+  descriptor.setProperty(hrt, valueProp, consoleObj);
+  definePropertyFn.call(hrt, global, "console", descriptor);
 }
 
 extern "C" SHERMES_EXPORT void init_console_bindings(SHRuntime *shr) {

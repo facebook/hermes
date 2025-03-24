@@ -39,71 +39,70 @@ print(f());
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
-
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
-// CHECK-NEXT:  %1 = CreateFunctionInst (:object) %0: environment, %""(): functionCode
-// CHECK-NEXT:  %2 = CallInst [njsf] (:undefined) %1: object, %""(): functionCode, true: boolean, %0: environment, undefined: undefined, 0: number, 0: number
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
+// CHECK-NEXT:  %1 = CallInst [njsf] (:undefined) %0: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 0: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [O: object, Foo: undefined|object, ?O.prototype: object, ?Foo.prototype: object]
+// CHECK:scope %VS0 [O: object, Foo: undefined|object, ?O.prototype: object, ?Foo.prototype: object]
 
 // CHECK:function ""(exports: number): undefined [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.Foo]: undefined|object
-// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %1: environment, %f(): functionCode
-// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %O(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.O]: object
-// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.?O.prototype]: object
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %4: object, "prototype": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %1: environment, %Foo(): functionCode
-// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.Foo]: undefined|object
-// CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS1.?Foo.prototype]: object
-// CHECK-NEXT:        StorePropertyStrictInst %11: object, %9: object, "prototype": string
-// CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %15 = CallInst [njsf] (:undefined) %3: object, %f(): functionCode, true: boolean, %1: environment, undefined: undefined, 0: number
-// CHECK-NEXT:  %16 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, undefined: undefined, [%VS0.Foo]: undefined|object
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f(): functionCode
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %3: object, [%VS0.O]: object
+// CHECK-NEXT:  %5 = AllocTypedObjectInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %5: object, [%VS0.?O.prototype]: object
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, %3: object, "prototype": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
+// CHECK-NEXT:       StoreFrameInst %0: environment, %8: object, [%VS0.Foo]: undefined|object
+// CHECK-NEXT:  %10 = AllocTypedObjectInst (:object) empty: any
+// CHECK-NEXT:        StoreFrameInst %0: environment, %10: object, [%VS0.?Foo.prototype]: object
+// CHECK-NEXT:        StorePropertyStrictInst %10: object, %8: object, "prototype": string
+// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %14 = CallInst [njsf] (:undefined) %2: object, %f(): functionCode, true: boolean, %0: environment, undefined: undefined, 0: number
+// CHECK-NEXT:  %15 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, undefined: undefined
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f(): undefined [allCallsitesKnownInStrictMode,typed]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS1.Foo]: undefined|object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS0.Foo]: undefined|object
 // CHECK-NEXT:  %2 = CheckedTypeCastInst (:object) %1: undefined|object, type(object)
-// CHECK-NEXT:  %3 = LoadFrameInst (:object) %0: environment, [%VS1.?Foo.prototype]: object
-// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any, "o": string, 0: number, "y": string, 0: number
-// CHECK-NEXT:       TypedStoreParentInst %3: object, %4: object
-// CHECK-NEXT:  %6 = CallInst (:undefined) %2: object, %Foo(): functionCode, true: boolean, %0: environment, %2: object, %4: object
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %3 = LoadFrameInst (:object) %0: environment, [%VS0.?Foo.prototype]: object
+// CHECK-NEXT:  %4 = AllocTypedObjectInst (:object) %3: object, "o": string, uninit: uninit, "y": string, 0: number
+// CHECK-NEXT:  %5 = CallInst (:undefined) %2: object, %Foo(): functionCode, true: boolean, %0: environment, %2: object, %4: object
+// CHECK-NEXT:  %6 = PrLoadInst (:uninit|object) %4: object, 0: number, "o": string
+// CHECK-NEXT:  %7 = ThrowIfInst (:object) %6: uninit|object, type(uninit)
+// CHECK-NEXT:  %8 = PrLoadInst (:uninit|object) %4: object, 0: number, "o": string
+// CHECK-NEXT:  %9 = ThrowIfInst (:object) %8: uninit|object, type(uninit)
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:constructor O(): undefined [typed]
+// CHECK:base constructor O(): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:       PrStoreInst 7: number, %0: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:constructor Foo(): undefined [typed]
+// CHECK:base constructor Foo(): undefined [typed]
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = PrLoadInst (:object) %0: object, 0: number, "o": string
-// CHECK-NEXT:  %3 = PrLoadInst (:number) %2: object, 0: number, "i": string
-// CHECK-NEXT:       PrStoreInst %3: number, %0: object, 1: number, "y": string, true: boolean
-// CHECK-NEXT:  %5 = LoadFrameInst (:object) %1: environment, [%VS1.O]: object
-// CHECK-NEXT:  %6 = LoadFrameInst (:object) %1: environment, [%VS1.?O.prototype]: object
-// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) empty: any, "i": string, 0: number
-// CHECK-NEXT:       TypedStoreParentInst %6: object, %7: object
-// CHECK-NEXT:  %9 = CallInst (:undefined) %5: object, %O(): functionCode, true: boolean, empty: any, %5: object, %7: object
-// CHECK-NEXT:        PrStoreInst %7: object, %0: object, 0: number, "o": string, false: boolean
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = PrLoadInst (:uninit|object) %0: object, 0: number, "o": string
+// CHECK-NEXT:  %3 = ThrowIfInst (:object) %2: uninit|object, type(uninit)
+// CHECK-NEXT:  %4 = PrLoadInst (:number) %3: object, 0: number, "i": string
+// CHECK-NEXT:       PrStoreInst %4: number, %0: object, 1: number, "y": string, true: boolean
+// CHECK-NEXT:  %6 = LoadFrameInst (:object) %1: environment, [%VS0.O]: object
+// CHECK-NEXT:  %7 = LoadFrameInst (:object) %1: environment, [%VS0.?O.prototype]: object
+// CHECK-NEXT:  %8 = AllocTypedObjectInst (:object) %7: object, "i": string, 0: number
+// CHECK-NEXT:  %9 = CallInst (:undefined) %6: object, %O(): functionCode, true: boolean, empty: any, %6: object, %8: object
+// CHECK-NEXT:        PrStoreInst %8: object, %0: object, 0: number, "o": string, false: boolean
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

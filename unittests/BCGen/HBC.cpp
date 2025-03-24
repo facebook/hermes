@@ -62,7 +62,7 @@ TEST(HBCBytecodeGen, ArrayBufferTest) {
 var arr = [1, true, false, null, null, 'abc']
 )";
   auto BM = bytecodeModuleForSource(src);
-  ASSERT_EQ(BM->getLiteralValueBufferSize(), 10u);
+  ASSERT_EQ(BM->getLiteralValueBufferSize(), 11u);
 }
 
 TEST(HBCBytecodeGen, ObjectBufferTest) {
@@ -72,7 +72,7 @@ var obj = {a:1, b:2, c:3};
   // Need to optimize to populate the object buffer.
   auto BM = bytecodeModuleForSource(
       src, BytecodeGenerationOptions::defaults(), /* optimize */ true);
-  ASSERT_EQ(BM->getObjectKeyBufferSize(), 4u);
+  ASSERT_EQ(BM->getObjectKeyBufferSize(), 7u);
   ASSERT_EQ(BM->getLiteralValueBufferSize(), 13u);
 }
 
@@ -206,7 +206,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
     auto *load = llvh::dyn_cast<HBCLoadConstInst>(&inst);
     if (!load)
       continue;
-    EXPECT_LT(RA.getRegister(load).getIndex(), 256u);
+    EXPECT_LT(RA.getRegister(load).getIndexInClass(), 256u);
   }
 }
 
@@ -232,7 +232,7 @@ TEST(SpillRegisterTest, NoStoreUnspilling) {
   llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
   RA.allocate(order);
   RA.allocateParameterCount(256);
-  RA.updateRegister(store, Register(256));
+  RA.updateRegister(store, Register(RegClass::Other, 256));
 
   // Ensure that spilling doesn't insert any additional instructions
   unsigned sizeBefore = BB->size();
@@ -284,25 +284,8 @@ TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
           .first;
   ASSERT_TRUE(bytecodeDefault);
   ASSERT_TRUE(bytecodeStaticBuiltins);
-  EXPECT_FALSE(bytecodeDefault->getBytecodeOptions().staticBuiltins);
-  EXPECT_TRUE(bytecodeStaticBuiltins->getBytecodeOptions().staticBuiltins);
-}
-
-TEST(HBCBytecodeGen, BytecodeOptionHasAsync) {
-  auto bytecodeVecNoAsync = bytecodeForSource("function foo(){}");
-  auto bytecodeVecHasAsync = bytecodeForSource("async function foo(){}");
-
-  auto bytecodeNoAsync = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                             std::make_unique<VectorBuffer>(bytecodeVecNoAsync))
-                             .first;
-  auto bytecodeHasAsync =
-      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          std::make_unique<VectorBuffer>(bytecodeVecHasAsync))
-          .first;
-  ASSERT_TRUE(bytecodeNoAsync);
-  ASSERT_TRUE(bytecodeHasAsync);
-  EXPECT_FALSE(bytecodeNoAsync->getBytecodeOptions().hasAsync);
-  EXPECT_TRUE(bytecodeHasAsync->getBytecodeOptions().hasAsync);
+  EXPECT_FALSE(bytecodeDefault->getBytecodeOptions().getStaticBuiltins());
+  EXPECT_TRUE(bytecodeStaticBuiltins->getBytecodeOptions().getStaticBuiltins());
 }
 
 } // end anonymous namespace

@@ -353,7 +353,7 @@ class TestingProgressDisplay(object):
             if is_failure:
                 print("%s TEST '%s' FAILED %s" % ("*" * 20, test.test_name, "*" * 20))
             print(test.output)
-            print("*" * 20)
+            print("*" * 80)
 
         # Ensure the output is flushed.
         sys.stdout.flush()

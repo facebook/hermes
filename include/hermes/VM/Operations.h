@@ -207,6 +207,9 @@ CallResult<Handle<SymbolID>> valueToSymbolID(
 /// `typeof` operator.
 HermesValue typeOf(Runtime &runtime, Handle<> valueHandle);
 
+/// \return true if the type of \p arg corresponds to the flag in \p types.
+bool matchTypeOfIs(HermesValue arg, TypeOfIsTypes types);
+
 /// Convert a string to an array index following ES5.1 15.4.
 /// A property name P (in the form of a String value) is an array index if and
 /// only if ToString(ToUint32(P)) is equal to P and ToUint32(P) is not equal to
@@ -275,6 +278,12 @@ inline char16_t letterToLower(char16_t c) {
 /// as radix \p radix.
 /// \returns the double that results, and NaN on failure.
 double parseIntWithRadix(const StringView str, int radix);
+
+/// ES5.1 9.8.1
+/// Convert \p m to its string value following the JS spec.
+CallResult<PseudoHandle<StringPrimitive>> numberToStringPrimitive(
+    Runtime &runtime,
+    double m);
 
 /// Takes a finite double \p number and a base \p radix (between 2 and 36
 /// inclusive), and returns the string that results from converting \p number

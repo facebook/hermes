@@ -50,10 +50,10 @@ describe('flowImportTo', () => {
   it('ImportDeclaration', async () => {
     await expectModules(
       `import A from 'X1';
-       import * as A from 'X2';
-       import {A} from 'X3';
-       import type {A} from 'X4';
-       import typeof {A} from 'X5';`,
+       import * as B from 'X2';
+       import {C} from 'X3';
+       import type {D} from 'X4';
+       import typeof {E} from 'X5';`,
       ['X1', 'X2', 'X3', 'X4', 'X5'],
     );
     await expectTranslate(

@@ -25,7 +25,8 @@ try {} catch (e) { let x: number = 1; }
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:                Decl %d.3 'e' ES5Catch : any
-// CHECK-NEXT:                Decl %d.4 'x' Let : number
+// CHECK-NEXT:                Scope %s.5
+// CHECK-NEXT:                    Decl %d.4 'x' Let : number
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -37,7 +38,7 @@ try {} catch (e) { let x: number = 1; }
 // CHECK-NEXT:                        BlockStatement Scope %s.3
 // CHECK-NEXT:                        CatchClause Scope %s.4
 // CHECK-NEXT:                            Id 'e' [D:E:%d.3 'e']
-// CHECK-NEXT:                            BlockStatement
+// CHECK-NEXT:                            BlockStatement Scope %s.5
 // CHECK-NEXT:                                VariableDeclaration
 // CHECK-NEXT:                                    VariableDeclarator
 // CHECK-NEXT:                                        NumericLiteral : number

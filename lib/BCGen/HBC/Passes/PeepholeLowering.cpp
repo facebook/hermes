@@ -17,9 +17,10 @@ class DoLower {
   Function *const F_;
   IRBuilder builder_{F_};
   IRBuilder::InstructionDestroyer destroyer_{};
+  bool optimize_;
 
  public:
-  explicit DoLower(Function *F) : F_(F) {}
+  explicit DoLower(Function *F, bool optimize) : F_(F), optimize_(optimize) {}
 
   bool run() {
     bool changed = false;
@@ -45,6 +46,11 @@ class DoLower {
   Value *peep(Instruction *I) {
     switch (I->getKind()) {
       case ValueKind::CoerceThisNSInstKind:
+        // This transformation is purely an optimization to collapse a sequence
+        // of LoadParam + CoerceThisNS into a LoadThisNS, so skip it if
+        // optimizations are disabled.
+        if (!optimize_)
+          return nullptr;
         return lowerCoerceThisNSInst(
             llvh::cast<CoerceThisNSInst>(I), builder_, destroyer_);
       case ValueKind::BinaryExponentiationInstKind:
@@ -58,6 +64,11 @@ class DoLower {
         return lowerStringConcat(llvh::cast<StringConcatInst>(I));
       case ValueKind::CallInstKind:
         return stripEnvFromCall(llvh::cast<CallInst>(I), builder_);
+      case ValueKind::CreateFunctionInstKind:
+      case ValueKind::CreateGeneratorInstKind:
+      case ValueKind::CreateClassInstKind:
+        return lowerTopLevelFunction(
+            llvh::cast<BaseCreateLexicalChildInst>(I), builder_);
       default:
         return nullptr;
     }
@@ -114,10 +125,29 @@ class DoLower {
     concatRes->setType(Type::createString());
     return concatRes;
   }
+
+  Value *lowerTopLevelFunction(
+      BaseCreateLexicalChildInst *BCLI,
+      IRBuilder &builder) {
+    if (!llvh::isa<EmptySentinel>(BCLI->getScope()))
+      return nullptr;
+    BCLI->setScope(builder.getLiteralUndefined());
+    return BCLI;
+  }
 };
 
-bool PeepholeLowering::runOnFunction(Function *F) {
-  return DoLower(F).run();
+Pass *createPeepholeLowering(bool optimize) {
+  class ThisPass : public FunctionPass {
+    bool optimize_;
+
+   public:
+    explicit ThisPass(bool optimize)
+        : FunctionPass("PeepholeLowering"), optimize_(optimize) {}
+    bool runOnFunction(Function *F) override {
+      return DoLower(F, optimize_).run();
+    }
+  };
+  return new ThisPass(optimize);
 }
 
 } // namespace hbc

@@ -28,14 +28,9 @@ namespace hermes {
 namespace hbc {
 class BCProviderBase;
 class BCProviderFromBuffer;
+class BytecodeModule;
 
-// Making BCProvider an alias to BCProviderFromBuffer when eval is disabled
-// eliminates the cost of virtual function calls and allows for inlining.
-#ifdef HERMESVM_LEAN
-using BCProvider = BCProviderFromBuffer;
-#else
 using BCProvider = BCProviderBase;
-#endif
 
 using StringID = uint32_t;
 
@@ -55,20 +50,21 @@ class RuntimeFunctionHeader {
     assert(isLarge());
   }
 
-#define HEADER_FIELD_ACCESSOR(api_type, store_type, name, bits) \
-  api_type name() const {                                       \
+#define HEADER_FIELD_ACCESSOR(_, storage, api_type, name, bits) \
+  api_type get##name() const {                                  \
     if (LLVM_UNLIKELY(isLarge()))                               \
-      return asLarge()->name;                                   \
+      return asLarge()->get##name();                            \
     else                                                        \
-      return asSmall()->name;                                   \
+      return asSmall()->get##name();                            \
   }
-  FUNC_HEADER_FIELDS(HEADER_FIELD_ACCESSOR)
-  HEADER_FIELD_ACCESSOR(
-      hbc::FunctionHeaderFlag,
-      hbc::FunctionHeaderFlag,
-      flags,
-      8)
+  FUNC_HEADER_FIELDS(HEADER_FIELD_ACCESSOR, HEADER_FIELD_ACCESSOR)
 #undef HEADER_FIELD_ACCESSOR
+  hbc::FunctionHeaderFlag getFlags() const {
+    if (LLVM_UNLIKELY(isLarge()))
+      return asLarge()->flags;
+    else
+      return asSmall()->flags;
+  }
 
  private:
   bool isLarge() const {
@@ -279,8 +275,16 @@ class BCProviderBase {
 
   virtual ~BCProviderBase() = default;
 
+  /// \return the BytecodeModule, nullptr if none exists.
+  virtual BytecodeModule *getBytecodeModule() = 0;
+
   /// Check whether a function with \p functionID is lazy.
   virtual bool isFunctionLazy(uint32_t functionID) const = 0;
+
+  /// \return whether the provider can be loaded as persistent,
+  /// which is not possible if the underlying storage may be mutated,
+  /// e.g. in the case of lazy compilation.
+  virtual bool allowPersistent() const = 0;
 
   /// Read some bytecode into OS page cache (only implemented for buffers).
   virtual void startWarmup(uint8_t percent) {}
@@ -442,7 +446,7 @@ class BCProviderFromBuffer final : public BCProviderBase {
 
   RuntimeFunctionHeader getFunctionHeader(uint32_t functionID) const override {
     const hbc::SmallFuncHeader &smallHeader = functionHeaders_[functionID];
-    if (LLVM_UNLIKELY(smallHeader.flags.overflowed)) {
+    if (LLVM_UNLIKELY(smallHeader.flags.getOverflowed())) {
       auto large = reinterpret_cast<const hbc::FunctionHeader *>(
           bufferPtr_ + smallHeader.getLargeHeaderOffset());
       return RuntimeFunctionHeader(large);
@@ -467,18 +471,20 @@ class BCProviderFromBuffer final : public BCProviderBase {
   StringTableEntry getStringTableEntry(uint32_t index) const override {
     auto &smallHeader = stringTableEntries_[index];
     if (LLVM_UNLIKELY(smallHeader.isOverflowed())) {
-      auto overflow = overflowStringTableEntries_[smallHeader.offset];
+      auto overflow = overflowStringTableEntries_[smallHeader.getOffset()];
       StringTableEntry entry(
-          overflow.offset, overflow.length, smallHeader.isUTF16);
+          overflow.offset, overflow.length, smallHeader.getIsUTF16());
       return entry;
     }
     StringTableEntry entry(
-        smallHeader.offset, smallHeader.length, smallHeader.isUTF16);
+        smallHeader.getOffset(),
+        smallHeader.getLength(),
+        smallHeader.getIsUTF16());
     return entry;
   }
 
   const uint8_t *getBytecode(uint32_t functionID) const override {
-    return bufferPtr_ + getFunctionHeader(functionID).offset();
+    return bufferPtr_ + getFunctionHeader(functionID).getOffset();
   }
 
   llvh::ArrayRef<hbc::HBCExceptionHandlerInfo> getExceptionTable(
@@ -515,8 +521,17 @@ class BCProviderFromBuffer final : public BCProviderBase {
     delete debugInfo_;
   }
 
+  /// \return the BytecodeModule, nullptr if none exists.
+  BytecodeModule *getBytecodeModule() override {
+    return nullptr;
+  }
+
   bool isFunctionLazy(uint32_t functionID) const override {
     return false;
+  }
+
+  bool allowPersistent() const override {
+    return true;
   }
 
   static bool classof(const BCProviderBase *provider) {

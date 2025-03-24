@@ -49,7 +49,7 @@ static std::string getFunctionName(
   hbc::RuntimeFunctionHeader functionHeader =
       bcProvider->getFunctionHeader(funcId);
   llvh::StringRef functionName =
-      bcProvider->getStringRefFromID(functionHeader.functionName());
+      bcProvider->getStringRefFromID(functionHeader.getFunctionName());
   return functionName.str();
 }
 
@@ -402,7 +402,8 @@ void ProfileAnalyzer::dumpFunctionStats() {
         << llvh::left_justify(std::to_string(funcInstFrequency), 12)
         << llvh::left_justify(std::to_string(entry.second.entryCount), 12);
 
-    auto funcSize = bcProvider->getFunctionHeader(funcId).bytecodeSizeInBytes();
+    auto funcSize =
+        bcProvider->getFunctionHeader(funcId).getBytecodeSizeInBytes();
     funcSizeAcc += funcSize;
     os_ << llvh::left_justify(std::to_string(funcSize), 12)
         << llvh::left_justify(std::to_string(funcSizeAcc), 12);
@@ -455,11 +456,11 @@ class FunctionBasicBlockStatsVisitor : public hbc::PrettyDisassembleVisitor {
         bcProvider_->getFunctionHeader(funcId);
 
     auto functionName =
-        bcProvider_->getStringRefFromID(functionHeader.functionName());
+        bcProvider_->getStringRefFromID(functionHeader.getFunctionName());
     os_ << "Function<" << functionName << ">";
     if (strncmp(functionName.data(), "global", functionName.size()) != 0) {
-      os_ << "(" << functionHeader.paramCount() << " params, "
-          << functionHeader.frameSize() << " registers)";
+      os_ << "(" << functionHeader.getParamCount() << " params, "
+          << functionHeader.getFrameSize() << " registers)";
     }
     os_ << ":\n";
     os_ << "Percentage in trace: "
@@ -691,10 +692,10 @@ void ProfileAnalyzer::dumpIO() {
   os_ << executionInfo.size() << " functions accessed out of total "
       << funcCount << " functions\n";
 
-  uint32_t funcRegionStartOffset = bcProvider->getFunctionHeader(0).offset();
+  uint32_t funcRegionStartOffset = bcProvider->getFunctionHeader(0).getOffset();
   uint32_t funcRegionEndOffset =
-      bcProvider->getFunctionHeader(funcCount - 1).offset() +
-      bcProvider->getFunctionHeader(funcCount - 1).bytecodeSizeInBytes() - 1;
+      bcProvider->getFunctionHeader(funcCount - 1).getOffset() +
+      bcProvider->getFunctionHeader(funcCount - 1).getBytecodeSizeInBytes() - 1;
 
   uint32_t funcRegionStartPage = getPageIndexFromOffset(funcRegionStartOffset);
   uint32_t funcRegionEndPage = getPageIndexFromOffset(funcRegionEndOffset);
@@ -712,9 +713,9 @@ void ProfileAnalyzer::dumpIO() {
         hbc::RuntimeFunctionHeader functionHeader =
             bcProvider->getFunctionHeader(funcId);
         // TODO: check each individual basic block's range instead of function.
-        uint32_t startOffset = functionHeader.offset();
-        uint32_t endOffset =
-            functionHeader.offset() + functionHeader.bytecodeSizeInBytes() - 1;
+        uint32_t startOffset = functionHeader.getOffset();
+        uint32_t endOffset = functionHeader.getOffset() +
+            functionHeader.getBytecodeSizeInBytes() - 1;
         uint32_t funcStartPage = getPageIndexFromOffset(startOffset);
         uint32_t funcEndPage = getPageIndexFromOffset(endOffset);
         for (uint32_t i = funcStartPage; i <= funcEndPage; ++i) {
@@ -876,12 +877,12 @@ void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
 
   auto header = bcProvider->getFunctionHeader(funcId);
   json.emitKeyValue("FunctionID", funcId);
-  json.emitKeyValue("Offset", header.offset());
+  json.emitKeyValue("Offset", header.getOffset());
   json.emitKeyValue(
       "VirtualOffset", bcProvider->getVirtualOffsetForFunction(funcId));
-  json.emitKeyValue("Size", header.bytecodeSizeInBytes());
+  json.emitKeyValue("Size", header.getBytecodeSizeInBytes());
   json.emitKeyValue(
-      "Name", bcProvider->getStringRefFromID(header.functionName()));
+      "Name", bcProvider->getStringRefFromID(header.getFunctionName()));
 
   auto dbg = bcProvider->getDebugOffsets(funcId);
   if (dbg) {
@@ -926,7 +927,8 @@ llvh::Optional<uint32_t> ProfileAnalyzer::getFunctionFromVirtualOffset(
 
   uint32_t endVirtualOffset = 0;
   for (uint32_t i = 0; i < funcCount; ++i) {
-    endVirtualOffset += bcProvider->getFunctionHeader(i).bytecodeSizeInBytes();
+    endVirtualOffset +=
+        bcProvider->getFunctionHeader(i).getBytecodeSizeInBytes();
     if (virtualOffset < endVirtualOffset) {
       return i;
     }
@@ -941,8 +943,8 @@ llvh::Optional<uint32_t> ProfileAnalyzer::getFunctionFromOffset(
 
   for (uint32_t i = 0; i < funcCount; ++i) {
     auto header = bcProvider->getFunctionHeader(i);
-    if (offset >= header.offset() &&
-        offset < header.offset() + header.bytecodeSizeInBytes()) {
+    if (offset >= header.getOffset() &&
+        offset < header.getOffset() + header.getBytecodeSizeInBytes()) {
       return i;
     }
   }

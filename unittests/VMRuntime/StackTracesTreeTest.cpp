@@ -31,7 +31,6 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
   explicit StackTracesTreeTest()
       : RuntimeTestFixtureBase(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
-                .withES6Promise(true)
                 .withES6Proxy(true)
                 .withIntl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
@@ -122,7 +121,8 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
     llvh::raw_string_ostream resStream(res);
     SourceErrorManager sm;
     sourceMapGen.outputAsJSON(resStream);
-    auto sourceMap = SourceMapParser::parse(res, /* baseDir */ "", sm);
+    llvh::MemoryBufferRef smBuf(res, "");
+    auto sourceMap = SourceMapParser::parse(smBuf, /* baseDir */ "", sm);
     assert(
         sm.getErrorCount() == 0 && "source map generation or parsing failed");
     return sourceMap;
@@ -477,7 +477,7 @@ eval("returnit()");
 )#",
       R"#(
 returnit test.js:4:20
-eval eval:1:9
+eval :1:9
 global test.js:6:5
 global test.js:2:1
 (root) :0:0

@@ -1048,11 +1048,11 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       return managedPointer_;
     }
 
-    void invalidate() override {
+    void invalidate() noexcept override {
       dec();
     }
 
-    void inc() {
+    void inc() noexcept {
       // See comments in hermes_vtable.cpp for why we use relaxed operations
       // here.
       auto oldCount = refCount_.fetch_add(1, std::memory_order_relaxed);
@@ -1061,7 +1061,7 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       (void)oldCount;
     }
 
-    void dec() {
+    void dec() noexcept {
       // See comments in hermes_vtable.cpp for why we use relaxed operations
       // here, and why TSAN requires different ordering.
 

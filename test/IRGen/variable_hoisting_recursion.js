@@ -24,7 +24,7 @@ function fibonacci(n) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "fibonacci": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %fibonacci(): functionCode
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %fibonacci(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "fibonacci": string
 // CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any

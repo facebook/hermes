@@ -50,6 +50,7 @@ import type {
   ObjectTypeProperty,
   OpaqueType,
   QualifiedTypeIdentifier,
+  QualifiedTypeofIdentifier,
   Program,
   RestElement,
   Statement,
@@ -84,6 +85,7 @@ import {
   isStringLiteral,
   isNumericLiteral,
   isIdentifier,
+  isMemberExpressionWithNonComputedProperty,
 } from 'hermes-estree';
 
 const EMPTY_TRANSLATION_RESULT = [null, []];
@@ -149,9 +151,9 @@ function transferProgramStatementProperties(
 }
 
 /**
- * Consume an abribray Flow AST and convert it into a Type defintion file.
+ * Consume an arbitrary Flow AST and convert it into a type definition file.
  *
- * To do this all runtime logic will be stripped and only Type that describe the module boundary will remain.
+ * To do this all runtime logic will be stripped and only types that describe the module boundary will remain.
  */
 export default function flowToFlowDef(
   ast: Program,
@@ -443,7 +445,7 @@ function convertExpressionToTypeAnnotation(
     }
     case 'Identifier': {
       return [
-        t.GenericTypeAnnotation({id: t.Identifier({name: expr.name})}),
+        t.TypeofTypeAnnotation({argument: t.Identifier({name: expr.name})}),
         analyzeTypeDependencies(expr, context),
       ];
     }
@@ -460,6 +462,14 @@ function convertExpressionToTypeAnnotation(
       const [resultExpr, deps] = convertAFunction(expr, context);
       return [resultExpr, deps];
     }
+    case 'MemberExpression': {
+      return [
+        t.TypeofTypeAnnotation({
+          argument: convertExpressionToTypeofIdentifier(expr, context),
+        }),
+        analyzeTypeDependencies(expr, context),
+      ];
+    }
     default: {
       return [
         flowFixMeOrError(
@@ -471,6 +481,15 @@ function convertExpressionToTypeAnnotation(
       ];
     }
   }
+}
+
+function inheritComments<T: DetachedNode<ESNode>>(
+  fromNode: ESNode,
+  toNode: T,
+): T {
+  // $FlowFixMe[unclear-type]
+  (toNode: any).comments = (fromNode: any).comments;
+  return toNode;
 }
 
 function convertObjectExpression(
@@ -513,13 +532,16 @@ function convertObjectExpression(
 
           const [resultExpr, deps] = convertAFunction(prop.value, context);
           return [
-            t.ObjectTypeMethodSignature({
-              // $FlowFixMe[incompatible-call]
-              key: asDetachedNode<
-                Identifier | NumericLiteral | StringLiteral | Expression,
-              >(prop.key),
-              value: resultExpr,
-            }),
+            inheritComments(
+              prop,
+              t.ObjectTypeMethodSignature({
+                // $FlowFixMe[incompatible-call]
+                key: asDetachedNode<
+                  Identifier | NumericLiteral | StringLiteral | Expression,
+                >(prop.key),
+                value: resultExpr,
+              }),
+            ),
             deps,
           ];
         }
@@ -539,14 +561,17 @@ function convertObjectExpression(
           const kind = prop.kind;
           const [resultExpr, deps] = convertAFunction(prop.value, context);
           return [
-            t.ObjectTypeAccessorSignature({
-              // $FlowFixMe[incompatible-call]
-              key: asDetachedNode<
-                Identifier | NumericLiteral | StringLiteral | Expression,
-              >(prop.key),
-              kind,
-              value: resultExpr,
-            }),
+            inheritComments(
+              prop,
+              t.ObjectTypeAccessorSignature({
+                // $FlowFixMe[incompatible-call]
+                key: asDetachedNode<
+                  Identifier | NumericLiteral | StringLiteral | Expression,
+                >(prop.key),
+                kind,
+                value: resultExpr,
+              }),
+            ),
             deps,
           ];
         }
@@ -557,15 +582,18 @@ function convertObjectExpression(
         );
 
         return [
-          t.ObjectTypePropertySignature({
-            // $FlowFixMe[incompatible-call]
-            key: asDetachedNode<
-              Identifier | NumericLiteral | StringLiteral | Expression,
-            >(prop.key),
-            value: resultExpr,
-            optional: false,
-            variance: null,
-          }),
+          inheritComments(
+            prop,
+            t.ObjectTypePropertySignature({
+              // $FlowFixMe[incompatible-call]
+              key: asDetachedNode<
+                Identifier | NumericLiteral | StringLiteral | Expression,
+              >(prop.key),
+              value: resultExpr,
+              optional: false,
+              variance: null,
+            }),
+          ),
           deps,
         ];
       }
@@ -1003,6 +1031,31 @@ function convertExpressionToIdentifier(
   );
 }
 
+function convertExpressionToTypeofIdentifier(
+  node: Expression,
+  context: TranslationContext,
+): DetachedNode<Identifier> | DetachedNode<QualifiedTypeofIdentifier> {
+  if (node.type === 'Identifier') {
+    return t.Identifier({name: node.name});
+  }
+
+  if (node.type === 'MemberExpression') {
+    const {property, object} = node;
+    if (property.type === 'Identifier' && object.type !== 'Super') {
+      return t.QualifiedTypeofIdentifier({
+        qualification: convertExpressionToTypeofIdentifier(object, context),
+        id: t.Identifier({name: property.name}),
+      });
+    }
+  }
+
+  throw translationError(
+    node,
+    `Expected ${node.type} to be an Identifier or Member with Identifier property, non-Super object.`,
+    context,
+  );
+}
+
 function convertSuperClassHelper(
   detachedId: DetachedNode<Identifier | QualifiedTypeIdentifier>,
   nodeForDependencies: ESNode,
@@ -1135,6 +1188,30 @@ function convertClassMember(
         );
       }
 
+      if (
+        member.value?.type === 'ArrowFunctionExpression' &&
+        member.typeAnnotation == null
+      ) {
+        const [resultTypeAnnotation, deps] = convertAFunction(
+          member.value,
+          context,
+        );
+
+        return [
+          t.ObjectTypePropertySignature({
+            // $FlowFixMe[incompatible-call]
+            key: asDetachedNode<
+              ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+            >(member.key),
+            value: resultTypeAnnotation,
+            optional: member.optional,
+            static: member.static,
+            variance: member.variance,
+          }),
+          deps,
+        ];
+      }
+
       const [resultTypeAnnotation, deps] = convertTypeAnnotation(
         member.typeAnnotation,
         member,
@@ -1163,7 +1240,13 @@ function convertClassMember(
       if (
         !isIdentifier(member.key) &&
         !isStringLiteral(member.key) &&
-        !isNumericLiteral(member.key)
+        !isNumericLiteral(member.key) &&
+        !(
+          isMemberExpressionWithNonComputedProperty(member.key) &&
+          member.key.object.type === 'Identifier' &&
+          member.key.object.name === 'Symbol' &&
+          ['iterator', 'asyncIterator'].includes(member.key.property.name)
+        )
       ) {
         throw translationError(
           member.key,
@@ -1174,15 +1257,23 @@ function convertClassMember(
 
       const [resultValue, deps] = convertAFunction(member.value, context);
 
+      const newKey =
+        isMemberExpressionWithNonComputedProperty(member.key) &&
+        member.key.object.type === 'Identifier' &&
+        member.key.object.name === 'Symbol'
+          ? t.Identifier({name: `@@${member.key.property.name}`})
+          : member.key;
+
       if (member.kind === 'get' || member.kind === 'set') {
         // accessors are methods - but flow accessor signatures are properties
         const kind = member.kind;
+
         return [
           t.ObjectTypeAccessorSignature({
             // $FlowFixMe[incompatible-call]
             key: asDetachedNode<
               ClassPropertyNameComputed | ClassPropertyNameNonComputed,
-            >(member.key),
+            >(newKey),
             value: resultValue,
             static: member.static,
             kind,
@@ -1196,7 +1287,7 @@ function convertClassMember(
           // $FlowFixMe[incompatible-call]
           key: asDetachedNode<
             ClassPropertyNameComputed | ClassPropertyNameNonComputed,
-          >(member.key),
+          >(newKey),
           value: resultValue,
           static: member.static,
         }),

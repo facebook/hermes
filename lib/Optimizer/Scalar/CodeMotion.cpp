@@ -171,43 +171,105 @@ static bool hoistInstructionsFromLoop(
   return changed;
 }
 
-/// Try to sink operands of instructions in the basic block \p BB.
+/// Try to sink instructions in the block \p BB to the point where they are
+/// used.
 static bool sinkInstructionsInBlock(
     BasicBlock *BB,
     const DominanceInfo &dominance,
     const LoopAnalysis &loops) {
   bool changed = false;
-  const bool inLoop = loops.isBlockInLoop(BB);
   const BasicBlock *header = loops.getLoopHeader(BB);
-  for (auto it = BB->rbegin(), e = BB->rend(); it != e; ++it) {
-    Instruction *inst = &*it;
 
-    if (llvh::isa<PhiInst>(inst))
+  for (auto it = BB->rbegin(); it != BB->rend();) {
+    auto *I = &*(it++);
+    auto se = I->getSideEffect();
+
+    // If the instruction cannot be moved, or if it can observe or modify memory
+    // locations, skip it.
+    if (se.getFirstInBlock() || se.mayReadOrWorse() ||
+        llvh::isa<CreateArgumentsInst>(I) || llvh::isa<TerminatorInst>(I))
       continue;
 
-    for (int i = 0, numOperands = inst->getNumOperands(); i < numOperands;
-         i++) {
-      auto *I = llvh::dyn_cast<Instruction>(inst->getOperand(i));
-      // Don't touch non-instructions, special instructions, instructions that
-      // have multiple uses or instructions with side effects.
-      if (!I || !I->hasOneUser() || I->getSideEffect().mayReadOrWorse() ||
-          llvh::isa<PhiInst>(I) || llvh::isa<TerminatorInst>(I) ||
-          llvh::isa<CreateArgumentsInst>(I))
+    // If the instruction only has one user, we can move it right before that
+    // user, as long as that user is not FirstInBlock.
+    if (I->hasOneUser() &&
+        !I->getUsers()[0]->getSideEffect().getFirstInBlock()) {
+      auto *user = I->getUsers()[0];
+      // If the user is already the next instruction, nothing to do.
+      if (I->getNextNode() == user)
         continue;
 
-      // If block is in a loop, only sink instructions from the same loop. Note
-      // that the loop header must be non-null for us to prove that they are in
-      // the same loop.
-      BasicBlock *parent = I->getParent();
-      if (inLoop && parent != BB &&
-          (!header || loops.getLoopHeader(parent) != header)) {
-        continue;
+      auto *userBB = user->getParent();
+
+      // We cannot sink into a different loop, because it may be suboptimal, and
+      // the instruction may not be idempotent.
+      if (userBB != BB && loops.isBlockInLoop(userBB)) {
+        auto *ipHeader = loops.getLoopHeader(userBB);
+        // Note that if the header is null, we cannot prove that it is the same
+        // loop.
+        if (!ipHeader || ipHeader != header)
+          continue;
       }
 
-      I->moveBefore(inst);
+      I->moveBefore(user);
       changed = true;
       ++NumCM;
       ++NumSunk;
+    }
+
+    // If the instruction has multiple users, we will sink it to the first
+    // common dominator of all of them, tracked by this variable.
+    BasicBlock *newBlock = nullptr;
+
+    /// Update newBlock to account for a user in \p useBB.
+    auto merge = [&newBlock, &dominance](BasicBlock *useBB) {
+      newBlock = newBlock
+          ? dominance.findNearestCommonDominator(newBlock, useBB)
+          : useBB;
+    };
+    for (auto *U : I->getUsers()) {
+      if (auto *phi = llvh::dyn_cast<PhiInst>(U)) {
+        // For Phi, ensure that the new block dominates the blocks from which
+        // this instruction is the incoming value.
+        for (unsigned i = 0, e = phi->getNumEntries(); i < e; ++i) {
+          auto [val, pred] = phi->getEntry(i);
+          if (val == I)
+            merge(pred);
+        }
+        continue;
+      }
+
+      // If the user is some other FirstInBlock instruction, give up.
+      if (U->getSideEffect().getFirstInBlock()) {
+        newBlock = nullptr;
+        break;
+      }
+
+      // Ensure that the new block dominates this user.
+      merge(U->getParent());
+    }
+
+    // If no new block was determined, move on.
+    if (!newBlock || newBlock == BB)
+      continue;
+
+    // If we cannot prove that the new location is in the same loop as the
+    // current location, bail.
+    if (loops.isBlockInLoop(newBlock)) {
+      auto *nbHeader = loops.getLoopHeader(newBlock);
+      if (!nbHeader || nbHeader != header)
+        continue;
+    }
+
+    // Move the instruction to the first available location in the new block.
+    for (auto &newLoc : *newBlock) {
+      if (!newLoc.getSideEffect().getFirstInBlock()) {
+        I->moveBefore(&newLoc);
+        changed = true;
+        ++NumCM;
+        ++NumSunk;
+        break;
+      }
     }
   }
   return changed;
@@ -230,21 +292,22 @@ bool CodeMotion::runOnFunction(Function *F) {
 
   // Scan the function in post order (from end to start) and:
   //
-  //   1. Sink instruction operands to where we need them. This shortens the
-  //      lifetime of instructions and reduces register pressure.
-  //   2. Hoist instructions out of loops to avoid repeated evaluation.
+  //   1. First, sink instructions to where we need them. This shortens their
+  //      lifetime and reduces register pressure.
+  //   2. Once instructions in all blocks have been sunk, hoist instructions out
+  //      of loops to avoid repeated evaluation.
   //
   // Do it in this order so that (hopefully) operands are sunk and then both
   // they and the instruction that uses them can all be hoisted at once.
   // Otherwise, that instruction couldn't be hoisted because its operands are
   // still in (an earlier block of) the loop.
-  //
+  for (auto *BB : PO)
+    changed |= sinkInstructionsInBlock(BB, dominance, loops);
+
   // Note: ideally we would visit the blocks from inner loops first and outer
   // loops last, but post-order doesn't guarantee that.
-  for (auto *BB : PO) {
-    changed |= sinkInstructionsInBlock(BB, dominance, loops);
+  for (auto *BB : PO)
     changed |= hoistInstructionsFromLoop(BB, dominance, loops);
-  }
 
   return changed;
 }

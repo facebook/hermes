@@ -97,8 +97,15 @@ class Interpreter {
   tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id);
 
   /// Implement OpCode::GetById/TryGetById when the base is not an object.
+  static CallResult<PseudoHandle<>> getByIdTransientWithReceiver_RJS(
+      Runtime &runtime,
+      Handle<> base,
+      SymbolID id,
+      Handle<> receiver);
   static CallResult<PseudoHandle<>>
-  getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id);
+  getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id) {
+    return getByIdTransientWithReceiver_RJS(runtime, base, id, base);
+  }
 
   /// Fast path for getByValTransient() -- avoid boxing for \p base if it is
   /// string primitive and \p nameHandle is an array index.
@@ -107,8 +114,15 @@ class Interpreter {
   getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle);
 
   /// Implement OpCode::GetByVal when the base is not an object.
+  static CallResult<PseudoHandle<>> getByValTransientWithReceiver_RJS(
+      Runtime &runtime,
+      Handle<> base,
+      Handle<> name,
+      Handle<> receiver);
   static CallResult<PseudoHandle<>>
-  getByValTransient_RJS(Runtime &runtime, Handle<> base, Handle<> name);
+  getByValTransient_RJS(Runtime &runtime, Handle<> base, Handle<> name) {
+    return getByValTransientWithReceiver_RJS(runtime, base, name, base);
+  }
 
   /// Implement OpCode::PutById/TryPutById when the base is not an object.
   static ExecutionStatus putByIdTransient_RJS(
@@ -219,12 +233,12 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
-  static ExecutionStatus casePutOwnByVal(
+  static ExecutionStatus caseDefineOwnByVal(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
-  static ExecutionStatus casePutOwnGetterSetterByVal(
+  static ExecutionStatus caseDefineOwnGetterSetterByVal(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
@@ -242,6 +256,42 @@ class Interpreter {
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const Inst *ip);
+  static ExecutionStatus caseGetNextPName(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
+  static ExecutionStatus caseDelByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus caseGetByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus caseGetByValWithReceiver(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus casePutByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus casePutByValWithReceiver(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  /// Interpreter implementation for creating a RegExp object. Unlike the other
+  /// out-of-line cases, this takes a CodeBlock* and does not return an
+  /// ExecutionStatus.
+  static void caseCreateRegExp(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      const inst::Inst *ip);
 
   /// \return the `this` to be used for a construct call on \p callee, with \p
   /// newTarget as the new.target. We need to take special care when \p callee
@@ -254,6 +304,18 @@ class Interpreter {
       PinnedHermesValue *newTarget,
       uint8_t cacheIdx,
       CodeBlock *curCodeBlock);
+
+  /// Create a class, as per ES2023 15.7.14.
+  static ExecutionStatus caseCreateClass(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs);
+
+  static ExecutionStatus defineOwnByIdSlowPath(
+      Runtime &runtime,
+      SmallHermesValue valueToStore,
+      CodeBlock *curCodeBlock,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
 
   /// Evaluate callBuiltin and store the result in the register stack. it must
   /// must be invoked with CallBuiltin or CallBuiltinLong. \p op3 contains the

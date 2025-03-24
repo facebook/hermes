@@ -15,7 +15,6 @@
 #include "hermes/BCGen/HBC/StringKind.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/BCGen/ShapeTableEntry.h"
-#include "hermes/IRGen/IRGen.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/StringTableEntry.h"
@@ -27,6 +26,10 @@
 
 namespace hermes {
 class SourceMapGenerator;
+
+namespace sema {
+class SemContext;
+}
 
 namespace hbc {
 class BCProviderFromSrc;
@@ -95,10 +98,10 @@ class BytecodeFunction {
   }
 
   void setOffset(uint32_t offset) {
-    header_.offset = offset;
+    header_.setOffset(offset);
   }
   uint32_t getOffset() const {
-    return header_.offset;
+    return header_.getOffset();
   }
 
   void setInfoOffset(uint32_t offset) {
@@ -109,7 +112,7 @@ class BytecodeFunction {
   }
 
   bool isStrictMode() const {
-    return header_.flags.strictMode;
+    return header_.flags.getStrictMode();
   }
 
   /// Return the entire opcode array for execution, including the inlined jump
@@ -121,7 +124,7 @@ class BytecodeFunction {
   /// Return only the opcodes for serialisation. The jump tables need to be
   /// accessed separately so they can be correctly inlined.
   llvh::ArrayRef<opcode_atom_t> getOpcodesOnly() const {
-    return {opcodesAndJumpTables_.data(), header_.bytecodeSizeInBytes};
+    return {opcodesAndJumpTables_.data(), header_.getBytecodeSizeInBytes()};
   }
 
   /// Return the jump table portion of the opcode array. This is useful for the
@@ -142,9 +145,9 @@ class BytecodeFunction {
 
   void setDebugOffsets(DebugOffsets offsets) {
     debugOffsets_ = offsets;
-    header_.flags.hasDebugInfo =
+    header_.flags.setHasDebugInfo(
         debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET ||
-        debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET;
+        debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET);
   }
 
   void setFunctionIR(Function *functionIR) {

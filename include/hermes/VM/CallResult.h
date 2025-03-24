@@ -286,6 +286,13 @@ class CallResult<Handle<T>, detail::CallResultSpecialize::Handle> {
     return &getValue();
   }
 
+  CallResult<HermesValue> toCallResultHermesValue() const {
+    if (LLVM_UNLIKELY(getStatus() == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    else
+      return valueOrStatus_.getHermesValue();
+  }
+
   ExecutionStatus getStatus() const {
     return reinterpret_cast<intptr_t>(
                valueOrStatus_.unsafeGetPinnedHermesValue()) == -1

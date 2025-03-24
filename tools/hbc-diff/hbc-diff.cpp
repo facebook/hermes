@@ -126,7 +126,7 @@ static ExecutionStatus diffFiles(
       }
     }
     auto lastFuncHeader = bytecode->getFunctionHeader(lastFuncId);
-    auto lastFuncEnd = lastFuncStart + lastFuncHeader.bytecodeSizeInBytes();
+    auto lastFuncEnd = lastFuncStart + lastFuncHeader.getBytecodeSizeInBytes();
     fileSizes[i].push_back(lastFuncEnd - start);
 
     // function info, debug info
@@ -139,7 +139,7 @@ static ExecutionStatus diffFiles(
     // Iterate to find the first function that actually has info allocated for
     // it.
     for (const auto &header : bytecode->getSmallFunctionHeaders()) {
-      if (header.flags.overflowed) {
+      if (header.flags.getOverflowed()) {
         funcInfoStart = header.getLargeHeaderOffset();
         break;
       }
@@ -156,7 +156,8 @@ static ExecutionStatus diffFiles(
     hbc::BCProvider *raw_bc = bytecode.get();
     hbc::BytecodeDisassembler disas(std::move(bytecode));
     for (uint32_t funcId = 0; funcId < functionCount; ++funcId) {
-      uint32_t size = raw_bc->getFunctionHeader(funcId).bytecodeSizeInBytes();
+      uint32_t size =
+          raw_bc->getFunctionHeader(funcId).getBytecodeSizeInBytes();
       funcHashToSize[i].insert(
           std::make_pair(disas.fuzzyHashBytecode(funcId), size));
     }

@@ -55,23 +55,20 @@ function test_could_be_int(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKIR:scope %VS0 []
-
 // CHKIR:function global(): undefined
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_int": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_int_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_uint_uint": string
 // CHKIR-NEXT:       DeclareGlobalVarInst "test_could_be_int": string
-// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %test_int_int(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_int_int": string
-// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %test_int_uint(): functionCode
-// CHKIR-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_int_uint": string
-// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %test_uint_uint(): functionCode
-// CHKIR-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "test_uint_uint": string
-// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %test_could_be_int(): functionCode
-// CHKIR-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "test_could_be_int": string
+// CHKIR-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %test_int_int(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_int_int": string
+// CHKIR-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %test_int_uint(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_int_uint": string
+// CHKIR-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %test_uint_uint(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_uint_uint": string
+// CHKIR-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %test_could_be_int(): functionCode
+// CHKIR-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_could_be_int": string
 // CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 
@@ -161,78 +158,77 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:i3[ASCII, 31..42] #B424DF91: test_int_int
 // CHKBC-NEXT:i4[ASCII, 42..58] #7CF5E44C: test_could_be_int
 
-// CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHKBC-NEXT:    CreateTopLevelEnvironment r2, 0
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_int"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_int_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_uint_uint"
 // CHKBC-NEXT:    DeclareGlobalVar  "test_could_be_int"
-// CHKBC-NEXT:    CreateClosure     r0, r2, Function<test_int_int>
-// CHKBC-NEXT:    GetGlobalObject   r1
-// CHKBC-NEXT:    PutByIdLoose      r1, r0, 1, "test_int_int"
-// CHKBC-NEXT:    CreateClosure     r0, r2, Function<test_int_uint>
-// CHKBC-NEXT:    PutByIdLoose      r1, r0, 2, "test_int_uint"
-// CHKBC-NEXT:    CreateClosure     r0, r2, Function<test_uint_uint>
-// CHKBC-NEXT:    PutByIdLoose      r1, r0, 3, "test_uint_uint"
-// CHKBC-NEXT:    CreateClosure     r2, r2, Function<test_could_be_int>
-// CHKBC-NEXT:    PutByIdLoose      r1, r2, 4, "test_could_be_int"
-// CHKBC-NEXT:    LoadConstUndefined r2
-// CHKBC-NEXT:    Ret               r2
-
-// CHKBC:Function<test_int_int>(3 params, 2 registers, 0 numbers, 0 non-pointers):
-// CHKBC-NEXT:    LoadParam         r1, 1
-// CHKBC-NEXT:    ToInt32           r1, r1
-// CHKBC-NEXT:    LoadParam         r0, 2
-// CHKBC-NEXT:    ToInt32           r0, r0
-// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
+// CHKBC-NEXT:    GetGlobalObject   r2
 // CHKBC-NEXT:    LoadConstUndefined r0
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_int_int>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 1, "test_int_int"
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_int_uint>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 2, "test_int_uint"
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_uint_uint>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 3, "test_uint_uint"
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_could_be_int>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 4, "test_could_be_int"
 // CHKBC-NEXT:    Ret               r0
-// CHKBC-NEXT:L1:
-// CHKBC-NEXT:    Ret               r1
 
-// CHKBC:Function<test_int_uint>(3 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x001c, lexical 0x0000
-// CHKBC-NEXT:    LoadParam         r2, 1
-// CHKBC-NEXT:    ToInt32           r2, r2
-// CHKBC-NEXT:    LoadParam         r1, 2
-// CHKBC-NEXT:    LoadConstZero     r0
-// CHKBC-NEXT:    URshift           r0, r1, r0
-// CHKBC-NEXT:    JStrictEqual      L1, r2, r0
-// CHKBC-NEXT:    LoadConstUndefined r0
-// CHKBC-NEXT:    Ret               r0
-// CHKBC-NEXT:L1:
-// CHKBC-NEXT:    Ret               r2
-
-// CHKBC:Function<test_uint_uint>(3 params, 3 registers, 1 numbers, 0 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
-// CHKBC-NEXT:    LoadParam         r2, 1
-// CHKBC-NEXT:    LoadConstZero     r0
-// CHKBC-NEXT:    URshift           r2, r2, r0
-// CHKBC-NEXT:    LoadParam         r1, 2
-// CHKBC-NEXT:    URshift           r1, r1, r0
-// CHKBC-NEXT:    JStrictEqual      L1, r2, r1
-// CHKBC-NEXT:    LoadConstUndefined r1
-// CHKBC-NEXT:    Ret               r1
-// CHKBC-NEXT:L1:
-// CHKBC-NEXT:    Ret               r2
-
-// CHKBC:Function<test_could_be_int>(2 params, 12 registers, 1 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x002d, lexical 0x0000
+// CHKBC:Function<test_int_int>(3 params, 4 registers, 2 numbers, 1 non-pointers):
 // CHKBC-NEXT:    LoadParam         r3, 1
-// CHKBC-NEXT:    LoadConstUndefined r1
-// CHKBC-NEXT:    Call1             r2, r3, r1
-// CHKBC-NEXT:    LoadConstUInt8    r0, 100
-// CHKBC-NEXT:    Mul               r0, r2, r0
-// CHKBC-NEXT:    Call1             r3, r3, r1
+// CHKBC-NEXT:    ToInt32           r1, r3
+// CHKBC-NEXT:    LoadParam         r3, 2
+// CHKBC-NEXT:    ToInt32           r0, r3
+// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
 // CHKBC-NEXT:    LoadConstUndefined r2
-// CHKBC-NEXT:    JmpFalse          L1, r3
+// CHKBC-NEXT:    Ret               r2
+// CHKBC-NEXT:L1:
+// CHKBC-NEXT:    Ret               r1
+
+// CHKBC:Function<test_int_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x001c, lexical 0x0000
+// CHKBC-NEXT:    LoadParam         r3, 1
+// CHKBC-NEXT:    ToInt32           r1, r3
+// CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    LoadParam         r3, 2
+// CHKBC-NEXT:    URshift           r0, r3, r0
+// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    Ret               r2
+// CHKBC-NEXT:L1:
+// CHKBC-NEXT:    Ret               r1
+
+// CHKBC:Function<test_uint_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
+// CHKBC-NEXT:    LoadConstZero     r0
+// CHKBC-NEXT:    LoadParam         r3, 1
+// CHKBC-NEXT:    URshift           r1, r3, r0
+// CHKBC-NEXT:    LoadParam         r3, 2
+// CHKBC-NEXT:    URshift           r0, r3, r0
+// CHKBC-NEXT:    JStrictEqual      L1, r1, r0
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    Ret               r2
+// CHKBC-NEXT:L1:
+// CHKBC-NEXT:    Ret               r1
+
+// CHKBC:Function<test_could_be_int>(2 params, 14 registers, 2 numbers, 2 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x002d, lexical 0x0000
+// CHKBC-NEXT:    LoadParam         r4, 1
+// CHKBC-NEXT:    LoadConstUndefined r3
+// CHKBC-NEXT:    Call1             r5, r4, r3
+// CHKBC-NEXT:    LoadConstUInt8    r0, 100
+// CHKBC-NEXT:    Mul               r0, r5, r0
+// CHKBC-NEXT:    Call1             r4, r4, r3
+// CHKBC-NEXT:    LoadConstUndefined r2
+// CHKBC-NEXT:    JmpFalse          L1, r4
 // CHKBC-NEXT:    ToInt32           r2, r0
 // CHKBC-NEXT:L1:
-// CHKBC-NEXT:    LoadConstZero     r3
-// CHKBC-NEXT:    URshift           r3, r0, r3
-// CHKBC-NEXT:    JStrictEqual      L2, r2, r3
-// CHKBC-NEXT:    Ret               r1
+// CHKBC-NEXT:    LoadConstZero     r1
+// CHKBC-NEXT:    URshift           r1, r0, r1
+// CHKBC-NEXT:    JStrictEqual      L2, r2, r1
+// CHKBC-NEXT:    Ret               r3
 // CHKBC-NEXT:L2:
 // CHKBC-NEXT:    Ret               r0
 
@@ -244,14 +240,14 @@ function test_could_be_int(func) {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 12 col 1
-// CHKBC-NEXT:    bc 6: line 12 col 1
-// CHKBC-NEXT:    bc 11: line 12 col 1
-// CHKBC-NEXT:    bc 16: line 12 col 1
-// CHKBC-NEXT:    bc 21: line 12 col 1
-// CHKBC-NEXT:    bc 33: line 12 col 1
-// CHKBC-NEXT:    bc 44: line 12 col 1
-// CHKBC-NEXT:    bc 55: line 12 col 1
-// CHKBC-NEXT:    bc 66: line 12 col 1
+// CHKBC-NEXT:    bc 0: line 12 col 1
+// CHKBC-NEXT:    bc 5: line 12 col 1
+// CHKBC-NEXT:    bc 10: line 12 col 1
+// CHKBC-NEXT:    bc 15: line 12 col 1
+// CHKBC-NEXT:    bc 29: line 12 col 1
+// CHKBC-NEXT:    bc 40: line 12 col 1
+// CHKBC-NEXT:    bc 51: line 12 col 1
+// CHKBC-NEXT:    bc 62: line 12 col 1
 // CHKBC-NEXT:  0x001c  function idx 2, starts at line 23 col 1
 // CHKBC-NEXT:    bc 11: line 25 col 7
 // CHKBC-NEXT:  0x0023  function idx 3, starts at line 34 col 1

@@ -474,9 +474,18 @@ bool execute(
 
   // Open the produced shared library and invoke main with args.
   void *handle = dlopen(tmpPath.c_str(), RTLD_LAZY);
+  if (!handle) {
+    llvh::errs() << "dlopen() error, path: " << tmpPath
+                 << ", error: " << dlerror() << "\n";
+    return false;
+  }
   // Note that main technically takes a non-const char**, but we know it is
   // never modified.
   auto *main = (int (*)(int, const char **))dlsym(handle, "main");
+  if (!main) {
+    llvh::errs() << "dlsym(main) error: " << dlerror() << "\n";
+    return false;
+  }
   return !main(args.size(), args.data());
 }
 

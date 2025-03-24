@@ -46,13 +46,13 @@ function func4() {
 // CHECK-NEXT:       DeclareGlobalVarInst "func2": string
 // CHECK-NEXT:       DeclareGlobalVarInst "func3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "func4": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %func1(): functionCode
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %func1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "func1": string
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %func2(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %func2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "func2": string
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %func3(): functionCode
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %func3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "func3": string
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %func4(): functionCode
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %func4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "func4": string
 // CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
@@ -105,19 +105,19 @@ function func4() {
 // CHECK-NEXT:  %5 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, %5: undefined|object, [%VS3.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:       StoreFrameInst %3: environment, undefined: undefined, [%VS3.innerArrow1]: any
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %3: environment, %innerFunction(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %3: environment, %VS3: any, %innerFunction(): functionCode
 // CHECK-NEXT:       StoreFrameInst %3: environment, %8: object, [%VS3.innerFunction]: any
 // CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
 // CHECK-NEXT:  %11 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
 // CHECK-NEXT:  %12 = BinaryStrictlyNotEqualInst (:boolean) %11: undefined|object, undefined: undefined
 // CHECK-NEXT:  %13 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: boolean
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %3: environment, %innerArrow1(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %3: environment, %VS3: any, %innerArrow1(): functionCode
 // CHECK-NEXT:        StoreFrameInst %3: environment, %14: object, [%VS3.innerArrow1]: any
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) %3: environment, [%VS3.innerFunction]: any
 // CHECK-NEXT:  %17 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:        StoreOwnPropertyInst %16: any, %17: object, 0: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %16: any, %17: object, 0: number, true: boolean
 // CHECK-NEXT:  %19 = LoadFrameInst (:any) %3: environment, [%VS3.innerArrow1]: any
-// CHECK-NEXT:        StoreOwnPropertyInst %19: any, %17: object, 1: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %19: any, %17: object, 1: number, true: boolean
 // CHECK-NEXT:        ReturnInst %17: object
 // CHECK-NEXT:function_end
 
@@ -153,7 +153,7 @@ function func4() {
 // CHECK-NEXT:  %4 = LoadFrameInst (:undefined|object) %0: environment, [%VS3.?anon_1_new.target]: undefined|object
 // CHECK-NEXT:  %5 = BinaryStrictlyNotEqualInst (:boolean) %4: undefined|object, undefined: undefined
 // CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: boolean
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %innerArrow2(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS6: any, %innerArrow2(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS6.innerArrow2]: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS6.innerArrow2]: any
 // CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined

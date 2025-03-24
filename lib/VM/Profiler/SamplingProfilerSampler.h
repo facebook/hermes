@@ -71,15 +71,15 @@ struct Sampler {
   /// Whether profiler is enabled or not. Protected by profilerLock_.
   bool enabled_{false};
 
-  /// Threading: load/store of sampledStackDepth_ and sampleStorage_
-  /// are protected by samplingDoneSem_.
-  /// Actual sampled stack depth in sampleStorage_.
-  uint32_t sampledStackDepth_{0};
-  /// Preallocated stack frames storage for signal handler(because
+  /// Pre-allocated stack frames storage for signal handler(because
   /// allocating memory in signal handler is not allowed)
-  /// This storage does not need to be protected by lock because accessing to
-  /// it is serialized by samplingDoneSem_.
-  SamplingProfiler::StackTrace sampleStorage_{SamplingProfiler::kMaxStackDepth};
+  /// Threading: load/store of sampleStorage_ and numSkippedFrames_
+  /// are protected by samplingDoneSem_ and thus does not need a lock.
+  SamplingProfiler::StackTrace sampleStorage_{};
+  /// The number of frames that were not stored in sampleStorage_ during the
+  /// sampling event. This is used to determine whether the sampleStorage_ has
+  /// insufficient space and needs to be grown.
+  uint32_t numSkippedFrames_{0};
 
   /// This thread starts in timerLoop_, and samples the stacks of registered
   /// runtimes periodically. It is created in \p enable() and joined in
@@ -117,9 +117,11 @@ struct Sampler {
   static Sampler *get();
 
  protected:
-  Sampler() = default;
+  Sampler();
 
-  void walkRuntimeStack(SamplingProfiler *profiler);
+  void walkRuntimeStack(
+      SamplingProfiler *profiler,
+      SamplingProfiler::MayAllocate mayAllocate);
 
  private:
   /// Sample stack for a profiler.

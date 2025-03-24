@@ -75,41 +75,58 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<AllocFastArrayInst>(Inst))
     return true;
 
+  // Key operands of CacheNewObjectInst must be literals.
+  if (llvh::isa<CacheNewObjectInst>(Inst))
+    return opIndex >= CacheNewObjectInst::FirstKeyIdx;
+
   // SwitchInst's rest of the operands are case values,
   // hence they will stay as constant.
   if (llvh::isa<SwitchInst>(Inst) && opIndex > 0)
     return true;
 
-  // StoreOwnPropertyInst and StoreNewOwnPropertyInst.
-  if (auto *SOP = llvh::dyn_cast<BaseStoreOwnPropertyInst>(Inst)) {
-    if (opIndex == StoreOwnPropertyInst::PropertyIdx) {
-      if (llvh::isa<StoreNewOwnPropertyInst>(Inst)) {
-        // In StoreNewOwnPropertyInst the property name must be a literal.
+  // DefineOwnPropertyInst and DefineNewOwnPropertyInst.
+  if (auto *SOP = llvh::dyn_cast<BaseDefineOwnPropertyInst>(Inst)) {
+    if (opIndex == BaseDefineOwnPropertyInst::PropertyIdx) {
+      if (llvh::isa<DefineNewOwnPropertyInst>(Inst)) {
+        // In DefineNewOwnPropertyInst the property name must be a literal.
         return true;
       }
 
       // If the propery is a LiteralNumber, the property is enumerable, and it
       // is a valid array index, it is coming from an array initialization and
-      // we will emit it as PutByIndex.
+      // we will emit it as DefineOwnByIndex.
       if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst->getOperand(opIndex))) {
         if (SOP->getIsEnumerable() && LN->convertToArrayIndex().hasValue())
           return true;
       }
+
+      // LiteralStrings are optimized, when they are enumerable.
+      if (llvh::isa<LiteralString>(Inst->getOperand(opIndex)) &&
+          SOP->getIsEnumerable()) {
+        return true;
+      }
     }
 
-    // StoreOwnPropertyInst's isEnumerable is a boolean constant.
-    if (opIndex == StoreOwnPropertyInst::IsEnumerableIdx)
+    // DefineOwnPropertyInst's isEnumerable is a boolean constant.
+    if (opIndex == DefineOwnPropertyInst::IsEnumerableIdx)
       return true;
 
     return false;
   }
 
   // If StorePropertyInst's property ID is a LiteralString, we will keep it
-  // untouched and emit try_put_by_id eventually.
+  // untouched and emit try_put_by_id eventually. Unless it is specifically a
+  // StorePropertyWithReceiverInst. That instruction has no by_id variant.
   if (llvh::isa<BaseStorePropertyInst>(Inst) &&
+      !llvh::isa<StorePropertyWithReceiverInst>(Inst) &&
       opIndex == BaseStorePropertyInst::PropertyIdx &&
       llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
     return true;
+
+  if (llvh::isa<StorePropertyWithReceiverInst>(Inst) &&
+      opIndex == StorePropertyWithReceiverInst::IsStrictIdx) {
+    return true;
+  }
 
   // If LoadPropertyInst's property ID is a LiteralString, we will keep it
   // untouched and emit try_put_by_id eventually.
@@ -118,16 +135,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
     return true;
 
-  // If DeletePropertyInst's property ID is a LiteralString, we will keep it
-  // untouched and emit try_put_by_id eventually.
-  if (llvh::isa<DeletePropertyInst>(Inst) &&
-      opIndex == DeletePropertyInst::PropertyIdx &&
-      llvh::isa<LiteralString>(Inst->getOperand(opIndex)))
-    return true;
-
-  // StoreGetterSetterInst's isEnumerable is a boolean constant.
-  if (llvh::isa<StoreGetterSetterInst>(Inst) &&
-      opIndex == StoreGetterSetterInst::IsEnumerableIdx)
+  // DefineOwnGetterSetterInst's isEnumerable is a boolean constant.
+  if (llvh::isa<DefineOwnGetterSetterInst>(Inst) &&
+      opIndex == DefineOwnGetterSetterInst::IsEnumerableIdx)
     return true;
 
   // Both pattern and flags operands of the CreateRegExpInst
@@ -146,6 +156,9 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       (opIndex == CallBuiltinInst::CalleeIdx ||
        opIndex == CallBuiltinInst::NewTargetIdx ||
        opIndex == CallBuiltinInst::ThisIdx))
+    return true;
+  if (llvh::isa<BranchIfBuiltinInst>(Inst) &&
+      opIndex == BranchIfBuiltinInst::BuiltinIdx)
     return true;
 
   // CallInst's NewTarget should only be a literal if it's undefined.
@@ -222,9 +235,24 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return true;
   }
 
+  if (llvh::isa<TypeOfIsInst>(Inst) && opIndex == TypeOfIsInst::TypesIdx) {
+    return true;
+  }
+  if (llvh::isa<HBCCmpBrTypeOfIsInst>(Inst) &&
+      opIndex == HBCCmpBrTypeOfIsInst::TypesIdx) {
+    return true;
+  }
+
   if (llvh::isa<BaseCallInst>(Inst) &&
       opIndex == BaseCallInst::CalleeIsAlwaysClosure) {
     return true;
+  }
+
+  if (const auto *callInst = llvh::dyn_cast<BaseCallInst>(Inst)) {
+    if (callInst->getAttributes(Inst->getModule()).isMetroRequire &&
+        opIndex == callInst->getThisIdx() + 1) {
+      return true;
+    }
   }
 
   // For properties that uint8_t literals, there's a GetByIndex variant
@@ -489,32 +517,43 @@ bool InitCallFrame::runOnFunction(Function *F) {
       // This also matches constructors.
       if (!call)
         continue;
+
+      bool isRequireCall =
+          call->getAttributes(call->getModule()).isMetroRequire;
+
       builder.setInsertionPoint(call);
       changed = true;
 
-      auto reg = RA_.getLastRegister().getIndex() -
-          HVMRegisterAllocator::CALL_EXTRA_REGISTERS;
+      // Index of the argument register in RegClass::Other.
+      auto reg = RA_.lastCallArgRegister().getIndexInClass();
 
       for (int i = 0, e = call->getNumArguments(); i < e; i++, --reg) {
         // If this is a Call instruction, emit explicit Movs to the argument
         // registers. If this is a CallN instruction, emit ImplicitMovs
         // instead, to express that these registers get written to by the CallN,
         // even though they are not the destination.
-        // Lastly, if this is argument 0 of CallBuiltinInst emit ImplicitMov to
+        // If this is argument 0 of CallBuiltinInst emit ImplicitMov to
         // encode that the "this" register is implicitly set to undefined.
+        // Lastly, if this is argument 1 of Call that has been identified
+        // as a call to the Metro Require function, it will become an immediate
+        // in the resulting CallRequire bytecode.  But we still need to emit an
+        // implicit move, and reserve the argument register, since we will be
+        // making the call on cache misses.
         Value *arg = call->getArgument(i);
         if (llvh::isa<HBCCallNInst>(call) ||
-            (i == 0 && llvh::isa<CallBuiltinInst>(call))) {
+            (i == 0 && llvh::isa<CallBuiltinInst>(call)) ||
+            (i == 1 && isRequireCall)) {
           auto *imov = builder.createImplicitMovInst(arg);
-          RA_.updateRegister(imov, Register(reg));
+          RA_.updateRegister(imov, Register(RegClass::Other, reg));
         } else {
           auto *mov = builder.createMovInst(arg);
-          RA_.updateRegister(mov, Register(reg));
+          RA_.updateRegister(mov, Register(RegClass::Other, reg));
           call->setArgument(mov, i);
         }
       }
     }
   }
+
   return changed;
 }
 
@@ -575,10 +614,10 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
 
   for (auto &BB : *F) {
     IRBuilder::InstructionDestroyer destroyer;
-    // Maps a register number to the instruction that last modified it.
+    // Maps a register to the instruction that last modified it.
     // Every Instruction is either an HBCLoadConstInst or a Mov whose
     // operand is a HBCLoadConstInst
-    llvh::DenseMap<unsigned, Instruction *> regToInstMap{};
+    llvh::DenseMap<Register, Instruction *> regToInstMap{};
     for (auto &I : BB) {
       HBCLoadConstInst *loadI{nullptr};
       // Value numbering currently only tracks the values of registers that
@@ -590,7 +629,7 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
       }
 
       if (RA_.isAllocated(&I)) {
-        unsigned reg = RA_.getRegister(&I).getIndex();
+        Register reg = RA_.getRegister(&I);
         if (loadI) {
           auto it = regToInstMap.find(reg);
           if (it != regToInstMap.end()) {
@@ -620,8 +659,7 @@ bool LoadConstantValueNumbering::runOnFunction(Function *F) {
       if (I.getSideEffect().getWriteStack()) {
         for (size_t i = 0, e = I.getNumOperands(); i < e; ++i) {
           if (auto *operand = llvh::dyn_cast<AllocStackInst>(I.getOperand(i))) {
-            unsigned reg =
-                RA_.getRegister(cast<Instruction>(operand)).getIndex();
+            Register reg = RA_.getRegister(cast<Instruction>(operand));
             regToInstMap.erase(reg);
           }
         }
@@ -690,12 +728,16 @@ bool SpillRegisters::modifiesOperandRegister(Instruction *I, int op) {
   return I->getSideEffect().getWriteStack() &&
       llvh::isa<AllocStackInst>(I->getOperand(op));
 }
-
 bool SpillRegisters::runOnFunction(Function *F) {
-  if (RA_.getMaxRegisterUsage() < boundary_) {
+  if (RA_.getMaxHVMRegisterUsage() < boundary_) {
     return false;
   }
+
   reserveLowRegisters(F);
+  assert(
+      RA_.getMaxRegisterUsage(RegClass::Number) == 0 &&
+      RA_.getMaxRegisterUsage(RegClass::NonPtr) == 0 &&
+      "only one register class can be spilled");
 
   IRBuilder builder(F);
   llvh::SmallVector<std::pair<Instruction *, Register>, 2> toSpill;
@@ -713,7 +755,8 @@ bool SpillRegisters::runOnFunction(Function *F) {
       builder.setLocation(inst.getLocation());
 
       auto myRegister = RA_.getRegister(&inst);
-      if (requiresShortOutput(&inst) && !isShort(myRegister)) {
+      if (requiresShortOutput(&inst) &&
+          !isShort(RA_.getHVMRegisterIndex(myRegister))) {
         auto temp = getReserved(tempReg++);
         RA_.updateRegister(&inst, temp);
         toSpill.push_back(
@@ -730,7 +773,8 @@ bool SpillRegisters::runOnFunction(Function *F) {
         }
         auto opRegister = RA_.getRegister(op);
 
-        if (requiresShortOperand(&inst, i) && !isShort(opRegister)) {
+        if (requiresShortOperand(&inst, i) &&
+            !isShort(RA_.getHVMRegisterIndex(opRegister))) {
           // The check for if an instruction modifies an operand depends on the
           // kind of the instruction the operand is. So, we need to compute this
           // value before we replace the operand.

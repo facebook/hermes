@@ -72,27 +72,6 @@ Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
   return res;
 }
 
-bool hermes::isConstructionSetup(Value *V, Value *closure) {
-  // Constructor invocations access the closure, to read the "prototype"
-  // property and to create the "this" argument. However, in the absence of
-  // other accesses (like making "prototype" a setter), these operations
-  // cannot leak the closure.
-  if (auto *LPI = llvh::dyn_cast<LoadPropertyInst>(V))
-    if (LPI->getObject() == closure)
-      if (auto *LS = llvh::dyn_cast<LiteralString>(LPI->getProperty()))
-        if (LS->getValue().str() == "prototype")
-          return true;
-
-  if (auto *CTI = llvh::dyn_cast<CreateThisInst>(V)) {
-    (void)CTI;
-    assert(
-        CTI->getClosure() == closure &&
-        "Closure must be closure argument to CreateThisInst");
-    return true;
-  }
-  return false;
-}
-
 llvh::SmallVector<BaseCallInst *, 2> hermes::getKnownCallsites(Function *F) {
   llvh::SmallVector<BaseCallInst *, 2> result{};
   for (Instruction *user : F->getUsers()) {

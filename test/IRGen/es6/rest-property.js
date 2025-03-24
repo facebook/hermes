@@ -44,15 +44,15 @@ function f5(o) {
 // CHECK-NEXT:       DeclareGlobalVarInst "f3": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f4": string
 // CHECK-NEXT:       DeclareGlobalVarInst "f5": string
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %f1(): functionCode
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f1(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "f1": string
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %f2(): functionCode
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f2(): functionCode
 // CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "f2": string
-// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %f3(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f3(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "f3": string
-// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %f4(): functionCode
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f4(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "f4": string
-// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %f5(): functionCode
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f5(): functionCode
 // CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "f5": string
 // CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:        StoreStackInst undefined: undefined, %16: any
@@ -99,8 +99,8 @@ function f5(o) {
 // CHECK-NEXT:  %10 = LoadPropertyInst (:any) %7: any, "b": string
 // CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [%VS2.b]: any
 // CHECK-NEXT:  %12 = AllocObjectLiteralInst (:object) null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %12: object, "a": string, true: boolean
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %12: object, "b": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst 0: number, %12: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst 0: number, %12: object, "b": string, true: boolean
 // CHECK-NEXT:  %15 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %16 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %15: object, %7: any, %12: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %16: any, [%VS2.rest]: any
@@ -122,7 +122,7 @@ function f5(o) {
 // CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "a": string
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: any, [%VS3.a]: any
 // CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %9: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst 0: number, %9: object, "a": string, true: boolean
 // CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: object, %6: any, %9: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [%VS3.rest]: any
@@ -145,7 +145,7 @@ function f5(o) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: any, [%VS4.a]: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS4.o]: any
 // CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
 // CHECK-NEXT:  %13 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %13: object, %7: any, %11: object
 // CHECK-NEXT:        StorePropertyLooseInst %14: any, %10: any, "rest": string
@@ -168,7 +168,7 @@ function f5(o) {
 // CHECK-NEXT:  %9 = LoadPropertyInst (:any) %6: any, "a": string
 // CHECK-NEXT:        StoreFrameInst %1: environment, %9: any, [%VS5.a]: any
 // CHECK-NEXT:  %11 = AllocObjectLiteralInst (:object) null: null
-// CHECK-NEXT:        StoreNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineNewOwnPropertyInst 0: number, %11: object, "a": string, true: boolean
 // CHECK-NEXT:  %13 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %14 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %13: object, %6: any, %11: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %14: any, [%VS5.rest]: any

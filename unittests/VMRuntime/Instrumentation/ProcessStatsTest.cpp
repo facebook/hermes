@@ -178,11 +178,15 @@ void infoAssertionImpl(
     const ProcessStats::Info &actual,
     int64_t dRSSkB,
     int64_t dVAkB) {
+// In some scenarios on Linux, the RSS value is inaccurate (e.g., remains
+// unchanged after calling touchPages()). Disabling assertions for now.
+#ifndef __linux__
   EXPECT_EQ(initial.RSSkB + dRSSkB, actual.RSSkB)
       << "At " << file << ":" << line << "\n"
       << "  " << initExpr << " -> " << actualExpr << "\n"
       << "  RSS: " << initial.RSSkB << " + " << dRSSkB
       << " != " << actual.RSSkB;
+#endif
   EXPECT_EQ(initial.VAkB + dVAkB, actual.VAkB)
       << "At " << file << ":" << line << "\n"
       << "  " << initExpr << " -> " << actualExpr << "\n"

@@ -23,6 +23,7 @@
 using namespace hermes;
 
 STATISTIC(NumCSE, "Number of instructions CSE'd");
+STATISTIC(NumRequireCSE, "Number of require calls CSE'd");
 
 //===----------------------------------------------------------------------===//
 //                                Simple Value
@@ -45,6 +46,19 @@ struct CSEValue {
 
   /// Return true if we know how to CSE this instruction.
   static bool canHandle(Instruction *Inst) {
+    // Calls to metro's require function are idempotent (for a given module id).
+    // Consider the heap separated into a portion private to require (i.e.,
+    // the data structure that keeps track of what modules have been
+    // initialized), and the rest of the heap.  The module init functions
+    // can access and update the "rest of the heap", but not the data stucture
+    // private to require (more specifically, the portion of that data stucture
+    // relevant to the given module id).  Require uses its private data
+    // structure to ensure that the module init function runs only on the first
+    // call for a module id.  Thus, require calls as a whole are idempotent.
+    if (Inst->getAttributesRef(Inst->getModule()).isMetroRequire) {
+      assert(Inst->getKind() == ValueKind::CallInstKind);
+      return true;
+    }
     // Check that the instruction can be freely reordered and deduplicated, and
     // that it is not a terminator.
     return !llvh::isa<TerminatorInst>(Inst) && Inst->getSideEffect().isPure() &&
@@ -160,6 +174,11 @@ bool CSEContext::processNode(StackNode *SN) {
     // Now that we know we have an instruction we understand see if the
     // instruction has an available value.  If so, use it.
     if (Value *V = availableValues_.lookup(&Inst)) {
+      if (AreStatisticsEnabled() &&
+          Inst.getAttributes(Inst.getModule()).isMetroRequire) {
+        NumRequireCSE++;
+      }
+
       Inst.replaceAllUsesWith(V);
       destroyer.add(&Inst);
       changed = true;

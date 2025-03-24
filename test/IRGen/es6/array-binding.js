@@ -88,7 +88,7 @@ var [a, [b = 1, c] = [,2]] = x;
 // CHECK-NEXT:        CondBranchInst %54: any, %BB17, %BB16
 // CHECK-NEXT:%BB16:
 // CHECK-NEXT:  %56 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:        StoreOwnPropertyInst 2: number, %56: object, 1: number, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 2: number, %56: object, 1: number, true: boolean
 // CHECK-NEXT:        StoreStackInst %56: object, %14: any
 // CHECK-NEXT:        BranchInst %BB17
 // CHECK-NEXT:%BB17:
