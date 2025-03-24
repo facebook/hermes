@@ -15,6 +15,21 @@
 // This file provides portable definitions of compiler specific macros
 // It is modelled after LLVM's Compiler.h
 
+/// Force a symbol to be treated as used, even if unused.
+#if defined(__GNUC__) || defined(__clang__)
+#define HERMES_FORCE_USED [[gnu::used]]
+#else
+#define HERMES_FORCE_USED
+#endif
+
+/// Force a symbol to be treated as used, even if unused, but only in debug
+/// builds.
+#ifndef NDEBUG
+#define HERMES_FORCE_USED_IN_DEBUG HERMES_FORCE_USED
+#else
+#define HERMES_FORCE_USED_IN_DEBUG
+#endif
+
 /// Like LLVM_ATTRIBUTE_NORETURN, but only in release builds.
 #ifndef NDEBUG
 #define HERMES_ALWAYS_INLINE
