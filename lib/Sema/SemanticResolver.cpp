@@ -979,6 +979,8 @@ void SemanticResolver::visit(StaticBlockNode *node) {
   // It is a Syntax Error if ClassStaticBlockStatementList Contains await is
   // true.
   llvh::SaveAndRestore<bool> oldForbidAwait{forbidAwaitExpression_, true};
+  // Disallow arguments usage in static blocks.
+  llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
   visitESTreeChildren(*this, node);
 }
 
