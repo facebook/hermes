@@ -28,7 +28,7 @@ the CVE testsuite:
 # For hermes compiler
 -test262 -fno-static-builtins -Xes6-block-scoping -Xenable-tdz
 # For hermes VM (running the bytecode)
--Xes6-promise -Xes6-proxy -Xhermes-internal-test-methods -Xmicrotask-queue
+-Xes6-proxy -Xhermes-internal-test-methods -Xmicrotask-queue
 ```
 
 Since esprima testsuite includes only AST tests, we simply use `-dump-ast`. For

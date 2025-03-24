@@ -179,9 +179,6 @@ uint64_t jsonStringToUint64(const ::hermes::parser::JSONValue *val) {
   if (auto *maxNumRegisters = rtConfig->get("maxNumRegisters")) {
     conf.withMaxNumRegisters(getNumberAs<unsigned>(maxNumRegisters));
   }
-  if (auto *promise = rtConfig->get("ES6Promise")) {
-    conf.withES6Promise(llvh::cast<JSONBoolean>(promise)->getValue());
-  }
   if (auto *proxy = rtConfig->get("ES6Proxy")) {
     conf.withES6Proxy(llvh::cast<JSONBoolean>(proxy)->getValue());
   }

@@ -120,12 +120,6 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(RuntimeCategory),
       llvh::cl::init(vm::RuntimeConfig::getDefaultMaxNumRegisters())};
 
-  llvh::cl::opt<bool> ES6Promise{
-      "Xes6-promise",
-      llvh::cl::desc("Enable support for ES6 Promise"),
-      llvh::cl::init(vm::RuntimeConfig::getDefaultES6Promise()),
-      llvh::cl::cat(RuntimeCategory)};
-
   llvh::cl::opt<bool> ES6Proxy{
       "Xes6-proxy",
       llvh::cl::desc("Enable support for ES6 Proxy"),

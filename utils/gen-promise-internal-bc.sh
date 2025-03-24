@@ -15,17 +15,15 @@
 #   imports the `promise` polyfill that we installed with `yarn`, exposes it to
 #   Hermes's globalThis, and then setup Hermes promise rejection tracking.
 #
-# 2. It adds `@nolint` to the start of the file and append a snippet to make 
-#   the initialization of Promise conditionalized against 
-#   `HermesInternal.hasPromise()` to ensure there is no runtime overhead when
-#   Hermes' Promise flag is disabled.
+# 2. It adds `@nolint` to the start of the file and append a snippet to
+#   initialize Promise.
 #
 # 3. Finally, it moved the resulted file to the `InternalBytecode`.
 
 
 SCRIPT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-BC_DIR="${SCRIPT}/../lib/InternalBytecode"
+BC_DIR="${SCRIPT}/../lib/InternalJavaScript"
 TMP_DIR=$(mktemp -d)
 PROMISE_DIR="${SCRIPT}/promise"
 TMP_PROMISE_DIR="${TMP_DIR}/promise"
@@ -46,9 +44,7 @@ gen() {
   sed -i.bak '$ d' $TMP_PROMISE_JS && \
   cat <<EOT >> $TMP_PROMISE_JS
 });
-if (HermesInternal?.hasPromise?.()) {
-  initPromise();
-}
+initPromise();
 EOT
 }
 

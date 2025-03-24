@@ -141,7 +141,6 @@ SynthTrace::SynthTrace(
       json_->closeDict();
     }
     json_->emitKeyValue("maxNumRegisters", conf.getMaxNumRegisters());
-    json_->emitKeyValue("ES6Promise", conf.getES6Promise());
     json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
     json_->emitKeyValue("Intl", conf.getIntl());
     json_->emitKeyValue("MicrotasksQueue", conf.getMicrotaskQueue());

@@ -896,10 +896,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     return runtimeModuleList_;
   }
 
-  bool hasES6Promise() const {
-    return hasES6Promise_;
-  }
-
   bool hasES6Proxy() const {
     return hasES6Proxy_;
   }
@@ -1144,9 +1140,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// All state related to JIT compilation.
   JITContext jitContext_;
-
-  /// Set to true if we should enable ES6 Promise.
-  const bool hasES6Promise_;
 
   /// Set to true if we should enable ES6 Proxy.
   const bool hasES6Proxy_;

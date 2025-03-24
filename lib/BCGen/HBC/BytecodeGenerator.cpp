@@ -222,9 +222,6 @@ unsigned BytecodeModuleGenerator::addFunction(Function *F) {
   auto [it, inserted] = functionIDMap_.insert({F, bm_.getNumFunctions()});
   if (inserted) {
     bm_.addFunction();
-    auto &optionsMut = bm_.getBytecodeOptionsMut();
-    optionsMut.setHasAsync(
-        (uint8_t)optionsMut.getHasAsync() | llvh::isa<AsyncFunction>(F));
   }
   return it->second;
 }

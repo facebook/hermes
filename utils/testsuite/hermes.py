@@ -20,7 +20,7 @@ COMPILE_ARGS = [
     "-Xes6-block-scoping",
     "-Xenable-tdz",
 ]
-ES6_ARGS = ["-Xes6-promise", "-Xes6-proxy"]
+ES6_ARGS = ["-Xes6-proxy"]
 EXTRA_RUN_ARGS = ["-Xhermes-internal-test-methods"]
 USE_MICROTASK_FLAG = ["-Xmicrotask-queue"]
 

@@ -288,22 +288,5 @@ TEST(HBCBytecodeGen, SerializeBytecodeOptions) {
   EXPECT_TRUE(bytecodeStaticBuiltins->getBytecodeOptions().getStaticBuiltins());
 }
 
-TEST(HBCBytecodeGen, BytecodeOptionHasAsync) {
-  auto bytecodeVecNoAsync = bytecodeForSource("function foo(){}");
-  auto bytecodeVecHasAsync = bytecodeForSource("async function foo(){}");
-
-  auto bytecodeNoAsync = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-                             std::make_unique<VectorBuffer>(bytecodeVecNoAsync))
-                             .first;
-  auto bytecodeHasAsync =
-      hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          std::make_unique<VectorBuffer>(bytecodeVecHasAsync))
-          .first;
-  ASSERT_TRUE(bytecodeNoAsync);
-  ASSERT_TRUE(bytecodeHasAsync);
-  EXPECT_FALSE(bytecodeNoAsync->getBytecodeOptions().getHasAsync());
-  EXPECT_TRUE(bytecodeHasAsync->getBytecodeOptions().getHasAsync());
-}
-
 } // end anonymous namespace
 #undef DEBUG_TYPE

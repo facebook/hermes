@@ -58,7 +58,6 @@ struct BytecodeOptions {
       bool,
       CjsModulesStaticallyResolved,
       1);
-  HERMES_NEXT_BITFIELD(CjsModulesStaticallyResolved, flags, bool, HasAsync, 1);
 
   BytecodeOptions() : _flags(0) {}
 };

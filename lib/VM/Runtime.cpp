@@ -282,7 +282,6 @@ Runtime::Runtime(
           std::move(provider),
           runtimeConfig.getVMExperimentFlags()),
       jitContext_(runtimeConfig.getEnableJIT()),
-      hasES6Promise_(runtimeConfig.getES6Promise()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6BlockScoping_(runtimeConfig.getES6BlockScoping()),
       hasIntl_(runtimeConfig.getIntl()),
@@ -1082,11 +1081,6 @@ CallResult<HermesValue> Runtime::runBytecode(
     }
     freezeBuiltins();
     assert(builtinsFrozen_ && "Builtins must be frozen by now.");
-  }
-
-  if (bytecode->getBytecodeOptions().getHasAsync() && !hasES6Promise_) {
-    return raiseTypeError(
-        "Cannot execute a bytecode having async functions when Promise is disabled.");
   }
 
   if (flags.persistent) {

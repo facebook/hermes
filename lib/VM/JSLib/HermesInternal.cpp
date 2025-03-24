@@ -374,7 +374,7 @@ hermesInternalIsProxy(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 hermesInternalHasPromise(void *, Runtime &runtime, NativeArgs args) {
-  return HermesValue::encodeBoolValue(runtime.hasES6Promise());
+  return HermesValue::encodeBoolValue(true);
 }
 
 CallResult<HermesValue>

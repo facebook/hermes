@@ -139,7 +139,6 @@ int main(int argc, char **argv) {
       vm::RuntimeConfig::Builder()
           .withGCConfig(gcConfigBuilder.build())
           .withMaxNumRegisters(flags.MaxNumRegisters)
-          .withES6Promise(flags.ES6Promise)
           .withES6Proxy(flags.ES6Proxy)
           .withIntl(flags.Intl)
           .withMicrotaskQueue(flags.MicrotaskQueue)
