@@ -156,6 +156,7 @@ PRIVATE_BUILTIN(functionPrototypeCall)
 
 JS_BUILTIN(spawnAsync)
 MARK_FIRST_JS_BUILTIN(spawnAsync)
+JS_BUILTIN(myBuiltin)
 
 #undef NORMAL_OBJECT
 #undef NORMAL_METHOD
