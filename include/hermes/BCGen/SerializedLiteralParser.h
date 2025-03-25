@@ -39,55 +39,54 @@ parse(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
     else
       leftInSeq = tag & 0x0f;
 
+    size_t toRead = std::min<size_t>(totalLen, leftInSeq);
+    totalLen -= toRead;
+
     SerializedLiteralGenerator::TagType type =
         tag & SerializedLiteralGenerator::TagMask;
     switch (type) {
       case SerializedLiteralGenerator::ShortStringTag:
-        while (leftInSeq-- && totalLen--) {
+        for (size_t e = bufIdx + toRead * 2; bufIdx < e; bufIdx += 2) {
           uint16_t val = llvh::support::endian::read<uint16_t, 1>(
               &buf[bufIdx], llvh::support::endianness::little);
           v.visitStringID(val);
-          bufIdx += 2;
         }
         break;
       case SerializedLiteralGenerator::LongStringTag:
-        while (leftInSeq-- && totalLen--) {
+        for (size_t e = bufIdx + toRead * 4; bufIdx < e; bufIdx += 4) {
           uint32_t val = llvh::support::endian::read<uint32_t, 1>(
               &buf[bufIdx], llvh::support::endianness::little);
           v.visitStringID(val);
-          bufIdx += 4;
         }
         break;
       case SerializedLiteralGenerator::NumberTag:
-        while (leftInSeq-- && totalLen--) {
+        for (size_t e = bufIdx + toRead * 8; bufIdx < e; bufIdx += 8) {
           double val = llvh::support::endian::read<double, 1>(
               &buf[bufIdx], llvh::support::endianness::little);
           v.visitNumber(val);
-          bufIdx += 8;
         }
         break;
       case SerializedLiteralGenerator::IntegerTag:
-        while (leftInSeq-- && totalLen--) {
+        for (size_t e = bufIdx + toRead * 4; bufIdx < e; bufIdx += 4) {
           int32_t val = llvh::support::endian::read<int32_t, 1>(
               &buf[bufIdx], llvh::support::endianness::little);
           v.visitNumber(val);
-          bufIdx += 4;
         }
         break;
       case SerializedLiteralGenerator::NullTag:
-        while (leftInSeq-- && totalLen--)
+        for (size_t i = 0; i < toRead; ++i)
           v.visitNull();
         break;
       case SerializedLiteralGenerator::UndefinedTag:
-        while (leftInSeq-- && totalLen--)
+        for (size_t i = 0; i < toRead; ++i)
           v.visitUndefined();
         break;
       case SerializedLiteralGenerator::TrueTag:
-        while (leftInSeq-- && totalLen--)
+        for (size_t i = 0; i < toRead; ++i)
           v.visitBool(true);
         break;
       case SerializedLiteralGenerator::FalseTag:
-        while (leftInSeq-- && totalLen--)
+        for (size_t i = 0; i < toRead; ++i)
           v.visitBool(false);
         break;
     }
