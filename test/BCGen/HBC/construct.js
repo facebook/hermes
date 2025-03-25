@@ -53,9 +53,9 @@ function bar() {
 
 // CHECK:Function<foo>(2 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 1<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] LoadThisNS 2<Reg8>
-// CHECK-NEXT:[@ 5] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 3<UInt16>
+// CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 3] LoadThisNS 1<Reg8>
+// CHECK-NEXT:[@ 5] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 3<UInt16>
 // CHECK-NEXT:[@ 11] LoadConstUndefined 0<Reg8>
 // CHECK-NEXT:[@ 13] Ret 0<Reg8>
 

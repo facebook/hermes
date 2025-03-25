@@ -57,14 +57,14 @@ test_one(1,2,3)
 
 // CHECK:Function<test_one>(3 params, 8 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 4<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] Mov 7<Reg8>, 4<Reg8>
-// CHECK-NEXT:[@ 6] GetPNameList 6<Reg8>, 7<Reg8>, 0<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 11] JmpUndefined 21<Addr8>, 6<Reg8>
-// CHECK-NEXT:[@ 14] GetNextPName 5<Reg8>, 6<Reg8>, 7<Reg8>, 0<Reg8>, 1<Reg8>
-// CHECK-NEXT:[@ 20] JmpUndefined 12<Addr8>, 5<Reg8>
-// CHECK-NEXT:[@ 23] Mov 3<Reg8>, 5<Reg8>
-// CHECK-NEXT:[@ 26] GetByVal 3<Reg8>, 4<Reg8>, 3<Reg8>
+// CHECK-NEXT:[@ 0] LoadParam 6<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 3] Mov 4<Reg8>, 6<Reg8>
+// CHECK-NEXT:[@ 6] GetPNameList 5<Reg8>, 4<Reg8>, 0<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 11] JmpUndefined 21<Addr8>, 5<Reg8>
+// CHECK-NEXT:[@ 14] GetNextPName 3<Reg8>, 5<Reg8>, 4<Reg8>, 0<Reg8>, 1<Reg8>
+// CHECK-NEXT:[@ 20] JmpUndefined 12<Addr8>, 3<Reg8>
+// CHECK-NEXT:[@ 23] Mov 7<Reg8>, 3<Reg8>
+// CHECK-NEXT:[@ 26] GetByVal 7<Reg8>, 6<Reg8>, 7<Reg8>
 // CHECK-NEXT:[@ 30] Jmp -16<Addr8>
 // CHECK-NEXT:[@ 32] LoadConstUndefined 2<Reg8>
 // CHECK-NEXT:[@ 34] Ret 2<Reg8>

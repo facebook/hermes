@@ -14,8 +14,8 @@
 
 namespace hermes::hbc {
 
-bool ReorderRegisters::runOnFunction(Function *F) {
-  uint32_t totalRegCount = RA_.getMaxHVMRegisterUsage();
+static bool run(Function *F, HVMRegisterAllocator &RA) {
+  uint32_t totalRegCount = RA.getMaxHVMRegisterUsage();
 
   // If there's no registers, nothing to do.
   // If the function has to spill registers, don't reorder to avoid having to
@@ -92,11 +92,11 @@ bool ReorderRegisters::runOnFunction(Function *F) {
     double loopScore = std::pow(kLoopMultiplier, (double)nestingDepth);
 
     for (Instruction &I : BB) {
-      if (!I.hasOutput() || !RA_.isAllocated(&I))
+      if (!I.hasOutput() || !RA.isAllocated(&I))
         continue;
-      Register reg = RA_.getRegister(&I);
+      Register reg = RA.getRegister(&I);
       RegSortData &regTypeData =
-          regTypes[(size_t)reg.getClass()][RA_.getHVMRegisterIndex(reg)];
+          regTypes[(size_t)reg.getClass()][RA.getHVMRegisterIndex(reg)];
       // Update the type of the register.
       regTypeData.reg = reg;
       // Add to the score for the result.
@@ -104,20 +104,30 @@ bool ReorderRegisters::runOnFunction(Function *F) {
       // Add to the score for each operand.
       for (unsigned i = 0, e = I.getNumOperands(); i < e; ++i) {
         Instruction *op = llvh::dyn_cast<Instruction>(I.getOperand(i));
-        if (op && RA_.isAllocated(op)) {
-          auto opReg = RA_.getRegister(op);
-          regTypes[(size_t)opReg.getClass()][RA_.getHVMRegisterIndex(opReg)]
+        if (op && RA.isAllocated(op)) {
+          auto opReg = RA.getRegister(op);
+          regTypes[(size_t)opReg.getClass()][RA.getHVMRegisterIndex(opReg)]
               .score += loopScore;
         }
       }
     }
   }
 
-  // Need to skip the NoOutput registers.
+  // Need to skip the NoOutput and Other registers.
+  // Reordering Other registers significantly regresses bytecode compressed size
+  // while having no benefit for the JIT.
   static_assert((int)RegClass::NoOutput == 0, "NoOutput must be 0");
+  static_assert(
+      (int)RegClass::Other == (int)RegClass::_last - 1,
+      "Other must be the last register class");
 
-  for (size_t regClass = 1; regClass < (size_t)RegClass::_last; ++regClass) {
+  // The remapping.
+  // Index is Register, value is index within its register class.
+  llvh::SmallVector<uint32_t, 32> remapping[(size_t)RegClass::_last];
+
+  for (size_t regClass = 1; regClass < (size_t)RegClass::Other; ++regClass) {
     auto &rt = regTypes[regClass];
+    // Sort the registers in the class.
     std::sort(
         rt.begin(),
         rt.end(),
@@ -127,14 +137,9 @@ bool ReorderRegisters::runOnFunction(Function *F) {
           return std::tuple{a.score, a.reg.getIndexInClass()} >
               std::tuple{b.score, b.reg.getIndexInClass()};
         });
-  }
 
-  // Count the registers by type for the remapping.
-  // Index is Register, value is index within its register class.
-  llvh::SmallVector<uint32_t, 32> remapping[(size_t)RegClass::_last];
-  for (size_t regClass = 1; regClass < (size_t)RegClass::_last; ++regClass) {
+    // Record the remapping for each register in the class.
     remapping[regClass].resize(totalRegCount, UINT32_MAX);
-    const auto &rt = regTypes[regClass];
     for (size_t i = 0, e = rt.size(); i < e; ++i) {
       Register reg = rt[i].reg;
       if (reg.isValid()) {
@@ -148,20 +153,40 @@ bool ReorderRegisters::runOnFunction(Function *F) {
   // Reassign registers according to the mapping.
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      if (!I.hasOutput() || !RA_.isAllocated(&I))
+      if (!I.hasOutput() || !RA.isAllocated(&I))
         continue;
-      auto reg = RA_.getRegister(&I);
+      auto reg = RA.getRegister(&I);
+      // Don't remap "Other" registers.
+      if (reg.getClass() == RegClass::Other)
+        continue;
       uint32_t newIdx =
           remapping[(size_t)reg.getClass()][reg.getIndexInClass()];
       assert(newIdx != UINT32_MAX && "Register not remapped");
-      RA_.updateRegister(&I, Register(reg.getClass(), newIdx));
+      RA.updateRegister(&I, Register(reg.getClass(), newIdx));
     }
   }
 
   // Set the loop score to the max nesting depth.
-  RA_.setMaxLoopDepth(maxNestingDepth);
+  RA.setMaxLoopDepth(maxNestingDepth);
 
   return true;
+}
+
+Pass *createReorderRegisters(HVMRegisterAllocator &RA) {
+  class ThisPass : public FunctionPass {
+   public:
+    explicit ThisPass(HVMRegisterAllocator &RA)
+        : FunctionPass("ReorderRegisters"), RA_(RA) {}
+
+    bool runOnFunction(Function *F) override {
+      return run(F, RA_);
+    }
+
+   private:
+    HVMRegisterAllocator &RA_;
+  };
+
+  return new ThisPass(RA);
 }
 
 } // namespace hermes::hbc

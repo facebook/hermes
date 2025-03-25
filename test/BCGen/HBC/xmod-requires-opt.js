@@ -70,10 +70,10 @@ function require(modIdx) {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "require"
-// CHECK-NEXT:    GetGlobalObject   r1
+// CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    CreateClosure     r2, r0, Function<require>
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "require"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<require>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "require"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<require>(2 params, 18 registers, 1 numbers, 1 non-pointers):
@@ -112,22 +112,22 @@ function require(modIdx) {
 
 // CHECK:Function<modFact0>(5 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0027, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r2, 4
+// CHECK-NEXT:    LoadParam         r1, 4
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    CreateClosure     r1, r0, Function<bar>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "bar"
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    CreateClosure     r2, r0, Function<bar>
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "bar"
+// CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<modFact1>(5 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r3, 4
+// CHECK-NEXT:    LoadParam         r1, 4
 // CHECK-NEXT:    LoadConstUndefined r5
-// CHECK-NEXT:    LoadParam         r1, 2
-// CHECK-NEXT:    CallRequire       r2, r1, 0
-// CHECK-NEXT:    GetByIdShort      r1, r2, 1, "bar"
-// CHECK-NEXT:    Call1             r1, r1, r2
-// CHECK-NEXT:    PutByIdLoose      r3, r1, 1, "x"
-// CHECK-NEXT:    Ret               r3
+// CHECK-NEXT:    LoadParam         r2, 2
+// CHECK-NEXT:    CallRequire       r3, r2, 0
+// CHECK-NEXT:    GetByIdShort      r2, r3, 1, "bar"
+// CHECK-NEXT:    Call1             r2, r2, r3
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "x"
+// CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<bar>(1 params, 1 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:    LoadConstUInt8    r0, 17

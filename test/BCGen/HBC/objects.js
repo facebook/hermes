@@ -50,27 +50,27 @@ function foo(p) {
 // CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 3<UInt32>
-// CHECK-NEXT:[@ 5] GetGlobalObject 1<Reg8>
+// CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 9] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 14] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 3<UInt16>
+// CHECK-NEXT:[@ 9] CreateClosure 1<Reg8>, 0<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 14] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 3<UInt16>
 // CHECK-NEXT:[@ 20] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 5 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:[@ 0] LoadParam 4<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 0] LoadParam 3<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] NewObjectWithBuffer 2<Reg8>, 0<UInt16>, 0<UInt16>
 // CHECK-NEXT:[@ 9] LoadConstUInt8 0<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 12] PutByIdLoose 2<Reg8>, 0<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 18] PutByValLoose 2<Reg8>, 4<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 22] GetByIdShort 3<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
-// CHECK-NEXT:[@ 27] PutByIdLoose 2<Reg8>, 3<Reg8>, 2<UInt8>, 2<UInt16>
-// CHECK-NEXT:[@ 33] GetByVal 3<Reg8>, 2<Reg8>, 4<Reg8>
+// CHECK-NEXT:[@ 18] PutByValLoose 2<Reg8>, 3<Reg8>, 0<Reg8>
+// CHECK-NEXT:[@ 22] GetByIdShort 4<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 27] PutByIdLoose 2<Reg8>, 4<Reg8>, 2<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 33] GetByVal 4<Reg8>, 2<Reg8>, 3<Reg8>
 // CHECK-NEXT:[@ 37] LoadConstUInt8 0<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 40] PutByValLoose 2<Reg8>, 0<Reg8>, 3<Reg8>
-// CHECK-NEXT:[@ 44] LoadConstString 3<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 48] DelByVal 1<Reg8>, 2<Reg8>, 3<Reg8>, 0<UInt8>
-// CHECK-NEXT:[@ 53] DelByVal 1<Reg8>, 2<Reg8>, 4<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 40] PutByValLoose 2<Reg8>, 0<Reg8>, 4<Reg8>
+// CHECK-NEXT:[@ 44] LoadConstString 4<Reg8>, 2<UInt16>
+// CHECK-NEXT:[@ 48] DelByVal 1<Reg8>, 2<Reg8>, 4<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 53] DelByVal 1<Reg8>, 2<Reg8>, 3<Reg8>, 0<UInt8>
 // CHECK-NEXT:[@ 58] LoadConstUndefined 1<Reg8>
 // CHECK-NEXT:[@ 60] Ret 1<Reg8>
 

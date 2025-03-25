@@ -55,28 +55,28 @@ function foo() {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    GetGlobalObject   r1
+// CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    CreateClosure     r2, r0, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(1 params, 12 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    CreateFunctionEnvironment r3, 3
+// CHECK-NEXT:    CreateFunctionEnvironment r1, 3
 // CHECK-NEXT:    LoadConstInt      r0, 1234
-// CHECK-NEXT:    StoreNPToEnvironment r3, 0, r0
-// CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    TryGetById        r1, r1, 1, "Object"
-// CHECK-NEXT:    CreateThisForNew  r2, r1, 2
-// CHECK-NEXT:    Mov               r4, r2
-// CHECK-NEXT:    Construct         r1, r1, 1
-// CHECK-NEXT:    SelectObject      r1, r2, r1
-// CHECK-NEXT:    StoreToEnvironment r3, 1, r1
-// CHECK-NEXT:    CreateRegExp      r1, "Hermes", "i", 0
-// CHECK-NEXT:    StoreToEnvironment r3, 2, r1
-// CHECK-NEXT:    CreateClosure     r3, r3, Function<bar>
-// CHECK-NEXT:    Ret               r3
+// CHECK-NEXT:    StoreNPToEnvironment r1, 0, r0
+// CHECK-NEXT:    GetGlobalObject   r2
+// CHECK-NEXT:    TryGetById        r2, r2, 1, "Object"
+// CHECK-NEXT:    CreateThisForNew  r3, r2, 2
+// CHECK-NEXT:    Mov               r4, r3
+// CHECK-NEXT:    Construct         r2, r2, 1
+// CHECK-NEXT:    SelectObject      r2, r3, r2
+// CHECK-NEXT:    StoreToEnvironment r1, 1, r2
+// CHECK-NEXT:    CreateRegExp      r2, "Hermes", "i", 0
+// CHECK-NEXT:    StoreToEnvironment r1, 2, r2
+// CHECK-NEXT:    CreateClosure     r1, r1, Function<bar>
+// CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<bar>(1 params, 16 registers, 2 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000

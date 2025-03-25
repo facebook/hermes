@@ -364,11 +364,11 @@ function obj7() {
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj1>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:    NewObjectWithBuffer r2, 0, 0
+// BCGEN-NEXT:    NewObjectWithBuffer r1, 0, 0
 // BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    CreateClosure     r1, r0, Function<f>
-// BCGEN-NEXT:    PutOwnBySlotIdx   r2, r1, 5
-// BCGEN-NEXT:    Ret               r2
+// BCGEN-NEXT:    CreateClosure     r2, r0, Function<f>
+// BCGEN-NEXT:    PutOwnBySlotIdx   r1, r2, 5
+// BCGEN-NEXT:    Ret               r1
 
 // BCGEN:Function<obj2>(1 params, 1 registers, 0 numbers, 0 non-pointers):
 // BCGEN-NEXT:    NewObjectWithBuffer r0, 1, 17

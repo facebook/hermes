@@ -75,10 +75,10 @@ function foo(a) {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
-// CHECK-NEXT:[@ 5] GetGlobalObject 1<Reg8>
+// CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 9] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 14] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 9] CreateClosure 1<Reg8>, 0<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 14] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt16>
 // CHECK-NEXT:[@ 20] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 2 registers, 1 numbers, 0 non-pointers):
