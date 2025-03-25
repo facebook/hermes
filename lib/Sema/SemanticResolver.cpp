@@ -901,7 +901,15 @@ void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
 }
 
 void SemanticResolver::visit(PrivateNameNode *node) {
-  resolvePrivateName(llvh::cast<IdentifierNode>(node->_id));
+  auto *identifier = llvh::cast<IdentifierNode>(node->_id);
+  auto *decl = resolvePrivateName(identifier);
+  if (!decl) {
+    // Failed to resolve.
+    sm_.error(
+        identifier->getSourceRange(),
+        Twine("the private name \"#") + identifier->_name->str() +
+            "\" was not declared in any enclosing class");
+  }
   visitESTreeChildren(*this, node);
 }
 
@@ -1104,27 +1112,30 @@ void SemanticResolver::visit(
     if (!astContext_.getCodeGenerationSettings().test262) {
       sema::Decl *decl =
           resolvePrivateName(llvh::cast<IdentifierNode>(name->_id));
-      assert(decl && "private name node has missing decl");
-      if (auto *assign = llvh::dyn_cast<AssignmentExpressionNode>(parent);
-          assign && assign->_left == node) {
-        // Validate stores of a private name are using a name that is eligible
-        // for stores.
-        if (decl->kind == Decl::Kind::PrivateGetter) {
-          sm_.error(
-              parent->getSourceRange(),
-              "Cannot store to a private name that only defines a getter.");
-        } else if (decl->kind == Decl::Kind::PrivateMethod) {
-          sm_.error(
-              parent->getSourceRange(),
-              "Cannot store to a private name that defines a method.");
-        }
-      } else {
-        // Validate loads of a private name are using a name that is eligible
-        // for loads.
-        if (decl->kind == Decl::Kind::PrivateSetter) {
-          sm_.error(
-              node->getSourceRange(),
-              "Cannot load from a private name that only defines a setter.");
+      // There is no decl when a nonexistent private name is referenced, in
+      // which case there's no further validation that can be done here.
+      if (decl) {
+        if (auto *assign = llvh::dyn_cast<AssignmentExpressionNode>(parent);
+            assign && assign->_left == node) {
+          // Validate stores of a private name are using a name that is eligible
+          // for stores.
+          if (decl->kind == Decl::Kind::PrivateGetter) {
+            sm_.error(
+                parent->getSourceRange(),
+                "Cannot store to a private name that only defines a getter.");
+          } else if (decl->kind == Decl::Kind::PrivateMethod) {
+            sm_.error(
+                parent->getSourceRange(),
+                "Cannot store to a private name that defines a method.");
+          }
+        } else {
+          // Validate loads of a private name are using a name that is eligible
+          // for loads.
+          if (decl->kind == Decl::Kind::PrivateSetter) {
+            sm_.error(
+                node->getSourceRange(),
+                "Cannot load from a private name that only defines a setter.");
+          }
         }
       }
     }
@@ -1145,25 +1156,28 @@ void SemanticResolver::visit(
     if (!astContext_.getCodeGenerationSettings().test262) {
       sema::Decl *decl =
           resolvePrivateName(llvh::cast<IdentifierNode>(name->_id));
-      assert(decl && "private name node has missing decl");
-      if (auto *assign = llvh::dyn_cast<AssignmentExpressionNode>(parent);
-          assign && assign->_left == node) {
-        // Validate stores of a private name.
-        if (decl->kind == Decl::Kind::PrivateGetter) {
-          sm_.error(
-              parent->getSourceRange(),
-              "Cannot store to a private name that only defines a getter.");
-        } else if (decl->kind == Decl::Kind::PrivateMethod) {
-          sm_.error(
-              parent->getSourceRange(),
-              "Cannot store to a private name that defines a method.");
-        }
-      } else {
-        // Validate loads of a private name.
-        if (decl->kind == Decl::Kind::PrivateSetter) {
-          sm_.error(
-              node->getSourceRange(),
-              "Cannot load from a private name that only defines a setter.");
+      // There is no decl when a nonexistent private name is referenced, in
+      // which case there's no further validation that can be done here.
+      if (decl) {
+        if (auto *assign = llvh::dyn_cast<AssignmentExpressionNode>(parent);
+            assign && assign->_left == node) {
+          // Validate stores of a private name.
+          if (decl->kind == Decl::Kind::PrivateGetter) {
+            sm_.error(
+                parent->getSourceRange(),
+                "Cannot store to a private name that only defines a getter.");
+          } else if (decl->kind == Decl::Kind::PrivateMethod) {
+            sm_.error(
+                parent->getSourceRange(),
+                "Cannot store to a private name that defines a method.");
+          }
+        } else {
+          // Validate loads of a private name.
+          if (decl->kind == Decl::Kind::PrivateSetter) {
+            sm_.error(
+                node->getSourceRange(),
+                "Cannot load from a private name that only defines a setter.");
+          }
         }
       }
     }
@@ -1905,11 +1919,6 @@ Decl *SemanticResolver::resolvePrivateName(IdentifierNode *identifier) {
     return binding->decl;
   }
 
-  // Failed to resolve.
-  sm_.error(
-      identifier->getSourceRange(),
-      Twine("the private name \"#") + identifier->_name->str() +
-          "\" was not declared in any enclosing class");
   return nullptr;
 }
 
