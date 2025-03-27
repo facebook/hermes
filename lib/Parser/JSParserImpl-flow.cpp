@@ -862,8 +862,8 @@ Optional<ESTree::Node *> JSParserImpl::tryParseMatchStatementFlow(Param param) {
       return None;
 
     ESTree::Node *guard = nullptr;
-    if (checkAndEat(TokenKind::rw_if)) {
-      auto optGuard = parseExpression(ParamIn, CoverTypedParameters::No);
+    if (check(TokenKind::rw_if)) {
+      auto optGuard = parseMatchCaseGuardFlow();
       if (!optGuard)
         return None;
       guard = optGuard.getValue();
@@ -959,8 +959,8 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
       return None;
 
     ESTree::Node *guard = nullptr;
-    if (checkAndEat(TokenKind::rw_if)) {
-      auto optGuard = parseExpression(ParamIn, CoverTypedParameters::No);
+    if (check(TokenKind::rw_if)) {
+      auto optGuard = parseMatchCaseGuardFlow();
       if (!optGuard)
         return None;
       guard = optGuard.getValue();
@@ -1001,6 +1001,30 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
       startLoc,
       endLoc,
       new (context_) ESTree::MatchExpressionNode(argument, std::move(cases)));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchCaseGuardFlow() {
+  assert(check(TokenKind::rw_if));
+  SMLoc startLoc = advance().Start;
+  SMLoc condLoc = tok_->getStartLoc();
+  if (!eat(
+          TokenKind::l_paren,
+          JSLexer::AllowRegExp,
+          "after 'if' guard",
+          "location of 'if' guard",
+          startLoc))
+    return None;
+  auto optGuard = parseExpression(ParamIn, CoverTypedParameters::No);
+  if (!optGuard)
+    return None;
+  if (!eat(
+          TokenKind::r_paren,
+          JSLexer::AllowRegExp,
+          "at end of 'if' guard",
+          "'if' guard starts here",
+          condLoc))
+    return None;
+  return optGuard.getValue();
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMatchPatternFlow() {
