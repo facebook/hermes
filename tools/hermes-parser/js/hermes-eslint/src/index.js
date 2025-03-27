@@ -30,7 +30,7 @@ function parse(code: string, options?: ParseForESLintOptions): Program {
     enableExperimentalComponentSyntax:
       options?.enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
-      options?.enableExperimentalFlowMatchSyntax ?? false,
+      options?.enableExperimentalFlowMatchSyntax ?? true,
   };
 
   try {

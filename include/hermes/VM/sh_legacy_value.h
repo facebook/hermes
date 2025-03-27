@@ -419,6 +419,9 @@ typedef union {
   uint32_t bits;
 } SHObjectFlags;
 
+/// Used for debugging.
+void _sh_ljs_dump_to_stderr(SHLegacyValue v);
+
 #ifdef __cplusplus
 }
 #endif

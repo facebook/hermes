@@ -10,8 +10,7 @@
 
 import {printForSnapshot} from '../__test_utils__/parse';
 
-const transform = (src: string) =>
-  printForSnapshot(src, {babel: true, enableExperimentalFlowMatchSyntax: true});
+const transform = (src: string) => printForSnapshot(src, {babel: true});
 
 function runMatchExp(code: string, x: mixed): mixed {
   const f: $FlowFixMe = new Function(
@@ -60,8 +59,8 @@ describe('MatchExpression', () => {
     const code = `
       const $$gen$0 = true;
       const e = match (x()) {
-        'a': $$gen$0,
-        _: 1,
+        'a' => $$gen$0,
+        _ => 1,
       };
     `;
     const output = await transform(code);
@@ -84,7 +83,7 @@ describe('MatchExpression', () => {
     test('+/-0 not allowed', async () => {
       const code = `
         const e = match (x) {
-          -0: 0,
+          -0 => 0,
         }
       `;
       await expect(async () => {
@@ -95,7 +94,7 @@ describe('MatchExpression', () => {
     test('bindings in "or" patterns', async () => {
       const code = `
         const e = match (x) {
-          [const a] | {const a}: 0,
+          [const a] | {const a} => 0,
         }
       `;
       await expect(async () => {
@@ -106,8 +105,8 @@ describe('MatchExpression', () => {
     test('as pattern on binding pattern', async () => {
       const code = `
         const e = match (x) {
-          const x as y: 0,
-          _: 1,
+          const x as y => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -118,8 +117,8 @@ describe('MatchExpression', () => {
     test('var binding: binding pattern', async () => {
       const code = `
         const e = match (x) {
-          var a: 0,
-          _: 1,
+          var a => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -130,8 +129,8 @@ describe('MatchExpression', () => {
     test('var binding: as pattern', async () => {
       const code = `
         const e = match (x) {
-          0 as var a: 0,
-          _: 1,
+          0 as var a => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -142,8 +141,8 @@ describe('MatchExpression', () => {
     test('var binding: array rest', async () => {
       const code = `
         const e = match (x) {
-          [...var a]: 0,
-          _: 1,
+          [...var a] => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -154,8 +153,8 @@ describe('MatchExpression', () => {
     test('var binding: object rest', async () => {
       const code = `
         const e = match (x) {
-          {...var a}: 0,
-          _: 1,
+          {...var a} => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -166,8 +165,8 @@ describe('MatchExpression', () => {
     test('duplicate object props', async () => {
       const code = `
         const e = match (x) {
-          {a: 0, const a}: 0,
-          _: 1,
+          {a: 0, const a} => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -178,8 +177,8 @@ describe('MatchExpression', () => {
     test('duplicate binding name: binding pattern', async () => {
       const code = `
         const e = match (x) {
-          [const a, const a]: 0,
-          _: 1,
+          [const a, const a] => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -190,8 +189,8 @@ describe('MatchExpression', () => {
     test('duplicate binding name: as pattern', async () => {
       const code = `
         const e = match (x) {
-          [const a, 1 as const a]: 0,
-          _: 1,
+          [const a, 1 as const a] => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -202,8 +201,8 @@ describe('MatchExpression', () => {
     test('duplicate binding name: array rest', async () => {
       const code = `
         const e = match (x) {
-          [const a, ...const a]: 0,
-          _: 1,
+          [const a, ...const a] => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -214,8 +213,8 @@ describe('MatchExpression', () => {
     test('duplicate binding name: object rest', async () => {
       const code = `
         const e = match (x) {
-          {const a, ...const a}: 0,
-          _: 1,
+          {const a, ...const a} => 0,
+          _ => 1,
         }
       `;
       await expect(async () => {
@@ -228,15 +227,15 @@ describe('MatchExpression', () => {
     test('simple and guards', async () => {
       const code = `
         const e = match (x) {
-          'a': 0,
-          888: 1,
-          -999: 2,
-          foo: 3,
-          bar.a: 4,
-          NaN: 5,
-          'b' if no(): 6,
-          _ if yes(): 7,
-          _: 8,
+          'a' => 0,
+          888 => 1,
+          -999 => 2,
+          foo => 3,
+          bar.a => 4,
+          NaN => 5,
+          'b' if (no()) => 6,
+          _ if (yes()) => 7,
+          _ => 8,
         };
       `;
       const output = await transform(code);
@@ -253,9 +252,9 @@ describe('MatchExpression', () => {
     test('simple argument', async () => {
       const code = `
         const e = match (x.foo['bar'][0]) {
-          'a': 0,
-          'b': 1,
-          _: 2,
+          'a' => 0,
+          'b' => 1,
+          _ => 2,
         }
       `;
 
@@ -269,8 +268,8 @@ describe('MatchExpression', () => {
     test('no wildcard', async () => {
       const code = `
         const e = match (x) {
-          'a': 0,
-          'b': 1,
+          'a' => 0,
+          'b' => 1,
         };
       `;
       const output = await transform(code);
@@ -290,7 +289,7 @@ describe('MatchExpression', () => {
     test('only wildcard', async () => {
       const code = `
         const e = match (x) {
-          _: 1,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -302,11 +301,11 @@ describe('MatchExpression', () => {
     test('objects', async () => {
       const code = `
         const e = match (x) {
-          {a: 'a', b: 'b'}: 0,
-          {c: _, d: _}: 1,
-          {999: 999, 's': 's'}: 2,
-          {}: 3,
-          _: 4,
+          {a: 'a', b: 'b'} => 0,
+          {c: _, d: _} => 1,
+          {999: 999, 's': 's'} => 2,
+          {} => 3,
+          _ => 4,
         };
       `;
       const output = await transform(code);
@@ -323,8 +322,8 @@ describe('MatchExpression', () => {
     test('objects matches arrays', async () => {
       const code = `
         const e = match (x) {
-          {0: 'a', 1: 'b'}: 0,
-          _: 1,
+          {0: 'a', 1: 'b'} => 0,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -340,10 +339,10 @@ describe('MatchExpression', () => {
     test('arrays', async () => {
       const code = `
         const e = match (x) {
-          ['a']: 0,
-          ['b', ...]: 1,
-          [_]: 2,
-          _: 3,
+          ['a'] => 0,
+          ['b', ...] => 1,
+          [_] => 2,
+          _ => 3,
         };
       `;
       const output = await transform(code);
@@ -361,9 +360,9 @@ describe('MatchExpression', () => {
     test('as', async () => {
       const code = `
         const e = match (x) {
-          (1 | 2) as a: a,
-          [(3 | 4) as const a]: -a,
-          _: 3,
+          (1 | 2) as a => a,
+          [(3 | 4) as const a] => -a,
+          _ => 3,
         };
       `;
       const output = await transform(code);
@@ -393,8 +392,8 @@ describe('MatchExpression', () => {
     test('or: simple', async () => {
       const code = `
         const e = match (x) {
-          'a' | 'b': 0,
-          _: 1,
+          'a' | 'b' => 0,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -410,7 +409,7 @@ describe('MatchExpression', () => {
     test('or: wildcard', async () => {
       const code = `
         const e = match (x) {
-          'a' | _: 0,
+          'a' | _ => 0,
         };
       `;
       const output = await transform(code);
@@ -422,8 +421,8 @@ describe('MatchExpression', () => {
     test('or: complex', async () => {
       const code = `
         const e = match (x) {
-          [[1] | {foo: 2}]: 0,
-          _: 1,
+          [[1] | {foo: 2}] => 0,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -439,11 +438,11 @@ describe('MatchExpression', () => {
     test('nested', async () => {
       const code = `
         const e = match (x) {
-          'a' | 'b': match (x) {
-            'a': 0,
-            'b': 1,
+          'a' | 'b' => match (x) {
+            'a' => 0,
+            'b' => 1,
           },
-          _: 2,
+          _ => 2,
         };
       `;
       const output = await transform(code);
@@ -463,14 +462,14 @@ describe('MatchExpression', () => {
     test('simple and guards', async () => {
       const code = `
         const e = match (x) {
-          'a': 0,
-          888: 1,
-          -999: 2,
-          foo: 3,
-          bar.a: 4,
-          'b' if no(): 5,
-          const foo if yes(foo): 6,
-          const bar: bar,
+          'a' => 0,
+          888 => 1,
+          -999 => 2,
+          foo => 3,
+          bar.a => 4,
+          'b' if (no()) => 5,
+          const foo if (yes(foo)) => 6,
+          const bar => bar,
         };
       `;
       const output = await transform(code);
@@ -519,8 +518,8 @@ describe('MatchExpression', () => {
     test('non-simple argument: call', async () => {
       const code = `
         const e = match (x()) {
-          'a': 0,
-          _: 1,
+          'a' => 0,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -541,8 +540,8 @@ describe('MatchExpression', () => {
     test('non-simple argument: computed access', async () => {
       const code = `
         const e = match (x[1 + 2 - 3]) {
-          'a': 0,
-          _: 1,
+          'a' => 0,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -563,7 +562,7 @@ describe('MatchExpression', () => {
     test('no wildcard', async () => {
       const code = `
         const e = match (x()) {
-          'a': 0,
+          'a' => 0,
         };
       `;
       const output = await transform(code);
@@ -586,7 +585,7 @@ describe('MatchExpression', () => {
     test('only wildcard', async () => {
       const code = `
         const e = match (x()) {
-          _: 0,
+          _ => 0,
         };
       `;
       const output = await transform(code);
@@ -602,8 +601,8 @@ describe('MatchExpression', () => {
     test('arrays', async () => {
       const code = `
         const e = match (x) {
-          [1, const a]: a,
-          _: 1,
+          [1, const a] => a,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -626,8 +625,8 @@ describe('MatchExpression', () => {
     test('array rest', async () => {
       const code = `
         const e = match (x) {
-          [1, 2, ...const rest]: rest,
-          _: 1,
+          [1, 2, ...const rest] => rest,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -650,8 +649,8 @@ describe('MatchExpression', () => {
     test('objects', async () => {
       const code = `
         const e = match (x) {
-          {foo: 1, bar: const a, const baz}: a + baz,
-          _: 1,
+          {foo: 1, bar: const a, const baz} => a + baz,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -676,8 +675,8 @@ describe('MatchExpression', () => {
     test('object rest', async () => {
       const code = `
         const e = match (x) {
-          {foo: 1, bar: const a, ...const rest}: rest,
-          _: 1,
+          {foo: 1, bar: const a, ...const rest} => rest,
+          _ => 1,
         };
       `;
       const output = await transform(code);
@@ -708,10 +707,10 @@ describe('MatchExpression', () => {
     test('object property with `undefined` value', async () => {
       const code = `
         const e = match (x) {
-          {foo: undefined}: true,
-          {bar: undefined as const a}: true,
-          {baz: 0 | undefined}: true,
-          _: false,
+          {foo: undefined} => true,
+          {bar: undefined as const a} => true,
+          {baz: 0 | undefined} => true,
+          _ => false,
         };
       `;
       const output = await transform(code);
@@ -743,11 +742,11 @@ describe('MatchExpression', () => {
     test('nested', async () => {
       const code = `
         const e = match (x) {
-          'a' | 'b': match (x) {
-            'a': 0,
-            const a: a,
+          'a' | 'b' => match (x) {
+            'a' => 0,
+            const a => a,
           },
-          const a: a,
+          const a => a,
         };
       `;
       const output = await transform(code);

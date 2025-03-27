@@ -77,7 +77,7 @@ export function parseForSnapshot(
     enableExperimentalComponentSyntax:
       enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
-      enableExperimentalFlowMatchSyntax ?? false,
+      enableExperimentalFlowMatchSyntax ?? true,
   };
   if (babel === true) {
     return cleanASTForSnapshot(
@@ -132,7 +132,7 @@ export async function printForSnapshot(
     enableExperimentalComponentSyntax:
       enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
-      enableExperimentalFlowMatchSyntax ?? false,
+      enableExperimentalFlowMatchSyntax ?? true,
     reactRuntimeTarget,
   };
   if (babel === true) {

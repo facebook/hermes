@@ -25,7 +25,18 @@ void HermesValue::dump(llvh::raw_ostream &os) const {
   os << *this << "\n";
 }
 
-llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
+HERMES_FORCE_USED_IN_DEBUG
+void HermesValue::dump() const {
+  dump(llvh::errs());
+}
+
+llvh::raw_ostream &dumpHermesValue(llvh::raw_ostream &OS, SHLegacyValue lhv) {
+  static_assert(
+      sizeof(HermesValue) == sizeof(SHLegacyValue),
+      "HermesValue and SHLegacyValue must be the same size");
+  HermesValue hv;
+  memcpy(&hv, &lhv, sizeof(HermesValue));
+
   switch (hv.getETag()) {
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2: {
@@ -96,5 +107,17 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv) {
   }
 }
 
+HERMES_FORCE_USED_IN_DEBUG
+void dumpHermesValue(SHLegacyValue lhv) {
+  dumpHermesValue(llvh::errs(), lhv);
+  llvh::errs() << "\n";
+}
+
 } // namespace vm
 } // namespace hermes
+
+extern "C" HERMES_FORCE_USED_IN_DEBUG void _sh_ljs_dump_to_stderr(
+    SHLegacyValue v) {
+  hermes::vm::dumpHermesValue(llvh::errs(), v);
+  llvh::errs() << "\n";
+}

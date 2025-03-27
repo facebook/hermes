@@ -46,20 +46,20 @@ var obj = {
 // CHECK:Function<global>(1 params, 5 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
-// CHECK-NEXT:    NewObject         r4
-// CHECK-NEXT:    LoadConstString   r3, "b"
+// CHECK-NEXT:    NewObject         r2
+// CHECK-NEXT:    LoadConstString   r4, "b"
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    CreateClosure     r2, r0, Function<set b>
+// CHECK-NEXT:    CreateClosure     r3, r0, Function<set b>
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<get b>
-// CHECK-NEXT:    DefineOwnGetterSetterByVal r4, r3, r1, r2, 1
-// CHECK-NEXT:    LoadConstString   r2, "c"
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r2, r4, r1, r3, 1
+// CHECK-NEXT:    LoadConstString   r3, "c"
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<get c>
-// CHECK-NEXT:    DefineOwnGetterSetterByVal r4, r2, r1, r0, 1
-// CHECK-NEXT:    LoadConstString   r2, "d"
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r2, r3, r1, r0, 1
+// CHECK-NEXT:    LoadConstString   r3, "d"
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<set d>
-// CHECK-NEXT:    DefineOwnGetterSetterByVal r4, r2, r0, r1, 1
+// CHECK-NEXT:    DefineOwnGetterSetterByVal r2, r3, r0, r1, 1
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r4, 1, "obj"
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "obj"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<get b>(1 params, 1 registers, 0 numbers, 1 non-pointers):

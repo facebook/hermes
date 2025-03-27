@@ -10,23 +10,15 @@
 
 'use strict';
 
-import type {ParseForESLintReturn} from '../../src';
-
 import {ScopeType} from '../../src';
-import {parseForESLint as parseForESLintWithOptions} from '../../src';
-
-function parseForESLint(str: string): ParseForESLintReturn {
-  return parseForESLintWithOptions(str, {
-    enableExperimentalFlowMatchSyntax: true,
-  });
-}
+import {parseForESLint} from '../../src';
 
 describe('Match', () => {
   describe('Match expression', () => {
     test('binding pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          const a if a: a,
+          const a if (a) => a,
         };
       `);
 
@@ -69,8 +61,8 @@ describe('Match', () => {
         let foo;
         let bar;
         const e = match (x) {
-          foo: 1,
-          bar.baz: 2,
+          foo => 1,
+          bar.baz => 2,
         };
       `);
 
@@ -118,7 +110,7 @@ describe('Match', () => {
     test('wildcard pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          _: 0,
+          _ => 0,
         };
       `);
 
@@ -134,7 +126,7 @@ describe('Match', () => {
     test('object pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          {foo: 1, const bar}: bar,
+          {foo: 1, const bar} => bar,
         };
       `);
 
@@ -160,8 +152,8 @@ describe('Match', () => {
     test('as pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          [1 as const a]: a,
-          [1 as b]: b,
+          [1 as const a] => a,
+          [1 as b] => b,
         };
       `);
 
@@ -204,7 +196,7 @@ describe('Match', () => {
     test('or pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          [const a] | {foo: const a}: a,
+          [const a] | {foo: const a} => a,
         };
       `);
 
@@ -243,7 +235,7 @@ describe('Match', () => {
     test('basic', () => {
       const {scopeManager} = parseForESLint(`
         match (x) {
-          const a: {
+          const a => {
             a
           },
         };

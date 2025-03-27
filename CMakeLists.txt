@@ -299,6 +299,15 @@ set(HERMES_ALLOW_BOOST_CONTEXT 1 CACHE STRING
 set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
   "Enable gathering, printing of Statistics.")
 
+# Used to force enable slow statistics even in release builds.
+set(HERMES_FORCE_SLOW_STATS OFF CACHE BOOL
+  "Force enable HERMES_SLOW_STATISTIC even when HERMES_SLOW_DEBUG is off.")
+
+if(HERMES_FORCE_SLOW_STATS)
+  # Also enable regular statistics when slow stats are forced on
+  set(LLVM_FORCE_ENABLE_STATS ON)
+endif()
+
 # This definition is used by source that must be kept identical between Hermes and
 # Static Hermes, but needs to behave differently in each case.
 add_definitions(-DSTATIC_HERMES)
@@ -533,6 +542,11 @@ else()
     set(BOOST_CONTEXT_LIB )
 endif()
 add_definitions(-DHERMES_USE_BOOST_CONTEXT=${HERMES_USE_BOOST_CONTEXT})
+
+if(HERMES_FORCE_SLOW_STATS)
+  add_definitions(-DHERMES_FORCE_SLOW_STATS)
+endif()
+
 
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so

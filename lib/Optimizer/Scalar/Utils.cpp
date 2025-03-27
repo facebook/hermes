@@ -16,9 +16,9 @@
 
 #include "llvh/ADT/SetVector.h"
 
-using namespace hermes;
+namespace hermes {
 
-Value *hermes::isStoreOnceVariable(Variable *V) {
+Value *isStoreOnceVariable(Variable *V) {
   Value *res = nullptr;
 
   for (auto *U : V->getUsers()) {
@@ -42,7 +42,7 @@ Value *hermes::isStoreOnceVariable(Variable *V) {
   return res;
 }
 
-Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
+Value *isStoreOnceStackLocation(AllocStackInst *AS) {
   Value *res = nullptr;
 
   for (auto *U : AS->getUsers()) {
@@ -72,7 +72,7 @@ Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
   return res;
 }
 
-llvh::SmallVector<BaseCallInst *, 2> hermes::getKnownCallsites(Function *F) {
+llvh::SmallVector<BaseCallInst *, 2> getKnownCallsites(Function *F) {
   llvh::SmallVector<BaseCallInst *, 2> result{};
   for (Instruction *user : F->getUsers()) {
     if (auto *call = llvh::dyn_cast<BaseCallInst>(user)) {
@@ -85,7 +85,7 @@ llvh::SmallVector<BaseCallInst *, 2> hermes::getKnownCallsites(Function *F) {
   return result;
 }
 
-BasicBlock *hermes::splitBasicBlock(
+BasicBlock *splitBasicBlock(
     BasicBlock *BB,
     BasicBlock::InstListType::iterator it) {
   Function *F = BB->getParent();
@@ -108,7 +108,7 @@ BasicBlock *hermes::splitBasicBlock(
 }
 
 /// Delete all incoming arrows from \p incoming in PhiInsts in \p blockToModify.
-bool hermes::deleteIncomingBlockFromPhis(
+bool deleteIncomingBlockFromPhis(
     BasicBlock *blockToModify,
     BasicBlock *incoming) {
   bool changed = false;
@@ -129,7 +129,7 @@ bool hermes::deleteIncomingBlockFromPhis(
   return changed;
 }
 
-Value *hermes::getSinglePhiValue(PhiInst *P) {
+Value *getSinglePhiValue(PhiInst *P) {
   Value *incoming = nullptr;
   for (int i = 0, e = P->getNumEntries(); i < e; i++) {
     auto E = P->getEntry(i);
@@ -151,10 +151,7 @@ Value *hermes::getSinglePhiValue(PhiInst *P) {
   return incoming;
 }
 
-void hermes::splitCriticalEdge(
-    IRBuilder *builder,
-    BasicBlock *from,
-    BasicBlock *to) {
+void splitCriticalEdge(IRBuilder *builder, BasicBlock *from, BasicBlock *to) {
   // Special case: If the target block is Catch block, there's only one
   // possible arrow and we can't insert anything between them. Just
   // start writing after the Catch statement.
@@ -196,7 +193,7 @@ void hermes::splitCriticalEdge(
   builder->setInsertionPoint(branch);
 }
 
-bool hermes::deleteUnusedVariables(Module *M) {
+bool deleteUnusedVariables(Module *M) {
   bool changed = false;
   auto &scopeList = M->getVariableScopes();
   for (auto it = scopeList.begin(); it != scopeList.end();) {
@@ -228,7 +225,7 @@ bool hermes::deleteUnusedVariables(Module *M) {
   return changed;
 }
 
-bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
+bool deleteUnusedFunctionsAndVariables(Module *M) {
   // A list of unused functions to deallocate from memory.
   // We need to destroy the memory at the very end of this function because a
   // dead function may have a variable that is referenced by an inner function
@@ -286,5 +283,7 @@ bool hermes::deleteUnusedFunctionsAndVariables(Module *M) {
   changed |= deleteUnusedVariables(M);
   return changed;
 }
+
+} // namespace hermes
 
 #undef DEBUG_TYPE

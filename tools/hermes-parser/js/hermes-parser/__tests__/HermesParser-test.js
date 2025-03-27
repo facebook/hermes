@@ -223,7 +223,9 @@ component Foo() {}
 });
 
 test('Allow Flow match syntax', () => {
-  expect(() => parse('const e = match (x) {}')).toThrow(
+  expect(() =>
+    parse('const e = match (x) {}', {enableExperimentalFlowMatchSyntax: false}),
+  ).toThrow(
     new SyntaxError(
       `';' expected (1:20)
 const e = match (x) {}
@@ -231,9 +233,7 @@ const e = match (x) {}
     ),
   );
 
-  expect(
-    parse('const e = match (x) {}', {enableExperimentalFlowMatchSyntax: true}),
-  ).toMatchObject({
+  expect(parse('const e = match (x) {}')).toMatchObject({
     type: 'Program',
     body: [
       {

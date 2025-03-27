@@ -1808,11 +1808,8 @@ static const struct JSBuiltin {
 #define NORMAL_METHOD(object, method)
 #define BUILTIN_METHOD(object, method)
 #define PRIVATE_BUILTIN(name)
-#define JS_BUILTIN(name)                                \
-  {                                                     \
-    (uint16_t) Predefined::name,                        \
-        (uint16_t)BuiltinMethod::HermesBuiltin##_##name \
-  }
+#define JS_BUILTIN(name) \
+  {(uint16_t)Predefined::name, (uint16_t)BuiltinMethod::HermesBuiltin##_##name},
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 
@@ -1824,7 +1821,10 @@ void Runtime::initJSBuiltins(Handle<JSObject> jsBuiltinsObj) {
     // Try to get the JS function from jsBuiltinsObj.
     auto getRes = JSObject::getNamed_RJS(
         jsBuiltinsObj, *this, Predefined::getSymbolID((Predefined::Str)symID));
-    assert(getRes == ExecutionStatus::RETURNED && "Failed to get JS builtin.");
+    assert(
+        getRes == ExecutionStatus::RETURNED &&
+        !getRes.getValue()->isUndefined() && "Failed to get JS builtin.");
+
     Callable *jsFunc = vmcast<Callable>(getRes->getHermesValue());
 
     registerBuiltin((BuiltinMethod::Enum)builtinIndex, jsFunc);

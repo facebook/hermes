@@ -50,24 +50,24 @@ function foo(a) {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
-// CHECK-NEXT:    GetGlobalObject   r1
+// CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    CreateClosure     r2, r0, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(2 params, 12 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:    LoadParam         r3, 1
+// CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:L9:
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call1             r0, r3, r0
+// CHECK-NEXT:    Call1             r0, r2, r0
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    Catch             r2
+// CHECK-NEXT:    Catch             r3
 // CHECK-NEXT:L8:
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call1             r0, r2, r0
+// CHECK-NEXT:    Call1             r0, r3, r0
 // CHECK-NEXT:    Jmp               L4
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    Catch             r1
@@ -75,20 +75,20 @@ function foo(a) {
 // CHECK-NEXT:    Call1             r0, r1, r0
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call1             r0, r2, r0
+// CHECK-NEXT:    Call1             r0, r3, r0
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    Call1             r1, r3, r0
+// CHECK-NEXT:    Call1             r1, r2, r0
 // CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    Catch             r0
 // CHECK-NEXT:    LoadConstUndefined r1
-// CHECK-NEXT:    Call1             r1, r2, r1
+// CHECK-NEXT:    Call1             r1, r3, r1
 // CHECK-NEXT:    Throw             r0
 // CHECK-NEXT:L6:
 // CHECK-NEXT:    Catch             r0
 // CHECK-NEXT:    LoadConstUndefined r1
-// CHECK-NEXT:    Call1             r1, r3, r1
+// CHECK-NEXT:    Call1             r1, r2, r1
 // CHECK-NEXT:    Throw             r0
 
 // CHECK:Exception Handlers:

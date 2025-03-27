@@ -27,7 +27,7 @@ const e = match (x) {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cases": [
 
-  "s" | true | null: 1,
+  "s" | true | null => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -64,7 +64,46 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: 1 | 2}: 2,
+  | "s"
+  | true
+  | null => 1,
+
+// CHECK-NEXT:              {
+// CHECK-NEXT:                "type": "MatchExpressionCase",
+// CHECK-NEXT:                "pattern": {
+// CHECK-NEXT:                  "type": "MatchOrPattern",
+// CHECK-NEXT:                  "patterns": [
+// CHECK-NEXT:                    {
+// CHECK-NEXT:                      "type": "MatchLiteralPattern",
+// CHECK-NEXT:                      "literal": {
+// CHECK-NEXT:                        "type": "StringLiteral",
+// CHECK-NEXT:                        "value": "s"
+// CHECK-NEXT:                      }
+// CHECK-NEXT:                    },
+// CHECK-NEXT:                    {
+// CHECK-NEXT:                      "type": "MatchLiteralPattern",
+// CHECK-NEXT:                      "literal": {
+// CHECK-NEXT:                        "type": "BooleanLiteral",
+// CHECK-NEXT:                        "value": true
+// CHECK-NEXT:                      }
+// CHECK-NEXT:                    },
+// CHECK-NEXT:                    {
+// CHECK-NEXT:                      "type": "MatchLiteralPattern",
+// CHECK-NEXT:                      "literal": {
+// CHECK-NEXT:                        "type": "NullLiteral"
+// CHECK-NEXT:                      }
+// CHECK-NEXT:                    }
+// CHECK-NEXT:                  ]
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "body": {
+// CHECK-NEXT:                  "type": "NumericLiteral",
+// CHECK-NEXT:                  "value": 1,
+// CHECK-NEXT:                  "raw": "1"
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "guard": null
+// CHECK-NEXT:              },
+
+  {foo: 1 | 2} => 2,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -111,7 +150,55 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: [1] as y}: y,
+  {foo: | 1
+        | 2} => 2,
+
+// CHECK-NEXT:              {
+// CHECK-NEXT:                "type": "MatchExpressionCase",
+// CHECK-NEXT:                "pattern": {
+// CHECK-NEXT:                  "type": "MatchObjectPattern",
+// CHECK-NEXT:                  "properties": [
+// CHECK-NEXT:                    {
+// CHECK-NEXT:                      "type": "MatchObjectPatternProperty",
+// CHECK-NEXT:                      "key": {
+// CHECK-NEXT:                        "type": "Identifier",
+// CHECK-NEXT:                        "name": "foo"
+// CHECK-NEXT:                      },
+// CHECK-NEXT:                      "pattern": {
+// CHECK-NEXT:                        "type": "MatchOrPattern",
+// CHECK-NEXT:                        "patterns": [
+// CHECK-NEXT:                          {
+// CHECK-NEXT:                            "type": "MatchLiteralPattern",
+// CHECK-NEXT:                            "literal": {
+// CHECK-NEXT:                              "type": "NumericLiteral",
+// CHECK-NEXT:                              "value": 1,
+// CHECK-NEXT:                              "raw": "1"
+// CHECK-NEXT:                            }
+// CHECK-NEXT:                          },
+// CHECK-NEXT:                          {
+// CHECK-NEXT:                            "type": "MatchLiteralPattern",
+// CHECK-NEXT:                            "literal": {
+// CHECK-NEXT:                              "type": "NumericLiteral",
+// CHECK-NEXT:                              "value": 2,
+// CHECK-NEXT:                              "raw": "2"
+// CHECK-NEXT:                            }
+// CHECK-NEXT:                          }
+// CHECK-NEXT:                        ]
+// CHECK-NEXT:                      },
+// CHECK-NEXT:                      "shorthand": false
+// CHECK-NEXT:                    }
+// CHECK-NEXT:                  ],
+// CHECK-NEXT:                  "rest": null
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "body": {
+// CHECK-NEXT:                  "type": "NumericLiteral",
+// CHECK-NEXT:                  "value": 2,
+// CHECK-NEXT:                  "raw": "2"
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "guard": null
+// CHECK-NEXT:              },
+
+  {foo: [1] as y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -157,7 +244,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: 1 | 2 | 3 as y}: y,
+  {foo: 1 | 2 | 3 as y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -218,7 +305,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: (1 | 2 | 3) as y}: y,
+  {foo: (1 | 2 | 3) as y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -279,7 +366,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: [1] as const y}: y,
+  {foo: [1] as const y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",

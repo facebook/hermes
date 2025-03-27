@@ -48,31 +48,31 @@ function test1() {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "test1"
-// CHECK-NEXT:    GetGlobalObject   r1
+// CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    CreateClosure     r2, r0, Function<test1>
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "test1"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<test1>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "test1"
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<test1>(1 params, 19 registers, 6 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
 // CHECK-NEXT:    LoadConstUInt8    r3, 1
-// CHECK-NEXT:    GetGlobalObject   r9
+// CHECK-NEXT:    GetGlobalObject   r7
 // CHECK-NEXT:    LoadConstUInt8    r4, 5
 // CHECK-NEXT:    LoadConstUInt8    r0, 3
 // CHECK-NEXT:    LoadConstZero     r1
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:L3:
-// CHECK-NEXT:    TryGetById        r7, r9, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r8, r7, 2, "random"
-// CHECK-NEXT:    Call1             r8, r8, r7
+// CHECK-NEXT:    TryGetById        r9, r7, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r8, r9, 2, "random"
+// CHECK-NEXT:    Call1             r8, r8, r9
 // CHECK-NEXT:    Mov               r2, r1
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    JStrictEqual      L1, r8, r0
-// CHECK-NEXT:    TryGetById        r7, r9, 1, "Math"
-// CHECK-NEXT:    GetByIdShort      r8, r7, 2, "random"
-// CHECK-NEXT:    Call1             r8, r8, r7
+// CHECK-NEXT:    TryGetById        r9, r7, 1, "Math"
+// CHECK-NEXT:    GetByIdShort      r8, r9, 2, "random"
+// CHECK-NEXT:    Call1             r8, r8, r9
 // CHECK-NEXT:    JStrictEqual      L2, r8, r4
 // CHECK-NEXT:    AddN              r1, r2, r3
 // CHECK-NEXT:    Jmp               L3
@@ -90,9 +90,9 @@ function test1() {
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    JLessN            L5, r4, r2
 // CHECK-NEXT:L4:
-// CHECK-NEXT:    TryGetById        r9, r9, 3, "print"
+// CHECK-NEXT:    TryGetById        r7, r7, 3, "print"
 // CHECK-NEXT:    LoadConstUndefined r6
-// CHECK-NEXT:    Call2             r9, r9, r6, r2
+// CHECK-NEXT:    Call2             r7, r7, r6, r2
 // CHECK-NEXT:    Ret               r6
 
 // CHECK:Debug filename table:

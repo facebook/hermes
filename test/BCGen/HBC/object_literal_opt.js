@@ -83,10 +83,10 @@ function foo(p) {
 // CHECK-NEXT:[@ 6] Ret 0<Reg8>
 
 // CHECK:Function<>(1 params, 2 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:[@ 0] NewObjectWithBuffer 1<Reg8>, 1<UInt16>, 9<UInt16>
-// CHECK-NEXT:[@ 6] LoadThisNS 0<Reg8>
-// CHECK-NEXT:[@ 8] PutOwnBySlotIdx 1<Reg8>, 0<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 12] Ret 1<Reg8>
+// CHECK-NEXT:[@ 0] NewObjectWithBuffer 0<Reg8>, 1<UInt16>, 9<UInt16>
+// CHECK-NEXT:[@ 6] LoadThisNS 1<Reg8>
+// CHECK-NEXT:[@ 8] PutOwnBySlotIdx 0<Reg8>, 1<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 12] Ret 0<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}object_literal_opt.js

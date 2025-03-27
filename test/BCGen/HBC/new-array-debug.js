@@ -37,22 +37,22 @@ function foo() {
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
-// CHECK-NEXT:[@ 5] GetGlobalObject 1<Reg8>
+// CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 0<Reg8>
-// CHECK-NEXT:[@ 9] CreateClosure 2<Reg8>, 0<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 14] PutByIdLoose 1<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 9] CreateClosure 1<Reg8>, 0<Reg8>, 1<UInt16>
+// CHECK-NEXT:[@ 14] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt16>
 // CHECK-NEXT:[@ 20] Ret 0<Reg8>
 
 // CHECK:Function<foo>(1 params, 2 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
-// CHECK-NEXT:[@ 0] NewArray 1<Reg8>, 3<UInt16>
-// CHECK-NEXT:[@ 4] NewArray 0<Reg8>, 0<UInt16>
-// CHECK-NEXT:[@ 8] DefineOwnByIndex 1<Reg8>, 0<Reg8>, 0<UInt8>
-// CHECK-NEXT:[@ 12] NewArray 0<Reg8>, 0<UInt16>
-// CHECK-NEXT:[@ 16] DefineOwnByIndex 1<Reg8>, 0<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 20] NewArray 0<Reg8>, 0<UInt16>
-// CHECK-NEXT:[@ 24] DefineOwnByIndex 1<Reg8>, 0<Reg8>, 2<UInt8>
-// CHECK-NEXT:[@ 28] Ret 1<Reg8>
+// CHECK-NEXT:[@ 0] NewArray 0<Reg8>, 3<UInt16>
+// CHECK-NEXT:[@ 4] NewArray 1<Reg8>, 0<UInt16>
+// CHECK-NEXT:[@ 8] DefineOwnByIndex 0<Reg8>, 1<Reg8>, 0<UInt8>
+// CHECK-NEXT:[@ 12] NewArray 1<Reg8>, 0<UInt16>
+// CHECK-NEXT:[@ 16] DefineOwnByIndex 0<Reg8>, 1<Reg8>, 1<UInt8>
+// CHECK-NEXT:[@ 20] NewArray 1<Reg8>, 0<UInt16>
+// CHECK-NEXT:[@ 24] DefineOwnByIndex 0<Reg8>, 1<Reg8>, 2<UInt8>
+// CHECK-NEXT:[@ 28] Ret 0<Reg8>
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}new-array-debug.js

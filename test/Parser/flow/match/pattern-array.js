@@ -27,7 +27,7 @@ const e = match (x) {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cases": [
 
-  [10]: 1,
+  [10] => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -53,7 +53,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  [const y, 1]: y,
+  [const y, 1] => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -86,7 +86,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  [1, ...]: 1,
+  [1, ...] => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -115,7 +115,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  [1, 2, ...const rest]: rest,
+  [1, 2, ...const rest] => rest,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -158,7 +158,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  [...let rest]: rest,
+  [...let rest] => rest,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -184,7 +184,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  [...var rest]: rest,
+  [...var rest] => rest,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -210,7 +210,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  [{nested: [1, const x]}]: x,
+  [{nested: [1, const x]}] => x,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",

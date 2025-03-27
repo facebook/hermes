@@ -15,16 +15,14 @@ namespace hermes::hbc {
 /// Reorder registers to place number and non-pointer registers in lower
 /// registers, and registers in inner loops in lower-indexed registers within
 /// each of those classes.
-class ReorderRegisters : public FunctionPass {
- public:
-  explicit ReorderRegisters(HVMRegisterAllocator &RA)
-      : FunctionPass("ReorderRegisters"), RA_(RA) {}
-
-  bool runOnFunction(Function *F) override;
-
- private:
-  HVMRegisterAllocator &RA_;
-};
+/// This is useful for the JIT because it can allocate hardware registers
+/// specially for known types.
+///
+/// Does NOT change the ordering of registers in RegClass::Other,
+/// because it hurts compressibility of bytecode (3-5% regression in compressed
+/// size based on the file). The ordering doesn't matter for the JIT for "Other"
+/// registers right now so it also has no benefit.
+Pass *createReorderRegisters(HVMRegisterAllocator &RA);
 
 } // namespace hermes::hbc
 

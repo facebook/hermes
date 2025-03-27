@@ -79,16 +79,16 @@ function dynamicProto(func, getProto) {
 
 // CHECK:Function<dynamicProto>(3 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
-// CHECK-NEXT:    NewObjectWithBuffer r2, 1, 13
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 13
 // CHECK-NEXT:    LoadConstUndefined r0
-// CHECK-NEXT:    LoadParam         r1, 1
-// CHECK-NEXT:    Call1             r1, r1, r0
-// CHECK-NEXT:    PutOwnBySlotIdx   r2, r1, 0
-// CHECK-NEXT:    LoadParam         r1, 2
-// CHECK-NEXT:    Call1             r3, r1, r0
-// CHECK-NEXT:    Mov               r4, r2
-// CHECK-NEXT:    CallBuiltin       r1, "HermesBuiltin.silentSetPrototypeOf", 3
-// CHECK-NEXT:    Ret               r2
+// CHECK-NEXT:    LoadParam         r2, 1
+// CHECK-NEXT:    Call1             r2, r2, r0
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r2, 0
+// CHECK-NEXT:    LoadParam         r2, 2
+// CHECK-NEXT:    Call1             r3, r2, r0
+// CHECK-NEXT:    Mov               r4, r1
+// CHECK-NEXT:    CallBuiltin       r2, "HermesBuiltin.silentSetPrototypeOf", 3
+// CHECK-NEXT:    Ret               r1
 
 // CHECK:Debug filename table:
 // CHECK-NEXT:  0: {{.*}}__proto__.js
