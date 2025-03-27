@@ -29,7 +29,8 @@ class CDPDebugAPI;
 
 /// Public-facing wrapper for internal CDP state that can be preserved across
 /// reloads.
-struct HERMES_EXPORT State {
+class HERMES_EXPORT State {
+ public:
   /// Incomplete type that stores the actual state.
   struct Private;
 
