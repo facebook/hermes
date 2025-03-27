@@ -5689,6 +5689,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           case "LogicalExpression":
           case "AwaitExpression":
           case "TSTypeAssertion":
+          case "MatchExpressionCase":
             return true;
           case "ConditionalExpression":
             return key === "test";
@@ -10995,8 +10996,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const body = node.type === "MatchStatementCase" ? [" ", print3("body")] : indent([line, print3("body"), ","]);
     return [
       print3("pattern"),
-      node.guard ? [" if ", print3("guard")] : "",
-      group([":", comment, body])
+      node.guard ? [" if (", print3("guard"), ")"] : "",
+      group([" =>", comment, body])
     ];
   }
   function printMatchPattern(path, option, print3) {

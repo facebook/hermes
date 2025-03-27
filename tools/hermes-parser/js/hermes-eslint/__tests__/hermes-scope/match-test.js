@@ -26,7 +26,7 @@ describe('Match', () => {
     test('binding pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          const a if a: a,
+          const a if (a) => a,
         };
       `);
 
@@ -69,8 +69,8 @@ describe('Match', () => {
         let foo;
         let bar;
         const e = match (x) {
-          foo: 1,
-          bar.baz: 2,
+          foo => 1,
+          bar.baz => 2,
         };
       `);
 
@@ -118,7 +118,7 @@ describe('Match', () => {
     test('wildcard pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          _: 0,
+          _ => 0,
         };
       `);
 
@@ -134,7 +134,7 @@ describe('Match', () => {
     test('object pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          {foo: 1, const bar}: bar,
+          {foo: 1, const bar} => bar,
         };
       `);
 
@@ -160,8 +160,8 @@ describe('Match', () => {
     test('as pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          [1 as const a]: a,
-          [1 as b]: b,
+          [1 as const a] => a,
+          [1 as b] => b,
         };
       `);
 
@@ -204,7 +204,7 @@ describe('Match', () => {
     test('or pattern', () => {
       const {scopeManager} = parseForESLint(`
         const e = match (x) {
-          [const a] | {foo: const a}: a,
+          [const a] | {foo: const a} => a,
         };
       `);
 
@@ -243,7 +243,7 @@ describe('Match', () => {
     test('basic', () => {
       const {scopeManager} = parseForESLint(`
         match (x) {
-          const a: {
+          const a => {
             a
           },
         };

@@ -52,19 +52,19 @@ describe('MatchStatement', () => {
   test('simple and guards', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           out = 0;
         }
-        'b': {
+        'b' => {
           out = 1;
         }
-        'c' if no(): {
+        'c' if (no()) => {
           out = 2
         }
-        'd' if yes(): {
+        'd' if (yes()) => {
           out = 3
         }
-        _: {
+        _ => {
           out = 4;
         }
       }
@@ -113,10 +113,10 @@ describe('MatchStatement', () => {
   test('simple or', async () => {
     const code = `
       match (x) {
-        'a' | 'b': {
+        'a' | 'b' => {
           out = 0;
         }
-        _: {
+        _ => {
           out = 1;
         }
       }
@@ -144,10 +144,10 @@ describe('MatchStatement', () => {
   test('no wildcard', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           out = 0;
         }
-        'b': {
+        'b' => {
           out = 1;
         }
       }
@@ -179,7 +179,7 @@ describe('MatchStatement', () => {
   test('only wildcard', async () => {
     const code = `
       match (x) {
-        _: {
+        _ => {
           out = 0;
         }
       }
@@ -200,7 +200,7 @@ describe('MatchStatement', () => {
   test('complex argument', async () => {
     const code = `
       match (x()) {
-        'a': {
+        'a' => {
           out = 0;
         }
       }
@@ -225,10 +225,10 @@ describe('MatchStatement', () => {
   test('NaN', async () => {
     const code = `
       match (x) {
-        NaN: {
+        NaN => {
           out = 0;
         }
-        _: {
+        _ => {
           out = 1;
         }
       }
@@ -255,10 +255,10 @@ describe('MatchStatement', () => {
   test('guard', async () => {
     const code = `
       match (x) {
-        'a' if yes(): {
+        'a' if (yes()) => {
           out = 0;
         }
-        _: {
+        _ => {
           out = 1;
         }
       }
@@ -287,10 +287,10 @@ describe('MatchStatement', () => {
   test('binding', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           out = 0;
         }
-        const a: {
+        const a => {
           out = a;
         }
       }
@@ -318,13 +318,13 @@ describe('MatchStatement', () => {
   test('object and array patterns', async () => {
     const code = `
       match (x) {
-        ['a']: {
+        ['a'] => {
           out = 0;
         }
-        {b: 'b'}: {
+        {b: 'b'} => {
           out = 1;
         }
-        _: {
+        _ => {
           out = 2;
         }
       }
@@ -357,16 +357,16 @@ describe('MatchStatement', () => {
   test('object and array bindings', async () => {
     const code = `
       match (x) {
-        [const a]: {
+        [const a] => {
           out = a;
         }
-        {const b}: {
+        {const b} => {
           out = b;
         }
-        const a if no(): {
+        const a if (no()) => {
           out = a;
         }
-        _: {
+        _ => {
           out = 3;
         }
       }
@@ -409,20 +409,20 @@ describe('MatchStatement', () => {
   test('nested', async () => {
     const code = `
       match (x) {
-        [const a]: {
+        [const a] => {
           match (a) {
-            foo: {
+            foo => {
               out = 0;
             }
-            bar.a: {
+            bar.a => {
               out = 1;
             }
-            _: {
+            _ => {
               out = 2;
             }
           }
         }
-        _: {
+        _ => {
           out = 3;
         }
       }
@@ -469,11 +469,11 @@ describe('MatchStatement', () => {
   test('variable in body does not conflict', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           const a = 0;
           out = a;
         }
-        _: {
+        _ => {
           const a = 1;
           out = a;
         }
@@ -504,7 +504,7 @@ describe('MatchStatement', () => {
     const code = `
       while (true) {
         match (x) {
-          _: {
+          _ => {
             break;
           }
         }
