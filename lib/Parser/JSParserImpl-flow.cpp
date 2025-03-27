@@ -870,7 +870,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseMatchStatementFlow(Param param) {
     }
 
     if (!eat(
-            TokenKind::colon,
+            TokenKind::equalgreater,
             JSLexer::AllowRegExp,
             "after match pattern",
             "location of pattern",
@@ -887,7 +887,7 @@ Optional<ESTree::Node *> JSParserImpl::tryParseMatchStatementFlow(Param param) {
         new (context_) ESTree::MatchStatementCaseNode(
             optPattern.getValue(), optBody.getValue(), guard)));
 
-    if (check(TokenKind::comma, TokenKind::semi)) {
+    if (check(TokenKind::comma)) {
       advance();
     }
   }
@@ -967,7 +967,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
     }
 
     if (!eat(
-            TokenKind::colon,
+            TokenKind::equalgreater,
             JSLexer::AllowRegExp,
             "after match pattern",
             "location of pattern",
@@ -984,7 +984,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
         new (context_) ESTree::MatchExpressionCaseNode(
             optPattern.getValue(), optBody.getValue(), guard)));
 
-    if (!(checkAndEat(TokenKind::comma) || checkAndEat(TokenKind::semi)))
+    if (!(checkAndEat(TokenKind::comma)))
       break;
   }
 

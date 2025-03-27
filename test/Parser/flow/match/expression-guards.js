@@ -27,7 +27,7 @@ const e = match (a) {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cases": [
 
-  1 if (b): true,
+  1 if (b) => true,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",

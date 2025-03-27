@@ -27,7 +27,7 @@ const e = match (x) {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cases": [
 
-  "s" | true | null: 1,
+  "s" | true | null => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -64,7 +64,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: 1 | 2}: 2,
+  {foo: 1 | 2} => 2,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -111,7 +111,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: [1] as y}: y,
+  {foo: [1] as y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -157,7 +157,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: 1 | 2 | 3 as y}: y,
+  {foo: 1 | 2 | 3 as y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -218,7 +218,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: (1 | 2 | 3) as y}: y,
+  {foo: (1 | 2 | 3) as y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -279,7 +279,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: [1] as const y}: y,
+  {foo: [1] as const y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",

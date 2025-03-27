@@ -27,7 +27,7 @@ const e = match (x) {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cases": [
 
-  "s": 1,
+  "s" => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -46,7 +46,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  true: 1,
+  true => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -65,7 +65,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  null: 1,
+  null => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -83,7 +83,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  3: 1,
+  3 => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -103,7 +103,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  4n: 1,
+  4n => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -122,7 +122,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  +5: 1,
+  +5 => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -143,7 +143,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  -6: 1,
+  -6 => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -164,7 +164,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  +7n: 1,
+  +7n => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -184,7 +184,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  -8n: 1,
+  -8n => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -204,7 +204,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  y: 1,
+  y => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -223,7 +223,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  const y: y,
+  const y => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -242,7 +242,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  let y: y,
+  let y => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -261,7 +261,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  var y: y,
+  var y => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -280,7 +280,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  ('s'): 1,
+  ('s') => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -299,7 +299,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  _: 1,
+  _ => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",

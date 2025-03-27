@@ -21,7 +21,7 @@ match (a) {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "cases": [
 
-  1 if (b): {
+  1 if (b) => {
     const x = 1;
   },
 
@@ -64,7 +64,7 @@ match (a) {
 // CHECK-NEXT:          }
 // CHECK-NEXT:        },
 
-  'foo' if (f()): {
+  'foo' if (f()) => {
     const x = 2;
   },
 
@@ -110,7 +110,7 @@ match (a) {
 // CHECK-NEXT:          }
 // CHECK-NEXT:        },
 
-  2 if (x < y): {
+  2 if (x < y) => {
     const x = 3;
   },
 }

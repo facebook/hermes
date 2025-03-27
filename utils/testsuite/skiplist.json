@@ -1872,7 +1872,16 @@
     },
     {
       "paths": [
-        "flow/match/"
+        "flow/match/expression-colon.js",
+        "flow/match/statement-colon.js",
+        "flow/match/statement-nonblock-body.js",
+        "flow/match/pattern-object.js"
+      ],
+      "comment": "Flow match parsing - Flow parser more permissive for better Flow errors"
+    },
+    {
+      "paths": [
+        "flow/match/pattern-leading-bar.js"
       ],
       "comment": "Enabled later in stack"
     }
