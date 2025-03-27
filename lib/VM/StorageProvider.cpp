@@ -205,7 +205,9 @@ llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
   void *mem = *result;
   assert(isAligned(mem));
   (void)&isAligned;
+#ifdef HERMESVM_ALLOW_HUGE_PAGES
   oscompat::vm_hugepage(mem, sz);
+#endif
   // Name the memory region on platforms that support naming.
   oscompat::vm_name(mem, sz, name);
   return mem;
