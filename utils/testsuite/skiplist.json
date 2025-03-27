@@ -1878,12 +1878,6 @@
         "flow/match/pattern-object.js"
       ],
       "comment": "Flow match parsing - Flow parser more permissive for better Flow errors"
-    },
-    {
-      "paths": [
-        "flow/match/pattern-leading-bar.js"
-      ],
-      "comment": "Enabled later in stack"
     }
   ],
   "lazy_skip_list": [

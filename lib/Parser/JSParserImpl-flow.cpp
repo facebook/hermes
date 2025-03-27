@@ -1029,6 +1029,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchCaseGuardFlow() {
 
 Optional<ESTree::Node *> JSParserImpl::parseMatchPatternFlow() {
   SMLoc startLoc = tok_->getStartLoc();
+  checkAndEat(TokenKind::pipe);
   auto optFirstPattern = parseMatchSubpatternFlow();
   if (!optFirstPattern)
     return None;
