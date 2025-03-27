@@ -53,11 +53,6 @@ union RuntimeModuleFlags {
     /// Whether this runtime module's epilogue should be hidden in
     /// runtime.getEpilogues().
     bool hidesEpilogue : 1;
-
-    /// Whether we want to ignore ES6 promise checks.
-    /// This is used to force compiling modules with ES6 promises even if the
-    /// runtime is not configured to support them.
-    bool ignoreES6PromiseChecks : 1;
   };
   uint8_t flags;
   RuntimeModuleFlags() : flags(0) {}

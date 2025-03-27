@@ -1228,7 +1228,6 @@ Handle<JSObject> Runtime::runInternalJavaScript() {
   RuntimeModuleFlags flags;
   flags.persistent = true;
   flags.hidesEpilogue = true;
-  flags.ignoreES6PromiseChecks = true;
   auto res = runBytecode(
       std::move(bcResult.first),
       flags,
