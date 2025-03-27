@@ -53,6 +53,10 @@ function getOptions(options?: ParserOptions = {...DEFAULTS}) {
     options.enableExperimentalComponentSyntax = true; // Enable by default
   }
 
+  if (options.enableExperimentalFlowMatchSyntax == null) {
+    options.enableExperimentalFlowMatchSyntax = true; // Enable by default
+  }
+
   options.tokens = options.tokens === true;
   options.allowReturnOutsideFunction =
     options.allowReturnOutsideFunction === true;

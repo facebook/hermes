@@ -10,16 +10,8 @@
 
 'use strict';
 
-import type {ParseForESLintReturn} from '../../src';
-
 import {ScopeType} from '../../src';
-import {parseForESLint as parseForESLintWithOptions} from '../../src';
-
-function parseForESLint(str: string): ParseForESLintReturn {
-  return parseForESLintWithOptions(str, {
-    enableExperimentalFlowMatchSyntax: true,
-  });
-}
+import {parseForESLint} from '../../src';
 
 describe('Match', () => {
   describe('Match expression', () => {

@@ -64,6 +64,8 @@ type AnalyzeOptions = $ReadOnly<{
 
   /**
    * Support experimental Flow match syntax
+   *
+   * Defaults to `true`.
    */
   enableExperimentalFlowMatchSyntax?: boolean,
 }>;

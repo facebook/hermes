@@ -10,8 +10,7 @@
 
 import {printForSnapshot} from '../__test_utils__/parse';
 
-const transform = (src: string) =>
-  printForSnapshot(src, {babel: true, enableExperimentalFlowMatchSyntax: true});
+const transform = (src: string) => printForSnapshot(src, {babel: true});
 
 function runMatchStmt(code: string, x: mixed): mixed {
   const f: $FlowFixMe = new Function(
