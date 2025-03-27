@@ -1829,6 +1829,7 @@
         "flow/types/annotations/static_is_reserved_param.js",
         "flow/types/annotations/static_is_reserved_type.js",
         "flow/types/annotations/underscore_is_reserved_elsewhere.js",
+        "flow/types/declare_namespace/global.js",
         "flow/types/import_type_shorthand/migrated_0002.js",
         "flow/types/import_type_shorthand/typeof_reserved_value.js",
         "flow/types/import_types/default_reserved_value.js",
@@ -1868,6 +1869,12 @@
         "flow/bigint/valid-binary.js"
       ],
       "comment": "Failing Flow tests - BigInt"
+    },
+    {
+      "paths": [
+        "flow/match/"
+      ],
+      "comment": "Enabled later in stack"
     }
   ],
   "lazy_skip_list": [
