@@ -584,11 +584,6 @@ ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
 
 ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetAsyncIteratorSlow(
     Value *obj) {
-  auto *asyncIteratorMethod =
-      Builder.createLoadPropertyInst(obj, emitAsyncIteratorSymbol());
-  auto *syncIteratorMethod =
-      Builder.createLoadPropertyInst(obj, emitIteratorSymbol());
-
   auto *makeAsyncIterator = Builder.createGetBuiltinClosureInst(
       BuiltinMethod::HermesBuiltin_makeAsyncIterator);
 
@@ -596,7 +591,7 @@ ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetAsyncIteratorSlow(
       makeAsyncIterator,
       Builder.getLiteralUndefined(),
       Builder.getLiteralUndefined(),
-      {obj, asyncIteratorMethod, syncIteratorMethod});
+      {obj});
   auto *nextMethod = Builder.createLoadPropertyInst(iterator, "next");
 
   return {iterator, nextMethod};
