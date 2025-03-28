@@ -78,8 +78,8 @@ TEST(MetadataTest, TestNormalFields) {
   EXPECT_EQ(meta.offsets.fields[1], offsetof(DummyCell, y_));
   EXPECT_EQ(meta.offsets.fields[2], offsetof(DummyCell, z_));
 
-  EXPECT_EQ(meta.offsets.endGCHermesValue, 3u);
-  EXPECT_EQ(meta.offsets.endGCSmallHermesValue, 3u);
+  EXPECT_EQ(meta.offsets.endGCHermesValueBase, 3u);
+  EXPECT_EQ(meta.offsets.endGCSmallHermesValueBase, 3u);
 
   EXPECT_EQ(meta.offsets.endGCSymbolID, 4u);
   EXPECT_STREQ(meta.names[3], "sym");

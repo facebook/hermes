@@ -23,11 +23,11 @@ namespace vm {
 /// resizing on both ends which is necessary for the simplest implementation of
 /// JavaScript arrays (using a base offset and length).
 template <typename HVType>
-class ArrayStorageBase final
-    : public VariableSizeRuntimeCell,
-      private llvh::
-          TrailingObjects<ArrayStorageBase<HVType>, GCHermesValueBase<HVType>> {
-  using GCHVType = GCHermesValueBase<HVType>;
+class ArrayStorageBase final : public VariableSizeRuntimeCell,
+                               private llvh::TrailingObjects<
+                                   ArrayStorageBase<HVType>,
+                                   GCHermesValueBaseImpl<HVType>> {
+  using GCHVType = GCHermesValueBaseImpl<HVType>;
   friend llvh::TrailingObjects<ArrayStorageBase<HVType>, GCHVType>;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend void ArrayStorageSmallBuildMeta(
@@ -245,7 +245,7 @@ class ArrayStorageBase final
     auto *fromStart = other->data();
     auto *fromEnd = fromStart + otherSz;
     GCHVType::uninitialized_copy(
-        fromStart, fromEnd, data() + sz, runtime.getHeap());
+        fromStart, fromEnd, data() + sz, this, runtime.getHeap());
     size_.store(sz + otherSz, std::memory_order_release);
   }
 

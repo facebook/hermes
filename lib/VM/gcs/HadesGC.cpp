@@ -13,6 +13,7 @@
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/GCBase-inline.h"
+#include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/RootAndSlotAcceptorDefault.h"
@@ -430,9 +431,14 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       return forwardCell<GCCell *>(ptr);
     }
     if (CompactionEnabled && gc.compactee_.contains(ptr)) {
+      assert(
+          currentCell_ < heapLoc &&
+          heapLoc < (reinterpret_cast<const char *>(currentCell_) +
+                     currentCell_->getAllocatedSize()) &&
+          "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::dirtyCardForAddress(heapLoc);
+      AlignedHeapSegment::dirtyCardForAddressInLargeObj(currentCell_, heapLoc);
     }
     return ptr;
   }
@@ -447,9 +453,14 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       return forwardCell<CompressedPointer>(ptr);
     }
     if (CompactionEnabled && gc.compactee_.contains(cptr)) {
+      assert(
+          currentCell_ < heapLoc &&
+          heapLoc < (reinterpret_cast<const char *>(currentCell_) +
+                     currentCell_->getAllocatedSize()) &&
+          "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
-      FixedSizeHeapSegment::dirtyCardForAddress(heapLoc);
+      AlignedHeapSegment::dirtyCardForAddressInLargeObj(currentCell_, heapLoc);
     }
     return cptr;
   }
@@ -512,7 +523,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void accept(GCHermesValue &hv) override {
+  void accept(GCHermesValueBase &hv) override {
     if (hv.isPointer()) {
       GCCell *forwardedPtr =
           acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hv);
@@ -520,7 +531,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void accept(GCSmallHermesValue &hv) override {
+  void accept(GCSmallHermesValueBase &hv) override {
     if (hv.isPointer()) {
       CompressedPointer forwardedPtr = acceptHeap(hv.getPointer(), &hv);
       hv.setInGC(hv.updatePointer(forwardedPtr), gc);
@@ -569,6 +580,12 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
+  /// Set the current cell being visited.
+  void setCurrentCell(const GCCell *cell) {
+    if constexpr (CompactionEnabled)
+      currentCell_ = cell;
+  }
+
  private:
   HadesGC &gc;
   PointerBase &pointerBase_;
@@ -576,6 +593,10 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   AssignableCompressedPointer copyListHead_;
   const bool isTrackingIDs_;
   uint64_t evacuatedBytes_{0};
+
+  /// Current GCCell being visited. For heap locations that could be from a
+  /// large object, we need this pointer to get the correct card table.
+  const GCCell *currentCell_{nullptr};
 
   void push(CopyListCell *cell) {
     cell->next_ = copyListHead_;
@@ -621,6 +642,9 @@ bool HadesGC::MarkWorklist::empty() {
 class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
   HadesGC &gc;
   PointerBase &pointerBase_;
+  /// Current GCCell being visited. For heap locations that could be from a
+  /// large object, we need this pointer to get the correct card table.
+  const GCCell *currentCell_{nullptr};
 
  public:
   MarkAcceptor(HadesGC &gc) : gc{gc}, pointerBase_{gc.getPointerBase()} {}
@@ -628,10 +652,15 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
   void acceptHeap(GCCell *cell, const void *heapLoc) {
     assert(cell && "Cannot pass null pointer to acceptHeap");
     assert(!gc.inYoungGen(heapLoc) && "YG slot found in OG marking");
+    assert(
+        currentCell_ < heapLoc &&
+        heapLoc < (reinterpret_cast<const char *>(currentCell_) +
+                   currentCell_->getAllocatedSize()) &&
+        "currentCell_ must be set for compaction");
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
       // corresponding card.
-      FixedSizeHeapSegment::dirtyCardForAddress(heapLoc);
+      AlignedHeapSegment::dirtyCardForAddressInLargeObj(currentCell_, heapLoc);
     }
     if (AlignedHeapSegment::getCellMarkBit(cell)) {
       // Points to an already marked object, do nothing.
@@ -659,7 +688,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
       acceptHeap(cp.getNonNull(pointerBase_), &ptr);
   }
 
-  void accept(GCHermesValue &hvRef) override {
+  void accept(GCHermesValueBase &hvRef) override {
     HermesValue hv = concurrentRead<HermesValue>(hvRef);
     if (hv.isPointer()) {
       acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hvRef);
@@ -686,7 +715,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     }
   }
 
-  void accept(GCSmallHermesValue &hvRef) override {
+  void accept(GCSmallHermesValueBase &hvRef) override {
     const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
     if (hv.isPointer()) {
       acceptHeap(hv.getPointer(pointerBase_), &hvRef);
@@ -721,6 +750,11 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
         "Shouldn't ever push a YG object onto the worklist");
     AlignedHeapSegment::setCellMarkBit(cell);
     gc.markState_->localWorklist.push(cell);
+  }
+
+  /// Set the current cell being visited.
+  void setCurrentCell(const GCCell *cell) {
+    currentCell_ = cell;
   }
 
  private:
@@ -808,6 +842,7 @@ bool HadesGC::incrementalMark(size_t markLimit) {
         dbgContains(cell) && "Non-heap object discovered during marking");
     const auto sz = cell->getAllocatedSize();
     numMarkedBytes += sz;
+    acceptor.setCurrentCell(cell);
     markCell(acceptor, cell);
   }
   markState_->markedBytes += numMarkedBytes;
@@ -1577,6 +1612,9 @@ void HadesGC::finalizeCompactee() {
   // allocated in the compactee.
   oldGen_.incrementAllocatedBytes(-preAllocated);
 
+#ifndef NDEBUG
+  unitSegmentAddrMap_.erase(compactee_.segment->lowLim());
+#endif
   const size_t segIdx = AlignedHeapSegment::getSegmentIndexFromStart(
       compactee_.segment->lowLim());
   segmentIndices_.push_back(segIdx);
@@ -1782,6 +1820,20 @@ void HadesGC::writeBarrierSlow(const GCHermesValue *loc, HermesValue value) {
   relocationWriteBarrier(loc, value.getPointer());
 }
 
+void HadesGC::writeBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCHermesValueInLargeObj *loc,
+    HermesValue value) {
+  if (ogMarkingBarriers_) {
+    snapshotWriteBarrierInternal(*loc);
+  }
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, static_cast<GCCell *>(value.getPointer()));
+}
+
 void HadesGC::writeBarrierSlow(
     const GCSmallHermesValue *loc,
     SmallHermesValue value) {
@@ -1794,12 +1846,37 @@ void HadesGC::writeBarrierSlow(
   relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
 }
 
+void HadesGC::writeBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCSmallHermesValueInLargeObj *loc,
+    SmallHermesValue value) {
+  if (ogMarkingBarriers_) {
+    snapshotWriteBarrierInternal(*loc);
+  }
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, value.getPointer(getPointerBase()));
+}
+
 void HadesGC::writeBarrierSlow(const GCPointerBase *loc, const GCCell *value) {
   if (*loc && ogMarkingBarriers_)
     snapshotWriteBarrierInternal(*loc);
   // Always do the non-snapshot write barrier in order for YG to be able to
   // scan cards.
   relocationWriteBarrier(loc, value);
+}
+
+void HadesGC::writeBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCPointerBase *loc,
+    const GCCell *value) {
+  if (*loc && ogMarkingBarriers_)
+    snapshotWriteBarrierInternal(*loc);
+  // Always do the non-snapshot write barrier in order for YG to be able to
+  // scan cards.
+  relocationWriteBarrierForLargeObj(owningObj, loc, value);
 }
 
 void HadesGC::constructorWriteBarrierSlow(
@@ -1813,6 +1890,19 @@ void HadesGC::constructorWriteBarrierSlow(
   relocationWriteBarrier(loc, value.getPointer());
 }
 
+void HadesGC::constructorWriteBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCHermesValueInLargeObj *loc,
+    HermesValue value) {
+  // A constructor never needs to execute a SATB write barrier, since its
+  // previous value was definitely not live.
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, static_cast<GCCell *>(value.getPointer()));
+}
+
 void HadesGC::constructorWriteBarrierSlow(
     const GCSmallHermesValue *loc,
     SmallHermesValue value) {
@@ -1824,32 +1914,58 @@ void HadesGC::constructorWriteBarrierSlow(
   relocationWriteBarrier(loc, value.getPointer(getPointerBase()));
 }
 
+void HadesGC::constructorWriteBarrierSlowForLargeObj(
+    const GCCell *owningObj,
+    const GCSmallHermesValueInLargeObj *loc,
+    SmallHermesValue value) {
+  // A constructor never needs to execute a SATB write barrier, since its
+  // previous value was definitely not live.
+  if (!value.isPointer()) {
+    return;
+  }
+  relocationWriteBarrierForLargeObj(
+      owningObj, loc, value.getPointer(getPointerBase()));
+}
+
 void HadesGC::constructorWriteBarrierRangeSlow(
-    const GCHermesValue *start,
+    const GCCell *owningObj,
+    const GCHermesValueBase *start,
     uint32_t numHVs) {
   assert(
-      FixedSizeHeapSegment::containedInSame(start, start + numHVs) &&
-      "Range must start and end within a heap segment.");
+      reinterpret_cast<const char *>(owningObj) <=
+          reinterpret_cast<const char *>(start) &&
+      reinterpret_cast<const char *>(start + numHVs) <=
+          (reinterpret_cast<const char *>(owningObj) +
+           owningObj->getAllocatedSize()) &&
+      "Range must start and end within the owning object.");
 
   // Most constructors should be running in the YG, so in the common case, we
   // can avoid doing anything for the whole range. If the range is in the OG,
   // then just dirty all the cards corresponding to it, and we can scan them for
   // pointers later. This is less precise but makes the write barrier faster.
 
-  FixedSizeHeapSegment::dirtyCardsForAddressRange(start, start + numHVs);
+  AlignedHeapSegment::dirtyCardsForAddressRange(
+      owningObj, start, start + numHVs);
 }
 
 void HadesGC::constructorWriteBarrierRangeSlow(
-    const GCSmallHermesValue *start,
+    const GCCell *owningObj,
+    const GCSmallHermesValueBase *start,
     uint32_t numHVs) {
   assert(
-      FixedSizeHeapSegment::containedInSame(start, start + numHVs) &&
-      "Range must start and end within a heap segment.");
-  FixedSizeHeapSegment::dirtyCardsForAddressRange(start, start + numHVs);
+      reinterpret_cast<const char *>(owningObj) <=
+          reinterpret_cast<const char *>(start) &&
+      reinterpret_cast<const char *>(start + numHVs) <=
+          (reinterpret_cast<const char *>(owningObj) +
+           owningObj->getAllocatedSize()) &&
+      "Range must start and end within the owning object.");
+
+  AlignedHeapSegment::dirtyCardsForAddressRange(
+      owningObj, start, start + numHVs);
 }
 
 void HadesGC::snapshotWriteBarrierRangeSlow(
-    const GCHermesValue *start,
+    const GCHermesValueBase *start,
     uint32_t numHVs) {
   for (uint32_t i = 0; i < numHVs; ++i) {
     snapshotWriteBarrierInternal(start[i]);
@@ -1857,7 +1973,7 @@ void HadesGC::snapshotWriteBarrierRangeSlow(
 }
 
 void HadesGC::snapshotWriteBarrierRangeSlow(
-    const GCSmallHermesValue *start,
+    const GCSmallHermesValueBase *start,
     uint32_t numHVs) {
   for (uint32_t i = 0; i < numHVs; ++i) {
     snapshotWriteBarrierInternal(start[i]);
@@ -1936,6 +2052,27 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
   }
 }
 
+void HadesGC::relocationWriteBarrierForLargeObj(
+    const GCCell *owningObj,
+    const void *loc,
+    const GCCell *value) {
+  assert(!inYoungGen(loc) && "Pre-condition from other callers");
+  // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
+  // pointers. But do dirty cards for compactee->yg pointers, since compaction
+  // may not happen in the next YG.
+  if (AlignedHeapSegment::containedInSameSegment(owningObj, value)) {
+    return;
+  }
+  if (inYoungGen(value) || compactee_.contains(value)) {
+    // Only dirty a card if it's an old-to-young or old-to-compactee pointer.
+    // This is fine to do since the GC never modifies card tables outside of
+    // allocation.
+    // Note that this *only* applies since the boundaries are updated separately
+    // from the card table being marked itself.
+    AlignedHeapSegment::dirtyCardForAddressInLargeObj(owningObj, loc);
+  }
+}
+
 void HadesGC::weakRefReadBarrier(HermesValue value) {
   assert(
       !calledByBackgroundThread() &&
@@ -2011,7 +2148,7 @@ bool HadesGC::dbgContains(const void *p) const {
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
 
-bool HadesGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+bool HadesGC::needsWriteBarrier(const GCHermesValueBase *loc, HermesValue value)
     const {
   // Values in the YG never need a barrier.
   if (inYoungGen(loc))
@@ -2024,8 +2161,19 @@ bool HadesGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
     return true;
   return false;
 }
+bool HadesGC::needsWriteBarrierInCtor(
+    const GCHermesValueBase *loc,
+    HermesValue value) const {
+  // Values in the YG never need a barrier.
+  if (inYoungGen(loc))
+    return false;
+  // If the new value is a pointer, a relocation barrier is needed.
+  if (value.isPointer())
+    return true;
+  return false;
+}
 bool HadesGC::needsWriteBarrier(
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueBase *loc,
     SmallHermesValue value) const {
   // Values in the YG never need a barrier.
   if (inYoungGen(loc))
@@ -2033,6 +2181,17 @@ bool HadesGC::needsWriteBarrier(
   // If the old value is a pointer or a symbol, a snapshot barrier is needed.
   if (loc->isPointer() || loc->isSymbol())
     return true;
+  // If the new value is a pointer, a relocation barrier is needed.
+  if (value.isPointer())
+    return true;
+  return false;
+}
+bool HadesGC::needsWriteBarrierInCtor(
+    const GCSmallHermesValueBase *loc,
+    SmallHermesValue value) const {
+  // Values in the YG never need a barrier.
+  if (inYoungGen(loc))
+    return false;
   // If the new value is a pointer, a relocation barrier is needed.
   if (value.isPointer())
     return true;
@@ -2267,6 +2426,7 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
     // object is only there for the forwarding pointer.
     GCCell *const cell =
         copyCell->getMarkedForwardingPointer().getNonNull(getPointerBase());
+    acceptor.setCurrentCell(cell);
     markCell(acceptor, cell);
   }
 
@@ -2611,8 +2771,10 @@ void HadesGC::scanDirtyCardsForSegment(
     // expensive.
 
     // Mark the first object with respect to the dirty card boundaries.
-    if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+    if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj)) {
+      acceptor.setCurrentCell(obj);
       markCellWithinRange(acceptor, obj, begin, end);
+    }
 
     obj = obj->nextCell();
     // If there are additional objects in this card, scan them.
@@ -2623,8 +2785,10 @@ void HadesGC::scanDirtyCardsForSegment(
       // object where next is within the card.
       for (GCCell *next = obj->nextCell(); next < boundary;
            next = next->nextCell()) {
-        if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+        if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj)) {
+          acceptor.setCurrentCell(obj);
           markCell(acceptor, obj);
+        }
         obj = next;
       }
 
@@ -2633,8 +2797,10 @@ void HadesGC::scanDirtyCardsForSegment(
       assert(
           obj < boundary && obj->nextCell() >= boundary &&
           "Last object in card must touch or cross cross the card boundary");
-      if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj))
+      if (visitUnmarked || AlignedHeapSegment::getCellMarkBit(obj)) {
+        acceptor.setCurrentCell(obj);
         markCellWithinRange(acceptor, obj, begin, end);
+      }
     }
 
     from = iEnd;
@@ -2801,6 +2967,13 @@ llvh::ErrorOr<FixedSizeHeapSegment> HadesGC::createSegment() {
   }
   gcCallbacks_.registerHeapSegment(segIdx, seg.lowLim());
   addSegmentExtentToCrashManager(seg, std::to_string(segIdx));
+#ifndef NDEBUG
+  auto inserted =
+      unitSegmentAddrMap_.try_emplace(seg.lowLim(), seg.lowLim(), seg.hiLim());
+  assert(
+      inserted.second &&
+      "One segment with the same start address exists in unitSegmentAddrMap_");
+#endif
   seg.markBitArray().set();
   return llvh::ErrorOr<FixedSizeHeapSegment>(std::move(seg));
 }
@@ -2944,6 +3117,73 @@ void HadesGC::removeSegmentExtentFromCrashManager(
 }
 
 #ifdef HERMES_SLOW_DEBUG
+std::pair<const char *, const char *> HadesGC::getSegmentAddrRange(
+    const void *addr) {
+  auto *alignedAddr = reinterpret_cast<const char *>(llvh::alignDown(
+      reinterpret_cast<uintptr_t>(addr), AlignedHeapSegment::kSegmentUnitSize));
+  auto iter = unitSegmentAddrMap_.find(alignedAddr);
+  assert(
+      iter != unitSegmentAddrMap_.end() &&
+      "Given addr is not in any valid segment.");
+  return iter->getSecond();
+}
+
+void HadesGC::assertWriteBarrierForNormalObj(const void *loc) {
+  if (currentCellKindAndSize_) {
+    // If currentCellKindAndSize_ is set, the owning object is still being
+    // constructed, use currentCellKindAndSize_ instead of trying to find its
+    // owning object.
+    assert(
+        !VTable::getVTable(currentCellKindAndSize_->first)->allowLargeAlloc &&
+        "This write barrier should not be called on GCCells that support large allocation");
+  } else {
+    // Normal objects should always be allocated in a FixedSizeHeapSegment.
+    auto [start, end] = getSegmentAddrRange(loc);
+    assert(
+        ((end - start) == FixedSizeHeapSegment::kSize) &&
+        "This write barrier does not work for GCCells larger than the size of FixedSizeHeapSegment");
+
+    // Don't run the check with concurrent GC. Because when the background
+    // thread is sweeping, it may merge freed cells and poison memory outside of
+    // FreeListCell, which may be accessed by findObjectContaining() when
+    // visiting next cell.
+    if constexpr (!kConcurrentGC) {
+      // The above check ensures that this loc must be within a
+      // FixedSizeHeapSegment, so it's safe to access its card table.
+      auto *obj = FixedSizeHeapSegment::findObjectContaining(loc);
+      assert(
+          !VTable::getVTable(obj->getKind())->allowLargeAlloc &&
+          "This write barrier only works for GCCells that do not support large allocation");
+    }
+  }
+}
+
+void HadesGC::assertWriteBarrierForLargeObj(
+    const GCCell *owningObj,
+    const void *loc) {
+  if (currentCellKindAndSize_) {
+    // If currentCellKindAndSize_ is set, the owning object is still being
+    // constructed, use currentCellKindAndSize_ instead of the kind and size of
+    // owningObj.
+    assert(
+        VTable::getVTable(currentCellKindAndSize_->first)->allowLargeAlloc &&
+        "This write barrier should only be called on GCCells that support large allocation");
+    assert(
+        owningObj <= loc &&
+        loc < (reinterpret_cast<const char *>(owningObj) +
+               currentCellKindAndSize_->second) &&
+        "The owning object must contain the given heap location");
+  } else {
+    assert(
+        VTable::getVTable(owningObj->getKind())->allowLargeAlloc &&
+        "This write barrier should only be called on GCCells that support large allocation");
+    assert(
+        owningObj <= loc &&
+        loc < (reinterpret_cast<const char *>(owningObj) +
+               owningObj->getAllocatedSize()) &&
+        "The owning object must contain the given heap location");
+  }
+}
 
 void HadesGC::checkWellFormed() {
   CheckHeapWellFormedAcceptor acceptor(*this);
@@ -3030,6 +3270,7 @@ void HadesGC::verifyCardTable() {
   assert(inGC() && "Must be in GC to call verifyCardTable");
   struct VerifyCardDirtyAcceptor final : public SlotAcceptor {
     HadesGC &gc;
+    const GCCell *currentCell{nullptr};
 
     explicit VerifyCardDirtyAcceptor(HadesGC &gc) : gc(gc) {}
 
@@ -3039,7 +3280,7 @@ void HadesGC::verifyCardTable() {
           gc.compactee_.evacContains(valuePtr);
       if (!gc.inYoungGen(locPtr) &&
           (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
-        assert(FixedSizeHeapSegment::isCardForAddressDirty(locPtr));
+        assert(AlignedHeapSegment::isCardForAddressDirty(currentCell, locPtr));
       }
     }
 
@@ -3047,11 +3288,11 @@ void HadesGC::verifyCardTable() {
       acceptHelper(ptr.get(gc.getPointerBase()), &ptr);
     }
 
-    void accept(GCHermesValue &hv) override {
+    void accept(GCHermesValueBase &hv) override {
       if (hv.isPointer())
         acceptHelper(hv.getPointer(), &hv);
     }
-    void accept(GCSmallHermesValue &hv) override {
+    void accept(GCSmallHermesValueBase &hv) override {
       if (hv.isPointer())
         acceptHelper(hv.getPointer(gc.getPointerBase()), &hv);
     }
@@ -3060,7 +3301,10 @@ void HadesGC::verifyCardTable() {
   };
 
   VerifyCardDirtyAcceptor acceptor{*this};
-  forAllObjs([this, &acceptor](GCCell *cell) { markCell(acceptor, cell); });
+  forAllObjs([this, &acceptor](GCCell *cell) {
+    acceptor.currentCell = cell;
+    markCell(acceptor, cell);
+  });
 
   for (const FixedSizeHeapSegment &seg : oldGen_) {
     seg.cardBoundaryTable().verifyBoundaries(seg.start(), seg.level());
