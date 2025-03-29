@@ -538,6 +538,15 @@ class SemContext {
     return root_->bindingTable_;
   }
 
+  /// This is an opaque data blob that SemContext will own, but never use. This
+  /// is useful for IRGen to put information that it needs across lazy
+  /// compilation invocations. Conceptually this could be modeled as a
+  /// unique_ptr since SemContext owns this. But, given that we don't want to
+  /// know the type of the underlying data, it's better to use a shared_ptr.
+  /// Then we remain ignorant of the type but still call the correct deleter
+  /// function.
+  std::shared_ptr<void> customData;
+
  private:
   /// The parent SemContext of this SemContext.
   /// If null, this SemContext has no parent.

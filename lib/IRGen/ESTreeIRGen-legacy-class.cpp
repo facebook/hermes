@@ -14,6 +14,171 @@
 namespace hermes {
 namespace irgen {
 
+/// This function initializes critical state that will be used in the rest of
+/// IRGen for adding, reading, and writing private elements. The main
+/// characteristic of private properties that informs our implementation is the
+/// semi-typed nature of a private name. That is, each private name is uniquely
+/// used to define a type of "private element" (using language from
+/// ES2024 6.2.10 PrivateElement.) So when seeing `#privateName`, it is
+/// immediately known if this expression refers to a field, a method, or an
+/// accessor.
+///
+/// Methods & accessors have an even stronger guarantee. Because these private
+/// elements are installed in bulk before any other user JS runs, and they are
+/// not writable, we can actually store these values out of line- directly on
+/// the instance. Private fields work mostly the same as normal properties, with
+/// the added restrictions that trying to read a private field that doesn't
+/// exist throws. But methods & accessors work very differently. Instead of
+/// adding private methods as own properties to the instance (or the class in
+/// the case of `static`) instead we add a single "private brand". This brand
+/// can be thought of as a seal of approval: having this brand means the object
+/// is allowed to use all methods & accessors granted by this brand.
+///
+/// Each class defines two private brands then: an instance brand and a static
+/// brand. The class function object gets the static brand immediately on class
+/// definition evaluation, and the instance gets the instance brand during
+/// constructor execution. When trying to read a private method or accessor, we
+/// first emit IR to check for the seal of approval. If it's there, then we can
+/// directly invoke the corresponding function. So adding all instance or static
+/// methods to an object is simply adding this single brand to it.
+///
+/// `Decl`s are the structure we use to hold these private brands, along with
+/// the actual function objects to invoke. Take the following class:
+///   class A {
+///     #m1() {}
+///     useM1() { this.#m1() }
+///   }
+/// In this case, there is a single decl that is associated with `#m1`. That
+/// decl will contain two `Variable*`s. The first contains the value of the
+/// instance private brand, and the second holds the function object value. In
+/// order to get to these `Variable*`s, we create a side table that lives in
+/// SemContext (so this can be used across lazy compilation.) This private name
+/// side table contains lists of elements, where each element contains the
+/// relevant set of `Variable*`s that needs to be associated with each private
+/// name to hold the brand and function object. Most private names only need two
+/// `Variable*`s, but a private name that defines both a getter and a setter
+/// needs to hold the function object values for each accessor. So in that case,
+/// the element in the side table is a different, larger struct. Just by
+/// inspecting the kind of a `Decl`, it's possible to know which kind of element
+/// in the side table the customData field of the `Decl` points to.
+void ESTreeIRGen::emitPrivateNameDeclarations(
+    sema::LexicalScope *scope,
+    Identifier className) {
+  Variable *staticBrand = nullptr;
+  Variable *instanceBrand = nullptr;
+  /// Lazily create and return the correct private brand for the given static
+  /// level.
+  auto getPrivateBrand =
+      [this, &className, &staticBrand, &instanceBrand](bool isStatic) {
+        if (isStatic) {
+          if (!staticBrand) {
+            staticBrand = Builder.createVariable(
+                curFunction()->curScope->getVariableScope(),
+                Twine("?static_brand_") + className.str(),
+                Type::createPrivateName(),
+                /* hidden */ true);
+            Builder.createStoreFrameInst(
+                curFunction()->curScope,
+                Builder.createCreatePrivateNameInst(
+                    Builder.getLiteralString(className)),
+                staticBrand);
+          }
+          return staticBrand;
+        }
+        if (!instanceBrand) {
+          instanceBrand = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              Twine("?instance_brand_") + className.str(),
+              Type::createPrivateName(),
+              /* hidden */ true);
+          Builder.createStoreFrameInst(
+              curFunction()->curScope,
+              Builder.createCreatePrivateNameInst(
+                  Builder.getLiteralString(className)),
+              instanceBrand);
+        }
+        return instanceBrand;
+      };
+  for (sema::Decl *decl : scope->decls) {
+    if (!sema::Decl::isKindPrivateName(decl->kind))
+      continue;
+    assert(
+        ((curFunction()->debugAllowRecompileCounter != 0) ||
+         (decl->customData == nullptr)) &&
+        "customData can be bound only if recompiling AST");
+    switch (decl->kind) {
+      case sema::Decl::Kind::PrivateField: {
+        // PrivateField's custom data is Variable*.
+        Variable *nameVar;
+        if (!decl->customData) {
+          nameVar = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              decl->name,
+              Type::createPrivateName(),
+              /* hidden */ true);
+          setDeclData(decl, nameVar);
+        } else {
+          nameVar = llvh::cast<Variable>(getDeclData(decl));
+        }
+        // Initialize private names to their values.
+        Builder.createStoreFrameInst(
+            curFunction()->curScope,
+            Builder.createCreatePrivateNameInst(
+                Builder.getLiteralString(decl->name)),
+            nameVar);
+        break;
+      }
+      case sema::Decl::Kind::PrivateMethod: {
+        // PrivateMethod's custom data is
+        // PrivateNameFunctionTable::SingleFunctionEntry*.
+        if (!decl->customData) {
+          auto &elem =
+              privateNameTable().singleFunctions.emplace_back(getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic));
+          setDeclDataPrivate(decl, &elem);
+        }
+        break;
+      }
+      case sema::Decl::Kind::PrivateGetter: {
+        // PrivateGetter's custom data is
+        // PrivateNameFunctionTable::SingleFunctionEntry*.
+        if (!decl->customData) {
+          auto &elem =
+              privateNameTable().singleFunctions.emplace_back(getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic));
+          setDeclDataPrivate(decl, &elem);
+        }
+        break;
+      }
+      case sema::Decl::Kind::PrivateSetter: {
+        // PrivateSetter's custom data is
+        // PrivateNameFunctionTable::SingleFunctionEntry*.
+        if (!decl->customData) {
+          auto &elem =
+              privateNameTable().singleFunctions.emplace_back(getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic));
+          setDeclDataPrivate(decl, &elem);
+        }
+        break;
+      }
+      case sema::Decl::Kind::PrivateGetterSetter: {
+        // PrivateGetterSetter's custom data is
+        // PrivateNameFunctionTable::GetterSetter*.
+        if (!decl->customData) {
+          auto &elem =
+              privateNameTable().accessors.emplace_back(getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic));
+          setDeclDataPrivate(decl, &elem);
+        }
+        break;
+      }
+      default:
+        assert(false && "unhandled private decl");
+        continue;
+    }
+  }
+}
+
 Value *ESTreeIRGen::genLegacyClassExpression(
     ESTree::ClassExpressionNode *node,
     Identifier nameHint) {
