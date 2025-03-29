@@ -3073,6 +3073,23 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(AddOwnPrivateBySym) {
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            JSObject::defineNewOwnProperty(
+                Handle<JSObject>::vmcast(&O1REG(AddOwnPrivateBySym)),
+                runtime,
+                O3REG(AddOwnPrivateBySym).getSymbol(),
+                PropertyFlags::privateFieldPropertyFlags(),
+                Handle<>(&O2REG(AddOwnPrivateBySym))));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(AddOwnPrivateBySym);
+        DISPATCH;
+      }
+
       CASE_OUTOFLINE(DefineOwnByVal);
       CASE_OUTOFLINE(DefineOwnGetterSetterByVal);
       CASE_OUTOFLINE(DirectEval);

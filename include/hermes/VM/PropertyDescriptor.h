@@ -109,6 +109,17 @@ struct PropertyFlags {
     return pf;
   }
 
+  /// Return an instance of PropertyFlags initialized as writable,
+  /// non-configurable, non-enumerable, and privateName.
+  static PropertyFlags privateFieldPropertyFlags() {
+    PropertyFlags pf{};
+    pf.enumerable = 0;
+    pf.writable = 1;
+    pf.configurable = 0;
+    pf.privateName = 1;
+    return pf;
+  }
+
   /// Return the invalid instance.
   static PropertyFlags invalid() {
     PropertyFlags pf{};

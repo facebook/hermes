@@ -449,6 +449,11 @@ DEFINE_OPCODE_5(PutByValWithReceiver, Reg8, Reg8, Reg8, Reg8, UInt8)
 /// Arg4 : Integer value set to 1 for strict mode semantics, 0 for loose.
 DEFINE_OPCODE_4(DelByVal, Reg8, Reg8, Reg8, UInt8)
 
+/// Add a private property to an object. This must be a new property.
+/// The property will be added with the privateName flag set on the PropertyFlags.
+/// Arg1[Arg2] = Arg3
+DEFINE_OPCODE_3(AddOwnPrivateBySym, Reg8, Reg8, Reg8)
+
 /// Add a getter and a setter for a property by value.
 /// Object.defineProperty(Arg1, Arg2, { get: Arg3, set: Arg4 }).
 /// Arg1 is the target object which will have a property defined.

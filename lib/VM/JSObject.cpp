@@ -2148,8 +2148,8 @@ ExecutionStatus JSObject::defineNewOwnProperty(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
   assert(
-      !selfHandle->flags_.proxyObject &&
-      "definedNewOwnProperty cannot be used with proxy objects");
+      (!selfHandle->flags_.proxyObject || propertyFlags.privateName) &&
+      "cannot define non-private properties on Proxy");
   assert(
       !(propertyFlags.accessor && !valueOrAccessor.get().isPointer()) &&
       "accessor must be non-empty");
@@ -2809,8 +2809,9 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
   assert(
+      propertyFlags.privateName ||
       !selfHandle->flags_.proxyObject &&
-      "Internal properties cannot be added to Proxy objects");
+          "Internal non-private properties cannot be added to Proxy objects");
   // Add a new property to the class.
   // TODO: if we check for OOM here in the future, we must undo the slot
   // allocation.

@@ -2114,8 +2114,8 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
       expectedFlags,
       desc);
   assert(
-      !(selfHandle->flags_.proxyObject && ret) &&
-      "Proxy objects should never have own properties");
+      (desc.flags.privateName || !(selfHandle->flags_.proxyObject && ret)) &&
+      "Proxy objects should never have own non-private properties");
   return ret;
 }
 
