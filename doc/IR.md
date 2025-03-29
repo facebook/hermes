@@ -578,6 +578,16 @@ Arguments | *%value* is the value to be stored. *%object*, which must be an obje
 Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
+### StoreOwnPrivateFieldInst
+
+StoreOwnPrivateFieldInst | _
+--- | --- |
+Description | Store a private *own property* to an object.
+Example |   `%4 = StoreOwnPrivateFieldInst %value, %object, %property : symbol, %enumerable : boolean`
+Arguments | *%value* is the value to be stored. *%object* should be an object, if not this throws. *%property* must be the value of a symbol. *%enumerable* must always be false.
+Semantics | This instruction implements ES2024 7.3.31 PrivateSet. This instruction will throw if the private property does not already exist on %object.
+Effects | May read and write memory.
+
 ### AddOwnPrivateFieldInst
 
 AddOwnPrivateFieldInst | _

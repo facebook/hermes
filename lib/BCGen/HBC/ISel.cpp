@@ -1044,6 +1044,20 @@ void HBCISel::generateDefineNewOwnPropertyInst(
         id);
   }
 }
+
+void HBCISel::generateStoreOwnPrivateFieldInst(
+    StoreOwnPrivateFieldInst *Inst,
+    BasicBlock *next) {
+  auto objReg = encodeValue(Inst->getObject());
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto prop = Inst->getProperty();
+  auto propReg = encodeValue(prop);
+  uint32_t privateNameCacheIdx = acquirePrivateNameCacheIndex(
+      Inst->getProperty(), PrivateNameOperationKind::ReadWrite);
+  BCFGen_->emitPutOwnPrivateBySym(
+      objReg, valueReg, privateNameCacheIdx, propReg);
+}
+
 void HBCISel::generateAddOwnPrivateFieldInst(
     AddOwnPrivateFieldInst *Inst,
     BasicBlock *next) {

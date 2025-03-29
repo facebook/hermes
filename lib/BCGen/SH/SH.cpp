@@ -1312,6 +1312,9 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ", NULL);\n";
   }
+  void generateStoreOwnPrivateFieldInst(StoreOwnPrivateFieldInst &inst) {
+    unimplemented(inst);
+  }
   void generateAddOwnPrivateFieldInst(AddOwnPrivateFieldInst &inst) {
     unimplemented(inst);
   }

@@ -114,6 +114,7 @@ MARK_FIRST(BaseDefineOwnPropertyInst, Instruction)
 DEF_VALUE(DefineOwnPropertyInst, BaseDefineOwnPropertyInst)
 DEF_VALUE(DefineNewOwnPropertyInst, BaseDefineOwnPropertyInst)
 DEF_VALUE(AddOwnPrivateFieldInst, BaseDefineOwnPropertyInst)
+DEF_VALUE(StoreOwnPrivateFieldInst, BaseDefineOwnPropertyInst)
 MARK_LAST(BaseDefineOwnPropertyInst)
 
 DEF_VALUE(DefineOwnGetterSetterInst, Instruction)

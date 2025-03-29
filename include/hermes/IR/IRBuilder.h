@@ -466,6 +466,10 @@ class IRBuilder {
       Value *storedValue,
       Value *object,
       Literal *property);
+  StoreOwnPrivateFieldInst *createStoreOwnPrivateFieldInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
   AddOwnPrivateFieldInst *createAddOwnPrivateFieldInst(
       Value *storedValue,
       Value *object,
