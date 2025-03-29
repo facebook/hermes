@@ -2253,6 +2253,8 @@ tailCall:
         DISPATCH;
       }
 
+      CASE_OUTOFLINE(CreatePrivateName);
+
       CASE(Jmp) {
         ip = IPADD(ip->iJmp.op1);
         DISPATCH;

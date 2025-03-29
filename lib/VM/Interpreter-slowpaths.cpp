@@ -133,6 +133,26 @@ ExecutionStatus Interpreter::caseCreateClass(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus Interpreter::caseCreatePrivateName(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  CodeBlock *curCodeBlock = runtime.getCurrentFrame().getCalleeCodeBlock();
+  auto *descStr = runtime.getIdentifierTable().getStringPrim(
+      runtime, ID(ip->iCreatePrivateName.op2));
+  struct : public Locals {
+    PinnedValue<StringPrimitive> desc;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.desc = descStr;
+  auto symbolRes =
+      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, lv.desc);
+  if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(CreatePrivateName) = HermesValue::encodeSymbolValue(*symbolRes);
+  return ExecutionStatus::RETURNED;
+}
+
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
