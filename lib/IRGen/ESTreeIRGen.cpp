@@ -422,6 +422,11 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
     return Builder.getLiteralNumber(N->_value);
   }
 
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(Mem))) {
+    auto *id = llvh::cast<ESTree::IdentifierNode>(PN->_id);
+    return genPrivateNameValue(id);
+  }
+
   // ESTree encodes property access as MemberExpression -> Identifier.
   auto Id = cast<ESTree::IdentifierNode>(getProperty(Mem));
 

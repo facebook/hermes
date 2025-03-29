@@ -1601,6 +1601,21 @@ class ESTreeIRGen {
   /// \return the instruction performing the store.
   Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
 
+  /// Emit IR to perform a private brand check.
+  /// \param from is the value to query.
+  /// \param brandVal is the value of the private brand name. Brands are only
+  ///     associated with private methods and accessors, not fields.
+  void emitPrivateBrandCheck(Value *from, Value *brandVal);
+
+  /// Emit IR to load a private name.
+  /// \param from value to perform the lookup on.
+  /// \param nameVal is the value of the private name.
+  /// \param nameNode
+  Value *emitPrivateLookup(
+      Value *from,
+      Value *nameVal,
+      ESTree::PrivateNameNode *nameNode);
+
  private:
   /// Search for the specified AST node in \c compiledEntities_ and return the
   /// associated IR value, or nullptr if not found.

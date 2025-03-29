@@ -1052,10 +1052,14 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
     Mod->getContext().getSourceErrorManager().error(
         mem->getSourceRange(), "invalid tuple access");
+  };
+  Value *loadProp;
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(mem))) {
+    loadProp = emitPrivateLookup(baseValue, propValue, PN);
+  } else {
+    loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
   }
-
-  return MemberExpressionResult{
-      Builder.createLoadPropertyInst(baseValue, propValue), nullptr, baseValue};
+  return MemberExpressionResult{loadProp, nullptr, baseValue};
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
@@ -1262,7 +1266,12 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
   Value *result = nullptr;
   switch (op) {
     case MemberExpressionOperation::Load:
-      result = Builder.createLoadPropertyInst(baseValue, prop);
+      if (auto *PN =
+              llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(mem))) {
+        result = emitPrivateLookup(baseValue, prop, PN);
+      } else {
+        result = Builder.createLoadPropertyInst(baseValue, prop);
+      }
       break;
     case MemberExpressionOperation::Delete:
       result = Builder.createDeletePropertyInst(baseValue, prop);

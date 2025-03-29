@@ -209,6 +209,71 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
   }
 }
 
+void ESTreeIRGen::emitPrivateBrandCheck(Value *from, Value *brandVal) {
+  auto *continueBB = Builder.createBasicBlock(Builder.getFunction());
+  auto *throwBB = Builder.createBasicBlock(Builder.getFunction());
+  Builder.createCondBranchInst(
+      Builder.createBinaryOperatorInst(
+          brandVal, from, ValueKind::BinaryPrivateInInstKind),
+      continueBB,
+      throwBB);
+  Builder.setInsertionBlock(throwBB);
+  Builder.createThrowTypeErrorInst(
+      Builder.getLiteralString("Private element not found"));
+  Builder.setInsertionBlock(continueBB);
+}
+
+Value *ESTreeIRGen::emitPrivateLookup(
+    Value *from,
+    Value *nameVal,
+    ESTree::PrivateNameNode *nameNode) {
+  auto *ID = llvh::cast<ESTree::IdentifierNode>(nameNode->_id);
+  sema::Decl *decl = semCtx_.getExpressionDecl(ID);
+  assert(sema::Decl::isKindPrivateName(decl->kind) && "private decl required");
+  switch (decl->kind) {
+    case sema::Decl::Kind::PrivateField:
+      return Builder.createLoadOwnPrivateFieldInst(from, nameVal);
+    case sema::Decl::Kind::PrivateMethod: {
+      emitPrivateBrandCheck(from, nameVal);
+      auto *entry =
+          getDeclDataPrivate<PrivateNameFunctionTable::SingleFunctionEntry>(
+              decl);
+      return emitLoad(entry->functionObject, false);
+    }
+    case sema::Decl::Kind::PrivateSetter:
+      emitPrivateBrandCheck(from, nameVal);
+      Builder.createThrowTypeErrorInst(Builder.getLiteralString(
+          "No field, method or getter with this name"));
+      // Throwing is a terminal instruction, so make a new basic block to place
+      // any IR following this private lookup.
+      Builder.setInsertionBlock(
+          Builder.createBasicBlock(Builder.getFunction()));
+      return Builder.getLiteralUndefined();
+      // For getters, invoke the function directly.
+    case sema::Decl::Kind::PrivateGetter:
+    case sema::Decl::Kind::PrivateGetterSetter: {
+      Variable *getterFunctionObject =
+          decl->kind == sema::Decl::Kind::PrivateGetter
+          ? getDeclDataPrivate<PrivateNameFunctionTable::SingleFunctionEntry>(
+                decl)
+                ->functionObject
+          : getDeclDataPrivate<PrivateNameFunctionTable::GetterSetterEntry>(
+                decl)
+                ->getterFunctionObject;
+      emitPrivateBrandCheck(from, nameVal);
+      auto *funcVal = emitLoad(getterFunctionObject, false);
+      return Builder.createCallInst(
+          funcVal,
+          /* newTarget */ Builder.getLiteralUndefined(),
+          /* thisValue */ from,
+          /* args */ {});
+    }
+    default:
+      assert(false && "unhandled private decl");
+      return nullptr;
+  }
+}
+
 Value *ESTreeIRGen::genLegacyClassExpression(
     ESTree::ClassExpressionNode *node,
     Identifier nameHint) {
