@@ -631,11 +631,13 @@ class JSObject : public GCCell {
       PointerBase &runtime,
       NamedPropertyDescriptor desc) {
     assert(
+        desc.flags.privateName ||
         !self->flags_.proxyObject && !desc.flags.proxyObject &&
-        "getNamedSlotValueUnsafe called on a Proxy");
+            "getNamedSlotValueUnsafe called on a Proxy");
     assert(
+        desc.flags.privateName ||
         !desc.flags.hostObject &&
-        "getNamedSlotValueUnsafe called on a HostObject");
+            "getNamedSlotValueUnsafe called on a HostObject");
     return getNamedSlotValueUnsafe(self, runtime, desc.slot);
   }
 
@@ -1202,6 +1204,13 @@ class JSObject : public GCCell {
       DefinePropertyFlags dpFlags,
       Handle<> valueOrAccessor,
       PropOpFlags opFlags = PropOpFlags());
+
+  /// ES2024 7.3.30 PrivateGet
+  static CallResult<HermesValue> getPrivateField(
+      Handle<JSObject> selfHandle,
+      Runtime &runtime,
+      Handle<SymbolID> privateName,
+      PrivateNameCacheEntry *cacheEntry);
 
   /// ES5.1 15.2.3.8.
   /// Make all own properties non-configurable.
@@ -1780,7 +1789,6 @@ inline SmallHermesValue JSObject::getNamedSlotValueDirectUnsafe(
     JSObject *self,
     PointerBase &runtime,
     SlotIndex index) {
-  assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
   assert(index < DIRECT_PROPERTY_SLOTS);
   return self->directProps()[index];
 }
@@ -1790,7 +1798,6 @@ inline SmallHermesValue JSObject::getNamedSlotValueIndirectUnsafe(
     JSObject *self,
     PointerBase &runtime,
     SlotIndex index) {
-  assert(!self->flags_.proxyObject && "getNamedSlotValue called on a Proxy");
   return self->propStorage_.getNonNull(runtime)->at(index);
 }
 
