@@ -60,6 +60,7 @@ DEF_VALUE(LoadFrameInst, Instruction)
 DEF_VALUE(LoadParamInst, Instruction)
 DEF_VALUE(HBCLoadConstInst, Instruction)
 DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
+DEF_VALUE(CreatePrivateNameInst, Instruction)
 
 MARK_FIRST(HBCReifyArgumentsInst, Instruction)
 DEF_VALUE(HBCReifyArgumentsStrictInst, HBCReifyArgumentsInst)

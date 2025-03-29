@@ -714,6 +714,9 @@ class InstrGen {
   void generateInstruction(Instruction &inst) {
     hermes_fatal("Unimplemented instruction Instruction");
   }
+  void generateCreatePrivateNameInst(CreatePrivateNameInst &inst) {
+    unimplemented(inst);
+  }
   void generateAddEmptyStringInst(AddEmptyStringInst &inst) {
     os_.indent(2);
     generateRegister(inst);

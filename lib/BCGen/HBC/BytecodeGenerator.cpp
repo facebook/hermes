@@ -291,6 +291,7 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);
     CASE_WITH_PROP_IDX(TryStoreGlobalPropertyLooseInst);
     CASE_WITH_PROP_IDX(TryStoreGlobalPropertyStrictInst);
+    CASE_WITH_PROP_IDX(CreatePrivateNameInst);
 
     case ValueKind::DeclareGlobalVarInstKind:
       return idx == DeclareGlobalVarInst::NameIdx;

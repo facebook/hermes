@@ -449,6 +449,9 @@ class TypeInferenceImpl {
     }
     return Type::unionTy(Type::createString(), Type::createSymbol());
   }
+  Type inferCreatePrivateNameInst(CreatePrivateNameInst *inst) {
+    return *inst->getInherentType();
+  }
   Type inferAsNumberInst(AsNumberInst *inst) {
     return *inst->getInherentType();
   }

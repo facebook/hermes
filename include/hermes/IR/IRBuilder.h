@@ -299,6 +299,8 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
+  CreatePrivateNameInst *createCreatePrivateNameInst(LiteralString *descStr);
+
   CreateClassInst *createCreateClassInst(
       BaseScopeInst *scope,
       Function *code,

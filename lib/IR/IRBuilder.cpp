@@ -355,6 +355,13 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
+CreatePrivateNameInst *IRBuilder::createCreatePrivateNameInst(
+    LiteralString *descStr) {
+  auto *I = new CreatePrivateNameInst(descStr);
+  insert(I);
+  return I;
+}
+
 CreateClassInst *IRBuilder::createCreateClassInst(
     BaseScopeInst *scope,
     Function *code,

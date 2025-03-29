@@ -572,6 +572,15 @@ void HBCISel::generateToPropertyKeyInst(
   BCFGen_->emitToPropertyKey(dst, src);
 }
 
+void HBCISel::generateCreatePrivateNameInst(
+    CreatePrivateNameInst *Inst,
+    BasicBlock *next) {
+  auto dst = encodeValue(Inst);
+  auto *descStr = llvh::cast<LiteralString>(Inst->getSingleOperand());
+  auto id = BCFGen_->getIdentifierID(descStr);
+  BCFGen_->emitCreatePrivateName(dst, id);
+}
+
 void HBCISel::generateAsNumberInst(AsNumberInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getSingleOperand());

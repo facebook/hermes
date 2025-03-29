@@ -246,6 +246,44 @@ class ToPropertyKeyInst : public SingleOperandInst {
   }
 };
 
+class CreatePrivateNameInst : public SingleOperandInst {
+  CreatePrivateNameInst(const CreatePrivateNameInst &) = delete;
+  void operator=(const CreatePrivateNameInst &) = delete;
+
+ public:
+  enum { PropertyIdx };
+  explicit CreatePrivateNameInst(LiteralString *value)
+      : SingleOperandInst(ValueKind::CreatePrivateNameInstKind, value) {
+    setType(*getInherentTypeImpl());
+  }
+  explicit CreatePrivateNameInst(
+      const CreatePrivateNameInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands) {
+    setType(*getInherentTypeImpl());
+  }
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createPrivateName();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::CreatePrivateNameInstKind;
+  }
+};
+
 class AsNumberInst : public SingleOperandInst {
   AsNumberInst(const AsNumberInst &) = delete;
   void operator=(const AsNumberInst &) = delete;

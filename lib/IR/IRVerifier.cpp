@@ -739,6 +739,18 @@ bool Verifier::visitAddEmptyStringInst(const AddEmptyStringInst &Inst) {
   return true;
 }
 
+bool Verifier::visitCreatePrivateNameInst(const CreatePrivateNameInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<LiteralString>(Inst.getSingleOperand()),
+      "CreatePrivateNameInst must take in a literal string");
+  AssertIWithMsg(
+      Inst,
+      Inst.getType().isPrivateNameType(),
+      "CreatePrivateNameInst must return a private name type");
+  return true;
+}
+
 bool Verifier::visitAllocStackInst(const AllocStackInst &Inst) {
   AssertIWithMsg(
       Inst,

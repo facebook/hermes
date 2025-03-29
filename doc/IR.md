@@ -289,6 +289,16 @@ Arguments | The value to cast.
 Semantics | The instruction follows the JavaScript rules for adding an empty string to a value (ES5.1 11.6.1).
 Effects | May read or write to memory or throw.
 
+### CreatePrivateNameInst
+
+CreatePrivateNameInst | _
+--- | --- |
+Description | Create a globally unique private value, settings its internal [[Description]] to the given string literal. Practically speakig, this will result in a symbol value created at runtime with its [[Description]] set.
+Example |  %1 = CreatePrivateNameInst %descString
+Arguments | %descString is the string description of the name. It must be a string literal.
+Semantics | Allocate a new globally unique private name.
+Effects | Does not read or write to memory.
+
 ### CondBranchInst
 
 CondBranchInst | _
