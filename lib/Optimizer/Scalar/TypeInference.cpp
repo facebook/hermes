@@ -213,6 +213,7 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
     case ValueKind::BinaryGreaterThanInstKind:
     case ValueKind::BinaryGreaterThanOrEqualInstKind:
     case ValueKind::BinaryInInstKind:
+    case ValueKind::BinaryPrivateInInstKind:
     case ValueKind::BinaryInstanceOfInstKind:
       // Notice that the spec says that comparison of NaN should return
       // "Undefined" but all VMs return 'false'. We decided to conform to the

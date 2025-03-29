@@ -1070,6 +1070,9 @@ class InstrGen {
       case ValueKind::BinaryInInstKind: // in
         funcUntypedOp = "_sh_ljs_is_in_rjs";
         break;
+      case ValueKind::BinaryPrivateInInstKind: // in
+        unimplemented(inst);
+        break;
       case ValueKind::BinaryInstanceOfInstKind:
         funcUntypedOp = "_sh_ljs_instance_of_rjs";
         break;

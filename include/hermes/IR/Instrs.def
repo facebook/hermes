@@ -93,6 +93,7 @@ DEF_TAG(BinaryXorInst, BinaryOperatorInst)
 DEF_TAG(BinaryAndInst, BinaryOperatorInst)
 DEF_TAG(BinaryExponentiationInst, BinaryOperatorInst)
 DEF_TAG(BinaryInInst, BinaryOperatorInst)
+DEF_TAG(BinaryPrivateInInst, BinaryOperatorInst)
 DEF_TAG(BinaryInstanceOfInst, BinaryOperatorInst)
 END_VALUE(BinaryOperatorInst)
 

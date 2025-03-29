@@ -837,6 +837,14 @@ void HBCISel::generateBinaryOperatorInst(
     case ValueKind::BinaryInInstKind: // "in"
       BCFGen_->emitIsIn(res, left, right);
       break;
+    case ValueKind::BinaryPrivateInInstKind: // #privateName "in"
+      BCFGen_->emitPrivateIsIn(
+          res,
+          left,
+          right,
+          acquirePrivateNameCacheIndex(
+              Inst->getRightHandSide(), PrivateNameOperationKind::In));
+      break;
     case ValueKind::BinaryInstanceOfInstKind: // instanceof
       BCFGen_->emitInstanceOf(res, left, right);
       break;

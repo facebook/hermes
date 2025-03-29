@@ -2104,6 +2104,7 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
   if ((kind >= ValueKind::BinaryEqualInstKind &&
        kind <= ValueKind::BinaryGreaterThanOrEqualInstKind) ||
       kind == ValueKind::BinaryInInstKind ||
+      kind == ValueKind::BinaryPrivateInInstKind ||
       kind == ValueKind::BinaryInstanceOfInstKind) {
     res->setType(Type::createBoolean());
   }
