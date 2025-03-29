@@ -2430,6 +2430,32 @@ CallResult<HermesValue> JSObject::getPrivateField(
   return getNamedSlotValueUnsafe(*selfHandle, runtime, desc).unboxToHV(runtime);
 }
 
+ExecutionStatus JSObject::setPrivateField(
+    Handle<JSObject> selfHandle,
+    Runtime &runtime,
+    Handle<SymbolID> privateName,
+    Handle<> valueHandle,
+    PrivateNameCacheEntry *cacheEntry) {
+  NamedPropertyDescriptor desc;
+  // 1. Let entry be PrivateElementFind(O, P).
+  auto pos = findProperty(selfHandle, runtime, *privateName, desc);
+  // 2. If entry is empty, throw a TypeError exception.
+  if (!pos.hasValue()) {
+    return runtime.raiseTypeErrorForValue(
+        privateName, "Private property does not exist: ");
+  }
+  // This must be a private field since methods and accessors are not stored
+  // directly in the instance. So just directly set it.
+  if (cacheEntry && !selfHandle->getClass(runtime)->isDictionaryNoCache()) {
+    cacheEntry->clazz = selfHandle->getClassGCPtr();
+    cacheEntry->slot = desc.slot;
+    cacheEntry->nameVal = static_cast<RootSymbolID>(*privateName);
+  }
+  auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
+  setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
+  return ExecutionStatus::RETURNED;
+}
+
 std::string JSObject::getNameIfExists(PointerBase &base) {
   // Try "displayName" first, if it is defined.
   if (auto nameVal = tryGetNamedNoAlloc(

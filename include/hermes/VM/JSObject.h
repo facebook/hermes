@@ -1212,6 +1212,14 @@ class JSObject : public GCCell {
       Handle<SymbolID> privateName,
       PrivateNameCacheEntry *cacheEntry);
 
+  /// ES2024 7.3.31 PrivateSet
+  static ExecutionStatus setPrivateField(
+      Handle<JSObject> selfHandle,
+      Runtime &runtime,
+      Handle<SymbolID> privateName,
+      Handle<> valueHandle,
+      PrivateNameCacheEntry *cacheEntry);
+
   /// ES5.1 15.2.3.8.
   /// Make all own properties non-configurable.
   /// Set [[Extensible]] to false.

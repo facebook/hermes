@@ -462,6 +462,14 @@ DEFINE_OPCODE_3(AddOwnPrivateBySym, Reg8, Reg8, Reg8)
 /// Arg4 is the symbol value of the private name.
 DEFINE_OPCODE_4(GetOwnPrivateBySym, Reg8, Reg8, UInt8, Reg8)
 
+/// Store a private property to an object.
+/// Arg1[Arg5] = Arg2
+/// Arg1 is the object to store to.
+/// Arg2 is the value to store.
+/// Arg3 is a private name cache index used to speed up the above operation.
+/// Arg4 is the symbol value of the private name.
+DEFINE_OPCODE_4(PutOwnPrivateBySym, Reg8, Reg8, UInt8, Reg8)
+
 /// Add a getter and a setter for a property by value.
 /// Object.defineProperty(Arg1, Arg2, { get: Arg3, set: Arg4 }).
 /// Arg1 is the target object which will have a property defined.

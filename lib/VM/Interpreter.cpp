@@ -3129,6 +3129,46 @@ tailCall:
         }
       }
 
+      CASE(PutOwnPrivateBySym) {
+        if (LLVM_LIKELY(O1REG(PutOwnPrivateBySym).isObject())) {
+          ENCODE_HV_AS_SHV(shv, O2REG(PutOwnPrivateBySym));
+          auto *obj = vmcast<JSObject>(O1REG(PutOwnPrivateBySym));
+          auto cacheIdx = ip->iPutOwnPrivateBySym.op3;
+          auto *cacheEntry = curCodeBlock->getPrivateNameCacheEntry(cacheIdx);
+          CompressedPointer clazzPtr{obj->getClassGCPtr()};
+          SymbolID nameSym = O4REG(PutOwnPrivateBySym).getSymbol();
+          if (LLVM_LIKELY(
+                  cacheEntry->clazz == clazzPtr &&
+                  cacheEntry->nameVal == nameSym)) {
+            JSObject::setNamedSlotValueUnsafe(
+                obj, runtime, cacheEntry->slot, shv);
+            ip = NEXTINST(PutOwnPrivateBySym);
+            DISPATCH;
+          }
+          // Slow path
+          CAPTURE_IP_ASSIGN(
+              auto res,
+              JSObject::setPrivateField(
+                  Handle<JSObject>::vmcast(&O1REG(PutOwnPrivateBySym)),
+                  runtime,
+                  Handle<SymbolID>::vmcast(&O4REG(PutOwnPrivateBySym)),
+                  Handle<>(&O2REG(PutOwnPrivateBySym)),
+                  cacheIdx == hbc::PROPERTY_CACHING_DISABLED
+                      ? nullptr
+                      : curCodeBlock->getPrivateNameCacheEntry(cacheIdx)));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          ip = NEXTINST(GetOwnPrivateBySym);
+          DISPATCH;
+        } else {
+          CAPTURE_IP(runtime.raiseTypeError(
+              "cannot set private property of a non-object"));
+          goto exception;
+        }
+      }
+
       CASE_OUTOFLINE(DefineOwnByVal);
       CASE_OUTOFLINE(DefineOwnGetterSetterByVal);
       CASE_OUTOFLINE(DirectEval);
