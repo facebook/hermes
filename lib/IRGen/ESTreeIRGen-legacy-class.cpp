@@ -256,11 +256,12 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
         instElemInitFuncVar;
   }
 
-  // Function code for the constructor.
-  NormalFunction *consCode;
+  NormalFunction *constructorCode;
+  // Generate the function code for the constructor- either from a user-provided
+  // constructor or an implicit constructor we generate ourselves.
   if (ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode)
           ->implicitCtorFunctionInfo) {
-    consCode =
+    constructorCode =
         genLegacyImplicitConstructor(classNode, className, superClassNode);
   } else {
     ESTree::MethodDefinitionNode *consMethodNode = nullptr;
@@ -273,7 +274,7 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       }
     }
     assert(consMethodNode && "no explicit or implicit constructor found");
-    consCode = genBasicFunction(
+    constructorCode = genBasicFunction(
         className,
         llvh::cast<ESTree::FunctionExpressionNode>(consMethodNode->_value),
         curScope->getVariableScope(),
@@ -286,7 +287,7 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   AllocStackInst *clsPrototypeOutput = Builder.createAllocStackInst(
       genAnonymousLabelName("clsPrototype"), Type::createObject());
   CreateClassInst *createClass = Builder.createCreateClassInst(
-      curScope, consCode, superCls, clsPrototypeOutput);
+      curScope, constructorCode, superCls, clsPrototypeOutput);
   auto *clsPrototype = Builder.createLoadStackInst(clsPrototypeOutput);
 
   /// Add a method to a given object \p O. In practice, O should either be the
@@ -313,9 +314,15 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
               closure, O, key, IRBuilder::PropEnumerable::No);
         }
       };
+
   // Space used to convert property keys to strings.
   llvh::SmallVector<char, 32> buffer;
+  // Used to provide a slightly more helpful name for the `Variable*`s that hold
+  // the value of a computed name.
   size_t computedKeyIdx = 0;
+  // This loop is responsible for generating the value of all function class
+  // elements, and field computed key values. Non-private static methods are
+  // immediately added to the class.
   for (auto &classElement : classBody->_body) {
     if (auto *method =
             llvh::dyn_cast<ESTree::MethodDefinitionNode>(&classElement)) {
