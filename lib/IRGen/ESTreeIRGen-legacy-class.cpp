@@ -213,6 +213,7 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   Value *superCls = superClassNode ? genExpression(superClassNode)
                                    : Builder.getEmptySentinel();
 
+  emitPrivateNameDeclarations(classNode->getScope(), className);
   auto *curScope = curFunction()->curScope;
   auto *curVarScope = curScope->getVariableScope();
   // Holds the .prototype of the class.
@@ -366,13 +367,6 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
             Builder.createToPropertyKeyInst(genExpression(prop->_key)),
             fieldKeyVar);
       }
-    }
-    if (auto *privateProp =
-            llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&classElement)) {
-      Builder.getModule()->getContext().getSourceErrorManager().error(
-          privateProp->getSourceRange(),
-          Twine("private properties are not supported"));
-      return nullptr;
     }
   }
 
@@ -720,6 +714,21 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
                                         : Builder.getLiteralUndefined();
         Builder.createDefineOwnPropertyInst(
             propValue, classVal, propKey, IRBuilder::PropEnumerable::Yes);
+        continue;
+      }
+      if (auto *prop = llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&it)) {
+        if (!prop->_static)
+          continue;
+        auto *privateNameID = llvh::cast<ESTree::IdentifierNode>(prop->_key);
+        auto *propKey = genPrivateNameValue(privateNameID);
+        Value *propValue = prop->_value
+            ? genExpression(
+                  prop->_value,
+                  Builder.getModule()->getContext().getPrivateNameIdentifier(
+                      privateNameID->_name))
+            : Builder.getLiteralUndefined();
+        Builder.createAddOwnPrivateFieldInst(propValue, classVal, propKey);
+        continue;
       }
     }
 
@@ -774,8 +783,32 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
         DoEmitDeclarations::No,
         parentScope);
     auto &LC = curFunction()->legacyClassContext;
-
     auto *thisParam = curFunction()->jsParams[0];
+
+    bool hasCheckedDoubleInit = false;
+    /// Before adding any private elements, we must make sure we haven't already
+    /// run through this constructor before. This function emits the necessary
+    /// IR to do this check.
+    /// \param propKey is the private name used to determine when a constructor
+    /// has already run.
+    auto checkForDoubleInit =
+        [this, &hasCheckedDoubleInit, initFunc, thisParam](Value *propKey) {
+          if (hasCheckedDoubleInit)
+            return;
+          auto *continueBB = Builder.createBasicBlock(initFunc);
+          auto *throwBB = Builder.createBasicBlock(initFunc);
+          Builder.createCondBranchInst(
+              Builder.createBinaryOperatorInst(
+                  propKey, thisParam, ValueKind::BinaryPrivateInInstKind),
+              throwBB,
+              continueBB);
+          Builder.setInsertionBlock(throwBB);
+          Builder.createThrowTypeErrorInst(Builder.getLiteralString(
+              "Cannot initialize private field twice."));
+          Builder.setInsertionBlock(continueBB);
+          hasCheckedDoubleInit = true;
+        };
+
     auto *classBody = ESTree::getClassBody(legacyClassNode);
     llvh::SmallVector<char, 32> buffer;
     // Emit a store to the constructor object for each instance property on the
@@ -801,6 +834,24 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
                                         : Builder.getLiteralUndefined();
         Builder.createDefineOwnPropertyInst(
             propValue, thisParam, propKey, IRBuilder::PropEnumerable::Yes);
+        continue;
+      }
+      if (auto *prop = llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&it)) {
+        if (prop->_static)
+          continue;
+        auto *privateNameID = llvh::cast<ESTree::IdentifierNode>(prop->_key);
+        auto *propKey = genPrivateNameValue(privateNameID);
+        Value *propValue = prop->_value
+            ? genExpression(
+                  prop->_value,
+                  Mod->getContext().getPrivateNameIdentifier(
+                      privateNameID->_name))
+            : Builder.getLiteralUndefined();
+        // Make sure to emit this after we run the side effects of the value
+        // initializer.
+        checkForDoubleInit(propKey);
+        Builder.createAddOwnPrivateFieldInst(propValue, thisParam, propKey);
+        continue;
       }
     }
 
