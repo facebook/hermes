@@ -715,7 +715,11 @@ class InstrGen {
     hermes_fatal("Unimplemented instruction Instruction");
   }
   void generateCreatePrivateNameInst(CreatePrivateNameInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_create_private_name(shr, ";
+    genStringConst(cast<LiteralString>(inst.getSingleOperand())) << ");\n";
   }
   void generateAddEmptyStringInst(AddEmptyStringInst &inst) {
     os_.indent(2);

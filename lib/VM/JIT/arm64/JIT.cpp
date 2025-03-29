@@ -319,7 +319,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(CreatePrivateName)
 EMIT_UNIMPLEMENTED(PrivateIsIn)
 EMIT_UNIMPLEMENTED(AddOwnPrivateBySym)
 EMIT_UNIMPLEMENTED(GetOwnPrivateBySym)
@@ -1101,6 +1100,11 @@ inline void JITContext::Compiler::emitGetNextPName(
 inline void JITContext::Compiler::emitToPropertyKey(
     const inst::ToPropertyKeyInst *inst) {
   em_.toPropertyKey(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitCreatePrivateName(
+    const inst::CreatePrivateNameInst *inst) {
+  em_.createPrivateName(FR(inst->op1), ID(inst->op2));
 }
 
 inline void JITContext::Compiler::emitIteratorBegin(

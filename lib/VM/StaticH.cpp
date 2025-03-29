@@ -1502,6 +1502,32 @@ extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {
       getRuntime(shr).getStringPrimFromSymbolID(SymbolID::unsafeCreate(symID)));
 }
 
+extern "C" SHLegacyValue _sh_ljs_create_private_name(
+    SHRuntime *shr,
+    SHSymbolID descStrID) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr = [&runtime,
+                                descStrID]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    struct : public Locals {
+      PinnedValue<StringPrimitive> desc;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+    auto *descStr = runtime.getIdentifierTable().getStringPrim(
+        runtime, SymbolID::unsafeCreate(descStrID));
+    lv.desc = descStr;
+    auto res =
+        runtime.getIdentifierTable().createNotUniquedSymbol(runtime, lv.desc);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeSymbolValue(*res);
+  }();
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *cr;
+}
+
 extern "C" SHLegacyValue
 _sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags) {
   Runtime &runtime = getRuntime(shr);

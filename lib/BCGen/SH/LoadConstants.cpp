@@ -71,6 +71,10 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return false;
   }
 
+  if (llvh::isa<CreatePrivateNameInst>(Inst)) {
+    return opIndex == CreatePrivateNameInst::PropertyIdx;
+  }
+
   // If StorePropertyInst's property ID is a LiteralString, we will keep it
   // untouched and emit try_put_by_id eventually. Unless it is specifically a
   // StorePropertyWithReceiverInst. That instruction has no by_id variant.

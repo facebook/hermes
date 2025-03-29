@@ -577,6 +577,8 @@ class Emitter {
 
   void toPropertyKey(FR frRes, FR frVal);
 
+  void createPrivateName(FR frRes, SHSymbolID symID);
+
 #define DECL_COMPARE(                                                   \
     methodName, commentStr, slowCall, condCode, invSlow, passArgsByVal) \
   void methodName(FR rRes, FR rLeft, FR rRight) {                       \

@@ -756,6 +756,9 @@ _sh_ljs_minus_rjs(SHRuntime *shr, const SHLegacyValue *n);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_add_empty_string_rjs(SHRuntime *shr, const SHLegacyValue *a);
 
+SHERMES_EXPORT SHLegacyValue
+_sh_ljs_create_private_name(SHRuntime *shr, SHSymbolID descStrID);
+
 /// Concatenate \p argCount strings together into a new StringPrimitive.
 /// \param argCount the number of varargs that follow.
 /// \param ... the (const SHLegacyValue *) string arguments to concatenate.

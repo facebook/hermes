@@ -5058,6 +5058,23 @@ void Emitter::toPropertyKey(FR frRes, FR frVal) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::createPrivateName(FR frRes, SHSymbolID symID) {
+  comment("// CreatePrivateName r%u, %u", frRes.index(), symID);
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, symID);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHSymbolID),
+      _sh_ljs_create_private_name);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
   comment(
       "// AddS r%u, r%u, r%u", frRes.index(), frLeft.index(), frRight.index());
