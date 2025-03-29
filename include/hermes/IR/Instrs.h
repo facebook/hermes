@@ -1907,6 +1907,39 @@ class DefineNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
   }
 };
 
+class AddOwnPrivateFieldInst : public BaseDefineOwnPropertyInst {
+  AddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &) = delete;
+  void operator=(const AddOwnPrivateFieldInst &) = delete;
+
+ public:
+  explicit AddOwnPrivateFieldInst(
+      Value *storedValue,
+      Value *object,
+      Value *property,
+      LiteralBool *isEnumerable)
+      : BaseDefineOwnPropertyInst(
+            ValueKind::AddOwnPrivateFieldInstKind,
+            storedValue,
+            object,
+            property,
+            isEnumerable) {
+    assert(
+        property->getType().isPrivateNameType() &&
+        "can only add private name types");
+    assert(!isEnumerable->getValue() && "isEnumerable should be false");
+  }
+
+  explicit AddOwnPrivateFieldInst(
+      const AddOwnPrivateFieldInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseDefineOwnPropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AddOwnPrivateFieldInstKind;
+  }
+};
+
 class DefineOwnGetterSetterInst : public Instruction {
   DefineOwnGetterSetterInst(const DefineOwnGetterSetterInst &) = delete;
   void operator=(const DefineOwnGetterSetterInst &) = delete;

@@ -568,6 +568,16 @@ Arguments | *%value* is the value to be stored. *%object*, which must be an obje
 Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
+### AddOwnPrivateFieldInst
+
+AddOwnPrivateFieldInst | _
+--- | --- |
+Description | Add a new private own field.
+Example |   `%4 = AddOwnPrivateFieldInst %value, %object, %property : symbol, %enumerable : boolean`
+Arguments | *%value* is the value to be stored. *%object* must be an object. *%property* must be the value of a symbol. *%enumerable* should always be false.
+Semantics | This instruction is used to initialize private fields on objects. As such it implements ES2024 7.3.27 PrivateFieldAdd- except this instruction will assume that the property being added does not already exist.
+Effects | May read and write memory.
+
 ### DefineOwnGetterSetterInst
 
 DefineOwnGetterSetterInst | _

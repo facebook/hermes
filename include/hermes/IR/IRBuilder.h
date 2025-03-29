@@ -463,6 +463,10 @@ class IRBuilder {
       Value *storedValue,
       Value *object,
       Literal *property);
+  AddOwnPrivateFieldInst *createAddOwnPrivateFieldInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
 
   DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,

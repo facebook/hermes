@@ -664,6 +664,15 @@ DefineNewOwnPropertyInst *IRBuilder::createDefineNewOwnPropertyInst(
   insert(inst);
   return inst;
 }
+AddOwnPrivateFieldInst *IRBuilder::createAddOwnPrivateFieldInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto *inst = new AddOwnPrivateFieldInst(
+      storedValue, object, property, getLiteralBool(false));
+  insert(inst);
+  return inst;
+}
 
 DefineOwnGetterSetterInst *IRBuilder::createDefineOwnGetterSetterInst(
     Value *storedGetter,

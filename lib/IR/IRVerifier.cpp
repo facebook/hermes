@@ -1072,6 +1072,17 @@ bool Verifier::visitDefineNewOwnPropertyInst(
       "DefineNewOwnPropertyInst::IsEnumerable must be true");
   return true;
 }
+bool Verifier::visitAddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getProperty()->getType().isPrivateNameType(),
+      "AddOwnPrivateFieldInst::Property must be a private name");
+  AssertIWithMsg(
+      Inst,
+      !Inst.getIsEnumerable(),
+      "AddOwnPrivateFieldInst::IsEnumerable must be false");
+  return true;
+}
 
 bool Verifier::visitDefineOwnGetterSetterInst(
     const DefineOwnGetterSetterInst &Inst) {

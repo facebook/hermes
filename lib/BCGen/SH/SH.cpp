@@ -1312,6 +1312,9 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ", NULL);\n";
   }
+  void generateAddOwnPrivateFieldInst(AddOwnPrivateFieldInst &inst) {
+    unimplemented(inst);
+  }
   void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
     os_.indent(2);
     os_ << "_sh_ljs_define_own_getter_setter_by_val(";

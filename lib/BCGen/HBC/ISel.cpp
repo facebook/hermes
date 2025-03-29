@@ -1044,6 +1044,14 @@ void HBCISel::generateDefineNewOwnPropertyInst(
         id);
   }
 }
+void HBCISel::generateAddOwnPrivateFieldInst(
+    AddOwnPrivateFieldInst *Inst,
+    BasicBlock *next) {
+  auto objReg = encodeValue(Inst->getObject());
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto symReg = encodeValue(Inst->getProperty());
+  BCFGen_->emitAddOwnPrivateBySym(objReg, valueReg, symReg);
+}
 
 void HBCISel::generateDefineOwnGetterSetterInst(
     DefineOwnGetterSetterInst *Inst,
