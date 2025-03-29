@@ -1016,6 +1016,12 @@ void SemanticResolver::visit(
   if (node->_computed)
     visitESTreeNode(*this, node->_key, node);
 
+  // If there are private instance methods, we will need to make an instance
+  // elements intializer function.
+  if (llvh::isa<PrivateNameNode>(node->_key) && !node->_static) {
+    curClassContext_->getOrCreateInstanceElementsInitFunctionInfo();
+  }
+
   // Visit the body.
   visitESTreeNode(*this, node->_value, node);
 }

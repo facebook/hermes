@@ -105,6 +105,12 @@ struct LegacyClassContext {
   llvh::DenseMap<ESTree::ClassPropertyNode *, Variable *>
       classComputedFieldKeys{};
 
+  /// First instance private method, or nullptr if there are none. If one
+  /// exists, then we will need to stamp the instance with the private instance
+  /// brand. The way to get the value of the instance brand is also through this
+  /// AST node.
+  ESTree::MethodDefinitionNode *firstInstancePrivateMethod{nullptr};
+
   explicit LegacyClassContext(Variable *cons, Variable *funcVar)
       : constructor(cons), instElemInitFuncVar(funcVar) {}
 };
@@ -460,11 +466,24 @@ class PrivateNameFunctionTable {
   /// Used for private names that define only a single function (methods or a
   /// single getter/setter.)
   struct SingleFunctionEntry : BaseEntry {
-    SingleFunctionEntry(Variable *classBrand) : BaseEntry(classBrand) {}
+    /// Closure value of function.
+    Variable *functionObject;
+    SingleFunctionEntry(Variable *classBrand, Variable *functionObject)
+        : BaseEntry(classBrand), functionObject(functionObject) {}
   };
   /// Used for private names that define both a getter and setter.
   struct GetterSetterEntry : BaseEntry {
-    GetterSetterEntry(Variable *classBrand) : BaseEntry(classBrand) {}
+    /// Closure value of the getter.
+    Variable *getterFunctionObject;
+    /// Closure value of the setter.
+    Variable *setterFunctionObject;
+    GetterSetterEntry(
+        Variable *classBrand,
+        Variable *getterFunctionObject,
+        Variable *setterFunctionObject)
+        : BaseEntry(classBrand),
+          getterFunctionObject(getterFunctionObject),
+          setterFunctionObject(setterFunctionObject) {}
   };
   // The following fields are declared as a deque so stable pointers can be
   // taken to the elements. The custom data of private name decls will point to

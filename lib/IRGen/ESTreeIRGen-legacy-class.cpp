@@ -132,9 +132,15 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateMethod's custom data is
         // PrivateNameFunctionTable::SingleFunctionEntry*.
         if (!decl->customData) {
-          auto &elem =
-              privateNameTable().singleFunctions.emplace_back(getPrivateBrand(
-                  decl->special == sema::Decl::Special::PrivateStatic));
+          Variable *methodClosure = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              decl->name,
+              Type::createObject(),
+              /* hidden */ true);
+          auto &elem = privateNameTable().singleFunctions.emplace_back(
+              getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic),
+              methodClosure);
           setDeclDataPrivate(decl, &elem);
         }
         break;
@@ -143,9 +149,15 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateGetter's custom data is
         // PrivateNameFunctionTable::SingleFunctionEntry*.
         if (!decl->customData) {
-          auto &elem =
-              privateNameTable().singleFunctions.emplace_back(getPrivateBrand(
-                  decl->special == sema::Decl::Special::PrivateStatic));
+          Variable *getterClosure = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              Twine("?private_get_") + decl->name.str(),
+              Type::createObject(),
+              /* hidden */ true);
+          auto &elem = privateNameTable().singleFunctions.emplace_back(
+              getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic),
+              getterClosure);
           setDeclDataPrivate(decl, &elem);
         }
         break;
@@ -154,9 +166,15 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateSetter's custom data is
         // PrivateNameFunctionTable::SingleFunctionEntry*.
         if (!decl->customData) {
-          auto &elem =
-              privateNameTable().singleFunctions.emplace_back(getPrivateBrand(
-                  decl->special == sema::Decl::Special::PrivateStatic));
+          Variable *setterClosure = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              Twine("?private_set_") + decl->name.str(),
+              Type::createObject(),
+              /* hidden */ true);
+          auto &elem = privateNameTable().singleFunctions.emplace_back(
+              getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic),
+              setterClosure);
           setDeclDataPrivate(decl, &elem);
         }
         break;
@@ -165,9 +183,21 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateGetterSetter's custom data is
         // PrivateNameFunctionTable::GetterSetter*.
         if (!decl->customData) {
-          auto &elem =
-              privateNameTable().accessors.emplace_back(getPrivateBrand(
-                  decl->special == sema::Decl::Special::PrivateStatic));
+          Variable *getterClosure = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              Twine("?private_get_") + decl->name.str(),
+              Type::createObject(),
+              /* hidden */ true);
+          Variable *setterClosure = Builder.createVariable(
+              curFunction()->curScope->getVariableScope(),
+              Twine("?private_set_") + decl->name.str(),
+              Type::createObject(),
+              /* hidden */ true);
+          auto &elem = privateNameTable().accessors.emplace_back(
+              getPrivateBrand(
+                  decl->special == sema::Decl::Special::PrivateStatic),
+              getterClosure,
+              setterClosure);
           setDeclDataPrivate(decl, &elem);
         }
         break;
@@ -315,6 +345,10 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
         }
       };
 
+  // Keep track of the first static private method. If one exists, then we will
+  // need to stamp the class function object with the private static brand. The
+  // way to get the value of the static brand is also through this AST node.
+  ESTree::MethodDefinitionNode *firstStaticPrivateMethod = nullptr;
   // Space used to convert property keys to strings.
   llvh::SmallVector<char, 32> buffer;
   // Used to provide a slightly more helpful name for the `Variable*`s that hold
@@ -329,11 +363,57 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
       if (method->_kind == kw_.identConstructor) {
         continue;
       }
-      if (llvh::isa<ESTree::PrivateNameNode>(method->_key)) {
-        Builder.getModule()->getContext().getSourceErrorManager().error(
-            method->_key->getSourceRange(),
-            Twine("private properties are not supported"));
-        return nullptr;
+      auto isStatic = method->_static;
+      auto *homeObject = isStatic ? classVar : clsPrototypeVar;
+      // Handle private methods & accessors. Here is where we generate the
+      // function object value, and initialize the `Variable*` that is assocated
+      // with each private name Decl.
+      if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key)) {
+        auto *ID = llvh::cast<ESTree::IdentifierNode>(PN->_id);
+        auto *funcValue = genFunctionExpression(
+            llvh::cast<ESTree::FunctionExpressionNode>(method->_value),
+            Mod->getContext().getPrivateNameIdentifier(ID->_name),
+            superClassNode,
+            Function::DefinitionKind::ES6Method,
+            homeObject,
+            method);
+        sema::Decl *decl = semCtx_.getExpressionDecl(ID);
+        // Handle private names that only define a single function.
+        if (decl->kind == sema::Decl::Kind::PrivateMethod ||
+            decl->kind == sema::Decl::Kind::PrivateGetter ||
+            decl->kind == sema::Decl::Kind::PrivateSetter) {
+          auto *entry =
+              getDeclDataPrivate<PrivateNameFunctionTable::SingleFunctionEntry>(
+                  decl);
+          Builder.createStoreFrameInst(
+              curScope, funcValue, entry->functionObject);
+        } else {
+          assert(
+              decl->kind == sema::Decl::Kind::PrivateGetterSetter &&
+              "unrecognized private decl kind");
+          auto *entry =
+              getDeclDataPrivate<PrivateNameFunctionTable::GetterSetterEntry>(
+                  decl);
+          // A name defining both a getter and setter defines two functions, one
+          // for each accessor. Make sure we are initializing the correct
+          // accessor.
+          Builder.createStoreFrameInst(
+              curScope,
+              funcValue,
+              method->_kind == kw_.identGet ? entry->getterFunctionObject
+                                            : entry->setterFunctionObject);
+        }
+        // If this is the first instance private method discovered, set the
+        // corresponding field in the class context.
+        if (!method->_static &&
+            !curFunction()->legacyClassContext->firstInstancePrivateMethod) {
+          curFunction()->legacyClassContext->firstInstancePrivateMethod =
+              method;
+        }
+        if (method->_static && !firstStaticPrivateMethod) {
+          firstStaticPrivateMethod = method;
+        }
+        continue;
       }
       Value *key;
       Identifier nameHint{};
@@ -344,8 +424,6 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
             propertyKeyAsString(buffer, method->_key));
         key = Builder.getLiteralString(nameHint);
       }
-      auto isStatic = method->_static;
-      auto *homeObject = isStatic ? classVar : clsPrototypeVar;
       auto *funcValue = genFunctionExpression(
           llvh::cast<ESTree::FunctionExpressionNode>(method->_value),
           nameHint,
@@ -384,6 +462,23 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   // Initialize the class context variables.
   Builder.createStoreFrameInst(curScope, createClass, classVar);
   Builder.createStoreFrameInst(curScope, clsPrototype, clsPrototypeVar);
+
+  // Make the static private methods available on the class *before* evaluating
+  // the static elements initializer, e.g. the following code should work:
+  //   class A {
+  //     static f1 = this.#m1();
+  //     static #m1() {}
+  //   }
+  if (firstStaticPrivateMethod) {
+    auto *privateName =
+        llvh::cast<ESTree::PrivateNameNode>(firstStaticPrivateMethod->_key);
+    auto *staticBrand = genPrivateNameValue(
+        llvh::cast<ESTree::IdentifierNode>(privateName->_id));
+    // All we have to do to "install" the static methods & accessors is add the
+    // private static brand to the class.
+    Builder.createAddOwnPrivateFieldInst(
+        Builder.getLiteralUndefined(), createClass, staticBrand);
+  }
 
   if (Function *staticElementsCode =
           genStaticElementsInitFunction(classNode, className)) {
@@ -815,6 +910,20 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
           Builder.setInsertionBlock(continueBB);
           hasCheckedDoubleInit = true;
         };
+
+    // If there is a private instance method, then this instance must be stamped
+    // with the private instance brand. This should be done before any other
+    // part of the constructor runs, because all other user JS should be able to
+    // access these private methods, e.g. the expression of a private field
+    // initializer.
+    if (auto *method = LC->firstInstancePrivateMethod) {
+      auto *privateName = llvh::cast<ESTree::PrivateNameNode>(method->_key);
+      auto *instanceBrand = genPrivateNameValue(
+          llvh::cast<ESTree::IdentifierNode>(privateName->_id));
+      checkForDoubleInit(instanceBrand);
+      Builder.createAddOwnPrivateFieldInst(
+          Builder.getLiteralUndefined(), thisParam, instanceBrand);
+    }
 
     auto *classBody = ESTree::getClassBody(legacyClassNode);
     llvh::SmallVector<char, 32> buffer;

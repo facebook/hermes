@@ -24,6 +24,14 @@ function simpleFields() {
   return A;
 }
 
+function simpleMethods() {
+  class B {
+    #m1() {}
+    static #m2() {}
+  }
+  return B;
+}
+
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:scope %VS0 []
@@ -32,12 +40,15 @@ function simpleFields() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       DeclareGlobalVarInst "simpleFields": string
-// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleFields(): functionCode
-// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "simpleFields": string
-// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
-// CHECK-NEXT:  %6 = LoadStackInst (:any) %4: any
-// CHECK-NEXT:       ReturnInst %6: any
+// CHECK-NEXT:       DeclareGlobalVarInst "simpleMethods": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleFields(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "simpleFields": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simpleMethods(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "simpleMethods": string
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %7: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS1 [A: any, A#1: any, #privateF1: privateName, #privateF4: privateName, ?A.prototype: object, ?A: object, <instElemInitFunc:A>: object]
@@ -71,13 +82,44 @@ function simpleFields() {
 // CHECK-NEXT:        ReturnInst %23: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS2 []
+// CHECK:scope %VS2 [B: any, B#1: any, #m1: object, ?instance_brand_B: privateName, #m2: object, ?static_brand_B: privateName, ?B.prototype: object, ?B: object, <instElemInitFunc:B>: object]
+
+// CHECK:function simpleMethods(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.B]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.B#1]: any
+// CHECK-NEXT:  %4 = CreatePrivateNameInst (:privateName) "B": string
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: privateName, [%VS2.?instance_brand_B]: privateName
+// CHECK-NEXT:  %6 = CreatePrivateNameInst (:privateName) "B": string
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: privateName, [%VS2.?static_brand_B]: privateName
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS2: any, %<instance_members_initializer:B>(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS2.<instElemInitFunc:B>]: object
+// CHECK-NEXT:  %10 = AllocStackInst (:object) $?anon_0_clsPrototype: any
+// CHECK-NEXT:  %11 = CreateClassInst (:object) %1: environment, %VS2: any, %B(): functionCode, empty: any, %10: object
+// CHECK-NEXT:  %12 = LoadStackInst (:object) %10: object
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %1: environment, %VS2: any, %#m1(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS2.#m1]: object
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %VS2: any, %#m2(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %15: object, [%VS2.#m2]: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.B#1]: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.?B]: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS2.?B.prototype]: object
+// CHECK-NEXT:  %20 = LoadFrameInst (:privateName) %1: environment, [%VS2.?static_brand_B]: privateName
+// CHECK-NEXT:        AddOwnPrivateFieldInst undefined: undefined, %11: object, %20: privateName, false: boolean
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.B]: any
+// CHECK-NEXT:  %23 = LoadFrameInst (:any) %1: environment, [%VS2.B]: any
+// CHECK-NEXT:        ReturnInst %23: any
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS3 []
 
 // CHECK:function <instance_members_initializer:A>(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS2: any, %1: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
 // CHECK-NEXT:       DefineOwnPropertyInst 20: number, %0: any, "f2": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst 30: number, %0: any, "f3": string, true: boolean
 // CHECK-NEXT:  %5 = LoadFrameInst (:privateName) %1: environment, [%VS1.#privateF4]: privateName
@@ -90,52 +132,99 @@ function simpleFields() {
 // CHECK-NEXT:        ThrowTypeErrorInst "Cannot initialize private field twice.": string
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS3 []
+// CHECK:scope %VS4 []
 
 // CHECK:base constructor A(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS4: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.<instElemInitFunc:A>]: object
 // CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, empty: any, true: boolean, empty: any, undefined: undefined, %0: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS4 [o: any]
+// CHECK:scope %VS5 [o: any]
 
 // CHECK:method checkF1(o: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
-// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.o]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.o]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:privateName) %0: environment, [%VS1.#privateF1]: privateName
-// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS4.o]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS5.o]: any
 // CHECK-NEXT:  %6 = BinaryPrivateInInst (:boolean) %4: privateName, %5: any
 // CHECK-NEXT:       ReturnInst %6: boolean
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS5 []
+// CHECK:scope %VS6 []
 
 // CHECK:method checkF4(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS5: any, %1: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS6: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:privateName) %1: environment, [%VS1.#privateF4]: privateName
 // CHECK-NEXT:  %4 = BinaryPrivateInInst (:boolean) %3: privateName, %0: any
 // CHECK-NEXT:       ReturnInst %4: boolean
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS6 []
+// CHECK:scope %VS7 []
 
 // CHECK:function <static_elements_initializer:A>(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %0: environment, [%VS1.?A]: object
 // CHECK-NEXT:  %3 = LoadFrameInst (:privateName) %0: environment, [%VS1.#privateF1]: privateName
 // CHECK-NEXT:       AddOwnPrivateFieldInst 10: number, %2: object, %3: privateName, false: boolean
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS8 []
+
+// CHECK:function <instance_members_initializer:B>(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS8: any, %1: environment
+// CHECK-NEXT:  %3 = LoadFrameInst (:privateName) %1: environment, [%VS2.?instance_brand_B]: privateName
+// CHECK-NEXT:  %4 = BinaryPrivateInInst (:any) %3: privateName, %0: any
+// CHECK-NEXT:       CondBranchInst %4: any, %BB2, %BB1
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       AddOwnPrivateFieldInst undefined: undefined, %0: any, %3: privateName, false: boolean
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ThrowTypeErrorInst "Cannot initialize private field twice.": string
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS9 []
+
+// CHECK:base constructor B(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS9: any, %1: environment
+// CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS2.<instElemInitFunc:B>]: object
+// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, empty: any, true: boolean, empty: any, undefined: undefined, %0: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS10 []
+
+// CHECK:method #m1(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS10: any, %0: environment
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS11 []
+
+// CHECK:method #m2(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS11: any, %0: environment
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
