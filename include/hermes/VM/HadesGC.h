@@ -277,6 +277,8 @@ class HadesGC final : public GCBase {
 
   void weakRefReadBarrier(GCCell *value);
 
+  void weakRefReadBarrier(SymbolID value);
+
   /// \}
 
   /// Returns whether an external allocation of the given \p size fits

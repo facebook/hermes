@@ -29,6 +29,7 @@ struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptorDefault,
   void accept(GCCell *&ptr) override;
   void accept(const GCCell *ptr);
   void acceptWeak(GCCell *&ptr) override;
+  void acceptWeakSym(WeakRootSymbolID &ws) override;
   void acceptHV(HermesValue &hv) override;
   void acceptSHV(SmallHermesValue &hv) override;
   void acceptSym(SymbolID sym) override;

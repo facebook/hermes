@@ -127,6 +127,19 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 #endif
   }
 
+  void acceptWeakSym(WeakRootSymbolID &ws) override {
+    if (ws.isInvalid()) {
+      return;
+    }
+    SymbolID id = ws.getNoBarrierUnsafe();
+    assert(
+        id.unsafeGetIndex() < markedSymbols_.size() &&
+        "Tried to mark a weak symbol not in range");
+    if (!markedSymbols_[id.unsafeGetIndex()]) {
+      ws = SymbolID::empty();
+    }
+  }
+
   void acceptHV(HermesValue &hv) override {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());

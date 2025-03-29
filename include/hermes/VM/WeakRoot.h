@@ -10,6 +10,7 @@
 
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCDecl.h"
+#include "hermes/VM/SymbolID.h"
 
 namespace hermes {
 namespace vm {
@@ -89,6 +90,23 @@ class WeakRoot final : public WeakRootBase {
   WeakRoot &operator=(CompressedPointer ptr) {
     WeakRootBase::operator=(ptr);
     return *this;
+  }
+};
+
+/// A SymbolID which is weakly held and is known to the GC.
+class WeakRootSymbolID final : protected SymbolID {
+ public:
+  constexpr WeakRootSymbolID() : SymbolID() {}
+
+  explicit WeakRootSymbolID(SymbolID id) : SymbolID(id) {}
+
+  using SymbolID::operator=;
+  using SymbolID::operator==;
+  using SymbolID::isInvalid;
+
+  inline SymbolID get(GC &gc);
+  inline SymbolID getNoBarrierUnsafe() {
+    return (SymbolID)(*this);
   }
 };
 
