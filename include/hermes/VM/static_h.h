@@ -85,6 +85,7 @@ typedef struct SHUnit {
   /// Sizes of the property caches.
   uint32_t num_read_prop_cache_entries;
   uint32_t num_write_prop_cache_entries;
+  uint32_t num_private_name_cache_entries;
 
   /// Pool of ASCII strings.
   const char *ascii_pool;
@@ -112,6 +113,10 @@ typedef struct SHUnit {
   /// `num_read_prop_cache_entries` elements.  Must be zeroed
   /// initially.
   SHReadPropertyCacheEntry *read_prop_cache;
+  /// Private name cache. Points to an array with
+  /// `num_private_name_cache_entries` elements.  Must be zeroed
+  /// initially.
+  SHPrivateNameCacheEntry *private_name_cache;
 
   /// Object key buffer.
   const unsigned char *obj_key_buffer;

@@ -78,6 +78,16 @@ static_assert(
 static_assert(
     offsetof(SHReadPropertyCacheEntry, slot) ==
     offsetof(ReadPropertyCacheEntry, slot));
+static_assert(sizeof(SHPrivateNameCacheEntry) == sizeof(PrivateNameCacheEntry));
+static_assert(
+    offsetof(SHPrivateNameCacheEntry, clazz) ==
+    offsetof(PrivateNameCacheEntry, clazz));
+static_assert(
+    offsetof(SHPrivateNameCacheEntry, nameVal) ==
+    offsetof(PrivateNameCacheEntry, nameVal));
+static_assert(
+    offsetof(SHPrivateNameCacheEntry, slot) ==
+    offsetof(PrivateNameCacheEntry, slot));
 
 } // namespace vm
 } // namespace hermes

@@ -17,6 +17,8 @@ typedef uint32_t SHCompressedPointerRawType;
 typedef uintptr_t SHCompressedPointerRawType;
 #endif
 
+typedef uint32_t SHWeakRootSymbolID;
+
 typedef struct SHNativeFuncInfo SHNativeFuncInfo;
 typedef struct SHUnit SHUnit;
 
@@ -34,6 +36,12 @@ typedef struct SHReadPropertyCacheEntry {
   SHCompressedPointerRawType negMatchClazz;
   uint32_t slot;
 } SHReadPropertyCacheEntry;
+
+typedef struct SHPrivateNameCacheEntry {
+  SHCompressedPointerRawType clazz;
+  SHWeakRootSymbolID nameVal;
+  uint32_t slot;
+} SHPrivateNameCacheEntry;
 
 /// Struct mirroring the layout of GCCell.
 typedef struct SHGCCell {

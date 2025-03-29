@@ -483,6 +483,7 @@ class InstrGen {
       ModuleGen &moduleGen,
       uint32_t &nextWriteCacheIdx,
       uint32_t &nextReadCacheIdx,
+      uint32_t &nextPrivateNameCacheIdx,
       const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs)
       : os_(os),
         ra_(ra),
@@ -492,6 +493,7 @@ class InstrGen {
         moduleGen_(moduleGen),
         nextWriteCacheIdx_(nextWriteCacheIdx),
         nextReadCacheIdx_(nextReadCacheIdx),
+        nextPrivateNameCacheIdx_(nextPrivateNameCacheIdx),
         tryIDs_(tryIDs) {
     if (!tryIDs_.empty())
       enclosingTrys_ = *findEnclosingTrysPerBlock(&F_);
@@ -536,6 +538,7 @@ class InstrGen {
   /// These starts at 0 and increments every time a cache index is used
   uint32_t &nextWriteCacheIdx_;
   uint32_t &nextReadCacheIdx_;
+  uint32_t &nextPrivateNameCacheIdx_;
 
   /// Map from TryStart to an ID for the try/catch.
   /// Set the tryState to the ID when entering the try, restore it when leaving.
@@ -624,6 +627,10 @@ class InstrGen {
   }
   llvh::raw_ostream &genReadIC(LiteralString *LS) {
     return os_ << "get_read_prop_cache(shUnit) + " << nextReadCacheIdx_++;
+  }
+  llvh::raw_ostream &genPrivateNameIC(Value *privateName) {
+    return os_ << "get_private_name_cache(shUnit) + "
+               << nextPrivateNameCacheIdx_++;
   }
 
   /// Helper to generate a value in a register,
@@ -2553,6 +2560,7 @@ void generateFunction(
     ModuleGen &moduleGen,
     uint32_t &nextWriteCacheIdx,
     uint32_t &nextReadCacheIdx,
+    uint32_t &nextPrivateNameCacheIdx,
     BytecodeGenerationOptions options) {
   auto PO = hermes::postOrderAnalysis(&F);
 
@@ -2613,7 +2621,15 @@ void generateFunction(
   OS << '\n';
 
   InstrGen instrGen(
-      OS, RA, bbMap, F, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, tryIDs);
+      OS,
+      RA,
+      bbMap,
+      F,
+      moduleGen,
+      nextWriteCacheIdx,
+      nextReadCacheIdx,
+      nextPrivateNameCacheIdx,
+      tryIDs);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
@@ -2899,6 +2915,7 @@ void generateModule(
   // -reuse-prop-cache is passed in.
   uint32_t nextWriteCacheIdx = 0;
   uint32_t nextReadCacheIdx = 0;
+  uint32_t nextPrivateNameCacheIdx = 0;
   ModuleGen moduleGen{M, options.optimizationEnabled};
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
@@ -2919,6 +2936,7 @@ static uint32_t unit_index;
 static inline SHSymbolID* get_symbols(SHUnit *);
 static inline SHWritePropertyCacheEntry* get_write_prop_cache(SHUnit *);
 static inline SHReadPropertyCacheEntry* get_read_prop_cache(SHUnit *);
+static inline SHPrivateNameCacheEntry* get_private_name_cache(SHUnit *);
 static const SHSrcLoc s_source_locations[];
 static SHNativeFuncInfo s_function_info_table[];
 )";
@@ -2938,9 +2956,16 @@ static SHNativeFuncInfo s_function_info_table[];
 
   M->assignIndexToVariables();
 
-  for (auto &F : *M)
+  for (auto &F : *M) {
     generateFunction(
-        F, OS, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, options);
+        F,
+        OS,
+        moduleGen,
+        nextWriteCacheIdx,
+        nextReadCacheIdx,
+        nextPrivateNameCacheIdx,
+        options);
+  }
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);
@@ -2962,6 +2987,8 @@ static SHNativeFuncInfo s_function_info_table[];
        << nextWriteCacheIdx << "];\n"
        << "  SHReadPropertyCacheEntry read_prop_cache_data[" << nextReadCacheIdx
        << "];\n"
+       << "  SHPrivateNameCacheEntry private_name_cache_data["
+       << nextPrivateNameCacheIdx << "];\n"
        << "  SHCompressedPointer object_literal_class_cache["
        << moduleGen.literalBuffers.objShapeTable.size() << "];\n};\n"
        << "SHUnit *CREATE_THIS_UNIT(void) {\n"
@@ -2973,7 +3000,8 @@ static SHNativeFuncInfo s_function_info_table[];
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
        << ".strings = s_strings, .symbols = unit_data->symbol_data,"
        << ".write_prop_cache = unit_data->write_prop_cache_data,"
-       << ".read_prop_cache = unit_data->read_prop_cache_data,"
+       << ".read_prop_cache = unit_data->read_prop_cache_data, "
+       << ".private_name_cache = unit_data->private_name_cache_data, "
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
@@ -2998,6 +3026,9 @@ SHWritePropertyCacheEntry *get_write_prop_cache(SHUnit *unit) {
 }
 SHReadPropertyCacheEntry *get_read_prop_cache(SHUnit *unit) {
   return ((struct UnitData *)unit)->read_prop_cache_data;
+}
+SHPrivateNameCacheEntry *get_private_name_cache(SHUnit *unit) {
+  return ((struct UnitData *)unit)->private_name_cache_data;
 }
 )";
     if (options.emitMain) {
