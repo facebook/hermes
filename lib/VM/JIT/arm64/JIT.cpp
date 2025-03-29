@@ -320,6 +320,7 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 EMIT_UNIMPLEMENTED(CreatePrivateName)
+EMIT_UNIMPLEMENTED(PrivateIsIn)
 
 #undef EMIT_UNIMPLEMENTED
 

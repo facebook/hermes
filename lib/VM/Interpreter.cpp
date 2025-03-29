@@ -2842,6 +2842,31 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(PrivateIsIn) {
+        if (LLVM_LIKELY(O3REG(PrivateIsIn).isObject())) {
+          auto *obj = vmcast<JSObject>(O3REG(PrivateIsIn));
+          auto cacheIdx = ip->iPrivateIsIn.op4;
+          auto *cacheEntry = curCodeBlock->getPrivateNameCacheEntry(cacheIdx);
+          CompressedPointer clazzPtr{obj->getClassGCPtr()};
+          SymbolID nameSym = O2REG(PrivateIsIn).getSymbol();
+          // If we have a cache hit, reuse the cached result.
+          if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr) &&
+              LLVM_LIKELY(cacheEntry->nameVal == nameSym)) {
+            O1REG(PrivateIsIn) = HermesValue::encodeBoolValue(cacheEntry->slot);
+            ip = NEXTINST(PrivateIsIn);
+            DISPATCH;
+          }
+        }
+        CAPTURE_IP_ASSIGN(
+            auto res, casePrivateIsIn(runtime, frameRegs, curCodeBlock, ip));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(PrivateIsIn);
+        DISPATCH;
+      }
+
       CASE(TypeOfIs) {
         TypeOfIsTypes types(ip->iTypeOfIs.op3);
         O1REG(TypeOfIs) =

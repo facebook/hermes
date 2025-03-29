@@ -153,6 +153,43 @@ ExecutionStatus Interpreter::caseCreatePrivateName(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus Interpreter::casePrivateIsIn(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    CodeBlock *curCodeBlock,
+    const Inst *ip) {
+  if (!LLVM_LIKELY(O3REG(PrivateIsIn).isObject())) {
+    return runtime.raiseTypeError("right operand of 'in' is not an object");
+  }
+  NamedPropertyDescriptor desc;
+  auto res = JSObject::getOwnNamedDescriptor(
+      Handle<JSObject>::vmcast(&O3REG(PrivateIsIn)),
+      runtime,
+      O2REG(PrivateIsIn).getSymbol(),
+      desc);
+  assert(
+      !res ||
+      desc.flags.privateName &&
+          "if a property exists here it should be a private property.");
+  auto *obj = vmcast<JSObject>(O3REG(PrivateIsIn));
+  auto cacheIdx = ip->iPrivateIsIn.op4;
+  // We want to be able to cache negative results here, as in cache the answer
+  // that an object with a given HC does not contain a property. However, in
+  // dictionary mode the HC wouldn't change even if the object subsequently gets
+  // the private property added to it. So we must disable caching when the HC is
+  // a dictionary.
+  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED &&
+      !obj->getClass(runtime)->isDictionary()) {
+    auto *cacheEntry = curCodeBlock->getPrivateNameCacheEntry(cacheIdx);
+    cacheEntry->clazz = obj->getClassGCPtr();
+    SymbolID nameSym = O2REG(PrivateIsIn).getSymbol();
+    cacheEntry->nameVal = nameSym;
+    cacheEntry->slot = res;
+  }
+  O1REG(PrivateIsIn) = HermesValue::encodeBoolValue(res);
+  return ExecutionStatus::RETURNED;
+}
+
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,

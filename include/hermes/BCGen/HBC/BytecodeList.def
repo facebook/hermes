@@ -246,6 +246,14 @@ DEFINE_OPCODE_3(InstanceOf, Reg8, Reg8, Reg8)
 /// Arg1 = Arg2 in Arg3 (JS relational 'in')
 DEFINE_OPCODE_3(IsIn, Reg8, Reg8, Reg8)
 
+/// Arg1 = Arg2 in Arg3 (JS relational 'in' for private names.)
+/// Arg2 must be a symbol.
+/// Arg4 is a private name cache index used to speed up the above operation.
+/// Note that this performs different logic than a normal `in` check. This
+/// instruction does not consult the prototype chain or trigger any proxy
+/// traps. It is a direct check on the own properties of the input object.
+DEFINE_OPCODE_4(PrivateIsIn, Reg8, Reg8, Reg8, Reg8)
+
 /// Arg1 = typeof Arg2 is in Arg3 (TypeOfIsTypes, see Typeof.h)
 DEFINE_OPCODE_3(TypeOfIs, Reg8, Reg8, UInt16)
 
