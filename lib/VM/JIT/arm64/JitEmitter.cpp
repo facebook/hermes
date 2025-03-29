@@ -3319,6 +3319,47 @@ void Emitter::getOwnPrivateBySym(
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
 }
+void Emitter::putOwnPrivateBySym(
+    FR frTarget,
+    FR frKey,
+    FR frValue,
+    uint8_t cacheIdx) {
+  comment(
+      "// PutOwnPrivateBySym r%u, r%u, r%u, cache %u",
+      frTarget.index(),
+      frKey.index(),
+      frValue.index(),
+      cacheIdx);
+
+  syncAllFRTempExcept({});
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frValue);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frValue);
+
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x4, 0);
+  } else {
+    a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsPrivateNameCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x4, a64::x4, sizeof(SHPrivateNameCacheEntry) * cacheIdx);
+  }
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHPrivateNameCacheEntry *),
+      _sh_ljs_put_own_private_by_sym);
+}
 
 void Emitter::getByIdImpl(
     FR frRes,

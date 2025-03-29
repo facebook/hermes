@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -O -exec %s | %FileCheck --match-full-lines %s
 
 print("private in");
 // CHECK-LABEL: private in

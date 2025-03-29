@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -test262 -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -test262 -O -exec %s | %FileCheck --match-full-lines %s
 
 print('private properties');
 // CHECK-LABEL: private properties

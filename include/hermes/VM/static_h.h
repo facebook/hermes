@@ -659,6 +659,14 @@ SHERMES_EXPORT void _sh_ljs_add_own_private_by_sym(
     SHLegacyValue *key,
     SHLegacyValue *value);
 
+/// Store to a private field.
+SHERMES_EXPORT void _sh_ljs_put_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *privateNameKey,
+    SHLegacyValue *value,
+    SHPrivateNameCacheEntry *privateNameCacheEntry);
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_del_by_id_strict(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key);
 SHERMES_EXPORT SHLegacyValue

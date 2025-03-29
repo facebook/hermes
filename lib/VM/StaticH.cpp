@@ -1487,6 +1487,48 @@ extern "C" void _sh_ljs_add_own_private_by_sym(
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
 }
+extern "C" void _sh_ljs_put_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *privateNameKey,
+    SHLegacyValue *value,
+    SHPrivateNameCacheEntry *privateNameCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&]() -> ExecutionStatus {
+    GCScopeMarkerRAII marker{runtime};
+    auto *targetPHV = toPHV(target);
+    if (LLVM_LIKELY(targetPHV->isObject())) {
+      auto *valuePHV = toPHV(value);
+      SmallHermesValue shv =
+          SmallHermesValue::encodeHermesValue(*valuePHV, runtime);
+      auto *privateNameKeyPHV = toPHV(privateNameKey);
+      auto *cacheEntry =
+          reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+      auto *obj = vmcast<JSObject>(*targetPHV);
+      CompressedPointer clazzPtr{obj->getClassGCPtr()};
+      if (LLVM_LIKELY(
+              cacheEntry && cacheEntry->clazz == clazzPtr &&
+              cacheEntry->nameVal == privateNameKeyPHV->getSymbol())) {
+        // Fast path, use the cached slot
+        JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
+        return ExecutionStatus::RETURNED;
+      }
+      // Slow path, call setPrivateField
+      return JSObject::setPrivateField(
+          Handle<JSObject>::vmcast(targetPHV),
+          runtime,
+          Handle<SymbolID>::vmcast(privateNameKeyPHV),
+          Handle<>(valuePHV),
+          cacheEntry);
+    } else {
+      return runtime.raiseTypeError(
+          "cannot write private property of a non-object");
+    }
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+}
 
 static HermesValue delByVal(
     Runtime &runtime,

@@ -320,7 +320,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(PutOwnPrivateBySym)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -743,6 +742,12 @@ inline void JITContext::Compiler::emitGetOwnPrivateBySym(
     const inst::GetOwnPrivateBySymInst *inst) {
   em_.getOwnPrivateBySym(
       FR(inst->op1), FR(inst->op2), FR(inst->op4), inst->op3);
+}
+
+inline void JITContext::Compiler::emitPutOwnPrivateBySym(
+    const inst::PutOwnPrivateBySymInst *inst) {
+  em_.putOwnPrivateBySym(
+      FR(inst->op1), FR(inst->op4), FR(inst->op2), inst->op3);
 }
 
 inline void JITContext::Compiler::emitGetByIndex(
