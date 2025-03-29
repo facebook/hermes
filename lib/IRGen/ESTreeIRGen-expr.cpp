@@ -2089,10 +2089,20 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
     return LHS;
   }
 
-  Value *LHS = genExpression(bin->_left);
+  ValueKind kind;
+  Value *LHS;
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(bin->_left)) {
+    // If we are seeing the form `#privateName in val`, generate a different
+    // kind of `in` operator.
+    assert(bin->_operator->str() == "in");
+    kind = ValueKind::BinaryPrivateInInstKind;
+    LHS = genPrivateNameValue(llvh::cast<ESTree::IdentifierNode>(PN->_id));
+  } else {
+    kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
+    LHS = genExpression(bin->_left);
+  }
   Value *RHS = genExpression(bin->_right);
 
-  ValueKind kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
   Instruction *res = Builder.createBinaryOperatorInst(LHS, RHS, kind);
 
   // If the binary operator is a comparison, set the result type to boolean.
@@ -2484,6 +2494,22 @@ Value *ESTreeIRGen::genIdentifierExpression(
 
   // Typeof <variable> does not throw.
   return emitLoad(Var, afterTypeOf);
+}
+
+Value *ESTreeIRGen::genPrivateNameValue(ESTree::IdentifierNode *Iden) {
+  sema::Decl *decl = semCtx_.getExpressionDecl(Iden);
+  assert(decl && "identifier must be resolved");
+  assert(
+      sema::Decl::isKindPrivateName(decl->kind) &&
+      "must refer to a private name");
+  // Fields each have their own name value.
+  if (decl->kind == sema::Decl::Kind::PrivateField) {
+    return emitLoad(getDeclData(decl), false);
+  }
+  // Methods and accessors all share the same class brand symbol as their "name
+  // value".
+  auto *entry = getDeclDataPrivate<PrivateNameFunctionTable::BaseEntry>(decl);
+  return emitLoad(entry->classBrand, false);
 }
 
 Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {

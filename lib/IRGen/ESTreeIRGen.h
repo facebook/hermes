@@ -1007,6 +1007,12 @@ class ESTreeIRGen {
       ESTree::IdentifierNode *Iden,
       bool afterTypeOf);
 
+  /// Generate IR for the value of the private name. For fields, this is just
+  /// the value of the name itself. But for methods and accessors, this is the
+  /// class brand. The class is the class in which the private name of \p Iden
+  /// was declared.
+  Value *genPrivateNameValue(ESTree::IdentifierNode *Iden);
+
   Value *genMetaProperty(ESTree::MetaPropertyNode *MP);
 
   /// Generate the new.target of the current function.
