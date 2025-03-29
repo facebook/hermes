@@ -460,6 +460,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
          &indexNames,
          &tmpHandle,
          &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+          if (desc.flags.privateName)
+            return;
           if (!isPropertyNamePrimitive(id)) {
             return;
           }
@@ -510,6 +512,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
          &idHandle,
          hostObjectSymbolCount,
          &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+          if (desc.flags.privateName)
+            return;
           if (!isSymbolPrimitive(id)) {
             return;
           }

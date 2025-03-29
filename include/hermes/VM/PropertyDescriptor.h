@@ -61,6 +61,8 @@ struct PropertyFlags {
       /// descriptors synthesized by get*Descriptor methods, and never
       /// set in descriptors stored persistently.
       uint16_t proxyObject : 1;
+      /// The property is a private name.
+      uint16_t privateName : 1;
     };
 
     uint16_t _flags;
