@@ -1126,6 +1126,18 @@ void HBCISel::generateLoadPropertyInst(
   auto propReg = encodeValue(prop);
   BCFGen_->emitGetByVal(resultReg, objReg, propReg);
 }
+void HBCISel::generateLoadOwnPrivateFieldInst(
+    LoadOwnPrivateFieldInst *Inst,
+    BasicBlock *next) {
+  auto resultReg = encodeValue(Inst);
+  auto objReg = encodeValue(Inst->getObject());
+  auto prop = Inst->getProperty();
+  auto propReg = encodeValue(prop);
+  uint32_t privateNameCacheIdx = acquirePrivateNameCacheIndex(
+      Inst->getProperty(), PrivateNameOperationKind::ReadWrite);
+  BCFGen_->emitGetOwnPrivateBySym(
+      resultReg, objReg, privateNameCacheIdx, propReg);
+}
 
 void HBCISel::generateLoadPropertyWithReceiverInst(
     LoadPropertyWithReceiverInst *Inst,

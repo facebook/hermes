@@ -998,6 +998,14 @@ bool Verifier::visitLoadPropertyWithReceiverInst(
     const LoadPropertyWithReceiverInst &Inst) {
   return true;
 }
+bool Verifier::visitLoadOwnPrivateFieldInst(
+    const LoadOwnPrivateFieldInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getProperty()->getType().isPrivateNameType(),
+      "LoadOwnPrivateFieldInst must be loading a private name");
+  return true;
+}
 bool Verifier::visitTryLoadGlobalPropertyInst(
     const TryLoadGlobalPropertyInst &Inst) {
   return true;

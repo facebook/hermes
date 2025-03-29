@@ -489,6 +489,16 @@ Arguments | %object is the object to load from. %property is the name of the fie
 Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation GetValue (ES5.1. sec 8.7.1) is then applied to the returned Reference.
 Effects | May read and write memory or throw.
 
+### LoadOwnPrivateFieldInst
+
+LoadOwnPrivateFieldInst | _
+--- | --- |
+Description | Loads the value of a private name from a JavaScript object.
+Example |  %0 = LoadOwnPrivateFieldInst %object, %property : symbol
+Arguments | %object is the object to load from. %property is the private name symbol.
+Semantics | The instruction honors ES2024 7.3.30 PrivateGet. It looks up a private name on the object and throws if it does not exist. However, this does not have to deal with accessors or methods because those are stored outside of the instance.
+Effects | May execute JS.
+
 TryLoadGlobalPropertyInst | _
 --- | --- |
 Description | Loads the value of an existing field from the global object or throw if it doesn't exist.

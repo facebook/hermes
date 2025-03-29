@@ -533,6 +533,14 @@ LoadPropertyWithReceiverInst *IRBuilder::createLoadPropertyWithReceiverInst(
   return LPI;
 }
 
+LoadOwnPrivateFieldInst *IRBuilder::createLoadOwnPrivateFieldInst(
+    Value *object,
+    Value *property) {
+  auto LPI = new LoadOwnPrivateFieldInst(object, property);
+  insert(LPI);
+  return LPI;
+}
+
 TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
     LiteralString *property) {
   auto *inst = new TryLoadGlobalPropertyInst(getGlobalObject(), property);

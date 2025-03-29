@@ -418,6 +418,9 @@ class IRBuilder {
       Value *object,
       Value *property,
       Value *receiver);
+  LoadOwnPrivateFieldInst *createLoadOwnPrivateFieldInst(
+      Value *object,
+      Value *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       LiteralString *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(

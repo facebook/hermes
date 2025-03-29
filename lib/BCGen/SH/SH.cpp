@@ -1404,6 +1404,9 @@ class InstrGen {
     generateRegister(*inst.getReceiver());
     os_ << ");\n";
   }
+  void generateLoadOwnPrivateFieldInst(LoadOwnPrivateFieldInst &inst) {
+    unimplemented(inst);
+  }
   void generateTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst &inst) {
     os_.indent(2);
     generateRegister(inst);

@@ -594,6 +594,9 @@ class TypeInferenceImpl {
   Type inferLoadPropertyWithReceiverInst(LoadPropertyWithReceiverInst *inst) {
     return Type::createAnyType();
   }
+  Type inferLoadOwnPrivateFieldInst(LoadOwnPrivateFieldInst *inst) {
+    return Type::createAnyType();
+  }
   Type inferTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst *inst) {
     return Type::createAnyType();
   }

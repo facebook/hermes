@@ -2185,6 +2185,31 @@ class LoadPropertyWithReceiverInst : public BaseLoadPropertyInst {
   }
 };
 
+class LoadOwnPrivateFieldInst : public BaseLoadPropertyInst {
+  LoadOwnPrivateFieldInst(const LoadOwnPrivateFieldInst &) = delete;
+  void operator=(const LoadOwnPrivateFieldInst &) = delete;
+
+ public:
+  explicit LoadOwnPrivateFieldInst(Value *object, Value *property)
+      : BaseLoadPropertyInst(
+            ValueKind::LoadOwnPrivateFieldInstKind,
+            object,
+            property) {
+    assert(
+        property->getType().isPrivateNameType() &&
+        "can only load private name types");
+  }
+  explicit LoadOwnPrivateFieldInst(
+      const LoadOwnPrivateFieldInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseLoadPropertyInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LoadOwnPrivateFieldInstKind;
+  }
+};
+
 class TryLoadGlobalPropertyInst : public BaseLoadPropertyInst {
   TryLoadGlobalPropertyInst(const TryLoadGlobalPropertyInst &) = delete;
   void operator=(const TryLoadGlobalPropertyInst &) = delete;

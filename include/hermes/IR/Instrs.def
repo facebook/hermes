@@ -126,6 +126,7 @@ MARK_LAST(DeletePropertyInst)
 MARK_FIRST(BaseLoadPropertyInst, Instruction)
 DEF_VALUE(LoadPropertyInst, BaseLoadPropertyInst)
 DEF_VALUE(LoadPropertyWithReceiverInst, BaseLoadPropertyInst)
+DEF_VALUE(LoadOwnPrivateFieldInst, BaseLoadPropertyInst)
 DEF_VALUE(TryLoadGlobalPropertyInst, BaseLoadPropertyInst)
 MARK_LAST(BaseLoadPropertyInst)
 
