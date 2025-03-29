@@ -1616,6 +1616,16 @@ class ESTreeIRGen {
       Value *nameVal,
       ESTree::PrivateNameNode *nameNode);
 
+  /// Emit IR to store to a private name.
+  /// \param from value to perform the store on.
+  /// \param nameVal is the value of the private name.
+  /// \param nameNode
+  void emitPrivateStore(
+      Value *from,
+      Value *storedValue,
+      Value *nameVal,
+      ESTree::PrivateNameNode *nameNode);
+
  private:
   /// Search for the specified AST node in \c compiledEntities_ and return the
   /// associated IR value, or nullptr if not found.

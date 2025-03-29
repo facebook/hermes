@@ -274,6 +274,57 @@ Value *ESTreeIRGen::emitPrivateLookup(
   }
 }
 
+void ESTreeIRGen::emitPrivateStore(
+    Value *from,
+    Value *storedValue,
+    Value *nameVal,
+    ESTree::PrivateNameNode *nameNode) {
+  auto *ID = llvh::cast<ESTree::IdentifierNode>(nameNode->_id);
+  sema::Decl *decl = semCtx_.getExpressionDecl(ID);
+  assert(sema::Decl::isKindPrivateName(decl->kind) && "private decl required");
+  switch (decl->kind) {
+    case sema::Decl::Kind::PrivateField:
+      Builder.createStoreOwnPrivateFieldInst(storedValue, from, nameVal);
+      return;
+    case sema::Decl::Kind::PrivateMethod: {
+      emitPrivateBrandCheck(from, nameVal);
+      Builder.createThrowTypeErrorInst(
+          Builder.getLiteralString("Cannot overwrite a private method."));
+      Builder.setInsertionBlock(
+          Builder.createBasicBlock(Builder.getFunction()));
+      return;
+    }
+    case sema::Decl::Kind::PrivateGetter:
+      emitPrivateBrandCheck(from, nameVal);
+      Builder.createThrowTypeErrorInst(
+          Builder.getLiteralString("No field or setter with this name"));
+      Builder.setInsertionBlock(
+          Builder.createBasicBlock(Builder.getFunction()));
+      return;
+      // For setters, invoke the function directly.
+    case sema::Decl::Kind::PrivateSetter:
+    case sema::Decl::Kind::PrivateGetterSetter: {
+      auto *setterFunctionObject = decl->kind == sema::Decl::Kind::PrivateSetter
+          ? getDeclDataPrivate<PrivateNameFunctionTable::SingleFunctionEntry>(
+                decl)
+                ->functionObject
+          : getDeclDataPrivate<PrivateNameFunctionTable::GetterSetterEntry>(
+                decl)
+                ->setterFunctionObject;
+      emitPrivateBrandCheck(from, nameVal);
+      auto *funcVal = emitLoad(setterFunctionObject, false);
+      Builder.createCallInst(
+          funcVal,
+          Builder.getLiteralUndefined(),
+          from,
+          /* args */ {storedValue});
+      return;
+    }
+    default:
+      assert(false && "unhandled private decl");
+  }
+}
+
 Value *ESTreeIRGen::genLegacyClassExpression(
     ESTree::ClassExpressionNode *node,
     Identifier nameHint) {

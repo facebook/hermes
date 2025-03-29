@@ -178,3 +178,73 @@ class Forwarder {
 // CHECK-NEXT: TypeError
   }
 })();
+
+// --- Setting
+
+// Setting fields
+(function () {
+  class H {
+    #f1 = 10;
+    setField(v) {
+      this.#f1 = v;
+    }
+    getField() {
+      return this.#f1;
+    }
+  }
+  let inst = new H();
+  print(inst.getField());
+// CHECK-NEXT: 10
+  inst.setField(42);
+  print(inst.getField());
+// CHECK-NEXT: 42
+  try {
+    inst.setField.call({}, 42);
+  } catch (e) {
+    print(e.constructor.name);
+// CHECK-NEXT: TypeError
+  }
+  class H2 {
+    #f1;
+    #f2;
+    setFields(v1, v2) {
+      this.#f1 = v1 + v2;
+      this.#f2 = v1 * v2;
+    }
+    getSum() {
+      return this.#f1 + this.#f2;
+    }
+  }
+  inst = new H2();
+  inst.setFields(0, 0);
+  // Call it twice, to test when the cache is warm.
+  inst.setFields(42, 43);
+  print(inst.getSum());
+// CHECK-NEXT: 1891
+})();
+
+// Setting methods & accessors.
+(function () {
+  class I {
+    #m1 () {}
+    setInstanceMethod() {
+      this.#m1 = 10;
+    }
+    static #m2() {}
+    setStaticMethod(o) {
+      o.#m2 = 10;
+    }
+  }
+  try {
+    (new I()).setInstanceMethod();
+  } catch (e) {
+    print(e.constructor.name);
+// CHECK-NEXT: TypeError
+  }
+  try {
+    I.setStaticMethod.call(I);
+  } catch (e) {
+    print(e.constructor.name);
+// CHECK-NEXT: TypeError
+  }
+})();

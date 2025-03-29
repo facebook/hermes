@@ -1199,7 +1199,11 @@ void ESTreeIRGen::emitMemberStore(
         mem->getSourceRange(), "invalid tuple access");
   }
 
-  Builder.createStorePropertyInst(storedValue, baseValue, propValue);
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(mem))) {
+    emitPrivateStore(baseValue, storedValue, propValue, PN);
+  } else {
+    Builder.createStorePropertyInst(storedValue, baseValue, propValue);
+  }
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
