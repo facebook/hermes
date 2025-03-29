@@ -204,6 +204,7 @@ class HBCISel {
   /// The last emitted property cache index.
   uint8_t lastPropertyReadCacheIndex_{0};
   uint8_t lastPropertyWriteCacheIndex_{0};
+  uint8_t lastPrivateNameCacheIndex_{0};
 
   /// The next index to use for CacheNewObject.
   uint8_t numCacheNewObject_{0};
@@ -217,6 +218,13 @@ class HBCISel {
       propertyReadCacheIndexForId_;
   llvh::DenseMap<Identifier, uint8_t> propertyWriteCacheIndexForId_;
 
+  /// This enum is used to provide extra, distinguishing information to the
+  /// private name operations that would otherwise share a cache index.
+  enum class PrivateNameOperationKind : uint8_t { ReadWrite = 0, In };
+  /// Map from property name & kind to the private name cache index for that
+  /// name.
+  llvh::DenseMap<std::pair<Value *, int>, uint8_t> privateNameCacheIdx_;
+
   /// Compute and return the index to use for caching the read/write of a
   /// property with the given identifier name.
   /// \param k is the kind of property read cache being acquired.
@@ -224,6 +232,14 @@ class HBCISel {
       Identifier prop,
       PropCacheKind k = PropCacheKind::NormalIdentifier);
   uint8_t acquirePropertyWriteCacheIndex(Identifier prop);
+
+  /// Compute and return the index to use for caching some operation involving a
+  /// private name.
+  /// \param privateName is the symbol value of the private name.
+  /// \k is the kind of operation being performed.
+  uint8_t acquirePrivateNameCacheIndex(
+      Value *privateName,
+      PrivateNameOperationKind k);
 
   /// A cache mapping from buffer ID to filelname+source map.
   FileAndSourceMapIdCache &fileAndSourceMapIdCache_;
@@ -542,6 +558,7 @@ void HBCISel::populatePropertyCachingInfo() {
   BCFGen_->setHighestReadCacheIndex(lastPropertyReadCacheIndex_);
   BCFGen_->setHighestWriteCacheIndex(lastPropertyWriteCacheIndex_);
   BCFGen_->setNumCacheNewObject(numCacheNewObject_);
+  BCFGen_->setHighestPrivateNameCacheIndex(lastPrivateNameCacheIndex_);
 }
 
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
@@ -2410,6 +2427,40 @@ void HBCISel::run(SourceMapGenerator *outSourceMap) {
   addDebugLexicalInfo();
   populatePropertyCachingInfo();
   BCFGen_->bytecodeGenerationComplete();
+}
+
+uint8_t HBCISel::acquirePrivateNameCacheIndex(
+    Value *privateName,
+    PrivateNameOperationKind k) {
+  const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
+  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
+  uint8_t dummyZero = 0;
+  Value *cacheKey = privateName;
+  // Ideally we want to be returning the same cache index (when reuse is true)
+  // for usages of the same private name. Most usages of private names will be
+  // via a LoadFrame. Each LoadFrame is a different instruction, so we would
+  // never get matches on those `Value*`s. So instead, use the underlying
+  // variable as the Value* key, as that will be shared across different
+  // LoadFrames.
+  if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(privateName)) {
+    cacheKey = LFI->getLoadVariable();
+  }
+  auto &idx = reuse ? privateNameCacheIdx_[{cacheKey, (int)k}] : dummyZero;
+  if (idx) {
+    ++NumCachedNodes;
+    return idx;
+  }
+
+  if (LLVM_UNLIKELY(
+          lastPrivateNameCacheIndex_ == std::numeric_limits<uint8_t>::max())) {
+    ++NumUncachedNodes;
+    return PROPERTY_CACHING_DISABLED;
+  }
+
+  ++NumCachedNodes;
+  ++NumCacheSlots;
+  idx = ++lastPrivateNameCacheIndex_;
+  return idx;
 }
 
 uint8_t HBCISel::acquirePropertyReadCacheIndex(

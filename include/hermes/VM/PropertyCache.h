@@ -47,6 +47,21 @@ struct ReadPropertyCacheEntry {
   SlotIndex slot{0};
 };
 
+/// A cache entry used for all private name operations, e.g. reads, stores and
+/// `in` checks using a private name.
+struct PrivateNameCacheEntry {
+  /// Cached class.
+  WeakRoot<HiddenClass> clazz{nullptr};
+
+  /// Cached symbol value.
+  WeakRootSymbolID nameVal{};
+
+  /// Cached property index. In the case of reads and stores, this is the offset
+  /// where the property can be found. For existence checks, like the `in`
+  /// operator, this is just a boolean.
+  SlotIndex slot{0};
+};
+
 static_assert(
     sizeof(SHWritePropertyCacheEntry) == sizeof(WritePropertyCacheEntry));
 static_assert(

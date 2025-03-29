@@ -248,21 +248,22 @@ static_assert(
 /// for the first field in a "word", and
 ///   N(prevField, storageName, apiType, name, bits)
 /// for the following fields.
-#define FUNC_HEADER_FIELDS(F, N)                        \
-  /* first word */                                      \
-  F(uint32_t, w1, uint32_t, Offset, 25)                 \
-  N(Offset, w1, uint32_t, ParamCount, 5)                \
-  N(ParamCount, w1, uint32_t, LoopDepth, 2)             \
-  /* second word */                                     \
-  F(uint32_t, w2, uint32_t, BytecodeSizeInBytes, 14)    \
-  N(BytecodeSizeInBytes, w2, uint32_t, FunctionName, 8) \
-  N(FunctionName, w2, uint32_t, NumberRegCount, 5)      \
-  N(NumberRegCount, w2, uint32_t, NonPtrRegCount, 5)    \
-  /* third word, with flags below */                    \
-  F(uint8_t, b1, uint32_t, FrameSize, 8)                \
-  F(uint8_t, b2, uint8_t, HighestReadCacheIndex, 8)     \
-  F(uint8_t, b3, uint8_t, HighestWriteCacheIndex, 7)    \
-  N(HighestWriteCacheIndex, b3, uint8_t, NumCacheNewObject, 1)
+#define FUNC_HEADER_FIELDS(F, N)                               \
+  /* first word */                                             \
+  F(uint32_t, w1, uint32_t, Offset, 25)                        \
+  N(Offset, w1, uint32_t, ParamCount, 5)                       \
+  N(ParamCount, w1, uint32_t, LoopDepth, 2)                    \
+  /* second word */                                            \
+  F(uint32_t, w2, uint32_t, BytecodeSizeInBytes, 14)           \
+  N(BytecodeSizeInBytes, w2, uint32_t, FunctionName, 8)        \
+  N(FunctionName, w2, uint32_t, NumberRegCount, 5)             \
+  N(NumberRegCount, w2, uint32_t, NonPtrRegCount, 5)           \
+  /* third word, with flags below */                           \
+  F(uint8_t, b1, uint32_t, FrameSize, 8)                       \
+  F(uint8_t, b2, uint8_t, HighestReadCacheIndex, 8)            \
+  F(uint8_t, b3, uint8_t, HighestWriteCacheIndex, 6)           \
+  N(HighestWriteCacheIndex, b3, uint8_t, NumCacheNewObject, 1) \
+  N(HighestWriteCacheIndex, b3, uint8_t, HighestPrivateNameCacheIndex, 1)
 
 /**
  * Metadata of a function.
@@ -293,7 +294,8 @@ struct FunctionHeader {
       uint32_t functionNameID,
       uint8_t hiRCacheIndex,
       uint8_t hiWCacheIndex,
-      uint8_t numCacheNewObject) {
+      uint8_t numCacheNewObject,
+      uint8_t hiPrivateCacheIndex) {
     setOffset(0);
     setParamCount(paramCount);
     setLoopDepth(loopDepth);
@@ -305,6 +307,7 @@ struct FunctionHeader {
     setHighestReadCacheIndex(hiRCacheIndex);
     setHighestWriteCacheIndex(hiWCacheIndex);
     setNumCacheNewObject(numCacheNewObject);
+    setHighestPrivateNameCacheIndex(hiPrivateCacheIndex);
   }
 };
 
@@ -322,6 +325,12 @@ struct SmallFuncHeader {
   FUNC_HEADER_FIELDS(HERMES_FIRST_BITFIELD, HERMES_NEXT_BITFIELD)
 
   FunctionHeaderFlag flags{};
+
+#define M(storageTypeOrPrevField, storageName, apiType, name, bits) \
+  static constexpr apiType name##Max =                              \
+      std::numeric_limits<apiType>::max() >> (sizeof(apiType) * 8 - bits);
+  FUNC_HEADER_FIELDS(M, M)
+#undef M
 
   /// Make a small header equivalent to \p large, which is known to fit.
   SmallFuncHeader(const FunctionHeader &large) {

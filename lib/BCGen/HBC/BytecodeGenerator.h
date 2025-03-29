@@ -304,6 +304,9 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// Number of cache new object entries for this function.
   uint8_t numCacheNewObject_{0};
 
+  /// Highest accessed private name cache index in this function.
+  uint8_t highestPrivateNameCacheIndex_{0};
+
   /// The jump table for this function (if any)
   /// this vector consists of jump table for each SwitchImm instruction,
   /// laid out sequentially. Each entry is a relative jump.
@@ -525,6 +528,12 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     this->highestWriteCacheIndex_ = sz;
+  }
+  void setHighestPrivateNameCacheIndex(uint8_t sz) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    this->highestPrivateNameCacheIndex_ = sz;
   }
 
   void setNumCacheNewObject(uint8_t sz) {
