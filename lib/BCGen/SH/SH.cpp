@@ -2959,9 +2959,10 @@ static SHNativeFuncInfo s_function_info_table[];
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
        << "  SHWritePropertyCacheEntry write_prop_cache_data["
-       << nextWriteCacheIdx << "];\n;"
+       << nextWriteCacheIdx << "];\n"
        << "  SHReadPropertyCacheEntry read_prop_cache_data[" << nextReadCacheIdx
-       << "];\n;" << "  SHCompressedPointer object_literal_class_cache["
+       << "];\n"
+       << "  SHCompressedPointer object_literal_class_cache["
        << moduleGen.literalBuffers.objShapeTable.size() << "];\n};\n"
        << "SHUnit *CREATE_THIS_UNIT(void) {\n"
        << "  struct UnitData *unit_data = calloc(sizeof(struct UnitData), 1);\n"
