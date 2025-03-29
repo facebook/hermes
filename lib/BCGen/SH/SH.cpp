@@ -1432,7 +1432,16 @@ class InstrGen {
     os_ << ");\n";
   }
   void generateLoadOwnPrivateFieldInst(LoadOwnPrivateFieldInst &inst) {
-    unimplemented(inst);
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_get_own_private_by_sym(shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getProperty());
+    os_ << ", ";
+    genPrivateNameIC(inst.getProperty());
+    os_ << ");\n";
   }
   void generateTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst &inst) {
     os_.indent(2);

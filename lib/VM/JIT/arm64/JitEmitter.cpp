@@ -3277,6 +3277,49 @@ void Emitter::addOwnPrivateBySym(FR frTarget, FR frKey, FR frValue) {
       _sh_ljs_add_own_private_by_sym);
 }
 
+void Emitter::getOwnPrivateBySym(
+    FR frRes,
+    FR frTarget,
+    FR frKey,
+    uint8_t cacheIdx) {
+  comment(
+      "// GetOwnPrivateBySym r%u, r%u, r%u, cache %u",
+      frRes.index(),
+      frTarget.index(),
+      frKey.index(),
+      cacheIdx);
+
+  syncAllFRTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR());
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x3, 0);
+  } else {
+    a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsPrivateNameCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x3, a64::x3, sizeof(SHPrivateNameCacheEntry) * cacheIdx);
+  }
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *,
+          const SHLegacyValue *,
+          const SHLegacyValue *,
+          SHPrivateNameCacheEntry *),
+      _sh_ljs_get_own_private_by_sym);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::getByIdImpl(
     FR frRes,
     SHSymbolID symID,

@@ -332,6 +332,43 @@ _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   return res->getHermesValue();
 }
 
+extern "C" SHLegacyValue _sh_ljs_get_own_private_by_sym(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *privateNameKey,
+    SHPrivateNameCacheEntry *privateNameCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    auto *sourcePHV = toPHV(source);
+    if (LLVM_LIKELY(sourcePHV->isObject())) {
+      auto *privateNameKeyPHV = toPHV(privateNameKey);
+      auto *cacheEntry =
+          reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+      auto *obj = vmcast<JSObject>(*sourcePHV);
+      CompressedPointer clazzPtr{obj->getClassGCPtr()};
+      if (LLVM_LIKELY(
+              cacheEntry && cacheEntry->clazz == clazzPtr &&
+              cacheEntry->nameVal == privateNameKeyPHV->getSymbol())) {
+        return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
+            .unboxToHV(runtime);
+      }
+      return JSObject::getPrivateField(
+          Handle<JSObject>::vmcast(sourcePHV),
+          runtime,
+          Handle<SymbolID>::vmcast(privateNameKeyPHV),
+          cacheEntry);
+    } else {
+      return runtime.raiseTypeError(
+          "cannot read private property of a non-object");
+    }
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return *res;
+}
+
 extern "C" SHLegacyValue _sh_catch(
     SHRuntime *shr,
     SHLocals *locals,

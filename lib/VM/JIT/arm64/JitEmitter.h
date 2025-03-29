@@ -755,6 +755,8 @@ class Emitter {
 
   void addOwnPrivateBySym(FR frTarget, FR frKey, FR frValue);
 
+  void getOwnPrivateBySym(FR frRes, FR frTarget, FR frKey, uint8_t cacheIdx);
+
   void instanceOf(FR frRes, FR frLeft, FR frRight);
   void isIn(FR frRes, FR frLeft, FR frRight);
 

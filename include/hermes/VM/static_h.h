@@ -607,6 +607,12 @@ static inline SHLegacyValue _sh_ljs_get_by_val_rjs(
   return _sh_ljs_get_by_val_with_receiver_rjs(shr, source, key, source);
 }
 
+SHERMES_EXPORT SHLegacyValue _sh_ljs_get_own_private_by_sym(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *privateNameKey,
+    SHPrivateNameCacheEntry *privateNameCacheEntry);
+
 /// Get a property from the given object \p source given a valid array index
 /// \p key.
 SHERMES_EXPORT SHLegacyValue
