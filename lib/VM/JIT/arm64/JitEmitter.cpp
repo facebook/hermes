@@ -3254,6 +3254,29 @@ void Emitter::delByVal(FR frRes, FR frTarget, FR frKey, bool strict) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::addOwnPrivateBySym(FR frTarget, FR frKey, FR frValue) {
+  comment(
+      "// AddOwnPrivateBySym r%u, r%u, r%u",
+      frTarget.index(),
+      frKey.index(),
+      frValue.index());
+
+  syncAllFRTempExcept({});
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frValue);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frValue);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_add_own_private_by_sym);
+}
+
 void Emitter::getByIdImpl(
     FR frRes,
     SHSymbolID symID,

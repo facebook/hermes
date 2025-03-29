@@ -753,6 +753,8 @@ class Emitter {
 
   void delByVal(FR frRes, FR frTarget, FR frKey, bool strict);
 
+  void addOwnPrivateBySym(FR frTarget, FR frKey, FR frValue);
+
   void instanceOf(FR frRes, FR frLeft, FR frRight);
   void isIn(FR frRes, FR frLeft, FR frRight);
 

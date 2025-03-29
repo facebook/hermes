@@ -646,6 +646,13 @@ SHERMES_EXPORT void _sh_ljs_define_own_getter_setter_by_val(
     SHLegacyValue *setter,
     bool isEnumerable);
 
+/// Add a new private field. This must be a new property.
+SHERMES_EXPORT void _sh_ljs_add_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value);
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_del_by_id_strict(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key);
 SHERMES_EXPORT SHLegacyValue

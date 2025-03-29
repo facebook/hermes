@@ -1432,6 +1432,25 @@ extern "C" void _sh_ljs_define_own_getter_setter_by_val(
     _sh_throw_current(shr);
 }
 
+extern "C" void _sh_ljs_add_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value) {
+  Runtime &runtime{getRuntime(shr)};
+  ExecutionStatus cr = [&runtime, target, key, value]() {
+    GCScopeMarkerRAII marker{runtime};
+    return JSObject::defineNewOwnProperty(
+        Handle<JSObject>::vmcast(toPHV(target)),
+        runtime,
+        toPHV(key)->getSymbol(),
+        PropertyFlags::privateFieldPropertyFlags(),
+        Handle<>(toPHV(value)));
+  }();
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+
 static HermesValue delByVal(
     Runtime &runtime,
     PinnedHermesValue *target,

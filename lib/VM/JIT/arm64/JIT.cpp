@@ -320,7 +320,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(AddOwnPrivateBySym)
 EMIT_UNIMPLEMENTED(GetOwnPrivateBySym)
 EMIT_UNIMPLEMENTED(PutOwnPrivateBySym)
 
@@ -734,6 +733,11 @@ inline void JITContext::Compiler::emitPutByValWithReceiver(
 
 inline void JITContext::Compiler::emitDelByVal(const inst::DelByValInst *inst) {
   em_.delByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4);
+}
+
+inline void JITContext::Compiler::emitAddOwnPrivateBySym(
+    const inst::AddOwnPrivateBySymInst *inst) {
+  em_.addOwnPrivateBySym(FR(inst->op1), FR(inst->op3), FR(inst->op2));
 }
 
 inline void JITContext::Compiler::emitGetByIndex(
