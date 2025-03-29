@@ -95,6 +95,7 @@ class JITContext::Compiler {
             codeBlock,
             codeBlock->readPropertyCache(),
             codeBlock->writePropertyCache(),
+            codeBlock->privateNameCache(),
             // TODO: is getFrameSize() the right thing to call?
             codeBlock->getFrameSize(),
             [this](std::string &&message) {
@@ -319,7 +320,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(PrivateIsIn)
 EMIT_UNIMPLEMENTED(AddOwnPrivateBySym)
 EMIT_UNIMPLEMENTED(GetOwnPrivateBySym)
 EMIT_UNIMPLEMENTED(PutOwnPrivateBySym)
@@ -1105,6 +1105,11 @@ inline void JITContext::Compiler::emitToPropertyKey(
 inline void JITContext::Compiler::emitCreatePrivateName(
     const inst::CreatePrivateNameInst *inst) {
   em_.createPrivateName(FR(inst->op1), ID(inst->op2));
+}
+
+inline void JITContext::Compiler::emitPrivateIsIn(
+    const inst::PrivateIsInInst *inst) {
+  em_.privateIsIn(FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4);
 }
 
 inline void JITContext::Compiler::emitIteratorBegin(

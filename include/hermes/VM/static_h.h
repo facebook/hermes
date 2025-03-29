@@ -719,6 +719,11 @@ SHERMES_EXPORT SHLegacyValue
 _sh_ljs_mod_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_private_is_in_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *privateName,
+    SHLegacyValue *target,
+    SHPrivateNameCacheEntry *cacheEntry);
 SHERMES_EXPORT SHLegacyValue _sh_ljs_instance_of_rjs(
     SHRuntime *shr,
     SHLegacyValue *object,

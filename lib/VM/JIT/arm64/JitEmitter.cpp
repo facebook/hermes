@@ -561,6 +561,7 @@ Emitter::Emitter(
     CodeBlock *codeBlock,
     ReadPropertyCacheEntry *readPropertyCache,
     WritePropertyCacheEntry *writePropertyCache,
+    PrivateNameCacheEntry *privateNameCache,
     uint32_t numFrameRegs,
     const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
@@ -592,6 +593,8 @@ Emitter::Emitter(
       uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
   roOfsWritePropertyCachePtr_ =
       uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
+  roOfsPrivateNameCachePtr_ =
+      uint64Const((uint64_t)privateNameCache, "privateNameCache");
 }
 
 void Emitter::enter(uint32_t numCount, uint32_t npCount) {
@@ -4289,6 +4292,50 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
       *this,
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
       _sh_ljs_is_in_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::privateIsIn(
+    FR frRes,
+    FR frPrivateName,
+    FR frTarget,
+    uint8_t cacheIdx) {
+  comment(
+      "// PrivateIsIn r%u, r%u, r%u, cache %u",
+      frRes.index(),
+      frPrivateName.index(),
+      frTarget.index(),
+      cacheIdx);
+
+  syncAllFRTempExcept(
+      frRes != frPrivateName && frRes != frTarget ? frRes : FR());
+  syncToFrame(frPrivateName);
+  syncToFrame(frTarget);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frPrivateName);
+  loadFrameAddr(a64::x2, frTarget);
+
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x3, 0);
+  } else {
+    a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsPrivateNameCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x3, a64::x3, sizeof(SHPrivateNameCacheEntry) * cacheIdx);
+  }
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHPrivateNameCacheEntry *),
+      _sh_ljs_private_is_in_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));

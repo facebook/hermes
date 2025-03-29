@@ -1082,8 +1082,14 @@ class InstrGen {
         funcUntypedOp = "_sh_ljs_is_in_rjs";
         break;
       case ValueKind::BinaryPrivateInInstKind: // in
-        unimplemented(inst);
-        break;
+        os_ << "_sh_ljs_private_is_in_rjs(shr, ";
+        generateRegisterPtr(*inst.getLeftHandSide());
+        os_ << ", ";
+        generateRegisterPtr(*inst.getRightHandSide());
+        os_ << ", ";
+        genPrivateNameIC(inst.getLeftHandSide());
+        os_ << ");\n";
+        return;
       case ValueKind::BinaryInstanceOfInstKind:
         funcUntypedOp = "_sh_ljs_instance_of_rjs";
         break;

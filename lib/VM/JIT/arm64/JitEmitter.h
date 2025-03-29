@@ -377,9 +377,12 @@ class Emitter {
   /// Offset in RODATA of the pointer to the start of the read property
   /// cache.
   int32_t roOfsReadPropertyCachePtr_;
-  /// Offset in RODATA of the pointer to the start of the read property
+  /// Offset in RODATA of the pointer to the start of the write property
   /// cache.
   int32_t roOfsWritePropertyCachePtr_;
+  /// Offset in RODATA of the pointer to the start of the private name
+  /// cache.
+  int32_t roOfsPrivateNameCachePtr_;
 
   unsigned gpSaveCount_ = 0;
   unsigned vecSaveCount_ = 0;
@@ -399,6 +402,7 @@ class Emitter {
       CodeBlock *codeBlock,
       ReadPropertyCacheEntry *readPropertyCache,
       WritePropertyCacheEntry *writePropertyCache,
+      PrivateNameCacheEntry *privateNameCache,
       uint32_t numFrameRegs,
       const std::function<void(std::string &&message)> &longjmpError);
 
@@ -576,6 +580,8 @@ class Emitter {
   void getNextPName(FR frRes, FR frProps, FR frObj, FR frIdx, FR frSize);
 
   void toPropertyKey(FR frRes, FR frVal);
+
+  void privateIsIn(FR frRes, FR frPrivateName, FR frTarget, uint8_t cacheIdx);
 
   void createPrivateName(FR frRes, SHSymbolID symID);
 

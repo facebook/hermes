@@ -1815,6 +1815,64 @@ _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
     _sh_throw_current(shr);
   return _sh_ljs_bool(*cr);
 }
+extern "C" SHLegacyValue _sh_ljs_private_is_in_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *privateName,
+    SHLegacyValue *target,
+    SHPrivateNameCacheEntry *privateNameCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{false};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    if (LLVM_UNLIKELY(!_sh_ljs_is_object(*target))) {
+      (void)runtime.raiseTypeError("right operand of 'in' is not an object");
+      cr = ExecutionStatus::EXCEPTION;
+    } else {
+      auto *privateNamePHV = toPHV(privateName);
+      auto *obj = vmcast<JSObject>(*toPHV(target));
+      CompressedPointer clazzPtr{obj->getClassGCPtr()};
+      auto *cacheEntry =
+          reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+      if (LLVM_LIKELY(
+              cacheEntry && cacheEntry->clazz == clazzPtr &&
+              cacheEntry->nameVal == privateNamePHV->getSymbol())) {
+        // Fast path, reuse the cached result.
+        cr = cacheEntry->slot;
+      } else {
+        // Slow path, look up the symbol on the object's own properties.
+        auto *targetPHV = toPHV(target);
+        NamedPropertyDescriptor desc;
+        auto res = JSObject::getOwnNamedDescriptor(
+            Handle<JSObject>::vmcast(targetPHV),
+            runtime,
+            toPHV(privateName)->getSymbol(),
+            desc);
+        assert(
+            !res ||
+            desc.flags.privateName &&
+                "if a property exists here it should be a private property.");
+        // We want to be able to cache negative results here, as in cache the
+        // answer that an object with a given HC does not contain a property.
+        // However, in dictionary mode the HC wouldn't change even if the object
+        // subsequently gets the private property added to it. So we must
+        // disable caching when the HC is a dictionary.
+        if (privateNameCacheEntry &&
+            !vmcast<JSObject>(*targetPHV)->getClass(runtime)->isDictionary()) {
+          auto *cacheEntry =
+              reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+          cacheEntry->clazz = vmcast<JSObject>(*targetPHV)->getClassGCPtr();
+          SymbolID nameSym = privateNamePHV->getSymbol();
+          cacheEntry->nameVal = nameSym;
+          cacheEntry->slot = res;
+        }
+        cr = res;
+      }
+    }
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return _sh_ljs_bool(*cr);
+}
 
 extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
     SHRuntime *shr,
