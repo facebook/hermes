@@ -1953,34 +1953,6 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
   }
 }
 
-void HadesGC::weakRefReadBarrier(HermesValue value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Read barrier invoked by background thread.");
-  if (ogMarkingBarriers_)
-    snapshotWriteBarrierInternal(value);
-}
-
-void HadesGC::weakRefReadBarrier(GCCell *value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Read barrier invoked by background thread.");
-  // If the GC is marking, conservatively mark the value as live.
-  if (ogMarkingBarriers_)
-    snapshotWriteBarrierInternal(value);
-
-  // Otherwise, if no GC is active at all, the weak ref must be alive.
-  // During sweeping there's no special handling either.
-}
-
-void HadesGC::weakRefReadBarrier(SymbolID value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Read barrier invoked by background thread.");
-  if (ogMarkingBarriers_)
-    snapshotWriteBarrierInternal(value);
-}
-
 bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }
