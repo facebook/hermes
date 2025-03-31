@@ -3495,8 +3495,8 @@ const getTransforms = (
         type T = { ...T1, ...T2, ...T3, b: string  };
         // becomes
         type T =
-          & Omit<T1, keyof (T2 | T3 | { b: string })>
-          & Omit<T2, keyof (T3 | { b: string })>
+          & Omit<T1, keyof T2 | keyof T3 | keyof { b: string }>
+          & Omit<T2, keyof T3 | keyof { b: string }>
           & Omit<T3, keyof { b: string }>
           & { b: string };
         ```
@@ -3577,14 +3577,22 @@ const getTransforms = (
               params: [
                 currentType,
                 {
-                  type: 'TSTypeOperator',
+                  type: 'TSUnionType',
                   loc: DUMMY_LOC,
-                  operator: 'keyof',
-                  typeAnnotation: {
-                    type: 'TSUnionType',
-                    loc: DUMMY_LOC,
-                    types: [...remainingTypes, objectType],
-                  },
+                  types: [
+                    ...remainingTypes.map(t => ({
+                      type: 'TSTypeOperator',
+                      loc: DUMMY_LOC,
+                      operator: 'keyof',
+                      typeAnnotation: t,
+                    })),
+                    {
+                      type: 'TSTypeOperator',
+                      loc: DUMMY_LOC,
+                      operator: 'keyof',
+                      typeAnnotation: objectType,
+                    },
+                  ],
                 },
               ],
             },
