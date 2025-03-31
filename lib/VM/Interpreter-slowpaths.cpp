@@ -1843,7 +1843,10 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  lv.obj = JSObject::create(runtime, lv.clazz).get();
+  lv.obj =
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), lv.clazz)
+          .get();
   auto numLiterals = lv.clazz->getNumProperties();
 
   // Set up the visitor to populate property values in the object.

@@ -363,7 +363,9 @@ class JSObject : public GCCell {
 
   /// Attempts to allocate a JSObject with the standard Object prototype.
   /// If allocation fails, the GC declares an OOM.
-  static PseudoHandle<JSObject> create(Runtime &runtime);
+  static PseudoHandle<JSObject> create(Runtime &runtime) {
+    return create(runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
+  }
 
   /// Attempts to allocate a JSObject with the standard Object prototype and
   /// property storage preallocated. If allocation fails, the GC declares an
@@ -372,14 +374,6 @@ class JSObject : public GCCell {
   static PseudoHandle<JSObject> create(
       Runtime &runtime,
       unsigned propertyCount);
-
-  /// Allocates a JSObject with the given hidden class and property storage
-  /// preallocated. If allocation fails, the GC declares an
-  /// OOM.
-  /// \param clazz the hidden class for the new object.
-  static PseudoHandle<JSObject> create(
-      Runtime &runtime,
-      Handle<HiddenClass> clazz);
 
   /// Allocates a JSObject with the given hidden class and prototype.
   /// If allocation fails, the GC declares an OOM.

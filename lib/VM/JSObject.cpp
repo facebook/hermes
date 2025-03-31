@@ -84,10 +84,6 @@ PseudoHandle<JSObject> JSObject::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-PseudoHandle<JSObject> JSObject::create(Runtime &runtime) {
-  return create(runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
-}
-
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     unsigned propertyCount) {
@@ -99,6 +95,7 @@ PseudoHandle<JSObject> JSObject::create(
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
+    Handle<JSObject> parentHandle,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
   obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap());
@@ -107,14 +104,6 @@ PseudoHandle<JSObject> JSObject::create(
   if (LLVM_UNLIKELY(
           obj->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
     obj->flags_.fastIndexProperties = false;
-  return obj;
-}
-
-PseudoHandle<JSObject> JSObject::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    Handle<HiddenClass> clazz) {
-  PseudoHandle<JSObject> obj = JSObject::create(runtime, clazz);
   obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap());
   return obj;
 }

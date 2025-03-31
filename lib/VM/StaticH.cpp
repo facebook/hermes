@@ -1747,7 +1747,8 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
   // call it.
   lv.clazz = clazz;
   auto numProps = lv.clazz->getNumProperties();
-  lv.obj = JSObject::create(runtime, lv.clazz);
+  lv.obj = JSObject::create(
+      runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), lv.clazz);
 
   struct {
     void visitStringID(StringID id) {
