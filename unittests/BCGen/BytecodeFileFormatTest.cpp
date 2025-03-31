@@ -13,9 +13,7 @@
 
 #include "gtest/gtest.h"
 
-#include <iomanip>
 #include <sstream>
-#include <string>
 
 // Structs with bit fields can have different layouts between GCC, CLANG,
 // and MSVC. With experiments, it is observed that GCC and CLANG always
