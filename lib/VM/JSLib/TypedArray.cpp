@@ -1048,7 +1048,7 @@ typedArrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto elementSize = self->getByteWidth();
-  uint8_t *begin = self->begin(runtime);
+  uint8_t *begin = self->data(runtime);
   // Fill with the same raw bytes as the first one.
   switch (elementSize) {
     case 1:

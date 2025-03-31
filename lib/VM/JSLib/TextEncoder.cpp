@@ -194,7 +194,7 @@ textEncoderPrototypeEncode(void *, Runtime &runtime, NativeArgs args) {
     llvh::ArrayRef<char> strRef = string->getStringRef<char>();
 
     std::memcpy(
-        typedArray->begin(runtime), strRef.data(), string->getStringLength());
+        typedArray->data(runtime), strRef.data(), string->getStringLength());
     return typedArray.getHermesValue();
   } else {
     // Convert UTF-16 to UTF-8
@@ -212,7 +212,7 @@ textEncoderPrototypeEncode(void *, Runtime &runtime, NativeArgs args) {
 
     Handle<JSTypedArrayBase> typedArray = result.getValue();
     std::memcpy(
-        typedArray->begin(runtime), converted.data(), converted.length());
+        typedArray->data(runtime), converted.data(), converted.length());
     return typedArray.getHermesValue();
   }
 }

@@ -85,11 +85,11 @@ class JSTypedArrayBase : public JSObject {
     return buffer_.get(runtime);
   }
 
-  uint8_t *begin(Runtime &runtime) {
+  uint8_t *data(Runtime &runtime) {
     return buffer_.getNonNull(runtime)->getDataBlock(runtime) + offset_;
   }
-  uint8_t *end(Runtime &runtime) {
-    return begin(runtime) + getByteLength();
+  uint8_t *dataEnd(Runtime &runtime) {
+    return data(runtime) + getByteLength();
   }
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
@@ -215,8 +215,6 @@ class JSTypedArrayBase : public JSObject {
 template <typename T, CellKind C>
 class JSTypedArray final : public JSTypedArrayBase {
  public:
-  using iterator = T *;
-
   static const ObjectVTable vt;
 
   static constexpr CellKind getCellKind() {
@@ -230,10 +228,10 @@ class JSTypedArray final : public JSTypedArrayBase {
       Runtime &runtime,
       Handle<JSObject> prototype);
 
-  iterator begin(Runtime &runtime) {
-    return reinterpret_cast<T *>(JSTypedArrayBase::begin(runtime));
+  T *begin(Runtime &runtime) {
+    return reinterpret_cast<T *>(data(runtime));
   }
-  iterator end(Runtime &runtime) {
+  T *end(Runtime &runtime) {
     return begin(runtime) + length_;
   }
 
