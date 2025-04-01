@@ -3387,6 +3387,8 @@ void Emitter::getByIdImpl(
 
   // All temporaries will potentially be clobbered by the slow path.
   syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
+  // Ensure the source register is in memory for the slow path.
+  syncToFrame(frSource);
 
   if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
     // Label for indirect property access.
@@ -3508,17 +3510,7 @@ void Emitter::getByIdImpl(
     a.b(contLab);
 
     a.bind(slowPathLab);
-
-    // Ensure the frSource is in memory for the fast path. Note that we haven't
-    // done it before.
-    // Note that this is the reason we can't use a regular slow path at the
-    // end of the function. We need syncToFrame() to execute in the slow path,
-    // but by then the state is gone.
-    syncToFrame(frSource);
   } else {
-    // We arrive here if there is no fast path. Ensure that frSource is in
-    // memory.
-    syncToFrame(frSource);
     // All temporaries will be clobbered.
     freeAllFRTempExcept({});
 
