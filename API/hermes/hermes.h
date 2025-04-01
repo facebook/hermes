@@ -64,6 +64,12 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
       const uint8_t *data,
       size_t len,
       std::string *errorMessage = nullptr);
+
+  /// Sets a global fatal handler that is shared across all active Hermes
+  /// runtimes. Setting fatal handler in multiple places will override the
+  /// previous fatal handler set by this functionality.
+  /// The fatal handler must not throw exceptions, as Hermes is compiled without
+  /// exceptions.
   static void setFatalHandler(void (*handler)(const std::string &));
 
   // Assuming that \p data is valid HBC bytecode data, returns a pointer to the
