@@ -2173,6 +2173,19 @@ const getTransforms = (
           return unsupportedAnnotation(node, fullTypeName);
         }
 
+        case '$ArrayBufferView': {
+          // `$ArrayBufferView` => `ArrayBufferView`
+          return {
+            type: 'TSTypeReference',
+            loc: DUMMY_LOC,
+            typeName: {
+              type: 'Identifier',
+              loc: DUMMY_LOC,
+              name: 'ArrayBufferView',
+            },
+          };
+        }
+
         case '$ArrayLike': {
           // `$ArrayLike<T>` => `ArrayLike<T>`
           return {
