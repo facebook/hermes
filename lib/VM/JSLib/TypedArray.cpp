@@ -905,48 +905,22 @@ typedArrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
   // 14. Let count be min(final-from, len-to).
   double count = std::min(fin - from, len - to);
 
-  int direction;
-  if (from < to && to < from + count) {
-    // 15. If from<to and to<from+count
-    // a. Let direction be -1.
-    direction = -1;
-    // b. Let from be from + count -1.
-    from = from + count - 1;
-    // c. Let to be to + count -1.
-    to = to + count - 1;
-  } else {
-    // 16. Else,
-    // a. Let direction = 1.
-    direction = 1;
-  }
-
-  // Need to case on the TypedArray type to avoid encoding using HermesValues.
-  // We need to preserve the bit-level encoding of values, and HermesValues
-  // destroy information, e.g. which NaN is being used.
   auto *baseArr = vmcast<JSTypedArrayBase>(*O);
   if (!baseArr->attached(runtime)) {
     return runtime.raiseTypeError(
         "Underlying ArrayBuffer detached after calling copyWithin");
   }
 
-#define TYPED_ARRAY(name, type)                                             \
-  case CellKind::name##ArrayKind: {                                         \
-    auto *arr =                                                             \
-        llvh::cast<JSTypedArray<type, CellKind::name##ArrayKind>>(baseArr); \
-    while (count > 0) {                                                     \
-      arr->monoAt(runtime, to) = arr->monoAt(runtime, from);                \
-      from += direction;                                                    \
-      to += direction;                                                      \
-      --count;                                                              \
-    }                                                                       \
-    break;                                                                  \
-  }
+  // Get the byte width for this typed array
+  const size_t elemSize = baseArr->getByteWidth();
+  uint8_t *data = baseArr->data(runtime);
 
-  switch (O->getKind()) {
-#include "hermes/VM/TypedArrays.def"
-
-    default:
-      llvm_unreachable("Invalid TypedArray after ValidateTypedArray call");
+  // Use memmove to handle the overlapping regions correctly
+  if (count > 0) {
+    memmove(
+        data + (static_cast<size_t>(to) * elemSize), // destination
+        data + (static_cast<size_t>(from) * elemSize), // source
+        static_cast<size_t>(count) * elemSize); // byte count
   }
 
   return O.getHermesValue();
