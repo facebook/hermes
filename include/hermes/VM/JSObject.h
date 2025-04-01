@@ -2133,6 +2133,29 @@ inline bool JSObject::shouldCacheForIn(Runtime &runtime) const {
       !flags_.indexedStorage && !flags_.hostObject && !flags_.proxyObject;
 }
 
+/// Attempt to get the value of an indexed property from an object cheaply,
+/// if the object is a JSArray, typed array, or a JSObject with indexed storage.
+/// Allocation may occur (e.g. for a BigInt64Array), but usually doesn't.
+///
+/// IndexType must be an unsigned integer type. It is templated to allow the
+/// check for 0xFFFF'FFFFu to be skipped if the value is known to be smaller
+/// (e.g. uint8_t).
+template <typename IndexType>
+inline OptValue<HermesValue>
+tryFastGetComputedMayAlloc(Runtime &runtime, JSObject *obj, IndexType index);
+
+/// Attempt to get the value of an indexed property from an object cheaply,
+/// if the object is a JSArray, typed array, or a JSObject with indexed storage.
+/// Allocation may NOT occur, so some typed arrays or general indexed objects
+/// are not supported.
+///
+/// IndexType must be an unsigned integer type. It is templated to allow the
+/// check for 0xFFFF'FFFFu to be skipped if the value is known to be smaller
+/// (e.g. uint8_t).
+template <typename IndexType>
+inline OptValue<HermesValue>
+tryFastGetComputedNoAlloc(Runtime &runtime, JSObject *obj, IndexType index);
+
 } // namespace vm
 } // namespace hermes
 
