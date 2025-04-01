@@ -46,6 +46,10 @@ HERMES_SLOW_STATISTIC(
     "NumGetByIdSlow: Number of property 'read by id' slow path");
 
 HERMES_SLOW_STATISTIC(
+    NumGetByValStr,
+    "NumGetByValStr: Number of GetByVal _,StringPrimitive,_");
+
+HERMES_SLOW_STATISTIC(
     NumPutByIdCacheEvicts,
     "NumPutByIdCacheEvicts: Number of property 'write by id' cache evictions");
 HERMES_SLOW_STATISTIC(
@@ -54,6 +58,8 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumPutByIdTransient,
     "NumPutByIdTransient: Number of property 'write by id' to non-objects");
+
+HERMES_SLOW_STATISTIC(NumPutByVal, "NumPutByVal: Number of PutByVal");
 
 namespace hermes {
 namespace vm {
@@ -685,6 +691,8 @@ ExecutionStatus Interpreter::caseDelByVal(
 static inline PseudoHandle<>
 getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle) {
   if (base->isString()) {
+    ++NumGetByValStr;
+
     // Handle most common fast path -- array index property for string
     // primitive.
     // Since primitive string cannot have index like property we can
@@ -798,6 +806,7 @@ ExecutionStatus Interpreter::casePutByVal(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const inst::Inst *ip) {
+  ++NumPutByVal;
   bool strictMode = (ip->opCode == inst::OpCode::PutByValStrict);
   if (LLVM_LIKELY(O1REG(PutByValLoose).isObject())) {
     auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
