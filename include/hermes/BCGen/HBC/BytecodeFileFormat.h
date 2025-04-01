@@ -263,7 +263,7 @@ static_assert(
   F(uint8_t, b2, uint8_t, HighestReadCacheIndex, 8)            \
   F(uint8_t, b3, uint8_t, HighestWriteCacheIndex, 6)           \
   N(HighestWriteCacheIndex, b3, uint8_t, NumCacheNewObject, 1) \
-  N(HighestWriteCacheIndex, b3, uint8_t, HighestPrivateNameCacheIndex, 1)
+  N(NumCacheNewObject, b3, uint8_t, HighestPrivateNameCacheIndex, 1)
 
 /**
  * Metadata of a function.
