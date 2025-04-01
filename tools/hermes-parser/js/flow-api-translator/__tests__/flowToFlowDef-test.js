@@ -267,7 +267,7 @@ describe('flowToFlowDef', () => {
       `);
     });
   });
-  describe('FunctionDeclation', () => {
+  describe('FunctionDeclaration', () => {
     it('basic', async () => {
       await expectTranslate(
         `export function foo(): void {}`,
@@ -301,7 +301,19 @@ describe('flowToFlowDef', () => {
     it('with default params', async () => {
       await expectTranslate(
         `export function foo(bar: string = 'hello'): void {}`,
-        `declare export function foo(bar: string): void;`,
+        `declare export function foo(bar?: string): void;`,
+      );
+    });
+    it('without identifier', async () => {
+      await expectTranslate(
+        `export function foo({foo = 'foo'}: Foo): void {}`,
+        `declare export function foo($$PARAM_0$$: Foo): void;`,
+      );
+    });
+    it('without identifier with default param', async () => {
+      await expectTranslate(
+        `export function foo({foo = 'foo'}: Foo = {}): void {}`,
+        `declare export function foo($$PARAM_0$$?: Foo): void;`,
       );
     });
     it('with predicates', async () => {
