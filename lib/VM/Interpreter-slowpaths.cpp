@@ -679,10 +679,11 @@ ExecutionStatus Interpreter::caseDelByVal(
   return ExecutionStatus::RETURNED;
 }
 
-PseudoHandle<> Interpreter::getByValTransientFast(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> nameHandle) {
+/// Fast path for getByValTransient() -- avoid boxing for \p base if it is
+/// string primitive and \p nameHandle is an array index.
+/// If the property does not exist, return Empty.
+static inline PseudoHandle<>
+getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle) {
   if (base->isString()) {
     // Handle most common fast path -- array index property for string
     // primitive.
@@ -1523,10 +1524,14 @@ ExecutionStatus doGetByIdSlowPath_RJS(
   return ExecutionStatus::RETURNED;
 }
 
-inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id) {
+/// Fast path to get primitive value \p base's own properties by name \p id
+/// without boxing.
+/// Primitive own properties are properties fetching values from primitive
+/// value itself.
+/// Currently the only primitive own property is String.prototype.length.
+/// If the fast path property does not exist, return Empty.
+static inline PseudoHandle<>
+tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id) {
   if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
     return createPseudoHandle(HermesValue::encodeTrustedNumberValue(
         base->getString()->getStringLength()));
