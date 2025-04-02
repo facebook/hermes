@@ -552,8 +552,7 @@ SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
 CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     Runtime &runtime,
     Handle<StringPrimitive> desc) {
-  uint32_t nextID = allocNextID();
-
+  StringPrimitive *str;
   if (runtime.getHeap().inYoungGen(desc.get())) {
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()
@@ -561,18 +560,22 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
               runtime, desc->castToASCIIRef(), desc)
         : allocateDynamicString<char16_t, /* Unique */ false>(
               runtime, desc->castToUTF16Ref(), desc);
-    // Since we keep a raw pointer to mem, no more JS heap allocations after
-    // this point.
-    NoAllocScope _(runtime);
     if (LLVM_UNLIKELY(longLivedStr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    new (&lookupVector_[nextID]) LookupEntry(longLivedStr->get(), true);
+    str = longLivedStr->get();
   } else {
     // Description is already in the old gen, just point to it.
-    new (&lookupVector_[nextID]) LookupEntry(*desc, true);
+    str = *desc;
   }
 
+  // Since we keep a raw pointer to mem, no more JS heap allocations after this
+  // point.
+  NoAllocScope _(runtime);
+  // Allocate the id after we have performed memory allocations because a GC
+  // would have freed the newly allocated ID.
+  uint32_t nextID = allocNextID();
+  new (&lookupVector_[nextID]) LookupEntry(str, true);
   return SymbolID::unsafeCreateNotUniqued(nextID);
 }
 
