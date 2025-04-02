@@ -594,7 +594,7 @@ static CLFlag ReorderRegisters(
 
 static opt<unsigned> InlineMaxSize(
     "Xinline-max-size",
-    cl::init(1),
+    cl::init(OptimizationSettings::kDefaultInlineMaxSize),
     cl::desc("Suppress inlining of functions larger than the given size"),
     cl::Hidden,
     cl::cat(CompilerCategory));

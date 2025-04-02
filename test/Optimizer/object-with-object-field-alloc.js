@@ -38,14 +38,11 @@ new Foo();
 // CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.?O.prototype]: object
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %3: object, "prototype": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
-// CHECK-NEXT:  %6 = AllocTypedObjectInst (:object) empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
-// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) "o0": string, uninit: uninit, "o1": string, uninit: uninit, "o2": string, uninit: uninit
-// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: object, %6: object
-// CHECK-NEXT:  %10 = CallInst (:undefined) %5: object, %Foo(): functionCode, true: boolean, empty: any, %5: object, %8: object
-// CHECK-NEXT:  %11 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:        ReturnInst %11: undefined
+// CHECK-NEXT:  %5 = AllocTypedObjectInst (:object) empty: any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, %6: object, "prototype": string
+// CHECK-NEXT:  %8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       ReturnInst %8: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor O(): undefined [typed]

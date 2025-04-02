@@ -53,7 +53,7 @@ struct CompileFlags {
 
   /// Maximum number of instructions (in addition to parameter handling)
   /// that is allowed for inlining of small functions.
-  unsigned inlineMaxSize{1};
+  unsigned inlineMaxSize{OptimizationSettings::kDefaultInlineMaxSize};
 
   bool verifyIR{false};
   /// If set, the compiler emits async break check instructions.  These may be

@@ -58,8 +58,8 @@ function outer2(){
 // CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.foo]: object
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar(): functionCode
 // CHECK-NEXT:  %4 = CreateThisInst (:object) %3: object, %3: object
-// CHECK-NEXT:  %5 = CallInst (:object) %3: object, %bar(): functionCode, true: boolean, %0: environment, undefined: undefined, %4: object
-// CHECK-NEXT:       ReturnInst %5: object
+// CHECK-NEXT:  %5 = CreateThisInst (:object) %1: object, %1: object
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(): undefined|object
