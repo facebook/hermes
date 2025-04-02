@@ -20,8 +20,8 @@ function foo() {
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:                 DeclareGlobalVarInst "x": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHKRA-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r1}      %2 = LIRGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {np0}     %3 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %foo(): functionCode
 // CHKRA-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "foo": string
 // CHKRA-NEXT:                 ReturnInst {np0} %3: undefined
@@ -29,7 +29,7 @@ function foo() {
 
 // CHKRA:function foo(): any
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  {r0}      %0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r0}      %0 = LIRGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  {r0}      %1 = LoadPropertyInst (:any) {r0} %0: object, "x": string
 // CHKRA-NEXT:                 ReturnInst {r0} %1: any
 // CHKRA-NEXT:function_end

@@ -546,7 +546,7 @@ class IRBuilder {
   ThrowIfThisInitializedInst *createThrowIfThisInitializedInst(
       Value *subclassCheckedThis);
 
-  HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
+  LIRGetGlobalObjectInst *createLIRGetGlobalObjectInst();
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
@@ -630,7 +630,7 @@ class IRBuilder {
       const SwitchImmInst::ValueListType &values,
       const SwitchImmInst::BasicBlockListType &blocks);
 
-  HBCLoadConstInst *createHBCLoadConstInst(Literal *value);
+  LIRLoadConstInst *createLIRLoadConstInst(Literal *value);
 
   LoadParamInst *createLoadParamInst(JSDynamicParam *param);
 
@@ -640,19 +640,19 @@ class IRBuilder {
 
   LIRGetThisNSInst *createLIRGetThisNSInst();
 
-  HBCGetArgumentsPropByValLooseInst *createHBCGetArgumentsPropByValLooseInst(
+  LIRGetArgumentsPropByValLooseInst *createLIRGetArgumentsPropByValLooseInst(
       Value *index,
       AllocStackInst *lazyReg);
-  HBCGetArgumentsPropByValStrictInst *createHBCGetArgumentsPropByValStrictInst(
+  LIRGetArgumentsPropByValStrictInst *createLIRGetArgumentsPropByValStrictInst(
       Value *index,
       AllocStackInst *lazyReg);
 
-  HBCGetArgumentsLengthInst *createHBCGetArgumentsLengthInst(
+  LIRGetArgumentsLengthInst *createLIRGetArgumentsLengthInst(
       Value *lazyRegValue);
 
-  HBCReifyArgumentsLooseInst *createHBCReifyArgumentsLooseInst(
+  LIRReifyArgumentsLooseInst *createLIRReifyArgumentsLooseInst(
       AllocStackInst *lazyReg);
-  HBCReifyArgumentsStrictInst *createHBCReifyArgumentsStrictInst(
+  LIRReifyArgumentsStrictInst *createLIRReifyArgumentsStrictInst(
       AllocStackInst *lazyReg);
 
   CreateThisInst *createCreateThisInst(Value *closure, Value *newTarget);
@@ -670,10 +670,10 @@ class IRBuilder {
   GetBuiltinClosureInst *createGetBuiltinClosureInst(
       BuiltinMethod::Enum builtinIndex);
 
-  HBCSpillMovInst *createHBCSpillMovInst(Instruction *value);
+  LIRSpillMovInst *createLIRSpillMovInst(Instruction *value);
 
-  HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
-      HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
+  LIRAllocObjectFromBufferInst *createLIRAllocObjectFromBufferInst(
+      LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
 
   HBCCompareBranchInst *createHBCCompareBranchInst(
       Value *left,

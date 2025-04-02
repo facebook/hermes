@@ -1510,17 +1510,17 @@ class HBCCallNInst : public BaseCallInst {
   }
 };
 
-class HBCGetGlobalObjectInst : public Instruction {
-  HBCGetGlobalObjectInst(const HBCGetGlobalObjectInst &) = delete;
-  void operator=(const HBCGetGlobalObjectInst &) = delete;
+class LIRGetGlobalObjectInst : public Instruction {
+  LIRGetGlobalObjectInst(const LIRGetGlobalObjectInst &) = delete;
+  void operator=(const LIRGetGlobalObjectInst &) = delete;
 
  public:
-  explicit HBCGetGlobalObjectInst()
-      : Instruction(ValueKind::HBCGetGlobalObjectInstKind) {
+  explicit LIRGetGlobalObjectInst()
+      : Instruction(ValueKind::LIRGetGlobalObjectInstKind) {
     setType(*getInherentTypeImpl());
   }
-  explicit HBCGetGlobalObjectInst(
-      const HBCGetGlobalObjectInst *src,
+  explicit LIRGetGlobalObjectInst(
+      const LIRGetGlobalObjectInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -1541,7 +1541,7 @@ class HBCGetGlobalObjectInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCGetGlobalObjectInstKind;
+    return kind == ValueKind::LIRGetGlobalObjectInstKind;
   }
 };
 
@@ -1718,7 +1718,7 @@ class TryStoreGlobalPropertyInst : public BaseStorePropertyInst {
       : BaseStorePropertyInst(kind, storedValue, globalObject, property) {
     assert(
         (llvh::isa<GlobalObject>(globalObject) ||
-         llvh::isa<HBCGetGlobalObjectInst>(globalObject)) &&
+         llvh::isa<LIRGetGlobalObjectInst>(globalObject)) &&
         "globalObject must refer to the global object");
   }
   explicit TryStoreGlobalPropertyInst(
@@ -2260,7 +2260,7 @@ class TryLoadGlobalPropertyInst : public BaseLoadPropertyInst {
             property) {
     assert(
         (llvh::isa<GlobalObject>(globalObject) ||
-         llvh::isa<HBCGetGlobalObjectInst>(globalObject)) &&
+         llvh::isa<LIRGetGlobalObjectInst>(globalObject)) &&
         "globalObject must refer to the global object");
   }
   explicit TryLoadGlobalPropertyInst(
@@ -2274,9 +2274,9 @@ class TryLoadGlobalPropertyInst : public BaseLoadPropertyInst {
   }
 };
 
-class HBCAllocObjectFromBufferInst : public Instruction {
-  HBCAllocObjectFromBufferInst(const HBCAllocObjectFromBufferInst &) = delete;
-  void operator=(const HBCAllocObjectFromBufferInst &) = delete;
+class LIRAllocObjectFromBufferInst : public Instruction {
+  LIRAllocObjectFromBufferInst(const LIRAllocObjectFromBufferInst &) = delete;
+  void operator=(const LIRAllocObjectFromBufferInst &) = delete;
 
  public:
   using ObjectPropertyMap =
@@ -2285,16 +2285,16 @@ class HBCAllocObjectFromBufferInst : public Instruction {
   /// \sizeHint is a hint for the VM regarding the final size of this object.
   /// It is the number of entries in the object declaration including
   /// non-literal ones. \prop_map is all the literal key/value entries.
-  explicit HBCAllocObjectFromBufferInst(const ObjectPropertyMap &prop_map)
-      : Instruction(ValueKind::HBCAllocObjectFromBufferInstKind) {
+  explicit LIRAllocObjectFromBufferInst(const ObjectPropertyMap &prop_map)
+      : Instruction(ValueKind::LIRAllocObjectFromBufferInstKind) {
     setType(*getInherentTypeImpl());
     for (size_t i = 0; i < prop_map.size(); i++) {
       pushOperand(prop_map[i].first);
       pushOperand(prop_map[i].second);
     }
   }
-  explicit HBCAllocObjectFromBufferInst(
-      const HBCAllocObjectFromBufferInst *src,
+  explicit LIRAllocObjectFromBufferInst(
+      const LIRAllocObjectFromBufferInst *src,
       llvh::ArrayRef<Value *> operands)
       : Instruction(src, operands) {}
 
@@ -2330,7 +2330,7 @@ class HBCAllocObjectFromBufferInst : public Instruction {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCAllocObjectFromBufferInstKind;
+    return kind == ValueKind::LIRAllocObjectFromBufferInstKind;
   }
 };
 
@@ -4312,17 +4312,17 @@ class HBCProfilePointInst : public Instruction {
   }
 };
 
-class HBCLoadConstInst : public SingleOperandInst {
-  HBCLoadConstInst(const HBCLoadConstInst &) = delete;
-  void operator=(const HBCLoadConstInst &) = delete;
+class LIRLoadConstInst : public SingleOperandInst {
+  LIRLoadConstInst(const LIRLoadConstInst &) = delete;
+  void operator=(const LIRLoadConstInst &) = delete;
 
  public:
-  explicit HBCLoadConstInst(Literal *input)
-      : SingleOperandInst(ValueKind::HBCLoadConstInstKind, input) {
+  explicit LIRLoadConstInst(Literal *input)
+      : SingleOperandInst(ValueKind::LIRLoadConstInstKind, input) {
     setType(input->getType());
   }
-  explicit HBCLoadConstInst(
-      const HBCLoadConstInst *src,
+  explicit LIRLoadConstInst(
+      const LIRLoadConstInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
@@ -4347,7 +4347,7 @@ class HBCLoadConstInst : public SingleOperandInst {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCLoadConstInstKind;
+    return kind == ValueKind::LIRLoadConstInstKind;
   }
 };
 
@@ -4426,19 +4426,19 @@ class LIRGetThisNSInst : public Instruction {
 };
 
 // Get `arguments.length`, without having to create a real array.
-class HBCGetArgumentsLengthInst : public SingleOperandInst {
-  HBCGetArgumentsLengthInst(const HBCGetArgumentsLengthInst &) = delete;
-  void operator=(const HBCGetArgumentsLengthInst &) = delete;
+class LIRGetArgumentsLengthInst : public SingleOperandInst {
+  LIRGetArgumentsLengthInst(const LIRGetArgumentsLengthInst &) = delete;
+  void operator=(const LIRGetArgumentsLengthInst &) = delete;
 
  public:
-  explicit HBCGetArgumentsLengthInst(Value *lazyRegValue)
+  explicit LIRGetArgumentsLengthInst(Value *lazyRegValue)
       : SingleOperandInst(
-            ValueKind::HBCGetArgumentsLengthInstKind,
+            ValueKind::LIRGetArgumentsLengthInstKind,
             lazyRegValue) {
     setType(*getInherentTypeImpl());
   }
-  explicit HBCGetArgumentsLengthInst(
-      const HBCGetArgumentsLengthInst *src,
+  explicit LIRGetArgumentsLengthInst(
+      const LIRGetArgumentsLengthInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
@@ -4462,7 +4462,7 @@ class HBCGetArgumentsLengthInst : public SingleOperandInst {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCGetArgumentsLengthInstKind;
+    return kind == ValueKind::LIRGetArgumentsLengthInstKind;
   }
 };
 
@@ -4512,47 +4512,47 @@ class HBCGetArgumentsPropByValInst : public Instruction {
   }
 };
 
-class HBCGetArgumentsPropByValLooseInst : public HBCGetArgumentsPropByValInst {
-  HBCGetArgumentsPropByValLooseInst(const HBCGetArgumentsPropByValLooseInst &) =
+class LIRGetArgumentsPropByValLooseInst : public HBCGetArgumentsPropByValInst {
+  LIRGetArgumentsPropByValLooseInst(const LIRGetArgumentsPropByValLooseInst &) =
       delete;
-  void operator=(const HBCGetArgumentsPropByValLooseInst &) = delete;
+  void operator=(const LIRGetArgumentsPropByValLooseInst &) = delete;
 
  public:
-  explicit HBCGetArgumentsPropByValLooseInst(Value *index, AllocStackInst *reg)
+  explicit LIRGetArgumentsPropByValLooseInst(Value *index, AllocStackInst *reg)
       : HBCGetArgumentsPropByValInst(
-            ValueKind::HBCGetArgumentsPropByValLooseInstKind,
+            ValueKind::LIRGetArgumentsPropByValLooseInstKind,
             index,
             reg) {}
-  explicit HBCGetArgumentsPropByValLooseInst(
-      const HBCGetArgumentsPropByValLooseInst *src,
+  explicit LIRGetArgumentsPropByValLooseInst(
+      const LIRGetArgumentsPropByValLooseInst *src,
       llvh::ArrayRef<Value *> operands)
       : HBCGetArgumentsPropByValInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCGetArgumentsPropByValLooseInstKind;
+    return kind == ValueKind::LIRGetArgumentsPropByValLooseInstKind;
   }
 };
 
-class HBCGetArgumentsPropByValStrictInst : public HBCGetArgumentsPropByValInst {
-  HBCGetArgumentsPropByValStrictInst(
-      const HBCGetArgumentsPropByValStrictInst &) = delete;
-  void operator=(const HBCGetArgumentsPropByValStrictInst &) = delete;
+class LIRGetArgumentsPropByValStrictInst : public HBCGetArgumentsPropByValInst {
+  LIRGetArgumentsPropByValStrictInst(
+      const LIRGetArgumentsPropByValStrictInst &) = delete;
+  void operator=(const LIRGetArgumentsPropByValStrictInst &) = delete;
 
  public:
-  explicit HBCGetArgumentsPropByValStrictInst(Value *index, AllocStackInst *reg)
+  explicit LIRGetArgumentsPropByValStrictInst(Value *index, AllocStackInst *reg)
       : HBCGetArgumentsPropByValInst(
-            ValueKind::HBCGetArgumentsPropByValStrictInstKind,
+            ValueKind::LIRGetArgumentsPropByValStrictInstKind,
             index,
             reg) {}
-  explicit HBCGetArgumentsPropByValStrictInst(
-      const HBCGetArgumentsPropByValStrictInst *src,
+  explicit LIRGetArgumentsPropByValStrictInst(
+      const LIRGetArgumentsPropByValStrictInst *src,
       llvh::ArrayRef<Value *> operands)
       : HBCGetArgumentsPropByValInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCGetArgumentsPropByValStrictInstKind;
+    return kind == ValueKind::LIRGetArgumentsPropByValStrictInstKind;
   }
 };
 
@@ -4597,40 +4597,40 @@ class HBCReifyArgumentsInst : public SingleOperandInst {
   }
 };
 
-class HBCReifyArgumentsStrictInst : public HBCReifyArgumentsInst {
-  HBCReifyArgumentsStrictInst(const HBCReifyArgumentsStrictInst &) = delete;
-  void operator=(const HBCReifyArgumentsStrictInst &) = delete;
+class LIRReifyArgumentsStrictInst : public HBCReifyArgumentsInst {
+  LIRReifyArgumentsStrictInst(const LIRReifyArgumentsStrictInst &) = delete;
+  void operator=(const LIRReifyArgumentsStrictInst &) = delete;
 
  public:
-  explicit HBCReifyArgumentsStrictInst(AllocStackInst *reg)
-      : HBCReifyArgumentsInst(ValueKind::HBCReifyArgumentsStrictInstKind, reg) {
+  explicit LIRReifyArgumentsStrictInst(AllocStackInst *reg)
+      : HBCReifyArgumentsInst(ValueKind::LIRReifyArgumentsStrictInstKind, reg) {
   }
-  explicit HBCReifyArgumentsStrictInst(
-      const HBCReifyArgumentsStrictInst *src,
+  explicit LIRReifyArgumentsStrictInst(
+      const LIRReifyArgumentsStrictInst *src,
       llvh::ArrayRef<Value *> operands)
       : HBCReifyArgumentsInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCReifyArgumentsStrictInstKind;
+    return kind == ValueKind::LIRReifyArgumentsStrictInstKind;
   }
 };
 
-class HBCReifyArgumentsLooseInst : public HBCReifyArgumentsInst {
-  HBCReifyArgumentsLooseInst(const HBCReifyArgumentsLooseInst &) = delete;
-  void operator=(const HBCReifyArgumentsLooseInst &) = delete;
+class LIRReifyArgumentsLooseInst : public HBCReifyArgumentsInst {
+  LIRReifyArgumentsLooseInst(const LIRReifyArgumentsLooseInst &) = delete;
+  void operator=(const LIRReifyArgumentsLooseInst &) = delete;
 
  public:
-  explicit HBCReifyArgumentsLooseInst(AllocStackInst *reg)
-      : HBCReifyArgumentsInst(ValueKind::HBCReifyArgumentsLooseInstKind, reg) {}
-  explicit HBCReifyArgumentsLooseInst(
-      const HBCReifyArgumentsLooseInst *src,
+  explicit LIRReifyArgumentsLooseInst(AllocStackInst *reg)
+      : HBCReifyArgumentsInst(ValueKind::LIRReifyArgumentsLooseInstKind, reg) {}
+  explicit LIRReifyArgumentsLooseInst(
+      const LIRReifyArgumentsLooseInst *src,
       llvh::ArrayRef<Value *> operands)
       : HBCReifyArgumentsInst(src, operands) {}
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCReifyArgumentsLooseInstKind;
+    return kind == ValueKind::LIRReifyArgumentsLooseInstKind;
   }
 };
 
@@ -4730,17 +4730,17 @@ class GetConstructedObjectInst : public Instruction {
 
 /// Identical to a Mov, except it should never be eliminated.
 /// Elimination will undo spilling and cause failures during bc gen.
-class HBCSpillMovInst : public SingleOperandInst {
-  HBCSpillMovInst(const HBCSpillMovInst &) = delete;
-  void operator=(const HBCSpillMovInst &) = delete;
+class LIRSpillMovInst : public SingleOperandInst {
+  LIRSpillMovInst(const LIRSpillMovInst &) = delete;
+  void operator=(const LIRSpillMovInst &) = delete;
 
  public:
-  explicit HBCSpillMovInst(Instruction *value)
-      : SingleOperandInst(ValueKind::HBCSpillMovInstKind, value) {
+  explicit LIRSpillMovInst(Instruction *value)
+      : SingleOperandInst(ValueKind::LIRSpillMovInstKind, value) {
     setType(value->getType());
   }
-  explicit HBCSpillMovInst(
-      const HBCSpillMovInst *src,
+  explicit LIRSpillMovInst(
+      const LIRSpillMovInst *src,
       llvh::ArrayRef<Value *> operands)
       : SingleOperandInst(src, operands) {}
 
@@ -4761,7 +4761,7 @@ class HBCSpillMovInst : public SingleOperandInst {
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
-    return kind == ValueKind::HBCSpillMovInstKind;
+    return kind == ValueKind::LIRSpillMovInstKind;
   }
 };
 

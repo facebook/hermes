@@ -32,14 +32,14 @@ print(bench(4e6, 100))
 // CHINT:function global(): any
 // CHINT-NEXT:%BB0:
 // CHINT-NEXT:            %0            = DeclareGlobalVarInst "bench": string
-// CHINT-NEXT:  {loc0}    %1 [2...6)    = HBCGetGlobalObjectInst (:object)
+// CHINT-NEXT:  {loc0}    %1 [2...6)    = LIRGetGlobalObjectInst (:object)
 // CHINT-NEXT:  {loc1}    %2 [3...4)    = CreateFunctionInst (:object) empty: any, empty: any, %bench(): functionCode
 // CHINT-NEXT:            %3            = StorePropertyStrictInst %2: object, %1: object, "bench": string
 // CHINT-NEXT:  {loc1}    %4 [5...11)   = TryLoadGlobalPropertyInst (:any) %1: object, "print": string
 // CHINT-NEXT:  {loc0}    %5 [6...10)   = LoadPropertyInst (:any) %1: object, "bench": string
-// CHINT-NEXT:  {np2}     %6 [7...10)   = HBCLoadConstInst (:number) 100: number
-// CHINT-NEXT:  {np1}     %7 [8...10)   = HBCLoadConstInst (:number) 4000000: number
-// CHINT-NEXT:  {np0}     %8 [9...11)   = HBCLoadConstInst (:undefined) undefined: undefined
+// CHINT-NEXT:  {np2}     %6 [7...10)   = LIRLoadConstInst (:number) 100: number
+// CHINT-NEXT:  {np1}     %7 [8...10)   = LIRLoadConstInst (:number) 4000000: number
+// CHINT-NEXT:  {np0}     %8 [9...11)   = LIRLoadConstInst (:undefined) undefined: undefined
 // CHINT-NEXT:  {loc0}    %9 [10...11)  = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, %8: undefined, %8: undefined, %7: number, %6: number
 // CHINT-NEXT:  {loc0}   %10 [11...12)  = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, %8: undefined, %8: undefined, %9: any
 // CHINT-NEXT:           %11            = ReturnInst %10: any
@@ -50,9 +50,9 @@ print(bench(4e6, 100))
 // CHINT-NEXT:  {loc3}    %0 [1...37)   = LoadParamInst (:any) %fc: any
 // CHINT-NEXT:  {loc0}    %1 [2...3)    = LoadParamInst (:any) %lc: any
 // CHINT-NEXT:  {loc2}    %2 [3...8)    = UnaryDecInst (:number|bigint) %1: any
-// CHINT-NEXT:  {np2}     %3 [4...37)   = HBCLoadConstInst (:number) 0: number
+// CHINT-NEXT:  {np2}     %3 [4...37)   = LIRLoadConstInst (:number) 0: number
 // CHINT-NEXT:  {np0}     %4 [5...10)   = BinaryGreaterThanOrEqualInst (:boolean) %2: number|bigint, %3: number
-// CHINT-NEXT:  {np1}     %5 [6...37)   = HBCLoadConstInst (:number) 1: number
+// CHINT-NEXT:  {np1}     %5 [6...37)   = LIRLoadConstInst (:number) 1: number
 // CHINT-NEXT:  {loc1}    %6 [7...11)   = MovInst (:number) %3: number
 // CHINT-NEXT:  {loc2}    %7 [8...12)   = MovInst (:number|bigint) %2: number|bigint
 // CHINT-NEXT:  {loc0}    %8 [9...38)   = MovInst (:number) %6: number
@@ -96,14 +96,14 @@ print(bench(4e6, 100))
 // CHECK:function global(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "bench": string
-// CHECK-NEXT:  {loc0}    %1 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {loc0}    %1 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {loc1}    %2 = CreateFunctionInst (:object) empty: any, empty: any, %bench(): functionCode
 // CHECK-NEXT:                 StorePropertyStrictInst {loc1} %2: object, {loc0} %1: object, "bench": string
 // CHECK-NEXT:  {loc1}    %4 = TryLoadGlobalPropertyInst (:any) {loc0} %1: object, "print": string
 // CHECK-NEXT:  {loc0}    %5 = LoadPropertyInst (:any) {loc0} %1: object, "bench": string
-// CHECK-NEXT:  {np2}     %6 = HBCLoadConstInst (:number) 100: number
-// CHECK-NEXT:  {np1}     %7 = HBCLoadConstInst (:number) 4000000: number
-// CHECK-NEXT:  {np0}     %8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np2}     %6 = LIRLoadConstInst (:number) 100: number
+// CHECK-NEXT:  {np1}     %7 = LIRLoadConstInst (:number) 4000000: number
+// CHECK-NEXT:  {np0}     %8 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {loc0}    %9 = CallInst (:any) {loc0} %5: any, empty: any, false: boolean, empty: any, {np0} %8: undefined, {np0} %8: undefined, {np1} %7: number, {np2} %6: number
 // CHECK-NEXT:  {loc0}   %10 = CallInst (:any) {loc1} %4: any, empty: any, false: boolean, empty: any, {np0} %8: undefined, {np0} %8: undefined, {loc0} %9: any
 // CHECK-NEXT:                 ReturnInst {loc0} %10: any
@@ -114,9 +114,9 @@ print(bench(4e6, 100))
 // CHECK-NEXT:  {loc3}    %0 = LoadParamInst (:any) %fc: any
 // CHECK-NEXT:  {loc0}    %1 = LoadParamInst (:any) %lc: any
 // CHECK-NEXT:  {loc2}    %2 = UnaryDecInst (:number|bigint) {loc0} %1: any
-// CHECK-NEXT:  {np2}     %3 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {np2}     %3 = LIRLoadConstInst (:number) 0: number
 // CHECK-NEXT:  {np0}     %4 = BinaryGreaterThanOrEqualInst (:boolean) {loc2} %2: number|bigint, {np2} %3: number
-// CHECK-NEXT:  {np1}     %5 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {np1}     %5 = LIRLoadConstInst (:number) 1: number
 // CHECK-NEXT:  {loc1}    %6 = MovInst (:number) {np2} %3: number
 // CHECK-NEXT:  {loc2}    %7 = MovInst (:number|bigint) {loc2} %2: number|bigint
 // CHECK-NEXT:  {loc0}    %8 = MovInst (:number) {loc1} %6: number

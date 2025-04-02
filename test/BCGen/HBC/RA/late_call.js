@@ -28,8 +28,8 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "bar": string
-// CHECK-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}      %2 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %3 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %foo(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "foo": string
 // CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %bar(): functionCode
@@ -39,7 +39,7 @@ function bar(a,b,c,d,e,f,g,h) {
 
 // CHECK:function foo(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {n0}      %0 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {n0}      %0 = LIRLoadConstInst (:number) 0: number
 // CHECK-NEXT:                 ReturnInst {n0} %0: number
 // CHECK-NEXT:function_end
 
@@ -60,9 +60,9 @@ function bar(a,b,c,d,e,f,g,h) {
 // CHECK-NEXT:  {r2}     %12 = BinaryAddInst (:string|number|bigint) {r0} %11: any, {r3} %10: string|number|bigint
 // CHECK-NEXT:  {r0}     %13 = LoadParamInst (:any) %h: any
 // CHECK-NEXT:  {r1}     %14 = BinaryAddInst (:string|number|bigint) {r0} %13: any, {r8} %0: any
-// CHECK-NEXT:  {r0}     %15 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r0}     %15 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}     %16 = LoadPropertyInst (:any) {r0} %15: object, "foo": string
-// CHECK-NEXT:  {np0}    %17 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np0}    %17 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}     %18 = CallInst (:any) {r0} %16: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %17: undefined, {r1} %14: string|number|bigint, {r2} %12: string|number|bigint, {r3} %10: string|number|bigint, {r4} %8: string|number|bigint, {r5} %6: string|number|bigint, {r6} %4: string|number|bigint, {r7} %2: string|number|bigint, {r8} %0: any
 // CHECK-NEXT:                 ReturnInst {np0} %17: undefined
 // CHECK-NEXT:function_end

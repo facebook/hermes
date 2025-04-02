@@ -622,7 +622,7 @@ Effects | Does not read or write to memory.
 
 AllocObjectLiteralInst | _
 --- | --- |
-Description | Allocates a new JavaScript object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Description | Allocates a new JavaScript object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a LIRAllocObjectFromBufferInst.
 Example |  %0 = AllocObjectLiteralInst "prop1" : string, 10 : number
 Arguments | %prop_map is a vector of (Literal*, value*) pairs which represents the properties and their keys in the object literal.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
@@ -632,7 +632,7 @@ Effects | Does not read or write to memory.
 
 AllocTypedObjectInst | _
 --- | --- |
-Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a LIRAllocObjectFromBufferInst.
 Example |  %0 = AllocTypedObjectInst %parent, "prop1" : string, 10 : number
 Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values.
@@ -985,12 +985,12 @@ need to perform lowering, which is a form of instruction selection. The semantic
 of these instructions are identical to the semantic of the relevant target
 instructions.
 
-### HBCGetGlobalObjectInst
+### LIRGetGlobalObjectInst
 
-HBCGetGlobalObjectInst | _
+LIRGetGlobalObjectInst | _
 --- | --- |
 Description | Obtain the "global" object
-Example |  %0 = HBCGetGlobalObjectInst
+Example |  %0 = LIRGetGlobalObjectInst
 Arguments | None.
 Semantics | The instruction returns a reference to the "global" object.
 Effects | Does not read or write to memory.
@@ -1015,12 +1015,12 @@ Arguments | %varScope is the variable scope to resolve to. %numLevels is the num
 Semantics | The instruction resolves an environment that is a parent of the current function's environment.
 Effects | Does not read or write to memory.
 
-### HBCAllocObjectFromBufferInst
+### LIRAllocObjectFromBufferInst
 
-HBCAllocObjectFromBufferInst | _
+LIRAllocObjectFromBufferInst | _
 --- | --- |
 Description | Allocates a new JavaScript object on the heap, and initializes it with values from the object buffer.
-Example |  %0 = HBCAllocObjectFromBufferInst %value0, %value1, ...
+Example |  %0 = LIRAllocObjectFromBufferInst %value0, %value1, ...
 Arguments | The values are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.

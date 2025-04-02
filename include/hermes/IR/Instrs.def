@@ -58,16 +58,16 @@ DEF_VALUE(DirectEvalInst, Instruction)
 DEF_VALUE(DeclareGlobalVarInst, Instruction)
 DEF_VALUE(LoadFrameInst, Instruction)
 DEF_VALUE(LoadParamInst, Instruction)
-DEF_VALUE(HBCLoadConstInst, Instruction)
-DEF_VALUE(HBCGetArgumentsLengthInst, Instruction)
+DEF_VALUE(LIRLoadConstInst, Instruction)
+DEF_VALUE(LIRGetArgumentsLengthInst, Instruction)
 DEF_VALUE(CreatePrivateNameInst, Instruction)
 
 MARK_FIRST(HBCReifyArgumentsInst, Instruction)
-DEF_VALUE(HBCReifyArgumentsStrictInst, HBCReifyArgumentsInst)
-DEF_VALUE(HBCReifyArgumentsLooseInst, HBCReifyArgumentsInst)
+DEF_VALUE(LIRReifyArgumentsStrictInst, HBCReifyArgumentsInst)
+DEF_VALUE(LIRReifyArgumentsLooseInst, HBCReifyArgumentsInst)
 MARK_LAST(HBCReifyArgumentsInst)
 
-DEF_VALUE(HBCSpillMovInst, Instruction)
+DEF_VALUE(LIRSpillMovInst, Instruction)
 
 DEF_VALUE(PhiInst, Instruction)
 
@@ -238,14 +238,14 @@ DEF_VALUE(CacheNewObjectInst, Instruction)
 // These are target dependent instructions:
 
 DEF_VALUE(LIRGetThisNSInst, Instruction)
-DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
+DEF_VALUE(LIRGetGlobalObjectInst, Instruction)
 
 MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
-DEF_VALUE(HBCGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)
-DEF_VALUE(HBCGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
+DEF_VALUE(LIRGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)
+DEF_VALUE(LIRGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
 MARK_LAST(HBCGetArgumentsPropByValInst)
 
-DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
+DEF_VALUE(LIRAllocObjectFromBufferInst, Instruction)
 DEF_VALUE(HBCProfilePointInst, Instruction)
 
 DEF_VALUE(PrLoadInst, Instruction)

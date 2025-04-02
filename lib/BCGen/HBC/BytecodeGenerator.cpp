@@ -297,7 +297,7 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
     case ValueKind::DeclareGlobalVarInstKind:
       return idx == DeclareGlobalVarInst::NameIdx;
 
-    case ValueKind::HBCAllocObjectFromBufferInstKind:
+    case ValueKind::LIRAllocObjectFromBufferInstKind:
       // AllocObjectFromBuffer stores the keys and values as alternating
       // operands, with keys starting first.
       return idx % 2 == 0;

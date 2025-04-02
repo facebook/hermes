@@ -182,7 +182,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
   // Create a 200 LoadConstInsts, requiring 200 registers
   std::vector<Value *> values;
   for (int i = 0; i < 200; i++) {
-    values.push_back(builder.createHBCLoadConstInst(undef));
+    values.push_back(builder.createLIRLoadConstInst(undef));
   }
   // Use them in a call to require 200 parameter registers.
   builder.createCallInst(
@@ -203,7 +203,7 @@ TEST(SpillRegisterTest, SpillsParameters) {
 
   // Ensure that spilling takes care of that
   for (auto &inst : *BB) {
-    auto *load = llvh::dyn_cast<HBCLoadConstInst>(&inst);
+    auto *load = llvh::dyn_cast<LIRLoadConstInst>(&inst);
     if (!load)
       continue;
     EXPECT_LT(RA.getRegister(load).getIndexInClass(), 256u);

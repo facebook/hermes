@@ -15,15 +15,15 @@ namespace {
 /// Check whether a particular operand of an instruction must stay
 /// as literal and hence cannot be lowered into load_const instruction.
 bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
-  // HBCLoadConstInst is meant to load a constant
-  if (llvh::isa<HBCLoadConstInst>(Inst))
+  // LIRLoadConstInst is meant to load a constant
+  if (llvh::isa<LIRLoadConstInst>(Inst))
     return true;
 
   // The operand of LoadParamInst is a literal index.
   if (llvh::isa<LoadParamInst>(Inst))
     return true;
 
-  if (llvh::isa<HBCAllocObjectFromBufferInst>(Inst))
+  if (llvh::isa<LIRAllocObjectFromBufferInst>(Inst))
     return true;
 
   // All operands of AllocArrayInst are literals.
@@ -218,8 +218,8 @@ bool loadConstants(Function *F) {
   auto createLoadLiteral = [&builder](Literal *literal, Instruction *where) {
     builder.setInsertionPoint(where);
     return llvh::isa<GlobalObject>(literal)
-        ? cast<Instruction>(builder.createHBCGetGlobalObjectInst())
-        : cast<Instruction>(builder.createHBCLoadConstInst(literal));
+        ? cast<Instruction>(builder.createLIRGetGlobalObjectInst())
+        : cast<Instruction>(builder.createLIRLoadConstInst(literal));
   };
 
   for (BasicBlock &BB : *F) {

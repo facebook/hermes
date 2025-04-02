@@ -882,7 +882,7 @@ class InstrGen {
     generateValue(*inst.getScope());
     os_ << ", " << inst.getLoadVariable()->getIndexInVariableList() << ");\n";
   }
-  void generateHBCLoadConstInst(HBCLoadConstInst &inst) {
+  void generateLIRLoadConstInst(LIRLoadConstInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -928,24 +928,24 @@ class InstrGen {
     generateRegister(*inst.getClosure());
     os_ << ");";
   }
-  void generateHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst &inst) {
+  void generateLIRGetArgumentsLengthInst(LIRGetArgumentsLengthInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_arguments_length(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst &inst) {
+  void generateLIRReifyArgumentsLooseInst(LIRReifyArgumentsLooseInst &inst) {
     os_ << "  _sh_ljs_reify_arguments_loose(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCReifyArgumentsStrictInst(HBCReifyArgumentsStrictInst &inst) {
+  void generateLIRReifyArgumentsStrictInst(LIRReifyArgumentsStrictInst &inst) {
     os_ << "  _sh_ljs_reify_arguments_strict(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCSpillMovInst(HBCSpillMovInst &inst) {
+  void generateLIRSpillMovInst(LIRSpillMovInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -1658,7 +1658,7 @@ class InstrGen {
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
     assert(
         inst.getKeyValuePairCount() == 0 &&
-        "AllocObjectLiteralInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+        "AllocObjectLiteralInst with properties should be lowered to LIRAllocObjectFromBufferInst");
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -1675,7 +1675,7 @@ class InstrGen {
   void generateAllocTypedObjectInst(AllocTypedObjectInst &inst) {
     assert(
         inst.getKeyValuePairCount() == 0 &&
-        "AllocTypedObjectInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+        "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -2066,7 +2066,7 @@ class InstrGen {
   void generateResumeGeneratorInst(ResumeGeneratorInst &inst) {
     unimplemented(inst);
   }
-  void generateHBCGetGlobalObjectInst(HBCGetGlobalObjectInst &inst) {
+  void generateLIRGetGlobalObjectInst(LIRGetGlobalObjectInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_global_object(shr);\n";
@@ -2112,8 +2112,8 @@ class InstrGen {
     genReadIC(protoStr);
     os_ << ");\n";
   }
-  void generateHBCGetArgumentsPropByValLooseInst(
-      HBCGetArgumentsPropByValLooseInst &inst) {
+  void generateLIRGetArgumentsPropByValLooseInst(
+      LIRGetArgumentsPropByValLooseInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_arguments_prop_by_val_loose(shr, frame, ";
@@ -2122,8 +2122,8 @@ class InstrGen {
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCGetArgumentsPropByValStrictInst(
-      HBCGetArgumentsPropByValStrictInst &inst) {
+  void generateLIRGetArgumentsPropByValStrictInst(
+      LIRGetArgumentsPropByValStrictInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_arguments_prop_by_val_strict(shr, frame, ";
@@ -2143,8 +2143,8 @@ class InstrGen {
     generateRegister(*inst.getThisValue());
     os_ << ";\n";
   }
-  void generateHBCAllocObjectFromBufferInst(
-      HBCAllocObjectFromBufferInst &inst) {
+  void generateLIRAllocObjectFromBufferInst(
+      LIRAllocObjectFromBufferInst &inst) {
     os_.indent(2);
     generateRegister(inst);
 
@@ -2557,9 +2557,9 @@ bool lowerModuleIR(Module *M, bool optimize) {
   if (optimize) {
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
-    // Eliminate common HBCLoadConstInsts.
+    // Eliminate common LIRLoadConstInsts.
     // TODO(T140823187): Run before CodeMotion too.
-    // Avoid pushing HBCLoadConstInsts down into individual blocks,
+    // Avoid pushing LIRLoadConstInsts down into individual blocks,
     // preventing their elimination.
     PM.addCSE();
     // Drop unused LoadParamInsts.

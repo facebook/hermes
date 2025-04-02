@@ -1227,7 +1227,7 @@ void HBCISel::generateAllocObjectLiteralInst(
   auto result = encodeValue(Inst);
   assert(
       Inst->getKeyValuePairCount() == 0 &&
-      "AllocObjectLiteralInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+      "AllocObjectLiteralInst with properties should be lowered to LIRAllocObjectFromBufferInst");
   if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObject(result);
   } else {
@@ -1241,7 +1241,7 @@ void HBCISel::generateAllocTypedObjectInst(
   auto result = encodeValue(Inst);
   assert(
       Inst->getKeyValuePairCount() == 0 &&
-      "AllocTypedObjectInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+      "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
   if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObject(result);
   } else {
@@ -1294,8 +1294,8 @@ void HBCISel::generateCreateFunctionInst(
   }
 }
 
-void HBCISel::generateHBCAllocObjectFromBufferInst(
-    HBCAllocObjectFromBufferInst *Inst,
+void HBCISel::generateLIRAllocObjectFromBufferInst(
+    LIRAllocObjectFromBufferInst *Inst,
     BasicBlock *next) {
   auto result = encodeValue(Inst);
   auto buffIdxs =
@@ -1772,8 +1772,8 @@ void HBCISel::generateGetClosureScopeInst(
   BCFGen_->emitGetClosureEnvironment(output, closure);
 }
 
-void HBCISel::generateHBCLoadConstInst(
-    hermes::HBCLoadConstInst *Inst,
+void HBCISel::generateLIRLoadConstInst(
+    hermes::LIRLoadConstInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   Literal *literal = Inst->getConst();
@@ -1899,8 +1899,8 @@ void HBCISel::generateHBCProfilePointInst(
   BCFGen_->emitProfilePoint(Inst->getPointIndex());
 }
 
-void HBCISel::generateHBCGetGlobalObjectInst(
-    hermes::HBCGetGlobalObjectInst *Inst,
+void HBCISel::generateLIRGetGlobalObjectInst(
+    hermes::LIRGetGlobalObjectInst *Inst,
     hermes::BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   BCFGen_->emitGetGlobalObject(dstReg);
@@ -1926,37 +1926,37 @@ void HBCISel::generateCoerceThisNSInst(
   auto src = encodeValue(Inst->getSingleOperand());
   BCFGen_->emitCoerceThisNS(dst, src);
 }
-void HBCISel::generateHBCGetArgumentsLengthInst(
-    hermes::HBCGetArgumentsLengthInst *Inst,
+void HBCISel::generateLIRGetArgumentsLengthInst(
+    hermes::LIRGetArgumentsLengthInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsLength(output, reg);
 }
-void HBCISel::generateHBCGetArgumentsPropByValLooseInst(
-    hermes::HBCGetArgumentsPropByValLooseInst *Inst,
+void HBCISel::generateLIRGetArgumentsPropByValLooseInst(
+    hermes::LIRGetArgumentsPropByValLooseInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto index = encodeValue(Inst->getIndex());
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsPropByValLoose(output, index, reg);
 }
-void HBCISel::generateHBCGetArgumentsPropByValStrictInst(
-    hermes::HBCGetArgumentsPropByValStrictInst *Inst,
+void HBCISel::generateLIRGetArgumentsPropByValStrictInst(
+    hermes::LIRGetArgumentsPropByValStrictInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto index = encodeValue(Inst->getIndex());
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsPropByValStrict(output, index, reg);
 }
-void HBCISel::generateHBCReifyArgumentsLooseInst(
-    hermes::HBCReifyArgumentsLooseInst *Inst,
+void HBCISel::generateLIRReifyArgumentsLooseInst(
+    hermes::LIRReifyArgumentsLooseInst *Inst,
     hermes::BasicBlock *next) {
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitReifyArgumentsLoose(reg);
 }
-void HBCISel::generateHBCReifyArgumentsStrictInst(
-    hermes::HBCReifyArgumentsStrictInst *Inst,
+void HBCISel::generateLIRReifyArgumentsStrictInst(
+    hermes::LIRReifyArgumentsStrictInst *Inst,
     hermes::BasicBlock *next) {
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitReifyArgumentsStrict(reg);
@@ -1984,7 +1984,7 @@ void HBCISel::generateGetConstructedObjectInst(
   auto constructed = encodeValue(Inst->getConstructorReturnValue());
   BCFGen_->emitSelectObject(output, thisValue, constructed);
 }
-void HBCISel::generateHBCSpillMovInst(HBCSpillMovInst *Inst, BasicBlock *next) {
+void HBCISel::generateLIRSpillMovInst(LIRSpillMovInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getValue());
   emitMovIfNeeded(dst, src);

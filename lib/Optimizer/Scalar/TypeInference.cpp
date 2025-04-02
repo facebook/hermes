@@ -515,7 +515,7 @@ class TypeInferenceImpl {
     Type T = inst->getLoadVariable()->getType();
     return T;
   }
-  Type inferHBCLoadConstInst(HBCLoadConstInst *inst) {
+  Type inferLIRLoadConstInst(LIRLoadConstInst *inst) {
     return inst->getSingleOperand()->getType();
   }
   Type inferLoadParamInst(LoadParamInst *inst) {
@@ -526,21 +526,21 @@ class TypeInferenceImpl {
       HBCResolveParentEnvironmentInst *inst) {
     return *inst->getInherentType();
   }
-  Type inferHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst *inst) {
+  Type inferLIRGetArgumentsLengthInst(LIRGetArgumentsLengthInst *inst) {
     return *inst->getInherentType();
   }
   Type inferHBCReifyArgumentsInst(HBCReifyArgumentsInst *inst) {
     hermes_fatal("This is not a concrete instruction");
   }
-  Type inferHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst *inst) {
+  Type inferLIRReifyArgumentsLooseInst(LIRReifyArgumentsLooseInst *inst) {
     // Does not return a value, uses a lazy register instead.
     return Type::createNoType();
   }
-  Type inferHBCReifyArgumentsStrictInst(HBCReifyArgumentsStrictInst *inst) {
+  Type inferLIRReifyArgumentsStrictInst(LIRReifyArgumentsStrictInst *inst) {
     // Does not return a value, uses a lazy register instead.
     return Type::createNoType();
   }
-  Type inferHBCSpillMovInst(HBCSpillMovInst *inst) {
+  Type inferLIRSpillMovInst(LIRSpillMovInst *inst) {
     return inst->getSingleOperand()->getType();
   }
 
@@ -825,7 +825,7 @@ class TypeInferenceImpl {
 
   // These are target dependent instructions:
 
-  Type inferHBCGetGlobalObjectInst(HBCGetGlobalObjectInst *inst) {
+  Type inferLIRGetGlobalObjectInst(LIRGetGlobalObjectInst *inst) {
     return *inst->getInherentType();
   }
   Type inferHBCCreateFunctionEnvironmentInst(
@@ -841,18 +841,18 @@ class TypeInferenceImpl {
   Type inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
     hermes_fatal("This is not a concrete instruction");
   }
-  Type inferHBCGetArgumentsPropByValLooseInst(
-      HBCGetArgumentsPropByValLooseInst *inst) {
+  Type inferLIRGetArgumentsPropByValLooseInst(
+      LIRGetArgumentsPropByValLooseInst *inst) {
     return Type::createAnyType();
   }
-  Type inferHBCGetArgumentsPropByValStrictInst(
-      HBCGetArgumentsPropByValStrictInst *inst) {
+  Type inferLIRGetArgumentsPropByValStrictInst(
+      LIRGetArgumentsPropByValStrictInst *inst) {
     return Type::createAnyType();
   }
   Type inferGetConstructedObjectInst(GetConstructedObjectInst *inst) {
     return *inst->getInherentType();
   }
-  Type inferHBCAllocObjectFromBufferInst(HBCAllocObjectFromBufferInst *inst) {
+  Type inferLIRAllocObjectFromBufferInst(LIRAllocObjectFromBufferInst *inst) {
     return *inst->getInherentType();
   }
   Type inferHBCProfilePointInst(HBCProfilePointInst *inst) {
