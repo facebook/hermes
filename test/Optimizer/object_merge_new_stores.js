@@ -73,17 +73,13 @@ function objPhiUser(sink){
 
 // CHECK:function inlineComputedKeys(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineOwnPropertyInst 0: number, %0: object, "foo": string, true: boolean
-// CHECK-NEXT:       DefineOwnPropertyInst 1: number, %0: object, "bar": string, true: boolean
-// CHECK-NEXT:       DefineOwnPropertyInst 3: number, %0: object, "baz": string, true: boolean
+// CHECK-NEXT:  %0 = AllocObjectLiteralInst (:object) empty: any, "foo": string, 0: number, "bar": string, 1: number, "baz": string, 3: number
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
 // CHECK:function repeatProperty(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocObjectLiteralInst (:object) empty: any, "a": string, null: null, "b": string, 5: number, "c": string, null: null
-// CHECK-NEXT:       DefineOwnPropertyInst "hello": string, %0: object, "a": string, true: boolean
+// CHECK-NEXT:  %0 = AllocObjectLiteralInst (:object) empty: any, "a": string, "hello": string, "b": string, 5: number, "c": string, null: null
 // CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
