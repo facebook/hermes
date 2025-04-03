@@ -3216,8 +3216,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       } else if (lv.prop->isString()) {
         CallResult<Handle<SymbolID>> symRes =
             runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
-                runtime,
-                runtime.makeHandle<StringPrimitive>(lv.prop->getString()));
+                runtime, createPseudoHandle(lv.prop->getString()));
         if (LLVM_UNLIKELY(symRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
