@@ -495,7 +495,7 @@ void IdentifierTable::unmarkSymbols() {
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
-    const llvh::BitVector &markedSymbols,
+    llvh::BitVector &markedSymbols,
     GC::IDTracker &tracker) {
   assert(
       markedSymbols.size() <= lookupVector_.size() &&
@@ -503,10 +503,12 @@ void IdentifierTable::freeUnmarkedSymbols(
   assert(
       markedSymbols_.size() == lookupVector_.size() &&
       "Size of markedSymbols_ must be the same as the lookupVector");
-  markedSymbols_ |= markedSymbols;
+  // Update the markedSymbols passed in so the caller knows which symbols were
+  // marked internally by the IdentifierTable.
+  markedSymbols |= markedSymbols_;
   const bool hasTrackedObjectIDs = tracker.hasTrackedObjectIDs();
-  for (int i = markedSymbols_.find_first_unset(); i >= 0;
-       i = markedSymbols_.find_next_unset(i)) {
+  for (int i = markedSymbols.find_first_unset(); i >= 0;
+       i = markedSymbols.find_next_unset(i)) {
     assert((unsigned)i < markedSymbols.size() && "New symbol is unmarked");
     // We never free StringPrimitives that are materialized from a lazy
     // identifier.

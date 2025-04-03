@@ -299,11 +299,21 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     drainMarkStack(acceptor);
 
     markWeakMapEntrySlots(acceptor);
+
+    // Now free symbols. Note that:
+    // 1. We must do this before marking weak symbols, because the mark bits
+    //    will be updated by this call to reflect symbols that were not actually
+    //    freed.
+    // 2. We must do this after we mark the WeakMap entries, because they may
+    //    retain additional symbols. However, if we add support for WeakMaps
+    //    with symbol keys, we will have to revisit this, because freeSymbols
+    //    also updates the mark bits to reflect non-freeable symbols, which is
+    //    necessary to know if a symbol key in a WeakMap is reachable.
+    gcCallbacks_.freeSymbols(acceptor.markedSymbols_);
+
     // Update weak roots references.
     markWeakRoots(acceptor, /*markLongLived*/ true);
 
-    // Free the unused symbols.
-    gcCallbacks_.freeSymbols(acceptor.markedSymbols_);
     // By the end of the marking loop, all pointers left in pointers_ are dead.
     for (CellHeader *header : pointers_) {
 #ifndef HERMESVM_SANITIZE_HANDLES

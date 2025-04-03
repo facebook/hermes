@@ -1716,11 +1716,20 @@ void HadesGC::completeMarking() {
   // Reset weak roots to null after full reachability has been
   // determined.
   markState_->markedSymbols |= markState_->writeBarrierMarkedSymbols;
+
+  // Now free symbols. Note that:
+  // 1. We must do this before marking weak symbols, because the mark bits
+  //    will be updated by this call to reflect symbols that were not actually
+  //    freed.
+  // 2. We must do this after we mark the WeakMap entries, because they may
+  //    retain additional symbols. However, if we add support for WeakMaps
+  //    with symbol keys, we will have to revisit this, because freeSymbols
+  //    also updates the mark bits to reflect non-freeable symbols, which is
+  //    necessary to know if a symbol key in a WeakMap is reachable.
+  gcCallbacks_.freeSymbols(markState_->markedSymbols);
+
   MarkWeakRootsAcceptor acceptor{*this, markState_->markedSymbols};
   markWeakRoots(acceptor, /*markLongLived*/ true);
-
-  // Now free symbols and weak refs.
-  gcCallbacks_.freeSymbols(markState_->markedSymbols);
 
   // Nothing needs markState_ from this point onward.
   markState_.reset();
