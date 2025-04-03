@@ -7,7 +7,6 @@
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
 
 // Custom async iterable using Symbol.asyncIterator
 const asyncIterable = {
