@@ -1504,12 +1504,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     Builder.createStoreFrameInst(curFunction()->curScope, Obj, capturedObj);
   }
 
-  // haveSeenComputedProp tracks whether we have processed a computed property.
-  // Once we do, for all future properties, we can no longer generate
-  // DefineNewOwnPropertyInst because the computed property could have already
-  // defined any property.
-  bool haveSeenComputedProp = false;
-
   // Initialize all properties. We check whether the value of each property
   // will be overwritten (by comparing against what we have saved in propMap).
   // In that case we still compute the value (it could have side effects), but
@@ -1521,7 +1515,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       genBuiltinCall(
           BuiltinMethod::HermesBuiltin_copyDataProperties,
           {Obj, genExpression(spread->_argument)});
-      haveSeenComputedProp = true;
       continue;
     }
 
@@ -1561,7 +1554,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         Builder.createDefineOwnPropertyInst(
             value, Obj, key, IRBuilder::PropEnumerable::Yes);
       }
-      haveSeenComputedProp = true;
       continue;
     }
 
@@ -1599,16 +1591,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       if (propValue->state == PropertyValue::None) {
         // This value is going to be overwritten, but insert a placeholder in
         // order to maintain insertion order.
-        if (haveSeenComputedProp) {
-          Builder.createDefineOwnPropertyInst(
-              Builder.getLiteralNull(),
-              Obj,
-              Key,
-              IRBuilder::PropEnumerable::Yes);
-        } else {
-          Builder.createDefineNewOwnPropertyInst(
-              Builder.getLiteralNull(), Obj, Key);
-        }
+        Builder.createDefineOwnPropertyInst(
+            Builder.getLiteralNull(), Obj, Key, IRBuilder::PropEnumerable::Yes);
         propValue->state = PropertyValue::Placeholder;
       }
     };
@@ -1663,13 +1647,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       assert(
           propValue->state != PropertyValue::IRGenerated &&
           "IR can only be generated once");
-      if (haveSeenComputedProp ||
-          propValue->state == PropertyValue::Placeholder) {
-        Builder.createDefineOwnPropertyInst(
-            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
-      } else {
-        Builder.createDefineNewOwnPropertyInst(value, Obj, Key);
-      }
+      Builder.createDefineOwnPropertyInst(
+          value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       propValue->state = PropertyValue::IRGenerated;
     } else {
       maybeInsertPlaceholder();

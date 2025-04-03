@@ -107,7 +107,7 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:  %3 = CreateFunctionInst (:object) %2: undefined, empty: any, %"get c"(): functionCode
 // IRGEN-NEXT:       DefineOwnGetterSetterInst %3: object, %2: undefined, %0: object, %1: string, true: boolean
 // IRGEN-NEXT:  %5 = LIRLoadConstInst (:null) null: null
-// IRGEN-NEXT:       DefineNewOwnPropertyInst %5: null, %0: object, "d": string, true: boolean
+// IRGEN-NEXT:       DefineOwnPropertyInst %5: null, %0: object, "d": string, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
