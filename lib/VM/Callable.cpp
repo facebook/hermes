@@ -648,14 +648,19 @@ CallResult<HermesValue> BoundFunction::create(
     ConstArgIterator argsWithThis) {
   unsigned argCount = argCountWithThis > 0 ? argCountWithThis - 1 : 0;
 
+  struct : public Locals {
+    PinnedValue<ArrayStorage> arrStorage;
+    PinnedValue<BoundFunction> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   // Copy the arguments. If we don't have any, we must at least initialize
   // 'this' to 'undefined'.
   auto arrRes = ArrayStorage::create(runtime, argCount + 1);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arrHandle = runtime.makeMutableHandle(vmcast<ArrayStorage>(*arrRes));
-
+  lv.arrStorage = vmcast<ArrayStorage>(*arrRes);
+  MutableHandle<ArrayStorage> arrHandle(lv.arrStorage);
   if (argCountWithThis) {
     for (unsigned i = 0; i != argCountWithThis; ++i) {
       ArrayStorage::push_back(arrHandle, runtime, Handle<>(&argsWithThis[i]));
@@ -673,13 +678,12 @@ CallResult<HermesValue> BoundFunction::create(
           runtime.functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
       target,
       arrHandle);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  if (initializeLengthAndName_RJS(selfHandle, runtime, target, argCount) ==
+  lv.self = JSObjectInit::initToPointer(runtime, cell);
+  if (initializeLengthAndName_RJS(lv.self, runtime, target, argCount) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return selfHandle.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
