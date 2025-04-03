@@ -325,6 +325,13 @@ cl::opt<bool> ES6BlockScoping{
     llvh::cl::init(false),
     llvh::cl::cat(CompilerCategory)};
 
+cl::opt<bool> EnableAsyncGenerators{
+    "Xasync-generators",
+    llvh::cl::Hidden,
+    llvh::cl::desc("Enable support for async generators"),
+    llvh::cl::init(false),
+    llvh::cl::cat(CompilerCategory)};
+
 cl::opt<bool> MetroRequireOpt(
     "Xmetro-require",
     llvh::cl::init(true),
@@ -647,6 +654,7 @@ std::shared_ptr<Context> createContext() {
   context->setStrictMode(cli::Typed || cli::StrictMode);
   context->setEnableEval(cli::EnableEval);
   context->setEnableES6BlockScoping(cli::ES6BlockScoping);
+  context->setEnableAsyncGenerators(cli::EnableAsyncGenerators);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());

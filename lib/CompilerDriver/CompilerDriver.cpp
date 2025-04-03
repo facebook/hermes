@@ -329,6 +329,13 @@ opt<bool> ES6BlockScoping(
     Hidden,
     cat(CompilerCategory));
 
+opt<bool> EnableAsyncGenerators(
+    "Xasync-generators",
+    init(false),
+    desc("Enable support for async generators"),
+    Hidden,
+    cat(CompilerCategory));
+
 opt<bool> MetroRequireOpt(
     "Xmetro-require",
     init(true),
@@ -1120,6 +1127,7 @@ std::shared_ptr<Context> createContext(
   context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
   context->setEnableEval(cl::EnableEval);
   context->setEnableES6BlockScoping(cl::ES6BlockScoping);
+  context->setEnableAsyncGenerators(cl::EnableAsyncGenerators);
   context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 

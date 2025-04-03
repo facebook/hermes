@@ -264,6 +264,7 @@ static void compileEvalWorker(void *argPtr) {
 
   context.setEmitAsyncBreakCheck(data->compileFlags.emitAsyncBreakCheck);
   context.setEnableES6BlockScoping(data->compileFlags.enableES6BlockScoping);
+  context.setEnableAsyncGenerators(data->compileFlags.enableAsyncGenerators);
   context.setDebugInfoSetting(
       data->compileFlags.debug ? DebugInfoSetting::ALL
                                : DebugInfoSetting::THROWING);

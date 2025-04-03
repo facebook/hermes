@@ -378,6 +378,11 @@ hermesInternalHasPromise(void *, Runtime &runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue>
+hermesInternalHasAsyncGenerators(void *, Runtime &runtime, NativeArgs args) {
+  return HermesValue::encodeBoolValue(runtime.hasAsyncGenerators());
+}
+
+CallResult<HermesValue>
 hermesInternalUseEngineQueue(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(runtime.hasMicrotaskQueue());
 }
@@ -757,6 +762,7 @@ Handle<JSObject> createHermesInternalObject(
   // present by the VM internals even under a security-sensitive environment
   // where HermesInternal might be explicitly disabled.
   defineInternMethod(P::hasPromise, hermesInternalHasPromise);
+  defineInternMethod(P::hasAsyncGenerators, hermesInternalHasAsyncGenerators);
   defineInternMethod(P::enqueueJob, hermesInternalEnqueueJob);
   defineInternMethod(
       P::setPromiseRejectionTrackingHook,
