@@ -1111,6 +1111,9 @@ std::shared_ptr<Context> createContext(
 
   optimizationOpts.useLegacyMem2Reg = cl::LegacyMem2Reg;
 
+  optimizationOpts.limitRecursiveInlining =
+      (cl::OptimizationLevel == cl::OptLevel::OFixedPoint);
+
   auto context = std::make_shared<Context>(
       std::move(codeGenOpts),
       optimizationOpts,

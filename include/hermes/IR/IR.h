@@ -1924,6 +1924,14 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// and have cleared it in preparation for lowering steps.
   OptValue<uint32_t> statementCount_{0};
 
+  /// The two fields below are used only in "opt-to-fixed-point" compilation
+  /// mode.
+
+  /// The set of functions that have been inlined into this one.
+  llvh::DenseSet<Function *> inlinedInto_;
+  /// The set of functions that this function has been inlined into.
+  llvh::DenseSet<Function *> inlinedBy_;
+
  protected:
   explicit Function(
       ValueKind kind,
@@ -2086,6 +2094,25 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   void setNoInline() {
     customDirectives_.noInline = true;
   }
+
+  /// The four inlining-related functions below are used only in
+  /// "opt-to-fixed-point" compilation mode.
+
+  /// The set of functions that have been inlined into this one.
+  llvh::DenseSet<Function *> &inlinedInto() {
+    return inlinedInto_;
+  };
+  const llvh::DenseSet<Function *> &inlinedInto() const {
+    return inlinedInto_;
+  };
+
+  /// The set of functions that this function has been inlined into.
+  llvh::DenseSet<Function *> &inlinedBy() {
+    return inlinedBy_;
+  };
+  const llvh::DenseSet<Function *> &inlinedBy() const {
+    return inlinedBy_;
+  };
 
   OptValue<uint32_t> getStatementCount() const {
     return statementCount_;

@@ -465,7 +465,30 @@ void Function::eraseFromParentNoDestroy() {
   getParent()->getFunctionList().remove(getIterator());
   // Also remove from any Module data structures that contain function
   // references.
+
+  // If it is a module factory function, remove from the map keeping
+  // track of those.
   getParent()->jsModuleFactoryFunctions().erase(this);
+
+  // In opt-to-fixed point mode, we keep track of inliners and inlinees.
+  // Update those tables if we're deleting a function.
+  if (getParent()->getContext().getLimitRecursiveInlining()) {
+    // If the current function has been inlined anywhere, delete from inlined
+    // set of its (former) callers.
+    for (Function *inliner : inlinedBy()) {
+      inliner->inlinedInto().erase(this);
+    }
+    // If the current function inlines some other function \p inlinee,
+    // then delete the current function from \p inlinee's inlinedBy() set.
+    for (Function *inlinee : inlinedInto()) {
+      inlinee->inlinedBy().erase(this);
+    }
+  } else {
+    assert(
+        inlinedInto().empty() && inlinedBy().empty() &&
+        "When getLimitRecursiveInlining() is false, should not be "
+        "tracking inliners/inlinees");
+  }
 }
 
 void Function::eraseFromCompiledFunctionsNoDestroy() {
