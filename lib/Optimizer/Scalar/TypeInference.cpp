@@ -369,7 +369,6 @@ class TypeInferenceImpl {
     // It's possible that inference will result in the same type being
     // assigned.
     switch (inst->getKind()) {
-#define INCLUDE_HBC_INSTRS
 #define DEF_VALUE(CLASS, PARENT)                  \
   case ValueKind::CLASS##Kind:                    \
     inferredTy = infer##CLASS(cast<CLASS>(inst)); \

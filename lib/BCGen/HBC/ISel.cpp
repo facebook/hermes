@@ -38,8 +38,6 @@ void HVMRegisterAllocator::allocateCallInst(BaseCallInst *I) {
 
 namespace {
 
-#define INCLUDE_HBC_INSTRS
-
 STATISTIC(NumJumpPass, "Number of passes to resolve all jump targets");
 STATISTIC(
     NumUncachedNodes,
@@ -257,14 +255,12 @@ class HBCISel {
 
 /// This is the header declaration for all of the methods that emit opcodes
 /// for specific high-level IR instructions.
-#define INCLUDE_HBC_INSTRS
 #define DEF_VALUE(CLASS, PARENT) \
   void generate##CLASS(CLASS *Inst, BasicBlock *next);
 #define BEGIN_VALUE(CLASS, PARENT) DEF_VALUE(CLASS, PARENT)
 #include "hermes/IR/ValueKinds.def"
 #undef DEF_VALUE
 #undef MARK_VALUE
-#undef INCLUDE_HBC_INSTRS
 
  public:
   /// C'tor.

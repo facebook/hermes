@@ -503,7 +503,6 @@ class InstrGen {
   /// ostream.
   void generate(Instruction &I) {
     switch (I.getKind()) {
-#define INCLUDE_HBC_INSTRS
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
     return generate##CLASS(*cast<CLASS>(&I));
