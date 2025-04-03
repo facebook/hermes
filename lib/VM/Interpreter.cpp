@@ -1706,9 +1706,7 @@ tailCall:
                 ip->iCreateEnvironment.op3));
 
         O1REG(CreateEnvironment) = envHV;
-#ifdef HERMES_ENABLE_DEBUGGER
-        FRAME.getDebugEnvironmentRef() = envHV;
-#endif
+        FRAME.getEnvironmentRef() = envHV;
         ip = NEXTINST(CreateEnvironment);
         DISPATCH;
       }
@@ -1722,9 +1720,7 @@ tailCall:
                 ip->iCreateFunctionEnvironment.op2));
 
         O1REG(CreateFunctionEnvironment) = HermesValue::encodeObjectValue(env);
-#ifdef HERMES_ENABLE_DEBUGGER
-        FRAME.getDebugEnvironmentRef() = O1REG(CreateFunctionEnvironment);
-#endif
+        FRAME.getEnvironmentRef() = O1REG(CreateFunctionEnvironment);
         tmpHandle = HermesValue::encodeUndefinedValue();
         ip = NEXTINST(CreateFunctionEnvironment);
         DISPATCH;
@@ -1739,9 +1735,7 @@ tailCall:
                 ip->iCreateTopLevelEnvironment.op2));
 
         O1REG(CreateTopLevelEnvironment) = envHV;
-#ifdef HERMES_ENABLE_DEBUGGER
-        FRAME.getDebugEnvironmentRef() = envHV;
-#endif
+        FRAME.getEnvironmentRef() = envHV;
         ip = NEXTINST(CreateTopLevelEnvironment);
         DISPATCH;
       }
