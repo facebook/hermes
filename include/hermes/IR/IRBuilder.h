@@ -462,10 +462,6 @@ class IRBuilder {
       Value *object,
       Value *property,
       PropEnumerable isEnumerable);
-  DefineNewOwnPropertyInst *createDefineNewOwnPropertyInst(
-      Value *storedValue,
-      Value *object,
-      Literal *property);
   StoreOwnPrivateFieldInst *createStoreOwnPrivateFieldInst(
       Value *storedValue,
       Value *object,

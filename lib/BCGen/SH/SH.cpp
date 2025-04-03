@@ -1303,31 +1303,6 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
-  void generateDefineNewOwnPropertyInst(DefineNewOwnPropertyInst &inst) {
-    os_.indent(2);
-    auto prop = inst.getProperty();
-    assert(inst.getIsEnumerable() && "enumerable must be true.");
-
-    if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
-      uint32_t index = *numProp->convertToArrayIndex();
-      os_ << "_sh_ljs_define_own_by_index(";
-      os_ << "shr, ";
-      generateRegisterPtr(*inst.getObject());
-      os_ << ", ";
-      os_ << index << ", ";
-      generateRegisterPtr(*inst.getStoredValue());
-      os_ << ");\n";
-      return;
-    }
-
-    auto *LS = cast<LiteralString>(prop);
-    os_ << "_sh_ljs_define_own_by_id(shr,&";
-    generateRegister(*inst.getObject());
-    os_ << ", ";
-    genStringConst(LS) << ", ";
-    generateRegisterPtr(*inst.getStoredValue());
-    os_ << ", NULL);\n";
-  }
   void generateStoreOwnPrivateFieldInst(StoreOwnPrivateFieldInst &inst) {
     os_.indent(2);
     os_ << "_sh_ljs_put_own_private_by_sym(shr, ";

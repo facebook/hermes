@@ -1006,41 +1006,6 @@ void HBCISel::generateDefineOwnPropertyInst(
       objReg, valueReg, propReg, Inst->getIsEnumerable());
 }
 
-void HBCISel::generateDefineNewOwnPropertyInst(
-    DefineNewOwnPropertyInst *Inst,
-    BasicBlock *next) {
-  auto valueReg = encodeValue(Inst->getStoredValue());
-  auto objReg = encodeValue(Inst->getObject());
-  auto prop = Inst->getProperty();
-  assert(Inst->getIsEnumerable() && "must be enumerable");
-
-  if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
-    uint32_t index = *numProp->convertToArrayIndex();
-    if (index <= UINT8_MAX) {
-      BCFGen_->emitDefineOwnByIndex(objReg, valueReg, index);
-    } else {
-      BCFGen_->emitDefineOwnByIndexL(objReg, valueReg, index);
-    }
-    return;
-  }
-
-  auto strProp = cast<LiteralString>(prop);
-  auto id = BCFGen_->getIdentifierID(strProp);
-  if (id <= UINT16_MAX) {
-    BCFGen_->emitDefineOwnById(
-        objReg,
-        valueReg,
-        acquirePropertyWriteCacheIndex(strProp->getValue()),
-        id);
-  } else {
-    BCFGen_->emitDefineOwnByIdLong(
-        objReg,
-        valueReg,
-        acquirePropertyWriteCacheIndex(strProp->getValue()),
-        id);
-  }
-}
-
 void HBCISel::generateStoreOwnPrivateFieldInst(
     StoreOwnPrivateFieldInst *Inst,
     BasicBlock *next) {

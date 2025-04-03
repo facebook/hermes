@@ -1707,7 +1707,7 @@ Value *ESTreeIRGen::genTypedObjectExpr(
         "Missing stored value in typechecked object literal");
     // Use a literal if possible, otherwise use the default init value.
     // Avoid putting non-literals here because we want to emit PrStore
-    // instead of DefineNewOwnPropertyInst.
+    // instead of DefineOwnPropertyInst.
     Value *initValue = nullptr;
     if (llvh::isa<Literal>(it->second.first)) {
       initValue = it->second.first;

@@ -571,9 +571,6 @@ class TypeInferenceImpl {
   Type inferDefineOwnPropertyInst(DefineOwnPropertyInst *inst) {
     return Type::createNoType();
   }
-  Type inferDefineNewOwnPropertyInst(DefineNewOwnPropertyInst *inst) {
-    return Type::createNoType();
-  }
   Type inferStoreOwnPrivateFieldInst(StoreOwnPrivateFieldInst *inst) {
     return Type::createNoType();
   }

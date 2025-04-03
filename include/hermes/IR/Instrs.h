@@ -1870,43 +1870,6 @@ class DefineOwnPropertyInst : public BaseDefineOwnPropertyInst {
   }
 };
 
-class DefineNewOwnPropertyInst : public BaseDefineOwnPropertyInst {
-  DefineNewOwnPropertyInst(const DefineNewOwnPropertyInst &) = delete;
-  void operator=(const DefineNewOwnPropertyInst &) = delete;
-
- public:
-  explicit DefineNewOwnPropertyInst(
-      Value *storedValue,
-      Value *object,
-      Literal *property,
-      LiteralBool *isEnumerable)
-      : BaseDefineOwnPropertyInst(
-            ValueKind::DefineNewOwnPropertyInstKind,
-            storedValue,
-            object,
-            property,
-            isEnumerable) {
-    assert(
-        (llvh::isa<LiteralString>(property) ||
-         llvh::isa<LiteralNumber>(property)) &&
-        "Invalid property literal.");
-    assert(
-        object->getType().isObjectType() &&
-        "object operand must be known to be an object");
-    assert(isEnumerable->getValue() && "isEnumerable should be true");
-  }
-
-  explicit DefineNewOwnPropertyInst(
-      const DefineNewOwnPropertyInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : BaseDefineOwnPropertyInst(src, operands) {}
-
-  static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::DefineNewOwnPropertyInstKind;
-  }
-};
-
 class StoreOwnPrivateFieldInst : public BaseDefineOwnPropertyInst {
   StoreOwnPrivateFieldInst(const StoreOwnPrivateFieldInst &) = delete;
   void operator=(const StoreOwnPrivateFieldInst &) = delete;

@@ -61,7 +61,7 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   // as LowerNumericProperties could generate new constants.
   PM.addPass(new LowerNumericProperties());
   // Lower AllocObjectLiteral into a mixture of LIRAllocObjectFromBufferInst,
-  // AllocObjectInst, DefineNewOwnPropertyInst and StorePropertyInst.
+  // AllocObjectInst, DefineOwnPropertyInst and StorePropertyInst.
   PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
