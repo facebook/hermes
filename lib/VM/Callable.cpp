@@ -651,6 +651,7 @@ CallResult<HermesValue> BoundFunction::create(
   struct : public Locals {
     PinnedValue<ArrayStorage> arrStorage;
     PinnedValue<BoundFunction> self;
+    PinnedValue<JSObject> proto;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   // Copy the arguments. If we don't have any, we must at least initialize
@@ -670,10 +671,16 @@ CallResult<HermesValue> BoundFunction::create(
     // of at least 1.
     ArrayStorage::push_back(arrHandle, runtime, Runtime::getUndefinedValue());
   }
+  CallResult<PseudoHandle<JSObject>> protoRes =
+      getPrototypeOf(Handle<JSObject>::vmcast(target), runtime);
+  if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.proto = std::move(*protoRes);
 
   auto *cell = runtime.makeAFixed<BoundFunction>(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      lv.proto,
       runtime.getHiddenClassForPrototype(
           runtime.functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
       target,
