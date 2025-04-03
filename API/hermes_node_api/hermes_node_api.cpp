@@ -2339,10 +2339,11 @@ class NodeApiComplexReference : public NodeApiReference {
       return napi_ok;
     }
     if (--refCount_ == 0) {
+      weakRoot_.~WeakRoot();
       if (value_.isObject()) {
-        weakRoot_ = env.createWeakRoot(getObjectUnsafe(value_));
+        ::new (std::addressof(weakRoot_)) vm::WeakRoot<vm::JSObject>(env.createWeakRoot(getObjectUnsafe(value_)));
       } else {
-        weakRoot_ = vm::WeakRoot<vm::JSObject>{};
+        ::new (std::addressof(weakRoot_)) vm::WeakRoot<vm::JSObject>();
       }
     }
     result = refCount_;
