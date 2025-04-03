@@ -86,10 +86,15 @@ TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
   // Declare two weak symbols which the GC knows about.
   WeakRootSymbolID weakSymA;
   WeakRootSymbolID weakSymB;
+
+  // Declare a weak symbol that we will point to a lazy symbol. This should
+  // never be cleared.
+  WeakRootSymbolID weakSymLazy;
   runtime.addCustomWeakRootsFunction(
       [&](vm::GC *, vm::WeakRootAcceptor &acceptor) {
         acceptor.acceptWeakSym(weakSymA);
         acceptor.acceptWeakSym(weakSymB);
+        acceptor.acceptWeakSym(weakSymLazy);
       });
 
   struct : Locals {
@@ -120,11 +125,18 @@ TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
   lv.symB = *symResB;
   weakSymB = *symResB;
 
+  // Init the lazy symbol.
+  weakSymLazy = runtime.getIdentifierTable().registerLazyIdentifier(
+      "I am the laziest symbol in the world!");
+
   // Perform a GC. Both weak symbols should be fine since A and B both are being
   // referenced in live PVs.
   runtime.collect("test");
   ASSERT_FALSE(weakSymA.isInvalid());
   ASSERT_FALSE(weakSymB.isInvalid());
+
+  // The lazy symbol should never be cleared.
+  ASSERT_FALSE(weakSymLazy.isInvalid());
 
   // Invalidate PV symB, then perform a GC. This should result in only
   // weak symbol B being set to invalid.
@@ -133,12 +145,18 @@ TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
   ASSERT_FALSE(weakSymA.isInvalid());
   ASSERT_TRUE(weakSymB.isInvalid());
 
+  // The lazy symbol should never be cleared.
+  ASSERT_FALSE(weakSymLazy.isInvalid());
+
   // Invalidate PV symA, then perform a GC. At this point, both weak
   // symbols should be cleared.
   lv.symA = SymbolID{};
   runtime.collect("test");
   ASSERT_TRUE(weakSymA.isInvalid());
   ASSERT_TRUE(weakSymB.isInvalid());
+
+  // The lazy symbol should never be cleared.
+  ASSERT_FALSE(weakSymLazy.isInvalid());
 }
 
 TEST_F(SymbolIDRuntimeTest, SymbolAllocDuringGC) {

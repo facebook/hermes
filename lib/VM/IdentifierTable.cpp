@@ -517,6 +517,10 @@ void IdentifierTable::freeUnmarkedSymbols(
         tracker.untrackSymbol(i);
       }
       freeSymbol(i);
+    } else {
+      // This symbol should not be freed, update the marked symbols so the GC
+      // knows that it is retained.
+      markedSymbols.set(i);
     }
   }
   markedSymbols_.reset();
