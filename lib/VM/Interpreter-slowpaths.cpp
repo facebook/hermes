@@ -46,6 +46,10 @@ HERMES_SLOW_STATISTIC(
     "NumGetByIdSlow: Number of property 'read by id' slow path");
 
 HERMES_SLOW_STATISTIC(
+    NumGetByValStr,
+    "NumGetByValStr: Number of GetByVal _,StringPrimitive,_");
+
+HERMES_SLOW_STATISTIC(
     NumPutByIdCacheEvicts,
     "NumPutByIdCacheEvicts: Number of property 'write by id' cache evictions");
 HERMES_SLOW_STATISTIC(
@@ -54,6 +58,8 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumPutByIdTransient,
     "NumPutByIdTransient: Number of property 'write by id' to non-objects");
+
+HERMES_SLOW_STATISTIC(NumPutByVal, "NumPutByVal: Number of PutByVal");
 
 namespace hermes {
 namespace vm {
@@ -679,11 +685,14 @@ ExecutionStatus Interpreter::caseDelByVal(
   return ExecutionStatus::RETURNED;
 }
 
-PseudoHandle<> Interpreter::getByValTransientFast(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> nameHandle) {
+/// Fast path for getByValTransient() -- avoid boxing for \p base if it is
+/// string primitive and \p nameHandle is an array index.
+/// If the property does not exist, return Empty.
+static inline PseudoHandle<>
+getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle) {
   if (base->isString()) {
+    ++NumGetByValStr;
+
     // Handle most common fast path -- array index property for string
     // primitive.
     // Since primitive string cannot have index like property we can
@@ -797,6 +806,7 @@ ExecutionStatus Interpreter::casePutByVal(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
     const inst::Inst *ip) {
+  ++NumPutByVal;
   bool strictMode = (ip->opCode == inst::OpCode::PutByValStrict);
   if (LLVM_LIKELY(O1REG(PutByValLoose).isObject())) {
     auto defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
@@ -1523,10 +1533,14 @@ ExecutionStatus doGetByIdSlowPath_RJS(
   return ExecutionStatus::RETURNED;
 }
 
-inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id) {
+/// Fast path to get primitive value \p base's own properties by name \p id
+/// without boxing.
+/// Primitive own properties are properties fetching values from primitive
+/// value itself.
+/// Currently the only primitive own property is String.prototype.length.
+/// If the fast path property does not exist, return Empty.
+static inline PseudoHandle<>
+tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id) {
   if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
     return createPseudoHandle(HermesValue::encodeTrustedNumberValue(
         base->getString()->getStringLength()));
