@@ -22,7 +22,7 @@
 #include <type_traits>
 #include <utility>
 
-using namespace hermes;
+namespace hermes {
 
 // Make sure the ValueKinds.def tree is consistent with the class hierarchy.
 #define QUOTE(X) #X
@@ -1022,6 +1022,8 @@ void Type::print(llvh::raw_ostream &OS) const {
     }
   }
 }
+
+} // namespace hermes
 
 llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const hermes::Type &T) {
   T.print(OS);

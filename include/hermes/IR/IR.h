@@ -667,6 +667,10 @@ union Attributes {
     flags_ = 0;
   }
 
+  llvh::hash_code hash() {
+    return flags_;
+  }
+
   /// \return a string describing the attributes if there are any.
   /// If there are no attributes, returns "".
   /// If there are attributes returns, e.g. "[allCallsitesKnownInStrictMode]".
@@ -1585,7 +1589,8 @@ class Instruction
   }
 
   /// Return the hash code the this instruction.
-  llvh::hash_code getHashCode() const;
+  /// (The instruction cannot be a Phi, since that might have loops.)
+  llvh::hash_code getSimpleHashCode() const;
 
   /// Return true if \p RHS is equal to this instruction.
   bool isIdenticalTo(const Instruction *RHS) const;
@@ -1940,7 +1945,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// \returns whether this is the top level function (i.e. global scope).
   bool isGlobalScope() const;
 
-  /// \return whether this is a anonymous function.
+  /// \return whether this is an anonymous function.
   bool isAnonymous() const {
     return originalOrInferredName_.str().empty();
   }
@@ -2732,6 +2737,11 @@ class Module : public Value {
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ModuleKind;
   }
+
+  /// The hash_code of the Module.  This is intended to detect changes made
+  /// by optimization passes; aspects not changed by such passes may
+  /// not be included in the hash value.
+  llvh::hash_code hash() const;
 
  private:
   /// Calculate the CJS module function graph, if it hasn't been calculated yet.

@@ -234,6 +234,8 @@ bool Verifier::visitModule(const Module &M) {
   }
   for (auto &VS : M.getVariableScopes())
     ReturnIfNot(visitVariableScope(VS));
+  // Ensure that we can compute the hash of a module successfully.
+  (void)M.hash();
   return true;
 }
 

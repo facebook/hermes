@@ -447,7 +447,10 @@ class InstructionHashConstructor
 };
 } // namespace
 
-llvh::hash_code Instruction::getHashCode() const {
+llvh::hash_code Instruction::getSimpleHashCode() const {
+  assert(
+      getKind() != ValueKind::PhiInstKind &&
+      "Simple hash code doesn't handle Phi's, because they allow loops.");
   llvh::hash_code hc =
       llvh::hash_combine((unsigned)getKind(), getNumOperands());
 
