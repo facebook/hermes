@@ -75,9 +75,9 @@ class HadesGC final : public GCBase {
     return gc->getKind() == HeapKind::HadesGC;
   }
 
-  static constexpr uint32_t maxAllocationSizeImpl() {
-    // The largest allocation allowable in Hades is the max size a single
-    // segment supports.
+  static constexpr uint32_t maxNormalAllocationSizeImpl() {
+    // Normal allocation (in contrast to large allocation) in Hades cannot
+    // exceed the maximum size of allocation space in a FixedSizeHeapSegment.
     return FixedSizeHeapSegment::maxSize();
   }
 

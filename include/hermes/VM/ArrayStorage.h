@@ -59,7 +59,7 @@ class ArrayStorageBase final
   /// \return The maximum number of elements we can fit in a single array in the
   /// current GC.
   static constexpr size_type maxElements() {
-    return capacityForAllocationSize(GC::maxAllocationSize());
+    return capacityForAllocationSize(GC::maxNormalAllocationSize());
   }
 
   static bool classof(const GCCell *cell) {
@@ -454,22 +454,22 @@ using ArrayStorageSmall = ArrayStorageBase<SmallHermesValue>;
 
 static_assert(
     ArrayStorage::allocationSize(ArrayStorage::maxElements()) <=
-        GC::maxAllocationSize(),
+        GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 
 static_assert(
-    GC::maxAllocationSize() -
+    GC::maxNormalAllocationSize() -
             ArrayStorage::allocationSize(ArrayStorage::maxElements()) <
         HeapAlign,
     "maxElements() is too small");
 
 static_assert(
     ArrayStorageSmall::allocationSize(ArrayStorageSmall::maxElements()) <=
-        GC::maxAllocationSize(),
+        GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 
 static_assert(
-    GC::maxAllocationSize() -
+    GC::maxNormalAllocationSize() -
             ArrayStorageSmall::allocationSize(
                 ArrayStorageSmall::maxElements()) <
         HeapAlign,

@@ -649,7 +649,7 @@ template <typename HVType>
 constexpr typename SegmentedArrayBase<HVType>::SegmentNumber
 SegmentedArrayBase<HVType>::maxNumSegments() {
   const SegmentedArrayBase::SegmentNumber maxAllocSlots =
-      slotCapacityForAllocationSize(GC::maxAllocationSize());
+      slotCapacityForAllocationSize(GC::maxNormalAllocationSize());
   const SegmentedArrayBase::SegmentNumber maxAllocSegments =
       maxAllocSlots - kValueToSegmentThreshold;
   return std::min(maxAllocSegments, maxNumSegmentsWithoutOverflow());
@@ -673,11 +673,11 @@ struct IsGCObject<SegmentedArraySmall::Segment> : public std::true_type {};
 
 static_assert(
     SegmentedArray::allocationSizeForCapacity(SegmentedArray::maxElements()) <=
-        GC::maxAllocationSize(),
+        GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 static_assert(
     SegmentedArraySmall::allocationSizeForCapacity(
-        SegmentedArraySmall::maxElements()) <= GC::maxAllocationSize(),
+        SegmentedArraySmall::maxElements()) <= GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 
 } // namespace vm

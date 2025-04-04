@@ -193,7 +193,7 @@ class MallocGC final : public GCBase {
     return 0;
   }
 
-  static constexpr uint32_t maxAllocationSizeImpl() {
+  static constexpr uint32_t maxNormalAllocationSizeImpl() {
     // MallocGC imposes no limit on individual allocations.
     return std::numeric_limits<uint32_t>::max();
   }

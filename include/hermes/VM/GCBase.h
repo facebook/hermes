@@ -108,8 +108,9 @@ enum XorPtrKeyID {
 /// logging.
 ///   void collect(std::string cause);
 ///
-/// The maximum size of any one allocation allowable by the GC in any state.
-///   static constexpr uint32_t maxAllocationSizeImpl();
+/// The maximum size of an normal allocation (compared to large allocation)
+/// allowable by the GC in any state.
+///   static constexpr uint32_t maxNormalAllocationSizeImpl();
 ///
 /// Mark a pointer to a GCCell.
 ///   template <class T> void mark(T *&ptr);
@@ -1027,12 +1028,14 @@ class GCBase {
 #ifdef HERMESVM_GC_RUNTIME
   inline static constexpr uint32_t minAllocationSizeImpl();
 
-  inline static constexpr uint32_t maxAllocationSizeImpl();
+  inline static constexpr uint32_t maxNormalAllocationSizeImpl();
 #endif
 
   inline static constexpr uint32_t minAllocationSize();
 
-  inline static constexpr uint32_t maxAllocationSize();
+  /// The maximum size of a normal allocation. All GCCell types that do not
+  /// support large allocation must be smaller than or equal to this.
+  inline static constexpr uint32_t maxNormalAllocationSize();
 
   /// Dump detailed heap contents to the given output stream, \p os.
   virtual void dump(llvh::raw_ostream &os, bool verbose = false);

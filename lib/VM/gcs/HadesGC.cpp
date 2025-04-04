@@ -37,7 +37,8 @@ static constexpr size_t kTargetMaxPauseMs = 50;
 // Assert that it is always safe to construct a cell that is as large as the
 // entire segment. This lets us always assume that contiguous regions in a
 // segment can be safely turned into a single FreelistCell.
-static_assert(FixedSizeHeapSegment::maxSize() <= HadesGC::maxAllocationSize());
+static_assert(
+    FixedSizeHeapSegment::maxSize() <= HadesGC::maxNormalAllocationSize());
 
 // A free list cell is always variable-sized.
 const VTable HadesGC::OldGen::FreelistCell::vt{
@@ -2412,7 +2413,8 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
       isSizeHeapAligned(sz) &&
       "Should be aligned before entering this function");
   assert(sz >= minAllocationSize() && "Allocating too small of an object");
-  assert(sz <= maxAllocationSize() && "Allocating too large of an object");
+  assert(
+      sz <= maxNormalAllocationSize() && "Allocating too large of an object");
   assert(gc_.gcMutex_ && "gcMutex_ must be held before calling oldGenAlloc");
   if (GCCell *cell = search(sz)) {
     return cell;
