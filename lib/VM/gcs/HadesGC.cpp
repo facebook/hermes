@@ -1412,7 +1412,7 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 
   // First, clear any mark bits that were set by a previous collection or
   // direct-to-OG allocation, they aren't needed anymore.
-  for (FixedSizeHeapSegment &seg : oldGen_)
+  for (FixedSizeHeapSegment &seg : oldGen_.getSegments())
     seg.markBitArray().reset();
 
   // Unmark all symbols in the identifier table, as Symbol liveness will be
@@ -1801,7 +1801,7 @@ void HadesGC::finalizeAll() {
     forCompactedObjsInSegment(
         *compactee_.segment, finalizeCallback, getPointerBase());
 
-  for (FixedSizeHeapSegment &seg : oldGen_)
+  for (FixedSizeHeapSegment &seg : oldGen_.getSegments())
     forAllObjsInSegment(seg, finalizeCallback);
 }
 
@@ -2116,7 +2116,7 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
       callback(cell);
     }
   };
-  for (FixedSizeHeapSegment &seg : oldGen_) {
+  for (FixedSizeHeapSegment &seg : oldGen_.getSegments()) {
     if (concurrentPhase_ != Phase::Sweep)
       forAllObjsInSegment(seg, callback);
     else
@@ -2827,7 +2827,7 @@ void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
   for (size_t i = 0; i < segEnd; ++i) {
     // It is safe to hold this reference across a push_back into
     // oldGen_.segments_ since references into a deque are not invalidated.
-    FixedSizeHeapSegment &seg = oldGen_[i];
+    FixedSizeHeapSegment &seg = oldGen_.getSegments()[i];
     scanDirtyCardsForSegment(acceptor, seg);
     // Do not clear the card table if the OG thread is currently marking to
     // prepare for a compaction. Note that we should clear the card tables if
@@ -2917,7 +2917,7 @@ llvh::ErrorOr<size_t> HadesGC::getVMFootprintForTest() const {
     return ygFootprint;
 
   // Add each OG segment.
-  for (const FixedSizeHeapSegment &seg : oldGen_) {
+  for (const FixedSizeHeapSegment &seg : oldGen_.getSegments()) {
     auto segFootprint =
         hermes::oscompat::vm_footprint(seg.start(), seg.hiLim());
     if (!segFootprint)
@@ -2927,29 +2927,8 @@ llvh::ErrorOr<size_t> HadesGC::getVMFootprintForTest() const {
   return footprint;
 }
 
-std::deque<FixedSizeHeapSegment>::iterator HadesGC::OldGen::begin() {
-  return segments_.begin();
-}
-
-std::deque<FixedSizeHeapSegment>::iterator HadesGC::OldGen::end() {
-  return segments_.end();
-}
-
-std::deque<FixedSizeHeapSegment>::const_iterator HadesGC::OldGen::begin()
-    const {
-  return segments_.begin();
-}
-
-std::deque<FixedSizeHeapSegment>::const_iterator HadesGC::OldGen::end() const {
-  return segments_.end();
-}
-
 size_t HadesGC::OldGen::numSegments() const {
   return segments_.size();
-}
-
-FixedSizeHeapSegment &HadesGC::OldGen::operator[](size_t i) {
-  return segments_[i];
 }
 
 llvh::ErrorOr<FixedSizeHeapSegment> HadesGC::createSegment() {
@@ -3032,10 +3011,9 @@ bool HadesGC::inOldGen(const void *p) const {
   // If it isn't in any OG segment or the compactee, then this pointer is not
   // in the OG.
   return compactee_.contains(p) ||
-      std::any_of(
-             oldGen_.begin(),
-             oldGen_.end(),
-             [p](const FixedSizeHeapSegment &seg) { return seg.contains(p); });
+      llvh::any_of(oldGen_.getSegments(), [p](const FixedSizeHeapSegment &seg) {
+           return seg.contains(p);
+         });
 }
 
 void HadesGC::yieldToOldGen() {
@@ -3312,7 +3290,7 @@ void HadesGC::verifyCardTable() {
     markCell(acceptor, cell);
   });
 
-  for (const FixedSizeHeapSegment &seg : oldGen_) {
+  for (const FixedSizeHeapSegment &seg : oldGen_.getSegments()) {
     seg.cardBoundaryTable().verifyBoundaries(seg.start(), seg.level());
   }
 }

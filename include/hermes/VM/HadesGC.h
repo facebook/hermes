@@ -555,14 +555,15 @@ class HadesGC final : public GCBase {
    public:
     explicit OldGen(HadesGC &gc);
 
-    std::deque<FixedSizeHeapSegment>::iterator begin();
-    std::deque<FixedSizeHeapSegment>::iterator end();
-    std::deque<FixedSizeHeapSegment>::const_iterator begin() const;
-    std::deque<FixedSizeHeapSegment>::const_iterator end() const;
-
     size_t numSegments() const;
 
-    FixedSizeHeapSegment &operator[](size_t i);
+    /// \return The deque of AlignedHeapSegments in the OG.
+    std::deque<FixedSizeHeapSegment> &getSegments() {
+      return segments_;
+    }
+    const std::deque<FixedSizeHeapSegment> &getSegments() const {
+      return segments_;
+    }
 
     /// Take ownership of the given segment.
     void addSegment(FixedSizeHeapSegment seg);
