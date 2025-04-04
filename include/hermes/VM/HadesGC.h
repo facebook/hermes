@@ -621,6 +621,8 @@ class HadesGC final : public GCBase {
     GCCell *alloc(uint32_t sz);
 
     /// Allocate objects that are larger than FixedSizeHeapSegment::maxSize().
+    /// \tparam If Yes, failed allocation returns nullptr.
+    template <MayFail mayFail>
     GCCell *allocLarge(uint32_t sz);
 
     /// \return the total number of bytes that are in use by the OG section of
@@ -1179,7 +1181,9 @@ class HadesGC final : public GCBase {
   /// FixedSizeHeapSegment::maxSize().
   /// \tparam canBeLarge If Yes, the object being allocated supports large
   /// allocations, and \p sz may be > FixedHeapSegment::maxSize().
-  template <CanBeLarge canBeLarge>
+  /// \param mayFail If Yes, the large allocation path may fail and return a
+  /// null pointer.
+  template <CanBeLarge canBeLarge, MayFail mayFail>
   void *allocSlow(uint32_t sz);
 
   /// Like alloc, but the resulting object is expected to be long-lived.
@@ -1187,7 +1191,9 @@ class HadesGC final : public GCBase {
   /// necessary to create room).
   /// \tparam canBeLarge If Yes, the object being allocated supports large
   /// allocations, and \p sz may be > FixedHeapSegment::maxSize().
-  template <CanBeLarge canBeLarge>
+  /// \param mayFail If Yes, the large allocation path may fail and return a
+  /// null pointer.
+  template <CanBeLarge canBeLarge, MayFail mayFail>
   void *allocLongLived(uint32_t sz);
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
@@ -1478,7 +1484,7 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
 #endif
   if constexpr (longLived == LongLived::Yes) {
     auto lk = ensureBackgroundTaskPaused();
-    auto *ptr = allocLongLived<canBeLarge>(size);
+    auto *ptr = allocLongLived<canBeLarge, mayFail>(size);
     if constexpr (canBeLarge == CanBeLarge::Yes) {
       if constexpr (mayFail == MayFail::Yes) {
         // If it fails, a nullptr is allowed and simply return it to the caller.
@@ -1499,7 +1505,7 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
   }
   // Slow path for types that don't support large allocation.
   if constexpr (canBeLarge == CanBeLarge::No) {
-    auto *ptr = allocSlow<CanBeLarge::No>(size);
+    auto *ptr = allocSlow<CanBeLarge::No, MayFail::No>(size);
     if (hasFinalizer == HasFinalizer::Yes)
       youngGenFinalizables_.emplace_back(static_cast<GCCell *>(ptr));
     return constructCell<T>(ptr, size, std::forward<Args>(args)...);
@@ -1514,7 +1520,7 @@ T *HadesGC::makeASlowCanBeLarge(uint32_t size, Args &&...args) {
   // Since CanBeLarge is Yes, this could be a large allocation. We need to hold
   // the lock until constructCellCanBeLarge() returns.
   auto lk = ensureBackgroundTaskPaused();
-  auto *ptr = allocSlow<CanBeLarge::Yes>(size);
+  auto *ptr = allocSlow<CanBeLarge::Yes, mayFail>(size);
   if constexpr (mayFail == MayFail::Yes) {
     // If it fails, a nullptr is allowed and simply return it to the caller.
     if (LLVM_UNLIKELY(!ptr))
