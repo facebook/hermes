@@ -45,8 +45,8 @@ template <typename HVType>
 class SegmentedArrayBase final : public VariableSizeRuntimeCell,
                                  private llvh::TrailingObjects<
                                      SegmentedArrayBase<HVType>,
-                                     GCHermesValueBaseImpl<HVType>> {
-  using GCHVType = GCHermesValueBaseImpl<HVType>;
+                                     GCHermesValueImpl<HVType>> {
+  using GCHVType = GCHermesValueImpl<HVType>;
 
  public:
   /// A segment is just a blob of raw memory with a fixed size.

@@ -31,8 +31,8 @@ inline PinnedHermesValue &PinnedHermesValue::operator=(PseudoHandle<T> &&hv) {
 
 template <typename HVType>
 template <typename NeedsBarriers>
-GCHermesValueBaseImpl<HVType>::GCHermesValueBaseImpl(HVType hv, GC &gc)
-    : HVType{hv} {
+GCHermesValueImpl<HVType>::GCHermesValueImpl(HVType hv, GC &gc)
+    : GCHermesValueBaseImpl<HVType>{hv} {
   assert(!hv.isPointer() || hv.getPointer());
   if (NeedsBarriers::value) {
     gc.constructorWriteBarrier(this, hv);
@@ -45,11 +45,25 @@ GCHermesValueBaseImpl<HVType>::GCHermesValueBaseImpl(HVType hv, GC &gc)
 
 template <typename HVType>
 template <typename NeedsBarriers>
-GCHermesValueBaseImpl<HVType>::GCHermesValueBaseImpl(
+GCHermesValueInLargeObjImpl<HVType>::GCHermesValueInLargeObjImpl(
     HVType hv,
-    GC &gc,
-    std::nullptr_t)
-    : HVType{hv} {
+    const GCCell *owningObj,
+    GC &gc)
+    : GCHermesValueBaseImpl<HVType>{hv} {
+  assert(!hv.isPointer() || hv.getPointer());
+  if (NeedsBarriers::value) {
+    gc.constructorWriteBarrierForLargeObj(owningObj, this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrierInCtor(this, hv) &&
+        "This GCHermesValueBase construction cannot skip write barrier");
+  }
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+GCHermesValueImpl<HVType>::GCHermesValueImpl(HVType hv, GC &gc, std::nullptr_t)
+    : GCHermesValueBaseImpl<HVType>(hv) {
   assert(!hv.isPointer());
   // No need to invoke any write barriers here, since the old value is
   // uninitialized (so the snapshot barrier does not apply), and the new value
@@ -58,7 +72,7 @@ GCHermesValueBaseImpl<HVType>::GCHermesValueBaseImpl(
 
 template <typename HVType>
 template <typename NeedsBarriers>
-inline void GCHermesValueBaseImpl<HVType>::set(HVType hv, GC &gc) {
+inline void GCHermesValueImpl<HVType>::set(HVType hv, GC &gc) {
   if (hv.isPointer()) {
     HERMES_SLOW_ASSERT(
         gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
@@ -67,6 +81,40 @@ inline void GCHermesValueBaseImpl<HVType>::set(HVType hv, GC &gc) {
   assert(NeedsBarriers::value || !gc.needsWriteBarrier(this, hv));
   if (NeedsBarriers::value)
     gc.writeBarrier(this, hv);
+  HVType::setNoBarrier(hv);
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+GCHermesValueInLargeObjImpl<HVType>::GCHermesValueInLargeObjImpl(
+    HVType hv,
+    GC &gc,
+    std::nullptr_t)
+    : GCHermesValueBaseImpl<HVType>(hv) {
+  assert(!hv.isPointer());
+  // No need to invoke any write barriers here, since the old value is
+  // uninitialized (so the snapshot barrier does not apply), and the new value
+  // is not a pointer (so the generational/relocation barrier does not apply).
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+inline void GCHermesValueInLargeObjImpl<HVType>::set(
+    HVType hv,
+    const GCCell *owningObj,
+    GC &gc) {
+  if (hv.isPointer()) {
+    HERMES_SLOW_ASSERT(
+        gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
+        "Setting an invalid pointer into a GCHermesValue");
+  }
+  if constexpr (NeedsBarriers::value) {
+    gc.writeBarrierForLargeObj(owningObj, this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrier(this, hv) &&
+        "Can't skip write barriers for this GCHermesValueBase and target value");
+  }
   HVType::setNoBarrier(hv);
 }
 
@@ -86,7 +134,7 @@ void GCHermesValueBaseImpl<HVType>::unreachableWriteBarrier(GC &gc) {
 /*static*/
 template <typename HVType>
 template <typename InputIt>
-inline void GCHermesValueBaseImpl<HVType>::fill(
+inline void GCHermesValueImpl<HVType>::fill(
     InputIt start,
     InputIt end,
     HVType fill,
@@ -105,7 +153,27 @@ inline void GCHermesValueBaseImpl<HVType>::fill(
 /*static*/
 template <typename HVType>
 template <typename InputIt>
-inline void GCHermesValueBaseImpl<HVType>::uninitialized_fill(
+inline void GCHermesValueInLargeObjImpl<HVType>::fill(
+    InputIt start,
+    InputIt end,
+    HVType fill,
+    const GCCell *owningObj,
+    GC &gc) {
+  if (fill.isPointer()) {
+    for (auto cur = start; cur != end; ++cur) {
+      cur->set(fill, owningObj, gc);
+    }
+  } else {
+    for (auto cur = start; cur != end; ++cur) {
+      cur->setNonPtr(fill, gc);
+    }
+  }
+}
+
+/*static*/
+template <typename HVType>
+template <typename InputIt>
+inline void GCHermesValueImpl<HVType>::uninitialized_fill(
     InputIt start,
     InputIt end,
     HVType fill,
@@ -113,19 +181,41 @@ inline void GCHermesValueBaseImpl<HVType>::uninitialized_fill(
   if (fill.isPointer()) {
     for (auto cur = start; cur != end; ++cur) {
       // Use the constructor write barrier. Assume it needs barriers.
-      new (&*cur) GCHermesValueBaseImpl<HVType>(fill, gc);
+      new (&*cur) GCHermesValueImpl<HVType>(fill, gc);
     }
   } else {
     for (auto cur = start; cur != end; ++cur) {
       // Use a constructor that doesn't handle pointer values.
-      new (&*cur) GCHermesValueBaseImpl<HVType>(fill, gc, nullptr);
+      new (&*cur) GCHermesValueImpl<HVType>(fill, gc, nullptr);
+    }
+  }
+}
+
+/*static*/
+template <typename HVType>
+template <typename InputIt>
+inline void GCHermesValueInLargeObjImpl<HVType>::uninitialized_fill(
+    InputIt start,
+    InputIt end,
+    HVType fill,
+    const GCCell *owningObj,
+    GC &gc) {
+  if (fill.isPointer()) {
+    for (auto cur = start; cur != end; ++cur) {
+      // Use the constructor write barrier. Assume it needs barriers.
+      new (&*cur) GCHermesValueInLargeObjImpl<HVType>(fill, owningObj, gc);
+    }
+  } else {
+    for (auto cur = start; cur != end; ++cur) {
+      // Use a constructor that doesn't handle pointer values.
+      new (&*cur) GCHermesValueInLargeObjImpl<HVType>(fill, gc, nullptr);
     }
   }
 }
 
 template <typename HVType>
 template <typename InputIt, typename OutputIt>
-inline OutputIt GCHermesValueBaseImpl<HVType>::copy(
+inline OutputIt GCHermesValueImpl<HVType>::copy(
     InputIt first,
     InputIt last,
     OutputIt result,
@@ -138,17 +228,14 @@ inline OutputIt GCHermesValueBaseImpl<HVType>::copy(
 
 template <typename HVType>
 template <typename InputIt, typename OutputIt>
-inline OutputIt GCHermesValueBaseImpl<HVType>::uninitialized_copy(
+inline OutputIt GCHermesValueInLargeObjImpl<HVType>::copy(
     InputIt first,
     InputIt last,
     OutputIt result,
+    const GCCell *owningObj,
     GC &gc) {
-  static_assert(
-      !std::is_same<InputIt, GCHermesValueBaseImpl *>::value ||
-          !std::is_same<OutputIt, GCHermesValueBaseImpl *>::value,
-      "Pointer arguments must invoke pointer overload.");
   for (; first != last; ++first, (void)++result) {
-    new (&*result) GCHermesValueBaseImpl<HVType>(*first, gc);
+    result->set(*first, owningObj, gc);
   }
   return result;
 }
@@ -182,13 +269,27 @@ GCHermesValueBaseImpl<HVType>::uninitialized_copy(
 
 template <typename HVType>
 template <typename InputIt, typename OutputIt>
-inline OutputIt GCHermesValueBaseImpl<HVType>::copy_backward(
+inline OutputIt GCHermesValueImpl<HVType>::copy_backward(
     InputIt first,
     InputIt last,
     OutputIt result,
     GC &gc) {
   while (first != last) {
     (--result)->set(*--last, gc);
+  }
+  return result;
+}
+
+template <typename HVType>
+template <typename InputIt, typename OutputIt>
+inline OutputIt GCHermesValueInLargeObjImpl<HVType>::copy_backward(
+    InputIt first,
+    InputIt last,
+    OutputIt result,
+    const GCCell *owningObj,
+    GC &gc) {
+  while (first != last) {
+    (--result)->set(*--last, owningObj, gc);
   }
   return result;
 }
