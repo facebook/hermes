@@ -106,6 +106,8 @@ struct VTable {
   /// If it is variable sized, it should inherit from \see
   /// VariableSizeRuntimeCell.
   const uint32_t size;
+  /// Whether the cell supports large allocation.
+  bool allowLargeAlloc;
   /// Called during GC when an object becomes unreachable. Must not perform any
   /// allocations or access any garbage-collectable objects.  Unless an
   /// operation is documented to be safe to call from a finalizer, it probably
@@ -137,6 +139,7 @@ struct VTable {
   constexpr explicit VTable(
       CellKind kind,
       uint32_t size,
+      bool allowLargeAlloc = false,
       FinalizeCallback *finalize = nullptr,
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr
@@ -153,6 +156,7 @@ struct VTable {
       )
       : kind(kind),
         size(heapAlignSize(size)),
+        allowLargeAlloc(allowLargeAlloc),
         finalize_(finalize),
         mallocSize_(mallocSize),
         trimSize_(trimSize)
