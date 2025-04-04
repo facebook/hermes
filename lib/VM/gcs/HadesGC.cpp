@@ -2295,10 +2295,33 @@ bool HadesGC::needsWriteBarrier(const GCPointerBase *loc, GCCell *value) const {
 }
 #endif
 
+template void *HadesGC::allocSlow<CanBeLarge::Yes>(uint32_t sz);
+template void *HadesGC::allocSlow<CanBeLarge::No>(uint32_t sz);
+
+template <CanBeLarge canBeLarge>
 void *HadesGC::allocSlow(uint32_t sz) {
+  // Check if it's a large allocation before YG collection.
+  if (LLVM_UNLIKELY(sz > FixedSizeHeapSegment::maxSize())) {
+    if constexpr (canBeLarge == CanBeLarge::Yes)
+      return oldGen_.allocLarge(sz);
+
+    // A YG collection is guaranteed to fully evacuate, leaving all the space
+    // available, so the only way this could fail is if sz is greater than
+    // a segment size and canBeLarge is No.
+    // This would be an error in VM code to ever allow such a size to be
+    // allocated without enabling large allocation. This case is for production,
+    // if we miss a test case.
+    oom(make_error_code(OOMError::SuperSegmentAlloc));
+  }
+
   AllocResult res;
-  {
+  // On slow path for CanBeLarge::Yes, we should have already held the lock.
+  if constexpr (canBeLarge == CanBeLarge::No) {
     auto lk = ensureBackgroundTaskPaused();
+    // Failed to alloc in young gen, do a young gen collection.
+    youngGenCollection(
+        kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
+  } else {
     // Failed to alloc in young gen, do a young gen collection.
     youngGenCollection(
         kNaturalCauseForAnalytics, /*forceOldGenCollection*/ false);
@@ -2311,26 +2334,63 @@ void *HadesGC::allocSlow(uint32_t sz) {
   // the YG to full size.
   youngGen().clearExternalMemoryCharge();
   res = youngGen().alloc(sz);
-  if (res.success)
-    return res.ptr;
-
-  // A YG collection is guaranteed to fully evacuate, leaving all the space
-  // available, so the only way this could fail is if sz is greater than
-  // a segment size.
-  // This would be an error in VM code to ever allow such a size to be
-  // allocated, and thus there's an assert at the top of this function to
-  // disallow that. This case is for production, if we miss a test case.
-  oom(make_error_code(OOMError::SuperSegmentAlloc));
+  assert(
+      res.success &&
+      "Allocation of size smaller than or equal to FixedSizeHeapSegment::maxSize() should never fail");
+  return res.ptr;
 }
 
+GCCell *HadesGC::OldGen::allocLarge(uint32_t sz) {
+  assert(
+      sz <= GCCell::maxSize() &&
+      "Large cell size can't exceed GCCell::maxSize()");
+  assert(
+      sz > FixedSizeHeapSegment::maxSize() &&
+      "Large allocation must have size larger than FixedSizeHeapSegment::maxSize()");
+  assert(gc_.gcMutex_ && "gcMutex_ must be held before calling allocLarge()");
+  size_t segmentSize = JumboHeapSegment::computeSegmentSize(sz);
+  llvh::ErrorOr<JumboHeapSegment> seg = gc_.createJumboSegment(segmentSize);
+  if (!seg) {
+    // Can't create any new segments, wait for an OG collection to finish and
+    // possibly free some segments.
+    gc_.waitForCollectionToFinish("full heap");
+    // Try the allocation again.
+    seg = gc_.createJumboSegment(segmentSize);
+    if (!seg) {
+      // The GC didn't recover enough memory, OOM.
+      // Re-use the error code from the earlier heap segment allocation, because
+      // it's either that the max heap size was reached, or that segment failed
+      // to allocate.
+      gc_.oom(seg.getError());
+    }
+  }
+
+  GCCell *newObj = static_cast<GCCell *>(seg->alloc());
+  auto maxSize = seg->maxSize();
+  jumboSegments_.emplace_back(std::move(seg.get()));
+  gc_.totalAllocatedBytes_ += maxSize;
+  return finishAlloc(newObj, maxSize);
+}
+
+template void *HadesGC::allocLongLived<CanBeLarge::Yes>(uint32_t sz);
+template void *HadesGC::allocLongLived<CanBeLarge::No>(uint32_t sz);
+
+template <CanBeLarge canBeLarge>
 void *HadesGC::allocLongLived(uint32_t sz) {
   assert(
       isSizeHeapAligned(sz) &&
       "Call to allocLongLived must use a size aligned to HeapAlign");
   assert(gcMutex_ && "GC mutex must be held when calling allocLongLived");
-  totalAllocatedBytes_ += sz;
-  // Alloc directly into the old gen.
-  return oldGen_.alloc(sz);
+  // Alloc directly into the old gen when canBeLarge is No or it can fit in a
+  // FixedSizeHeapSegment.
+  if ((canBeLarge == CanBeLarge::No) ||
+      LLVM_LIKELY(sz <= FixedSizeHeapSegment::maxSize())) {
+    // OldGen::alloc does not internally increment totalAllocatedBytes, so do it
+    // here.
+    totalAllocatedBytes_ += sz;
+    return oldGen_.alloc(sz);
+  }
+  return oldGen_.allocLarge(sz);
 }
 
 GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
@@ -2343,25 +2403,31 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   if (GCCell *cell = search(sz)) {
     return cell;
   }
-  // Before waiting for a collection to finish, check if we're below the max
-  // heap size and can simply allocate another segment. This will prevent
-  // blocking the YG unnecessarily.
-  llvh::ErrorOr<FixedSizeHeapSegment> seg = gc_.createSegment();
-  if (seg) {
+
+  /// Allocate from this newly created segment.
+  auto allocFromNewSegment = [this, sz](FixedSizeHeapSegment seg) {
     // Complete this allocation using a bump alloc.
-    AllocResult res = seg->alloc(sz);
+    AllocResult res = seg.alloc(sz);
     assert(
         res.success &&
         "A newly created segment should always be able to allocate");
     // Set the cell head for any successful alloc, so that write barriers can
     // move from dirty cards to the head of the object.
     FixedSizeHeapSegment::setCellHead(static_cast<GCCell *>(res.ptr), sz);
-    // Add the segment to segments_ and add the remainder of the segment to the
-    // free list.
-    addSegment(std::move(seg.get()));
+    // Add the segment to segments_ and add the remainder of the segment to
+    // the free list.
+    addSegment(std::move(seg));
     GCCell *newObj = static_cast<GCCell *>(res.ptr);
     AlignedHeapSegment::setCellMarkBit(newObj);
     return newObj;
+  };
+
+  // Before waiting for a collection to finish, check if we're below the max
+  // heap size and can simply allocate another segment. This will prevent
+  // blocking the YG unnecessarily.
+  llvh::ErrorOr<FixedSizeHeapSegment> seg = gc_.createSegment();
+  if (seg) {
+    return allocFromNewSegment(std::move(seg.get()));
   }
 
   // Can't expand to any more segments, wait for an old gen collection to
@@ -2371,6 +2437,12 @@ GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
   // Repeat the search in case the collection did free memory.
   if (GCCell *cell = search(sz)) {
     return cell;
+  }
+  // It's possible that the collection freed some JumboHeapSegments, so try
+  // to create a new segment again.
+  seg = gc_.createSegment();
+  if (seg) {
+    return allocFromNewSegment(std::move(seg.get()));
   }
 
   // The GC didn't recover enough memory, OOM.

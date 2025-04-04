@@ -20,6 +20,10 @@ enum class HasFinalizer { No = 0, Yes };
 /// not the cell being allocated should be allocated directly in OG.
 enum class LongLived { No = 0, Yes };
 
+/// Template parameter passed in during allocation, that signifies whether or
+/// not the cell being allocated supports large allocation.
+enum class CanBeLarge { No = 0, Yes };
+
 } // namespace vm
 } // namespace hermes
 

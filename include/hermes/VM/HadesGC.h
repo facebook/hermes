@@ -599,12 +599,16 @@ class HadesGC final : public GCBase {
     void setTargetSizeBytes(size_t targetSizeBytes);
 
     /// Allocate into OG. Returns a pointer to the newly allocated space. That
-    /// space must be filled before releasing the gcMutex_.
+    /// space must be filled before releasing the gcMutex_. Note that \p sz
+    /// must be smaller than FixedSizeHeapSegment::maxSize().
     /// \return A non-null pointer to memory in the old gen that should have a
     ///   constructor run in immediately.
     /// \pre gcMutex_ must be held before calling this function.
     /// \post This function either successfully allocates, or reports OOM.
     GCCell *alloc(uint32_t sz);
+
+    /// Allocate objects that are larger than FixedSizeHeapSegment::maxSize().
+    GCCell *allocLarge(uint32_t sz);
 
     /// \return the total number of bytes that are in use by the OG section of
     /// the JS heap, including any bytes allocated in a pending compactee, and
@@ -1158,23 +1162,19 @@ class HadesGC final : public GCBase {
     HeapSnapshot::NodeID og{IDTracker::kInvalidNode};
   } nativeIDs_;
 
-  /// The main entrypoint for all allocations.
-  /// \param sz The size of allocation requested. This might be rounded up to
-  ///   fit heap alignment requirements.
-  /// \tparam fixedSize If true, the allocation is of a cell type that always
-  ///   has the same size. The requirement enforced by Hades is that all
-  ///   fixed-size allocations must go into YG.
-  /// \tparam hasFinalizer If true, the cell about to be allocated into the
-  ///   requested space will have a finalizer that the GC will need to invoke.
-  template <bool fixedSize, HasFinalizer hasFinalizer>
-  inline void *allocWork(uint32_t sz);
-
-  /// Slow path for allocations.
+  /// Slow path for allocations. This returns nullptr iff \p sz is larger than
+  /// FixedSizeHeapSegment::maxSize().
+  /// \tparam canBeLarge If Yes, the object being allocated supports large
+  /// allocations, and \p sz may be > FixedHeapSegment::maxSize().
+  template <CanBeLarge canBeLarge>
   void *allocSlow(uint32_t sz);
 
   /// Like alloc, but the resulting object is expected to be long-lived.
   /// Allocate directly in the old generation (doing a full collection if
   /// necessary to create room).
+  /// \tparam canBeLarge If Yes, the object being allocated supports large
+  /// allocations, and \p sz may be > FixedHeapSegment::maxSize().
+  template <CanBeLarge canBeLarge>
   void *allocLongLived(uint32_t sz);
 
   /// Perform a YG garbage collection. All live objects in YG will be evacuated
@@ -1432,31 +1432,9 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
   assert(
       isSizeHeapAligned(size) &&
       "Call to makeA must use a size aligned to HeapAlign");
+  assert(size >= minAllocationSize() && "Allocating too small of an object");
   assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
-#ifdef HERMES_SLOW_DEBUG
-  assert(!currentCellKindAndSize_ && "makeA() calls can not be interleaved");
-  llvh::SaveAndRestore<llvh::Optional<std::pair<CellKind, uint32_t>>>
-      saveCurrentCellKindAndSize(
-          currentCellKindAndSize_, std::make_pair(T::getCellKind(), size));
-#endif
-  if (longLived == LongLived::Yes) {
-    auto lk = ensureBackgroundTaskPaused();
-    return constructCell<T>(
-        allocLongLived(size), size, std::forward<Args>(args)...);
-  }
 
-  return constructCell<T>(
-      allocWork<fixedSize, hasFinalizer>(size),
-      size,
-      std::forward<Args>(args)...);
-}
-
-template <bool fixedSize, HasFinalizer hasFinalizer>
-void *HadesGC::allocWork(uint32_t sz) {
-  assert(
-      isSizeHeapAligned(sz) &&
-      "Should be aligned before entering this function");
-  assert(sz >= minAllocationSize() && "Allocating too small of an object");
   if (shouldSanitizeHandles()) {
     auto lk = ensureBackgroundTaskPaused();
     // The best way to sanitize uses of raw pointers outside handles is to force
@@ -1468,11 +1446,33 @@ void *HadesGC::allocWork(uint32_t sz) {
     youngGenCollection(
         kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
   }
-  AllocResult res = youngGen().alloc(sz);
-  void *resPtr = LLVM_UNLIKELY(!res.success) ? allocSlow(sz) : res.ptr;
+
+#ifdef HERMES_SLOW_DEBUG
+  assert(!currentCellKindAndSize_ && "makeA() calls can not be interleaved");
+  llvh::SaveAndRestore<llvh::Optional<std::pair<CellKind, uint32_t>>>
+      saveCurrentCellKindAndSize(
+          currentCellKindAndSize_, std::make_pair(T::getCellKind(), size));
+#endif
+  if (longLived == LongLived::Yes) {
+    auto lk = ensureBackgroundTaskPaused();
+    return constructCell<T>(
+        allocLongLived<CanBeLarge::No>(size),
+        size,
+        std::forward<Args>(args)...);
+  }
+
+  // Try allocating in YG.
+  AllocResult res = youngGen().alloc(size);
+  if (LLVM_LIKELY(res.success)) {
+    if (hasFinalizer == HasFinalizer::Yes)
+      youngGenFinalizables_.emplace_back(static_cast<GCCell *>(res.ptr));
+    return constructCell<T>(res.ptr, size, std::forward<Args>(args)...);
+  }
+  // Call into slow path.
+  auto *ptr = allocSlow<CanBeLarge::No>(size);
   if (hasFinalizer == HasFinalizer::Yes)
-    youngGenFinalizables_.emplace_back(static_cast<GCCell *>(resPtr));
-  return resPtr;
+    youngGenFinalizables_.emplace_back(static_cast<GCCell *>(ptr));
+  return constructCell<T>(ptr, size, std::forward<Args>(args)...);
 }
 
 /// \}
