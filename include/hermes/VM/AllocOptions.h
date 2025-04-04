@@ -24,6 +24,11 @@ enum class LongLived { No = 0, Yes };
 /// not the cell being allocated supports large allocation.
 enum class CanBeLarge { No = 0, Yes };
 
+/// Template parameter passed in during allocation, that signifies whether or
+/// not the allocation may fail and return nullptr (MayFail::Yes is only
+/// allowed if CanBeLarge::Yes is provided as well).
+enum class MayFail { No = 0, Yes };
+
 } // namespace vm
 } // namespace hermes
 

@@ -124,8 +124,21 @@ class HadesGC final : public GCBase {
       bool fixedSize = true,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   inline T *makeA(uint32_t size, Args &&...args);
+
+  /// Slow path of makeA() above when canBeLarge is Yes. It acquires gcMutex_
+  /// (background thread needs to be paused) and calls into allocSlow(). Mark it
+  /// with noinline to prevent it from getting inlined together with the fast
+  /// path.
+  template <
+      typename T,
+      HasFinalizer hasFinalizer,
+      MayFail mayFail,
+      class... Args>
+  LLVM_ATTRIBUTE_NOINLINE T *makeASlowCanBeLarge(uint32_t size, Args &&...args);
 
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
@@ -1427,8 +1440,18 @@ template <
     bool fixedSize,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
+  // When mayFail == MayFail::Yes, we must have canBeLarge == CanBeLarge::Yes.
+  static_assert(
+      (mayFail == MayFail::No) || (canBeLarge == CanBeLarge::Yes),
+      "Only large allocation is allowed to fail");
+  assert(
+      ((canBeLarge == CanBeLarge::No) ||
+       VTable::getVTable(T::getCellKind())->allowLargeAlloc) &&
+      "T must support large allocation when canBeLarge is Yes");
   assert(
       isSizeHeapAligned(size) &&
       "Call to makeA must use a size aligned to HeapAlign");
@@ -1453,12 +1476,18 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
       saveCurrentCellKindAndSize(
           currentCellKindAndSize_, std::make_pair(T::getCellKind(), size));
 #endif
-  if (longLived == LongLived::Yes) {
+  if constexpr (longLived == LongLived::Yes) {
     auto lk = ensureBackgroundTaskPaused();
-    return constructCell<T>(
-        allocLongLived<CanBeLarge::No>(size),
-        size,
-        std::forward<Args>(args)...);
+    auto *ptr = allocLongLived<canBeLarge>(size);
+    if constexpr (canBeLarge == CanBeLarge::Yes) {
+      if constexpr (mayFail == MayFail::Yes) {
+        // If it fails, a nullptr is allowed and simply return it to the caller.
+        if (LLVM_UNLIKELY(!ptr))
+          return nullptr;
+      }
+      return constructCellCanBeLarge<T>(ptr, size, std::forward<Args>(args)...);
+    }
+    return constructCell<T>(ptr, size, std::forward<Args>(args)...);
   }
 
   // Try allocating in YG.
@@ -1468,11 +1497,30 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
       youngGenFinalizables_.emplace_back(static_cast<GCCell *>(res.ptr));
     return constructCell<T>(res.ptr, size, std::forward<Args>(args)...);
   }
-  // Call into slow path.
-  auto *ptr = allocSlow<CanBeLarge::No>(size);
-  if (hasFinalizer == HasFinalizer::Yes)
-    youngGenFinalizables_.emplace_back(static_cast<GCCell *>(ptr));
-  return constructCell<T>(ptr, size, std::forward<Args>(args)...);
+  // Slow path for types that don't support large allocation.
+  if constexpr (canBeLarge == CanBeLarge::No) {
+    auto *ptr = allocSlow<CanBeLarge::No>(size);
+    if (hasFinalizer == HasFinalizer::Yes)
+      youngGenFinalizables_.emplace_back(static_cast<GCCell *>(ptr));
+    return constructCell<T>(ptr, size, std::forward<Args>(args)...);
+  }
+  // Slow path for types that support large allocation.
+  return makeASlowCanBeLarge<T, hasFinalizer, mayFail>(
+      size, std::forward<Args>(args)...);
+}
+
+template <typename T, HasFinalizer hasFinalizer, MayFail mayFail, class... Args>
+T *HadesGC::makeASlowCanBeLarge(uint32_t size, Args &&...args) {
+  // Since CanBeLarge is Yes, this could be a large allocation. We need to hold
+  // the lock until constructCellCanBeLarge() returns.
+  auto lk = ensureBackgroundTaskPaused();
+  auto *ptr = allocSlow<CanBeLarge::Yes>(size);
+  if constexpr (mayFail == MayFail::Yes) {
+    // If it fails, a nullptr is allowed and simply return it to the caller.
+    if (LLVM_UNLIKELY(!ptr))
+      return nullptr;
+  }
+  return constructCellCanBeLarge<T>(ptr, size, std::forward<Args>(args)...);
 }
 
 /// \}

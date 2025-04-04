@@ -336,6 +336,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
 
@@ -2049,6 +2051,8 @@ template <
     typename T,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
 #ifndef NDEBUG
@@ -2058,8 +2062,9 @@ T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  return getHeap().makeAVariable<T, hasFinalizer, longLived>(
-      size, std::forward<Args>(args)...);
+  return getHeap()
+      .makeAVariable<T, hasFinalizer, longLived, canBeLarge, mayFail>(
+          size, std::forward<Args>(args)...);
 }
 
 template <typename T>
