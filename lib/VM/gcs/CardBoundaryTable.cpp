@@ -9,6 +9,7 @@
 
 #include "hermes/VM/CardBoundaryTable.h"
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GCCell.h"
 
 #include "hermes/Support/OSCompat.h"
 

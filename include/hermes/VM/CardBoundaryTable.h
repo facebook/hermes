@@ -12,7 +12,9 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/ExpectedPageSize.h"
-#include "hermes/VM/GCCell.h"
+#include "hermes/VM/GCConcurrency.h"
+#include "hermes/VM/sh_config.h"
+#include "hermes/VM/sh_segment_info.h"
 
 #include "llvh/Support/MathExtras.h"
 
@@ -20,6 +22,8 @@
 
 namespace hermes {
 namespace vm {
+
+class GCCell;
 
 /// Supports the following query:  Given a card in the heap that intersects
 /// with the used portion of its segment, find its "crossing object" -- the
