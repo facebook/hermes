@@ -21,7 +21,11 @@ using namespace hermes::vm;
 
 namespace {
 
-struct CardTableNCTest : public ::testing::Test {
+struct TestParam {
+  size_t segmentSize;
+};
+
+struct CardTableNCTest : public ::testing::TestWithParam<TestParam> {
   CardTableNCTest();
 
   /// Run a test scenario whereby we dirty [dirtyStart, dirtyEnd], and then test
@@ -35,8 +39,9 @@ struct CardTableNCTest : public ::testing::Test {
 
  protected:
   std::unique_ptr<StorageProvider> provider{StorageProvider::mmapProvider()};
-  FixedSizeHeapSegment seg{
-      std::move(FixedSizeHeapSegment::create(provider.get()).get())};
+  // Use a shared_ptr so that we won't need to pass a custom deleter to
+  // unique_ptr or have a virtual dtor on AlignedHeapSegment.
+  std::shared_ptr<AlignedHeapSegment> seg{nullptr};
 
   // Addresses in the aligned storage to interact with during the tests.
   std::vector<char *> addrs;
@@ -47,23 +52,34 @@ void CardTableNCTest::dirtyRangeTest(
     char *dirtyStart,
     char *dirtyEnd,
     char *expectedEnd) {
-  seg.dirtyCardsForAddressRange(dirtyStart, dirtyEnd);
+  seg->dirtyCardsForAddressRange(dirtyStart, dirtyEnd);
 
   for (char *p = expectedStart; p < expectedEnd;
        p += CardBoundaryTable::kCardSize) {
-    EXPECT_TRUE(seg.isCardForAddressDirty(p));
+    EXPECT_TRUE(seg->isCardForAddressDirty(p));
   }
 }
 
 CardTableNCTest::CardTableNCTest() {
+  auto &param = GetParam();
+  // Creating different segments depending on the provided segment size.
+  if (param.segmentSize == FixedSizeHeapSegment::kSize) {
+    seg = std::make_shared<FixedSizeHeapSegment>(
+        std::move(FixedSizeHeapSegment::create(provider.get(), "test").get()));
+  } else {
+    seg = std::make_shared<JumboHeapSegment>(std::move(
+        JumboHeapSegment::create(provider.get(), "test", param.segmentSize)
+            .get()));
+  }
+
   // For purposes of this test, we'll assume the first writeable byte of
   // the segment comes just after the memory region that can be mapped by
   // kFirstUsedIndex bytes.
-  auto first = seg.lowLim() +
+  auto first = seg->lowLim() +
       AlignedHeapSegment::Contents::kFirstUsedIndex *
           AlignedHeapSegment::Contents::kCardSize;
   auto last = reinterpret_cast<char *>(llvh::alignDown(
-      reinterpret_cast<uintptr_t>(seg.hiLim() - 1),
+      reinterpret_cast<uintptr_t>(seg->lowLim() + param.segmentSize - 1),
       CardBoundaryTable::kCardSize));
 
   addrs = {
@@ -78,10 +94,10 @@ CardTableNCTest::CardTableNCTest() {
   EXPECT_TRUE(std::is_sorted(addrs.begin(), addrs.end()));
 }
 
-TEST_F(CardTableNCTest, AddressToIndex) {
+TEST_P(CardTableNCTest, AddressToIndex) {
   // Expected indices in the card table corresponding to the probe
   // addresses into the storage.
-  const size_t lastIx = seg.getEndCardIndex() - 1;
+  const size_t lastIx = seg->getEndCardIndex() - 1;
   std::vector<size_t> indices{
       AlignedHeapSegment::Contents::kFirstUsedIndex,
       AlignedHeapSegment::Contents::kFirstUsedIndex + 1,
@@ -94,53 +110,54 @@ TEST_F(CardTableNCTest, AddressToIndex) {
     char *addr = addrs.at(i);
     size_t ind = indices.at(i);
 
-    EXPECT_EQ(ind, seg.addressToCardIndex(addr))
+    EXPECT_EQ(ind, seg->addressToCardIndex(addr))
         << "0x" << std::hex << (void *)addr << " -> " << ind;
-    EXPECT_EQ(seg.cardIndexToAddress(ind), addr)
+    EXPECT_EQ(seg->cardIndexToAddress(ind), addr)
         << "0x" << std::hex << (void *)addr << " <- " << ind;
   }
 }
 
-TEST_F(CardTableNCTest, AddressToIndexBoundary) {
-  const size_t hiLim = seg.getEndCardIndex();
-  EXPECT_EQ(0, seg.addressToCardIndex(seg.lowLim()));
-  EXPECT_EQ(hiLim, seg.addressToCardIndex(seg.hiLim()));
+TEST_P(CardTableNCTest, AddressToIndexBoundary) {
+  const size_t hiLim = seg->getEndCardIndex();
+  EXPECT_EQ(0, seg->addressToCardIndex(seg->lowLim()));
+  EXPECT_EQ(
+      hiLim, seg->addressToCardIndex(seg->lowLim() + GetParam().segmentSize));
 }
 
-TEST_F(CardTableNCTest, DirtyAddress) {
-  const size_t lastIx = seg.getEndCardIndex() - 1;
+TEST_P(CardTableNCTest, DirtyAddress) {
+  const size_t lastIx = seg->getEndCardIndex() - 1;
 
   for (char *addr : addrs) {
-    size_t ind = seg.addressToCardIndex(addr);
+    size_t ind = seg->addressToCardIndex(addr);
 
-    EXPECT_FALSE(ind > 0 && seg.isCardForIndexDirty(ind - 1))
+    EXPECT_FALSE(ind > 0 && seg->isCardForIndexDirty(ind - 1))
         << "initial " << ind << " - 1";
-    EXPECT_FALSE(seg.isCardForIndexDirty(ind)) << "initial " << ind;
-    EXPECT_FALSE(ind < lastIx && seg.isCardForIndexDirty(ind + 1))
+    EXPECT_FALSE(seg->isCardForIndexDirty(ind)) << "initial " << ind;
+    EXPECT_FALSE(ind < lastIx && seg->isCardForIndexDirty(ind + 1))
         << "initial " << ind << " + 1";
 
-    seg.dirtyCardForAddressInLargeObj(addr);
+    seg->dirtyCardForAddressInLargeObj(addr);
 
-    EXPECT_FALSE(ind > 0 && seg.isCardForIndexDirty(ind - 1))
+    EXPECT_FALSE(ind > 0 && seg->isCardForIndexDirty(ind - 1))
         << "dirty " << ind << " - 1";
-    EXPECT_TRUE(seg.isCardForIndexDirty(ind)) << "dirty " << ind;
-    EXPECT_FALSE(ind < lastIx && seg.isCardForIndexDirty(ind + 1))
+    EXPECT_TRUE(seg->isCardForIndexDirty(ind)) << "dirty " << ind;
+    EXPECT_FALSE(ind < lastIx && seg->isCardForIndexDirty(ind + 1))
         << "dirty " << ind << " + 1";
 
-    seg.clearAllCards();
+    seg->clearAllCards();
   }
 }
 
 /// Dirty an emtpy range.
-TEST_F(CardTableNCTest, DirtyAddressRangeEmpty) {
+TEST_P(CardTableNCTest, DirtyAddressRangeEmpty) {
   char *addr = addrs.at(0);
-  seg.dirtyCardsForAddressRange(addr, addr);
-  EXPECT_FALSE(seg.findNextDirtyCard(
-      AlignedHeapSegment::Contents::kFirstUsedIndex, seg.getEndCardIndex()));
+  seg->dirtyCardsForAddressRange(addr, addr);
+  EXPECT_FALSE(seg->findNextDirtyCard(
+      AlignedHeapSegment::Contents::kFirstUsedIndex, seg->getEndCardIndex()));
 }
 
 /// Dirty an address range smaller than a single card.
-TEST_F(CardTableNCTest, DirtyAddressRangeSmall) {
+TEST_P(CardTableNCTest, DirtyAddressRangeSmall) {
   char *addr = addrs.at(0);
   dirtyRangeTest(
       /* expectedStart */ addr,
@@ -150,7 +167,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeSmall) {
 }
 
 /// Dirty an address range corresponding exactly to a card.
-TEST_F(CardTableNCTest, DirtyAddressRangeCard) {
+TEST_P(CardTableNCTest, DirtyAddressRangeCard) {
   char *addr = addrs.at(0);
   dirtyRangeTest(
       /* expectedStart */ addr,
@@ -161,7 +178,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeCard) {
 
 /// Dirty an address range the width of a card but spread across a card
 /// boundary.
-TEST_F(CardTableNCTest, DirtyAddressRangeCardOverlapping) {
+TEST_P(CardTableNCTest, DirtyAddressRangeCardOverlapping) {
   char *addr = addrs.at(0);
   char *start = addr + CardBoundaryTable::kCardSize / 2;
   dirtyRangeTest(
@@ -173,7 +190,7 @@ TEST_F(CardTableNCTest, DirtyAddressRangeCardOverlapping) {
 
 /// Dirty an address range spanning multiple cards, with overhang on either
 /// side.
-TEST_F(CardTableNCTest, DirtyAddressRangeLarge) {
+TEST_P(CardTableNCTest, DirtyAddressRangeLarge) {
   char *addr = addrs.at(0);
   char *start = addr + CardBoundaryTable::kCardSize / 2;
   dirtyRangeTest(
@@ -183,56 +200,56 @@ TEST_F(CardTableNCTest, DirtyAddressRangeLarge) {
       /* expectedEnd */ addr + 4 * CardBoundaryTable::kCardSize);
 }
 
-TEST_F(CardTableNCTest, Initial) {
+TEST_P(CardTableNCTest, Initial) {
   for (char *addr : addrs) {
-    EXPECT_FALSE(seg.isCardForAddressDirty(addr));
+    EXPECT_FALSE(seg->isCardForAddressDirty(addr));
   }
 }
 
-TEST_F(CardTableNCTest, Clear) {
+TEST_P(CardTableNCTest, Clear) {
   for (char *addr : addrs) {
-    ASSERT_FALSE(seg.isCardForAddressDirty(addr));
+    ASSERT_FALSE(seg->isCardForAddressDirty(addr));
   }
 
   for (char *addr : addrs) {
-    seg.dirtyCardForAddressInLargeObj(addr);
+    seg->dirtyCardForAddressInLargeObj(addr);
   }
 
   for (char *addr : addrs) {
-    ASSERT_TRUE(seg.isCardForAddressDirty(addr));
+    ASSERT_TRUE(seg->isCardForAddressDirty(addr));
   }
 
-  seg.clearAllCards();
+  seg->clearAllCards();
   for (char *addr : addrs) {
-    EXPECT_FALSE(seg.isCardForAddressDirty(addr));
+    EXPECT_FALSE(seg->isCardForAddressDirty(addr));
   }
 }
 
-TEST_F(CardTableNCTest, NextDirtyCardImmediate) {
+TEST_P(CardTableNCTest, NextDirtyCardImmediate) {
   char *addr = addrs.at(addrs.size() / 2);
-  size_t ind = seg.addressToCardIndex(addr);
+  size_t ind = seg->addressToCardIndex(addr);
 
-  seg.dirtyCardForAddress(addr);
-  auto dirty = seg.findNextDirtyCard(ind, seg.getEndCardIndex());
+  seg->dirtyCardForAddressInLargeObj(addr);
+  auto dirty = seg->findNextDirtyCard(ind, seg->getEndCardIndex());
 
   ASSERT_TRUE(dirty);
   EXPECT_EQ(ind, *dirty);
 }
 
-TEST_F(CardTableNCTest, NextDirtyCard) {
+TEST_P(CardTableNCTest, NextDirtyCard) {
   /// Empty case: No dirty cards
-  EXPECT_FALSE(seg.findNextDirtyCard(
-      AlignedHeapSegment::Contents::kFirstUsedIndex, seg.getEndCardIndex()));
+  EXPECT_FALSE(seg->findNextDirtyCard(
+      AlignedHeapSegment::Contents::kFirstUsedIndex, seg->getEndCardIndex()));
 
   size_t from = AlignedHeapSegment::Contents::kFirstUsedIndex;
   for (char *addr : addrs) {
-    seg.dirtyCardForAddressInLargeObj(addr);
+    seg->dirtyCardForAddressInLargeObj(addr);
 
-    auto ind = seg.addressToCardIndex(addr);
-    EXPECT_FALSE(seg.findNextDirtyCard(from, ind));
+    auto ind = seg->addressToCardIndex(addr);
+    EXPECT_FALSE(seg->findNextDirtyCard(from, ind));
 
-    auto atEnd = seg.findNextDirtyCard(from, ind + 1);
-    auto inMiddle = seg.findNextDirtyCard(from, seg.getEndCardIndex());
+    auto atEnd = seg->findNextDirtyCard(from, ind + 1);
+    auto inMiddle = seg->findNextDirtyCard(from, seg->getEndCardIndex());
 
     ASSERT_TRUE(atEnd);
     EXPECT_EQ(ind, *atEnd);
@@ -242,6 +259,14 @@ TEST_F(CardTableNCTest, NextDirtyCard) {
     from = ind + 1;
   }
 }
+
+INSTANTIATE_TEST_CASE_P(
+    CardTableNCTests,
+    CardTableNCTest,
+    ::testing::Values(
+        TestParam{AlignedHeapSegment::kSegmentUnitSize},
+        TestParam{AlignedHeapSegment::kSegmentUnitSize * 4},
+        TestParam{AlignedHeapSegment::kSegmentUnitSize * 32}));
 
 } // namespace
 
