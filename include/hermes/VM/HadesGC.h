@@ -908,7 +908,8 @@ class HadesGC final : public GCBase {
   };
 
   /// The maximum number of bytes that the heap can hold. Once this amount has
-  /// been filled up, OOM will occur.
+  /// been filled up, OOM will occur. When creating new segment, we allow an
+  /// extra buffer with size AlignedHeapSegment::kSegmentUnitSize.
   const uint64_t maxHeapSize_;
 
   /// This needs to be placed before youngGen_ and oldGen_, because those
@@ -1355,6 +1356,17 @@ class HadesGC final : public GCBase {
 
   /// Create a new segment (to be used by either YG or OG).
   llvh::ErrorOr<FixedSizeHeapSegment> createSegment();
+
+  /// Create a jumbo segment (for large allocation).
+  llvh::ErrorOr<JumboHeapSegment> createJumboSegment(size_t segmentSize);
+
+  /// Actual implementation for creating a heap segment.
+  /// \tparam createSegFunc takes StorageProvider pointer, segment name and size
+  /// to create a segment and return it.
+  template <typename T, typename CreateSegFunc>
+  llvh::ErrorOr<T> createSegmentImpl(
+      size_t segmentSize,
+      CreateSegFunc createSegFunc);
 
   /// Set a given segment as the YG segment.
   /// \return the previous YG segment.
