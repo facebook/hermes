@@ -495,7 +495,7 @@ void IdentifierTable::unmarkSymbols() {
 }
 
 void IdentifierTable::freeUnmarkedSymbols(
-    const llvh::BitVector &markedSymbols,
+    llvh::BitVector &markedSymbols,
     GC::IDTracker &tracker) {
   assert(
       markedSymbols.size() <= lookupVector_.size() &&
@@ -503,18 +503,13 @@ void IdentifierTable::freeUnmarkedSymbols(
   assert(
       markedSymbols_.size() == lookupVector_.size() &&
       "Size of markedSymbols_ must be the same as the lookupVector");
-  markedSymbols_ |= markedSymbols;
-  // Flip and find set bits, which will correspond to symbols that weren't
-  // marked.
-  markedSymbols_.flip();
+  // Update the markedSymbols passed in so the caller knows which symbols were
+  // marked internally by the IdentifierTable.
+  markedSymbols |= markedSymbols_;
   const bool hasTrackedObjectIDs = tracker.hasTrackedObjectIDs();
-  const uint32_t markedSymbolsSize = markedSymbols.size();
-  for (const uint32_t i : markedSymbols_.set_bits()) {
-    // Don't check any bits after the passed-in bits, which represent the number
-    // of symbols alive at the start of the collection.
-    if (i >= markedSymbolsSize) {
-      break;
-    }
+  for (int i = markedSymbols.find_first_unset(); i >= 0;
+       i = markedSymbols.find_next_unset(i)) {
+    assert((unsigned)i < markedSymbols.size() && "New symbol is unmarked");
     // We never free StringPrimitives that are materialized from a lazy
     // identifier.
     if (lookupVector_[i].isNonLazyStringPrim()) {
@@ -522,6 +517,10 @@ void IdentifierTable::freeUnmarkedSymbols(
         tracker.untrackSymbol(i);
       }
       freeSymbol(i);
+    } else {
+      // This symbol should not be freed, update the marked symbols so the GC
+      // knows that it is retained.
+      markedSymbols.set(i);
     }
   }
   markedSymbols_.reset();
@@ -552,8 +551,7 @@ SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
 CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
     Runtime &runtime,
     Handle<StringPrimitive> desc) {
-  uint32_t nextID = allocNextID();
-
+  StringPrimitive *str;
   if (runtime.getHeap().inYoungGen(desc.get())) {
     // Need to reallocate in the old gen if the description is in the young gen.
     CallResult<PseudoHandle<StringPrimitive>> longLivedStr = desc->isASCII()
@@ -561,18 +559,22 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
               runtime, desc->castToASCIIRef(), desc)
         : allocateDynamicString<char16_t, /* Unique */ false>(
               runtime, desc->castToUTF16Ref(), desc);
-    // Since we keep a raw pointer to mem, no more JS heap allocations after
-    // this point.
-    NoAllocScope _(runtime);
     if (LLVM_UNLIKELY(longLivedStr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    new (&lookupVector_[nextID]) LookupEntry(longLivedStr->get(), true);
+    str = longLivedStr->get();
   } else {
     // Description is already in the old gen, just point to it.
-    new (&lookupVector_[nextID]) LookupEntry(*desc, true);
+    str = *desc;
   }
 
+  // Since we keep a raw pointer to mem, no more JS heap allocations after this
+  // point.
+  NoAllocScope _(runtime);
+  // Allocate the id after we have performed memory allocations because a GC
+  // would have freed the newly allocated ID.
+  uint32_t nextID = allocNextID();
+  new (&lookupVector_[nextID]) LookupEntry(str, true);
   return SymbolID::unsafeCreateNotUniqued(nextID);
 }
 

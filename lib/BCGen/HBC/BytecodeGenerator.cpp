@@ -132,7 +132,8 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       nameID,
       funcGen.highestReadCacheIndex_,
       funcGen.highestWriteCacheIndex_,
-      funcGen.numCacheNewObject_};
+      funcGen.numCacheNewObject_,
+      funcGen.highestPrivateNameCacheIndex_};
 
   header.flags.setProhibitInvoke(computeProhibitInvoke(F->getProhibitInvoke()));
   header.flags.setKind(computeFuncKind(F->getKind()));
@@ -284,18 +285,18 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
     CASE_WITH_PROP_IDX(DeletePropertyStrictInst);
     CASE_WITH_PROP_IDX(LoadPropertyInst);
     CASE_WITH_PROP_IDX(LoadPropertyWithReceiverInst);
-    CASE_WITH_PROP_IDX(DefineNewOwnPropertyInst);
     CASE_WITH_PROP_IDX(DefineOwnPropertyInst);
     CASE_WITH_PROP_IDX(StorePropertyLooseInst);
     CASE_WITH_PROP_IDX(StorePropertyStrictInst);
     CASE_WITH_PROP_IDX(TryLoadGlobalPropertyInst);
     CASE_WITH_PROP_IDX(TryStoreGlobalPropertyLooseInst);
     CASE_WITH_PROP_IDX(TryStoreGlobalPropertyStrictInst);
+    CASE_WITH_PROP_IDX(CreatePrivateNameInst);
 
     case ValueKind::DeclareGlobalVarInstKind:
       return idx == DeclareGlobalVarInst::NameIdx;
 
-    case ValueKind::HBCAllocObjectFromBufferInstKind:
+    case ValueKind::LIRAllocObjectFromBufferInstKind:
       // AllocObjectFromBuffer stores the keys and values as alternating
       // operands, with keys starting first.
       return idx % 2 == 0;

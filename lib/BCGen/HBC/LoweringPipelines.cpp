@@ -60,8 +60,8 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
   // It is important to run LowerNumericProperties before LoadConstants
   // as LowerNumericProperties could generate new constants.
   PM.addPass(new LowerNumericProperties());
-  // Lower AllocObjectLiteral into a mixture of HBCAllocObjectFromBufferInst,
-  // AllocObjectInst, DefineNewOwnPropertyInst and StorePropertyInst.
+  // Lower AllocObjectLiteral into a mixture of LIRAllocObjectFromBufferInst,
+  // AllocObjectInst, DefineOwnPropertyInst and StorePropertyInst.
   PM.addPass(new LowerAllocObjectLiteral());
   PM.addPass(new LowerArgumentsArray());
   PM.addPass(new LimitAllocArray(UINT16_MAX));
@@ -74,9 +74,9 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
     PM.addPass(new LowerCondBranch());
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
-    // Eliminate common HBCLoadConstInsts.
+    // Eliminate common LIRLoadConstInsts.
     // TODO(T140823187): Run before CodeMotion too.
-    // Avoid pushing HBCLoadConstInsts down into individual blocks,
+    // Avoid pushing LIRLoadConstInsts down into individual blocks,
     // preventing their elimination.
     PM.addCSE();
     // Drop unused LoadParamInsts.

@@ -99,8 +99,8 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS2.?obj]: object
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS2: any, %__proto__(): functionCode
-// CHECK-NEXT:       DefineNewOwnPropertyInst %8: object, %6: object, "__proto__": string, true: boolean
-// CHECK-NEXT:        DefineNewOwnPropertyInst 42: number, %6: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst %8: object, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 42: number, %6: object, "a": string, true: boolean
 // CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 
@@ -115,11 +115,11 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS3.?obj]: object
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS3: any, %"__proto__ 1#"(): functionCode
-// CHECK-NEXT:       DefineNewOwnPropertyInst %6: object, %4: object, "__proto__": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst %6: object, %4: object, "__proto__": string, true: boolean
 // CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS3.func]: any
 // CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object, %9: any
-// CHECK-NEXT:        DefineNewOwnPropertyInst 42: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 42: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 

@@ -35,6 +35,10 @@ void CheckHeapWellFormedAcceptor::acceptWeak(GCCell *&ptr) {
   accept(ptr);
 }
 
+void CheckHeapWellFormedAcceptor::acceptWeakSym(WeakRootSymbolID &ws) {
+  acceptSym(ws.getNoBarrierUnsafe());
+}
+
 void CheckHeapWellFormedAcceptor::acceptHV(HermesValue &hv) {
   assert(!hv.isInvalid() && "HermesValue with InvalidTag encountered by GC.");
   if (hv.isPointer()) {

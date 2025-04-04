@@ -455,6 +455,9 @@ static void createGroupsObject(
 
   HiddenClass::forEachProperty(
       clazzHandle, runtime, [&](SymbolID id, NamedPropertyDescriptor desc) {
+        assert(
+            !desc.flags.privateName &&
+            "private name not expected in regex mapping object");
         auto groupIdx =
             JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
                 .getNumber(runtime);
@@ -534,6 +537,9 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
         mappingObjClazz,
         runtime,
         [&](SymbolID id, NamedPropertyDescriptor desc) {
+          assert(
+              !desc.flags.privateName &&
+              "private name not expected in regex mapping object");
           auto groupIdx =
               JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
                   .getNumber(runtime);

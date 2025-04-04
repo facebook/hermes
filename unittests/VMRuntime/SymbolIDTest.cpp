@@ -82,5 +82,126 @@ TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
     otherArray = tmp;
   }
 }
+TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
+  // Declare two weak symbols which the GC knows about.
+  WeakRootSymbolID weakSymA;
+  WeakRootSymbolID weakSymB;
+
+  // Declare a weak symbol that we will point to a lazy symbol. This should
+  // never be cleared.
+  WeakRootSymbolID weakSymLazy;
+  runtime.addCustomWeakRootsFunction(
+      [&](vm::GC *, vm::WeakRootAcceptor &acceptor) {
+        acceptor.acceptWeakSym(weakSymA);
+        acceptor.acceptWeakSym(weakSymB);
+        acceptor.acceptWeakSym(weakSymLazy);
+      });
+
+  struct : Locals {
+    PinnedValue<SymbolID> symA;
+    PinnedValue<SymbolID> symB;
+    PinnedValue<StringPrimitive> str;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  std::string asciiStr = "teststring";
+  auto strRes = StringPrimitive::create(
+      runtime, ASCIIRef{asciiStr.c_str(), asciiStr.length()});
+  ASSERT_FALSE(isException(strRes));
+  lv.str = vmcast<StringPrimitive>(*strRes);
+  MutableHandle<StringPrimitive> str{lv.str};
+
+  // Init PV and weak symbol for A.
+  auto symResA =
+      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, str);
+  ASSERT_FALSE(isException(symResA));
+  lv.symA = *symResA;
+  weakSymA = *symResA;
+
+  // Init PV and weak symbol for B.
+  auto symResB =
+      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, str);
+  ASSERT_FALSE(isException(symResB));
+  lv.symB = *symResB;
+  weakSymB = *symResB;
+
+  // Init the lazy symbol.
+  weakSymLazy = runtime.getIdentifierTable().registerLazyIdentifier(
+      "I am the laziest symbol in the world!");
+
+  // Perform a GC. Both weak symbols should be fine since A and B both are being
+  // referenced in live PVs.
+  runtime.collect("test");
+  ASSERT_FALSE(weakSymA.isInvalid());
+  ASSERT_FALSE(weakSymB.isInvalid());
+
+  // The lazy symbol should never be cleared.
+  ASSERT_FALSE(weakSymLazy.isInvalid());
+
+  // Invalidate PV symB, then perform a GC. This should result in only
+  // weak symbol B being set to invalid.
+  lv.symB = SymbolID{};
+  runtime.collect("test");
+  ASSERT_FALSE(weakSymA.isInvalid());
+  ASSERT_TRUE(weakSymB.isInvalid());
+
+  // The lazy symbol should never be cleared.
+  ASSERT_FALSE(weakSymLazy.isInvalid());
+
+  // Invalidate PV symA, then perform a GC. At this point, both weak
+  // symbols should be cleared.
+  lv.symA = SymbolID{};
+  runtime.collect("test");
+  ASSERT_TRUE(weakSymA.isInvalid());
+  ASSERT_TRUE(weakSymB.isInvalid());
+
+  // The lazy symbol should never be cleared.
+  ASSERT_FALSE(weakSymLazy.isInvalid());
+}
+
+TEST_F(SymbolIDRuntimeTest, SymbolAllocDuringGC) {
+  WeakRootSymbolID weakSym;
+  runtime.addCustomWeakRootsFunction(
+      [&](vm::GC *, vm::WeakRootAcceptor &acceptor) {
+        acceptor.acceptWeakSym(weakSym);
+      });
+
+  std::string asciiStr = "teststring";
+  auto strRes = StringPrimitive::create(
+      runtime, ASCIIRef{asciiStr.c_str(), asciiStr.length()});
+  ASSERT_FALSE(isException(strRes));
+  MutableHandle<StringPrimitive> str{runtime};
+  str = vmcast<StringPrimitive>(*strRes);
+  (void)str;
+
+  struct : Locals {
+    /// Array holding all the strong symbols.
+    PinnedValue<ArrayStorage> strongSymbols;
+    PinnedValue<SymbolID> curSym;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.strongSymbols = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, 4));
+  MutableHandle<ArrayStorage> strongSymbols(lv.strongSymbols);
+
+  GCScopeMarkerRAII marker{runtime};
+  for (size_t i = 0; i < 1000; i++) {
+    // Allocate a new SymbolID which is strongly held.
+    {
+      auto symRes =
+          runtime.getIdentifierTable().createNotUniquedSymbol(runtime, str);
+      ASSERT_FALSE(isException(symRes));
+      lv.curSym = *symRes;
+      (void)ArrayStorage::push_back(strongSymbols, runtime, lv.curSym);
+      weakSym = *symRes;
+      // The weak symbol should never be invalid.
+      marker.flush();
+    }
+    for (size_t i = 0; i < 1000; i++) {
+      JSObject::create(runtime);
+      // The weak symbol should never be invalid.
+      ASSERT_FALSE(weakSym.isInvalid());
+    }
+  }
+}
 
 } // namespace

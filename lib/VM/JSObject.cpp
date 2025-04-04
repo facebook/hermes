@@ -84,10 +84,6 @@ PseudoHandle<JSObject> JSObject::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-PseudoHandle<JSObject> JSObject::create(Runtime &runtime) {
-  return create(runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
-}
-
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     unsigned propertyCount) {
@@ -99,6 +95,7 @@ PseudoHandle<JSObject> JSObject::create(
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
+    Handle<JSObject> parentHandle,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
   obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap());
@@ -107,14 +104,6 @@ PseudoHandle<JSObject> JSObject::create(
   if (LLVM_UNLIKELY(
           obj->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
     obj->flags_.fastIndexProperties = false;
-  return obj;
-}
-
-PseudoHandle<JSObject> JSObject::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    Handle<HiddenClass> clazz) {
-  PseudoHandle<JSObject> obj = JSObject::create(runtime, clazz);
   obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap());
   return obj;
 }
@@ -460,6 +449,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
          &indexNames,
          &tmpHandle,
          &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+          if (desc.flags.privateName)
+            return;
           if (!isPropertyNamePrimitive(id)) {
             return;
           }
@@ -510,6 +501,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
          &idHandle,
          hostObjectSymbolCount,
          &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+          if (desc.flags.privateName)
+            return;
           if (!isSymbolPrimitive(id)) {
             return;
           }
@@ -2144,8 +2137,8 @@ ExecutionStatus JSObject::defineNewOwnProperty(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
   assert(
-      !selfHandle->flags_.proxyObject &&
-      "definedNewOwnProperty cannot be used with proxy objects");
+      (!selfHandle->flags_.proxyObject || propertyFlags.privateName) &&
+      "cannot define non-private properties on Proxy");
   assert(
       !(propertyFlags.accessor && !valueOrAccessor.get().isPointer()) &&
       "accessor must be non-empty");
@@ -2401,6 +2394,55 @@ CallResult<bool> JSObject::defineOwnComputed(
     return ExecutionStatus::EXCEPTION;
   return defineOwnComputedPrimitive(
       selfHandle, runtime, *converted, dpFlags, valueOrAccessor, opFlags);
+}
+
+CallResult<HermesValue> JSObject::getPrivateField(
+    Handle<JSObject> selfHandle,
+    Runtime &runtime,
+    Handle<SymbolID> privateName,
+    PrivateNameCacheEntry *cacheEntry) {
+  NamedPropertyDescriptor desc;
+  // 1. Let entry be PrivateElementFind(O, P).
+  auto pos = findProperty(selfHandle, runtime, *privateName, desc);
+  // 2. If entry is empty, throw a TypeError exception.
+  if (!pos.hasValue()) {
+    return runtime.raiseTypeErrorForValue(
+        privateName, "Private property does not exist: ");
+  }
+  // This must be a private field since methods and accessors are not stored
+  // directly in the instance. So just directly return it.
+  if (cacheEntry && !selfHandle->getClass(runtime)->isDictionaryNoCache()) {
+    cacheEntry->clazz = selfHandle->getClassGCPtr();
+    cacheEntry->slot = desc.slot;
+    cacheEntry->nameVal = *privateName;
+  }
+  return getNamedSlotValueUnsafe(*selfHandle, runtime, desc).unboxToHV(runtime);
+}
+
+ExecutionStatus JSObject::setPrivateField(
+    Handle<JSObject> selfHandle,
+    Runtime &runtime,
+    Handle<SymbolID> privateName,
+    Handle<> valueHandle,
+    PrivateNameCacheEntry *cacheEntry) {
+  NamedPropertyDescriptor desc;
+  // 1. Let entry be PrivateElementFind(O, P).
+  auto pos = findProperty(selfHandle, runtime, *privateName, desc);
+  // 2. If entry is empty, throw a TypeError exception.
+  if (!pos.hasValue()) {
+    return runtime.raiseTypeErrorForValue(
+        privateName, "Private property does not exist: ");
+  }
+  // This must be a private field since methods and accessors are not stored
+  // directly in the instance. So just directly set it.
+  if (cacheEntry && !selfHandle->getClass(runtime)->isDictionaryNoCache()) {
+    cacheEntry->clazz = selfHandle->getClassGCPtr();
+    cacheEntry->slot = desc.slot;
+    cacheEntry->nameVal = static_cast<RootSymbolID>(*privateName);
+  }
+  auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
+  setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
+  return ExecutionStatus::RETURNED;
 }
 
 std::string JSObject::getNameIfExists(PointerBase &base) {
@@ -2805,8 +2847,9 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
   assert(
+      propertyFlags.privateName ||
       !selfHandle->flags_.proxyObject &&
-      "Internal properties cannot be added to Proxy objects");
+          "Internal non-private properties cannot be added to Proxy objects");
   // Add a new property to the class.
   // TODO: if we check for OOM here in the future, we must undo the slot
   // allocation.
@@ -3173,8 +3216,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       } else if (lv.prop->isString()) {
         CallResult<Handle<SymbolID>> symRes =
             runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
-                runtime,
-                runtime.makeHandle<StringPrimitive>(lv.prop->getString()));
+                runtime, createPseudoHandle(lv.prop->getString()));
         if (LLVM_UNLIKELY(symRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }

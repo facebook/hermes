@@ -101,7 +101,12 @@ void hermesFatalErrorHandler(
     bool /*gen_crash_diag*/) {
   // Actually crash and let breakpad handle the reporting.
   if (sApiFatalHandler) {
-    sApiFatalHandler(reason);
+    try {
+      sApiFatalHandler(reason);
+    } catch (...) {
+      // Catch the exception and do nothing as the fatal handler must not throw
+      // exceptions.
+    }
   } else {
 #ifdef HERMES_IS_MOBILE_BUILD
     *((volatile int *)nullptr) = 42;

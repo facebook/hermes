@@ -355,6 +355,13 @@ AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   return I;
 }
 
+CreatePrivateNameInst *IRBuilder::createCreatePrivateNameInst(
+    LiteralString *descStr) {
+  auto *I = new CreatePrivateNameInst(descStr);
+  insert(I);
+  return I;
+}
+
 CreateClassInst *IRBuilder::createCreateClassInst(
     BaseScopeInst *scope,
     Function *code,
@@ -526,6 +533,14 @@ LoadPropertyWithReceiverInst *IRBuilder::createLoadPropertyWithReceiverInst(
   return LPI;
 }
 
+LoadOwnPrivateFieldInst *IRBuilder::createLoadOwnPrivateFieldInst(
+    Value *object,
+    Value *property) {
+  auto LPI = new LoadOwnPrivateFieldInst(object, property);
+  insert(LPI);
+  return LPI;
+}
+
 TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
     LiteralString *property) {
   auto *inst = new TryLoadGlobalPropertyInst(getGlobalObject(), property);
@@ -648,12 +663,21 @@ DefineOwnPropertyInst *IRBuilder::createDefineOwnPropertyInst(
   insert(SPI);
   return SPI;
 }
-DefineNewOwnPropertyInst *IRBuilder::createDefineNewOwnPropertyInst(
+StoreOwnPrivateFieldInst *IRBuilder::createStoreOwnPrivateFieldInst(
     Value *storedValue,
     Value *object,
-    Literal *property) {
-  auto *inst = new DefineNewOwnPropertyInst(
-      storedValue, object, property, getLiteralBool(true));
+    Value *property) {
+  auto *inst = new StoreOwnPrivateFieldInst(
+      storedValue, object, property, getLiteralBool(false));
+  insert(inst);
+  return inst;
+}
+AddOwnPrivateFieldInst *IRBuilder::createAddOwnPrivateFieldInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto *inst = new AddOwnPrivateFieldInst(
+      storedValue, object, property, getLiteralBool(false));
   insert(inst);
   return inst;
 }
@@ -805,8 +829,8 @@ ThrowIfThisInitializedInst *IRBuilder::createThrowIfThisInitializedInst(
   return inst;
 }
 
-HBCGetGlobalObjectInst *IRBuilder::createHBCGetGlobalObjectInst() {
-  auto inst = new HBCGetGlobalObjectInst();
+LIRGetGlobalObjectInst *IRBuilder::createLIRGetGlobalObjectInst() {
+  auto inst = new LIRGetGlobalObjectInst();
   insert(inst);
   return inst;
 }
@@ -1000,8 +1024,8 @@ DeclareGlobalVarInst *IRBuilder::createDeclareGlobalVarInst(
   return inst;
 }
 
-HBCLoadConstInst *IRBuilder::createHBCLoadConstInst(Literal *value) {
-  auto inst = new HBCLoadConstInst(value);
+LIRLoadConstInst *IRBuilder::createLIRLoadConstInst(Literal *value) {
+  auto inst = new LIRLoadConstInst(value);
   insert(inst);
   return inst;
 }
@@ -1026,37 +1050,37 @@ LIRGetThisNSInst *IRBuilder::createLIRGetThisNSInst() {
   insert(inst);
   return inst;
 }
-HBCGetArgumentsPropByValLooseInst *
-IRBuilder::createHBCGetArgumentsPropByValLooseInst(
+LIRGetArgumentsPropByValLooseInst *
+IRBuilder::createLIRGetArgumentsPropByValLooseInst(
     Value *index,
     AllocStackInst *lazyReg) {
-  auto inst = new HBCGetArgumentsPropByValLooseInst(index, lazyReg);
+  auto inst = new LIRGetArgumentsPropByValLooseInst(index, lazyReg);
   insert(inst);
   return inst;
 }
-HBCGetArgumentsPropByValStrictInst *
-IRBuilder::createHBCGetArgumentsPropByValStrictInst(
+LIRGetArgumentsPropByValStrictInst *
+IRBuilder::createLIRGetArgumentsPropByValStrictInst(
     Value *index,
     AllocStackInst *lazyReg) {
-  auto inst = new HBCGetArgumentsPropByValStrictInst(index, lazyReg);
+  auto inst = new LIRGetArgumentsPropByValStrictInst(index, lazyReg);
   insert(inst);
   return inst;
 }
-HBCGetArgumentsLengthInst *IRBuilder::createHBCGetArgumentsLengthInst(
+LIRGetArgumentsLengthInst *IRBuilder::createLIRGetArgumentsLengthInst(
     Value *lazyRegValue) {
-  auto inst = new HBCGetArgumentsLengthInst(lazyRegValue);
+  auto inst = new LIRGetArgumentsLengthInst(lazyRegValue);
   insert(inst);
   return inst;
 }
-HBCReifyArgumentsLooseInst *IRBuilder::createHBCReifyArgumentsLooseInst(
+LIRReifyArgumentsLooseInst *IRBuilder::createLIRReifyArgumentsLooseInst(
     AllocStackInst *lazyReg) {
-  auto inst = new HBCReifyArgumentsLooseInst(lazyReg);
+  auto inst = new LIRReifyArgumentsLooseInst(lazyReg);
   insert(inst);
   return inst;
 }
-HBCReifyArgumentsStrictInst *IRBuilder::createHBCReifyArgumentsStrictInst(
+LIRReifyArgumentsStrictInst *IRBuilder::createLIRReifyArgumentsStrictInst(
     AllocStackInst *lazyReg) {
-  auto inst = new HBCReifyArgumentsStrictInst(lazyReg);
+  auto inst = new LIRReifyArgumentsStrictInst(lazyReg);
   insert(inst);
   return inst;
 }
@@ -1102,15 +1126,15 @@ GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
   return inst;
 }
 
-HBCSpillMovInst *IRBuilder::createHBCSpillMovInst(Instruction *value) {
-  auto *inst = new HBCSpillMovInst(value);
+LIRSpillMovInst *IRBuilder::createLIRSpillMovInst(Instruction *value) {
+  auto *inst = new LIRSpillMovInst(value);
   insert(inst);
   return inst;
 }
 
-HBCAllocObjectFromBufferInst *IRBuilder::createHBCAllocObjectFromBufferInst(
-    HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map) {
-  auto *inst = new HBCAllocObjectFromBufferInst(prop_map);
+LIRAllocObjectFromBufferInst *IRBuilder::createLIRAllocObjectFromBufferInst(
+    LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map) {
+  auto *inst = new LIRAllocObjectFromBufferInst(prop_map);
   insert(inst);
   return inst;
 }

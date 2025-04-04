@@ -19,9 +19,9 @@
 
 // CHECK:function global(): any [noReturn]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCLoadConstInst (:string) "": string
-// CHECK-NEXT:  %1 = HBCLoadConstInst (:string) " ": string
-// CHECK-NEXT:  %2 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  %0 = LIRLoadConstInst (:string) "": string
+// CHECK-NEXT:  %1 = LIRLoadConstInst (:string) " ": string
+// CHECK-NEXT:  %2 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %4 = PhiInst (:string) %0: string, %BB0, %8: string, %BB1

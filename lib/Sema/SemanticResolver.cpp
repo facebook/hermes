@@ -928,6 +928,14 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
         node->_static
             ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
             : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo());
+    // We need to make sure that the special `arguments` object is declared so
+    // that we can detect usages of it, and correctly error out since field
+    // initializers are not allowed to reference `arguments`. If we didn't do
+    // this then a class in the global scope would allow a field initializer to
+    // reference `arguments`, since it would treat it as a normal identifier.
+    // This will insert the `arguments` identifer into the binding table scope
+    // which is created by the class declaration / expression node.
+    declareArguments();
     visitESTreeNode(*this, node->_value, node);
   } else if (!typed_) {
     // Create the these initializers even if no value initializer is present, in
@@ -965,6 +973,7 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
         node->_static
             ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
             : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo());
+    declareArguments();
     visitESTreeNode(*this, node->_value, node);
   } else if (!typed_) {
     // Create the these initializers even if no value initializer is present, in
@@ -1004,6 +1013,12 @@ void SemanticResolver::visit(
   // If computed property, the key expression needs to be resolved.
   if (node->_computed)
     visitESTreeNode(*this, node->_key, node);
+
+  // If there are private instance methods, we will need to make an instance
+  // elements intializer function.
+  if (llvh::isa<PrivateNameNode>(node->_key) && !node->_static) {
+    curClassContext_->getOrCreateInstanceElementsInitFunctionInfo();
+  }
 
   // Visit the body.
   visitESTreeNode(*this, node->_value, node);

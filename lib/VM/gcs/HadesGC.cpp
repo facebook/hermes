@@ -548,6 +548,9 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
+  // Nothing to do for symbols, since they are not collected during a YG
+  // collection.
+  void acceptWeakSym(WeakRootSymbolID &ws) override {}
   void accept(const RootSymbolID &sym) override {}
   void accept(const GCSymbolID &sym) override {}
 
@@ -820,7 +823,8 @@ bool HadesGC::incrementalMark(size_t markLimit) {
 /// writes of compressed pointers is important.
 class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
  public:
-  MarkWeakRootsAcceptor(HadesGC &gc) : gc_{gc} {}
+  MarkWeakRootsAcceptor(HadesGC &gc, const llvh::BitVector &markedSymbols)
+      : gc_{gc}, markedSymbols_(markedSymbols) {}
 
   void acceptWeak(WeakRootBase &wr) override {
     if (!wr) {
@@ -836,8 +840,21 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     wr = nullptr;
   }
 
+  void acceptWeakSym(WeakRootSymbolID &ws) override {
+    if (ws.isInvalid()) {
+      return;
+    }
+    const uint32_t idx = ws.getNoBarrierUnsafe().unsafeGetIndex();
+    // Symbols pointing outside of the markedSymbols range have been allocated
+    // after this collection has started and should be treated as live.
+    if (idx < markedSymbols_.size() && !markedSymbols_[idx]) {
+      ws = SymbolID::empty();
+    }
+  }
+
  private:
   HadesGC &gc_;
+  const llvh::BitVector &markedSymbols_;
 };
 
 class HadesGC::Executor {
@@ -1698,12 +1715,21 @@ void HadesGC::completeMarking() {
       markState_->globalWorklist.empty() && "Marking worklist wasn't drained");
   // Reset weak roots to null after full reachability has been
   // determined.
-  MarkWeakRootsAcceptor acceptor{*this};
-  markWeakRoots(acceptor, /*markLongLived*/ true);
-
-  // Now free symbols and weak refs.
   markState_->markedSymbols |= markState_->writeBarrierMarkedSymbols;
+
+  // Now free symbols. Note that:
+  // 1. We must do this before marking weak symbols, because the mark bits
+  //    will be updated by this call to reflect symbols that were not actually
+  //    freed.
+  // 2. We must do this after we mark the WeakMap entries, because they may
+  //    retain additional symbols. However, if we add support for WeakMaps
+  //    with symbol keys, we will have to revisit this, because freeSymbols
+  //    also updates the mark bits to reflect non-freeable symbols, which is
+  //    necessary to know if a symbol key in a WeakMap is reachable.
   gcCallbacks_.freeSymbols(markState_->markedSymbols);
+
+  MarkWeakRootsAcceptor acceptor{*this, markState_->markedSymbols};
+  markWeakRoots(acceptor, /*markLongLived*/ true);
 
   // Nothing needs markState_ from this point onward.
   markState_.reset();
@@ -1934,26 +1960,6 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
     // from the card table being marked itself.
     FixedSizeHeapSegment::dirtyCardForAddress(loc);
   }
-}
-
-void HadesGC::weakRefReadBarrier(HermesValue value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Read barrier invoked by background thread.");
-  if (ogMarkingBarriers_)
-    snapshotWriteBarrierInternal(value);
-}
-
-void HadesGC::weakRefReadBarrier(GCCell *value) {
-  assert(
-      !calledByBackgroundThread() &&
-      "Read barrier invoked by background thread.");
-  // If the GC is marking, conservatively mark the value as live.
-  if (ogMarkingBarriers_)
-    snapshotWriteBarrierInternal(value);
-
-  // Otherwise, if no GC is active at all, the weak ref must be alive.
-  // During sweeping there's no special handling either.
 }
 
 bool HadesGC::canAllocExternalMemory(uint32_t size) {

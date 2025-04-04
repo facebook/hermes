@@ -85,10 +85,10 @@ class RecreateCheapValues : public FunctionPass {
   HVMRegisterAllocator &RA_;
 };
 
-/// This pass removes unnecessary Movs and HBCLoadConstInsts that have been
+/// This pass removes unnecessary Movs and LIRLoadConstInsts that have been
 /// introduced after CSE by register allocation.
-/// It keeps track of all registers that are written to by HBCLoadConstInst
-/// or by Movs whose operand is a HBCLoadConstInst, and removes all successive
+/// It keeps track of all registers that are written to by LIRLoadConstInst
+/// or by Movs whose operand is a LIRLoadConstInst, and removes all successive
 /// instructions that write the same value to that register until it is written
 /// to by a different instruction.
 class LoadConstantValueNumbering : public FunctionPass {

@@ -332,6 +332,43 @@ _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   return res->getHermesValue();
 }
 
+extern "C" SHLegacyValue _sh_ljs_get_own_private_by_sym(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *privateNameKey,
+    SHPrivateNameCacheEntry *privateNameCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    auto *sourcePHV = toPHV(source);
+    if (LLVM_LIKELY(sourcePHV->isObject())) {
+      auto *privateNameKeyPHV = toPHV(privateNameKey);
+      auto *cacheEntry =
+          reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+      auto *obj = vmcast<JSObject>(*sourcePHV);
+      CompressedPointer clazzPtr{obj->getClassGCPtr()};
+      if (LLVM_LIKELY(
+              cacheEntry && cacheEntry->clazz == clazzPtr &&
+              cacheEntry->nameVal == privateNameKeyPHV->getSymbol())) {
+        return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
+            .unboxToHV(runtime);
+      }
+      return JSObject::getPrivateField(
+          Handle<JSObject>::vmcast(sourcePHV),
+          runtime,
+          Handle<SymbolID>::vmcast(privateNameKeyPHV),
+          cacheEntry);
+    } else {
+      return runtime.raiseTypeError(
+          "cannot read private property of a non-object");
+    }
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return *res;
+}
+
 extern "C" SHLegacyValue _sh_catch(
     SHRuntime *shr,
     SHLocals *locals,
@@ -1432,6 +1469,67 @@ extern "C" void _sh_ljs_define_own_getter_setter_by_val(
     _sh_throw_current(shr);
 }
 
+extern "C" void _sh_ljs_add_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value) {
+  Runtime &runtime{getRuntime(shr)};
+  ExecutionStatus cr = [&runtime, target, key, value]() {
+    GCScopeMarkerRAII marker{runtime};
+    return JSObject::defineNewOwnProperty(
+        Handle<JSObject>::vmcast(toPHV(target)),
+        runtime,
+        toPHV(key)->getSymbol(),
+        PropertyFlags::privateFieldPropertyFlags(),
+        Handle<>(toPHV(value)));
+  }();
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+}
+extern "C" void _sh_ljs_put_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *privateNameKey,
+    SHLegacyValue *value,
+    SHPrivateNameCacheEntry *privateNameCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&]() -> ExecutionStatus {
+    GCScopeMarkerRAII marker{runtime};
+    auto *targetPHV = toPHV(target);
+    if (LLVM_LIKELY(targetPHV->isObject())) {
+      auto *valuePHV = toPHV(value);
+      SmallHermesValue shv =
+          SmallHermesValue::encodeHermesValue(*valuePHV, runtime);
+      auto *privateNameKeyPHV = toPHV(privateNameKey);
+      auto *cacheEntry =
+          reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+      auto *obj = vmcast<JSObject>(*targetPHV);
+      CompressedPointer clazzPtr{obj->getClassGCPtr()};
+      if (LLVM_LIKELY(
+              cacheEntry && cacheEntry->clazz == clazzPtr &&
+              cacheEntry->nameVal == privateNameKeyPHV->getSymbol())) {
+        // Fast path, use the cached slot
+        JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
+        return ExecutionStatus::RETURNED;
+      }
+      // Slow path, call setPrivateField
+      return JSObject::setPrivateField(
+          Handle<JSObject>::vmcast(targetPHV),
+          runtime,
+          Handle<SymbolID>::vmcast(privateNameKeyPHV),
+          Handle<>(valuePHV),
+          cacheEntry);
+    } else {
+      return runtime.raiseTypeError(
+          "cannot write private property of a non-object");
+    }
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+}
+
 static HermesValue delByVal(
     Runtime &runtime,
     PinnedHermesValue *target,
@@ -1500,6 +1598,32 @@ extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {
   NoHandleScope noHandles{getRuntime(shr)};
   return HermesValue::encodeStringValue(
       getRuntime(shr).getStringPrimFromSymbolID(SymbolID::unsafeCreate(symID)));
+}
+
+extern "C" SHLegacyValue _sh_ljs_create_private_name(
+    SHRuntime *shr,
+    SHSymbolID descStrID) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr = [&runtime,
+                                descStrID]() -> CallResult<HermesValue> {
+    GCScopeMarkerRAII marker{runtime};
+    struct : public Locals {
+      PinnedValue<StringPrimitive> desc;
+    } lv;
+    LocalsRAII lraii{runtime, &lv};
+    auto *descStr = runtime.getIdentifierTable().getStringPrim(
+        runtime, SymbolID::unsafeCreate(descStrID));
+    lv.desc = descStr;
+    auto res =
+        runtime.getIdentifierTable().createNotUniquedSymbol(runtime, lv.desc);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return HermesValue::encodeSymbolValue(*res);
+  }();
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *cr;
 }
 
 extern "C" SHLegacyValue
@@ -1623,7 +1747,8 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
   // call it.
   lv.clazz = clazz;
   auto numProps = lv.clazz->getNumProperties();
-  lv.obj = JSObject::create(runtime, lv.clazz);
+  lv.obj = JSObject::create(
+      runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), lv.clazz);
 
   struct {
     void visitStringID(StringID id) {
@@ -1783,6 +1908,64 @@ _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
     } else {
       cr = JSObject::hasComputed(
           Handle<JSObject>::vmcast(toPHV(obj)), runtime, Handle<>(toPHV(name)));
+    }
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return _sh_ljs_bool(*cr);
+}
+extern "C" SHLegacyValue _sh_ljs_private_is_in_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *privateName,
+    SHLegacyValue *target,
+    SHPrivateNameCacheEntry *privateNameCacheEntry) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{false};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    if (LLVM_UNLIKELY(!_sh_ljs_is_object(*target))) {
+      (void)runtime.raiseTypeError("right operand of 'in' is not an object");
+      cr = ExecutionStatus::EXCEPTION;
+    } else {
+      auto *privateNamePHV = toPHV(privateName);
+      auto *obj = vmcast<JSObject>(*toPHV(target));
+      CompressedPointer clazzPtr{obj->getClassGCPtr()};
+      auto *cacheEntry =
+          reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+      if (LLVM_LIKELY(
+              cacheEntry && cacheEntry->clazz == clazzPtr &&
+              cacheEntry->nameVal == privateNamePHV->getSymbol())) {
+        // Fast path, reuse the cached result.
+        cr = cacheEntry->slot;
+      } else {
+        // Slow path, look up the symbol on the object's own properties.
+        auto *targetPHV = toPHV(target);
+        NamedPropertyDescriptor desc;
+        auto res = JSObject::getOwnNamedDescriptor(
+            Handle<JSObject>::vmcast(targetPHV),
+            runtime,
+            toPHV(privateName)->getSymbol(),
+            desc);
+        assert(
+            !res ||
+            desc.flags.privateName &&
+                "if a property exists here it should be a private property.");
+        // We want to be able to cache negative results here, as in cache the
+        // answer that an object with a given HC does not contain a property.
+        // However, in dictionary mode the HC wouldn't change even if the object
+        // subsequently gets the private property added to it. So we must
+        // disable caching when the HC is a dictionary.
+        if (privateNameCacheEntry &&
+            !vmcast<JSObject>(*targetPHV)->getClass(runtime)->isDictionary()) {
+          auto *cacheEntry =
+              reinterpret_cast<PrivateNameCacheEntry *>(privateNameCacheEntry);
+          cacheEntry->clazz = vmcast<JSObject>(*targetPHV)->getClassGCPtr();
+          SymbolID nameSym = privateNamePHV->getSymbol();
+          cacheEntry->nameVal = nameSym;
+          cacheEntry->slot = res;
+        }
+        cr = res;
+      }
     }
   }
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))

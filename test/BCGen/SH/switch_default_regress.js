@@ -42,10 +42,10 @@ function foo(i) {
 // CHKLIR:function global(): undefined
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLIR-NEXT:  %1 = HBCGetGlobalObjectInst (:object)
+// CHKLIR-NEXT:  %1 = LIRGetGlobalObjectInst (:object)
 // CHKLIR-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
 // CHKLIR-NEXT:       StorePropertyLooseInst %2: object, %1: object, "foo": string
-// CHKLIR-NEXT:  %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKLIR-NEXT:  %4 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:       ReturnInst %4: undefined
 // CHKLIR-NEXT:function_end
 
@@ -56,15 +56,15 @@ function foo(i) {
 // CHKLIR-NEXT:  %1 = PhiInst (:any) %3: number, %BB2, %8: any, %BB3
 // CHKLIR-NEXT:       ReturnInst %1: any
 // CHKLIR-NEXT:%BB2:
-// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:number) 2: number
+// CHKLIR-NEXT:  %3 = LIRLoadConstInst (:number) 2: number
 // CHKLIR-NEXT:       BranchInst %BB1
 // CHKLIR-NEXT:%BB3:
-// CHKLIR-NEXT:  %5 = HBCLoadConstInst (:number) 1: number
+// CHKLIR-NEXT:  %5 = LIRLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:  %6 = BinaryStrictlyEqualInst (:boolean) %5: number, %8: any
 // CHKLIR-NEXT:       CondBranchInst %6: boolean, %BB1, %BB1
 // CHKLIR-NEXT:%BB4:
 // CHKLIR-NEXT:  %8 = LoadParamInst (:any) %i: any
-// CHKLIR-NEXT:  %9 = HBCLoadConstInst (:number) 0: number
+// CHKLIR-NEXT:  %9 = LIRLoadConstInst (:number) 0: number
 // CHKLIR-NEXT:  %10 = BinaryStrictlyEqualInst (:boolean) %9: number, %8: any
 // CHKLIR-NEXT:        CondBranchInst %10: boolean, %BB2, %BB3
 // CHKLIR-NEXT:function_end

@@ -23,13 +23,13 @@ function foo(x) {
 // CHECK-NEXT:  {r0}      %1 = DeclareGlobalVarInst "sink": string
 // CHECK-NEXT:  {r0}      %2 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  {r2}      %3 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %sink(): functionCode
-// CHECK-NEXT:  {r3}      %4 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r3}      %4 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %5 = StorePropertyLooseInst {r2} %3: object, {r3} %4: object, "sink": string
 // CHECK-NEXT:  {r1}      %6 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:  {r2}      %7 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r2}      %7 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %8 = StorePropertyLooseInst {r1} %6: object, {r2} %7: object, "foo": string
 // CHECK-NEXT:  {r1}      %9 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  {r2}     %10 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r2}     %10 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}     %11 = StoreStackInst {r2} %10: undefined, {r1} %9: any
 // CHECK-NEXT:  {r1}     %12 = LoadStackInst (:any) {r1} %9: any
 // CHECK-NEXT:  {r0}     %13 = ReturnInst {r1} %12: any
@@ -49,7 +49,7 @@ function foo(x) {
 // CHECK-NEXT:  {r0}      %5 = StoreFrameInst {r1} %1: environment, {r2} %4: any, [%VS1.y]: any
 // CHECK-NEXT:  {r2}      %6 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:  {r0}      %7 = StoreFrameInst {r1} %1: environment, {r2} %6: any, [%VS1.z]: any
-// CHECK-NEXT:  {r1}      %8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}      %8 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %9 = ReturnInst {r1} %8: undefined
 // CHECK-NEXT:function_end
 
@@ -65,10 +65,10 @@ function foo(x) {
 // CHECK-NEXT:  {r0}      %3 = StoreFrameInst {r2} %1: environment, {r1} %2: any, [%VS1.x]: any
 // CHECK-NEXT:  {r2}      %4 = LoadFrameInst (:any) {r2} %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  {r1}      %5 = LoadPropertyInst (:any) {r2} %4: any, "sink": string
-// CHECK-NEXT:  {r3}      %6 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  {r4}      %7 = HBCLoadConstInst (:number) 2: number
-// CHECK-NEXT:  {r5}      %8 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:  {r3}      %6 = LIRLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {r4}      %7 = LIRLoadConstInst (:number) 2: number
+// CHECK-NEXT:  {r5}      %8 = LIRLoadConstInst (:number) 3: number
 // CHECK-NEXT:  {r0}      %9 = HBCCallNInst (:any) {r1} %5: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %4: any, {r3} %6: number, {r4} %7: number, {r5} %8: number
-// CHECK-NEXT:  {r1}     %10 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}     %10 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}     %11 = ReturnInst {r1} %10: undefined
 // CHECK-NEXT:function_end

@@ -15,15 +15,15 @@ namespace {
 /// Check whether a particular operand of an instruction must stay
 /// as literal and hence cannot be lowered into load_const instruction.
 bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
-  // HBCLoadConstInst is meant to load a constant
-  if (llvh::isa<HBCLoadConstInst>(Inst))
+  // LIRLoadConstInst is meant to load a constant
+  if (llvh::isa<LIRLoadConstInst>(Inst))
     return true;
 
   // The operand of LoadParamInst is a literal index.
   if (llvh::isa<LoadParamInst>(Inst))
     return true;
 
-  if (llvh::isa<HBCAllocObjectFromBufferInst>(Inst))
+  if (llvh::isa<LIRAllocObjectFromBufferInst>(Inst))
     return true;
 
   // All operands of AllocArrayInst are literals.
@@ -41,14 +41,8 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<SwitchInst>(Inst) && opIndex > 0)
     return true;
 
-  // DefineOwnPropertyInst and DefineNewOwnPropertyInst.
   if (auto *SOP = llvh::dyn_cast<BaseDefineOwnPropertyInst>(Inst)) {
     if (opIndex == BaseDefineOwnPropertyInst::PropertyIdx) {
-      if (llvh::isa<DefineNewOwnPropertyInst>(Inst)) {
-        // In DefineNewOwnPropertyInst the property name must be a literal.
-        return true;
-      }
-
       // If the propery is a LiteralNumber, the property is enumerable, and it
       // is a valid array index, it is coming from an array initialization and
       // we will emit it as DefineOwnByIndex.
@@ -69,6 +63,10 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
       return true;
 
     return false;
+  }
+
+  if (llvh::isa<CreatePrivateNameInst>(Inst)) {
+    return opIndex == CreatePrivateNameInst::PropertyIdx;
   }
 
   // If StorePropertyInst's property ID is a LiteralString, we will keep it
@@ -214,8 +212,8 @@ bool loadConstants(Function *F) {
   auto createLoadLiteral = [&builder](Literal *literal, Instruction *where) {
     builder.setInsertionPoint(where);
     return llvh::isa<GlobalObject>(literal)
-        ? cast<Instruction>(builder.createHBCGetGlobalObjectInst())
-        : cast<Instruction>(builder.createHBCLoadConstInst(literal));
+        ? cast<Instruction>(builder.createLIRGetGlobalObjectInst())
+        : cast<Instruction>(builder.createLIRLoadConstInst(literal));
   };
 
   for (BasicBlock &BB : *F) {

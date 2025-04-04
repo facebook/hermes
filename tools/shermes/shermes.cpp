@@ -13,6 +13,7 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/NativeContext.h"
 #include "hermes/AST/TS2Flow.h"
+#include "hermes/AST/TransformAST.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/PassManager.h"
@@ -409,7 +410,7 @@ CLFlag Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
 cl::opt<unsigned> InlineMaxSize(
     "Xinline-max-size",
-    cl::init(1),
+    cl::init(50),
     cl::desc("Suppress inlining of functions larger than the given size"),
     cl::Hidden,
     cl::cat(CompilerCategory));
@@ -812,6 +813,11 @@ ESTree::NodePtr parseJS(
     }
   }
 #endif
+
+  parsedAST = llvh::cast<ESTree::ProgramNode>(
+      hermes::transformASTForCompilation(*context, parsedAST));
+  if (!parsedAST)
+    return nullptr;
 
   // If we are executing in typed mode and not script, then wrap the program.
   if (shouldWrapInIIFE) {

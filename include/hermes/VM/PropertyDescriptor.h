@@ -61,6 +61,8 @@ struct PropertyFlags {
       /// descriptors synthesized by get*Descriptor methods, and never
       /// set in descriptors stored persistently.
       uint16_t proxyObject : 1;
+      /// The property is a private name.
+      uint16_t privateName : 1;
     };
 
     uint16_t _flags;
@@ -104,6 +106,17 @@ struct PropertyFlags {
     pf.enumerable = 0;
     pf.writable = 1;
     pf.configurable = 1;
+    return pf;
+  }
+
+  /// Return an instance of PropertyFlags initialized as writable,
+  /// non-configurable, non-enumerable, and privateName.
+  static PropertyFlags privateFieldPropertyFlags() {
+    PropertyFlags pf{};
+    pf.enumerable = 0;
+    pf.writable = 1;
+    pf.configurable = 0;
+    pf.privateName = 1;
     return pf;
   }
 

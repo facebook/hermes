@@ -483,6 +483,7 @@ class InstrGen {
       ModuleGen &moduleGen,
       uint32_t &nextWriteCacheIdx,
       uint32_t &nextReadCacheIdx,
+      uint32_t &nextPrivateNameCacheIdx,
       const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs)
       : os_(os),
         ra_(ra),
@@ -492,6 +493,7 @@ class InstrGen {
         moduleGen_(moduleGen),
         nextWriteCacheIdx_(nextWriteCacheIdx),
         nextReadCacheIdx_(nextReadCacheIdx),
+        nextPrivateNameCacheIdx_(nextPrivateNameCacheIdx),
         tryIDs_(tryIDs) {
     if (!tryIDs_.empty())
       enclosingTrys_ = *findEnclosingTrysPerBlock(&F_);
@@ -501,7 +503,6 @@ class InstrGen {
   /// ostream.
   void generate(Instruction &I) {
     switch (I.getKind()) {
-#define INCLUDE_HBC_INSTRS
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
     return generate##CLASS(*cast<CLASS>(&I));
@@ -536,6 +537,7 @@ class InstrGen {
   /// These starts at 0 and increments every time a cache index is used
   uint32_t &nextWriteCacheIdx_;
   uint32_t &nextReadCacheIdx_;
+  uint32_t &nextPrivateNameCacheIdx_;
 
   /// Map from TryStart to an ID for the try/catch.
   /// Set the tryState to the ID when entering the try, restore it when leaving.
@@ -625,6 +627,10 @@ class InstrGen {
   llvh::raw_ostream &genReadIC(LiteralString *LS) {
     return os_ << "get_read_prop_cache(shUnit) + " << nextReadCacheIdx_++;
   }
+  llvh::raw_ostream &genPrivateNameIC(Value *privateName) {
+    return os_ << "get_private_name_cache(shUnit) + "
+               << nextPrivateNameCacheIdx_++;
+  }
 
   /// Helper to generate a value in a register,
   void generateRegister(sh::Register reg) {
@@ -713,6 +719,13 @@ class InstrGen {
 
   void generateInstruction(Instruction &inst) {
     hermes_fatal("Unimplemented instruction Instruction");
+  }
+  void generateCreatePrivateNameInst(CreatePrivateNameInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_create_private_name(shr, ";
+    genStringConst(cast<LiteralString>(inst.getSingleOperand())) << ");\n";
   }
   void generateAddEmptyStringInst(AddEmptyStringInst &inst) {
     os_.indent(2);
@@ -868,7 +881,7 @@ class InstrGen {
     generateValue(*inst.getScope());
     os_ << ", " << inst.getLoadVariable()->getIndexInVariableList() << ");\n";
   }
-  void generateHBCLoadConstInst(HBCLoadConstInst &inst) {
+  void generateLIRLoadConstInst(LIRLoadConstInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -914,24 +927,24 @@ class InstrGen {
     generateRegister(*inst.getClosure());
     os_ << ");";
   }
-  void generateHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst &inst) {
+  void generateLIRGetArgumentsLengthInst(LIRGetArgumentsLengthInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_arguments_length(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst &inst) {
+  void generateLIRReifyArgumentsLooseInst(LIRReifyArgumentsLooseInst &inst) {
     os_ << "  _sh_ljs_reify_arguments_loose(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCReifyArgumentsStrictInst(HBCReifyArgumentsStrictInst &inst) {
+  void generateLIRReifyArgumentsStrictInst(LIRReifyArgumentsStrictInst &inst) {
     os_ << "  _sh_ljs_reify_arguments_strict(shr, frame, ";
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCSpillMovInst(HBCSpillMovInst &inst) {
+  void generateLIRSpillMovInst(LIRSpillMovInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -1067,6 +1080,15 @@ class InstrGen {
       case ValueKind::BinaryInInstKind: // in
         funcUntypedOp = "_sh_ljs_is_in_rjs";
         break;
+      case ValueKind::BinaryPrivateInInstKind: // in
+        os_ << "_sh_ljs_private_is_in_rjs(shr, ";
+        generateRegisterPtr(*inst.getLeftHandSide());
+        os_ << ", ";
+        generateRegisterPtr(*inst.getRightHandSide());
+        os_ << ", ";
+        genPrivateNameIC(inst.getLeftHandSide());
+        os_ << ");\n";
+        return;
       case ValueKind::BinaryInstanceOfInstKind:
         funcUntypedOp = "_sh_ljs_instance_of_rjs";
         break;
@@ -1281,30 +1303,27 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
-  void generateDefineNewOwnPropertyInst(DefineNewOwnPropertyInst &inst) {
+  void generateStoreOwnPrivateFieldInst(StoreOwnPrivateFieldInst &inst) {
     os_.indent(2);
-    auto prop = inst.getProperty();
-    assert(inst.getIsEnumerable() && "enumerable must be true.");
-
-    if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
-      uint32_t index = *numProp->convertToArrayIndex();
-      os_ << "_sh_ljs_define_own_by_index(";
-      os_ << "shr, ";
-      generateRegisterPtr(*inst.getObject());
-      os_ << ", ";
-      os_ << index << ", ";
-      generateRegisterPtr(*inst.getStoredValue());
-      os_ << ");\n";
-      return;
-    }
-
-    auto *LS = cast<LiteralString>(prop);
-    os_ << "_sh_ljs_define_own_by_id(shr,&";
-    generateRegister(*inst.getObject());
+    os_ << "_sh_ljs_put_own_private_by_sym(shr, ";
+    generateRegisterPtr(*inst.getObject());
     os_ << ", ";
-    genStringConst(LS) << ", ";
+    generateRegisterPtr(*inst.getProperty());
+    os_ << ", ";
     generateRegisterPtr(*inst.getStoredValue());
-    os_ << ", NULL);\n";
+    os_ << ", ";
+    genPrivateNameIC(inst.getProperty());
+    os_ << ");\n";
+  }
+  void generateAddOwnPrivateFieldInst(AddOwnPrivateFieldInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_ljs_add_own_private_by_sym(shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getProperty());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getStoredValue());
+    os_ << ");\n";
   }
   void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
     os_.indent(2);
@@ -1393,6 +1412,18 @@ class InstrGen {
     generateRegister(*inst.getProperty());
     os_ << ", &";
     generateRegister(*inst.getReceiver());
+    os_ << ");\n";
+  }
+  void generateLoadOwnPrivateFieldInst(LoadOwnPrivateFieldInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_get_own_private_by_sym(shr, ";
+    generateRegisterPtr(*inst.getObject());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getProperty());
+    os_ << ", ";
+    genPrivateNameIC(inst.getProperty());
     os_ << ");\n";
   }
   void generateTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst &inst) {
@@ -1601,7 +1632,7 @@ class InstrGen {
   void generateAllocObjectLiteralInst(AllocObjectLiteralInst &inst) {
     assert(
         inst.getKeyValuePairCount() == 0 &&
-        "AllocObjectLiteralInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+        "AllocObjectLiteralInst with properties should be lowered to LIRAllocObjectFromBufferInst");
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -1618,7 +1649,7 @@ class InstrGen {
   void generateAllocTypedObjectInst(AllocTypedObjectInst &inst) {
     assert(
         inst.getKeyValuePairCount() == 0 &&
-        "AllocTypedObjectInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+        "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
     os_.indent(2);
     generateRegister(inst);
     os_ << " = ";
@@ -2009,7 +2040,7 @@ class InstrGen {
   void generateResumeGeneratorInst(ResumeGeneratorInst &inst) {
     unimplemented(inst);
   }
-  void generateHBCGetGlobalObjectInst(HBCGetGlobalObjectInst &inst) {
+  void generateLIRGetGlobalObjectInst(LIRGetGlobalObjectInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_global_object(shr);\n";
@@ -2055,8 +2086,8 @@ class InstrGen {
     genReadIC(protoStr);
     os_ << ");\n";
   }
-  void generateHBCGetArgumentsPropByValLooseInst(
-      HBCGetArgumentsPropByValLooseInst &inst) {
+  void generateLIRGetArgumentsPropByValLooseInst(
+      LIRGetArgumentsPropByValLooseInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_arguments_prop_by_val_loose(shr, frame, ";
@@ -2065,8 +2096,8 @@ class InstrGen {
     generateRegisterPtr(*inst.getLazyRegister());
     os_ << ");\n";
   }
-  void generateHBCGetArgumentsPropByValStrictInst(
-      HBCGetArgumentsPropByValStrictInst &inst) {
+  void generateLIRGetArgumentsPropByValStrictInst(
+      LIRGetArgumentsPropByValStrictInst &inst) {
     os_.indent(2);
     generateRegister(inst);
     os_ << " = _sh_ljs_get_arguments_prop_by_val_strict(shr, frame, ";
@@ -2086,8 +2117,8 @@ class InstrGen {
     generateRegister(*inst.getThisValue());
     os_ << ";\n";
   }
-  void generateHBCAllocObjectFromBufferInst(
-      HBCAllocObjectFromBufferInst &inst) {
+  void generateLIRAllocObjectFromBufferInst(
+      LIRAllocObjectFromBufferInst &inst) {
     os_.indent(2);
     generateRegister(inst);
 
@@ -2500,9 +2531,9 @@ bool lowerModuleIR(Module *M, bool optimize) {
   if (optimize) {
     // Move loads to child blocks if possible.
     PM.addCodeMotion();
-    // Eliminate common HBCLoadConstInsts.
+    // Eliminate common LIRLoadConstInsts.
     // TODO(T140823187): Run before CodeMotion too.
-    // Avoid pushing HBCLoadConstInsts down into individual blocks,
+    // Avoid pushing LIRLoadConstInsts down into individual blocks,
     // preventing their elimination.
     PM.addCSE();
     // Drop unused LoadParamInsts.
@@ -2534,6 +2565,7 @@ void generateFunction(
     ModuleGen &moduleGen,
     uint32_t &nextWriteCacheIdx,
     uint32_t &nextReadCacheIdx,
+    uint32_t &nextPrivateNameCacheIdx,
     BytecodeGenerationOptions options) {
   auto PO = hermes::postOrderAnalysis(&F);
 
@@ -2594,7 +2626,15 @@ void generateFunction(
   OS << '\n';
 
   InstrGen instrGen(
-      OS, RA, bbMap, F, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, tryIDs);
+      OS,
+      RA,
+      bbMap,
+      F,
+      moduleGen,
+      nextWriteCacheIdx,
+      nextReadCacheIdx,
+      nextPrivateNameCacheIdx,
+      tryIDs);
 
   // Number of registers stored in the `locals` struct below.
   uint32_t localsSize = RA.getMaxRegisterUsage(sh::RegClass::LocalPtr);
@@ -2880,6 +2920,7 @@ void generateModule(
   // -reuse-prop-cache is passed in.
   uint32_t nextWriteCacheIdx = 0;
   uint32_t nextReadCacheIdx = 0;
+  uint32_t nextPrivateNameCacheIdx = 0;
   ModuleGen moduleGen{M, options.optimizationEnabled};
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
@@ -2900,6 +2941,7 @@ static uint32_t unit_index;
 static inline SHSymbolID* get_symbols(SHUnit *);
 static inline SHWritePropertyCacheEntry* get_write_prop_cache(SHUnit *);
 static inline SHReadPropertyCacheEntry* get_read_prop_cache(SHUnit *);
+static inline SHPrivateNameCacheEntry* get_private_name_cache(SHUnit *);
 static const SHSrcLoc s_source_locations[];
 static SHNativeFuncInfo s_function_info_table[];
 )";
@@ -2919,9 +2961,16 @@ static SHNativeFuncInfo s_function_info_table[];
 
   M->assignIndexToVariables();
 
-  for (auto &F : *M)
+  for (auto &F : *M) {
     generateFunction(
-        F, OS, moduleGen, nextWriteCacheIdx, nextReadCacheIdx, options);
+        F,
+        OS,
+        moduleGen,
+        nextWriteCacheIdx,
+        nextReadCacheIdx,
+        nextPrivateNameCacheIdx,
+        options);
+  }
 
   if (options.format == DumpBytecode || options.format == EmitBundle) {
     moduleGen.literalBuffers.generate(OS);
@@ -2940,9 +2989,12 @@ static SHNativeFuncInfo s_function_info_table[];
        << "  SHUnit unit;\n"
        << "  SHSymbolID symbol_data[" << moduleGen.stringTable.size() << "];\n"
        << "  SHWritePropertyCacheEntry write_prop_cache_data["
-       << nextWriteCacheIdx << "];\n;"
+       << nextWriteCacheIdx << "];\n"
        << "  SHReadPropertyCacheEntry read_prop_cache_data[" << nextReadCacheIdx
-       << "];\n;" << "  SHCompressedPointer object_literal_class_cache["
+       << "];\n"
+       << "  SHPrivateNameCacheEntry private_name_cache_data["
+       << nextPrivateNameCacheIdx << "];\n"
+       << "  SHCompressedPointer object_literal_class_cache["
        << moduleGen.literalBuffers.objShapeTable.size() << "];\n};\n"
        << "SHUnit *CREATE_THIS_UNIT(void) {\n"
        << "  struct UnitData *unit_data = calloc(sizeof(struct UnitData), 1);\n"
@@ -2953,7 +3005,8 @@ static SHNativeFuncInfo s_function_info_table[];
        << ", .ascii_pool = s_ascii_pool, .u16_pool = s_u16_pool,"
        << ".strings = s_strings, .symbols = unit_data->symbol_data,"
        << ".write_prop_cache = unit_data->write_prop_cache_data,"
-       << ".read_prop_cache = unit_data->read_prop_cache_data,"
+       << ".read_prop_cache = unit_data->read_prop_cache_data, "
+       << ".private_name_cache = unit_data->private_name_cache_data, "
        << ".obj_key_buffer = s_obj_key_buffer, .obj_key_buffer_size = "
        << moduleGen.literalBuffers.objKeyBuffer.size() << ", "
        << ".literal_val_buffer = s_literal_val_buffer, .literal_val_buffer_size = "
@@ -2978,6 +3031,9 @@ SHWritePropertyCacheEntry *get_write_prop_cache(SHUnit *unit) {
 }
 SHReadPropertyCacheEntry *get_read_prop_cache(SHUnit *unit) {
   return ((struct UnitData *)unit)->read_prop_cache_data;
+}
+SHPrivateNameCacheEntry *get_private_name_cache(SHUnit *unit) {
+  return ((struct UnitData *)unit)->private_name_cache_data;
 }
 )";
     if (options.emitMain) {

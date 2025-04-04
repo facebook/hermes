@@ -138,16 +138,21 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
 
   uint32_t readCacheSize = sizeComputer(header.getHighestReadCacheIndex());
   uint32_t writeCacheSize = sizeComputer(header.getHighestWriteCacheIndex());
+  uint32_t privateNameCacheSize =
+      sizeComputer(header.getHighestPrivateNameCacheIndex());
 
   bool isCodeBlockLazy = !bytecode;
   if (isCodeBlockLazy) {
     readCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
     writeCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
+    privateNameCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
   }
 
-  auto allocSize =
-      totalSizeToAlloc<ReadPropertyCacheEntry, WritePropertyCacheEntry>(
-          readCacheSize, writeCacheSize);
+  auto allocSize = totalSizeToAlloc<
+      ReadPropertyCacheEntry,
+      WritePropertyCacheEntry,
+      PrivateNameCacheEntry>(
+      readCacheSize, writeCacheSize, privateNameCacheSize);
   void *mem = checkedMalloc(allocSize);
   return std::unique_ptr<CodeBlock>(new (mem) CodeBlock(
       runtimeModule,
@@ -155,7 +160,8 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
       bytecode,
       functionID,
       readCacheSize,
-      writeCacheSize));
+      writeCacheSize,
+      privateNameCacheSize));
 }
 
 int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
@@ -287,7 +293,7 @@ OptValue<uint32_t> CodeBlock::getDebugLexicalDataOffset() const {
   return ret;
 }
 
-void CodeBlock::markCachedHiddenClasses(
+void CodeBlock::markWeakElementsInCaches(
     Runtime &runtime,
     WeakRootAcceptor &acceptor) {
   for (auto &prop :
@@ -304,6 +310,13 @@ void CodeBlock::markCachedHiddenClasses(
     if (prop.clazz) {
       acceptor.acceptWeak(prop.clazz);
     }
+  }
+  for (auto &prop :
+       llvh::makeMutableArrayRef(privateNameCache(), privateNameCacheSize_)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
+    acceptor.acceptWeakSym(prop.nameVal);
   }
 }
 

@@ -133,6 +133,63 @@ ExecutionStatus Interpreter::caseCreateClass(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus Interpreter::caseCreatePrivateName(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  CodeBlock *curCodeBlock = runtime.getCurrentFrame().getCalleeCodeBlock();
+  auto *descStr = runtime.getIdentifierTable().getStringPrim(
+      runtime, ID(ip->iCreatePrivateName.op2));
+  struct : public Locals {
+    PinnedValue<StringPrimitive> desc;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.desc = descStr;
+  auto symbolRes =
+      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, lv.desc);
+  if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  O1REG(CreatePrivateName) = HermesValue::encodeSymbolValue(*symbolRes);
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus Interpreter::casePrivateIsIn(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    CodeBlock *curCodeBlock,
+    const Inst *ip) {
+  if (!LLVM_LIKELY(O3REG(PrivateIsIn).isObject())) {
+    return runtime.raiseTypeError("right operand of 'in' is not an object");
+  }
+  NamedPropertyDescriptor desc;
+  auto res = JSObject::getOwnNamedDescriptor(
+      Handle<JSObject>::vmcast(&O3REG(PrivateIsIn)),
+      runtime,
+      O2REG(PrivateIsIn).getSymbol(),
+      desc);
+  assert(
+      !res ||
+      desc.flags.privateName &&
+          "if a property exists here it should be a private property.");
+  auto *obj = vmcast<JSObject>(O3REG(PrivateIsIn));
+  auto cacheIdx = ip->iPrivateIsIn.op4;
+  // We want to be able to cache negative results here, as in cache the answer
+  // that an object with a given HC does not contain a property. However, in
+  // dictionary mode the HC wouldn't change even if the object subsequently gets
+  // the private property added to it. So we must disable caching when the HC is
+  // a dictionary.
+  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED &&
+      !obj->getClass(runtime)->isDictionary()) {
+    auto *cacheEntry = curCodeBlock->getPrivateNameCacheEntry(cacheIdx);
+    cacheEntry->clazz = obj->getClassGCPtr();
+    SymbolID nameSym = O2REG(PrivateIsIn).getSymbol();
+    cacheEntry->nameVal = nameSym;
+    cacheEntry->slot = res;
+  }
+  O1REG(PrivateIsIn) = HermesValue::encodeBoolValue(res);
+  return ExecutionStatus::RETURNED;
+}
+
 ExecutionStatus Interpreter::caseDirectEval(
     Runtime &runtime,
     PinnedHermesValue *frameRegs,
@@ -1786,7 +1843,10 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  lv.obj = JSObject::create(runtime, lv.clazz).get();
+  lv.obj =
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), lv.clazz)
+          .get();
   auto numLiterals = lv.clazz->getNumProperties();
 
   // Set up the visitor to populate property values in the object.

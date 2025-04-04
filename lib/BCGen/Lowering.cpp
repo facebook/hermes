@@ -154,16 +154,16 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   IRBuilder builder(F);
   uint32_t size = allocInst->getKeyValuePairCount();
 
-  // Should not create HBCAllocObjectFromBufferInst for an object with 0
+  // Should not create LIRAllocObjectFromBufferInst for an object with 0
   // properties.
   if (size == 0) {
     return false;
   }
 
-  // Replace AllocObjectLiteral with HBCAllocObjectFromBufferInst
+  // Replace AllocObjectLiteral with LIRAllocObjectFromBufferInst
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPointAfter(allocInst);
-  HBCAllocObjectFromBufferInst::ObjectPropertyMap propMap;
+  LIRAllocObjectFromBufferInst::ObjectPropertyMap propMap;
 
   bool hasSeenNumericProp = false;
   for (unsigned i = 0; i < size; i++) {
@@ -208,13 +208,13 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
     }
   }
 
-  // Emit HBCAllocObjectFromBufferInst.
+  // Emit LIRAllocObjectFromBufferInst.
   // First, we reset insertion location.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createHBCAllocObjectFromBufferInst(propMap);
+  auto *alloc = builder.createLIRAllocObjectFromBufferInst(propMap);
 
-  // HBCAllocObjectFromBuffer does not take a prototype argument. So if the
+  // LIRAllocObjectFromBufferInst does not take a prototype argument. So if the
   // object has a prototype set, make an explicit call to set it.
   if (!llvh::isa<EmptySentinel>(allocInst->getParentObject())) {
     builder.createCallBuiltinInst(

@@ -977,7 +977,7 @@ void Runtime::unmarkSymbols() {
   identifierTable_.unmarkSymbols();
 }
 
-void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
+void Runtime::freeSymbols(llvh::BitVector &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols, getHeap().getIDTracker());
 }
 

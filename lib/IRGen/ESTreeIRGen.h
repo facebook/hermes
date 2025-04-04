@@ -105,6 +105,12 @@ struct LegacyClassContext {
   llvh::DenseMap<ESTree::ClassPropertyNode *, Variable *>
       classComputedFieldKeys{};
 
+  /// First instance private method, or nullptr if there are none. If one
+  /// exists, then we will need to stamp the instance with the private instance
+  /// brand. The way to get the value of the instance brand is also through this
+  /// AST node.
+  ESTree::MethodDefinitionNode *firstInstancePrivateMethod{nullptr};
+
   explicit LegacyClassContext(Variable *cons, Variable *funcVar)
       : constructor(cons), instElemInitFuncVar(funcVar) {}
 };
@@ -446,6 +452,48 @@ class LReference {
 //===----------------------------------------------------------------------===//
 // ESTreeIRGen
 
+/// Holds the required state that ESTreeIRGen needs for private name
+/// declarations and usages which refer to functions- methods and accessors.
+class PrivateNameFunctionTable {
+ public:
+  /// All entries in the private name table need to contain at least the class
+  /// brand symbol, so this is defined here in a base class.
+  struct BaseEntry {
+    /// Class brand symbol.
+    Variable *classBrand;
+    BaseEntry(Variable *classBrand) : classBrand(classBrand) {}
+  };
+  /// Used for private names that define only a single function (methods or a
+  /// single getter/setter.)
+  struct SingleFunctionEntry : BaseEntry {
+    /// Closure value of function.
+    Variable *functionObject;
+    SingleFunctionEntry(Variable *classBrand, Variable *functionObject)
+        : BaseEntry(classBrand), functionObject(functionObject) {}
+  };
+  /// Used for private names that define both a getter and setter.
+  struct GetterSetterEntry : BaseEntry {
+    /// Closure value of the getter.
+    Variable *getterFunctionObject;
+    /// Closure value of the setter.
+    Variable *setterFunctionObject;
+    GetterSetterEntry(
+        Variable *classBrand,
+        Variable *getterFunctionObject,
+        Variable *setterFunctionObject)
+        : BaseEntry(classBrand),
+          getterFunctionObject(getterFunctionObject),
+          setterFunctionObject(setterFunctionObject) {}
+  };
+  // The following fields are declared as a deque so stable pointers can be
+  // taken to the elements. The custom data of private name decls will point to
+  // individual elements from these deques.
+  /// The list of single function entries.
+  std::deque<SingleFunctionEntry> singleFunctions;
+  /// The list of accessor entries.
+  std::deque<GetterSetterEntry> accessors;
+};
+
 /// Performs lowering of the JSON ESTree down to Hermes IR.
 class ESTreeIRGen {
   friend class FunctionContext;
@@ -577,6 +625,15 @@ class ESTreeIRGen {
   /// Perform IRGeneration for the whole module.
   /// \param evalDataInst must not contain a null varScope.
   Function *doItInScope(EvalCompilationDataInst *evalDataInst);
+
+  /// \return the PrivateNameFunctionTable which is stored in SemContext. Lazily
+  /// initialize the table.
+  PrivateNameFunctionTable &privateNameTable() {
+    if (!semCtx_.customData) {
+      semCtx_.customData = std::make_shared<PrivateNameFunctionTable>();
+    }
+    return *static_cast<PrivateNameFunctionTable *>(semCtx_.customData.get());
+  }
 
   /// Perform IR generation for a given CJS module.
   void doCJSModule(
@@ -970,6 +1027,12 @@ class ESTreeIRGen {
       ESTree::IdentifierNode *Iden,
       bool afterTypeOf);
 
+  /// Generate IR for the value of the private name. For fields, this is just
+  /// the value of the name itself. But for methods and accessors, this is the
+  /// class brand. The class is the class in which the private name of \p Iden
+  /// was declared.
+  Value *genPrivateNameValue(ESTree::IdentifierNode *Iden);
+
   Value *genMetaProperty(ESTree::MetaPropertyNode *MP);
 
   /// Generate the new.target of the current function.
@@ -1213,13 +1276,21 @@ class ESTreeIRGen {
       DoEmitDeclarations doEmitDeclarations,
       VariableScope *parentScope);
 
-  /// Declare all variables in the scope, except parameters (which are handled
-  /// separately). Variables that obey TDZ are initialized to empty.
-  /// Hoisted closures are recursively compiled and initialized. Imports are
-  /// code generated.
-  /// \param scope The lexical scope, nullabe. If null, there is no scope, so do
+  /// Declare all variables in the scope, except parameters and private names
+  /// (which are handled separately). Variables that obey TDZ are initialized to
+  /// empty. Hoisted closures are recursively compiled and initialized. Imports
+  /// are code generated. \param scope The lexical scope, nullabe. If null,
+  /// there is no scope, so do
   ///     nothing.
   void emitScopeDeclarations(sema::LexicalScope *scope);
+
+  /// Declare all private names in the class' scope. This will setup the
+  /// customData for all private name decls to point to the required state
+  /// needed for IRGen to handle usages involving that private name.
+  /// \param scope The lexical scope, can't be null.
+  void emitPrivateNameDeclarations(
+      sema::LexicalScope *scope,
+      Identifier className);
 
   /// Emit any lazy declarations in the global scope which haven't been emitted
   /// yet because they were found as the result of lazy compilation.
@@ -1543,6 +1614,31 @@ class ESTreeIRGen {
   /// \return the instruction performing the store.
   Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
 
+  /// Emit IR to perform a private brand check.
+  /// \param from is the value to query.
+  /// \param brandVal is the value of the private brand name. Brands are only
+  ///     associated with private methods and accessors, not fields.
+  void emitPrivateBrandCheck(Value *from, Value *brandVal);
+
+  /// Emit IR to load a private name.
+  /// \param from value to perform the lookup on.
+  /// \param nameVal is the value of the private name.
+  /// \param nameNode
+  Value *emitPrivateLookup(
+      Value *from,
+      Value *nameVal,
+      ESTree::PrivateNameNode *nameNode);
+
+  /// Emit IR to store to a private name.
+  /// \param from value to perform the store on.
+  /// \param nameVal is the value of the private name.
+  /// \param nameNode
+  void emitPrivateStore(
+      Value *from,
+      Value *storedValue,
+      Value *nameVal,
+      ESTree::PrivateNameNode *nameNode);
+
  private:
   /// Search for the specified AST node in \c compiledEntities_ and return the
   /// associated IR value, or nullptr if not found.
@@ -1598,11 +1694,62 @@ class ESTreeIRGen {
     assert(decl);
     decl->customData = value;
   }
+  /// Set the customData field of the private name declaration with the
+  /// specified entry from the private name table.
+  static void setDeclDataPrivate(
+      sema::Decl *decl,
+      PrivateNameFunctionTable::SingleFunctionEntry *entry) {
+    assert(decl);
+    decl->customData = entry;
+  }
+  /// Set the customData field of the private name declaration with the
+  /// specified entry from the private name table.
+  static void setDeclDataPrivate(
+      sema::Decl *decl,
+      PrivateNameFunctionTable::GetterSetterEntry *entry) {
+    assert(decl);
+    decl->customData = entry;
+  }
+
   /// Extract the decl's custom data field, which must be a value.
   static Value *getDeclData(sema::Decl *decl) {
     assert(decl);
     assert(decl->customData);
     return static_cast<Value *>(decl->customData);
+  }
+
+  // Add a template overload for the different PrivateNameFunctionTable pointer
+  // types that can be stored in private name decls.
+  template <typename T>
+  static T *getDeclDataPrivate(sema::Decl *decl) {
+    static_assert(
+        std::is_same_v<T, PrivateNameFunctionTable::BaseEntry> ||
+            std::is_same_v<T, PrivateNameFunctionTable::SingleFunctionEntry> ||
+            std::is_same_v<T, PrivateNameFunctionTable::GetterSetterEntry>,
+        "T must be a PrivateNameFunctionTable type");
+    assert(decl);
+    assert(decl->customData);
+    if constexpr (std::is_same_v<T, PrivateNameFunctionTable::BaseEntry>) {
+      assert(
+          decl->kind == sema::Decl::Kind::PrivateMethod ||
+          decl->kind == sema::Decl::Kind::PrivateGetter ||
+          decl->kind == sema::Decl::Kind::PrivateSetter ||
+          decl->kind == sema::Decl::Kind::PrivateGetterSetter);
+    }
+    if constexpr (std::is_same_v<
+                      T,
+                      PrivateNameFunctionTable::SingleFunctionEntry>) {
+      assert(
+          decl->kind == sema::Decl::Kind::PrivateMethod ||
+          decl->kind == sema::Decl::Kind::PrivateGetter ||
+          decl->kind == sema::Decl::Kind::PrivateSetter);
+    }
+    if constexpr (std::is_same_v<
+                      T,
+                      PrivateNameFunctionTable::GetterSetterEntry>) {
+      assert(decl->kind == sema::Decl::Kind::PrivateGetterSetter);
+    }
+    return static_cast<T *>(decl->customData);
   }
 };
 

@@ -1032,8 +1032,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void unmarkSymbols();
 
   /// Called by the GC at the end of a collection to free all symbols not set in
-  /// markedSymbols.
-  void freeSymbols(const llvh::BitVector &markedSymbols);
+  /// markedSymbols. The function may set additional bits in \p markedSymbols to
+  /// reflect the fact that some symbols were not freed.
+  void freeSymbols(llvh::BitVector &markedSymbols);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier

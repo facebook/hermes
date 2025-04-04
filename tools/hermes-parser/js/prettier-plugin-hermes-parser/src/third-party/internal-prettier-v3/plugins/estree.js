@@ -5749,6 +5749,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return key === "callee" || key === "left" && parent.type === "BinaryExpression" && parent.operator === "<" || !isArrayOrTupleExpression(parent) && parent.type !== "ArrowFunctionExpression" && parent.type !== "AssignmentExpression" && parent.type !== "AssignmentPattern" && parent.type !== "BinaryExpression" && parent.type !== "NewExpression" && parent.type !== "ConditionalExpression" && parent.type !== "ExpressionStatement" && parent.type !== "JsExpressionRoot" && parent.type !== "JSXAttribute" && parent.type !== "JSXElement" && parent.type !== "JSXExpressionContainer" && parent.type !== "JSXFragment" && parent.type !== "LogicalExpression" && !isCallExpression(parent) && !isObjectProperty(parent) && parent.type !== "ReturnStatement" && parent.type !== "ThrowStatement" && parent.type !== "TypeCastExpression" && parent.type !== "VariableDeclarator" && parent.type !== "YieldExpression";
       case "TSInstantiationExpression":
         return key === "object" && isMemberExpression(parent);
+      case "MatchOrPattern":
+        return parent.type === "MatchAsPattern";
     }
     return false;
   }
@@ -11000,16 +11002,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       group([" =>", comment, body])
     ];
   }
-  function printMatchPattern(path, option, print3) {
-    const { node, parent } = path;
+  function printMatchPattern(path, options2, print3) {
+    const { node } = path;
     switch (node.type) {
-      case "MatchOrPattern": {
-        const parts = join([" |", line], path.map(print3, "patterns"));
-        if (parent.type === "MatchAsPattern") {
-          return ["(", parts, ")"];
-        }
-        return group(parts);
-      }
+      case "MatchOrPattern":
+        return printMatchOrPattern(path, options2, print3);
       case "MatchAsPattern":
         return [print3("pattern"), " as ", print3("target")];
       case "MatchWildcardPattern":
@@ -11065,6 +11062,64 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return parts;
       }
     }
+  }
+  var isSimpleMatchPattern = create_type_check_function_default([
+    "MatchWildcardPattern",
+    "MatchLiteralPattern",
+    "MatchUnaryPattern",
+    "MatchIdentifierPattern"
+  ]);
+  function shouldHugMatchOrPattern(node) {
+    const { patterns } = node;
+    if (patterns.some((node2) => hasComment(node2))) {
+      return false;
+    }
+    const objectPattern = patterns.find(
+      (node2) => node2.type === "MatchObjectPattern"
+    );
+    if (!objectPattern) {
+      return false;
+    }
+    return patterns.every(
+      (node2) => node2 === objectPattern || isSimpleMatchPattern(node2)
+    );
+  }
+  function shouldHugMatchPattern(node) {
+    if (isSimpleMatchPattern(node) || node.type === "MatchObjectPattern") {
+      return true;
+    }
+    if (node.type === "MatchOrPattern") {
+      return shouldHugMatchOrPattern(node);
+    }
+    return false;
+  }
+  function printMatchOrPattern(path, options2, print3) {
+    const { node } = path;
+    const { parent } = path;
+    const shouldIndent = parent.type !== "MatchStatementCase" && parent.type !== "MatchExpressionCase" && parent.type !== "MatchArrayPattern" && parent.type !== "MatchObjectPatternProperty" && !hasLeadingOwnLineComment(options2.originalText, node);
+    const shouldHug = shouldHugMatchPattern(node);
+    const printed = path.map((patternPath) => {
+      let printedPattern = print3();
+      if (!shouldHug) {
+        printedPattern = align(2, printedPattern);
+      }
+      return printComments(patternPath, printedPattern, options2);
+    }, "patterns");
+    if (shouldHug) {
+      return join(" | ", printed);
+    }
+    const code = [ifBreak(["| "]), join([line, "| "], printed)];
+    if (needs_parens_default(path, options2)) {
+      return group([indent([ifBreak([softline]), code]), softline]);
+    }
+    if (parent.type === "MatchArrayPattern" && parent.elements.length > 1) {
+      return group([
+        indent([ifBreak(["(", softline]), code]),
+        softline,
+        ifBreak(")")
+      ]);
+    }
+    return group(shouldIndent ? indent(code) : code);
   }
 
   // src/language-js/print/flow.js

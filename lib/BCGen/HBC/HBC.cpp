@@ -8,6 +8,7 @@
 #include "hermes/BCGen/HBC/HBC.h"
 
 #include "BytecodeGenerator.h"
+#include "hermes/AST/TransformAST.h"
 #include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
@@ -169,6 +170,14 @@ static void compileLazyFunctionWorker(void *argPtr) {
   sema::SemContext *semCtx = provider->getSemCtx();
   assert(semCtx && "missing semantic data to compile");
 
+  if (!optParsed) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  optParsed = hermes::transformASTForCompilation(context, *optParsed);
+
   // A non-null home object means the parent function context could reference
   // super.
   bool parentHadSuperBinding = lazyDataInst->getHomeObject();
@@ -307,6 +316,11 @@ static void compileEvalWorker(void *argPtr) {
   parser.setStrictMode(data->compileFlags.strict);
 
   auto optParsed = parser.parse();
+  if (!optParsed) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
 
   if (optParsed && parserMode != parser::LazyParse) {
     parser.registerMagicURLs();
@@ -317,6 +331,9 @@ static void compileEvalWorker(void *argPtr) {
   // BCProviderFromSrc is destroyed.
   std::shared_ptr<sema::SemContext> semCtx =
       std::make_shared<sema::SemContext>(context, provider->shareSemCtx());
+
+  optParsed = llvh::cast<ESTree::ProgramNode>(
+      hermes::transformASTForCompilation(context, *optParsed));
 
   // A non-null home object means the parent function context could reference
   // super.

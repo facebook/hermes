@@ -22,8 +22,8 @@ function fib(n) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "fib": string
-// CHECK-NEXT:  {r1}      %1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {np0}     %2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}      %1 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %2 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %3 = CreateFunctionInst (:object) {np0} %2: undefined, empty: any, %fib(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %3: object, {r1} %1: object, "fib": string
 // CHECK-NEXT:                 ReturnInst {np0} %2: undefined
@@ -32,9 +32,9 @@ function fib(n) {
 // CHECK:function fib(n: any): number
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r0}      %0 = LoadParamInst (:any) %n: any
-// CHECK-NEXT:  {n4}      %1 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {n4}      %1 = LIRLoadConstInst (:number) 0: number
 // CHECK-NEXT:  {np0}     %2 = BinaryGreaterThanInst (:boolean) {r0} %0: any, {n4} %1: number
-// CHECK-NEXT:  {n3}      %3 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {n3}      %3 = LIRLoadConstInst (:number) 1: number
 // CHECK-NEXT:  {n2}      %4 = MovInst (:number) {n3} %3: number
 // CHECK-NEXT:  {n1}      %5 = MovInst (:number) {n4} %1: number
 // CHECK-NEXT:  {r0}      %6 = MovInst (:any) {r0} %0: any

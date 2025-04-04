@@ -37,7 +37,8 @@ typedef HermesValue (*JITCompiledFunctionPtr)(Runtime *runtime);
 class CodeBlock final : private llvh::TrailingObjects<
                             CodeBlock,
                             ReadPropertyCacheEntry,
-                            WritePropertyCacheEntry> {
+                            WritePropertyCacheEntry,
+                            PrivateNameCacheEntry> {
   friend TrailingObjects;
   friend struct RuntimeOffsets;
 
@@ -80,27 +81,38 @@ class CodeBlock final : private llvh::TrailingObjects<
   const uint32_t readPropertyCacheSize_;
   const uint32_t writePropertyCacheSize_;
 
+  /// Total size of the private name cache.
+  const uint32_t privateNameCacheSize_;
+
   CodeBlock(
       RuntimeModule *runtimeModule,
       hbc::RuntimeFunctionHeader header,
       const uint8_t *bytecode,
       uint32_t functionID,
       uint32_t readCacheSize,
-      uint32_t writeCacheSize)
+      uint32_t writeCacheSize,
+      uint32_t privateNameCacheSize)
       : runtimeModule_(runtimeModule),
         functionHeader_(header),
         bytecode_(bytecode),
         functionID_(functionID),
         readPropertyCacheSize_(readCacheSize),
-        writePropertyCacheSize_(writeCacheSize) {
+        writePropertyCacheSize_(writeCacheSize),
+        privateNameCacheSize_(privateNameCacheSize) {
     std::uninitialized_fill_n(
         readPropertyCache(), readCacheSize, ReadPropertyCacheEntry{});
     std::uninitialized_fill_n(
         writePropertyCache(), writeCacheSize, WritePropertyCacheEntry{});
+    std::uninitialized_fill_n(
+        privateNameCache(), privateNameCacheSize, PrivateNameCacheEntry{});
   }
 
   size_t numTrailingObjects(OverloadToken<ReadPropertyCacheEntry>) const {
     return readPropertyCacheSize_;
+  }
+
+  size_t numTrailingObjects(OverloadToken<WritePropertyCacheEntry>) const {
+    return writePropertyCacheSize_;
   }
 
  public:
@@ -124,6 +136,11 @@ class CodeBlock final : private llvh::TrailingObjects<
 
   WritePropertyCacheEntry *writePropertyCache() {
     return getTrailingObjects<WritePropertyCacheEntry>();
+  }
+
+  /// \return the base pointer of the private name cache.
+  PrivateNameCacheEntry *privateNameCache() {
+    return getTrailingObjects<PrivateNameCacheEntry>();
   }
 
   uint32_t getParamCount() const {
@@ -313,8 +330,15 @@ class CodeBlock final : private llvh::TrailingObjects<
     return &writePropertyCache()[idx];
   }
 
-  // Mark all hidden classes in the property cache as roots.
-  void markCachedHiddenClasses(Runtime &runtime, WeakRootAcceptor &acceptor);
+  inline PrivateNameCacheEntry *getPrivateNameCacheEntry(uint8_t idx) {
+    assert(idx < privateNameCacheSize_ && "idx out of PrivateNameCache bound");
+    return &privateNameCache()[idx];
+  }
+
+  /// Traverse through elements of the different caches in this code block and
+  /// mark any weak ones. This means all hidden classes in the property caches
+  /// and weak symbols in the private name cache.
+  void markWeakElementsInCaches(Runtime &runtime, WeakRootAcceptor &acceptor);
 
   /// Create a CodeBlock for a given runtime module \p runtimeModule.
   /// The result must be deallocated via the overridden delete operator,

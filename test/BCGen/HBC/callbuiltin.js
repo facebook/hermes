@@ -33,8 +33,8 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "shadows": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "checkNonStaticBuiltin": string
-// CHKRA-NEXT:  {r0}      %3 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  {np0}     %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r0}      %3 = LIRGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {np0}     %4 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  {r1}      %5 = CreateFunctionInst (:object) {np0} %4: undefined, empty: any, %foo(): functionCode
 // CHKRA-NEXT:                 StorePropertyLooseInst {r1} %5: object, {r0} %3: object, "foo": string
 // CHKRA-NEXT:  {r1}      %7 = CreateFunctionInst (:object) {np0} %4: undefined, empty: any, %shadows(): functionCode
@@ -43,7 +43,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %3: object, "checkNonStaticBuiltin": string
 // CHKRA-NEXT:  {r1}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %3: object, "print": string
 // CHKRA-NEXT:  {r2}     %12 = LoadPropertyInst (:any) {r0} %3: object, "foo": string
-// CHKRA-NEXT:  {r0}     %13 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
+// CHKRA-NEXT:  {r0}     %13 = LIRAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
 // CHKRA-NEXT:  {r4}     %14 = ImplicitMovInst (:undefined) {np0} %4: undefined
 // CHKRA-NEXT:  {r3}     %15 = ImplicitMovInst (:object) {r0} %13: object
 // CHKRA-NEXT:  {r0}     %16 = HBCCallNInst (:any) {r2} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %4: undefined, {r0} %13: object
@@ -63,29 +63,29 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKRA:function shadows(): undefined
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  {r2}      %0 = HBCAllocObjectFromBufferInst (:object) "keys": string, null: null
-// CHKRA-NEXT:  {r0}      %1 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r2}      %0 = LIRAllocObjectFromBufferInst (:object) "keys": string, null: null
+// CHKRA-NEXT:  {r0}      %1 = LIRGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  {r0}      %2 = TryLoadGlobalPropertyInst (:any) {r0} %1: object, "print": string
 // CHKRA-NEXT:                 PrStoreInst {r0} %2: any, {r2} %0: object, 0: number, "keys": string, false: boolean
 // CHKRA-NEXT:  {r1}      %4 = LoadPropertyInst (:any) {r2} %0: object, "keys": string
-// CHKRA-NEXT:  {r0}      %5 = HBCLoadConstInst (:string) "evil": string
+// CHKRA-NEXT:  {r0}      %5 = LIRLoadConstInst (:string) "evil": string
 // CHKRA-NEXT:  {r4}      %6 = ImplicitMovInst (:object) {r2} %0: object
 // CHKRA-NEXT:  {r3}      %7 = ImplicitMovInst (:string) {r0} %5: string
 // CHKRA-NEXT:  {r0}      %8 = HBCCallNInst (:any) {r1} %4: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %0: object, {r0} %5: string
-// CHKRA-NEXT:  {np0}     %9 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {np0}     %9 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:                 ReturnInst {np0} %9: undefined
 // CHKRA-NEXT:function_end
 
 // CHKRA:function checkNonStaticBuiltin(): undefined
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  {r0}      %0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r0}      %0 = LIRGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  {r2}      %1 = TryLoadGlobalPropertyInst (:any) {r0} %0: object, "HermesInternal": string
 // CHKRA-NEXT:  {r1}      %2 = LoadPropertyInst (:any) {r2} %1: any, "concat": string
-// CHKRA-NEXT:  {r0}      %3 = HBCLoadConstInst (:string) "hello": string
+// CHKRA-NEXT:  {r0}      %3 = LIRLoadConstInst (:string) "hello": string
 // CHKRA-NEXT:  {r4}      %4 = ImplicitMovInst (:any) {r2} %1: any
 // CHKRA-NEXT:  {r3}      %5 = ImplicitMovInst (:string) {r0} %3: string
 // CHKRA-NEXT:  {r0}      %6 = HBCCallNInst (:any) {r1} %2: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %1: any, {r0} %3: string
-// CHKRA-NEXT:  {np0}     %7 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {np0}     %7 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:                 ReturnInst {np0} %7: undefined
 // CHKRA-NEXT:function_end
 

@@ -273,9 +273,33 @@ class HadesGC final : public GCBase {
 
   /// Add read barrier for \p value. This is only used when reading entry
   /// value from WeakMap/WeakSet.
-  void weakRefReadBarrier(HermesValue value);
+  void weakRefReadBarrier(HermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Read barrier invoked by background thread.");
+    if (ogMarkingBarriers_)
+      snapshotWriteBarrierInternal(value);
+  }
 
-  void weakRefReadBarrier(GCCell *value);
+  void weakRefReadBarrier(GCCell *value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Read barrier invoked by background thread.");
+    // If the GC is marking, conservatively mark the value as live.
+    if (ogMarkingBarriers_)
+      snapshotWriteBarrierInternal(value);
+
+    // Otherwise, if no GC is active at all, the weak ref must be alive.
+    // During sweeping there's no special handling either.
+  }
+
+  void weakRefReadBarrier(SymbolID value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Read barrier invoked by background thread.");
+    if (ogMarkingBarriers_)
+      snapshotWriteBarrierInternal(value);
+  }
 
   /// \}
 

@@ -132,7 +132,8 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
           0,
           functions_[i].highestReadCacheIndex,
           functions_[i].highestWriteCacheIndex,
-          /* numCacheNewObject */ 0};
+          /* numCacheNewObject */ 0,
+          functions_[i].highestPrivateNameCacheIndex};
       funcHeader.setOffset(functions_[i].offset);
       funcHeader.flags.setStrictMode(true);
       SmallFuncHeader small(funcHeader);
@@ -168,7 +169,8 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
           0,
           functions_[i].highestReadCacheIndex,
           functions_[i].highestWriteCacheIndex,
-          /* numCacheNewObject */ 0};
+          /* numCacheNewObject */ 0,
+          functions_[i].highestPrivateNameCacheIndex};
       funcHeader.setOffset(functions_[i].offset);
       funcHeader.flags.setStrictMode(true);
       funcHeader.flags.setHasDebugInfo(true);

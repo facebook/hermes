@@ -777,7 +777,7 @@ class Value {
   /// The only instructions which set the type in the constructor are
   /// those with inherent types (see \c Instruction::getInherentType),
   /// and those which are simply copying the types from a single operand
-  /// (e.g. MovInst, HBCLoadConstInst).
+  /// (e.g. MovInst, LIRLoadConstInst).
   /// All other Instruction types will be set during inference in TypeInference.
   void setType(Type type) {
 #ifndef NDEBUG

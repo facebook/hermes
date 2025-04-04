@@ -14,8 +14,8 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA:function global(): undefined
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:                 DeclareGlobalVarInst "b": string
-// CHKRA-NEXT:  {r1}      %1 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  {np0}     %2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r1}      %1 = LIRGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {np0}     %2 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  {r0}      %3 = CreateFunctionInst (:object) {np0} %2: undefined, empty: any, %b(): functionCode
 // CHKRA-NEXT:                 StorePropertyLooseInst {r0} %3: object, {r1} %1: object, "b": string
 // CHKRA-NEXT:                 ReturnInst {np0} %2: undefined
@@ -24,14 +24,14 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA:function b(d: any): undefined
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  {r3}      %0 = AllocStackInst (:undefined|object) $arguments: any
-// CHKRA-NEXT:  {r0}      %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r0}      %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:                 StoreStackInst {r0} %1: undefined, {r3} %0: undefined|object
 // CHKRA-NEXT:  {r1}      %3 = LoadParamInst (:any) %d: any
 // CHKRA-NEXT:                 CmpBrStrictlyNotEqualInst {r1} %3: any, {r0} %1: undefined, %BB2, %BB1
 // CHKRA-NEXT:%BB1:
 // CHKRA-NEXT:  {r2}      %5 = AllocStackInst (:any) $?anon_0_iter: any
 // CHKRA-NEXT:  {r1}      %6 = AllocStackInst (:any) $?anon_1_sourceOrNext: any
-// CHKRA-NEXT:                 HBCReifyArgumentsLooseInst {r3} %0: undefined|object
+// CHKRA-NEXT:                 LIRReifyArgumentsLooseInst {r3} %0: undefined|object
 // CHKRA-NEXT:  {r3}      %8 = LoadStackInst (:undefined|object) {r3} %0: undefined|object
 // CHKRA-NEXT:  {r3}      %9 = UnionNarrowTrustedInst (:object) {r3} %8: undefined|object
 // CHKRA-NEXT:                 StoreStackInst {r3} %9: object, {r1} %6: any
@@ -240,10 +240,10 @@ function b(d=([[[[{z:[{}]}]]]]=arguments)) {}
 // CHKRA-NEXT:%BB46:
 // CHKRA-NEXT:                 CondBranchInst {r11} %156: boolean, %BB51, %BB50
 // CHKRA-NEXT:%BB47:
-// CHKRA-NEXT:  {r1}     %170 = HBCLoadConstInst (:null) null: null
+// CHKRA-NEXT:  {r1}     %170 = LIRLoadConstInst (:null) null: null
 // CHKRA-NEXT:                 CmpBrEqualInst {r12} %163: any, {r1} %170: null, %BB48, %BB49
 // CHKRA-NEXT:%BB48:
-// CHKRA-NEXT:  {r1}     %172 = HBCLoadConstInst (:string) "Cannot destructure 'undefined' or 'null'.": string
+// CHKRA-NEXT:  {r1}     %172 = LIRLoadConstInst (:string) "Cannot destructure 'undefined' or 'null'.": string
 // CHKRA-NEXT:  {r1}     %173 = CallBuiltinInst (:any) [HermesBuiltin.throwTypeError]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, {r1} %172: string
 // CHKRA-NEXT:                 UnreachableInst
 // CHKRA-NEXT:%BB49:

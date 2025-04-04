@@ -317,6 +317,19 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
+  /// Create a unique symbol value.
+  static ExecutionStatus caseCreatePrivateName(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
+  /// Create a unique symbol value.
+  static ExecutionStatus casePrivateIsIn(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      const Inst *ip);
+
   /// Evaluate callBuiltin and store the result in the register stack. it must
   /// must be invoked with CallBuiltin or CallBuiltinLong. \p op3 contains the
   /// value of operand3, which is the only difference in encoding between the

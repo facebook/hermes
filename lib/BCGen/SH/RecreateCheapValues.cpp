@@ -25,7 +25,7 @@ static bool recreateCheapValues(Function *F, SHRegisterAllocator &RA) {
       auto *mov = llvh::dyn_cast<MovInst>(&I);
       if (!mov)
         continue;
-      auto *load = llvh::dyn_cast<HBCLoadConstInst>(mov->getSingleOperand());
+      auto *load = llvh::dyn_cast<LIRLoadConstInst>(mov->getSingleOperand());
       if (!load)
         continue;
       Literal *literal = load->getConst();
@@ -34,7 +34,7 @@ static bool recreateCheapValues(Function *F, SHRegisterAllocator &RA) {
         continue;
 
       builder.setInsertionPoint(mov);
-      auto *recreation = builder.createHBCLoadConstInst(literal);
+      auto *recreation = builder.createLIRLoadConstInst(literal);
       RA.updateRegister(recreation, RA.getRegister(mov));
       mov->replaceAllUsesWith(recreation);
       destroyer.add(mov);

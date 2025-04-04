@@ -221,13 +221,24 @@ OptValue<uint32_t> toArrayIndex(
 /// Fast path for toArrayIndex where we already have the view of the string.
 OptValue<uint32_t> toArrayIndex(StringView str);
 
-/// If it is possible to cheaply verify that \p value is an array index
-/// according to the rules in ES5.1 15.4, do so and return the index. Note that
+/// If it is possible to cheaply verify that \p value is an integer value in
+/// the range [0..2**32-1), return it as an OptValue<uint32_t>. Note that
 /// it this fails, the value may still be a valid index.
+///
+/// Note that the range is open and 0xFFFFFFFFu is not a valid index.
+/// This matches JS requirements for JS arrays. However, we use this function
+/// for all indexes, including those for TypedArrays. The JS spec does allow
+/// typed arrays to have sizes (and indexes) up to (2**53 - 1).
+/// Our implementation uses uint32_t for sizes and indexes, so 0xFFFFFFFFu is
+/// not a valid index for us.
 inline OptValue<uint32_t> toArrayIndexFastPath(HermesValue value) {
-  if (value.isNumber()) {
-    return hermes::doubleToArrayIndex(value.getNumber());
-  }
+  // We rely on non-numbers being encoded as NaN.
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "HermesValue version changed, update this function");
+  uint32_t index;
+  if (sh_tryfast_f64_to_u32(value.f64, index) && index != 0xFFFFFFFFu)
+    return index;
   return llvh::None;
 }
 

@@ -315,6 +315,10 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     // Same goes for weak pointers.
   }
 
+  void acceptWeakSym(WeakRootSymbolID &ws) override {
+    // Same goes for weak symbols.
+  }
+
   void beginRootSection(Section section) override {
     // Make an element edge from the super root to each root section.
     snap_.addIndexedEdge(
@@ -354,14 +358,31 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     pointerAccept(ptr, nullptr, true);
   }
 
+  void acceptWeakSym(WeakRootSymbolID &ws) override {
+    acceptSym(ws.getNoBarrierUnsafe(), nullptr, true);
+  }
+
   void acceptSym(SymbolID sym, const char *name) override {
+    acceptSym(sym, name, false);
+  }
+
+  void acceptSym(SymbolID sym, const char *name, bool weak) {
     if (sym.isInvalid()) {
       return;
     }
     auto nameRef = llvh::StringRef::withNullAsEmpty(name);
     const auto id = gc_.getObjectID(sym);
     if (!nameRef.empty()) {
-      snap_.addNamedEdge(HeapSnapshot::EdgeType::Internal, nameRef, id);
+      snap_.addNamedEdge(
+          weak ? HeapSnapshot::EdgeType::Weak
+               : HeapSnapshot::EdgeType::Internal,
+          nameRef,
+          id);
+    } else if (weak) {
+      // TODO: Figure out if we can just add these weak edges as indexed instead
+      // of named
+      std::string numericName = std::to_string(nextEdge_++);
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
     } else {
       // Unnamed edges get indices.
       snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
@@ -454,6 +475,8 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
           nameRef,
           id);
     } else if (weak) {
+      // TODO: Figure out if we can just add these weak edges as indexed instead
+      // of named
       std::string numericName = std::to_string(nextEdge_++);
       snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
     } else {

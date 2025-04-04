@@ -180,10 +180,10 @@ class IdentifierTable {
   /// Remove the mark bit from each symbol.
   void unmarkSymbols();
 
-  /// Invoked at the end of a GC to free all unmarked symbols.
-  void freeUnmarkedSymbols(
-      const llvh::BitVector &markedSymbols,
-      GC::IDTracker &gc);
+  /// Invoked at the end of a GC to free all unmarked symbols. The function may
+  /// set additional bits in \p markedSymbols to reflect the fact that some
+  /// symbols were not freed.
+  void freeUnmarkedSymbols(llvh::BitVector &markedSymbols, GC::IDTracker &gc);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier

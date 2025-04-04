@@ -289,6 +289,16 @@ Arguments | The value to cast.
 Semantics | The instruction follows the JavaScript rules for adding an empty string to a value (ES5.1 11.6.1).
 Effects | May read or write to memory or throw.
 
+### CreatePrivateNameInst
+
+CreatePrivateNameInst | _
+--- | --- |
+Description | Create a globally unique private value, settings its internal [[Description]] to the given string literal. Practically speakig, this will result in a symbol value created at runtime with its [[Description]] set.
+Example |  %1 = CreatePrivateNameInst %descString
+Arguments | %descString is the string description of the name. It must be a string literal.
+Semantics | Allocate a new globally unique private name.
+Effects | Does not read or write to memory.
+
 ### CondBranchInst
 
 CondBranchInst | _
@@ -479,6 +489,16 @@ Arguments | %object is the object to load from. %property is the name of the fie
 Semantics | The instruction follows the rules of JavaScript property access in ES5.1 sec 11.2.1. The operation GetValue (ES5.1. sec 8.7.1) is then applied to the returned Reference.
 Effects | May read and write memory or throw.
 
+### LoadOwnPrivateFieldInst
+
+LoadOwnPrivateFieldInst | _
+--- | --- |
+Description | Loads the value of a private name from a JavaScript object.
+Example |  %0 = LoadOwnPrivateFieldInst %object, %property : symbol
+Arguments | %object is the object to load from. %property is the private name symbol.
+Semantics | The instruction honors ES2024 7.3.30 PrivateGet. It looks up a private name on the object and throws if it does not exist. However, this does not have to deal with accessors or methods because those are stored outside of the instance.
+Effects | May execute JS.
+
 TryLoadGlobalPropertyInst | _
 --- | --- |
 Description | Loads the value of an existing field from the global object or throw if it doesn't exist.
@@ -548,14 +568,25 @@ Arguments | %value is the value to be stored. %object *must* be of an object typ
 Semantics | Implements ES15 7.3.8 DefinePropertyOrThrow. The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
-### DefineNewOwnPropertyInst
 
-DefineNewOwnPropertyInst | _
+### StoreOwnPrivateFieldInst
+
+StoreOwnPrivateFieldInst | _
 --- | --- |
-Description | Create a new *own property* in what is known to be a JavaScript object.
-Example |   `%4 = DefineNewOwnPropertyInst %value, %object, %property, %enumerable : boolean`
-Arguments | *%value* is the value to be stored. *%object*, which must be an object, is where the field with name *%property* will be created. *%property* must be a string or index-like number literal, otherwise it is impossible to guarantee that it is new. *%enumerable* determines whether the new property will be created as enumerable or not.
-Semantics | The instruction follows the rules of JavaScript *own* property access. The property is created in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
+Description | Store a private *own property* to an object.
+Example |   `%4 = StoreOwnPrivateFieldInst %value, %object, %property : symbol, %enumerable : boolean`
+Arguments | *%value* is the value to be stored. *%object* should be an object, if not this throws. *%property* must be the value of a symbol. *%enumerable* must always be false.
+Semantics | This instruction implements ES2024 7.3.31 PrivateSet. This instruction will throw if the private property does not already exist on %object.
+Effects | May read and write memory.
+
+### AddOwnPrivateFieldInst
+
+AddOwnPrivateFieldInst | _
+--- | --- |
+Description | Add a new private own field.
+Example |   `%4 = AddOwnPrivateFieldInst %value, %object, %property : symbol, %enumerable : boolean`
+Arguments | *%value* is the value to be stored. *%object* must be an object. *%property* must be the value of a symbol. *%enumerable* should always be false.
+Semantics | This instruction is used to initialize private fields on objects. As such it implements ES2024 7.3.27 PrivateFieldAdd- except this instruction will assume that the property being added does not already exist.
 Effects | May read and write memory.
 
 ### DefineOwnGetterSetterInst
@@ -582,7 +613,7 @@ Effects | Does not read or write to memory.
 
 AllocObjectLiteralInst | _
 --- | --- |
-Description | Allocates a new JavaScript object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Description | Allocates a new JavaScript object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a LIRAllocObjectFromBufferInst.
 Example |  %0 = AllocObjectLiteralInst "prop1" : string, 10 : number
 Arguments | %prop_map is a vector of (Literal*, value*) pairs which represents the properties and their keys in the object literal.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
@@ -592,7 +623,7 @@ Effects | Does not read or write to memory.
 
 AllocTypedObjectInst | _
 --- | --- |
-Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a HBCAllocObjectFromBufferInst.
+Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a LIRAllocObjectFromBufferInst.
 Example |  %0 = AllocTypedObjectInst %parent, "prop1" : string, 10 : number
 Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values.
@@ -945,12 +976,12 @@ need to perform lowering, which is a form of instruction selection. The semantic
 of these instructions are identical to the semantic of the relevant target
 instructions.
 
-### HBCGetGlobalObjectInst
+### LIRGetGlobalObjectInst
 
-HBCGetGlobalObjectInst | _
+LIRGetGlobalObjectInst | _
 --- | --- |
 Description | Obtain the "global" object
-Example |  %0 = HBCGetGlobalObjectInst
+Example |  %0 = LIRGetGlobalObjectInst
 Arguments | None.
 Semantics | The instruction returns a reference to the "global" object.
 Effects | Does not read or write to memory.
@@ -975,12 +1006,12 @@ Arguments | %varScope is the variable scope to resolve to. %numLevels is the num
 Semantics | The instruction resolves an environment that is a parent of the current function's environment.
 Effects | Does not read or write to memory.
 
-### HBCAllocObjectFromBufferInst
+### LIRAllocObjectFromBufferInst
 
-HBCAllocObjectFromBufferInst | _
+LIRAllocObjectFromBufferInst | _
 --- | --- |
 Description | Allocates a new JavaScript object on the heap, and initializes it with values from the object buffer.
-Example |  %0 = HBCAllocObjectFromBufferInst %value0, %value1, ...
+Example |  %0 = LIRAllocObjectFromBufferInst %value0, %value1, ...
 Arguments | The values are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.

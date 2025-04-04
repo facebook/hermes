@@ -25,13 +25,13 @@ TEST_F(JSTypedArrayTest, BeginAndEndMatchesOnBaseAndSub) {
     ASSERT_FALSE(isException(result));                                \
     Handle<name##Array> array = Handle<name##Array>::vmcast(*result); \
     EXPECT_EQ(                                                        \
-        reinterpret_cast<uintptr_t>(array->begin(runtime)),           \
+        reinterpret_cast<uintptr_t>(array->data(runtime)),            \
         reinterpret_cast<uintptr_t>(                                  \
-            Handle<JSTypedArrayBase>(array)->begin(runtime)));        \
+            Handle<JSTypedArrayBase>(array)->data(runtime)));         \
     EXPECT_EQ(                                                        \
-        reinterpret_cast<uintptr_t>(array->end(runtime)),             \
+        reinterpret_cast<uintptr_t>(array->dataEnd(runtime)),         \
         reinterpret_cast<uintptr_t>(                                  \
-            Handle<JSTypedArrayBase>(array)->end(runtime)));          \
+            Handle<JSTypedArrayBase>(array)->dataEnd(runtime)));      \
   }
 #include "hermes/VM/TypedArrays.def"
 }

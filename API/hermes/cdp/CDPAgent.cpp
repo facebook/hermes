@@ -92,9 +92,10 @@ class CDPAgentImpl {
  private:
   /// Collection of domain-specific message handlers. These handlers require
   /// exclusive access to the runtime (whereas the CDP Agent can be used from)
-  /// arbitrary threads), so all methods on this struct are expected to be
-  /// called with exclusive access to the runtime.
-  struct DomainAgentsImpl {
+  /// arbitrary threads), so all methods of this class are expected to be called
+  /// with exclusive access to the runtime.
+  class DomainAgentsImpl {
+   public:
     // Create a new collection of domain agents.
     DomainAgentsImpl(
         int32_t executionContextID,
@@ -161,7 +162,8 @@ class CDPAgentImpl {
   /// DomainAgentsImpl and domain agents might hold onto JSI values, via
   /// RemoteObjectsTable, we want to be sure that everything is cleaned up prior
   /// to the HermesRuntime going away.
-  struct DomainAgents {
+  class DomainAgents {
+   public:
     // Create a new collection of domain agents.
     DomainAgents(
         int32_t executionContextID,

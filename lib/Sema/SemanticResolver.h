@@ -568,7 +568,7 @@ class FunctionContext {
 
   explicit FunctionContext(
       SemanticResolver &resolver,
-      FunctionInfo *newFunctionFin);
+      FunctionInfo *newFunctionInfo);
 
   /// Tag for readability to show lazy compilation constructor.
   struct LazyTag {};

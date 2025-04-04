@@ -85,6 +85,7 @@ typedef struct SHUnit {
   /// Sizes of the property caches.
   uint32_t num_read_prop_cache_entries;
   uint32_t num_write_prop_cache_entries;
+  uint32_t num_private_name_cache_entries;
 
   /// Pool of ASCII strings.
   const char *ascii_pool;
@@ -112,6 +113,10 @@ typedef struct SHUnit {
   /// `num_read_prop_cache_entries` elements.  Must be zeroed
   /// initially.
   SHReadPropertyCacheEntry *read_prop_cache;
+  /// Private name cache. Points to an array with
+  /// `num_private_name_cache_entries` elements.  Must be zeroed
+  /// initially.
+  SHPrivateNameCacheEntry *private_name_cache;
 
   /// Object key buffer.
   const unsigned char *obj_key_buffer;
@@ -602,6 +607,12 @@ static inline SHLegacyValue _sh_ljs_get_by_val_rjs(
   return _sh_ljs_get_by_val_with_receiver_rjs(shr, source, key, source);
 }
 
+SHERMES_EXPORT SHLegacyValue _sh_ljs_get_own_private_by_sym(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    const SHLegacyValue *privateNameKey,
+    SHPrivateNameCacheEntry *privateNameCacheEntry);
+
 /// Get a property from the given object \p source given a valid array index
 /// \p key.
 SHERMES_EXPORT SHLegacyValue
@@ -640,6 +651,21 @@ SHERMES_EXPORT void _sh_ljs_define_own_getter_setter_by_val(
     SHLegacyValue *getter,
     SHLegacyValue *setter,
     bool isEnumerable);
+
+/// Add a new private field. This must be a new property.
+SHERMES_EXPORT void _sh_ljs_add_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *key,
+    SHLegacyValue *value);
+
+/// Store to a private field.
+SHERMES_EXPORT void _sh_ljs_put_own_private_by_sym(
+    SHRuntime *shr,
+    SHLegacyValue *target,
+    SHLegacyValue *privateNameKey,
+    SHLegacyValue *value,
+    SHPrivateNameCacheEntry *privateNameCacheEntry);
 
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_del_by_id_strict(SHRuntime *shr, SHLegacyValue *target, SHSymbolID key);
@@ -714,6 +740,11 @@ SHERMES_EXPORT SHLegacyValue
 _sh_ljs_mod_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj);
+SHERMES_EXPORT SHLegacyValue _sh_ljs_private_is_in_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *privateName,
+    SHLegacyValue *target,
+    SHPrivateNameCacheEntry *cacheEntry);
 SHERMES_EXPORT SHLegacyValue _sh_ljs_instance_of_rjs(
     SHRuntime *shr,
     SHLegacyValue *object,
@@ -755,6 +786,9 @@ _sh_ljs_minus_rjs(SHRuntime *shr, const SHLegacyValue *n);
 
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_add_empty_string_rjs(SHRuntime *shr, const SHLegacyValue *a);
+
+SHERMES_EXPORT SHLegacyValue
+_sh_ljs_create_private_name(SHRuntime *shr, SHSymbolID descStrID);
 
 /// Concatenate \p argCount strings together into a new StringPrimitive.
 /// \param argCount the number of varargs that follow.

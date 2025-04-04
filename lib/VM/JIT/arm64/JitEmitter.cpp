@@ -561,6 +561,7 @@ Emitter::Emitter(
     CodeBlock *codeBlock,
     ReadPropertyCacheEntry *readPropertyCache,
     WritePropertyCacheEntry *writePropertyCache,
+    PrivateNameCacheEntry *privateNameCache,
     uint32_t numFrameRegs,
     const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
@@ -592,6 +593,8 @@ Emitter::Emitter(
       uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
   roOfsWritePropertyCachePtr_ =
       uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
+  roOfsPrivateNameCachePtr_ =
+      uint64Const((uint64_t)privateNameCache, "privateNameCache");
 }
 
 void Emitter::enter(uint32_t numCount, uint32_t npCount) {
@@ -3251,6 +3254,113 @@ void Emitter::delByVal(FR frRes, FR frTarget, FR frKey, bool strict) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::addOwnPrivateBySym(FR frTarget, FR frKey, FR frValue) {
+  comment(
+      "// AddOwnPrivateBySym r%u, r%u, r%u",
+      frTarget.index(),
+      frKey.index(),
+      frValue.index());
+
+  syncAllFRTempExcept({});
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frValue);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frValue);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
+      _sh_ljs_add_own_private_by_sym);
+}
+
+void Emitter::getOwnPrivateBySym(
+    FR frRes,
+    FR frTarget,
+    FR frKey,
+    uint8_t cacheIdx) {
+  comment(
+      "// GetOwnPrivateBySym r%u, r%u, r%u, cache %u",
+      frRes.index(),
+      frTarget.index(),
+      frKey.index(),
+      cacheIdx);
+
+  syncAllFRTempExcept(frRes != frTarget && frRes != frKey ? frRes : FR());
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x3, 0);
+  } else {
+    a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsPrivateNameCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x3, a64::x3, sizeof(SHPrivateNameCacheEntry) * cacheIdx);
+  }
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *,
+          const SHLegacyValue *,
+          const SHLegacyValue *,
+          SHPrivateNameCacheEntry *),
+      _sh_ljs_get_own_private_by_sym);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+void Emitter::putOwnPrivateBySym(
+    FR frTarget,
+    FR frKey,
+    FR frValue,
+    uint8_t cacheIdx) {
+  comment(
+      "// PutOwnPrivateBySym r%u, r%u, r%u, cache %u",
+      frTarget.index(),
+      frKey.index(),
+      frValue.index(),
+      cacheIdx);
+
+  syncAllFRTempExcept({});
+  syncToFrame(frTarget);
+  syncToFrame(frKey);
+  syncToFrame(frValue);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frTarget);
+  loadFrameAddr(a64::x2, frKey);
+  loadFrameAddr(a64::x3, frValue);
+
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x4, 0);
+  } else {
+    a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsPrivateNameCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x4, a64::x4, sizeof(SHPrivateNameCacheEntry) * cacheIdx);
+  }
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHPrivateNameCacheEntry *),
+      _sh_ljs_put_own_private_by_sym);
+}
+
 void Emitter::getByIdImpl(
     FR frRes,
     SHSymbolID symID,
@@ -3277,6 +3387,8 @@ void Emitter::getByIdImpl(
 
   // All temporaries will potentially be clobbered by the slow path.
   syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
+  // Ensure the source register is in memory for the slow path.
+  syncToFrame(frSource);
 
   if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
     // Label for indirect property access.
@@ -3398,17 +3510,7 @@ void Emitter::getByIdImpl(
     a.b(contLab);
 
     a.bind(slowPathLab);
-
-    // Ensure the frSource is in memory for the fast path. Note that we haven't
-    // done it before.
-    // Note that this is the reason we can't use a regular slow path at the
-    // end of the function. We need syncToFrame() to execute in the slow path,
-    // but by then the state is gone.
-    syncToFrame(frSource);
   } else {
-    // We arrive here if there is no fast path. Ensure that frSource is in
-    // memory.
-    syncToFrame(frSource);
     // All temporaries will be clobbered.
     freeAllFRTempExcept({});
 
@@ -4295,6 +4397,50 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::privateIsIn(
+    FR frRes,
+    FR frPrivateName,
+    FR frTarget,
+    uint8_t cacheIdx) {
+  comment(
+      "// PrivateIsIn r%u, r%u, r%u, cache %u",
+      frRes.index(),
+      frPrivateName.index(),
+      frTarget.index(),
+      cacheIdx);
+
+  syncAllFRTempExcept(
+      frRes != frPrivateName && frRes != frTarget ? frRes : FR());
+  syncToFrame(frPrivateName);
+  syncToFrame(frTarget);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frPrivateName);
+  loadFrameAddr(a64::x2, frTarget);
+
+  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+    a.mov(a64::x3, 0);
+  } else {
+    a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsPrivateNameCachePtr_));
+    if (cacheIdx != 0)
+      a.add(a64::x3, a64::x3, sizeof(SHPrivateNameCacheEntry) * cacheIdx);
+  }
+
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *,
+          SHLegacyValue *,
+          SHLegacyValue *,
+          SHPrivateNameCacheEntry *),
+      _sh_ljs_private_is_in_rjs);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 int32_t Emitter::reserveData(
     int32_t dsize,
     size_t align,
@@ -5052,6 +5198,23 @@ void Emitter::toPropertyKey(FR frRes, FR frVal) {
       *this,
       SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
       _sh_ljs_to_property_key);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
+void Emitter::createPrivateName(FR frRes, SHSymbolID symID) {
+  comment("// CreatePrivateName r%u, %u", frRes.index(), symID);
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  a.mov(a64::w1, symID);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(SHRuntime *, SHSymbolID),
+      _sh_ljs_create_private_name);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));

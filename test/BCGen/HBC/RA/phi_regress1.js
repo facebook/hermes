@@ -43,17 +43,17 @@ print(glob);
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:                 DeclareGlobalVarInst "glob": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "bad": string
-// CHKRA-NEXT:  {r0}      %2 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r0}      %2 = LIRGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {np0}     %3 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %bad(): functionCode
 // CHKRA-NEXT:                 StorePropertyLooseInst {r1} %4: object, {r0} %2: object, "bad": string
-// CHKRA-NEXT:  {np1}     %6 = HBCLoadConstInst (:null) null: null
+// CHKRA-NEXT:  {np1}     %6 = LIRLoadConstInst (:null) null: null
 // CHKRA-NEXT:                 StorePropertyLooseInst {np1} %6: null, {r0} %2: object, "glob": string
 // CHKRA-NEXT:  {r2}      %8 = LoadPropertyInst (:any) {r0} %2: object, "bad": string
-// CHKRA-NEXT:  {r1}      %9 = HBCLoadConstInst (:string) "foo": string
+// CHKRA-NEXT:  {r1}      %9 = LIRLoadConstInst (:string) "foo": string
 // CHKRA-NEXT:  {r1}     %10 = HBCCallNInst (:any) {r2} %8: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %3: undefined, {r1} %9: string, {np1} %6: null
 // CHKRA-NEXT:  {r2}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
-// CHKRA-NEXT:  {r1}     %12 = HBCLoadConstInst (:string) "phi": string
+// CHKRA-NEXT:  {r1}     %12 = LIRLoadConstInst (:string) "phi": string
 // CHKRA-NEXT:  {r1}     %13 = HBCCallNInst (:any) {r2} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %3: undefined, {r1} %12: string
 // CHKRA-NEXT:  {r1}     %14 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
 // CHKRA-NEXT:  {r0}     %15 = LoadPropertyInst (:any) {r0} %2: object, "glob": string
@@ -65,7 +65,7 @@ print(glob);
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:  {r2}      %0 = LoadParamInst (:any) %param1: any
 // CHKRA-NEXT:  {r0}      %1 = LoadParamInst (:any) %param2: any
-// CHKRA-NEXT:  {n0}      %2 = HBCLoadConstInst (:number) 0: number
+// CHKRA-NEXT:  {n0}      %2 = LIRLoadConstInst (:number) 0: number
 // CHKRA-NEXT:  {r2}      %3 = MovInst (:any) {r2} %0: any
 // CHKRA-NEXT:                 BranchInst %BB1
 // CHKRA-NEXT:%BB1:
@@ -79,8 +79,8 @@ print(glob);
 // CHKRA-NEXT:  {r2}     %10 = MovInst (:any) {r0} %1: any
 // CHKRA-NEXT:                 CondBranchInst {r2} %10: any, %BB1, %BB4
 // CHKRA-NEXT:%BB4:
-// CHKRA-NEXT:  {r0}     %12 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r0}     %12 = LIRGetGlobalObjectInst (:object)
 // CHKRA-NEXT:                 StorePropertyLooseInst {r1} %6: any, {r0} %12: object, "glob": string
-// CHKRA-NEXT:  {np0}    %14 = HBCLoadConstInst (:null) null: null
+// CHKRA-NEXT:  {np0}    %14 = LIRLoadConstInst (:null) null: null
 // CHKRA-NEXT:                 ReturnInst {np0} %14: null
 // CHKRA-NEXT:function_end

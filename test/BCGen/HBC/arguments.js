@@ -39,8 +39,8 @@ function check_phi_handling(x) {
 // CHECK-NEXT:                 DeclareGlobalVarInst "build": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "buffalobuffalo": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "check_phi_handling": string
-// CHECK-NEXT:  {r1}      %5 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {np0}     %6 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}      %5 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %6 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %7 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %count(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %7: object, {r1} %5: object, "count": string
 // CHECK-NEXT:  {r0}      %9 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %select(): functionCode
@@ -57,31 +57,31 @@ function check_phi_handling(x) {
 // CHECK:function count(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r0}      %0 = AllocStackInst (:undefined|object) $arguments: any
-// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}      %3 = LoadStackInst (:undefined|object) {r0} %0: undefined|object
-// CHECK-NEXT:  {n0}      %4 = HBCGetArgumentsLengthInst (:number) {r0} %3: undefined|object
+// CHECK-NEXT:  {n0}      %4 = LIRGetArgumentsLengthInst (:number) {r0} %3: undefined|object
 // CHECK-NEXT:                 ReturnInst {n0} %4: number
 // CHECK-NEXT:function_end
 
 // CHECK:function select(x: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r1}      %0 = AllocStackInst (:undefined|object) $arguments: any
-// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r1} %0: undefined|object
-// CHECK-NEXT:  {n0}      %3 = HBCLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {n0}      %3 = LIRLoadConstInst (:number) 1: number
 // CHECK-NEXT:  {r0}      %4 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  {r0}      %5 = BinaryAddInst (:string|number) {r0} %4: any, {n0} %3: number
-// CHECK-NEXT:  {r0}      %6 = HBCGetArgumentsPropByValLooseInst (:any) {r0} %5: string|number, {r1} %0: undefined|object
+// CHECK-NEXT:  {r0}      %6 = LIRGetArgumentsPropByValLooseInst (:any) {r0} %5: string|number, {r1} %0: undefined|object
 // CHECK-NEXT:                 ReturnInst {r0} %6: any
 // CHECK-NEXT:function_end
 
 // CHECK:function build(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r0}      %0 = AllocStackInst (:undefined|object) $arguments: any
-// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r0} %0: undefined|object
-// CHECK-NEXT:                 HBCReifyArgumentsLooseInst {r0} %0: undefined|object
+// CHECK-NEXT:                 LIRReifyArgumentsLooseInst {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}      %4 = LoadStackInst (:undefined|object) {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}      %5 = UnionNarrowTrustedInst (:object) {r0} %4: undefined|object
 // CHECK-NEXT:                 ReturnInst {r0} %5: object
@@ -90,9 +90,9 @@ function check_phi_handling(x) {
 // CHECK:function buffalobuffalo(): string|number|bigint
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r0}      %0 = AllocStackInst (:undefined|object) $arguments: any
-// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r0} %0: undefined|object
-// CHECK-NEXT:                 HBCReifyArgumentsLooseInst {r0} %0: undefined|object
+// CHECK-NEXT:                 LIRReifyArgumentsLooseInst {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}      %4 = LoadStackInst (:undefined|object) {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}      %5 = UnionNarrowTrustedInst (:object) {r0} %4: undefined|object
 // CHECK-NEXT:  {r0}      %6 = BinaryAddInst (:string|number|bigint) {r0} %5: object, {r0} %5: object
@@ -102,7 +102,7 @@ function check_phi_handling(x) {
 // CHECK:function check_phi_handling(x: any): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r0}      %0 = AllocStackInst (:undefined|object) $arguments: any
-// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r0} %0: undefined|object
 // CHECK-NEXT:  {r1}      %3 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:                 CondBranchInst {r1} %3: any, %BB1, %BB3
@@ -115,7 +115,7 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  {r0}      %9 = MovInst (:object) {r0} %8: object
 // CHECK-NEXT:                 ReturnInst {r0} %9: object
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:                 HBCReifyArgumentsLooseInst {r0} %0: undefined|object
+// CHECK-NEXT:                 LIRReifyArgumentsLooseInst {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}     %12 = LoadStackInst (:undefined|object) {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}     %13 = UnionNarrowTrustedInst (:object) {r0} %12: undefined|object
 // CHECK-NEXT:  {r0}     %14 = MovInst (:object) {r0} %13: object

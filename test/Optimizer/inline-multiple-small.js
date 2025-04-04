@@ -35,22 +35,17 @@ function outer(a, b) {
 
 // CHECK:function outer(a: any, b: any): string|number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %f3(): functionCode
-// CHECK-NEXT:  %1 = CallInst (:string|number) %0: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 10: number
-// CHECK-NEXT:  %2 = BinaryAddInst (:string|number) 1734: number, %1: string|number
-// CHECK-NEXT:  %3 = CallInst (:string|number) %0: object, %f3(): functionCode, true: boolean, empty: any, undefined: undefined, 0: number, 100: number
-// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %2: string|number, %3: string|number
-// CHECK-NEXT:       ReturnInst %4: string|number
-// CHECK-NEXT:function_end
-
-// CHECK:function f3(x: number): string|number [allCallsitesKnownInStrictMode]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:number) %x: number
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
-// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: any, "foo": string
-// CHECK-NEXT:  %3 = FMultiplyInst (:number) %0: number, %0: number
-// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %2: any, %3: number
-// CHECK-NEXT:  %5 = BinaryAddInst (:string|number) %4: string|number, %3: number
-// CHECK-NEXT:  %6 = BinaryAddInst (:string|number) %5: string|number, %3: number
-// CHECK-NEXT:       ReturnInst %6: string|number
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "foo": string
+// CHECK-NEXT:  %2 = BinaryAddInst (:string|number) %1: any, 100: number
+// CHECK-NEXT:  %3 = BinaryAddInst (:string|number) %2: string|number, 100: number
+// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %3: string|number, 100: number
+// CHECK-NEXT:  %5 = BinaryAddInst (:string|number) 1734: number, %4: string|number
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "foo": string
+// CHECK-NEXT:  %8 = BinaryAddInst (:string|number) %7: any, 10000: number
+// CHECK-NEXT:  %9 = BinaryAddInst (:string|number) %8: string|number, 10000: number
+// CHECK-NEXT:  %10 = BinaryAddInst (:string|number) %9: string|number, 10000: number
+// CHECK-NEXT:  %11 = BinaryAddInst (:string|number) %5: string|number, %10: string|number
+// CHECK-NEXT:        ReturnInst %11: string|number
 // CHECK-NEXT:function_end

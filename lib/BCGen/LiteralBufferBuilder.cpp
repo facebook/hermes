@@ -98,7 +98,7 @@ class Builder {
 
   /// Serialization handlers for different instructions.
   void serializeLiteralFor(AllocArrayInst *AAI);
-  void serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB);
+  void serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB);
   void serializeLiteralFor(CacheNewObjectInst *cacheNew);
 
   /// Serialize the the input literals \p elements into the UniquedStringVector
@@ -142,7 +142,7 @@ class Builder {
   /// not be the same, since values_ is shared between object and array literal
   /// values.
   std::vector<std::pair<
-      const HBCAllocObjectFromBufferInst *,
+      const LIRAllocObjectFromBufferInst *,
       std::pair<size_t, size_t>>>
       objInst_{};
 
@@ -243,7 +243,7 @@ void Builder::traverse() {
         if (auto *AAI = llvh::dyn_cast<AllocArrayInst>(&I)) {
           serializeLiteralFor(AAI);
         } else if (
-            auto *AOFB = llvh::dyn_cast<HBCAllocObjectFromBufferInst>(&I)) {
+            auto *AOFB = llvh::dyn_cast<LIRAllocObjectFromBufferInst>(&I)) {
           serializeLiteralFor(AOFB);
         } else if (auto *cacheNew = llvh::dyn_cast<CacheNewObjectInst>(&I)) {
           serializeLiteralFor(cacheNew);
@@ -277,7 +277,7 @@ void Builder::serializeLiteralFor(AllocArrayInst *AAI) {
   serializeInto(values_, elements, false);
 }
 
-void Builder::serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB) {
+void Builder::serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
   if (!e)
     return;

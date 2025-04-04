@@ -22,8 +22,8 @@ function foo (a, b) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  {r1}      %1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {np0}     %2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}      %1 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %2 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %3 = CreateFunctionInst (:object) {np0} %2: undefined, empty: any, %foo(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %3: object, {r1} %1: object, "foo": string
 // CHECK-NEXT:                 ReturnInst {np0} %2: undefined

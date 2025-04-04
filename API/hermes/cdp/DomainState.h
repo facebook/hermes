@@ -32,7 +32,6 @@ namespace cdp {
 
 /// Base class for data to be stored in DomainState.
 struct StateValue {
- public:
   virtual ~StateValue() = default;
   virtual std::unique_ptr<StateValue> copy() const = 0;
 };

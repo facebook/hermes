@@ -278,8 +278,10 @@ class GCBase {
     virtual void unmarkSymbols() = 0;
 
     /// Free all symbols which are not marked as \c true in \p markedSymbols.
-    /// Optionally invoked at the end of a garbage collection.
-    virtual void freeSymbols(const llvh::BitVector &markedSymbols) = 0;
+    /// Optionally invoked at the end of a garbage collection. The function may
+    /// set additional bits in \p markedSymbols to reflect the fact that some
+    /// symbols were not freed.
+    virtual void freeSymbols(llvh::BitVector &markedSymbols) = 0;
 
     /// Prints any statistics maintained in the Runtime about GC to \p
     /// os.  At present, this means the breakdown of markRoots time by
@@ -375,7 +377,7 @@ class GCBase {
     void unmarkSymbols() override {
       runtime_.unmarkSymbols();
     }
-    void freeSymbols(const llvh::BitVector &markedSymbols) override {
+    void freeSymbols(llvh::BitVector &markedSymbols) override {
       runtime_.freeSymbols(markedSymbols);
     }
     void printRuntimeGCStats(JSONEmitter &json) const override {

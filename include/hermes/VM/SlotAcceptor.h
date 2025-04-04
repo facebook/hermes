@@ -19,6 +19,7 @@ namespace vm {
 class GCPointerBase;
 class HeapSnapshot;
 class WeakRootBase;
+class WeakRootSymbolID;
 class GCCell;
 
 /// SlotAcceptor is an interface to be implemented by acceptors of objects in
@@ -136,6 +137,8 @@ struct WeakRootAcceptor : RootSectionAcceptor {
   /// NOTE: This is called acceptWeak in order to avoid clashing with accept
   /// from SlotAcceptor, for classes that inherit from both.
   virtual void acceptWeak(WeakRootBase &ptr) = 0;
+
+  virtual void acceptWeakSym(WeakRootSymbolID &sym) = 0;
 };
 
 template <typename Acceptor>

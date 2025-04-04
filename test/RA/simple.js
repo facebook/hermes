@@ -22,8 +22,8 @@ function main(x, y, z) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "main": string
-// CHECK-NEXT:  {r1}      %1 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {np0}     %2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}      %1 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %2 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %3 = CreateFunctionInst (:object) {np0} %2: undefined, empty: any, %main(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %3: object, {r1} %1: object, "main": string
 // CHECK-NEXT:                 ReturnInst {np0} %2: undefined
@@ -33,10 +33,10 @@ function main(x, y, z) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r1}      %0 = LoadParamInst (:any) %x: any
 // CHECK-NEXT:  {r0}      %1 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:  {n4}      %2 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  {n3}      %3 = HBCLoadConstInst (:number) 3: number
-// CHECK-NEXT:  {n2}      %4 = HBCLoadConstInst (:number) 1: number
-// CHECK-NEXT:  {n1}      %5 = HBCLoadConstInst (:number) 10: number
+// CHECK-NEXT:  {n4}      %2 = LIRLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {n3}      %3 = LIRLoadConstInst (:number) 3: number
+// CHECK-NEXT:  {n2}      %4 = LIRLoadConstInst (:number) 1: number
+// CHECK-NEXT:  {n1}      %5 = LIRLoadConstInst (:number) 10: number
 // CHECK-NEXT:  {n4}      %6 = MovInst (:number) {n4} %2: number
 // CHECK-NEXT:  {n3}      %7 = MovInst (:number) {n3} %3: number
 // CHECK-NEXT:                 BranchInst %BB1

@@ -250,6 +250,15 @@ void hermes::vm::sh_unit_mark_long_lived_weak_roots(
       acceptor.acceptWeak(prop.clazz);
     }
   }
+  for (auto &prop : llvh::makeMutableArrayRef(
+           reinterpret_cast<PrivateNameCacheEntry *>(
+               unit->num_private_name_cache_entries),
+           unit->num_private_name_cache_entries)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
+    acceptor.acceptWeakSym(prop.nameVal);
+  }
 
   for (auto &entry : llvh::makeMutableArrayRef(
            reinterpret_cast<WeakRootBase *>(unit->object_literal_class_cache),
