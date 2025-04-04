@@ -20,6 +20,13 @@ buildDir.mkdirs()
 
 def testDestination = "java/com/facebook/hermes/test/assets"
 
+// Don't redirect logs.
+tasks.withType(Test) {
+    testLogging {
+      showStandardStreams = true
+    }
+}
+
 task prepareTests() {
   doLast {
     def test262Dir = file(rootProject.ext.fbsource).exists() ?
@@ -68,13 +75,14 @@ android {
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DHERMES_PARSE_FLOW=1"
         arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+        arguments "-DIMPORT_HOST_COMPILERS=${rootProject.ext.hermesC}"
         arguments "-DHERMES_SLOW_DEBUG=False"
         arguments "-DHERMES_ENABLE_INTL=True"
-        targets "jsijni", "jsijniepi", "libhermes"
+        targets "jsijni", "jsijniepi", "hermesvm_a"
       }
     }
     ndk {

@@ -21,13 +21,14 @@ android {
       cmake {
         arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
         arguments "-DHERMES_IS_ANDROID=True"
+        arguments "-DHERMES_PARSE_FLOW=1"
         arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+        arguments "-DIMPORT_HOST_COMPILERS=${rootProject.ext.hermesC}"
         arguments "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True"
         arguments "-DHERMES_BUILD_SHARED_JSI=True"
-        targets "libhermes"
+        targets "hermesvm_a"
       }
     }
     ndk {
