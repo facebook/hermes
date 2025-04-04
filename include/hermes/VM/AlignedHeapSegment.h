@@ -749,6 +749,16 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   static void checkUnwritten(char *start, char *end);
 #endif
 
+#ifdef HERMES_SLOW_DEBUG
+  /// Find the object containing \p loc.
+  static GCCell *findObjectContaining(const void *loc) {
+    auto *lowLim = static_cast<char *>(storageStart(loc));
+    auto *hiLim = lowLim + kSize;
+    return contents(lowLim)->boundaryTable_.findObjectContaining(
+        lowLim, hiLim, loc);
+  }
+#endif
+
  private:
   FixedSizeHeapSegment(StorageProvider *provider, void *lowLim);
 };
