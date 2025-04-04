@@ -2295,15 +2295,18 @@ bool HadesGC::needsWriteBarrier(const GCPointerBase *loc, GCCell *value) const {
 }
 #endif
 
-template void *HadesGC::allocSlow<CanBeLarge::Yes>(uint32_t sz);
-template void *HadesGC::allocSlow<CanBeLarge::No>(uint32_t sz);
+template void *HadesGC::allocSlow<CanBeLarge::Yes, MayFail::Yes>(uint32_t sz);
+template void *HadesGC::allocSlow<CanBeLarge::Yes, MayFail::No>(uint32_t sz);
+template void *HadesGC::allocSlow<CanBeLarge::No, MayFail::No>(uint32_t sz);
+// We intentionally don't instantiate it with CanBeLarge::No and MayFail::Yes,
+// as we currently don't allow normal allocation to fail instead of OOM.
 
-template <CanBeLarge canBeLarge>
+template <CanBeLarge canBeLarge, MayFail mayFail>
 void *HadesGC::allocSlow(uint32_t sz) {
   // Check if it's a large allocation before YG collection.
   if (LLVM_UNLIKELY(sz > FixedSizeHeapSegment::maxSize())) {
     if constexpr (canBeLarge == CanBeLarge::Yes)
-      return oldGen_.allocLarge(sz);
+      return oldGen_.allocLarge<mayFail>(sz);
 
     // A YG collection is guaranteed to fully evacuate, leaving all the space
     // available, so the only way this could fail is if sz is greater than
@@ -2340,6 +2343,7 @@ void *HadesGC::allocSlow(uint32_t sz) {
   return res.ptr;
 }
 
+template <MayFail mayFail>
 GCCell *HadesGC::OldGen::allocLarge(uint32_t sz) {
   assert(
       sz <= GCCell::maxSize() &&
@@ -2357,6 +2361,10 @@ GCCell *HadesGC::OldGen::allocLarge(uint32_t sz) {
     // Try the allocation again.
     seg = gc_.createJumboSegment(segmentSize);
     if (!seg) {
+      // Return nullptr and let the caller handle it if Fail is allowed.
+      if constexpr (mayFail == MayFail::Yes) {
+        return nullptr;
+      }
       // The GC didn't recover enough memory, OOM.
       // Re-use the error code from the earlier heap segment allocation, because
       // it's either that the max heap size was reached, or that segment failed
@@ -2372,10 +2380,16 @@ GCCell *HadesGC::OldGen::allocLarge(uint32_t sz) {
   return finishAlloc(newObj, maxSize);
 }
 
-template void *HadesGC::allocLongLived<CanBeLarge::Yes>(uint32_t sz);
-template void *HadesGC::allocLongLived<CanBeLarge::No>(uint32_t sz);
+template void *HadesGC::allocLongLived<CanBeLarge::Yes, MayFail::Yes>(
+    uint32_t sz);
+template void *HadesGC::allocLongLived<CanBeLarge::Yes, MayFail::No>(
+    uint32_t sz);
+template void *HadesGC::allocLongLived<CanBeLarge::No, MayFail::No>(
+    uint32_t sz);
+// We intentionally don't instantiate it with CanBeLarge::No and MayFail::Yes,
+// as we currently don't allow normal allocation to fail instead of OOM.
 
-template <CanBeLarge canBeLarge>
+template <CanBeLarge canBeLarge, MayFail mayFail>
 void *HadesGC::allocLongLived(uint32_t sz) {
   assert(
       isSizeHeapAligned(sz) &&
@@ -2390,7 +2404,7 @@ void *HadesGC::allocLongLived(uint32_t sz) {
     totalAllocatedBytes_ += sz;
     return oldGen_.alloc(sz);
   }
-  return oldGen_.allocLarge(sz);
+  return oldGen_.allocLarge<mayFail>(sz);
 }
 
 GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
