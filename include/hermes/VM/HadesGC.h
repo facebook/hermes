@@ -19,6 +19,7 @@
 #include "llvh/ADT/SparseBitVector.h"
 #include "llvh/Support/ErrorOr.h"
 #include "llvh/Support/PointerLikeTypeTraits.h"
+#include "llvh/Support/SaveAndRestore.h"
 
 #include <atomic>
 #include <condition_variable>
@@ -157,21 +158,67 @@ class HadesGC final : public GCBase {
     assert(
         !calledByBackgroundThread() &&
         "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForNormalObj(loc);
+#endif
+
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
       writeBarrierSlow(loc, value);
   }
   void writeBarrierSlow(const GCHermesValue *loc, HermesValue value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValue *loc,
+      HermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForLargeObj(owningObj, loc);
+#endif
+
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlowForLargeObj(owningObj, loc, value);
+  }
+  void writeBarrierSlowForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValue *loc,
+      HermesValue value);
 
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value) {
     assert(
         !calledByBackgroundThread() &&
         "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForNormalObj(loc);
+#endif
+
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
       writeBarrierSlow(loc, value);
   }
   void writeBarrierSlow(const GCSmallHermesValue *loc, SmallHermesValue value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForLargeObj(owningObj, loc);
+#endif
+
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlowForLargeObj(owningObj, loc, value);
+  }
+  void writeBarrierSlowForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
   /// be in the heap). The value may be null. Execute a write barrier.
@@ -181,24 +228,80 @@ class HadesGC final : public GCBase {
     assert(
         !calledByBackgroundThread() &&
         "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForNormalObj(loc);
+#endif
+
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
       writeBarrierSlow(loc, value);
   }
   void writeBarrierSlow(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCPointerBase *loc,
+      const GCCell *value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForLargeObj(owningObj, loc);
+#endif
+
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      writeBarrierSlowForLargeObj(owningObj, loc, value);
+  }
+  void writeBarrierSlowForLargeObj(
+      const GCCell *owningObj,
+      const GCPointerBase *loc,
+      const GCCell *value);
 
   /// Special versions of \p writeBarrier for when there was no previous value
   /// initialized into the space.
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForNormalObj(loc);
+#endif
+
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
       constructorWriteBarrierSlow(loc, value);
   }
   void constructorWriteBarrierSlow(const GCHermesValue *loc, HermesValue value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValue *loc,
+      HermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForLargeObj(owningObj, loc);
+#endif
+
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      constructorWriteBarrierSlowForLargeObj(owningObj, loc, value);
+  }
+  void constructorWriteBarrierSlowForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValue *loc,
+      HermesValue value);
 
   void constructorWriteBarrier(
       const GCSmallHermesValue *loc,
       SmallHermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForNormalObj(loc);
+#endif
+
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
       constructorWriteBarrierSlow(loc, value);
@@ -206,11 +309,52 @@ class HadesGC final : public GCBase {
   void constructorWriteBarrierSlow(
       const GCSmallHermesValue *loc,
       SmallHermesValue value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForLargeObj(owningObj, loc);
+#endif
+
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      constructorWriteBarrierSlowForLargeObj(owningObj, loc, value);
+  }
+  void constructorWriteBarrierSlowForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValue *loc,
+      SmallHermesValue value);
 
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForNormalObj(loc);
+#endif
+
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(loc)))
       relocationWriteBarrier(loc, value);
+  }
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCPointerBase *loc,
+      const GCCell *value) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Write barrier invoked by background thread.");
+#ifdef HERMES_SLOW_DEBUG
+    assertWriteBarrierForLargeObj(owningObj, loc);
+#endif
+
+    // A pointer that lives in YG never needs any write barriers.
+    if (LLVM_UNLIKELY(!inYoungGen(loc)))
+      relocationWriteBarrierForLargeObj(owningObj, loc, value);
   }
 
   void constructorWriteBarrierRange(
@@ -767,6 +911,14 @@ class HadesGC final : public GCBase {
   /// GC. This includes mark bits, free lists, etc.
   Mutex gcMutex_;
 
+#ifdef HERMES_SLOW_DEBUG
+  /// CellKind and size of the GCCell being constructed. It is set in makeA()
+  /// before constructing the cell and reset in the end. Note that we don't
+  /// use KindAndSize here since the actual size could be larger than
+  /// GCCell::maxSize().
+  llvh::Optional<std::pair<CellKind, uint32_t>> currentCellKindAndSize_;
+#endif
+
   /// Flag used to signal to the background thread that it should stop and yield
   /// the gcMutex_ to the mutator as soon as possible.
   AtomicIfConcurrentGC<bool> ogPaused_{false};
@@ -1120,6 +1272,10 @@ class HadesGC final : public GCBase {
   /// pointers into YG and for tracking newly created pointers into the
   /// compactee.
   void relocationWriteBarrier(const void *loc, const void *value);
+  void relocationWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const void *loc,
+      const GCCell *value);
 
   /// Finalize all objects in YG that have finalizers.
   void finalizeYoungGenObjects();
@@ -1189,6 +1345,14 @@ class HadesGC final : public GCBase {
   /// Return the start/end address of the segment that contains \p addr.
   std::pair<const char *, const char *> getSegmentAddrRange(const void *addr);
 
+  /// Assert that \p loc does not belong to an object that supports large
+  /// allocation.
+  void assertWriteBarrierForNormalObj(const void *loc);
+
+  /// Assert that \p owningObj is an object that supports large allocation and
+  /// it contains \p loc.
+  void assertWriteBarrierForLargeObj(const GCCell *owningObj, const void *loc);
+
   /// Checks the heap to make sure all cells are valid.
   void checkWellFormed();
 
@@ -1212,6 +1376,12 @@ inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
       isSizeHeapAligned(size) &&
       "Call to makeA must use a size aligned to HeapAlign");
   assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
+#ifdef HERMES_SLOW_DEBUG
+  assert(!currentCellKindAndSize_ && "makeA() calls can not be interleaved");
+  llvh::SaveAndRestore<llvh::Optional<std::pair<CellKind, uint32_t>>>
+      saveCurrentCellKindAndSize(
+          currentCellKindAndSize_, std::make_pair(T::getCellKind(), size));
+#endif
   if (longLived == LongLived::Yes) {
     auto lk = ensureBackgroundTaskPaused();
     return constructCell<T>(
