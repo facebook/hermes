@@ -178,7 +178,7 @@ class AsyncGenerator : public TransformationsBase {
 
 void transformAsyncGenerators(Context &context, ESTree::Node *node) {
   AsyncGenerator transformer(context);
-  visitESTreeNodeNoReplace(transformer, node);
+  visitESTreeNode(transformer, node, nullptr);
 }
 
 } // namespace hermes

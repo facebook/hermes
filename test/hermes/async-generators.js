@@ -25,7 +25,6 @@ async function* mixedValuesGenerator() {
 })();
 //CHECK: 6
 
-/*
 async function* errorHandlingGenerator() {
     yield 1;
     throw new Error('Test error');
@@ -42,4 +41,4 @@ async function* errorHandlingGenerator() {
         print('Caught error:', error.message);
     }
 })();
- */
+

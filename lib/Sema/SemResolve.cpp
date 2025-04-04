@@ -12,7 +12,6 @@
 #include "FlowTypesDumper.h"
 #include "SemanticResolver.h"
 #include "hermes/AST/ESTree.h"
-#include "hermes/AST/AsyncGenerator.h"
 #include "hermes/Support/PerfSection.h"
 
 namespace hermes {
@@ -163,9 +162,6 @@ bool resolveAST(
     flow::FlowContext *flowContext,
     ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls) {
-  if (astContext.getEnableAsyncGenerators()) {
-    transformAsyncGenerators(astContext, root);
-  }
 
   PerfSection validation("Resolving JavaScript global AST");
   // Resolve the entire AST.
