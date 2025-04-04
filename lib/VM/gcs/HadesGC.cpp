@@ -3086,15 +3086,40 @@ size_t HadesGC::OldGen::numSegments() const {
 }
 
 llvh::ErrorOr<FixedSizeHeapSegment> HadesGC::createSegment() {
+  return createSegmentImpl<FixedSizeHeapSegment>(
+      FixedSizeHeapSegment::storageSize(),
+      [](StorageProvider *provider, const char *name, size_t segmentSize) {
+        return FixedSizeHeapSegment::create(provider, name);
+      });
+}
+
+llvh::ErrorOr<JumboHeapSegment> HadesGC::createJumboSegment(
+    size_t segmentSize) {
+  return createSegmentImpl<JumboHeapSegment>(
+      segmentSize,
+      [](StorageProvider *provider, const char *name, size_t segmentSize) {
+        return JumboHeapSegment::create(provider, name, segmentSize);
+      });
+}
+
+template <typename T, typename CreateSegFunc>
+llvh::ErrorOr<T> HadesGC::createSegmentImpl(
+    size_t segmentSize,
+    CreateSegFunc createSegFunc) {
   // No heap size limit when Handle-SAN is on, to allow the heap enough room to
-  // keep moving things around.
-  if (!sanitizeRate_ && heapFootprint() >= maxHeapSize_)
+  // keep moving things around. Otherwise, if allocating this segment will
+  // make the heap footprint larger than the max heap size plus one unit segment
+  // size, return OOM error.
+  if (!sanitizeRate_ &&
+      heapFootprint() >=
+          (maxHeapSize_ - segmentSize + AlignedHeapSegment::kSegmentUnitSize))
     return make_error_code(OOMError::MaxHeapReached);
-  auto res = FixedSizeHeapSegment::create(provider_.get(), "hades-segment");
+
+  auto res = createSegFunc(provider_.get(), "hades-segment", segmentSize);
   if (!res) {
     return res.getError();
   }
-  FixedSizeHeapSegment seg(std::move(res.get()));
+  T seg(std::move(res.get()));
   // Even if compressed pointers are off, we still use the segment index for
   // crash manager indices.
   size_t segIdx;
@@ -3108,14 +3133,18 @@ llvh::ErrorOr<FixedSizeHeapSegment> HadesGC::createSegment() {
   addSegmentExtentToCrashManager(
       seg, FixedSizeHeapSegment::storageSize(), std::to_string(segIdx));
 #ifndef NDEBUG
-  auto inserted =
-      unitSegmentAddrMap_.try_emplace(seg.lowLim(), seg.lowLim(), seg.hiLim());
-  assert(
-      inserted.second &&
-      "One segment with the same start address exists in unitSegmentAddrMap_");
+  // Add this segment's address mapping.
+  for (char *alignedAddr = seg.lowLim(), *end = seg.hiLim(); alignedAddr != end;
+       alignedAddr += AlignedHeapSegment::kSegmentUnitSize) {
+    auto inserted =
+        unitSegmentAddrMap_.try_emplace(alignedAddr, seg.lowLim(), seg.hiLim());
+    assert(
+        inserted.second &&
+        "One segment containing the same aligned address exists in unitSegmentAddrMap_");
+  }
 #endif
   seg.markBitArray().set();
-  return llvh::ErrorOr<FixedSizeHeapSegment>(std::move(seg));
+  return llvh::ErrorOr<T>(std::move(seg));
 }
 
 void HadesGC::OldGen::addSegment(FixedSizeHeapSegment seg) {
