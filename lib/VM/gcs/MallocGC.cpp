@@ -498,6 +498,7 @@ void MallocGC::resetStats() {
 void MallocGC::getHeapInfo(HeapInfo &info) {
   GCBase::getHeapInfo(info);
   info.allocatedBytes = allocatedBytes_;
+  info.totalAllocatedBytes = totalAllocatedBytes_;
   // MallocGC does not have a heap size.
   info.heapSize = 0;
   info.externalBytes = externalBytes_;
