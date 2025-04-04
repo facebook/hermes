@@ -445,7 +445,7 @@ class BoundFunction final : public Callable {
  private:
   /// Return a pointer to the stored arguments, including \c this. \c this is
   /// at index 0, followed by the rest.
-  GCHermesValue *getArgsWithThis(PointerBase &runtime) {
+  ArrayStorage::iterator getArgsWithThis(PointerBase &runtime) {
     return argStorage_.getNonNull(runtime)->begin();
   }
 

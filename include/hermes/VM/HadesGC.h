@@ -169,7 +169,7 @@ class HadesGC final : public GCBase {
   void writeBarrierSlow(const GCHermesValue *loc, HermesValue value);
   void writeBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCHermesValue *loc,
+      const GCHermesValueInLargeObj *loc,
       HermesValue value) {
     assert(
         !calledByBackgroundThread() &&
@@ -184,7 +184,7 @@ class HadesGC final : public GCBase {
   }
   void writeBarrierSlowForLargeObj(
       const GCCell *owningObj,
-      const GCHermesValue *loc,
+      const GCHermesValueInLargeObj *loc,
       HermesValue value);
 
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value) {
@@ -202,7 +202,7 @@ class HadesGC final : public GCBase {
   void writeBarrierSlow(const GCSmallHermesValue *loc, SmallHermesValue value);
   void writeBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueInLargeObj *loc,
       SmallHermesValue value) {
     assert(
         !calledByBackgroundThread() &&
@@ -217,7 +217,7 @@ class HadesGC final : public GCBase {
   }
   void writeBarrierSlowForLargeObj(
       const GCCell *owningObj,
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueInLargeObj *loc,
       SmallHermesValue value);
 
   /// The given pointer value is being written at the given loc (required to
@@ -274,7 +274,7 @@ class HadesGC final : public GCBase {
   void constructorWriteBarrierSlow(const GCHermesValue *loc, HermesValue value);
   void constructorWriteBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCHermesValue *loc,
+      const GCHermesValueInLargeObj *loc,
       HermesValue value) {
     assert(
         !calledByBackgroundThread() &&
@@ -289,7 +289,7 @@ class HadesGC final : public GCBase {
   }
   void constructorWriteBarrierSlowForLargeObj(
       const GCCell *owningObj,
-      const GCHermesValue *loc,
+      const GCHermesValueInLargeObj *loc,
       HermesValue value);
 
   void constructorWriteBarrier(
@@ -311,7 +311,7 @@ class HadesGC final : public GCBase {
       SmallHermesValue value);
   void constructorWriteBarrierForLargeObj(
       const GCCell *owningObj,
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueInLargeObj *loc,
       SmallHermesValue value) {
     assert(
         !calledByBackgroundThread() &&
@@ -326,7 +326,7 @@ class HadesGC final : public GCBase {
   }
   void constructorWriteBarrierSlowForLargeObj(
       const GCCell *owningObj,
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueInLargeObj *loc,
       SmallHermesValue value);
 
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value) {
@@ -359,7 +359,7 @@ class HadesGC final : public GCBase {
 
   void constructorWriteBarrierRange(
       const GCCell *owningObj,
-      const GCHermesValue *start,
+      const GCHermesValueBase *start,
       uint32_t numHVs) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(start)))
@@ -367,12 +367,12 @@ class HadesGC final : public GCBase {
   }
   void constructorWriteBarrierRangeSlow(
       const GCCell *owningObj,
-      const GCHermesValue *start,
+      const GCHermesValueBase *start,
       uint32_t numHVs);
 
   void constructorWriteBarrierRange(
       const GCCell *owningObj,
-      const GCSmallHermesValue *start,
+      const GCSmallHermesValueBase *start,
       uint32_t numHVs) {
     // A pointer that lives in YG never needs any write barriers.
     if (LLVM_UNLIKELY(!inYoungGen(start)))
@@ -380,14 +380,14 @@ class HadesGC final : public GCBase {
   }
   void constructorWriteBarrierRangeSlow(
       const GCCell *owningObj,
-      const GCSmallHermesValue *start,
+      const GCSmallHermesValueBase *start,
       uint32_t numHVs);
 
-  void snapshotWriteBarrier(const GCHermesValue *loc) {
+  void snapshotWriteBarrier(const GCHermesValueBase *loc) {
     if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
       snapshotWriteBarrierInternal(*loc);
   }
-  void snapshotWriteBarrier(const GCSmallHermesValue *loc) {
+  void snapshotWriteBarrier(const GCSmallHermesValueBase *loc) {
     if (LLVM_UNLIKELY(!inYoungGen(loc) && ogMarkingBarriers_))
       snapshotWriteBarrierInternal(*loc);
   }
@@ -401,22 +401,24 @@ class HadesGC final : public GCBase {
       snapshotWriteBarrierInternal(*loc);
   }
 
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs) {
-    if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
-      snapshotWriteBarrierRangeSlow(start, numHVs);
-  }
-  void snapshotWriteBarrierRangeSlow(
-      const GCHermesValue *start,
-      uint32_t numHVs);
-
   void snapshotWriteBarrierRange(
-      const GCSmallHermesValue *start,
+      const GCHermesValueBase *start,
       uint32_t numHVs) {
     if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
       snapshotWriteBarrierRangeSlow(start, numHVs);
   }
   void snapshotWriteBarrierRangeSlow(
-      const GCSmallHermesValue *start,
+      const GCHermesValueBase *start,
+      uint32_t numHVs);
+
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValueBase *start,
+      uint32_t numHVs) {
+    if (LLVM_UNLIKELY(!inYoungGen(start) && ogMarkingBarriers_))
+      snapshotWriteBarrierRangeSlow(start, numHVs);
+  }
+  void snapshotWriteBarrierRangeSlow(
+      const GCSmallHermesValueBase *start,
       uint32_t numHVs);
 
   /// Add read barrier for \p value. This is only used when reading entry
@@ -508,16 +510,17 @@ class HadesGC final : public GCBase {
   /// found reachable in a full GC.
   void trackReachable(CellKind kind, unsigned sz) override;
 
-  bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+  bool needsWriteBarrier(const GCHermesValueBase *loc, HermesValue value)
       const override;
-  bool needsWriteBarrier(const GCSmallHermesValue *loc, SmallHermesValue value)
-      const override;
+  bool needsWriteBarrier(
+      const GCSmallHermesValueBase *loc,
+      SmallHermesValue value) const override;
   bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const override;
-  bool needsWriteBarrierInCtor(const GCHermesValue *loc, HermesValue value)
+  bool needsWriteBarrierInCtor(const GCHermesValueBase *loc, HermesValue value)
       const override;
   bool needsWriteBarrierInCtor(
-      const GCSmallHermesValue *loc,
+      const GCSmallHermesValueBase *loc,
       SmallHermesValue value) const override;
   /// \}
 #endif

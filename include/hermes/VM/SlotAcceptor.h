@@ -34,8 +34,8 @@ class GCCell;
 struct SlotAcceptor {
   virtual ~SlotAcceptor() = default;
   virtual void accept(GCPointerBase &ptr) = 0;
-  virtual void accept(GCHermesValue &hv) = 0;
-  virtual void accept(GCSmallHermesValue &hv) = 0;
+  virtual void accept(GCHermesValueBase &hv) = 0;
+  virtual void accept(GCSmallHermesValueBase &hv) = 0;
   virtual void accept(const GCSymbolID &sym) = 0;
 };
 
@@ -111,15 +111,15 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   }
   virtual void accept(GCPointerBase &ptr, const char *name) = 0;
 
-  void accept(GCHermesValue &hv) final {
+  void accept(GCHermesValueBase &hv) final {
     accept(hv, nullptr);
   }
-  virtual void accept(GCHermesValue &hv, const char *name) = 0;
+  virtual void accept(GCHermesValueBase &hv, const char *name) = 0;
 
-  void accept(GCSmallHermesValue &hv) final {
+  void accept(GCSmallHermesValueBase &hv) final {
     accept(hv, nullptr);
   }
-  virtual void accept(GCSmallHermesValue &hv, const char *name) = 0;
+  virtual void accept(GCSmallHermesValueBase &hv, const char *name) = 0;
 
   void accept(const GCSymbolID &sym) final {
     accept(sym, nullptr);
@@ -167,11 +167,11 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
     acceptor.acceptNullable(hv);
   }
 
-  void accept(GCHermesValue &hv, const char *) override {
+  void accept(GCHermesValueBase &hv, const char *) override {
     acceptor.accept(hv);
   }
 
-  void accept(GCSmallHermesValue &hv, const char *) override {
+  void accept(GCSmallHermesValueBase &hv, const char *) override {
     acceptor.accept(hv);
   }
 

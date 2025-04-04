@@ -1734,23 +1734,23 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
   // (including calls to memset) so we manually unroll it with a switch.
   switch (numOverlapSlots<T>()) {
     case 0:
-      new (&self->directProps()[0]) GCHermesValueBase(
+      new (&self->directProps()[0]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 1:
-      new (&self->directProps()[1]) GCHermesValueBase(
+      new (&self->directProps()[1]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 2:
-      new (&self->directProps()[2]) GCHermesValueBase(
+      new (&self->directProps()[2]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 3:
-      new (&self->directProps()[3]) GCHermesValueBase(
+      new (&self->directProps()[3]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 4:
-      new (&self->directProps()[4]) GCHermesValueBase(
+      new (&self->directProps()[4]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 5:
