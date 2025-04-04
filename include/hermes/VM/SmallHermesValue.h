@@ -471,10 +471,11 @@ static_assert(
 using GCSmallHermesValueBase = GCHermesValueBaseImpl<SmallHermesValue>;
 
 /// GCSmallHermesValue stored in a normal object.
-using GCSmallHermesValue = GCSmallHermesValueBase;
+using GCSmallHermesValue = GCHermesValueImpl<SmallHermesValue>;
 
 /// GCSmallHermesValue stored in an object that supports large allocation.
-using GCSmallHermesValueInLargeObj = GCSmallHermesValueBase;
+using GCSmallHermesValueInLargeObj =
+    GCHermesValueInLargeObjImpl<SmallHermesValue>;
 
 } // end namespace vm
 } // end namespace hermes
