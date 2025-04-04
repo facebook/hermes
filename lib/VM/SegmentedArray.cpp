@@ -294,6 +294,7 @@ ExecutionStatus SegmentedArrayBase<HVType>::growRight(
       self->inlineStorage(),
       self->inlineStorage() + numSlotsUsed,
       newSegmentedArray->inlineStorage(),
+      newSegmentedArray.get(),
       runtime.getHeap());
   // Set the size of the new array to be the same as the old array's size.
   newSegmentedArray->numSlotsUsed_.store(

@@ -182,6 +182,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
     GCHermesValueBase<HVType> *first,
     GCHermesValueBase<HVType> *last,
     GCHermesValueBase<HVType> *result,
+    const GCCell *owningObj,
     GC &gc) {
 #ifndef NDEBUG
   uintptr_t fromFirst = reinterpret_cast<uintptr_t>(first),
@@ -194,7 +195,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
       "Uninitialized range cannot overlap with an initialized one.");
 #endif
 
-  gc.constructorWriteBarrierRange(result, last - first);
+  gc.constructorWriteBarrierRange(owningObj, result, last - first);
   // memcpy is fine for an uninitialized copy.
   std::memcpy(
       reinterpret_cast<void *>(result), first, (last - first) * sizeof(HVType));
