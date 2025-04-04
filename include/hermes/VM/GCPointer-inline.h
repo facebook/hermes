@@ -15,13 +15,10 @@
 namespace hermes {
 namespace vm {
 
+template <typename T>
 template <typename NeedsBarriers>
-GCPointerBase::GCPointerBase(
-    PointerBase &base,
-    GCCell *ptr,
-    GC &gc,
-    NeedsBarriers)
-    : CompressedPointer(CompressedPointer::encode(ptr, base)) {
+inline GCPointer<T>::GCPointer(PointerBase &base, T *ptr, GC &gc, NeedsBarriers)
+    : GCPointerBase(CompressedPointer::encode(ptr, base)) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&
       "Cannot construct a GCPointer from an invalid pointer");
@@ -32,7 +29,24 @@ GCPointerBase::GCPointerBase(
   }
 }
 
-inline void GCPointerBase::set(PointerBase &base, GCCell *ptr, GC &gc) {
+template <typename T>
+inline GCPointerInLargeObj<T>::GCPointerInLargeObj(
+    PointerBase &base,
+    GC &gc,
+    T *ptr,
+    const GCCell *owningObj)
+    : GCPointerBase(CompressedPointer::encode(ptr, base)) {
+  assert(
+      (!ptr || gc.validPointer(ptr)) &&
+      "Cannot construct a GCPointer from an invalid pointer");
+  // Constructing a GCPointer on an object that supports large allocation always
+  // needs to perform write barrier. We may revisit this decision if we see a
+  // case that needs optimization.
+  gc.constructorWriteBarrierForLargeObj(owningObj, this, ptr);
+}
+
+template <typename T>
+inline void GCPointer<T>::set(PointerBase &base, T *ptr, GC &gc) {
   assert(
       (!ptr || gc.validPointer(ptr)) &&
       "Cannot set a GCPointer to an invalid pointer");
@@ -41,7 +55,8 @@ inline void GCPointerBase::set(PointerBase &base, GCCell *ptr, GC &gc) {
   setNoBarrier(CompressedPointer::encode(ptr, base));
 }
 
-inline void GCPointerBase::setNonNull(PointerBase &base, GCCell *ptr, GC &gc) {
+template <typename T>
+inline void GCPointer<T>::setNonNull(PointerBase &base, T *ptr, GC &gc) {
   assert(
       gc.validPointer(ptr) && "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
@@ -49,14 +64,42 @@ inline void GCPointerBase::setNonNull(PointerBase &base, GCCell *ptr, GC &gc) {
   setNoBarrier(CompressedPointer::encodeNonNull(ptr, base));
 }
 
+template <typename T>
 inline void
-GCPointerBase::set(PointerBase &base, CompressedPointer ptr, GC &gc) {
+GCPointer<T>::set(PointerBase &base, const GCPointer<T> &ptr, GC &gc) {
   assert(
       (!ptr || gc.validPointer(ptr.get(base))) &&
       "Cannot set a GCPointer to an invalid pointer");
   // Write barrier must happen before the write.
   gc.writeBarrier(this, ptr.get(base));
   setNoBarrier(ptr);
+}
+
+template <typename T>
+inline void GCPointerInLargeObj<T>::set(
+    PointerBase &base,
+    GC &gc,
+    T *ptr,
+    const GCCell *owningObj) {
+  assert(
+      (!ptr || gc.validPointer(ptr)) &&
+      "Cannot set a GCPointer to an invalid pointer");
+  // Write barrier must happen before the write.
+  gc.writeBarrierForLargeObj(owningObj, this, ptr);
+  setNoBarrier(CompressedPointer::encode(ptr, base));
+}
+
+template <typename T>
+inline void GCPointerInLargeObj<T>::setNonNull(
+    PointerBase &base,
+    GC &gc,
+    T *ptr,
+    const GCCell *owningObj) {
+  assert(
+      gc.validPointer(ptr) && "Cannot set a GCPointer to an invalid pointer");
+  // Write barrier must happen before the write.
+  gc.writeBarrierForLargeObj(owningObj, this, ptr);
+  setNoBarrier(CompressedPointer::encodeNonNull(ptr, base));
 }
 
 inline void GCPointerBase::setNull(GC &gc) {
