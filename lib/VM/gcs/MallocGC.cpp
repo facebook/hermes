@@ -542,7 +542,17 @@ bool MallocGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
     const {
   return false;
 }
+bool MallocGC::needsWriteBarrierInCtor(
+    const GCHermesValue *loc,
+    HermesValue value) const {
+  return false;
+}
 bool MallocGC::needsWriteBarrier(
+    const GCSmallHermesValue *loc,
+    SmallHermesValue value) const {
+  return false;
+}
+bool MallocGC::needsWriteBarrierInCtor(
     const GCSmallHermesValue *loc,
     SmallHermesValue value) const {
   return false;
