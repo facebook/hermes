@@ -171,16 +171,6 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
   }
 };
 
-gcheapsize_t MallocGC::Size::storageFootprint() const {
-  // MallocGC uses no storage from the StorageProvider.
-  return 0;
-}
-
-gcheapsize_t MallocGC::Size::minStorageFootprint() const {
-  // MallocGC uses no storage from the StorageProvider.
-  return 0;
-}
-
 MallocGC::MallocGC(
     GCCallbacks &gcCallbacks,
     PointerBase &pointerBase,
@@ -195,7 +185,7 @@ MallocGC::MallocGC(
           std::move(crashMgr),
           HeapKind::MallocGC),
       pointers_(),
-      maxSize_(Size(gcConfig).max()),
+      maxSize_(gcConfig.getMaxHeapSize()),
       sizeLimit_(gcConfig.getInitHeapSize()) {
   (void)vmExperimentFlags;
   crashMgr_->setCustomData("HermesGC", kGCName);

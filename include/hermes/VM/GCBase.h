@@ -225,20 +225,6 @@ enum XorPtrKeyID {
 /// after the mark call.
 ///   bool isUpdatingPointers() const;
 ///
-/// It must also have the inner type:
-///   class Size;
-/// Which provides at least these functions publicly:
-///   Constructor from either a GCConfig or the min and max heap size.
-///     explicit Size(const GCConfig &conf);
-///     Size(gcheapsize_t min, gcheapsize_t max);
-///   Return the minimum amount of bytes holdable by this heap.
-///     gcheapsize_t min() const;
-///   Return the maximum amount of bytes holdable by this heap.
-///     gcheapsize_t max() const;
-///   Return the total amount of bytes of storage this GC will require.
-///   This will be a multiple of FixedSizeHeapSegment::storageSize().
-///     gcheapsize_t storageFootprint() const;
-///
 class GCBase {
  public:
   static const char kNaturalCauseForAnalytics[];
