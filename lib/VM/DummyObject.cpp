@@ -19,6 +19,7 @@ namespace testhelpers {
 const VTable DummyObject::vt{
     CellKind::DummyObjectKind,
     cellSize<DummyObject>(),
+    /* allowLargeAlloc */ false,
     _finalizeImpl,
     _mallocSizeImpl,
     nullptr

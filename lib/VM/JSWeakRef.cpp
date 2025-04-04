@@ -17,6 +17,7 @@ const ObjectVTable JSWeakRef::vt{
     VTable(
         CellKind::JSWeakRefKind,
         cellSize<JSWeakRef>(),
+        /* allowLargeAlloc */ false,
         JSWeakRef::_finalizeImpl,
         nullptr,
         nullptr
