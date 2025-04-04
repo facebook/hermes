@@ -610,6 +610,12 @@ class JumboHeapSegment : public AlignedHeapSegment {
     return lowLim() + storageSize();
   }
 
+  /// \return \c true if and only if \p ptr is within the memory range owned by
+  /// this segment.
+  bool contains(const void *ptr) const {
+    return start() <= ptr && ptr < hiLim();
+  }
+
  private:
   JumboHeapSegment(StorageProvider *provider, void *lowLim, size_t segmentSize)
       : AlignedHeapSegment(provider, lowLim, segmentSize),
