@@ -17,6 +17,7 @@
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/StatsAccumulator.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
@@ -916,6 +917,8 @@ class GCBase {
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
 
@@ -924,6 +927,8 @@ class GCBase {
       bool fixedSize = true,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeA(uint32_t size, Args &&...args);
 
@@ -1426,6 +1431,23 @@ class GCBase {
     auto *cell = new (ptr) T(std::forward<Args>(args)...);
     constexpr auto kind = T::getCellKind();
     cell->setKindAndSize({kind, size});
+    return cell;
+  }
+
+  template <typename T, class... Args>
+  static T *constructCellCanBeLarge(void *ptr, uint32_t size, Args &&...args) {
+    assert(ptr && "constructCellCanBeLarge() can't be called on null ptr");
+    constexpr auto kind = T::getCellKind();
+    assert(
+        VTable::getVTable(kind)->allowLargeAlloc &&
+        "constructLargeCell() should only be used for constructing object that supports large allocation");
+    auto *cell = new (ptr) T(std::forward<Args>(args)...);
+    // If this cell lives in a JumboHeapSegment, its size is the segment's max
+    // allocation size.
+    auto cellSize = size > FixedSizeHeapSegment::maxSize()
+        ? JumboHeapSegment::computeActualCellSize(size)
+        : size;
+    cell->setKindAndSize({kind, cellSize});
     return cell;
   }
 

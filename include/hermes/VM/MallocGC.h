@@ -172,6 +172,8 @@ class MallocGC final : public GCBase {
       bool fixedSize = true,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::Yes,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   inline T *makeA(uint32_t size, Args &&...args);
 
@@ -389,6 +391,8 @@ template <
     bool fixedSize,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
   assert(

@@ -254,6 +254,18 @@ class AlignedHeapSegment {
     return lowLim_;
   }
 
+  /// Gets the segment size from SHSegmentInfo. This should only be used when
+  /// we only have a GCCell pointer and don't know its owning segment.
+  static size_t getSegmentSize(const GCCell *cell) {
+    return contents(alignedStorageStart(cell))->getSegmentSize();
+  }
+
+  /// Return the maximum allocation size for the heap segment that contains
+  /// \p cell.
+  static size_t maxSize(const GCCell *cell) {
+    return getSegmentSize(cell) - kOffsetOfAllocRegion;
+  }
+
   /// Returns the address at which the first allocation in this segment would
   /// occur.
   /// Disable UB sanitization because 'this' may be null during the tests.
@@ -593,6 +605,13 @@ class JumboHeapSegment : public AlignedHeapSegment {
   static constexpr size_t computeSegmentSize(uint32_t targetObjSize) {
     return llvh::alignTo<kSegmentUnitSize>(
         targetObjSize + kOffsetOfAllocRegion);
+  }
+
+  /// Compute the actual allocation size for \p targetObjSize. This is
+  /// essentially the `maxSize()` of the JumboHeapSegment with size derived from
+  /// computeSegmentSize().
+  static constexpr size_t computeActualCellSize(uint32_t targetObjSize) {
+    return computeSegmentSize(targetObjSize) - kOffsetOfAllocRegion;
   }
 
   /// The maximum size of allocation region for this segment.
