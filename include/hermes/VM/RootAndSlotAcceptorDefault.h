@@ -38,13 +38,13 @@ class RootAndSlotAcceptorDefault : public RootAndSlotAcceptor {
     acceptHV(hv);
   }
 
-  void accept(GCHermesValue &hv) final {
+  void accept(GCHermesValueBase &hv) final {
     acceptHV(hv);
   }
 
   virtual void acceptHV(HermesValue &hv) = 0;
 
-  void accept(GCSmallHermesValue &shv) final {
+  void accept(GCSmallHermesValueBase &shv) final {
     acceptSHV(shv);
   }
 
@@ -93,13 +93,13 @@ class RootAndSlotAcceptorWithNamesDefault
     acceptHV(hv, name);
   }
 
-  void accept(GCHermesValue &hv, const char *name) final {
+  void accept(GCHermesValueBase &hv, const char *name) final {
     acceptHV(hv, name);
   }
 
   virtual void acceptHV(HermesValue &hv, const char *name) = 0;
 
-  void accept(GCSmallHermesValue &shv, const char *name) final {
+  void accept(GCSmallHermesValueBase &shv, const char *name) final {
     acceptSHV(shv, name);
   }
 
