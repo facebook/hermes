@@ -550,11 +550,71 @@ class AlignedHeapSegment {
 
 /// JumboHeapSegment has custom storage size that must be a multiple of
 /// kSegmentUnitSize. Each such segment can only allocate a single object that
-/// occupies the entire allocation space. Therefore, the inline MarkBitArray is
-/// large enough, while card status array needs to be allocated separately. The
-/// card boundary table is unused, since the GCCell always lives at the start
-/// of the allocation region.
-class JumboHeapSegment : public AlignedHeapSegment {};
+/// may occupy the entire allocation space at most. Therefore, the inline
+/// MarkBitArray is large enough, while CardStatus array needs to be allocated
+/// separately. The card boundary table is not needed for JumboHeapSegment.
+class JumboHeapSegment : public AlignedHeapSegment {
+  /// Size of this segment.
+  size_t segmentSize_{0};
+
+ public:
+  /// Construct a null JumboHeapSegment (one that does not own memory).
+  JumboHeapSegment() = default;
+  /// \c JumboHeapSegment is movable and assignable, but not copyable.
+  JumboHeapSegment(JumboHeapSegment &&) = default;
+  JumboHeapSegment &operator=(JumboHeapSegment &&) = default;
+  JumboHeapSegment(const JumboHeapSegment &) = delete;
+  JumboHeapSegment &operator=(const JumboHeapSegment &) = delete;
+
+  /// Create a JumboHeapSegment by allocating memory with \p provider.
+  static llvh::ErrorOr<JumboHeapSegment>
+  create(StorageProvider *provider, const char *name, size_t segmentSize);
+
+  /// Allocate memory of maxSize() from this segment.
+  void *alloc() {
+    assert(
+        level() == start() &&
+        "Only one GCCell may be allocated in this segment, at the start.");
+    auto *cell = reinterpret_cast<GCCell *>(start());
+    // After allocation, level_ should point to the end.
+    level_ = hiLim();
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    // Unpoison the entire allocation region.
+    __asan_unpoison_memory_region(cell, maxSize());
+#endif
+    return cell;
+  }
+
+  /// Compute a suitable segment size to hold the object with size
+  /// \p targetObjSize. It adds the size of the metadata and aligns to
+  /// kSegmentUnitSize, which is required when creating a segment storage.
+  /// Note: On a 64bit platform, \p targetObjSize could be as large as 2^32-1,
+  /// hence the segment size could be larger than 4GB.
+  static constexpr size_t computeSegmentSize(uint32_t targetObjSize) {
+    return llvh::alignTo<kSegmentUnitSize>(
+        targetObjSize + kOffsetOfAllocRegion);
+  }
+
+  /// The maximum size of allocation region for this segment.
+  size_t maxSize() const {
+    return segmentSize_ - kOffsetOfAllocRegion;
+  }
+
+  /// Returns the storage size, in bytes, of a \c FixedSizeHeapSegment.
+  size_t storageSize() const {
+    return segmentSize_;
+  }
+
+  /// Returns the address that is the upper bound of the segment.
+  char *hiLim() const {
+    return lowLim() + storageSize();
+  }
+
+ private:
+  JumboHeapSegment(StorageProvider *provider, void *lowLim, size_t segmentSize)
+      : AlignedHeapSegment(provider, lowLim, segmentSize),
+        segmentSize_(segmentSize) {}
+};
 
 /// FixedSizeHeapSegment has fixed storage size kSegmentUnitSize. Its
 /// card status and boundary arrays and MarkBitArray are stored inline right
