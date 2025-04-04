@@ -121,13 +121,15 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
     }
 
     if (validatePayload) {
-      void *ptr = nullptr;
-      int numArgsWritten = std::sscanf(payload.c_str(), "%p", &ptr);
-      EXPECT_EQ(numArgsWritten, 1);
+      char *ptr = nullptr, *ptrEnd = nullptr;
+      int numArgsWritten = std::sscanf(payload.c_str(), "%p:%p", &ptr, &ptrEnd);
+      EXPECT_EQ(numArgsWritten, 2);
       // The pointer value itself doesn't matter, as long as it is one of the
       // segments in the heap. That would require exposing more GC APIs though,
       // so just check that it was parsed as non-null.
       EXPECT_NE(ptr, nullptr);
+      // There should be no JumboHeapSegment in this test.
+      EXPECT_EQ(ptrEnd, ptr + FixedSizeHeapSegment::kSize);
     }
   }
   EXPECT_EQ(1, numHeapSegmentsYG);
@@ -162,10 +164,12 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   EXPECT_EQ(4, contextualCustomData.size());
   // Make sure the value for YG is the actual YG segment.
   const std::string ygAddress = contextualCustomData.at("XYZ:HeapSegment:YG");
-  void *ptr = nullptr;
-  int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p", &ptr);
-  EXPECT_EQ(numArgsWritten, 1);
+  char *ptr = nullptr, *ptrEnd = nullptr;
+  int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p:%p", &ptr, &ptrEnd);
+  EXPECT_EQ(numArgsWritten, 2);
   EXPECT_TRUE(rt.getHeap().inYoungGen(ptr));
+  // There should be no JumboHeapSegment in this test.
+  EXPECT_EQ(ptrEnd, ptr + FixedSizeHeapSegment::kSize);
 
   // Test if all the segments are numbered correctly.
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);

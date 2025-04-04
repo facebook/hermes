@@ -506,6 +506,12 @@ class HadesGC final : public GCBase {
   /// operation, debug mode only.
   bool dbgContains(const void *ptr) const override;
 
+  /// Searches the old gen for this pointer. This is O(number of OG segments).
+  /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
+  /// it is O(1).
+  /// \return true if the pointer is in the old gen.
+  bool inOldGen(const void *p) const;
+
   /// Record that a cell of the given \p kind and size \p sz has been
   /// found reachable in a full GC.
   void trackReachable(CellKind kind, unsigned sz) override;
@@ -564,6 +570,23 @@ class HadesGC final : public GCBase {
     const std::deque<FixedSizeHeapSegment> &getSegments() const {
       return segments_;
     }
+
+    /// \return The list of JumboHeapSegments in the OG.
+    std::list<JumboHeapSegment> &getJumboSegments() {
+      return jumboSegments_;
+    }
+    const std::list<JumboHeapSegment> &getJumboSegments() const {
+      return jumboSegments_;
+    }
+
+    /// Iterate over all heap segments in the OG, and call \p
+    /// fixedSizeSegCallback and \p jumboSegCallback on each segment with
+    /// corresponding type. This does not support callback with return value or
+    /// early return.
+    template <typename FixedSizeSegmentCallBack, typename JumboSegmentCallBack>
+    void forAllSegments(
+        FixedSizeSegmentCallBack fixedSizeSegCallback,
+        JumboSegmentCallBack jumboSegCallback);
 
     /// Take ownership of the given segment.
     void addSegment(FixedSizeHeapSegment seg);
@@ -646,10 +669,14 @@ class HadesGC final : public GCBase {
     };
 
     /// Sweep the next segment and advance the internal sweep iterator. If there
-    /// are no more segments left to sweep, update OG collection stats with
-    /// numbers from the sweep. \p backgroundThread indicates  whether this call
-    /// was made from the background thread.
+    /// are no more segments left to sweep, calls endSweep(). \p
+    /// backgroundThread indicates whether this call was made from the
+    /// background thread.
     bool sweepNext(bool backgroundThread);
+
+    /// When no more segments to sweep, update OG collection stats with numbers
+    /// from the sweep. Note that freeUnusedJumboSegments() is also called here.
+    void endSweep();
 
     /// Initialize the internal sweep iterator. This will reset the internal
     /// sweep stats to 0, and set the sweep iterator to the last segment in the
@@ -663,6 +690,11 @@ class HadesGC final : public GCBase {
 
     /// \return The number of bytes of native memory in use by this OldGen.
     size_t getMemorySize() const;
+
+    /// Iterate through the jumbo segments list, and free those with dead
+    /// objects. This is run in the Sweep phase, allowing mutator to proceed
+    /// and allocate in YG.
+    void freeUnusedJumboSegments();
 
 #ifdef HERMES_SLOW_DEBUG
     /// Check that the freelists are well-formed.
@@ -766,6 +798,11 @@ class HadesGC final : public GCBase {
     /// Use a std::deque instead of a std::vector so that references into it
     /// remain valid across a push_back.
     std::deque<FixedSizeHeapSegment> segments_;
+
+    /// List of large heap segments, each contains a single GCCell.
+    /// Use std::list so that we can erase a segment once its GCCell is
+    /// dead.
+    std::list<JumboHeapSegment> jumboSegments_;
 
     /// See \c targetSizeBytes() above.
     ExponentialMovingAverage targetSizeBytes_{0, 0};
@@ -1255,6 +1292,10 @@ class HadesGC final : public GCBase {
   void scanDirtyCardsForSegment(
       EvacAcceptor<CompactionEnabled> &acceptor,
       FixedSizeHeapSegment &segment);
+  template <bool CompactionEnabled>
+  void scanDirtyCardsForSegment(
+      EvacAcceptor<CompactionEnabled> &acceptor,
+      JumboHeapSegment &segment);
 
   /// Find all pointers from OG into the YG/compactee during a YG collection.
   /// This is done quickly through use of write barriers that detect the
@@ -1323,12 +1364,6 @@ class HadesGC final : public GCBase {
   size_t getYoungGenExternalBytes() const;
   void setYoungGenExternalBytes(size_t sz);
 
-  /// Searches the old gen for this pointer. This is O(number of OG segments).
-  /// NOTE: In any non-debug case, \c inYoungGen should be used instead, because
-  /// it is O(1).
-  /// \return true if the pointer is in the old gen.
-  bool inOldGen(const void *p) const;
-
   /// Give the background GC a chance to complete marking and finish the OG
   /// collection.
   void yieldToOldGen();
@@ -1342,7 +1377,8 @@ class HadesGC final : public GCBase {
   /// \param extraName append this to the name of the segment. Must be
   ///   non-empty.
   void addSegmentExtentToCrashManager(
-      const FixedSizeHeapSegment &seg,
+      const AlignedHeapSegment &seg,
+      size_t segSize,
       const std::string &extraName);
 
   /// Deletes a segment from the CrashManager's custom data.

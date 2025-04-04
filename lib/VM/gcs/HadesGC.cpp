@@ -942,11 +942,12 @@ class HadesGC::Executor {
 };
 
 bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
-  // Check if there are any more segments to sweep. Note that in the case where
-  // OG has zero segments, this also skips updating the stats and survival ratio
-  // at the end of this function, since they are not required.
-  if (!sweepIterator_.segNumber)
+  // Check if there are any more segments to sweep. This could be triggered when
+  // OG has zero FixedSizeHeapSegment (but could have JumboHeapSegment).
+  if (!sweepIterator_.segNumber) {
+    endSweep();
     return false;
+  }
   assert(gc_.gcMutex_ && "gcMutex_ must be held while sweeping.");
 
   sweepIterator_.segNumber--;
@@ -1075,6 +1076,16 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   if (sweepIterator_.segNumber)
     return true;
 
+  endSweep();
+  return false;
+}
+
+void HadesGC::OldGen::endSweep() {
+  assert(!sweepIterator_.segNumber && "All segments should have been swept.");
+  // In the end of sweeping, free any dead jumbo segments. Note that this does
+  // not necessarily happen here, just a convenient place to do it.
+  freeUnusedJumboSegments();
+
   // This was the last sweep iteration, finish the collection.
   auto &stats = *gc_.ogCollectionStats_;
 
@@ -1103,7 +1114,6 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   uint64_t clampedSizeBytes = std::min(targetSizeBytes, gc_.maxHeapSize_);
   targetSizeBytes_.update(clampedSizeBytes);
   sweepIterator_ = {};
-  return false;
 }
 
 void HadesGC::OldGen::initializeSweep() {
@@ -1412,8 +1422,9 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
 
   // First, clear any mark bits that were set by a previous collection or
   // direct-to-OG allocation, they aren't needed anymore.
-  for (FixedSizeHeapSegment &seg : oldGen_.getSegments())
-    seg.markBitArray().reset();
+  oldGen_.forAllSegments(
+      [](auto &&seg) { seg.markBitArray().reset(); },
+      [](auto &&seg) { seg.markBitArray().reset(); });
 
   // Unmark all symbols in the identifier table, as Symbol liveness will be
   // determined during the collection.
@@ -1592,7 +1603,9 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
     compactee_.segment =
         std::make_shared<FixedSizeHeapSegment>(oldGen_.popSegment());
     addSegmentExtentToCrashManager(
-        *compactee_.segment, kCompacteeNameForCrashMgr);
+        *compactee_.segment,
+        FixedSizeHeapSegment::storageSize(),
+        kCompacteeNameForCrashMgr);
     compactee_.start = compactee_.segment->lowLim();
     compactee_.startCP = CompressedPointer::encodeNonNull(
         reinterpret_cast<GCCell *>(compactee_.segment->lowLim()),
@@ -1773,6 +1786,49 @@ void HadesGC::completeMarking() {
   markState_.reset();
 }
 
+void HadesGC::OldGen::freeUnusedJumboSegments() {
+  assert(
+      gc_.gcMutex_ && "GC mutex must be held when freeing dead jumbo segments");
+  for (auto it = jumboSegments_.begin(); it != jumboSegments_.end();) {
+    auto *cell = reinterpret_cast<GCCell *>(it->start());
+    if (AlignedHeapSegment::getCellMarkBit(cell)) {
+      ++it;
+      continue;
+    }
+    // Cell must be dead now.
+
+    // TODO: we need to handle cell with size larger than GCCell::maxSize().
+    auto sz = cell->getAllocatedSize();
+    // Run its finalizer first if it has one.
+    cell->getVT()->finalizeIfExists(cell, gc_);
+    if (gc_.isTrackingIDs()) {
+      gc_.untrackObject(cell, sz);
+    }
+    // Reflect the allocation bytes change.
+    incrementAllocatedBytes(-sz);
+    sweepIterator_.sweptBytes += sz;
+
+#ifndef NDEBUG
+    // Remove the segment address mapping.
+    for (auto *alignedAddr = it->lowLim(), *end = it->hiLim();
+         alignedAddr != end;
+         alignedAddr += AlignedHeapSegment::kSegmentUnitSize) {
+      bool success = gc_.unitSegmentAddrMap_.erase(alignedAddr);
+      assert(
+          success &&
+          "Existing JumboHeapSegment must have mapping entries in unitSegmentAddrMap_");
+    }
+#endif
+
+    // Remove the entire segment.
+    const size_t segIdx =
+        AlignedHeapSegment::getSegmentIndexFromStart(it->lowLim());
+    it = jumboSegments_.erase(it);
+    gc_.segmentIndices_.push_back(segIdx);
+    gc_.removeSegmentExtentFromCrashManager(std::to_string(segIdx));
+  }
+}
+
 void HadesGC::finalizeAll() {
   std::lock_guard<Mutex> lk{gcMutex_};
   // Terminate any existing OG collection.
@@ -1801,8 +1857,13 @@ void HadesGC::finalizeAll() {
     forCompactedObjsInSegment(
         *compactee_.segment, finalizeCallback, getPointerBase());
 
-  for (FixedSizeHeapSegment &seg : oldGen_.getSegments())
-    forAllObjsInSegment(seg, finalizeCallback);
+  oldGen_.forAllSegments(
+      [&finalizeCallback](auto &&seg) {
+        forAllObjsInSegment(seg, finalizeCallback);
+      },
+      [&finalizeCallback](auto &&seg) {
+        finalizeCallback(reinterpret_cast<GCCell *>(seg.start()));
+      });
 }
 
 void HadesGC::creditExternalMemory(GCCell *cell, uint32_t sz) {
@@ -2103,6 +2164,16 @@ bool HadesGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxHeapSize_;
 }
 
+template <typename FixedSizeSegmentCallBack, typename JumboSegmentCallBack>
+void HadesGC::OldGen::forAllSegments(
+    FixedSizeSegmentCallBack fixedSizeSegCallback,
+    JumboSegmentCallBack jumboSegCallback) {
+  for (FixedSizeHeapSegment &seg : getSegments())
+    fixedSizeSegCallback(seg);
+  for (JumboHeapSegment &seg : getJumboSegments())
+    jumboSegCallback(seg);
+}
+
 void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
   std::lock_guard<Mutex> lk{gcMutex_};
   forAllObjsInSegment(youngGen(), callback);
@@ -2116,12 +2187,19 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
       callback(cell);
     }
   };
-  for (FixedSizeHeapSegment &seg : oldGen_.getSegments()) {
-    if (concurrentPhase_ != Phase::Sweep)
-      forAllObjsInSegment(seg, callback);
-    else
-      forAllObjsInSegment(seg, skipGarbageCallback);
-  }
+  oldGen_.forAllSegments(
+      [this, &skipGarbageCallback, &callback](auto &&seg) {
+        if (concurrentPhase_ != Phase::Sweep)
+          forAllObjsInSegment(seg, callback);
+        else
+          forAllObjsInSegment(seg, skipGarbageCallback);
+      },
+      [this, &skipGarbageCallback, &callback](auto &&seg) {
+        if (concurrentPhase_ != Phase::Sweep)
+          callback(reinterpret_cast<GCCell *>(seg.start()));
+        else
+          skipGarbageCallback(reinterpret_cast<GCCell *>(seg.start()));
+      });
   if (compactee_.segment) {
     if (!compactee_.evacActive())
       forAllObjsInSegment(*compactee_.segment, callback);
@@ -2150,6 +2228,15 @@ bool HadesGC::validPointer(const void *p) const {
 
 bool HadesGC::dbgContains(const void *p) const {
   return inYoungGen(p) || inOldGen(p);
+}
+
+bool HadesGC::inOldGen(const void *p) const {
+  auto alignedAddr = reinterpret_cast<const char *>(llvh::alignDown(
+      reinterpret_cast<uintptr_t>(p), AlignedHeapSegment::kSegmentUnitSize));
+  // If it isn't in any OG segment or the compactee, or in a JumboHeapSegment,
+  // then this pointer is not considered in the OG.
+  return alignedAddr != youngGen_.lowLim() &&
+      unitSegmentAddrMap_.find(alignedAddr) != unitSegmentAddrMap_.end();
 }
 
 void HadesGC::trackReachable(CellKind kind, unsigned sz) {}
@@ -2671,7 +2758,8 @@ bool HadesGC::promoteYoungGenToOldGen() {
 }
 
 FixedSizeHeapSegment HadesGC::setYoungGen(FixedSizeHeapSegment seg) {
-  addSegmentExtentToCrashManager(seg, "YG");
+  addSegmentExtentToCrashManager(
+      seg, FixedSizeHeapSegment::storageSize(), "YG");
   youngGenFinalizables_.clear();
   std::swap(youngGen_, seg);
   youngGenCP_ = CompressedPointer::encodeNonNull(
@@ -2814,6 +2902,46 @@ void HadesGC::scanDirtyCardsForSegment(
 }
 
 template <bool CompactionEnabled>
+void HadesGC::scanDirtyCardsForSegment(
+    EvacAcceptor<CompactionEnabled> &acceptor,
+    JumboHeapSegment &seg) {
+  auto *cell = reinterpret_cast<GCCell *>(seg.start());
+
+  // If it's Sweep phase and the object is dead, don't scan it. For more
+  // detailed description, please see the comments in above function.
+  if (concurrentPhase_ == Phase::Sweep &&
+      !AlignedHeapSegment::getCellMarkBit(cell)) {
+    return;
+  }
+
+  const char *const segEnd = seg.hiLim();
+  size_t from = seg.addressToCardIndex(seg.start());
+  const size_t to = seg.addressToCardIndex(segEnd - 1) + 1;
+
+  acceptor.setCurrentCell(cell);
+  while (const auto oiBegin = seg.findNextDirtyCard(from, to)) {
+    const auto iBegin = *oiBegin;
+
+    const auto oiEnd = seg.findNextCleanCard(iBegin, to);
+    const auto iEnd = oiEnd ? *oiEnd : to;
+
+    assert(
+        (iEnd == to || !seg.isCardForIndexDirty(iEnd)) &&
+        seg.isCardForIndexDirty(iEnd - 1) &&
+        "end should either be the end of the card table, or the first "
+        "non-dirty card after a sequence of dirty cards");
+    assert(iBegin < iEnd && "Indices must be apart by at least one");
+
+    const char *const begin = seg.cardIndexToAddress(iBegin);
+    const char *const end = seg.cardIndexToAddress(iEnd);
+
+    markCellWithinRange(acceptor, cell, begin, end);
+
+    from = iEnd;
+  }
+}
+
+template <bool CompactionEnabled>
 void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
   const bool preparingCompaction =
       CompactionEnabled && !compactee_.evacActive();
@@ -2832,6 +2960,16 @@ void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
     // Do not clear the card table if the OG thread is currently marking to
     // prepare for a compaction. Note that we should clear the card tables if
     // the compaction is currently ongoing.
+    if (!preparingCompaction)
+      seg.clearAllCards();
+  }
+
+  for (JumboHeapSegment &seg : oldGen_.getJumboSegments()) {
+    // Unlike FixedSizeHeapSegment, we cannot allocate additional jumbo segments
+    // during a YG collection, so we don't need to worry about that. But in
+    // principle, it should still be safe to use reference in that case because
+    // jumbo segments are stored in a list instead of vector.
+    scanDirtyCardsForSegment(acceptor, seg);
     if (!preparingCompaction)
       seg.clearAllCards();
   }
@@ -2861,9 +2999,14 @@ uint64_t HadesGC::externalBytes() const {
 }
 
 uint64_t HadesGC::segmentFootprint() const {
-  size_t totalSegments = oldGen_.numSegments() + (youngGen_ ? 1 : 0) +
+  size_t totalNormalSegments = oldGen_.numSegments() + (youngGen_ ? 1 : 0) +
       (compactee_.segment ? 1 : 0);
-  return totalSegments * FixedSizeHeapSegment::storageSize();
+  size_t totalSegmentBytes =
+      totalNormalSegments * FixedSizeHeapSegment::storageSize();
+  for (const JumboHeapSegment &seg : oldGen_.getJumboSegments()) {
+    totalSegmentBytes += seg.storageSize();
+  }
+  return totalSegmentBytes;
 }
 
 uint64_t HadesGC::heapFootprint() const {
@@ -2886,7 +3029,11 @@ uint64_t HadesGC::OldGen::externalBytes() const {
 
 uint64_t HadesGC::OldGen::size() const {
   size_t totalSegments = numSegments() + (gc_.compactee_.segment ? 1 : 0);
-  return totalSegments * FixedSizeHeapSegment::maxSize();
+  size_t jumboSegBytes = 0;
+  for (auto &seg : jumboSegments_) {
+    jumboSegBytes += seg.storageSize();
+  }
+  return totalSegments * FixedSizeHeapSegment::storageSize() + jumboSegBytes;
 }
 
 uint64_t HadesGC::OldGen::targetSizeBytes() const {
@@ -2924,6 +3071,13 @@ llvh::ErrorOr<size_t> HadesGC::getVMFootprintForTest() const {
       return segFootprint;
     footprint += *segFootprint;
   }
+  for (const JumboHeapSegment &seg : oldGen_.getJumboSegments()) {
+    auto segFootprint =
+        hermes::oscompat::vm_footprint(seg.start(), seg.hiLim());
+    if (!segFootprint)
+      return segFootprint;
+    footprint += *segFootprint;
+  }
   return footprint;
 }
 
@@ -2951,7 +3105,8 @@ llvh::ErrorOr<FixedSizeHeapSegment> HadesGC::createSegment() {
     segIdx = ++numSegments_;
   }
   gcCallbacks_.registerHeapSegment(segIdx, seg.lowLim());
-  addSegmentExtentToCrashManager(seg, std::to_string(segIdx));
+  addSegmentExtentToCrashManager(
+      seg, FixedSizeHeapSegment::storageSize(), std::to_string(segIdx));
 #ifndef NDEBUG
   auto inserted =
       unitSegmentAddrMap_.try_emplace(seg.lowLim(), seg.lowLim(), seg.hiLim());
@@ -2983,7 +3138,10 @@ void HadesGC::OldGen::addSegment(FixedSizeHeapSegment seg) {
     addCellToFreelist(res.ptr, sz, &segmentBuckets_.back()[bucket]);
   }
 
-  gc_.addSegmentExtentToCrashManager(newSeg, std::to_string(numSegments()));
+  gc_.addSegmentExtentToCrashManager(
+      newSeg,
+      FixedSizeHeapSegment::storageSize(),
+      std::to_string(numSegments()));
 }
 
 FixedSizeHeapSegment HadesGC::OldGen::popSegment() {
@@ -3005,15 +3163,6 @@ void HadesGC::OldGen::setTargetSizeBytes(size_t targetSizeBytes) {
   assert(gc_.gcMutex_ && "Must hold gcMutex_ when accessing targetSizeBytes_.");
   assert(!targetSizeBytes_ && "Should only initialise targetSizeBytes_ once.");
   targetSizeBytes_ = ExponentialMovingAverage(0.5, targetSizeBytes);
-}
-
-bool HadesGC::inOldGen(const void *p) const {
-  // If it isn't in any OG segment or the compactee, then this pointer is not
-  // in the OG.
-  return compactee_.contains(p) ||
-      llvh::any_of(oldGen_.getSegments(), [p](const FixedSizeHeapSegment &seg) {
-           return seg.contains(p);
-         });
 }
 
 void HadesGC::yieldToOldGen() {
@@ -3067,7 +3216,8 @@ void HadesGC::updateDrainRate() {
 }
 
 void HadesGC::addSegmentExtentToCrashManager(
-    const FixedSizeHeapSegment &seg,
+    const AlignedHeapSegment &seg,
+    size_t segSize,
     const std::string &extraName) {
   assert(!extraName.empty() && "extraName can't be empty");
   if (!crashMgr_) {
@@ -3075,11 +3225,16 @@ void HadesGC::addSegmentExtentToCrashManager(
   }
   const std::string segmentName = name_ + ":HeapSegment:" + extraName;
   // Pointers need at most 18 characters for 0x + 16 digits for a 64-bit
-  // pointer.
-  constexpr unsigned kAddressMaxSize = 18;
-  char segmentAddressBuffer[kAddressMaxSize];
-  snprintf(segmentAddressBuffer, kAddressMaxSize, "%p", seg.lowLim());
-  crashMgr_->setContextualCustomData(segmentName.c_str(), segmentAddressBuffer);
+  // pointer. Same for the size digits. Add an extra char for the terminator.
+  constexpr unsigned kBufferMaxSize = 18 + 18 + 2;
+  char segmentExtentBuffer[kBufferMaxSize];
+  snprintf(
+      segmentExtentBuffer,
+      kBufferMaxSize,
+      "%p:%p",
+      seg.lowLim(),
+      seg.lowLim() + segSize);
+  crashMgr_->setContextualCustomData(segmentName.c_str(), segmentExtentBuffer);
 
 #ifdef HERMESVM_PLATFORM_LOGGING
   hermesLog(
@@ -3293,6 +3448,7 @@ void HadesGC::verifyCardTable() {
   for (const FixedSizeHeapSegment &seg : oldGen_.getSegments()) {
     seg.cardBoundaryTable().verifyBoundaries(seg.start(), seg.level());
   }
+  // JumboHeapSegment does not use card boundary table, so don't verify them.
 }
 
 #endif
