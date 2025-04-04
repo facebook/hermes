@@ -342,7 +342,7 @@ jobs:
         name: windows-hermes
         path: c:\tmp\hermes\output
   npm:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs:
     - android
     - linux
@@ -392,7 +392,7 @@ jobs:
         name: npm-hermes
         path: /tmp/hermes/output
   emscripten:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     container:
       image: emscripten/emsdk:2.0.9
     steps:
@@ -434,7 +434,7 @@ jobs:
         name: emscripten-hermes
         path: output
   sandbox:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     container:
       image: emscripten/emsdk:3.1.39
     env:
@@ -484,7 +484,7 @@ jobs:
         cmake --build build_opt -j 4
         cmake --build build_opt --target check-hermes -j 4
   test-linux:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - name: Install dependencies
       run: |-
@@ -589,7 +589,7 @@ jobs:
         cmake --build ./build --target check-hermes
         python3 hermes/utils/testsuite/run_testsuite.py --test-intl test262/test -b build/bin
   test-linux-test262:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4.1.0
       with:
