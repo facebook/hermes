@@ -569,18 +569,31 @@ void MallocGC::debitExternalMemory(GCCell *, uint32_t size) {
   externalBytes_ -= size;
 }
 
-/// @name Forward instantiations
-/// @{
-
-template void *MallocGC::alloc</*FixedSize*/ true, HasFinalizer::Yes>(
-    uint32_t size);
-template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::Yes>(
-    uint32_t size);
-template void *MallocGC::alloc</*FixedSize*/ true, HasFinalizer::No>(
-    uint32_t size);
-template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::No>(
-    uint32_t size);
-/// @}
+GCCell *MallocGC::alloc(uint32_t size) {
+  assert(noAllocLevel_ == 0 && "no alloc allowed right now");
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to alloc must use a size aligned to HeapAlign");
+  if (shouldSanitizeHandles()) {
+    collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
+  }
+  // Use subtraction to prevent overflow.
+  if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
+    collectBeforeAlloc(kNaturalCauseForAnalytics, size);
+  }
+  // Add space for the header.
+  auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
+  GCCell *mem = header->data();
+  initCell(mem, size);
+  // Add to the set of pointers owned by the GC.
+  pointers_.insert(header);
+  allocatedBytes_ += size;
+  totalAllocatedBytes_ += size;
+#ifndef NDEBUG
+  ++numAllocatedObjects_;
+#endif
+  return mem;
+}
 
 } // namespace vm
 } // namespace hermes

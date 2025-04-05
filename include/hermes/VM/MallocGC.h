@@ -178,13 +178,6 @@ class MallocGC final : public GCBase {
   /// Run the finalizers for all heap objects.
   void finalizeAll() override;
 
-  /// \return true iff this is collecting the entire heap, or false if it is
-  /// only a portion of the heap.
-  /// \pre Assumes inGC() is true, or else this has no meaning.
-  bool inFullCollection() const {
-    return true;
-  }
-
 #ifndef NDEBUG
   /// See comment in GCBase.
   bool calledByGC() const override {
@@ -294,10 +287,7 @@ class MallocGC final : public GCBase {
 
   /// Allocate an object in the GC controlled heap with the size to allocate
   /// given by \p size.
-  template <
-      bool fixedSizeIgnored = true,
-      HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *alloc(uint32_t size);
+  GCCell *alloc(uint32_t size);
 
   /// Initialize a cell with the required basic data for any cell.
   inline void initCell(GCCell *cell, uint32_t size);
@@ -332,33 +322,6 @@ class MallocGC final : public GCBase {
 /// @name Inline implementations
 /// @{
 
-template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
-inline void *MallocGC::alloc(uint32_t size) {
-  assert(noAllocLevel_ == 0 && "no alloc allowed right now");
-  assert(
-      isSizeHeapAligned(size) &&
-      "Call to alloc must use a size aligned to HeapAlign");
-  if (shouldSanitizeHandles()) {
-    collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
-  }
-  // Use subtraction to prevent overflow.
-  if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
-    collectBeforeAlloc(kNaturalCauseForAnalytics, size);
-  }
-  // Add space for the header.
-  auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
-  GCCell *mem = header->data();
-  initCell(mem, size);
-  // Add to the set of pointers owned by the GC.
-  pointers_.insert(header);
-  allocatedBytes_ += size;
-  totalAllocatedBytes_ += size;
-#ifndef NDEBUG
-  ++numAllocatedObjects_;
-#endif
-  return mem;
-}
-
 inline bool MallocGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxSize_;
 }
@@ -377,7 +340,7 @@ inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
       "Call to makeA must use a size aligned to HeapAlign");
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
-  void *mem = alloc<fixedSize, hasFinalizer>(size);
+  GCCell *mem = alloc(size);
   return constructCell<T>(mem, size, std::forward<Args>(args)...);
 }
 
