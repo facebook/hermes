@@ -188,14 +188,14 @@ static void sh_unit_init_symbols(Runtime &runtime, SHUnit *unit) {
       // TODO: HACK HACK: if the hash is 0, calculate it.
       uint32_t hash = stringData[2] ? stringData[2] : hashString(str);
       id = runtime.getIdentifierTable()
-               .registerLazyIdentifier(str, hash)
+               .registerLazyIdentifier(runtime, str, hash)
                .unsafeGetRaw();
     } else {
       auto str = ASCIIRef{unit->ascii_pool + stringData[0], stringData[1]};
       // TODO: HACK HACK: if the hash is 0, calculate it.
       uint32_t hash = stringData[2] ? stringData[2] : hashString(str);
       id = runtime.getIdentifierTable()
-               .registerLazyIdentifier(str, hash)
+               .registerLazyIdentifier(runtime, str, hash)
                .unsafeGetRaw();
     }
     unit->symbols[symIndex] = id;

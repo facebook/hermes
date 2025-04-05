@@ -24,7 +24,7 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
       runtime,
       intern,
       runtime.getIdentifierTable().registerLazyIdentifier(
-          createASCIIRef("isDebuggerAttached")),
+          runtime, createASCIIRef("isDebuggerAttached")),
       nullptr,
       isDebuggerAttached,
       nullptr,
@@ -37,7 +37,7 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
       runtime,
       intern,
       runtime.getIdentifierTable().registerLazyIdentifier(
-          createASCIIRef("shouldPauseOnThrow")),
+          runtime, createASCIIRef("shouldPauseOnThrow")),
       nullptr,
       shouldPauseOnThrow,
       nullptr,

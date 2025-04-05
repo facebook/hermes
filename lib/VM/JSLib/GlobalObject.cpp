@@ -670,7 +670,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       runtime.getGlobal(),
       runtime,
       runtime.getIdentifierTable().registerLazyIdentifier(
-          createASCIIRef("DebuggerInternal")),
+          runtime, createASCIIRef("DebuggerInternal")),
       constantDPF,
       createDebuggerInternalObject(runtime)));
 

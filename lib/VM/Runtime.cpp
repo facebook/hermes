@@ -1609,7 +1609,7 @@ void Runtime::initPredefinedStrings() {
       "Arrays should have same length");
   for (uint32_t idx = 0; idx < strCount; idx++) {
     SymbolID sym = identifierTable_.registerLazyIdentifier(
-        ASCIIRef{&buffer[offset], strLengths[idx]}, hashes[idx]);
+        *this, ASCIIRef{&buffer[offset], strLengths[idx]}, hashes[idx]);
 
     assert(sym == Predefined::getSymbolID((Predefined::Str)registered++));
     (void)sym;

@@ -292,7 +292,8 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   if (flags_.persistent) {
     // Registering a lazy identifier does not allocate, so we do not need a
     // GC scope.
-    id = runtime_.getIdentifierTable().registerLazyIdentifier(str, hash);
+    id = runtime_.getIdentifierTable().registerLazyIdentifier(
+        runtime_, str, hash);
   } else {
     // Accessing a symbol non-lazily may allocate in the GC heap, so add a scope
     // marker.

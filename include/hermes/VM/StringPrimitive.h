@@ -402,7 +402,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// \return the unique id.
   /// This requires and asserts that the string is uniqued.
-  SymbolID getUniqueID() const;
+  SymbolID getUniqueID(Runtime &runtime) const;
 
   /// Mark this string as not uniqued. This is used by IdentifierTable when
   /// the associated SymbolID is garbage collected.
@@ -458,8 +458,9 @@ class SymbolStringPrimitive : public StringPrimitive {
   }
 
   /// \return the unique id.
-  SymbolID getUniqueID() const {
+  SymbolID getUniqueID(Runtime &runtime) const {
     assert(isUniqued() && "StringPrimitive is not uniqued");
+    runtime.getHeap().weakRefReadBarrier(weakUniqueID_);
     return weakUniqueID_;
   }
 };
@@ -1100,9 +1101,9 @@ inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
   }
 }
 
-inline SymbolID StringPrimitive::getUniqueID() const {
+inline SymbolID StringPrimitive::getUniqueID(Runtime &runtime) const {
   assert(this->isUniqued() && "StringPrimitive is not uniqued");
-  return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
+  return vmcast<SymbolStringPrimitive>(this)->getUniqueID(runtime);
 }
 
 inline char16_t StringPrimitive::at(uint32_t index) const {
