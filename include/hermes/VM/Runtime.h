@@ -902,6 +902,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     return hasES6Proxy_;
   }
 
+  bool hasAsyncGenerators() const {
+    return hasAsyncGenerators_;
+  }
+
   bool hasES6BlockScoping() const {
     return hasES6BlockScoping_;
   }
@@ -1146,6 +1150,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Set to true if we should enable ES6 Proxy.
   const bool hasES6Proxy_;
+
+  /// Set to true if we should enable async generators.
+  const bool hasAsyncGenerators_;
 
   /// Set to true if we should enable ES6 block scoping.
   const bool hasES6BlockScoping_;
