@@ -12,6 +12,7 @@
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
@@ -3450,6 +3451,20 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
     clazz->setForInCache(*arr, runtime);
   }
   return arr;
+}
+
+CallResult<PseudoHandle<>> getIndexedWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<JSObject> srcHandle,
+    uint64_t index,
+    Handle<> receiver) {
+  if (auto optRes = tryFastGetComputedMayAlloc(runtime, *srcHandle, index))
+    return createPseudoHandle(*optRes);
+
+  PinnedValue hvIndex = PinnedHermesValue::encodeTrustedNumberValue(index);
+  // TODO: call a less general function?
+  return JSObject::getComputedWithReceiver_RJS(
+      srcHandle, runtime, hvIndex, receiver);
 }
 
 } // namespace vm

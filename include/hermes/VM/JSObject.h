@@ -2156,6 +2156,23 @@ template <typename IndexType>
 inline OptValue<HermesValue>
 tryFastGetComputedNoAlloc(Runtime &runtime, JSObject *obj, IndexType index);
 
+/// A version of JSObject::getComputedWithReceiver_RJS(), specialized for
+/// uint32_t index. It attempts the fast paths before falling back to
+/// JSObject::getComputedWithReceiver_RJS().
+CallResult<PseudoHandle<>> getIndexedWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<JSObject> srcHandle,
+    uint64_t index,
+    Handle<> receiver);
+
+/// A version of JSObject::getComputed_RJS(), specialized for
+/// uint32_t index. It attempts the fast paths before falling back to
+/// JSObject::getComputed_RJS().
+inline CallResult<PseudoHandle<>>
+getIndexed_RJS(Runtime &runtime, Handle<JSObject> srcHandle, uint64_t index) {
+  return getIndexedWithReceiver_RJS(runtime, srcHandle, index, srcHandle);
+}
+
 } // namespace vm
 } // namespace hermes
 
