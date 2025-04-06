@@ -489,7 +489,7 @@ HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
     return HermesValue::encodeUndefinedValue();
   }
   if (LLVM_LIKELY(index < self->getLength())) {
-    auto elem = self->at(runtime, index);
+    auto elem = self->monoAt(runtime, index);
     noAllocs.release();
     return _getOwnRetEncoder<T>::encodeMayAlloc(runtime, elem);
   }
@@ -559,7 +559,7 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
     return true;
   }
   if (LLVM_LIKELY(index < typedArrayHandle->getLength())) {
-    typedArrayHandle->at(runtime, index) = destValue;
+    typedArrayHandle->monoAt(runtime, index) = destValue;
   }
   return true;
 }
