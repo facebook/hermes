@@ -240,9 +240,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
             return ExecutionStatus::EXCEPTION;
           }
         } else {
-          tmpHandle = HermesValue::encodeUntrustedNumberValue(i);
-          CallResult<PseudoHandle<>> valueRes =
-              JSObject::getComputed_RJS(arr, runtime, tmpHandle);
+          CallResult<PseudoHandle<>> valueRes = getIndexed_RJS(runtime, arr, i);
           if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }

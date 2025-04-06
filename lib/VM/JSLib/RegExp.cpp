@@ -1456,8 +1456,7 @@ regExpPrototypeSymbolMatch(void *, Runtime &runtime, NativeArgs args) {
     auto resultObj = Handle<JSObject>::vmcast(result);
     // 1. Let matchStr be ToString(Get(result, "0")).
     // 2. ReturnIfAbrupt(matchStr).
-    auto propRes2 = JSObject::getComputed_RJS(
-        resultObj, runtime, HandleRootOwner::getZeroValue());
+    auto propRes2 = getIndexed_RJS(runtime, resultObj, 0);
     if (propRes2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1676,8 +1675,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       // iii. Else,
       // 1. Let matchStr be ToString(Get(result, "0")).
       // 2. ReturnIfAbrupt(matchStr).
-      propRes = JSObject::getComputed_RJS(
-          result, runtime, HandleRootOwner::getZeroValue());
+      propRes = getIndexed_RJS(runtime, result, 0);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1719,7 +1717,6 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
   uint32_t nextSourcePosition = 0;
   // 16. Repeat, for each result in results,
   MutableHandle<> valueHandle{runtime};
-  MutableHandle<> nHandle{runtime};
   for (uint32_t i = 0, size = resultsHandle->size(); i < size; ++i) {
     GCScopeMarkerRAII marker1{runtime};
     result = vmcast<JSObject>(resultsHandle->at(i).getObject(runtime));
@@ -1741,8 +1738,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
     nCaptures = nCaptures > 0 ? nCaptures - 1 : 0;
     // d. Let matched be ToString(Get(result, "0")).
     // e. ReturnIfAbrupt(matched).
-    propRes = JSObject::getComputed_RJS(
-        result, runtime, HandleRootOwner::getZeroValue());
+    propRes = getIndexed_RJS(runtime, result, 0);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1792,8 +1788,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       GCScopeMarkerRAII marker2{runtime};
       // i. Let capN be Get(result, ToString(n)).
       // ii. ReturnIfAbrupt(capN).
-      nHandle = HermesValue::encodeTrustedNumberValue(n);
-      propRes = JSObject::getComputed_RJS(result, runtime, nHandle);
+      propRes = getIndexed_RJS(runtime, result, n);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }

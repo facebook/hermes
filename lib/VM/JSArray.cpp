@@ -900,8 +900,7 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
 
   // 13. Let elementKey be ToString(index).
   // 14. Let elementValue be Get(a, elementKey).
-  CallResult<PseudoHandle<>> valueRes =
-      JSObject::getComputed_RJS(lv.a, runtime, lv.index);
+  CallResult<PseudoHandle<>> valueRes = getIndexed_RJS(runtime, lv.a, index);
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

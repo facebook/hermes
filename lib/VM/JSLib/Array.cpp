@@ -577,7 +577,6 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
     PinnedValue<> E;
     PinnedValue<JSObject> elementObj;
     PinnedValue<> lenProp;
-    PinnedValue<> i;
     PinnedValue<Callable> func;
     PinnedValue<JSArray> strings;
     PinnedValue<StringPrimitive> strElement;
@@ -624,22 +623,18 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   }
   lv.strings = std::move(*arrRes);
 
-  // Index into the array.
-  lv.i = HermesValue::encodeTrustedNumberValue(0);
-
   auto marker = gcScope.createMarker();
-  while (lv.i->getNumber() < len) {
+  for (uint32_t i = 0; i < len; ++i) {
     gcScope.flushToMarker(marker);
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getComputed_RJS(lv.array, runtime, lv.i)) ==
+            (propRes = getIndexed_RJS(runtime, lv.array, i)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     lv.E = std::move(*propRes);
     if (lv.E->isUndefined() || lv.E->isNull()) {
       // Empty string for undefined or null element. No need to add to size.
-      JSArray::setElementAt(
-          lv.strings, runtime, lv.i->getNumber(), emptyString);
+      JSArray::setElementAt(lv.strings, runtime, i, emptyString);
     } else {
       if (LLVM_UNLIKELY(
               (objRes = toObject(runtime, lv.E)) ==
@@ -692,13 +687,11 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
           return runtime.raiseRangeError(
               "resulting string length exceeds limit");
         }
-        JSArray::setElementAt(
-            lv.strings, runtime, lv.i->getNumber(), lv.strElement);
+        JSArray::setElementAt(lv.strings, runtime, i, lv.strElement);
       } else {
         return runtime.raiseTypeError("toLocaleString() not callable");
       }
     }
-    lv.i = HermesValue::encodeTrustedNumberValue(lv.i->getNumber() + 1);
   }
 
   // Create and then populate the result string.
@@ -748,7 +741,6 @@ CallResult<HermesValue>
 arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
     PinnedValue<JSObject> O;
-    PinnedValue<> nameVal;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
@@ -761,9 +753,11 @@ arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   lv.O = vmcast<JSObject>(*objRes);
 
   // 2. Let len be ? LengthOfArrayLike(O).
-  auto jsArr = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
-                                     : Runtime::makeNullHandle<JSArray>();
-  auto lenRes = lengthOfArrayLike(runtime, lv.O, jsArr);
+  auto lenRes = lengthOfArrayLike(
+      runtime,
+      lv.O,
+      vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
+                            : Runtime::makeNullHandle<JSArray>());
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -794,17 +788,8 @@ arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // 7. Return ? Get(O, ! ToString(𝔽(k))).
-  if (LLVM_LIKELY(jsArr)) {
-    const SmallHermesValue elm = jsArr->at(runtime, k);
-    // If the element is not empty, we can return it directly here. Otherwise,
-    // we must proceed to the slow path.
-    if (!elm.isEmpty()) {
-      return elm.unboxToHV(runtime);
-    }
-  }
-  lv.nameVal = HermesValue::encodeTrustedNumberValue(k);
   CallResult<PseudoHandle<>> propRes =
-      JSObject::getComputed_RJS(lv.O, runtime, lv.nameVal);
+      getIndexed_RJS(runtime, lv.O, (uint64_t)k);
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2988,7 +2973,7 @@ arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
 
   lv.lenProp = HermesValue::encodeTrustedNumberValue(len - 1);
   if (LLVM_UNLIKELY(
-          (propRes = JSObject::getComputed_RJS(lv.O, runtime, lv.lenProp)) ==
+          (propRes = getIndexed_RJS(runtime, lv.O, len - 1)) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3016,7 +3001,6 @@ arrayPrototypeShift(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
-    PinnedValue<> idx;
     PinnedValue<> from;
     PinnedValue<> to;
     PinnedValue<> fromVal;
@@ -3058,9 +3042,8 @@ arrayPrototypeShift(void *, Runtime &runtime, NativeArgs args) {
     return HermesValue::encodeUndefinedValue();
   }
 
-  lv.idx = HermesValue::encodeTrustedNumberValue(0);
   if (LLVM_UNLIKELY(
-          (propRes = JSObject::getComputed_RJS(lv.O, runtime, lv.idx)) ==
+          (propRes = getIndexed_RJS(runtime, lv.O, 0)) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3904,7 +3887,7 @@ findHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = *intRes;
+  uint64_t len = *intRes;
 
   auto predicate = args.dyncastArg<Callable>(0);
   if (!predicate) {
@@ -3915,10 +3898,11 @@ findHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
   auto T = args.getArgHandle(1);
   auto marker = gcScope.createMarker();
   for (size_t i = 0; i < len; ++i) {
-    lv.k = HermesValue::encodeTrustedNumberValue(reverse ? (len - i - 1) : i);
+    uint64_t k = reverse ? len - i - 1 : i;
+    lv.k = HermesValue::encodeTrustedNumberValue(k);
     gcScope.flushToMarker(marker);
     if (LLVM_UNLIKELY(
-            (propRes = JSObject::getComputed_RJS(lv.O, runtime, lv.k)) ==
+            (propRes = getIndexed_RJS(runtime, lv.O, k)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -4269,7 +4253,6 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
-    PinnedValue<> k;
   } lv;
   LocalsRAII lraii{runtime, &lv};
   GCScope gcScope{runtime};
@@ -4292,7 +4275,7 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = *lenRes;
+  uint64_t len = *lenRes;
 
   // 3. If len is 0, return false.
   if (len == 0) {
@@ -4308,19 +4291,22 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
   // Use double here, because ToInteger may return Infinity.
   double n = nRes->getNumber();
 
-  double k;
+  uint64_t k;
   if (n >= 0) {
     // 5. If n ≥ 0, then
     // 5a. Let k be n.
-    k = n;
+    if (n > (double)len)
+      k = len;
+    else
+      k = (uint64_t)n;
   } else {
     // 6. Else n < 0,
     // 6a. Let k be len + n.
-    k = len + n;
+    double fk = len + n;
     // 6b. If k < 0, let k be 0.
-    if (k < 0) {
-      k = 0;
-    }
+    if (fk < 0)
+      fk = 0;
+    k = (uint64_t)fk;
   }
 
   // 7. Repeat, while k < len
@@ -4329,8 +4315,7 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
     gcScope.flushToMarker(marker);
 
     // 7a. Let elementK be the result of ? Get(O, ! ToString(k)).
-    lv.k = HermesValue::encodeTrustedNumberValue(k);
-    auto elementKRes = JSObject::getComputed_RJS(lv.O, runtime, lv.k);
+    auto elementKRes = getIndexed_RJS(runtime, lv.O, k);
     if (LLVM_UNLIKELY(elementKRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -4457,54 +4442,37 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// Copies \p count elements from \p from (or \p fromArr if is simple array)
-static inline CallResult<double> arrayCopyHelper(
+static inline CallResult<uint32_t> arrayCopyHelper(
     Runtime &runtime,
     GCScope &gcScope,
     Handle<JSObject> from,
-    Handle<JSArray> fromArr,
     uint32_t fromStartIndex,
     Handle<JSArray> to,
     uint32_t toStartIndex,
     uint32_t count) {
   struct : Locals {
-    PinnedValue<> fromIndex;
-    PinnedValue<> toIndex;
     PinnedValue<> fromValue;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
   auto marker = gcScope.createMarker();
-  double i = 0;
+  uint32_t i = 0;
 
   while (i < count) {
     gcScope.flushToMarker(marker);
-    auto fromIndex = fromStartIndex + i;
 
-    if (LLVM_LIKELY(fromArr)) {
-      const SmallHermesValue elem = fromArr->at(runtime, fromIndex);
-      if (!elem.isEmpty()) {
-        lv.fromValue = elem.unboxToHV(runtime);
-      }
-    }
-    // Slow path
-    else {
-      lv.fromIndex = HermesValue::encodeTrustedNumberValue(fromIndex);
+    auto propRes = getIndexed_RJS(runtime, from, fromStartIndex + i);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    lv.fromValue = std::move(*propRes);
 
-      CallResult<PseudoHandle<>> propRes =
-          JSObject::getComputed_RJS(from, runtime, lv.fromIndex);
-      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      lv.fromValue = propRes->getHermesValue();
-    }
-
-    lv.toIndex = HermesValue::encodeTrustedNumberValue(toStartIndex + i);
-
+    PinnedValue toIndex =
+        HermesValue::encodeTrustedNumberValue(toStartIndex + i);
     if (LLVM_UNLIKELY(
             JSObject::defineOwnComputedPrimitive(
                 to,
                 runtime,
-                lv.toIndex,
+                toIndex,
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
                 lv.fromValue,
                 PropOpFlags().plusThrowOnError()) ==
@@ -4537,9 +4505,11 @@ arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
   lv.O = vmcast<JSObject>(*oRes);
 
   // 2. Let len be ? LengthOfArrayLike(O).
-  auto jsArr = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
-                                     : Runtime::makeNullHandle<JSArray>();
-  auto lenRes = lengthOfArrayLike(runtime, lv.O, jsArr);
+  auto lenRes = lengthOfArrayLike(
+      runtime,
+      lv.O,
+      vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
+                            : Runtime::makeNullHandle<JSArray>());
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -4624,13 +4594,11 @@ arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
 
   uint64_t paramIndex = 2;
 
-  auto fromArr = jsArr;
-
   // 16a - 16d
   // Copy elements from original array O from beginning until actualStart into
   // new array A
   auto copyRes =
-      arrayCopyHelper(runtime, gcScope, lv.O, fromArr, 0, lv.A, 0, actualStart);
+      arrayCopyHelper(runtime, gcScope, lv.O, 0, lv.A, 0, actualStart);
   if (LLVM_UNLIKELY(copyRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -4662,8 +4630,8 @@ arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
   // 18a - 18f
   // Copy remaining elements from original array O including skipCount into new
   // array A
-  copyRes = arrayCopyHelper(
-      runtime, gcScope, lv.O, fromArr, r, lv.A, i, lenAfterInsert - i);
+  copyRes =
+      arrayCopyHelper(runtime, gcScope, lv.O, r, lv.A, i, lenAfterInsert - i);
   if (LLVM_UNLIKELY(copyRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -4678,7 +4646,6 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> A;
-    PinnedValue<> kVal;
     PinnedValue<> fromValue;
   } lv;
   LocalsRAII lraii{runtime, &lv};
@@ -4692,13 +4659,15 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   lv.O = vmcast<JSObject>(*oRes);
 
   // 2. Let len be ? LengthOfArrayLike(O).
-  auto jsArr = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
-                                     : Runtime::makeNullHandle<JSArray>();
-  auto lenRes = lengthOfArrayLike(runtime, lv.O, jsArr);
+  auto lenRes = lengthOfArrayLike(
+      runtime,
+      lv.O,
+      vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
+                            : Runtime::makeNullHandle<JSArray>());
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto len = lenRes.getValue();
+  uint64_t len = lenRes.getValue();
 
   // 3. Let relativeIndex be ? ToIntegerOrInfinity(index).
   auto relativeIndexRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
@@ -4735,7 +4704,7 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   lv.A = std::move(*ARes);
 
   // 8. Let k be 0.
-  double k = 0;
+  uint64_t k = 0;
 
   auto marker = gcScope.createMarker();
   // 9. Repeat, while k < len,
@@ -4743,8 +4712,7 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
     gcScope.flushToMarker(marker);
 
     // 9a. Let Pk be the result of ? Get(O, ! ToString(k)).
-    lv.kVal = HermesValue::encodeUntrustedNumberValue(k);
-    auto PkRes = JSObject::getComputed_RJS(lv.O, runtime, lv.kVal);
+    auto PkRes = getIndexed_RJS(runtime, lv.O, k);
     if (LLVM_UNLIKELY(PkRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -4755,31 +4723,19 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
     }
     // 9c. Else, let fromValue be ? Get(O, Pk).
     else {
-      if (LLVM_LIKELY(jsArr)) {
-        const SmallHermesValue elm = jsArr->at(runtime, k);
-        // If the element is not empty, we can return it directly here.
-        // Otherwise, we must proceed to the slow path.
-        if (!elm.isEmpty()) {
-          lv.fromValue = elm.unboxToHV(runtime);
-        }
-      }
-      // Slow path
-      else {
-        CallResult<PseudoHandle<>> propRes =
-            JSObject::getComputed_RJS(lv.O, runtime, lv.kVal);
-        if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        lv.fromValue = std::move(*propRes);
-      }
+      auto propRes = getIndexed_RJS(runtime, lv.O, k);
+      if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      lv.fromValue = std::move(*propRes);
     }
 
     // 9d. Perform ! CreateDataPropertyOrThrow(A, Pk, fromValue).
+    PinnedValue kVal = HermesValue::encodeTrustedNumberValue(k);
     if (LLVM_UNLIKELY(
             JSObject::defineOwnComputedPrimitive(
                 lv.A,
                 runtime,
-                lv.kVal,
+                kVal,
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
                 lv.fromValue,
                 PropOpFlags().plusThrowOnError()) ==
@@ -5066,10 +5022,11 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
   // 15. Let k be 0.
   lv.k = HermesValue::encodeTrustedNumberValue(0);
   // 16. Repeat, while k < len
-  while (lv.k->getNumberAs<uint32_t>() < len) {
+  while (lv.k->getNumber() < (double)len) {
     GCScopeMarkerRAII marker2{runtime};
     // b. Let kValue be Get(arrayLike, Pk).
-    propRes = JSObject::getComputed_RJS(lv.arrayLike, runtime, lv.k);
+    propRes =
+        getIndexed_RJS(runtime, lv.arrayLike, (uint64_t)lv.k->getNumber());
     // c. ReturnIfAbrupt(kValue).
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

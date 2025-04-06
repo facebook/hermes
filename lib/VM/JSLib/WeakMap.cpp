@@ -135,8 +135,6 @@ weakMapConstructor(void *, Runtime &runtime, NativeArgs args) {
   MutableHandle<JSObject> nextItem{runtime};
   MutableHandle<> keyHandle{runtime};
   MutableHandle<> valueHandle{runtime};
-  Handle<> zero = HandleRootOwner::getZeroValue();
-  Handle<> one = HandleRootOwner::getOneValue();
   auto marker = gcScope.createMarker();
 
   for (;;) {
@@ -159,12 +157,12 @@ weakMapConstructor(void *, Runtime &runtime, NativeArgs args) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     nextItem = vmcast<JSObject>(nextItemRes->get());
-    auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
+    auto keyRes = getIndexed_RJS(runtime, nextItem, 0);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
     keyHandle = std::move(*keyRes);
-    auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
+    auto valueRes = getIndexed_RJS(runtime, nextItem, 1);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }

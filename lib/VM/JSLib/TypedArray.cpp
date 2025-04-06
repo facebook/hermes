@@ -198,21 +198,20 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   }
   GCScope scope(runtime);
   // 8. Let k be 0.
-  MutableHandle<HermesValue> i(
-      runtime, HermesValue::encodeTrustedNumberValue(0));
+  uint64_t i = 0;
   auto marker = scope.createMarker();
   // 9. Repeat, while k < len.
-  for (; i->getNumberAs<uint64_t>() < len;
-       i = HermesValue::encodeTrustedNumberValue(
-           i->getNumberAs<uint64_t>() + 1)) {
+  for (; i < len; ++i) {
     // a. Let Pk be ! ToString(k).
     // b. Let kValue be ? Get(arrayLike, Pk).
     // c. Perform ? Set(O, Pk, kValue, true).
-    if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, i)) ==
-            ExecutionStatus::EXCEPTION ||
-        JSTypedArray<T, C>::putComputed_RJS(
-            self, runtime, i, runtime.makeHandle(std::move(*propRes))) ==
-            ExecutionStatus::EXCEPTION) {
+    if ((propRes = getIndexed_RJS(runtime, arrayLike, i)) ==
+        ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    PinnedValue iValue = HermesValue::encodeTrustedNumberValue(i);
+    if (JSTypedArray<T, C>::putComputed_RJS(
+            self, runtime, iValue, runtime.makeHandle(std::move(*propRes))) ==
+        ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     scope.flushToMarker(marker);
@@ -510,12 +509,10 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
   // Read everything from the other array and write it into self starting from
   // offset.
   GCScope scope(runtime);
-  MutableHandle<> k(runtime, HermesValue::encodeTrustedNumberValue(0));
+  uint64_t k = 0;
   auto marker = scope.createMarker();
-  for (; k->getNumberAs<uint64_t>() < srcLength;
-       k = HermesValue::encodeTrustedNumberValue(
-           k->getNumberAs<uint64_t>() + 1)) {
-    if ((propRes = JSObject::getComputed_RJS(src, runtime, k)) ==
+  for (; k < srcLength; ++k) {
+    if ((propRes = getIndexed_RJS(runtime, src, k)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -661,14 +658,12 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 9. Let k be 0.
-  MutableHandle<> k(runtime, HermesValue::encodeTrustedNumberValue(0));
+  uint64_t k = 0;
   // 10. Repeat, while k < len.
-  for (; k->getNumberAs<uint64_t>() < len;
-       k = HermesValue::encodeTrustedNumberValue(
-           k->getNumberAs<uint64_t>() + 1)) {
+  for (; k < len; ++k) {
     GCScopeMarkerRAII marker{runtime};
     // a - b. Get the value of the property at k.
-    if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, k)) ==
+    if ((propRes = getIndexed_RJS(runtime, arrayLike, k)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -676,7 +671,11 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     if (mapfn) {
       // i. Let mappedValue be ? Call(mapfn, T, [kValue, k]).
       auto callRes = Callable::executeCall2(
-          mapfn, runtime, T, propRes->get(), k.getHermesValue());
+          mapfn,
+          runtime,
+          T,
+          propRes->get(),
+          HermesValue::encodeTrustedNumberValue(k));
       if (callRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -687,7 +686,8 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     // d. Else, let mappedValue be kValue (already done by initializer).
     auto mappedValue = runtime.makeHandle(std::move(*propRes));
     // e. Perform ? Set(targetObj, Pk, mappedValue, true).
-    if (JSObject::putComputed_RJS(*targetObj, runtime, k, mappedValue) ==
+    PinnedValue kVal = HermesValue::encodeTrustedNumberValue(k);
+    if (JSObject::putComputed_RJS(*targetObj, runtime, kVal, mappedValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }

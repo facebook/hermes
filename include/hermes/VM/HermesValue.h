@@ -497,9 +497,11 @@ static_assert(
     std::is_trivial<HermesValue>::value,
     "HermesValue must be trivial");
 
-/// Encode common double constants to HermesValue.
-/// The tricks is that that we know the bit patterns of known constants.
+/// Encode common double constants to HermesValue. The encode functions cannot
+/// be used because they are not constepxr, so we use the bit patterns of known
+/// constants.
 struct HVConstants {
+  static_assert(HERMESVALUE_VERSION == 2, "HVConstants version mismatch");
   static constexpr HermesValue kZero = HermesValue(0);
   static constexpr HermesValue kOne = HermesValue(0x3ff0ull << 48);
   static constexpr HermesValue kNegOne = HermesValue(0xbff0ull << 48);
