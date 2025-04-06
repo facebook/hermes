@@ -14,8 +14,10 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSGeneratorObject.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
+#include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/ModuleExportsCache-inline.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SerializedLiteralOperations.h"
@@ -270,27 +272,39 @@ extern "C" SHLegacyValue _sh_ljs_get_by_val_with_receiver_rjs(
   Handle<> sourceHandle{toPHV(source)};
   Handle<> keyHandle{toPHV(key)};
   Handle<> receiverHandle{(toPHV(receiver))};
-  if (LLVM_LIKELY(sourceHandle->isObject())) {
-    CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+
+  if (LLVM_UNLIKELY(!sourceHandle->isObject())) {
+    // Transient object.
     {
       GCScopeMarkerRAII marker{runtime};
-      res = JSObject::getComputedWithReceiver_RJS(
-          Handle<JSObject>::vmcast(sourceHandle),
-          runtime,
-          keyHandle,
-          receiverHandle);
+      res = Interpreter::getByValTransientWithReceiver_RJS(
+          runtime, sourceHandle, keyHandle, receiverHandle);
     }
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       _sh_throw_current(shr);
     return res->getHermesValue();
   }
 
-  // This is the "slow path".
-  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+  // Fast path for arrays and typed arrays with numeric indices
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "HermesValue must use NaN-encoding for non-numbers");
+  uint32_t index;
+  if (sh_tryfast_f64_to_u32(key->f64, index)) {
+    if (auto optRes = tryFastGetComputedMayAlloc(
+            runtime, vmcast<JSObject>(*toPHV(source)), index))
+      return *optRes;
+  }
+
+  // Slow path for regular objects.
   {
     GCScopeMarkerRAII marker{runtime};
-    res = Interpreter::getByValTransientWithReceiver_RJS(
-        runtime, sourceHandle, keyHandle, receiverHandle);
+    res = JSObject::getComputedWithReceiver_RJS(
+        Handle<JSObject>::vmcast(sourceHandle),
+        runtime,
+        keyHandle,
+        receiverHandle);
   }
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -302,15 +316,9 @@ _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   Handle<> sourceHandle{toPHV(source)};
   Runtime &runtime = getRuntime(shr);
   if (LLVM_LIKELY(sourceHandle->isObject())) {
-    Handle<JSObject> objHandle = Handle<JSObject>::vmcast(sourceHandle);
-    if (LLVM_LIKELY(objHandle->hasFastIndexProperties())) {
-      GCScopeMarkerRAII marker{runtime};
-      auto ourValue = createPseudoHandle(JSObject::getOwnIndexed(
-          createPseudoHandle(*objHandle), runtime, key));
-      if (LLVM_LIKELY(!ourValue->isEmpty())) {
-        return ourValue.getHermesValue();
-      }
-    }
+    if (auto optRes = tryFastGetComputedMayAlloc(
+            runtime, vmcast<JSObject>(*sourceHandle), key))
+      return *optRes;
   }
 
   // Otherwise...

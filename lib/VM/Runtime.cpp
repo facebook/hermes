@@ -285,7 +285,6 @@ Runtime::Runtime(
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6BlockScoping_(runtimeConfig.getES6BlockScoping()),
       hasIntl_(runtimeConfig.getIntl()),
-      hasArrayBuffer_(runtimeConfig.getArrayBuffer()),
       hasMicrotaskQueue_(runtimeConfig.getMicrotaskQueue()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),

@@ -11,20 +11,25 @@
 #error "TYPED_ARRAY must exist before including this file"
 #endif
 
-TYPED_ARRAY(Int8, int8_t)
-TYPED_ARRAY(Int16, int16_t)
-TYPED_ARRAY(Int32, int32_t)
+// NOTE: pay attention to CELL_RANGE in CellKinds.def when updating these!
+// NOTE: the order for each size is unsigned first, then signed. For 8-bit
+// there is an additional unsigned (Uint8Clamped) last. The important thing is
+// that the sign inverses and starts with unsigned.
+
 TYPED_ARRAY(Uint8, uint8_t)
+TYPED_ARRAY(Int8, int8_t)
 #ifndef TYPED_ARRAY_NO_CLAMP
 TYPED_ARRAY(Uint8Clamped, uint8_t)
 #else
 #undef TYPED_ARRAY_NO_CLAMP
 #endif
 TYPED_ARRAY(Uint16, uint16_t)
+TYPED_ARRAY(Int16, int16_t)
 TYPED_ARRAY(Uint32, uint32_t)
+TYPED_ARRAY(Int32, int32_t)
 TYPED_ARRAY(Float32, float)
 TYPED_ARRAY(Float64, double)
-TYPED_ARRAY(BigInt64, int64_t)
 TYPED_ARRAY(BigUint64, uint64_t)
+TYPED_ARRAY(BigInt64, int64_t)
 
 #undef TYPED_ARRAY
