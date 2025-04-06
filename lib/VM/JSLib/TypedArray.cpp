@@ -831,17 +831,8 @@ typedArrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(!arr->attached(runtime)))
     return runtime.raiseTypeError("Underlying ArrayBuffer detached");
 
-#define TYPED_ARRAY(name, type)                                        \
-  case CellKind::name##ArrayKind:                                      \
-    return HermesValue::encodeUntrustedNumberValue(                    \
-        llvh::cast<JSTypedArray<type, CellKind::name##ArrayKind>>(arr) \
-            ->monoAt(runtime, k));
-
-  switch (O->getKind()) {
-#include "hermes/VM/TypedArrays.def"
-    default:
-      llvm_unreachable("Invalid TypedArray after ValidateTypedArray call");
-  }
+  return JSTypedArrayBase::polyReadMayAlloc(
+      arr, runtime, JSTypedArrayBase::size_type(k));
 }
 
 /// ES6 22.2.3.5
