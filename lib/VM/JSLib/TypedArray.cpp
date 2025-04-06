@@ -827,14 +827,16 @@ typedArrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   // 8. Return ? Get(O, ! ToString(𝔽(k))).
   // Since we know we have a TypedArray, we can directly call JSTypedArray::at
   // rather than getComputed_RJS like the spec mandates.
-#define TYPED_ARRAY(name, type)                                            \
-  case CellKind::name##ArrayKind: {                                        \
-    auto *arr = vmcast<JSTypedArray<type, CellKind::name##ArrayKind>>(*O); \
-    if (!arr->attached(runtime)) {                                         \
-      return runtime.raiseTypeError("Underlying ArrayBuffer detached");    \
-    }                                                                      \
-    return HermesValue::encodeUntrustedNumberValue(arr->at(runtime, k));   \
-  }
+  auto *arr = vmcast<JSTypedArrayBase>(*O);
+  if (LLVM_UNLIKELY(!arr->attached(runtime)))
+    return runtime.raiseTypeError("Underlying ArrayBuffer detached");
+
+#define TYPED_ARRAY(name, type)                                        \
+  case CellKind::name##ArrayKind:                                      \
+    return HermesValue::encodeUntrustedNumberValue(                    \
+        llvh::cast<JSTypedArray<type, CellKind::name##ArrayKind>>(arr) \
+            ->monoAt(runtime, k));
+
   switch (O->getKind()) {
 #include "hermes/VM/TypedArrays.def"
     default:
@@ -921,20 +923,23 @@ typedArrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
   // Need to case on the TypedArray type to avoid encoding using HermesValues.
   // We need to preserve the bit-level encoding of values, and HermesValues
   // destroy information, e.g. which NaN is being used.
-#define TYPED_ARRAY(name, type)                                            \
-  case CellKind::name##ArrayKind: {                                        \
-    auto *arr = vmcast<JSTypedArray<type, CellKind::name##ArrayKind>>(*O); \
-    if (!arr->attached(runtime)) {                                         \
-      return runtime.raiseTypeError(                                       \
-          "Underlying ArrayBuffer detached after calling copyWithin");     \
-    }                                                                      \
-    while (count > 0) {                                                    \
-      arr->at(runtime, to) = arr->at(runtime, from);                       \
-      from += direction;                                                   \
-      to += direction;                                                     \
-      --count;                                                             \
-    }                                                                      \
-    break;                                                                 \
+  auto *baseArr = vmcast<JSTypedArrayBase>(*O);
+  if (!baseArr->attached(runtime)) {
+    return runtime.raiseTypeError(
+        "Underlying ArrayBuffer detached after calling copyWithin");
+  }
+
+#define TYPED_ARRAY(name, type)                                             \
+  case CellKind::name##ArrayKind: {                                         \
+    auto *arr =                                                             \
+        llvh::cast<JSTypedArray<type, CellKind::name##ArrayKind>>(baseArr); \
+    while (count > 0) {                                                     \
+      arr->monoAt(runtime, to) = arr->monoAt(runtime, from);                \
+      from += direction;                                                    \
+      to += direction;                                                      \
+      --count;                                                              \
+    }                                                                       \
+    break;                                                                  \
   }
 
   switch (O->getKind()) {
