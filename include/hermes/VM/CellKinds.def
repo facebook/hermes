@@ -141,7 +141,8 @@ CELL_RANGE(CallableExpectsThis, JSFunction, NativeJSFunction)
 
 CELL_RANGE(CodeBlockFunction, JSDerivedClass, JSFunction)
 CELL_RANGE(NativeFunction, NativeFunction, JSCallableProxy)
-CELL_RANGE(TypedArrayBase, Int8Array, BigUint64Array)
+CELL_RANGE(TypedArrayBase, Uint8Array, BigInt64Array)
+CELL_RANGE(NoAllocTypedArray, Uint8Array, Float64Array)
 CELL_RANGE(WeakMapImplBase, JSWeakMap, JSWeakSet)
 CELL_RANGE(
     StringPrimitive,
