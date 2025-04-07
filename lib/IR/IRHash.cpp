@@ -111,7 +111,7 @@ llvh::hash_code hash_value(
     return iter->second;
   }
   VariableScope *par = varScope.getParentScope();
-  llvh::hash_code result;
+  llvh::hash_code result = 0;
   if (par) {
     result = hash_value(*par, modData);
   }
