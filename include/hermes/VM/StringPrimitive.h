@@ -255,7 +255,13 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       const StringPrimitive *other) const;
 
   /// \return true if the other string is identical to this one.
-  bool equals(const StringPrimitive *other) const;
+  bool equals(const StringPrimitive *other) const {
+    if (this == other)
+      return true;
+    if (getStringLength() != other->getStringLength())
+      return false;
+    return sliceEquals(0, getStringLength(), other);
+  }
 
   /// \return true if the other string view has identical content as self.
   bool equals(const StringView &other) const;
