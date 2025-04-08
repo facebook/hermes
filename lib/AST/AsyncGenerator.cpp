@@ -40,9 +40,19 @@ class AsyncGenerator : public TransformationsBase {
   void visit(ESTree::FunctionDeclarationNode *funcDecl, ESTree::Node **ppNode) {
     if (funcDecl->_async && funcDecl->_generator) {
       recurseFunctionBody(funcDecl->_body, true);
-      auto iife = transformAsyncGeneratorFunction(
+      auto *refFunc = transformAsyncGeneratorFunction(
           funcDecl, funcDecl->_params, funcDecl->_body);
-      *ppNode = makeSingleVarDecl(funcDecl, funcDecl->_id, iife);
+
+      *ppNode = createTransformedNode<ESTree::FunctionDeclarationNode>(
+          funcDecl,
+          funcDecl->_id,
+          std::move(funcDecl->_params),
+          refFunc,
+          nullptr,
+          nullptr,
+          nullptr,
+          false,
+          false);
     } else {
       recurseFunctionBody(funcDecl->_body, false);
     }
@@ -51,8 +61,19 @@ class AsyncGenerator : public TransformationsBase {
   void visit(ESTree::FunctionExpressionNode *funcExpr, ESTree::Node **ppNode) {
     if (funcExpr->_async && funcExpr->_generator) {
       recurseFunctionBody(funcExpr->_body, true);
-      *ppNode = transformAsyncGeneratorFunction(
+      auto *refFunc = transformAsyncGeneratorFunction(
           funcExpr, funcExpr->_params, funcExpr->_body);
+
+      *ppNode = createTransformedNode<ESTree::FunctionExpressionNode>(
+          funcExpr,
+          nullptr,
+          std::move(funcExpr->_params),
+          refFunc,
+          nullptr,
+          nullptr,
+          nullptr,
+          false,
+          false);
     } else {
       recurseFunctionBody(funcExpr->_body, false);
     }
@@ -114,8 +135,8 @@ class AsyncGenerator : public TransformationsBase {
     auto *wrappedRef = makeHermesInternalCall(
         funcNode, "_wrapAsyncGenerator", NodeVector{refFunc});
 
-    // Create the inner function that calls apply on the wrapped reference
-    auto innerFuncBody = createTransformedNode<ESTree::BlockStatementNode>(
+    // Create a function body that calls apply on the wrapped function
+    auto appliedBody = createTransformedNode<ESTree::BlockStatementNode>(
         funcNode,
         NodeVector{
             createTransformedNode<ESTree::ReturnStatementNode>(
@@ -135,38 +156,7 @@ class AsyncGenerator : public TransformationsBase {
                         .toNodeList()))}
             .toNodeList());
 
-    auto *innerFunc = createTransformedNode<ESTree::FunctionExpressionNode>(
-        funcNode,
-        nullptr,
-        ESTree::NodeList{},
-        innerFuncBody,
-        nullptr,
-        nullptr,
-        nullptr,
-        false,
-        false);
-
-    // Create the outer IIFE
-    auto *iife = createTransformedNode<ESTree::CallExpressionNode>(
-        funcNode,
-        createTransformedNode<ESTree::FunctionExpressionNode>(
-            funcNode,
-            nullptr,
-            ESTree::NodeList{}, // no params
-            createTransformedNode<ESTree::BlockStatementNode>(
-                funcNode,
-                NodeVector{createTransformedNode<ESTree::ReturnStatementNode>(
-                               funcNode, innerFunc)}
-                    .toNodeList()),
-            nullptr,
-            nullptr,
-            nullptr,
-            false,
-            false),
-        nullptr, // typeArguments
-        ESTree::NodeList{}); // no arguments
-
-    return iife;
+    return appliedBody;
   }
 
   ESTree::Node *getHermesInternalIdentifier(ESTree::Node *srcNode) override {
@@ -176,9 +166,10 @@ class AsyncGenerator : public TransformationsBase {
   bool insideAsyncGenerator = false;
 };
 
-void transformAsyncGenerators(Context &context, ESTree::Node *node) {
+ESTree::Node* transformAsyncGenerators(Context &context, ESTree::Node *node) {
   AsyncGenerator transformer(context);
   visitESTreeNode(transformer, node, nullptr);
+  return node;
 }
 
 } // namespace hermes

@@ -12,7 +12,7 @@ namespace hermes {
 
 ESTree::Node *transformASTForCompilation(Context &context, ESTree::Node *root) {
   if (context.getEnableAsyncGenerators()) {
-    transformAsyncGenerators(context, root);
+    root = transformAsyncGenerators(context, root);
   }
   return root;
 }
