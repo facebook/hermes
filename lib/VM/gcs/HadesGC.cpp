@@ -2309,12 +2309,10 @@ void *HadesGC::allocSlow(uint32_t sz) {
     if constexpr (canBeLarge == CanBeLarge::Yes)
       return oldGen_.allocLarge<mayFail>(sz);
 
-    // A YG collection is guaranteed to fully evacuate, leaving all the space
-    // available, so the only way this could fail is if sz is greater than
-    // a segment size and canBeLarge is No.
-    // This would be an error in VM code to ever allow such a size to be
-    // allocated without enabling large allocation. This case is for production,
-    // if we miss a test case.
+    // We can't allocate an object with size > FixedSizeHeapSegment::maxSize()
+    // in the YG. If this happens, it would be an error in VM code to ever allow
+    // such a size to be allocated without enabling large allocation. This case
+    // is for production, if we miss a test case.
     oom(make_error_code(OOMError::SuperSegmentAlloc));
   }
 
@@ -2334,8 +2332,8 @@ void *HadesGC::allocSlow(uint32_t sz) {
   if (res.success)
     return res.ptr;
 
-  // Still fails after YG collection, perhaps it is a large alloc, try growing
-  // the YG to full size.
+  // Still fails after YG collection, perhaps the alloc size is large, try
+  // growing the YG to full size.
   youngGen().clearExternalMemoryCharge();
   res = youngGen().alloc(sz);
   assert(
