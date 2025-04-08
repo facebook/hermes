@@ -466,7 +466,16 @@ static_assert(
     std::is_trivial<SmallHermesValue>::value,
     "SmallHermesValue must be trivial");
 
-using GCSmallHermesValue = GCHermesValueBase<SmallHermesValue>;
+/// Base type for GC aware SmallHermesValues. This should only be used when we
+/// don't need to handle large allocation specially.
+using GCSmallHermesValueBase = GCHermesValueBaseImpl<SmallHermesValue>;
+
+/// GCSmallHermesValue stored in a normal object.
+using GCSmallHermesValue = GCHermesValueImpl<SmallHermesValue>;
+
+/// GCSmallHermesValue stored in an object that supports large allocation.
+using GCSmallHermesValueInLargeObj =
+    GCHermesValueInLargeObjImpl<SmallHermesValue>;
 
 } // end namespace vm
 } // end namespace hermes

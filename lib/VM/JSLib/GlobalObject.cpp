@@ -559,24 +559,19 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Array constructor.
   runtime.arrayConstructor = createArrayConstructor(runtime);
 
-  if (runtime.hasArrayBuffer()) {
-    // ArrayBuffer constructor.
-    runtime.arrayBufferConstructor = createArrayBufferConstructor(runtime);
+  // ArrayBuffer constructor.
+  runtime.arrayBufferConstructor = createArrayBufferConstructor(runtime);
 
-    // DataView constructor.
-    runtime.dataViewConstructor = createDataViewConstructor(runtime);
+  // DataView constructor.
+  runtime.dataViewConstructor = createDataViewConstructor(runtime);
 
-    // TypedArrayBase constructor.
-    runtime.typedArrayBaseConstructor =
-        createTypedArrayBaseConstructor(runtime);
+  // TypedArrayBase constructor.
+  runtime.typedArrayBaseConstructor = createTypedArrayBaseConstructor(runtime);
 
 #define TYPED_ARRAY(name, type)                                             \
   runtime.name##ArrayConstructor = create##name##ArrayConstructor(runtime); \
   gcScope.clearAllHandles();
 #include "hermes/VM/TypedArrays.def"
-  } else {
-    gcScope.clearAllHandles();
-  } // hasArrayBuffer
 
   // Set constructor.
   runtime.setConstructor = createSetConstructor(runtime);
@@ -670,7 +665,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       runtime.getGlobal(),
       runtime,
       runtime.getIdentifierTable().registerLazyIdentifier(
-          createASCIIRef("DebuggerInternal")),
+          runtime, createASCIIRef("DebuggerInternal")),
       constantDPF,
       createDebuggerInternalObject(runtime)));
 

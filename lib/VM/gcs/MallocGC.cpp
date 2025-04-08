@@ -171,16 +171,6 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
   }
 };
 
-gcheapsize_t MallocGC::Size::storageFootprint() const {
-  // MallocGC uses no storage from the StorageProvider.
-  return 0;
-}
-
-gcheapsize_t MallocGC::Size::minStorageFootprint() const {
-  // MallocGC uses no storage from the StorageProvider.
-  return 0;
-}
-
 MallocGC::MallocGC(
     GCCallbacks &gcCallbacks,
     PointerBase &pointerBase,
@@ -195,7 +185,7 @@ MallocGC::MallocGC(
           std::move(crashMgr),
           HeapKind::MallocGC),
       pointers_(),
-      maxSize_(Size(gcConfig).max()),
+      maxSize_(gcConfig.getMaxHeapSize()),
       sizeLimit_(gcConfig.getInitHeapSize()) {
   (void)vmExperimentFlags;
   crashMgr_->setCustomData("HermesGC", kGCName);
@@ -498,6 +488,7 @@ void MallocGC::resetStats() {
 void MallocGC::getHeapInfo(HeapInfo &info) {
   GCBase::getHeapInfo(info);
   info.allocatedBytes = allocatedBytes_;
+  info.totalAllocatedBytes = totalAllocatedBytes_;
   // MallocGC does not have a heap size.
   info.heapSize = 0;
   info.externalBytes = externalBytes_;
@@ -538,12 +529,23 @@ bool MallocGC::dbgContains(const void *p) const {
   return isValid;
 }
 
-bool MallocGC::needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
-    const {
+bool MallocGC::needsWriteBarrier(
+    const GCHermesValueBase *loc,
+    HermesValue value) const {
+  return false;
+}
+bool MallocGC::needsWriteBarrierInCtor(
+    const GCHermesValueBase *loc,
+    HermesValue value) const {
   return false;
 }
 bool MallocGC::needsWriteBarrier(
-    const GCSmallHermesValue *loc,
+    const GCSmallHermesValueBase *loc,
+    SmallHermesValue value) const {
+  return false;
+}
+bool MallocGC::needsWriteBarrierInCtor(
+    const GCSmallHermesValueBase *loc,
     SmallHermesValue value) const {
   return false;
 }
@@ -567,18 +569,31 @@ void MallocGC::debitExternalMemory(GCCell *, uint32_t size) {
   externalBytes_ -= size;
 }
 
-/// @name Forward instantiations
-/// @{
-
-template void *MallocGC::alloc</*FixedSize*/ true, HasFinalizer::Yes>(
-    uint32_t size);
-template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::Yes>(
-    uint32_t size);
-template void *MallocGC::alloc</*FixedSize*/ true, HasFinalizer::No>(
-    uint32_t size);
-template void *MallocGC::alloc</*FixedSize*/ false, HasFinalizer::No>(
-    uint32_t size);
-/// @}
+GCCell *MallocGC::alloc(uint32_t size) {
+  assert(noAllocLevel_ == 0 && "no alloc allowed right now");
+  assert(
+      isSizeHeapAligned(size) &&
+      "Call to alloc must use a size aligned to HeapAlign");
+  if (shouldSanitizeHandles()) {
+    collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
+  }
+  // Use subtraction to prevent overflow.
+  if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
+    collectBeforeAlloc(kNaturalCauseForAnalytics, size);
+  }
+  // Add space for the header.
+  auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
+  GCCell *mem = header->data();
+  initCell(mem, size);
+  // Add to the set of pointers owned by the GC.
+  pointers_.insert(header);
+  allocatedBytes_ += size;
+  totalAllocatedBytes_ += size;
+#ifndef NDEBUG
+  ++numAllocatedObjects_;
+#endif
+  return mem;
+}
 
 } // namespace vm
 } // namespace hermes

@@ -60,20 +60,30 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandle(
   return runtime.makeHandle(*cr);
 }
 
-SymbolID IdentifierTable::registerLazyIdentifier(ASCIIRef str) {
-  return registerLazyIdentifierImpl(str, hermes::hashString(str));
+SymbolID IdentifierTable::registerLazyIdentifier(
+    Runtime &runtime,
+    ASCIIRef str) {
+  return registerLazyIdentifierImpl(runtime, str, hermes::hashString(str));
 }
 
-SymbolID IdentifierTable::registerLazyIdentifier(ASCIIRef str, uint32_t hash) {
-  return registerLazyIdentifierImpl(str, hash);
+SymbolID IdentifierTable::registerLazyIdentifier(
+    Runtime &runtime,
+    ASCIIRef str,
+    uint32_t hash) {
+  return registerLazyIdentifierImpl(runtime, str, hash);
 }
 
-SymbolID IdentifierTable::registerLazyIdentifier(UTF16Ref str) {
-  return registerLazyIdentifierImpl(str, hermes::hashString(str));
+SymbolID IdentifierTable::registerLazyIdentifier(
+    Runtime &runtime,
+    UTF16Ref str) {
+  return registerLazyIdentifierImpl(runtime, str, hermes::hashString(str));
 }
 
-SymbolID IdentifierTable::registerLazyIdentifier(UTF16Ref str, uint32_t hash) {
-  return registerLazyIdentifierImpl(str, hash);
+SymbolID IdentifierTable::registerLazyIdentifier(
+    Runtime &runtime,
+    UTF16Ref str,
+    uint32_t hash) {
+  return registerLazyIdentifierImpl(runtime, str, hash);
 }
 
 CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
@@ -82,8 +92,7 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandleFromPrimitive(
   assert(str && "null string primitive");
   if (str->isUniqued()) {
     // If the string was already uniqued, we can return directly.
-    SymbolID id = str->getUniqueID();
-    symbolReadBarrier(id.unsafeGetIndex());
+    SymbolID id = str->getUniqueID(runtime);
     return runtime.makeHandle(id);
   }
   auto handle = runtime.makeHandle(std::move(str));
@@ -331,10 +340,11 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
   if (hashTable_.isValid(idx)) {
     NoAllocScope scope{runtime};
     const auto id = hashTable_.get(idx);
+    auto sym = SymbolID::unsafeCreate(id);
     // Read barrier here because a symbol value is getting read out of the hash
     // map.
-    symbolReadBarrier(id);
-    return SymbolID::unsafeCreate(id);
+    runtime.getHeap().weakRefReadBarrier(sym);
+    return sym;
   }
 
   // It is tempting here to check whether the incoming StringPrimitive can be
@@ -382,21 +392,28 @@ StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNullWithHash(
   }
   // Use a handle since getStringPrim may need to materialize the string.
   const auto id = hashTable_.get(idx);
-  symbolReadBarrier(id);
-  Handle<SymbolID> sym(runtime, SymbolID::unsafeCreate(id));
+  auto symID = SymbolID::unsafeCreate(id);
+  // Read barrier here because a symbol value is getting read out of the hash
+  // map.
+  runtime.getHeap().weakRefReadBarrier(symID);
+  Handle<SymbolID> sym(runtime, symID);
   return getStringPrim(runtime, *sym);
 }
 
 template <typename T>
 SymbolID IdentifierTable::registerLazyIdentifierImpl(
+    Runtime &runtime,
     llvh::ArrayRef<T> str,
     uint32_t hash) {
   auto idx = hashTable_.lookupString(str, hash);
   if (hashTable_.isValid(idx)) {
     // If the string is already in the table, return it.
     const auto id = hashTable_.get(idx);
-    symbolReadBarrier(id);
-    return SymbolID::unsafeCreate(id);
+    auto sym = SymbolID::unsafeCreate(id);
+    // Read barrier here because a symbol value is getting read out of the hash
+    // map.
+    runtime.getHeap().weakRefReadBarrier(sym);
+    return sym;
   }
   uint32_t nextId = allocNextID();
   SymbolID symbolId = SymbolID::unsafeCreate(nextId);

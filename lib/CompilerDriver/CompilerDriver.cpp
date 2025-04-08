@@ -154,6 +154,7 @@ enum class OptLevel {
   O0,
   Og,
   OMax,
+  OFixedPoint,
 };
 
 cl::opt<OptLevel> OptimizationLevel(
@@ -162,7 +163,8 @@ cl::opt<OptLevel> OptimizationLevel(
     cl::values(
         clEnumValN(OptLevel::O0, "O0", "No optimizations"),
         clEnumValN(OptLevel::Og, "Og", "Optimizations suitable for debugging"),
-        clEnumValN(OptLevel::OMax, "O", "Expensive optimizations")),
+        clEnumValN(OptLevel::OMax, "O", "Expensive optimizations"),
+        clEnumValN(OptLevel::OFixedPoint, "O4", "Optimize to fixed point")),
     cl::cat(CompilerCategory));
 
 enum class StaticBuiltinSetting {
@@ -1121,6 +1123,9 @@ std::shared_ptr<Context> createContext(
 
   optimizationOpts.useLegacyMem2Reg = cl::LegacyMem2Reg;
 
+  optimizationOpts.limitRecursiveInlining =
+      (cl::OptimizationLevel == cl::OptLevel::OFixedPoint);
+
   auto context = std::make_shared<Context>(
       std::move(codeGenOpts),
       optimizationOpts,
@@ -2037,6 +2042,9 @@ CompileResult processSourceFiles(
         break;
       case cl::OptLevel::OMax:
         runFullOptimizationPasses(*M);
+        break;
+      case cl::OptLevel::OFixedPoint:
+        runOptimizationPassesToFixedPoint(*M);
         break;
     }
   }

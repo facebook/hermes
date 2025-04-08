@@ -464,8 +464,6 @@ CallResult<HermesValue> addEntriesFromIterable(
   MutableHandle<JSObject> nextItem{runtime};
   MutableHandle<> key{runtime};
   MutableHandle<> value{runtime};
-  Handle<> zero = HandleRootOwner::getZeroValue();
-  Handle<> one = HandleRootOwner::getOneValue();
   auto marker = gcScope.createMarker();
 
   // 4. Repeat,
@@ -496,7 +494,7 @@ CallResult<HermesValue> addEntriesFromIterable(
     nextItem = PseudoHandle<JSObject>::vmcast(std::move(*nextItemRes));
 
     // e. Let k be Get(nextItem, "0").
-    auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
+    auto keyRes = getIndexed_RJS(runtime, nextItem, 0);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       // f. If k is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, k).
@@ -505,7 +503,7 @@ CallResult<HermesValue> addEntriesFromIterable(
     key = std::move(*keyRes);
 
     // g. Let v be Get(nextItem, "1").
-    auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
+    auto valueRes = getIndexed_RJS(runtime, nextItem, 1);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       // h. If v is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, v).

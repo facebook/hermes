@@ -1734,23 +1734,23 @@ inline T *JSObject::initDirectPropStorage(Runtime &runtime, T *self) {
   // (including calls to memset) so we manually unroll it with a switch.
   switch (numOverlapSlots<T>()) {
     case 0:
-      new (&self->directProps()[0]) GCHermesValueBase(
+      new (&self->directProps()[0]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 1:
-      new (&self->directProps()[1]) GCHermesValueBase(
+      new (&self->directProps()[1]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 2:
-      new (&self->directProps()[2]) GCHermesValueBase(
+      new (&self->directProps()[2]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 3:
-      new (&self->directProps()[3]) GCHermesValueBase(
+      new (&self->directProps()[3]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 4:
-      new (&self->directProps()[4]) GCHermesValueBase(
+      new (&self->directProps()[4]) GCSmallHermesValue(
           SmallHermesValue::encodeUndefinedValue(), runtime.getHeap(), nullptr);
       [[fallthrough]];
     case 5:
@@ -2131,6 +2131,46 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
 inline bool JSObject::shouldCacheForIn(Runtime &runtime) const {
   return !clazz_.getNonNull(runtime)->isDictionary() &&
       !flags_.indexedStorage && !flags_.hostObject && !flags_.proxyObject;
+}
+
+/// Attempt to get the value of an indexed property from an object cheaply,
+/// if the object is a JSArray, typed array, or a JSObject with indexed storage.
+/// Allocation may occur (e.g. for a BigInt64Array), but usually doesn't.
+///
+/// IndexType must be an unsigned integer type. It is templated to allow the
+/// check for 0xFFFF'FFFFu to be skipped if the value is known to be smaller
+/// (e.g. uint8_t).
+template <typename IndexType>
+inline OptValue<HermesValue>
+tryFastGetComputedMayAlloc(Runtime &runtime, JSObject *obj, IndexType index);
+
+/// Attempt to get the value of an indexed property from an object cheaply,
+/// if the object is a JSArray, typed array, or a JSObject with indexed storage.
+/// Allocation may NOT occur, so some typed arrays or general indexed objects
+/// are not supported.
+///
+/// IndexType must be an unsigned integer type. It is templated to allow the
+/// check for 0xFFFF'FFFFu to be skipped if the value is known to be smaller
+/// (e.g. uint8_t).
+template <typename IndexType>
+inline OptValue<HermesValue>
+tryFastGetComputedNoAlloc(Runtime &runtime, JSObject *obj, IndexType index);
+
+/// A version of JSObject::getComputedWithReceiver_RJS(), specialized for
+/// uint32_t index. It attempts the fast paths before falling back to
+/// JSObject::getComputedWithReceiver_RJS().
+CallResult<PseudoHandle<>> getIndexedWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<JSObject> srcHandle,
+    uint64_t index,
+    Handle<> receiver);
+
+/// A version of JSObject::getComputed_RJS(), specialized for
+/// uint32_t index. It attempts the fast paths before falling back to
+/// JSObject::getComputed_RJS().
+inline CallResult<PseudoHandle<>>
+getIndexed_RJS(Runtime &runtime, Handle<JSObject> srcHandle, uint64_t index) {
+  return getIndexedWithReceiver_RJS(runtime, srcHandle, index, srcHandle);
 }
 
 } // namespace vm

@@ -26,8 +26,8 @@ template <typename HVType>
 class ArrayStorageBase final
     : public VariableSizeRuntimeCell,
       private llvh::
-          TrailingObjects<ArrayStorageBase<HVType>, GCHermesValueBase<HVType>> {
-  using GCHVType = GCHermesValueBase<HVType>;
+          TrailingObjects<ArrayStorageBase<HVType>, GCHermesValueImpl<HVType>> {
+  using GCHVType = GCHermesValueImpl<HVType>;
   friend llvh::TrailingObjects<ArrayStorageBase<HVType>, GCHVType>;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend void ArrayStorageSmallBuildMeta(
@@ -59,7 +59,7 @@ class ArrayStorageBase final
   /// \return The maximum number of elements we can fit in a single array in the
   /// current GC.
   static constexpr size_type maxElements() {
-    return capacityForAllocationSize(GC::maxAllocationSize());
+    return capacityForAllocationSize(GC::maxNormalAllocationSize());
   }
 
   static bool classof(const GCCell *cell) {
@@ -245,7 +245,7 @@ class ArrayStorageBase final
     auto *fromStart = other->data();
     auto *fromEnd = fromStart + otherSz;
     GCHVType::uninitialized_copy(
-        fromStart, fromEnd, data() + sz, runtime.getHeap());
+        fromStart, fromEnd, data() + sz, this, runtime.getHeap());
     size_.store(sz + otherSz, std::memory_order_release);
   }
 
@@ -454,22 +454,22 @@ using ArrayStorageSmall = ArrayStorageBase<SmallHermesValue>;
 
 static_assert(
     ArrayStorage::allocationSize(ArrayStorage::maxElements()) <=
-        GC::maxAllocationSize(),
+        GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 
 static_assert(
-    GC::maxAllocationSize() -
+    GC::maxNormalAllocationSize() -
             ArrayStorage::allocationSize(ArrayStorage::maxElements()) <
         HeapAlign,
     "maxElements() is too small");
 
 static_assert(
     ArrayStorageSmall::allocationSize(ArrayStorageSmall::maxElements()) <=
-        GC::maxAllocationSize(),
+        GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 
 static_assert(
-    GC::maxAllocationSize() -
+    GC::maxNormalAllocationSize() -
             ArrayStorageSmall::allocationSize(
                 ArrayStorageSmall::maxElements()) <
         HeapAlign,

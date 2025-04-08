@@ -254,6 +254,18 @@ class AlignedHeapSegment {
     return lowLim_;
   }
 
+  /// Gets the segment size from SHSegmentInfo. This should only be used when
+  /// we only have a GCCell pointer and don't know its owning segment.
+  static size_t getSegmentSize(const GCCell *cell) {
+    return contents(alignedStorageStart(cell))->getSegmentSize();
+  }
+
+  /// Return the maximum allocation size for the heap segment that contains
+  /// \p cell.
+  static size_t maxSize(const GCCell *cell) {
+    return getSegmentSize(cell) - kOffsetOfAllocRegion;
+  }
+
   /// Returns the address at which the first allocation in this segment would
   /// occur.
   /// Disable UB sanitization because 'this' may be null during the tests.
@@ -407,6 +419,17 @@ class AlignedHeapSegment {
     return (cp - base) >> LogHeapAlign;
   }
 
+  /// Return true if objects \p a and \p b live in the same segment. This is
+  /// used to check if a pointer field in an object points to another object in
+  /// the same segment (so that we don't need to dirty the cards -- we only need
+  /// to dirty cards that might contain old-to-young pointers, which must cross
+  /// segments). This also works for large segments, since there is only one
+  /// cell in those segments (i.e., \p a and \p b would be the same).
+  static bool containedInSameSegment(const GCCell *a, const GCCell *b) {
+    return (reinterpret_cast<uintptr_t>(a) ^ reinterpret_cast<uintptr_t>(b)) <
+        kSegmentUnitSize;
+  }
+
   /// Returns the index of the segment containing \p lowLim, which is required
   /// to be the start of its containing segment.  (This can allow extra
   /// efficiency, in cases where the segment start has already been computed.)
@@ -539,11 +562,84 @@ class AlignedHeapSegment {
 
 /// JumboHeapSegment has custom storage size that must be a multiple of
 /// kSegmentUnitSize. Each such segment can only allocate a single object that
-/// occupies the entire allocation space. Therefore, the inline MarkBitArray is
-/// large enough, while card status array needs to be allocated separately. The
-/// card boundary table is unused, since the GCCell always lives at the start
-/// of the allocation region.
-class JumboHeapSegment : public AlignedHeapSegment {};
+/// may occupy the entire allocation space at most. Therefore, the inline
+/// MarkBitArray is large enough, while CardStatus array needs to be allocated
+/// separately. The card boundary table is not needed for JumboHeapSegment.
+class JumboHeapSegment : public AlignedHeapSegment {
+  /// Size of this segment.
+  size_t segmentSize_{0};
+
+ public:
+  /// Construct a null JumboHeapSegment (one that does not own memory).
+  JumboHeapSegment() = default;
+  /// \c JumboHeapSegment is movable and assignable, but not copyable.
+  JumboHeapSegment(JumboHeapSegment &&) = default;
+  JumboHeapSegment &operator=(JumboHeapSegment &&) = default;
+  JumboHeapSegment(const JumboHeapSegment &) = delete;
+  JumboHeapSegment &operator=(const JumboHeapSegment &) = delete;
+
+  /// Create a JumboHeapSegment by allocating memory with \p provider.
+  static llvh::ErrorOr<JumboHeapSegment>
+  create(StorageProvider *provider, const char *name, size_t segmentSize);
+
+  /// Allocate memory of maxSize() from this segment.
+  void *alloc() {
+    assert(
+        level() == start() &&
+        "Only one GCCell may be allocated in this segment, at the start.");
+    auto *cell = reinterpret_cast<GCCell *>(start());
+    // After allocation, level_ should point to the end.
+    level_ = hiLim();
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    // Unpoison the entire allocation region.
+    __asan_unpoison_memory_region(cell, maxSize());
+#endif
+    return cell;
+  }
+
+  /// Compute a suitable segment size to hold the object with size
+  /// \p targetObjSize. It adds the size of the metadata and aligns to
+  /// kSegmentUnitSize, which is required when creating a segment storage.
+  /// Note: On a 64bit platform, \p targetObjSize could be as large as 2^32-1,
+  /// hence the segment size could be larger than 4GB.
+  static constexpr size_t computeSegmentSize(uint32_t targetObjSize) {
+    return llvh::alignTo<kSegmentUnitSize>(
+        targetObjSize + kOffsetOfAllocRegion);
+  }
+
+  /// Compute the actual allocation size for \p targetObjSize. This is
+  /// essentially the `maxSize()` of the JumboHeapSegment with size derived from
+  /// computeSegmentSize().
+  static constexpr size_t computeActualCellSize(uint32_t targetObjSize) {
+    return computeSegmentSize(targetObjSize) - kOffsetOfAllocRegion;
+  }
+
+  /// The maximum size of allocation region for this segment.
+  size_t maxSize() const {
+    return segmentSize_ - kOffsetOfAllocRegion;
+  }
+
+  /// Returns the storage size, in bytes, of a \c FixedSizeHeapSegment.
+  size_t storageSize() const {
+    return segmentSize_;
+  }
+
+  /// Returns the address that is the upper bound of the segment.
+  char *hiLim() const {
+    return lowLim() + storageSize();
+  }
+
+  /// \return \c true if and only if \p ptr is within the memory range owned by
+  /// this segment.
+  bool contains(const void *ptr) const {
+    return start() <= ptr && ptr < hiLim();
+  }
+
+ private:
+  JumboHeapSegment(StorageProvider *provider, void *lowLim, size_t segmentSize)
+      : AlignedHeapSegment(provider, lowLim, segmentSize),
+        segmentSize_(segmentSize) {}
+};
 
 /// FixedSizeHeapSegment has fixed storage size kSegmentUnitSize. Its
 /// card status and boundary arrays and MarkBitArray are stored inline right
@@ -639,29 +735,6 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
     size_t index = addressToCardIndex(segContents, addr);
     segContents->inlineCardsArray_[index].store(
         Contents::CardStatus::Dirty, std::memory_order_relaxed);
-  }
-
-  /// Make the card table entries for cards that intersect the given address
-  /// range dirty. The range is a closed interval [low, high].
-  /// \pre \p low and \p high are required to be addresses covered by the card
-  /// table.
-  static void dirtyCardsForAddressRange(const void *low, const void *high) {
-    auto *segContents = contents(storageStart(low));
-    high = reinterpret_cast<const char *>(high) + Contents::kCardSize - 1;
-    cleanOrDirtyRange(
-        segContents,
-        addressToCardIndex(segContents, low),
-        addressToCardIndex(segContents, high),
-        Contents::CardStatus::Dirty);
-  }
-
-  /// Returns whether the card table entry for the given address is dirty.
-  /// \pre \p addr is required to be an address covered by the card table.
-  static bool isCardForAddressDirty(const void *addr) {
-    auto *segContents = contents(storageStart(addr));
-    return segContents->prefixHeader_
-               .cards_[addressToCardIndex(segContents, addr)]
-               .load(std::memory_order_relaxed) == Contents::CardStatus::Dirty;
   }
 
   /// Find the head of the first cell that extends into the card at index
@@ -770,6 +843,16 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
 
   /// Checks that dead values are present in the [start, end) range.
   static void checkUnwritten(char *start, char *end);
+#endif
+
+#ifdef HERMES_SLOW_DEBUG
+  /// Find the object containing \p loc.
+  static GCCell *findObjectContaining(const void *loc) {
+    auto *lowLim = static_cast<char *>(storageStart(loc));
+    auto *hiLim = lowLim + kSize;
+    return contents(lowLim)->boundaryTable_.findObjectContaining(
+        lowLim, hiLim, loc);
+  }
 #endif
 
  private:

@@ -8,6 +8,6 @@
 // This file lists the types of slots that the GC needs to visit.
 
 SLOT_TYPE(GCPointerBase)
-SLOT_TYPE(GCHermesValue)
-SLOT_TYPE(GCSmallHermesValue)
+SLOT_TYPE(GCHermesValueBase)
+SLOT_TYPE(GCSmallHermesValueBase)
 SLOT_TYPE(GCSymbolID)

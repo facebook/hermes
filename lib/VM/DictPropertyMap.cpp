@@ -21,13 +21,14 @@ struct DictPropertyMap::detail {
       !DictPropertyMap::constWouldFitAllocation(kSearchUpperBound),
       "kSearchUpperBound should not fit into an allocation");
 
-  /// The maximum capacity of DictPropertyMap, given GC::maxAllocationSize().
+  /// The maximum capacity of DictPropertyMap, given
+  /// GC::maxNormalAllocationSize().
   static constexpr uint32_t kMaxCapacity = getMaxCapacity();
 
   // Double-check that kMaxCapacity is reasonable.
   static_assert(
       DictPropertyMap::constApproxAllocSize64(kMaxCapacity) <=
-          GC::maxAllocationSize(),
+          GC::maxNormalAllocationSize(),
       "invalid kMaxCapacity");
 
   // Ensure that it is safe to double capacities without checking for overflow

@@ -27,6 +27,9 @@ class Pass {
   enum class PassKind {
     Function,
     Module,
+    // Kinds below this are for "passes" used only in the implementation of
+    // PassManager; these are not actual optimization passes.
+    FixedPointLoop,
   };
 
  private:

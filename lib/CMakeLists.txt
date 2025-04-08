@@ -48,6 +48,7 @@ add_hermes_library(hermesFrontend
   IR/Analysis.cpp
   IR/IR.cpp
   IR/IREval.cpp
+  IR/IRHash.cpp
   IR/CFG.cpp
   IR/IRBuilder.cpp
   IR/IRVerifier.cpp

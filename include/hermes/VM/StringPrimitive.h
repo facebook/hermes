@@ -255,7 +255,13 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       const StringPrimitive *other) const;
 
   /// \return true if the other string is identical to this one.
-  bool equals(const StringPrimitive *other) const;
+  bool equals(const StringPrimitive *other) const {
+    if (this == other)
+      return true;
+    if (getStringLength() != other->getStringLength())
+      return false;
+    return sliceEquals(0, getStringLength(), other);
+  }
 
   /// \return true if the other string view has identical content as self.
   bool equals(const StringView &other) const;
@@ -402,7 +408,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// \return the unique id.
   /// This requires and asserts that the string is uniqued.
-  SymbolID getUniqueID() const;
+  SymbolID getUniqueID(Runtime &runtime) const;
 
   /// Mark this string as not uniqued. This is used by IdentifierTable when
   /// the associated SymbolID is garbage collected.
@@ -458,8 +464,9 @@ class SymbolStringPrimitive : public StringPrimitive {
   }
 
   /// \return the unique id.
-  SymbolID getUniqueID() const {
+  SymbolID getUniqueID(Runtime &runtime) const {
     assert(isUniqued() && "StringPrimitive is not uniqued");
+    runtime.getHeap().weakRefReadBarrier(weakUniqueID_);
     return weakUniqueID_;
   }
 };
@@ -838,6 +845,7 @@ template <typename T, bool Uniqued>
 const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     DynamicStringPrimitive<T, Uniqued>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     nullptr,
     nullptr,
     nullptr
@@ -865,6 +873,7 @@ template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     ExternalStringPrimitive<T>::_finalizeImpl,
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr
@@ -886,6 +895,7 @@ template <typename T>
 const VTable BufferedStringPrimitive<T>::vt = VTable(
     BufferedStringPrimitive<T>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     nullptr, // finalize.
     nullptr, // mallocSize
     nullptr
@@ -1097,9 +1107,9 @@ inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
   }
 }
 
-inline SymbolID StringPrimitive::getUniqueID() const {
+inline SymbolID StringPrimitive::getUniqueID(Runtime &runtime) const {
   assert(this->isUniqued() && "StringPrimitive is not uniqued");
-  return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
+  return vmcast<SymbolStringPrimitive>(this)->getUniqueID(runtime);
 }
 
 inline char16_t StringPrimitive::at(uint32_t index) const {

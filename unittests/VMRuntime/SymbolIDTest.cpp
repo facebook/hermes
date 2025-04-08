@@ -127,7 +127,7 @@ TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
 
   // Init the lazy symbol.
   weakSymLazy = runtime.getIdentifierTable().registerLazyIdentifier(
-      "I am the laziest symbol in the world!");
+      runtime, "I am the laziest symbol in the world!");
 
   // Perform a GC. Both weak symbols should be fine since A and B both are being
   // referenced in live PVs.

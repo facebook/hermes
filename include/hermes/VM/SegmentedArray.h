@@ -45,8 +45,8 @@ template <typename HVType>
 class SegmentedArrayBase final : public VariableSizeRuntimeCell,
                                  private llvh::TrailingObjects<
                                      SegmentedArrayBase<HVType>,
-                                     GCHermesValueBase<HVType>> {
-  using GCHVType = GCHermesValueBase<HVType>;
+                                     GCHermesValueImpl<HVType>> {
+  using GCHVType = GCHermesValueImpl<HVType>;
 
  public:
   /// A segment is just a blob of raw memory with a fixed size.
@@ -401,8 +401,7 @@ class SegmentedArrayBase final : public VariableSizeRuntimeCell,
  private:
   static const VTable vt;
 
-  friend llvh::
-      TrailingObjects<SegmentedArrayBase<HVType>, GCHermesValueBase<HVType>>;
+  friend llvh::TrailingObjects<SegmentedArrayBase<HVType>, GCHVType>;
   friend void SegmentBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend void SegmentedArrayBuildMeta(
       const GCCell *cell,
@@ -650,7 +649,7 @@ template <typename HVType>
 constexpr typename SegmentedArrayBase<HVType>::SegmentNumber
 SegmentedArrayBase<HVType>::maxNumSegments() {
   const SegmentedArrayBase::SegmentNumber maxAllocSlots =
-      slotCapacityForAllocationSize(GC::maxAllocationSize());
+      slotCapacityForAllocationSize(GC::maxNormalAllocationSize());
   const SegmentedArrayBase::SegmentNumber maxAllocSegments =
       maxAllocSlots - kValueToSegmentThreshold;
   return std::min(maxAllocSegments, maxNumSegmentsWithoutOverflow());
@@ -674,11 +673,11 @@ struct IsGCObject<SegmentedArraySmall::Segment> : public std::true_type {};
 
 static_assert(
     SegmentedArray::allocationSizeForCapacity(SegmentedArray::maxElements()) <=
-        GC::maxAllocationSize(),
+        GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 static_assert(
     SegmentedArraySmall::allocationSizeForCapacity(
-        SegmentedArraySmall::maxElements()) <= GC::maxAllocationSize(),
+        SegmentedArraySmall::maxElements()) <= GC::maxNormalAllocationSize(),
     "maxElements() is too big");
 
 } // namespace vm

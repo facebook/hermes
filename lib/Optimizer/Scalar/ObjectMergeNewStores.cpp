@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This optimization collects BaseDefineOwnPropertyInsts and merges them into a
+/// This optimization collects DefineOwnPropertyInsts and merges them into a
 /// single AllocObjectLiteral.
 //===----------------------------------------------------------------------===//
 
@@ -27,8 +27,8 @@
 namespace hermes {
 namespace {
 
-/// Define a type for managing lists of BaseDefineOwnPropertyInst.
-using StoreList = llvh::SmallVector<BaseDefineOwnPropertyInst *, 4>;
+/// Define a type for managing lists of DefineOwnPropertyInst.
+using StoreList = llvh::SmallVector<DefineOwnPropertyInst *, 4>;
 /// Define a type for mapping a given basic block to the stores to a given
 /// AllocObjectLiteralInst in that basic block.
 using BlockUserMap = llvh::DenseMap<BasicBlock *, StoreList>;
@@ -45,7 +45,7 @@ StoreList collectStores(
       DI, allocInst->getParent(), [&userBasicBlockMap](BasicBlock *BB) {
         return userBasicBlockMap.find(BB) != userBasicBlockMap.end();
       });
-  // Iterate over the sorted blocks to collect BaseDefineOwnPropertyInst users
+  // Iterate over the sorted blocks to collect DefineOwnPropertyInst users
   // until we encounter a nullptr or a store in an inner loop, indicating we
   // should stop.
   StoreList instrs;
@@ -100,7 +100,7 @@ Literal *normalizeKey(IRBuilder &builder, Literal *key) {
   return key;
 }
 
-/// Merge BaseDefineOwnPropertyInsts into a single AllocObjectLiteralInst.
+/// Merge DefineOwnPropertyInsts into a single AllocObjectLiteralInst.
 /// Non-literal values are set with placeholders and later patched with the
 /// correct value.
 /// \p allocInst the instruction to transform
@@ -121,7 +121,7 @@ bool mergeStoresToObjectLiteral(
 
   // Map from a key to the last store for that key. Entries are added to the map
   // in the same order that properties are added to the object.
-  llvh::MapVector<Literal *, BaseDefineOwnPropertyInst *> finalStoresMV;
+  llvh::MapVector<Literal *, DefineOwnPropertyInst *> finalStoresMV;
   for (auto *store : users) {
     // Normalize the keys, this ensures we don't end up with multiple entries
     // for the same key.
@@ -197,12 +197,12 @@ bool mergeNewStores(Function *F) {
     if (!stores.empty() && !stores.back())
       return;
 
-    if (auto *BDOP = llvh::dyn_cast<BaseDefineOwnPropertyInst>(U)) {
+    if (auto *BDOP = llvh::dyn_cast<DefineOwnPropertyInst>(U)) {
       // Note that we check the stored value instead of the target object so
       // that we omit the case where an object is stored into itself. While
       // it should technically be safe, this maintains the invariant that
       // stop as soon the allocated object is used as something other than
-      // the target of a BaseDefineOwnPropertyInst.
+      // the target of a DefineOwnPropertyInst.
       if (BDOP->getStoredValue() != A && BDOP->getIsEnumerable()) {
         // Check that the key is a literal number or string.
         Value *key = BDOP->getProperty();
@@ -231,7 +231,7 @@ bool mergeNewStores(Function *F) {
         continue;
       for (size_t i = 0; i < I.getNumOperands(); ++i) {
         if (auto *A = llvh::dyn_cast<AllocObjectLiteralInst>(I.getOperand(i))) {
-          // For now, we only consider merging BaseDefineOwnPropertyInsts that
+          // For now, we only consider merging DefineOwnPropertyInsts that
           // are writing into an empty object to start.
           if (A->getKeyValuePairCount() == 0)
             tryAdd(A, &I, allocUsers[A][&BB]);

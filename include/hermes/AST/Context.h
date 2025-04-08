@@ -77,6 +77,11 @@ struct OptimizationSettings {
   /// Whether to use old Mem2Reg pass instead of SimpleMem2Reg. This may produce
   /// better code for irreducible CFGs.
   bool useLegacyMem2Reg{false};
+
+  /// Whether to use a more complicated condition to prevent recursive inlining
+  /// (which will prevent unbounded code growth in "opt-to-fixed-point"
+  /// compilations).
+  bool limitRecursiveInlining{false};
 };
 
 enum class DebugInfoSetting {
@@ -506,6 +511,10 @@ class Context {
 
   bool getMetroRequireOpt() const {
     return optimizationSettings_.metroRequireOpt;
+  }
+
+  bool getLimitRecursiveInlining() const {
+    return optimizationSettings_.limitRecursiveInlining;
   }
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {

@@ -22,6 +22,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
 #include "hermes/VM/JSGeneratorObject.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/JSTypedArray.h"
@@ -57,6 +58,22 @@ HERMES_SLOW_STATISTIC(
 HERMES_SLOW_STATISTIC(
     NumGetByIdDict,
     "NumGetByIdDict: Number of property 'read by id' of dictionaries");
+
+HERMES_SLOW_STATISTIC(NumGetByIndex, "NumGetByIndex: Number of GetByIndex");
+
+HERMES_SLOW_STATISTIC(NumGetByVal, "NumGetByVal: Number of GetByVal");
+HERMES_SLOW_STATISTIC(
+    NumGetByValObjInd,
+    "NumGetByValObjInd: Number of GetByVal _,Obj,Index");
+HERMES_SLOW_STATISTIC(
+    NumGetByValArrInd,
+    "NumGetByValArrInd: Number of GetByVal _,JSArray,Index");
+HERMES_SLOW_STATISTIC(
+    NumGetByValTAInd,
+    "NumGetByValTAInd: Number of GetByVal _,TypedArray,Index");
+HERMES_SLOW_STATISTIC(
+    NumGetByValObjIndFast,
+    "NumGetByValObjIndFast: Number of GetByVal _,Obj,Index good fast paths");
 
 HERMES_SLOW_STATISTIC(
     NumPutById,
@@ -364,6 +381,7 @@ static inline const Inst *nextInstCall(const Inst *ip) {
       ((sizeof(inst::name##Inst) - minSize) \
        << (((uint8_t)OpCode::name - firstCall) * W))
 #include "hermes/BCGen/HBC/BytecodeList.def"
+
       ;
 #undef DEFINE_RET_TARGET
 
@@ -2032,7 +2050,70 @@ tailCall:
       DISPATCH;
     }
 
-      CASE_OUTOFLINE(GetByVal);
+      CASE(GetByIndex) {
+        ++NumGetByIndex;
+        if (LLVM_LIKELY(O2REG(GetByIndex).isObject())) {
+          if (auto optRes = tryFastGetComputedNoAlloc(
+                  runtime,
+                  vmcast<JSObject>(O2REG(GetByIndex)),
+                  ip->iGetByIndex.op3)) {
+            O1REG(GetByIndex) = *optRes;
+            ip = NEXTINST(GetByIndex);
+            DISPATCH;
+          }
+        }
+        // Otherwise...
+        // This is the "slow path".
+        tmpHandle = HermesValue::encodeTrustedNumberValue(ip->iGetByIndex.op3);
+        CAPTURE_IP(
+            resPH = Interpreter::getByValTransient_RJS(
+                runtime, Handle<>(&O2REG(GetByIndex)), tmpHandle));
+        tmpHandle.clear();
+        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        O1REG(GetByIndex) = resPH->get();
+        ip = NEXTINST(GetByIndex);
+        DISPATCH;
+      }
+
+      CASE(GetByVal) {
+        ++NumGetByVal;
+
+        // An efficient check whether the value is both a number and a uint32.
+        static_assert(
+            HERMESVALUE_VERSION == 2,
+            "HermesValue must use NaN-encoding for non-numbers");
+        uint32_t index;
+        if (sh_tryfast_f64_to_u32(O3REG(GetByVal).f64, index) &&
+            LLVM_LIKELY(O2REG(GetByVal).isObject())) {
+          ++NumGetByValObjInd;
+          if (HERMES_SLOW_STATISTIC_ENABLED) {
+            if (vmisa<JSArray>(O2REG(GetByVal)))
+              ++NumGetByValArrInd;
+            else if (vmisa<JSTypedArrayBase>(O2REG(GetByVal)))
+              ++NumGetByValTAInd;
+          }
+
+          if (auto optRes = tryFastGetComputedNoAlloc(
+                  runtime, vmcast<JSObject>(O2REG(GetByVal)), index)) {
+            ++NumGetByValObjIndFast;
+            O1REG(GetByVal) = *optRes;
+            ip = NEXTINST(GetByVal);
+            DISPATCH;
+          }
+        }
+
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus res, caseGetByVal(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+          goto exception;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(GetByVal);
+        DISPATCH;
+      }
+
       CASE_OUTOFLINE(GetByValWithReceiver);
 
       CASE(DefineOwnById) {
@@ -2090,40 +2171,6 @@ tailCall:
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(DefineOwnByIdLong);
-        DISPATCH;
-      }
-
-      CASE(GetByIndex) {
-        if (LLVM_LIKELY(O2REG(GetByIndex).isObject())) {
-          auto *obj = vmcast<JSObject>(O2REG(GetByIndex));
-          if (LLVM_LIKELY(obj->hasFastIndexProperties())) {
-            CAPTURE_IP_ASSIGN(
-                auto ourValue,
-                createPseudoHandle(JSObject::getOwnIndexed(
-                    PseudoHandle<JSObject>::create(obj),
-                    runtime,
-                    ip->iGetByIndex.op3)));
-            if (LLVM_LIKELY(!ourValue->isEmpty())) {
-              gcScope.flushToSmallCount(KEEP_HANDLES);
-              O1REG(GetByIndex) = ourValue.get();
-              ip = NEXTINST(GetByIndex);
-              DISPATCH;
-            }
-          }
-        }
-        // Otherwise...
-        // This is the "slow path".
-        tmpHandle = HermesValue::encodeTrustedNumberValue(ip->iGetByIndex.op3);
-        CAPTURE_IP(
-            resPH = Interpreter::getByValTransient_RJS(
-                runtime, Handle<>(&O2REG(GetByIndex)), tmpHandle));
-        tmpHandle.clear();
-        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(GetByIndex) = resPH->get();
-        ip = NEXTINST(GetByIndex);
         DISPATCH;
       }
 

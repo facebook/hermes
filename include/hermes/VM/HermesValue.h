@@ -497,9 +497,11 @@ static_assert(
     std::is_trivial<HermesValue>::value,
     "HermesValue must be trivial");
 
-/// Encode common double constants to HermesValue.
-/// The tricks is that that we know the bit patterns of known constants.
+/// Encode common double constants to HermesValue. The encode functions cannot
+/// be used because they are not constepxr, so we use the bit patterns of known
+/// constants.
 struct HVConstants {
+  static_assert(HERMESVALUE_VERSION == 2, "HVConstants version mismatch");
   static constexpr HermesValue kZero = HermesValue(0);
   static constexpr HermesValue kOne = HermesValue(0x3ff0ull << 48);
   static constexpr HermesValue kNegOne = HermesValue(0xbff0ull << 48);
@@ -525,32 +527,29 @@ class PinnedHermesValue : public HermesValue {
   inline PinnedHermesValue &operator=(PseudoHandle<T> &&hv);
 } HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
 
-// All HermesValues stored in heap object should be of this
-// type. Hides assignment operator, but provides set operations that
-// do a write barrier for pointer values, or else assert that the new
-// value is not a pointer.
+/// The base implementation of GC aware HermesValue types. Specifically, types
+/// for HermesValues that live in normal objects and objects supporting large
+/// allocation subclass this. We use this base type in SlotAcceptor and places
+/// that we don't need to specially handle large allocation. All set() methods
+/// (except setNonPtr()) can only be defined and called on subclasses.
+/// Hides assignment operator, but provides set operations that do a write
+/// barrier for pointer values, or else assert that the new value is not a
+/// pointer.
 template <typename HVType>
-class GCHermesValueBase final : public HVType {
+class GCHermesValueBaseImpl : public HVType {
+ protected:
+  GCHermesValueBaseImpl() : HVType(HVType::encodeUndefinedValue()) {}
+
+  /// Initialize the base HV, assuming all necessary write barriers have been
+  /// performed in constructors of subclasses.
+  GCHermesValueBaseImpl(const HVType &hv) : HVType(hv) {}
+
  public:
-  GCHermesValueBase() : HVType(HVType::encodeUndefinedValue()) {}
-  /// Initialize a GCHermesValue from another HV. Performs a write barrier.
-  template <typename NeedsBarriers = std::true_type>
-  GCHermesValueBase(HVType hv, GC &gc);
-  /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
-  /// barrier, depending on the GC.
-  /// NOTE: The last parameter is unused, but acts as an overload selector.
-  template <typename NeedsBarriers = std::true_type>
-  GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t);
-  GCHermesValueBase(const HVType &) = delete;
-
-  /// The HermesValue \p hv may be an object pointer.  Assign the
-  /// value, and perform any necessary write barriers.
-  template <typename NeedsBarriers = std::true_type>
-  inline void set(HVType hv, GC &gc);
-
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
   /// Some GCs still need to do a write barrier though, so pass a GC parameter.
+  /// Note that this can be used for any object, since the value is not a
+  /// pointer which does not require a special barrier for now.
   inline void setNonPtr(HVType hv, GC &gc);
 
   /// Force a write barrier to occur on this value, as if the value was being
@@ -559,6 +558,48 @@ class GCHermesValueBase final : public HVType {
   /// NOTE: This barrier is typically used when a variable-sized object's length
   /// decreases.
   inline void unreachableWriteBarrier(GC &gc);
+
+  /// This is unsafe to use if the memory region being copied into (pointed to
+  /// by \p result) is reachable by the GC (for instance, memory within the
+  /// size of an ArrayStorage), since it does not update elements atomically.
+  /// This must be used if the owning object supports large allocation.
+  static inline GCHermesValueBaseImpl<HVType> *uninitialized_copy(
+      GCHermesValueBaseImpl<HVType> *first,
+      GCHermesValueBaseImpl<HVType> *last,
+      GCHermesValueBaseImpl<HVType> *result,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
+  /// unreachable.
+  static inline void rangeUnreachableWriteBarrier(
+      GCHermesValueBaseImpl<HVType> *first,
+      GCHermesValueBaseImpl<HVType> *last,
+      GC &gc);
+};
+
+template <typename HVType>
+class GCHermesValueImpl final : public GCHermesValueBaseImpl<HVType> {
+ public:
+  GCHermesValueImpl() : GCHermesValueBaseImpl<HVType>() {}
+
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier. This
+  /// must not be used if it lives in an object that supports large allocation.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueImpl(HVType hv, GC &gc);
+
+  /// Initialize a GCHermesValue from a non-pointer HV without performing write
+  /// barrier.
+  /// NOTE: The last parameter is unused, but acts as an overload selector.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueImpl(HVType hv, GC &gc, std::nullptr_t);
+
+  GCHermesValueImpl(const HVType &) = delete;
+
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers.
+  template <typename NeedsBarriers = std::true_type>
+  inline void set(HVType hv, GC &gc);
 
   /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
   /// value \p fill.  If the fill value is an object pointer, must
@@ -578,46 +619,88 @@ class GCHermesValueBase final : public HVType {
   static inline OutputIt
   copy(InputIt first, InputIt last, OutputIt result, GC &gc);
 
-  /// Same as \p copy, but the range [result, result + (last - first)) has not
-  /// been previously initialized. Cannot use this on previously initialized
-  /// memory, as it will use an incorrect write barrier.
-  template <typename InputIt, typename OutputIt>
-  static inline OutputIt
-  uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC &gc);
-
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  /// Same as \p copy, but specialized for raw pointers.
-  static inline GCHermesValueBase<HVType> *copy(
-      GCHermesValueBase<HVType> *first,
-      GCHermesValueBase<HVType> *last,
-      GCHermesValueBase<HVType> *result,
-      GC &gc);
-#endif
-
-  /// Same as \p uninitialized_copy, but specialized for raw pointers. This is
-  /// unsafe to use if the memory region being copied into (pointed to by
-  /// \p result) is reachable by the GC (for instance, memory within the
-  /// size of an ArrayStorage), since it does not update elements atomically.
-  static inline GCHermesValueBase<HVType> *uninitialized_copy(
-      GCHermesValueBase<HVType> *first,
-      GCHermesValueBase<HVType> *last,
-      GCHermesValueBase<HVType> *result,
-      GC &gc);
-
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
   copy_backward(InputIt first, InputIt last, OutputIt result, GC &gc);
+};
 
-  /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
-  /// unreachable.
-  static inline void rangeUnreachableWriteBarrier(
-      GCHermesValueBase<HVType> *first,
-      GCHermesValueBase<HVType> *last,
+template <typename HVType>
+class GCHermesValueInLargeObjImpl final : public GCHermesValueBaseImpl<HVType> {
+ public:
+  GCHermesValueInLargeObjImpl() : GCHermesValueBaseImpl<HVType>() {}
+
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier using
+  /// \p owningObj, which owns this GCHermesValue and may support large
+  /// allocation.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueInLargeObjImpl(HVType hv, const GCCell *owningObj, GC &gc);
+
+  /// Initialize a GCHermesValue from a non-pointer HV without performing write
+  /// barrier.
+  /// NOTE: The last parameter is unused, but acts as an overload selector.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueInLargeObjImpl(HVType hv, GC &gc, std::nullptr_t);
+
+  GCHermesValueInLargeObjImpl(const HVType &) = delete;
+
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers. \p owningObj is the object that
+  /// contains this GCHermesValueBase, and it may support large allocation.
+  /// for which the object pointer is needed by writer barriers.
+  template <typename NeedsBarriers = std::true_type>
+  inline void set(HVType hv, const GCCell *owningObj, GC &gc);
+
+  /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
+  /// value \p fill.  If the fill value is an object pointer, must provide a
+  /// non-null \p gc argument, to perform write barriers.
+  template <typename InputIt>
+  static inline void fill(
+      InputIt first,
+      InputIt last,
+      HVType fill,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Same as \p fill except the range expressed by  [\p first, \p last) has not
+  /// been previously initialized. Cannot use this on previously initialized
+  /// memory, as it will use an incorrect write barrier.
+  template <typename InputIt>
+  static inline void uninitialized_fill(
+      InputIt first,
+      InputIt last,
+      HVType fill,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Copies a range of values and performs a write barrier on each.
+  template <typename InputIt, typename OutputIt>
+  static inline OutputIt copy(
+      InputIt first,
+      InputIt last,
+      OutputIt result,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Copies a range of values and performs a write barrier on each.
+  template <typename InputIt, typename OutputIt>
+  static inline OutputIt copy_backward(
+      InputIt first,
+      InputIt last,
+      OutputIt result,
+      const GCCell *owningObj,
       GC &gc);
 };
 
-using GCHermesValue = GCHermesValueBase<HermesValue>;
+/// Base type for GC aware HermesValues. This should only be used when we don't
+/// need to handle large allocation specially.
+using GCHermesValueBase = GCHermesValueBaseImpl<HermesValue>;
+
+/// GCHermesValue stored in a normal object.
+using GCHermesValue = GCHermesValueImpl<HermesValue>;
+
+/// GCHermesValue stored in an object that supports large allocation.
+using GCHermesValueInLargeObj = GCHermesValueInLargeObjImpl<HermesValue>;
 
 /// copyToPinned is harder to generalise since it also depends on
 /// PinnedHermesValue, so we keep it in a separate struct for now.

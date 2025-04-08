@@ -45,6 +45,44 @@ struct AlignedHeapSegmentTest : public ::testing::Test {
   FixedSizeHeapSegment s;
 };
 
+/// Testing against a reasonably large segment size.
+static constexpr size_t jumboSize = AlignedHeapSegment::kSegmentUnitSize * 8;
+
+struct JumboHeapSegmentTest : public ::testing::Test {
+  JumboHeapSegmentTest()
+      : provider_(StorageProvider::mmapProvider()),
+        s(std::move(
+            JumboHeapSegment::create(provider_.get(), "jumbo", jumboSize)
+                .get())) {}
+
+  std::unique_ptr<StorageProvider> provider_;
+  JumboHeapSegment s;
+};
+
+TEST_F(JumboHeapSegmentTest, Alloc) {
+  auto *cell = s.alloc();
+  EXPECT_EQ(cell, s.start());
+  EXPECT_EQ(s.level(), s.hiLim());
+}
+
+TEST_F(JumboHeapSegmentTest, AllocSize) {
+  uint32_t sz = AlignedHeapSegment::kSegmentUnitSize;
+  // Allocate an object with the size of a normal segment would require double
+  // size.
+  EXPECT_EQ(
+      AlignedHeapSegment::kSegmentUnitSize * 2,
+      JumboHeapSegment::computeSegmentSize(sz));
+  sz = AlignedHeapSegment::kSegmentUnitSize * 2 - 1;
+  EXPECT_EQ(
+      AlignedHeapSegment::kSegmentUnitSize * 3,
+      JumboHeapSegment::computeSegmentSize(sz));
+  sz = AlignedHeapSegment::kSegmentUnitSize * 2 -
+      AlignedHeapSegment::kOffsetOfAllocRegion;
+  EXPECT_EQ(
+      AlignedHeapSegment::kSegmentUnitSize * 2,
+      JumboHeapSegment::computeSegmentSize(sz));
+}
+
 #ifndef NDEBUG
 TEST_F(AlignedHeapSegmentTest, FailedAllocation) {
   LimitedStorageProvider limitedProvider{StorageProvider::mmapProvider(), 0};

@@ -76,9 +76,12 @@ HERMES_VM_GCOBJECT(StringPrimitive);
 
 namespace testhelpers {
 struct DummyObject;
-}
+struct LargeDummyObject;
+} // namespace testhelpers
 template <>
 struct IsGCObject<testhelpers::DummyObject> : public std::true_type {};
+template <>
+struct IsGCObject<testhelpers::LargeDummyObject> : public std::true_type {};
 
 // Typed arrays use templates and cannot use the macro above
 template <typename T, CellKind C>

@@ -6,11 +6,11 @@ on:
       - static_h
 jobs:
   macos:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: 15.4
+        xcode-version: 16.2
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
@@ -38,18 +38,81 @@ jobs:
         name: macos-hermes
         path: output
 
-  test-linux:
-    runs-on: ubuntu-20.04
+  test-macos-test262:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15]
+        cmake_flags: [""]
+        lit_flags: [""]
+        test_runner_flags: [""]
+        include:
+          - os: macos-15
+            cmake_flags: "-DHERMESVM_ALLOW_JIT=2"
+            lit_flags: "-Xforce-jit"
+            test_runner_flags: "--vm-args='-Xforce-jit'"
+    runs-on: ${{ matrix.os }}
     steps:
-    - name: Install dependencies
-      run: |-
-        sudo apt update
-        sudo apt install -y git openssh-client cmake build-essential \
-            libicu-dev zip python3
+    - uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: 16.2
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
-    - name: Run Hermes regression tests
+    - name: Setup dependencies
       run: |-
-        cmake -S hermes -B build -DCMAKE_BUILD_TYPE=Debug
-        cmake --build build --target check-hermes all -j 4
+        brew install cmake ninja
+        # Check out test262 at a pinned revision to reduce flakiness
+        git clone https://github.com/tc39/test262
+        cd test262
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Run Hermes tests and test262 with Intl
+      env:
+        LIT_HERMES_EXTRA_FLAGS: ${{ matrix.lit_flags }}
+      run: |-
+        cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
+        cmake --build ./build
+        cmake --build ./build --target check-hermes
+        python3 hermes/utils/test_runner.py --test-intl test262/test -b build/bin ${{ matrix.test_runner_flags }}
+
+  test-linux-test262:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        cmake_flags: [""]
+        lit_flags: [""]
+        test_runner_flags: [""]
+        include:
+          - os: ubuntu-24.04-arm
+            cmake_flags: "-DHERMESVM_ALLOW_JIT=2"
+            lit_flags: "-Xforce-jit"
+            test_runner_flags: "--vm-args='-Xforce-jit'"
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Setup dependencies
+      run: |-
+        sudo apt update
+        sudo apt install -y git openssh-client cmake build-essential \
+            libreadline-dev libicu-dev zip python3 ninja-build
+        # Check out test262 at a pinned revision to reduce flakiness
+        git clone https://github.com/tc39/test262
+        cd test262
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Run test262 with Intl
+      env:
+        LIT_HERMES_EXTRA_FLAGS: ${{ matrix.lit_flags }}
+      run: |-
+        cmake -S hermes -GNinja -B build -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
+        cmake --build build --target check-hermes all
+
+        cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug ${{ matrix.cmake_flags }}
+        cmake --build ./build_intl
+        # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
+        # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
+        # main ones.
+        # cmake --build ./build_intl --target check-hermes
+        python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin ${{ matrix.test_runner_flags }}

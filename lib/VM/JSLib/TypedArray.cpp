@@ -198,21 +198,20 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   }
   GCScope scope(runtime);
   // 8. Let k be 0.
-  MutableHandle<HermesValue> i(
-      runtime, HermesValue::encodeTrustedNumberValue(0));
+  uint64_t i = 0;
   auto marker = scope.createMarker();
   // 9. Repeat, while k < len.
-  for (; i->getNumberAs<uint64_t>() < len;
-       i = HermesValue::encodeTrustedNumberValue(
-           i->getNumberAs<uint64_t>() + 1)) {
+  for (; i < len; ++i) {
     // a. Let Pk be ! ToString(k).
     // b. Let kValue be ? Get(arrayLike, Pk).
     // c. Perform ? Set(O, Pk, kValue, true).
-    if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, i)) ==
-            ExecutionStatus::EXCEPTION ||
-        JSTypedArray<T, C>::putComputed_RJS(
-            self, runtime, i, runtime.makeHandle(std::move(*propRes))) ==
-            ExecutionStatus::EXCEPTION) {
+    if ((propRes = getIndexed_RJS(runtime, arrayLike, i)) ==
+        ExecutionStatus::EXCEPTION)
+      return ExecutionStatus::EXCEPTION;
+    PinnedValue iValue = HermesValue::encodeTrustedNumberValue(i);
+    if (JSTypedArray<T, C>::putComputed_RJS(
+            self, runtime, iValue, runtime.makeHandle(std::move(*propRes))) ==
+        ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     scope.flushToMarker(marker);
@@ -510,12 +509,10 @@ CallResult<HermesValue> typedArrayPrototypeSetObject(
   // Read everything from the other array and write it into self starting from
   // offset.
   GCScope scope(runtime);
-  MutableHandle<> k(runtime, HermesValue::encodeTrustedNumberValue(0));
+  uint64_t k = 0;
   auto marker = scope.createMarker();
-  for (; k->getNumberAs<uint64_t>() < srcLength;
-       k = HermesValue::encodeTrustedNumberValue(
-           k->getNumberAs<uint64_t>() + 1)) {
-    if ((propRes = JSObject::getComputed_RJS(src, runtime, k)) ==
+  for (; k < srcLength; ++k) {
+    if ((propRes = getIndexed_RJS(runtime, src, k)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -661,14 +658,12 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   // 9. Let k be 0.
-  MutableHandle<> k(runtime, HermesValue::encodeTrustedNumberValue(0));
+  uint64_t k = 0;
   // 10. Repeat, while k < len.
-  for (; k->getNumberAs<uint64_t>() < len;
-       k = HermesValue::encodeTrustedNumberValue(
-           k->getNumberAs<uint64_t>() + 1)) {
+  for (; k < len; ++k) {
     GCScopeMarkerRAII marker{runtime};
     // a - b. Get the value of the property at k.
-    if ((propRes = JSObject::getComputed_RJS(arrayLike, runtime, k)) ==
+    if ((propRes = getIndexed_RJS(runtime, arrayLike, k)) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -676,7 +671,11 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     if (mapfn) {
       // i. Let mappedValue be ? Call(mapfn, T, [kValue, k]).
       auto callRes = Callable::executeCall2(
-          mapfn, runtime, T, propRes->get(), k.getHermesValue());
+          mapfn,
+          runtime,
+          T,
+          propRes->get(),
+          HermesValue::encodeTrustedNumberValue(k));
       if (callRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -687,7 +686,8 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     // d. Else, let mappedValue be kValue (already done by initializer).
     auto mappedValue = runtime.makeHandle(std::move(*propRes));
     // e. Perform ? Set(targetObj, Pk, mappedValue, true).
-    if (JSObject::putComputed_RJS(*targetObj, runtime, k, mappedValue) ==
+    PinnedValue kVal = HermesValue::encodeTrustedNumberValue(k);
+    if (JSObject::putComputed_RJS(*targetObj, runtime, kVal, mappedValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -824,22 +824,15 @@ typedArrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
     return HermesValue::encodeUndefinedValue();
   }
 
-  // 8. Return ? Get(O, ! ToString(𝔽(k))).
+  // 8. Return ? Get(O, ! ToString(�(k))).
   // Since we know we have a TypedArray, we can directly call JSTypedArray::at
   // rather than getComputed_RJS like the spec mandates.
-#define TYPED_ARRAY(name, type)                                            \
-  case CellKind::name##ArrayKind: {                                        \
-    auto *arr = vmcast<JSTypedArray<type, CellKind::name##ArrayKind>>(*O); \
-    if (!arr->attached(runtime)) {                                         \
-      return runtime.raiseTypeError("Underlying ArrayBuffer detached");    \
-    }                                                                      \
-    return HermesValue::encodeUntrustedNumberValue(arr->at(runtime, k));   \
-  }
-  switch (O->getKind()) {
-#include "hermes/VM/TypedArrays.def"
-    default:
-      llvm_unreachable("Invalid TypedArray after ValidateTypedArray call");
-  }
+  auto *arr = vmcast<JSTypedArrayBase>(*O);
+  if (LLVM_UNLIKELY(!arr->attached(runtime)))
+    return runtime.raiseTypeError("Underlying ArrayBuffer detached");
+
+  return JSTypedArrayBase::polyReadMayAlloc(
+      arr, runtime, JSTypedArrayBase::size_type(k));
 }
 
 /// ES6 22.2.3.5
@@ -903,44 +896,21 @@ typedArrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
   // 14. Let count be min(final-from, len-to).
   double count = std::min(fin - from, len - to);
 
-  int direction;
-  if (from < to && to < from + count) {
-    // 15. If from<to and to<from+count
-    // a. Let direction be -1.
-    direction = -1;
-    // b. Let from be from + count -1.
-    from = from + count - 1;
-    // c. Let to be to + count -1.
-    to = to + count - 1;
-  } else {
-    // 16. Else,
-    // a. Let direction = 1.
-    direction = 1;
+  auto *baseArr = vmcast<JSTypedArrayBase>(*O);
+  if (!baseArr->attached(runtime)) {
+    return runtime.raiseTypeError(
+        "Underlying ArrayBuffer detached after calling copyWithin");
   }
 
-  // Need to case on the TypedArray type to avoid encoding using HermesValues.
-  // We need to preserve the bit-level encoding of values, and HermesValues
-  // destroy information, e.g. which NaN is being used.
-#define TYPED_ARRAY(name, type)                                            \
-  case CellKind::name##ArrayKind: {                                        \
-    auto *arr = vmcast<JSTypedArray<type, CellKind::name##ArrayKind>>(*O); \
-    if (!arr->attached(runtime)) {                                         \
-      return runtime.raiseTypeError(                                       \
-          "Underlying ArrayBuffer detached after calling copyWithin");     \
-    }                                                                      \
-    while (count > 0) {                                                    \
-      arr->at(runtime, to) = arr->at(runtime, from);                       \
-      from += direction;                                                   \
-      to += direction;                                                     \
-      --count;                                                             \
-    }                                                                      \
-    break;                                                                 \
-  }
-
-  switch (O->getKind()) {
-#include "hermes/VM/TypedArrays.def"
-    default:
-      llvm_unreachable("Invalid TypedArray after ValidateTypedArray call");
+  // Get the byte width for this typed array
+  const size_t elemSize = baseArr->getByteWidth();
+  uint8_t *data = baseArr->data(runtime);
+  // Use memmove to handle the overlapping regions correctly
+  if (count > 0) {
+    memmove(
+        data + (static_cast<size_t>(to) * elemSize), // destination
+        data + (static_cast<size_t>(from) * elemSize), // source
+        static_cast<size_t>(count) * elemSize); // byte count
   }
 
   return O.getHermesValue();

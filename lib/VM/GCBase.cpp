@@ -958,33 +958,76 @@ bool GCBase::shouldSanitizeHandles() {
     runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2); }); \
   }
 
+#define GCBASE_BARRIER_3(name, type1, type2, type3)                   \
+  void GCBase::name(type1 arg1, type2 arg2, type3 arg3) {             \
+    runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2, arg3); }); \
+  }
+
 GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCHermesValueInLargeObj *,
+    HermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCSmallHermesValueInLargeObj *,
+    SmallHermesValue);
 GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
+GCBASE_BARRIER_3(
+    writeBarrierForLargeObj,
+    const GCCell *,
+    const GCPointerBase *,
+    const GCCell *);
 GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
+    const GCHermesValueInLargeObj *,
+    HermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
     const GCSmallHermesValue *,
+    SmallHermesValue);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
+    const GCSmallHermesValueInLargeObj *,
     SmallHermesValue);
 GCBASE_BARRIER_2(
     constructorWriteBarrier,
     const GCPointerBase *,
     const GCCell *);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierForLargeObj,
+    const GCCell *,
+    const GCPointerBase *,
+    const GCCell *);
 GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
 GCBASE_BARRIER_2(writeBarrierRange, const GCSmallHermesValue *, uint32_t);
-GCBASE_BARRIER_2(constructorWriteBarrierRange, const GCHermesValue *, uint32_t);
-GCBASE_BARRIER_2(
+GCBASE_BARRIER_3(
     constructorWriteBarrierRange,
-    const GCSmallHermesValue *,
+    const GCCell *,
+    const GCHermesValueBase *,
     uint32_t);
-GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
-GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSmallHermesValue *);
+GCBASE_BARRIER_3(
+    constructorWriteBarrierRange,
+    const GCCell *,
+    const GCSmallHermesValueBase *,
+    uint32_t);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValueBase *);
+GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSmallHermesValueBase *);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCPointerBase *);
 GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSymbolID *);
-GCBASE_BARRIER_2(snapshotWriteBarrierRange, const GCHermesValue *, uint32_t);
 GCBASE_BARRIER_2(
     snapshotWriteBarrierRange,
-    const GCSmallHermesValue *,
+    const GCHermesValueBase *,
+    uint32_t);
+GCBASE_BARRIER_2(
+    snapshotWriteBarrierRange,
+    const GCSmallHermesValueBase *,
     uint32_t);
 GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
 GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
@@ -1770,11 +1813,11 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
           diagnostic.stats.breakdown["HermesValue"],
           sizeof(PinnedHermesValue));
     }
-    void accept(GCHermesValue &hv) override {
+    void accept(GCHermesValueBase &hv) override {
       acceptHV(
           hv, diagnostic.stats.breakdown["HermesValue"], sizeof(GCHermesValue));
     }
-    void accept(GCSmallHermesValue &shv) override {
+    void accept(GCSmallHermesValueBase &shv) override {
       acceptHV(
           shv.toHV(pointerBase_),
           diagnostic.stats.breakdown["SmallHermesValue"],

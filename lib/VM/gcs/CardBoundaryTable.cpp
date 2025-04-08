@@ -9,6 +9,7 @@
 
 #include "hermes/VM/CardBoundaryTable.h"
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GCCell.h"
 
 #include "hermes/Support/OSCompat.h"
 
@@ -109,6 +110,16 @@ void CardBoundaryTable::verifyBoundaries(char *start, char *level) const {
         boundary < (cellPtr + cell->getAllocatedSize()) &&
         "Card object boundary is broken: first obj doesn't extend into card");
   }
+}
+
+GCCell *CardBoundaryTable::findObjectContaining(
+    const char *lowLim,
+    const char *hiLim,
+    const void *loc) const {
+  GCCell *obj = firstObjForCard(lowLim, hiLim, addressToIndex(loc));
+  while (obj->nextCell() < loc)
+    obj = obj->nextCell();
+  return obj;
 }
 #endif // HERMES_SLOW_DEBUG
 

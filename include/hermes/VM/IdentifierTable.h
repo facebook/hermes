@@ -111,13 +111,15 @@ class IdentifierTable {
   /// Register a lazy ASCII identifier from a bytecode module or as predefined
   /// identifier.
   /// This function should only be called during initialization of a module.
-  SymbolID registerLazyIdentifier(ASCIIRef str);
-  SymbolID registerLazyIdentifier(ASCIIRef str, uint32_t hash);
+  SymbolID registerLazyIdentifier(Runtime &runtime, ASCIIRef str);
+  SymbolID
+  registerLazyIdentifier(Runtime &runtime, ASCIIRef str, uint32_t hash);
 
   /// Register a lazy UTF16 identifier from a bytecode module or as predefined
   /// identifier.
-  SymbolID registerLazyIdentifier(UTF16Ref str);
-  SymbolID registerLazyIdentifier(UTF16Ref str, uint32_t hash);
+  SymbolID registerLazyIdentifier(Runtime &runtime, UTF16Ref str);
+  SymbolID
+  registerLazyIdentifier(Runtime &runtime, UTF16Ref str, uint32_t hash);
 
   /// \return the SymbolID of the string primitive \p str.
   CallResult<Handle<SymbolID>> getSymbolHandleFromPrimitive(
@@ -439,7 +441,10 @@ class IdentifierTable {
 
   /// Internal implementation of registerLazyIdentifier().
   template <typename T>
-  SymbolID registerLazyIdentifierImpl(llvh::ArrayRef<T> str, uint32_t hash);
+  SymbolID registerLazyIdentifierImpl(
+      Runtime &runtime,
+      llvh::ArrayRef<T> str,
+      uint32_t hash);
 
   /// Allocate a new SymbolID, and set it to \p str. Update the hash table
   /// location \p hashTableIndex with the ID. \return the new ID.

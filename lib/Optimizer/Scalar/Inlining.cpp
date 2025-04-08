@@ -536,6 +536,11 @@ bool Inlining::runOnModule(Module *M) {
     }
   }
 
+  /// For each f, newInlining.at(f) is the set of functions into which
+  /// f was inlined in this pass.  This is used only in opt-to-fixed-point
+  /// mode.
+  llvh::DenseMap<Function *, llvh::DenseSet<Function *>> newInlinings;
+
   for (Function *FC : functionOrder) {
     LLVM_DEBUG(
         llvh::dbgs() << "Visiting function '" << FC->getInternalNameStr()
@@ -567,6 +572,20 @@ bool Inlining::runOnModule(Module *M) {
         LLVM_DEBUG(
             llvh::dbgs() << "Cannot inline function '"
                          << FC->getInternalNameStr() << "' into itself\n");
+        continue;
+      }
+
+      // If the flag controlling it is set, check whether a call to \p
+      // FC has already been inlined into \p intoFunction in a
+      // previous invocation of inlining.  Don't inline here is so.
+      // (This prevents infinite looping in "opt-to-fixed-point"
+      // mode.)
+      if (M->getContext().getLimitRecursiveInlining() &&
+          intoFunction->inlinedInto().count(FC)) {
+        LLVM_DEBUG(
+            llvh::dbgs() << "Function '" << FC->getInternalNameStr()
+                         << "' was already " << "inlined into '"
+                         << FC->getInternalNameStr() << "'\n");
         continue;
       }
 
@@ -656,6 +675,10 @@ bool Inlining::runOnModule(Module *M) {
 
       ++NumInlinedCalls;
       changed = true;
+
+      if (M->getContext().getLimitRecursiveInlining()) {
+        newInlinings[FC].insert(intoFunction);
+      }
     }
   }
 
@@ -664,6 +687,28 @@ bool Inlining::runOnModule(Module *M) {
   for (Function *F : intoFunctions) {
     changed |= deleteUnreachableBasicBlocks(F);
     changed |= fixupCatchTargets(F);
+  }
+
+  // Record the new inlinings, to prevent runaway recursive
+  // inlining in the next invocation of this pass.  Note that we gather the new
+  // inlinings, and record them here, rather than recording them directly in the
+  // "inlinedInto" set of each function.  If we did the latter, we'd prevent
+  // inlinings we'd like to allow.  Consider a function F0, that has multiple
+  // calls to function F1.  As of yet, no calls to F1 have been inlined into F0.
+  // Now we do an inlining pass.  If we record the inlinings as they are
+  // performed, the first inlining of F1 into F0 would prevent the other calls
+  // of F1 in F0 from being inlined.  Therefore, we let the pass run on the
+  // information as of the start of the pass, and only record the new inlinings
+  // after the pass has run.
+  //
+  // Note that newInlinings will always be empty unless we're in
+  // opt-to-fixed-point mode, so this loop will be a no-op unless that's set.
+  for (auto &pair : newInlinings) {
+    Function *inlined = pair.first;
+    for (Function *inliner : pair.second) {
+      inliner->inlinedInto().insert(inlined);
+      inlined->inlinedBy().insert(inliner);
+    }
   }
 
   return changed;

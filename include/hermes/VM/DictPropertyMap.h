@@ -454,7 +454,7 @@ class DictPropertyMap final
   /// it might a few return false negatives at the end of the range.
   /// NOTE: it must not be used at runtime since it might be slow.
   static constexpr bool constWouldFitAllocation(uint32_t cap) {
-    return constApproxAllocSize64(cap) <= GC::maxAllocationSize();
+    return constApproxAllocSize64(cap) <= GC::maxNormalAllocationSize();
   }
 
   /// In the range of capacity values [lower ... upper), find the largest
@@ -472,12 +472,13 @@ class DictPropertyMap final
   }
 
   /// The upper bound of the search when trying to find the maximum capacity
-  /// of this object, given GC::maxAllocationSize().
+  /// of this object, given GC::maxNormalAllocationSize().
   /// It was chosen to be a value that is certain to not fit into an allocation;
   /// at the same time we want to make it smaller, so/ we have arbitrarily
   /// chosen to divide the max allocation size by two, which is still guaranteed
   /// not to fit.
-  static constexpr uint32_t kSearchUpperBound = GC::maxAllocationSize() / 2;
+  static constexpr uint32_t kSearchUpperBound =
+      GC::maxNormalAllocationSize() / 2;
 
   /// A place to put things in order to avoid restrictions on using constexpr
   /// functions declared in the same class.

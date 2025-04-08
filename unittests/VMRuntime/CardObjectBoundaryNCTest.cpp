@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "hermes/VM/AlignedHeapSegment.h"
+#include "hermes/VM/GCCell.h"
 #include "hermes/VM/StorageProvider.h"
 
 using namespace hermes::vm;

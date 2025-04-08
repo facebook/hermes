@@ -17,6 +17,7 @@
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/StatsAccumulator.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
@@ -107,8 +108,9 @@ enum XorPtrKeyID {
 /// logging.
 ///   void collect(std::string cause);
 ///
-/// The maximum size of any one allocation allowable by the GC in any state.
-///   static constexpr uint32_t maxAllocationSizeImpl();
+/// The maximum size of an normal allocation (compared to large allocation)
+/// allowable by the GC in any state.
+///   static constexpr uint32_t maxNormalAllocationSizeImpl();
 ///
 /// Mark a pointer to a GCCell.
 ///   template <class T> void mark(T *&ptr);
@@ -185,24 +187,32 @@ enum XorPtrKeyID {
 ///         const GCSmallHermesValue *start, uint32_t
 ///         numHVs);
 ///     void constructorWriteBarrierRange(
-///         const GCHermesValue *start,
+///         const GCHermesValueBase *start,
 ///         uint32_t numHVs);
 ///     void constructorWriteBarrierRange(
-///         const GCSmallHermesValue *start,
+///         const GCSmallHermesValueBase *start,
 ///         uint32_t numHVs);
 ///
 ///   The given loc or region is about to be overwritten, but the new value is
 ///   not important. Perform any necessary barriers.
-///     void snapshotWriteBarrier(const GCHermesValue *loc);
-///     void snapshotWriteBarrier(const GCSmallHermesValue *loc);
+///     void snapshotWriteBarrier(const GCHermesValueBase *loc);
+///     void snapshotWriteBarrier(const GCSmallHermesValueBase *loc);
 ///     void snapshotWriteBarrier(const GCPointerBase *loc);
 ///     void snapshotWriteBarrier(const GCSymboldID *symbol);
 ///     void snapshotWriteBarrierRange(
-///         const GCHermesValue *start,
+///         const GCHermesValueBase *start,
 ///         uint32_t numHVs);
 ///     void snapshotWriteBarrierRange(
-///         const GCSmallHermesValue *start,
+///         const GCSmallHermesValueBase *start,
 ///         uint32_t numHVs);
+///
+///   The above barriers may have a variant with "ForLargeObj" suffix, which is
+///   used when the heap location may be from a GCCell of a kind that supports
+///   large allocation. This variant is less efficient since it has to load the
+///   cards array through pointer in SHSegmentInfo, instead of the inline array
+///   field in CardTable structure. Because of this, these variant write
+///   barriers need a pointer to the start of the object in order to locate the
+///   card table for an object that is larger than the unit segment size.
 ///
 ///   In debug builds: is a write barrier necessary for a write of the given
 ///   GC pointer \p value to the given \p loc?
@@ -214,20 +224,6 @@ enum XorPtrKeyID {
 /// location passed to mark will contain the final, correct, pointer value
 /// after the mark call.
 ///   bool isUpdatingPointers() const;
-///
-/// It must also have the inner type:
-///   class Size;
-/// Which provides at least these functions publicly:
-///   Constructor from either a GCConfig or the min and max heap size.
-///     explicit Size(const GCConfig &conf);
-///     Size(gcheapsize_t min, gcheapsize_t max);
-///   Return the minimum amount of bytes holdable by this heap.
-///     gcheapsize_t min() const;
-///   Return the maximum amount of bytes holdable by this heap.
-///     gcheapsize_t max() const;
-///   Return the total amount of bytes of storage this GC will require.
-///   This will be a multiple of FixedSizeHeapSegment::storageSize().
-///     gcheapsize_t storageFootprint() const;
 ///
 class GCBase {
  public:
@@ -908,6 +904,8 @@ class GCBase {
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
 
@@ -916,6 +914,8 @@ class GCBase {
       bool fixedSize = true,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeA(uint32_t size, Args &&...args);
 
@@ -1014,12 +1014,14 @@ class GCBase {
 #ifdef HERMESVM_GC_RUNTIME
   inline static constexpr uint32_t minAllocationSizeImpl();
 
-  inline static constexpr uint32_t maxAllocationSizeImpl();
+  inline static constexpr uint32_t maxNormalAllocationSizeImpl();
 #endif
 
   inline static constexpr uint32_t minAllocationSize();
 
-  inline static constexpr uint32_t maxAllocationSize();
+  /// The maximum size of a normal allocation. All GCCell types that do not
+  /// support large allocation must be smaller than or equal to this.
+  inline static constexpr uint32_t maxNormalAllocationSize();
 
   /// Dump detailed heap contents to the given output stream, \p os.
   virtual void dump(llvh::raw_ostream &os, bool verbose = false);
@@ -1071,13 +1073,20 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
-  virtual bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
-      const = 0;
   virtual bool needsWriteBarrier(
-      const GCSmallHermesValue *loc,
+      const GCHermesValueBase *loc,
+      HermesValue value) const = 0;
+  virtual bool needsWriteBarrier(
+      const GCSmallHermesValueBase *loc,
       SmallHermesValue value) const = 0;
   virtual bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCHermesValueBase *loc,
+      HermesValue value) const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCSmallHermesValueBase *loc,
+      SmallHermesValue value) const = 0;
   /// \}
 #endif
 
@@ -1152,27 +1161,55 @@ class GCBase {
   /// Default implementations for read and write barriers: do nothing.
   void writeBarrier(const GCHermesValue *loc, HermesValue value);
   void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValueInLargeObj *loc,
+      HermesValue value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValueInLargeObj *loc,
+      SmallHermesValue value);
   void writeBarrier(const GCPointerBase *loc, const GCCell *value);
+  void writeBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCPointerBase *loc,
+      const GCCell *value);
   void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
   void constructorWriteBarrier(
       const GCSmallHermesValue *loc,
       SmallHermesValue value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCHermesValueInLargeObj *loc,
+      HermesValue value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCSmallHermesValueInLargeObj *loc,
+      SmallHermesValue value);
   void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *owningObj,
+      const GCPointerBase *loc,
+      const GCCell *value);
   void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
   void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
   void constructorWriteBarrierRange(
-      const GCHermesValue *start,
+      const GCCell *owningObj,
+      const GCHermesValueBase *start,
       uint32_t numHVs);
   void constructorWriteBarrierRange(
-      const GCSmallHermesValue *start,
+      const GCCell *owningObj,
+      const GCSmallHermesValueBase *start,
       uint32_t numHVs);
-  void snapshotWriteBarrier(const GCHermesValue *loc);
-  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
+  void snapshotWriteBarrier(const GCHermesValueBase *loc);
+  void snapshotWriteBarrier(const GCSmallHermesValueBase *loc);
   void snapshotWriteBarrier(const GCPointerBase *loc);
   void snapshotWriteBarrier(const GCSymbolID *symbol);
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
   void snapshotWriteBarrierRange(
-      const GCSmallHermesValue *start,
+      const GCHermesValueBase *start,
+      uint32_t numHVs);
+  void snapshotWriteBarrierRange(
+      const GCSmallHermesValueBase *start,
       uint32_t numHVs);
   void weakRefReadBarrier(HermesValue value);
   void weakRefReadBarrier(GCCell *value);
@@ -1383,6 +1420,23 @@ class GCBase {
     auto *cell = new (ptr) T(std::forward<Args>(args)...);
     constexpr auto kind = T::getCellKind();
     cell->setKindAndSize({kind, size});
+    return cell;
+  }
+
+  template <typename T, class... Args>
+  static T *constructCellCanBeLarge(void *ptr, uint32_t size, Args &&...args) {
+    assert(ptr && "constructCellCanBeLarge() can't be called on null ptr");
+    constexpr auto kind = T::getCellKind();
+    assert(
+        VTable::getVTable(kind)->allowLargeAlloc &&
+        "constructLargeCell() should only be used for constructing object that supports large allocation");
+    auto *cell = new (ptr) T(std::forward<Args>(args)...);
+    // If this cell lives in a JumboHeapSegment, its size is the segment's max
+    // allocation size.
+    auto cellSize = size > FixedSizeHeapSegment::maxSize()
+        ? JumboHeapSegment::computeActualCellSize(size)
+        : size;
+    cell->setKindAndSize({kind, cellSize});
     return cell;
   }
 

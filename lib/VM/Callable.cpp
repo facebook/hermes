@@ -609,6 +609,7 @@ const CallableVTable BoundFunction::vt{
         VTable(
             CellKind::BoundFunctionKind,
             cellSize<BoundFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -648,14 +649,20 @@ CallResult<HermesValue> BoundFunction::create(
     ConstArgIterator argsWithThis) {
   unsigned argCount = argCountWithThis > 0 ? argCountWithThis - 1 : 0;
 
+  struct : public Locals {
+    PinnedValue<ArrayStorage> arrStorage;
+    PinnedValue<BoundFunction> self;
+    PinnedValue<JSObject> proto;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   // Copy the arguments. If we don't have any, we must at least initialize
   // 'this' to 'undefined'.
   auto arrRes = ArrayStorage::create(runtime, argCount + 1);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arrHandle = runtime.makeMutableHandle(vmcast<ArrayStorage>(*arrRes));
-
+  lv.arrStorage = vmcast<ArrayStorage>(*arrRes);
+  MutableHandle<ArrayStorage> arrHandle(lv.arrStorage);
   if (argCountWithThis) {
     for (unsigned i = 0; i != argCountWithThis; ++i) {
       ArrayStorage::push_back(arrHandle, runtime, Handle<>(&argsWithThis[i]));
@@ -665,21 +672,26 @@ CallResult<HermesValue> BoundFunction::create(
     // of at least 1.
     ArrayStorage::push_back(arrHandle, runtime, Runtime::getUndefinedValue());
   }
+  CallResult<PseudoHandle<JSObject>> protoRes =
+      getPrototypeOf(Handle<JSObject>::vmcast(target), runtime);
+  if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.proto = std::move(*protoRes);
 
   auto *cell = runtime.makeAFixed<BoundFunction>(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      lv.proto,
       runtime.getHiddenClassForPrototype(
           runtime.functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
       target,
       arrHandle);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  if (initializeLengthAndName_RJS(selfHandle, runtime, target, argCount) ==
+  lv.self = JSObjectInit::initToPointer(runtime, cell);
+  if (initializeLengthAndName_RJS(lv.self, runtime, target, argCount) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return selfHandle.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
@@ -914,6 +926,7 @@ const CallableVTable NativeJSFunction::vt{
         VTable(
             CellKind::NativeJSFunctionKind,
             cellSize<NativeJSFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1040,6 +1053,7 @@ const CallableVTable NativeJSDerivedClass::vt{
         VTable(
             CellKind::NativeJSDerivedClassKind,
             cellSize<NativeJSDerivedClass>(),
+            /*allowLargeAlloc*/ false,
             nullptr,
             nullptr,
             nullptr
@@ -1097,6 +1111,7 @@ const CallableVTable NativeFunction::vt{
         VTable(
             CellKind::NativeFunctionKind,
             cellSize<NativeFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1276,6 +1291,7 @@ const CallableVTable NativeConstructor::vt{
         VTable(
             CellKind::NativeConstructorKind,
             cellSize<NativeConstructor>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1333,6 +1349,7 @@ const CallableVTable JSFunction::vt{
         VTable(
             CellKind::JSFunctionKind,
             cellSize<JSFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1475,6 +1492,7 @@ const CallableVTable JSDerivedClass::vt{
         VTable(
             CellKind::JSDerivedClassKind,
             cellSize<JSDerivedClass>(),
+            /*allowLargeAlloc*/ false,
             nullptr,
             nullptr,
             nullptr

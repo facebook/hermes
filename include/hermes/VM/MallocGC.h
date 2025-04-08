@@ -125,29 +125,6 @@ class MallocGC final : public GCBase {
   uint64_t externalBytes_{0};
 
  public:
-  /// See comment in GCBase.
-  class Size final {
-   public:
-    explicit Size(const GCConfig &gcConfig)
-        : Size(gcConfig.getMinHeapSize(), gcConfig.getMaxHeapSize()) {}
-    Size(gcheapsize_t min, gcheapsize_t max) : min_(min), max_(max) {}
-
-    gcheapsize_t min() const {
-      return min_;
-    }
-
-    gcheapsize_t max() const {
-      return max_;
-    }
-
-    gcheapsize_t storageFootprint() const;
-    gcheapsize_t minStorageFootprint() const;
-
-   private:
-    gcheapsize_t min_;
-    gcheapsize_t max_;
-  };
-
   MallocGC(
       GCCallbacks &gcCallbacks,
       PointerBase &pointerBase,
@@ -172,6 +149,8 @@ class MallocGC final : public GCBase {
       bool fixedSize = true,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::Yes,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   inline T *makeA(uint32_t size, Args &&...args);
 
@@ -191,20 +170,13 @@ class MallocGC final : public GCBase {
     return 0;
   }
 
-  static constexpr uint32_t maxAllocationSizeImpl() {
+  static constexpr uint32_t maxNormalAllocationSizeImpl() {
     // MallocGC imposes no limit on individual allocations.
     return std::numeric_limits<uint32_t>::max();
   }
 
   /// Run the finalizers for all heap objects.
   void finalizeAll() override;
-
-  /// \return true iff this is collecting the entire heap, or false if it is
-  /// only a portion of the heap.
-  /// \pre Assumes inGC() is true, or else this has no meaning.
-  bool inFullCollection() const {
-    return true;
-  }
 
 #ifndef NDEBUG
   /// See comment in GCBase.
@@ -216,12 +188,18 @@ class MallocGC final : public GCBase {
   bool validPointer(const void *p) const override;
   bool dbgContains(const void *p) const override;
 
-  bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
+  bool needsWriteBarrier(const GCHermesValueBase *loc, HermesValue value)
       const override;
-  bool needsWriteBarrier(const GCSmallHermesValue *loc, SmallHermesValue value)
-      const override;
+  bool needsWriteBarrier(
+      const GCSmallHermesValueBase *loc,
+      SmallHermesValue value) const override;
   bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const override;
+  bool needsWriteBarrierInCtor(const GCHermesValueBase *loc, HermesValue value)
+      const override;
+  bool needsWriteBarrierInCtor(
+      const GCSmallHermesValueBase *loc,
+      SmallHermesValue value) const override;
 #endif
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -235,20 +213,50 @@ class MallocGC final : public GCBase {
 
   void writeBarrier(const GCHermesValue *, HermesValue) {}
   void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
+  void writeBarrierForLargeObj(
+      const GCCell *,
+      const GCHermesValueInLargeObj *,
+      HermesValue) {}
+  void writeBarrierForLargeObj(
+      const GCCell *,
+      const GCSmallHermesValueInLargeObj *,
+      SmallHermesValue) {}
   void writeBarrier(const GCPointerBase *, const GCCell *) {}
+  void writeBarrierForLargeObj(
+      const GCCell *,
+      const GCPointerBase *,
+      const GCCell *) {}
   void constructorWriteBarrier(const GCHermesValue *, HermesValue) {}
   void constructorWriteBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *,
+      const GCSmallHermesValueInLargeObj *,
+      SmallHermesValue) {}
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *,
+      const GCHermesValueInLargeObj *,
+      HermesValue) {}
   void constructorWriteBarrier(const GCPointerBase *, const GCCell *) {}
+  void constructorWriteBarrierForLargeObj(
+      const GCCell *,
+      const GCPointerBase *,
+      const GCCell *) {}
   void writeBarrierRange(const GCHermesValue *, uint32_t) {}
   void writeBarrierRange(const GCSmallHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCHermesValue *, uint32_t) {}
-  void constructorWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
-  void snapshotWriteBarrier(const GCHermesValue *) {}
-  void snapshotWriteBarrier(const GCSmallHermesValue *) {}
+  void constructorWriteBarrierRange(
+      const GCCell *,
+      const GCHermesValueBase *,
+      uint32_t) {}
+  void constructorWriteBarrierRange(
+      const GCCell *,
+      const GCSmallHermesValueBase *,
+      uint32_t) {}
+  void snapshotWriteBarrier(const GCHermesValueBase *) {}
+  void snapshotWriteBarrier(const GCSmallHermesValueBase *) {}
   void snapshotWriteBarrier(const GCPointerBase *) {}
   void snapshotWriteBarrier(const GCSymbolID *) {}
-  void snapshotWriteBarrierRange(const GCHermesValue *, uint32_t) {}
-  void snapshotWriteBarrierRange(const GCSmallHermesValue *, uint32_t) {}
+  void snapshotWriteBarrierRange(const GCHermesValueBase *, uint32_t) {}
+  void snapshotWriteBarrierRange(const GCSmallHermesValueBase *, uint32_t) {}
   void weakRefReadBarrier(HermesValue) {}
   void weakRefReadBarrier(GCCell *) {}
   void weakRefReadBarrier(SymbolID) {}
@@ -279,10 +287,7 @@ class MallocGC final : public GCBase {
 
   /// Allocate an object in the GC controlled heap with the size to allocate
   /// given by \p size.
-  template <
-      bool fixedSizeIgnored = true,
-      HasFinalizer hasFinalizer = HasFinalizer::No>
-  inline void *alloc(uint32_t size);
+  GCCell *alloc(uint32_t size);
 
   /// Initialize a cell with the required basic data for any cell.
   inline void initCell(GCCell *cell, uint32_t size);
@@ -317,33 +322,6 @@ class MallocGC final : public GCBase {
 /// @name Inline implementations
 /// @{
 
-template <bool fixedSizeIgnored, HasFinalizer hasFinalizer>
-inline void *MallocGC::alloc(uint32_t size) {
-  assert(noAllocLevel_ == 0 && "no alloc allowed right now");
-  assert(
-      isSizeHeapAligned(size) &&
-      "Call to alloc must use a size aligned to HeapAlign");
-  if (shouldSanitizeHandles()) {
-    collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
-  }
-  // Use subtraction to prevent overflow.
-  if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
-    collectBeforeAlloc(kNaturalCauseForAnalytics, size);
-  }
-  // Add space for the header.
-  auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
-  GCCell *mem = header->data();
-  initCell(mem, size);
-  // Add to the set of pointers owned by the GC.
-  pointers_.insert(header);
-  allocatedBytes_ += size;
-  totalAllocatedBytes_ += size;
-#ifndef NDEBUG
-  ++numAllocatedObjects_;
-#endif
-  return mem;
-}
-
 inline bool MallocGC::canAllocExternalMemory(uint32_t size) {
   return size <= maxSize_;
 }
@@ -353,6 +331,8 @@ template <
     bool fixedSize,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
   assert(
@@ -360,7 +340,7 @@ inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
       "Call to makeA must use a size aligned to HeapAlign");
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
-  void *mem = alloc<fixedSize, hasFinalizer>(size);
+  GCCell *mem = alloc(size);
   return constructCell<T>(mem, size, std::forward<Args>(args)...);
 }
 

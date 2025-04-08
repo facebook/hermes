@@ -24,6 +24,9 @@ bool runCustomOptimizationPasses(
 /// Run optimization passes corresponding to -O3
 void runFullOptimizationPasses(Module &M);
 
+/// Run optimization passes corresponding to -O4
+void runOptimizationPassesToFixedPoint(Module &M);
+
 /// Run optimization passes corresponding to -Og
 void runDebugOptimizationPasses(Module &M);
 

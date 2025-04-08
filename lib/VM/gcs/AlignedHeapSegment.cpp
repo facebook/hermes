@@ -95,6 +95,22 @@ AlignedHeapSegment::~AlignedHeapSegment() {
   }
 }
 
+/* static */
+llvh::ErrorOr<JumboHeapSegment> JumboHeapSegment::create(
+    StorageProvider *provider,
+    const char *name,
+    size_t segmentSize) {
+  assert(
+      segmentSize > kSegmentUnitSize &&
+      "JumboHeapSegment size must be larger than kSegmentUnitSize");
+  auto result = provider->newStorage(segmentSize, name);
+  if (!result) {
+    return result.getError();
+  }
+  assert(*result && "Heap segment storage allocation failure");
+  return JumboHeapSegment{provider, *result, segmentSize};
+}
+
 llvh::ErrorOr<FixedSizeHeapSegment> FixedSizeHeapSegment::create(
     StorageProvider *provider,
     const char *name) {

@@ -336,6 +336,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
 
@@ -912,10 +914,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     return hasIntl_;
   }
 
-  bool hasArrayBuffer() const {
-    return hasArrayBuffer_;
-  }
-
   bool hasMicrotaskQueue() const {
     return hasMicrotaskQueue_;
   }
@@ -1157,9 +1155,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Set to true if we should enable ECMA-402 Intl APIs.
   const bool hasIntl_;
-
-  /// Set to true if we should enable ArrayBuffer, DataView and typed arrays.
-  const bool hasArrayBuffer_;
 
   /// Set to true if we are using microtasks.
   const bool hasMicrotaskQueue_;
@@ -2056,6 +2051,8 @@ template <
     typename T,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
 #ifndef NDEBUG
@@ -2065,8 +2062,9 @@ T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  return getHeap().makeAVariable<T, hasFinalizer, longLived>(
-      size, std::forward<Args>(args)...);
+  return getHeap()
+      .makeAVariable<T, hasFinalizer, longLived, canBeLarge, mayFail>(
+          size, std::forward<Args>(args)...);
 }
 
 template <typename T>

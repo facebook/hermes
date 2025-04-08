@@ -114,6 +114,59 @@ void hermes::runFullOptimizationPasses(Module &M) {
   PM.run(&M);
 }
 
+void hermes::runOptimizationPassesToFixedPoint(Module &M) {
+  LLVM_DEBUG(dbgs() << "Running -O4 optimizations...\n");
+  PassManager PM("Opt to fixed point");
+
+  auto addMem2Reg = [&PM, &M]() {
+    if (M.getContext().getOptimizationSettings().useLegacyMem2Reg)
+      PM.addMem2Reg();
+    else
+      PM.addSimpleMem2Reg();
+  };
+
+  // Add the optimization passes.
+
+  PM.addLowerGeneratorFunction();
+
+  PM.beginFixedPointLoop("outer type inference loop");
+  PM.addTypeInference();
+
+  PM.beginFixedPointLoop("inner loop");
+
+  // We need to fold constant strings before staticrequire.
+  PM.addInstSimplify();
+  PM.addResolveStaticRequire();
+  // staticrequire creates some dead instructions (namely frame loads) which
+  // need to be eliminated now, or the "require" parameter cannot be promoted.
+  PM.addDCE();
+
+  PM.addSimplifyCFG();
+  PM.addSimpleStackPromotion();
+  PM.addFrameLoadStoreOpts();
+  addMem2Reg();
+  PM.addScopeElimination();
+  PM.addFunctionAnalysis();
+  PM.addMetroRequire();
+  PM.addInlining();
+  PM.addObjectMergeNewStores();
+  PM.addObjectStackPromotion();
+  PM.addCSE();
+  PM.addTDZDedup();
+  PM.addFuncSigOpts();
+
+  PM.addMetroRequire();
+
+  PM.endFixedPointLoop(); // inner loop.
+  PM.endFixedPointLoop(); // outer type inference loop
+
+  // Auditor must always be run last -- it audits the final state of the IR.
+  PM.addAuditor();
+
+  // Run the optimizations.
+  PM.run(&M);
+}
+
 void hermes::runDebugOptimizationPasses(Module &M) {
   LLVM_DEBUG(dbgs() << "Running -Og optimizations...\n");
   PassManager PM("Debug opts");

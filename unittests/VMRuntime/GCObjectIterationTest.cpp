@@ -28,7 +28,7 @@ TEST(GCObjectIterationTest, ForAllObjsGetsAllObjects) {
 #ifdef HERMESVM_GC_MALLOC
       1024 * 1024
 #else
-      heapAlignSize((GC::maxAllocationSize() / 3) * 2)
+      heapAlignSize((GC::maxNormalAllocationSize() / 3) * 2)
 #endif
       ;
   using LargeCell = EmptyCell<kLargeSize>;

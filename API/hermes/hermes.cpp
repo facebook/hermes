@@ -2373,10 +2373,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
         "getValueAtIndex: index ", i, " is out of bounds [0, ", size(arr), ")");
   }
 
-  auto res = vm::JSObject::getComputed_RJS(
-      handle(arr),
-      runtime_,
-      runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)));
+  auto res = vm::getIndexed_RJS(runtime_, handle(arr), i);
   checkStatus(res.getStatus());
 
   return valueFromHermesValue(res->get());
@@ -2705,7 +2702,6 @@ vm::RuntimeConfig hardenedHermesRuntimeConfig() {
   vm::RuntimeConfig::Builder config;
   // Disable optional JS features.
   config.withEnableEval(false);
-  config.withArrayBuffer(false);
   config.withES6Proxy(false);
   config.withEnableHermesInternal(false);
   config.withEnableHermesInternalTestMethods(false);

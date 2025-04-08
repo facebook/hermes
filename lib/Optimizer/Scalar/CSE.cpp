@@ -82,7 +82,7 @@ struct DenseMapInfo<CSEValue> {
 } // end namespace llvh
 
 unsigned llvh::DenseMapInfo<CSEValue>::getHashValue(CSEValue Val) {
-  return Val.inst_->getHashCode();
+  return Val.inst_->getSimpleHashCode();
 }
 
 bool llvh::DenseMapInfo<CSEValue>::isEqual(CSEValue LHS, CSEValue RHS) {

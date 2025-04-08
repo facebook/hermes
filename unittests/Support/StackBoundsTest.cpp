@@ -6,6 +6,7 @@
  */
 
 #include "hermes/Support/OSCompat.h"
+#include "llvh/Support/Compiler.h"
 
 #include "gtest/gtest.h"
 
@@ -105,7 +106,7 @@ void unboundedRecursion() {
 volatile unsigned sum = 0;
 
 /// Ensure that we can read from the entire extent of the reported stack
-void manualStackScan() {
+LLVM_NO_SANITIZE("address") void manualStackScan() {
   auto [high, size] = oscompat::thread_stack_bounds(0);
   const char *low = (const char *)high - size;
   for (const char *p = (const char *)high - 16; p > low; p -= 2048) {

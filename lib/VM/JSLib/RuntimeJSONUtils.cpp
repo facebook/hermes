@@ -636,9 +636,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     gcScope.flushToMarker(marker);
 
     // Get the property value.
-    tmpHandle_ = HermesValue::encodeTrustedNumberValue(i);
-    auto propRes =
-        JSObject::getComputed_RJS(replacerArray, runtime_, tmpHandle_);
+    auto propRes = getIndexed_RJS(runtime_, replacerArray, i);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

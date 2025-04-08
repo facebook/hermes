@@ -56,8 +56,9 @@ CELL_KIND(BoxedDouble)
 CELL_KIND(NativeState)
 CELL_KIND(BigIntPrimitive)
 
-// Dummy object used only in tests.
+// DummyObject/LargeDummyObject used only in tests.
 CELL_KIND(DummyObject)
+CELL_KIND(LargeDummyObject)
 
 CELL_CLASS(JSObject, "Object")
 CELL_CLASS(DecoratedObject, "DecoratedObject")
@@ -140,7 +141,8 @@ CELL_RANGE(CallableExpectsThis, JSFunction, NativeJSFunction)
 
 CELL_RANGE(CodeBlockFunction, JSDerivedClass, JSFunction)
 CELL_RANGE(NativeFunction, NativeFunction, JSCallableProxy)
-CELL_RANGE(TypedArrayBase, Int8Array, BigUint64Array)
+CELL_RANGE(TypedArrayBase, Uint8Array, BigInt64Array)
+CELL_RANGE(NoAllocTypedArray, Uint8Array, Float64Array)
 CELL_RANGE(WeakMapImplBase, JSWeakMap, JSWeakSet)
 CELL_RANGE(
     StringPrimitive,
