@@ -9,18 +9,20 @@
 // RUN: %hermes -Xasync-generators -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -Xasync-generators -lazy %s | %FileCheck --match-full-lines %s
 
-async function* mixedValuesGenerator() {
+async function* errorHandlingGenerator() {
     yield 1;
-    yield Promise.resolve(2);
-    yield new Promise((resolve) => resolve(3));
+    throw new Error('Async generator threw!');
+    yield 2;
 }
 
-// Test async generator with for await...of loop
-(async function testMixedValuesGenerator() {
-    let sum = 0;
-    for await (const value of mixedValuesGenerator()) {
-        sum += value;
+// Test error propagation with the async generator
+(async function testErrorPropagation() {
+    try {
+        for await (const value of errorHandlingGenerator()) {
+            print(value);
+        }
+    } catch (error) {
+        print('Caught error:', error.message);
     }
-    print(sum);
 })();
-//CHECK: 6
+//CHECK: Caught error: Async generator threw!
