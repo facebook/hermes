@@ -4697,7 +4697,6 @@
     "Symbol.unscopables",
     "async-iteration",
     "caller",
-    "class-static-block",
     "destructuring-binding",
     "dynamic-import",
     "error-cause",

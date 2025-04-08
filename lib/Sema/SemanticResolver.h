@@ -98,8 +98,11 @@ class SemanticResolver
   /// True if we are forbidding await expressions.
   bool forbidAwaitExpression_{false};
 
-  /// True if we are forbidding 'arguments' identifier.
-  bool forbidArguments_{false};
+  /// True if we are forbidding the reference to the special 'arguments' object.
+  bool forbidSpecialArgumentsReference_{false};
+
+  /// True if 'arguments' cannot be used as any identifier.
+  bool forbidArgumentsAsIdentifier_{false};
 
  public:
   /// This constant enables the more expensive path in RecursiveVisitorDispatch,
@@ -570,6 +573,16 @@ class FunctionContext {
       SemanticResolver &resolver,
       FunctionInfo *newFunctionInfo);
 
+  /// Although a static block is not technically a function, we should be able
+  /// to construct a function context starting from a static block node. This is
+  /// because static blocks introduce a new "var"-scope in the same way that
+  /// function nodes do. So we must be able to collect and initialize \p decls
+  /// starting from the static block node.
+  explicit FunctionContext(
+      SemanticResolver &resolver,
+      ESTree::StaticBlockNode *node,
+      FunctionInfo *newFunctionInfo);
+
   /// Tag for readability to show lazy compilation constructor.
   struct LazyTag {};
 
@@ -623,6 +636,9 @@ class ClassContext {
   /// Get or create a synthetic function information for the static elements
   /// initializer of a class.
   FunctionInfo *getOrCreateStaticElementsInitFunctionInfo();
+
+  /// Create a synthetic function information for a static initialization block.
+  FunctionInfo *createStaticBlockFunctionInfo(ESTree::StaticBlockNode *node);
 
   /// \return true if the current class of this context is a derived class.
   bool isDerivedClass() const {

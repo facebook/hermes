@@ -881,8 +881,8 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
                       legacyClassNode = legacyClassNode,
                       typedClassContext = curFunction()->typedClassContext,
                       legacyClassContext = curFunction()->legacyClassContext,
-                      parentScope =
-                          curFunction()->curScope->getVariableScope()] {
+                      parentScope = curFunction()->curScope->getVariableScope(),
+                      consName] {
     FunctionContext newFunctionContext{
         this, staticElementsFunc, staticElementsFuncInfo};
     newFunctionContext.typedClassContext = typedClassContext;
@@ -910,6 +910,7 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
 
     // Emit a store to the constructor object for each static property on the
     // class.
+    size_t staticBlockIdx = 0;
     for (ESTree::Node &it : classBody->_body) {
       if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&it)) {
         if (!prop->_static)
@@ -946,6 +947,59 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
                       privateNameID->_name))
             : Builder.getLiteralUndefined();
         Builder.createAddOwnPrivateFieldInst(propValue, classVal, propKey);
+        continue;
+      }
+      if (auto *SB = llvh::dyn_cast<ESTree::StaticBlockNode>(&it)) {
+        // Create a new IR function to hold the IR of the static block, then
+        // invoke it.
+        auto *staticBlockFunc = Builder.createFunction(
+            (llvh::Twine("<") + consName.str() + llvh::Twine(":static_block_") +
+             llvh::Twine(staticBlockIdx++) + llvh::Twine(">"))
+                .str(),
+            Function::DefinitionKind::ES5Function,
+            true /*strictMode*/);
+
+        auto compileStaticBlock =
+            [this,
+             staticBlockFunc,
+             typedClassContext = curFunction()->typedClassContext,
+             legacyClassContext = curFunction()->legacyClassContext,
+             parentScope = curFunction()->curScope->getVariableScope(),
+             SB] {
+              FunctionContext newFunctionContext{
+                  this, staticBlockFunc, SB->functionInfo};
+              newFunctionContext.typedClassContext = typedClassContext;
+              newFunctionContext.legacyClassContext = legacyClassContext;
+              newFunctionContext.capturedState.homeObject =
+                  legacyClassContext->constructor;
+              auto *prologueBB = Builder.createBasicBlock(staticBlockFunc);
+              Builder.setInsertionBlock(prologueBB);
+              emitFunctionPrologue(
+                  nullptr,
+                  prologueBB,
+                  InitES5CaptureState::Yes,
+                  DoEmitDeclarations::No,
+                  parentScope);
+              emitScopeDeclarations(SB->getScope());
+              for (auto &Node : SB->_body) {
+                genStatement(&Node);
+              }
+              emitFunctionEpilogue(Builder.getLiteralUndefined());
+            };
+
+        enqueueCompilation(
+            SB, ExtraKey::Normal, staticBlockFunc, compileStaticBlock);
+        CreateFunctionInst *staticBlockClosure =
+            Builder.createCreateFunctionInst(
+                curFunction()->curScope, staticBlockFunc);
+        Builder.createCallInst(
+            staticBlockClosure,
+            staticBlockFunc,
+            /* calleeIsAlwaysClosure */ true,
+            /* env */ curFunction()->curScope,
+            /*newTarget*/ Builder.getLiteralUndefined(),
+            genThisExpression(),
+            /*args*/ {});
         continue;
       }
     }

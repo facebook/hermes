@@ -5,22 +5,24 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermesc -dump-transformed-ast %s 2>&1 ) | %FileCheckOrRegen --match-full-lines %s
+// RUN: (! %hermesc -dump-transformed-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 function* foo() {
   class C {
     static {
       print(arguments.length);
+// CHECK:{{.*}}arguments-static-block-error.js:13:13: error: invalid use of 'arguments' as an identifier
+// CHECK-NEXT:      print(arguments.length);
+// CHECK-NEXT:            ^~~~~~~~~
     }
   }
 }
 
-// Auto-generated content below. Please do not modify manually.
-
-// CHECK:{{.*}}arguments-static-block-error.js:12:12: error: class static blocks are not supported
-// CHECK-NEXT:    static {
-// CHECK-NEXT:           ^
-// CHECK-NEXT:{{.*}}arguments-static-block-error.js:13:13: error: invalid use of 'arguments'
-// CHECK-NEXT:      print(arguments.length);
-// CHECK-NEXT:            ^~~~~~~~~
-// CHECK-NEXT:Emitted 2 errors. exiting.
+class GlobalClass {
+  static {
+    print(arguments.length);
+// CHECK:{{.*}}arguments-static-block-error.js:23:11: error: invalid use of 'arguments' as an identifier
+// CHECK-NEXT:    print(arguments.length);
+// CHECK-NEXT:          ^~~~~~~~~
+  }
+}

@@ -436,7 +436,8 @@ void SemContextDumper::printFunction(
     llvh::raw_ostream &os,
     const FunctionInfo &f,
     unsigned level) {
-  os << ind(level) << "Func " << (f.strict ? "strict" : "loose") << "\n";
+  os << ind(level) << (f.isStaticBlock ? "StaticBlock " : "Func ")
+     << (f.strict ? "strict" : "loose") << "\n";
   std::map<const LexicalScope *, llvh::SmallVector<const LexicalScope *, 2>>
       children;
 

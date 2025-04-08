@@ -300,6 +300,9 @@ class FunctionInfo {
   /// True if this function came from a program node.
   bool isProgramNode = false;
 
+  /// True if this function came from a static block node.
+  bool isStaticBlock = false;
+
   /// Lazy compilation: the parent binding table scope of this function.
   /// Eager/eval compilation: the binding table scope of this function.
   /// In both cases, we're storing the parent of the code we want to eventually
