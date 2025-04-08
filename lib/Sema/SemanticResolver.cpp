@@ -2935,7 +2935,7 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
       resolver_.curScope_,
       /*strict*/ true,
       CustomDirectives{});
-  // This is callled for the side effect of associating the new scope with
+  // This is called for the side effect of associating the new scope with
   // implicitCtor.  We don't need the value now, but we will later.
   (void)resolver_.semCtx_.newScope(implicitCtor, resolver_.curScope_);
   classDecoration->implicitCtorFunctionInfo = implicitCtor;
@@ -2951,7 +2951,7 @@ FunctionInfo *ClassContext::getOrCreateInstanceElementsInitFunctionInfo() {
         resolver_.curScope_,
         /*strict*/ true,
         CustomDirectives{});
-    // This is callled for the side effect of associating the new scope with
+    // This is called for the side effect of associating the new scope with
     // fieldInitFunc.  We don't need the value now, but we will later.
     (void)resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);
     classDecoration->instanceElementsInitFunctionInfo = fieldInitFunc;
@@ -2969,7 +2969,7 @@ FunctionInfo *ClassContext::getOrCreateStaticElementsInitFunctionInfo() {
         resolver_.curScope_,
         /*strict*/ true,
         CustomDirectives{});
-    // This is callled for the side effect of associating the new scope with
+    // This is called for the side effect of associating the new scope with
     // staticFieldInitFunc.  We don't need the value now, but we will later.
     (void)resolver_.semCtx_.newScope(staticFieldInitFunc, resolver_.curScope_);
     classDecoration->staticElementsInitFunctionInfo = staticFieldInitFunc;
