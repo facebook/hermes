@@ -1261,7 +1261,14 @@ void HBCISel::generateLIRAllocObjectFromBufferInst(
   auto result = encodeValue(Inst);
   auto buffIdxs =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  if (buffIdxs.shapeTableIdx <= UINT16_MAX &&
+  if (!llvh::isa<EmptySentinel>(Inst->getParentObject())) {
+    BCFGen_->emitNewObjectWithBufferAndParent(
+        result,
+        encodeValue(Inst->getParentObject()),
+        buffIdxs.shapeTableIdx,
+        buffIdxs.valueBufferOffset);
+  } else if (
+      buffIdxs.shapeTableIdx <= UINT16_MAX &&
       buffIdxs.valueBufferOffset <= UINT16_MAX) {
     BCFGen_->emitNewObjectWithBuffer(
         result, buffIdxs.shapeTableIdx, buffIdxs.valueBufferOffset);

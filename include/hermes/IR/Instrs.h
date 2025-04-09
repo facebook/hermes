@@ -2242,18 +2242,22 @@ class LIRAllocObjectFromBufferInst : public Instruction {
   void operator=(const LIRAllocObjectFromBufferInst &) = delete;
 
  public:
+  enum { ParentObjectIdx, FirstKeyIdx };
+
   using ObjectPropertyMap =
       llvh::SmallVector<std::pair<Literal *, Literal *>, 4>;
 
-  /// \sizeHint is a hint for the VM regarding the final size of this object.
-  /// It is the number of entries in the object declaration including
-  /// non-literal ones. \prop_map is all the literal key/value entries.
-  explicit LIRAllocObjectFromBufferInst(const ObjectPropertyMap &prop_map)
+  /// \param parentObj is the parent object of the new object.
+  /// \param propMap is all the literal key/value entries.
+  explicit LIRAllocObjectFromBufferInst(
+      Value *parentObj,
+      const ObjectPropertyMap &propMap)
       : Instruction(ValueKind::LIRAllocObjectFromBufferInstKind) {
     setType(*getInherentTypeImpl());
-    for (size_t i = 0; i < prop_map.size(); i++) {
-      pushOperand(prop_map[i].first);
-      pushOperand(prop_map[i].second);
+    pushOperand(parentObj);
+    for (size_t i = 0; i < propMap.size(); i++) {
+      pushOperand(propMap[i].first);
+      pushOperand(propMap[i].second);
     }
   }
   explicit LIRAllocObjectFromBufferInst(
@@ -2279,16 +2283,20 @@ class LIRAllocObjectFromBufferInst : public Instruction {
     return {};
   }
 
+  Value *getParentObject() const {
+    return getOperand(ParentObjectIdx);
+  }
+
   /// Number of consecutive literal key/value pairs in the object.
   unsigned getKeyValuePairCount() const {
-    return getNumOperands() / 2;
+    return (getNumOperands() - FirstKeyIdx) / 2;
   }
 
   /// Return the \index 'd sequential literal key/value pair.
   std::pair<Literal *, Literal *> getKeyValuePair(unsigned index) const {
     return std::pair<Literal *, Literal *>{
-        cast<Literal>(getOperand(2 * index)),
-        cast<Literal>(getOperand(1 + 2 * index))};
+        cast<Literal>(getOperand(2 * index + FirstKeyIdx)),
+        cast<Literal>(getOperand(1 + 2 * index + FirstKeyIdx))};
   }
 
   static bool classof(const Value *V) {

@@ -43,7 +43,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKRA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %3: object, "checkNonStaticBuiltin": string
 // CHKRA-NEXT:  {r1}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %3: object, "print": string
 // CHKRA-NEXT:  {r2}     %12 = LoadPropertyInst (:any) {r0} %3: object, "foo": string
-// CHKRA-NEXT:  {r0}     %13 = LIRAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
+// CHKRA-NEXT:  {r0}     %13 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, 10: number, "b": string, 20: number, "lastKey": string, 30: number, 5: number, 6: number
 // CHKRA-NEXT:  {r4}     %14 = ImplicitMovInst (:undefined) {np0} %4: undefined
 // CHKRA-NEXT:  {r3}     %15 = ImplicitMovInst (:object) {r0} %13: object
 // CHKRA-NEXT:  {r0}     %16 = HBCCallNInst (:any) {r2} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %4: undefined, {r0} %13: object
@@ -63,7 +63,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 
 // CHKRA:function shadows(): undefined
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  {r2}      %0 = LIRAllocObjectFromBufferInst (:object) "keys": string, null: null
+// CHKRA-NEXT:  {r2}      %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "keys": string, null: null
 // CHKRA-NEXT:  {r0}      %1 = LIRGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  {r0}      %2 = TryLoadGlobalPropertyInst (:any) {r0} %1: object, "print": string
 // CHKRA-NEXT:                 PrStoreInst {r0} %2: any, {r2} %0: object, 0: number, "keys": string, false: boolean

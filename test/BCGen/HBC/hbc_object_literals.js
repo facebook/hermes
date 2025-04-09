@@ -141,7 +141,7 @@ function obj7() {
 
 // IRGEN:function obj1(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) "a": string, "hello": string, "b": string, 1: number, "c": string, null: null, "d": string, undefined: undefined, "e": string, true: boolean, "f": string, null: null, "g": string, 2: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, "hello": string, "b": string, 1: number, "c": string, null: null, "d": string, undefined: undefined, "e": string, true: boolean, "f": string, null: null, "g": string, 2: number
 // IRGEN-NEXT:  %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:  %2 = CreateFunctionInst (:object) %1: undefined, empty: any, %f(): functionCode
 // IRGEN-NEXT:       PrStoreInst %2: object, %0: object, 5: number, "f": string, false: boolean
@@ -150,37 +150,37 @@ function obj7() {
 
 // IRGEN:function obj2(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) "a": string, undefined: undefined, "b": string, undefined: undefined, "c": string, undefined: undefined, "d": string, undefined: undefined, "e": string, undefined: undefined, "r": string, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, undefined: undefined, "b": string, undefined: undefined, "c": string, undefined: undefined, "d": string, undefined: undefined, "e": string, undefined: undefined, "r": string, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj3(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) 1: number, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, 1: number, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj4(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) 1: number, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, 1: number, undefined: undefined, "f": string, 1: number, "g": string, 1: number, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, 1: number, "m": string, 1: number, "n": string, 1: number, "o": string, 1: number, "p": string, 1: number, "q": string, 1: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj5(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) 1: number, 50: number, "a": string, 1: number, 3: number, 50: number, "b": string, 2: number, 2: number, 50: number, "c": string, 3: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, 1: number, 50: number, "a": string, 1: number, 3: number, 50: number, "b": string, 2: number, 2: number, 50: number, "c": string, 3: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj6(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) 1: number, undefined: undefined, "a": string, 1: number, 3: number, undefined: undefined, "b": string, 2: number, 2: number, undefined: undefined, "c": string, 3: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, 1: number, undefined: undefined, "a": string, 1: number, 3: number, undefined: undefined, "b": string, 2: number, 2: number, undefined: undefined, "c": string, 3: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function obj7(): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) 1: number, 1: number, "a": string, undefined: undefined, 3: number, 2: number, "b": string, undefined: undefined, 2: number, 3: number, "c": string, undefined: undefined
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, 1: number, 1: number, "a": string, undefined: undefined, 3: number, 2: number, "b": string, undefined: undefined, 2: number, 3: number, "c": string, undefined: undefined
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 

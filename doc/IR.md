@@ -614,8 +614,8 @@ Effects | Does not read or write to memory.
 AllocObjectLiteralInst | _
 --- | --- |
 Description | Allocates a new JavaScript object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a LIRAllocObjectFromBufferInst.
-Example |  %0 = AllocObjectLiteralInst "prop1" : string, 10 : number
-Arguments | %prop_map is a vector of (Literal*, value*) pairs which represents the properties and their keys in the object literal.
+Example |  %0 = AllocObjectLiteralInst %parent, "prop1" : string, 10 : number
+Arguments | %parent is the parent of the new object. %prop_map is a vector of (Literal*, value*) pairs which represents the properties and their keys in the object literal.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.
 
@@ -1011,8 +1011,8 @@ Effects | Does not read or write to memory.
 LIRAllocObjectFromBufferInst | _
 --- | --- |
 Description | Allocates a new JavaScript object on the heap, and initializes it with values from the object buffer.
-Example |  %0 = LIRAllocObjectFromBufferInst %value0, %value1, ...
-Arguments | The values are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
+Example |  %0 = LIRAllocObjectFromBufferInst %parent, %value0, %value1, ...
+Arguments | %parent is the parent of the new object. The subsequent values are all literal values, with alternating keys and values. Non-serializable values will be inserted into the array separately.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.
 

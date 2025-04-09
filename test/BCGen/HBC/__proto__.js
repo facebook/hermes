@@ -69,16 +69,13 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "dynamicProto"
 // CHECK-NEXT:    Ret               r0
 
-// CHECK:Function<staticProto>(1 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
-// CHECK-NEXT:    NewObjectWithBuffer r1, 0, 0
-// CHECK-NEXT:    LoadConstNull     r3
-// CHECK-NEXT:    Mov               r4, r1
-// CHECK-NEXT:    CallBuiltin       r2, "HermesBuiltin.silentSetPrototypeOf", 3
+// CHECK:Function<staticProto>(1 params, 2 registers, 0 numbers, 1 non-pointers):
+// CHECK-NEXT:    LoadConstNull     r0
+// CHECK-NEXT:    NewObjectWithBufferAndParent r1, r0, 0, 0
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<dynamicProto>(3 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    NewObjectWithBuffer r1, 1, 13
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    LoadParam         r2, 1
@@ -102,10 +99,8 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    bc 5: line 11 col 1
 // CHECK-NEXT:    bc 19: line 11 col 1
 // CHECK-NEXT:    bc 30: line 11 col 1
-// CHECK-NEXT:  0x0010  function idx 1, starts at line 11 col 1
-// CHECK-NEXT:    bc 11: line 12 col 10
-// CHECK-NEXT:  0x0017  function idx 2, starts at line 15 col 1
+// CHECK-NEXT:  0x0010  function idx 2, starts at line 15 col 1
 // CHECK-NEXT:    bc 11: line 16 col 18
 // CHECK-NEXT:    bc 22: line 16 col 48
 // CHECK-NEXT:    bc 29: line 16 col 29
-// CHECK-NEXT:  0x0024  end of debug source table
+// CHECK-NEXT:  0x001d  end of debug source table

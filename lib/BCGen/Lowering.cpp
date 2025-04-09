@@ -212,15 +212,8 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   // First, we reset insertion location.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createLIRAllocObjectFromBufferInst(propMap);
-
-  // LIRAllocObjectFromBufferInst does not take a prototype argument. So if the
-  // object has a prototype set, make an explicit call to set it.
-  if (!llvh::isa<EmptySentinel>(allocInst->getParentObject())) {
-    builder.createCallBuiltinInst(
-        BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
-        {alloc, allocInst->getParentObject()});
-  }
+  auto *alloc = builder.createLIRAllocObjectFromBufferInst(
+      allocInst->getParentObject(), propMap);
 
   allocInst->replaceAllUsesWith(alloc);
   allocInst->eraseFromParent();

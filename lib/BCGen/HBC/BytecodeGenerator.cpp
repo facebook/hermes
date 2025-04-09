@@ -299,7 +299,7 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
     case ValueKind::LIRAllocObjectFromBufferInstKind:
       // AllocObjectFromBuffer stores the keys and values as alternating
       // operands, with keys starting first.
-      return idx % 2 == 0;
+      return (idx - LIRAllocObjectFromBufferInst::FirstKeyIdx) % 2 == 0;
 
     case ValueKind::CacheNewObjectInstKind:
       // The keys of CacheNewObject are identifiers.

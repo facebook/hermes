@@ -669,6 +669,7 @@ class IRBuilder {
   LIRSpillMovInst *createLIRSpillMovInst(Instruction *value);
 
   LIRAllocObjectFromBufferInst *createLIRAllocObjectFromBufferInst(
+      Value *parentObj,
       LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
 
   HBCCompareBranchInst *createHBCCompareBranchInst(

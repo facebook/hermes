@@ -28,7 +28,7 @@ function test_call_after_builtin() {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc0}    %0 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {loc0}    %1 = TryLoadGlobalPropertyInst (:any) {loc0} %0: object, "print": string
-// CHECK-NEXT:  {loc1}    %2 = LIRAllocObjectFromBufferInst (:object) "valueOf": string, null: null
+// CHECK-NEXT:  {loc1}    %2 = LIRAllocObjectFromBufferInst (:object) empty: any, "valueOf": string, null: null
 // CHECK-NEXT:  {loc2}    %3 = CreateFunctionInst (:object) empty: any, empty: any, %valueOf(): functionCode
 // CHECK-NEXT:                 PrStoreInst {loc2} %3: object, {loc1} %2: object, 0: number, "valueOf": string, false: boolean
 // CHECK-NEXT:  {stack[0]}  %5 = LIRLoadConstInst (:number) 3: number

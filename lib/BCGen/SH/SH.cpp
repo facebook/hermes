@@ -2126,7 +2126,13 @@ class InstrGen {
         moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
 
     os_ << " = ";
-    os_ << "_sh_ljs_new_object_with_buffer(shr, shUnit, ";
+    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
+      os_ << "_sh_ljs_new_object_with_buffer(shr, shUnit, ";
+    } else {
+      os_ << "_sh_ljs_new_object_with_buffer_and_parent(shr, shUnit, ";
+      generateRegisterPtr(*inst.getParentObject());
+      os_ << ", ";
+    }
     os_ << shapeIdx << ", ";
     os_ << valIdx << ")";
     os_ << ";\n";

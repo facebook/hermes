@@ -1133,8 +1133,9 @@ LIRSpillMovInst *IRBuilder::createLIRSpillMovInst(Instruction *value) {
 }
 
 LIRAllocObjectFromBufferInst *IRBuilder::createLIRAllocObjectFromBufferInst(
+    Value *parentObj,
     LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map) {
-  auto *inst = new LIRAllocObjectFromBufferInst(prop_map);
+  auto *inst = new LIRAllocObjectFromBufferInst(parentObj, prop_map);
   insert(inst);
   return inst;
 }
