@@ -179,6 +179,11 @@ enum XorPtrKeyID {
 ///   mapped value.
 ///     void weakRefReadBarrier(HermesValue value);
 ///
+///   The given symbol has just been allocated, ensure that it is treated as
+///   live. Symbols are special because they are allocated by the
+///   IdentifierTable, but are marked by the GC.
+///     void symbolAllocationBarrier(SymbolID sym);
+///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
 ///   Do any necessary barriers.

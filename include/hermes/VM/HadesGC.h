@@ -464,6 +464,15 @@ class HadesGC final : public GCBase {
       snapshotWriteBarrierInternal(value);
   }
 
+  void symbolAllocationBarrier(SymbolID sym) {
+    assert(
+        !calledByBackgroundThread() &&
+        "Read barrier invoked by background thread.");
+    // If marking is in progress, ensure the symbol is treated as live.
+    if (ogMarkingBarriers_)
+      snapshotWriteBarrierInternal(sym);
+  }
+
   /// \}
 
   /// Returns whether an external allocation of the given \p size fits

@@ -448,7 +448,10 @@ class IdentifierTable {
 
   /// Allocate a new SymbolID, and set it to \p str. Update the hash table
   /// location \p hashTableIndex with the ID. \return the new ID.
-  uint32_t allocIDAndInsert(uint32_t hashTableIndex, StringPrimitive *str);
+  uint32_t allocIDAndInsert(
+      Runtime &runtime,
+      uint32_t hashTableIndex,
+      StringPrimitive *str);
 
   /// Free the symbol with the specified index \p index.
   /// The specified symbol must be a valid one (not previously freed).

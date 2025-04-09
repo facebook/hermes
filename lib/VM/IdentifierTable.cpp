@@ -302,10 +302,12 @@ void IdentifierTable::symbolReadBarrier(uint32_t id) {
 }
 
 uint32_t IdentifierTable::allocIDAndInsert(
+    Runtime &runtime,
     uint32_t hashTableIndex,
     StringPrimitive *strPrim) {
   uint32_t nextId = allocNextID();
   SymbolID symbolId = SymbolID::unsafeCreate(nextId);
+  runtime.getHeap().symbolAllocationBarrier(symbolId);
   assert(lookupVector_[nextId].isFreeSlot() && "Allocated a non-free slot");
   strPrim->convertToUniqued(symbolId);
 
@@ -371,7 +373,7 @@ CallResult<SymbolID> IdentifierTable::getOrCreateIdentifier(
 
   // Allocate the id after we have performed memory allocations because a GC
   // would have freed id.
-  return SymbolID::unsafeCreate(allocIDAndInsert(idx, cr->get()));
+  return SymbolID::unsafeCreate(allocIDAndInsert(runtime, idx, cr->get()));
 }
 
 StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNull(
@@ -416,6 +418,8 @@ SymbolID IdentifierTable::registerLazyIdentifierImpl(
     return sym;
   }
   uint32_t nextId = allocNextID();
+  // No allocation barrier is needed because lazy symbols are not garbage
+  // collected.
   SymbolID symbolId = SymbolID::unsafeCreate(nextId);
   assert(lookupVector_[nextId].isFreeSlot() && "Allocated a non-free slot");
   new (&lookupVector_[nextId]) LookupEntry(str, hash);
@@ -561,6 +565,8 @@ const StringPrimitive *IdentifierTable::getStringForSymbol(SymbolID id) const {
 
 SymbolID IdentifierTable::createNotUniquedLazySymbol(ASCIIRef desc) {
   uint32_t nextID = allocNextID();
+  // No allocation barrier is needed because lazy symbols are not garbage
+  // collected.
   new (&lookupVector_[nextID]) LookupEntry(desc, 0, true);
   return SymbolID::unsafeCreateNotUniqued(nextID);
 }
@@ -591,8 +597,10 @@ CallResult<SymbolID> IdentifierTable::createNotUniquedSymbol(
   // Allocate the id after we have performed memory allocations because a GC
   // would have freed the newly allocated ID.
   uint32_t nextID = allocNextID();
+  SymbolID symbolId = SymbolID::unsafeCreateNotUniqued(nextID);
+  runtime.getHeap().symbolAllocationBarrier(SymbolID::unsafeCreate(nextID));
   new (&lookupVector_[nextID]) LookupEntry(str, true);
-  return SymbolID::unsafeCreateNotUniqued(nextID);
+  return symbolId;
 }
 
 llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, SymbolID symbolID) {
