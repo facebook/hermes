@@ -1038,7 +1038,7 @@ class GCBase {
   virtual void forAllObjs(const std::function<void(GCCell *)> &callback) = 0;
 
   /// \return true if the pointer lives in the young generation.
-  virtual bool inYoungGen(const void *p) const {
+  virtual bool inYoungGen(const GCCell *) const {
     return false;
   }
 

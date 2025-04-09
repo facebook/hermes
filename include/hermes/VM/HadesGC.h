@@ -484,8 +484,11 @@ class HadesGC final : public GCBase {
   /// \}
 
   /// \return true if the pointer lives in the young generation.
-  bool inYoungGen(const void *p) const override {
-    return youngGen_.lowLim() == FixedSizeHeapSegment::storageStart(p);
+  bool inYoungGen(const GCCell *ptr) const override {
+    return youngGen_.contains(ptr);
+  }
+  bool inYoungGen(const void *p) const {
+    return youngGen_.contains(p);
   }
   bool inYoungGen(CompressedPointer p) const {
     return p.getSegmentStart() == youngGenCP_;
