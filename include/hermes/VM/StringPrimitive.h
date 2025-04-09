@@ -136,7 +136,10 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Strings whose length is at least this size are always allocated as
   /// "external" strings, outside the JS heap. Note that there may be external
   /// strings smaller than this length.
-  static constexpr uint32_t EXTERNAL_STRING_THRESHOLD = 64 * 1024;
+  /// This is literally 1/64 of the unit segment size, so that in builds with
+  /// small segment size, we won't allocate a too large string in the heap.
+  static constexpr uint32_t EXTERNAL_STRING_THRESHOLD =
+      std::min<size_t>(AlignedHeapSegment::kSegmentUnitSize >> 6, 64 * 1024);
 
   /// Strings whose length is smaller than this will never be externally
   /// allocated. This is to protect against a small string optimization which
