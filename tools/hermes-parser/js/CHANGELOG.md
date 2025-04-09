@@ -1,3 +1,15 @@
+## 0.28.0
+
+### `flow-api-translator`
+* Make function arguments with a default assignment optional.
+* Translate `$ArrayBufferView` to `ArrayBufferView`.
+* Improve spread translation.
+* Translate to `ComponentRef` instead of deprecated `ElementRef`.
+
+### `hermes-parser`
+* Updates to experimental Flow pattern matching support (also in `hermes-estree`, `hermes-eslint`, `hermes-transform`, `prettier-plugin-hermes-parser`).
+* Fix bug that caused Flow typed code parsed with loose mode to never complete parsing in some cases.
+
 ## 0.27.0
 
 ### `hermes-parser`
