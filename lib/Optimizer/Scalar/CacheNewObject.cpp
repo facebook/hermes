@@ -93,31 +93,30 @@ static std::vector<LiteralString *> getPropsForCaching(
       if (!thisUsers.count(&inst))
         continue;
 
-      LiteralString *propKey = nullptr;
-      size_t objIdx;
-      if (auto *SPI = llvh::dyn_cast<StorePropertyInst>(&inst)) {
-        propKey = llvh::dyn_cast<LiteralString>(SPI->getProperty());
-        objIdx = StorePropertyInst::ObjectIdx;
-      } else if (auto *DOPI = llvh::dyn_cast<DefineOwnPropertyInst>(&inst)) {
-        propKey = llvh::dyn_cast<LiteralString>(DOPI->getProperty());
-        objIdx = DefineOwnPropertyInst::ObjectIdx;
-      }
-      if (!propKey) {
-        // Property name is not a literal string, bail.
+      StorePropertyInst *store = llvh::dyn_cast<StorePropertyInst>(&inst);
+
+      // 'this' used outside of a StorePropertyInst, bail.
+      if (!store)
         return props;
-      }
+
+      auto *prop = llvh::dyn_cast<LiteralString>(store->getProperty());
+
+      // Property name is not a literal string, bail.
+      if (!prop)
+        return props;
 
       // Check if "this" is being used in a non-Object operand position.
-      for (uint32_t i = 0, e = inst.getNumOperands(); i < e; ++i) {
-        if (i != objIdx && inst.getOperand(i) == thisParam) {
+      for (uint32_t i = 0, e = store->getNumOperands(); i < e; ++i) {
+        if (i != StorePropertyInst::ObjectIdx &&
+            store->getOperand(i) == thisParam) {
           return props;
         }
       }
 
       // Valid store for caching, append to the list if it's new.
-      if (!seenProps.count(propKey)) {
-        props.push_back(propKey);
-        seenProps.insert(propKey);
+      if (!seenProps.count(prop)) {
+        props.push_back(prop);
+        seenProps.insert(prop);
       }
     }
   }
