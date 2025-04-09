@@ -75,7 +75,7 @@ class ArrayImpl : public JSObject {
     assert(
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
-    self->getIndexedStorage(runtime)->set(
+    self->getIndexedStorageUnsafe(runtime)->set(
         runtime, index - self->beginIndex_, value);
   }
 
@@ -103,7 +103,7 @@ class ArrayImpl : public JSObject {
   /// contained in the storage.
   const SmallHermesValue at(Runtime &runtime, size_type index) const {
     return index >= beginIndex_ && index < endIndex_
-        ? getIndexedStorage(runtime)->at(runtime, index - beginIndex_)
+        ? getIndexedStorageUnsafe(runtime)->at(runtime, index - beginIndex_)
         : SmallHermesValue::encodeEmptyValue();
   }
 
@@ -114,8 +114,13 @@ class ArrayImpl : public JSObject {
 
   /// Get a pointer to the indexed storage for this array. The returned value
   /// may be null if there is no indexed storage.
-  StorageType *getIndexedStorage(PointerBase &base) const {
+  StorageType *getIndexedStorageNullable(PointerBase &base) const {
     return indexedStorage_.get(base);
+  }
+  /// Get a pointer to the indexed storage for this array. The indexed storage
+  /// must not be null.
+  StorageType *getIndexedStorageUnsafe(PointerBase &base) const {
+    return indexedStorage_.getNonNull(base);
   }
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
@@ -214,7 +219,7 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, which must be valid.
   const SmallHermesValue unsafeAt(Runtime &runtime, size_type index) const {
-    return getIndexedStorage(runtime)->at(runtime, index - beginIndex_);
+    return getIndexedStorageUnsafe(runtime)->at(runtime, index - beginIndex_);
   }
 
  private:

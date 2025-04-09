@@ -1067,7 +1067,11 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
       arr && arrayFastPathCheck(runtime, arr, nullptr, (uint32_t)len)) {
     // Accumulate the size of the strings in the array, stopping at the first
     // element that is not a string, null, or undefined.
-    auto *storage = arr->getIndexedStorage(runtime);
+
+    assert(
+        len != 0 &&
+        "we already checled len is not 0, so storage should be non-null");
+    auto *storage = arr->getIndexedStorageUnsafe(runtime);
     // Save it for later.
     lv.inputStorage = storage;
 
@@ -1669,7 +1673,7 @@ CallResult<HermesValue> sortSparse(
   if (crNames == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   // Get the underlying storage containing the names.
-  lv.names = (*crNames)->getIndexedStorage(runtime);
+  lv.names = (*crNames)->getIndexedStorageNullable(runtime);
   if (!lv.names.get()) {
     // Indexed storage can be null if there's nothing to store.
     return O.getHermesValue();
@@ -2335,9 +2339,10 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
   }
   {
     NoAllocScope noAlloc(runtime);
-    JSArray::StorageType *aStorage = A->getIndexedStorage(runtime);
-    JSArray::StorageType *oStorage = O->getIndexedStorage(runtime);
+    JSArray::StorageType *aStorage = A->getIndexedStorageNullable(runtime);
+    JSArray::StorageType *oStorage = O->getIndexedStorageNullable(runtime);
     for (uint32_t j = 0; j < actualDeleteCount; ++j) {
+      assert(aStorage && oStorage && "storage must not be null");
       uint32_t from = actualStart + j;
       SmallHermesValue elem = oStorage->at(runtime, from);
       aStorage->set(runtime, j, elem);
@@ -2359,8 +2364,9 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
     // This leaves itemCount spaces to copy the arguments into.
 
     NoAllocScope noAlloc(runtime);
-    JSArray::StorageType *oStorage = O->getIndexedStorage(runtime);
+    JSArray::StorageType *oStorage = O->getIndexedStorageNullable(runtime);
     for (uint32_t k = actualStart; k < len - actualDeleteCount; ++k) {
+      assert(oStorage && "storage must not be null");
       uint32_t from = k + actualDeleteCount;
       uint32_t to = k + itemCount;
       SmallHermesValue elem = oStorage->at(runtime, from);
@@ -2386,8 +2392,9 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
     // just like the spec does for the slow path.
 
     NoAllocScope noAlloc(runtime);
-    JSArray::StorageType *oStorage = O->getIndexedStorage(runtime);
+    JSArray::StorageType *oStorage = O->getIndexedStorageNullable(runtime);
     for (uint32_t k = len - actualDeleteCount; k > actualStart; --k) {
+      assert(oStorage && "storage must not be null");
       uint32_t from = k + actualDeleteCount - 1;
       uint32_t to = k + itemCount - 1;
       SmallHermesValue elem = oStorage->at(runtime, from);
@@ -3225,7 +3232,8 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
         SmallHermesValue::encodeHermesValue(searchElement.get(), runtime);
     NoAllocScope noAlloc{runtime};
     bool hasHole = false;
-    auto *arrStorage = arrHandle->getIndexedStorage(runtime);
+    assert(len != 0 && "we already checked len != 0, so storage can't be null");
+    auto *arrStorage = arrHandle->getIndexedStorageUnsafe(runtime);
 
     // Macro for searching the array with given loop initialization, terminating
     // condition and updating rule after each iteration. Note that the macro
@@ -4104,8 +4112,9 @@ arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
       return args.getThisArg();
 
     if (arrayFastPathCheck(runtime, arr, nullptr, len)) {
-      auto *storage = arr->getIndexedStorage(runtime);
+      auto *storage = arr->getIndexedStorageNullable(runtime);
       for (uint32_t l = 0, u = len - 1; l < u; ++l, --u) {
+        assert(storage && "storage should not be null");
         auto lowerValue = storage->at(runtime, l);
         auto upperValue = storage->at(runtime, u);
         storage->set(runtime, l, upperValue);
@@ -4382,9 +4391,10 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   // Fast Path: Input is a JSArray and arrayFastPathCheck passes.
   if (jsArr && arrayFastPathCheck(runtime, jsArr.get(), nullptr, len32)) {
     NoAllocScope noAllocScope{runtime};
-    auto *srcStorage = jsArr->getIndexedStorage(runtime);
-    auto *destStorage = lv.A->getIndexedStorage(runtime);
+    auto *srcStorage = jsArr->getIndexedStorageNullable(runtime);
+    auto *destStorage = lv.A->getIndexedStorageNullable(runtime);
     for (uint32_t to = 0, from = len32 - 1; to < len32; ++to, --from) {
+      assert(srcStorage && destStorage && "storage should not be null");
       SmallHermesValue fromValue = srcStorage->at(runtime, from);
       destStorage->set(
           runtime,
