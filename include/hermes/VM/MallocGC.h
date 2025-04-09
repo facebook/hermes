@@ -27,6 +27,14 @@ namespace vm {
 
 class MallocGC final : public GCBase {
   class CellHeader {
+   public:
+    /// If true, then this cell is in the "young generation". Note that MallocGC
+    /// is not actually a generational collector, this just tracks some objects
+    /// that could plausibly be in the young gen to exercise codepaths that
+    /// depend on inYoungGen being true.
+    bool inYoungGen;
+
+   private:
     /// If true, then this cell is live. If this is false at the end of a
     /// collection, then this cell can be freed. Defaults to false when not in
     /// the middle of a collection.
@@ -177,6 +185,10 @@ class MallocGC final : public GCBase {
 
   /// Run the finalizers for all heap objects.
   void finalizeAll() override;
+
+  bool inYoungGen(const GCCell *p) const override {
+    return CellHeader::from(p)->inYoungGen;
+  }
 
 #ifndef NDEBUG
   /// See comment in GCBase.
@@ -341,6 +353,7 @@ inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
   GCCell *mem = alloc(size);
+  CellHeader::from(mem)->inYoungGen = longLived == LongLived::No;
   return constructCell<T>(mem, size, std::forward<Args>(args)...);
 }
 

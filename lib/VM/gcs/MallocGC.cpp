@@ -360,6 +360,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     for (CellHeader *header : pointers_) {
       assert(header->isMarked() && "Should only be live pointers left");
       header->unmark();
+      header->inYoungGen = false;
     }
   }
 

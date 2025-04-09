@@ -1038,9 +1038,7 @@ class GCBase {
   virtual void forAllObjs(const std::function<void(GCCell *)> &callback) = 0;
 
   /// \return true if the pointer lives in the young generation.
-  virtual bool inYoungGen(const GCCell *) const {
-    return false;
-  }
+  virtual bool inYoungGen(const GCCell *) const = 0;
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size. (Note that this does not guarantee that the
