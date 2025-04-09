@@ -206,15 +206,6 @@ void IdentifierTable::snapshotAddNodes(HeapSnapshot &snap) {
           GCBase::IDTracker::ReservedObjectID::IdentifierTableHashTable),
       hashTable_.additionalMemorySize(),
       0);
-
-  snap.beginNode();
-  snap.endNode(
-      HeapSnapshot::NodeType::Native,
-      "BitVector",
-      GCBase::IDTracker::reserved(
-          GCBase::IDTracker::ReservedObjectID::IdentifierTableMarkedSymbols),
-      markedSymbols_.getMemorySize(),
-      0);
 }
 
 void IdentifierTable::snapshotAddEdges(HeapSnapshot &snap) {
@@ -228,11 +219,6 @@ void IdentifierTable::snapshotAddEdges(HeapSnapshot &snap) {
       "hashTable",
       GCBase::IDTracker::reserved(
           GCBase::IDTracker::ReservedObjectID::IdentifierTableHashTable));
-  snap.addNamedEdge(
-      HeapSnapshot::EdgeType::Internal,
-      "markedSymbols",
-      GCBase::IDTracker::reserved(
-          GCBase::IDTracker::ReservedObjectID::IdentifierTableMarkedSymbols));
 }
 #endif // HERMES_MEMORY_INSTRUMENTATION
 
@@ -291,14 +277,6 @@ IdentifierTable::allocateDynamicString(
   }
 
   return result;
-}
-
-void IdentifierTable::symbolReadBarrier(uint32_t id) {
-  // Set the mark bool inside the symbol table entry so that this symbol isn't
-  // garbage collected.
-  // The reason this exists is that a Symbol can be retrieved via a string hash
-  // that doesn't otherwise keep the symbol alive while in the middle of a GC.
-  markedSymbols_.set(id);
 }
 
 uint32_t IdentifierTable::allocIDAndInsert(
@@ -482,7 +460,6 @@ uint32_t IdentifierTable::allocNextID() {
       hermes_fatal("Failed to allocate Identifier: IdentifierTable is full");
     }
     lookupVector_.emplace_back();
-    markedSymbols_.push_back(true);
     LLVM_DEBUG(
         llvh::dbgs() << "Allocated new symbol id at end " << newID << "\n");
     // Don't need to tell the GC about this ID, it will assume any growth is
@@ -495,7 +472,6 @@ uint32_t IdentifierTable::allocNextID() {
   auto &entry = getLookupTableEntry(nextId);
   assert(entry.isFreeSlot() && "firstFreeID_ is not a free slot");
   firstFreeID_ = entry.getNextFreeSlot();
-  markedSymbols_.set(nextId);
   LLVM_DEBUG(llvh::dbgs() << "Allocated freed symbol id " << nextId << "\n");
   return nextId;
 }
@@ -511,22 +487,12 @@ void IdentifierTable::freeID(uint32_t id) {
   LLVM_DEBUG(llvh::dbgs() << "Freeing ID " << id << "\n");
 }
 
-void IdentifierTable::unmarkSymbols() {
-  markedSymbols_.reset();
-}
-
 void IdentifierTable::freeUnmarkedSymbols(
     llvh::BitVector &markedSymbols,
     GC::IDTracker &tracker) {
   assert(
       markedSymbols.size() <= lookupVector_.size() &&
       "Size of markedSymbols must be less than the current lookupVector");
-  assert(
-      markedSymbols_.size() == lookupVector_.size() &&
-      "Size of markedSymbols_ must be the same as the lookupVector");
-  // Update the markedSymbols passed in so the caller knows which symbols were
-  // marked internally by the IdentifierTable.
-  markedSymbols |= markedSymbols_;
   const bool hasTrackedObjectIDs = tracker.hasTrackedObjectIDs();
   for (int i = markedSymbols.find_first_unset(); i >= 0;
        i = markedSymbols.find_next_unset(i)) {
@@ -544,7 +510,6 @@ void IdentifierTable::freeUnmarkedSymbols(
       markedSymbols.set(i);
     }
   }
-  markedSymbols_.reset();
 }
 
 #ifdef HERMES_SLOW_DEBUG

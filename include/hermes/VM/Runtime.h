@@ -1021,10 +1021,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Optionally invoked at the beginning of a garbage collection.
   unsigned getSymbolsEnd() const;
 
-  /// If any symbols are marked by the IdentifierTable, clear that marking.
-  /// Optionally invoked at the beginning of some collections.
-  void unmarkSymbols();
-
   /// Called by the GC at the end of a collection to free all symbols not set in
   /// markedSymbols. The function may set additional bits in \p markedSymbols to
   /// reflect the fact that some symbols were not freed.

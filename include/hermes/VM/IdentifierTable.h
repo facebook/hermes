@@ -146,14 +146,13 @@ class IdentifierTable {
   void reserve(uint32_t count) {
     lookupVector_.reserve(count);
     hashTable_.reserve(count);
-    markedSymbols_.reserve(count);
   }
 
   /// \return an estimate of the size of additional memory used by this
   /// IdentifierTable.
   size_t additionalMemorySize() const {
     return lookupVector_.capacity() * sizeof(LookupEntry) +
-        hashTable_.additionalMemorySize() + markedSymbols_.getMemorySize();
+        hashTable_.additionalMemorySize();
   }
 
   /// Mark all identifiers for the garbage collector.
@@ -178,9 +177,6 @@ class IdentifierTable {
   unsigned getSymbolsEnd() const {
     return lookupVector_.size();
   }
-
-  /// Remove the mark bit from each symbol.
-  void unmarkSymbols();
 
   /// Invoked at the end of a GC to free all unmarked symbols. The function may
   /// set additional bits in \p markedSymbols to reflect the fact that some
@@ -394,9 +390,6 @@ class IdentifierTable {
   /// the number of identifiers initialized from the module.
   ConservativeVector<LookupEntry> lookupVector_;
 
-  /// A bit vector representing if a symbol is new since the last collection.
-  llvh::BitVector markedSymbols_;
-
   /// The hash table.
   detail::IdentifierHashTable hashTable_{};
 
@@ -420,10 +413,6 @@ class IdentifierTable {
     assert(id < lookupVector_.size() && "Identifier ID out of bound");
     return lookupVector_[id];
   }
-
-  /// Marks a symbol as being read, which will ensure it isn't garbage collected
-  /// if a GC is ongoing.
-  void symbolReadBarrier(uint32_t id);
 
   /// Create or lookup a SymbolID from a string \str. If \p primHandle is not
   /// null, it is assumed to be backing str.

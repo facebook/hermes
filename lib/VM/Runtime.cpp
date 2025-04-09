@@ -971,10 +971,6 @@ unsigned Runtime::getSymbolsEnd() const {
   return identifierTable_.getSymbolsEnd();
 }
 
-void Runtime::unmarkSymbols() {
-  identifierTable_.unmarkSymbols();
-}
-
 void Runtime::freeSymbols(llvh::BitVector &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols, getHeap().getIDTracker());
 }

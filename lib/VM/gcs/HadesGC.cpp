@@ -1427,10 +1427,6 @@ void HadesGC::oldGenCollection(std::string cause, bool forceCompaction) {
       [](auto &&seg) { seg.markBitArray().reset(); },
       [](auto &&seg) { seg.markBitArray().reset(); });
 
-  // Unmark all symbols in the identifier table, as Symbol liveness will be
-  // determined during the collection.
-  gcCallbacks_.unmarkSymbols();
-
   // Mark phase: discover all pointers that are live.
   // Initialize the marking state.
   markState_.emplace(gcCallbacks_.getSymbolsEnd());

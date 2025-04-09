@@ -274,10 +274,6 @@ class GCBase {
     /// Optionally invoked at the beginning of a garbage collection.
     virtual unsigned getSymbolsEnd() const = 0;
 
-    /// If any symbols are marked by the IdentifierTable, clear that marking.
-    /// Optionally invoked at the beginning of some collections.
-    virtual void unmarkSymbols() = 0;
-
     /// Free all symbols which are not marked as \c true in \p markedSymbols.
     /// Optionally invoked at the end of a garbage collection. The function may
     /// set additional bits in \p markedSymbols to reflect the fact that some
@@ -374,9 +370,6 @@ class GCBase {
     }
     unsigned getSymbolsEnd() const override {
       return runtime_.getSymbolsEnd();
-    }
-    void unmarkSymbols() override {
-      runtime_.unmarkSymbols();
     }
     void freeSymbols(llvh::BitVector &markedSymbols) override {
       runtime_.freeSymbols(markedSymbols);
@@ -670,7 +663,6 @@ class GCBase {
 #include "hermes/VM/RootSections.def"
       IdentifierTableLookupVector,
       IdentifierTableHashTable,
-      IdentifierTableMarkedSymbols,
       JSIHermesValueList,
       JSIWeakHermesValueList,
       WeakRefSlotStorage,
