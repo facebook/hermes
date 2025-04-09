@@ -71,6 +71,15 @@ static std::vector<LiteralString *> getPropsForCaching(
     thisUsersBlocks.insert(user->getParent());
   }
 
+  // Order the blocks containing users of 'this' such that each block dominates
+  // all other blocks that use 'this'. Note that it is important that we start
+  // the traversal at the entry block rather than the block containing the load
+  // of 'this'. This handles two important cases where 'this' may not dominate
+  // the instruction that leaks it:
+  // 1. Phi instructions using 'this' that are not dominated by the block
+  //    containing the load of 'this'.
+  // 2. Return instructions, which implicitly use 'this' because the caller can
+  //    observe the state of the object at the point we return.
   auto orderedBlocks = orderBlocksByDominance(
       domInfo, entryBlock, [&thisUsersBlocks](BasicBlock *block) -> bool {
         // Must dominate all returns as well, because the caller can read the

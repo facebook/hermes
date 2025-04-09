@@ -37,4 +37,4 @@ function callArg(x, y) {
   print(this);
 }
 
-// CHECK-NOT:  %{{.*}} CacheNewObjectInst {{.*}}
+// CHECK-NOT:  {{.*}} CacheNewObjectInst {{.*}}
