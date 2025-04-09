@@ -1057,6 +1057,12 @@ EMIT_NEW_OBJECT_WITH_BUFFER(NewObjectWithBufferLong)
 
 #undef EMIT_NEW_OBJECT_WITH_BUFFER
 
+void JITContext::Compiler::emitNewObjectWithBufferAndParent(
+    const inst::NewObjectWithBufferAndParentInst *inst) {
+  em_.newObjectWithBufferAndParent(
+      FR(inst->op1), FR(inst->op2), inst->op3, inst->op4);
+}
+
 inline void JITContext::Compiler::emitNewArray(const inst::NewArrayInst *inst) {
   em_.newArray(FR(inst->op1), inst->op2);
 }

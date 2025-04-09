@@ -2086,6 +2086,38 @@ void Emitter::newObjectWithBuffer(
   frUpdatedWithHW(frRes, hwRes);
 }
 
+void Emitter::newObjectWithBufferAndParent(
+    FR frRes,
+    FR frParent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  comment(
+      "// NewObjectWithBufferAndParent r%u, r%u, %u, %u",
+      frRes.index(),
+      frParent.index(),
+      shapeTableIndex,
+      valBufferOffset);
+
+  // We unconditionally skip frRes here because we handle frParent with the
+  // syncToFrame below.
+  syncAllFRTempExcept(frRes);
+  syncToFrame(frParent);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
+  loadFrameAddr(a64::x2, frParent);
+  a.mov(a64::w3, shapeTableIndex);
+  a.mov(a64::w4, valBufferOffset);
+  EMIT_RUNTIME_CALL(
+      *this,
+      SHLegacyValue(*)(
+          SHRuntime *, SHCodeBlock *, SHLegacyValue *, uint32_t, uint32_t),
+      _interpreter_create_object_from_buffer_with_parent);
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::newArray(FR frRes, uint32_t size) {
   comment("// NewArray r%u, %u", frRes.index(), size);
   syncAllFRTempExcept(frRes);

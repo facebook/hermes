@@ -1801,6 +1801,7 @@ ExecutionStatus doPutByIdSlowPath_RJS(
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
+    Handle<JSObject> parent,
     unsigned shapeTableIndex,
     unsigned valBufferOffset) {
   RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
@@ -1813,7 +1814,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     const auto *shapeInfo =
         &runtimeModule->getBytecode()->getObjectShapeTable()[shapeTableIndex];
     auto *rootClazz = *runtime.getHiddenClassForPrototype(
-        *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+        *parent, JSObject::numOverlapSlots<JSObject>());
 
     // Ensure that the hidden class does not start out with any properties, so
     // we just need to check the shape table entry.
@@ -1857,10 +1858,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  lv.obj =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), lv.clazz)
-          .get();
+  lv.obj = JSObject::create(runtime, parent, lv.clazz).get();
   auto numLiterals = lv.clazz->getNumProperties();
 
   // Set up the visitor to populate property values in the object.
@@ -1903,6 +1901,28 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
       v);
 
   return createPseudoHandle(lv.obj.getHermesValue());
+}
+
+ExecutionStatus Interpreter::caseNewObjectWithBufferAndParent(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    CodeBlock *curCodeBlock,
+    const inst::Inst *ip) {
+  Handle<JSObject> parent = O2REG(NewObjectWithParent).isObject()
+      ? Handle<JSObject>::vmcast(&O2REG(NewObjectWithParent))
+      : O2REG(NewObjectWithParent).isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  auto res = createObjectFromBuffer(
+      runtime,
+      curCodeBlock,
+      parent,
+      ip->iNewObjectWithBufferAndParent.op3,
+      ip->iNewObjectWithBufferAndParent.op4);
+  if (res == ExecutionStatus::EXCEPTION)
+    return ExecutionStatus::EXCEPTION;
+  O1REG(NewObjectWithBufferAndParent) = res->getHermesValue();
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(

@@ -1696,12 +1696,12 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
-extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
-    SHRuntime *shr,
+static SHLegacyValue createObjectFromBuffer(
+    Runtime &runtime,
     SHUnit *unit,
+    Handle<JSObject> parent,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
-  Runtime &runtime = getRuntime(shr);
   NoLeakHandleScope marker{runtime};
 
   HiddenClass *clazz;
@@ -1720,7 +1720,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
       (void)runtime.raiseRangeError(
           TwineChar16("Object has more than ") +
           HiddenClass::maxNumProperties() + " properties");
-      _sh_throw_current(shr);
+      _sh_throw_current(&runtime);
     }
 
     llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
@@ -1731,7 +1731,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
         keyBuffer,
         shapeInfo->num_props,
         *runtime.getHiddenClassForPrototype(
-            *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>()),
+            *parent, JSObject::numOverlapSlots<JSObject>()),
         [unit](StringID id) {
           return SymbolID::unsafeCreate(unit->symbols[id]);
         });
@@ -1755,8 +1755,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
   // call it.
   lv.clazz = clazz;
   auto numProps = lv.clazz->getNumProperties();
-  lv.obj = JSObject::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), lv.clazz);
+  lv.obj = JSObject::create(runtime, parent, lv.clazz);
 
   struct {
     void visitStringID(StringID id) {
@@ -1795,6 +1794,34 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
       literalValBuffer.slice(valBufferOffset), numProps, v);
 
   return lv.obj.getHermesValue();
+}
+
+extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  auto &runtime = getRuntime(shr);
+  return createObjectFromBuffer(
+      runtime, unit, runtime.objectPrototype, shapeTableIndex, valBufferOffset);
+}
+
+extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer_and_parent(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  auto &runtime = getRuntime(shr);
+
+  auto *parentPHV = toPHV(parent);
+  Handle<JSObject> parentHandle = parentPHV->isObject()
+      ? Handle<JSObject>::vmcast(parentPHV)
+      : parentPHV->isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  return createObjectFromBuffer(
+      runtime, unit, parentHandle, shapeTableIndex, valBufferOffset);
 }
 
 extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint) {

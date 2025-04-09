@@ -2577,6 +2577,7 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
+                runtime.objectPrototype,
                 ip->iNewObjectWithBuffer.op2,
                 ip->iNewObjectWithBuffer.op3));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
@@ -2592,6 +2593,7 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
+                runtime.objectPrototype,
                 ip->iNewObjectWithBufferLong.op2,
                 ip->iNewObjectWithBufferLong.op3));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
@@ -2599,6 +2601,17 @@ tailCall:
         }
         O1REG(NewObjectWithBufferLong) = resPH->get();
         ip = NEXTINST(NewObjectWithBufferLong);
+        DISPATCH;
+      }
+
+      CASE(NewObjectWithBufferAndParent) {
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            caseNewObjectWithBufferAndParent(
+                runtime, frameRegs, curCodeBlock, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+          goto exception;
+        ip = NEXTINST(NewObjectWithBufferAndParent);
         DISPATCH;
       }
 

@@ -139,12 +139,14 @@ class Interpreter {
       InterpreterState &state);
 
   /// Constructs an object via literal buffers in the bytecode file.
+  /// \param parent the parent of the newly created object.
   /// \param shapeTableIndex the index of the shape element.
   /// \param valBufferOffset the first element of the val buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
   static CallResult<PseudoHandle<>> createObjectFromBuffer(
       Runtime &runtime,
       CodeBlock *curCodeBlock,
+      Handle<JSObject> parent,
       unsigned shapeTableIndex,
       unsigned valBufferOffset);
 
@@ -267,6 +269,12 @@ class Interpreter {
   static ExecutionStatus casePutByValWithReceiver(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus caseNewObjectWithBufferAndParent(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
       const inst::Inst *ip);
 
   /// Interpreter implementation for creating a RegExp object. Unlike the other

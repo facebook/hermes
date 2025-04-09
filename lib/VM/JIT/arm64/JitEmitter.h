@@ -770,6 +770,11 @@ class Emitter {
       FR frRes,
       uint32_t shapeTableIndex,
       uint32_t valBufferOffset);
+  void newObjectWithBufferAndParent(
+      FR frRes,
+      FR frParent,
+      uint32_t shapeTableIndex,
+      uint32_t valBufferOffset);
 
   void newArray(FR frRes, uint32_t size);
   void newArrayWithBuffer(

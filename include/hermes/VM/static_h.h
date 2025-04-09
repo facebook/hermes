@@ -811,6 +811,14 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_buffer(
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset);
 
+/// Like _sh_ljs_new_object_with_buffer, but also takes a \p parent.
+SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_buffer_and_parent(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
+
 /// \p sizeHint the size of the resultant array.
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint);
