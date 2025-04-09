@@ -1,3 +1,5 @@
+set(HERMES_ENABLE_EH_RTTI ON)
+
 add_hermes_library(LLVHSupport
     APFloat.cpp
     APInt.cpp
