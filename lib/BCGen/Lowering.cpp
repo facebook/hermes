@@ -252,7 +252,7 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvh::isa<StorePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StorePropertyInst::PropertyIdx);
-      } else if (llvh::isa<BaseDefineOwnPropertyInst>(&Inst)) {
+      } else if (llvh::isa<DefineOwnPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, DefineOwnPropertyInst::PropertyIdx);
       } else if (llvh::isa<DeletePropertyInst>(&Inst)) {

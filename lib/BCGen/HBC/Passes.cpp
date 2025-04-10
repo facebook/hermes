@@ -84,8 +84,8 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<SwitchInst>(Inst) && opIndex > 0)
     return true;
 
-  if (auto *SOP = llvh::dyn_cast<BaseDefineOwnPropertyInst>(Inst)) {
-    if (opIndex == BaseDefineOwnPropertyInst::PropertyIdx) {
+  if (auto *SOP = llvh::dyn_cast<DefineOwnPropertyInst>(Inst)) {
+    if (opIndex == DefineOwnPropertyInst::PropertyIdx) {
       // If the propery is a LiteralNumber, the property is enumerable, and it
       // is a valid array index, it is coming from an array initialization and
       // we will emit it as DefineOwnByIndex.

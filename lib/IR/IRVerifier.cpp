@@ -92,8 +92,6 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
   LLVM_NODISCARD bool visitBasicBlock(const BasicBlock &BB);
   LLVM_NODISCARD bool visitVariableScope(const VariableScope &VS);
 
-  LLVM_NODISCARD bool visitBaseDefineOwnPropertyInst(
-      const BaseDefineOwnPropertyInst &Inst);
   LLVM_NODISCARD bool visitBaseCreateLexicalChildInst(
       const BaseCreateLexicalChildInst &Inst);
   LLVM_NODISCARD bool visitBaseCreateCallableInst(
@@ -1046,17 +1044,13 @@ bool Verifier::visitTryStoreGlobalPropertyStrictInst(
   return true;
 }
 
-bool Verifier::visitBaseDefineOwnPropertyInst(
-    const BaseDefineOwnPropertyInst &Inst) {
+bool Verifier::visitDefineOwnPropertyInst(const DefineOwnPropertyInst &Inst) {
   AssertIWithMsg(
       Inst,
       llvh::isa<LiteralBool>(
           Inst.getOperand(DefineOwnPropertyInst::IsEnumerableIdx)),
-      "BaseDefineOwnPropertyInst::IsEnumerable must be a boolean literal");
+      "DefineOwnPropertyInst::IsEnumerable must be a boolean literal");
   return true;
-}
-bool Verifier::visitDefineOwnPropertyInst(const DefineOwnPropertyInst &Inst) {
-  return visitBaseDefineOwnPropertyInst(Inst);
 }
 bool Verifier::visitStoreOwnPrivateFieldInst(
     const StoreOwnPrivateFieldInst &Inst) {
