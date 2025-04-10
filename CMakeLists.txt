@@ -275,8 +275,6 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
 set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
-set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
-
 set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
 
 set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
@@ -782,10 +780,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     emhermesc
     )
 
-  if(HERMES_BUILD_NODE_HERMES)
-    list(APPEND HERMES_TEST_DEPS node-hermes)
-  endif()
-
   set(coverage_directory "")
   if (HERMES_ENABLE_CODE_COVERAGE)
     set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
@@ -810,8 +804,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     slow_debug=$<IF:$<CONFIG:Debug>,${HERMES_SLOW_DEBUG},OFF>
     debug_options=$<IF:$<CONFIG:Debug>,ON,OFF>
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
-    node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
-    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
