@@ -132,7 +132,7 @@ class AsyncGenerator : public TransformationsBase {
         true, // generator
         false); // async
 
-    auto *wrappedRef = makeHermesInternalCall(
+    auto *wrappedRef = isBodyEmpty(body) ? refFunc : makeHermesInternalCall(
         funcNode, "_wrapAsyncGenerator", NodeVector{refFunc});
 
     // Create a function body that calls apply on the wrapped function
@@ -157,6 +157,11 @@ class AsyncGenerator : public TransformationsBase {
             .toNodeList());
 
     return appliedBody;
+  }
+
+  bool isBodyEmpty(ESTree::Node *body) {
+    auto *blockStmt = llvh::dyn_cast<ESTree::BlockStatementNode>(body);
+    return blockStmt && blockStmt->_body.empty();
   }
 
   ESTree::Node *getHermesInternalIdentifier(ESTree::Node *srcNode) override {

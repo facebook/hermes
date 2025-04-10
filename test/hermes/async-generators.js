@@ -7,6 +7,7 @@
 
 // RUN: %hermes -Xasync-generators %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -Xasync-generators -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xasync-generators -lazy %s | %FileCheck --match-full-lines %s
 
 async function* mixedValuesGenerator() {
     yield 1;
