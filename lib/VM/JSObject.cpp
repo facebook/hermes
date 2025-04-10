@@ -3156,10 +3156,25 @@ CallResult<uint32_t> appendAllPropertyKeys(
   // before we start to look at any prototype.
   bool needDedup = false;
   lv.head = obj;
+
+  // Make sure we can store SymbolID::RawType in DenseSet.
+  assert(
+      llvh::DenseMapInfo<SymbolID::RawType>::getEmptyKey() >=
+          SymbolID::FIRST_INVALID_ID &&
+      "can't store SymbolID::RawType in DenseSet");
+  assert(
+      llvh::DenseMapInfo<SymbolID::RawType>::getTombstoneKey() >=
+          SymbolID::FIRST_INVALID_ID &&
+      "can't store SymbolID::RawType in DenseSet");
+
   // Keep track of the unique props we have seen so far. The props may be
   // strings (SymbolIDs) or index names.
   llvh::SmallDenseSet<SymbolID::RawType, 8> dedupNames;
-  llvh::SmallDenseSet<uint32_t, 8> dedupIdxNames;
+  // Store uint64_t in the set here to avoid collisions between tombstone/empty
+  // keys and real indices.
+  // In reality, all inserted keys will be valid array indices, meaning they
+  // will fit in 32 bits.
+  llvh::SmallDenseSet<uint64_t, 8> dedupIdxNames;
   // Add the current value of prop and/or propIdHandle to correct set(s).
   // Always called after property is added to \c arr, so the symbols in
   // dedupNames stay alive.
