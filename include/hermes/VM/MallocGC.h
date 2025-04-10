@@ -143,9 +143,8 @@ class MallocGC final : public GCBase {
 
   ~MallocGC() override;
 
-  /// Checks if a requested \p size can fit in the heap. If it can't, a
-  /// collection occurs. If it still can't after the collection, OOM is
-  /// declared.
+  /// Perform a collection and resize the heap as necessary to ensure that an
+  /// object of \p size bytes can be allocated. If this is not possible, we OOM.
   void collectBeforeAlloc(std::string cause, uint32_t size);
 
   /// Allocate a new cell of the specified size \p size by calling alloc.

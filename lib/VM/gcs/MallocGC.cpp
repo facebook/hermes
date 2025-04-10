@@ -198,39 +198,20 @@ MallocGC::~MallocGC() {
 }
 
 void MallocGC::collectBeforeAlloc(std::string cause, uint32_t size) {
-  const auto growSizeLimit = [this, size](gcheapsize_t sizeLimit) {
-    // Either double the size limit, or increase to size, at a max of maxSize_.
-    return std::min(maxSize_, std::max(sizeLimit * 2, size));
-  };
-  if (size > sizeLimit_) {
-    sizeLimit_ = growSizeLimit(sizeLimit_);
-  }
-  if (size > maxSize_) {
-    // No way to handle the allocation no matter what.
-    oom(make_error_code(OOMError::MaxHeapReached));
-  }
-  assert(
-      size <= sizeLimit_ &&
-      "Should be guaranteed not to be asking for more space than the heap can "
-      "provide");
-  // Check for memory pressure conditions to do a collection.
-  // Use subtraction to prevent overflow.
-#ifndef HERMESVM_SANITIZE_HANDLES
-  if (allocatedBytes_ < sizeLimit_ - size) {
-    return;
-  }
-#endif
   // Do a collection if the sanitization of handles is requested or if there
   // is memory pressure.
   collect(std::move(cause));
-  // While we still can't fill the allocation, keep growing.
-  while (allocatedBytes_ >= sizeLimit_ - size) {
-    if (sizeLimit_ == maxSize_) {
-      // Can't grow memory any higher, OOM.
-      oom(make_error_code(OOMError::MaxHeapReached));
-    }
-    sizeLimit_ = growSizeLimit(sizeLimit_);
-  }
+
+  // We aim for the heap to always be 50% live data, so set the target size
+  // limit to double the number of bytes that survived the collection.
+  uint64_t targetNewSizeLimit = (uint64_t)allocatedBytes_ * 2;
+  // The heap must be at least large enough to allocate the requested object.
+  uint64_t minNewSizeLimit = allocatedBytes_ + size;
+  // There is not enough room after the allocation, OOM.
+  if (minNewSizeLimit > maxSize_)
+    oom(make_error_code(OOMError::MaxHeapReached));
+  sizeLimit_ =
+      std::clamp<uint64_t>(targetNewSizeLimit, minNewSizeLimit, maxSize_);
 }
 
 #ifdef HERMES_SLOW_DEBUG
@@ -582,6 +563,7 @@ GCCell *MallocGC::alloc(uint32_t size) {
   if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
     collectBeforeAlloc(kNaturalCauseForAnalytics, size);
   }
+  assert(sizeLimit_ - size >= allocatedBytes_ && "collectBeforeAlloc failed");
   // Add space for the header.
   auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
   GCCell *mem = header->data();
