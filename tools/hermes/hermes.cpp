@@ -199,6 +199,9 @@ int main(int argc, char **argv) {
   llvh::llvm_shutdown_obj Y;
 #endif
 
+  // Enable the microtask queue in the CLI by default.
+  flags.MicrotaskQueue.setInitialValue(true);
+
   llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
 
