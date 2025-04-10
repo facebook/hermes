@@ -1870,31 +1870,51 @@ class DefineOwnPropertyInst : public BaseDefineOwnPropertyInst {
   }
 };
 
-class StoreOwnPrivateFieldInst : public BaseDefineOwnPropertyInst {
+class StoreOwnPrivateFieldInst : public Instruction {
   StoreOwnPrivateFieldInst(const StoreOwnPrivateFieldInst &) = delete;
   void operator=(const StoreOwnPrivateFieldInst &) = delete;
 
  public:
+  enum { StoredValueIdx, ObjectIdx, PropertyIdx };
   explicit StoreOwnPrivateFieldInst(
       Value *storedValue,
       Value *object,
-      Value *property,
-      LiteralBool *isEnumerable)
-      : BaseDefineOwnPropertyInst(
-            ValueKind::StoreOwnPrivateFieldInstKind,
-            storedValue,
-            object,
-            property,
-            isEnumerable) {
+      Value *property)
+      : Instruction(ValueKind::StoreOwnPrivateFieldInstKind) {
     assert(
         property->getType().isPrivateNameType() &&
         "can only store private name types");
+    setType(Type::createNoType());
+    pushOperand(storedValue);
+    pushOperand(object);
+    pushOperand(property);
   }
 
   explicit StoreOwnPrivateFieldInst(
       const StoreOwnPrivateFieldInst *src,
       llvh::ArrayRef<Value *> operands)
-      : BaseDefineOwnPropertyInst(src, operands) {}
+      : Instruction(src, operands) {}
+
+  Value *getStoredValue() const {
+    return getOperand(StoredValueIdx);
+  }
+  Value *getObject() const {
+    return getOperand(ObjectIdx);
+  };
+  Value *getProperty() const {
+    return getOperand(PropertyIdx);
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setThrow().setReadHeap().setWriteHeap();
+  }
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
@@ -1902,32 +1922,51 @@ class StoreOwnPrivateFieldInst : public BaseDefineOwnPropertyInst {
   }
 };
 
-class AddOwnPrivateFieldInst : public BaseDefineOwnPropertyInst {
+class AddOwnPrivateFieldInst : public Instruction {
   AddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &) = delete;
   void operator=(const AddOwnPrivateFieldInst &) = delete;
 
  public:
+  enum { StoredValueIdx, ObjectIdx, PropertyIdx };
   explicit AddOwnPrivateFieldInst(
       Value *storedValue,
       Value *object,
-      Value *property,
-      LiteralBool *isEnumerable)
-      : BaseDefineOwnPropertyInst(
-            ValueKind::AddOwnPrivateFieldInstKind,
-            storedValue,
-            object,
-            property,
-            isEnumerable) {
+      Value *property)
+      : Instruction(ValueKind::AddOwnPrivateFieldInstKind) {
     assert(
         property->getType().isPrivateNameType() &&
         "can only add private name types");
-    assert(!isEnumerable->getValue() && "isEnumerable should be false");
+    setType(Type::createNoType());
+    pushOperand(storedValue);
+    pushOperand(object);
+    pushOperand(property);
   }
 
   explicit AddOwnPrivateFieldInst(
       const AddOwnPrivateFieldInst *src,
       llvh::ArrayRef<Value *> operands)
-      : BaseDefineOwnPropertyInst(src, operands) {}
+      : Instruction(src, operands) {}
+
+  Value *getStoredValue() const {
+    return getOperand(StoredValueIdx);
+  }
+  Value *getObject() const {
+    return getOperand(ObjectIdx);
+  };
+  Value *getProperty() const {
+    return getOperand(PropertyIdx);
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setThrow().setReadHeap().setWriteHeap();
+  }
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
@@ -2180,24 +2219,42 @@ class LoadPropertyWithReceiverInst : public BaseLoadPropertyInst {
   }
 };
 
-class LoadOwnPrivateFieldInst : public BaseLoadPropertyInst {
+class LoadOwnPrivateFieldInst : public Instruction {
   LoadOwnPrivateFieldInst(const LoadOwnPrivateFieldInst &) = delete;
   void operator=(const LoadOwnPrivateFieldInst &) = delete;
 
  public:
+  enum { ObjectIdx, PropertyIdx };
   explicit LoadOwnPrivateFieldInst(Value *object, Value *property)
-      : BaseLoadPropertyInst(
-            ValueKind::LoadOwnPrivateFieldInstKind,
-            object,
-            property) {
+      : Instruction(ValueKind::LoadOwnPrivateFieldInstKind) {
     assert(
         property->getType().isPrivateNameType() &&
         "can only load private name types");
+    pushOperand(object);
+    pushOperand(property);
   }
   explicit LoadOwnPrivateFieldInst(
       const LoadOwnPrivateFieldInst *src,
       llvh::ArrayRef<Value *> operands)
-      : BaseLoadPropertyInst(src, operands) {}
+      : Instruction(src, operands) {}
+
+  Value *getObject() const {
+    return getOperand(ObjectIdx);
+  };
+  Value *getProperty() const {
+    return getOperand(PropertyIdx);
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setThrow().setReadHeap();
+  }
 
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();

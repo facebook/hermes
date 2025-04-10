@@ -107,7 +107,7 @@ function simpleMethods() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.?B]: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS2.?B.prototype]: object
 // CHECK-NEXT:  %20 = LoadFrameInst (:privateName) %1: environment, [%VS2.?static_brand_B]: privateName
-// CHECK-NEXT:        AddOwnPrivateFieldInst undefined: undefined, %11: object, %20: privateName, false: boolean
+// CHECK-NEXT:        AddOwnPrivateFieldInst undefined: undefined, %11: object, %20: privateName
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.B]: any
 // CHECK-NEXT:  %23 = LoadFrameInst (:any) %1: environment, [%VS2.B]: any
 // CHECK-NEXT:        ReturnInst %23: any
@@ -126,7 +126,7 @@ function simpleMethods() {
 // CHECK-NEXT:  %6 = BinaryPrivateInInst (:any) %5: privateName, %0: any
 // CHECK-NEXT:       CondBranchInst %6: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       AddOwnPrivateFieldInst 40: number, %0: any, %5: privateName, false: boolean
+// CHECK-NEXT:       AddOwnPrivateFieldInst 40: number, %0: any, %5: privateName
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:        ThrowTypeErrorInst "Cannot initialize private field twice.": string
@@ -178,7 +178,7 @@ function simpleMethods() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %0: environment, [%VS1.?A]: object
 // CHECK-NEXT:  %3 = LoadFrameInst (:privateName) %0: environment, [%VS1.#privateF1]: privateName
-// CHECK-NEXT:       AddOwnPrivateFieldInst 10: number, %2: object, %3: privateName, false: boolean
+// CHECK-NEXT:       AddOwnPrivateFieldInst 10: number, %2: object, %3: privateName
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -193,7 +193,7 @@ function simpleMethods() {
 // CHECK-NEXT:  %4 = BinaryPrivateInInst (:any) %3: privateName, %0: any
 // CHECK-NEXT:       CondBranchInst %4: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:       AddOwnPrivateFieldInst undefined: undefined, %0: any, %3: privateName, false: boolean
+// CHECK-NEXT:       AddOwnPrivateFieldInst undefined: undefined, %0: any, %3: privateName
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:       ThrowTypeErrorInst "Cannot initialize private field twice.": string

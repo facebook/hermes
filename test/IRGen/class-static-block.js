@@ -65,7 +65,7 @@ class A {
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS2: any, %1: environment
 // CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS0.?A]: object
 // CHECK-NEXT:  %4 = LoadFrameInst (:privateName) %1: environment, [%VS0.#f1]: privateName
-// CHECK-NEXT:       AddOwnPrivateFieldInst 10: number, %3: object, %4: privateName, false: boolean
+// CHECK-NEXT:       AddOwnPrivateFieldInst 10: number, %3: object, %4: privateName
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %2: environment, %VS2: any, %<A:static_block_0>(): functionCode
 // CHECK-NEXT:  %7 = CallInst (:any) %6: object, %<A:static_block_0>(): functionCode, true: boolean, %2: environment, undefined: undefined, %0: any
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %2: environment, %VS2: any, %<A:static_block_1>(): functionCode

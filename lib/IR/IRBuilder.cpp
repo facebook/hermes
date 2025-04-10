@@ -667,8 +667,7 @@ StoreOwnPrivateFieldInst *IRBuilder::createStoreOwnPrivateFieldInst(
     Value *storedValue,
     Value *object,
     Value *property) {
-  auto *inst = new StoreOwnPrivateFieldInst(
-      storedValue, object, property, getLiteralBool(false));
+  auto *inst = new StoreOwnPrivateFieldInst(storedValue, object, property);
   insert(inst);
   return inst;
 }
@@ -676,8 +675,7 @@ AddOwnPrivateFieldInst *IRBuilder::createAddOwnPrivateFieldInst(
     Value *storedValue,
     Value *object,
     Value *property) {
-  auto *inst = new AddOwnPrivateFieldInst(
-      storedValue, object, property, getLiteralBool(false));
+  auto *inst = new AddOwnPrivateFieldInst(storedValue, object, property);
   insert(inst);
   return inst;
 }

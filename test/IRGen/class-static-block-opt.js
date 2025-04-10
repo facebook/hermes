@@ -28,7 +28,7 @@ class A {
 // CHECK-NEXT:  %0 = CreatePrivateNameInst (:privateName) "#f1": string
 // CHECK-NEXT:  %1 = AllocStackInst (:object) $?anon_1_clsPrototype: any
 // CHECK-NEXT:  %2 = CreateClassInst (:object) empty: any, empty: any, %A(): functionCode, empty: any, %1: object
-// CHECK-NEXT:       AddOwnPrivateFieldInst 10: number, %2: object, %0: privateName, false: boolean
+// CHECK-NEXT:       AddOwnPrivateFieldInst 10: number, %2: object, %0: privateName
 // CHECK-NEXT:  %4 = LoadOwnPrivateFieldInst (:any) %2: object, %0: privateName
 // CHECK-NEXT:  %5 = LoadOwnPrivateFieldInst (:any) %2: object, %0: privateName
 // CHECK-NEXT:  %6 = LoadOwnPrivateFieldInst (:any) %2: object, %0: privateName
