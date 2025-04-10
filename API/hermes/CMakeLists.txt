@@ -99,7 +99,7 @@ add_hermes_library(traceInterpreter TraceInterpreter.cpp
   LINK_LIBS libhermes hermesInstrumentation synthTrace synthTraceParser)
 
 add_library(libhermes ${api_sources})
-target_link_libraries(libhermes PUBLIC jsi PRIVATE hermesVMRuntime ${INSPECTOR_DEPS})
+target_link_libraries(libhermes PUBLIC jsi PRIVATE hermesNodeApi hermesVMRuntime ${INSPECTOR_DEPS})
 target_link_options(libhermes PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 
 # Export the required header directory

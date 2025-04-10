@@ -280,7 +280,12 @@ Instrumentation& Runtime::instrumentation() {
   return sharedInstance;
 }
 
-Value Runtime::createValueFromJsonUtf8(const uint8_t* json, size_t length) {
+void* Runtime::createNodeApiEnv(int32_t apiVersion) {
+  throw JSINativeException(
+    "Node-API is not supported by this particular JSI runtime");
+}
+
+Value Runtime::createValueFromJsonUtf8(const uint8_t *json, size_t length) {
   Function parseJson = global()
                            .getPropertyAsObject(*this, "JSON")
                            .getPropertyAsFunction(*this, "parse");
