@@ -4405,9 +4405,7 @@ class LIRGetArgumentsLengthInst : public SingleOperandInst {
   explicit LIRGetArgumentsLengthInst(Value *lazyRegValue)
       : SingleOperandInst(
             ValueKind::LIRGetArgumentsLengthInstKind,
-            lazyRegValue) {
-    setType(*getInherentTypeImpl());
-  }
+            lazyRegValue) {}
   explicit LIRGetArgumentsLengthInst(
       const LIRGetArgumentsLengthInst *src,
       llvh::ArrayRef<Value *> operands)
@@ -4422,9 +4420,6 @@ class LIRGetArgumentsLengthInst : public SingleOperandInst {
   }
   static bool isTyped() {
     return false;
-  }
-  static llvh::Optional<Type> getInherentTypeImpl() {
-    return Type::createNumber();
   }
 
   SideEffect getSideEffectImpl() const {

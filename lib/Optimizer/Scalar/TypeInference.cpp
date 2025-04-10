@@ -526,7 +526,7 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
   Type inferLIRGetArgumentsLengthInst(LIRGetArgumentsLengthInst *inst) {
-    return *inst->getInherentType();
+    return Type::createAnyType();
   }
   Type inferHBCReifyArgumentsInst(HBCReifyArgumentsInst *inst) {
     hermes_fatal("This is not a concrete instruction");

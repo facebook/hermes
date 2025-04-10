@@ -2708,7 +2708,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
   freeReg(hwTemp);
   // Avoid an extra mov by using the temp register for the result if possible.
   HWReg hwRes = getOrAllocFRInVecD(frRes, false);
-  frUpdatedWithHW(frRes, hwRes, FRType::Number);
+  frUpdatedWithHW(frRes, hwRes);
 
   emit_sh_ljs_is_object(a, hwTemp.a64GpX(), hwLazyReg.a64GpX());
   a.b_eq(slowPathLab);

@@ -60,8 +60,8 @@ function check_phi_handling(x) {
 // CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 StoreStackInst {np0} %1: undefined, {r0} %0: undefined|object
 // CHECK-NEXT:  {r0}      %3 = LoadStackInst (:undefined|object) {r0} %0: undefined|object
-// CHECK-NEXT:  {n0}      %4 = LIRGetArgumentsLengthInst (:number) {r0} %3: undefined|object
-// CHECK-NEXT:                 ReturnInst {n0} %4: number
+// CHECK-NEXT:  {r0}      %4 = LIRGetArgumentsLengthInst (:any) {r0} %3: undefined|object
+// CHECK-NEXT:                 ReturnInst {r0} %4: any
 // CHECK-NEXT:function_end
 
 // CHECK:function select(x: any): any
