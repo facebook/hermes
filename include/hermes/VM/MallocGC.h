@@ -347,12 +347,25 @@ template <
     MayFail mayFail,
     class... Args>
 inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
+  // For now, when mayFail == MayFail::Yes, we must have canBeLarge ==
+  // CanBeLarge::Yes.
+  static_assert(
+      (mayFail == MayFail::No) || (canBeLarge == CanBeLarge::Yes),
+      "Only large allocation can actually fail");
   assert(
       isSizeHeapAligned(size) &&
       "Call to makeA must use a size aligned to HeapAlign");
   // Since there is no old generation in this collector, always forward to the
   // normal allocation.
+  // Note that if checkedMalloc() fails and returns nullptr, it will fatal out
+  // immediately.
   GCCell *mem = alloc(size);
+  if (LLVM_UNLIKELY(!mem)) {
+    if constexpr (mayFail == MayFail::Yes) {
+      return nullptr;
+    }
+    oom(make_error_code(OOMError::MaxHeapReached));
+  }
   CellHeader::from(mem)->inYoungGen = longLived == LongLived::No;
   return constructCell<T>(mem, size, std::forward<Args>(args)...);
 }

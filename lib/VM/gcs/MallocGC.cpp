@@ -207,9 +207,10 @@ void MallocGC::collectBeforeAlloc(std::string cause, uint32_t size) {
   uint64_t targetNewSizeLimit = (uint64_t)allocatedBytes_ * 2;
   // The heap must be at least large enough to allocate the requested object.
   uint64_t minNewSizeLimit = allocatedBytes_ + size;
-  // There is not enough room after the allocation, OOM.
+  // There is not enough room after the allocation, return and let the caller
+  // decide what to do.
   if (minNewSizeLimit > maxSize_)
-    oom(make_error_code(OOMError::MaxHeapReached));
+    return;
   sizeLimit_ =
       std::clamp<uint64_t>(targetNewSizeLimit, minNewSizeLimit, maxSize_);
 }
@@ -559,11 +560,15 @@ GCCell *MallocGC::alloc(uint32_t size) {
   if (shouldSanitizeHandles()) {
     collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
   }
+  // Check for memory pressure conditions to do a collection.
   // Use subtraction to prevent overflow.
   if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
     collectBeforeAlloc(kNaturalCauseForAnalytics, size);
   }
-  assert(sizeLimit_ - size >= allocatedBytes_ && "collectBeforeAlloc failed");
+  // Above collection doesn't free enough memory, we can't allocate this object.
+  if (LLVM_UNLIKELY(size > sizeLimit_ - allocatedBytes_)) {
+    return nullptr;
+  }
   // Add space for the header.
   auto *header = new (checkedMalloc(size + sizeof(CellHeader))) CellHeader();
   GCCell *mem = header->data();

@@ -440,13 +440,12 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   uint64_t prevTotalAllocBytes = 0;
   // Test that large allocation in case of insufficient space returns nullptr.
   {
-    LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap());
-    LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap());
-#ifndef HERMESVM_GC_MALLOC
+    GCScopeMarkerRAII marker{scope};
+    rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()));
+    rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()));
     // No enough space, this allocation should fail and return nullptr.
     ASSERT_EQ(
         LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()), nullptr);
-#endif
     rt.getHeap().getHeapInfo(heapInfo);
     prevTotalAllocBytes = heapInfo.totalAllocatedBytes;
   }
