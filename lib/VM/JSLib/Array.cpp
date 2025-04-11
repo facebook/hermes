@@ -1000,7 +1000,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
     PinnedValue<StringPrimitive> sep;
-    PinnedValue<JSArray> strings;
+    PinnedValue<JSArray::StorageType> strings;
     PinnedValue<> elem;
     PinnedValue<StringPrimitive> elementStr;
     PinnedValue<JSArray::StorageType> inputStorage;
@@ -1102,27 +1102,15 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   // If there are remaining elements that weren't strings, or the input wasn't
   // a dense array at all.
   if (fastPathEnd < len) {
-    // Create temporary storage for the remaining input strings.  Element i of
-    // lv.strings will correspond to element i + fastPathEnd of the input array.
+    // Create temporary storage for the remaining input strings. Element i of
+    // lv.strings will correspond to element i of the input array. Elements
+    // [0..fastPathEnd) will not be populated until we encounter an object
+    // (since its toString has side effects).
 
-    auto arrRes = JSArray::create(runtime, 0, 0);
+    auto arrRes = JSArray::StorageType::create(runtime, len, len);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     lv.strings = std::move(*arrRes);
-
-    // Resize the array.
-    if (LLVM_UNLIKELY(
-            JSArray::setStorageEndIndex(
-                lv.strings, runtime, len - fastPathEnd) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (LLVM_UNLIKELY(
-            JSArray::setLengthProperty(
-                lv.strings, runtime, len - fastPathEnd) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
 
     auto marker = gcScope.createMarker();
     // Call toString on the remaining elements of the array.
@@ -1138,9 +1126,8 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
         // Fast-path: input array is dense.
         lv.elem = lv.inputStorage->at(runtime, i).unboxToHV(runtime);
       } else {
-        PinnedValue<> key = HermesValue::encodeTrustedNumberValue(i);
         if (LLVM_UNLIKELY(
-                (propRes = JSObject::getComputed_RJS(lv.O, runtime, key)) ==
+                (propRes = getIndexed_RJS(runtime, lv.O, i)) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -1150,13 +1137,28 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
       // null and undefined are empty strings. The empty could come from
       // reading the input storage directly; it acts as undefined.
       if (lv.elem->isUndefined() || lv.elem->isNull() || lv.elem->isEmpty()) {
-        auto emptyString = SmallHermesValue::encodeStringValue(
-            runtime.getPredefinedString(Predefined::emptyString), runtime);
-        JSArray::unsafeSetExistingElementAt(
-            lv.strings.get(), runtime, i - fastPathEnd, emptyString);
+        // Do nothing. Element in `strings` is already initialized to empty.
       } else {
         // Otherwise, call toString_RJS() and save the result, incrementing
         // size.
+
+        // If the element is an object, converting it to a string can have
+        // side effects and can modify the input array. We need to copy the
+        // fast path elements and assume the input storage is no longer
+        // accessible.
+        if (lv.inputStorage.get() && lv.elem->isObject()) {
+          assert(
+              lv.inputStorage.get() &&
+              "inputStorage should be non-null if fastPathEnd != 0");
+          for (uint32_t j = 0; j < fastPathEnd; ++j) {
+            SmallHermesValue elem = lv.inputStorage->at(runtime, j);
+            if (elem.isString())
+              lv.strings->set(runtime, j, elem);
+          }
+          fastPathEnd = 0;
+          lv.inputStorage = nullptr;
+        }
+
         auto strRes = toString_RJS(runtime, lv.elem);
         if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
           return ExecutionStatus::EXCEPTION;
@@ -1164,11 +1166,8 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
         StringPrimitive *s = strRes.getValue().get();
         size.add(s->getStringLength());
 
-        JSArray::unsafeSetExistingElementAt(
-            lv.strings.get(),
-            runtime,
-            i - fastPathEnd,
-            SmallHermesValue::encodeStringValue(s, runtime));
+        lv.strings->set(
+            runtime, i, SmallHermesValue::encodeStringValue(s, runtime));
       }
 
       // Check for string overflow on every iteration to create the illusion
@@ -1201,8 +1200,13 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   for (uint32_t i = fastPathEnd; i < len; ++i) {
     if (i > 0)
       builder->appendStringPrim(lv.sep);
-    lv.elementStr = lv.strings->at(runtime, i - fastPathEnd).getString(runtime);
-    builder->appendStringPrim(lv.elementStr);
+    auto hv = lv.strings->at(runtime, i);
+    if (hv.isString()) {
+      lv.elementStr = hv.getString(runtime);
+      builder->appendStringPrim(lv.elementStr);
+    } else {
+      assert(hv.isEmpty() && "The element must be string or empty");
+    }
   }
 
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
