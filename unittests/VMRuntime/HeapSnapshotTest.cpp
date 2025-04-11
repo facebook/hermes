@@ -1542,7 +1542,7 @@ objects[0];
 global(1) @ test.js(2):2:1
 global(11) @ test.js(2):15:2
 A(12) @ test.js(2):4:4
-B(5) @ test.js(2):7:15)#");
+B(4) @ test.js(2):7:15)#");
 }
 
 #endif // HERMES_ENABLE_DEBUGGER

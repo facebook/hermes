@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "class"
 #include "hermes/VM/HiddenClass.h"
 
+#include "hermes/Support/Statistic.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSArray.h"
@@ -18,6 +19,16 @@
 #include "llvh/Support/Debug.h"
 
 using llvh::dbgs;
+
+HERMES_SLOW_STATISTIC(
+    NumHCFindProperty,
+    "NumHCFindProperty: Number of HiddenClass property lookups.");
+HERMES_SLOW_STATISTIC(
+    NumHCInitPropMap,
+    "NumHCInitPropMap: Number of HiddenClass map initializations.");
+HERMES_SLOW_STATISTIC(
+    NumHCMapSteal,
+    "NumHCMapSteal: Number of map steals from parent HiddenClass.");
 
 namespace hermes {
 namespace vm {
@@ -268,6 +279,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     SymbolID name,
     PropertyFlags expectedFlags,
     NamedPropertyDescriptor &desc) {
+  ++NumHCFindProperty;
   // Lazily create the property map.
   if (LLVM_UNLIKELY(!self->propertyMap_)) {
     // If expectedFlags is valid, we can check if there is an outgoing
@@ -416,40 +428,14 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   auto existingChild =
       selfHandle->transitionMap_.lookup(runtime, {name, propertyFlags});
   if (LLVM_LIKELY(existingChild)) {
-    auto childHandle = runtime.makeHandle(existingChild);
-    // If the child doesn't have a property map, but we do, update our map and
-    // move it to the child.
-    if (!childHandle->propertyMap_ && selfHandle->propertyMap_) {
-      LLVM_DEBUG(
-          dbgs() << "Adding property " << runtime.formatSymbolID(name)
-                 << " to Class:" << selfHandle->getDebugAllocationId()
-                 << " transitions Map to existing Class:"
-                 << childHandle->getDebugAllocationId() << "\n");
+    LLVM_DEBUG(
+        dbgs() << "Adding property " << runtime.formatSymbolID(name)
+               << " to Class:" << selfHandle->getDebugAllocationId()
+               << " transitions to existing Class:"
+               << existingChild->getDebugAllocationId() << "\n");
 
-      if (LLVM_UNLIKELY(
-              addToPropertyMap(
-                  selfHandle,
-                  runtime,
-                  name,
-                  NamedPropertyDescriptor(
-                      propertyFlags, selfHandle->numProperties_)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      childHandle->propertyMap_.set(
-          runtime, selfHandle->propertyMap_, runtime.getHeap());
-    } else {
-      LLVM_DEBUG(
-          dbgs() << "Adding property " << runtime.formatSymbolID(name)
-                 << " to Class:" << selfHandle->getDebugAllocationId()
-                 << " transitions to existing Class:"
-                 << childHandle->getDebugAllocationId() << "\n");
-    }
-
-    // In any case, clear our own map.
-    selfHandle->propertyMap_.setNull(runtime.getHeap());
-
-    return std::make_pair(childHandle, selfHandle->numProperties_);
+    return std::make_pair(
+        runtime.makeHandle(existingChild), selfHandle->numProperties_);
   }
 
   // Do we need to convert to dictionary?
@@ -854,6 +840,7 @@ void HiddenClass::initializeMissingPropertyMap(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
   assert(!selfHandle->propertyMap_ && "property map is already initialized");
+  ++NumHCInitPropMap;
 
   // Check whether we can steal our parent's map. If we can, we only need
   // to add or update a single property.
@@ -915,6 +902,7 @@ void HiddenClass::initializeMissingPropertyMap(
 void HiddenClass::stealPropertyMapFromParent(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
+  ++NumHCMapSteal;
   // Most of this method uses raw pointers.
   NoAllocScope noAlloc(runtime);
   auto *self = *selfHandle;
