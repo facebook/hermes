@@ -1418,23 +1418,6 @@ class GCBase {
     return cell;
   }
 
-  template <typename T, class... Args>
-  static T *constructCellCanBeLarge(void *ptr, uint32_t size, Args &&...args) {
-    assert(ptr && "constructCellCanBeLarge() can't be called on null ptr");
-    constexpr auto kind = T::getCellKind();
-    assert(
-        VTable::getVTable(kind)->allowLargeAlloc &&
-        "constructLargeCell() should only be used for constructing object that supports large allocation");
-    auto *cell = new (ptr) T(std::forward<Args>(args)...);
-    // If this cell lives in a JumboHeapSegment, its size is the segment's max
-    // allocation size.
-    auto cellSize = size > FixedSizeHeapSegment::maxSize()
-        ? JumboHeapSegment::computeActualCellSize(size)
-        : size;
-    cell->setKindAndSize({kind, cellSize});
-    return cell;
-  }
-
   /// Number of finalized objects in the last collection.
   unsigned numFinalizedObjects_{0};
 

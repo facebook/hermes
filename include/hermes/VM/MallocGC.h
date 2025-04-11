@@ -34,11 +34,16 @@ class MallocGC final : public GCBase {
     /// depend on inYoungGen being true.
     bool inYoungGen;
 
-   private:
     /// If true, then this cell is live. If this is false at the end of a
     /// collection, then this cell can be freed. Defaults to false when not in
     /// the middle of a collection.
     bool marked_ = false;
+
+    /// The size of this cell. On 32bits platform, we use 24bits for size in
+    /// KindAndSize, which is not large enough for any allocation with larger
+    /// size. So we store the actual size here and use when calling
+    /// GCCell::getAllocatedSizeSlow().
+    uint32_t cellSize;
 
 #ifdef HERMESVM_SANITIZE_HANDLES
     /// If non-null, contains a pointer to the new location where this cell will
@@ -54,7 +59,6 @@ class MallocGC final : public GCBase {
         "GCCell's alignment exceeds the alignment requirement of the heap");
     alignas(HeapAlign) uint8_t data_[0];
 
-   public:
     bool isMarked() const {
       return marked_;
     }
@@ -366,8 +370,11 @@ inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
     }
     oom(make_error_code(OOMError::MaxHeapReached));
   }
-  CellHeader::from(mem)->inYoungGen = longLived == LongLived::No;
-  return constructCell<T>(mem, size, std::forward<Args>(args)...);
+  auto *header = CellHeader::from(mem);
+  header->inYoungGen = longLived == LongLived::No;
+  header->cellSize = size;
+  return constructCell<T>(
+      mem, size > GCCell::maxSize() ? 0 : size, std::forward<Args>(args)...);
 }
 
 inline void MallocGC::initCell(GCCell *cell, uint32_t size) {
