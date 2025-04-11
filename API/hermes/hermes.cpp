@@ -54,9 +54,12 @@
 #include <system_error>
 #include <unordered_map>
 
-#include <hermes_node_api/hermes_node_api.h>
 #include <jsi/instrumentation.h>
 #include <jsi/threadsafe.h>
+
+#ifndef HERMESVM_LEAN
+#include <hermes_node_api/hermes_node_api.h>
+#endif
 
 #ifdef HERMESVM_LLVM_PROFILE_DUMP
 extern "C" {
@@ -2626,12 +2629,17 @@ void HermesRuntimeImpl::throwJSErrorWithMessage(Args &&...args) {
 }
 
 void *HermesRuntimeImpl::createNodeApiEnv(int32_t apiVersion) {
+#ifndef HERMESVM_LEAN
   auto res = ::hermes::node_api::createModuleNodeApiEnvironment(
       *this->getVMRuntimeUnsafe(), apiVersion);
   if (res.getStatus() == ::hermes::vm::ExecutionStatus::EXCEPTION) {
     throw std::runtime_error("Failed to create Node API environment");
   }
   return res.getValue();
+#else
+  (void)apiVersion; // Unused
+  return nullptr;
+#endif
 }
 
 namespace {
