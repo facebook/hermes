@@ -408,7 +408,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     // but not consume until we are sure (which is less efficient, but more
     // robust). T31555339.
     SlotIndex newSlot = DictPropertyMap::allocatePropertySlot(
-        selfHandle->propertyMap_.get(runtime), runtime);
+        selfHandle->propertyMap_.getNonNull(runtime), runtime);
 
     if (LLVM_UNLIKELY(
             addToPropertyMap(
@@ -488,7 +488,8 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
 
   if (selfHandle->propertyMap_) {
     assert(
-        !DictPropertyMap::find(selfHandle->propertyMap_.get(runtime), name) &&
+        !DictPropertyMap::find(
+            selfHandle->propertyMap_.getNonNull(runtime), name) &&
         "Adding an existing property to hidden class");
 
     LLVM_DEBUG(
@@ -550,7 +551,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
       selfHandle->propertyMap_ && "propertyMap must exist in updateProperty()");
 
   auto *descPair = DictPropertyMap::getDescriptorPair(
-      selfHandle->propertyMap_.get(runtime), pos);
+      selfHandle->propertyMap_.getNonNull(runtime), pos);
   // If the property flags didn't change, do nothing.
   if (descPair->second.flags == newFlags)
     return selfHandle;
@@ -658,8 +659,8 @@ Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
             curHandle->propertyMap_ &&
             "propertyMap must exist after updateOwnProperty()");
 
-        auto found =
-            DictPropertyMap::find(curHandle->propertyMap_.get(runtime), id);
+        auto found = DictPropertyMap::find(
+            curHandle->propertyMap_.getNonNull(runtime), id);
         assert(found && "property not found during enumeration");
         curHandle = *updateProperty(curHandle, runtime, *found, newFlags);
       });
@@ -824,7 +825,7 @@ ExecutionStatus HiddenClass::addToPropertyMap(
 
   // Add the new field to the property map.
   MutableHandle<DictPropertyMap> updatedMap{
-      runtime, selfHandle->propertyMap_.get(runtime)};
+      runtime, selfHandle->propertyMap_.getNonNull(runtime)};
 
   if (LLVM_UNLIKELY(
           DictPropertyMap::add(updatedMap, runtime, name, desc) ==
@@ -944,18 +945,17 @@ void HiddenClass::stealPropertyMapFromParent(
   // Our class is updating the flags of an existing property. So we need
   // to find it and update it.
 
+  auto *propMap = self->propertyMap_.getNonNull(runtime);
   assert(
-      self->numProperties_ == self->propertyMap_.getNonNull(runtime)->size() &&
+      self->numProperties_ == propMap->size() &&
       "propertyMap->size() must match HiddenClass::numProperties in "
       "flag update transition");
 
-  auto pos =
-      DictPropertyMap::find(self->propertyMap_.get(runtime), self->symbolID_);
+  auto pos = DictPropertyMap::find(propMap, self->symbolID_);
   assert(pos && "property must exist in flag update transition");
   auto tmpFlags = self->propertyFlags_;
   tmpFlags.flagsTransition = 0;
-  DictPropertyMap::getDescriptorPair(self->propertyMap_.get(runtime), *pos)
-      ->second.flags = tmpFlags;
+  DictPropertyMap::getDescriptorPair(propMap, *pos)->second.flags = tmpFlags;
 }
 
 } // namespace vm
