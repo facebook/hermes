@@ -1068,8 +1068,14 @@ void Emitter::leave(llvh::ArrayRef<const asmjit::Label *> exceptionHandlers) {
 }
 
 void Emitter::callThunk(void *fn, const char *name) {
-  //    comment("// call %s", name);
-  a.bl(registerThunk(fn, name));
+  // Using thunks leads to 0.27% more branch mispredicts and 2.8% performance
+  // regression on an important React benchmark. So, disable them for now.
+  if constexpr (false) {
+    comment("// call %s", name);
+    a.bl(registerThunk(fn, name));
+  } else {
+    callWithoutThunk(fn, name);
+  }
 }
 
 void Emitter::callThunkWithSavedIP(void *fn, const char *name) {
