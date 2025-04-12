@@ -156,7 +156,9 @@ class ContiguousVAStorageProvider final : public StorageProvider {
     // Reset all bits for this storage.
     int startIndex = (static_cast<char *>(storage) - start_) / kSegmentUnitSize;
     statusBits_.reset(startIndex, startIndex + numUnits);
-    if (startIndex < firstFreeBit_)
+    // This delete could happen right after the last piece of memory is used, so
+    // firstFreeBit_ could be -1.
+    if ((startIndex < firstFreeBit_) || (firstFreeBit_ == -1))
       firstFreeBit_ = startIndex;
   }
 
