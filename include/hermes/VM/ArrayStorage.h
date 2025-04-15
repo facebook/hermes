@@ -313,9 +313,11 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
       Runtime &runtime,
       size_type capacity);
 
-  /// Change the size of the storage to \p newSize. This can increase the size
-  /// (in which case the new elements will be initialized to empty), or decrease
-  /// the size.
+  /// Change the size of the storage to \p newSize. If the new size is larger,
+  /// the additional elements are initialized to "empty". This may cause a
+  /// reallocation when the new size exceeds the capacity. If the new size is
+  /// smaller, the "extra" elements are marked as unreachable for the GC, but
+  /// there is no reallocation.
   ///
   /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
   /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
@@ -327,15 +329,23 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
       size_type newSize) {
-    return shift(selfHandle, runtime, 0, 0, newSize);
+    if (selfHandle->size() == newSize)
+      return ExecutionStatus::RETURNED;
+    // Check if we could expand within capacity.
+    if (newSize <= selfHandle->capacity()) {
+      ArrayStorageBase::resizeWithinCapacity(
+          *selfHandle, runtime.getHeap(), newSize);
+      return ExecutionStatus::RETURNED;
+    }
+
+    // Reallocate to a capacity of at least newSize.
+    return reallocateToLarger(selfHandle, runtime, newSize, 0, 0, newSize);
   }
 
-  /// The same as resize, but add elements to the left instead of the right.
-  ///
-  /// In the case where the capacity is sufficient to hold the \p newSize,
-  /// every existing element is copied rightward, a linear time procedure.
-  /// If the capacity is not sufficient, then the performance will be the same
-  /// as \c resize.
+  /// Change the size of the storage to \p newSize. If the size is decreasing,
+  /// shift the data the left, marking the extra elements at the end as
+  /// unreachable. If the size is increasing, reallocate if necessary, shift the
+  /// data to the right and initialize the new elements at the start as "empty".
   ///
   /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
   /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
@@ -346,9 +356,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   static ExecutionStatus resizeLeft(
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
-      size_type newSize) {
-    return shift(selfHandle, runtime, 0, newSize - selfHandle->size(), newSize);
-  }
+      size_type newSize);
 
   /// Set the size to a value <= the capacity. This is a special
   /// case of resize() but has a simpler interface since we know that it doesn't
@@ -439,37 +447,6 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
       size_type minCapacity,
-      size_type fromFirst,
-      size_type toFirst,
-      size_type toLast);
-
-// Mangling scheme used by MSVC encode public/private into the name.
-// As a result, vanilla "ifdef public" trick leads to link errors.
-#if defined(UNIT_TEST) || defined(_MSC_VER)
- public:
-#endif
-  /// This is a flexible function which can be used to extend the array by
-  /// creating or removing elements in front or in the back. New elements are
-  /// initialized to empty. Intuitively it shifts a specified number of elements
-  /// to a new position and clears the rest. More precisely, it can be described
-  /// as follows:
-  /// 1. Resize the storage to contain `toLast` elements.
-  /// 2. Copy the elements `[fromFirst..min(fromFirst+size, toLast-toFirst))` to
-  ///       position 'toFirst'.
-  /// 3. Set all elements before `toFirst` and after the last copied element to
-  ///   "empty".
-  ///
-  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
-  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
-  /// if allocation is required. Caller needs to take the updated handle value
-  /// after the call to update their own pointers.
-  /// \param runtime The Runtime.
-  /// \param fromFirst First element to be copied from.
-  /// \param toFirst Index where to copy the first element to.
-  /// \param toLast Index where to copy the last element to.
-  static ExecutionStatus shift(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime &runtime,
       size_type fromFirst,
       size_type toFirst,
       size_type toLast);

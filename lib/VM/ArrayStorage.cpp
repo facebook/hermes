@@ -168,74 +168,98 @@ void ArrayStorageBase<HVType>::resizeWithinCapacity(
 }
 
 template <typename HVType>
-ExecutionStatus ArrayStorageBase<HVType>::shift(
+ExecutionStatus ArrayStorageBase<HVType>::resizeLeft(
     MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime &runtime,
-    size_type fromFirst,
-    size_type toFirst,
-    size_type toLast) {
-  assert(toFirst <= toLast && "First must be before last");
-  assert(fromFirst <= selfHandle->size() && "fromFirst must be before size");
+    size_type newSize) {
+  if (selfHandle->size() == newSize)
+    return ExecutionStatus::RETURNED;
 
-  // If we don't need to expand the capacity.
-  if (toLast <= selfHandle->capacity()) {
+  if (newSize < selfHandle->size()) {
+    // Shrink left, copy from [size-newSize, size) to [0, newSize). Mark the
+    // range [newSize, size) as unreachable.
     auto *self = selfHandle.get();
-    size_type copySize = std::min(self->size() - fromFirst, toLast - toFirst);
+    size_type size = self->size();
+    GCHVType::copy(
+        self->data() + size - newSize,
+        self->data() + size,
+        self->data(),
+        self,
+        runtime.getHeap());
+    // Execute write barriers on elements about to be conceptually changed to
+    // null. This also means if an array is refilled, it can treat the memory
+    // here as uninitialized safely.
+    GCHVType::rangeUnreachableWriteBarrier(
+        self->data() + newSize, self->data() + size, runtime.getHeap());
+    self->size_.store(newSize, std::memory_order_release);
+    return ExecutionStatus::RETURNED;
+  }
 
-    // Copy the values to their final destination.
-    if (fromFirst > toFirst) {
-      GCHVType::copy(
-          self->data() + fromFirst,
-          self->data() + fromFirst + copySize,
+  // Check if we could expand within capacity.
+  assert(newSize > selfHandle->size());
+  if (newSize <= selfHandle->capacity()) {
+    // size < newSize <= capacity.
+
+    auto *self = selfHandle.get();
+    size_type size = self->size();
+    size_type toFirst = newSize - size;
+
+    if (toFirst >= size) {
+      // uninitialized_copy [0, size) to [toFirst, newSize).
+      GCHVType::uninitialized_copy(
+          self->data(),
+          self->data() + size,
           self->data() + toFirst,
           self,
           runtime.getHeap());
-    } else if (fromFirst < toFirst) {
-      // Copying to the right, need to copy backwards to avoid overwriting what
-      // is being copied.
-      GCHVType::copy_backward(
-          self->data() + fromFirst,
-          self->data() + fromFirst + copySize,
-          self->data() + toFirst + copySize,
+      // Set [0, toFirst) to Empty:
+      // - fill [0, size).
+      // - uninitialized_fill [size, toFirst).
+      GCHVType::fill(
+          self->data(),
+          self->data() + size,
+          HVType::encodeEmptyValue(),
           self,
           runtime.getHeap());
-    }
-
-    // Initialize the elements which were emptied in front.
-    GCHVType::fill(
-        self->data(),
-        self->data() + toFirst,
-        HVType::encodeEmptyValue(),
-        self,
-        runtime.getHeap());
-
-    // Initialize the elements between the last copied element and toLast.
-    if (toFirst + copySize < toLast) {
+      // The previously-unused cells in [size, toFirst) are now part of the
+      // array representation; fill them with empty.
       GCHVType::uninitialized_fill(
-          self->data() + toFirst + copySize,
-          self->data() + toLast,
+          self->data() + size,
+          self->data() + toFirst,
+          HVType::encodeEmptyValue(),
+          self,
+          runtime.getHeap());
+    } else {
+      // uninitialized_copy [size-toFirst, size) to [size, newSize).
+      GCHVType::uninitialized_copy(
+          self->data() + size - toFirst,
+          self->data() + size,
+          self->data() + size,
+          self,
+          runtime.getHeap());
+      // Backward copy [0, size-toFirst) to [toFirst, size). It has to be
+      // backward here because it's possible that size-toFirst > toFirst.
+      GCHVType::copy_backward(
+          self->data(),
+          self->data() + size - toFirst,
+          self->data() + size,
+          self,
+          runtime.getHeap());
+      // Set [0, toFirst) to Empty.
+      GCHVType::fill(
+          self->data(),
+          self->data() + toFirst,
           HVType::encodeEmptyValue(),
           self,
           runtime.getHeap());
     }
-    if (toLast < self->size()) {
-      // Some elements are becoming unreachable, let the GC know.
-      GCHVType::rangeUnreachableWriteBarrier(
-          self->data() + toLast,
-          self->data() + self->size(),
-          runtime.getHeap());
-    }
-    self->size_.store(toLast, std::memory_order_release);
+    self->size_.store(newSize, std::memory_order_release);
     return ExecutionStatus::RETURNED;
   }
 
+  // Reallocate to a capacity of at least newSize.
   return reallocateToLarger(
-      selfHandle,
-      runtime,
-      /* minCapacity */ toLast,
-      fromFirst,
-      toFirst,
-      toLast);
+      selfHandle, runtime, newSize, 0, newSize - selfHandle->size(), newSize);
 }
 
 template <typename HVType>
