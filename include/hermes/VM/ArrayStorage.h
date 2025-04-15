@@ -23,11 +23,11 @@ namespace vm {
 /// resizing on both ends which is necessary for the simplest implementation of
 /// JavaScript arrays (using a base offset and length).
 template <typename HVType>
-class ArrayStorageBase final
-    : public VariableSizeRuntimeCell,
-      private llvh::
-          TrailingObjects<ArrayStorageBase<HVType>, GCHermesValueImpl<HVType>> {
-  using GCHVType = GCHermesValueImpl<HVType>;
+class ArrayStorageBase final : public VariableSizeRuntimeCell,
+                               private llvh::TrailingObjects<
+                                   ArrayStorageBase<HVType>,
+                                   GCHermesValueInLargeObjImpl<HVType>> {
+  using GCHVType = GCHermesValueInLargeObjImpl<HVType>;
   friend llvh::TrailingObjects<ArrayStorageBase<HVType>, GCHVType>;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend void ArrayStorageSmallBuildMeta(
@@ -46,20 +46,23 @@ class ArrayStorageBase final
   static const VTable vt;
 
   /// Gets the amount of memory used by this object for a given \p capacity.
-  static constexpr uint32_t allocationSize(size_type capacity) {
+  static constexpr size_t allocationSize(size_type capacity) {
     return ArrayStorageBase::template totalSizeToAlloc<GCHVType>(capacity);
   }
 
   /// \return The the maximum number of elements that will fit in an
   /// ArrayStorage with allocated size \p allocSize.
   static constexpr size_type capacityForAllocationSize(uint32_t allocSize) {
+    assert(
+        allocSize >= allocationSize(0) &&
+        "allocSize must be at least the size of ArrayStorage itself");
     return (allocSize - allocationSize(0)) / sizeof(HVType);
   }
 
   /// \return The maximum number of elements we can fit in a single array in the
   /// current GC.
   static constexpr size_type maxElements() {
-    return capacityForAllocationSize(GC::maxNormalAllocationSize());
+    return capacityForAllocationSize(GCCell::maxNormalSize());
   }
 
   static bool classof(const GCCell *cell) {
@@ -76,13 +79,42 @@ class ArrayStorageBase final
         : CellKind::ArrayStorageSmallKind;
   }
 
+  /// Return the maximum capacity that ensures no overflow when computing
+  /// allocation size from it. In this class, we use `size_type`, which is
+  /// uint32_t, to represent capacity and size, since each element occupies more
+  /// than one byte, the allocation size for a large capacity may overflow. We
+  /// should always check against this value when creating ArrayStorage with a
+  /// passed in capacity.
+  static constexpr size_type maxCapacityNoOverflow() {
+    return capacityForAllocationSize(std::numeric_limits<size_type>::max());
+  }
+
+  /// Return allocation size for \p capacity with overflow check.
+  static CallResult<size_type> checkedAllocationSize(
+      Runtime &runtime,
+      size_type capacity) {
+    if (LLVM_UNLIKELY(capacity > maxElements()))
+      return throwExcessiveCapacityError(runtime, capacity);
+
+    if (capacity > maxCapacityNoOverflow())
+      return throwExcessiveCapacityError(runtime, capacity);
+    return allocationSize(capacity);
+  }
+
   /// Create a new instance with at least the specified \p capacity.
   static CallResult<HermesValue> create(Runtime &runtime, size_type capacity) {
-    if (LLVM_UNLIKELY(capacity > maxElements())) {
+    auto allocSizeRes = checkedAllocationSize(runtime, capacity);
+    if (LLVM_UNLIKELY(allocSizeRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    auto *cell = runtime.makeAVariable<
+        ArrayStorageBase<HVType>,
+        HasFinalizer::No,
+        LongLived::No,
+        CanBeLarge::Yes,
+        MayFail::Yes>(*allocSizeRes);
+    if (LLVM_UNLIKELY(!cell)) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    const auto allocSize = allocationSize(capacity);
-    auto *cell = runtime.makeAVariable<ArrayStorageBase<HVType>>(allocSize);
     return HermesValue::encodeObjectValue(cell);
   }
 
@@ -103,14 +135,19 @@ class ArrayStorageBase final
   static CallResult<HermesValue> createLongLived(
       Runtime &runtime,
       size_type capacity) {
-    if (LLVM_UNLIKELY(capacity > maxElements())) {
+    auto allocSizeRes = checkedAllocationSize(runtime, capacity);
+    if (LLVM_UNLIKELY(allocSizeRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    auto *ptr = runtime.makeAVariable<
+        ArrayStorageBase<HVType>,
+        HasFinalizer::No,
+        LongLived::Yes,
+        CanBeLarge::Yes,
+        MayFail::Yes>(*allocSizeRes);
+    if (LLVM_UNLIKELY(!ptr)) {
       return throwExcessiveCapacityError(runtime, capacity);
     }
-    const auto allocSize = allocationSize(capacity);
-    return HermesValue::encodeObjectValue(runtime.makeAVariable<
-                                          ArrayStorageBase<HVType>,
-                                          HasFinalizer::No,
-                                          LongLived::Yes>(allocSize));
+    return HermesValue::encodeObjectValue(ptr);
   }
 
   /// Create a new instance with at least the specified \p capacity and a size
@@ -151,7 +188,7 @@ class ArrayStorageBase final
   template <Inline inl = Inline::No>
   void set(size_type index, HVType val, GC &gc) {
     assert(index < size() && "index out of range");
-    data()[index].set(val, gc);
+    data()[index].set(val, this, gc);
   }
 
   /// \return the element at index \p index
@@ -162,7 +199,7 @@ class ArrayStorageBase final
   }
 
   size_type capacity() const {
-    return capacityForAllocationSize(getAllocatedSize());
+    return capacityForAllocationSize(getAllocatedSizeSlow());
   }
   size_type size() const {
     return size_.load(std::memory_order_relaxed);
@@ -185,7 +222,7 @@ class ArrayStorageBase final
     assert(sz < capacity());
     // Use the constructor of GCHermesValue to use the correct write barrier
     // for uninitialized memory.
-    new (&data()[sz]) GCHVType(value, runtime.getHeap());
+    new (&data()[sz]) GCHVType(value, this, runtime.getHeap());
     size_.store(sz + 1, std::memory_order_release);
   }
 
@@ -451,29 +488,6 @@ class ArrayStorageBase final
 
 using ArrayStorage = ArrayStorageBase<HermesValue>;
 using ArrayStorageSmall = ArrayStorageBase<SmallHermesValue>;
-
-static_assert(
-    ArrayStorage::allocationSize(ArrayStorage::maxElements()) <=
-        GC::maxNormalAllocationSize(),
-    "maxElements() is too big");
-
-static_assert(
-    GC::maxNormalAllocationSize() -
-            ArrayStorage::allocationSize(ArrayStorage::maxElements()) <
-        HeapAlign,
-    "maxElements() is too small");
-
-static_assert(
-    ArrayStorageSmall::allocationSize(ArrayStorageSmall::maxElements()) <=
-        GC::maxNormalAllocationSize(),
-    "maxElements() is too big");
-
-static_assert(
-    GC::maxNormalAllocationSize() -
-            ArrayStorageSmall::allocationSize(
-                ArrayStorageSmall::maxElements()) <
-        HeapAlign,
-    "maxElements() is too small");
 
 } // namespace vm
 } // namespace hermes

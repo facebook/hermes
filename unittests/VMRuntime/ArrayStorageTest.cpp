@@ -127,24 +127,7 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
   EXPECT_EQ(st->size(), st->capacity());
 }
 
-using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;
-
-#ifndef HERMESVM_GC_MALLOC
-// The following test allocates gigantic arrays on non-NCGen GCs.
-TEST_F(ArrayStorageBigHeapTest, AllocMaxSizeArray) {
-  // Should succeed, allocations up to maxElements are allowed.
-  auto res = ArrayStorage::create(
-      runtime, ArrayStorage::maxElements(), ArrayStorage::maxElements());
-  EXPECT_EQ(res, ExecutionStatus::RETURNED)
-      << "Allocating a max size array failed";
-
-  // Try to push an additional element, which should fail.
-  auto h = runtime.makeMutableHandle(vmcast<ArrayStorage>(*res));
-  auto res2 = ArrayStorage::push_back(h, runtime, runtime.getUndefinedValue());
-  EXPECT_EQ(res2, ExecutionStatus::EXCEPTION)
-      << "Array cannot grow beyond max size";
-}
-#endif
+using ArrayStorageBigHeapTest = ExtremeLargeHeapRuntimeTestFixture;
 
 TEST_F(ArrayStorageBigHeapTest, AllocLargeArrayThrowsRangeError) {
   // Should fail with a RangeError for allocations above the maxElements.

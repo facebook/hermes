@@ -898,7 +898,8 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
     if (cell->getKind() == CellKind::ArrayStorageKind) {
       ArrayStorage *arr = vmcast<ArrayStorage>(cell);
-      const auto key = std::make_pair(arr->capacity(), arr->getAllocatedSize());
+      const auto key =
+          std::make_pair(arr->capacity(), arr->getAllocatedSizeSlow());
       arraySizeToCountAndWastedSlots[key].first++;
       arraySizeToCountAndWastedSlots[key].second +=
           arr->capacity() - arr->size();

@@ -19,7 +19,7 @@ template <typename HVType>
 const VTable ArrayStorageBase<HVType>::vt(
     ArrayStorageBase<HVType>::getCellKind(),
     0,
-    /* allowLargeAlloc */ false,
+    /* allowLargeAlloc */ true,
     nullptr,
     nullptr,
     _trimSizeCallback
@@ -113,6 +113,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
       newSelf->data(),
       newSelf->data() + toFirst,
       HVType::encodeEmptyValue(),
+      newSelf,
       runtime.getHeap());
 
   // Initialize the elements after the last copied element and toLast.
@@ -121,6 +122,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
         newSelf->data() + toFirst + copySize,
         newSelf->data() + toLast,
         HVType::encodeEmptyValue(),
+        newSelf,
         runtime.getHeap());
   }
 
@@ -153,6 +155,7 @@ void ArrayStorageBase<HVType>::resizeWithinCapacity(
         self->data() + sz,
         self->data() + newSize,
         HVType::encodeEmptyValue(),
+        self,
         gc);
   } else if (newSize < sz) {
     // Execute write barriers on elements about to be conceptually changed to
@@ -186,6 +189,7 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst,
+          self,
           runtime.getHeap());
     } else if (fromFirst < toFirst) {
       // Copying to the right, need to copy backwards to avoid overwriting what
@@ -194,6 +198,7 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + fromFirst,
           self->data() + fromFirst + copySize,
           self->data() + toFirst + copySize,
+          self,
           runtime.getHeap());
     }
 
@@ -202,6 +207,7 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
         self->data(),
         self->data() + toFirst,
         HVType::encodeEmptyValue(),
+        self,
         runtime.getHeap());
 
     // Initialize the elements between the last copied element and toLast.
@@ -210,6 +216,7 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
           self->data() + toFirst + copySize,
           self->data() + toLast,
           HVType::encodeEmptyValue(),
+          self,
           runtime.getHeap());
     }
     if (toLast < self->size()) {
