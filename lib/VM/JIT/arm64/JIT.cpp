@@ -368,9 +368,9 @@ inline void JITContext::Compiler::emitLoadConstDouble(
     em_.loadConstBits64(FR(inst->op1), val, type, #NAME); \
   }
 
-EMIT_LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::UnknownNonPtr);
-EMIT_LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::UnknownNonPtr);
-EMIT_LOAD_CONST(Null, _sh_ljs_null().raw, FRType::UnknownNonPtr);
+EMIT_LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::OtherNonPtr);
+EMIT_LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::OtherNonPtr);
+EMIT_LOAD_CONST(Null, _sh_ljs_null().raw, FRType::OtherNonPtr);
 EMIT_LOAD_CONST(True, _sh_ljs_bool(true).raw, FRType::Bool);
 EMIT_LOAD_CONST(False, _sh_ljs_bool(false).raw, FRType::Bool);
 
