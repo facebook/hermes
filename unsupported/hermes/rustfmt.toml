@@ -4,5 +4,5 @@ edition = "2021"
 group_imports = "StdExternalCrate"
 imports_granularity = "Module"
 merge_derives = false
+style_edition = "2024"
 use_field_init_shorthand = true
-version = "Two"
