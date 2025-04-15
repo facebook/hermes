@@ -23,8 +23,8 @@ template <
     class... Args>
 T *GCBase::makeAFixed(Args &&...args) {
   static_assert(
-      cellSize<T>() >= minAllocationSize() &&
-          cellSize<T>() <= maxNormalAllocationSize(),
+      cellSize<T>() >= GC::minAllocationSize() &&
+          cellSize<T>() <= GC::maxNormalAllocationSize(),
       "Cell size outside legal range.");
   assert(
       VTable::getVTable(T::getCellKind())->size && "Cell is not fixed size.");
@@ -118,34 +118,6 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
   newAlloc(ptr, ptr->getAllocatedSize());
 #endif
   return ptr;
-}
-
-#ifdef HERMESVM_GC_RUNTIME
-constexpr uint32_t GCBase::maxNormalAllocationSizeImpl() {
-  // Return the lesser of the two GC options' max allowed sizes.
-  return std::min({
-#define GC_KIND(kind) kind::maxNormalAllocationSizeImpl(),
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-  });
-}
-
-constexpr uint32_t GCBase::minAllocationSizeImpl() {
-  // Return the greater of the two GC options' min allowed sizes.
-  return std::max({
-#define GC_KIND(kind) kind::minAllocationSizeImpl(),
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-  });
-}
-#endif
-
-constexpr uint32_t GCBase::maxNormalAllocationSize() {
-  return std::min(GC::maxNormalAllocationSizeImpl(), GCCell::maxSize());
-}
-
-constexpr uint32_t GCBase::minAllocationSize() {
-  return GC::minAllocationSizeImpl();
 }
 
 template <typename Acceptor>

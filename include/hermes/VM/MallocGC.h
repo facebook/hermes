@@ -176,14 +176,15 @@ class MallocGC final : public GCBase {
   /// weak pointers that point to dead objects.
   void collect(std::string cause, bool canEffectiveOOM = false) override;
 
-  static constexpr uint32_t minAllocationSizeImpl() {
+  /// The minimum allocation size.
+  static constexpr uint32_t minAllocationSize() {
     // MallocGC imposes no limit on individual allocations.
     return 0;
   }
 
-  static constexpr uint32_t maxNormalAllocationSizeImpl() {
-    // MallocGC imposes no limit on individual allocations.
-    return std::numeric_limits<uint32_t>::max();
+  /// The maximum allocation size.
+  static constexpr uint32_t maxNormalAllocationSize() {
+    return GCCell::maxSize();
   }
 
   /// Run the finalizers for all heap objects.

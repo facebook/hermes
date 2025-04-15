@@ -75,13 +75,14 @@ class HadesGC final : public GCBase {
     return gc->getKind() == HeapKind::HadesGC;
   }
 
-  static constexpr uint32_t maxNormalAllocationSizeImpl() {
-    // Normal allocation (in contrast to large allocation) in Hades cannot
-    // exceed the maximum size of allocation space in a FixedSizeHeapSegment.
+  /// The maximum size of a normal allocation. All GCCell types that do not
+  /// support large allocation must be smaller than or equal to this.
+  static constexpr uint32_t maxNormalAllocationSize() {
     return FixedSizeHeapSegment::maxSize();
   }
 
-  static constexpr uint32_t minAllocationSizeImpl() {
+  /// The minimum allocation size (aligned to HeapAlign).
+  static constexpr uint32_t minAllocationSize() {
     return heapAlignSize(
         std::max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
   }
