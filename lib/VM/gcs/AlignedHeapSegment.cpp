@@ -33,17 +33,6 @@ static void clearRange(char *start, char *end) {
 }
 #endif
 
-void AlignedHeapSegment::Contents::protectGuardPage(
-    oscompat::ProtectMode mode) {
-  char *begin = &paddedGuardPage_[kGuardPagePadding];
-  size_t size = sizeof(paddedGuardPage_) - kGuardPagePadding;
-  size_t PS = oscompat::page_size();
-  // Only protect if the actual system page size matches expectations.
-  if (reinterpret_cast<uintptr_t>(begin) % PS == 0 && PS <= size) {
-    oscompat::vm_protect(begin, PS, mode);
-  }
-}
-
 AlignedHeapSegment::AlignedHeapSegment(
     StorageProvider *provider,
     void *lowLim,
@@ -56,7 +45,9 @@ AlignedHeapSegment::AlignedHeapSegment(
        oscompat::page_size()) == 0 &&
       "The higher limit must be page aligned");
   new (contents()) Contents(segmentSize);
-  contents()->protectGuardPage(oscompat::ProtectMode::None);
+
+  // Poison the padding array to detect any unintentional read/write.
+  __asan_poison_memory_region(contents()->padding_, Contents::kPaddingSize);
 
 #ifndef NDEBUG
   clearRange(start(), static_cast<char *>(lowLim_) + segmentSize);
@@ -86,8 +77,8 @@ AlignedHeapSegment::~AlignedHeapSegment() {
     return;
   }
   size_t segmentSize = contents()->getSegmentSize();
-  contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
   contents()->~Contents();
+  __asan_unpoison_memory_region(contents()->padding_, Contents::kPaddingSize);
   __asan_unpoison_memory_region(start(), segmentSize - kOffsetOfAllocRegion);
 
   if (provider_) {
@@ -133,14 +124,9 @@ void FixedSizeHeapSegment::markUnused(char *start, char *end) {
       !llvh::alignmentAdjustment(end, oscompat::page_size()));
   assert(start <= end && "Unused region boundaries inverted");
   assert(lowLim() <= start && end <= hiLim() && "Unused region out-of-bounds");
-  // Some kernels seems to require all pages in the mapping to have the same
-  // permissions for the advise to "take", so suspend guard page protection
-  // temporarily.
-  contents()->protectGuardPage(oscompat::ProtectMode::ReadWrite);
 #ifndef HERMES_ALLOW_HUGE_PAGES
   oscompat::vm_unused(start, end - start);
 #endif
-  contents()->protectGuardPage(oscompat::ProtectMode::None);
 }
 
 template <AdviseUnused MU>

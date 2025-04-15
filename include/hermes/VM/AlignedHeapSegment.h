@@ -100,10 +100,6 @@ class AlignedHeapSegment {
     static constexpr size_t kInlineCardTableSize =
         kSegmentUnitSize >> kLogCardSize;
 
-    /// Set the protection mode of paddedGuardPage_ (if system page size allows
-    /// it).
-    void protectGuardPage(oscompat::ProtectMode mode);
-
     /// Get the segment size from SHSegmentInfo. This is only used in debug code
     /// or when clearing the entire card table.
     size_t getSegmentSize() const {
@@ -178,18 +174,20 @@ class AlignedHeapSegment {
 
     static constexpr size_t kMetadataSize = sizeof(inlineCardsArray_) +
         sizeof(boundaryTable_) + sizeof(MarkBitArray);
-    /// Padding to ensure that the guard page is aligned to a page boundary.
-    static constexpr size_t kGuardPagePadding =
-        llvh::alignTo<pagesize::kExpectedPageSize>(kMetadataSize) -
-        kMetadataSize;
-
-    /// Memory made inaccessible through protectGuardPage, for security and
-    /// earlier detection of corruption. Padded to contain at least one full
-    /// aligned page.
-    char paddedGuardPage_[pagesize::kExpectedPageSize + kGuardPagePadding];
-
-    static constexpr size_t kMetadataAndGuardSize =
-        kMetadataSize + sizeof(paddedGuardPage_);
+    /// The minimum prefix space size (space before allocRegion_) to ensure that
+    /// there is enough mapped unused space to store PrefixHeader. See the
+    /// comment of kFirstUsedIndex for more details.
+    static constexpr size_t kMinimumPrefixSize =
+        sizeof(PrefixHeader) * Contents::kCardSize;
+    /// If kMetadataSize <= kMinimumPrefixSize, add necessary padding bytes.
+    /// Otherwise, make sure that it's aligned to kCardSize because allocRegion_
+    /// needs to be aligned to that. Note that we use kMetadataSize+1 because
+    /// kMetadataSize may already be aligned to kCardSize and cause kPaddingSize
+    /// to be zero.
+    static constexpr size_t kPaddingSize = kMetadataSize < kMinimumPrefixSize
+        ? (llvh::alignTo<kMinimumPrefixSize>(kMetadataSize) - kMetadataSize)
+        : (llvh::alignTo<kCardSize>(kMetadataSize + 1) - kMetadataSize);
+    [[maybe_unused]] char padding_[kPaddingSize];
 
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
@@ -200,11 +198,6 @@ class AlignedHeapSegment {
     static_assert(
         sizeof(inlineCardsArray_[0]) == 1,
         "Validate assumption that card table entries are one byte");
-
-    /// The total space at the start of Contents taken up by the
-    /// metadata and guard page in the Contents struct.
-    static constexpr size_t kCardTableUnusedPrefixBytes =
-        Contents::kMetadataAndGuardSize / Contents::kCardSize;
 
    public:
     /// A prefix of every segment is occupied by auxiliary data structures:
@@ -221,29 +214,21 @@ class AlignedHeapSegment {
     /// bits. And this index must be larger than the size of prefix space that
     /// we repurposed, to avoid corrupting it when clearing/dirtying bits.
     static constexpr size_t kFirstUsedIndex = sizeof(PrefixHeader);
-
-    static_assert(
-        Contents::kFirstUsedIndex <= kCardTableUnusedPrefixBytes,
-        "The first used index in card table should be smaller than the total unused space");
   };
-
-  static_assert(
-      offsetof(Contents, paddedGuardPage_) == Contents::kMetadataSize,
-      "Should not need padding after metadata.");
 
   /// The offset from the beginning of a segment of the allocatable region.
   static constexpr size_t kOffsetOfAllocRegion{
       offsetof(Contents, allocRegion_)};
 
+  /// Currently kCardSize % kHeapAlign is 0, so this check is a bit redundant to
+  /// the next check, but let's keep it to prevent a bad change in either
+  /// kHeapAlign or kCardSize.
   static_assert(
       isSizeHeapAligned(kOffsetOfAllocRegion),
       "Allocation region must start at a heap aligned offset");
-
   static_assert(
-      (offsetof(Contents, paddedGuardPage_) + Contents::kGuardPagePadding) %
-              pagesize::kExpectedPageSize ==
-          0,
-      "Guard page must be aligned to likely page size");
+      (kOffsetOfAllocRegion & (Contents::kCardSize - 1)) == 0,
+      "Allocation region needs to be card aligned");
 
   ~AlignedHeapSegment();
 
