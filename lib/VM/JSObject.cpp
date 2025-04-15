@@ -434,33 +434,36 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
         continue;
 
       tmpHandle = HermesValue::encodeTrustedNumberValue(i);
-      JSArray::setElementAt(array, runtime, index++, tmpHandle);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(array, runtime, index++, tmpHandle) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
       marker.flush();
     }
 
     numIndexed = index;
 
-    HiddenClass::forEachProperty(
+    bool result = HiddenClass::forEachPropertyWhile(
         runtime.makeHandle(selfHandle->clazz_),
         runtime,
-        [&runtime,
-         okFlags,
+        [okFlags,
          array,
          hostObjectSymbolCount,
          &index,
          &indexNames,
          &tmpHandle,
-         &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+         &dedupSet](
+            Runtime &runtime, SymbolID id, NamedPropertyDescriptor desc) {
           if (desc.flags.privateName)
-            return;
+            return true;
           if (!isPropertyNamePrimitive(id)) {
-            return;
+            return true;
           }
 
           // If specified, check whether it is enumerable.
           if (!okFlags.getIncludeNonEnumerable()) {
             if (!desc.flags.enumerable)
-              return;
+              return true;
           }
 
           // Host properties might overlap with the ones recognized by the
@@ -477,7 +480,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
               runtime.getIdentifierTable().getStringView(runtime, id));
           if (LLVM_UNLIKELY(propNameAsIndex)) {
             indexNames.push_back(*propNameAsIndex);
-            return;
+            return true;
           }
 
           if (okFlags.getKeepSymbols()) {
@@ -486,32 +489,31 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
             tmpHandle = HermesValue::encodeStringValue(
                 runtime.getStringPrimFromSymbolID(id));
           }
-          JSArray::setElementAt(array, runtime, index++, tmpHandle);
+          return JSArray::setElementAt(array, runtime, index++, tmpHandle) !=
+              ExecutionStatus::EXCEPTION;
         });
+
+    if (LLVM_UNLIKELY(!result))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Now iterate the named properties again, including only Symbols.
   if (okFlags.getIncludeSymbols()) {
     MutableHandle<SymbolID> idHandle{runtime};
-    HiddenClass::forEachProperty(
+    bool result = HiddenClass::forEachPropertyWhile(
         runtime.makeHandle(selfHandle->clazz_),
         runtime,
-        [&runtime,
-         okFlags,
-         array,
-         &index,
-         &idHandle,
-         hostObjectSymbolCount,
-         &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+        [okFlags, array, &index, &idHandle, hostObjectSymbolCount, &dedupSet](
+            Runtime &runtime, SymbolID id, NamedPropertyDescriptor desc) {
           if (desc.flags.privateName)
-            return;
+            return true;
           if (!isSymbolPrimitive(id)) {
-            return;
+            return true;
           }
           // If specified, check whether it is enumerable.
           if (!okFlags.getIncludeNonEnumerable()) {
             if (!desc.flags.enumerable)
-              return;
+              return true;
           }
 
           // Keep track of hidden class properties for deduplication purposes.
@@ -520,8 +522,11 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
           }
 
           idHandle = id;
-          JSArray::setElementAt(array, runtime, index++, idHandle);
+          return JSArray::setElementAt(array, runtime, index++, idHandle) !=
+              ExecutionStatus::EXCEPTION;
         });
+    if (LLVM_UNLIKELY(!result))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Iterate over HostObject properties and append them to the array. Do not
@@ -570,7 +575,10 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
         tmpHandle = HermesValue::encodeStringValue(
             runtime.getStringPrimFromSymbolID(id));
       }
-      JSArray::setElementAt(array, runtime, index++, tmpHandle);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(array, runtime, index++, tmpHandle) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
   }
 
@@ -605,7 +613,10 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
     --last;
     --toLast;
     tmpHandle = array->at(runtime, last).unboxToHV(runtime);
-    JSArray::setElementAt(array, runtime, toLast, tmpHandle);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, toLast, tmpHandle) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Now we need to merge the indexes in indexNames and the array
@@ -635,7 +646,10 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
     }
 
     --toLast;
-    JSArray::setElementAt(array, runtime, toLast, tmpHandle);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, toLast, tmpHandle) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
 
   return array;

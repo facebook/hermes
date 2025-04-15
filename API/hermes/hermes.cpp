@@ -825,7 +825,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
         size_t i = 0;
         for (auto &name : names) {
           tmpHandle = phv(name).getSymbol();
-          vm::JSArray::setElementAt(arrayHandle, rt_.runtime_, i++, tmpHandle);
+          if (LLVM_UNLIKELY(
+                  vm::JSArray::setElementAt(
+                      arrayHandle, rt_.runtime_, i++, tmpHandle) ==
+                  vm::ExecutionStatus::EXCEPTION))
+            return vm::ExecutionStatus::EXCEPTION;
         }
 
         return arrayHandle;

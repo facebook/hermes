@@ -350,10 +350,16 @@ CallResult<HermesValue> mapFilterLoop(
     if (MapOrFilter) {
       // Map adds the result of the callback onto the array.
       storage = std::move(*callRes);
-      JSArray::setElementAt(values, runtime, insert++, storage);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(values, runtime, insert++, storage) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     } else if (toBoolean(callRes->get())) {
       storage = *val;
-      JSArray::setElementAt(values, runtime, insert++, storage);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(values, runtime, insert++, storage) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
     marker.flush();
   }
@@ -1352,7 +1358,10 @@ typedArrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
       }
       auto S = runtime.makeHandle(std::move(*res2));
       size.add(S->getStringLength());
-      JSArray::setElementAt(strings, runtime, i, S);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(strings, runtime, i, S) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
   }
 
@@ -1702,7 +1711,10 @@ typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       auto elementStr = runtime.makeHandle(std::move(*strRes));
-      JSArray::setElementAt(strings, runtime, i, elementStr);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(strings, runtime, i, elementStr) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
       size.add(elementStr->getStringLength());
     } else {
       return runtime.raiseTypeError("toLocaleString() not callable");

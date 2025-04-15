@@ -45,7 +45,7 @@ class ArrayImpl : public JSObject {
   /// Update the element at index \p index. If necessary, the array will be
   /// resized, but if it is an \c JSArray, it's \c .length property will not
   /// be affected.
-  static ExecutionStatus setElementAt(
+  [[nodiscard]] static ExecutionStatus setElementAt(
       Handle<ArrayImpl> selfHandle,
       Runtime &runtime,
       size_type index,

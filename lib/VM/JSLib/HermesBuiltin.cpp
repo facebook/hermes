@@ -540,7 +540,11 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
           // creation and running this spread are DefineOwnProperty calls with
           // standard flags (as well as other spread operations, which do the
           // same thing).
-          JSArray::setElementAt(target, runtime, nextIndex, nextValue);
+          if (LLVM_UNLIKELY(
+                  JSArray::setElementAt(
+                      target, runtime, nextIndex, nextValue) ==
+                  ExecutionStatus::EXCEPTION))
+            return ExecutionStatus::EXCEPTION;
           ++nextIndex;
         }
 

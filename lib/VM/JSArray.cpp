@@ -917,8 +917,14 @@ CallResult<HermesValue> JSArrayIterator::nextElement(
         return ExecutionStatus::EXCEPTION;
       }
       lv.arr = std::move(*resultRes);
-      JSArray::setElementAt(lv.arr, runtime, 0, lv.index);
-      JSArray::setElementAt(lv.arr, runtime, 1, lv.value);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(lv.arr, runtime, 0, lv.index) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(lv.arr, runtime, 1, lv.value) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
       // 18. Return CreateIterResultObject(result, false).
       return createIterResultObject(runtime, lv.arr, false).getHermesValue();
     }

@@ -671,7 +671,10 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
       }
     }
     if (!exists) {
-      JSArray::setElementAt(propertyList_, runtime_, len, tmpHandle_);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(propertyList_, runtime_, len, tmpHandle_) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
   }
   return ExecutionStatus::RETURNED;

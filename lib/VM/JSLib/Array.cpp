@@ -519,7 +519,10 @@ arrayConstructor(void *, Runtime &runtime, NativeArgs args) {
   uint32_t index = 0;
   GCScopeMarkerRAII marker(runtime);
   for (Handle<> arg : args.handles()) {
-    JSArray::setElementAt(lv.self, runtime, index++, arg);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(lv.self, runtime, index++, arg) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
     marker.flush();
   }
 
@@ -634,7 +637,10 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
     lv.E = std::move(*propRes);
     if (lv.E->isUndefined() || lv.E->isNull()) {
       // Empty string for undefined or null element. No need to add to size.
-      JSArray::setElementAt(lv.strings, runtime, i, emptyString);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(lv.strings, runtime, i, emptyString) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     } else {
       if (LLVM_UNLIKELY(
               (objRes = toObject(runtime, lv.E)) ==
@@ -687,7 +693,10 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
           return runtime.raiseRangeError(
               "resulting string length exceeds limit");
         }
-        JSArray::setElementAt(lv.strings, runtime, i, lv.strElement);
+        if (LLVM_UNLIKELY(
+                JSArray::setElementAt(lv.strings, runtime, i, lv.strElement) ==
+                ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
       } else {
         return runtime.raiseTypeError("toLocaleString() not callable");
       }
@@ -958,7 +967,10 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
       }
       // Otherwise, just put the value into the next slot.
       if (LLVM_LIKELY(n < UINT32_MAX)) {
-        JSArray::setElementAt(lv.A, runtime, n, lv.tmp);
+        if (LLVM_UNLIKELY(
+                JSArray::setElementAt(lv.A, runtime, n, lv.tmp) ==
+                ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
       } else {
         lv.n = HermesValue::encodeTrustedNumberValue(n);
         auto cr = valueToSymbolID(runtime, lv.n);
@@ -2289,7 +2301,10 @@ arrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
     }
     if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
       lv.kValue = std::move(*propRes);
-      JSArray::setElementAt(lv.A, runtime, n, lv.kValue);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(lv.A, runtime, n, lv.kValue) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
     k += 1;
     ++n;
@@ -2579,7 +2594,10 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
       }
       if (LLVM_LIKELY(!(*propRes)->isEmpty())) {
         lv.fromValue = std::move(*propRes);
-        JSArray::setElementAt(lv.A, runtime, j, lv.fromValue);
+        if (LLVM_UNLIKELY(
+                JSArray::setElementAt(lv.A, runtime, j, lv.fromValue) ==
+                ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
       }
 
       gcScope.flushToMarker(gcMarker);
@@ -3686,7 +3704,11 @@ arrayPrototypeMap(void *, Runtime &runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       lv.value = std::move(*callRes);
-      JSArray::setElementAt(lv.A, runtime, lv.k->getDouble(), lv.value);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(
+                  lv.A, runtime, lv.k->getDouble(), lv.value) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
 
     lv.k = HermesValue::encodeTrustedNumberValue(lv.k->getDouble() + 1);
@@ -3779,7 +3801,10 @@ arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
       }
       if (toBoolean(callRes->get())) {
         // Add the element to the array if it passes the callback.
-        JSArray::setElementAt(lv.A, runtime, to, lv.kValue);
+        if (LLVM_UNLIKELY(
+                JSArray::setElementAt(lv.A, runtime, to, lv.kValue) ==
+                ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
         ++to;
       }
     }

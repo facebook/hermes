@@ -57,7 +57,9 @@ TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
         runtime.getIdentifierTable().createNotUniquedSymbol(runtime, str);
     ASSERT_FALSE(isException(symbolRes));
     symbol = *symbolRes;
-    JSArray::setElementAt(array, runtime, i, symbol);
+    ASSERT_NE(
+        JSArray::setElementAt(array, runtime, i, symbol),
+        ExecutionStatus::EXCEPTION);
   }
   // Move everything to OG.
   runtime.collect("test");
@@ -68,9 +70,13 @@ TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
   for (int repeat = 0; repeat < 5; repeat++) {
     for (JSArray::size_type i = 0; i < 100; i++) {
       symbol = array->at(runtime, i).getSymbol();
-      JSArray::setElementAt(otherArray, runtime, i, symbol);
+      ASSERT_NE(
+          JSArray::setElementAt(otherArray, runtime, i, symbol),
+          ExecutionStatus::EXCEPTION);
       // Set to undefined to execute a write barrier.
-      JSArray::setElementAt(array, runtime, i, runtime.getUndefinedValue());
+      ASSERT_NE(
+          JSArray::setElementAt(array, runtime, i, runtime.getUndefinedValue()),
+          ExecutionStatus::EXCEPTION);
       // Create some garbage to try and start an OG collection.
       for (int allocs = 0; allocs < 100; allocs++) {
         JSObject::create(runtime);
