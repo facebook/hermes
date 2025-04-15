@@ -32,11 +32,15 @@ const DUMMY_COMMON = {
   parent: DUMMY_PARENT,
 };
 
+type LooseOmit<O: interface {}, K: $Keys<$FlowFixMe>> = Pick<
+  O,
+  Exclude<$Keys<O>, K>,
+>;
 function constructFlowNode<T: FlowESTree.BaseNode>(
-  node: $Diff<T, FlowESTree.BaseNode>,
+  node: LooseOmit<NoInfer<T>, 'parent'>,
 ): T {
   return {
-    ...node,
+    ...(node: $FlowFixMe),
     ...DUMMY_COMMON,
   };
 }

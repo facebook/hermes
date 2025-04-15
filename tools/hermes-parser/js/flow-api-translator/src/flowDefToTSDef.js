@@ -35,11 +35,14 @@ const DUMMY_LOC: FlowESTree.SourceLocation = {
   end: {line: 1, column: 0},
 };
 
+type LooseOmit<O: interface {}, K: $Keys<$FlowFixMe>> = Pick<
+  O,
+  Exclude<$Keys<O>, K>,
+>;
 function constructFlowNode<T: FlowESTree.BaseNode>(
-  node: $Diff<T, FlowESTree.BaseNode>,
+  node: LooseOmit<NoInfer<T>, 'parent'>,
 ): T {
-  // $FlowFixMe[prop-missing]
-  return node;
+  return (node: $FlowFixMe);
 }
 
 const cloneJSDocCommentsToNewNode =
