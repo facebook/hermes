@@ -282,7 +282,8 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
   /// Provide the correct storage provider based on build modes.
   /// All decorator StorageProviders must wrap the one returned from this
   /// function.
-  static std::unique_ptr<StorageProvider> defaultProvider();
+  static std::unique_ptr<StorageProvider> defaultProvider(
+      uint64_t providerSize = 128 << 20);
 
   ~DummyRuntime();
 

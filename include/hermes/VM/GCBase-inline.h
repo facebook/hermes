@@ -10,6 +10,7 @@
 
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase.h"
+#include "hermes/VM/GCCell-inline.h"
 
 #include "hermes/Support/Algorithms.h"
 
@@ -115,7 +116,7 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
   ptr->setDebugAllocationIdInGC(nextObjectID());
 #endif
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  newAlloc(ptr, ptr->getAllocatedSize());
+  newAlloc(ptr, ptr->getAllocatedSizeSlow());
 #endif
   return ptr;
 }

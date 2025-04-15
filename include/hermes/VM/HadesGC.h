@@ -87,6 +87,23 @@ class HadesGC final : public GCBase {
         std::max(sizeof(OldGen::FreelistCell), sizeof(CopyListCell)));
   }
 
+  /// Get the size of \p cell that are allocated by large allocation.
+  static uint32_t getLargeCellSize(const GCCell *cell) {
+    assert(
+        VTable::getVTable(cell->getKind())->allowLargeAlloc &&
+        "Can only be called on large object");
+    // For HadesGC, we query the SHSegmentInfo and returns the size of the
+    // entire allocation area in that segment, which must be a JumboHeapSegment.
+    // Note that we forbid getAllocatedSize() calls on objects that live in
+    // JumboHeapSegments, so this method should only be necessary in places such
+    // as assertions or the memory profiler or outside of GC.
+    auto sz = AlignedHeapSegment::maxSize(cell);
+    assert(
+        sz > GCCell::maxNormalSize() &&
+        "This should only be reached when size > GCCell::maxNormalSize()");
+    return sz;
+  }
+
   /// \name GCBase overrides
   /// \{
 
@@ -129,7 +146,10 @@ class HadesGC final : public GCBase {
     auto cellSize = size > FixedSizeHeapSegment::maxSize()
         ? JumboHeapSegment::computeActualCellSize(size)
         : size;
-    cell->setKindAndSize({kind, cellSize});
+    // If cellSize is larger than GCCell::maxNormalSize(), set the size bits to
+    // 0.
+    cell->setKindAndSize(
+        {kind, cellSize > GCCell::maxNormalSize() ? 0 : cellSize});
     return cell;
   }
 
@@ -1011,7 +1031,7 @@ class HadesGC final : public GCBase {
   /// CellKind and size of the GCCell being constructed. It is set in makeA()
   /// before constructing the cell and reset in the end. Note that we don't
   /// use KindAndSize here since the actual size could be larger than
-  /// GCCell::maxSize().
+  /// GCCell::maxNormalSize().
   llvh::Optional<std::pair<CellKind, uint32_t>> currentCellKindAndSize_;
 #endif
 

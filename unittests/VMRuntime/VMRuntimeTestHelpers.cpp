@@ -56,13 +56,25 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
 }
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(const GCConfig &gcConfig) {
+#ifdef HERMESVM_CONTIGUOUS_HEAP
+  // Allow some extra segments for the runtime, and as a buffer for the GC.
+  // This is consistent to VM::Runtime.
+  uint64_t providerSize = std::min<uint64_t>(
+      1ULL << 32,
+      (uint64_t)gcConfig.getMaxHeapSize() +
+          FixedSizeHeapSegment::storageSize() * 4);
+  return create(gcConfig, defaultProvider(providerSize));
+#else
   return create(gcConfig, defaultProvider());
+#endif
 }
 
-std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
+std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider(
+    uint64_t providerSize) {
 #ifdef HERMESVM_CONTIGUOUS_HEAP
-  return StorageProvider::contiguousVAProvider(128 << 20);
+  return StorageProvider::contiguousVAProvider(providerSize);
 #else
+  (void)providerSize;
   return StorageProvider::mmapProvider();
 #endif
 }

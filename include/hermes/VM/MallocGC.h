@@ -26,8 +26,7 @@ namespace hermes {
 namespace vm {
 
 class MallocGC final : public GCBase {
-  class CellHeader {
-   public:
+  struct CellHeader {
     /// If true, then this cell is in the "young generation". Note that MallocGC
     /// is not actually a generational collector, this just tracks some objects
     /// that could plausibly be in the young gen to exercise codepaths that
@@ -184,7 +183,8 @@ class MallocGC final : public GCBase {
 
   /// The maximum allocation size.
   static constexpr uint32_t maxNormalAllocationSize() {
-    return GCCell::maxSize();
+    // MallocGC imposes no limit on individual allocations.
+    return std::numeric_limits<uint32_t>::max();
   }
 
   /// Run the finalizers for all heap objects.
@@ -192,6 +192,13 @@ class MallocGC final : public GCBase {
 
   bool inYoungGen(const GCCell *p) const override {
     return CellHeader::from(p)->inYoungGen;
+  }
+
+  /// Get the cell size. This is used when the size of \p cell is larger than
+  /// GCCell::maxNormalSize().
+  static uint32_t getLargeCellSize(const GCCell *cell) {
+    auto *header = CellHeader::from(cell);
+    return header->cellSize;
   }
 
 #ifndef NDEBUG
@@ -374,8 +381,15 @@ inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
   auto *header = CellHeader::from(mem);
   header->inYoungGen = longLived == LongLived::No;
   header->cellSize = size;
+  // On 32bits platform, the allocation size could be larger than
+  // GCCell::maxNormalSize(), so we store 0 in the cell's KindAndSize, and call
+  // GCCell::getAllocatedSizeSlow() to get the actual size (which reads the
+  // cellSize field in CellHeader). Note that on 64bits platform, the size is
+  // always smaller because MallocGC is not compatible with compressed pointer.
   return constructCell<T>(
-      mem, size > GCCell::maxSize() ? 0 : size, std::forward<Args>(args)...);
+      mem,
+      size > GCCell::maxNormalSize() ? 0 : size,
+      std::forward<Args>(args)...);
 }
 
 inline void MallocGC::initCell(GCCell *cell, uint32_t size) {

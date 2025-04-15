@@ -69,7 +69,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     } else {
       // It hasn't been seen before, move it.
       // At this point, also trim the object.
-      const gcheapsize_t origSize = cell->getAllocatedSize();
+      const gcheapsize_t origSize = cell->getAllocatedSizeSlow();
       const gcheapsize_t trimmedSize =
           cell->getVT()->getTrimmedSize(cell, origSize);
       auto *newLocation =
@@ -88,7 +88,10 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       gc.newPointers_.insert(newLocation);
       if (gc.isTrackingIDs()) {
         gc.moveObject(
-            cell, cell->getAllocatedSize(), newLocation->data(), trimmedSize);
+            cell,
+            cell->getAllocatedSizeSlow(),
+            newLocation->data(),
+            trimmedSize);
       }
       cell = newLocation->data();
     }
@@ -98,7 +101,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
       header->mark();
       // Trim the cell. This is fine to do with malloc'ed memory because the
       // original size is retained by malloc.
-      gcheapsize_t origSize = cell->getAllocatedSize();
+      gcheapsize_t origSize = cell->getAllocatedSizeSlow();
       gcheapsize_t newSize = cell->getVT()->getTrimmedSize(cell, origSize);
       if (newSize != origSize) {
         static_cast<VariableSizeRuntimeCell *>(cell)->setSizeFromGC(newSize);
@@ -294,7 +297,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
 #endif
       GCCell *cell = header->data();
       // Extract before running any potential finalizers.
-      const auto freedSize = cell->getAllocatedSize();
+      const auto freedSize = cell->getAllocatedSizeSlow();
       // Run the finalizer if it exists and the cell is actually dead.
       if (!header->isMarked()) {
         cell->getVT()->finalizeIfExists(cell, *this);
@@ -392,7 +395,7 @@ void MallocGC::drainMarkStack(MarkingAcceptor &acceptor) {
     assert(header->isMarked() && "Pointer on the worklist isn't marked");
     GCCell *cell = header->data();
     markCell(acceptor, cell);
-    allocatedBytes_ += cell->getAllocatedSize();
+    allocatedBytes_ += cell->getAllocatedSizeSlow();
   }
 }
 

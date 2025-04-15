@@ -435,7 +435,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       assert(
           currentCell_ < heapLoc &&
           heapLoc < (reinterpret_cast<const char *>(currentCell_) +
-                     currentCell_->getAllocatedSize()) &&
+                     currentCell_->getAllocatedSizeSlow()) &&
           "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
@@ -457,7 +457,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
       assert(
           currentCell_ < heapLoc &&
           heapLoc < (reinterpret_cast<const char *>(currentCell_) +
-                     currentCell_->getAllocatedSize()) &&
+                     currentCell_->getAllocatedSizeSlow()) &&
           "currentCell_ must be set for compaction");
       // If a compaction is about to take place, dirty the card for any newly
       // evacuated cells, since the marker may miss them.
@@ -659,7 +659,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     assert(
         currentCell_ < heapLoc &&
         heapLoc < (reinterpret_cast<const char *>(currentCell_) +
-                   currentCell_->getAllocatedSize()) &&
+                   currentCell_->getAllocatedSizeSlow()) &&
         "currentCell_ must be set for compaction");
     if (gc.compactee_.contains(cell) && !gc.compactee_.contains(heapLoc)) {
       // This is a pointer in the heap pointing into the compactee, dirty the
@@ -844,7 +844,7 @@ bool HadesGC::incrementalMark(size_t markLimit) {
         "Shouldn't ever traverse a YG object in this loop");
     HERMES_SLOW_ASSERT(
         dbgContains(cell) && "Non-heap object discovered during marking");
-    const auto sz = cell->getAllocatedSize();
+    const auto sz = cell->getAllocatedSizeSlow();
     numMarkedBytes += sz;
     acceptor.setCurrentCell(cell);
     markCell(acceptor, cell);
@@ -1794,8 +1794,7 @@ void HadesGC::OldGen::freeUnusedJumboSegments() {
     }
     // Cell must be dead now.
 
-    // TODO: we need to handle cell with size larger than GCCell::maxSize().
-    auto sz = cell->getAllocatedSize();
+    auto sz = cell->getAllocatedSizeSlow();
     // Run its finalizer first if it has one.
     cell->getVT()->finalizeIfExists(cell, gc_);
     if (gc_.isTrackingIDs()) {
@@ -2020,7 +2019,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
           reinterpret_cast<const char *>(start) &&
       reinterpret_cast<const char *>(start + numHVs) <=
           (reinterpret_cast<const char *>(owningObj) +
-           owningObj->getAllocatedSize()) &&
+           owningObj->getAllocatedSizeSlow()) &&
       "Range must start and end within the owning object.");
 
   // Most constructors should be running in the YG, so in the common case, we
@@ -2041,7 +2040,7 @@ void HadesGC::constructorWriteBarrierRangeSlow(
           reinterpret_cast<const char *>(start) &&
       reinterpret_cast<const char *>(start + numHVs) <=
           (reinterpret_cast<const char *>(owningObj) +
-           owningObj->getAllocatedSize()) &&
+           owningObj->getAllocatedSizeSlow()) &&
       "Range must start and end within the owning object.");
 
   AlignedHeapSegment::dirtyCardsForAddressRange(
@@ -2340,9 +2339,6 @@ void *HadesGC::allocSlow(uint32_t sz) {
 
 template <MayFail mayFail>
 GCCell *HadesGC::OldGen::allocLarge(uint32_t sz) {
-  assert(
-      sz <= GCCell::maxSize() &&
-      "Large cell size can't exceed GCCell::maxSize()");
   assert(
       sz > FixedSizeHeapSegment::maxSize() &&
       "Large allocation must have size larger than FixedSizeHeapSegment::maxSize()");
@@ -3430,7 +3426,7 @@ void HadesGC::assertWriteBarrierForLargeObj(
     assert(
         owningObj <= loc &&
         loc < (reinterpret_cast<const char *>(owningObj) +
-               owningObj->getAllocatedSize()) &&
+               owningObj->getAllocatedSizeSlow()) &&
         "The owning object must contain the given heap location");
   }
 }

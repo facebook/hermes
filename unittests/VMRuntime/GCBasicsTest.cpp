@@ -399,18 +399,22 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
 #endif // #ifdef HERMESVM_GC_MALLOC
 
 TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
-  /// An object with this size requires large allocation support to successfully
-  /// allocate within HadesGC. This should fit into a JumboHeapSegment with size
-  /// of 2 * kSegmentUnitSize.
+  // An object with this size requires large allocation support to successfully
+  // allocate within HadesGC. This should fit into a JumboHeapSegment with size
+  // of 2 * kSegmentUnitSize.
   static constexpr size_t kLargeCellSize =
       JumboHeapSegment::computeActualCellSize(
           AlignedHeapSegment::kSegmentUnitSize);
-  // Set a large heap size so that we can allocate large objects below (when
-  // compressed pointer is OFF, we may allocate objects with size larger than
-  // GCCell::maxSize()).
-  constexpr size_t kMaxHeapSize = std::min<uint64_t>(
-      GCCell::maxSize() * 2, std::numeric_limits<gcheapsize_t>::max());
-
+  // For 32-bit platforms, or 64-bit platforms using MallocGC or HadesGC without
+  // compressed pointers, we set the maximum heap size to slightly larger than
+  // triple GCCell::maxNormalSize() to test allocating cells larger than this
+  // limit. In other cases where GCCell::maxNormalSize() equals UINT32_MAX, we
+  // don't support allocations beyond that size, so we use a reasonably large
+  // heap size to ensure the remaining tests can execute properly.
+  static constexpr size_t kMaxHeapSize =
+      GCCell::maxNormalSize() >= (std::numeric_limits<uint32_t>::max() / 2)
+      ? 1UL << 25
+      : (GCCell::maxNormalSize() * 3 + 8);
   const GCConfig kGCConfig = TestGCConfigFixedSize(kMaxHeapSize);
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
@@ -438,11 +442,26 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   rt.collect();
 
   uint64_t prevTotalAllocBytes = 0;
-  // Test that large allocation in case of insufficient space returns nullptr.
+  // Test that large allocation in case of insufficient space returns nullptr,
+  // and allocation with size larger than GCCell::maxNormalSize() works as
+  // expected.
   {
     GCScopeMarkerRAII marker{scope};
-    rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()));
-    rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()));
+    // Add a few extra bytes to ensure that the third allocation below fails due
+    // to insufficient heap space.
+    rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3 + 8, rt.getHeap()));
+    auto dummy2 =
+        rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()));
+    ASSERT_NE(dummy2.get(), nullptr);
+#ifdef HERMESVM_GC_MALLOC
+    auto expectedSize = heapAlignSize(kMaxHeapSize / 3);
+#else
+    auto expectedSize =
+        JumboHeapSegment::computeActualCellSize(kMaxHeapSize / 3);
+#endif
+    // The above allocation may have size larger than GCCell::maxNormalSize(),
+    // assert that we can still get correct cell size.
+    ASSERT_EQ(dummy2->getAllocatedSizeSlow(), expectedSize);
     // No enough space, this allocation should fail and return nullptr.
     ASSERT_EQ(
         LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()), nullptr);
@@ -452,7 +471,6 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   // Full collection should free all large objects allocated above, otherwise,
   // next large object allocation will fail.
   rt.collect();
-  rt.getHeap().getHeapInfo(heapInfo);
 
   {
     GCScopeMarkerRAII marker{scope};
@@ -460,7 +478,7 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
     auto large =
         rt.makeHandle(LargeDummyObject::create(kLargeCellSize, rt.getHeap()));
     EXPECT_NE(large.get(), nullptr);
-    EXPECT_EQ(large->getAllocatedSize(), kLargeCellSize);
+    EXPECT_EQ(large->getAllocatedSizeSlow(), kLargeCellSize);
     rt.getHeap().getHeapInfo(heapInfo);
     // allocatedBytes should be equal to size of the only object above.
     ASSERT_EQ(heapInfo.allocatedBytes, kLargeCellSize);

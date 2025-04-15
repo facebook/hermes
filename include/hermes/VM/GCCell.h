@@ -9,6 +9,7 @@
 #define HERMES_VM_GCCELL_H
 
 #include "hermes/Support/Algorithms.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/HeapAlign.h"
@@ -75,6 +76,8 @@ class KindAndSize {
   /// The size of the cell. Due to heap alignment, we are guaranteed that the
   /// least significant bit will always be zero, so it can be used for the
   /// mark bit. In order for that to work, this has to come first.
+  /// If this is 0, it means the cell has an actual size larger than
+  /// maxNormalSize() (in HadesGC, it must be allocated in a JumboHeapSegment).
   RawType size_ : kNumSizeBits;
   /// The CellKind of the cell.
   RawType kind_ : kNumKindBits;
@@ -113,10 +116,27 @@ class GCCell {
   GCCell(const GCCell &) = delete;
   void operator=(const GCCell &) = delete;
 
-  /// Return the allocated size of the object in bytes.
+  /// Return the allocated size of the object in bytes. This is fast but does
+  /// not work for GCCell with size larger than maxNormalSize(), for which we
+  /// set size_ to 0. For that case, getAllocatedSizeSlow() should be used
+  /// instead.
   uint32_t getAllocatedSize() const {
-    return kindAndSize_.getSize();
+    uint32_t sz = kindAndSize_.getSize();
+    assert(
+        sz &&
+        "GCCell with potentially zero size must call getAllocatedSizeSlow()");
+#ifdef HERMESVM_GC_HADES
+    assert(
+        AlignedHeapSegment::getSegmentSize(this) ==
+            FixedSizeHeapSegment::storageSize() &&
+        "getAllocatedSize() can only be called on GCCells that live in FixedSizeHeapSegment");
+#endif
+    return sz;
   }
+
+  /// Get the allocated size for any GCCell. This is slower than above version
+  /// but works for any GCCell.
+  inline size_t getAllocatedSizeSlow() const;
 
   /// Implementation of cellSize. Do not use this directly.
   template <class C>
@@ -277,12 +297,19 @@ class GCCell {
     return forwardingPointer_.getRaw() & 0x1;
   }
 
-  static constexpr uint32_t maxSize() {
+  /// The maximum size for all normal GCCells (i.e., no large allocation
+  /// support). With large allocation, any object with size larger than this
+  /// will store 0 in its KindAndSize, and getAllocatedSizeSlow() must be used
+  /// to get its actual size.
+  static constexpr uint32_t maxNormalSize() {
     return KindAndSize::maxSize();
   }
 };
 
 static_assert(sizeof(GCCell) == sizeof(SHGCCell));
+/// We should be able to assume that any allocation in a FixedSizeHeapSegment
+/// has its size stored inline.
+static_assert(GCCell::maxNormalSize() >= FixedSizeHeapSegment::maxSize());
 
 /// A VariableSizeRuntimeCell is a GCCell with a variable size only known
 /// at runtime, whereas GCCell is for fixed-size objects.
@@ -304,6 +331,7 @@ class VariableSizeRuntimeCell : public GCCell {
         sz >= sizeof(VariableSizeRuntimeCell) &&
         "Should not allocate a VariableSizeRuntimeCell of size less than "
         "the size of a cell");
+    assert(sz <= maxNormalSize() && "sz cannot be larger than maxNormalSize()");
     setKindAndSize(KindAndSize{getKind(), sz});
   }
 };

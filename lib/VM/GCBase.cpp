@@ -580,7 +580,7 @@ void GCBase::createSnapshotImpl(
             cell->getVT()->snapshotMetaData.nodeType(),
             cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
             gc.getObjectID(cell),
-            cell->getAllocatedSize(),
+            cell->getAllocatedSizeSlow(),
             stackTracesTreeNode ? stackTracesTreeNode->id : 0);
       };
   gc.forAllObjs(snapshotForObject);
@@ -1396,7 +1396,7 @@ void GCBase::AllocationLocationTracker::enable(
   uint64_t numBytes = 0;
   gc_->forAllObjs([&numObjects, &numBytes, this](GCCell *cell) {
     numObjects++;
-    numBytes += cell->getAllocatedSize();
+    numBytes += cell->getAllocatedSizeSlow();
     gc_->getObjectID(cell);
   });
   fragmentCallback_ = std::move(callback);
