@@ -951,9 +951,9 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
     if (JSArray *arr = dyn_vmcast<JSArray>(cell)) {
       JSArray::StorageType *storage = arr->getIndexedStorageNullable(*this);
-      const auto capacity = storage ? storage->totalCapacityOfSpine() : 0;
-      const auto sz = storage ? storage->size(*this) : 0;
-      const auto key = std::make_pair(capacity, arr->getAllocatedSize());
+      const auto capacity = storage ? storage->capacity() : 0;
+      const auto sz = storage ? storage->size() : 0;
+      const auto key = std::make_pair(capacity, arr->getAllocatedSizeSlow());
       arraySizeToCountAndWastedSlots[key].first++;
       arraySizeToCountAndWastedSlots[key].second += capacity - sz;
     }

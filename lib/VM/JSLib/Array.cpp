@@ -1054,11 +1054,6 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   // Track the size of the resultant string.
   SafeUInt32 size;
 
-  // Storage for the strings for each element must fit in a JSArray.
-  if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
-    return runtime.raiseRangeError("Out of memory for array elements.");
-  }
-
   // The first element not processed by the fast path.
   uint32_t fastPathEnd = 0;
 
@@ -1077,7 +1072,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
 
     uint32_t i;
     for (i = 0; i < len; ++i) {
-      SmallHermesValue elem = storage->at(runtime, i); // Direct access
+      SmallHermesValue elem = storage->at(i); // Direct access
       uint32_t elemLen;
       if (elem.isString())
         elemLen = elem.getString(runtime)->getStringLength();
@@ -1110,7 +1105,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
     auto arrRes = JSArray::StorageType::create(runtime, len, len);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
-    lv.strings = std::move(*arrRes);
+    lv.strings = vmcast<JSArray::StorageType>(*arrRes);
 
     auto marker = gcScope.createMarker();
     // Call toString on the remaining elements of the array.
@@ -1124,7 +1119,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
       // Fetch the element into lv.elem.
       if (lv.inputStorage.get()) {
         // Fast-path: input array is dense.
-        lv.elem = lv.inputStorage->at(runtime, i).unboxToHV(runtime);
+        lv.elem = lv.inputStorage->at(i).unboxToHV(runtime);
       } else {
         if (LLVM_UNLIKELY(
                 (propRes = getIndexed_RJS(runtime, lv.O, i)) ==
@@ -1151,9 +1146,9 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
               lv.inputStorage.get() &&
               "inputStorage should be non-null if fastPathEnd != 0");
           for (uint32_t j = 0; j < fastPathEnd; ++j) {
-            SmallHermesValue elem = lv.inputStorage->at(runtime, j);
+            SmallHermesValue elem = lv.inputStorage->at(j);
             if (elem.isString())
-              lv.strings->set(runtime, j, elem);
+              lv.strings->set(j, elem, runtime.getHeap());
           }
           fastPathEnd = 0;
           lv.inputStorage = nullptr;
@@ -1167,7 +1162,9 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
         size.add(s->getStringLength());
 
         lv.strings->set(
-            runtime, i, SmallHermesValue::encodeStringValue(s, runtime));
+            i,
+            SmallHermesValue::encodeStringValue(s, runtime),
+            runtime.getHeap());
       }
 
       // Check for string overflow on every iteration to create the illusion
@@ -1188,9 +1185,9 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   for (uint32_t i = 0; i < fastPathEnd; ++i) {
     if (i > 0)
       builder->appendStringPrim(lv.sep);
-    SmallHermesValue elem = lv.inputStorage->at(runtime, i);
+    SmallHermesValue elem = lv.inputStorage->at(i);
     if (elem.isString()) {
-      lv.elementStr = lv.inputStorage->at(runtime, i).getString(runtime);
+      lv.elementStr = lv.inputStorage->at(i).getString(runtime);
       builder->appendStringPrim(lv.elementStr);
     } else {
       assert(elem.isNull() || elem.isUndefined() || elem.isEmpty());
@@ -1200,7 +1197,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   for (uint32_t i = fastPathEnd; i < len; ++i) {
     if (i > 0)
       builder->appendStringPrim(lv.sep);
-    auto hv = lv.strings->at(runtime, i);
+    auto hv = lv.strings->at(i);
     if (hv.isString()) {
       lv.elementStr = hv.getString(runtime);
       builder->appendStringPrim(lv.elementStr);
@@ -1685,10 +1682,9 @@ CallResult<HermesValue> sortSparse(
 
   // Find out how many sortable numeric properties we have.
   JSArray::StorageType::size_type numProps = 0;
-  for (JSArray::StorageType::size_type e = lv.names->size(runtime);
-       numProps != e;
+  for (JSArray::StorageType::size_type e = lv.names->size(); numProps != e;
        ++numProps) {
-    SmallHermesValue hv = lv.names->at(runtime, numProps);
+    SmallHermesValue hv = lv.names->at(numProps);
     // Stop at the first non-number.
     if (!hv.isNumber())
       break;
@@ -1719,7 +1715,7 @@ CallResult<HermesValue> sortSparse(
   for (decltype(numProps) i = 0; i != numProps; ++i) {
     gcMarker.flush();
 
-    lv.propName = lv.names->at(runtime, i).unboxToHV(runtime);
+    lv.propName = lv.names->at(i).unboxToHV(runtime);
     auto res = JSObject::getComputed_RJS(O, runtime, lv.propName);
     if (res == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
@@ -2262,8 +2258,9 @@ arrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
 
   // Create the result array.
   double count = std::max(fin - k, 0.0);
-  if (LLVM_UNLIKELY(count > JSArray::StorageType::maxElements())) {
-    return runtime.raiseRangeError("Out of memory for array elements.");
+  uint32_t count32 = truncateToUInt32(count);
+  if (LLVM_UNLIKELY(count32 != count)) {
+    return runtime.raiseRangeError("invalid array length");
   }
   auto arrRes = JSArray::create(runtime, count, count);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -2348,8 +2345,8 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
     for (uint32_t j = 0; j < actualDeleteCount; ++j) {
       assert(aStorage && oStorage && "storage must not be null");
       uint32_t from = actualStart + j;
-      SmallHermesValue elem = oStorage->at(runtime, from);
-      aStorage->set(runtime, j, elem);
+      SmallHermesValue elem = oStorage->at(from);
+      aStorage->set(j, elem, runtime.getHeap());
     }
   }
 
@@ -2373,8 +2370,8 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
       assert(oStorage && "storage must not be null");
       uint32_t from = k + actualDeleteCount;
       uint32_t to = k + itemCount;
-      SmallHermesValue elem = oStorage->at(runtime, from);
-      oStorage->set(runtime, to, elem);
+      SmallHermesValue elem = oStorage->at(from);
+      oStorage->set(to, elem, runtime.getHeap());
     }
 
     // Shrink the array size to the new length.
@@ -2401,8 +2398,8 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
       assert(oStorage && "storage must not be null");
       uint32_t from = k + actualDeleteCount - 1;
       uint32_t to = k + itemCount - 1;
-      SmallHermesValue elem = oStorage->at(runtime, from);
-      oStorage->set(runtime, to, elem);
+      SmallHermesValue elem = oStorage->at(from);
+      oStorage->set(to, elem, runtime.getHeap());
     }
   }
 
@@ -2520,9 +2517,8 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("Array.prototype.splice result out of space");
   }
 
-  // Let A be ? ArraySpeciesCreate(O, actualDeleteCount).
-  if (LLVM_UNLIKELY(actualDeleteCount > JSArray::StorageType::maxElements())) {
-    return runtime.raiseRangeError("Out of memory for array elements.");
+  if (LLVM_UNLIKELY(actualDeleteCount > std::numeric_limits<uint32_t>::max())) {
+    return runtime.raiseRangeError("invalid array length");
   }
   auto arrRes = JSArray::create(runtime, actualDeleteCount, actualDeleteCount);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -3245,7 +3241,7 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
     // produces a boolean value, must be defined befofe exeucting this.
 #define SEARCH_ARRAY_DIRECTED(INIT, LOOP_COND, STEP)   \
   for (INIT; LOOP_COND; STEP) {                        \
-    auto element = arrStorage->at(runtime, k);         \
+    auto element = arrStorage->at(k);                  \
     if (LLVM_UNLIKELY(element.isEmpty())) {            \
       hasHole = true;                                  \
       break;                                           \
@@ -3647,8 +3643,8 @@ arrayPrototypeMap(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // Resultant array.
-  if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
-    return runtime.raiseRangeError("Out of memory for array elements.");
+  if (LLVM_UNLIKELY(len > std::numeric_limits<uint32_t>::max())) {
+    return runtime.raiseRangeError("invalid array length");
   }
   auto arrRes = JSArray::create(runtime, len, len);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -3737,8 +3733,8 @@ arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
         "Array.prototype.filter() requires a callable argument");
   }
 
-  if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
-    return runtime.raiseRangeError("Out of memory for array elements.");
+  if (LLVM_UNLIKELY(len > std::numeric_limits<uint32_t>::max())) {
+    return runtime.raiseRangeError("invalid array length");
   }
   auto arrRes = JSArray::create(runtime, len, 0);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -4119,10 +4115,10 @@ arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
       auto *storage = arr->getIndexedStorageNullable(runtime);
       for (uint32_t l = 0, u = len - 1; l < u; ++l, --u) {
         assert(storage && "storage should not be null");
-        auto lowerValue = storage->at(runtime, l);
-        auto upperValue = storage->at(runtime, u);
-        storage->set(runtime, l, upperValue);
-        storage->set(runtime, u, lowerValue);
+        auto lowerValue = storage->at(l);
+        auto upperValue = storage->at(u);
+        storage->set(l, upperValue, runtime.getHeap());
+        storage->set(u, lowerValue, runtime.getHeap());
       }
       return args.getThisArg();
     }
@@ -4399,13 +4395,13 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
     auto *destStorage = lv.A->getIndexedStorageNullable(runtime);
     for (uint32_t to = 0, from = len32 - 1; to < len32; ++to, --from) {
       assert(srcStorage && destStorage && "storage should not be null");
-      SmallHermesValue fromValue = srcStorage->at(runtime, from);
+      SmallHermesValue fromValue = srcStorage->at(from);
       destStorage->set(
-          runtime,
           to,
           LLVM_LIKELY(!fromValue.isEmpty())
               ? fromValue
-              : SmallHermesValue::encodeUndefinedValue());
+              : SmallHermesValue::encodeUndefinedValue(),
+          runtime.getHeap());
     }
     return lv.A.getHermesValue();
   }
@@ -5023,8 +5019,9 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
   } else {
     // 13. Else,
     //  a. Let A be ArrayCreate(len).
-    if (LLVM_UNLIKELY(len > JSArray::StorageType::maxElements())) {
-      return runtime.raiseRangeError("Out of memory for array elements.");
+    uint32_t len32 = truncateToUInt32(len);
+    if (LLVM_UNLIKELY(len32 != len)) {
+      return runtime.raiseRangeError("invalid array length");
     }
     auto arrRes = JSArray::create(runtime, len, len);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {

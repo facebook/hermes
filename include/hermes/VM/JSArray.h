@@ -33,7 +33,7 @@ class ArrayImpl : public JSObject {
   using size_type = uint32_t;
   /// StorageType is the underlying storage that JSArray uses to put the values
   /// into.
-  using StorageType = SegmentedArraySmall;
+  using StorageType = ArrayStorageSmall;
 
   /// Resize the internal storage. The ".length" property is not affected. It
   /// does \b NOT check for read-only properties.
@@ -45,18 +45,12 @@ class ArrayImpl : public JSObject {
   /// Update the element at index \p index. If necessary, the array will be
   /// resized, but if it is an \c JSArray, it's \c .length property will not
   /// be affected.
-  /// Note that even though the underlying \c setOwnIndexed() interface defines
-  /// failure modes, our concrete implementation can never fail.
-  static void setElementAt(
+  static ExecutionStatus setElementAt(
       Handle<ArrayImpl> selfHandle,
       Runtime &runtime,
       size_type index,
       Handle<> value) {
-    auto result = _setOwnIndexedImpl(selfHandle, runtime, index, value);
-    (void)result;
-    assert(
-        result != ExecutionStatus::EXCEPTION && *result &&
-        "JSArrayImpl::setElementAt() failing");
+    return _setOwnIndexedImpl(selfHandle, runtime, index, value).getStatus();
   }
 
   /// Update an array element, which must exist in storage. Elements with value
@@ -76,7 +70,7 @@ class ArrayImpl : public JSObject {
         index >= self->beginIndex_ && index < self->endIndex_ &&
         "array index out of range");
     self->getIndexedStorageUnsafe(runtime)->set(
-        runtime, index - self->beginIndex_, value);
+        index - self->beginIndex_, value, runtime.getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
@@ -103,7 +97,7 @@ class ArrayImpl : public JSObject {
   /// contained in the storage.
   const SmallHermesValue at(Runtime &runtime, size_type index) const {
     return index >= beginIndex_ && index < endIndex_
-        ? getIndexedStorageUnsafe(runtime)->at(runtime, index - beginIndex_)
+        ? getIndexedStorageUnsafe(runtime)->at(index - beginIndex_)
         : SmallHermesValue::encodeEmptyValue();
   }
 
@@ -219,7 +213,7 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, which must be valid.
   const SmallHermesValue unsafeAt(Runtime &runtime, size_type index) const {
-    return getIndexedStorageUnsafe(runtime)->at(runtime, index - beginIndex_);
+    return getIndexedStorageUnsafe(runtime)->at(index - beginIndex_);
   }
 
  private:
