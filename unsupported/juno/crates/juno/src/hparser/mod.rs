@@ -18,8 +18,8 @@ use hermes::parser::NodePtr;
 pub use hermes::parser::ParserDialect;
 pub use hermes::parser::ParserFlags;
 use hermes::utf::utf8_with_surrogates_to_string_lossy;
-use juno_support::source_manager::SourceId;
 use juno_support::NullTerminatedBuf;
+use juno_support::source_manager::SourceId;
 use thiserror::Error;
 
 use crate::ast;

@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use serde::de::Visitor;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::de::Visitor;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum JsValue {

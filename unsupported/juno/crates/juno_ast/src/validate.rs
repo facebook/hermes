@@ -7,7 +7,6 @@
 
 use thiserror::Error;
 
-use super::kind::*;
 use super::AssignmentExpressionOperator;
 use super::BinaryExpressionOperator;
 use super::Context;
@@ -28,6 +27,7 @@ use super::UnaryExpressionOperator;
 use super::UpdateExpressionOperator;
 use super::VariableDeclarationKind;
 use super::Visitor;
+use super::kind::*;
 
 macro_rules! gen_validate_fn {
     ($name:ident {
