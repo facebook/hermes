@@ -1322,6 +1322,10 @@ void HadesGC::printStats(JSONEmitter &json) {
   json.emitKey("stats");
   json.openDict();
   json.emitKeyValue("Num compactions", numCompactions_);
+  json.emitKeyValue("Num large allocations", oldGen_.numLargeAllocations());
+  json.emitKeyValue(
+      "Current heap bytes of large allocation",
+      oldGen_.allocatedLargeObjectBytes());
   json.closeDict();
   json.closeDict();
 }
@@ -1802,6 +1806,7 @@ void HadesGC::OldGen::freeUnusedJumboSegments() {
     }
     // Reflect the allocation bytes change.
     incrementAllocatedBytes(-sz);
+    allocatedLargeObjectBytes_ -= sz;
     sweepIterator_.sweptBytes += sz;
 
 #ifndef NDEBUG
@@ -2368,6 +2373,8 @@ GCCell *HadesGC::OldGen::allocLarge(uint32_t sz) {
   auto maxSize = seg->maxSize();
   jumboSegments_.emplace_back(std::move(seg.get()));
   gc_.totalAllocatedBytes_ += maxSize;
+  numLargeAllocations_++;
+  allocatedLargeObjectBytes_ += maxSize;
   return finishAlloc(newObj, maxSize);
 }
 
@@ -3093,6 +3100,14 @@ uint64_t HadesGC::heapFootprint() const {
 
 uint64_t HadesGC::OldGen::allocatedBytes() const {
   return allocatedBytes_;
+}
+
+uint64_t HadesGC::OldGen::allocatedLargeObjectBytes() const {
+  return allocatedLargeObjectBytes_;
+}
+
+unsigned HadesGC::OldGen::numLargeAllocations() const {
+  return numLargeAllocations_;
 }
 
 void HadesGC::OldGen::incrementAllocatedBytes(int32_t incr) {

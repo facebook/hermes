@@ -680,6 +680,13 @@ class HadesGC final : public GCBase {
     /// excluding free list entries.
     uint64_t allocatedBytes() const;
 
+    /// \return the number of bytes currently in the heap that are allocated by
+    /// large allocation.
+    uint64_t allocatedLargeObjectBytes() const;
+
+    /// \return the total number of large allocations.
+    unsigned numLargeAllocations() const;
+
     /// Increase the allocated bytes tracker by \p incr.
     void incrementAllocatedBytes(int32_t incr);
 
@@ -875,6 +882,13 @@ class HadesGC final : public GCBase {
 
     /// See \c targetSizeBytes() above.
     ExponentialMovingAverage targetSizeBytes_{0, 0};
+
+    /// Number of large allocations that have occurred in this execution.
+    unsigned numLargeAllocations_{0};
+
+    /// Sum of all bytes currently allocated in the heap by large allocation.
+    /// This is a subset of allocatedBytes_ below.
+    uint64_t allocatedLargeObjectBytes_{0};
 
     /// This is the sum of all bytes currently allocated in the heap, excluding
     /// bump-allocated segments. Use \c allocatedBytes() to include
