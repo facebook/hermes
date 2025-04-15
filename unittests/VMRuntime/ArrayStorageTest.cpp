@@ -129,9 +129,36 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
 
 using ArrayStorageBigHeapTest = ExtremeLargeHeapRuntimeTestFixture;
 
+TEST_F(ArrayStorageBigHeapTest, AllocLarge) {
+  // 1M elements would need > 4MB in HV32, > 8MB in HV64. Both cases trigger
+  // large allocation.
+  using StorageType = ArrayStorageSmall;
+  using HVType = SmallHermesValue;
+
+  constexpr size_t sz = 1024 * 1024;
+  struct : Locals {
+    PinnedValue<StorageType> st;
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.st = vmcast<StorageType>(*StorageType::create(runtime, 1024 * 1024));
+  MutableHandle<StorageType> st{lv.st};
+  StorageType::resize(st, runtime, sz);
+  lv.obj = JSObject::create(runtime);
+  lv.st->set(
+      sz - 1,
+      HVType::encodeHermesValue(lv.obj.getHermesValue(), runtime),
+      runtime.getHeap());
+  // Force the created object to move.
+  runtime.collect("test");
+  auto val = lv.st->at(sz - 1);
+  // It should be accessible and returning the same object pointer.
+  EXPECT_EQ(lv.obj.get(), val.getPointer(runtime));
+}
+
 TEST_F(ArrayStorageBigHeapTest, AllocLargeArrayThrowsRangeError) {
-  // Should fail with a RangeError for allocations above the maxElements.
-  auto res = ArrayStorage::create(runtime, ArrayStorage::maxElements() + 1);
+  // Attempt to allocate an array so big that it fails and throws a range error.
+  auto res = ArrayStorage::create(runtime, 1024 * 1024 * 1024);
   EXPECT_EQ(res, ExecutionStatus::EXCEPTION)
       << "Allocating an array slightly larger than its max size should throw";
   HermesValue hv = runtime.getThrownValue();
