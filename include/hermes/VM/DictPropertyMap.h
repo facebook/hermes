@@ -112,7 +112,12 @@ class DPMHashPair {
   /// Returns true if idx is small enough to be stored as a descriptor index
   /// in this class.
   static constexpr bool canStore(uint32_t idx) {
-    return idx < ((1 << DESC_BITS) - FIRST_VALID);
+    return idx <= maxDescIndex();
+  }
+
+  /// The maximum index that can be hold.
+  static constexpr uint32_t maxDescIndex() {
+    return (1 << DESC_BITS) - FIRST_VALID - 1;
   }
 
  private:
@@ -121,14 +126,8 @@ class DPMHashPair {
 
   /// Number of bits of SymbolID to store. A static_assert checks that
   /// the max possible descriptor index can be stored in the other bits.
-#ifdef HERMESVM_GC_MALLOC
-  /// MallocGC supports allocations up to 4 GB. Each descriptor consumes at
-  /// least 16 bytes. Thus at least log(16) = 4 bits remain for the ID.
-  static constexpr size_t ID_BITS = 4;
-#else
   /// Could be slightly higher, but single byte is efficient to access.
   static constexpr size_t ID_BITS = 8;
-#endif
   static constexpr size_t ID_MASK = (1 << ID_BITS) - 1;
 
   /// Bits that can hold (max possible descriptor index + FIRST_VALID).
@@ -183,9 +182,9 @@ class DictPropertyMap final
     return cell->getKind() == CellKind::DictPropertyMapKind;
   }
 
-  /// Return the maximum possible capacity of DictPropMap.
+  /// Return the maximum possible capacity of DictPropertyMap.
   static constexpr DictPropertyMap::size_type getMaxCapacity() {
-    return constFindMaxCapacity(0, kSearchUpperBound);
+    return hermes::vm::detail::DPMHashPair::maxDescIndex();
   }
 
   /// Create an instance of DictPropertyMap with the specified capacity.
@@ -410,16 +409,21 @@ class DictPropertyMap final
       size_type newCapacity);
 
   /// Gets the amount of memory required by this object for a given capacity.
-  static uint32_t allocationSize(
+  static size_type allocationSize(
       size_type descriptorCapacity,
       size_type hashCapacity) {
+    assert(
+        descriptorCapacity <= getMaxCapacity() &&
+        "descriptorCapacity exceeds the maximum allowed.");
+    assert(
+        hashCapacity <= calcHashCapacity(getMaxCapacity()) &&
+        "hashCapacity exceeds the maximum allowed.");
     return totalSizeToAlloc<DescriptorPair, HashPair>(
         descriptorCapacity, hashCapacity);
   }
 
-  /// Calculate the maximum capacity of DictPropertyMap at compile time using
-  /// binary search in the solution space, since we can't solve the equation
-  /// directly.
+  /// Calculate the maximum allocation size of DictPropertyMap at compile time
+  /// using approximated padding and getMaxCapacity().
   /// @{
 
   /// The maximum alignment padding a compiler might insert before a field or at
@@ -431,7 +435,7 @@ class DictPropertyMap final
   /// given a capacity. The calculation is performed using 64-bit arithmetic to
   /// avoid overflow.
   /// NOTE: it must not be used at runtime since it might be slow.
-  static constexpr uint64_t constApproxAllocSize64(uint32_t cap) {
+  static constexpr uint64_t constApproxAllocSize64(size_type cap) {
     static_assert(
         alignof(DictPropertyMap) <= kAlignPadding + 1,
         "DictPropertyMap exceeds supported alignment");
@@ -448,37 +452,6 @@ class DictPropertyMap final
         sizeof(DictPropertyMap::HashPair) * constCalcHashCapacity64(cap) +
         kAlignPadding;
   }
-
-  /// Return true if DictPropertyMap with the specified capacity is guaranteed
-  /// to fit within the GC's maximum allocation size. The check is conservative:
-  /// it might a few return false negatives at the end of the range.
-  /// NOTE: it must not be used at runtime since it might be slow.
-  static constexpr bool constWouldFitAllocation(uint32_t cap) {
-    return constApproxAllocSize64(cap) <= GC::maxNormalAllocationSize();
-  }
-
-  /// In the range of capacity values [lower ... upper), find the largest
-  /// value for which wouldFitAllocation() returns true.
-  /// NOTE: it must not be used at runtime since it might be slow.
-  static constexpr uint32_t constFindMaxCapacity(
-      uint32_t lower,
-      uint32_t upper) {
-    assert(constWouldFitAllocation(lower) && "lower must always fit");
-    if (upper - lower <= 1)
-      return lower;
-    const auto mid = (lower + upper) / 2;
-    return constWouldFitAllocation(mid) ? constFindMaxCapacity(mid, upper)
-                                        : constFindMaxCapacity(lower, mid);
-  }
-
-  /// The upper bound of the search when trying to find the maximum capacity
-  /// of this object, given GC::maxNormalAllocationSize().
-  /// It was chosen to be a value that is certain to not fit into an allocation;
-  /// at the same time we want to make it smaller, so/ we have arbitrarily
-  /// chosen to divide the max allocation size by two, which is still guaranteed
-  /// not to fit.
-  static constexpr uint32_t kSearchUpperBound =
-      GC::maxNormalAllocationSize() / 2;
 
   /// A place to put things in order to avoid restrictions on using constexpr
   /// functions declared in the same class.

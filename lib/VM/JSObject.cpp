@@ -223,7 +223,7 @@ CallResult<bool> JSObject::setParent(
   return true;
 }
 
-void JSObject::allocateNewSlotStorage(
+ExecutionStatus JSObject::allocateNewSlotStorage(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     SlotIndex newSlotIndex,
@@ -232,7 +232,7 @@ void JSObject::allocateNewSlotStorage(
   if (LLVM_LIKELY(newSlotIndex < DIRECT_PROPERTY_SLOTS)) {
     auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
     selfHandle->directProps()[newSlotIndex].set(shv, runtime.getHeap());
-    return;
+    return ExecutionStatus::RETURNED;
   }
 
   // Make the slot index relative to the indirect storage.
@@ -254,7 +254,11 @@ void JSObject::allocateNewSlotStorage(
         newSlotIndex == selfHandle->propStorage_.getNonNull(runtime)->size() &&
         "allocated slot must be at end");
     auto hnd = runtime.makeMutableHandle(selfHandle->propStorage_);
-    PropStorage::resize(hnd, runtime, newSlotIndex + 1);
+    if (LLVM_UNLIKELY(
+            PropStorage::resize(hnd, runtime, newSlotIndex + 1) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    };
     selfHandle->propStorage_.setNonNull(runtime, *hnd, runtime.getHeap());
   }
 
@@ -274,6 +278,7 @@ void JSObject::allocateNewSlotStorage(
   // If we don't need to resize, just store it directly.
   selfHandle->propStorage_.getNonNull(runtime)->set(
       newSlotIndex, shv, runtime.getHeap());
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
@@ -2876,8 +2881,12 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   }
   selfHandle->clazz_.setNonNull(runtime, *addResult->first, runtime.getHeap());
 
-  allocateNewSlotStorage(
-      selfHandle, runtime, addResult->second, valueOrAccessor);
+  if (LLVM_UNLIKELY(
+          allocateNewSlotStorage(
+              selfHandle, runtime, addResult->second, valueOrAccessor) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   // If this is an index-like property, we need to clear the fast path flags.
   if (LLVM_UNLIKELY(

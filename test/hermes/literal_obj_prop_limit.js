@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s | (! %hermes - 2>&1 -gc-sanitize-handles=0 ) | %FileCheck --match-full-lines %s
-// RUN: %hermes %s | (! %shermes -exec - 2>&1 -Wx,-gc-sanitize-handles=0 ) | %FileCheck --match-full-lines %s
+// RUN: %hermes %s | %hermes - 2>&1 -gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
+// RUN: %hermes %s | %shermes -exec - 2>&1 -Wx,-gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 // REQUIRES: !slow_debug && !gc_malloc
 
 // Print a huge object literal with 300,000 entries.
@@ -17,5 +17,6 @@ for(let i = 0; i < 300_000; ++i)
     print ("a" + i, ": null,");
 
 print("};")
+print("print(\"PASS\");");
 
-// CHECK: Uncaught RangeError: Object has more than {{.+}} properties
+// CHECK: PASS

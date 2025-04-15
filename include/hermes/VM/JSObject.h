@@ -1400,7 +1400,7 @@ class JSObject : public GCCell {
   /// allocated by the hidden class.
   /// Note that slot storage is never truly released once allocated. Released
   /// storage slots are put into a free list.
-  static void allocateNewSlotStorage(
+  static ExecutionStatus allocateNewSlotStorage(
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       SlotIndex newSlotIndex,
