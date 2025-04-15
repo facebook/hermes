@@ -17,11 +17,11 @@ use std::ptr::NonNull;
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering;
 
+use juno_support::Deque;
+use juno_support::HeapSize;
 use juno_support::atom_table::Atom;
 use juno_support::atom_table::AtomTable;
 use juno_support::atom_table::AtomU16;
-use juno_support::Deque;
-use juno_support::HeapSize;
 use libc::c_void;
 use memoffset::offset_of;
 

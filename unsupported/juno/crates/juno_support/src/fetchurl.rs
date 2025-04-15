@@ -18,12 +18,12 @@ use std::fs::File;
 use std::io::Read;
 
 use anyhow;
+use base64::Engine;
 use base64::alphabet::URL_SAFE;
+use base64::engine::DecodePaddingMode;
 use base64::engine::general_purpose::GeneralPurpose;
 use base64::engine::general_purpose::GeneralPurposeConfig;
 use base64::engine::general_purpose::PAD;
-use base64::engine::DecodePaddingMode;
-use base64::Engine;
 use thiserror;
 use url::Url;
 

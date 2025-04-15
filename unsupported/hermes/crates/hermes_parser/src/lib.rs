@@ -8,11 +8,11 @@
 include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 mod generated_extension;
 
-use generated_extension::convert_comment;
-use generated_extension::convert_smloc;
 pub use generated_extension::Comment;
 use generated_extension::Context;
 use generated_extension::FromHermes;
+use generated_extension::convert_comment;
+use generated_extension::convert_smloc;
 use hermes::parser::HermesParser;
 pub use hermes::parser::ParserDialect;
 pub use hermes::parser::ParserFlags;

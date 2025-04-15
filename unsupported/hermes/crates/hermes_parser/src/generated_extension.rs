@@ -7,6 +7,17 @@
 
 use std::num::NonZeroU32;
 
+use hermes::parser::Comment as HermesComment;
+use hermes::parser::NodeKind;
+use hermes::parser::NodeLabel;
+use hermes::parser::NodeLabelOpt;
+use hermes::parser::NodeListRef;
+use hermes::parser::NodePtr;
+use hermes::parser::NodePtrOpt;
+use hermes::parser::NodeString;
+use hermes::parser::NodeStringOpt;
+use hermes::parser::SMLoc;
+use hermes::parser::SMRange;
 use hermes::parser::hermes_get_ArrowFunctionExpression_async;
 use hermes::parser::hermes_get_ArrowFunctionExpression_body;
 use hermes::parser::hermes_get_ArrowFunctionExpression_expression;
@@ -37,17 +48,6 @@ use hermes::parser::hermes_get_Property_kind;
 use hermes::parser::hermes_get_Property_method;
 use hermes::parser::hermes_get_Property_shorthand;
 use hermes::parser::hermes_get_Property_value;
-use hermes::parser::Comment as HermesComment;
-use hermes::parser::NodeKind;
-use hermes::parser::NodeLabel;
-use hermes::parser::NodeLabelOpt;
-use hermes::parser::NodeListRef;
-use hermes::parser::NodePtr;
-use hermes::parser::NodePtrOpt;
-use hermes::parser::NodeString;
-use hermes::parser::NodeStringOpt;
-use hermes::parser::SMLoc;
-use hermes::parser::SMRange;
 use hermes::utf::utf8_with_surrogates_to_string;
 use hermes_diagnostics::DiagnosticsResult;
 use hermes_estree::ArrowFunctionExpression;

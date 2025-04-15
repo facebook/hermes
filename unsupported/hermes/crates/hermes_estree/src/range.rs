@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use serde::ser::SerializeTuple;
 use serde::Deserialize;
 use serde::Serialize;
+use serde::ser::SerializeTuple;
 
 #[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Hash)]
 pub struct SourceRange {

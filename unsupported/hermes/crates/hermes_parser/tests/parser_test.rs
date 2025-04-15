@@ -8,9 +8,9 @@
 use std::env;
 
 use hermes_estree::SourceType;
-use hermes_parser::parse;
 use hermes_parser::ParserDialect;
 use hermes_parser::ParserFlags;
+use hermes_parser::parse;
 use insta::assert_snapshot;
 use insta::glob;
 

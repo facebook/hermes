@@ -7,10 +7,10 @@
 
 use std::fmt::Write;
 
-use hermes_parser::parse;
 use hermes_parser::ParserFlags;
-use hermes_semantic_analysis::analyze;
+use hermes_parser::parse;
 use hermes_semantic_analysis::AnalyzeOptions;
+use hermes_semantic_analysis::analyze;
 use insta::assert_snapshot;
 use insta::glob;
 use miette::NamedSource;

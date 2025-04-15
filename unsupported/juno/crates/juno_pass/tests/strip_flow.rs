@@ -8,8 +8,8 @@
 extern crate juno_support;
 
 use juno::ast;
-use juno::ast::dump_json;
 use juno::ast::NodeRc;
+use juno::ast::dump_json;
 use juno::gen_js;
 use juno::hparser;
 use juno::hparser::ParserDialect;
