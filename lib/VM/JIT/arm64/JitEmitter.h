@@ -616,16 +616,15 @@ class Emitter {
       false,
       false)
   DECL_COMPARE(equal, "Eq", _sh_ljs_equal_rjs, kEQ, false, false)
-  DECL_COMPARE(strictEqual, "StrictEq", _sh_ljs_strict_equal, kEQ, false, true)
   DECL_COMPARE(notEqual, "Neq", _sh_ljs_equal_rjs, kNE, true, false)
-  DECL_COMPARE(
-      strictNotEqual,
-      "StrictNeq",
-      _sh_ljs_strict_equal,
-      kNE,
-      true,
-      true)
 #undef DECL_COMPARE
+
+  void strictEqual(FR frRes, FR frLeft, FR frRight) {
+    strictEqualImpl(false, frRes, frLeft, frRight);
+  }
+  void strictNotEqual(FR frRes, FR frLeft, FR frRight) {
+    strictEqualImpl(true, frRes, frLeft, frRight);
+  }
 
 #define DECL_JCOND(                                                      \
     methodName, forceNum, passArgsByVal, commentStr, slowCall, condCode) \
@@ -668,13 +667,15 @@ class Emitter {
       _sh_ljs_less_equal_rjs,
       kLS)
   DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, kEQ)
-  DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, kEQ)
 #undef DECL_JCOND
 
   void
   jmpTypeOfIs(const asmjit::Label &target, FR frInput, TypeOfIsTypes types);
 
   void typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types);
+
+  void
+  jStrictEqual(bool invert, const asmjit::Label &target, FR frLeft, FR frRight);
 
   void switchImm(
       FR frInput,
@@ -1025,6 +1026,14 @@ class Emitter {
   bool isFRKnownNumber(FR fr) const {
     return isFRKnownType(fr, FRType::Number);
   }
+  /// \return true if the FR is currently known to contain a number.
+  bool isFRKnownBool(FR fr) const {
+    return isFRKnownType(fr, FRType::Bool);
+  }
+  /// \return true if the FR is currently known to contain an OtherNonPtr.
+  bool isFRKnownOtherNonPtr(FR fr) const {
+    return isFRKnownType(fr, FRType::OtherNonPtr);
+  }
 
   /// Get the current bytecode IP in \p xOut.
   void getBytecodeIP(const a64::GpX &xOut);
@@ -1179,6 +1188,8 @@ class Emitter {
       const char *slowCallName,
       bool invSlow,
       bool passArgsByVal);
+
+  void strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight);
 
   void jCond(
       bool forceNumber,

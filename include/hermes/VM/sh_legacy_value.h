@@ -136,7 +136,9 @@ typedef int32_t HVTagType;
 
 /// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 /// word.
-/// If tag < FirstTag, the encoded value is a double.
+/// We define them in the enum as negative numbers, with the last tag being -1.
+/// They range from -7 to -1 (signed).
+/// If in an unsigned comparison: tag < FirstTag, the encoded value is a double.
 enum HVTag {
   HVTag_First = (HVTagType)(int8_t)0xf9,
   HVTag_EmptyInvalid = HVTag_First,

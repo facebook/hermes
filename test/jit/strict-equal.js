@@ -9,23 +9,8 @@
 // RUN: %hermes -fno-inline -Xforce-jit -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
-// Test the JStrictEqual instruction (and the inverse).
-function equal(x, y) {
-  if (x === y) {
-    return 123;
-  } else {
-    return 456;
-  }
-}
-function nequal(x, y) {
-  if (x !== y) {
-    return 123;
-  } else {
-    return 456;
-  }
-}
 function check(x, y) {
-  return [equal(x, y) === 123, nequal(x, y) === 123];
+  return [x === y, x !== y];
 }
 
 print(check(undefined, undefined));

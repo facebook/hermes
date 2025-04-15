@@ -11,55 +11,42 @@
 
 // Test the JStrictEqual instruction (and the inverse).
 function equal(x, y) {
-  if (x === y) {
+  if (x === 1.5) {
     return 123;
   } else {
     return 456;
   }
 }
 function nequal(x, y) {
-  if (x !== y) {
+  if (x !== 1.5) {
     return 123;
   } else {
     return 456;
   }
 }
-function check(x, y) {
-  return [equal(x, y) === 123, nequal(x, y) === 123];
+function check(x) {
+  return [equal(x) === 123, nequal(x) === 123];
 }
 
-print(check(undefined, undefined));
-// CHECK: true,false
-print(check(undefined, null));
-// CHECK: false,true
-print(check(undefined, {}));
-// CHECK: false,true
-print(check(1, 1));
-// CHECK: true,false
-print(check(1, 2));
+print(check(1.5));
+// CHECK-LABEL: true,false
+print(check(null));
 // CHECK-NEXT: false,true
-print(check(1, NaN));
+print(check(0));
 // CHECK-NEXT: false,true
-print(check(NaN, NaN));
+print(check(1));
 // CHECK-NEXT: false,true
-print(check(NaN, 'a'));
+print(check('a'));
 // CHECK-NEXT: false,true
-print(check('a', NaN));
+print(check(1n));
 // CHECK-NEXT: false,true
-print(check('ab', 'ab'));
-// CHECK-NEXT: true,false
-globalThis.a = 'a';
-print(check('ab', globalThis.a + 'b'));
-// CHECK-NEXT: true,false
-print(check('a', 'b'));
+print(check({}));
 // CHECK-NEXT: false,true
-print(check('a', 'bc'));
+print(check(NaN));
 // CHECK-NEXT: false,true
-print(check({}, 'a'));
+print(check(1.12984675));
 // CHECK-NEXT: false,true
-print(check('a', {}));
+print(check(undefined));
 // CHECK-NEXT: false,true
-print(check({}, {}));
+print(check(true));
 // CHECK-NEXT: false,true
-print(check(Math, Math));
-// CHECK-NEXT: true,false

@@ -50,6 +50,52 @@ static_assert(
     HERMESVALUE_VERSION == 2,
     "HermesValue version mismatch, JIT may need to be updated");
 
+/// Get the tag for the HermesValue in \p xIn and place it in \p xOut.
+/// xOut and xIn may be the same, but if they are, xIn will be clobbered.
+void emit_sh_ljs_get_tag(
+    a64::Assembler &a,
+    const a64::GpX &xOut,
+    const a64::GpX &xIn) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "kHV_NumDataBits is 48 and can be easily shifted");
+  a.asr(xOut, xIn, kHV_NumDataBits);
+}
+
+/// Check whether \p xTagReg is the tag for a pointer value.
+/// CPU flags are updated as result. b.hs success.
+void emit_sh_ljs_tag_is_pointer(a64::Assembler &a, const a64::GpX &xTagReg) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "All tags above HVTag_FirstPointer are pointers");
+  // The valid pointer tags are: 0xfc (FirstPointer) to 0xff (LastTag), but
+  // all sign extended to 64 bits.
+  // We need an unsigned comparison (tag >= 0xfc) to catch all pointers.
+  // Doubles may have 0 in the tag bits, e.g. so we have to use
+  // unsigned condition codes to make sure they don't get detected as pointers.
+  a.cmn(xTagReg, -HVTag_FirstPointer);
+}
+
+/// Emit code to check whether the input reg is an object tag,
+/// using the specified register.
+/// The input reg is not modified.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_tag_is_object(a64::Assembler &a, const a64::GpX &xTagReg) {
+  static_assert(
+      (int16_t)HVTag_Object == (int16_t)(-1) && "HV_TagObject must be -1");
+  a.cmn(xTagReg, -HVTag_Object);
+}
+
+/// Emit code to check whether the input reg is string tag, using the specified
+/// register.
+/// The input reg is not modified.
+/// CPU flags are updated as result. b.eq on success.
+void emit_sh_ljs_tag_is_string(a64::Assembler &a, const a64::GpX &xTagReg) {
+  static_assert(
+      (int16_t)HVTag_Str == (int16_t)(-3) && "HV_TagObject must be -1");
+  a.cmn(xTagReg, -HVTag_Str);
+}
+
 void emit_sh_ljs_get_pointer(
     a64::Assembler &a,
     const a64::GpX &xOut,
@@ -84,6 +130,21 @@ void emit_sh_ljs_object2(
   a.orr(xOut, xIn, (uint64_t)HVTag_Object << kHV_NumDataBits);
 }
 
+/// Emit code to check whether the input HermesValue is a double.
+/// The input reg is not modified.
+/// The temp reg is modified.
+/// CPU flags are updated as result. b.lo on success.
+void emit_sh_ljs_is_double(
+    a64::Assembler &a,
+    const a64::GpX &xInput,
+    const a64::GpX &xTmp) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "numbers must be lower than HVTag_First << kHV_NumDataBits");
+  a.mov(xTmp, ((uint64_t)HVTag_First << kHV_NumDataBits));
+  a.cmp(xInput, xTmp);
+}
+
 /// Emit code to check whether the input reg is an object, using the specified
 /// temp register. The input reg is not
 /// modified unless it is the same as the temp, which is allowed.
@@ -92,26 +153,20 @@ void emit_sh_ljs_is_object(
     a64::Assembler &a,
     const a64::GpX &xTempReg,
     const a64::GpX &xInputReg) {
-  // Check if frConstructed is an object.
-  // Get the tag bits in xTmpConstructedTag by right shifting.
-  static_assert(
-      (int16_t)HVTag_Object == (int16_t)(-1) && "HV_TagObject must be -1");
-  a.asr(xTempReg, xInputReg, kHV_NumDataBits);
-  a.cmn(xTempReg, -HVTag_Object);
+  emit_sh_ljs_get_tag(a, xTempReg, xInputReg);
+  emit_sh_ljs_tag_is_object(a, xTempReg);
 }
 
-/// Emit code to check whether the input reg is a string, using the specified
-/// temp register. The input reg is not
+/// Emit code to check whether the input HermesValue is a string,
+/// using the specified temp register. The input reg is not
 /// modified unless it is the same as the temp, which is allowed.
 /// CPU flags are updated as result. b.eq on success.
 void emit_sh_ljs_is_string(
     a64::Assembler &a,
     const a64::GpX &xTempReg,
     const a64::GpX &xInputReg) {
-  // Get the tag bits by right shifting.
-  static_assert((int16_t)HVTag_Str == (int16_t)(-3) && "HV_TagStr must be -3");
-  a.asr(xTempReg, xInputReg, kHV_NumDataBits);
-  a.cmn(xTempReg, -HVTag_Str);
+  emit_sh_ljs_get_tag(a, xTempReg, xInputReg);
+  emit_sh_ljs_tag_is_string(a, xTempReg);
 }
 
 /// Emit code to check whether the input reg is a bigint, using the specified
@@ -228,6 +283,24 @@ void emit_sh_ljs_bool(a64::Assembler &a, const a64::GpX inOut) {
   a.lsl(inOut, inOut, kHV_BoolBitIdx);
   // Add the bool tag.
   a.movk(inOut, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
+}
+
+/// Store the HermesValue for the bool \p val into \p out.
+void emit_sh_ljs_bool_const(a64::Assembler &a, const a64::GpX &out, bool val) {
+  static constexpr SHLegacyValue baseBool = HermesValue::encodeBoolValue(false);
+  // We know that the ETag for bool has a 0 in its lowest bit, and is therefore
+  // a shifted 16 bit value. We can exploit this to use movk to set the tag.
+  static_assert(HERMESVALUE_VERSION == 2);
+  static_assert(
+      (llvh::isShiftedUInt<16, kHV_NumDataBits>(baseBool.raw)) &&
+      "Boolean tag must be 16 bits.");
+  if (val) {
+    // Put 1 at the value and add the bool tag.
+    a.mov(out, (uint64_t)1 << kHV_BoolBitIdx);
+    a.movk(out, baseBool.raw >> kHV_NumDataBits, kHV_NumDataBits);
+  } else {
+    a.mov(out, baseBool.raw);
+  }
 }
 
 /// For a register containing a pointer to a GCCell, retrieve its CellKind (a
@@ -434,6 +507,21 @@ void emit_sh_shv_decode(
       (size_t)HermesValue32::Tag::BoxedDouble;
   a.ldr(xInOut, a64::Mem(xInOut, bdOffs));
 #endif
+}
+
+/// Load the lengthAndFlags of a HermesValue that contains a StringPrimitive
+/// into \p xOut.
+/// xOut and xIn may be the same, but xIn will be clobbered.
+/// \param xOut the output register for the length, which will be placed
+///  in xOut.w().
+/// \param xIn the input register containing the string HermesValue.
+void emit_stringprim_get_length_and_flags(
+    a64::Assembler &a,
+    const a64::GpX &xOut,
+    const a64::GpX &xIn) {
+  emit_sh_ljs_get_pointer(a, xOut, xIn);
+  a.ldr(
+      xOut.w(), a64::Mem(xOut, RuntimeOffsets::stringPrimitiveLengthAndFlags));
 }
 
 class OurErrorHandler : public asmjit::ErrorHandler {
@@ -5795,6 +5883,361 @@ void Emitter::jCond(
            em.a.cbnz(a64::w0, sl.target);
          else
            em.a.cbz(a64::w0, sl.target);
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::jStrictEqual(
+    bool invert,
+    const asmjit::Label &target,
+    FR frLeft,
+    FR frRight) {
+  comment(
+      "// JStrict%sEq Lx, r%u, r%u",
+      invert ? "Not" : "",
+      frLeft.index(),
+      frRight.index());
+
+  // Fast path for raw-only comparison. One of the operands is a non-number
+  // non-pointer value, meaning we can compare bits directly.
+  if (isFRKnownBool(frLeft) || isFRKnownBool(frRight) ||
+      isFRKnownOtherNonPtr(frLeft) || isFRKnownOtherNonPtr(frRight)) {
+    // Do this always, since this could be the end of the BB.
+    syncAllFRTempExcept({});
+    HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
+    HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+    freeAllFRTempExcept({});
+
+    a.cmp(hwLeft.a64GpX(), hwRight.a64GpX());
+    a.b(!invert ? a64::CondCode::kEQ : a64::CondCode::kNE, target);
+    return;
+  }
+
+  // Fast path for number (double) comparison.
+  // One of the operands is a number, so there's two cases:
+  // * It's NaN: it'll fcmp false against everything which is what we want.
+  // * It's not NaN: It won't have NaN tag bits so it'll compare false against
+  //   all non-double HVs and correctly fcmp true against the same number.
+  if (isFRKnownNumber(frLeft) || isFRKnownNumber(frRight)) {
+    // Do this always, since this could be the end of the BB.
+    syncAllFRTempExcept(FR());
+    HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
+    HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+    freeAllFRTempExcept({});
+    a.fcmp(hwLeftD.a64VecD(), hwRightD.a64VecD());
+    a.b(!invert ? a64::CondCode::kEQ : a64::CondCode::kNE, target);
+    return;
+  }
+
+  // Do this always, since this could be the end of the BB.
+  syncAllFRTempExcept(FR());
+
+  HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
+  HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+
+  HWReg hwTmpLeft = allocTempGpX();
+  a64::GpX xTmpLeft = hwTmpLeft.a64GpX();
+  HWReg hwTmpRight = allocTempGpX();
+  a64::GpX xTmpRight = hwTmpRight.a64GpX();
+  HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
+  HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+  freeReg(hwTmpLeft);
+  freeReg(hwTmpRight);
+
+  // Label for non-number comparisons.
+  auto nonNumberLab = a.newLabel();
+
+  // Set up slow path.
+  auto slowPathLab = newSlowPathLabel();
+  auto contLab = newContLabel();
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
+  freeAllFRTempExcept(FR());
+
+  a.fcmp(hwLeftD.a64VecD(), hwRightD.a64VecD());
+  // If not inverted then equality here is real equality.
+  // If the equality check fails, we don't know anything.
+  if (!invert)
+    a.b_eq(target);
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for
+  // NaN. We can do that with the VS condition code, which is set if either
+  // operand to fcmp is NaN.
+  static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
+  a.b_vs(nonNumberLab);
+  // If neither number is NaN, then we can just jump to the correct endpoint.
+  // We already checked equality above for the non-inverted case,
+  // so just check the inverted case here to know if the values are not equal.
+  // If all that fails, then the branch failed and we go to contLab.
+  if (invert)
+    a.b_ne(target);
+  a.b(contLab);
+
+  // Convenience labels so we don't have to think too hard about inverted logic
+  // below.
+  const asmjit::Label &equalLab = !invert ? target : contLab;
+  const asmjit::Label &notEqualLab = !invert ? contLab : target;
+
+  a.bind(nonNumberLab);
+  emit_sh_ljs_is_double(a, hwLeft.a64GpX(), xTmpLeft);
+  // Left is actually the JS NaN, which is never equal to anything.
+  // No need to check RHS for JS NaN, because it won't cause false positive
+  // on the raw bit check below.
+  a.b_lo(notEqualLab);
+
+  // Compare bits directly.
+  // If they match exactly, the two values are equal.
+  a.cmp(hwLeft.a64GpX(), hwRight.a64GpX());
+  a.b_eq(equalLab);
+
+  // First compare the tags. If they don't match, the two values are NOT equal.
+  emit_sh_ljs_get_tag(a, xTmpLeft, hwLeft.a64GpX());
+  emit_sh_ljs_get_tag(a, xTmpRight, hwRight.a64GpX());
+  a.cmp(xTmpLeft, xTmpRight);
+  a.b_ne(notEqualLab);
+
+  // If the LHS is either a non-pointer or an object, we can compare raw values
+  // only. We've already checked and we know that the raw values are not the
+  // same, so if this is a non-pointer or an object, then the two values are NOT
+  // strictly equal.
+  emit_sh_ljs_tag_is_pointer(a, xTmpLeft);
+  a.b_lo(notEqualLab);
+  emit_sh_ljs_tag_is_object(a, xTmpLeft);
+  a.b_eq(notEqualLab);
+
+  // Now we know that the LHS is a non-object pointer.
+
+  // Fast string path: string inequality can be easily determined by checking
+  // the lengths. If the LHS isn't a string, go to slow path.
+  emit_sh_ljs_tag_is_string(a, xTmpLeft);
+  a.b_ne(slowPathLab);
+
+  emit_stringprim_get_length_and_flags(a, xTmpLeft, hwLeft.a64GpX());
+  emit_stringprim_get_length_and_flags(a, xTmpRight, hwRight.a64GpX());
+  // XOR the lengths together and mask the result.
+  // xTmpLeft will be nonzero if the lengths don't match.
+  a.eor(xTmpLeft, xTmpLeft, xTmpRight);
+  a.and_(xTmpLeft, xTmpLeft, RuntimeOffsets::stringPrimitiveLengthMask);
+  // Length mismatch means we're done, the two values are NOT equal.
+  a.cbnz(xTmpLeft, notEqualLab);
+  a.b(slowPathLab);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .target = target,
+       .name = invert ? "j_strict_not_eq" : "j_strict_eq",
+       .frInput1 = frLeft,
+       .frInput2 = frRight,
+       .invert = invert,
+       .slowCall = (void *)_sh_ljs_strict_equal,
+       .slowCallName = "_sh_ljs_strict_equal",
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: %s Lx, r%u, r%u",
+             sl.name,
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         em._loadFrame(HWReg::gpX(0), sl.frInput1);
+         em._loadFrame(HWReg::gpX(1), sl.frInput2);
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
+         if (!sl.invert)
+           em.a.cbnz(a64::w0, sl.target);
+         else
+           em.a.cbz(a64::w0, sl.target);
+         em.a.b(sl.contLab);
+       }});
+}
+
+void Emitter::strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight) {
+  comment(
+      "// %s r%u, r%u, r%u",
+      !invert ? "StrictEq" : "StrictNEq",
+      frRes.index(),
+      frLeft.index(),
+      frRight.index());
+
+  // Fast path for raw-only comparison. One of the operands is a non-number
+  // non-pointer value, meaning we can compare bits directly.
+  if (isFRKnownBool(frLeft) || isFRKnownBool(frRight) ||
+      isFRKnownOtherNonPtr(frLeft) || isFRKnownOtherNonPtr(frRight)) {
+    HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
+    HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+    HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+    frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+
+    a.cmp(hwLeft.a64GpX(), hwRight.a64GpX());
+    a.cset(hwRes.a64GpX(), !invert ? a64::CondCode::kEQ : a64::CondCode::kNE);
+    emit_sh_ljs_bool(a, hwRes.a64GpX());
+    return;
+  }
+
+  // Fast path for number (double) comparison.
+  // One of the operands is a number, so there's two cases:
+  // * It's NaN: it'll fcmp false against everything which is what we want.
+  // * It's not NaN: It won't have NaN tag bits so it'll compare false against
+  //   all non-double HVs and correctly fcmp true against the same number.
+  if (isFRKnownNumber(frLeft) || isFRKnownNumber(frRight)) {
+    // Do this always, since this could be the end of the BB.
+    HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
+    HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+    HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+    frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+
+    a.fcmp(hwLeftD.a64VecD(), hwRightD.a64VecD());
+    a.cset(hwRes.a64GpX(), !invert ? a64::CondCode::kEQ : a64::CondCode::kNE);
+    emit_sh_ljs_bool(a, hwRes.a64GpX());
+    return;
+  }
+
+  HWReg hwLeftD = getOrAllocFRInVecD(frLeft, true);
+  HWReg hwRightD = getOrAllocFRInVecD(frRight, true);
+
+  // Allocate registers used for non-number comparisons.
+  HWReg hwLeft = getOrAllocFRInGpX(frLeft, true);
+  HWReg hwRight = getOrAllocFRInGpX(frRight, true);
+  HWReg hwTmpLeft = allocTempGpX();
+  HWReg hwTmpRight = allocTempGpX();
+  a64::GpX xTmpLeft = hwTmpLeft.a64GpX();
+  a64::GpX xTmpRight = hwTmpRight.a64GpX();
+  freeReg(hwTmpLeft);
+  freeReg(hwTmpRight);
+
+  // Labels for non-number comparisons.
+  auto nonNumberLab = a.newLabel();
+  auto equalLab = a.newLabel();
+  auto notEqualLab = a.newLabel();
+
+  // Set up slow path.
+  auto slowPathLab = newSlowPathLabel();
+  auto contLab = newContLabel();
+  syncAllFRTempExcept(frRes != frLeft && frRes != frRight ? frRes : FR());
+  syncToFrame(frLeft);
+  syncToFrame(frRight);
+  freeAllFRTempExcept({});
+
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes, FRType::Bool);
+  a64::GpX xRes = hwRes.a64GpX();
+
+  // Start by comparing doubles with fcmp.
+  a.fcmp(hwLeftD.a64VecD(), hwRightD.a64VecD());
+
+  // Since HermesValue is NaN-boxed we know that all non-number values will be
+  // NaN. So we can conveniently test for non-number values by checking for
+  // NaN. We can do that with the VS condition code, which is set if either
+  // operand to fcmp is NaN.
+  static_assert(HERMESVALUE_VERSION == 2, "Non-numbers must be NaN");
+  a.b_vs(nonNumberLab);
+
+  // Store the result of the comparison in the lowest bit of tmpCmpRes.
+  // asmjit will convert CondCode to the correct encoding for use in the opcode.
+  a.cset(xRes, invert ? a64::CondCode::kNE : a64::CondCode::kEQ);
+  emit_sh_ljs_bool(a, xRes);
+
+  a.b(contLab);
+
+  // May be JS NaN (not a number, but really it is a number).
+  a.bind(nonNumberLab);
+  emit_sh_ljs_is_double(a, hwLeft.a64GpX(), xTmpLeft);
+  // Left is actually the JS NaN, which is never equal to anything.
+  // No need to check RHS for JS NaN, because it won't cause false positive
+  // on the raw bit check below.
+  a.b_lo(notEqualLab);
+
+  // Compare bits directly.
+  // If they match exactly, the two values are equal.
+  a.cmp(hwLeft.a64GpX(), hwRight.a64GpX());
+  a.b_eq(equalLab);
+
+  // First compare the tags. If they don't match, the two values are NOT equal.
+  emit_sh_ljs_get_tag(a, xTmpLeft, hwLeft.a64GpX());
+  emit_sh_ljs_get_tag(a, xTmpRight, hwRight.a64GpX());
+  a.cmp(xTmpLeft, xTmpRight);
+  a.b_ne(notEqualLab);
+
+  // If the LHS is either a non-pointer or an object, we can compare raw values
+  // only. We've already checked and we know that the raw values are not the
+  // same, so if this is a non-pointer or an object, then the two values are NOT
+  // strictly equal.
+  emit_sh_ljs_tag_is_pointer(a, xTmpLeft);
+  a.b_lo(notEqualLab);
+  emit_sh_ljs_tag_is_object(a, xTmpLeft);
+  a.b_eq(notEqualLab);
+
+  // Now we know that the LHS is a non-object pointer.
+
+  // Fast string path: string inequality can be easily determined by checking
+  // the lengths. If the LHS isn't a string, go to slow path.
+  emit_sh_ljs_tag_is_string(a, xTmpLeft);
+  a.b_ne(slowPathLab);
+
+  emit_stringprim_get_length_and_flags(a, xTmpLeft, hwLeft.a64GpX());
+  emit_stringprim_get_length_and_flags(a, xTmpRight, hwRight.a64GpX());
+  // XOR the lengths together and mask the result.
+  // xTmpLeft will be nonzero if the lengths don't match.
+  a.eor(xTmpLeft, xTmpLeft, xTmpRight);
+  a.and_(xTmpLeft, xTmpLeft, RuntimeOffsets::stringPrimitiveLengthMask);
+  // Length mismatch means we're done, the two values are NOT equal.
+  a.cbnz(xTmpLeft, notEqualLab);
+  a.b(slowPathLab);
+
+  // Jump here if the result should be "equal".
+  // Returns true if not inverted, false if inverted.
+  a.bind(equalLab);
+  emit_sh_ljs_bool_const(a, xRes, !invert);
+  a.b(contLab);
+
+  // Jump here if the result should be "not equal".
+  // Returns false if not inverted, true if inverted.
+  a.bind(notEqualLab);
+  emit_sh_ljs_bool_const(a, xRes, invert);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .name = !invert ? "StrictEq" : "StrictNEq",
+       .frRes = frRes,
+       .frInput1 = frLeft,
+       .frInput2 = frRight,
+       .hwRes = hwRes,
+       .invert = invert,
+       .passArgsByVal = true,
+       .slowCall = (void *)_sh_ljs_strict_equal,
+       .slowCallName = "_sh_ljs_strict_equal",
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: %s r%u, r%u, r%u",
+             sl.name,
+             sl.frRes.index(),
+             sl.frInput1.index(),
+             sl.frInput2.index());
+         em.a.bind(sl.slowPathLab);
+         if (sl.passArgsByVal) {
+           em._loadFrame(HWReg::gpX(0), sl.frInput1);
+           em._loadFrame(HWReg::gpX(1), sl.frInput2);
+         } else {
+           em.a.mov(a64::x0, xRuntime);
+           em.loadFrameAddr(a64::x1, sl.frInput1);
+           em.loadFrameAddr(a64::x2, sl.frInput2);
+         }
+         em.callThunkWithSavedIP(sl.slowCall, sl.slowCallName);
+
+         // Invert the slow path result if needed.
+         if (sl.invert)
+           em.a.eor(sl.hwRes.a64GpX(), a64::x0, 1);
+         else
+           em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+
+         // Comparison functions return bool, so encode it.
+         emit_sh_ljs_bool(em.a, sl.hwRes.a64GpX());
          em.a.b(sl.contLab);
        }});
 }

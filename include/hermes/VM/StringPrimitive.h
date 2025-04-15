@@ -29,6 +29,8 @@ class StringView;
 /// use of strings should not need to worry about the precise type of
 /// StringPrimitive, and use it directly in favor of the exact subclass.
 class StringPrimitive : public VariableSizeRuntimeCell {
+  friend RuntimeOffsets;
+
  protected:
   // Fields:
 
