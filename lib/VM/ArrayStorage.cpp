@@ -64,8 +64,6 @@ ExecutionStatus ArrayStorageBase<HVType>::ensureCapacity(
     MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
     Runtime &runtime,
     size_type capacity) {
-  assert(capacity <= maxElements() && "capacity overflows 32-bit storage");
-
   if (capacity <= selfHandle->capacity())
     return ExecutionStatus::RETURNED;
 
@@ -82,12 +80,13 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
     size_type toFirst,
     size_type toLast) {
   assert(minCapacity >= toLast && "Last element outside capacity.");
+  assert(
+      minCapacity > selfHandle->capacity() &&
+      "minCapacity must be larger than current capacity.");
 
-  static_assert(
-      maxElements() <= std::numeric_limits<size_type>::max() / 2,
-      "Multiplying capacity may overflow.");
   size_type newCapacity = std::max(
-      std::min(selfHandle->capacity() * 2, maxElements()), minCapacity);
+      std::min(selfHandle->capacity(), maxCapacityNoOverflow() / 2) * 2,
+      minCapacity);
 
   auto arrRes = create(runtime, newCapacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
@@ -240,19 +239,16 @@ ExecutionStatus ArrayStorageBase<HVType>::shift(
 }
 
 template <typename HVType>
-ExecutionStatus ArrayStorageBase<HVType>::throwExcessiveCapacityError(
+ExecutionStatus ArrayStorageBase<HVType>::throwAllocationFailure(
     Runtime &runtime,
     size_type capacity) {
-  assert(
-      capacity > maxElements() &&
-      "Shouldn't call this without first checking that capacity is big");
   // Record the fact that this error occurred.
   HERMES_EXTRA_DEBUG(runtime.getCrashManager().setCustomData(
       "Hermes_ArrayStorage_overflow", "1"));
   return runtime.raiseRangeError(
       TwineChar16(
-          "Requested an array size larger than the max allowable: Requested elements = ") +
-      capacity + ", max elements = " + maxElements());
+          "Requested an array size that fails to allocate: Requested elements = ") +
+      capacity);
 }
 
 template <typename HVType>

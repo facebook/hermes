@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_ARRAYSTORAGE_H
 #define HERMES_VM_ARRAYSTORAGE_H
 
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/Metadata.h"
 #include "hermes/VM/Runtime.h"
@@ -59,12 +60,6 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
     return (allocSize - allocationSize(0)) / sizeof(HVType);
   }
 
-  /// \return The maximum number of elements we can fit in a single array in the
-  /// current GC.
-  static constexpr size_type maxElements() {
-    return capacityForAllocationSize(GCCell::maxNormalSize());
-  }
-
   static bool classof(const GCCell *cell) {
     return cell->getKind() == getCellKind();
   }
@@ -93,11 +88,8 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   static CallResult<size_type> checkedAllocationSize(
       Runtime &runtime,
       size_type capacity) {
-    if (LLVM_UNLIKELY(capacity > maxElements()))
-      return throwExcessiveCapacityError(runtime, capacity);
-
     if (capacity > maxCapacityNoOverflow())
-      return throwExcessiveCapacityError(runtime, capacity);
+      return throwAllocationFailure(runtime, capacity);
     return allocationSize(capacity);
   }
 
@@ -112,9 +104,8 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
         LongLived::No,
         CanBeLarge::Yes,
         MayFail::Yes>(*allocSizeRes);
-    if (LLVM_UNLIKELY(!cell)) {
-      return throwExcessiveCapacityError(runtime, capacity);
-    }
+    if (LLVM_UNLIKELY(!cell))
+      return throwAllocationFailure(runtime, capacity);
     return HermesValue::encodeObjectValue(cell);
   }
 
@@ -123,7 +114,6 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// immediately resized to its capacity. This is used only in tests, where we
   /// have a GC* but not a Runtime*.
   static ArrayStorageBase *createForTest(GC &gc, size_type capacity) {
-    assert(capacity <= maxElements());
     const auto allocSize = allocationSize(capacity);
     auto *cell = gc.makeAVariable<ArrayStorageBase>(allocSize);
     ArrayStorageBase::resizeWithinCapacity(cell, gc, capacity);
@@ -145,7 +135,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
         CanBeLarge::Yes,
         MayFail::Yes>(*allocSizeRes);
     if (LLVM_UNLIKELY(!ptr)) {
-      return throwExcessiveCapacityError(runtime, capacity);
+      return throwAllocationFailure(runtime, capacity);
     }
     return HermesValue::encodeObjectValue(ptr);
   }
@@ -198,6 +188,8 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
     data()[index].setNonPtr(val, gc);
   }
 
+  /// \return The capacity of the current storage. It must be smaller than the
+  /// value of maxCapacityNoOverflow().
   size_type capacity() const {
     return capacityForAllocationSize(getAllocatedSizeSlow());
   }
@@ -384,9 +376,9 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
 
  private:
   /// Throws a RangeError with a descriptive message describing the attempted
-  /// capacity allocated, and the max that is allowed.
+  /// capacity allocated.
   /// \returns ExecutionStatus::EXCEPTION always.
-  static ExecutionStatus throwExcessiveCapacityError(
+  static ExecutionStatus throwAllocationFailure(
       Runtime &runtime,
       size_type capacity);
 
@@ -431,7 +423,8 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// "length" number of elements are copied from "fromFirst" to "toFirst".
   /// \p minCapacity must be larger than \p toLast, and it is guaranteed that
   /// the array will have a capacity of at least \p minCapacity after this
-  /// operation.
+  /// operation. \p minCapacity should also be larger than
+  /// selfHandle->capacity(), otherwise we do not need reallocation.
   ///
   /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
   /// MutableHandle will be updated to point to a new allocated ArrayStorageBase

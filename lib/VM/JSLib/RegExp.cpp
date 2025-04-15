@@ -1660,10 +1660,6 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
     result = vmcast<JSObject>(execRes.getValue());
     // i. Append result to the end of results.
     if (LLVM_UNLIKELY(
-            resultsHandle->size() == ArrayStorageSmall::maxElements())) {
-      return runtime.raiseRangeError("Out of memory for regexp results.");
-    }
-    if (LLVM_UNLIKELY(
             ArrayStorageSmall::push_back(resultsHandle, runtime, result) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1773,9 +1769,6 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
     // Match the type of nCaptures.
     uint64_t n = 1;
     // k. Let captures be an empty List.
-    if (LLVM_UNLIKELY(nCaptures > ArrayStorageSmall::maxElements())) {
-      return runtime.raiseRangeError("Out of memory for capture groups.");
-    }
     arrRes = ArrayStorageSmall::create(runtime, nCaptures);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
