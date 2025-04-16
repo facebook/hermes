@@ -14,7 +14,7 @@ jobs:
       run: |-
         yes | sdkmanager "cmake;3.22.1" &
         sudo apt update && sudo apt install -y libicu-dev
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Build Hermes Compiler
@@ -50,7 +50,7 @@ jobs:
         sudo apt update
         sudo apt install -y git openssh-client cmake build-essential \
             libreadline-dev libicu-dev zip python3
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Build linux CLI
@@ -83,7 +83,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Install dependencies
@@ -119,7 +119,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
     - name: Cache setup
       uses: actions/cache@v4.0.0
       with:
@@ -146,7 +146,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Install dependencies
@@ -167,7 +167,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
     - name: Cache setup
       uses: actions/cache@v4.0.0
       with:
@@ -231,7 +231,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
     - name: Cache setup
       uses: actions/cache@v4.0.0
       with:
@@ -276,7 +276,7 @@ jobs:
       RELEASE_FLAGS: "-DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF"
       TAR_NAME: hermes-cli-windows.tar.gz
     steps:
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
     - name: Set up workspace
       run: |-
         New-Item -ItemType Directory $Env:HERMES_WS_DIR
@@ -361,7 +361,7 @@ jobs:
         yarn --version
     - name: Install dependencies and set up
       run: mkdir -p /tmp/hermes/output
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
     - uses: actions/download-artifact@v4.1.3
     - name: Build NPM
       run: |-
@@ -400,7 +400,7 @@ jobs:
       run: |-
         apt update
         apt install -y libicu-dev
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Build Hermes Compiler
@@ -446,7 +446,7 @@ jobs:
         apt install -y libicu-dev tzdata
         wget https://github.com/WebAssembly/wabt/releases/download/1.0.33/wabt-1.0.33-ubuntu.tar.gz
         tar -xvf ./wabt-1.0.33-ubuntu.tar.gz
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Build Hermes with Emscripten
@@ -491,7 +491,7 @@ jobs:
         sudo apt update
         sudo apt install -y git openssh-client cmake build-essential \
             libicu-dev zip python3
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Run Hermes regression tests
@@ -501,7 +501,7 @@ jobs:
   test-windows:
     runs-on: windows-2019
     steps:
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Run Hermes regression tests
@@ -523,7 +523,7 @@ jobs:
         distribution: "temurin"
         java-version: "17"
     - name: Checkout Hermes
-      uses: actions/checkout@v4.1.0
+      uses: actions/checkout@v4
     - name: Checkout React Native
       run: |-
         cd "$HERMES_WS_DIR"
@@ -548,7 +548,7 @@ jobs:
       ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
     steps:
     - name: Checkout Hermes
-      uses: actions/checkout@v4.1.0
+      uses: actions/checkout@v4
     - name: Checkout Test262
       run: |-
         cd "$HERMES_WS_DIR"
@@ -572,7 +572,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Setup dependencies
@@ -591,7 +591,7 @@ jobs:
   test-linux-test262:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v4
       with:
         path: hermes
     - name: Setup dependencies
