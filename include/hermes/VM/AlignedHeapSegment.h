@@ -736,13 +736,12 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   static void setCellHead(const GCCell *cellStart, const size_t sz) {
     const char *start = reinterpret_cast<const char *>(cellStart);
     const char *end = start + sz;
-    auto *segContents = contents(storageStart(cellStart));
-    auto &boundaryTable = segContents->boundaryTable_;
-    auto boundary = boundaryTable.nextBoundary(start);
+    auto boundary = CardBoundaryTable::nextBoundary(start);
     // If this object crosses a card boundary, then update boundaries
     // appropriately.
     if (boundary.address() < end) {
-      boundaryTable.updateBoundaries(&boundary, start, end);
+      auto *segContents = contents(storageStart(cellStart));
+      segContents->boundaryTable_.updateBoundaries(&boundary, start, end);
     }
   }
 
