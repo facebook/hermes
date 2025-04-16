@@ -744,6 +744,12 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
         context_.getPreemptiveFunctionCompilationThreshold()) {
       lexer_.seek(endLoc);
       advance(grammarContext);
+      // Ensure the prev token end loc is set correctly because we used seek to
+      // get to the current spot to the advance() had no way to restore it
+      // properly.
+      // This is necessary to ensure that arrow functions parsed lazily get the
+      // correct source range (for "show source").
+      lexer_.setPrevTokenEndLoc(endLoc);
 
       // Emulate parsing the "use strict" directive in parseBlock.
       setStrictMode(functionInfo.strictMode);
@@ -5496,15 +5502,18 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     expression = true;
   }
 
-  auto *arrow = new (context_) ESTree::ArrowFunctionExpressionNode(
-      nullptr,
-      std::move(paramList),
-      body,
-      typeParams,
-      returnType,
-      predicate,
-      expression,
-      isAsync);
+  auto *arrow = setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::ArrowFunctionExpressionNode(
+          nullptr,
+          std::move(paramList),
+          body,
+          typeParams,
+          returnType,
+          predicate,
+          expression,
+          isAsync));
 
   if (pass_ == PreParse) {
     auto [it, inserted] = preParsed_->functionInfo.try_emplace(
@@ -5520,7 +5529,7 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
     assert(inserted);
   }
 
-  return setLocation(startLoc, body->getEndLoc(), arrow);
+  return arrow;
 }
 
 Optional<ESTree::Node *> JSParserImpl::reparseAssignmentPattern(

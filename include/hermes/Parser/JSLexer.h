@@ -566,6 +566,11 @@ class JSLexer {
     return prevTokenEndLoc_;
   }
 
+  /// Set the end location of the previous token.
+  void setPrevTokenEndLoc(SMLoc loc) {
+    prevTokenEndLoc_ = loc;
+  }
+
   /// Check whether the current 'let' is a declaration.
   /// \pre the current token is the 'let' identifier.
   /// Does not advance the current token,
