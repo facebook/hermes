@@ -19,6 +19,7 @@ COMPILE_ARGS = [
     "-fno-static-builtins",
     "-Xes6-block-scoping",
     "-Xenable-tdz",
+    "-Xasync-generators",
 ]
 ES6_ARGS = ["-Xes6-proxy"]
 EXTRA_RUN_ARGS = ["-Xhermes-internal-test-methods"]
