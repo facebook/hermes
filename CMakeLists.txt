@@ -35,13 +35,6 @@ if(POLICY CMP0022)
   cmake_policy(SET CMP0022 NEW)
 endif()
 
-# Allow reading the LOCATION property of a target to determine the eventual
-# location of build targets. This is needed when building the debugging symbols
-# bundles for Apple platforms.
-if (POLICY CMP0026)
-  cmake_policy(SET CMP0026 OLD)
-endif()
-
 # Has to be set before `project` as per documentation
 # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
 set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
@@ -284,9 +277,6 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
 set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
-set(HERMES_BUILD_APPLE_DSYM OFF CACHE BOOL
-  "Whether to build a DWARF debugging symbols bundle")
-
 set(IMPORT_HERMESC "" CACHE FILEPATH
   "Import the hermesc compiler from another build using the given CMake file.")
 
@@ -317,10 +307,6 @@ if(HERMES_CHECK_NATIVE_STACK)
     )
   endif()
   add_definitions(-DHERMES_CHECK_NATIVE_STACK)
-endif()
-
-if(HERMES_BUILD_APPLE_DSYM)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -gdwarf")
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
