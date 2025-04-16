@@ -1325,6 +1325,8 @@ void HadesGC::printStats(JSONEmitter &json) {
   json.emitKeyValue(
       "Current heap bytes of large allocation",
       oldGen_.allocatedLargeObjectBytes());
+  json.emitKeyValue("Num young gen collections", numYoungCollections_);
+  json.emitKeyValue("Num old gen collections", numOldCollections_);
   json.closeDict();
   json.closeDict();
 }
@@ -1569,6 +1571,7 @@ void HadesGC::incrementalCollect(bool backgroundThread) {
         ogCollectionStats_->setEndTime();
         ogCollectionStats_->setAfterSize(segmentFootprint());
         concurrentPhase_ = Phase::None;
+        ++numOldCollections_;
       }
       break;
     default:
@@ -2624,6 +2627,7 @@ void HadesGC::youngGenCollection(
   ygCollectionStats_ = std::make_unique<CollectionStats>(*this, cause, "young");
   ygCollectionStats_->beginCPUTimeSection();
   ygCollectionStats_->setBeginTime();
+  ++numYoungCollections_;
   GCCycle cycle{*this, "GC Young Gen"};
 #ifdef HERMES_SLOW_DEBUG
   checkWellFormed();

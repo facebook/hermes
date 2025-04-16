@@ -1236,6 +1236,10 @@ class HadesGC final : public GCBase {
   /// The number of compactions this GC has performed.
   size_t numCompactions_{0};
 
+  /// The number of collections this GC has performed in each generation.
+  size_t numYoungCollections_{0};
+  size_t numOldCollections_{0};
+
   struct NativeIDs {
     HeapSnapshot::NodeID ygFinalizables{IDTracker::kInvalidNode};
     HeapSnapshot::NodeID og{IDTracker::kInvalidNode};
