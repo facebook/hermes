@@ -28,7 +28,7 @@ namespace vm {
 
 static const char *kGCName = "malloc";
 
-struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptor,
+struct MallocGC::MarkingAcceptor final : public RootAcceptor,
                                          public WeakRootAcceptor {
   MallocGC &gc;
   std::vector<CellHeader *> worklist_;
@@ -125,19 +125,19 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptor,
     acceptSym(sym);
   }
 
-  void accept(GCPointerBase &ptr) override {
+  void accept(GCPointerBase &ptr) {
     auto *p = ptr.get(pointerBase_);
     accept(p);
     // Update the pointer in the slot.
     ptr.setInGC(CompressedPointer::encode(p, pointerBase_));
   }
-  void accept(GCHermesValueBase &hv) override {
+  void accept(GCHermesValueBase &hv) {
     acceptHV(hv);
   }
-  void accept(GCSmallHermesValueBase &hv) override {
+  void accept(GCSmallHermesValueBase &hv) {
     acceptSHV(hv);
   }
-  void accept(const GCSymbolID &sym) override {
+  void accept(const GCSymbolID &sym) {
     acceptSym(sym);
   }
 

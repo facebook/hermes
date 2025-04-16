@@ -214,7 +214,7 @@ size_t hermes::vm::sh_unit_additional_memory_size(const SHUnit *unit) {
 
 void hermes::vm::sh_unit_mark_roots(
     SHUnit *unit,
-    RootAndSlotAcceptorWithNames &acceptor,
+    RootAcceptorWithNames &acceptor,
     bool markLongLived) {
   for (auto &it : unit->runtime_ext->templateMap) {
     acceptor.acceptPtr(it.second);

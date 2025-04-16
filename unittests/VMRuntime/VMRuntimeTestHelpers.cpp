@@ -83,7 +83,7 @@ void DummyRuntime::collect() {
   getHeap().collect("test");
 }
 
-void DummyRuntime::markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) {
+void DummyRuntime::markRoots(RootAcceptorWithNames &acceptor, bool) {
   // DummyRuntime doesn't care what root section it is, but it needs one for
   // snapshot tests.
   acceptor.beginRootSection(RootAcceptor::Section::Custom);
@@ -98,8 +98,7 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor, bool) {
 }
 
 // Dummy runtime doesn't need to mark anything during complete marking.
-void DummyRuntime::markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &) {
-}
+void DummyRuntime::markRootsForCompleteMarking(RootAcceptorWithNames &) {}
 
 std::string DummyRuntime::convertSymbolToUTF8(SymbolID) {
   return "";

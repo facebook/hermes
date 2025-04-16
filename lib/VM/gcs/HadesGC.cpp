@@ -394,7 +394,7 @@ template <>
 }
 
 template <bool CompactionEnabled>
-class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
+class HadesGC::EvacAcceptor final : public RootAcceptor,
                                     public WeakRootAcceptor {
  public:
   EvacAcceptor(HadesGC &gc)
@@ -507,7 +507,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     ptr = acceptRoot(ptr);
   }
 
-  void accept(GCPointerBase &ptr) override {
+  void accept(GCPointerBase &ptr) {
     ptr.setInGC(acceptHeap(ptr, &ptr));
   }
 
@@ -523,7 +523,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void accept(GCHermesValueBase &hv) override {
+  void accept(GCHermesValueBase &hv) {
     if (hv.isPointer()) {
       GCCell *forwardedPtr =
           acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hv);
@@ -531,7 +531,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
     }
   }
 
-  void accept(GCSmallHermesValueBase &hv) override {
+  void accept(GCSmallHermesValueBase &hv) {
     if (hv.isPointer()) {
       CompressedPointer forwardedPtr = acceptHeap(hv.getPointer(), &hv);
       hv.setInGC(hv.updatePointer(forwardedPtr), gc);
@@ -563,7 +563,7 @@ class HadesGC::EvacAcceptor final : public RootAndSlotAcceptor,
   // collection.
   void acceptWeakSym(WeakRootSymbolID &ws) override {}
   void accept(const RootSymbolID &sym) override {}
-  void accept(const GCSymbolID &sym) override {}
+  void accept(const GCSymbolID &sym) {}
 
   uint64_t evacuatedBytes() const {
     return evacuatedBytes_;
@@ -642,7 +642,7 @@ bool HadesGC::MarkWorklist::empty() {
 }
 #endif
 
-class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
+class HadesGC::MarkAcceptor final : public RootAcceptor {
   HadesGC &gc;
   PointerBase &pointerBase_;
   /// Current GCCell being visited. For heap locations that could be from a
@@ -686,12 +686,12 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
       acceptRoot(ptr);
   }
 
-  void accept(GCPointerBase &ptr) override {
+  void accept(GCPointerBase &ptr) {
     if (auto cp = concurrentRead<CompressedPointer>(ptr))
       acceptHeap(cp.getNonNull(pointerBase_), &ptr);
   }
 
-  void accept(GCHermesValueBase &hvRef) override {
+  void accept(GCHermesValueBase &hvRef) {
     HermesValue hv = concurrentRead<HermesValue>(hvRef);
     if (hv.isPointer()) {
       acceptHeap(static_cast<GCCell *>(hv.getPointer()), &hvRef);
@@ -718,7 +718,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
     }
   }
 
-  void accept(GCSmallHermesValueBase &hvRef) override {
+  void accept(GCSmallHermesValueBase &hvRef) {
     const SmallHermesValue hv = concurrentRead<SmallHermesValue>(hvRef);
     if (hv.isPointer()) {
       acceptHeap(hv.getPointer(pointerBase_), &hvRef);
@@ -740,7 +740,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
   void accept(const RootSymbolID &sym) override {
     acceptSym(sym);
   }
-  void accept(const GCSymbolID &sym) override {
+  void accept(const GCSymbolID &sym) {
     acceptSym(concurrentRead<SymbolID>(sym));
   }
 
@@ -3528,7 +3528,7 @@ void HadesGC::OldGen::verifyFreelists() {
 
 void HadesGC::verifyCardTable() {
   assert(inGC() && "Must be in GC to call verifyCardTable");
-  struct VerifyCardDirtyAcceptor final : public SlotAcceptor {
+  struct VerifyCardDirtyAcceptor final {
     HadesGC &gc;
     const GCCell *currentCell{nullptr};
 
@@ -3544,20 +3544,20 @@ void HadesGC::verifyCardTable() {
       }
     }
 
-    void accept(GCPointerBase &ptr) override {
+    void accept(GCPointerBase &ptr) {
       acceptHelper(ptr.get(gc.getPointerBase()), &ptr);
     }
 
-    void accept(GCHermesValueBase &hv) override {
+    void accept(GCHermesValueBase &hv) {
       if (hv.isPointer())
         acceptHelper(hv.getPointer(), &hv);
     }
-    void accept(GCSmallHermesValueBase &hv) override {
+    void accept(GCSmallHermesValueBase &hv) {
       if (hv.isPointer())
         acceptHelper(hv.getPointer(gc.getPointerBase()), &hv);
     }
 
-    void accept(const GCSymbolID &hv) override {}
+    void accept(const GCSymbolID &hv) {}
   };
 
   VerifyCardDirtyAcceptor acceptor{*this};

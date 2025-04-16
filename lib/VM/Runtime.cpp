@@ -548,9 +548,7 @@ class Runtime::MarkRootsPhaseTimer {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void Runtime::markRoots(
-    RootAndSlotAcceptorWithNames &acceptor,
-    bool markLongLived) {
+void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
   // The body of markRoots should be sequence of blocks, each of which starts
   // with the declaration of an appropriate RootSection instance.
   {
@@ -760,8 +758,7 @@ void Runtime::markDomainRefInRuntimeModules(WeakRootAcceptor &acceptor) {
   }
 }
 
-void Runtime::markRootsForCompleteMarking(
-    RootAndSlotAcceptorWithNames &acceptor) {
+void Runtime::markRootsForCompleteMarking(RootAcceptorWithNames &acceptor) {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::SamplingProfiler);
   acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);

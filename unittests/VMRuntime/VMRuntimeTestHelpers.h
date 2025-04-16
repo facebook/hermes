@@ -332,11 +332,11 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
 
   void collect();
 
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool);
+  void markRoots(RootAcceptorWithNames &acceptor, bool);
 
   void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool);
 
-  void markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &acceptor);
+  void markRootsForCompleteMarking(RootAcceptorWithNames &acceptor);
 
   unsigned int getSymbolsEnd() const {
     return 0;

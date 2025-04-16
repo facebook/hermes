@@ -18,7 +18,7 @@ namespace vm {
 
 /// An acceptor for checking that the heap is full of valid objects, with
 /// pointers to valid objects.
-struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptor,
+struct CheckHeapWellFormedAcceptor final : public RootAcceptor,
                                            public WeakRootAcceptor {
   explicit CheckHeapWellFormedAcceptor(GCBase &gc);
 
@@ -31,10 +31,10 @@ struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptor,
   void acceptWeakSym(WeakRootSymbolID &ws) override;
 
   /// Heap acceptors.
-  void accept(GCPointerBase &ptr) override;
-  void accept(GCHermesValueBase &hv) override;
-  void accept(GCSmallHermesValueBase &hv) override;
-  void accept(const GCSymbolID &sym) override;
+  void accept(GCPointerBase &ptr);
+  void accept(GCHermesValueBase &hv);
+  void accept(GCSmallHermesValueBase &hv);
+  void accept(const GCSymbolID &sym);
 
   /// Internal acceptors.
   void accept(const GCCell *ptr);

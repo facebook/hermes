@@ -22,23 +22,6 @@ class WeakRootBase;
 class WeakRootSymbolID;
 class GCCell;
 
-/// SlotAcceptor is an interface to be implemented by acceptors of objects in
-/// the heap.
-/// An acceptor should accept all of the pointers and other markable fields in
-/// an object, and tell the GC that they exist, updating if necessary.
-/// (The accept methods should make no assumptions about the address of the
-/// slot; in some cases, an adaptor class may store a pointer in a local, call
-/// the acceptor on the local, and then write the local back into the
-/// pointer.  For example, if the pointer is in compressed form.)
-/// This is used by a visitor, see \c SlotVisitor.
-struct SlotAcceptor {
-  virtual ~SlotAcceptor() = default;
-  virtual void accept(GCPointerBase &ptr) = 0;
-  virtual void accept(GCHermesValueBase &hv) = 0;
-  virtual void accept(GCSmallHermesValueBase &hv) = 0;
-  virtual void accept(const GCSymbolID &sym) = 0;
-};
-
 struct RootSectionAcceptor {
   virtual ~RootSectionAcceptor() = default;
 
@@ -75,12 +58,7 @@ struct RootAcceptor : public RootSectionAcceptor {
   }
 };
 
-struct RootAndSlotAcceptor : public RootAcceptor, public SlotAcceptor {
-  using RootAcceptor::accept;
-  using SlotAcceptor::accept;
-};
-
-struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
+struct RootAcceptorWithNames : public RootAcceptor {
   void accept(GCCell *&ptr) final {
     accept(ptr, nullptr);
   }
@@ -100,31 +78,11 @@ struct RootAndSlotAcceptorWithNames : public RootAndSlotAcceptor {
   }
   virtual void accept(const RootSymbolID &sym, const char *name) = 0;
 
-  using RootAndSlotAcceptor::acceptPtr;
+  using RootAcceptor::acceptPtr;
   template <typename T>
   void acceptPtr(T *&ptr, const char *name) {
     accept(reinterpret_cast<GCCell *&>(ptr), name);
   }
-
-  void accept(GCPointerBase &ptr) final {
-    accept(ptr, nullptr);
-  }
-  virtual void accept(GCPointerBase &ptr, const char *name) = 0;
-
-  void accept(GCHermesValueBase &hv) final {
-    accept(hv, nullptr);
-  }
-  virtual void accept(GCHermesValueBase &hv, const char *name) = 0;
-
-  void accept(GCSmallHermesValueBase &hv) final {
-    accept(hv, nullptr);
-  }
-  virtual void accept(GCSmallHermesValueBase &hv, const char *name) = 0;
-
-  void accept(const GCSymbolID &sym) final {
-    accept(sym, nullptr);
-  }
-  virtual void accept(const GCSymbolID &sym, const char *name) = 0;
 
   /// Initiate the callback if this acceptor is part of heap snapshots.
   virtual void provideSnapshot(
@@ -142,21 +100,17 @@ struct WeakRootAcceptor : RootSectionAcceptor {
 };
 
 template <typename Acceptor>
-struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
+struct DroppingAcceptor final : public RootAcceptorWithNames {
   static_assert(
-      std::is_base_of<RootAndSlotAcceptor, Acceptor>::value,
-      "Can only use this with a subclass of RootAndSlotAcceptor");
+      std::is_base_of<RootAcceptor, Acceptor>::value,
+      "Can only use this with a subclass of RootAcceptor");
   Acceptor &acceptor;
 
   explicit DroppingAcceptor(Acceptor &acceptor) : acceptor(acceptor) {}
 
-  using RootAndSlotAcceptorWithNames::accept;
+  using RootAcceptorWithNames::accept;
 
   void accept(GCCell *&ptr, const char *) override {
-    acceptor.accept(ptr);
-  }
-
-  void accept(GCPointerBase &ptr, const char *) override {
     acceptor.accept(ptr);
   }
 
@@ -167,19 +121,7 @@ struct DroppingAcceptor final : public RootAndSlotAcceptorWithNames {
     acceptor.acceptNullable(hv);
   }
 
-  void accept(GCHermesValueBase &hv, const char *) override {
-    acceptor.accept(hv);
-  }
-
-  void accept(GCSmallHermesValueBase &hv, const char *) override {
-    acceptor.accept(hv);
-  }
-
   void accept(const RootSymbolID &sym, const char *) override {
-    acceptor.accept(sym);
-  }
-
-  void accept(const GCSymbolID &sym, const char *) override {
     acceptor.accept(sym);
   }
 };

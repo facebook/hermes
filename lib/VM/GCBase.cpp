@@ -140,11 +140,11 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 }
 
 // Abstract base class for all snapshot acceptors.
-struct SnapshotAcceptor : public RootAndSlotAcceptorWithNames {
+struct SnapshotAcceptor : public RootAcceptorWithNames {
   SnapshotAcceptor(PointerBase &base, HeapSnapshot &snap)
       : pointerBase_(base), snap_(snap) {}
 
-  using RootAndSlotAcceptorWithNames::accept;
+  using RootAcceptorWithNames::accept;
 
   virtual void acceptHV(HermesValue &hv, const char *name) {
     if (hv.isPointer()) {
@@ -172,17 +172,17 @@ struct SnapshotAcceptor : public RootAndSlotAcceptorWithNames {
     acceptSym(sym, name);
   }
 
-  void accept(GCPointerBase &ptr, const char *name) override {
+  void accept(GCPointerBase &ptr, const char *name) {
     auto *p = ptr.get(pointerBase_);
     accept(p, name);
   }
-  void accept(GCHermesValueBase &hv, const char *name) override {
+  void accept(GCHermesValueBase &hv, const char *name) {
     acceptHV(hv, name);
   }
-  void accept(GCSmallHermesValueBase &hv, const char *name) override {
+  void accept(GCSmallHermesValueBase &hv, const char *name) {
     acceptSHV(hv, name);
   }
-  void accept(const GCSymbolID &sym, const char *name) override {}
+  void accept(const GCSymbolID &sym, const char *name) {}
 
  protected:
   PointerBase &pointerBase_;
@@ -1800,7 +1800,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     }
   };
 
-  struct HeapSizeDiagnosticAcceptor final : public RootAndSlotAcceptor {
+  struct HeapSizeDiagnosticAcceptor final : public RootAcceptor {
     // Can't be static in a local class.
     const int64_t HINT8_MIN = -(1 << 7);
     const int64_t HINT8_MAX = (1 << 7) - 1;
@@ -1821,7 +1821,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
       diagnostic.stats.breakdown["Pointer"].size += sizeof(GCCell *);
     }
 
-    void accept(GCPointerBase &ptr) override {
+    void accept(GCPointerBase &ptr) {
       diagnostic.stats.breakdown["GCPointer"].count++;
       diagnostic.stats.breakdown["GCPointer"].size += sizeof(GCPointerBase);
     }
@@ -1835,11 +1835,11 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
           diagnostic.stats.breakdown["HermesValue"],
           sizeof(PinnedHermesValue));
     }
-    void accept(GCHermesValueBase &hv) override {
+    void accept(GCHermesValueBase &hv) {
       acceptHV(
           hv, diagnostic.stats.breakdown["HermesValue"], sizeof(GCHermesValue));
     }
-    void accept(GCSmallHermesValueBase &shv) override {
+    void accept(GCSmallHermesValueBase &shv) {
       acceptHV(
           shv.toHV(pointerBase_),
           diagnostic.stats.breakdown["SmallHermesValue"],
@@ -1901,7 +1901,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     void accept(const RootSymbolID &sym) override {
       acceptSym(sym);
     }
-    void accept(const GCSymbolID &sym) override {
+    void accept(const GCSymbolID &sym) {
       acceptSym(sym);
     }
     void acceptSym(SymbolID sym) {

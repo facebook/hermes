@@ -10,8 +10,8 @@
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/JSMapImpl.h"
+#include "hermes/VM/RootAcceptor.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/StringPrimitive.h"
 
 namespace hermes {

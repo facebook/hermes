@@ -987,7 +987,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// indicates whether root data structures that contain only
   /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived);
+  void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived);
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
@@ -999,7 +999,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void markDomainRefInRuntimeModules(WeakRootAcceptor &weakRootAcceptor);
 
   /// See documentation on \c GCBase::GCCallbacks.
-  void markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &acceptor);
+  void markRootsForCompleteMarking(RootAcceptorWithNames &acceptor);
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for

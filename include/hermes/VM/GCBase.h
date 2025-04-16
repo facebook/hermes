@@ -28,7 +28,7 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/SlotAcceptor.h"
+#include "hermes/VM/RootAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
 #include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
@@ -250,7 +250,7 @@ class GCBase {
     /// via allocLongLived) are required to be scanned.  A generational
     /// collector, for example, might take advantage of this.
     virtual void markRoots(
-        RootAndSlotAcceptorWithNames &acceptor,
+        RootAcceptorWithNames &acceptor,
         bool markLongLived = true) = 0;
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
@@ -269,7 +269,7 @@ class GCBase {
     /// \c markRoots, to be faster it should try to mark only things that would
     /// not have been properly doing barriers.
     virtual void markRootsForCompleteMarking(
-        RootAndSlotAcceptorWithNames &acceptor) = 0;
+        RootAcceptorWithNames &acceptor) = 0;
 
     /// \return one higher than the largest symbol in the identifier table. This
     /// enables the GC to size its internal structures for symbol marking.
@@ -358,7 +358,7 @@ class GCBase {
 
    public:
     GCCallbacksWrapper(RT &runtime) : runtime_(runtime) {}
-    void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived)
+    void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived)
         override {
       runtime_.markRoots(acceptor, markLongLived);
     }
@@ -366,8 +366,7 @@ class GCBase {
         override {
       runtime_.markWeakRoots(weakAcceptor, markLongLived);
     }
-    void markRootsForCompleteMarking(
-        RootAndSlotAcceptorWithNames &acceptor) override {
+    void markRootsForCompleteMarking(RootAcceptorWithNames &acceptor) override {
       runtime_.markRootsForCompleteMarking(acceptor);
     }
     unsigned getSymbolsEnd() const override {
@@ -1350,7 +1349,7 @@ class GCBase {
   /// are required to be marked.  In this collector, such objects will
   /// be allocated in the old gen, and references to them need not be
   /// marked during young-gen collection.
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived) {
+  void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
     gcCallbacks_.markRoots(acceptor, markLongLived);
   }
 
