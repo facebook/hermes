@@ -35,13 +35,6 @@ if(POLICY CMP0022)
   cmake_policy(SET CMP0022 NEW)
 endif()
 
-# Allow reading the LOCATION property of a target to determine the eventual
-# location of build targets. This is needed when building the debugging symbols
-# bundles for Apple platforms.
-if (POLICY CMP0026)
-  cmake_policy(SET CMP0026 OLD)
-endif()
-
 # Require a build type
 if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL ""))
     message(FATAL_ERROR "Please set CMAKE_BUILD_TYPE")
