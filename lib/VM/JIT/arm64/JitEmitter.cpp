@@ -21,6 +21,13 @@
 
 #define DEBUG_TYPE "jit"
 
+// Disable warnings about missing designated initializers since they occur often
+// when we construct SlowPaths.
+#if defined(__clang__) && \
+    __has_warning("-Wmissing-designated-field-initializers")
+#pragma clang diagnostic ignored "-Wmissing-designated-field-initializers"
+#endif
+
 #if defined(HERMESVM_COMPRESSED_POINTERS) && !defined(HERMESVM_CONTIGUOUS_HEAP)
 #error JIT does not support non-contiguous heap with compressed pointers
 #endif
