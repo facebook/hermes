@@ -16,7 +16,6 @@
 #include "hermes/VM/GCCell.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue-inline.h"
-#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 
 #include <array>

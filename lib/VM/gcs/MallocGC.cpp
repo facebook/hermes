@@ -15,7 +15,6 @@
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/HiddenClass.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 
 #include "llvh/Support/Debug.h"
@@ -29,8 +28,8 @@ namespace vm {
 
 static const char *kGCName = "malloc";
 
-struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
-                                         public WeakAcceptorDefault {
+struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptor,
+                                         public WeakRootAcceptor {
   MallocGC &gc;
   std::vector<CellHeader *> worklist_;
 
@@ -40,13 +39,12 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
   /// the falses are garbage.
   llvh::BitVector markedSymbols_;
 
-  MarkingAcceptor(MallocGC &gc)
-      : RootAndSlotAcceptorDefault(gc.getPointerBase()),
-        WeakAcceptorDefault(gc.getPointerBase()),
-        gc(gc),
-        markedSymbols_(gc.gcCallbacks_.getSymbolsEnd()) {}
+  PointerBase &pointerBase_;
 
-  using RootAndSlotAcceptorDefault::accept;
+  MarkingAcceptor(MallocGC &gc)
+      : gc(gc),
+        markedSymbols_(gc.gcCallbacks_.getSymbolsEnd()),
+        pointerBase_(gc.getPointerBase()) {}
 
   void accept(GCCell *&cell) override {
     if (!cell) {
@@ -116,10 +114,38 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 #endif
   }
 
-  void acceptWeak(GCCell *&ptr) override {
-    if (ptr == nullptr) {
+  void accept(PinnedHermesValue &hv) override {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptHV(hv);
+  }
+  void acceptNullable(PinnedHermesValue &hv) override {
+    acceptHV(hv);
+  }
+  void accept(const RootSymbolID &sym) override {
+    acceptSym(sym);
+  }
+
+  void accept(GCPointerBase &ptr) override {
+    auto *p = ptr.get(pointerBase_);
+    accept(p);
+    // Update the pointer in the slot.
+    ptr.setInGC(CompressedPointer::encode(p, pointerBase_));
+  }
+  void accept(GCHermesValueBase &hv) override {
+    acceptHV(hv);
+  }
+  void accept(GCSmallHermesValueBase &hv) override {
+    acceptSHV(hv);
+  }
+  void accept(const GCSymbolID &sym) override {
+    acceptSym(sym);
+  }
+
+  void acceptWeak(WeakRootBase &wr) override {
+    if (!wr) {
       return;
     }
+    auto *ptr = wr.getNonNullNoBarrierUnsafe(pointerBase_);
     CellHeader *header = CellHeader::from(ptr);
 
     // Reset weak root if target GCCell is dead.
@@ -128,6 +154,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
 #else
     ptr = header->isMarked() ? ptr : nullptr;
 #endif
+    wr = CompressedPointer::encode(ptr, pointerBase_);
   }
 
   void acceptWeakSym(WeakRootSymbolID &ws) override {
@@ -143,7 +170,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     }
   }
 
-  void acceptHV(HermesValue &hv) override {
+  void acceptHV(HermesValue &hv) {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr);
@@ -153,7 +180,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     }
   }
 
-  void acceptSHV(SmallHermesValue &hv) override {
+  void acceptSHV(SmallHermesValue &hv) {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
       accept(ptr);
@@ -163,7 +190,7 @@ struct MallocGC::MarkingAcceptor final : public RootAndSlotAcceptorDefault,
     }
   }
 
-  void acceptSym(SymbolID sym) override {
+  void acceptSym(SymbolID sym) {
     if (sym.isInvalid()) {
       return;
     }

@@ -14,7 +14,6 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/VTable.h"
@@ -141,26 +140,52 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 }
 
 // Abstract base class for all snapshot acceptors.
-struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
-  using RootAndSlotAcceptorWithNamesDefault::accept;
-
+struct SnapshotAcceptor : public RootAndSlotAcceptorWithNames {
   SnapshotAcceptor(PointerBase &base, HeapSnapshot &snap)
-      : RootAndSlotAcceptorWithNamesDefault(base), snap_(snap) {}
+      : pointerBase_(base), snap_(snap) {}
 
-  void acceptHV(HermesValue &hv, const char *name) override {
+  using RootAndSlotAcceptorWithNames::accept;
+
+  virtual void acceptHV(HermesValue &hv, const char *name) {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr, name);
     }
   }
-  void acceptSHV(SmallHermesValue &hv, const char *name) override {
+  virtual void acceptSHV(SmallHermesValue &hv, const char *name) {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
       accept(ptr, name);
     }
   }
 
+  virtual void acceptSym(SymbolID, const char *) {}
+
+  void accept(PinnedHermesValue &hv, const char *name) override {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptHV(hv, name);
+  }
+  void acceptNullable(PinnedHermesValue &hv, const char *name) override {
+    acceptHV(hv, name);
+  }
+  void accept(const RootSymbolID &sym, const char *name) override {
+    acceptSym(sym, name);
+  }
+
+  void accept(GCPointerBase &ptr, const char *name) override {
+    auto *p = ptr.get(pointerBase_);
+    accept(p, name);
+  }
+  void accept(GCHermesValueBase &hv, const char *name) override {
+    acceptHV(hv, name);
+  }
+  void accept(GCSmallHermesValueBase &hv, const char *name) override {
+    acceptSHV(hv, name);
+  }
+  void accept(const GCSymbolID &sym, const char *name) override {}
+
  protected:
+  PointerBase &pointerBase_;
   HeapSnapshot &snap_;
 };
 
@@ -299,19 +324,19 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
 };
 
 struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
-                                     public WeakAcceptorDefault {
+                                     public WeakRootAcceptor {
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
   SnapshotRootSectionAcceptor(PointerBase &base, HeapSnapshot &snap)
-      : SnapshotAcceptor(base, snap), WeakAcceptorDefault(base) {}
+      : SnapshotAcceptor(base, snap) {}
 
   void accept(GCCell *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
     // pointers.
   }
 
-  void acceptWeak(GCCell *&ptr) override {
+  void acceptWeak(WeakRootBase &ptr) override {
     // Same goes for weak pointers.
   }
 
@@ -336,8 +361,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
   int rootSectionNum_{1};
 };
 
-struct SnapshotRootAcceptor : public SnapshotAcceptor,
-                              public WeakAcceptorDefault {
+struct SnapshotRootAcceptor : public SnapshotAcceptor, public WeakRootAcceptor {
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
@@ -346,7 +370,6 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       HeapSnapshot &snap,
       GCBase::SavedNumRootEdges &numRootEdges)
       : SnapshotAcceptor(gc.getPointerBase(), snap),
-        WeakAcceptorDefault(gc.getPointerBase()),
         gc_(gc),
         numRootEdges_(numRootEdges) {}
 
@@ -354,7 +377,8 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     pointerAccept(ptr, name, false);
   }
 
-  void acceptWeak(GCCell *&ptr) override {
+  void acceptWeak(WeakRootBase &wr) override {
+    auto *ptr = wr.getNoBarrierUnsafe(gc_.getPointerBase());
     pointerAccept(ptr, nullptr, true);
   }
 
@@ -1791,8 +1815,6 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     PointerBase &pointerBase_;
 
     HeapSizeDiagnosticAcceptor(PointerBase &pb) : pointerBase_{pb} {}
-
-    using SlotAcceptor::accept;
 
     void accept(GCCell *&ptr) override {
       diagnostic.stats.breakdown["Pointer"].count++;
