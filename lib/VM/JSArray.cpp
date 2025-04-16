@@ -50,7 +50,7 @@ void ArrayImpl::_snapshotAddEdgesImpl(
   auto *const indexedStorage =
       self->getIndexedStorageUnsafe(gc.getPointerBase());
   const auto beginIndex = self->beginIndex_;
-  const auto endIndex = self->endIndex_;
+  const auto endIndex = self->getEndIndex();
   for (uint32_t i = beginIndex; i < endIndex; i++) {
     const auto &elem = indexedStorage->at(i - beginIndex);
     const llvh::Optional<HeapSnapshot::NodeID> elemID =
@@ -70,7 +70,7 @@ bool ArrayImpl::_haveOwnIndexedImpl(
   auto *self = vmcast<ArrayImpl>(selfObj);
 
   // Check whether the index is within the storage.
-  if (index >= self->beginIndex_ && index < self->endIndex_)
+  if (index >= self->beginIndex_ && index < self->getEndIndex())
     return !self->getIndexedStorageUnsafe(runtime)
                 ->at(index - self->beginIndex_)
                 .isEmpty();
@@ -85,10 +85,9 @@ OptValue<PropertyFlags> ArrayImpl::_getOwnIndexedPropertyFlagsImpl(
   auto *self = vmcast<ArrayImpl>(selfObj);
 
   // Check whether the index is within the storage.
-  if (index >= self->beginIndex_ && index < self->endIndex_ &&
-      !self->getIndexedStorageUnsafe(runtime)
-           ->at(index - self->beginIndex_)
-           .isEmpty()) {
+  index -= self->beginIndex_;
+  if (index < self->elemCount_ &&
+      !self->getIndexedStorageUnsafe(runtime)->at(index).isEmpty()) {
     PropertyFlags indexedElementFlags{};
     indexedElementFlags.enumerable = 1;
     indexedElementFlags.writable = 1;
@@ -110,7 +109,7 @@ std::pair<uint32_t, uint32_t> ArrayImpl::_getOwnIndexedRangeImpl(
     JSObject *selfObj,
     PointerBase &) {
   auto *self = vmcast<ArrayImpl>(selfObj);
-  return {self->beginIndex_, self->endIndex_};
+  return {self->beginIndex_, self->getEndIndex()};
 }
 
 HermesValue ArrayImpl::_getOwnIndexedImpl(
@@ -148,7 +147,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     lv.storage = vmcast<StorageType>(*arrRes);
     selfHandle->setIndexedStorage(runtime, lv.storage.get(), runtime.getHeap());
     selfHandle->beginIndex_ = 0;
-    selfHandle->endIndex_ = newLength;
+    selfHandle->elemCount_ = newLength;
     return ExecutionStatus::RETURNED;
   }
 
@@ -160,12 +159,12 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
 
     if (newLength <= beginIndex) {
       // the new length is prior to beginIndex, clearing the storage.
-      selfHandle->endIndex_ = beginIndex;
+      selfHandle->elemCount_ = 0;
       // Remove the storage. If this array grows again it can be re-allocated.
       self->setIndexedStorage(runtime, nullptr, runtime.getHeap());
       return ExecutionStatus::RETURNED;
     } else if (newLength - beginIndex <= indexedStorage->capacity()) {
-      selfHandle->endIndex_ = newLength;
+      selfHandle->elemCount_ = newLength - beginIndex;
       StorageType::resizeWithinCapacity(
           indexedStorage, runtime, newLength - beginIndex);
       return ExecutionStatus::RETURNED;
@@ -178,7 +177,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->endIndex_ = newLength;
+  selfHandle->elemCount_ = newLength - beginIndex;
   selfHandle->setIndexedStorage(runtime, lv.storage.get(), runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
@@ -190,17 +189,16 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     Handle<> value) {
   auto *self = vmcast<ArrayImpl>(selfHandle.get());
   auto beginIndex = self->beginIndex_;
-  auto endIndex = self->endIndex_;
 
   if (LLVM_UNLIKELY(self->flags_.frozen))
     return false;
 
   // Check whether the index is within the storage.
-  if (LLVM_LIKELY(index >= beginIndex && index < endIndex)) {
+  if (uint32_t rel = index - beginIndex; LLVM_LIKELY(rel < self->elemCount_)) {
     const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     Handle<ArrayImpl>::vmcast(selfHandle)
         ->getIndexedStorageUnsafe(runtime)
-        ->set(index - beginIndex, shv, runtime.getHeap());
+        ->set(rel, shv, runtime.getHeap());
     return true;
   }
 
@@ -223,11 +221,12 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
     self->setIndexedStorage(runtime, lv.storage.get(), runtime.getHeap());
     self->beginIndex_ = index;
-    self->endIndex_ = index + 1;
+    self->elemCount_ = 1;
     lv.storage->set(0, shv, runtime.getHeap());
     return true;
   }
 
+  auto endIndex = self->getEndIndex();
   {
     const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     NoAllocScope scope{runtime};
@@ -236,7 +235,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
 
     // Can we do it without reallocation for sure?
     if (index >= endIndex && index - beginIndex < indexedStorage->capacity()) {
-      self->endIndex_ = index + 1;
+      self->elemCount_ = index - beginIndex + 1;
       StorageType::resizeWithinCapacity(
           indexedStorage, runtime, index - beginIndex + 1);
       // self shouldn't have moved since there haven't been any allocations.
@@ -260,7 +259,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     indexedStorageHandle->set(0, shv, runtime.getHeap());
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
-    self->endIndex_ = index + 1;
+    self->elemCount_ = 1;
   } else if (LLVM_UNLIKELY(
                  (index > endIndex && index - endIndex > shiftLimit) ||
                  (index < beginIndex && beginIndex - index > shiftLimit))) {
@@ -295,7 +294,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     }
     const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     self = vmcast<ArrayImpl>(selfHandle.get());
-    self->endIndex_ = index + 1;
+    self->elemCount_ = index - beginIndex + 1;
     indexedStorageHandle->set(index - beginIndex, shv, runtime.getHeap());
   } else {
     // Extending to the left. 'index' will become the new 'beginIndex'.
@@ -311,6 +310,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     self = vmcast<ArrayImpl>(selfHandle.get());
     self->beginIndex_ = index;
+    self->elemCount_ = endIndex - index;
     indexedStorageHandle->set(0, shv, runtime.getHeap());
   }
 
@@ -326,19 +326,18 @@ bool ArrayImpl::_deleteOwnIndexedImpl(
     uint32_t index) {
   auto *self = vmcast<ArrayImpl>(selfHandle.get());
   NoAllocScope noAlloc{runtime};
-  if (index >= self->beginIndex_ && index < self->endIndex_) {
+  index -= self->beginIndex_;
+  if (index < self->elemCount_) {
     auto *indexedStorage = self->getIndexedStorageUnsafe(runtime);
     // Cannot delete indexed elements if we are sealed.
     if (LLVM_UNLIKELY(self->flags_.sealed)) {
-      SmallHermesValue elem = indexedStorage->at(index - self->beginIndex_);
+      SmallHermesValue elem = indexedStorage->at(index);
       if (!elem.isEmpty())
         return false;
     }
 
     indexedStorage->setNonPtr(
-        index - self->beginIndex_,
-        SmallHermesValue::encodeEmptyValue(),
-        runtime.getHeap());
+        index, SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
   }
 
   return true;
@@ -355,7 +354,8 @@ bool ArrayImpl::_checkAllOwnIndexedImpl(
   // If we have any indexed properties at all, they don't satisfy the
   // requirements.
   auto *indexedStorage = self->getIndexedStorageNullable(runtime);
-  for (uint32_t i = 0, e = self->endIndex_ - self->beginIndex_; i != e; ++i) {
+  for (uint32_t i = 0, e = self->elemCount_; i != e; ++i) {
+    assert(indexedStorage);
     if (!indexedStorage->at(i).isEmpty())
       return false;
   }

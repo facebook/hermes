@@ -416,7 +416,7 @@ static bool arrayFastPathCheck(
     return false;
 
   // Fast path assumes that the array storage goes from 0 to len.
-  if (arr->getBeginIndex() != 0 || arr->getEndIndex() != len)
+  if (arr->getBeginIndex() != 0 || arr->getElemCount() != len)
     return false;
 
   // Check if there are any index-like properties in any parent.
