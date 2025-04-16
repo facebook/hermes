@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
 // UNSUPPORTED: slow_debug || gc_malloc
 
 try {
