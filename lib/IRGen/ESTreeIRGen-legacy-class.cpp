@@ -695,6 +695,31 @@ Value *ESTreeIRGen::genLegacyDirectSuper(ESTree::CallExpressionNode *call) {
   return superRes;
 }
 
+Value *ESTreeIRGen::genLegacyBaseConstructorRet(
+    ESTree::ReturnStatementNode *node,
+    Value *returnValue) {
+  assert(
+      curFunction()->function->getDefinitionKind() ==
+          Function::DefinitionKind::ES6BaseConstructor &&
+      "incorrect function type");
+  // Easy optimization- if we are returning `this`, we know it is an object, so
+  // just return it.
+  if (node && node->_argument &&
+      llvh::isa<ESTree::ThisExpressionNode>(node->_argument)) {
+    return returnValue;
+  }
+  auto *thisVar = curFunction()->capturedState.thisVal;
+  auto *thisScope = emitResolveScopeInstIfNeeded(thisVar->getParent());
+
+  auto *thisVal = Builder.createLoadFrameInst(thisScope, thisVar);
+  // Easy optimization- we will often be returning a literal undefined because
+  // of implicit returns. Returning undefined is functionally equivalent to
+  // returning `this`.
+  if (llvh::isa<LiteralUndefined>(returnValue))
+    return thisVal;
+  return Builder.createGetConstructedObjectInst(thisVal, returnValue);
+}
+
 Value *ESTreeIRGen::genLegacyDerivedConstructorRet(
     ESTree::ReturnStatementNode *node,
     Value *returnValue) {
@@ -797,6 +822,8 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
           : Function::DefinitionKind::ES6BaseConstructor,
       /* strictMode */ true,
       funcInfo->customDirectives);
+  // Class constructors always return an object.
+  consFunc->setReturnType(Type::createObject());
 
   auto compileFunc = [this,
                       consFunc,
@@ -847,11 +874,10 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
       // Returning undefined in a derived constructor is coerced into returning
       // the `thisVal` we just set.
       emitFunctionEpilogue(Builder.getLiteralUndefined());
-      consFunc->setReturnType(Type::createObject());
     } else {
+      emitLegacyBaseClassThisInit();
       emitLegacyInstanceElementsInitCall();
       emitFunctionEpilogue(Builder.getLiteralUndefined());
-      consFunc->setReturnType(Type::createUndefined());
     }
   };
   enqueueCompilation(
@@ -1150,6 +1176,29 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
       initFunc,
       compileFunc);
   return initFunc;
+}
+
+void ESTreeIRGen::emitLegacyBaseClassThisInit() {
+  assert(!curFunction()->capturedState.thisVal && "thisVal already set");
+  assert(
+      curFunction()->function->getDefinitionKind() ==
+          Function::DefinitionKind::ES6BaseConstructor &&
+      "incorrect function type");
+  // Allocate the `this` object with parent new.target.prototype.
+  auto *newTarget = Builder.createGetNewTargetInst(
+      curFunction()->function->getNewTargetParam());
+  auto *proto = Builder.createLoadPropertyInst(
+      newTarget, Builder.getLiteralString("prototype"));
+  auto *newObj = Builder.createAllocObjectLiteralInst({}, proto);
+
+  // Create a variable for `this` and store the new object we created.
+  curFunction()->capturedState.thisVal = Builder.createVariable(
+      curFunction()->curScope->getVariableScope(),
+      Builder.createIdentifier("this"),
+      Type::createObject(),
+      true);
+  Builder.createStoreFrameInst(
+      curFunction()->curScope, newObj, curFunction()->capturedState.thisVal);
 }
 
 void ESTreeIRGen::emitLegacyInstanceElementsInitCall() {

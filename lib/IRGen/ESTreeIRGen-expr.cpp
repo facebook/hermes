@@ -2720,9 +2720,13 @@ Value *ESTreeIRGen::genThisExpression() {
   }
   // Generators may be used as arrows in async arrow functions, in which case
   // they should load from the captured this.
+  // Untyped base class constructors create `this` internally, so they also have
+  // to access `this` as a Variable.
   auto funcDefKind = curFunction()->function->getDefinitionKind();
   if ((funcDefKind == Function::DefinitionKind::ES6Arrow) ||
-      (funcDefKind == Function::DefinitionKind::GeneratorInnerArrow)) {
+      (funcDefKind == Function::DefinitionKind::GeneratorInnerArrow) ||
+      (curFunction()->hasLegacyClassContext() &&
+       funcDefKind == Function::DefinitionKind::ES6BaseConstructor)) {
     assert(
         curFunction()->capturedState.thisVal &&
         "arrow function must have a captured this");

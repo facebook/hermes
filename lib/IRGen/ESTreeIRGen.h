@@ -752,6 +752,12 @@ class ESTreeIRGen {
   /// Generate IR for `this` in a derived legacy class constructor.
   Value *genLegacyDerivedThis();
 
+  /// Generate IR for a `return` statement in a base legacy class constructor.
+  /// This ensures that the returned value is an object.
+  Value *genLegacyBaseConstructorRet(
+      ESTree::ReturnStatementNode *node,
+      Value *returnValue);
+
   /// Generate IR for a `return` statement in a derived legacy class
   /// constructor. This makes sure that \p returnValue is undefined or an
   /// object, and performs the checks on `this` when required.
@@ -766,6 +772,10 @@ class ESTreeIRGen {
       ESTree::ClassLikeNode *legacyClassNode,
       Variable *homeObjectVar,
       const Identifier &consName);
+
+  /// Initialize the capturedState `this` for use in a base class constructor by
+  /// creating a Variable for it and creating the new object.
+  void emitLegacyBaseClassThisInit();
 
   /// Emit IR to invoke the instance elements initializer function for a legacy
   /// class.

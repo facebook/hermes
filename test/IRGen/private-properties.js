@@ -132,16 +132,21 @@ function simpleMethods() {
 // CHECK-NEXT:        ThrowTypeErrorInst "Cannot initialize private field twice.": string
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS4 []
+// CHECK:scope %VS4 [this: object]
 
-// CHECK:base constructor A(): undefined
+// CHECK:base constructor A(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS4: any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS1.<instElemInitFunc:A>]: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, empty: any, true: boolean, empty: any, undefined: undefined, %0: any
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "prototype": string
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) %3: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS4.this]: object
+// CHECK-NEXT:  %6 = LoadFrameInst (:object) %0: environment, [%VS1.<instElemInitFunc:A>]: object
+// CHECK-NEXT:  %7 = LoadFrameInst (:object) %1: environment, [%VS4.this]: object
+// CHECK-NEXT:  %8 = CallInst (:undefined) %6: object, empty: any, true: boolean, empty: any, undefined: undefined, %7: object
+// CHECK-NEXT:  %9 = LoadFrameInst (:object) %1: environment, [%VS4.this]: object
+// CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS5 [o: any]
@@ -199,16 +204,21 @@ function simpleMethods() {
 // CHECK-NEXT:       ThrowTypeErrorInst "Cannot initialize private field twice.": string
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS9 []
+// CHECK:scope %VS9 [this: object]
 
-// CHECK:base constructor B(): undefined
+// CHECK:base constructor B(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
-// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS9: any, %1: environment
-// CHECK-NEXT:  %3 = LoadFrameInst (:object) %1: environment, [%VS2.<instElemInitFunc:B>]: object
-// CHECK-NEXT:  %4 = CallInst (:undefined) %3: object, empty: any, true: boolean, empty: any, undefined: undefined, %0: any
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS9: any, %0: environment
+// CHECK-NEXT:  %2 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "prototype": string
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) %3: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS9.this]: object
+// CHECK-NEXT:  %6 = LoadFrameInst (:object) %0: environment, [%VS2.<instElemInitFunc:B>]: object
+// CHECK-NEXT:  %7 = LoadFrameInst (:object) %1: environment, [%VS9.this]: object
+// CHECK-NEXT:  %8 = CallInst (:undefined) %6: object, empty: any, true: boolean, empty: any, undefined: undefined, %7: object
+// CHECK-NEXT:  %9 = LoadFrameInst (:object) %1: environment, [%VS9.this]: object
+// CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS10 []

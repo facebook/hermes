@@ -712,16 +712,11 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
   auto classRes = createClass(
       runtime,
       superClass ? Handle{toPHV(superClass)} : Runtime::getEmptyValue(),
-      [&runtime, env, func, funcInfo, unit, superClass](
-          Handle<JSObject> ctorParent) {
+      [&runtime, env, func, funcInfo, unit](Handle<JSObject> ctorParent) {
         auto envHandle = env ? Handle<Environment>::vmcast(toPHV(env))
                              : HandleRootOwner::makeNullHandle<Environment>();
-        // Derived classes get their own special CellKind.
-        return superClass
-            ? *NativeJSClass::create(
-                  runtime, ctorParent, envHandle, func, funcInfo, unit)
-            : *NativeJSFunction::create(
-                  runtime, ctorParent, envHandle, func, funcInfo, unit);
+        return *NativeJSClass::create(
+            runtime, ctorParent, envHandle, func, funcInfo, unit);
       });
   if (classRes == ExecutionStatus::EXCEPTION)
     _sh_throw_current(shr);

@@ -140,10 +140,10 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   IRBuilder builder(M);
   auto *closureVarScope = llvh::dyn_cast<VariableScope>(create->getVarScope());
 
-  // The only kind of function which does not expect a made `this` parameter in
-  // a construct call is a derived class constructor.
-  bool funcExpectsThisInConstruct =
-      F->getDefinitionKind() != Function::DefinitionKind::ES6DerivedConstructor;
+  // Class constructors do not expect `this` to be allocated by the caller.
+  bool funcExpectsThisInConstruct = F->getDefinitionKind() !=
+          Function::DefinitionKind::ES6DerivedConstructor &&
+      F->getDefinitionKind() != Function::DefinitionKind::ES6BaseConstructor;
 
   /// Define an element in the worklist below.
   struct UserInfo {

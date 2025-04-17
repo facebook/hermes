@@ -44,6 +44,21 @@ function objPhiUser(sink){
   }
 }
 
+class MyClass {
+  a = 1;
+  b = "I am a string";
+  c = null;
+  // Calling a method causes this to escape.
+  d = this.myMethod();
+  e = undefined;
+
+  myMethod () {
+    return 42;
+  }
+}
+// Force the constructor to escape so it isn't deleted.
+globalThis.MyClass = MyClass;
+
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:function global(): object
@@ -62,7 +77,14 @@ function objPhiUser(sink){
 // CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "objPhiUser": string
 // CHECK-NEXT:  %12 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
 // CHECK-NEXT:  %13 = CallInst (:object) %12: object, %""(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:        ReturnInst %13: object
+// CHECK-NEXT:  %14 = AllocStackInst (:object) $?anon_1_clsPrototype: any
+// CHECK-NEXT:  %15 = CreateClassInst (:object) empty: any, empty: any, %MyClass(): functionCode, empty: any, %14: object
+// CHECK-NEXT:  %16 = LoadStackInst (:object) %14: object
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) empty: any, empty: any, %myMethod(): functionCode
+// CHECK-NEXT:        DefineOwnPropertyInst %17: object, %16: object, "myMethod": string, false: boolean
+// CHECK-NEXT:  %19 = TryLoadGlobalPropertyInst (:any) globalObject: object, "globalThis": string
+// CHECK-NEXT:        StorePropertyLooseInst %15: object, %19: any, "MyClass": string
+// CHECK-NEXT:        ReturnInst %15: object
 // CHECK-NEXT:function_end
 
 // CHECK:function foo(p: any): object
@@ -105,4 +127,21 @@ function objPhiUser(sink){
 // CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any, "foo": string, "fail": string, "hello": string, null: null, "x": string, 5: number
 // CHECK-NEXT:       PrStoreInst %1: object, %2: object, 1: number, "hello": string, false: boolean
 // CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:base constructor MyClass(): object
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) %1: any, "a": string, 1: number, "b": string, "I am a string": string, "c": string, null: null
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "myMethod": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: object
+// CHECK-NEXT:       DefineOwnPropertyInst %4: any, %2: object, "d": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst undefined: undefined, %2: object, "e": string, true: boolean
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:method myMethod(): number
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst 42: number
 // CHECK-NEXT:function_end

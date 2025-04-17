@@ -37,7 +37,10 @@ class A {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:base constructor A(): undefined
+// CHECK:base constructor A(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %0 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) %1: any
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end

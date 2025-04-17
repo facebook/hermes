@@ -47,13 +47,18 @@ class A {
 // CHECK-NEXT:        ReturnInst %16: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 []
+// CHECK:scope %VS1 [this: object]
 
-// CHECK:base constructor A(): undefined
+// CHECK:base constructor A(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
-// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:  %2 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "prototype": string
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) %3: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.this]: object
+// CHECK-NEXT:  %6 = LoadFrameInst (:object) %1: environment, [%VS1.this]: object
+// CHECK-NEXT:       ReturnInst %6: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS2 []

@@ -100,11 +100,8 @@ ExecutionStatus Interpreter::caseCreateClass(
   auto classRes = createClass(
       runtime,
       funcIdxAndSuper.second,
-      [&runtime,
-       frameRegs,
-       ip,
-       funcIdx = funcIdxAndSuper.first,
-       super = funcIdxAndSuper.second](Handle<JSObject> ctorParent) {
+      [&runtime, frameRegs, ip, funcIdx = funcIdxAndSuper.first](
+          Handle<JSObject> ctorParent) {
         CodeBlock *curCodeBlock =
             runtime.getCurrentFrame().getCalleeCodeBlock();
         auto *runtimeModule = curCodeBlock->getRuntimeModule();
@@ -112,22 +109,13 @@ ExecutionStatus Interpreter::caseCreateClass(
         auto envHandle = O3REG(CreateBaseClass).isUndefined()
             ? Runtime::makeNullHandle<Environment>()
             : Handle<Environment>::vmcast(&O3REG(CreateBaseClass));
-        // Derived classes get their own special CellKind.
-        return super->isEmpty()
-            ? JSFunction::create(
-                  runtime,
-                  runtimeModule->getDomain(runtime),
-                  ctorParent,
-                  envHandle,
-                  runtimeModule->getCodeBlockMayAllocate(funcIdx))
-                  .get()
-            : JSClass::create(
-                  runtime,
-                  runtimeModule->getDomain(runtime),
-                  ctorParent,
-                  envHandle,
-                  runtimeModule->getCodeBlockMayAllocate(funcIdx))
-                  .get();
+        return JSClass::create(
+                   runtime,
+                   runtimeModule->getDomain(runtime),
+                   ctorParent,
+                   envHandle,
+                   runtimeModule->getCodeBlockMayAllocate(funcIdx))
+            .get();
       });
   if (LLVM_UNLIKELY(classRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
