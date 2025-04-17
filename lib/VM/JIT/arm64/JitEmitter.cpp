@@ -423,18 +423,82 @@ void emit_load_shv(
 #endif
 }
 
-/// Given a SmallHermesValue in \p xInOut, decompress it into a HermesValue and
-/// place the result in \p xInOut. Jump to \p doneLab if decoding is done early
-/// (but not in the fall-through case).
-void emit_sh_shv_decode(
-    a64::Assembler &a,
-    const a64::GpX &xInOut,
-    const asmjit::Label &doneLab) {
+/// A class implementing SmallHermesValue to HermesValue decoding.
+/// Given a SmallHermesValue in \p xInOut, decompress it and place the result in
+/// \p xInOut. Jump to \p doneLab if decoding is done early (but not in the
+/// fall-through case).
+///
+/// To facilitate sharing the decoding without an extra branch, the code is
+/// split into two parts: the first case and the rest of the cases. The first
+/// case checks its condition: if it doesn't match, it jumps to the rest of the
+/// cases. If it matches, it performs the decode and falls through.
+/// The intent is that the "rest cases" will be shared, while the first case
+/// may be emitted multiple times to save a branch.
+class Emit_sh_shv_decode {
 #ifdef HERMESVM_BOXED_DOUBLES
-  asmjit::Label ptrLab = a.newLabel();
-  asmjit::Label symLab = a.newLabel();
-  asmjit::Label bdLab = a.newLabel();
+  const a64::GpX xInOut;
+  asmjit::Label ptrLab;
+#endif
+  const asmjit::Label &doneLab;
+#ifndef NDEBUG
+  bool restEmitted = false;
+#endif
 
+ public:
+  explicit Emit_sh_shv_decode(
+      a64::Assembler &a,
+      const a64::GpX &xInOut,
+      const asmjit::Label &doneLab)
+#ifdef HERMESVM_BOXED_DOUBLES
+      : xInOut(xInOut), doneLab(doneLab) {
+    ptrLab = a.newLabel();
+  }
+#else
+      : doneLab(doneLab) {
+  }
+#endif
+
+  /// Emit the code checking and decoding the first case of SHV values. Can be
+  /// invoked multiple times. Emitted code looks like:
+  /// \code
+  ///    check
+  ///    b.cond ptrLab
+  ///    decode
+  /// \endcode
+  ///
+  /// Note that it simply falls through on success.
+  void emitFirstCase(a64::Assembler &a);
+
+  /// Emit the code checking and decoding all other cases of SHV values. Can
+  /// only be invoked once. Emitted code at high level looks like:
+  /// \code
+  ///    ptrLab:
+  ///      check_ptr
+  ///      b.cond otherLab
+  ///      decode
+  ///      b doneLab
+  ///    otherLab:
+  ///      decode
+  /// \endcode
+  ///
+  /// Note that the last case does not branch to doneLab, so the caller must
+  /// do it (or fall through to doneLab).
+  void emitRestCases(a64::Assembler &a);
+
+  /// Emit the first case, followed by a branch to doneLab, and the rest of the
+  /// cases.
+  void emitAll(a64::Assembler &a) {
+    emitFirstCase(a);
+#ifdef HERMESVM_BOXED_DOUBLES
+    // emitFirstCase() falls through, so add an explicit branch to doneLab.
+    a.b(doneLab);
+#endif
+    emitRestCases(a);
+  }
+};
+
+void Emit_sh_shv_decode::emitFirstCase(a64::Assembler &a) {
+#ifdef HERMESVM_BOXED_DOUBLES
   static_assert(HERMESVALUE_VERSION == 2, "Constructing HermesValue from bits");
   static_assert(HermesValue32::kVersion == 1, "Decoding HV32 bits");
   constexpr uint64_t kHV32TagMask = (1 << HermesValue32::kNumTagBits) - 1;
@@ -449,7 +513,22 @@ void emit_sh_shv_decode(
   // worth optimising here.
   if constexpr (sizeof(SmallHermesValue) < sizeof(HermesValue))
     a.lsl(xInOut, xInOut, 32);
-  a.b(doneLab);
+#endif
+}
+
+void Emit_sh_shv_decode::emitRestCases(a64::Assembler &a) {
+#ifndef NDEBUG
+  assert(!restEmitted && "Rest cases already emitted");
+  restEmitted = true;
+#endif
+#ifdef HERMESVM_BOXED_DOUBLES
+  asmjit::Label symLab = a.newLabel();
+  asmjit::Label bdLab = a.newLabel();
+
+  static_assert(HERMESVALUE_VERSION == 2, "Constructing HermesValue from bits");
+  static_assert(HermesValue32::kVersion == 1, "Decoding HV32 bits");
+  constexpr uint64_t kHV32TagMask = (1 << HermesValue32::kNumTagBits) - 1;
+
   a.bind(ptrLab);
 
   // See the comments below for why the exact bits are important.
@@ -514,6 +593,16 @@ void emit_sh_shv_decode(
       (size_t)HermesValue32::Tag::BoxedDouble;
   a.ldr(xInOut, a64::Mem(xInOut, bdOffs));
 #endif
+}
+
+/// Given a SmallHermesValue in \p xInOut, decompress it into a HermesValue and
+/// place the result in \p xInOut. Jump to \p doneLab if decoding is done early
+/// (but not in the fall-through case).
+void emit_sh_shv_decode(
+    a64::Assembler &a,
+    const a64::GpX &xInOut,
+    const asmjit::Label &doneLab) {
+  Emit_sh_shv_decode(a, xInOut, doneLab).emitAll(a);
 }
 
 /// Load the lengthAndFlags of a HermesValue that contains a StringPrimitive
@@ -3615,8 +3704,8 @@ void Emitter::getByIdImpl(
         hwRes.a64GpX(),
         a64::Mem(
             xTemp3, xTemp4, a64::Shift(a64::ShiftOp::kLSL, kPropShiftAmt)));
-    emit_sh_shv_decode(a, hwRes.a64GpX(), contLab);
-
+    Emit_sh_shv_decode shvDecode(a, hwRes.a64GpX(), contLab);
+    shvDecode.emitFirstCase(a);
     a.b(contLab);
 
     a.bind(indirectLab);
@@ -3639,7 +3728,7 @@ void Emitter::getByIdImpl(
         hwRes.a64GpX(),
         a64::Mem(
             xTemp1, xTemp4, a64::Shift(a64::ShiftOp::kLSL, kPropShiftAmt)));
-    emit_sh_shv_decode(a, hwRes.a64GpX(), contLab);
+    shvDecode.emitAll(a);
     a.b(contLab);
 
     a.bind(slowPathLab);
