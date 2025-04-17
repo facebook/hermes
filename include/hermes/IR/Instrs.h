@@ -4680,8 +4680,8 @@ class GetConstructedObjectInst : public Instruction {
   enum { ThisValueIdx, ConstructorReturnValueIdx };
 
   explicit GetConstructedObjectInst(
-      CreateThisInst *thisValue,
-      CallInst *constructorReturnValue)
+      Instruction *thisValue,
+      Value *constructorReturnValue)
       : Instruction(ValueKind::GetConstructedObjectInstKind) {
     setType(*getInherentTypeImpl());
     pushOperand(thisValue);

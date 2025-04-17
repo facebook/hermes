@@ -654,8 +654,8 @@ class IRBuilder {
   CreateThisInst *createCreateThisInst(Value *closure, Value *newTarget);
 
   GetConstructedObjectInst *createGetConstructedObjectInst(
-      CreateThisInst *thisValue,
-      CallInst *constructorReturnValue);
+      Instruction *thisValue,
+      Value *constructorReturnValue);
 
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 

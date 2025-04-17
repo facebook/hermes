@@ -1090,8 +1090,8 @@ CreateThisInst *IRBuilder::createCreateThisInst(
   return inst;
 }
 GetConstructedObjectInst *IRBuilder::createGetConstructedObjectInst(
-    CreateThisInst *thisValue,
-    CallInst *constructorReturnValue) {
+    Instruction *thisValue,
+    Value *constructorReturnValue) {
   auto inst = new GetConstructedObjectInst(thisValue, constructorReturnValue);
   insert(inst);
   return inst;
