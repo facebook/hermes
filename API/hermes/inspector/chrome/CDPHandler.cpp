@@ -145,7 +145,7 @@ struct ConsoleMessageInfo {
       : timestamp(timestamp),
         source("console-api"),
         level(level),
-        url(""),
+
         line(-1),
         column(-1),
         args(std::move(args)) {}
