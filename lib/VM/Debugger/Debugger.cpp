@@ -1250,7 +1250,7 @@ HermesValue Debugger::evalInFrame(
   // function for the eval expression. It would be invalid to call that arrow
   // function with a non-undefined new.target.
   Handle<> newTarget =
-      vmisa<JSDerivedClass>(*frameInfo->frame->getCalleeClosureHandleUnsafe())
+      vmisa<JSClass>(*frameInfo->frame->getCalleeClosureHandleUnsafe())
       ? Runtime::getUndefinedValue()
       : Handle<>(&frameInfo->frame->getNewTargetRef());
 

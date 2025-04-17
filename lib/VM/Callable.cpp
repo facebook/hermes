@@ -1046,13 +1046,13 @@ CallResult<PseudoHandle<>> NativeJSFunction::_callImpl(
 }
 
 //===----------------------------------------------------------------------===//
-// class NativeJSDerivedClass
+// class NativeJSClass
 
-const CallableVTable NativeJSDerivedClass::vt{
+const CallableVTable NativeJSClass::vt{
     {
         VTable(
-            CellKind::NativeJSDerivedClassKind,
-            cellSize<NativeJSDerivedClass>(),
+            CellKind::NativeJSClassKind,
+            cellSize<NativeJSClass>(),
             /*allowLargeAlloc*/ false,
             nullptr,
             nullptr,
@@ -1061,36 +1061,36 @@ const CallableVTable NativeJSDerivedClass::vt{
             ,
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
-                NativeJSDerivedClass::_snapshotNameImpl,
-                NativeJSDerivedClass::_snapshotAddEdgesImpl,
+                NativeJSClass::_snapshotNameImpl,
+                NativeJSClass::_snapshotAddEdgesImpl,
                 nullptr,
                 nullptr}
 #endif
             ),
-        NativeJSDerivedClass::_getOwnIndexedRangeImpl,
-        NativeJSDerivedClass::_haveOwnIndexedImpl,
-        NativeJSDerivedClass::_getOwnIndexedPropertyFlagsImpl,
-        NativeJSDerivedClass::_getOwnIndexedImpl,
-        NativeJSDerivedClass::_setOwnIndexedImpl,
-        NativeJSDerivedClass::_deleteOwnIndexedImpl,
-        NativeJSDerivedClass::_checkAllOwnIndexedImpl,
+        NativeJSClass::_getOwnIndexedRangeImpl,
+        NativeJSClass::_haveOwnIndexedImpl,
+        NativeJSClass::_getOwnIndexedPropertyFlagsImpl,
+        NativeJSClass::_getOwnIndexedImpl,
+        NativeJSClass::_setOwnIndexedImpl,
+        NativeJSClass::_deleteOwnIndexedImpl,
+        NativeJSClass::_checkAllOwnIndexedImpl,
     },
-    NativeJSDerivedClass::_callImpl};
+    NativeJSClass::_callImpl};
 
-void NativeJSDerivedClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSDerivedClass>());
+void NativeJSClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSClass>());
   NativeJSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&NativeJSDerivedClass::vt);
+  mb.setVTable(&NativeJSClass::vt);
 }
 
-Handle<NativeJSDerivedClass> NativeJSDerivedClass::create(
+Handle<NativeJSClass> NativeJSClass::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
     Handle<Environment> parentEnvHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
     const SHUnit *unit) {
-  auto *cell = runtime.makeAFixed<NativeJSDerivedClass>(
+  auto *cell = runtime.makeAFixed<NativeJSClass>(
       runtime,
       parentHandle,
       runtime.lazyObjectClass,
@@ -1485,13 +1485,13 @@ void JSFunction::_snapshotAddLocationsImpl(
 #endif
 
 //===----------------------------------------------------------------------===//
-// class JSDerivedClass
+// class JSClass
 
-const CallableVTable JSDerivedClass::vt{
+const CallableVTable JSClass::vt{
     {
         VTable(
-            CellKind::JSDerivedClassKind,
-            cellSize<JSDerivedClass>(),
+            CellKind::JSClassKind,
+            cellSize<JSClass>(),
             /*allowLargeAlloc*/ false,
             nullptr,
             nullptr,
@@ -1500,35 +1500,35 @@ const CallableVTable JSDerivedClass::vt{
             ,
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
-                JSDerivedClass::_snapshotNameImpl,
-                JSDerivedClass::_snapshotAddEdgesImpl,
+                JSClass::_snapshotNameImpl,
+                JSClass::_snapshotAddEdgesImpl,
                 nullptr,
-                JSDerivedClass::_snapshotAddLocationsImpl}
+                JSClass::_snapshotAddLocationsImpl}
 #endif
             ),
-        JSDerivedClass::_getOwnIndexedRangeImpl,
-        JSDerivedClass::_haveOwnIndexedImpl,
-        JSDerivedClass::_getOwnIndexedPropertyFlagsImpl,
-        JSDerivedClass::_getOwnIndexedImpl,
-        JSDerivedClass::_setOwnIndexedImpl,
-        JSDerivedClass::_deleteOwnIndexedImpl,
-        JSDerivedClass::_checkAllOwnIndexedImpl,
+        JSClass::_getOwnIndexedRangeImpl,
+        JSClass::_haveOwnIndexedImpl,
+        JSClass::_getOwnIndexedPropertyFlagsImpl,
+        JSClass::_getOwnIndexedImpl,
+        JSClass::_setOwnIndexedImpl,
+        JSClass::_deleteOwnIndexedImpl,
+        JSClass::_checkAllOwnIndexedImpl,
     },
-    JSDerivedClass::_callImpl};
+    JSClass::_callImpl};
 
-void JSDerivedClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSDerivedClass>());
+void JSClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSClass>());
   JSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&JSDerivedClass::vt);
+  mb.setVTable(&JSClass::vt);
 }
 
-PseudoHandle<JSDerivedClass> JSDerivedClass::create(
+PseudoHandle<JSClass> JSClass::create(
     Runtime &runtime,
     Handle<Domain> domain,
     Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  auto *cell = runtime.makeAFixed<JSDerivedClass, kHasFinalizer>(
+  auto *cell = runtime.makeAFixed<JSClass, kHasFinalizer>(
       runtime,
       domain,
       parentHandle,

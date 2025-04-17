@@ -121,7 +121,7 @@ ExecutionStatus Interpreter::caseCreateClass(
                   envHandle,
                   runtimeModule->getCodeBlockMayAllocate(funcIdx))
                   .get()
-            : JSDerivedClass::create(
+            : JSClass::create(
                   runtime,
                   runtimeModule->getDomain(runtime),
                   ctorParent,

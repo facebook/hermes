@@ -718,7 +718,7 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
                              : HandleRootOwner::makeNullHandle<Environment>();
         // Derived classes get their own special CellKind.
         return superClass
-            ? *NativeJSDerivedClass::create(
+            ? *NativeJSClass::create(
                   runtime, ctorParent, envHandle, func, funcInfo, unit)
             : *NativeJSFunction::create(
                   runtime, ctorParent, envHandle, func, funcInfo, unit);
