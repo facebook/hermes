@@ -1,3 +1,8 @@
+## 0.28.1
+
+### `hermes-parser`
+* Fixed end location of arrow function body
+
 ## 0.28.0
 
 ### `flow-api-translator`
