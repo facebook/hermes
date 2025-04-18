@@ -42,4 +42,11 @@
 #error HERMESVM_ALLOW_JIT must have a value of 1 or 2
 #endif
 
+// Only enable perf profiling support on Linux/Android when JIT is enabled and
+// HERMES_IS_MOBILE_BUILD is false.
+#if HERMESVM_JIT && !defined(HERMES_IS_MOBILE_BUILD) && \
+    (defined(__linux__) || defined(__ANDROID__))
+#define HERMES_ENABLE_PERF_PROF
+#endif
+
 #endif // HERMES_VM_JIT_CONFIG_H
