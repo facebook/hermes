@@ -24,6 +24,10 @@
 
 #include "repl.h"
 
+#ifdef HERMES_ENABLE_PERF_PROF
+#include <fcntl.h>
+#endif
+
 using namespace hermes;
 
 namespace {
@@ -144,6 +148,21 @@ static int executeHBCBytecodeFromCL(
   options.sampleProfiling = flags.SampleProfiling;
   options.sampleProfilingFreq = flags.SampleProfilingFreq;
   options.heapTimeline = flags.HeapTimeline;
+#ifdef HERMES_ENABLE_PERF_PROF
+  std::string jitdumpFile;
+  if (flags.PerfProf) {
+    llvh::raw_string_ostream sos{jitdumpFile};
+    // jitdump uses uint32_t for pid.
+    sos << llvh::format(
+        "%s/jit-%d.dump",
+        flags.PerfProfDir.c_str(),
+        (uint32_t)oscompat::process_id());
+    options.perfProfJitDumpFd =
+        open(sos.str().c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
+    if (options.perfProfJitDumpFd == -1)
+      hermes_fatal("Failed to open jitdump file: " + jitdumpFile);
+  }
+#endif
 
   bool success;
   if (flags.Repeat <= 1) {
@@ -162,6 +181,10 @@ static int executeHBCBytecodeFromCL(
           &info.filename);
     }
   }
+#ifdef HERMES_ENABLE_PERF_PROF
+  if (flags.PerfProf && (close(options.perfProfJitDumpFd) == -1))
+    hermes_fatal("Fail to close jitdump file: " + jitdumpFile);
+#endif
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 

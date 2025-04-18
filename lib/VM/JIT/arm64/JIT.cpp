@@ -281,6 +281,14 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 
   codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr));
 
+  if (jc_.perfJitDump_) {
+    // Write the JIT dump for this function.
+    jc_.perfJitDump_->writeCodeLoadRecord(
+        reinterpret_cast<const char *>(codeBlock_->getJITCompiled()),
+        em_.code.codeSize(),
+        codeBlock_->getNameString());
+  }
+
   if (LLVM_UNLIKELY(usedSize == memoryLimit)) {
     // Disable compilation for the future because we've hit the limit,
     // but this function is fine.

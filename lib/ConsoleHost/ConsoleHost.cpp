@@ -442,6 +442,10 @@ bool executeHBCBytecodeImpl(
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
   runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);
 
+  if (options.perfProfJitDumpFd != -1) {
+    runtime->getJITContext().initPerfProfData(options.perfProfJitDumpFd);
+  }
+
   if (options.timeLimit > 0) {
     runtime->timeLimitMonitor = vm::TimeLimitMonitor::getOrCreate();
     runtime->timeLimitMonitor->watchRuntime(

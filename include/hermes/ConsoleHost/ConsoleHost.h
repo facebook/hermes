@@ -151,6 +151,9 @@ struct ExecuteOptions {
   /// Dump JIT'ed code.
   unsigned dumpJITCode{0};
 
+  /// The jitdump file descriptor used for perf profiling.
+  int perfProfJitDumpFd{-1};
+
   /// Fatally crash on any JIT compilation error.
   bool jitCrashOnError{false};
 

@@ -160,6 +160,7 @@ if (HERMESVM_ALLOW_JIT)
           JIT/arm64/JitEmitter.cpp JIT/arm64/JitEmitter.h
           JIT/arm64/JIT.cpp
           JIT/arm64/JitHandlers.cpp JIT/arm64/JitHandlers.h
+          JIT/PerfJitDump.cpp
   )
   set(JITLIBS asmjit)
 endif ()
