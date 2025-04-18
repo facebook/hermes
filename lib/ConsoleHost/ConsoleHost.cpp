@@ -443,7 +443,10 @@ bool executeHBCBytecodeImpl(
   runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);
 
   if (options.perfProfJitDumpFd != -1) {
-    runtime->getJITContext().initPerfProfData(options.perfProfJitDumpFd);
+    runtime->getJITContext().initPerfProfData(
+        options.perfProfJitDumpFd,
+        options.perfProfDebugInfoFd,
+        options.perfProfDebugInfoFile);
   }
 
   if (options.timeLimit > 0) {

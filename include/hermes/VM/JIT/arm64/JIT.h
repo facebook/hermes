@@ -74,12 +74,18 @@ class JITContext {
 
   /// Construct data structure used for perf profiling support. This should be
   /// called only when PerfProf is enabled and perf JITContext.
-  /// \param fd The file descriptor of the opened jitdump file.
-  void initPerfProfData(int fd) {
+  /// \param jitdumpFd The file descriptor of the opened jitdump file.
+  /// \param commentFd The file descriptor of the opended \p commentFile.
+  /// \param commentFile The path of the file to store the comments.
+  void initPerfProfData(
+      int jitdumpFd,
+      int commentFd,
+      const std::string &commentFile) {
     assert(
         !perfJitDump_ &&
         "perfJitDump_ should be constructed once per JITContext");
-    perfJitDump_ = std::make_unique<PerfJitDump>(fd);
+    perfJitDump_ =
+        std::make_unique<PerfJitDump>(jitdumpFd, commentFd, commentFile);
   }
 
   /// Set the flag to fatally crash on JIT compilation errors.

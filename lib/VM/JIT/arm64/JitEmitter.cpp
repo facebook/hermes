@@ -681,11 +681,33 @@ class OurErrorHandler : public asmjit::ErrorHandler {
 
 #ifndef ASMJIT_NO_LOGGING
 class OurLogger : public asmjit::Logger {
+ private:
+  a64::Assembler &a_;
+  PerfJitDump *perfJitDump_{nullptr};
+  bool dumpJitCode_{false};
+
+ public:
+  OurLogger(a64::Assembler &a, PerfJitDump *perfJitDump, bool dumpJitCode)
+      : a_(a), perfJitDump_(perfJitDump), dumpJitCode_(dumpJitCode) {}
+
   ASMJIT_API asmjit::Error _log(const char *data, size_t size) noexcept
       override {
-    llvh::outs()
-        << (size == SIZE_MAX ? llvh::StringRef(data)
-                             : llvh::StringRef(data, size));
+    auto str =
+        (size == SIZE_MAX ? llvh::StringRef(data)
+                          : llvh::StringRef(data, size));
+    if (str.empty())
+      return asmjit::kErrorOk;
+    if (dumpJitCode_)
+      llvh::outs() << str;
+    if (!perfJitDump_)
+      return asmjit::kErrorOk;
+
+    // Comments by default do not have indentation, except some pseudocode
+    // comments, which start with ';' after indentation.
+    auto trimmed = str.ltrim();
+    if (str.front() != ' ' || (!trimmed.empty() && trimmed.front() == ';')) {
+      perfJitDump_->addCodeComment(str, a_.offset());
+    }
     return asmjit::kErrorOk;
   }
 };
@@ -743,6 +765,7 @@ Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
     unsigned dumpJitCode,
     bool emitAsserts,
+    PerfJitDump *perfJitDump,
     CodeBlock *codeBlock,
     ReadPropertyCacheEntry *readPropertyCache,
     WritePropertyCacheEntry *writePropertyCache,
@@ -760,8 +783,9 @@ Emitter::Emitter(
   code.setErrorHandler(errorHandler_.get());
 
 #ifndef ASMJIT_NO_LOGGING
-  if (dumpJitCode_ & DumpJitCode::Code) {
-    logger_ = std::unique_ptr<asmjit::Logger>(new OurLogger());
+  if ((dumpJitCode_ & DumpJitCode::Code) || perfJitDump) {
+    logger_ = std::unique_ptr<asmjit::Logger>(
+        new OurLogger(a, perfJitDump, dumpJitCode_));
     logger_->setIndentation(asmjit::FormatIndentationGroup::kCode, 4);
     logger_->addFlags(asmjit::FormatFlags::kHexImms);
     code.setLogger(logger_.get());

@@ -161,6 +161,14 @@ static int executeHBCBytecodeFromCL(
         open(sos.str().c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
     if (options.perfProfJitDumpFd == -1)
       hermes_fatal("Failed to open jitdump file: " + jitdumpFile);
+    llvh::SmallString<256> debugInfoFile;
+    if (std::error_code error = llvh::sys::fs::createUniqueFile(
+            llvh::Twine(flags.PerfProfDir) + "/debuginfo-%%%%%%%%.txt",
+            options.perfProfDebugInfoFd,
+            debugInfoFile)) {
+      hermes_fatal("Fail to create debuginfo file for perf jitdump");
+    }
+    options.perfProfDebugInfoFile = debugInfoFile.str();
   }
 #endif
 
@@ -182,8 +190,14 @@ static int executeHBCBytecodeFromCL(
     }
   }
 #ifdef HERMES_ENABLE_PERF_PROF
-  if (flags.PerfProf && (close(options.perfProfJitDumpFd) == -1))
-    hermes_fatal("Fail to close jitdump file: " + jitdumpFile);
+  if (flags.PerfProf) {
+    if (close(options.perfProfJitDumpFd) == -1)
+      hermes_fatal("Fail to close jitdump file: " + jitdumpFile);
+    if (close(options.perfProfDebugInfoFd) == -1)
+      hermes_fatal(
+          "Fail to close debuginfo file: " + options.perfProfDebugInfoFile);
+  }
+
 #endif
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }

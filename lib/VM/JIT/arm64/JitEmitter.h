@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/JIT/PerfJitDump.h"
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -399,6 +400,7 @@ class Emitter {
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
       bool emitAsserts,
+      PerfJitDump *perfJitDump,
       CodeBlock *codeBlock,
       ReadPropertyCacheEntry *readPropertyCache,
       WritePropertyCacheEntry *writePropertyCache,
