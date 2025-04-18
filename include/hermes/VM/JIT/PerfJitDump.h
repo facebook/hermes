@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 namespace hermes::vm {
 
@@ -29,6 +30,7 @@ class PerfJitDump {
   /// of "<dir>/jit-<pid>.dump". And the caller is supposed to close the file.
   /// \param fd The file descriptor of the opened jitdump file.
   PerfJitDump(int fd);
+  ~PerfJitDump();
 
   /// Write the JIT_CODE_LOAD record to the jitdump file.
   /// \param codePtr The address of the jitted code.
@@ -40,13 +42,19 @@ class PerfJitDump {
       llvh::StringRef fname);
 
  private:
+  struct DebugEntry;
+
   /// Write the jitdump header.
   void writePerfJitHeader();
+  /// Write the JIT_CODE_DEBUG_INFO record to the jitdump file.
+  void writeDebugInfoRecord(const char *codePtr);
 
   /// The current code index used to distinguish each jitted function.
   uint64_t codeIndex_{0};
   /// Output file stream to write jitdump.
   llvh::raw_fd_ostream os_;
+  /// The debug info entries.
+  std::vector<DebugEntry> debugEntries_;
 };
 } // namespace hermes::vm
 

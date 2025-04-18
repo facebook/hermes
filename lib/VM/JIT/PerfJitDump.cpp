@@ -91,6 +91,21 @@ struct PerfJitCodeLoad {
   /// uint8_t code[codeSize];
 };
 
+/// The record contains source lines debug information, i.e., a way to map a
+/// code address back to a source line. Note that this record must be generated
+/// before the JIT_CODE_LOAD record for the same function.
+struct PerfJitDebugInfo {
+  /// Common fields of every record.
+  PerfJitPrefix prefix;
+
+  /// Code start address for the jitted code.
+  uint64_t codeAddr;
+  /// Number of entries in the debug info.
+  uint64_t nEntry;
+  /// Followed by nEntry entries.
+  /// struct DebugEntry entries[];
+};
+
 /// Get timestamp in nanoseconds.
 uint64_t getTimestamp() {
   struct timespec ts;
@@ -103,6 +118,19 @@ uint64_t getTimestamp() {
 } // namespace
 
 namespace hermes::vm {
+
+/// The DebugEntry describes the source line information.
+struct PerfJitDump::DebugEntry {
+  /// Address of jitted code for which the debug information is generated.
+  uint64_t offset;
+  /// Source file line number (starting at 1).
+  int lineno;
+  /// Column discriminator, 0 is default.
+  int colno;
+  /// Source file name in ASCII, including null termination, \xff\0 if same as
+  /// previous entry.
+  // char fname[];
+};
 
 PerfJitDump::PerfJitDump(int fd) : os_(fd, /*shouldClose*/ false) {
   assert(fd != -1 && "Invalid file descriptor");
@@ -122,10 +150,17 @@ PerfJitDump::PerfJitDump(int fd) : os_(fd, /*shouldClose*/ false) {
   writePerfJitHeader();
 }
 
+// Place the destructor here so that we don't need to expose DebugEntry
+// definition in the header file.
+PerfJitDump::~PerfJitDump() = default;
+
 void PerfJitDump::writeCodeLoadRecord(
     const char *codePtr,
     uint32_t codeSize,
     llvh::StringRef fname) {
+  // JIT_CODE_DEBUG_INFO record must be generated before JIT_CODE_LOAD.
+  writeDebugInfoRecord(codePtr);
+
   PerfJitCodeLoad codeLoad;
   codeLoad.prefix.id = PerfJitRecordType::JIT_CODE_LOAD;
   // Total size is the size of this record plus the size of the jitted function
@@ -150,6 +185,8 @@ void PerfJitDump::writePerfJitHeader() {
   header.timestamp = getTimestamp();
   os_.write(reinterpret_cast<const char *>(&header), sizeof(header));
 }
+
+void PerfJitDump::writeDebugInfoRecord(const char *codePtr) {}
 
 } // namespace hermes::vm
 
