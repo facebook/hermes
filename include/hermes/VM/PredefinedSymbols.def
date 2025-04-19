@@ -15,6 +15,7 @@
 
 SYM(SymbolHasInstance, "Symbol.hasInstance")
 SYM(SymbolIterator, "Symbol.iterator")
+SYM(SymbolAsyncIterator, "Symbol.asyncIterator")
 SYM(SymbolIsConcatSpreadable, "Symbol.isConcatSpreadable")
 SYM(SymbolToPrimitive, "Symbol.toPrimitive")
 SYM(SymbolToStringTag, "Symbol.toStringTag")
