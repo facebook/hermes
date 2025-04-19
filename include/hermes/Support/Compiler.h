@@ -78,6 +78,15 @@
 #define HERMES_ATTRIBUTE_FORMAT(archetype, string_index, first_to_check)
 #endif
 
+/// Force the linkage type of a declaration to be internal to a given file. This
+/// is useful when some type needs to be forward-declared in a header, but is
+/// only used in a cpp file, so the compiler should optimize it accordingly.
+#if __has_attribute(internal_linkage)
+#define HERMES_ATTRIBUTE_INTERNAL_LINKAGE __attribute__((internal_linkage))
+#else
+#define HERMES_ATTRIBUTE_INTERNAL_LINKAGE
+#endif
+
 #ifndef LLVM_PTR_SIZE
 #error "LLVM_PTR_SIZE needs to be defined"
 #endif

@@ -642,7 +642,13 @@ bool HadesGC::MarkWorklist::empty() {
 }
 #endif
 
-class HadesGC::MarkAcceptor final : public RootAcceptor {
+/// Ideally, MarkAcceptor would be declared in an anonymous namespace, but it
+/// needs to be forward declared in HadesGC.h in order to access private members
+/// of HadesGC. Forcing it to have internal linkage reflects the fact that it is
+/// only actually used in this file, and the compiler should inline methods on
+/// it aggressively.
+class HERMES_ATTRIBUTE_INTERNAL_LINKAGE HadesGC::MarkAcceptor final
+    : public RootAcceptor {
   HadesGC &gc;
   PointerBase &pointerBase_;
   /// Current GCCell being visited. For heap locations that could be from a
