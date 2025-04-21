@@ -22,6 +22,15 @@
 #include <functional>
 #include <stack>
 
+// In ASAN builds, poison the memory outside of the FreelistCell so that
+// accesses are flagged as illegal while it is in the freelist.
+// Use +1 on the pointer to skip towards the memory region directly after the
+// FreelistCell header of a cell. This way the header is always intact and
+// readable, and only the contents of the cell are poisoned.
+#define ASAN_POISON_FREE_CELL(cell) \
+  __asan_poison_memory_region(      \
+      cell + 1, cell->getAllocatedSize() - sizeof(FreelistCell));
+
 namespace hermes {
 namespace vm {
 
@@ -114,13 +123,7 @@ void HadesGC::OldGen::addCellToFreelist(
     freelistBucketBitArray_.set(bucket, true);
   }
 
-  // In ASAN builds, poison the memory outside of the FreelistCell so that
-  // accesses are flagged as illegal while it is in the freelist.
-  // Here, and in other places where FreelistCells are poisoned, use +1 on the
-  // pointer to skip towards the memory region directly after the FreelistCell
-  // header of a cell. This way the header is always intact and readable, and
-  // only the contents of the cell are poisoned.
-  __asan_poison_memory_region(cell + 1, sz - sizeof(FreelistCell));
+  ASAN_POISON_FREE_CELL(cell);
 }
 
 void HadesGC::OldGen::addCellToFreelistFromSweep(
@@ -145,7 +148,7 @@ void HadesGC::OldGen::addCellToFreelistFromSweep(
   newCell->next_ = segBucket->head;
   segBucket->head =
       CompressedPointer::encodeNonNull(newCell, gc_.getPointerBase());
-  __asan_poison_memory_region(newCell + 1, newCellSize - sizeof(FreelistCell));
+  ASAN_POISON_FREE_CELL(newCell);
 }
 
 HadesGC::OldGen::FreelistCell *HadesGC::OldGen::removeCellFromFreelist(
