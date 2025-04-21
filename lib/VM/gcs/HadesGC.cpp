@@ -3420,7 +3420,9 @@ void HadesGC::assertWriteBarrierForNormalObj(const void *loc) {
     // thread is sweeping, it may merge freed cells and poison memory outside of
     // FreeListCell, which may be accessed by findObjectContaining() when
     // visiting next cell.
-    if constexpr (!kConcurrentGC) {
+    // `findObjectContaining` relies on card boundary table, which is only valid
+    // for OG, so we need to skip below check if \c loc lives in YG.
+    if (!kConcurrentGC && !inYoungGen(loc)) {
       // The above check ensures that this loc must be within a
       // FixedSizeHeapSegment, so it's safe to access its card table.
       auto *obj = FixedSizeHeapSegment::findObjectContaining(loc);
