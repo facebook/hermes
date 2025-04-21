@@ -1133,12 +1133,15 @@ class CreateClassInst : public BaseCreateCallableInst {
 
   SideEffect getSideEffectImpl() const {
     if (llvh::isa<EmptySentinel>(getSuperClass())) {
-      // When creating a derived class, we look up the .prototype of the super
-      // class we are deriving from. This property look up can potentially
-      // trigger JS.
-      return SideEffect::createExecute().setWriteStack();
+      // Evaluating a base class constructor cannot execute any JS. It only
+      // creates the new class constructor, and writes the home object to the
+      // given stack location.
+      return SideEffect{}.setWriteStack();
     } else {
-      return SideEffect{}.setReadHeap().setWriteStack();
+      // Evaluating a derived class constructor will fetch the `.prototype` of
+      // the super class. This property look up can potentially trigger JS. The
+      // home object is also written to the given stack location.
+      return SideEffect::createExecute().setWriteStack();
     }
   }
 
