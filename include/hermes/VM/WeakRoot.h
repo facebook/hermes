@@ -62,6 +62,15 @@ class WeakRootBase : protected CompressedPointer {
 
 /// A wrapper around a pointer meant to be used as a weak root. It adds a read
 /// barrier so that the GC is aware when the field is read.
+///
+/// The read barrier needs to execute if you are potentially reading the value
+/// out and storing it in a strong reference. If you are just reading it to
+/// compare it to something, or if it's just being moved around, there is no
+/// need for a read barrier.
+///
+/// The purpose of the read barrier is to inform the GC that the value stored
+/// inside the WeakRoot must now be treated as if it is alive, because we might
+/// store it somewhere.
 template <typename T>
 class WeakRoot final : public WeakRootBase {
  public:
