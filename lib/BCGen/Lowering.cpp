@@ -168,11 +168,13 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   bool hasSeenNumericProp = false;
   for (unsigned i = 0; i < size; i++) {
     Literal *propKey = allocInst->getKey(i);
+#ifndef NDEBUG
     if (auto *keyStr = llvh::dyn_cast<LiteralString>(propKey)) {
       assert(
           !toArrayIndex(keyStr->getValue().str()).hasValue() &&
           "LiteralString that looks like an array index should have been converted to a number.");
     }
+#endif
     Value *propVal = allocInst->getValue(i);
     bool isNumericKey = llvh::isa<LiteralNumber>(propKey);
     hasSeenNumericProp |= isNumericKey;
