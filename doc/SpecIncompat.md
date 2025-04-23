@@ -49,21 +49,6 @@ This is "implementable", but with very low priority.
 
 Static Hermes implements most of the scoped function promotion semantics in loose mode, but some corner cases are not spec compliant yet.
 
-Case 1:
-```javascript
-function g() {
-    {
-        function f() { return 1; }
-        {
-            var f;
-        }
-    }
-}
-```
-
-Shermes accepts this, aliasing `var f` to `function f()`. Spec compliance requires an error.
-
-Case 2:
 ```javascript
 function g() {
     {
