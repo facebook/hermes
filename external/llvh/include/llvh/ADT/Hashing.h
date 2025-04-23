@@ -667,7 +667,7 @@ hash_code hash_value(const std::basic_string<T> &arg) {
 // Declared and documented above, but defined here so that any of the hashing
 // infrastructure is available.
 inline hash_code hash_value(double arg) {
-  return hash_code(*reinterpret_cast<uint64_t *>(&arg));
+  return hash_value(llvh::DoubleToBits(arg));
 }
 
 } // namespace llvh
