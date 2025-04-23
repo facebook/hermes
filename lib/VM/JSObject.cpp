@@ -2871,15 +2871,23 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
       propertyFlags.privateName ||
       !selfHandle->flags_.proxyObject &&
           "Internal non-private properties cannot be added to Proxy objects");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // Add a new property to the class.
   // TODO: if we check for OOM here in the future, we must undo the slot
   // allocation.
-  auto addResult = HiddenClass::addProperty(
-      runtime.makeHandle(selfHandle->clazz_), runtime, name, propertyFlags);
+  lv.clazz = selfHandle->clazz_.get(runtime);
+  auto addResult =
+      HiddenClass::addProperty(lv.clazz, runtime, name, propertyFlags);
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->clazz_.setNonNull(runtime, *addResult->first, runtime.getHeap());
+  lv.clazz = *addResult->first;
+  selfHandle->clazz_.setNonNull(runtime, *lv.clazz, runtime.getHeap());
 
   if (LLVM_UNLIKELY(
           allocateNewSlotStorage(
@@ -2889,8 +2897,7 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   }
 
   // If this is an index-like property, we need to clear the fast path flags.
-  if (LLVM_UNLIKELY(
-          selfHandle->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
+  if (LLVM_UNLIKELY(lv.clazz->getHasIndexLikeProperties()))
     selfHandle->flags_.fastIndexProperties = false;
 
   return ExecutionStatus::RETURNED;
