@@ -156,13 +156,13 @@ class MallocGC final : public GCBase {
   /// \return a pointer to the newly created object in the GC heap.
   template <
       typename T,
-      bool fixedSize = true,
-      HasFinalizer hasFinalizer = HasFinalizer::No,
-      LongLived longLived = LongLived::Yes,
-      CanBeLarge canBeLarge = CanBeLarge::No,
-      MayFail mayFail = MayFail::No,
+      bool fixedSize,
+      HasFinalizer hasFinalizer,
+      LongLived longLived,
+      CanBeLarge canBeLarge,
+      MayFail mayFail,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&...args);
+  inline T *makeAImpl(uint32_t size, Args &&...args);
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size.  (Note that this does not guarantee that the
@@ -358,7 +358,7 @@ template <
     CanBeLarge canBeLarge,
     MayFail mayFail,
     class... Args>
-inline T *MallocGC::makeA(uint32_t size, Args &&...args) {
+inline T *MallocGC::makeAImpl(uint32_t size, Args &&...args) {
   // For now, when mayFail == MayFail::Yes, we must have canBeLarge ==
   // CanBeLarge::Yes.
   static_assert(

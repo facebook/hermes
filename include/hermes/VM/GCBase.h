@@ -86,11 +86,11 @@ enum XorPtrKeyID {
 ///
 ///   template <
 ///     typename T,
-///     bool fixedSize = true,
-///     HasFinalizer hasFinalizer = HasFinalizer::No,
-///     LongLived longLived = LongLived::No,
+///     bool fixedSize,
+///     HasFinalizer hasFinalizer,
+///     LongLived longLived,
 ///     class... Args>
-/// inline T *makeA(uint32_t size, Args &&... args);
+/// inline T *makeAImpl(uint32_t size, Args &&... args);
 ///
 /// In some GCs, objects can have associated memory allocated outside the heap,
 /// and this memory can influence GC initiation and heap sizing heuristics.

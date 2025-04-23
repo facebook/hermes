@@ -159,13 +159,13 @@ class HadesGC final : public GCBase {
   /// \return a pointer to the newly created object in the GC heap.
   template <
       typename T,
-      bool fixedSize = true,
-      HasFinalizer hasFinalizer = HasFinalizer::No,
-      LongLived longLived = LongLived::No,
-      CanBeLarge canBeLarge = CanBeLarge::No,
-      MayFail mayFail = MayFail::No,
+      bool fixedSize,
+      HasFinalizer hasFinalizer,
+      LongLived longLived,
+      CanBeLarge canBeLarge,
+      MayFail mayFail,
       class... Args>
-  inline T *makeA(uint32_t size, Args &&...args);
+  inline T *makeAImpl(uint32_t size, Args &&...args);
 
   /// Slow path of makeA() above when canBeLarge is Yes. It acquires gcMutex_
   /// (background thread needs to be paused) and calls into allocSlow(). Mark it
@@ -1517,7 +1517,7 @@ template <
     CanBeLarge canBeLarge,
     MayFail mayFail,
     class... Args>
-inline T *HadesGC::makeA(uint32_t size, Args &&...args) {
+inline T *HadesGC::makeAImpl(uint32_t size, Args &&...args) {
   // When mayFail == MayFail::Yes, we must have canBeLarge == CanBeLarge::Yes.
   static_assert(
       (mayFail == MayFail::No) || (canBeLarge == CanBeLarge::Yes),
