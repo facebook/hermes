@@ -413,22 +413,24 @@ Runtime::Runtime(
     // are actually populated.
     lazyObjectClass = clazz;
 
-    for (unsigned i = 1; i <= std::max(
-                                  {JSObject::numOverlapSlots<JSProxy>(),
-                                   JSObject::numOverlapSlots<JSCallableProxy>(),
-                                   JSObject::numOverlapSlots<HostObject>()});
-         ++i) {
-      auto addResult = HiddenClass::reserveSlot(clazz, *this);
-      assert(
-          addResult != ExecutionStatus::EXCEPTION &&
-          "Could not possibly grow larger than the limit");
-      clazz = *addResult->first;
+    constexpr unsigned maxNumOverlapSlots = std::max(
+        {JSObject::numOverlapSlots<JSProxy>(),
+         JSObject::numOverlapSlots<JSCallableProxy>(),
+         JSObject::numOverlapSlots<HostObject>()});
+    for (unsigned i = 0;; ++i) {
       if (i == JSObject::numOverlapSlots<JSProxy>())
         proxyClass = clazz;
       if (i == JSObject::numOverlapSlots<JSCallableProxy>())
         callableProxyClass = clazz;
       if (i == JSObject::numOverlapSlots<HostObject>())
         hostObjectClass = clazz;
+      if (i == maxNumOverlapSlots)
+        break;
+      auto addResult = HiddenClass::reserveSlot(clazz, *this);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      clazz = *addResult->first;
     }
   }
 
