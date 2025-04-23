@@ -17,7 +17,7 @@ set(SHERMES_CC "cc" CACHE STRING "C compiler to invoke")
 set(SHERMES_CC_SYSCFLAGS "" CACHE STRING "C compiler system flags")
 set(SHERMES_CC_SYSLDFLAGS "" CACHE STRING "C compiler system linker flags")
 set(SHERMES_CC_INCLUDE_PATH
-  "${CMAKE_BINARY_DIR}/lib/config:${CMAKE_SOURCE_DIR}/include" CACHE STRING
+  "${CMAKE_BINARY_DIR}/lib/config:${PROJECT_SOURCE_DIR}/include" CACHE STRING
   "Include path when invoking CC")
 set(SHERMES_CC_LIB_PATH "$<TARGET_FILE_DIR:hermesvm>:$<TARGET_FILE_DIR:jsi>:$<TARGET_FILE_DIR:shermes_console>" CACHE STRING
   "Library path when invoking CC")
