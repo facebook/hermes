@@ -280,8 +280,6 @@ set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
 set(IMPORT_HERMESC "" CACHE FILEPATH
   "Import the hermesc compiler from another build using the given CMake file.")
 
-set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
-
 # On Windows, produce static libraries by default so that tests and tools work
 # without needing to move DLLs around.
 # On Emscripten, there is no concept of a shared library.
@@ -722,10 +720,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     dependency-extractor
     )
 
-  if(HERMES_BUILD_NODE_HERMES)
-    list(APPEND HERMES_TEST_DEPS node-hermes)
-  endif()
-
   set(coverage_directory "")
   if (HERMES_ENABLE_CODE_COVERAGE)
     set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
@@ -749,8 +743,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
     build_mode="$<IF:$<CONFIG:Debug>,dbg,opt>"
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
-    node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
-    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
