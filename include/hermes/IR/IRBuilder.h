@@ -727,9 +727,6 @@ class IRBuilder {
 
   LoadParentNoTrapsInst *createLoadParentNoTrapsInst(Value *object);
   TypedLoadParentInst *createTypedLoadParentInst(Value *object);
-  TypedStoreParentInst *createTypedStoreParentInst(
-      Value *storedValue,
-      Value *object);
 
   FUnaryMathInst *createFUnaryMathInst(ValueKind kind, Value *arg);
   FBinaryMathInst *

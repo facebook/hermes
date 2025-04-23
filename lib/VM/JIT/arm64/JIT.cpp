@@ -823,11 +823,6 @@ inline void JITContext::Compiler::emitTypedLoadParent(
   em_.typedLoadParent(FR(inst->op1), FR(inst->op2));
 }
 
-inline void JITContext::Compiler::emitTypedStoreParent(
-    const inst::TypedStoreParentInst *inst) {
-  em_.typedStoreParent(FR(inst->op1), FR(inst->op2));
-}
-
 inline void JITContext::Compiler::emitRet(const inst::RetInst *inst) {
   em_.ret(FR(inst->op1));
 }

@@ -886,10 +886,6 @@ DEFINE_OPCODE_2(IteratorClose, Reg8, UInt8)
 /// Arg2 [in] is the source (must be an object).
 DEFINE_OPCODE_2(TypedLoadParent, Reg8, Reg8)
 
-/// Arg1 is the new parent.
-/// Arg2 is the target (must be an object).
-DEFINE_OPCODE_2(TypedStoreParent, Reg8, Reg8)
-
 // Jump instructions must be defined through the following DEFINE_JUMP macros.
 // The numeric suffix indicates number of operands the instruction takes.
 // The macros will automatically generate two opcodes for each definition,

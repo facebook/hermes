@@ -870,7 +870,6 @@ class Emitter {
 
   void loadParentNoTraps(FR frRes, FR frObj);
   void typedLoadParent(FR frRes, FR frObj);
-  void typedStoreParent(FR frStoredValue, FR frObj);
 
  private:
   /// Create an a64::Mem to a specifc frame register.

@@ -3268,13 +3268,6 @@ tailCall:
         ip = NEXTINST(TypedLoadParent);
         DISPATCH;
       }
-      CASE(TypedStoreParent) {
-        JSObject *newParent = vmcast<JSObject>(O1REG(TypedStoreParent));
-        JSObject::unsafeSetParentInternal(
-            vmcast<JSObject>(O2REG(TypedStoreParent)), runtime, newParent);
-        ip = NEXTINST(TypedStoreParent);
-        DISPATCH;
-      }
 
       CASE(_last) {
         hermes_fatal("Invalid opcode _last");

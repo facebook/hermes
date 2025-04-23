@@ -1126,16 +1126,6 @@ Arguments | %object is an instance of a typed class
 Semantics | Read the parent without any checks.
 Effects | May read memory.
 
-### TypedStoreParent
-
-TypedStoreParent | _
---- | --- |
-Description | Stores the parent (the vtable) for a typed object instance of a class
-Example | TypedStoreParent %storedValue (:object), %object (:object)
-Arguments | %object is an instance of a typed class, %storedValue is stored as the parent
-Semantics | Store the parent without any checks.
-Effects | May write memory.
-
 ### FUnaryMath
 
 FUnaryMath | _

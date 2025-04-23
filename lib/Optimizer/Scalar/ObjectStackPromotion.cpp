@@ -100,14 +100,6 @@ bool tryPromoteObject(
         continue;
       }
     }
-    if (auto *SP = llvh::dyn_cast<TypedStoreParentInst>(U)) {
-      // Unlike loads, we can freely store the parent, even if one is not
-      // specified in the AllocObjectLiteralInst.
-      if (SP->getStoredValue() != alloc) {
-        assert(SP->getObject() == alloc && "Unknown usage of object.");
-        continue;
-      }
-    }
 
     if (auto *SP = llvh::dyn_cast<StorePropertyInst>(U)) {
       if (SP->getStoredValue() == alloc)
@@ -203,10 +195,6 @@ bool tryPromoteObject(
     if (auto *S = llvh::dyn_cast<PrStoreInst>(U)) {
       builder.createStoreStackInst(
           S->getStoredValue(), stackLocs[S->getPropIndex()]);
-      continue;
-    }
-    if (auto *SP = llvh::dyn_cast<TypedStoreParentInst>(U)) {
-      builder.createStoreStackInst(SP->getStoredValue(), parentLoc);
       continue;
     }
 

@@ -2280,17 +2280,6 @@ extern "C" void _sh_prstore_indirect(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
-extern "C" void _sh_typed_store_parent(
-    SHRuntime *shr,
-    const SHLegacyValue *storedValue,
-    const SHLegacyValue *object) {
-  Runtime &runtime = getRuntime(shr);
-  Handle<JSObject> objectHandle = Handle<JSObject>::vmcast(toPHV(object));
-  Handle<JSObject> parentHandle = Handle<JSObject>::vmcast(toPHV(storedValue));
-  JSObject::unsafeSetParentInternal(
-      objectHandle.get(), runtime, parentHandle.get());
-}
-
 extern "C" void _sh_unreachable() {
   hermes_fatal("Unreachable code reached");
 }

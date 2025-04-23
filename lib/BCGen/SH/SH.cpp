@@ -1451,14 +1451,6 @@ class InstrGen {
     generateRegisterPtr(*inst.getObject());
     os_ << ");\n";
   }
-  void generateTypedStoreParentInst(TypedStoreParentInst &inst) {
-    os_.indent(2);
-    os_ << "_sh_typed_store_parent(shr, ";
-    generateRegisterPtr(*inst.getStoredValue());
-    os_ << ", ";
-    generateRegisterPtr(*inst.getObject());
-    os_ << ");\n";
-  }
   void generateFUnaryMathInst(FUnaryMathInst &inst) {
     os_.indent(2);
     generateRegister(inst);

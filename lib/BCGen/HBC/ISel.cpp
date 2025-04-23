@@ -2224,13 +2224,6 @@ void HBCISel::generateGetNativeRuntimeInst(
     hermes::BasicBlock *next) {
   hermes_fatal("GetNativeRuntimeInst not supported.");
 }
-void HBCISel::generateTypedStoreParentInst(
-    TypedStoreParentInst *Inst,
-    BasicBlock *) {
-  auto storedValue = encodeValue(Inst->getStoredValue());
-  auto object = encodeValue(Inst->getObject());
-  BCFGen_->emitTypedStoreParent(storedValue, object);
-}
 void HBCISel::generateLIRDeadValueInst(LIRDeadValueInst *, BasicBlock *) {
   hermes_fatal("LIRDeadValueInst not supported.");
 }

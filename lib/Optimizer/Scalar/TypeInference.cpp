@@ -881,9 +881,6 @@ class TypeInferenceImpl {
   Type inferTypedLoadParentInst(TypedLoadParentInst *inst) {
     hermes_fatal("typed instruction");
   }
-  Type inferTypedStoreParentInst(TypedStoreParentInst *inst) {
-    hermes_fatal("typed instruction");
-  }
   Type inferNativeCallInst(NativeCallInst *inst) {
     hermes_fatal("typed instruction");
   }

@@ -257,7 +257,6 @@ DEF_VALUE(FastArrayLengthInst, Instruction)
 
 DEF_VALUE(LoadParentNoTrapsInst, Instruction)
 DEF_VALUE(TypedLoadParentInst, Instruction)
-DEF_VALUE(TypedStoreParentInst, Instruction)
 
 BEGIN_VALUE(FUnaryMathInst, Instruction)
 DEF_TAG(FNegate, FUnaryMathInst)

@@ -5529,54 +5529,6 @@ class LoadParentNoTrapsInst : public Instruction {
   }
 };
 
-class TypedStoreParentInst : public Instruction {
-  TypedStoreParentInst(const TypedStoreParentInst &) = delete;
-  void operator=(const TypedStoreParentInst &) = delete;
-
- public:
-  enum { StoredValueIdx, ObjectIdx };
-
-  explicit TypedStoreParentInst(Value *storedValue, Value *object)
-      : Instruction(ValueKind::TypedStoreParentInstKind) {
-    setType(Type::createNoType());
-    pushOperand(storedValue);
-    pushOperand(object);
-  }
-  explicit TypedStoreParentInst(
-      const TypedStoreParentInst *src,
-      llvh::ArrayRef<Value *> operands)
-      : Instruction(src, operands) {}
-
-  Value *getStoredValue() {
-    return getOperand(StoredValueIdx);
-  }
-  Value *getObject() {
-    return getOperand(ObjectIdx);
-  }
-
-  const Value *getStoredValue() const {
-    return getOperand(StoredValueIdx);
-  }
-  const Value *getObject() const {
-    return getOperand(ObjectIdx);
-  }
-
-  static bool hasOutput() {
-    return false;
-  }
-  static bool isTyped() {
-    return true;
-  }
-
-  SideEffect getSideEffectImpl() const {
-    return SideEffect{}.setWriteHeap().setIdempotent();
-  }
-
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::TypedStoreParentInstKind;
-  }
-};
-
 class FUnaryMathInst : public Instruction {
   FUnaryMathInst(const FUnaryMathInst &) = delete;
   void operator=(const FUnaryMathInst &) = delete;

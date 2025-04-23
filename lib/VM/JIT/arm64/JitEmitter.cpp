@@ -3381,23 +3381,6 @@ void Emitter::typedLoadParent(FR frRes, FR frObj) {
   frUpdatedWithHW(frRes, hwRes);
 }
 
-void Emitter::typedStoreParent(FR frStoredValue, FR frObj) {
-  comment("// TypedStoreParent r%u, r%u", frStoredValue.index(), frObj.index());
-
-  syncAllFRTempExcept({});
-  syncToFrame(frStoredValue);
-  syncToFrame(frObj);
-  freeAllFRTempExcept({});
-
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frStoredValue);
-  loadFrameAddr(a64::x2, frObj);
-  EMIT_RUNTIME_CALL(
-      *this,
-      void (*)(SHRuntime *, const SHLegacyValue *, const SHLegacyValue *),
-      _sh_typed_store_parent);
-}
-
 void Emitter::putByValImpl(
     FR frTarget,
     FR frKey,

@@ -1186,11 +1186,6 @@ static inline SHLegacyValue _sh_typed_load_parent(
   return _sh_ljs_object(_sh_cp_decode_non_null(shr, parent));
 }
 
-SHERMES_EXPORT void _sh_typed_store_parent(
-    SHRuntime *shr,
-    const SHLegacyValue *storedValue,
-    const SHLegacyValue *object);
-
 /// If the double value is within representable integer range, convert it,
 /// otherwise throw.
 static inline uint64_t _sh_to_uint64_double_or_throw(SHRuntime *shr, double d) {

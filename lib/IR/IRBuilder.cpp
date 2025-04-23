@@ -1295,14 +1295,6 @@ TypedLoadParentInst *IRBuilder::createTypedLoadParentInst(Value *object) {
   return inst;
 }
 
-TypedStoreParentInst *IRBuilder::createTypedStoreParentInst(
-    Value *storedValue,
-    Value *object) {
-  auto *inst = new TypedStoreParentInst(storedValue, object);
-  insert(inst);
-  return inst;
-}
-
 FUnaryMathInst *IRBuilder::createFUnaryMathInst(ValueKind kind, Value *arg) {
   auto *inst = new FUnaryMathInst(kind, arg);
   insert(inst);

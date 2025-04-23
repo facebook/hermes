@@ -1650,17 +1650,6 @@ bool Verifier::visitTypedLoadParentInst(const TypedLoadParentInst &Inst) {
       "input object value must be of object type");
   return true;
 }
-bool Verifier::visitTypedStoreParentInst(const TypedStoreParentInst &Inst) {
-  AssertIWithMsg(
-      Inst,
-      Inst.getObject()->getType().isObjectType(),
-      "input object value must be of object type");
-  AssertIWithMsg(
-      Inst,
-      Inst.getStoredValue()->getType().isObjectType(),
-      "stored value must be an object");
-  return true;
-}
 
 bool Verifier::visitFUnaryMathInst(const FUnaryMathInst &Inst) {
   AssertIWithMsg(
