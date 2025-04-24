@@ -247,7 +247,7 @@ static inline SHLegacyValue _sh_ljs_bool(bool b) {
 }
 
 static inline SHLegacyValue _sh_ljs_object(void *p) {
-  return _sh_ljs_encode_raw_tag((uint64_t)p, HVTag_Object);
+  return _sh_ljs_encode_raw_tag((uint64_t)(uintptr_t)p, HVTag_Object);
 }
 
 static inline SHLegacyValue _sh_ljs_undefined() {
@@ -300,7 +300,7 @@ static inline double _sh_ljs_get_double(SHLegacyValue v) {
 }
 static inline void *_sh_ljs_get_pointer(SHLegacyValue v) {
   // Mask out the tag.
-  return (void *)(v.raw & kHV_DataMask);
+  return (void *)(uintptr_t)(v.raw & kHV_DataMask);
 }
 static inline void *_sh_ljs_get_native_pointer(SHLegacyValue v) {
   return (void *)(uintptr_t)v.raw;
