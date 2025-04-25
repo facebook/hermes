@@ -116,3 +116,40 @@ jobs:
         # main ones.
         # cmake --build ./build_intl --target check-hermes
         python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin ${{ matrix.test_runner_flags }}
+
+  test-linux-armv7:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4.1.0
+        with:
+          path: hermes
+      - name: Build with docker
+        uses: addnab/docker-run-action@v3
+        with:
+          image: arm32v7/ubuntu:noble
+          options: -v ${{github.workspace}}/hermes:/hermes
+          run: |-
+            set -xe
+            # Setup dependencies
+            apt update
+            apt install -y git openssh-client cmake build-essential \
+                libreadline-dev libicu-dev zip python3 ninja-build
+            # Check out test262 at a pinned revision to reduce flakiness
+            git clone https://github.com/tc39/test262
+            cd test262
+            git checkout 62626e083bd506124aac6c799464d76c2c42851b
+            cd -
+
+            cmake -S hermes -GNinja -B build -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
+            cmake --build build --target check-hermes all
+
+            cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON \
+              -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
+            cmake --build ./build_intl
+            # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
+            # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
+            # main ones.
+            # cmake --build ./build_intl --target check-hermes
+            python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin
