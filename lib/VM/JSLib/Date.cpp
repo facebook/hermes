@@ -376,6 +376,13 @@ Handle<JSObject> createDateConstructor(Runtime &runtime) {
       nullptr,
       dateNow,
       0);
+  defineMethod(
+      runtime,
+      cons,
+      Predefined::getSymbolID(Predefined::resetCache),
+      nullptr,
+      resetCache,
+      0);
 
   return cons;
 }
@@ -515,6 +522,13 @@ CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> dateNow(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUntrustedNumberValue(curTime());
+}
+
+CallResult<HermesValue> resetCache(void *, Runtime &runtime, NativeArgs args) {
+  // set the flag so we don't interrupt any threads in the
+  // middle of a date/time calculation
+  runtime.getJSLibStorage()->localTimeOffsetCache.needsToReset();
+  return HermesValue::encodeUntrustedNumberValue(0);
 }
 
 CallResult<HermesValue>

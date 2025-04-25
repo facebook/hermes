@@ -308,6 +308,7 @@ STR(setUTCMilliseconds, "setUTCMilliseconds")
 STR(toDateString, "toDateString")
 STR(toTimeString, "toTimeString")
 STR(InvalidDate, "Invalid Date")
+STR(resetCache, "resetCache")
 
 STR(RegExp, "RegExp")
 STR(exec, "exec")
