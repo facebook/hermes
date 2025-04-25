@@ -47,7 +47,11 @@ class TestCrashManager : public CrashManager {
     customData_[std::string(key)] = std::string(value);
   }
   void setContextualCustomData(const char *key, const char *value) override {
-    contextualCustomData_[std::string(key)] = std::string(value);
+    auto result = contextualCustomData_.emplace(key, value);
+    assert(
+        llvh::StringRef(value).endswith(":COMPACT") ||
+        result.second &&
+            "No duplicate keys allowed, except for COMPACT segment");
   }
   void removeCustomData(const char *key) override {
     customData_.erase(std::string(key));
@@ -175,6 +179,42 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
   EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
+}
+
+TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
+  // Turn on the "direct to OG" allocation feature.
+  GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
+                          .withName("XYZ")
+                          .withInitHeapSize(1 << 26)
+                          .withMaxHeapSize(1 << 28)
+                          .build();
+  auto testCrashMgr = std::make_shared<TestCrashManager>();
+  auto runtime = DummyRuntime::create(
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
+  DummyRuntime &rt = *runtime;
+  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
+  {
+    GCScope scope{rt};
+
+    rt.makeHandle(SegmentCell::createLongLived(rt));
+    rt.makeHandle(SegmentCell::createLongLived(rt));
+    auto h3 = rt.makeMutableHandle(SegmentCell::createLongLived(rt));
+    // YG segment (two entries) + 3 OG segments created above.
+    EXPECT_EQ(5, contextualCustomData.size());
+
+    h3.set(nullptr);
+    // The segment for h3 will be compacted.
+    rt.collect();
+    // Make sure we don't remove the wrong entry.
+    EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
+    EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
+    EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:4"), 0);
+  }
+
+  // Release the runtime.
+  runtime.reset();
+  // All contextual custom data should be removed.
+  EXPECT_EQ(0, contextualCustomData.size());
 }
 #endif
 
